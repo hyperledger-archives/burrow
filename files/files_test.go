@@ -2,99 +2,67 @@ package files
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path"
 	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
-var tempFolder = os.Getenv("TEMP")
+var tempFolder = os.TempDir()
 var fileData = []byte("aaaaaaaaaaaaaaaaa")
 
-func TestWrite(t *testing.T) {
+func TestWriteRemove(t *testing.T) {
 	fileName := "testfile"
-	err := write(fileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	remove(fileName)
-	if !checkGone(fileName){
-		t.Error(fmt.Errorf("File not removed: " + fileName))
-	}
+	write(t, fileName)
+	remove(t, fileName)
 }
 
-func TestRead(t *testing.T) {
+func TestWriteReadRemove(t *testing.T) {
 	fileName := "testfile"
-	err := write(fileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err2 := readAndCheck(fileName, fileData)
-	if err2 != nil {
-		remove(fileName)
-		t.Fatal(err)
-	}
-	remove(fileName)
-	if !checkGone(fileName){
-		t.Error(fmt.Errorf("File not removed: " + fileName))
-	}
+	write(t, fileName)
+	readAndCheck(t, fileName, fileData)
+	remove(t, fileName)
 }
 
-func TestRename(t *testing.T) {
+func TestRenameRemove(t *testing.T) {
 	fileName0 := "file0"
 	fileName1 := "file1"
-	err := write(fileName0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err2 := rename(fileName0,fileName1)
-	if err2 != nil {
-		t.Fatal(err2)
-	}
-	err3 := readAndCheck(fileName1, fileData)
-	if err3 != nil {
-		remove(fileName1)
-		t.Fatal(err)
-	}
-	remove(fileName1)
-	
-	if !checkGone(fileName0){
-		t.Error(fmt.Errorf("File not removed: " + fileName0))
-	}
-	if !checkGone(fileName1){
-		t.Error(fmt.Errorf("File not removed: " + fileName1))
-	}
+	write(t, fileName0)
+	rename(t, fileName0, fileName1)
+	readAndCheck(t, fileName1, fileData)
+	remove(t, fileName1)
+	checkGone(t, fileName0)
 }
+
+// Helpers
 
 func getName(name string) string {
 	return path.Join(tempFolder, name)
 }
 
-func write(fileName string) error {
-	return WriteFile(getName(fileName), fileData, FILE_RW)
+func write(t *testing.T, fileName string) {
+	err := WriteFile(getName(fileName), fileData, FILE_RW)
+	assert.NoError(t, err)
 }
 
-func readAndCheck(fileName string, btsIn []byte) error {
+func readAndCheck(t *testing.T, fileName string, btsIn []byte) {
 	bts, err := ReadFile(getName(fileName))
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(bts,btsIn) {
-		return fmt.Errorf("Failed to read file data. Written: %s, Read: %s\n", string(fileData), string(bts))
-	}
-	return nil
+	assert.NoError(t, err)
+	assert.True(t, bytes.Equal(bts,btsIn), "Failed to read file data. Written: %s, Read: %s\n", string(fileData), string(bts))
 }
 
-func remove(fileName string) error {
-	return os.Remove(getName(fileName))
+func remove(t *testing.T, fileName string) {
+	err := os.Remove(getName(fileName))
+	assert.NoError(t, err)
+	checkGone(t, fileName)
 }
 
-func rename(fileName0, fileName1 string) error {
-	return Rename(getName(fileName0), getName(fileName1))
+func rename(t *testing.T, fileName0, fileName1 string) {
+	assert.NoError(t, Rename(getName(fileName0), getName(fileName1)))
 }
 
-func checkGone(fileName string) bool {
+func checkGone(t *testing.T, fileName string) {
 	name := getName(fileName)
-	_ , err := os.Stat(name) 
-	return os.IsNotExist(err)
+	_ , err := os.Stat(name)
+	assert.True(t, os.IsNotExist(err), "File not removed: " + name)
 }
