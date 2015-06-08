@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	DURATION = 1
-	PER_SEC  = 10
+	DURATION = 3
+	PER_SEC  = 200
 )
 
 // Coarse flood testing just to ensure that http server
@@ -19,9 +19,10 @@ func TestHttpFlooding(t *testing.T) {
 	serveProcess := NewServeScumbag()
 	errSS := serveProcess.Start()
 	assert.NoError(t, errSS, "Scumbag-ed!")
+	t.Logf("Flooding http requests.")
 	err := runHttp()
 	if err == nil {
-		fmt.Printf("HTTP test: A total of %d http GET messages sent succesfully over %d seconds.\n", DURATION*PER_SEC, DURATION)
+		t.Logf("HTTP test: A total of %d http GET messages sent succesfully over %d seconds.\n", DURATION*PER_SEC, DURATION)
 	}
 	errStop := serveProcess.Stop(time.Millisecond*1000)
 	assert.NoError(t, errStop, "Scumbag-ed!") 

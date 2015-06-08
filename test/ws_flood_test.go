@@ -1,17 +1,15 @@
 package test
 
 import (
-	"fmt"
-	"github.com/androlo/blockchain_rpc/server"
-	"github.com/androlo/blockchain_rpc/test/client"
+	"github.com/eris-ltd/erisdb/server"
+	"github.com/eris-ltd/erisdb/test/client"
 	"github.com/stretchr/testify/assert"
-	"runtime"
 	"testing"
 	"time"
 )
 
 const CONNS = 100
-const MESSAGES = 10
+const MESSAGES = 1000
 
 // To keep track of new websocket sessions on the server.
 type SessionCounter struct {
@@ -24,11 +22,9 @@ func (this *SessionCounter) Run(oChan, cChan <-chan *server.WSSession) {
 		for {
 			select {
 			case <-oChan:
-				fmt.Println("Opened")
 				this.opened++
 				break
 			case <-cChan:
-				fmt.Println("Closed")
 				this.closed++
 				break
 			}
@@ -43,7 +39,6 @@ func (this *SessionCounter) Report() (int, int, int) {
 // Coarse flood testing just to ensure that websocket server
 // does not crash.
 func TestWsFlooding(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// New websocket server.
 	wsServer := NewScumsocketServer(CONNS)
@@ -60,7 +55,7 @@ func TestWsFlooding(t *testing.T) {
 	serveProcess := NewServeScumSocket(wsServer)
 	errServe := serveProcess.Start()
 	assert.NoError(t, errServe, "ScumSocketed!")
-
+	t.Logf("Flooding...")
 	// Run
 	errRun := runWs()
 
@@ -72,7 +67,7 @@ func TestWsFlooding(t *testing.T) {
 	assert.Equal(t, c, CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
 	assert.Equal(t, a, 0, "Server registered '%d' conns still active after closing all.", a)
 
-	fmt.Printf("WebSocket test: A total of %d messages sent succesfully over %d parallel websocket connections.\n", CONNS*MESSAGES, CONNS)
+	t.Logf("WebSocket test: A total of %d messages sent succesfully over %d parallel websocket connections.\n", CONNS*MESSAGES, CONNS)
 }
 
 func runWs() error {
@@ -102,14 +97,11 @@ func wsClient(doneChan chan bool, errChan chan error) {
 	}
 	readChan := client.Read()
 	i := 0
-	start := time.Now()
 	for i < MESSAGES {
 		client.WriteMsg([]byte("test"))
 		<-readChan
 		i++
 	}
-	dur := (time.Since(start).Nanoseconds()) / 1e6
-	fmt.Printf("Time taken for %d round trips: %d ms\n", MESSAGES, dur)
 
 	client.Close()
 	time.Sleep(time.Millisecond * 500)

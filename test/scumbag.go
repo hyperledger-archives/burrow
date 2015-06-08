@@ -1,12 +1,23 @@
 package test
 
 import (
-	"fmt"
+	"github.com/tendermint/log15"
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/eris-ltd/erisdb/rpc"
 	"github.com/gin-gonic/gin"
 	"encoding/json"
+	"runtime"
+	"os"
 )
+
+func init(){
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	log15.Root().SetHandler(log15.LvlFilterHandler(
+		log15.LvlError,
+		log15.StreamHandler(os.Stdout, log15.TerminalFormat()),
+	))
+	gin.SetMode(gin.ReleaseMode)
+}
 
 type ScumbagServer struct {
 	running bool
@@ -28,7 +39,7 @@ func (this *ScumbagServer) Running() bool {
 }
 
 func (this *ScumbagServer) ShutDown() {
-	fmt.Println("Scumbag...")
+	// fmt.Println("Scumbag...")
 }
 
 type ScumSocketService struct {}

@@ -83,6 +83,7 @@ func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 	if !this.config.CheckOrigin {
 		this.upgrader.CheckOrigin = nil
 	} else {
+		// TODO 
 		this.upgrader.CheckOrigin = func(r *http.Request) bool {
 			// Get the origin as an array.
 			origin := r.Header["Origin"]
