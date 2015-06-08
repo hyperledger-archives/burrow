@@ -5,12 +5,13 @@ import (
 	"github.com/eris-ltd/erisdb/server"
 	"os"
 	"github.com/gin-gonic/gin"
+	"path"
 )
 
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 
-	baseDir := os.Getenv("HOME") + "/.edbservers"
+	baseDir := path.Join(os.TempDir(), "/.edbservers")
 	ss := ess.NewServerServer(baseDir)
 	proc := server.NewServeProcess(nil, ss)
 	err := proc.Start()
