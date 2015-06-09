@@ -69,7 +69,7 @@ type (
 	}
 
 	ChainId struct {
-		ChainId string `json:"chainId"`
+		ChainId string `json:"chain_id"`
 	}
 
 	// GetBlocks
