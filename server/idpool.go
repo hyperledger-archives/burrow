@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"container/list"
 )
 
@@ -25,11 +26,14 @@ func (idp *IdPool) init(totNum uint) {
 }
 
 // Get an id from the pool.
-func (idp *IdPool) GetId() uint {
+func (idp *IdPool) GetId() (uint, error) {
+	if idp.ids.Len() == 0 {
+		return 0, fmt.Errorf("Out of IDs")
+	}
 	val := idp.ids.Front()
 	idp.ids.Remove(val)
 	num, _ := val.Value.(uint)
-	return num
+	return num, nil
 }
 
 // Release an id back into the pool.

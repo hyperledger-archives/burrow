@@ -2,21 +2,25 @@ package erisdb
 
 import (
 	"fmt"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	"sync"
 	"time"
 )
 
-const (
-	REAPER_TIMEOUT   = 5 * time.Second
-	REAPER_THRESHOLD = 10 * time.Second
+var (
+	reaperTimeout   = 5 * time.Second
+	reaperThreshold = 10 * time.Second
 )
+
+type EventEmitter interface {
+	Subscribe(subId, eventId string, callback func(interface{})) (bool, error)
+	Unsubscribe(subId string) (bool, error)
+}
 
 type EventCache struct {
 	mtx    *sync.Mutex
 	events []interface{}
 	ts     time.Time
-	subId string
+	subId  string
 }
 
 func newEventCache() *EventCache {
@@ -36,7 +40,7 @@ func (this *EventCache) poll() []interface{} {
 		evts = this.events
 		this.events = []interface{}{}
 	} else {
-		evts =  []interface{}{}
+		evts = []interface{}{}
 	}
 	this.ts = time.Now()
 	return evts
@@ -44,18 +48,18 @@ func (this *EventCache) poll() []interface{} {
 
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type EventSubscriptions struct {
-	mtx  *sync.Mutex
-	pipe ep.Pipe
-	subs map[string]*EventCache
-	reap bool
+	mtx          *sync.Mutex
+	eventEmitter EventEmitter
+	subs         map[string]*EventCache
+	reap         bool
 }
 
-func NewEventSubscriptions(pipe ep.Pipe) *EventSubscriptions {
+func NewEventSubscriptions(eventEmitter EventEmitter) *EventSubscriptions {
 	es := &EventSubscriptions{
-		mtx:  &sync.Mutex{},
-		pipe: pipe,
-		subs: make(map[string]*EventCache),
-		reap: true,
+		mtx:          &sync.Mutex{},
+		eventEmitter: eventEmitter,
+		subs:         make(map[string]*EventCache),
+		reap:         true,
 	}
 	go reap(es)
 	return es
@@ -65,15 +69,14 @@ func reap(es *EventSubscriptions) {
 	if !es.reap {
 		return
 	}
-	time.Sleep(REAPER_TIMEOUT)
+	time.Sleep(reaperTimeout)
 	es.mtx.Lock()
 	defer es.mtx.Unlock()
 	for id, sub := range es.subs {
-		if time.Since(sub.ts) > REAPER_THRESHOLD {
-			fmt.Println("[SUBSCRIPTION REAPER] Reaping sub: " + sub.subId)
+		if time.Since(sub.ts) > reaperThreshold {
 			// Seems like Go is ok with this..
 			delete(es.subs, id)
-			es.pipe.Events().Unsubscribe(id)
+			es.eventEmitter.Unsubscribe(id)
 		}
 	}
 	go reap(es)
@@ -90,12 +93,11 @@ func (this *EventSubscriptions) add(eventId string) (string, error) {
 		return "", errSID
 	}
 	cache := newEventCache()
-	_, errC := this.pipe.Events().Subscribe(subId, eventId,
+	_, errC := this.eventEmitter.Subscribe(subId, eventId,
 		func(evt interface{}) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)
-			cache.ts = time.Now()
 		})
 	cache.subId = subId
 	this.subs[subId] = cache

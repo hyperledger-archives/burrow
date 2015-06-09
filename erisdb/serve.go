@@ -59,7 +59,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	// Load the supporting objects.
 	pipe := ep.NewPipe(nd)
 	codec := &TCodec{}
-	evtSubs := NewEventSubscriptions(pipe)
+	evtSubs := NewEventSubscriptions(pipe.Events())
 	// The services.
 	tmwss := NewErisDbWsService(codec, pipe)
 	tmjs := NewErisDbJsonService(codec, pipe, evtSubs)

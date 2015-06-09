@@ -403,7 +403,7 @@ func (this *SessionManager) createSession(wsConn *websocket.Conn) (*WSSession, e
 	}
 
 	// Create and start
-	newId := this.idPool.GetId()
+	newId, _ := this.idPool.GetId()
 	conn := &WSSession{
 		sessionManager: this,
 		id:             newId,

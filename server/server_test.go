@@ -14,7 +14,7 @@ func TestIdGet(t *testing.T) {
 	arr := make([]uint, 100)
 	for i := 0; i < 100; i++ {
 		idparr[i] = uint(i + 1)
-		arr[i] = idPool.GetId()
+		arr[i], _ = idPool.GetId()
 	}
 	assert.Equal(t, idparr, arr, "Array of gotten id's is not [1, 2, ..., 101] as expected")
 }
@@ -25,7 +25,8 @@ func TestIdPut(t *testing.T) {
 		idPool.GetId()
 	}
 	idPool.ReleaseId(5)
-	assert.Equal(t, idPool.GetId(), uint(5), "Id gotten is not 5.")
+	id, _ := idPool.GetId()
+	assert.Equal(t, id, uint(5), "Id gotten is not 5.")
 }
 
 func TestIdFull(t *testing.T) {
@@ -33,13 +34,6 @@ func TestIdFull(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		idPool.GetId()
 	}
-	assert.Panics(t, func(){idPool.GetId()})
-}
-
-func Test(t *testing.T) {
-	idPool := NewIdPool(10)
-	for i := 0; i < 10; i++ {
-		idPool.GetId()
-	}
-	assert.Panics(t, func(){idPool.GetId()})
+	_, err := idPool.GetId()
+	assert.Error(t, err)
 }
