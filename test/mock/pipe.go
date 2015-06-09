@@ -12,7 +12,7 @@ type MockPipe struct {
 	accounts   ep.Accounts
 	blockchain ep.Blockchain
 	consensus  ep.Consensus
-	events     ep.Events
+	events     ep.EventEmitter
 	net        ep.Net
 	txs        ep.Txs
 }
@@ -53,7 +53,7 @@ func (this *MockPipe) Consensus() ep.Consensus {
 	return this.consensus
 }
 
-func (this *MockPipe) Events() ep.Events {
+func (this *MockPipe) Events() ep.EventEmitter {
 	return this.events
 }
 

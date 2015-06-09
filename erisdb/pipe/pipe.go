@@ -14,7 +14,7 @@ type (
 		Accounts() Accounts
 		Blockchain() Blockchain
 		Consensus() Consensus
-		Events() Events
+		Events() EventEmitter
 		Net() Net
 		Txs() Txs
 	}
@@ -43,7 +43,7 @@ type (
 		Validators() (*ValidatorList, error)
 	}
 
-	Events interface {
+	EventEmitter interface {
 		Subscribe(subId, event string, callback func(interface{})) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
@@ -73,7 +73,7 @@ type PipeImpl struct {
 	accounts   Accounts
 	blockchain Blockchain
 	consensus  Consensus
-	events     Events
+	events     EventEmitter
 	net        Net
 	txs        Txs
 }
@@ -109,7 +109,7 @@ func (this *PipeImpl) Consensus() Consensus {
 	return this.consensus
 }
 
-func (this *PipeImpl) Events() Events {
+func (this *PipeImpl) Events() EventEmitter {
 	return this.events
 }
 

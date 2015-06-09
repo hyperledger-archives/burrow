@@ -4,17 +4,13 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 )
 
 var (
 	reaperTimeout   = 5 * time.Second
 	reaperThreshold = 10 * time.Second
 )
-
-type EventEmitter interface {
-	Subscribe(subId, eventId string, callback func(interface{})) (bool, error)
-	Unsubscribe(subId string) (bool, error)
-}
 
 type EventCache struct {
 	mtx    *sync.Mutex
@@ -49,12 +45,12 @@ func (this *EventCache) poll() []interface{} {
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type EventSubscriptions struct {
 	mtx          *sync.Mutex
-	eventEmitter EventEmitter
+	eventEmitter ep.EventEmitter
 	subs         map[string]*EventCache
 	reap         bool
 }
 
-func NewEventSubscriptions(eventEmitter EventEmitter) *EventSubscriptions {
+func NewEventSubscriptions(eventEmitter ep.EventEmitter) *EventSubscriptions {
 	es := &EventSubscriptions{
 		mtx:          &sync.Mutex{},
 		eventEmitter: eventEmitter,
