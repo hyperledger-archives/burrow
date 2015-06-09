@@ -35,7 +35,7 @@ moniker = "anothertester"
 seeds = ""
 fast_sync = false
 db_backend = "leveldb"
-log_level = "debug"
+log_level = "warn"
 node_laddr = ""
 `
 
@@ -200,7 +200,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	config := server.DefaultServerConfig()
 	// Port is PORT_BASE + a value between 1 and the max number of servers.
 	port := uint16(PORT_BASE + this.idPool.GetId())
-	config.Port = port
+	config.Bind.Port = port
 
 	folderName := fmt.Sprintf("testnode%d", port)
 	workDir, errCWD := this.createWorkDir(data, config, folderName)
@@ -227,8 +227,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	
 	for scanner.Scan() {
 		text := scanner.Text()
-		fmt.Println(text)
-		if strings.Index(text, "DONTMINDME55891") == -1 {
+		if strings.Index(text, "DONTMINDME55891") != -1 {
 			break
 		}
 	}
@@ -245,7 +244,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	st := newServeTask(port, workDir, maxDur, proc)
 	this.running = append(this.running, st)
 
-	URL := "http://" + config.Address + ":" + fmt.Sprintf("%d", port) + config.JsonRpcPath
+	URL := "http://" + config.Bind.Address + ":" + fmt.Sprintf("%d", port) + config.HTTP.JsonRpcPath
 
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be

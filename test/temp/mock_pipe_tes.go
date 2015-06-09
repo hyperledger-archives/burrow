@@ -2,11 +2,10 @@ package test
 
 import (
 	//"fmt"
-	"github.com/androlo/blockchain_rpc/server"
-	edb "github.com/androlo/blockchain_rpc/erisdb"
-	ep "github.com/androlo/blockchain_rpc/erisdb/pipe"
-	tc "github.com/androlo/blockchain_rpc/test/client"
-	"github.com/androlo/blockchain_rpc/test/mock"
+	"github.com/eris-ltd/erisdb/server"
+	edb "github.com/eris-ltd/erisdb/erisdb"
+	tc "github.com/eris-ltd/erisdb/test/client"
+	"github.com/eris-ltd/erisdb/test/mock"
 	"github.com/stretchr/testify/suite"
 	"testing"
 	"time"
@@ -32,7 +31,8 @@ func (this *MockPipeSuite) SetupSuite() {
 
 	edbwss := edb.NewErisDbWsService(&edb.TCodec{}, mockPipe)
 	wsServer := server.NewWebSocketServer(MAX_CONNS, edbwss)
-	proc, errServe := server.Serve(nil, wsServer)
+	proc := server.NewServeProcess(nil, wsServer)
+	errServe := proc.Start()
 	if errServe != nil {
 		panic(errServe.Error())
 	}
@@ -54,7 +54,7 @@ func (this *MockPipeSuite) TearDownSuite() {
 }
 
 func (this *MockPipeSuite) TestClientAccountList() {
-	result, err := this.client.AccountList(&ep.AccountsParam{})
+	result, err := this.client.AccountList(&edb.AccountsParam{})
 	this.NoError(err)
 	this.Equal(result, this.mockData.Accounts, "Accounts not the same")
 }

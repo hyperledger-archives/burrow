@@ -23,6 +23,7 @@ func main() {
 	if errSe != nil {
 		panic(errSe.Error())
 	}
+	// TODO For now.
 	fmt.Println("DONTMINDME55891")
 	<- proc.StopEventChannel()
 }

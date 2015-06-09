@@ -45,7 +45,7 @@ type (
 	// Account storage
 	Storage struct {
 		StorageRoot  []byte         `json:"storage_root"`
-		StorageItems []*StorageItem `json:"storage_items"`
+		StorageItems []StorageItem `json:"storage_items"`
 	}
 
 	// *********************************** Blockchain ***********************************

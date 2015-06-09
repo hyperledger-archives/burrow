@@ -66,7 +66,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	// The servers.
 	jsonServer := NewJsonRpcServer(tmjs)
 	restServer := NewRestServer(codec, pipe, evtSubs)
-	wsServer := server.NewWebSocketServer(sConf.MaxWebSocketSessions, tmwss)
+	wsServer := server.NewWebSocketServer(sConf.WebSocket.MaxWebSocketSessions, tmwss)
 	// Create a server process.
 	proc := server.NewServeProcess(sConf, jsonServer, restServer, wsServer)
 	

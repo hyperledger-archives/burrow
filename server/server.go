@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	// cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"
@@ -49,12 +50,14 @@ func (this *ServeProcess) Start() error {
 
 	router := gin.New()
 
-	router.Use(gin.Recovery(), logHandler)
-	
 	config := this.config
 
-	address := config.Address
-	port := config.Port
+	// ch := NewCORSMiddleware(config.CORS)
+	// router.Use(gin.Recovery(), logHandler, ch)
+	router.Use(gin.Recovery(), logHandler)
+
+	address := config.Bind.Address
+	port := config.Bind.Port
 
 	if port == 0 {
 		return fmt.Errorf("0 is not a valid port.")
@@ -80,7 +83,7 @@ func (this *ServeProcess) Start() error {
 	}
 
 	// For secure connections.
-	if config.TLS {
+	if config.TLS.TLS {
 		addr := srv.Addr
 		if addr == "" {
 			addr = ":https"
@@ -93,7 +96,7 @@ func (this *ServeProcess) Start() error {
 
 		var tErr error
 		tConfig.Certificates = make([]tls.Certificate, 1)
-		tConfig.Certificates[0], tErr = tls.LoadX509KeyPair(config.CertPath, config.KeyPath)
+		tConfig.Certificates[0], tErr = tls.LoadX509KeyPair(config.TLS.CertPath, config.TLS.KeyPath)
 		if tErr != nil {
 			return tErr
 		}
@@ -163,8 +166,8 @@ func (this *ServeProcess) StartEventChannel() <-chan struct{} {
 // Get a stop-event channel from the server. The event happens
 // after the Stop() function has been called, and after the
 // timeout has passed. When the timeout has passed it will wait
-// for confirmation from the http.Server, which normally takes 
-// a very short time (milliseconds). 
+// for confirmation from the http.Server, which normally takes
+// a very short time (milliseconds).
 func (this *ServeProcess) StopEventChannel() <-chan struct{} {
 	lChan := make(chan struct{}, 1)
 	this.stopListenChans = append(this.stopListenChans, lChan)
@@ -187,7 +190,7 @@ func NewServeProcess(config *ServerConfig, servers ...Server) *ServeProcess {
 	return sp
 }
 
-// Used to enable log15 logging instead of the default Gin logging. 
+// Used to enable log15 logging instead of the default Gin logging.
 // This is done mainly because we at Eris uses log15 in other components.
 // TODO make this optional perhaps.
 func logHandler(c *gin.Context) {
@@ -205,3 +208,16 @@ func logHandler(c *gin.Context) {
 	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
 
 }
+/*
+func NewCORSMiddleware(options CORS) gin.HandlerFunc {
+	o := cors.Options{
+		AllowCredentials: options.AllowCredentials,
+		AllowHeaders:     options.AllowHeaders,
+		AllowMethods:     options.AllowMethods,
+		AllowOrigins:     options.AllowOrigins,
+		ExposeHeaders:    options.ExposeHeaders,
+		MaxAge:           time.Duration(options.MaxAge),
+	}
+	return cors.Middleware(o)
+}
+*/

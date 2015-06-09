@@ -107,7 +107,7 @@ func (this *accounts) Storage(address []byte) (*Storage, error) {
 
 	state := this.consensusState.GetState()
 	account := state.GetAccount(address)
-	storageItems := make([]*StorageItem, 0)
+	storageItems := make([]StorageItem, 0)
 	if account == nil {
 		return &Storage{nil, storageItems}, nil
 	}
@@ -115,7 +115,7 @@ func (this *accounts) Storage(address []byte) (*Storage, error) {
 	storageTree := state.LoadStorage(storageRoot)
 
 	storageTree.Iterate(func(key interface{}, value interface{}) bool {
-		storageItems = append(storageItems, &StorageItem{
+		storageItems = append(storageItems, StorageItem{
 			key.([]byte), value.([]byte)})
 		return false
 	})

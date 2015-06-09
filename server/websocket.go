@@ -64,50 +64,15 @@ func NewWebSocketServer(maxSessions uint, service WebSocketService) *WebSocketSe
 func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 
 	this.config = config
-	if config.CheckOrigin {
-		for _, origin := range config.AllowedOrigins {
-			if origin == "*" {
-				this.allOrigins = true
-				break
-			}
-		}
-	}
 
 	this.upgrader = websocket.Upgrader{
 		ReadBufferSize: 1024,
 		// TODO Will this be enough for massive "get blockchain" requests?
 		WriteBufferSize: 1024,
 	}
-	// If no origin check is to be made, we set the upgrader function to nil as per
-	// the instructions.
-	if !this.config.CheckOrigin {
-		this.upgrader.CheckOrigin = nil
-	} else {
-		// TODO 
-		this.upgrader.CheckOrigin = func(r *http.Request) bool {
-			// Get the origin as an array.
-			origin := r.Header["Origin"]
-			// If no origin is provided - disallow.
-			if len(origin) == 0 {
-				return false
-			}
-			o := origin[0]
-			// If all origins is allowed.
-			if this.allOrigins {
-				return true
-			}
-			// Iterate over all allowed origins and look for a match.
-			for _, origin := range this.config.AllowedOrigins {
-				if o == origin {
-					return true
-				}
-			}
-			// If the matching failed - disallow.
-			return false
-		}
-	}
+	this.upgrader.CheckOrigin = nil
 
-	router.GET(config.WebSocketPath, this.handleFunc)
+	router.GET(config.WebSocket.WebSocketPath, this.handleFunc)
 	this.running = true
 }
 

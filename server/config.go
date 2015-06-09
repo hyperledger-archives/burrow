@@ -2,63 +2,105 @@ package server
 
 import (
 	"github.com/eris-ltd/erisdb/files"
-	"github.com/BurntSushi/toml"
-	"bytes"
-	"os"
-	"path"
+	"github.com/naoina/toml"
 )
 
-// TODO fix his before monday (june 8th).
-
 // Standard configuration file for the server.
-type ServerConfig struct {
-	Address              string   `json:"address"`
-	Port                 uint16   `json:"port"`
-	CheckOrigin          bool     `json:"check_origin"`
-	AllowedOrigins       []string `json:"allow_origins"`
-	TLS                  bool     `json:"tls"`
-	CertPath             string   `json:"cert_path"`
-	KeyPath              string   `json:"key_path"`
-	WebSocketPath        string   `json:"websocket_path"`
-	JsonRpcPath          string   `json:"json_rpc_path"`
-	MaxWebSocketSessions uint     `json:"max_websocket_sessions"`
-}
+type (
+	ServerConfig struct {
+		Bind      Bind      `toml:"bind"`
+		TLS       TLS       `toml:"TLS"`
+		//CORS      *CORS      `toml:"CORS"`
+		HTTP      HTTP      `toml:"HTTP"`
+		WebSocket WebSocket `toml:"web_socket"`
+		Logging   Logging   `toml:"logging"`
+	}
+
+	Bind struct {
+		Address string `toml:"address"`
+		Port    uint16 `toml:"port"`
+	}
+
+	TLS struct {
+		TLS      bool   `toml:"tls"`
+		CertPath string `toml:"cert_path"`
+		KeyPath  string `toml:"key_path"`
+	}
+
+	// Options stores configurations
+	CORS struct {
+		AllowOrigins     []string `toml:"allow_origins"`
+		AllowCredentials bool     `toml:"allow_credentials"`
+		AllowMethods     []string `toml:"allow_methods"`
+		AllowHeaders     []string `toml:"allow_headers"`
+		ExposeHeaders    []string `toml:"expose_headers"`
+		MaxAge           uint64   `toml:"max_age"`
+	}
+
+	HTTP struct {
+		JsonRpcPath string `toml:"json_rpc_path"`
+	}
+
+	WebSocket struct {
+		WebSocketPath        string `toml:"websocket_path"`
+		MaxWebSocketSessions uint   `toml:"max_websocket_sessions"`
+	}
+
+	Logging struct {
+		ConsoleLogLevel string `toml:"console_log_level"`
+		FileLogLevel    string `toml:"file_log_level"`
+		LogFile         string `toml:"log_level"`
+	}
+)
 
 func DefaultServerConfig() *ServerConfig {
-	pwd, _ := os.Getwd()
-	cp := path.Join(pwd, "cert.pem")
-	kp := path.Join(pwd, "key.pem")
+	cp := ""
+	kp := ""
 	return &ServerConfig{
-		Address:              "0.0.0.0",
-		Port:                 1337,
-		CheckOrigin:          false,
-		AllowedOrigins:       []string{"*"},
-		TLS:                  false,
-		CertPath:             cp,
-		KeyPath:              kp,
-		WebSocketPath:        "/socketrpc",
-		JsonRpcPath:          "/rpc",
-		MaxWebSocketSessions: 50,
+		Bind: Bind{
+			Address: "0.0.0.0",
+			Port:    1337,
+		},
+		TLS: TLS{TLS: false,
+			CertPath: cp,
+			KeyPath:  kp,
+		},
+		/*
+			CORS: CORS{
+				},*/
+		HTTP: HTTP{JsonRpcPath: "/rpc"},
+		WebSocket: WebSocket{
+			WebSocketPath:        "/socketrpc",
+			MaxWebSocketSessions: 50,
+		},
+		Logging: Logging{
+			ConsoleLogLevel: "error",
+			FileLogLevel:    "error",
+			LogFile:         "",
+		},
 	}
 }
 
 // Read a TOML server configuration file.
 func ReadServerConfig(filePath string) (*ServerConfig, error) {
+	bts, err := files.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
 	cfg := &ServerConfig{}
-	_, errD := toml.DecodeFile(filePath, cfg)
-	if errD != nil {
-		return nil, errD
+	err2 := toml.Unmarshal(bts, cfg)
+	if err2 != nil {
+		return nil, err2
 	}
 	return cfg, nil
 }
 
-// We want to do this with the files package methods, so writing to a byte buffer. 
+// Write a server configuration file.
+// TODO use the backup file write.
 func WriteServerConfig(filePath string, cfg *ServerConfig) error {
-	var buf bytes.Buffer
-	enc := toml.NewEncoder(&buf)
-	err := enc.Encode(cfg)
+	bts, err := toml.Marshal(*cfg)
 	if err != nil {
 		return err
 	}
-	return files.WriteFileRW(filePath, buf.Bytes())
+	return files.WriteFileRW(filePath, bts)
 }
