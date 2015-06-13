@@ -5,14 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/tendermint/tendermint/account"
-	ess "github.com/eris-ltd/erisdb/erisdb/erisdbss"
 	edb "github.com/eris-ltd/erisdb/erisdb"
+	ess "github.com/eris-ltd/erisdb/erisdb/erisdbss"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	"github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/tendermint/account"
 	"net/http"
 	"os"
 	"path"
@@ -21,7 +21,7 @@ import (
 )
 
 const SS_URL = "http://localhost:1337/server"
-const SERVER_DURATION = 5;
+const SERVER_DURATION = 5
 
 //
 type WebApiSuite struct {
@@ -40,10 +40,10 @@ func (this *WebApiSuite) SetupSuite() {
 	proc := server.NewServeProcess(nil, ss)
 	_ = proc.Start()
 	this.serveProcess = proc
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 	testData := LoadTestData()
 	this.codec = edb.NewTCodec()
-	
+
 	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
 	rBts, _ := this.codec.EncodeBytes(requestData)
 	resp, _ := http.Post(SS_URL, "application/json", bytes.NewBuffer(rBts))
@@ -52,7 +52,7 @@ func (this *WebApiSuite) SetupSuite() {
 	fmt.Println("Received URL: " + rd.URL)
 	this.sUrl = rd.URL
 	this.testData = testData
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 func (this *WebApiSuite) TearDownSuite() {
@@ -248,7 +248,7 @@ func (this *WebApiSuite) get(endpoint string) *http.Response {
 func (this *WebApiSuite) postJson(endpoint string, v interface{}) *http.Response {
 	bts, errE := this.codec.EncodeBytes(v)
 	this.NoError(errE)
-	resp, errP := http.Post(this.sUrl + endpoint, "application/json", bytes.NewBuffer(bts))
+	resp, errP := http.Post(this.sUrl+endpoint, "application/json", bytes.NewBuffer(bts))
 	this.NoError(errP)
 	this.Equal(200, resp.StatusCode)
 	return resp

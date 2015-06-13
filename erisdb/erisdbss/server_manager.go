@@ -3,10 +3,10 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
+	"github.com/eris-ltd/erisdb/files"
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/tendermint/tendermint/binary"
 	. "github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/erisdb/files"
 	"os"
 	"os/exec"
 	"path"
@@ -58,7 +58,7 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 		return
 	}
 	fmt.Println("process started, waiting for token")
-	for scanner.Scan() {		
+	for scanner.Scan() {
 		text := scanner.Text()
 		log.Debug(text)
 		if strings.Index(text, this.token) != -1 {

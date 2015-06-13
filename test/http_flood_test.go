@@ -26,9 +26,9 @@ func TestHttpFlooding(t *testing.T) {
 	}
 	stopC := serveProcess.StopEventChannel()
 	errStop := serveProcess.Stop(0)
-	<- stopC
+	<-stopC
 	assert.NoError(t, errStop, "Scumbag-ed!")
-	
+
 }
 
 func runHttp() error {

@@ -191,7 +191,7 @@ func (this *RestServer) handleBlocks(c *gin.Context) {
 	if exists {
 		filters = fs.([]*ep.FilterData)
 	}
-	
+
 	blocks, err := this.pipe.Blockchain().Blocks(filters)
 	if err != nil {
 		c.AbortWithError(500, err)
