@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
 // Unit tests for server components goes here. Full-on client-server tests
 // can be found in the test folder. TODO change that?
 

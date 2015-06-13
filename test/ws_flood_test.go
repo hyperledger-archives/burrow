@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/eris-ltd/erisdb/server"
-	"github.com/eris-ltd/erisdb/test/client"
+	"github.com/eris-ltd/erisdb/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -37,15 +37,16 @@ func (this *SessionCounter) Report() (int, int, int) {
 }
 
 // Coarse flood testing just to ensure that websocket server
-// does not crash.
+// does not crash, and that it cleans up after itself.
+// TODO clean this up.
 func TestWsFlooding(t *testing.T) {
 
 	// New websocket server.
 	wsServer := NewScumsocketServer(CONNS)
-	
+
 	// Keep track of sessions.
 	sc := &SessionCounter{}
-	
+
 	// Register the observer.
 	oChan := wsServer.SessionManager().SessionOpenEventChannel()
 	cChan := wsServer.SessionManager().SessionCloseEventChannel()
@@ -56,13 +57,13 @@ func TestWsFlooding(t *testing.T) {
 	errServe := serveProcess.Start()
 	assert.NoError(t, errServe, "ScumSocketed!")
 	t.Logf("Flooding...")
-	// Run
+	// Run. Blocks.
 	errRun := runWs()
 
 	errStop := serveProcess.Stop(time.Millisecond * 100)
 	assert.NoError(t, errRun, "ScumSocketed!")
 	assert.NoError(t, errStop, "ScumSocketed!")
-	o, c, a := sc.Report() 
+	o, c, a := sc.Report()
 	assert.Equal(t, o, CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
 	assert.Equal(t, c, CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
 	assert.Equal(t, a, 0, "Server registered '%d' conns still active after closing all.", a)

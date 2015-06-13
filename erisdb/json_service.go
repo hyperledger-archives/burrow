@@ -2,11 +2,11 @@ package erisdb
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"fmt"
-	rpc "github.com/eris-ltd/erisdb/rpc"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	rpc "github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
+	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
@@ -109,7 +109,7 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 	err := this.codec.Encode(response, w)
 	// If there's an error here all bets are off.
 	if err != nil {
-		http.Error(w, "Failed to marshal standard error response: " + err.Error(), 500)
+		http.Error(w, "Failed to marshal standard error response: "+err.Error(), 500)
 		return
 	}
 	w.WriteHeader(200)
@@ -171,7 +171,7 @@ func (this *ErisDbJsonService) EventPoll(request *rpc.RPCRequest, requester inte
 	subId := param.SubId
 
 	result, errC := this.eventSubs.poll(subId)
-	
+
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

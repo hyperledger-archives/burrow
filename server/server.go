@@ -208,6 +208,7 @@ func logHandler(c *gin.Context) {
 	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
 
 }
+
 /*
 func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	o := cors.Options{

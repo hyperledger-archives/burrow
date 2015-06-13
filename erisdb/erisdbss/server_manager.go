@@ -16,24 +16,24 @@ import (
 
 const (
 	REAPER_TIMEOUT   = 5 * time.Second
-	REAPER_THRESHOLD = 10 * time.Second 
+	REAPER_THRESHOLD = 10 * time.Second
 	// Ports to new server processes are PORT_BASE + i, where i is an integer from the pool.
-	PORT_BASE        = 29000
+	PORT_BASE = 29000
 	// How long are we willing to wait for a process to become ready.
-	PROC_START_TIMEOUT = 3*time.Second
+	PROC_START_TIMEOUT = 3 * time.Second
 	// Name of the process executable.
-	EXECUTABLE_NAME  = "erisdb"
+	EXECUTABLE_NAME = "erisdb"
 )
 
-// Executable processes. These are used to wrap processes that are . 
+// Executable processes. These are used to wrap processes that are .
 type ExecProcess interface {
-	Start(chan <- error)
+	Start(chan<- error)
 	Kill() error
 }
 
 // Wrapper for exec.Cmd. Will wait for a token from stdout using line scanning.
 type CmdProcess struct {
-	cmd *exec.Cmd
+	cmd   *exec.Cmd
 	token string
 }
 
@@ -41,33 +41,36 @@ func newCmdProcess(cmd *exec.Cmd, token string) *CmdProcess {
 	return &CmdProcess{cmd, token}
 }
 
-func (this *CmdProcess) Start(doneChan chan <- error) {
-	
+func (this *CmdProcess) Start(doneChan chan<- error) {
+	fmt.Println("Starting erisdb process")
 	reader, errSP := this.cmd.StdoutPipe()
-	
+
 	if errSP != nil {
 		doneChan <- errSP
 	}
-	
+
 	scanner := bufio.NewScanner(reader)
 	scanner.Split(bufio.ScanLines)
-	
+
 	if errStart := this.cmd.Start(); errStart != nil {
 		doneChan <- errStart
 		return
 	}
-	
-	for scanner.Scan() {
+	fmt.Println("process started, waiting for token")
+	for scanner.Scan() {		
 		text := scanner.Text()
+		fmt.Println(text)
 		if strings.Index(text, this.token) != -1 {
+			fmt.Println("Token found: " + text)
 			break
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
-		 doneChan <- fmt.Errorf("Error reading from process stdout:", err)
-		 return
+		doneChan <- fmt.Errorf("Error reading from process stdout:", err)
+		return
 	}
+	fmt.Println("erisdb ready")
 	doneChan <- nil
 }
 
@@ -160,25 +163,24 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	if errCWD != nil {
 		return nil, errCWD
 	}
-	
+
 	// TODO ...
-	
+
 	// Create a new erisdb process.
 	cmd := exec.Command(EXECUTABLE_NAME, workDir)
 	proc := &CmdProcess{cmd, "DONTMINDME55891"}
-	
-	
+
 	errSt := waitForProcStarted(proc)
-	
+
 	if errSt != nil {
 		return nil, errSt
 	}
-	
+
 	maxDur := time.Duration(data.MaxDuration) * time.Second
 	if maxDur == 0 {
 		maxDur = REAPER_THRESHOLD
 	}
-	
+
 	st := newServeTask(port, workDir, maxDur, proc)
 	this.running = append(this.running, st)
 
@@ -257,7 +259,7 @@ func waitForProcStarted(proc ExecProcess) error {
 	timeoutChan := make(chan struct{})
 	doneChan := make(chan error)
 	done := new(bool)
-	go func(b *bool){
+	go func(b *bool) {
 		time.Sleep(PROC_START_TIMEOUT)
 		if !*b {
 			timeoutChan <- struct{}{}
@@ -266,14 +268,14 @@ func waitForProcStarted(proc ExecProcess) error {
 	go proc.Start(doneChan)
 	var errSt error
 	select {
-		case errD := <- doneChan:
-			errSt = errD
-			*done = true
-			break
-		case <- timeoutChan:
-			_ = proc.Kill()
-			errSt = fmt.Errorf("Process start timed out") 
-			break
+	case errD := <-doneChan:
+		errSt = errD
+		*done = true
+		break
+	case <-timeoutChan:
+		_ = proc.Kill()
+		errSt = fmt.Errorf("Process start timed out")
+		break
 	}
 	return errSt
 }

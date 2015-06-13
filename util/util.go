@@ -1,4 +1,4 @@
-package erisdb
+package util
 
 import (
 	"regexp"
@@ -10,21 +10,26 @@ var pubRe = regexp.MustCompile(`^[0-9a-fA-F]{64}$`)
 var privRe = regexp.MustCompile(`^[0-9a-fA-F]{128}$`)
 
 // Is the candidate a proper hex string.
-func isHex(str string) bool {
+func IsHex(str string) bool {
 	return hexRe.MatchString(str)
 }
 
+// Is the candidate a hash (32 bytes, same as public keys)
+func IsHash(str string) bool {
+	return pubRe.MatchString(str)
+}
+
 // Is the candidate a proper public address string (20 bytes, hex).
-func isAddress(str string) bool {
+func IsAddress(str string) bool {
 	return addrRe.MatchString(str)
 }
 
 // Is the candidate a public key string (32 bytes, hex).
-func isPub(str string) bool {
+func IsPub(str string) bool {
 	return pubRe.MatchString(str)
 }
 
 // Is the candidate a private key string (64 bytes, hex).
-func isPriv(str string) bool {
+func IsPriv(str string) bool {
 	return privRe.MatchString(str)
 }

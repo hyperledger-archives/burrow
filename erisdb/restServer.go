@@ -6,6 +6,7 @@ import (
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	rpc "github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
+	"github.com/eris-ltd/erisdb/util"
 	"github.com/gin-gonic/gin"
 	"strconv"
 	"strings"
@@ -60,7 +61,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/txpool", this.handleUnconfirmedTxs)
 	// Code execution
 	router.POST("/calls/:address", this.handleCall)
-	router.POST("/calls/code", this.handleCallCode)
+	router.POST("/calls/", this.handleCallCode)
 	// Unsafe
 	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
 	router.POST("/unsafe/txpool", this.handleTransact)
@@ -326,7 +327,7 @@ func (this *RestServer) handleBroadcastTx(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Txs().BroadcastTx(param.Tx)
+	receipt, err := this.pipe.Transactor().BroadcastTx(param.Tx)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -336,7 +337,7 @@ func (this *RestServer) handleBroadcastTx(c *gin.Context) {
 
 func (this *RestServer) handleUnconfirmedTxs(c *gin.Context) {
 
-	txs, err := this.pipe.Txs().UnconfirmedTxs()
+	txs, err := this.pipe.Transactor().UnconfirmedTxs()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -350,7 +351,7 @@ func (this *RestServer) handleCall(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	call, err := this.pipe.Txs().Call(param.Address, param.Data)
+	call, err := this.pipe.Transactor().Call(param.Address, param.Data)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -364,7 +365,7 @@ func (this *RestServer) handleCallCode(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	call, err := this.pipe.Txs().Call(param.Address, param.Data)
+	call, err := this.pipe.Transactor().Call(param.Address, param.Data)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -378,7 +379,7 @@ func (this *RestServer) handleTransact(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Txs().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	receipt, err := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -392,7 +393,7 @@ func (this *RestServer) handleSignTx(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	tx, err := this.pipe.Txs().SignTx(param.Tx, param.PrivAccounts)
+	tx, err := this.pipe.Transactor().SignTx(param.Tx, param.PrivAccounts)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -404,7 +405,7 @@ func (this *RestServer) handleSignTx(c *gin.Context) {
 
 func addressParam(c *gin.Context) {
 	addr := c.Param("address")
-	if !isAddress(addr) {
+	if !util.IsAddress(addr) {
 		c.AbortWithError(400, fmt.Errorf("Malformed address param: "+addr))
 	}
 	bts, _ := hex.DecodeString(addr)
@@ -433,7 +434,7 @@ func heightParam(c *gin.Context) {
 
 func subIdParam(c *gin.Context) {
 	subId := c.Param("id")
-	if len(subId) != 64 || !isHex(subId) {
+	if len(subId) != 64 || !util.IsHex(subId) {
 		c.AbortWithError(400, fmt.Errorf("Malformed event id"))
 	}
 	c.Set("id", subId)
@@ -445,8 +446,7 @@ func peerAddressParam(c *gin.Context) {
 	c.Set("address", subId)
 }
 
-
-func parseQuery(c *gin.Context){
+func parseQuery(c *gin.Context) {
 	q := c.Query("q")
 	if q == "" {
 		c.Set("filters", nil)
@@ -455,7 +455,7 @@ func parseQuery(c *gin.Context){
 		if err != nil {
 			c.AbortWithError(400, err)
 		}
-		c.Set("filters", data)	
+		c.Set("filters", data)
 	}
 }
 
@@ -473,7 +473,7 @@ func _parseQuery(queryString string) ([]*ep.FilterData, error) {
 		if kv[0] == "" {
 			return nil, fmt.Errorf("Malformed query. Field name missing: " + f)
 		}
-		
+
 		fd, fd2, errTfd := toFilterData(kv[0], kv[1])
 		if errTfd != nil {
 			return nil, errTfd
@@ -496,7 +496,7 @@ func toFilterData(field, stmt string) (*ep.FilterData, *ep.FilterData, error) {
 	if stmt[0] == '>' || stmt[0] == '<' || stmt[0] == '=' || stmt[0] == '!' {
 		// This means a normal operator. If one character then stop, otherwise
 		// peek at next and check if it's a "=".
-		
+
 		if len(stmt) == 1 {
 			return &ep.FilterData{field, stmt[0:1], ""}, nil, nil
 		} else if stmt[1] == '=' {

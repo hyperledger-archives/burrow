@@ -8,32 +8,13 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-const (
-	MaxUint8 = ^uint8(0) 
-	MinUint8 = 0 
-	MaxInt8 = int8(MaxUint8 >> 1) 
-	MinInt8 = -MaxInt8 - 1
-	MaxUint16 = ^uint16(0) 
-	MinUint16 = 0 
-	MaxInt16 = int16(MaxUint16 >> 1) 
-	MinInt16 = -MaxInt16 - 1
-	MaxUint = ^uint(0) 
-	MinUint = 0 
-	MaxInt = int(MaxUint >> 1) 
-	MinInt = -MaxInt - 1
-	MaxUint64 = ^uint64(0) 
-	MinUint64 = 0 
-	MaxInt64 = int64(MaxUint64 >> 1) 
-	MinInt64 = -MaxInt64 - 1
-)
-
 type (
 
 	// *********************************** Address ***********************************
 
 	// Accounts
 	AccountList struct {
-		Accounts    []*account.Account `json:"accounts"`
+		Accounts []*account.Account `json:"accounts"`
 	}
 
 	// A contract account storage item.
@@ -44,7 +25,7 @@ type (
 
 	// Account storage
 	Storage struct {
-		StorageRoot  []byte         `json:"storage_root"`
+		StorageRoot  []byte        `json:"storage_root"`
 		StorageItems []StorageItem `json:"storage_items"`
 	}
 
@@ -98,7 +79,7 @@ type (
 		BondedValidators    []*sm.Validator `json:"bonded_validators"`
 		UnbondingValidators []*sm.Validator `json:"unbonding_validators"`
 	}
-	
+
 	// *********************************** Events ***********************************
 
 	// EventSubscribe
@@ -164,7 +145,9 @@ type (
 		CreatesContract uint8  `json:"creates_contract"`
 		ContractAddr    []byte `json:"contract_addr"`
 	}
-	
+
+	TransactionResult struct {
+	}
 )
 
 func FromRoundState(rs *csus.RoundState) *ConsensusState {

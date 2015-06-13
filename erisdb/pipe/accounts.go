@@ -8,7 +8,6 @@ import (
 	cmn "github.com/tendermint/tendermint/common"
 	cs "github.com/tendermint/tendermint/consensus"
 	mempl "github.com/tendermint/tendermint/mempool"
-	"strconv"
 	"sync"
 )
 
@@ -21,19 +20,19 @@ type accounts struct {
 
 func newAccounts(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor) *accounts {
 	ff := NewFilterFactory()
-	
+
 	ff.RegisterFilterPool("code", &sync.Pool{
 		New: func() interface{} {
 			return &AccountCodeFilter{}
 		},
 	})
-	
+
 	ff.RegisterFilterPool("balance", &sync.Pool{
 		New: func() interface{} {
 			return &AccountBalanceFilter{}
 		},
 	})
-	
+
 	return &accounts{consensusState, mempoolReactor, ff}
 
 }
@@ -178,54 +177,21 @@ func (this *AccountCodeFilter) Match(v interface{}) bool {
 // Ops: All
 type AccountBalanceFilter struct {
 	op    string
-	value uint64
-	match func(uint64, uint64) bool
+	value int64
+	match func(int64, int64) bool
 }
 
 func (this *AccountBalanceFilter) Configure(fd *FilterData) error {
-	op := fd.Op
-	var val uint64
-	// Check for wildcards.
-	if fd.Value == "min" {
-		val = 0;
-	} else if fd.Value == "max" {
-		val = MaxUint64
-	} else {
-		tv, err := strconv.ParseUint(fd.Value, 10, 64)
-		if err != nil {
-			return fmt.Errorf("Wrong value type.")
-		}
-		val = tv
+	val, err := parseNumberValue(fd.Value)
+	if err != nil {
+		return err
 	}
-	
-	if op == "==" {
-		this.match = func(a, b uint64) bool {
-			return a == b
-		}
-	} else if op == "!=" {
-		this.match = func(a, b uint64) bool {
-			return a != b
-		}
-	} else if op == "<=" {
-		this.match = func(a, b uint64) bool {
-			return a <= b
-		}
-	} else if op == ">=" {
-		this.match = func(a, b uint64) bool {
-			return a >= b
-		}
-	} else if op == "<" {
-		this.match = func(a, b uint64) bool {
-			return a < b
-		}
-	} else if op == ">" {
-		this.match = func(a, b uint64) bool {
-			return a > b
-		}
-	} else {
-		return fmt.Errorf("Op: " + this.op + " is not supported for 'balance' filtering")
+	match, err2 := rangeFilter(fd.Op, "balance")
+	if err2 != nil {
+		return err2
 	}
-	this.op = op
+	this.match = match
+	this.op = fd.Op
 	this.value = val
 	return nil
 }
@@ -235,5 +201,5 @@ func (this *AccountBalanceFilter) Match(v interface{}) bool {
 	if !ok {
 		return false
 	}
-	return this.match(acc.Balance, this.value)
+	return this.match(int64(acc.Balance), this.value)
 }

@@ -6,6 +6,7 @@ import (
 	dbm "github.com/tendermint/tendermint/db"
 	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,8 +16,8 @@ const BLOCK_MAX = 50
 
 // The blockchain struct.
 type blockchain struct {
-	blockStore *bc.BlockStore
-	filterFactory         *FilterFactory
+	blockStore    *bc.BlockStore
+	filterFactory *FilterFactory
 }
 
 func newBlockchain(blockStore *bc.BlockStore) *blockchain {
@@ -86,7 +87,7 @@ func (this *blockchain) Blocks(fda []*FilterData) (*Blocks, error) {
 	if height == 0 {
 		return &Blocks{0, 0, []*types.BlockMeta{}}, nil
 	}
-	// Optimization. Break any height filters out. Messy but makes sure we don't 
+	// Optimization. Break any height filters out. Messy but makes sure we don't
 	// fetch more blocks then necessary. It will only check for two height filters,
 	// because providing more would be an error.
 	if fda == nil || len(fda) == 0 {
@@ -104,7 +105,7 @@ func (this *blockchain) Blocks(fda []*FilterData) (*Blocks, error) {
 	if skumtFel != nil {
 		return nil, fmt.Errorf("Fel i förfrågan. Helskumt...: " + skumtFel.Error())
 	}
-	for h := maxHeight; h >= minHeight && maxHeight - h > BLOCK_MAX; h-- {
+	for h := maxHeight; h >= minHeight && maxHeight-h > BLOCK_MAX; h-- {
 		blockMeta := this.blockStore.LoadBlockMeta(h)
 		if filter.Match(blockMeta) {
 			blockMetas = append(blockMetas, blockMeta)
@@ -144,9 +145,9 @@ func (this *BlockHeightFilter) Configure(fd *FilterData) error {
 	op := fd.Op
 	var val uint
 	if fd.Value == "min" {
-		val = 0;
+		val = 0
 	} else if fd.Value == "max" {
-		val = MaxUint
+		val = math.MaxUint32
 	} else {
 		tv, err := strconv.ParseUint(fd.Value, 10, 0)
 		if err != nil {
@@ -154,7 +155,7 @@ func (this *BlockHeightFilter) Configure(fd *FilterData) error {
 		}
 		val = uint(tv)
 	}
-	
+
 	if op == "==" {
 		this.match = func(a, b uint) bool {
 			return a == b
@@ -197,10 +198,10 @@ func (this *BlockHeightFilter) Match(v interface{}) bool {
 
 // TODO i should start using named return params...
 func getHeightMinMax(fda []*FilterData, height uint) (uint, uint, []*FilterData, error) {
-	
+
 	min := uint(0)
 	max := height
-	
+
 	for len(fda) > 0 {
 		fd := fda[0]
 		if strings.EqualFold(fd.Field, "height") {
@@ -217,39 +218,39 @@ func getHeightMinMax(fda []*FilterData, height uint) (uint, uint, []*FilterData,
 				val = uint(v)
 			}
 			switch fd.Op {
-				case "==":
-					if val > height && val < 0 {
-						return 0, 0, nil, fmt.Errorf("No such block: %d (chain height: %d\n",val, height)
-					}
-					min = val
+			case "==":
+				if val > height && val < 0 {
+					return 0, 0, nil, fmt.Errorf("No such block: %d (chain height: %d\n", val, height)
+				}
+				min = val
+				max = val
+				break
+			case "<":
+				mx := val - 1
+				if mx > min && mx < max {
+					max = mx
+				}
+				break
+			case "<=":
+				if val > min && val < max {
 					max = val
-					break
-				case "<":
-					mx := val - 1;
-					if mx > min && mx < max {
-						max = mx
-					} 
-					break
-				case "<=":
-					if val > min && val < max {
-						max = val
-					} 
-					break
-				case ">":
-					mn := val + 1;
-					if mn < max && mn > min {
-						min = mn
-					} 
-					break
-				case ">=":
-					if val < max && val > min {
-						min = val
-					} 
-					break
-				default:
-					return 0, 0, nil, fmt.Errorf("Operator not supported")			
+				}
+				break
+			case ">":
+				mn := val + 1
+				if mn < max && mn > min {
+					min = mn
+				}
+				break
+			case ">=":
+				if val < max && val > min {
+					min = val
+				}
+				break
+			default:
+				return 0, 0, nil, fmt.Errorf("Operator not supported")
 			}
-			
+
 			fda[0], fda = fda[len(fda)-1], fda[:len(fda)-1]
 		}
 	}

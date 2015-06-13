@@ -1,10 +1,10 @@
-package main 
+package main
 
 import (
 	ess "github.com/eris-ltd/erisdb/erisdb/erisdbss"
 	"github.com/eris-ltd/erisdb/server"
-	"os"
 	"github.com/gin-gonic/gin"
+	"os"
 	"path"
 )
 
@@ -18,6 +18,6 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	<- proc.StopEventChannel()
+	<-proc.StopEventChannel()
 	os.RemoveAll(baseDir)
 }

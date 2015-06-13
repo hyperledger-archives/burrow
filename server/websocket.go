@@ -207,16 +207,16 @@ var wpm *sync.Mutex = &sync.Mutex{}
 // Read loop. Will terminate on a failed read.
 func (this *WSSession) readPump() {
 	/*
-	rpm.Lock()
-	rp++
-	log.Debug("readpump created", "total", rp)
-	rpm.Unlock()
-	defer func(){
 		rpm.Lock()
-		rp--
-		log.Debug("readpump removed", "total", rp)
+		rp++
+		log.Debug("readpump created", "total", rp)
 		rpm.Unlock()
-		}()
+		defer func(){
+			rpm.Lock()
+			rp--
+			log.Debug("readpump removed", "total", rp)
+			rpm.Unlock()
+			}()
 	*/
 	this.wsConn.SetReadLimit(maxMessageSize)
 	this.wsConn.SetReadDeadline(time.Now().Add(pongWait))
@@ -263,24 +263,24 @@ func (this *WSSession) readPump() {
 // if pings are not responded to, or if a message comes in on the write close channel.
 func (this *WSSession) writePump() {
 	/*
-	wpm.Lock()
-	wp++
-	log.Debug("writepump created", "total", wp)
-	wpm.Unlock()
-	defer func() {
 		wpm.Lock()
-		wp--
-		log.Debug("writepump removed", "total", wp)
+		wp++
+		log.Debug("writepump created", "total", wp)
 		wpm.Unlock()
-	}()
+		defer func() {
+			wpm.Lock()
+			wp--
+			log.Debug("writepump removed", "total", wp)
+			wpm.Unlock()
+		}()
 	*/
 	ticker := time.NewTicker(pingPeriod)
-	
+
 	defer func() {
 		ticker.Stop()
 		this.Close()
 	}()
-	
+
 	// Write loop. Blocks while waiting for data to come in over a channel.
 	for {
 		select {
@@ -308,24 +308,24 @@ func (this *WSSession) writePump() {
 
 // Session manager handles the adding, tracking and removing of session objects.
 type SessionManager struct {
-	maxSessions      uint
-	activeSessions   map[uint]*WSSession
-	idPool           *IdPool
-	mtx              *sync.Mutex
-	service          WebSocketService
-	openEventChans []chan *WSSession
+	maxSessions     uint
+	activeSessions  map[uint]*WSSession
+	idPool          *IdPool
+	mtx             *sync.Mutex
+	service         WebSocketService
+	openEventChans  []chan *WSSession
 	closeEventChans []chan *WSSession
 }
 
 // Create a new WebsocketManager.
 func NewSessionManager(maxSessions uint, wss WebSocketService) *SessionManager {
 	return &SessionManager{
-		maxSessions:      maxSessions,
-		activeSessions:   make(map[uint]*WSSession),
-		idPool:           NewIdPool(maxSessions),
-		mtx:              &sync.Mutex{},
-		service:          wss,
-		openEventChans: []chan *WSSession{},
+		maxSessions:     maxSessions,
+		activeSessions:  make(map[uint]*WSSession),
+		idPool:          NewIdPool(maxSessions),
+		mtx:             &sync.Mutex{},
+		service:         wss,
+		openEventChans:  []chan *WSSession{},
 		closeEventChans: []chan *WSSession{},
 	}
 }
@@ -349,7 +349,7 @@ func (this *SessionManager) RemoveSessionOpenEventChannel(lChan chan *WSSession)
 		return false
 	}
 	for i, c := range ec {
-		if lChan == c {  
+		if lChan == c {
 			ec[i], ec = ec[len(ec)-1], ec[:len(ec)-1]
 			return true
 		}
@@ -371,7 +371,7 @@ func (this *SessionManager) RemoveSessionCloseEventChannel(lChan chan *WSSession
 		return false
 	}
 	for i, c := range ec {
-		if lChan == c {  
+		if lChan == c {
 			ec[i], ec = ec[len(ec)-1], ec[:len(ec)-1]
 			return true
 		}

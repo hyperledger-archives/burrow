@@ -22,9 +22,9 @@ type MockData struct {
 	BlockchainInfo    *ep.BlockchainInfo    `json:"blockchain_status"`
 	GenesisHash       *ep.GenesisHash       `json:"genesis_hash"`
 	LatestBlockHeight *ep.LatestBlockHeight `json:"latest_block_height"`
-	LatestBlock       *types.Block             `json:"latest_block"`
+	LatestBlock       *types.Block          `json:"latest_block"`
 	Blocks            *ep.Blocks            `json:"blocks"`
-	Block             *types.Block             `json:"block"`
+	Block             *types.Block          `json:"block"`
 	ConsensusState    *ep.ConsensusState    `json:"consensus_state"`
 	Validators        *ep.ValidatorList     `json:"validators"`
 	EventSub          *ep.EventSub          `json:"event_sub"`

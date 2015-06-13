@@ -21,7 +21,7 @@ moniker = "anothertester"
 seeds = ""
 fast_sync = false
 db_backend = "leveldb"
-log_level = "warn"
+log_level = "debug"
 node_laddr = ""
 `
 

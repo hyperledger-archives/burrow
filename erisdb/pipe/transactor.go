@@ -10,21 +10,45 @@ import (
 	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tendermint/vm"
+	"sync"
 )
 
-type txs struct {
+const (
+	DEFAULT_BLOCKS_WAIT = 10
+	SUB_ID              = "TransactorSubBlock"
+	EVENT_ID            = "NewBlock"
+)
+
+type transactor struct {
 	consensusState *cs.ConsensusState
 	mempoolReactor *mempl.MempoolReactor
+	pending        []TxFuture
+	pendingLock    *sync.Mutex
+	eventEmitter   EventEmitter
 }
 
-func newTxs(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor) *txs {
-	return &txs{consensusState, mempoolReactor}
-
+func newTransactor(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor, eventEmitter EventEmitter) *transactor {
+	txs := &transactor{
+		consensusState,
+		mempoolReactor,
+		[]TxFuture{},
+		&sync.Mutex{},
+		eventEmitter,
+	}
+	/*
+		eventEmitter.Subscribe(SUB_ID, EVENT_ID, func(v interface{}) {
+			block := v.(*types.Block)
+			for _, fut := range txs.pending {
+				fut.NewBlock(block)
+			}
+		})
+	*/
+	return txs
 }
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (this *txs) Call(address, data []byte) (*Call, error) {
+func (this *transactor) Call(address, data []byte) (*Call, error) {
 
 	st := this.consensusState.GetState() // performs a copy
 	cache := state.NewBlockCache(st)
@@ -53,7 +77,7 @@ func (this *txs) Call(address, data []byte) (*Call, error) {
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (this *txs) CallCode(code, data []byte) (*Call, error) {
+func (this *transactor) CallCode(code, data []byte) (*Call, error) {
 
 	st := this.consensusState.GetState() // performs a copy
 	cache := this.mempoolReactor.Mempool.GetCache()
@@ -77,7 +101,7 @@ func (this *txs) CallCode(code, data []byte) (*Call, error) {
 }
 
 // Broadcast a transaction.
-func (this *txs) BroadcastTx(tx types.Tx) (*Receipt, error) {
+func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
 	err := this.mempoolReactor.BroadcastTx(tx)
 	if err != nil {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
@@ -97,25 +121,29 @@ func (this *txs) BroadcastTx(tx types.Tx) (*Receipt, error) {
 }
 
 // Get all unconfirmed txs.
-func (this *txs) UnconfirmedTxs() (*UnconfirmedTxs, error) {
+func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
 	transactions := this.mempoolReactor.Mempool.GetProposalTxs()
 	return &UnconfirmedTxs{transactions}, nil
 }
 
-func (this *txs) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error) {
+func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*TransactionResult, error) {
+	return nil, nil
+}
+
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error) {
 	fmt.Printf("ADDRESS: %v\n", address)
 	var addr []byte
 	if len(address) == 0 {
 		addr = nil
 	} else if len(address) != 20 {
-		return nil, fmt.Errorf("Address is not of the right length: %d\n", len(address));
+		return nil, fmt.Errorf("Address is not of the right length: %d\n", len(address))
 	} else {
-		addr = address;
+		addr = address
 	}
 	if len(privKey) != 64 {
-		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey));
+		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	
+
 	key := [64]byte{}
 	copy(key[:], privKey[0:64])
 	pa := account.GenPrivAccountFromKey(key)
@@ -127,7 +155,7 @@ func (this *txs) Transact(privKey, address, data []byte, gasLimit, fee uint64) (
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	fmt.Printf("NONCE: %d\n", sequence) 
+	fmt.Printf("NONCE: %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   1000,
@@ -150,7 +178,7 @@ func (this *txs) Transact(privKey, address, data []byte, gasLimit, fee uint64) (
 }
 
 // Sign a transaction
-func (this *txs) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
+func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
 	// more checks?
 
 	for i, privAccount := range privAccounts {
@@ -193,8 +221,6 @@ func (this *txs) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
 	}
-	fmt.Println("******************** TYPE OFF *****************************")
-	fmt.Printf("%v\n", tx)
 	return tx, nil
 }
 
@@ -207,5 +233,87 @@ func toVMAccount(acc *account.Account) *vm.Account {
 		Nonce:       uint64(acc.Sequence),
 		StorageRoot: cmn.LeftPadWord256(acc.StorageRoot),
 		Other:       acc.PubKey,
+	}
+}
+
+// This is the different status codes for transactions.
+// 0 - the tx tracker object is being set up.
+// 1 - the tx has been created and passed into the tx pool.
+// 2 - the tx was succesfully committed into a block.
+// Errors
+// -1 - the tx failed.
+const (
+	TX_NEW_CODE      int8 = 0
+	TX_POOLED_CODE   int8 = 1
+	TX_COMITTED_CODE int8 = 2
+	TX_FAILED_CODE   int8 = -1
+)
+
+// Number of bytes in a transaction hash
+const TX_HASH_BYTES = 32
+
+// Length of the tx hash hex-string (prepended by 0x)
+const TX_HASH_LENGTH = 2 * TX_HASH_BYTES
+
+type TxFuture interface {
+	// Tx Hash
+	Hash() string
+	// Target account.
+	Target() string
+	// Get the Receipt for this transaction.
+	Results() *TransactionResult
+	// This will block and wait for the tx to be done.
+	Get() *TransactionResult
+	// This will block for 'timeout' miliseconds and wait for
+	// the tx to be done. 0 means no timeout, and is equivalent
+	// to calling 'Get()'.
+	GetWithTimeout(timeout uint64) *TransactionResult
+	// Checks the status. The status codes can be find near the
+	// top of this file.
+	StatusCode() int8
+	// This is true when the transaction is done (whether it was successful or not).
+	Done() bool
+}
+
+// Implements the 'TxFuture' interface.
+type TxFutureImpl struct {
+	receipt    *Receipt
+	result     *TransactionResult
+	target     string
+	status     int8
+	transactor Transactor
+	errStr     string
+	getLock    *sync.Mutex
+}
+
+func (this *TxFutureImpl) Results() *TransactionResult {
+	return this.result
+}
+
+func (this *TxFutureImpl) StatusCode() int8 {
+	return this.status
+}
+
+func (this *TxFutureImpl) Done() bool {
+	return this.status == TX_COMITTED_CODE || this.status == TX_FAILED_CODE
+}
+
+func (this *TxFutureImpl) Wait() *TransactionResult {
+	return this.WaitWithTimeout(0)
+}
+
+// We wait for blocks, and when a block arrives we check if tx is committed.
+// This will return after it has been confirmed that tx was committed, or if
+// it failed, and for a maximum of 'blocks' blocks. If 'blocks' is set to 0,
+// it will be set to DEFAULT_BLOCKS_WAIT.
+// This is a temporary solution until we have solidity events.
+func (this *TxFutureImpl) WaitWithTimeout(blocks int) *TransactionResult {
+	return nil
+}
+
+func (this *TxFutureImpl) setStatus(status int8, errorStr string) {
+	this.status = status
+	if status == TX_FAILED_CODE {
+		this.errStr = errorStr
 	}
 }

@@ -8,6 +8,8 @@ import (
 
 var rootHandler log15.Handler
 
+// This is basically the same code as in tendermint. Initialize root
+// and maybe later also track the loggers here.
 func Init(config *ServerConfig) {
 
 	consoleLogLevel := config.Logging.ConsoleLogLevel
@@ -30,7 +32,7 @@ func Init(config *ServerConfig) {
 		fileHandler := log15.LvlFilterHandler(getLevel(fileLogLevel), fh)
 		handlers = append(handlers, fileHandler)
 	}
-	
+
 	rootHandler = log15.MultiHandler(handlers...)
 
 	// By setting handlers on the root, we handle events from all loggers.

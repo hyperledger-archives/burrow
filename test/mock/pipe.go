@@ -14,7 +14,7 @@ type MockPipe struct {
 	consensus  ep.Consensus
 	events     ep.EventEmitter
 	net        ep.Net
-	txs        ep.Txs
+	transactor ep.Transactor
 }
 
 // Create a new mock tendermint pipe.
@@ -24,7 +24,7 @@ func NewMockPipe(mockData *MockData) ep.Pipe {
 	consensus := &consensus{mockData}
 	events := &events{mockData}
 	net := &net{mockData}
-	txs := &txs{mockData}
+	transactor := &transactor{mockData}
 	return &MockPipe{
 		mockData,
 		accounts,
@@ -32,7 +32,7 @@ func NewMockPipe(mockData *MockData) ep.Pipe {
 		consensus,
 		events,
 		net,
-		txs,
+		transactor,
 	}
 }
 
@@ -61,8 +61,8 @@ func (this *MockPipe) Net() ep.Net {
 	return this.net
 }
 
-func (this *MockPipe) Txs() ep.Txs {
-	return this.txs
+func (this *MockPipe) Transactor() ep.Transactor {
+	return this.transactor
 }
 
 // Components
@@ -185,30 +185,34 @@ func (this *net) Peer(address string) (*ep.Peer, error) {
 }
 
 // Txs
-type txs struct {
+type transactor struct {
 	mockData *MockData
 }
 
-func (this *txs) Call(address, data []byte) (*ep.Call, error) {
+func (this *transactor) Call(address, data []byte) (*ep.Call, error) {
 	return this.mockData.Call, nil
 }
 
-func (this *txs) CallCode(code, data []byte) (*ep.Call, error) {
+func (this *transactor) CallCode(code, data []byte) (*ep.Call, error) {
 	return this.mockData.CallCode, nil
 }
 
-func (this *txs) BroadcastTx(tx types.Tx) (*ep.Receipt, error) {
+func (this *transactor) BroadcastTx(tx types.Tx) (*ep.Receipt, error) {
 	return this.mockData.BroadcastTx, nil
 }
 
-func (this *txs) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
+func (this *transactor) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
 	return this.mockData.UnconfirmedTxs, nil
 }
 
-func (this *txs) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*ep.Receipt, error) {
+func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*ep.TransactionResult, error) {
+	return nil, nil
+}
+
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*ep.Receipt, error) {
 	return this.mockData.BroadcastTx, nil
 }
 
-func (this *txs) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
+func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
 	return this.mockData.SignTx, nil
 }

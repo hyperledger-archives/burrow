@@ -1,16 +1,16 @@
 package test
 
 import (
-	"github.com/tendermint/log15"
-	"github.com/eris-ltd/erisdb/server"
-	"github.com/eris-ltd/erisdb/rpc"
-	"github.com/gin-gonic/gin"
 	"encoding/json"
-	"runtime"
+	"github.com/eris-ltd/erisdb/rpc"
+	"github.com/eris-ltd/erisdb/server"
+	"github.com/gin-gonic/gin"
+	"github.com/tendermint/log15"
 	"os"
+	"runtime"
 )
 
-func init(){
+func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	log15.Root().SetHandler(log15.LvlFilterHandler(
 		log15.LvlError,
@@ -28,23 +28,23 @@ func NewScumbagServer() server.Server {
 }
 
 func (this *ScumbagServer) Start(sc *server.ServerConfig, g *gin.Engine) {
-	g.GET("/scumbag", func(c *gin.Context){
-				c.String(200, "Scumbag")
-			})
+	g.GET("/scumbag", func(c *gin.Context) {
+		c.String(200, "Scumbag")
+	})
 	this.running = true
 }
 
 func (this *ScumbagServer) Running() bool {
-	return this.running;
+	return this.running
 }
 
 func (this *ScumbagServer) ShutDown() {
 	// fmt.Println("Scumbag...")
 }
 
-type ScumSocketService struct {}
+type ScumSocketService struct{}
 
-func (this *ScumSocketService) Process(data []byte, session *server.WSSession){
+func (this *ScumSocketService) Process(data []byte, session *server.WSSession) {
 	resp := rpc.NewRPCResponse("1", "Scumbag")
 	bts, _ := json.Marshal(resp)
 	session.Write(bts)
@@ -59,9 +59,9 @@ func NewServeScumbag() *server.ServeProcess {
 	return server.NewServeProcess(nil, NewScumbagServer())
 }
 
-func NewServeScumSocket(wsServer *server.WebSocketServer) *server.ServeProcess{
+func NewServeScumSocket(wsServer *server.WebSocketServer) *server.ServeProcess {
 	cfg := server.DefaultServerConfig()
 	cfg.WebSocket.WebSocketPath = "/scumsocket"
 	cfg.Bind.Port = uint16(31337)
-	return server.NewServeProcess(cfg, wsServer)	
+	return server.NewServeProcess(cfg, wsServer)
 }

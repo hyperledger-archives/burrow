@@ -9,9 +9,9 @@ import (
 
 // A websocket client subscribes and unsubscribes to events
 type WSClient struct {
-	host string
+	host   string
 	closed bool
-	conn *websocket.Conn
+	conn   *websocket.Conn
 }
 
 // create a new connection
@@ -40,7 +40,7 @@ func (this *WSClient) Read() chan []byte {
 	go func() {
 		for {
 			_, msg, err := this.conn.ReadMessage()
-			
+
 			if err != nil {
 				if !this.closed {
 					// TODO For now. If it's not a graceful shutdown, log.
@@ -54,11 +54,11 @@ func (this *WSClient) Read() chan []byte {
 	return ch
 }
 
-func (this *WSClient) WriteMsg(msg []byte){
+func (this *WSClient) WriteMsg(msg []byte) {
 	this.conn.WriteMessage(websocket.TextMessage, msg)
 }
 
 func (this *WSClient) Close() {
-	this.closed = true;
+	this.closed = true
 	this.conn.Close()
 }

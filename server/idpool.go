@@ -1,8 +1,8 @@
 package server
 
 import (
-	"fmt"
 	"container/list"
+	"fmt"
 )
 
 // Simple id pool. Lets you get and release uints. Will panic
@@ -14,7 +14,7 @@ type IdPool struct {
 func NewIdPool(totNum uint) *IdPool {
 	idPool := &IdPool{}
 	idPool.init(totNum)
-	return idPool 
+	return idPool
 }
 
 // We start from 1, so that 0 is not used as an id.

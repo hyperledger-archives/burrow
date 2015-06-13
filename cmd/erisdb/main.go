@@ -14,7 +14,7 @@ func main() {
 	} else {
 		baseDir = os.Getenv("HOME") + "/.erisdb"
 	}
-	
+
 	proc, errSt := edb.ServeErisDB(baseDir)
 	if errSt != nil {
 		panic(errSt.Error())
@@ -25,5 +25,5 @@ func main() {
 	}
 	// TODO For now.
 	fmt.Println("DONTMINDME55891")
-	<- proc.StopEventChannel()
+	<-proc.StopEventChannel()
 }

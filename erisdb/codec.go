@@ -21,7 +21,7 @@ func (this *TCodec) Encode(v interface{}, w io.Writer) error {
 	var err error
 	var n int64
 	binary.WriteJSON(v, w, &n, &err)
-	return err;
+	return err
 }
 
 // Encode to a byte array.
@@ -42,7 +42,7 @@ func (this *TCodec) Decode(v interface{}, r io.Reader) error {
 
 // Decode from a byte array.
 func (this *TCodec) DecodeBytes(v interface{}, bts []byte) error {
-	var err error 
+	var err error
 	binary.ReadJSON(v, bts, &err)
 	return err
 }

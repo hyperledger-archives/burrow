@@ -88,23 +88,23 @@ func TestSubReaping(t *testing.T) {
 					doneChan <- fmt.Errorf("Id not of length 64")
 					return
 				}
-				_ , err2 := hex.DecodeString(id)
+				_, err2 := hex.DecodeString(id)
 				if err2 != nil {
 					doneChan <- err2
 				}
-				
+
 				doneChan <- nil
 			}()
 		}
 	}()
 	k := 0
 	for k < NUM_SUBS {
-		err := <- doneChan
+		err := <-doneChan
 		assert.NoError(t, err)
 		k++
 	}
-	time.Sleep(1100*time.Millisecond)
-	
+	time.Sleep(1100 * time.Millisecond)
+
 	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that were all automatically reaped.", NUM_SUBS)
@@ -116,7 +116,7 @@ func TestSubManualClose(t *testing.T) {
 	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
-	
+
 	mee := newMockEventEmitter()
 	eSubs := NewEventSubscriptions(mee)
 	doneChan := make(chan error)
@@ -133,11 +133,11 @@ func TestSubManualClose(t *testing.T) {
 					doneChan <- fmt.Errorf("Id not of length 64")
 					return
 				}
-				_ , err2 := hex.DecodeString(id)
+				_, err2 := hex.DecodeString(id)
 				if err2 != nil {
 					doneChan <- err2
 				}
-				time.Sleep(100*time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 				err3 := eSubs.remove(id)
 				if err3 != nil {
 					doneChan <- err3
@@ -148,11 +148,11 @@ func TestSubManualClose(t *testing.T) {
 	}()
 	k := 0
 	for k < NUM_SUBS {
-		err := <- doneChan
+		err := <-doneChan
 		assert.NoError(t, err)
 		k++
 	}
-	
+
 	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that were all closed down by unsubscribing.", NUM_SUBS)
@@ -165,7 +165,7 @@ func TestSubFlooding(t *testing.T) {
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
 	// Crank it up. Now pressure is 10 times higher on each sub.
-	mockInterval = 1*time.Millisecond
+	mockInterval = 1 * time.Millisecond
 	mee := newMockEventEmitter()
 	eSubs := NewEventSubscriptions(mee)
 	doneChan := make(chan error)
@@ -182,11 +182,11 @@ func TestSubFlooding(t *testing.T) {
 					doneChan <- fmt.Errorf("Id not of length 64")
 					return
 				}
-				_ , err2 := hex.DecodeString(id)
+				_, err2 := hex.DecodeString(id)
 				if err2 != nil {
 					doneChan <- err2
 				}
-				time.Sleep(1000*time.Millisecond)
+				time.Sleep(1000 * time.Millisecond)
 				err3 := eSubs.remove(id)
 				if err3 != nil {
 					doneChan <- err3
@@ -197,11 +197,11 @@ func TestSubFlooding(t *testing.T) {
 	}()
 	k := 0
 	for k < NUM_SUBS {
-		err := <- doneChan
+		err := <-doneChan
 		assert.NoError(t, err)
 		k++
 	}
-	
+
 	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that all received 1000 events each. They were all closed down by unsubscribing.", NUM_SUBS)

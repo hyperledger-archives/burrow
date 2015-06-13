@@ -16,7 +16,7 @@ type (
 		Consensus() Consensus
 		Events() EventEmitter
 		Net() Net
-		Txs() Txs
+		Transactor() Transactor
 	}
 
 	Accounts interface {
@@ -57,11 +57,12 @@ type (
 		Peer(string) (*Peer, error)
 	}
 
-	Txs interface {
+	Transactor interface {
 		Call(address, data []byte) (*Call, error)
 		CallCode(code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error)
+		TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*TransactionResult, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
 	}
@@ -75,7 +76,7 @@ type PipeImpl struct {
 	consensus  Consensus
 	events     EventEmitter
 	net        Net
-	txs        Txs
+	txs        Transactor
 }
 
 // Create a new rpc pipe.
@@ -85,7 +86,7 @@ func NewPipe(tNode *node.Node) Pipe {
 	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
 	events := newEvents(tNode.EventSwitch())
 	net := newNetwork(tNode.Switch())
-	txs := newTxs(tNode.ConsensusState(), tNode.MempoolReactor())
+	txs := newTransactor(tNode.ConsensusState(), tNode.MempoolReactor(), events)
 	return &PipeImpl{
 		tNode,
 		accounts,
@@ -117,6 +118,6 @@ func (this *PipeImpl) Net() Net {
 	return this.net
 }
 
-func (this *PipeImpl) Txs() Txs {
+func (this *PipeImpl) Transactor() Transactor {
 	return this.txs
 }

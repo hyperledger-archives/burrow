@@ -4,15 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	rpc "github.com/eris-ltd/erisdb/rpc"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	rpc "github.com/eris-ltd/erisdb/rpc"
 )
 
 const (
 	// string used in subscriber ids.
 	ID           = "socketrpc"
 	SERVICE_NAME = "erisdb"
-	
+
 	// Accounts
 	GET_ACCOUNTS              = SERVICE_NAME + ".getAccounts"
 	GET_ACCOUNT               = SERVICE_NAME + ".getAccount"
@@ -21,37 +21,37 @@ const (
 	GEN_PRIV_ACCOUNT          = SERVICE_NAME + ".genPrivAccount"
 	GEN_PRIV_ACCOUNT_FROM_KEY = SERVICE_NAME + ".genPrivAccountFromKey"
 	// Blockchain
-	GET_BLOCKCHAIN_INFO       = SERVICE_NAME + ".getBlockchainInfo"
-	GET_GENESIS_HASH          = SERVICE_NAME + ".getGenesisHash"
-	GET_LATEST_BLOCK_HEIGHT   = SERVICE_NAME + ".getLatestBlockHeight"
-	GET_LATEST_BLOCK          = SERVICE_NAME + ".getLatestBlock"
-	GET_BLOCKS                = SERVICE_NAME + ".getBlocks"
-	GET_BLOCK                 = SERVICE_NAME + ".getBlock"
+	GET_BLOCKCHAIN_INFO     = SERVICE_NAME + ".getBlockchainInfo"
+	GET_GENESIS_HASH        = SERVICE_NAME + ".getGenesisHash"
+	GET_LATEST_BLOCK_HEIGHT = SERVICE_NAME + ".getLatestBlockHeight"
+	GET_LATEST_BLOCK        = SERVICE_NAME + ".getLatestBlock"
+	GET_BLOCKS              = SERVICE_NAME + ".getBlocks"
+	GET_BLOCK               = SERVICE_NAME + ".getBlock"
 	// Consensus
-	GET_CONSENSUS_STATE       = SERVICE_NAME + ".getConsensusState" 
-	GET_VALIDATORS            = SERVICE_NAME + ".getValidators"
+	GET_CONSENSUS_STATE = SERVICE_NAME + ".getConsensusState"
+	GET_VALIDATORS      = SERVICE_NAME + ".getValidators"
 	// Net
-	GET_NETWORK_INFO          = SERVICE_NAME + ".getNetworkInfo" 
-	GET_MONIKER               = SERVICE_NAME + ".getMoniker"
-	GET_CHAIN_ID              = SERVICE_NAME + ".getChainId"
-	IS_LISTENING              = SERVICE_NAME + ".isListening"
-	GET_LISTENERS             = SERVICE_NAME + ".getListeners"
-	GET_PEERS                 = SERVICE_NAME + ".getPeers"
-	GET_PEER                  = SERVICE_NAME + ".getPeer"
+	GET_NETWORK_INFO = SERVICE_NAME + ".getNetworkInfo"
+	GET_MONIKER      = SERVICE_NAME + ".getMoniker"
+	GET_CHAIN_ID     = SERVICE_NAME + ".getChainId"
+	IS_LISTENING     = SERVICE_NAME + ".isListening"
+	GET_LISTENERS    = SERVICE_NAME + ".getListeners"
+	GET_PEERS        = SERVICE_NAME + ".getPeers"
+	GET_PEER         = SERVICE_NAME + ".getPeer"
 	// Tx
-	CALL                      = SERVICE_NAME + ".call" 
-	CALL_CODE                 = SERVICE_NAME + ".callCode"
-	BROADCAST_TX              = SERVICE_NAME + ".broadcastTx"
-	GET_UNCONFIRMED_TXS       = SERVICE_NAME + ".getUnconfirmedTxs"
-	SIGN_TX                   = SERVICE_NAME + ".signTx"
-	TRANSACT                  = SERVICE_NAME + ".transact"
+	CALL                = SERVICE_NAME + ".call"
+	CALL_CODE           = SERVICE_NAME + ".callCode"
+	BROADCAST_TX        = SERVICE_NAME + ".broadcastTx"
+	GET_UNCONFIRMED_TXS = SERVICE_NAME + ".getUnconfirmedTxs"
+	SIGN_TX             = SERVICE_NAME + ".signTx"
+	TRANSACT            = SERVICE_NAME + ".transact"
 	// Events
-	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" 
-	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
-	EVENT_POLL                = SERVICE_NAME + ".eventPoll"
+	EVENT_SUBSCRIBE   = SERVICE_NAME + ".eventSubscribe"
+	EVENT_UNSUBSCRIBE = SERVICE_NAME + ".eventUnsubscribe"
+	EVENT_POLL        = SERVICE_NAME + ".eventPoll"
 )
 
-// The rpc method handlers. 
+// The rpc method handlers.
 type ErisDbMethods struct {
 	codec rpc.Codec
 	pipe  ep.Pipe
@@ -222,7 +222,7 @@ func (this *ErisDbMethods) LatestBlockHeight(request *rpc.RPCRequest, requester 
 }
 
 func (this *ErisDbMethods) LatestBlock(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	
+
 	block, errC := this.pipe.Blockchain().LatestBlock()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
@@ -341,7 +341,7 @@ func (this *ErisDbMethods) Call(request *rpc.RPCRequest, requester interface{}) 
 	}
 	address := param.Address
 	data := param.Data
-	call, errC := this.pipe.Txs().Call(address, data)
+	call, errC := this.pipe.Transactor().Call(address, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -356,7 +356,7 @@ func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface
 	}
 	code := param.Code
 	data := param.Data
-	call, errC := this.pipe.Txs().CallCode(code, data)
+	call, errC := this.pipe.Transactor().CallCode(code, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -370,7 +370,7 @@ func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interf
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	tx := param.Tx
-	receipt, errC := this.pipe.Txs().BroadcastTx(tx)
+	receipt, errC := this.pipe.Transactor().BroadcastTx(tx)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -383,7 +383,7 @@ func (this *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := this.pipe.Txs().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	receipt, errC := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -391,7 +391,7 @@ func (this *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface
 }
 
 func (this *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	txs, errC := this.pipe.Txs().UnconfirmedTxs()
+	txs, errC := this.pipe.Transactor().UnconfirmedTxs()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -406,7 +406,7 @@ func (this *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}
 	}
 	tx := param.Tx
 	pAccs := param.PrivAccounts
-	txRet, errC := this.pipe.Txs().SignTx(tx, pAccs)
+	txRet, errC := this.pipe.Transactor().SignTx(tx, pAccs)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

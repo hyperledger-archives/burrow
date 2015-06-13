@@ -8,8 +8,8 @@ import (
 // Standard configuration file for the server.
 type (
 	ServerConfig struct {
-		Bind      Bind      `toml:"bind"`
-		TLS       TLS       `toml:"TLS"`
+		Bind Bind `toml:"bind"`
+		TLS  TLS  `toml:"TLS"`
 		//CORS      *CORS      `toml:"CORS"`
 		HTTP      HTTP      `toml:"HTTP"`
 		WebSocket WebSocket `toml:"web_socket"`

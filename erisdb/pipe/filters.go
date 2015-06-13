@@ -2,6 +2,8 @@ package pipe
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -9,18 +11,13 @@ import (
 // TODO add generic filters for various different kinds of matching.
 
 // Used to filter.
-// Op can be any of the following: 
+// Op can be any of the following:
 // The usual relative operators: <, >, <=, >=, ==, != (where applicable)
 // A range parameter (see: https://help.github.com/articles/search-syntax/)
 type FilterData struct {
 	Field string `json:"field"`
 	Op    string `json:"op"`
 	Value string `json:"value"`
-}
-
-// Parses a range param.
-func RangeToNumbers() (int64, int64, error){
-	return 1, 1, nil
 }
 
 // Filters based on fields.
@@ -81,21 +78,21 @@ func NewFilterFactory() *FilterFactory {
 	}
 	// Regular.
 	aff.filterPools = make(map[string]*sync.Pool)
-	
+
 	return aff
 }
 
-func (this *FilterFactory) RegisterFilterPool(fieldName string, pool *sync.Pool){
+func (this *FilterFactory) RegisterFilterPool(fieldName string, pool *sync.Pool) {
 	this.filterPools[strings.ToLower(fieldName)] = pool
 }
 
 // Creates a new filter given the input data array. If the array is zero length or nil, an empty
 // filter will be returned that returns true on all matches. If the array is of size 1, a regular
 // filter is returned, otherwise a CompositeFieldFilter is returned, which is a special filter that
-// contains a number of other filters. It implements AccountFieldFilter, and will match an account 
-// only if all the sub-filters matches. 
+// contains a number of other filters. It implements AccountFieldFilter, and will match an account
+// only if all the sub-filters matches.
 func (this *FilterFactory) NewFilter(fdArr []*FilterData) (Filter, error) {
-	
+
 	if fdArr == nil || len(fdArr) == 0 {
 		return &MatchAllFilter{}, nil
 	}
@@ -126,4 +123,56 @@ func (this *FilterFactory) newSingleFilter(fd *FilterData) (ConfigurableFilter, 
 		return nil, err
 	}
 	return f, nil
+}
+
+// Some standard value parsing functions.
+
+func parseNumberValue(value string) (int64, error) {
+	var val int64
+	// Check for wildcards.
+	if value == "min" {
+		val = math.MinInt64
+	} else if value == "max" {
+		val = math.MaxInt64
+	} else {
+		tv, err := strconv.ParseInt(value, 10, 64)
+
+		if err != nil {
+			return 0, fmt.Errorf("Wrong value type.")
+		}
+		val = tv
+	}
+	return val, nil
+}
+
+// Some standard filtering functions.
+
+func rangeFilter(op, fName string) (func(a, b int64) bool, error) {
+	if op == "==" {
+		return func(a, b int64) bool {
+			return a == b
+		}, nil
+	} else if op == "!=" {
+		return func(a, b int64) bool {
+			return a != b
+		}, nil
+	} else if op == "<=" {
+		return func(a, b int64) bool {
+			return a <= b
+		}, nil
+	} else if op == ">=" {
+		return func(a, b int64) bool {
+			return a >= b
+		}, nil
+	} else if op == "<" {
+		return func(a, b int64) bool {
+			return a < b
+		}, nil
+	} else if op == ">" {
+		return func(a, b int64) bool {
+			return a > b
+		}, nil
+	} else {
+		return nil, fmt.Errorf("Op: " + op + " is not supported for '" + fName + "' filtering")
+	}
 }

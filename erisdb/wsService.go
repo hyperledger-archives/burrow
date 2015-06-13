@@ -2,9 +2,9 @@ package erisdb
 
 import (
 	"fmt"
+	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	rpc "github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 )
 
 // Used for ErisDb. Implements WebSocketService.

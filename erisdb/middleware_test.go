@@ -1,9 +1,9 @@
 package erisdb
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 // Test empty query.
@@ -100,10 +100,10 @@ func TestRangeQueryBotchedMin(t *testing.T) {
 // Helpers.
 
 func testOp(op string, t *testing.T) {
-	assertFilter(t, "test:" + op + "33", "test", op, "33")
+	assertFilter(t, "test:"+op+"33", "test", op, "33")
 }
 
-func assertFilter(t *testing.T, filter, field, op, val string){
+func assertFilter(t *testing.T, filter, field, op, val string) {
 	arr, err := _parseQuery(filter)
 	assert.NoError(t, err)
 	assert.NotNil(t, arr)
@@ -111,8 +111,8 @@ func assertFilter(t *testing.T, filter, field, op, val string){
 	assert.Equal(t, arr[0], &ep.FilterData{field, op, val})
 }
 
-func assertRangeFilter(t *testing.T, min, max, res0, res1 string){
-	arr, err := _parseQuery("test:"+ min + ".." + max)
+func assertRangeFilter(t *testing.T, min, max, res0, res1 string) {
+	arr, err := _parseQuery("test:" + min + ".." + max)
 	assert.NoError(t, err)
 	assert.NotNil(t, arr)
 	assert.Len(t, arr, 2)

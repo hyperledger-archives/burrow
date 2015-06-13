@@ -2,10 +2,10 @@ package files
 
 import (
 	"bytes"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 var tempFolder = os.TempDir()
@@ -82,6 +82,6 @@ func rename(t *testing.T, fileName0, fileName1 string) {
 
 func checkGone(t *testing.T, fileName string) {
 	name := getName(fileName)
-	_ , err := os.Stat(name)
-	assert.True(t, os.IsNotExist(err), "File not removed: " + name)
+	_, err := os.Stat(name)
+	assert.True(t, os.IsNotExist(err), "File not removed: "+name)
 }

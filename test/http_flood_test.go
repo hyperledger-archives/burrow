@@ -24,8 +24,8 @@ func TestHttpFlooding(t *testing.T) {
 	if err == nil {
 		t.Logf("HTTP test: A total of %d http GET messages sent succesfully over %d seconds.\n", DURATION*PER_SEC, DURATION)
 	}
-	errStop := serveProcess.Stop(time.Millisecond*1000)
-	assert.NoError(t, errStop, "Scumbag-ed!") 
+	errStop := serveProcess.Stop(time.Millisecond * 1000)
+	assert.NoError(t, errStop, "Scumbag-ed!")
 }
 
 func runHttp() error {
@@ -41,7 +41,7 @@ func runHttp() error {
 		results = append(results, res)
 	}
 	metrics := vegeta.NewMetrics(results)
-	if(len(metrics.Errors) > 0){
+	if len(metrics.Errors) > 0 {
 		return fmt.Errorf("Errors: %v\n", metrics.Errors)
 	}
 	return nil
