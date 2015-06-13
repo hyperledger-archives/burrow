@@ -43,7 +43,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/blockchain/blocks", this.handleBlocks)
 	router.GET("/blockchain/block/:height", heightParam, this.handleBlock)
 	// Consensus
-	router.GET("/consensus/state", this.handleConsensusState)
+	router.GET("/consensus", this.handleConsensusState)
 	router.GET("/consensus/validators", this.handleValidatorList)
 	// Events
 	router.POST("/event_subs", this.handleEventSubscribe)

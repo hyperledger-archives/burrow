@@ -133,7 +133,7 @@ func reap(sm *ServerManager) {
 	// a time is below reaper threshold, then break.
 	for len(sm.running) > 0 {
 		task := sm.running[0]
-		if time.Since(task.start) > task.maxDuration {
+		if task.maxDuration != 0 && time.Since(task.start) > task.maxDuration {
 			fmt.Printf("[SERVER REAPER] Closing down server on port: %d\n", task.port)
 			task.sp.Kill()
 			sm.running = sm.running[1:]
@@ -184,7 +184,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	st := newServeTask(port, workDir, maxDur, proc)
 	this.running = append(this.running, st)
 
-	URL := "http://" + config.Bind.Address + ":" + fmt.Sprintf("%d", port) + config.HTTP.JsonRpcPath
+	URL := "http://" + config.Bind.Address + ":" + fmt.Sprintf("%d", port)
 
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be
