@@ -6,6 +6,7 @@ import (
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/tendermint/tendermint/binary"
 	. "github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/erisdb/files"
 	"os"
 	"os/exec"
 	"path"
@@ -42,7 +43,7 @@ func newCmdProcess(cmd *exec.Cmd, token string) *CmdProcess {
 }
 
 func (this *CmdProcess) Start(doneChan chan<- error) {
-	fmt.Println("Starting erisdb process")
+	log.Debug("Starting erisdb process")
 	reader, errSP := this.cmd.StdoutPipe()
 
 	if errSP != nil {
@@ -59,9 +60,9 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 	fmt.Println("process started, waiting for token")
 	for scanner.Scan() {		
 		text := scanner.Text()
-		fmt.Println(text)
+		log.Debug(text)
 		if strings.Index(text, this.token) != -1 {
-			fmt.Println("Token found: " + text)
+			log.Debug("Token found", "token", this.token)
 			break
 		}
 	}
@@ -70,7 +71,7 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 		doneChan <- fmt.Errorf("Error reading from process stdout:", err)
 		return
 	}
-	fmt.Println("erisdb ready")
+	log.Debug("ErisDB server ready.")
 	doneChan <- nil
 }
 
@@ -134,7 +135,7 @@ func reap(sm *ServerManager) {
 	for len(sm.running) > 0 {
 		task := sm.running[0]
 		if task.maxDuration != 0 && time.Since(task.start) > task.maxDuration {
-			fmt.Printf("[SERVER REAPER] Closing down server on port: %d\n", task.port)
+			log.Debug("[SERVER REAPER] Closing down server.", "port", task.port)
 			task.sp.Kill()
 			sm.running = sm.running[1:]
 			sm.idPool.ReleaseId(uint(task.port - PORT_BASE))
@@ -184,7 +185,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	st := newServeTask(port, workDir, maxDur, proc)
 	this.running = append(this.running, st)
 
-	URL := "http://" + config.Bind.Address + ":" + fmt.Sprintf("%d", port)
+	URL := fmt.Sprintf("http://%s:%d", config.Bind.Address, port)
 
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be
@@ -212,31 +213,37 @@ func (this *ServerManager) createWorkDir(data *RequestData, config *server.Serve
 	genesisName := path.Join(workDir, "genesis.json")
 
 	// Write config.
-	WriteFile(cfgName, []byte(TendermintConfigDefault))
+	errCFG := files.WriteFileRW(cfgName, []byte(TendermintConfigDefault))
+	if errCFG != nil {
+		return "", errCFG
+	}
+	log.Info("File written to %s.\n", cfgName)
 
 	// Write validator.
-	errPV := writeJSON(data.PrivValidator, pvName)
+	errPV := writeJSON(pvName, data.PrivValidator)
 	if errPV != nil {
 		return "", errPV
 	}
+	log.Info("File written to %s.\n", pvName)
 
 	// Write genesis
-	errG := writeJSON(data.Genesis, genesisName)
+	errG := writeJSON(genesisName, data.Genesis)
 	if errG != nil {
 		return "", errG
 	}
+	log.Info("File written to %s.\n", genesisName)
 
 	// Write server config.
 	errWC := server.WriteServerConfig(scName, config)
 	if errWC != nil {
 		return "", errWC
 	}
-
+	log.Info("File written to %s.\n", scName)
 	return workDir, nil
 }
 
 // Used to write json files using tendermints binary package.
-func writeJSON(v interface{}, file string) error {
+func writeJSON(file string, v interface{}) error {
 	var n int64
 	var errW error
 	fo, errC := os.Create(file)
@@ -251,7 +258,6 @@ func writeJSON(v interface{}, file string) error {
 	if errL != nil {
 		return errL
 	}
-	fmt.Printf("File written to %s.\n", file)
 	return nil
 }
 

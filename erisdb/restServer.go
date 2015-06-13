@@ -30,7 +30,7 @@ func NewRestServer(codec rpc.Codec, pipe ep.Pipe, eventSubs *EventSubscriptions)
 // Starting the server means registering all the handlers with the router.
 func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	// Accounts
-	router.GET("/accounts", this.handleAccounts)
+	router.GET("/accounts", parseQuery, this.handleAccounts)
 	router.GET("/accounts/:address", addressParam, this.handleAccount)
 	router.GET("/accounts/:address/storage", addressParam, this.handleStorage)
 	router.GET("/accounts/:address/storage/:key", addressParam, keyParam, this.handleStorageAt)
@@ -40,7 +40,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/blockchain/genesis_hash", this.handleGenesisHash)
 	router.GET("/blockchain/latest_block_height", this.handleLatestBlockHeight)
 	router.GET("/blockchain/latest_block", this.handleLatestBlock)
-	router.GET("/blockchain/blocks", this.handleBlocks)
+	router.GET("/blockchain/blocks", parseQuery, this.handleBlocks)
 	router.GET("/blockchain/block/:height", heightParam, this.handleBlock)
 	// Consensus
 	router.GET("/consensus", this.handleConsensusState)
@@ -61,7 +61,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/txpool", this.handleUnconfirmedTxs)
 	// Code execution
 	router.POST("/calls/:address", this.handleCall)
-	router.POST("/calls/", this.handleCallCode)
+	router.POST("/calls", this.handleCallCode)
 	// Unsafe
 	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
 	router.POST("/unsafe/txpool", this.handleTransact)
@@ -186,14 +186,18 @@ func (this *RestServer) handleLatestBlock(c *gin.Context) {
 }
 
 func (this *RestServer) handleBlocks(c *gin.Context) {
-	// TODO fix when query structure has been decided on.
-	// rfd := &RangeFilterData{0, 0}
-	//blocks, err := this.pipe.Blockchain().Blocks(rfd)
-	//if err != nil {
-	//	c.AbortWithError(500, err)
-	//}
-	//c.Writer.WriteHeader(200)
-	//this.codec.Encode(blocks, c.Writer)
+	var filters []*ep.FilterData
+	fs, exists := c.Get("filters")
+	if exists {
+		filters = fs.([]*ep.FilterData)
+	}
+	
+	blocks, err := this.pipe.Blockchain().Blocks(filters)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+	c.Writer.WriteHeader(200)
+	this.codec.Encode(blocks, c.Writer)
 }
 
 func (this *RestServer) handleBlock(c *gin.Context) {
@@ -360,12 +364,12 @@ func (this *RestServer) handleCall(c *gin.Context) {
 }
 
 func (this *RestServer) handleCallCode(c *gin.Context) {
-	param := &CallParam{}
+	param := &CallCodeParam{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	call, err := this.pipe.Transactor().Call(param.Address, param.Data)
+	call, err := this.pipe.Transactor().CallCode(param.Code, param.Data)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

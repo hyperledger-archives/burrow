@@ -24,8 +24,11 @@ func TestHttpFlooding(t *testing.T) {
 	if err == nil {
 		t.Logf("HTTP test: A total of %d http GET messages sent succesfully over %d seconds.\n", DURATION*PER_SEC, DURATION)
 	}
-	errStop := serveProcess.Stop(time.Millisecond * 1000)
+	stopC := serveProcess.StopEventChannel()
+	errStop := serveProcess.Stop(0)
+	<- stopC
 	assert.NoError(t, errStop, "Scumbag-ed!")
+	
 }
 
 func runHttp() error {

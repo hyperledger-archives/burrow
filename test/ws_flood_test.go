@@ -59,8 +59,9 @@ func TestWsFlooding(t *testing.T) {
 	t.Logf("Flooding...")
 	// Run. Blocks.
 	errRun := runWs()
-
-	errStop := serveProcess.Stop(time.Millisecond * 100)
+	stopC := serveProcess.StopEventChannel()
+	errStop := serveProcess.Stop(0)
+	<-stopC
 	assert.NoError(t, errRun, "ScumSocketed!")
 	assert.NoError(t, errStop, "ScumSocketed!")
 	o, c, a := sc.Report()

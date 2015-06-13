@@ -77,7 +77,7 @@ type (
 	}
 
 	// Used when sending a transaction to be created and signed on the server
-	// (using the private key).
+	// (using the private key). This only uses the standard key type for now.
 	TransactParam struct {
 		PrivKey  []byte `json:"priv_key"`
 		Data     []byte `json:"data"`

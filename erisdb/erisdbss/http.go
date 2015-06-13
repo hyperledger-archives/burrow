@@ -4,7 +4,6 @@ package erisdbss
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/tendermint/binary"
@@ -21,7 +20,7 @@ moniker = "anothertester"
 seeds = ""
 fast_sync = false
 db_backend = "leveldb"
-log_level = "debug"
+log_level = "warn"
 node_laddr = ""
 `
 
@@ -83,7 +82,7 @@ func (this *ServerServer) ShutDown() {
 
 // Handle incoming requests.
 func (this *ServerServer) handleFunc(c *gin.Context) {
-	fmt.Println("INCOMING MESSAGE")
+	log.Debug("Incoming message")
 	r := c.Request
 	var buf bytes.Buffer
 	n, errR := buf.ReadFrom(r.Body)
@@ -99,13 +98,13 @@ func (this *ServerServer) handleFunc(c *gin.Context) {
 		http.Error(c.Writer, "Failed to decode json.", 400)
 		return
 	}
-	fmt.Println("STARTING TO ADD")
+	log.Debug("Starting to add.")
 	resp, errA := this.serverManager.add(reqData)
 	if errA != nil {
 		http.Error(c.Writer, "Internal error: "+errA.Error(), 500)
 		return
 	}
-	fmt.Printf("WORK DONE: %v\n", resp)
+	log.Debug("Work done.", "URL", resp.URL)
 	w := c.Writer
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)
