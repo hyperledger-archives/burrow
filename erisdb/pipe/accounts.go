@@ -182,11 +182,11 @@ type AccountBalanceFilter struct {
 }
 
 func (this *AccountBalanceFilter) Configure(fd *FilterData) error {
-	val, err := parseNumberValue(fd.Value)
+	val, err := ParseNumberValue(fd.Value)
 	if err != nil {
 		return err
 	}
-	match, err2 := rangeFilter(fd.Op, "balance")
+	match, err2 := GetRangeFilter(fd.Op, "balance")
 	if err2 != nil {
 		return err2
 	}

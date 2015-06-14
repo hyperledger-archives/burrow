@@ -2,13 +2,14 @@ package mock
 
 import (
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	td "github.com/eris-ltd/erisdb/test/testdata/testdata"
 	"github.com/tendermint/tendermint/account"
 	"github.com/tendermint/tendermint/types"
 )
 
 // Base struct.
 type MockPipe struct {
-	mockData   *MockData
+	testOutput *td.Output
 	accounts   ep.Accounts
 	blockchain ep.Blockchain
 	consensus  ep.Consensus
@@ -18,15 +19,16 @@ type MockPipe struct {
 }
 
 // Create a new mock tendermint pipe.
-func NewMockPipe(mockData *MockData) ep.Pipe {
-	accounts := &accounts{mockData}
-	blockchain := &blockchain{mockData}
-	consensus := &consensus{mockData}
-	events := &events{mockData}
-	net := &net{mockData}
-	transactor := &transactor{mockData}
+func NewMockPipe(td *td.TestData) ep.Pipe {
+	testOutput := td.Output
+	accounts := &accounts{testOutput}
+	blockchain := &blockchain{testOutput}
+	consensus := &consensus{testOutput}
+	events := &events{testOutput}
+	net := &net{testOutput}
+	transactor := &transactor{testOutput}
 	return &MockPipe{
-		mockData,
+		testOutput,
 		accounts,
 		blockchain,
 		consensus,
@@ -38,7 +40,7 @@ func NewMockPipe(mockData *MockData) ep.Pipe {
 
 // Create a mock pipe with default mock data.
 func NewDefaultMockPipe() ep.Pipe {
-	return NewMockPipe(NewDefaultMockData())
+	return NewMockPipe(td.LoadTestData())
 }
 
 func (this *MockPipe) Accounts() ep.Accounts {
@@ -69,82 +71,82 @@ func (this *MockPipe) Transactor() ep.Transactor {
 
 // Accounts
 type accounts struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	return this.mockData.PrivAccount, nil
+	return this.testOutput.GenPrivAccount, nil
 }
 
 func (this *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, error) {
-	return this.mockData.PrivAccount, nil
+	return this.testOutput.GenPrivAccount, nil
 }
 
 func (this *accounts) Accounts([]*ep.FilterData) (*ep.AccountList, error) {
-	return this.mockData.Accounts, nil
+	return this.testOutput.Accounts, nil
 }
 
 func (this *accounts) Account(address []byte) (*account.Account, error) {
-	return this.mockData.Account, nil
+	return this.testOutput.Account, nil
 }
 
 func (this *accounts) Storage(address []byte) (*ep.Storage, error) {
-	return this.mockData.Storage, nil
+	return this.testOutput.Storage, nil
 }
 
 func (this *accounts) StorageAt(address, key []byte) (*ep.StorageItem, error) {
-	return this.mockData.StorageAt, nil
+	return this.testOutput.StorageAt, nil
 }
 
 // Blockchain
 type blockchain struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *blockchain) Info() (*ep.BlockchainInfo, error) {
-	return this.mockData.BlockchainInfo, nil
+	return this.testOutput.BlockchainInfo, nil
 }
 
 func (this *blockchain) ChainId() (string, error) {
-	return this.mockData.ChainId.ChainId, nil
+	return this.testOutput.ChainId.ChainId, nil
 }
 
 func (this *blockchain) GenesisHash() ([]byte, error) {
-	return this.mockData.GenesisHash.Hash, nil
+	return this.testOutput.GenesisHash.Hash, nil
 }
 
 func (this *blockchain) LatestBlockHeight() (uint, error) {
-	return this.mockData.LatestBlockHeight.Height, nil
+	return this.testOutput.LatestBlockHeight.Height, nil
 }
 
 func (this *blockchain) LatestBlock() (*types.Block, error) {
-	return this.mockData.LatestBlock, nil
+	return nil, nil
 }
 
 func (this *blockchain) Blocks([]*ep.FilterData) (*ep.Blocks, error) {
-	return this.mockData.Blocks, nil
+	return this.testOutput.Blocks, nil
 }
 
 func (this *blockchain) Block(height uint) (*types.Block, error) {
-	return this.mockData.Block, nil
+	return this.testOutput.Block, nil
 }
 
 // Consensus
 type consensus struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *consensus) State() (*ep.ConsensusState, error) {
-	return this.mockData.ConsensusState, nil
+	return this.testOutput.ConsensusState, nil
 }
 
 func (this *consensus) Validators() (*ep.ValidatorList, error) {
-	return this.mockData.Validators, nil
+	return this.testOutput.Validators, nil
 }
 
 // Events
 type events struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *events) Subscribe(subId, event string, callback func(interface{})) (bool, error) {
@@ -152,57 +154,57 @@ func (this *events) Subscribe(subId, event string, callback func(interface{})) (
 }
 
 func (this *events) Unsubscribe(subId string) (bool, error) {
-	return this.mockData.EventUnSub.Result, nil
+	return true, nil
 }
 
 // Net
 type net struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *net) Info() (*ep.NetworkInfo, error) {
-	return this.mockData.NetworkInfo, nil
+	return this.testOutput.NetworkInfo, nil
 }
 
 func (this *net) Moniker() (string, error) {
-	return this.mockData.Moniker.Moniker, nil
+	return this.testOutput.Moniker.Moniker, nil
 }
 
 func (this *net) Listening() (bool, error) {
-	return this.mockData.Listening.Listening, nil
+	return this.testOutput.Listening.Listening, nil
 }
 
 func (this *net) Listeners() ([]string, error) {
-	return this.mockData.Listeners.Listeners, nil
+	return this.testOutput.Listeners.Listeners, nil
 }
 
 func (this *net) Peers() ([]*ep.Peer, error) {
-	return this.mockData.Peers, nil
+	return this.testOutput.Peers, nil
 }
 
 func (this *net) Peer(address string) (*ep.Peer, error) {
-	return this.mockData.Peer, nil
+	return nil, nil
 }
 
 // Txs
 type transactor struct {
-	mockData *MockData
+	testOutput *td.Output
 }
 
 func (this *transactor) Call(address, data []byte) (*ep.Call, error) {
-	return this.mockData.Call, nil
+	return nil, nil
 }
 
 func (this *transactor) CallCode(code, data []byte) (*ep.Call, error) {
-	return this.mockData.CallCode, nil
+	return this.testOutput.CallCode, nil
 }
 
 func (this *transactor) BroadcastTx(tx types.Tx) (*ep.Receipt, error) {
-	return this.mockData.BroadcastTx, nil
+	return nil, nil
 }
 
 func (this *transactor) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
-	return this.mockData.UnconfirmedTxs, nil
+	return this.testOutput.UnconfirmedTxs, nil
 }
 
 func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*ep.TransactionResult, error) {
@@ -210,9 +212,12 @@ func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, f
 }
 
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*ep.Receipt, error) {
-	return this.mockData.BroadcastTx, nil
+	if address == nil || len(address) == 0 {
+		return this.testOutput.TxCreateReceipt, nil
+	}
+	return this.testOutput.TxReceipt, nil
 }
 
 func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
-	return this.mockData.SignTx, nil
+	return nil, nil
 }

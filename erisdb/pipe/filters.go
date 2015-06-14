@@ -127,7 +127,7 @@ func (this *FilterFactory) newSingleFilter(fd *FilterData) (ConfigurableFilter, 
 
 // Some standard value parsing functions.
 
-func parseNumberValue(value string) (int64, error) {
+func ParseNumberValue(value string) (int64, error) {
 	var val int64
 	// Check for wildcards.
 	if value == "min" {
@@ -147,7 +147,7 @@ func parseNumberValue(value string) (int64, error) {
 
 // Some standard filtering functions.
 
-func rangeFilter(op, fName string) (func(a, b int64) bool, error) {
+func GetRangeFilter(op, fName string) (func(a, b int64) bool, error) {
 	if op == "==" {
 		return func(a, b int64) bool {
 			return a == b
@@ -174,5 +174,19 @@ func rangeFilter(op, fName string) (func(a, b int64) bool, error) {
 		}, nil
 	} else {
 		return nil, fmt.Errorf("Op: " + op + " is not supported for '" + fName + "' filtering")
+	}
+}
+
+func GetStringFilter(op, fName string) (func(s0, s1 string) bool, error){
+	if op == "==" {
+		return func(s0, s1 string) bool {
+			return strings.EqualFold(s0,s1)
+		}, nil
+	} else if op == "!=" {
+		return func(s0, s1 string) bool {
+			return !strings.EqualFold(s0,s1)
+		}, nil
+	} else {
+		return nil, fmt.Errorf("Op: " + op + " is not supported for '" + fName + "' filtering.")
 	}
 }

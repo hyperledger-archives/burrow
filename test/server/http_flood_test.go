@@ -28,7 +28,6 @@ func TestHttpFlooding(t *testing.T) {
 	errStop := serveProcess.Stop(0)
 	<-stopC
 	assert.NoError(t, errStop, "Scumbag-ed!")
-
 }
 
 func runHttp() error {
@@ -36,7 +35,7 @@ func runHttp() error {
 	duration := DURATION * time.Second
 	targeter := vegeta.NewStaticTargeter(&vegeta.Target{
 		Method: "GET",
-		URL:    "http://localhost:1337/scumbag",
+		URL:    "http://localhost:31333/scumbag",
 	})
 	attacker := vegeta.NewAttacker()
 	var results vegeta.Results

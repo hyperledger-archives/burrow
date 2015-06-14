@@ -7,6 +7,7 @@ import (
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	rpc "github.com/eris-ltd/erisdb/rpc"
 	"github.com/tendermint/tendermint/types"
+	"strings"
 )
 
 const (
@@ -421,6 +422,7 @@ func generateSubId() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(b), nil
+	rStr := hex.EncodeToString(b)
+	return strings.ToUpper(rStr), nil
 
 }

@@ -24,12 +24,12 @@ func IsAddress(str string) bool {
 	return addrRe.MatchString(str)
 }
 
-// Is the candidate a public key string (32 bytes, hex).
-func IsPub(str string) bool {
+// Is the candidate a public key string (32 bytes). This is not a good name.
+func IsPubKey(str string) bool {
 	return pubRe.MatchString(str)
 }
 
-// Is the candidate a private key string (64 bytes, hex).
-func IsPriv(str string) bool {
+// Is the candidate a private key string (64 bytes, hex). This is not a good name.
+func IsPrivKey(str string) bool {
 	return privRe.MatchString(str)
 }

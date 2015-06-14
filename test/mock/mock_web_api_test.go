@@ -1,4 +1,4 @@
-package web_api
+package mock
 
 // Basic imports
 import (
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
 	edb "github.com/eris-ltd/erisdb/erisdb"
-	ess "github.com/eris-ltd/erisdb/erisdb/erisdbss"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	"github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
@@ -14,11 +13,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/account"
+	"github.com/tendermint/log15"
 	"net/http"
-	"os"
-	"path"
 	"testing"
+	"os"
+	"runtime"
 )
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	log15.Root().SetHandler(log15.LvlFilterHandler(
+		log15.LvlWarn,
+		log15.StreamHandler(os.Stdout, log15.TerminalFormat()),
+	))
+	gin.SetMode(gin.ReleaseMode)
+}
 
 type WebApiSuite struct {
 	suite.Suite
@@ -31,22 +40,22 @@ type WebApiSuite struct {
 
 func (this *WebApiSuite) SetupSuite() {
 	gin.SetMode(gin.ReleaseMode)
-	baseDir := path.Join(os.TempDir(), "/.edbservers")
-	ss := ess.NewServerServer(baseDir)
-	proc := server.NewServeProcess(nil, ss)
+	// Load the supporting objects.
+	testData := td.LoadTestData()
+	pipe := NewMockPipe(testData)
+	codec := &edb.TCodec{}
+	evtSubs := edb.NewEventSubscriptions(pipe.Events())
+	// The server
+	restServer := edb.NewRestServer(codec, pipe, evtSubs)
+	sConf := server.DefaultServerConfig()
+	sConf.Bind.Port = 31400
+	// Create a server process.
+	proc := server.NewServeProcess(sConf, restServer)
 	_ = proc.Start()
 	this.serveProcess = proc
-	testData := td.LoadTestData()
 	this.codec = edb.NewTCodec()
-
-	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
-	rBts, _ := this.codec.EncodeBytes(requestData)
-	resp, _ := http.Post(SS_URL, "application/json", bytes.NewBuffer(rBts))
-	rd := &ess.ResponseData{}
-	_ = this.codec.Decode(rd, resp.Body)
-	fmt.Println("Received URL: " + rd.URL)
-	this.sUrl = rd.URL
 	this.testData = testData
+	this.sUrl = "http://localhost:31400"
 }
 
 func (this *WebApiSuite) TearDownSuite() {
