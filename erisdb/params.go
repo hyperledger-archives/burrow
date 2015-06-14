@@ -23,11 +23,6 @@ type (
 		PrivKey []byte `json:"priv_key"`
 	}
 
-	// Used to send a tx. Using a string as placeholder until the tx stuff is sorted out.
-	TxParam struct {
-		Tx types.Tx `json:"tx"`
-	}
-
 	// StorageAt
 	StorageAtParam struct {
 		Address []byte `json:"address"`
@@ -72,7 +67,7 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           types.Tx               `json:"tx"`
+		Tx           *types.CallTx          `json:"tx"`
 		PrivAccounts []*account.PrivAccount `json:"priv_accounts"`
 	}
 

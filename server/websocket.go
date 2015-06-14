@@ -24,7 +24,7 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
 	// Maximum message size allowed from a peer.
-	maxMessageSize = 512
+	maxMessageSize = 2048
 )
 
 // Services requests. Message bytes are passed along with the session

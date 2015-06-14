@@ -193,6 +193,19 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	return &ResponseData{URL: URL}, nil
 }
 
+// Add a new erisdb process to the list.
+func (this *ServerManager) killAll() {
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
+	for len(this.running) > 0 {
+		task := this.running[0]
+		log.Debug("Closing down server.", "port", task.port)
+		task.sp.Kill()
+		this.running = this.running[1:]
+		this.idPool.ReleaseId(uint(task.port - PORT_BASE))
+	}
+}
+
 // Creates a temp folder for the tendermint/erisdb node to run in.
 // Folder name is port based, so port=1337 meens folder="testnode1337"
 // Old folders are cleared out. before creating them, and the server will
@@ -217,28 +230,28 @@ func (this *ServerManager) createWorkDir(data *RequestData, config *server.Serve
 	if errCFG != nil {
 		return "", errCFG
 	}
-	log.Info("File written to %s.\n", cfgName)
+	log.Info("File written.", "name", cfgName)
 
 	// Write validator.
 	errPV := writeJSON(pvName, data.PrivValidator)
 	if errPV != nil {
 		return "", errPV
 	}
-	log.Info("File written to %s.\n", pvName)
+	log.Info("File written.", "name", pvName)
 
 	// Write genesis
 	errG := writeJSON(genesisName, data.Genesis)
 	if errG != nil {
 		return "", errG
 	}
-	log.Info("File written to %s.\n", genesisName)
+	log.Info("File written.", "name", genesisName)
 
 	// Write server config.
 	errWC := server.WriteServerConfig(scName, config)
 	if errWC != nil {
 		return "", errWC
 	}
-	log.Info("File written to %s.\n", scName)
+	log.Info("File written.", "name", scName)
 	return workDir, nil
 }
 

@@ -1,4 +1,4 @@
-package test
+package server
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	log15.Root().SetHandler(log15.LvlFilterHandler(
-		log15.LvlError,
+		log15.LvlWarn,
 		log15.StreamHandler(os.Stdout, log15.TerminalFormat()),
 	))
 	gin.SetMode(gin.ReleaseMode)

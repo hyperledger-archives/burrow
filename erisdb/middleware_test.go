@@ -21,7 +21,7 @@ func TestQueryNoColonSeparator(t *testing.T) {
 
 // Test no colon separated filter and proper filters mixed.
 func TestQueryNoColonSeparatorMulti(t *testing.T) {
-	_, err := _parseQuery("test + test1:24 + test2")
+	_, err := _parseQuery("test test1:24 test2")
 	assert.Error(t, err, "Should detect missing colon.")
 }
 
@@ -63,6 +63,22 @@ func TestQueryEQ(t *testing.T) {
 // Test the '!=' operator.
 func TestQueryNEQ(t *testing.T) {
 	testOp("!=", t)
+}
+
+func TestCombined(t *testing.T) {
+	q := "balance:>=5 sequence:<8"
+	arr, err := _parseQuery(q)
+	assert.NoError(t, err)
+	assert.Len(t, arr, 2)
+	f0 := arr[0]
+	assert.Equal(t, f0.Field, "balance")
+	assert.Equal(t, f0.Op, ">=")
+	assert.Equal(t, f0.Value, "5")
+	f1 := arr[1]
+	assert.Equal(t, f1.Field, "sequence")
+	assert.Equal(t, f1.Op, "<")
+	assert.Equal(t, f1.Value, "8")
+
 }
 
 // Test a working range query.

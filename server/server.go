@@ -135,6 +135,9 @@ func (this *ServeProcess) Start() error {
 // up until the timeout duration is passed, at which point it
 // will abort them and shut down.
 func (this *ServeProcess) Stop(timeout time.Duration) error {
+	for _, s := range this.servers {
+		s.ShutDown()
+	}
 	toChan := make(chan struct{})
 	if timeout != 0 {
 		go func() {

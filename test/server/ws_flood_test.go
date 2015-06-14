@@ -1,4 +1,4 @@
-package test
+package server
 
 import (
 	"github.com/eris-ltd/erisdb/client"

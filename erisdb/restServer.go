@@ -8,6 +8,7 @@ import (
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/eris-ltd/erisdb/util"
 	"github.com/gin-gonic/gin"
+	"github.com/tendermint/tendermint/types"
 	"strconv"
 	"strings"
 )
@@ -99,7 +100,12 @@ func (this *RestServer) handleGenPrivAcc(c *gin.Context) {
 }
 
 func (this *RestServer) handleAccounts(c *gin.Context) {
-	accs, err := this.pipe.Accounts().Accounts(nil)
+	var filters []*ep.FilterData
+	fs, exists := c.Get("filters")
+	if exists {
+		filters = fs.([]*ep.FilterData)
+	}
+	accs, err := this.pipe.Accounts().Accounts(filters)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -326,12 +332,12 @@ func (this *RestServer) handlePeer(c *gin.Context) {
 // ********************************* Transactions *********************************
 
 func (this *RestServer) handleBroadcastTx(c *gin.Context) {
-	param := &TxParam{}
+	param := &types.CallTx{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(param.Tx)
+	receipt, err := this.pipe.Transactor().BroadcastTx(param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -452,22 +458,24 @@ func peerAddressParam(c *gin.Context) {
 
 func parseQuery(c *gin.Context) {
 	q := c.Query("q")
-	if q == "" {
-		c.Set("filters", nil)
-	} else {
+	if q != "" {
 		data, err := _parseQuery(q)
 		if err != nil {
-			c.AbortWithError(400, err)
+			c.Writer.WriteHeader(400)
+			c.Writer.Write([]byte(err.Error()))
+			c.Abort()
+			// c.AbortWithError(400, err)
+			return
 		}
 		c.Set("filters", data)
 	}
 }
 
 func _parseQuery(queryString string) ([]*ep.FilterData, error) {
-	if queryString == "" {
+	if len(queryString) == 0 {
 		return nil, nil
 	}
-	filters := strings.Split(queryString, "+")
+	filters := strings.Split(queryString, " ")
 	fdArr := []*ep.FilterData{}
 	for _, f := range filters {
 		kv := strings.Split(f, ":")

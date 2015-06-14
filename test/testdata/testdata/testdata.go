@@ -1,4 +1,4 @@
-package test
+package testdata
 
 import (
 	edb "github.com/eris-ltd/erisdb/erisdb"
@@ -81,6 +81,12 @@ var testDataJson = `{
     "block_range": {
       "min": 0,
       "max": 0
+    },
+    "priv_account": {
+      "address": "B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7",
+      "pub_key": [ 1, "9C74ECA0AF1DF930C69F5B9F72A1802C47D1A47E14D4572ADB24A63EA501D917" ],
+      "priv_key": [ 1,
+        "82197A833282E819D172A3CB19B4CA3FFCA2F2CBE042B01CCF66E5147AF3C3759C74ECA0AF1DF930C69F5B9F72A1802C47D1A47E14D4572ADB24A63EA501D917" ]
     }
   },
   "output": {
@@ -251,6 +257,11 @@ var testDataJson = `{
       "min_height": 0,
       "max_height": 0,
       "block_metas": []
+    },
+    "gen_priv_account": {
+      "address": "",
+      "pub_key": [ 1, "" ],
+      "priv_key": [ 1, "" ]
     }
   }
 }`
@@ -271,12 +282,13 @@ type (
 	}
 
 	Input struct {
-		AccountAddress string             `json:"account_address"`
-		StorageAddress string             `json:"storage_address"`
-		TxCreate       *edb.TransactParam `json:"tx_create"`
-		Tx             *edb.TransactParam `json:"tx"`
-		CallCode       *edb.CallCodeParam `json:"call_code"`
-		BlockRange     *BlockRange        `json:"block_range"`
+		AccountAddress string               `json:"account_address"`
+		StorageAddress string               `json:"storage_address"`
+		TxCreate       *edb.TransactParam   `json:"tx_create"`
+		Tx             *edb.TransactParam   `json:"tx"`
+		CallCode       *edb.CallCodeParam   `json:"call_code"`
+		BlockRange     *BlockRange          `json:"block_range"`
+		PrivAccount    *account.PrivAccount `json:"priv_account"`
 	}
 
 	Output struct {
@@ -301,6 +313,7 @@ type (
 		LatestBlockHeight *ep.LatestBlockHeight `json:"latest_block_height"`
 		Block             *types.Block          `json:"block"`
 		Blocks            *ep.Blocks            `json:"blocks"`
+		GenPrivAccount    *account.PrivAccount  `json:"gen_priv_account"`
 	}
 
 	TestData struct {

@@ -1,4 +1,4 @@
-package test
+package web_api
 
 // Basic imports
 import (
@@ -10,6 +10,7 @@ import (
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	"github.com/eris-ltd/erisdb/rpc"
 	"github.com/eris-ltd/erisdb/server"
+	td "github.com/eris-ltd/erisdb/test/testdata/testdata"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/account"
@@ -17,11 +18,7 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 )
-
-const SS_URL = "http://localhost:1337/server"
-const SERVER_DURATION = 5
 
 //
 type WebApiSuite struct {
@@ -30,7 +27,7 @@ type WebApiSuite struct {
 	serveProcess *server.ServeProcess
 	codec        rpc.Codec
 	sUrl         string
-	testData     *TestData
+	testData     *td.TestData
 }
 
 func (this *WebApiSuite) SetupSuite() {
@@ -40,8 +37,7 @@ func (this *WebApiSuite) SetupSuite() {
 	proc := server.NewServeProcess(nil, ss)
 	_ = proc.Start()
 	this.serveProcess = proc
-	time.Sleep(1 * time.Second)
-	testData := LoadTestData()
+	testData := td.LoadTestData()
 	this.codec = edb.NewTCodec()
 
 	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
@@ -52,14 +48,12 @@ func (this *WebApiSuite) SetupSuite() {
 	fmt.Println("Received URL: " + rd.URL)
 	this.sUrl = rd.URL
 	this.testData = testData
-	time.Sleep(1 * time.Second)
 }
 
 func (this *WebApiSuite) TearDownSuite() {
 	sec := this.serveProcess.StopEventChannel()
-	this.serveProcess.Stop(time.Millisecond)
+	this.serveProcess.Stop(0)
 	<-sec
-	os.RemoveAll(this.baseDir)
 }
 
 // ********************************************* Consensus *********************************************
@@ -241,7 +235,6 @@ func (this *WebApiSuite) Test_E4_Blocks() {
 func (this *WebApiSuite) get(endpoint string) *http.Response {
 	resp, errG := http.Get(this.sUrl + endpoint)
 	this.NoError(errG)
-	this.Equal(200, resp.StatusCode)
 	return resp
 }
 

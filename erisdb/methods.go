@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	rpc "github.com/eris-ltd/erisdb/rpc"
+	"github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -364,13 +365,12 @@ func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface
 }
 
 func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &TxParam{}
+	param := &types.CallTx{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	tx := param.Tx
-	receipt, errC := this.pipe.Transactor().BroadcastTx(tx)
+	receipt, errC := this.pipe.Transactor().BroadcastTx(param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

@@ -20,7 +20,7 @@ moniker = "anothertester"
 seeds = ""
 fast_sync = false
 db_backend = "leveldb"
-log_level = "warn"
+log_level = "debug"
 node_laddr = ""
 `
 
@@ -78,6 +78,7 @@ func (this *ServerServer) Running() bool {
 // Shut the server down. Will close all websocket sessions.
 func (this *ServerServer) ShutDown() {
 	this.running = false
+	this.serverManager.killAll()
 }
 
 // Handle incoming requests.
