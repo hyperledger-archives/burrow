@@ -110,17 +110,23 @@ func (this *ServeProcess) Start() error {
 	for _, c := range this.startListenChans {
 		c <- struct{}{}
 	}
+	// Start the serve routine.
 	go func() {
 		this.srv.Serve(lst)
 		for _, s := range this.servers {
 			s.ShutDown()
 		}
 	}()
+	// Listen to the process stop event, it will call 'Stop'
+	// on the graceful Server. This happens when someone 
+	// calls 'Stop' on the process.
 	go func() {
 		<-this.stopChan
 		log.Info("Close signal sent to server.")
 		this.srv.Stop(killTime)
 	}()
+	// Listen to the servers stop event. It is triggered when
+	// the server has been fully shut down.
 	go func() {
 		<-this.srv.StopChan()
 		log.Info("Server stop event fired. Good bye.")

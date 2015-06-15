@@ -68,8 +68,8 @@ func (this *mockEventEmitter) Unsubscribe(subId string) (bool, error) {
 // Test that event subscriptions can be added manually and then automatically reaped.
 func TestSubReaping(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	NUM_SUBS := 1000
-	reaperThreshold = 500 * time.Millisecond
+	NUM_SUBS := 100
+	reaperThreshold = 200 * time.Millisecond
 	reaperTimeout = 100 * time.Millisecond
 
 	mee := newMockEventEmitter()
@@ -112,7 +112,7 @@ func TestSubReaping(t *testing.T) {
 
 // Test that event subscriptions can be added and removed manually.
 func TestSubManualClose(t *testing.T) {
-	NUM_SUBS := 1000
+	NUM_SUBS := 100
 	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
@@ -160,7 +160,7 @@ func TestSubManualClose(t *testing.T) {
 
 // Test that the system doesn't fail under high pressure.
 func TestSubFlooding(t *testing.T) {
-	NUM_SUBS := 1000
+	NUM_SUBS := 100
 	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond

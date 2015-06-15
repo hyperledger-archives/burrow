@@ -59,7 +59,7 @@ var testDataJson = `{
   },
   "input" : {
     "account_address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3",
-    "storage_address": "",
+    "storage_address": "00",
     "tx_create" : {
       "address": "",
       "priv_key": "6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
@@ -240,7 +240,10 @@ var testDataJson = `{
       "storage_root": "",
       "storage_items": []
     },
-    "storage_at": {},
+    "storage_at": {
+      "key": "00",
+      "value": ""
+    },
     "blockchain_info": {
       "client_version": "",
       "chain_id": "my_tests",
