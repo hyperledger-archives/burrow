@@ -67,9 +67,7 @@ func TestWsFlooding(t *testing.T) {
 	o, c, a := sc.Report()
 	assert.Equal(t, o, CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
 	assert.Equal(t, c, CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
-	assert.Equal(t, a, 0, "Server registered '%d' conns still active after closing all.", a)
-
-	t.Logf("WebSocket test: A total of %d messages sent succesfully over %d parallel websocket connections.\n", CONNS*MESSAGES, CONNS)
+	assert.Equal(t, a, 0, "Server registered '%d' conns still active after shutting down.", a)
 }
 
 func runWs() error {

@@ -37,9 +37,6 @@ type (
 
 // Create a new response object from a result.
 func NewRPCResponse(id string, res interface{}) *RPCResponse {
-	if res == nil {
-		res = struct{}{}
-	}
 	return &RPCResponse{
 		Result:  res,
 		Error:   nil,

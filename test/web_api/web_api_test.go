@@ -34,7 +34,10 @@ func (this *WebApiSuite) SetupSuite() {
 	baseDir := path.Join(os.TempDir(), "/.edbservers")
 	ss := ess.NewServerServer(baseDir)
 	proc := server.NewServeProcess(nil, ss)
-	_ = proc.Start()
+	err := proc.Start()
+	if err != nil {
+		panic(err)
+	}
 	this.serveProcess = proc
 	testData := td.LoadTestData()
 	this.codec = edb.NewTCodec()
@@ -43,7 +46,10 @@ func (this *WebApiSuite) SetupSuite() {
 	rBts, _ := this.codec.EncodeBytes(requestData)
 	resp, _ := http.Post(SS_URL, "application/json", bytes.NewBuffer(rBts))
 	rd := &ess.ResponseData{}
-	_ = this.codec.Decode(rd, resp.Body)
+	err2 := this.codec.Decode(rd, resp.Body)
+	if err2 != nil {
+		panic(err2)
+	}
 	fmt.Println("Received URL: " + rd.URL)
 	this.sUrl = rd.URL
 	this.testData = testData
