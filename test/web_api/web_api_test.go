@@ -84,7 +84,15 @@ func (this *WebApiSuite) Test_B0_NetworkInfo() {
 	this.Equal(ret, this.testData.Output.NetworkInfo)
 }
 
-func (this *WebApiSuite) Test_B1_Moniker() {
+func (this *WebApiSuite) Test_B1_ClientVersion() {
+	resp := this.get("/network/client_version")
+	ret := &ep.ClientVersion{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.Output.ClientVersion)
+}
+
+func (this *WebApiSuite) Test_B2_Moniker() {
 	resp := this.get("/network/moniker")
 	ret := &ep.Moniker{}
 	errD := this.codec.Decode(ret, resp.Body)
@@ -92,7 +100,7 @@ func (this *WebApiSuite) Test_B1_Moniker() {
 	this.Equal(ret, this.testData.Output.Moniker)
 }
 
-func (this *WebApiSuite) Test_B2_Listening() {
+func (this *WebApiSuite) Test_B3_Listening() {
 	resp := this.get("/network/listening")
 	ret := &ep.Listening{}
 	errD := this.codec.Decode(ret, resp.Body)
@@ -100,7 +108,7 @@ func (this *WebApiSuite) Test_B2_Listening() {
 	this.Equal(ret, this.testData.Output.Listening)
 }
 
-func (this *WebApiSuite) Test_B3_Listeners() {
+func (this *WebApiSuite) Test_B4_Listeners() {
 	resp := this.get("/network/listeners")
 	ret := &ep.Listeners{}
 	errD := this.codec.Decode(ret, resp.Body)
@@ -108,7 +116,7 @@ func (this *WebApiSuite) Test_B3_Listeners() {
 	this.Equal(ret, this.testData.Output.Listeners)
 }
 
-func (this *WebApiSuite) Test_B4_Peers() {
+func (this *WebApiSuite) Test_B5_Peers() {
 	resp := this.get("/network/peers")
 	ret := []*ep.Peer{}
 	errD := this.codec.Decode(ret, resp.Body)

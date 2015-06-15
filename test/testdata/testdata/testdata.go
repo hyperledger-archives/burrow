@@ -121,10 +121,14 @@ var testDataJson = `{
       "unbonding_validators": []
     },
     "network_info": {
+      "client_version": "0.9.0",
       "moniker": "anothertester",
       "listening": false,
       "listeners": [],
       "peers": []
+    },
+    "client_version": {
+      "client_version": "0.9.0"
     },
     "moniker": {
       "moniker": "anothertester"
@@ -238,6 +242,7 @@ var testDataJson = `{
     },
     "storage_at": {},
     "blockchain_info": {
+      "client_version": "",
       "chain_id": "my_tests",
       "genesis_hash": "DA4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5FC",
       "latest_block_height": 0,
@@ -295,6 +300,7 @@ type (
 		ConsensusState    *ep.ConsensusState    `json:"consensus_state"`
 		Validators        *ep.ValidatorList     `json:"validators"`
 		NetworkInfo       *ep.NetworkInfo       `json:"network_info"`
+		ClientVersion     *ep.ClientVersion     `json:"client_version"`
 		Moniker           *ep.Moniker           `json:"moniker"`
 		Listening         *ep.Listening         `json:"listening"`
 		Listeners         *ep.Listeners         `json:"listeners"`

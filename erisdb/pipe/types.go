@@ -101,10 +101,15 @@ type (
 
 	// NetworkInfo
 	NetworkInfo struct {
-		Moniker   string   `json:"moniker"`
-		Listening bool     `json:"listening"`
-		Listeners []string `json:"listeners"`
-		Peers     []*Peer  `json:"peers"`
+		ClientVersion string   `json:"client_version"`
+		Moniker       string   `json:"moniker"`
+		Listening     bool     `json:"listening"`
+		Listeners     []string `json:"listeners"`
+		Peers         []*Peer  `json:"peers"`
+	}
+
+	ClientVersion struct {
+		ClientVersion string `json:"client_version"`
 	}
 
 	Moniker struct {

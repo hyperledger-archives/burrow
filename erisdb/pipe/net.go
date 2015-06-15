@@ -17,9 +17,9 @@ func newNetwork(p2pSwitch *p2p.Switch) *network {
 
 // Get the complete net info.
 func (this *network) Info() (*NetworkInfo, error) {
-	listening := this.p2pSwitch.IsListening()
-
+	version := config.GetString("version")
 	moniker := config.GetString("moniker")
+	listening := this.p2pSwitch.IsListening()
 	listeners := []string{}
 	for _, listener := range this.p2pSwitch.Listeners() {
 		listeners = append(listeners, listener.String())
@@ -30,11 +30,17 @@ func (this *network) Info() (*NetworkInfo, error) {
 		peers = append(peers, p)
 	}
 	return &NetworkInfo{
+		version,
 		moniker,
 		listening,
 		listeners,
 		peers,
 	}, nil
+}
+
+// Get the client version
+func (this *network) ClientVersion() (string, error) {
+	return config.GetString("version"), nil
 }
 
 // Get the moniker

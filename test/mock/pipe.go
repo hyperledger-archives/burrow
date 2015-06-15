@@ -166,6 +166,10 @@ func (this *net) Info() (*ep.NetworkInfo, error) {
 	return this.testOutput.NetworkInfo, nil
 }
 
+func (this *net) ClientVersion() (string, error) {
+	return this.testOutput.ClientVersion.ClientVersion, nil
+}
+
 func (this *net) Moniker() (string, error) {
 	return this.testOutput.Moniker.Moniker, nil
 }

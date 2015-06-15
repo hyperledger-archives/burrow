@@ -1,7 +1,6 @@
 package erisdb
 
 import (
-	"fmt"
 	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
 	"github.com/eris-ltd/erisdb/server"
 	"github.com/tendermint/log15"
@@ -13,15 +12,10 @@ import (
 	"path"
 )
 
+const VERSION = "0.9.0"
+
 var log = log15.New("module", "eris/erisdb_server")
 var tmConfig cfg.Config
-
-func init() {
-	cfg.OnConfig(func(newConfig cfg.Config) {
-		fmt.Println("NEWCONFIG")
-		tmConfig = newConfig
-	})
-}
 
 // This function returns a properly configured ErisDb server process with a running
 // tendermint node attached to it. To start listening for incoming requests, call
@@ -51,8 +45,9 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	// Get tendermint configuration
 	tmConfig = tmcfg.GetConfig(workDir)
+	tmConfig.Set("version", VERSION)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
-
+	
 	// Set the node up.
 	nodeRd := make(chan struct{})
 	nd := node.NewNode()

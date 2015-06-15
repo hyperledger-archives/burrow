@@ -50,6 +50,7 @@ type (
 
 	Net interface {
 		Info() (*NetworkInfo, error)
+		ClientVersion() (string, error)
 		Moniker() (string, error)
 		Listening() (bool, error)
 		Listeners() ([]string, error)

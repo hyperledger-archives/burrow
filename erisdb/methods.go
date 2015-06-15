@@ -15,42 +15,37 @@ const (
 	ID           = "socketrpc"
 	SERVICE_NAME = "erisdb"
 
-	// Accounts
-	GET_ACCOUNTS              = SERVICE_NAME + ".getAccounts"
+	GET_ACCOUNTS              = SERVICE_NAME + ".getAccounts" // Accounts
 	GET_ACCOUNT               = SERVICE_NAME + ".getAccount"
 	GET_STORAGE               = SERVICE_NAME + ".getStorage"
 	GET_STORAGE_AT            = SERVICE_NAME + ".getStorageAt"
 	GEN_PRIV_ACCOUNT          = SERVICE_NAME + ".genPrivAccount"
 	GEN_PRIV_ACCOUNT_FROM_KEY = SERVICE_NAME + ".genPrivAccountFromKey"
-	// Blockchain
-	GET_BLOCKCHAIN_INFO     = SERVICE_NAME + ".getBlockchainInfo"
-	GET_GENESIS_HASH        = SERVICE_NAME + ".getGenesisHash"
-	GET_LATEST_BLOCK_HEIGHT = SERVICE_NAME + ".getLatestBlockHeight"
-	GET_LATEST_BLOCK        = SERVICE_NAME + ".getLatestBlock"
-	GET_BLOCKS              = SERVICE_NAME + ".getBlocks"
-	GET_BLOCK               = SERVICE_NAME + ".getBlock"
-	// Consensus
-	GET_CONSENSUS_STATE = SERVICE_NAME + ".getConsensusState"
-	GET_VALIDATORS      = SERVICE_NAME + ".getValidators"
-	// Net
-	GET_NETWORK_INFO = SERVICE_NAME + ".getNetworkInfo"
-	GET_MONIKER      = SERVICE_NAME + ".getMoniker"
-	GET_CHAIN_ID     = SERVICE_NAME + ".getChainId"
-	IS_LISTENING     = SERVICE_NAME + ".isListening"
-	GET_LISTENERS    = SERVICE_NAME + ".getListeners"
-	GET_PEERS        = SERVICE_NAME + ".getPeers"
-	GET_PEER         = SERVICE_NAME + ".getPeer"
-	// Tx
-	CALL                = SERVICE_NAME + ".call"
-	CALL_CODE           = SERVICE_NAME + ".callCode"
-	BROADCAST_TX        = SERVICE_NAME + ".broadcastTx"
-	GET_UNCONFIRMED_TXS = SERVICE_NAME + ".getUnconfirmedTxs"
-	SIGN_TX             = SERVICE_NAME + ".signTx"
-	TRANSACT            = SERVICE_NAME + ".transact"
-	// Events
-	EVENT_SUBSCRIBE   = SERVICE_NAME + ".eventSubscribe"
-	EVENT_UNSUBSCRIBE = SERVICE_NAME + ".eventUnsubscribe"
-	EVENT_POLL        = SERVICE_NAME + ".eventPoll"
+	GET_BLOCKCHAIN_INFO       = SERVICE_NAME + ".getBlockchainInfo" // Blockchain
+	GET_GENESIS_HASH          = SERVICE_NAME + ".getGenesisHash"
+	GET_LATEST_BLOCK_HEIGHT   = SERVICE_NAME + ".getLatestBlockHeight"
+	GET_LATEST_BLOCK          = SERVICE_NAME + ".getLatestBlock"
+	GET_BLOCKS                = SERVICE_NAME + ".getBlocks"
+	GET_BLOCK                 = SERVICE_NAME + ".getBlock"
+	GET_CONSENSUS_STATE       = SERVICE_NAME + ".getConsensusState" // Consensus
+	GET_VALIDATORS            = SERVICE_NAME + ".getValidators"
+	GET_NETWORK_INFO          = SERVICE_NAME + ".getNetworkInfo" // Net
+	GET_CLIENT_VERSION        = SERVICE_NAME + ".getClientVersion"
+	GET_MONIKER               = SERVICE_NAME + ".getMoniker"
+	GET_CHAIN_ID              = SERVICE_NAME + ".getChainId"
+	IS_LISTENING              = SERVICE_NAME + ".isListening"
+	GET_LISTENERS             = SERVICE_NAME + ".getListeners"
+	GET_PEERS                 = SERVICE_NAME + ".getPeers"
+	GET_PEER                  = SERVICE_NAME + ".getPeer"
+	CALL                      = SERVICE_NAME + ".call" // Tx
+	CALL_CODE                 = SERVICE_NAME + ".callCode"
+	BROADCAST_TX              = SERVICE_NAME + ".broadcastTx"
+	GET_UNCONFIRMED_TXS       = SERVICE_NAME + ".getUnconfirmedTxs"
+	SIGN_TX                   = SERVICE_NAME + ".signTx"
+	TRANSACT                  = SERVICE_NAME + ".transact"
+	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
+	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
+	EVENT_POLL                = SERVICE_NAME + ".eventPoll"
 )
 
 // The rpc method handlers.
@@ -84,6 +79,7 @@ func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap[GET_VALIDATORS] = this.Validators
 	// Network
 	dhMap[GET_NETWORK_INFO] = this.NetworkInfo
+	dhMap[GET_CLIENT_VERSION] = this.ClientVersion
 	dhMap[GET_MONIKER] = this.Moniker
 	dhMap[GET_CHAIN_ID] = this.ChainId
 	dhMap[IS_LISTENING] = this.Listening
@@ -285,6 +281,14 @@ func (this *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interf
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return info, 0, nil
+}
+
+func (this *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	version, errC := this.pipe.Net().ClientVersion()
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return &ep.ClientVersion{version}, 0, nil
 }
 
 func (this *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

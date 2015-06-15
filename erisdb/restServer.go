@@ -52,6 +52,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.DELETE("/event_subs/:id", this.handleEventUnsubscribe)
 	// Network
 	router.GET("/network", this.handleNetworkInfo)
+	router.GET("/network/client_version", this.handleClientVersion)
 	router.GET("/network/moniker", this.handleMoniker)
 	router.GET("/network/listening", this.handleListening)
 	router.GET("/network/listeners", this.handleListeners)
@@ -281,6 +282,15 @@ func (this *RestServer) handleNetworkInfo(c *gin.Context) {
 	}
 	c.Writer.WriteHeader(200)
 	this.codec.Encode(nInfo, c.Writer)
+}
+
+func (this *RestServer) handleClientVersion(c *gin.Context) {
+	version, err := this.pipe.Net().ClientVersion()
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+	c.Writer.WriteHeader(200)
+	this.codec.Encode(&ep.ClientVersion{version}, c.Writer)
 }
 
 func (this *RestServer) handleMoniker(c *gin.Context) {
