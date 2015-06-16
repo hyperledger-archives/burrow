@@ -10,7 +10,7 @@ var rootHandler log15.Handler
 
 // This is basically the same code as in tendermint. Initialize root
 // and maybe later also track the loggers here.
-func Init(config *ServerConfig) {
+func InitLogger(config *ServerConfig) {
 
 	consoleLogLevel := config.Logging.ConsoleLogLevel
 

@@ -1,12 +1,20 @@
 # Eris DB
 
-Eris DB allows remote access to its functionality over http and websockets. It currently supports JSON-RPC (over both http and websockets), and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
+Eris DB allows remote access to its functionality over http and websocket. It currently supports JSON-RPC, and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
+
+## TOC
+
+- [JSON-RPC 2.0](#json-rpc)
+- [REST-like HTTP](#rest-like)
+- [Common objects and formatting](#formatting-conventions)
+- [Event-system](#event-system)
+- [Methods](#methods)
+- [Filters](#filters)
 
 <a name="json-rpc"></a>
 ## JSON RPC 2.0
 
-The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websockets. The namespace for the JSON-RPC service is `erisdb`. 
-
+The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `erisdb`.
 
 ### Objects
 
@@ -21,6 +29,7 @@ INTERNAL_ERROR   = -32603
 ```
 
 #####Request
+
 ```
 {
 	jsonrpc: <string>
@@ -31,6 +40,7 @@ INTERNAL_ERROR   = -32603
 ```
 
 #####Response
+
 ```
 {
 	jsonrpc: <string>
@@ -41,17 +51,20 @@ INTERNAL_ERROR   = -32603
 ```
 
 #####Error
+
 ```
 {
     code:    <number>
     message: <string>
 }
 ```
+
 Id can be any string value. Parameters are named, and wrapped in objects. Also, params, result and error params may be `null`.
 
 #####Example
 
-Request: 
+Request:
+
 ```
 {
 	jsonrpc: "2.0", 
@@ -62,6 +75,7 @@ Request:
 ```
 
 Response:
+
 ```
 {
     address: "37236DF251AB70022B1DA351F08A20FB52443E37",
@@ -74,15 +88,15 @@ Response:
 ```
 
 <a name="rest-like"></a>
-## REST-like api
+## REST-like HTTP
 
-The REST-like web-api provides the typical endpoint structure i.e. endpoints are resources, GET params in path, and queries used only for filtering. It is not fully compatible with normal REST and probably won't be. This is partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before 1.0.
+The REST-like API provides the typical endpoint structure i.e. endpoints are resources, parameters can be put in the path, and queries are used only for filtering. It is not fully compatible with REST; partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before version 1.0.
 
 
 <a name="formatting-conventions"></a>
 ##Common objects and formatting
 
-This section contains some common objects and explanations of how they behave.
+This section contains some common objects and explanations of how they work.
   
 ###Numbers and strings
 
@@ -102,11 +116,9 @@ Hex strings are never prefixed.
 
 Public and Private keys in JSON data are either null, or on the form: `[type, hex]`, where `type` is the [public](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go), or [private](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go) key type, and `hex` is the hex-string representation of the key bytes.
 
-* A `public address` is a 20 byte hex string.
-
-* A `public key` is a 32 byte hex string.
-
-* A `private key` is a 64 byte hex string.
+- A `public address` is a 20 byte hex string.
+- A `public key` is a 32 byte hex string.
+- A `private key` is a 64 byte hex string.
 
 #####WARNING
 
@@ -127,6 +139,7 @@ The corresponding Ed25519 private key: `[1, "6B72D45EB65F619F11CE580C8CAED9E0BAD
 These are the types of transactions:
 
 ####SendTx
+
 ```
 {
 	inputs:  [<TxInput>]
@@ -135,6 +148,7 @@ These are the types of transactions:
 ```
 
 ####CallTx
+
 ```
 {
 	input:     <TxInput>
@@ -146,6 +160,7 @@ These are the types of transactions:
 ```
 
 ####NameTx
+
 ```
 {
 	input: <TxInput>
@@ -156,6 +171,7 @@ These are the types of transactions:
 ```
 
 ####BondTx
+
 ```
 {
 	pub_key:   <PubKey>
@@ -166,6 +182,7 @@ These are the types of transactions:
 ```
 
 ####UnbondTx
+
 ```
 {
 	address:   <string>
@@ -175,6 +192,7 @@ These are the types of transactions:
 ```
 
 ####RebondTx
+
 ```
 {
 	address:   <string>
@@ -184,6 +202,7 @@ These are the types of transactions:
 ```
 
 ####DupeoutTx
+
 ```
 {
 	address: <string>
@@ -195,6 +214,7 @@ These are the types of transactions:
 These are the support types that are referenced in the transactions:
 
 ####TxInput
+
 ```
 {
 	address:   <string>
@@ -206,6 +226,7 @@ These are the support types that are referenced in the transactions:
 ```
 
 ####TxOutput
+
 ```
 {
 	address: <string>
@@ -231,10 +252,153 @@ These are the support types that are referenced in the transactions:
 <a name="event-system"></a>
 ##Event system
 
+Tendermint events can be subscribed to regardless of what connection type is used. There are three methods for this:
 
-####Contract code
+- [EventSubscribe](#event-subscribe) is used to subscribe to a given event, using an event-id string as argument. The response will contain a `subscription ID`, which can be used to close down the subscription later, or poll for new events if using HTTP. More on event-ids below.
+- [EventUnsubscribe](#event-unsubscribe) is used to unsubscribe to an event. It requires you to pass the `subscription ID` as an argument.
+- [EventPoll](#event-poll) is used to get all the events that has accumulated since the last time the subscription was polled. It takes the `subscription ID` as a parameter. NOTE: This only works over HTTP. Websocket connections will automatically receive events as they happen. They are sent as regular JSON-RPC 2.0 responses with the `subscriber ID` as response id.
+ 
+There is another slight difference between polling and websocket, and that is the data you receive. If using sockets, it will always be one event at a time, whereas polling will give you an array of events.
+
+### Event types
+
+These are the type of events you can subscribe to. 
+
+The "Account" events are triggered when someone transacts with the given account, and can be used to keep track of account activity. 
+
+NewBlock and Fork happens when a new block is committed or a fork happens, respectively. 
+
+The other events are directly related to consensus. You can find out more about the Tendermint consensus system in the Tendermint [white paper](http://tendermint.com/docs/tendermint.pdf). There is also information in the consensus [sources](https://github.com/tendermint/tendermint/blob/master/consensus/state.go), although a normal user would not be concerned with the consensus mechanisms, but would mostly just listen to account- and perhaps block-events. 
+
+#### Account Input
+
+This notifies you when an account is receiving input.
+
+Event ID: `Acc/<address>/Input`
+
+Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Input` will subscribe to input events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
+
+Event object:
+
+```
+{
+	tx:        <Tx>
+	return:    <string>
+	exception: <string>
+}
+```
+
+#### Account Output
+
+This notifies you when an account is yielding output.
+
+Event ID: `Acc/<address>/Output`
+
+Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Output` will subscribe to output events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
+
+Event object:
+
+```
+<Tx>
+```
+
+#### Account Receive
+
+This notifies you when an account is the target of a call, like when calling an accessor function.
+
+Event ID: `Acc/<address>/Receive`
+
+Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Input` will subscribe to call receive events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
+
+
+```
+{
+	call_data: {
+		caller: <string>
+    	callee: <string>
+    	data:   <string>
+    	value:  <number>
+    	gas:    <number>
+	}
+	origin:     <string>
+	tx_id:      <string>
+	return:     <string>
+	exception:  <string>
+}
+```
+
+#### New Block
+
+This notifies you when a new block is committed.
+
+Event ID: `NewBlock`
+
+Event object:
+
+```
+<Block>
+```
+
+#### Fork
+
+This notifies you when a fork event happens.
+
+Event ID: `Fork`
+
+Event object:
 
 TODO
+```
+<Block>
+```
+
+#### Bond
+
+This notifies you when a bond event happens.
+
+Event ID: `Bond`
+
+Event object:
+
+```
+<Tx>
+```
+
+#### Unbond
+
+This notifies you when an unbond event happens.
+
+Event ID: `Unbond`
+
+Event object:
+
+```
+<Tx>
+```
+
+#### Rebond
+
+This notifies you when a rebond event happens.
+
+Event ID: `Rebond`
+
+Event object:
+
+```
+<Tx>
+```
+
+#### Dupeout
+
+This notifies you when a dupeout event happens.
+
+Event ID: `Dupeout`
+
+Event object:
+
+```
+<Tx>
+```
 
 <a name="methods"></a>
 ##Methods
@@ -275,6 +439,7 @@ TODO
 | Name | RPC method name | REST method | REST endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetNetworkInfo](#get-network-info) | erisdb.getNetworkInfo | GET | `/network` |
+| [GetClientVersion](#get-client-version) | erisdb.getClientVersion | GET | `/network/client_version` |
 | [GetMoniker](#get-moniker) | erisdb.getMoniker | GET | `/network/moniker` |
 | [GetChainId](#get-chain-id) | erisdb.getChainId | GET | `/network/chain_id` |
 | [IsListening](#is-listening) | erisdb.isListening | GET | `/network/listening` |
@@ -315,7 +480,7 @@ Here are the catagories.
 
 In the case of **JSON-RPC**, the parameters are wrapped in a request object, and the return value is wrapped in a response object.
 
-In the case of **REST**, the params (and query) is provided in the url of the request. If it's a POST, PATCH or PUT request, the parameter object should be written to the body of the request in JSON form. It is normally the same object as would be the params in the corresponding JSON-RPC request.
+In the case of **REST-like HTTP** GET requests, the params (and query) is provided in the url. If it's a POST, PATCH or PUT request, the parameter object should be written to the body of the request as JSON. It is normally the same params object as in JSON-RPC.
 
 **Unsafe** is methods that require a private key to be sent either to or from the client, and should therefore be used only during development/testing, or with extreme care. They may be phased out entirely.
 
@@ -331,13 +496,9 @@ Get accounts will return a list of accounts. If no filtering is used, it will re
 
 #####HTTP
 
-Method: GET 
+Method: GET
 
 Endpoint: `/accounts`
-
-Search terms: 
-
-`
 
 #####JSON-RPC
 
@@ -351,9 +512,16 @@ Parameter:
 }
 ```
 
+##### Filters
+
+| Field | Underlying type | Ops | Example Queries |
+| :---- | :-------------- | :-- | :-------------- |
+| `balance` | uint64 | `<`, `>`, `<=`, `>=`, `==` | `q=balance:<=11` |
+| `code` | byte[] | `==`, `!=` | `q=code:1FA872` |
 
 #####Return value
-``` 
+
+```
 {
 	accounts: [<Account>]
 }
@@ -394,7 +562,8 @@ Parameter:
 ```
 
 #####Return value
-``` 
+
+```
 {
 	address:      <string>
 	pub_key:      <PubKey>
@@ -445,7 +614,8 @@ Parameter:
 ```
 
 #####Return value
-``` 
+
+```
 {
 	storage_root:  <string>
 	storage_items: [<StorageItem>]
@@ -486,7 +656,8 @@ Parameter:
 ```
 
 #####Return value
-``` 
+
+```
 {
 	key:   <string>
 	value: <string>
@@ -520,7 +691,8 @@ Method: `erisdb.getBlockchainInfo`
 Parameter: -
 
 #####Return value
-``` 
+
+```
 {
 	chain_id:            <string>
 	genesis_hash:        <string>
@@ -560,12 +732,12 @@ Method: `erisdb.getChainId`
 Parameter: -
 
 #####Return value
-``` 
+
+```
 {
 	chain_id:            <string>
 }
 ```
-
 ***
 
 <a name="get-genesis-hash"></a>
@@ -586,7 +758,8 @@ Method: `erisdb.getGenesisHash`
 Parameter: -
 
 #####Return value
-``` 
+
+```
 {
 	genesis_hash:        <string> 
 }
@@ -612,7 +785,8 @@ Method: `erisdb.getLatestBlockHeight`
 Parameter: -
 
 #####Return value
-``` 
+
+```
 {
 	latest_block_height: <number> 
 }
@@ -638,7 +812,8 @@ Method: `erisdb.getLatestBlock`
 Parameter: -
 
 #####Return value
-``` 
+
+```
 {
 	latest_block:        <BlockMeta> 
 }
@@ -673,9 +848,17 @@ Parameter:
 }
 ```
 
+##### Filters
+
+| Field | Underlying type | Ops | Example Queries |
+| :---- | :-------------- | :-- | :-------------- |
+| `height` | uint | `<`, `>`, `<=`, `>=`, `==` | `q=height:>4`, `q=height:10..*` |
+
+
+
 #####Return value
 
-``` 
+```
 {
 	min_height:  <number>
 	max_height:  <number>
@@ -737,14 +920,15 @@ Method: `erisdb.getBlock`
 
 Parameter:
 
-``` 
+```
 {
 	height: <number> 
 }
 ```
 
 #####Return value
-``` 
+
+```
 {
 	
 	header: {
@@ -813,7 +997,7 @@ Parameter: -
 
 #####Return value
 
-``` 
+```
 {
 	height:      <number>
 	round:       <number>
@@ -864,7 +1048,7 @@ Parameter: -
 
 #####Return value
 
-``` 
+```
 {
 	block_height:         <number>
 	bonded_validators:    [<Validator>]
@@ -916,7 +1100,7 @@ Method: `erisdb.eventSubscribe`
 
 Parameter: 
 
-``` 
+```
 {
 	event_id: <string>
 }
@@ -924,7 +1108,7 @@ Parameter:
 
 #####Return value
 
-``` 
+```
 {
 	sub_id: <string>
 }
@@ -955,7 +1139,7 @@ Parameter: -
 
 #####Return value
 
-``` 
+```
 {
 	result: <bool>
 }
@@ -984,7 +1168,7 @@ Method: `erisdb.eventPoll`
 
 #####Return value
 
-``` 
+```
 {
 	events: [<Event>]
 }
@@ -1020,8 +1204,9 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
+	client_version: <string>
 	moniker: <string>
 	listening: <boolean>
 	listeners: [<string>]
@@ -1031,12 +1216,40 @@ Parameters: -
 
 #####Additional info
 
+`client_version` is the version of the running client, or node.
 `moniker` is a moniker for the node.
 `listening` is a check if the node is listening for connections.
 `listeners` is a list of active listeners.
 `peers` is a list of peers.
 
 See [GetPeer](#get-peer) for info on the `Peer` object.
+
+***
+
+<a name="get-client-version"></a>
+####GetClientVersion
+
+Get the version of the running client (node).
+
+#####HTTP
+
+Method: GET
+
+Endpoint: `/network/client_version`
+
+#####JSON-RPC
+
+Method: `erisdb.getClientVersion`
+
+Parameters: -
+
+#####Return value
+
+```
+{
+	client_version: <string>
+}
+```
 
 ***
 
@@ -1059,7 +1272,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	moniker: <string>
 }
@@ -1086,7 +1299,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	listening: <boolean>
 }
@@ -1113,7 +1326,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	listeners: [<string>]
 }
@@ -1140,7 +1353,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	peers: [<Peer>]
 }
@@ -1167,7 +1380,7 @@ Method: `erisdb.getPeer`
 
 Parameters: 
 
-``` 
+```
 {
 	address: <string>
 }
@@ -1177,7 +1390,7 @@ Parameters:
 
 This is the peer object.
 
-``` 
+```
 {
 	is_outbound: <boolean>
 	moniker:     <string>
@@ -1214,7 +1427,7 @@ Endpoint: `/txpool`
 
 Body:
 
-``` 
+```
 <Tx>
 ```
 
@@ -1224,13 +1437,13 @@ Method: `erisdb.BroadcastTx`
 
 Parameters: 
 
-``` 
+```
 <Tx>
 ```
 
 #####Return value
 
-``` 
+```
 {
 	tx_hash:          <string>
 	creates_contract: <number>
@@ -1269,7 +1482,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	txs: [<Tx>]
 }
@@ -1306,7 +1519,7 @@ Method: `erisdb.call`
 
 Parameters: 
 
-``` 
+```
 {
 	address: <string>
 	data: <string>
@@ -1315,7 +1528,7 @@ Parameters:
 
 #####Return value
 
-``` 
+```
 {
 	return:   <string>
 	gas_used: <number>
@@ -1347,7 +1560,7 @@ Method: `erisdb.callCode`
 
 Parameters: 
 
-``` 
+```
 {
 	code: <string>
 	data: <string>
@@ -1356,7 +1569,7 @@ Parameters:
 
 #####Return value
 
-``` 
+```
 {
 	return: <string>
 	gas_used: <number>
@@ -1390,7 +1603,7 @@ Endpoint: `/unsafe/tx_signer`
 
 Body:
 
-``` 
+```
 <Tx>
 ```
 
@@ -1400,7 +1613,7 @@ Method: `erisdb.SignTx`
 
 Parameters: 
 
-``` 
+```
 <Tx>
 ```
 
@@ -1438,7 +1651,7 @@ Method: `erisdb.SignTx`
 
 Parameters: 
 
-``` 
+```
 {
 	priv_key:  <PrivKey>
 	data:      <string>
@@ -1452,7 +1665,7 @@ Parameters:
 
 The same as with BroadcastTx:
 
-``` 
+```
 {
 	tx_hash:          <string>
 	creates_contract: <number>
@@ -1484,7 +1697,7 @@ Parameters: -
 
 #####Return value
 
-``` 
+```
 {
 	address: <string>
 	pub_key: <PubKey>
@@ -1503,13 +1716,14 @@ Again - This is unsafe. Be warned.
 <a name="filters"></a>
 ##Filters
 
-Filters are used in searches. The filter query structure is similar to that of the [Github api (v3)](https://developer.github.com/v3/search/).
+Filters are used in searches. The structure is similar to that of the [Github api (v3)](https://developer.github.com/v3/search/).
 
 ###JSON-RPC
 
 Filters are added as objects in the request parameter. Methods that supports filtering includes an array of filters somewhere in their params object.
 
 Filter:
+
 ```
 {
     field: <string>
@@ -1571,75 +1785,32 @@ If we wanted only non-contract accounts then we would have used the same object 
 
 The structure of a normal query is: `q=field:statement+field2:statement2+ ... `.
 
-*`q` means it's a query.
-*`field` is the field name.
-*`:` is a separator.
-* `statement` is normally on the form `[op]value` where `op` is a relational operator, and `value` a value, e.g. `balance:>=5` or `language:==golang`. There is also support for [range queries](https://help.github.com/articles/search-syntax/): `*..*`, where `*` is a number. If on the left of `..` it means minimum value, and if it's on the right it means maximum value. `height:*..55`. There is only the non-quoted version as of now.
+- `q` means it's a query.
+- `+` is the filter separator (expands to a space when parsed)
+- `field` is the field name.
+- `:` is the field-statement separator.
+- `statement` is normally on the form `[op]value` where `op` is a relational operator, and `value` a string-value, e.g. `balance:>=5` or `language:==golang`. There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are numbers. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive. If it is put on the left-hand side it means the minimum value, and if it's on the right-hand side it means the maximum value. Let's say `height` is an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
 
 NOTE: URL encoding applies as usual. Omitting it here for clarity.
 
-If you leave `op` out it will default to equals (`==`).
+`op` will default to (`==`) if left out, meaning `balance:5` is the same as `balance:==5` 
 
-`value` may be left empty if the underlying type for that field is a string. This means if `code` is a supported string type,  `/accounts?q=code:%3D%3D` would check if the code field is empty. We could also use inferred `==` here, meaning this query would be equivalent: `/accounts?q=code:`. 
+`value` may be left out if the field accepts the empty string as input. This means if `code` is a supported string type,  `code:==` would check if the code field is empty. We could also use the inferred `==` meaning this would be equivalent: `code:`.  The system may be extended so that the empty string is automatically converted to the null-type of the underlying field, no matter what that type is. If balance is a number then `balance:` would be the same as `balance:==0` (and `balance:0`).
 
 #####Example
 
 We want to use the same filter as in the JSON version; one that finds all contract accounts.
 
-`http://localhost:1337/accounts?q=code:%21%3D` (code != "")
+`q=code:!=`
 
 One that finds those with balance less then 1000:
 
-`http://localhost:1337/accounts?q=balance:%3C1000` (balance < 1000)
+`q=balance:<1000`
 
-One that finds those with balance more then 0, but less then 1000.
+One that finds those where 0 <= balance <= 1000.
 
-`http://localhost:1337/accounts?q=balance:0..1000`
+`q=balance:0..1000`
 
-One that finds contract accounts with a balance less then 1000:
+One that finds non-contract accounts with 0 <= balance <= 1000:
 
-`http://localhost:1337/accounts?q=code:%21%3D+balance:0..1000`
-
-###Supported types
-
-Right now you can only filter searches when getting blocks and accounts. The system will expand to handle a lot more before version 1.0.
-
-#### Accounts
-
-#####Code
-
-Field name: `code`
-
-Ops: `==`, `!=`
-
-Field type: hex-string
-
-Underlying type: byte-array
- 
-`http://localhost:1337/accounts?q=code:%3D%3Dabababab` (code == "abababab")
-
-#####Balance
-
-Field name: `balance`
-
-Ops: All
-
-Field type: integer-string.
-
-Underlying type: uint64
-
-`http://localhost:1337/accounts?q=balance:0..1000`
-
-#### Blocks
-
-#####Height
-
-Field name: `height`
-
-Ops: `<`, `>`, `<=`, `>=`, `==` (`!=` is not supported because disjoint result sets are not allowed) 
-
-Field type: integer string
-
-Underlying type: uint
-
-`http://localhost:1337/blockchain/blocks?q=height:0..10`
+`q=balance:0..1000+code:`

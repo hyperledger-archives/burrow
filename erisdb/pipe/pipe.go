@@ -1,4 +1,4 @@
-// This
+// The pipe is used to call methods on the Tendermint node.
 package pipe
 
 import (

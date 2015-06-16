@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	// cors "github.com/tommy351/gin-cors"
+	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"
@@ -51,10 +51,15 @@ func (this *ServeProcess) Start() error {
 	router := gin.New()
 
 	config := this.config
+	
+	InitLogger(config)
 
-	// ch := NewCORSMiddleware(config.CORS)
-	// router.Use(gin.Recovery(), logHandler, ch)
-	router.Use(gin.Recovery(), logHandler)
+	if config.CORS.Enable {
+	ch := NewCORSMiddleware(config.CORS)
+	router.Use(gin.Recovery(), logHandler, ch)
+	} else {
+		router.Use(gin.Recovery(), logHandler)
+	}
 
 	address := config.Bind.Address
 	port := config.Bind.Port
@@ -218,7 +223,6 @@ func logHandler(c *gin.Context) {
 
 }
 
-/*
 func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	o := cors.Options{
 		AllowCredentials: options.AllowCredentials,
@@ -230,4 +234,4 @@ func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	}
 	return cors.Middleware(o)
 }
-*/
+

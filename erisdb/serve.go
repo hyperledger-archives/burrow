@@ -1,3 +1,5 @@
+// The erisdb package contains tendermint-specific services that goes with the
+// server.
 package erisdb
 
 import (
@@ -12,7 +14,8 @@ import (
 	"path"
 )
 
-const VERSION = "0.9.0"
+const ERISDB_VERSION = "0.9.1"
+const TENDERMINT_VERSION = "0.3.0"
 
 var log = log15.New("module", "eris/erisdb_server")
 var tmConfig cfg.Config
@@ -33,8 +36,13 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	sConfPath := path.Join(workDir, "server_conf.toml")
 	if !FileExists(sConfPath) {
+		log.Info("No server configuration, using default.")
+		log.Info("Writing to: " + sConfPath)
 		sConf = server.DefaultServerConfig()
-		server.WriteServerConfig(sConfPath, sConf)
+		errW := server.WriteServerConfig(sConfPath, sConf)
+		if errW != nil {
+			panic(errW)
+		}
 	} else {
 		var errRSC error
 		sConf, errRSC = server.ReadServerConfig(sConfPath)
@@ -45,7 +53,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	// Get tendermint configuration
 	tmConfig = tmcfg.GetConfig(workDir)
-	tmConfig.Set("version", VERSION)
+	tmConfig.Set("version", TENDERMINT_VERSION) 
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
 	
 	// Set the node up.

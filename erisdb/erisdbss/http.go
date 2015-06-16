@@ -1,4 +1,3 @@
-// Library code for the server-server.
 package erisdbss
 
 import (

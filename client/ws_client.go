@@ -1,4 +1,4 @@
-// Websocket client implementation.
+// Websocket client implementation. This will be used in tests.
 package client
 
 import (
@@ -29,22 +29,23 @@ func (this *WSClient) Dial() (*http.Response, error) {
 		return r, err
 	}
 	this.conn = conn
+	
 	return r, nil
 }
 
 // returns a channel from which messages can be pulled
 // from a go routine that reads the socket.
 // if the ws returns an error (eg. closes), we return
-func (this *WSClient) Read() chan []byte {
+func (this *WSClient) StartRead() <- chan []byte {
 	ch := make(chan []byte)
 	go func() {
 		for {
 			_, msg, err := this.conn.ReadMessage()
-
 			if err != nil {
 				if !this.closed {
-					// TODO For now. If it's not a graceful shutdown, log.
+					// TODO For now. 
 					fmt.Println("Error: " + err.Error())
+					close(ch)
 				}
 				return
 			}

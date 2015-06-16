@@ -72,7 +72,7 @@ func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 	}
 	this.upgrader.CheckOrigin = nil
 
-	router.GET(config.WebSocket.WebSocketPath, this.handleFunc)
+	router.GET(config.WebSocket.WebSocketEndpoint, this.handleFunc)
 	this.running = true
 }
 
