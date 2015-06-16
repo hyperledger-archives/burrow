@@ -1783,13 +1783,16 @@ If we wanted only non-contract accounts then we would have used the same object 
 
 ###HTTP Queries
 
-The structure of a normal query is: `q=field:statement+field2:statement2+ ... `.
+The structure of a normal query is: `q=field:[op]value+field2:[op2]value2+ ... `.
 
 - `q` means it's a query.
-- `+` is the filter separator (expands to a space when parsed)
+- `+` is the filter separator.
 - `field` is the field name.
 - `:` is the field-statement separator.
-- `statement` is normally on the form `[op]value` where `op` is a relational operator, and `value` a string-value, e.g. `balance:>=5` or `language:==golang`. There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are numbers. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive. If it is put on the left-hand side it means the minimum value, and if it's on the right-hand side it means the maximum value. Let's say `height` is an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
+- `op` is the relational operator, `>, <, >=, <=, ==, !=`.
+- `value` is always a string value, e.g. `balance:>=5` or `language:==golang`. 
+
+There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are number-strings. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive; if it is put on the left-hand side it is the minimum value, and on the right-hand side it means the maximum value. Let `height` be an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
 
 NOTE: URL encoding applies as usual. Omitting it here for clarity.
 
