@@ -95,7 +95,7 @@ func wsClient(doneChan chan bool, errChan chan error) {
 		errChan <- err
 		return
 	}
-	readChan := client.Read()
+	readChan := client.StartRead()
 	i := 0
 	for i < MESSAGES {
 		client.WriteMsg([]byte("test"))

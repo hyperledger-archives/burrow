@@ -8,9 +8,9 @@ import (
 // Standard configuration file for the server.
 type (
 	ServerConfig struct {
-		Bind Bind `toml:"bind"`
-		TLS  TLS  `toml:"TLS"`
-		//CORS      *CORS      `toml:"CORS"`
+		Bind      Bind      `toml:"bind"`
+		TLS       TLS       `toml:"TLS"`
+		CORS      CORS      `toml:"CORS"`
 		HTTP      HTTP      `toml:"HTTP"`
 		WebSocket WebSocket `toml:"web_socket"`
 		Logging   Logging   `toml:"logging"`
@@ -29,6 +29,7 @@ type (
 
 	// Options stores configurations
 	CORS struct {
+		Enable           bool     `toml:"enable"`
 		AllowOrigins     []string `toml:"allow_origins"`
 		AllowCredentials bool     `toml:"allow_credentials"`
 		AllowMethods     []string `toml:"allow_methods"`
@@ -38,18 +39,18 @@ type (
 	}
 
 	HTTP struct {
-		JsonRpcPath string `toml:"json_rpc_path"`
+		JsonRpcEndpoint string `toml:"json_rpc_endpoint"`
 	}
 
 	WebSocket struct {
-		WebSocketPath        string `toml:"websocket_path"`
+		WebSocketEndpoint        string `toml:"websocket_endpoint"`
 		MaxWebSocketSessions uint   `toml:"max_websocket_sessions"`
 	}
 
 	Logging struct {
 		ConsoleLogLevel string `toml:"console_log_level"`
 		FileLogLevel    string `toml:"file_log_level"`
-		LogFile         string `toml:"log_level"`
+		LogFile         string `toml:"log_file"`
 	}
 )
 
@@ -65,17 +66,15 @@ func DefaultServerConfig() *ServerConfig {
 			CertPath: cp,
 			KeyPath:  kp,
 		},
-		/*
-			CORS: CORS{
-				},*/
-		HTTP: HTTP{JsonRpcPath: "/rpc"},
+		CORS: CORS{},
+		HTTP: HTTP{JsonRpcEndpoint: "/rpc"},
 		WebSocket: WebSocket{
-			WebSocketPath:        "/socketrpc",
+			WebSocketEndpoint:        "/socketrpc",
 			MaxWebSocketSessions: 50,
 		},
 		Logging: Logging{
-			ConsoleLogLevel: "error",
-			FileLogLevel:    "error",
+			ConsoleLogLevel: "info",
+			FileLogLevel:    "warn",
 			LogFile:         "",
 		},
 	}
