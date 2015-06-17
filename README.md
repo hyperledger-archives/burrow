@@ -8,44 +8,40 @@ The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a
 
 There are no binary downloads, and probably won't be before `1.0`. 
 
-#### Ubuntu/OSX
+#### Ubuntu 14.04 (OSX ?)
 
-Make sure you have the proper [Go](https://golang.org/) distribution for your OS and architecture. The recommended version is `1.4.2`.
+Make sure you have the proper [Go](https://golang.org/) distribution for your OS and architecture. The recommended version is `1.4.2`. Follow the instructions on how to set up GOROOT and GOPATH.
 
-Start by installing [godep](https://github.com/tools/godep). 
+You will also need the following libraries: `git, mercurial, libgmp3-dev`
 
-Get the code:
+On Ubuntu: `sudo apt-get install git mercurial libgmp3-dev`
 
-`godep go get github.com/eris-ltd/erisdb/cmd/erisdb`
+Then download [godep](https://github.com/tools/godep). It is needed for dependency management. It is recommended to set up a separate workspace for this project.
 
-Note that it uses `godep` before the regular go command.
+`go get github.com/tools/godep` 
 
-This will download and install the program. From there on you can run the same command with the `-u` flag when you want to update.
+Next you pull in the code. It uses godep so I would recommend making a new workspace:
 
-If you want to re-install code that you already have, use:
+`go get github.com/eris-ltd/erisdb`
 
-`godep go install github.com/eris-ltd/erisdb/cmd/erisdb`
+It's gonna say no buildable sources but that's fine. Just cd into `$GOPATH/src/github.com/eris-ltd/erisdb` and run: `$ godep restore`
 
-Installing will build the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
+After that, run `$ go install ./cmd/erisdb`
+This will build the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
 
 To run `erisdb`, just type `$ erisdb /path/to/working/folder`
 
-This will start the node using the provided folder as working dir. If the path is omitted, it will default to `~/.erisdb`
-
-##### Summary
-
-* Install Go and Godep.
-* `$ godep go get github.com/eris-ltd/erisdb/cmd/erisdb`
-
-#### Others
-
-There is no docker container for this library yet, but it will be soon. 
+This will start the node using the provided folder as working dir. If the path is omitted it defaults to `~/.erisdb` 
 
 ##### Windows
 
 The server itself run on Windows, and it is possible to tweak Tendermint so that it works on Windows too (did so myself, mostly just some network and file stuff), but we do not recommend that. Eris programs are supposed to run on Linux; preferably through docker. One reason for this is security. The new `eris` command-line tool (formerly `epm`) will make the management of these containers easy.
 
 Tendermint officially supports only 64 bit Ubuntu. 
+
+#### Docker
+
+There is no docker container for this library yet, but it will be added.
 
 ### Usage
 
@@ -161,7 +157,7 @@ The library includes a "server-server". This server accepts POST requests with s
 
 NOTE: This is not safe in production, as it requires private keys to be passed over a network, but it is very useful when doing tests. If the same chain data is used, then each node is  guaranteed to give the same output (for the same input) when calling the methods.
 
-To start one up, just run `godep go install` in the `erisdb/cmd/erisdbss` directory, then run `erisdbss`. It takes no parameters. There are many examples on how to call it in the javascript library, and if people find it useful there will be a  tutorial.
+To start one up, just run `go install` in the `erisdb/cmd/erisdbss` directory, then run `erisdbss`. It takes no parameters. There are many examples on how to call it in the javascript library, and if people find it useful there will be a  tutorial.
 
 ### Testing
 
