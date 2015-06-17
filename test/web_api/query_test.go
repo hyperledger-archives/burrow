@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 type QuerySuite struct {
@@ -55,6 +56,9 @@ func (this *QuerySuite) TearDownSuite() {
 	sec := this.serveProcess.StopEventChannel()
 	this.serveProcess.Stop(0)
 	<-sec
+	// Tests are done rapidly, this is just to give that extra milliseconds 
+	// to shut down the previous server (may be excessive).
+	time.Sleep(500*time.Millisecond)
 }
 
 // ********************************************* Tests *********************************************
