@@ -451,7 +451,7 @@ Event object:
 | Name | RPC method name | REST method | REST endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [BroadcastTx](#broadcast-tx) | erisdb.broadcastTx | POST | `/txpool` |
-| [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.broadcastTx | GET | `/txpool` |
+| [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.getUnconfirmedTxs | GET | `/txpool` |
 
 ###Code execution
 | Name | RPC method name | REST method | REST endpoint |

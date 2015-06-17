@@ -164,6 +164,10 @@
 			"Rev": "46bd0e5d51692347647bb2e250fd0e637fc63a11"
 		},
 		{
+			"ImportPath": "github.com/tommy351/gin-cors",
+			"Rev": "f7219a698f21b23d73ae9330d3c5842951ce0b6a"
+		},
+		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "3cffabab72adf04f8e3b01c5baf775361837b5fe"
 		},
