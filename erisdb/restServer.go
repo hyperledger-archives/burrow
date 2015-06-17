@@ -62,8 +62,8 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.POST("/txpool", this.handleBroadcastTx)
 	router.GET("/txpool", this.handleUnconfirmedTxs)
 	// Code execution
-	router.POST("/calls/:address", this.handleCall)
-	router.POST("/calls", this.handleCallCode)
+	router.POST("/calls", this.handleCall)
+	router.POST("/codecalls", this.handleCallCode)
 	// Unsafe
 	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
 	router.POST("/unsafe/txpool", this.handleTransact)

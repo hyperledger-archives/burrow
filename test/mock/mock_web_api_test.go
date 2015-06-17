@@ -18,6 +18,7 @@ import (
 	"testing"
 	"os"
 	"runtime"
+	"time"
 )
 
 func init() {
@@ -65,6 +66,9 @@ func (this *MockSuite) TearDownSuite() {
 	sec := this.serveProcess.StopEventChannel()
 	this.serveProcess.Stop(0)
 	<-sec
+	// Tests are done rapidly, this is just to give that extra milliseconds 
+	// to shut down the previous server (may be excessive).
+	time.Sleep(500*time.Millisecond)
 }
 
 // ********************************************* Consensus *********************************************
@@ -163,7 +167,7 @@ func (this *MockSuite) Test_C2_UnconfirmedTxs() {
 }
 
 func (this *MockSuite) Test_C3_CallCode() {
-	resp := this.postJson("/calls", this.testData.Input.CallCode)
+	resp := this.postJson("/codecalls", this.testData.Input.CallCode)
 	ret := &ep.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)

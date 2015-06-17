@@ -457,7 +457,7 @@ Event object:
 | Name | RPC method name | REST method | REST endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Call](#call) | erisdb.call | POST | `/calls` |
-| [CallCode](#call-code) | erisdb.callCode | POST | `/calls/code` |
+| [CallCode](#call-code) | erisdb.callCode | POST | `/codecalls` |
 
 
 ####Unsafe
@@ -1414,7 +1414,7 @@ TODO
 
 ***
 
-<a name="BroadcastTx"></a>
+<a name="broadcast-tx"></a>
 ####BroadcastTx
 
 Broadcast a given (signed) transaction to the node. It will be added to the tx pool if there are no issues, and if it is accepted by all validators it will eventually be committed to a block. 
@@ -1500,7 +1500,7 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 
 ***
 
-<a name="Call"></a>
+<a name="call"></a>
 ####Call
 
 Call a given (contract) account to execute its code with the given in-data. 
@@ -1541,8 +1541,8 @@ Parameters:
 
 ***
 
-<a name="CallCode"></a>
-####Call
+<a name="call-code"></a>
+####CallCode
 
 Pass contract code and tx data to the node and have it executed in the virtual machine. This is mostly a dev feature.
 
@@ -1550,7 +1550,7 @@ Pass contract code and tx data to the node and have it executed in the virtual m
 
 Method: POST
 
-Endpoint: `/calls/code`
+Endpoint: `/codecalls`
 
 Body: See JSON-RPC parameter.
 
@@ -1590,7 +1590,7 @@ These methods are unsafe because they require that a private key is either trans
 
 ***
 
-<a name="SignTx"></a>
+<a name="sign-tx"></a>
 ####SignTx
 
 Send an unsigned transaction to the node for signing. 
@@ -1627,7 +1627,7 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 
 ***
 
-<a name="Transact"></a>
+<a name="transact"></a>
 ####Transact
 
 Convenience method for sending a transaction "old Ethereum dev style". It will do the following things:
@@ -1679,7 +1679,7 @@ See [The transaction types](#the-transaction-types) for more info on the `CallTx
 
 ***
 
-<a name="GenPrivAccount"></a>
+<a name="gen-priv-account"></a>
 ####GenPrivAccount
 
 Convenience method for generating a `PrivAccount` object, which contains a private key and the corresponding public key and address.
