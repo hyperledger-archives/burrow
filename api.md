@@ -1,4 +1,6 @@
-# Eris DB
+# Eris DB web APIs (draft)
+
+### for eris-db version 0.10.0
 
 Eris DB allows remote access to its functionality over http and websocket. It currently supports JSON-RPC, and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
 
@@ -90,8 +92,7 @@ Response:
 <a name="rest-like"></a>
 ## REST-like HTTP
 
-The REST-like API provides the typical endpoint structure i.e. endpoints are resources, parameters can be put in the path, and queries are used only for filtering. It is not fully compatible with REST; partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before version 1.0.
-
+The REST-like API provides the typical endpoint structure i.e. endpoints are named as resources, parameters can be put in the path, and queries are used for filtering and such. It is not fully compatible with REST; partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before version 1.0.
 
 <a name="formatting-conventions"></a>
 ##Common objects and formatting
@@ -102,7 +103,7 @@ This section contains some common objects and explanations of how they work.
 
 Numbers are always numbers, and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays. 
 
-Hex strings are never prefixed. 
+Hex strings are never prefixed.
 
 #####Examples
 
@@ -404,7 +405,7 @@ Event object:
 ##Methods
 
 ###Accounts 
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetAccounts](#get-accounts) | erisdb.getAccounts | GET | `/accounts` |
 | [GetAccount](#get-account) | erisdb.getAccount | GET | `/accounts/:address` |
@@ -412,7 +413,7 @@ Event object:
 | [GetStorageAt](#get-storage-at) | erisdb.getStorageAt | GET | `/accounts/:address/storage/:key` |
 
 ###Blockchain
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetBlockchainInfo](#get-blockchain-info) | erisdb.getBlockchainInfo | GET | `/blockchain` |
 | [GetChainId](#get-chain-id) | erisdb.getChainId | GET | `/blockchain/chain_id` |
@@ -423,20 +424,20 @@ Event object:
 | [GetBlock](#get-block) | erisdb.getBlock | GET | `/blockchain/blocks/:height` |
 
 ###Consensus
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetConsensusState](#get-consensus-state) | erisdb.getConsensusState | GET | `/consensus` |
 | [GetValidators](#get-validators) | erisdb.getValidators | GET | `/consensus/validators` |
 
 ###Events
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [EventSubscribe](#event-subscribe) | erisdb.eventSubscribe | POST | `/event_subs` |
 | [EventUnsubscribe](#event-unsubscribe) | erisdb.eventUnsubscribe | DELETE | `/event_subs/:id` |
 | [EventPoll](#event-poll) | erisdb.eventPoll | GET | `/event_subs/:id` |
 
 ###Network
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetNetworkInfo](#get-network-info) | erisdb.getNetworkInfo | GET | `/network` |
 | [GetClientVersion](#get-client-version) | erisdb.getClientVersion | GET | `/network/client_version` |
@@ -448,20 +449,20 @@ Event object:
 | [GetPeer](#get-peer) | erisdb.getPeer | GET | `/network/peer/:address` |
 
 ###Transactions
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [BroadcastTx](#broadcast-tx) | erisdb.broadcastTx | POST | `/txpool` |
 | [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.getUnconfirmedTxs | GET | `/txpool` |
 
 ###Code execution
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Call](#call) | erisdb.call | POST | `/calls` |
 | [CallCode](#call-code) | erisdb.callCode | POST | `/codecalls` |
 
 
 ####Unsafe
-| Name | RPC method name | REST method | REST endpoint |
+| Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [SignTx](#sign-tx) | erisdb.signTx | POST | `/unsafe/tx_signer` |
 | [Transact](#transact) | erisdb.transact | POST | `/unsafe/txpool` |

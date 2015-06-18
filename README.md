@@ -84,7 +84,7 @@ The server configuration file looks like this:
   log_file= <string>
 ```
 
-**NOTE**: **CORS** and **TLS** are not yet fully implemented, and cannot be used. It is unlikely that it will be supported before `1.0`. CORS will be implemented through [gin middleware](https://github.com/tommy351/gin-cors), and TLS through the standard Go http package via the [graceful library](https://github.com/tylerb/graceful).
+**NOTE**: **CORS** and **TLS** are not yet fully implemented, and cannot be used. CORS is implemented through [gin middleware](https://github.com/tommy351/gin-cors), and TLS through the standard Go http package via the [graceful library](https://github.com/tylerb/graceful).
 
 ##### Bind
 
@@ -155,7 +155,7 @@ log_file=""
 
 The library includes a "server-server". This server accepts POST requests with some chain data (such as priv_validator.json and genesis.json), and will use that to create a new working directory in the temp folder, write the data, deploy a new node in that folder, generate a port, use it to serve that node and then pass the url back in the response. It will also manage all the servers and shut them down as they become inactive. 
 
-NOTE: This is not safe in production, as it requires private keys to be passed over a network, but it is very useful when doing tests. If the same chain data is used, then each node is  guaranteed to give the same output (for the same input) when calling the methods.
+NOTE: This is not safe in production, as it requires private keys to be passed over a network, but it is useful when doing tests. If the same chain data is used, then each node is  guaranteed to give the same output (for the same input) when calling the methods.
 
 To start one up, just run `go install` in the `erisdb/cmd/erisdbss` directory, then run `erisdbss`. It takes no parameters. There are many examples on how to call it in the javascript library, and if people find it useful there will be a  tutorial.
 
@@ -167,7 +167,7 @@ Run using `go test` as usual. There are 3 tiers of tests:
 * Tier 2 is a full client-server test of `erisdb` using a mock implementation of the [Pipe](https://github.com/eris-ltd/erisdb/blob/master/erisdb/pipe/pipe.go).
 * Tier 3 is a full client-server test of `erisdb` using a live node.
 
-There will be a pipe-only test as well.
+More tests will be added continuously.
 
 #### JSON test-data
 
