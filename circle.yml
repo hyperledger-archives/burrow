@@ -1,0 +1,6 @@
+general:
+  build_dir: cmd/erisdb
+
+test:
+  override:
+    - "cd ../../ && go test -v ./... -race"
