@@ -89,7 +89,7 @@ func runWs() error {
 }
 
 func wsClient(doneChan chan bool, errChan chan error) {
-	client := client.NewWSClient("ws://localhost:31337/scumsocket")
+	client := client.NewWSClient("ws://localhost:31401/scumsocket")
 	_, err := client.Dial()
 	if err != nil {
 		errChan <- err

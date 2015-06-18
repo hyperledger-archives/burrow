@@ -54,12 +54,12 @@ func (this *ServeProcess) Start() error {
 	
 	InitLogger(config)
 
-	if config.CORS.Enable {
+	// if config.CORS.Enable {
 	ch := NewCORSMiddleware(config.CORS)
 	router.Use(gin.Recovery(), logHandler, ch)
-	} else {
-		router.Use(gin.Recovery(), logHandler)
-	}
+	//} else {
+	//	router.Use(gin.Recovery(), logHandler)
+	//}
 
 	address := config.Bind.Address
 	port := config.Bind.Port

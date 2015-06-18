@@ -7,7 +7,6 @@ import (
 	"runtime"
 )
 
-const SS_URL = "http://localhost:1337/server"
 const SERVER_DURATION = 10
 
 func init() {

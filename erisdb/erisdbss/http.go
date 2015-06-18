@@ -36,12 +36,14 @@ type RequestData struct {
 	MaxDuration   uint                 `json:"max_duration"`
 }
 
-// The response is the URL to the newly generated server.
+// The response is the port of the newly generated server. The assumption
+// here is that the host name or ip is the same, and the default server
+// settings apply.
 // TODO return some "live" data after starting the node, so that
 // the requester can validate that everything is fine. Maybe
 // some data directly from the state manager. Genesis hash?
 type ResponseData struct {
-	URL string `json:"URL"`
+	Port string `json:"port"`
 }
 
 // Serves requests to fire up erisdb executables. POSTing to the server
@@ -104,7 +106,7 @@ func (this *ServerServer) handleFunc(c *gin.Context) {
 		http.Error(c.Writer, "Internal error: "+errA.Error(), 500)
 		return
 	}
-	log.Debug("Work done.", "URL", resp.URL)
+	log.Debug("Work done.", "PORT", resp.Port)
 	w := c.Writer
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)

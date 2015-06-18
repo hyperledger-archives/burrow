@@ -18,7 +18,6 @@ import (
 	"testing"
 	"os"
 	"runtime"
-	"time"
 )
 
 func init() {
@@ -49,7 +48,7 @@ func (this *MockSuite) SetupSuite() {
 	// The server
 	restServer := edb.NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()
-	sConf.Bind.Port = 31473
+	sConf.Bind.Port = 31402
 	// Create a server process.
 	proc := server.NewServeProcess(sConf, restServer)
 	err := proc.Start()
@@ -59,16 +58,13 @@ func (this *MockSuite) SetupSuite() {
 	this.serveProcess = proc
 	this.codec = edb.NewTCodec()
 	this.testData = testData
-	this.sUrl = "http://localhost:31473"
+	this.sUrl = "http://localhost:31402"
 }
 
 func (this *MockSuite) TearDownSuite() {
 	sec := this.serveProcess.StopEventChannel()
 	this.serveProcess.Stop(0)
 	<-sec
-	// Tests are done rapidly, this is just to give that extra milliseconds 
-	// to shut down the previous server (may be excessive).
-	time.Sleep(500*time.Millisecond)
 }
 
 // ********************************************* Consensus *********************************************

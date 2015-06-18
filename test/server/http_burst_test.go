@@ -32,7 +32,7 @@ func TestHttpFlooding(t *testing.T) {
 func runHttp() error {
 	c := 0
 	for c < HTTP_MESSAGES {
-		resp, errG := http.Get("http://localhost:31333/scumbag")
+		resp, errG := http.Get("http://localhost:31400/scumbag")
 		if errG != nil {
 			return errG
 		}

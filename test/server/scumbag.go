@@ -57,13 +57,13 @@ func NewScumsocketServer(maxConnections uint) *server.WebSocketServer {
 
 func NewServeScumbag() *server.ServeProcess {
 	cfg := server.DefaultServerConfig()
-	cfg.Bind.Port = uint16(31333)
+	cfg.Bind.Port = uint16(31400)
 	return server.NewServeProcess(cfg, NewScumbagServer())
 }
 
 func NewServeScumSocket(wsServer *server.WebSocketServer) *server.ServeProcess {
 	cfg := server.DefaultServerConfig()
 	cfg.WebSocket.WebSocketEndpoint = "/scumsocket"
-	cfg.Bind.Port = uint16(31337)
+	cfg.Bind.Port = uint16(31401)
 	return server.NewServeProcess(cfg, wsServer)
 }

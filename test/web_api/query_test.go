@@ -15,8 +15,9 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 )
+
+const QS_URL = "http://localhost:31403/server"
 
 type QuerySuite struct {
 	suite.Suite
@@ -30,7 +31,9 @@ type QuerySuite struct {
 func (this *QuerySuite) SetupSuite() {
 	baseDir := path.Join(os.TempDir(), "/.edbservers")
 	ss := ess.NewServerServer(baseDir)
-	proc := server.NewServeProcess(nil, ss)
+	cfg := server.DefaultServerConfig()
+	cfg.Bind.Port = uint16(31403)
+	proc := server.NewServeProcess(cfg, ss)
 	err := proc.Start()
 	if err != nil {
 		panic(err)
@@ -41,14 +44,15 @@ func (this *QuerySuite) SetupSuite() {
 
 	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
 	rBts, _ := this.codec.EncodeBytes(requestData)
-	resp, _ := http.Post(SS_URL, "application/json", bytes.NewBuffer(rBts))
+	resp, _ := http.Post(QS_URL, "application/json", bytes.NewBuffer(rBts))
 	rd := &ess.ResponseData{}
 	err2 := this.codec.Decode(rd, resp.Body)
 	if err2 != nil {
 		panic(err2)
 	}
-	fmt.Println("Received URL: " + rd.URL)
-	this.sUrl = rd.URL
+	fmt.Println("Received Port: " + rd.Port)
+	this.sUrl = "http://localhost:" + rd.Port
+	fmt.Println("URL: " + this.sUrl)
 	this.testData = testData
 }
 
@@ -56,9 +60,6 @@ func (this *QuerySuite) TearDownSuite() {
 	sec := this.serveProcess.StopEventChannel()
 	this.serveProcess.Stop(0)
 	<-sec
-	// Tests are done rapidly, this is just to give that extra milliseconds 
-	// to shut down the previous server (may be excessive).
-	time.Sleep(500*time.Millisecond)
 }
 
 // ********************************************* Tests *********************************************
