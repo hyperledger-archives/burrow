@@ -1729,7 +1729,7 @@ Filter:
 {
     field: <string>
     op:    <string>
-    value: <*> 
+    value: <string> 
 }
 ```
 
