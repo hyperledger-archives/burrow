@@ -3,4 +3,4 @@ general:
 
 test:
   override:
-    - "cd ../../ && go test -v ./... -race"
+    - "cd ../../ && godep go test -v ./... -race"
