@@ -1,6 +1,6 @@
 # Eris DB web APIs (draft)
 
-### for eris-db version 0.10.0
+### for eris-db version 0.10.x
 
 Eris DB allows remote access to its functionality over http and websocket. It currently supports JSON-RPC, and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
 
@@ -1729,7 +1729,7 @@ Filter:
 {
     field: <string>
     op:    <string>
-    value: <*> 
+    value: <string> 
 }
 ```
 
