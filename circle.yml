@@ -1,6 +1,9 @@
-general:
-  build_dir: cmd/erisdb
+dependencies:
+  pre:
+    - go get github.com/tools/godep
+  override:
+    - godep go build ./cmd/erisdb
 
 test:
   override:
-    - "cd ../../ && godep go test -v ./... -race"
+    - godep go test ./... -race
