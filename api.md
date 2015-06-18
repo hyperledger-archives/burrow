@@ -11,7 +11,7 @@ Eris DB allows remote access to its functionality over http and websocket. It cu
 - [Common objects and formatting](#formatting-conventions)
 - [Event-system](#event-system)
 - [Methods](#methods)
-- [Filters](#filters)
+- [Filters](#queries-filters)
 
 <a name="json-rpc"></a>
 ## JSON RPC 2.0
@@ -532,7 +532,7 @@ Parameter:
 
 See GetAccount below for more info on the `Account` object.
 
-See the section on [Filters](#filters) for info on the `FilterData` object.
+See the section on [Filters](#queries-filters) for info on the `FilterData` object.
 
 ***
 
@@ -896,7 +896,7 @@ The `BlockMeta` object:
 
 TODO
 
-See the section on [Filters](#filters) for info on the `FilterData` object.
+See the section on [Filters](#queries-filters) for info on the `FilterData` object.
 
 `min_height` and `max_height` is the two actual values used for min and max height when fetching the blocks. The reason they are included is because the heights might have been modified, like for example when the blockchain height is lower then the max height provided in the query.
 
@@ -1714,7 +1714,7 @@ Again - This is unsafe. Be warned.
 
 ***
 
-<a name="filters"></a>
+<a name="queries-filters"></a>
 ##Filters
 
 Filters are used in searches. The structure is similar to that of the [Github api (v3)](https://developer.github.com/v3/search/).
