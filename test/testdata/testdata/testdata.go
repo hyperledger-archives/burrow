@@ -1,8 +1,8 @@
 package testdata
 
 import (
-	edb "github.com/eris-ltd/erisdb/erisdb"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	edb "github.com/eris-ltd/eris-db/erisdb"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/tendermint/tendermint/account"
 	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"

@@ -3,8 +3,8 @@
 package erisdb
 
 import (
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
-	"github.com/eris-ltd/erisdb/server"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/tendermint/log15"
 	. "github.com/tendermint/tendermint/common"
 	cfg "github.com/tendermint/tendermint/config"
@@ -14,7 +14,7 @@ import (
 	"path"
 )
 
-const ERISDB_VERSION = "0.9.1"
+const ERISDB_VERSION = "0.10.0"
 const TENDERMINT_VERSION = "0.3.0"
 
 var log = log15.New("module", "eris/erisdb_server")

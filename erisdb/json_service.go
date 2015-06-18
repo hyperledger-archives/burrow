@@ -3,9 +3,9 @@ package erisdb
 import (
 	"encoding/json"
 	"fmt"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
-	rpc "github.com/eris-ltd/erisdb/rpc"
-	"github.com/eris-ltd/erisdb/server"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	edb "github.com/eris-ltd/erisdb/erisdb"
+	edb "github.com/eris-ltd/eris-db/erisdb"
 	"os"
 )
 

@@ -1,7 +1,7 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/erisdb/erisdb/pipe"
+	"github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/tendermint/tendermint/account"
 	"github.com/tendermint/tendermint/types"
 )

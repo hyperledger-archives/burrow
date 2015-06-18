@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
-	rpc "github.com/eris-ltd/erisdb/rpc"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/tendermint/tendermint/types"
 	"strings"
 )

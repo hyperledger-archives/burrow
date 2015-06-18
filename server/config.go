@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/eris-ltd/erisdb/files"
+	"github.com/eris-ltd/eris-db/files"
 	"github.com/naoina/toml"
 )
 

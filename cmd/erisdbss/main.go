@@ -1,8 +1,8 @@
 package main
 
 import (
-	ess "github.com/eris-ltd/erisdb/erisdb/erisdbss"
-	"github.com/eris-ltd/erisdb/server"
+	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"os"
 	"path"

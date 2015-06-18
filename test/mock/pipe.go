@@ -1,8 +1,8 @@
 package mock
 
 import (
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
-	td "github.com/eris-ltd/erisdb/test/testdata/testdata"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/tendermint/tendermint/account"
 	"github.com/tendermint/tendermint/types"
 )

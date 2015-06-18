@@ -1,7 +1,7 @@
 package erisdb
 
 import (
-	rpc "github.com/eris-ltd/erisdb/rpc"
+	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/tendermint/tendermint/binary"
 	"io"
 	"io/ioutil"

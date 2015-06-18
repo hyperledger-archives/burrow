@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/eris-ltd/erisdb/client"
-	"github.com/eris-ltd/erisdb/server"
+	"github.com/eris-ltd/eris-db/client"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

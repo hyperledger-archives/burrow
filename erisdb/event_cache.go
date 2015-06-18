@@ -2,7 +2,7 @@ package erisdb
 
 import (
 	"fmt"
-	ep "github.com/eris-ltd/erisdb/erisdb/pipe"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"sync"
 	"time"
 )

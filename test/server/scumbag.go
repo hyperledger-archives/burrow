@@ -2,8 +2,8 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/eris-ltd/erisdb/rpc"
-	"github.com/eris-ltd/erisdb/server"
+	"github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
 	"os"

@@ -5,7 +5,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"testing"
 	"sync"
-	. "github.com/eris-ltd/erisdb/erisdb/pipe"
+	. "github.com/eris-ltd/eris-db/erisdb/pipe"
 )
 
 const OBJECTS = 100

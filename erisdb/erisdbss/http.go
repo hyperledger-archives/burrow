@@ -3,7 +3,7 @@ package erisdbss
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/eris-ltd/erisdb/server"
+	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/tendermint/binary"
 	. "github.com/tendermint/tendermint/common"
