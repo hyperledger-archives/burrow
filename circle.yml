@@ -1,8 +1,19 @@
 dependencies:
   pre:
-    - go get github.com/tools/godep
+    
   override:
     - godep go build ./cmd/erisdb
+
+dependencies:
+  pre:
+    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    - rm -rf ~/.go_workspace
+	- go get github.com/tools/godep
+  override:
+    - go get -d -v .
+    - "cd $GOPATH/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME && git checkout $CIRCLE_BRANCH"
+	- godep restore
+    - godep go build ./cmd/erisdb -v
 
 test:
   override:
