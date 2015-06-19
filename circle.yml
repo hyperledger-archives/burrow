@@ -4,7 +4,7 @@ dependencies:
     - rm -rf ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - mkdir -p ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - pwd
-    - ln -s ~/eris-db ~/.go_workspace/src/github.com/eris-ltd/eris-db
+    - ln -s ~/eris-db ~/.go_workspace/src/github.com/eris-ltd/
     - ls ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - go get github.com/tools/godep
   override:
