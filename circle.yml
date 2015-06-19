@@ -7,8 +7,7 @@ dependencies:
     - go get github.com/tools/godep
   override:
     - godep restore
-    - "cd ./cmd/erisdb && godep go build"
-    - go install
+    - "cd ./cmd/erisdb && godep go install"
 
 test:
   override:
