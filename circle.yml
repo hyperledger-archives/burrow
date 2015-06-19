@@ -12,4 +12,4 @@ dependencies:
 test:
   override:
     - pwd
-    - "cd ../.. && godep go test ./..."
+    - godep go test ./...
