@@ -4,8 +4,8 @@ dependencies:
     - go get github.com/tools/godep
   override:
     - godep restore
-    - godep go build ./cmd/erisdb
+    - "cd ./cmd/erisdb && godep go build"
 
 test:
   override:
-    - godep go test ./...
+    - "cd ../.. && godep go test ./..."
