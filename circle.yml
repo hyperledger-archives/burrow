@@ -2,7 +2,7 @@ dependencies:
   pre:
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
   override:
-    - "cd ./cmd/erisdb && godep go build"
+    - "cd ./cmd/erisdb && go build"
     - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
     - chmod +x ~/bin/erisdb
 
