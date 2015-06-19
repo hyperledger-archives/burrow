@@ -6,8 +6,9 @@ dependencies:
     - mv ~/eris-db ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - go get github.com/tools/godep
   override:
+    - cd ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - godep restore
-    - "cd ~/.go_workspace/src/github.com/eris-ltd/eris-db/cmd/erisdb && godep go build"
+    - "cd ./cmd/erisdb && godep go build"
 
 test:
   override:
