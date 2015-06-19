@@ -3,10 +3,9 @@ dependencies:
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
     - rm -rf ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - mkdir -p ~/.go_workspace/src/github.com/eris-ltd/eris-db
-    - mv ~/eris-db ~/.go_workspace/src/github.com/eris-ltd/eris-db
+    - ln ~/eris-db ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - go get github.com/tools/godep
   override:
-    - cd ~/.go_workspace/src/github.com/eris-ltd/eris-db
     - godep restore
     - "cd ./cmd/erisdb && godep go build"
 
