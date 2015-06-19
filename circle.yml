@@ -9,7 +9,7 @@ dependencies:
     - godep restore
     - "cd ./cmd/erisdb && godep go build"
     - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
-	- chmod +x ~/bin/erisdb
+    - chmod +x ~/bin/erisdb
 
 test:
   override:
