@@ -188,7 +188,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be
 	// established client-side before starting the tests.
-	return &ResponseData{fmt.Sprintf("%d",port)}, nil
+	return &ResponseData{fmt.Sprintf("%d", port)}, nil
 }
 
 // Add a new erisdb process to the list.

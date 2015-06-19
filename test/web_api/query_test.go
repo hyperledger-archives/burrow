@@ -2,7 +2,6 @@ package web_api
 
 // Basic imports
 import (
-	"io/ioutil"
 	"bytes"
 	"fmt"
 	edb "github.com/eris-ltd/eris-db/erisdb"
@@ -12,6 +11,7 @@ import (
 	"github.com/eris-ltd/eris-db/server"
 	fd "github.com/eris-ltd/eris-db/test/testdata/filters"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -70,7 +70,6 @@ func (this *QuerySuite) TearDownSuite() {
 }
 
 // ********************************************* Tests *********************************************
-
 
 // TODO make these functions into one.
 func (this *QuerySuite) Test_Accounts0() {

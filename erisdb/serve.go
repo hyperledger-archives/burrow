@@ -53,9 +53,9 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	// Get tendermint configuration
 	tmConfig = tmcfg.GetConfig(workDir)
-	tmConfig.Set("version", TENDERMINT_VERSION) 
+	tmConfig.Set("version", TENDERMINT_VERSION)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
-	
+
 	// Set the node up.
 	nodeRd := make(chan struct{})
 	nd := node.NewNode()

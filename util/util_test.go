@@ -12,7 +12,7 @@ func TestIsHexSuccess(t *testing.T) {
 
 // This should fail because there is a non matching character.
 func TestIsHexFailChar(t *testing.T) {
-	assert.False(t,IsHex("562Q"))
+	assert.False(t, IsHex("562Q"))
 }
 
 // This should succeed
@@ -22,12 +22,12 @@ func TestIsHashSuccess(t *testing.T) {
 
 // This should fail because there is a non matching character.
 func TestIsHashFailChar(t *testing.T) {
-	assert.False(t,IsHash("RM4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5FC"))
+	assert.False(t, IsHash("RM4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5FC"))
 }
 
 // This should fail because the length is not right.
 func TestIsHashFailLength(t *testing.T) {
-	assert.False(t,IsHash("DA4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5F"))
+	assert.False(t, IsHash("DA4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5F"))
 }
 
 // This should succeed
@@ -37,12 +37,12 @@ func TestIsAddressSuccess(t *testing.T) {
 
 // This should fail because there is a non matching character.
 func TestIsAddressFailChar(t *testing.T) {
-	assert.False(t,IsAddress("37236DF251AB70022B1DA351F08A20FB52443E3Q"))
+	assert.False(t, IsAddress("37236DF251AB70022B1DA351F08A20FB52443E3Q"))
 }
 
 // This should fail because the length is not right.
 func TestIsAddressFailLength(t *testing.T) {
-	assert.False(t,IsAddress("37236DF251AB70022B1DA351F08A20FB52443E"))
+	assert.False(t, IsAddress("37236DF251AB70022B1DA351F08A20FB52443E"))
 }
 
 // This should succeed
@@ -52,12 +52,12 @@ func TestIsPubKeySuccess(t *testing.T) {
 
 // This should fail because there is a non matching character.
 func TestIsPubKeyFailChar(t *testing.T) {
-	assert.False(t,IsPubKey("CB3688B7I6TD488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"))
+	assert.False(t, IsPubKey("CB3688B7I6TD488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"))
 }
 
 // This should fail because the length is not right.
 func TestIsPubKeyFailLength(t *testing.T) {
-	assert.False(t,IsPubKey("CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11"))
+	assert.False(t, IsPubKey("CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11"))
 }
 
 // This should succeed
@@ -67,10 +67,10 @@ func TestIsPrivKeySuccess(t *testing.T) {
 
 // This should fail because there is a non matching character.
 func TestIsPrivKeyFailChar(t *testing.T) {
-	assert.False(t,IsPrivKey("6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834ESAEE9398BEF94844D8BDBBCA980C11E3654A45906"))
+	assert.False(t, IsPrivKey("6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834ESAEE9398BEF94844D8BDBBCA980C11E3654A45906"))
 }
 
 // This should fail because the length is not right.
 func TestIsPrivKeyFailLength(t *testing.T) {
-	assert.False(t,IsPrivKey("6B72D45EB65F619F11CE580C8CAED9E0BADC774ED2C4151CB3688B7561D488A2A48EF94844D8BDBBCA980C11E3654A45906"))
+	assert.False(t, IsPrivKey("6B72D45EB65F619F11CE580C8CAED9E0BADC774ED2C4151CB3688B7561D488A2A48EF94844D8BDBBCA980C11E3654A45906"))
 }

@@ -70,7 +70,7 @@ func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 		// TODO Will this be enough for massive "get blockchain" requests?
 		WriteBufferSize: 1024,
 	}
-	this.upgrader.CheckOrigin = func(r *http.Request) bool {return true}
+	this.upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	router.GET(config.WebSocket.WebSocketEndpoint, this.handleFunc)
 	this.running = true

@@ -51,7 +51,7 @@ func (this *ServeProcess) Start() error {
 	router := gin.New()
 
 	config := this.config
-	
+
 	InitLogger(config)
 
 	// if config.CORS.Enable {
@@ -123,7 +123,7 @@ func (this *ServeProcess) Start() error {
 		}
 	}()
 	// Listen to the process stop event, it will call 'Stop'
-	// on the graceful Server. This happens when someone 
+	// on the graceful Server. This happens when someone
 	// calls 'Stop' on the process.
 	go func() {
 		<-this.stopChan
@@ -234,4 +234,3 @@ func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	}
 	return cors.Middleware(o)
 }
-

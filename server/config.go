@@ -43,7 +43,7 @@ type (
 	}
 
 	WebSocket struct {
-		WebSocketEndpoint        string `toml:"websocket_endpoint"`
+		WebSocketEndpoint    string `toml:"websocket_endpoint"`
 		MaxWebSocketSessions uint   `toml:"max_websocket_sessions"`
 	}
 
@@ -69,7 +69,7 @@ func DefaultServerConfig() *ServerConfig {
 		CORS: CORS{},
 		HTTP: HTTP{JsonRpcEndpoint: "/rpc"},
 		WebSocket: WebSocket{
-			WebSocketEndpoint:        "/socketrpc",
+			WebSocketEndpoint:    "/socketrpc",
 			MaxWebSocketSessions: 50,
 		},
 		Logging: Logging{

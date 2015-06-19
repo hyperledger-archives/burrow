@@ -1,11 +1,11 @@
 package erisdb
 
 import (
+	"encoding/json"
 	"fmt"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
-	"encoding/json"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -37,7 +37,7 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 
 	// Error when unmarshaling.
 	if errU != nil {
-		this.writeError("Failed to parse request: " + errU.Error() + " . Raw: " + string(msg), "", rpc.PARSE_ERROR, session)
+		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg), "", rpc.PARSE_ERROR, session)
 		return
 	}
 

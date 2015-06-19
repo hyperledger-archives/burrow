@@ -12,12 +12,12 @@ import (
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/tendermint/account"
 	"github.com/tendermint/log15"
+	"github.com/tendermint/tendermint/account"
 	"net/http"
-	"testing"
 	"os"
 	"runtime"
+	"testing"
 )
 
 func init() {

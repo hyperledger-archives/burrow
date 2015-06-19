@@ -177,14 +177,14 @@ func GetRangeFilter(op, fName string) (func(a, b int64) bool, error) {
 	}
 }
 
-func GetStringFilter(op, fName string) (func(s0, s1 string) bool, error){
+func GetStringFilter(op, fName string) (func(s0, s1 string) bool, error) {
 	if op == "==" {
 		return func(s0, s1 string) bool {
-			return strings.EqualFold(s0,s1)
+			return strings.EqualFold(s0, s1)
 		}, nil
 	} else if op == "!=" {
 		return func(s0, s1 string) bool {
-			return !strings.EqualFold(s0,s1)
+			return !strings.EqualFold(s0, s1)
 		}, nil
 	} else {
 		return nil, fmt.Errorf("Op: " + op + " is not supported for '" + fName + "' filtering.")
