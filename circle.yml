@@ -11,5 +11,4 @@ dependencies:
 
 test:
   override:
-    - pwd
-    - godep go test ./...
+    - godep go test -v ./...

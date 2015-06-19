@@ -183,7 +183,7 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	}
 
 	st := newServeTask(port, workDir, maxDur, proc)
-	this.running = append(this.running, st) 
+	this.running = append(this.running, st)
 
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be
