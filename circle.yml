@@ -1,9 +1,11 @@
 dependencies:
   pre:
-    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev tree"
     - go get github.com/tools/godep
   override:
+    - pwd
     - godep restore
+    - tree -d ../..
     - "cd ./cmd/erisdb && godep go build"
 
 test:
