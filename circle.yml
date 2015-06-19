@@ -8,7 +8,7 @@ dependencies:
   override:
     - godep restore
     - "cd ./cmd/erisdb && godep go build"
-	- go install
+    - go install
 
 test:
   override:
