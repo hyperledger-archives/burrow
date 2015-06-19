@@ -5,7 +5,6 @@ dependencies:
     - "cd ./cmd/erisdb && go build"
     - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
     - chmod +x ~/bin/erisdb
-
 test:
   override:
     - go test -v ./...
