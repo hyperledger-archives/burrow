@@ -2,6 +2,7 @@ package web_api
 
 // Basic imports
 import (
+	"io/ioutil"
 	"bytes"
 	"fmt"
 	edb "github.com/eris-ltd/eris-db/erisdb"
@@ -45,6 +46,12 @@ func (this *QuerySuite) SetupSuite() {
 	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
 	rBts, _ := this.codec.EncodeBytes(requestData)
 	resp, _ := http.Post(QS_URL, "application/json", bytes.NewBuffer(rBts))
+	if resp.StatusCode != 200 {
+		bts, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("ERROR GETTING SS ADDRESS: " + string(bts))
+		fmt.Printf("%v\n", resp)
+		panic(fmt.Errorf(string(bts)))
+	}
 	rd := &ess.ResponseData{}
 	err2 := this.codec.Decode(rd, resp.Body)
 	if err2 != nil {
