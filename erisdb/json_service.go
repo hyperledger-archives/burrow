@@ -3,10 +3,10 @@ package erisdb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
-	"github.com/gin-gonic/gin"
 	"net/http"
 )
 

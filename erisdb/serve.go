@@ -3,14 +3,14 @@
 package erisdb
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
+	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
-	"github.com/tendermint/log15"
-	. "github.com/tendermint/tendermint/common"
-	cfg "github.com/tendermint/tendermint/config"
-	tmcfg "github.com/tendermint/tendermint/config/tendermint"
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/p2p"
 	"path"
 )
 

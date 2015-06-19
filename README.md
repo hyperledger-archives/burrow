@@ -4,9 +4,11 @@
 
 The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The documentation can be found [here](TODO). We also have javascript bindings for the RPC methods in [erisdb-js](https://github.com/eris-ltd/erisdb-js).
 
-### Installation
+## Installation
 
-There are no binary downloads, and probably won't be before `1.0`. 
+There are no binary downloads, and probably won't be before `1.0`.
+
+### Building from source
 
 #### Ubuntu 14.04 (OSX ?)
 
@@ -16,18 +18,11 @@ You will also need the following libraries: `git, mercurial, libgmp3-dev`
 
 On Ubuntu: `sudo apt-get install git mercurial libgmp3-dev`
 
-Then download [godep](https://github.com/tools/godep). It is needed for dependency management. It is recommended to set up a separate workspace for this project.
+Next you pull in the code:
 
-`go get github.com/tools/godep` 
+`go get github.com/eris-ltd/eris-db/cmd/erisdb`
 
-Next you pull in the code. It uses godep so I would recommend making a new workspace:
-
-`go get github.com/eris-ltd/erisdb`
-
-It's gonna say no buildable sources but that's fine. Just cd into `$GOPATH/src/github.com/eris-ltd/erisdb` and run: `$ godep restore`
-
-After that, run `$ go install ./cmd/erisdb`
-This will build the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
+This will build and install the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
 
 To run `erisdb`, just type `$ erisdb /path/to/working/folder`
 
@@ -41,7 +36,7 @@ Tendermint officially supports only 64 bit Ubuntu.
 
 #### Docker
 
-There is no docker container for this library yet, but it will be added.
+WIP
 
 ### Usage
 

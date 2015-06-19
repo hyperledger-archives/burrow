@@ -3,7 +3,7 @@ package filters
 import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	"github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 )
 
 var testDataJson = `{

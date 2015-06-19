@@ -1,10 +1,10 @@
 package mock
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	"github.com/tendermint/tendermint/account"
-	"github.com/tendermint/tendermint/types"
 )
 
 // Base struct.
