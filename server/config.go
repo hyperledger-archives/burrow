@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/naoina/toml"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
 	"github.com/eris-ltd/eris-db/files"
 )
 

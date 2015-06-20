@@ -3,7 +3,7 @@ package client
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
 	"net/http"
 )
 
