@@ -36,7 +36,7 @@ Tendermint officially supports only 64 bit Ubuntu.
 
 #### Docker
 
-WIP
+`$ ./docker_build.sh` to build the image. After that, use ` $ ./docker_run.sh` to run with the default settings.
 
 ### Usage
 
