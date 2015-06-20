@@ -1,7 +1,7 @@
 package pipe
 
 import (
-	evts "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	evts "github.com/tendermint/tendermint/events"
 )
 
 // TODO improve
