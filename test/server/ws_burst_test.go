@@ -36,9 +36,8 @@ func (this *SessionCounter) Report() (int, int, int) {
 	return this.opened, this.closed, this.opened - this.closed
 }
 
-// Coarse flood testing just to ensure that websocket server
-// does not crash, and that it cleans up after itself.
-// TODO clean this up.
+// Testing to ensure that websocket server does not crash, and that it 
+// cleans up after itself.
 func TestWsFlooding(t *testing.T) {
 
 	// New websocket server.

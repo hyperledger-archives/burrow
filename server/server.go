@@ -15,7 +15,6 @@ var (
 	killTime = 100 * time.Millisecond
 )
 
-// TODO should this be here.
 type HttpService interface {
 	Process(*http.Request, http.ResponseWriter)
 }
@@ -205,7 +204,6 @@ func NewServeProcess(config *ServerConfig, servers ...Server) *ServeProcess {
 
 // Used to enable log15 logging instead of the default Gin logging.
 // This is done mainly because we at Eris uses log15 in other components.
-// TODO make this optional perhaps.
 func logHandler(c *gin.Context) {
 
 	path := c.Request.URL.Path

@@ -71,7 +71,7 @@ func (this *QuerySuite) TearDownSuite() {
 
 // ********************************************* Tests *********************************************
 
-// TODO make these functions into one.
+// TODO less duplication.
 func (this *QuerySuite) Test_Accounts0() {
 	fd := this.testData.Input.Filters0
 	resp := this.get("/accounts?" + generateQuery(fd))

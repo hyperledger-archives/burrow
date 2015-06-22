@@ -99,11 +99,10 @@ func ReadServerConfig(filePath string) (*ServerConfig, error) {
 }
 
 // Write a server configuration file.
-// TODO use the backup file write.
 func WriteServerConfig(filePath string, cfg *ServerConfig) error {
 	bts, err := toml.Marshal(*cfg)
 	if err != nil {
 		return err
 	}
-	return files.WriteFileRW(filePath, bts)
+	return files.WriteAndBackup(filePath, bts)
 }

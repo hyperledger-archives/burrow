@@ -10,7 +10,6 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-	"sync"
 )
 
 const (
@@ -22,8 +21,6 @@ const (
 type transactor struct {
 	consensusState *cs.ConsensusState
 	mempoolReactor *mempl.MempoolReactor
-	pending        []TxFuture
-	pendingLock    *sync.Mutex
 	eventEmitter   EventEmitter
 }
 
@@ -31,18 +28,8 @@ func newTransactor(consensusState *cs.ConsensusState, mempoolReactor *mempl.Memp
 	txs := &transactor{
 		consensusState,
 		mempoolReactor,
-		[]TxFuture{},
-		&sync.Mutex{},
 		eventEmitter,
 	}
-	/*
-		eventEmitter.Subscribe(SUB_ID, EVENT_ID, func(v interface{}) {
-			block := v.(*types.Block)
-			for _, fut := range txs.pending {
-				fut.NewBlock(block)
-			}
-		})
-	*/
 	return txs
 }
 
@@ -233,87 +220,5 @@ func toVMAccount(acc *account.Account) *vm.Account {
 		Nonce:       uint64(acc.Sequence),
 		StorageRoot: cmn.LeftPadWord256(acc.StorageRoot),
 		Other:       acc.PubKey,
-	}
-}
-
-// This is the different status codes for transactions.
-// 0 - the tx tracker object is being set up.
-// 1 - the tx has been created and passed into the tx pool.
-// 2 - the tx was succesfully committed into a block.
-// Errors
-// -1 - the tx failed.
-const (
-	TX_NEW_CODE      int8 = 0
-	TX_POOLED_CODE   int8 = 1
-	TX_COMITTED_CODE int8 = 2
-	TX_FAILED_CODE   int8 = -1
-)
-
-// Number of bytes in a transaction hash
-const TX_HASH_BYTES = 32
-
-// Length of the tx hash hex-string (prepended by 0x)
-const TX_HASH_LENGTH = 2 * TX_HASH_BYTES
-
-type TxFuture interface {
-	// Tx Hash
-	Hash() string
-	// Target account.
-	Target() string
-	// Get the Receipt for this transaction.
-	Results() *TransactionResult
-	// This will block and wait for the tx to be done.
-	Get() *TransactionResult
-	// This will block for 'timeout' miliseconds and wait for
-	// the tx to be done. 0 means no timeout, and is equivalent
-	// to calling 'Get()'.
-	GetWithTimeout(timeout uint64) *TransactionResult
-	// Checks the status. The status codes can be find near the
-	// top of this file.
-	StatusCode() int8
-	// This is true when the transaction is done (whether it was successful or not).
-	Done() bool
-}
-
-// Implements the 'TxFuture' interface.
-type TxFutureImpl struct {
-	receipt    *Receipt
-	result     *TransactionResult
-	target     string
-	status     int8
-	transactor Transactor
-	errStr     string
-	getLock    *sync.Mutex
-}
-
-func (this *TxFutureImpl) Results() *TransactionResult {
-	return this.result
-}
-
-func (this *TxFutureImpl) StatusCode() int8 {
-	return this.status
-}
-
-func (this *TxFutureImpl) Done() bool {
-	return this.status == TX_COMITTED_CODE || this.status == TX_FAILED_CODE
-}
-
-func (this *TxFutureImpl) Wait() *TransactionResult {
-	return this.WaitWithTimeout(0)
-}
-
-// We wait for blocks, and when a block arrives we check if tx is committed.
-// This will return after it has been confirmed that tx was committed, or if
-// it failed, and for a maximum of 'blocks' blocks. If 'blocks' is set to 0,
-// it will be set to DEFAULT_BLOCKS_WAIT.
-// This is a temporary solution until we have solidity events.
-func (this *TxFutureImpl) WaitWithTimeout(blocks int) *TransactionResult {
-	return nil
-}
-
-func (this *TxFutureImpl) setStatus(status int8, errorStr string) {
-	this.status = status
-	if status == TX_FAILED_CODE {
-		this.errStr = errorStr
 	}
 }
