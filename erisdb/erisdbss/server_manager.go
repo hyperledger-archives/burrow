@@ -76,7 +76,12 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 }
 
 func (this *CmdProcess) Kill() error {
-	return this.cmd.Process.Kill()
+	err := this.cmd.Process.Kill()
+	if err != nil {
+		return err
+	}
+	_ , err2 := this.cmd.Process.Wait()
+	return err2
 }
 
 // A serve task. This wraps a running process. It was designed to run 'erisdb' processes.

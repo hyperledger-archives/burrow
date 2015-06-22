@@ -36,7 +36,9 @@ Tendermint officially supports only 64 bit Ubuntu.
 
 #### Docker
 
-`$ ./docker_build.sh` to build the image. After that, use ` $ ./docker_run.sh` to run with the default settings.
+Work in progress.
+
+`$ ./docker_build.sh` to build the image. After that, use ` $ ./docker_run.sh` to run with the default workdir (/home/.eris/.eris-db).
 
 ### Usage
 
@@ -73,6 +75,8 @@ The server configuration file looks like this:
 [web_socket]
   websocket_endpoint= <string>
   max_websocket_sessions= <number>
+  read_buffer_size = <number>
+  write_buffer_size = <number>
 [logging]
   console_log_level= <string>
   file_log_level= <string>
@@ -106,6 +110,8 @@ Details about the other fields and how this is implemented can be found [here](h
 
 - `websocket_endpoint` is the name of the endpoint that is used to establish a websocket connection.
 - `max_websocket_connections` is the maximum number of websocket connections that is allowed at the same time.
+- `read_buffer_size` is the size of the read buffer for each socket in bytes.
+- `read_buffer_size` is the size of the write buffer for each socket in bytes.
 
 ##### logging
 
@@ -140,8 +146,10 @@ json_rpc_endpoint="/rpc"
 [web_socket]
 websocket_endpoint="/socketrpc"
 max_websocket_sessions=50
+read_buffer_size = 2048
+write_buffer_size = 2048
 [logging]
-console_log_level="debug"
+console_log_level="info"
 file_log_level="warn"
 log_file=""
 ```

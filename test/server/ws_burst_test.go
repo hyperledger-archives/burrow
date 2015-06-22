@@ -104,6 +104,6 @@ func wsClient(doneChan chan bool, errChan chan error) {
 	}
 
 	client.Close()
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 100)
 	doneChan <- true
 }

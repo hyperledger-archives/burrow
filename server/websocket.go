@@ -66,12 +66,11 @@ func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 	this.config = config
 
 	this.upgrader = websocket.Upgrader{
-		ReadBufferSize: 1024,
+		ReadBufferSize: int(config.WebSocket.ReadBufferSize),
 		// TODO Will this be enough for massive "get blockchain" requests?
-		WriteBufferSize: 1024,
+		WriteBufferSize: int(config.WebSocket.WriteBufferSize),
 	}
 	this.upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-
 	router.GET(config.WebSocket.WebSocketEndpoint, this.handleFunc)
 	this.running = true
 }

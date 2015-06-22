@@ -45,6 +45,8 @@ type (
 	WebSocket struct {
 		WebSocketEndpoint    string `toml:"websocket_endpoint"`
 		MaxWebSocketSessions uint   `toml:"max_websocket_sessions"`
+		ReadBufferSize       uint   `toml:"read_buffer_size"`
+		WriteBufferSize      uint   `toml:"write_buffer_size"`
 	}
 
 	Logging struct {
@@ -59,7 +61,7 @@ func DefaultServerConfig() *ServerConfig {
 	kp := ""
 	return &ServerConfig{
 		Bind: Bind{
-			Address: "",
+			Address: "localhost",
 			Port:    1337,
 		},
 		TLS: TLS{TLS: false,
@@ -71,6 +73,8 @@ func DefaultServerConfig() *ServerConfig {
 		WebSocket: WebSocket{
 			WebSocketEndpoint:    "/socketrpc",
 			MaxWebSocketSessions: 50,
+			ReadBufferSize: 2048,
+			WriteBufferSize: 2048,
 		},
 		Logging: Logging{
 			ConsoleLogLevel: "info",

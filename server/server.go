@@ -69,7 +69,6 @@ func (this *ServeProcess) Start() error {
 	}
 
 	listenAddress := address + ":" + fmt.Sprintf("%d", port)
-
 	srv := &graceful.Server{
 		Server: &http.Server{
 			Handler: router,
