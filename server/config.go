@@ -61,7 +61,7 @@ func DefaultServerConfig() *ServerConfig {
 	kp := ""
 	return &ServerConfig{
 		Bind: Bind{
-			Address: "localhost",
+			Address: "",
 			Port:    1337,
 		},
 		TLS: TLS{TLS: false,
