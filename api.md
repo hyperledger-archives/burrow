@@ -454,6 +454,8 @@ Event object:
 | [GetPeers](#get-peers) | erisdb.getPeers | GET | `/network/peers` |
 | [GetPeer](#get-peer) | erisdb.getPeer | GET | `/network/peer/:address` |
 
+NOTE: Get peer is not fully implemented.
+
 ###Transactions
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |

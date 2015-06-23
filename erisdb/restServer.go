@@ -440,6 +440,7 @@ func keyParam(c *gin.Context) {
 		c.AbortWithError(400, err)
 	}
 	c.Set("keyBts", bts)
+	c.Next()
 }
 
 func heightParam(c *gin.Context) {
@@ -451,6 +452,7 @@ func heightParam(c *gin.Context) {
 		c.AbortWithError(400, fmt.Errorf("Negative number used as height."))
 	}
 	c.Set("height", uint(h))
+	c.Next()
 }
 
 func subIdParam(c *gin.Context) {
@@ -459,12 +461,14 @@ func subIdParam(c *gin.Context) {
 		c.AbortWithError(400, fmt.Errorf("Malformed event id"))
 	}
 	c.Set("id", subId)
+	c.Next()
 }
 
 // TODO
 func peerAddressParam(c *gin.Context) {
 	subId := c.Param("address")
 	c.Set("address", subId)
+	c.Next()
 }
 
 func parseQuery(c *gin.Context) {
