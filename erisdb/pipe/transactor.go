@@ -113,10 +113,6 @@ func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
 	return &UnconfirmedTxs{transactions}, nil
 }
 
-func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*TransactionResult, error) {
-	return nil, nil
-}
-
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error) {
 	fmt.Printf("ADDRESS: %v\n", address)
 	var addr []byte
@@ -152,8 +148,8 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee ui
 	tx := &types.CallTx{
 		Input:    txInput,
 		Address:  addr,
-		GasLimit: 1000,
-		Fee:      1000,
+		GasLimit: gasLimit,
+		Fee:      fee,
 		Data:     data,
 	}
 	// Got ourselves a tx.

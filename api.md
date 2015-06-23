@@ -6,12 +6,18 @@ Eris DB allows remote access to its functionality over http and websocket. It cu
 
 ## TOC
 
+- [HTTP Requests](#http-requests)
 - [JSON-RPC 2.0](#json-rpc)
 - [REST-like HTTP](#rest-like)
 - [Common objects and formatting](#formatting-conventions)
 - [Event-system](#event-system)
 - [Methods](#methods)
 - [Filters](#queries-filters)
+
+<a name="http-requests"></a>
+## HTTP Requests
+
+The only data format supported is JSON. All post requests needs to use `Content-Type: application/json`. The charset flag is not supported (json is utf-8 encoded by default).
 
 <a name="json-rpc"></a>
 ## JSON RPC 2.0

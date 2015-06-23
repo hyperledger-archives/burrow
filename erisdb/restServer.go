@@ -430,6 +430,7 @@ func addressParam(c *gin.Context) {
 	}
 	bts, _ := hex.DecodeString(addr)
 	c.Set("addrBts", bts)
+	c.Next()
 }
 
 func keyParam(c *gin.Context) {

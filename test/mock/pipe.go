@@ -211,10 +211,6 @@ func (this *transactor) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
 	return this.testOutput.UnconfirmedTxs, nil
 }
 
-func (this *transactor) TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*ep.TransactionResult, error) {
-	return nil, nil
-}
-
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*ep.Receipt, error) {
 	if address == nil || len(address) == 0 {
 		return this.testOutput.TxCreateReceipt, nil

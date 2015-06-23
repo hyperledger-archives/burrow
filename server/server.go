@@ -53,12 +53,8 @@ func (this *ServeProcess) Start() error {
 
 	InitLogger(config)
 
-	// if config.CORS.Enable {
 	ch := NewCORSMiddleware(config.CORS)
-	router.Use(gin.Recovery(), logHandler, ch)
-	//} else {
-	//	router.Use(gin.Recovery(), logHandler)
-	//}
+	router.Use(gin.Recovery(), logHandler, contentTypeMW, ch)
 
 	address := config.Bind.Address
 	port := config.Bind.Port
@@ -216,7 +212,7 @@ func logHandler(c *gin.Context) {
 	statusCode := c.Writer.Status()
 	comment := c.Errors.String()
 
-	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
+	log.Info("[GIN] HTTP: " + clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
 
 }
 
@@ -230,4 +226,13 @@ func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 		MaxAge:           time.Duration(options.MaxAge),
 	}
 	return cors.Middleware(o)
+}
+
+// Just a catch-all for POST requests right now. Only allow default charset (utf8).
+func contentTypeMW(c *gin.Context) {
+	if c.Request.Method == "POST" && c.ContentType() != "application/json" {
+		c.AbortWithError(415, fmt.Errorf("Media type not supported: "+c.ContentType()))
+	} else {
+		c.Next()
+	}
 }
