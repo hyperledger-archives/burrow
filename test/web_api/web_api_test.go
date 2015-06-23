@@ -5,15 +5,16 @@ import (
 	"bytes"
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
+	"io/ioutil"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/tendermint/account"
 	"net/http"
 	"os"
 	"path"
@@ -252,6 +253,7 @@ func (this *WebApiSuite) Test_E4_Blocks() {
 func (this *WebApiSuite) get(endpoint string) *http.Response {
 	resp, errG := http.Get(this.sUrl + endpoint)
 	this.NoError(errG)
+	this.Equal(200, resp.StatusCode)
 	return resp
 }
 
@@ -259,6 +261,10 @@ func (this *WebApiSuite) postJson(endpoint string, v interface{}) *http.Response
 	bts, errE := this.codec.EncodeBytes(v)
 	this.NoError(errE)
 	resp, errP := http.Post(this.sUrl+endpoint, "application/json", bytes.NewBuffer(bts))
+	if resp.StatusCode != 200 {
+		bts, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("ERROR: " + string(bts))
+	}
 	this.NoError(errP)
 	this.Equal(200, resp.StatusCode)
 	return resp

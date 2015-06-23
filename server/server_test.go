@@ -2,12 +2,12 @@ package server
 
 import (
 	//"fmt"
-	"github.com/stretchr/testify/assert"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"testing"
 )
 
 // Unit tests for server components goes here. Full-on client-server tests
-// can be found in the test folder. TODO change that?
+// can be found in the test folder.
 
 func TestIdGet(t *testing.T) {
 	idPool := NewIdPool(100)

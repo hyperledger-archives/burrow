@@ -1,8 +1,8 @@
 package server
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
 	"github.com/eris-ltd/eris-db/files"
-	"github.com/naoina/toml"
 )
 
 // Standard configuration file for the server.
@@ -43,8 +43,10 @@ type (
 	}
 
 	WebSocket struct {
-		WebSocketEndpoint        string `toml:"websocket_endpoint"`
+		WebSocketEndpoint    string `toml:"websocket_endpoint"`
 		MaxWebSocketSessions uint   `toml:"max_websocket_sessions"`
+		ReadBufferSize       uint   `toml:"read_buffer_size"`
+		WriteBufferSize      uint   `toml:"write_buffer_size"`
 	}
 
 	Logging struct {
@@ -69,8 +71,10 @@ func DefaultServerConfig() *ServerConfig {
 		CORS: CORS{},
 		HTTP: HTTP{JsonRpcEndpoint: "/rpc"},
 		WebSocket: WebSocket{
-			WebSocketEndpoint:        "/socketrpc",
+			WebSocketEndpoint:    "/socketrpc",
 			MaxWebSocketSessions: 50,
+			ReadBufferSize: 2048,
+			WriteBufferSize: 2048,
 		},
 		Logging: Logging{
 			ConsoleLogLevel: "info",
@@ -95,11 +99,10 @@ func ReadServerConfig(filePath string) (*ServerConfig, error) {
 }
 
 // Write a server configuration file.
-// TODO use the backup file write.
 func WriteServerConfig(filePath string, cfg *ServerConfig) error {
 	bts, err := toml.Marshal(*cfg)
 	if err != nil {
 		return err
 	}
-	return files.WriteFileRW(filePath, bts)
+	return files.WriteAndBackup(filePath, bts)
 }

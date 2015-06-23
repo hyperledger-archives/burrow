@@ -3,10 +3,10 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
-	"github.com/tendermint/tendermint/binary"
-	. "github.com/tendermint/tendermint/common"
 	"os"
 	"os/exec"
 	"path"
@@ -76,7 +76,12 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 }
 
 func (this *CmdProcess) Kill() error {
-	return this.cmd.Process.Kill()
+	err := this.cmd.Process.Kill()
+	if err != nil {
+		return err
+	}
+	_ , err2 := this.cmd.Process.Wait()
+	return err2
 }
 
 // A serve task. This wraps a running process. It was designed to run 'erisdb' processes.
@@ -183,12 +188,12 @@ func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	}
 
 	st := newServeTask(port, workDir, maxDur, proc)
-	this.running = append(this.running, st) 
+	this.running = append(this.running, st)
 
 	// TODO add validation data. The node should ideally return some post-deploy state data
 	// and send it back with the server URL, so that the validity of the chain can be
 	// established client-side before starting the tests.
-	return &ResponseData{fmt.Sprintf("%d",port)}, nil
+	return &ResponseData{fmt.Sprintf("%d", port)}, nil
 }
 
 // Add a new erisdb process to the list.

@@ -4,9 +4,11 @@
 
 The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The documentation can be found [here](TODO). We also have javascript bindings for the RPC methods in [erisdb-js](https://github.com/eris-ltd/erisdb-js).
 
-### Installation
+## Installation
 
-There are no binary downloads, and probably won't be before `1.0`. 
+There are no binary downloads, and probably won't be before `1.0`.
+
+### Building from source
 
 #### Ubuntu 14.04 (OSX ?)
 
@@ -16,18 +18,11 @@ You will also need the following libraries: `git, mercurial, libgmp3-dev`
 
 On Ubuntu: `sudo apt-get install git mercurial libgmp3-dev`
 
-Then download [godep](https://github.com/tools/godep). It is needed for dependency management. It is recommended to set up a separate workspace for this project.
+Next you pull in the code:
 
-`go get github.com/tools/godep` 
+`go get github.com/eris-ltd/eris-db/cmd/erisdb`
 
-Next you pull in the code. It uses godep so I would recommend making a new workspace:
-
-`go get github.com/eris-ltd/erisdb`
-
-It's gonna say no buildable sources but that's fine. Just cd into `$GOPATH/src/github.com/eris-ltd/erisdb` and run: `$ godep restore`
-
-After that, run `$ go install ./cmd/erisdb`
-This will build the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
+This will build and install the `erisdb` executable and put it in `$GOPATH/bin`, which should be on your PATH. If not, then add it.
 
 To run `erisdb`, just type `$ erisdb /path/to/working/folder`
 
@@ -41,7 +36,9 @@ Tendermint officially supports only 64 bit Ubuntu.
 
 #### Docker
 
-There is no docker container for this library yet, but it will be added.
+Work in progress.
+
+`$ ./docker_build.sh` to build the image. After that, use ` $ ./docker_run.sh` to run with the default workdir (/home/.eris/.eris-db).
 
 ### Usage
 
@@ -78,6 +75,8 @@ The server configuration file looks like this:
 [web_socket]
   websocket_endpoint= <string>
   max_websocket_sessions= <number>
+  read_buffer_size = <number>
+  write_buffer_size = <number>
 [logging]
   console_log_level= <string>
   file_log_level= <string>
@@ -111,6 +110,8 @@ Details about the other fields and how this is implemented can be found [here](h
 
 - `websocket_endpoint` is the name of the endpoint that is used to establish a websocket connection.
 - `max_websocket_connections` is the maximum number of websocket connections that is allowed at the same time.
+- `read_buffer_size` is the size of the read buffer for each socket in bytes.
+- `read_buffer_size` is the size of the write buffer for each socket in bytes.
 
 ##### logging
 
@@ -145,8 +146,10 @@ json_rpc_endpoint="/rpc"
 [web_socket]
 websocket_endpoint="/socketrpc"
 max_websocket_sessions=50
+read_buffer_size = 2048
+write_buffer_size = 2048
 [logging]
-console_log_level="debug"
+console_log_level="info"
 file_log_level="warn"
 log_file=""
 ```

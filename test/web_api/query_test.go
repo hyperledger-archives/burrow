@@ -4,13 +4,14 @@ package web_api
 import (
 	"bytes"
 	"fmt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	fd "github.com/eris-ltd/eris-db/test/testdata/filters"
-	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -45,6 +46,12 @@ func (this *QuerySuite) SetupSuite() {
 	requestData := &ess.RequestData{testData.ChainData.PrivValidator, testData.ChainData.Genesis, SERVER_DURATION}
 	rBts, _ := this.codec.EncodeBytes(requestData)
 	resp, _ := http.Post(QS_URL, "application/json", bytes.NewBuffer(rBts))
+	if resp.StatusCode != 200 {
+		bts, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("ERROR GETTING SS ADDRESS: " + string(bts))
+		fmt.Printf("%v\n", resp)
+		panic(fmt.Errorf(string(bts)))
+	}
 	rd := &ess.ResponseData{}
 	err2 := this.codec.Decode(rd, resp.Body)
 	if err2 != nil {
@@ -64,8 +71,7 @@ func (this *QuerySuite) TearDownSuite() {
 
 // ********************************************* Tests *********************************************
 
-
-// TODO make these functions into one.
+// TODO less duplication.
 func (this *QuerySuite) Test_Accounts0() {
 	fd := this.testData.Input.Filters0
 	resp := this.get("/accounts?" + generateQuery(fd))

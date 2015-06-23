@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
@@ -60,18 +60,16 @@ func NewWebSocketServer(maxSessions uint, service WebSocketService) *WebSocketSe
 }
 
 // Start the server. Adds the handler to the router and sets everything up.
-// TODO fix CORS.
 func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 
 	this.config = config
 
 	this.upgrader = websocket.Upgrader{
-		ReadBufferSize: 1024,
+		ReadBufferSize: int(config.WebSocket.ReadBufferSize),
 		// TODO Will this be enough for massive "get blockchain" requests?
-		WriteBufferSize: 1024,
+		WriteBufferSize: int(config.WebSocket.WriteBufferSize),
 	}
-	this.upgrader.CheckOrigin = func(r *http.Request) bool {return true}
-
+	this.upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	router.GET(config.WebSocket.WebSocketEndpoint, this.handleFunc)
 	this.running = true
 }
@@ -82,9 +80,6 @@ func (this *WebSocketServer) Running() bool {
 }
 
 // Shut the server down.
-// TODO This should only ensure that all read/write procceses and
-// timers has been terminated. Closing the sockets should be done
-// by the http.Server
 func (this *WebSocketServer) ShutDown() {
 	this.sessionManager.Shutdown()
 	this.running = false
@@ -114,7 +109,6 @@ func (this *WebSocketServer) handleFunc(c *gin.Context) {
 	if cErr != nil {
 		cErrStr := "Failed to establish websocket connection: " + cErr.Error()
 		http.Error(w, cErrStr, 503)
-		// TODO Look into what these logging params all mean..
 		log.Info(cErrStr)
 		return
 	}
@@ -330,7 +324,7 @@ func NewSessionManager(maxSessions uint, wss WebSocketService) *SessionManager {
 	}
 }
 
-// TODO should ensure all session objects are released.
+// TODO 
 func (this *SessionManager) Shutdown() {
 	this.activeSessions = nil
 }
@@ -408,7 +402,6 @@ func (this *SessionManager) createSession(wsConn *websocket.Conn) (*WSSession, e
 		sessionManager: this,
 		id:             newId,
 		wsConn:         wsConn,
-		// TODO Tracking removed as of now.
 		writeChan:      make(chan []byte, writeChanBufferSize),
 		writeCloseChan: make(chan struct{}),
 		service:        this.service,

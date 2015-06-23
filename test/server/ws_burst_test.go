@@ -1,9 +1,9 @@
 package server
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/server"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -36,9 +36,8 @@ func (this *SessionCounter) Report() (int, int, int) {
 	return this.opened, this.closed, this.opened - this.closed
 }
 
-// Coarse flood testing just to ensure that websocket server
-// does not crash, and that it cleans up after itself.
-// TODO clean this up.
+// Testing to ensure that websocket server does not crash, and that it 
+// cleans up after itself.
 func TestWsFlooding(t *testing.T) {
 
 	// New websocket server.
@@ -104,6 +103,6 @@ func wsClient(doneChan chan bool, errChan chan error) {
 	}
 
 	client.Close()
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 100)
 	doneChan <- true
 }

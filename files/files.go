@@ -71,7 +71,12 @@ func IsRegular(fileName string) bool {
 
 func WriteAndBackup(fileName string, data []byte) error {
 	fs, err := os.Stat(fileName)
+	fmt.Println("Write and backup")
 	if err != nil {
+		if os.IsNotExist(err) {
+			WriteFileRW(fileName, data)
+			return nil
+		}
 		return err
 	}
 	if !fs.Mode().IsRegular() {

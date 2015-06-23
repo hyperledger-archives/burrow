@@ -2,17 +2,17 @@ package filters
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
-	"testing"
-	"sync"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
 	. "github.com/eris-ltd/eris-db/erisdb/pipe"
+	"sync"
+	"testing"
 )
 
 const OBJECTS = 100
 
 type FilterableObject struct {
 	Integer int
-	String string
+	String  string
 }
 
 // Filter for integer value.
@@ -76,37 +76,37 @@ func (this *StringFilter) Match(v interface{}) bool {
 // Test suite
 type FilterSuite struct {
 	suite.Suite
-	objects []FilterableObject
+	objects       []FilterableObject
 	filterFactory *FilterFactory
 }
 
 func (this *FilterSuite) SetupSuite() {
 	objects := make([]FilterableObject, OBJECTS, OBJECTS)
-	
+
 	for i := 0; i < 100; i++ {
-		objects[i] = FilterableObject{i, fmt.Sprintf("string%d",i)}
+		objects[i] = FilterableObject{i, fmt.Sprintf("string%d", i)}
 	}
-	
+
 	ff := NewFilterFactory()
-	
+
 	ff.RegisterFilterPool("integer", &sync.Pool{
 		New: func() interface{} {
 			return &IntegerFilter{}
 		},
 	})
-	
+
 	ff.RegisterFilterPool("string", &sync.Pool{
 		New: func() interface{} {
 			return &StringFilter{}
 		},
 	})
-	
+
 	this.objects = objects
 	this.filterFactory = ff
 }
 
 func (this *FilterSuite) TearDownSuite() {
-	
+
 }
 
 // ********************************************* Tests *********************************************
@@ -191,7 +191,6 @@ func (this *FilterSuite) Test_FilterIntegersGTEQ() {
 	this.Equal(arr, this.objects[77:])
 }
 
-
 func (this *FilterSuite) Test_FilterIntegersNEQ() {
 	fd := &FilterData{"integer", "!=", "50"}
 	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
@@ -221,13 +220,12 @@ func (this *FilterSuite) Test_FilterStringEquals() {
 	this.Equal(arr, this.objects[7:8])
 }
 
-
 func (this *FilterSuite) Test_FilterStringNEQ() {
 	fd := &FilterData{"string", "!=", "string50"}
 	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
-	
+
 	for _, o := range this.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)

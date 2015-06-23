@@ -1,8 +1,8 @@
 package erisdb
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	"github.com/stretchr/testify/assert"
 	"testing"
 )
 

@@ -3,9 +3,9 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	cors "github.com/tommy351/gin-cors"
-	"gopkg.in/tylerb/graceful.v1"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	cors "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tommy351/gin-cors"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"
 	"time"
@@ -15,7 +15,6 @@ var (
 	killTime = 100 * time.Millisecond
 )
 
-// TODO should this be here.
 type HttpService interface {
 	Process(*http.Request, http.ResponseWriter)
 }
@@ -51,15 +50,11 @@ func (this *ServeProcess) Start() error {
 	router := gin.New()
 
 	config := this.config
-	
+
 	InitLogger(config)
 
-	// if config.CORS.Enable {
 	ch := NewCORSMiddleware(config.CORS)
-	router.Use(gin.Recovery(), logHandler, ch)
-	//} else {
-	//	router.Use(gin.Recovery(), logHandler)
-	//}
+	router.Use(gin.Recovery(), logHandler, contentTypeMW, ch)
 
 	address := config.Bind.Address
 	port := config.Bind.Port
@@ -69,7 +64,6 @@ func (this *ServeProcess) Start() error {
 	}
 
 	listenAddress := address + ":" + fmt.Sprintf("%d", port)
-
 	srv := &graceful.Server{
 		Server: &http.Server{
 			Handler: router,
@@ -123,7 +117,7 @@ func (this *ServeProcess) Start() error {
 		}
 	}()
 	// Listen to the process stop event, it will call 'Stop'
-	// on the graceful Server. This happens when someone 
+	// on the graceful Server. This happens when someone
 	// calls 'Stop' on the process.
 	go func() {
 		<-this.stopChan
@@ -206,7 +200,6 @@ func NewServeProcess(config *ServerConfig, servers ...Server) *ServeProcess {
 
 // Used to enable log15 logging instead of the default Gin logging.
 // This is done mainly because we at Eris uses log15 in other components.
-// TODO make this optional perhaps.
 func logHandler(c *gin.Context) {
 
 	path := c.Request.URL.Path
@@ -219,7 +212,7 @@ func logHandler(c *gin.Context) {
 	statusCode := c.Writer.Status()
 	comment := c.Errors.String()
 
-	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
+	log.Info("[GIN] HTTP: " + clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
 
 }
 
@@ -235,3 +228,11 @@ func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	return cors.Middleware(o)
 }
 
+// Just a catch-all for POST requests right now. Only allow default charset (utf8).
+func contentTypeMW(c *gin.Context) {
+	if c.Request.Method == "POST" && c.ContentType() != "application/json" {
+		c.AbortWithError(415, fmt.Errorf("Media type not supported: "+c.ContentType()))
+	} else {
+		c.Next()
+	}
+}

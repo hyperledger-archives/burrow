@@ -3,12 +3,12 @@ package erisdb
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/util"
-	"github.com/gin-gonic/gin"
-	"github.com/tendermint/tendermint/types"
 	"strconv"
 	"strings"
 )
@@ -430,6 +430,7 @@ func addressParam(c *gin.Context) {
 	}
 	bts, _ := hex.DecodeString(addr)
 	c.Set("addrBts", bts)
+	c.Next()
 }
 
 func keyParam(c *gin.Context) {
@@ -439,6 +440,7 @@ func keyParam(c *gin.Context) {
 		c.AbortWithError(400, err)
 	}
 	c.Set("keyBts", bts)
+	c.Next()
 }
 
 func heightParam(c *gin.Context) {
@@ -450,6 +452,7 @@ func heightParam(c *gin.Context) {
 		c.AbortWithError(400, fmt.Errorf("Negative number used as height."))
 	}
 	c.Set("height", uint(h))
+	c.Next()
 }
 
 func subIdParam(c *gin.Context) {
@@ -458,12 +461,14 @@ func subIdParam(c *gin.Context) {
 		c.AbortWithError(400, fmt.Errorf("Malformed event id"))
 	}
 	c.Set("id", subId)
+	c.Next()
 }
 
 // TODO
 func peerAddressParam(c *gin.Context) {
 	subId := c.Param("address")
 	c.Set("address", subId)
+	c.Next()
 }
 
 func parseQuery(c *gin.Context) {

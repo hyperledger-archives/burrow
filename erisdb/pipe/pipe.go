@@ -2,9 +2,9 @@
 package pipe
 
 import (
-	"github.com/tendermint/tendermint/account"
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 type (
@@ -63,7 +63,6 @@ type (
 		CallCode(code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error)
-		TransactAsync(privKey, address, data []byte, gasLimit, fee uint64) (*TransactionResult, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
 	}
