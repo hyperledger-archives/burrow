@@ -25,7 +25,7 @@ RUN mkdir --parents $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone https://$REPO . && \
   git checkout $BRANCH && \
-  go build -o ./build/tendermint ./cmd/tendermint
+  go build -o ./build/tendermint ./cmd/tendermint && \
   mv ./build/tendermint /usr/local/bin/tendermint
 
 # set the repo and install erisdb
@@ -38,6 +38,10 @@ RUN cd ./cmd/erisdb && \
   cd ../erisdbss && \
   go build && \
   mv erisdbss /usr/local/bin/
+
+# install chain manager scripts
+COPY ./DOCKER/chain_* /usr/local/bin/
+ENV ECM_PATH /usr/local/bin
 
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
@@ -61,4 +65,4 @@ RUN mkdir --parents /home/$USER/.eris/blockchains/tendermint
 ENV TMROOT /home/$USER/.eris/blockchains/tendermint
 
 # run tendermint
-CMD ["erisdb-wrapper"]
+ENTRYPOINT ["erisdb-wrapper"]
