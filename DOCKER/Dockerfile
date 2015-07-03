@@ -25,19 +25,14 @@ RUN mkdir --parents $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone https://$REPO . && \
   git checkout $BRANCH && \
-  go build -o ./build/tendermint ./cmd/tendermint && \
-  mv ./build/tendermint /usr/local/bin/tendermint
+  go build -o /usr/local/bin/tendermint ./cmd/tendermint
 
 # set the repo and install erisdb
 ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
 COPY . $REPO
 WORKDIR $REPO
-RUN cd ./cmd/erisdb && \
-  go build && \
-  mv erisdb /usr/local/bin/ && \
-  cd ../erisdbss && \
-  go build && \
-  mv erisdbss /usr/local/bin/
+RUN go build -o /usr/local/bin/erisdb ./cmd/erisdb && \
+  go build -o /usr/local/bin/erisdbss ./cmd/erisdbss
 
 # install chain manager scripts
 COPY ./DOCKER/chain_* /usr/local/bin/
@@ -55,7 +50,9 @@ RUN git clone https://$REPO . && \
   mv ./mint-client /usr/local/bin/
 
 # cleanup
-RUN rm -rf $GOPATH/src/*
+RUN rm -rf $GOPATH/src/* && \
+  unset REPO && \
+  unset BRANCH
 
 # persist data, set user
 VOLUME /home/$USER/.eris
