@@ -25,9 +25,8 @@ RUN mkdir --parents $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone https://$REPO . && \
   git checkout $BRANCH && \
-  make && \
-  rm ./build/barak && \
-  mv ./build/* /usr/local/bin/
+  go build -o ./build/tendermint ./cmd/tendermint
+  mv ./build/tendermint /usr/local/bin/tendermint
 
 # set the repo and install erisdb
 ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
