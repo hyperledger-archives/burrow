@@ -37,7 +37,7 @@ func newBlockchain(blockStore *bc.BlockStore) *blockchain {
 func (this *blockchain) Info() (*BlockchainInfo, error) {
 	chainId := config.GetString("chain_id")
 	db := dbm.NewMemDB()
-	genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
 	genesisHash := genesisState.Hash()
 	latestHeight := this.blockStore.Height()
 
@@ -63,7 +63,7 @@ func (this *blockchain) ChainId() (string, error) {
 // Get the hash of the genesis block.
 func (this *blockchain) GenesisHash() ([]byte, error) {
 	db := dbm.NewMemDB()
-	genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
 	return genesisState.Hash(), nil
 }
 

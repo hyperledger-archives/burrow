@@ -1,5 +1,6 @@
-# Pull eris/data
-FROM eris/data
+# Pull base image.
+FROM eris/base
+MAINTAINER Eris Industries <support@erisindustries.com>
 
 # Set the env variables to non-interactive
 ENV DEBIAN_FRONTEND noninteractive
@@ -14,10 +15,51 @@ RUN apt-get update && \
     libgmp3-dev && \
   rm -rf /var/lib/apt/lists/*
 
+# install the wrapper/start script
+COPY DOCKER/start.sh /usr/local/bin/erisdb-wrapper
+
 # set the repo and install tendermint
-ENV repo /go/src/github.com/eris-ltd/eris-db
-ADD . $repo
-WORKDIR $repo
-RUN cd ./cmd/erisdb && go install
-USER eris
-ENTRYPOINT ["erisdb"]
+ENV REPO github.com/tendermint/tendermint
+ENV BRANCH permissions
+RUN mkdir --parents $GOPATH/src/$REPO
+WORKDIR $GOPATH/src/$REPO
+RUN git clone https://$REPO . && \
+  git checkout $BRANCH && \
+  make && \
+  rm ./build/barak && \
+  mv ./build/* /usr/local/bin/
+
+# set the repo and install erisdb
+ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
+COPY . $REPO
+WORKDIR $REPO
+RUN cd ./cmd/erisdb && \
+  go build && \
+  mv erisdb /usr/local/bin/ && \
+  cd ../erisdbss && \
+  go build && \
+  mv erisdbss /usr/local/bin/
+
+# set the repo and install mint-client
+ENV REPO github.com/eris-ltd/mint-client
+ENV BRANCH master
+RUN mkdir --parents $GOPATH/src/$REPO
+WORKDIR $GOPATH/src/$REPO
+RUN git clone https://$REPO . && \
+  git checkout $BRANCH && \
+  go install ./... && \
+  mv $GOPATH/bin/mint* /usr/local/bin && \
+  mv ./mint-client /usr/local/bin/
+
+# cleanup
+RUN rm -rf $GOPATH/src/*
+
+# persist data, set user
+VOLUME /home/$USER/.eris
+WORKDIR /home/$USER/.eris
+USER $USER
+RUN mkdir --parents /home/$USER/.eris/blockchains/tendermint
+ENV TMROOT /home/$USER/.eris/blockchains/tendermint
+
+# run tendermint
+CMD ["erisdb-wrapper"]

@@ -3,6 +3,7 @@ package state
 import (
 	ac "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
 )
@@ -79,6 +80,8 @@ func (cache *TxCache) CreateAccount(creator *vm.Account) *vm.Account {
 			Code:        nil,
 			Nonce:       0,
 			StorageRoot: Zero256,
+			Permissions: cache.GetAccount(ptypes.GlobalPermissionsAddress256).Permissions,
+			Other:       nil,
 		}
 		cache.accounts[addr] = vmAccountInfo{account, false}
 		return account
@@ -159,6 +162,7 @@ func toVMAccount(acc *ac.Account) *vm.Account {
 		Code:        acc.Code, // This is crazy.
 		Nonce:       uint64(acc.Sequence),
 		StorageRoot: LeftPadWord256(acc.StorageRoot),
+		Permissions: acc.Permissions.Copy(),
 		Other:       acc.PubKey,
 	}
 }
@@ -169,6 +173,7 @@ func toStateAccount(acc *vm.Account) *ac.Account {
 	if !ok {
 		pubKey = nil
 	}
+
 	var storageRoot []byte
 	if acc.StorageRoot.IsZero() {
 		storageRoot = nil
@@ -182,6 +187,7 @@ func toStateAccount(acc *vm.Account) *ac.Account {
 		Code:        acc.Code,
 		Sequence:    uint(acc.Nonce),
 		StorageRoot: storageRoot,
+		Permissions: acc.Permissions,
 	}
 }
 

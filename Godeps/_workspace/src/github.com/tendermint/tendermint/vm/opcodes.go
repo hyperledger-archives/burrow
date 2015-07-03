@@ -7,8 +7,8 @@ import (
 
 type OpCode byte
 
-// Op codes
 const (
+	// Op codes
 	// 0x0 range - arithmetic ops
 	STOP OpCode = iota
 	ADD

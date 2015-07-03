@@ -8,6 +8,7 @@ import (
 
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
 )
@@ -26,6 +27,14 @@ var (
 	ErrDataStackUnderflow  = errors.New("Data stack underflow")
 	ErrInvalidContract     = errors.New("Invalid contract")
 )
+
+type ErrPermission struct {
+	typ string
+}
+
+func (err ErrPermission) Error() string {
+	return fmt.Sprintf("Contract does not have permission to %s", err.typ)
+}
 
 type Debug bool
 
@@ -51,6 +60,9 @@ type VM struct {
 	callDepth int
 
 	evc events.Fireable
+
+	perms   bool // permission checking can be turned off
+	snative bool // access to snatives
 }
 
 func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
@@ -66,6 +78,32 @@ func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
 // satisfies events.Eventable
 func (vm *VM) SetFireable(evc events.Fireable) {
 	vm.evc = evc
+}
+
+// to allow calls to native DougContracts (off by default)
+func (vm *VM) EnableSNatives() {
+	vm.snative = true
+}
+
+// run permission checks before call and create
+func (vm *VM) EnablePermissions() {
+	vm.perms = true
+}
+
+// XXX: it is the duty of the contract writer to call known permissions
+// we do not convey if a permission is not set
+// (unlike in state/execution, where we guarantee HasPermission is called
+// on known permissions and panics else)
+func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
+	v, err := acc.Permissions.Base.Get(perm)
+	if _, ok := err.(ptypes.ErrValueNotSet); ok {
+		if appState == nil {
+			fmt.Printf("\n\n***** Unknown permission %b! ********\n\n", perm)
+			return false
+		}
+		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
+	}
+	return v
 }
 
 // CONTRACT appState is aware of caller and callee, so we can just mutate them.
@@ -87,6 +125,17 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, ga
 		}
 	}()
 
+	// if code is empty, callee may be snative contract
+	if vm.snative && len(code) == 0 {
+		if snativeContract, ok := RegisteredSNativeContracts[callee.Address]; ok {
+			output, err = snativeContract(vm.appState, caller, input)
+			if err != nil {
+				*exception = err.Error()
+			}
+			return
+		}
+	}
+
 	if err = transfer(caller, callee, value); err != nil {
 		*exception = err.Error()
 		return
@@ -100,6 +149,7 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, ga
 			*exception = err.Error()
 			err := transfer(callee, caller, value)
 			if err != nil {
+				// data has been corrupted in ram
 				panic("Could not return value to caller")
 			}
 		}
@@ -658,6 +708,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			dbg.Printf(" => %v\n", log)
 
 		case CREATE: // 0xF0
+			if vm.perms && !HasPermission(vm.appState, callee, ptypes.CreateContract) {
+				return nil, ErrPermission{"create_contract"}
+			}
 			contractValue := stack.Pop64()
 			offset, size := stack.Pop64(), stack.Pop64()
 			input, ok := subslice(memory, offset, size)
@@ -683,6 +736,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			}
 
 		case CALL, CALLCODE: // 0xF1, 0xF2
+			if vm.perms && !HasPermission(vm.appState, callee, ptypes.Call) {
+				return nil, ErrPermission{"call"}
+			}
 			gasLimit := stack.Pop64()
 			addr, value := stack.Pop(), stack.Pop64()
 			inOffset, inSize := stack.Pop64(), stack.Pop64()   // inputs
@@ -726,10 +782,15 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
 				} else {
 					if acc == nil {
-						// if we have not seen the account before, create it
-						// so we can send funds
-						acc = &Account{
-							Address: addr,
+						if _, ok := RegisteredSNativeContracts[addr]; vm.snative && ok {
+							acc = &Account{Address: addr}
+						} else {
+							// if we have not seen the account before, create it
+							// so we can send funds
+							if vm.perms && !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
+								return nil, ErrPermission{"create_account"}
+							}
+							acc = &Account{Address: addr}
 						}
 						vm.appState.UpdateAccount(acc)
 					}
@@ -739,8 +800,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 
 			// Push result
 			if err != nil {
-				dbg.Printf("error on call: %s", err.Error())
-				// TODO: fire event
+				dbg.Printf("error on call: %s\n", err.Error())
 				stack.Push(Zero256)
 			} else {
 				stack.Push(One256)
@@ -784,7 +844,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 
 		default:
 			dbg.Printf("(pc) %-3v Invalid opcode %X\n", pc, op)
-			panic(fmt.Errorf("Invalid opcode %X", op))
+			return nil, fmt.Errorf("Invalid opcode %X", op)
 		}
 
 		pc++
