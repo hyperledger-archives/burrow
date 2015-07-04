@@ -12,7 +12,7 @@ if [ "$DEV" != "true" ]; then
 	git pull origin
 fi
 
-if [ "$ERISDB_BUILD_BRANCH" == "master" ]; then
+if [ "$ERISDB_BUILD_BRANCH" = "master" ]; then
   docker build -t eris/erisdb:$release -f DOCKER/Dockerfile .
   docker tag eris/erisdb:$release eris/erisdb:latest
 else
