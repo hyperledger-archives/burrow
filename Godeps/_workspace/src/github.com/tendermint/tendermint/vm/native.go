@@ -52,10 +52,8 @@ func sha256Func(input []byte, gas *uint64) (output []byte, err error) {
 	}
 	// Hash
 	hasher := sha256.New()
-	_, err = hasher.Write(input)
-	if err != nil {
-		panic(err)
-	}
+	// CONTRACT: this does not err
+	hasher.Write(input)
 	return hasher.Sum(nil), nil
 }
 
@@ -69,10 +67,8 @@ func ripemd160Func(input []byte, gas *uint64) (output []byte, err error) {
 	}
 	// Hash
 	hasher := ripemd160.New()
-	_, err = hasher.Write(input)
-	if err != nil {
-		panic(err)
-	}
+	// CONTRACT: this does not err
+	hasher.Write(input)
 	return LeftPadBytes(hasher.Sum(nil), 32), nil
 }
 

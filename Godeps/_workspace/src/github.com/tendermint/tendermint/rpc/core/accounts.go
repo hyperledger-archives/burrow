@@ -4,6 +4,7 @@ import (
 	"fmt"
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 )
 
@@ -15,6 +16,7 @@ func GetAccount(address []byte) (*acm.Account, error) {
 	cache := mempoolReactor.Mempool.GetCache()
 	account := cache.GetAccount(address)
 	if account == nil {
+		// XXX: shouldn't we return "account not found"?
 		account = &acm.Account{
 			Address:     address,
 			PubKey:      nil,
@@ -22,6 +24,7 @@ func GetAccount(address []byte) (*acm.Account, error) {
 			Balance:     0,
 			Code:        nil,
 			StorageRoot: nil,
+			Permissions: cache.GetAccount(ptypes.GlobalPermissionsAddress).Permissions,
 		}
 	}
 	return account, nil

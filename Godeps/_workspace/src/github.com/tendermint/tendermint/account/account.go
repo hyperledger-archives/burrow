@@ -7,6 +7,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 )
 
 // Signable is an interface for all signable things.
@@ -42,6 +43,8 @@ type Account struct {
 	Balance     uint64 `json:"balance"`
 	Code        []byte `json:"code"`         // VM code
 	StorageRoot []byte `json:"storage_root"` // VM storage merkle root.
+
+	Permissions *ptypes.AccountPermissions `json:"permissions"`
 }
 
 func (acc *Account) Copy() *Account {
@@ -50,7 +53,8 @@ func (acc *Account) Copy() *Account {
 }
 
 func (acc *Account) String() string {
-	return fmt.Sprintf("Account{%X:%v C:%v S:%X}", acc.Address, acc.PubKey, len(acc.Code), acc.StorageRoot)
+	// return fmt.Sprintf("Account{%X:%v C:%v S:%X}", acc.Address, acc.PubKey, len(acc.Code), acc.StorageRoot)
+	return fmt.Sprintf("Account{%X:%v C:%v S:%X P:(%s)}", acc.Address, acc.PubKey, len(acc.Code), acc.StorageRoot, acc.Permissions)
 }
 
 func AccountEncoder(o interface{}, w io.Writer, n *int64, err *error) {

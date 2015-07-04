@@ -9,26 +9,51 @@ import (
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
-type GenesisAccount struct {
+//------------------------------------------------------------
+// we store the gendoc in the db
+
+var GenDocKey = []byte("GenDocKey")
+
+//------------------------------------------------------------
+// core types for a genesis definition
+
+type BasicAccount struct {
 	Address []byte `json:"address"`
 	Amount  uint64 `json:"amount"`
+}
+
+type GenesisAccount struct {
+	Address     []byte                     `json:"address"`
+	Amount      uint64                     `json:"amount"`
+	Name        string                     `json:"name"`
+	Permissions *ptypes.AccountPermissions `json:"permissions"`
 }
 
 type GenesisValidator struct {
 	PubKey   account.PubKeyEd25519 `json:"pub_key"`
 	Amount   uint64                `json:"amount"`
-	UnbondTo []GenesisAccount      `json:"unbond_to"`
+	Name     string                `json:"name"`
+	UnbondTo []BasicAccount        `json:"unbond_to"`
+}
+
+type GenesisParams struct {
+	GlobalPermissions *ptypes.AccountPermissions `json:"global_permissions"`
 }
 
 type GenesisDoc struct {
 	GenesisTime time.Time          `json:"genesis_time"`
 	ChainID     string             `json:"chain_id"`
+	Params      *GenesisParams     `json:"params"`
 	Accounts    []GenesisAccount   `json:"accounts"`
 	Validators  []GenesisValidator `json:"validators"`
 }
+
+//------------------------------------------------------------
+// Make genesis state from file
 
 func GenesisDocFromJSON(jsonBlob []byte) (genState *GenesisDoc) {
 	var err error
@@ -39,13 +64,13 @@ func GenesisDocFromJSON(jsonBlob []byte) (genState *GenesisDoc) {
 	return
 }
 
-func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) *State {
+func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		panic(Fmt("Couldn't read GenesisDoc file: %v", err))
 	}
 	genDoc := GenesisDocFromJSON(jsonBlob)
-	return MakeGenesisState(db, genDoc)
+	return genDoc, MakeGenesisState(db, genDoc)
 }
 
 func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
@@ -60,14 +85,38 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	// Make accounts state tree
 	accounts := merkle.NewIAVLTree(binary.BasicCodec, account.AccountCodec, defaultAccountsCacheCapacity, db)
 	for _, genAcc := range genDoc.Accounts {
+		perm := ptypes.NewDefaultAccountPermissions()
+		if genAcc.Permissions != nil {
+			perm = genAcc.Permissions
+		}
 		acc := &account.Account{
-			Address:  genAcc.Address,
-			PubKey:   nil,
-			Sequence: 0,
-			Balance:  genAcc.Amount,
+			Address:     genAcc.Address,
+			PubKey:      nil,
+			Sequence:    0,
+			Balance:     genAcc.Amount,
+			Permissions: perm,
 		}
 		accounts.Set(acc.Address, acc)
 	}
+
+	// global permissions are saved as the 0 address
+	// so they are included in the accounts tree
+	globalPerms := ptypes.NewDefaultAccountPermissions()
+	if genDoc.Params != nil && genDoc.Params.GlobalPermissions != nil {
+		globalPerms = genDoc.Params.GlobalPermissions
+		// XXX: make sure the set bits are all true
+		// Without it the HasPermission() functions will fail
+		globalPerms.Base.SetBit = ptypes.AllSet
+	}
+
+	permsAcc := &account.Account{
+		Address:     ptypes.GlobalPermissionsAddress,
+		PubKey:      nil,
+		Sequence:    0,
+		Balance:     1337,
+		Permissions: globalPerms,
+	}
+	accounts.Set(permsAcc.Address, permsAcc)
 
 	// Make validatorInfos state tree && validators slice
 	validatorInfos := merkle.NewIAVLTree(binary.BasicCodec, ValidatorInfoCodec, 0, db)

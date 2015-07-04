@@ -11,8 +11,7 @@ import (
 	"time"
 
 	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/mxk/go1/flowcontrol"
-	//"github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary" //"github.com/tendermint/log15"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 )
 

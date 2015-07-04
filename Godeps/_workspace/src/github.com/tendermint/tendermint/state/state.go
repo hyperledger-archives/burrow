@@ -142,6 +142,10 @@ func (s *State) SetBlockStateHash(block *types.Block) error {
 	return nil
 }
 
+func (s *State) SetDB(db dbm.DB) {
+	s.DB = db
+}
+
 //-------------------------------------
 // State.accounts
 
@@ -175,6 +179,11 @@ func (s *State) GetAccounts() merkle.Tree {
 	return s.accounts.Copy()
 }
 
+// Set the accounts tree
+func (s *State) SetAccounts(accounts merkle.Tree) {
+	s.accounts = accounts
+}
+
 // State.accounts
 //-------------------------------------
 // State.validators
@@ -194,6 +203,10 @@ func (s *State) GetValidatorInfo(address []byte) *ValidatorInfo {
 // afterwards has no side effects.
 func (s *State) SetValidatorInfo(valInfo *ValidatorInfo) (updated bool) {
 	return s.validatorInfos.Set(valInfo.Address, valInfo.Copy())
+}
+
+func (s *State) GetValidatorInfos() merkle.Tree {
+	return s.validatorInfos.Copy()
 }
 
 func (s *State) unbondValidator(val *Validator) {
@@ -232,7 +245,7 @@ func (s *State) releaseValidator(val *Validator) {
 	s.SetValidatorInfo(valInfo)
 
 	// Send coins back to UnbondTo outputs
-	accounts, err := getOrMakeAccounts(s, nil, valInfo.UnbondTo)
+	accounts, err := getOrMakeOutputs(s, nil, valInfo.UnbondTo)
 	if err != nil {
 		panic("Couldn't get or make unbondTo accounts")
 	}
@@ -269,6 +282,11 @@ func (s *State) destroyValidator(val *Validator) {
 
 }
 
+// Set the validator infos tree
+func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
+	s.validatorInfos = validatorInfos
+}
+
 // State.validators
 //-------------------------------------
 // State.storage
@@ -303,6 +321,11 @@ func (s *State) RemoveNameRegEntry(name string) bool {
 
 func (s *State) GetNames() merkle.Tree {
 	return s.nameReg.Copy()
+}
+
+// Set the name reg tree
+func (s *State) SetNameReg(nameReg merkle.Tree) {
+	s.nameReg = nameReg
 }
 
 func NameRegEncoder(o interface{}, w io.Writer, n *int64, err *error) {
