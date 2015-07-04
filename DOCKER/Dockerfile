@@ -34,9 +34,11 @@ WORKDIR $REPO
 RUN go build -o /usr/local/bin/erisdb ./cmd/erisdb && \
   go build -o /usr/local/bin/erisdbss ./cmd/erisdbss
 
-# install chain manager scripts
-COPY ./DOCKER/chain_* /usr/local/bin/
-ENV ECM_PATH /usr/local/bin
+# install chain manager scripts and default mint config
+ENV ECM_PATH /usr/local/lib/ecm/
+RUN mkdir -p $ECM_PATH
+COPY ./DOCKER/chain_* $ECM_PATH
+COPY ./DOCKER/config.toml  $ECM_PATH
 
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
@@ -62,4 +64,5 @@ RUN mkdir --parents /home/$USER/.eris/blockchains/tendermint
 ENV TMROOT /home/$USER/.eris/blockchains/tendermint
 
 # run tendermint
-ENTRYPOINT ["erisdb-wrapper"]
+# really should be entrypoint but broken in API 1.19
+CMD ["erisdb-wrapper"]

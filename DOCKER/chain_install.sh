@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #-----------------------------------------------------------------------
 # get genesis, seed, copy config
@@ -8,9 +8,11 @@ REFS_CHAIN_ID=$(mintinfo --node-addr $NODE_ADDR genesis chain_id)
 ifExit "Error fetching default chain id from $NODE_ADDR"
 REFS_CHAIN_ID=$(echo "$REFS_CHAIN_ID" | tr -d '"') # remove surrounding quotes
 
+echo "etcb chain: $REFS_CHAIN_ID"
+
 # get the genesis.json for a refs chain from the /genesis rpc endpoint
 # for a different chain, use etcb (ie namereg on the ref chain)
-if [ "$CHAIN_ID" = "$REF_CHAIN_ID"    ] ; then
+if [ "$CHAIN_ID" = "$REFS_CHAIN_ID" ] ; then
 	# grab genesis.json and config
 	mintinfo --node-addr $NODE_ADDR genesis > "${CHAIN_DIR}/genesis.json"
 	ifExit "Error fetching genesis.json from $NODE_ADDR"

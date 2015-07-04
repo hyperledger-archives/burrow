@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 ifExit(){
 	if [ $? -ne 0 ]; then
@@ -7,15 +7,15 @@ ifExit(){
 	fi
 }
 
+export -f ifExit
+
 #------------------------------------------------
 # set and export directories
 
-#############################################
-# We expect the following env vars to be set
-# $CHAIN_ID
-#
-# one day we'll make it more flexible
-# for now the only consumer is eris-cli
+if [ "$CHAIN_ID" = "" ]; then
+	echo "ecm requires CHAIN_ID be set"
+	exit 1
+fi
 
 
 # TODO: deal with chain numbers
