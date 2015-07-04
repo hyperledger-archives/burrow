@@ -34,12 +34,6 @@ WORKDIR $REPO
 RUN go build -o /usr/local/bin/erisdb ./cmd/erisdb && \
   go build -o /usr/local/bin/erisdbss ./cmd/erisdbss
 
-# install chain manager scripts and default mint config
-ENV ECM_PATH /usr/local/lib/ecm/
-RUN mkdir -p $ECM_PATH
-COPY ./DOCKER/chain_* $ECM_PATH
-COPY ./DOCKER/config.toml  $ECM_PATH
-
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
 ENV BRANCH master
@@ -55,6 +49,12 @@ RUN git clone https://$REPO . && \
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
   unset BRANCH
+
+# install chain manager scripts and default mint config
+ENV ECM_PATH /usr/local/lib/ecm/
+RUN mkdir -p $ECM_PATH
+COPY ./DOCKER/chain_* $ECM_PATH
+COPY ./DOCKER/config.toml  $ECM_PATH
 
 # persist data, set user
 VOLUME /home/$USER/.eris

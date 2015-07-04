@@ -31,8 +31,11 @@ if [ ! -d "$CHAIN_DIR" ]; then
 fi
 
 # our root chain
+if [ ! $NODE_HOST ]; then
+	NODE_HOST=interblock.io:46657
+fi
 if [ ! $NODE_ADDR ]; then
-	NODE_ADDR=http://interblock.io:46657
+	NODE_ADDR=http://$NODE_HOST
 fi
 
 # where the etcb client scripts are
@@ -44,6 +47,7 @@ fi
 export TMROOT
 export CHAIN_DIR
 export NODE_ADDR
+export NODE_HOST
 export ECM_PATH  # set by Dockerfile
 
 
