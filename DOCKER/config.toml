@@ -1,10 +1,10 @@
 # This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-moniker = "eris_db"
+moniker = "eris_chains"
 node_laddr = "0.0.0.0:46656"
-seeds = "interblock.io:46656"
-fast_sync = true
+seeds = ""
+fast_sync = false
 db_backend = "leveldb"
 log_level = "debug"
 rpc_laddr = "0.0.0.0:46657"

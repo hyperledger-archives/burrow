@@ -1,16 +1,9 @@
 #! /bin/sh
 
-ifExit(){
-	if [ $? -ne 0 ]; then
-		echo $1
-		exit 1
-	fi
-}
+#-----------------------------------------------------------------------
+# get genesis, seed, copy config
 
-# fetching a chain means grabbing its genesis.json (from etcb) and putting it in the right folder
-# we also copy in the config.toml, and update grab the seed node from etcb
-
-## get chain id for main reference chain (given by NODE_ADDR)
+# etcb chain (given by $NODE_ADDR)
 REFS_CHAIN_ID=$(mintinfo --node-addr $NODE_ADDR genesis chain_id)
 ifExit "Error fetching default chain id from $NODE_ADDR"
 REFS_CHAIN_ID=$(echo "$REFS_CHAIN_ID" | tr -d '"') # remove surrounding quotes
@@ -49,6 +42,7 @@ echo "Host name: ${HOST_NAME}"
 sed -i "s/^\(moniker\s*=\s*\).*\$/\1\"$HOST_NAME\"/" "${CHAIN_DIR}/config.toml"
 ifExit "Error setting host name in config.toml"
 
+#-----------------------------------------------------------------------
 
 # would be nice if we could stop syncing once we're caught up ...
 echo "Running mint in ${CHAIN_DIR}"

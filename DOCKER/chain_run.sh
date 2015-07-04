@@ -1,11 +1,4 @@
-#! /bin/bash
-
-ifExit(){
-	if [ $? -ne 0 ]; then
-		echo $1
-		exit 1
-	fi
-}
+#! /bin/sh
 
 # if no CHAIN_ID, get that off the main test net
 if [[ ! $CHAIN_ID ]]; then

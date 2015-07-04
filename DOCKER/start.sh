@@ -7,6 +7,9 @@ ifExit(){
 	fi
 }
 
+#------------------------------------------------
+# set and export directories
+
 #############################################
 # We expect the following env vars to be set
 # $CHAIN_ID
@@ -19,6 +22,7 @@ ifExit(){
 # and eg. $CONTAINER_NAME 
 CHAIN_DIR="/home/$USER/.eris/blockchains/$CHAIN_ID"
 
+# set the tendermint directory
 TMROOT=$CHAIN_DIR
 
 if [ ! -d "$CHAIN_DIR" ]; then
@@ -43,26 +47,17 @@ export NODE_ADDR
 export ECM_PATH  # set by Dockerfile
 
 
+#-----------------------------------------------------------------------
 # either we are fetching a chain for the first time,
 # creating one from scratch, or running one we already have
 CMD=$1
 case $CMD in
-"fetch" ) $ECM_PATH/chain_fetch.sh
+"install" ) $ECM_PATH/chain_install.sh
 	;;
 "new" ) $ECM_PATH/chain_new.sh
 	;;
 "run" ) $ECM_PATH/chain_run.sh
 	;;
-*)	echo "Enter a command for starting the chain (fetch, new, run)"
+*)	echo "Enter a command for starting the chain (install, new, run)"
 	;;
 esac
-
-#--------------------------------------------------------------------------------
-
-# XXX: assume for now the chain_id is always given
-#
-## if no CHAIN_ID given, use the ref chain
-#if [ ! $CHAIN_ID ]; then
-#	CHAIN_ID=$REFS_CHAIN_ID
-#fi
-
