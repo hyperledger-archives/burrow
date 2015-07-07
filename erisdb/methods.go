@@ -10,9 +10,8 @@ import (
 	"strings"
 )
 
+// TODO use the method name definition file.
 const (
-	// string used in subscriber ids.
-	ID           = "socketrpc"
 	SERVICE_NAME = "erisdb"
 
 	GET_ACCOUNTS              = SERVICE_NAME + ".getAccounts" // Accounts

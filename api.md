@@ -2,7 +2,7 @@
 
 ### for eris-db version 0.10.x
 
-Eris DB allows remote access to its functionality over http and websocket. It currently supports JSON-RPC, and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
+Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
 
 ## TOC
 
@@ -23,6 +23,8 @@ The only data format supported is JSON. All post requests needs to use `Content-
 ## JSON RPC 2.0
 
 The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `erisdb`.
+
+It does not yet support notifications or batched requests.
 
 ### Objects
 
@@ -448,7 +450,6 @@ Event object:
 | [GetNetworkInfo](#get-network-info) | erisdb.getNetworkInfo | GET | `/network` |
 | [GetClientVersion](#get-client-version) | erisdb.getClientVersion | GET | `/network/client_version` |
 | [GetMoniker](#get-moniker) | erisdb.getMoniker | GET | `/network/moniker` |
-| [GetChainId](#get-chain-id) | erisdb.getChainId | GET | `/network/chain_id` |
 | [IsListening](#is-listening) | erisdb.isListening | GET | `/network/listening` |
 | [GetListeners](#get-listeners) | erisdb.getListeners | GET | `/network/listeners` |
 | [GetPeers](#get-peers) | erisdb.getPeers | GET | `/network/peers` |
