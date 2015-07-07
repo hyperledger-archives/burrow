@@ -86,7 +86,7 @@ func NewPipe(tNode *node.Node) Pipe {
 	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
 	events := newEvents(tNode.EventSwitch())
 	net := newNetwork(tNode.Switch())
-	txs := newTransactor(tNode.ConsensusState(), tNode.MempoolReactor(), events)
+	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
 	return &PipeImpl{
 		tNode,
 		accounts,

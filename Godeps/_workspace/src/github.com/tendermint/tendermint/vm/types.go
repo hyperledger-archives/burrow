@@ -29,6 +29,13 @@ type Log struct {
 	Height  uint64
 }
 
+type SolLog struct {
+	Address string `json:"address"`
+	Topics  []string `json:"topics"`
+	Data    string `json:"data"`
+	Height  uint64 `json:"height"`
+}
+
 type AppState interface {
 
 	// Accounts

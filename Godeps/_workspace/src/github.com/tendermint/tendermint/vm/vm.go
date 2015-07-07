@@ -655,6 +655,21 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 				vm.params.BlockHeight,
 			}
 			vm.appState.AddLog(log)
+			if vm.evc != nil {
+				eventId := "Solidity/" + fmt.Sprintf("%X", callee.Address.Bytes()[12:])
+				solLog := &SolLog{
+					Address: fmt.Sprintf("%X",log.Address.Bytes()),
+					Data:    fmt.Sprintf("%X", log.Data),
+					Height:  log.Height}
+				solLog.Topics = []string{}
+				for _, ts := range log.Topics {
+					solLog.Topics = append(solLog.Topics, fmt.Sprintf("%X",ts.Bytes()))
+				}
+				vm.evc.FireEvent(eventId, solLog)
+				fmt.Println("***************************************************************")
+				fmt.Printf("%v\n", solLog)
+				fmt.Println("***************************************************************")
+			}
 			dbg.Printf(" => %v\n", log)
 
 		case CREATE: // 0xF0
