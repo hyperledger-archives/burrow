@@ -2,6 +2,9 @@
 FROM eris/base
 MAINTAINER Eris Industries <support@erisindustries.com>
 
+#-----------------------------------------------------------------------------
+# dependencies
+
 # Set the env variables to non-interactive
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBIAN_PRIORITY critical
@@ -15,8 +18,14 @@ RUN apt-get update && \
     libgmp3-dev && \
   rm -rf /var/lib/apt/lists/*
 
+#-----------------------------------------------------------------------------
+# start script
+
 # install the wrapper/start script
 COPY DOCKER/start.sh /usr/local/bin/erisdb-wrapper
+
+#-----------------------------------------------------------------------------
+# install tendermint
 
 # set the repo and install tendermint
 ENV REPO github.com/tendermint/tendermint
@@ -29,12 +38,18 @@ RUN git clone --quiet https://$REPO . && \
   git checkout --quiet $BRANCH && \
   go build -o /usr/local/bin/tendermint ./cmd/tendermint
 
+#-----------------------------------------------------------------------------
+# install erisdb
+
 # set the repo and install erisdb
 ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
 COPY . $REPO
 WORKDIR $REPO
 RUN go build -o /usr/local/bin/erisdb ./cmd/erisdb && \
   go build -o /usr/local/bin/erisdbss ./cmd/erisdbss
+
+#-----------------------------------------------------------------------------
+# install mint-client tools
 
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
@@ -47,16 +62,23 @@ RUN git clone --quiet https://$REPO . && \
   mv $GOPATH/bin/mint* /usr/local/bin && \
   mv ./mint-client /usr/local/bin/
 
+#-----------------------------------------------------------------------------
 # cleanup
+
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
   unset BRANCH
 
-# install chain manager scripts and default mint config
+#-----------------------------------------------------------------------------
+# chain manager scripts and default mint config
+
 ENV ECM_PATH /usr/local/lib/ecm/
 RUN mkdir -p $ECM_PATH
 COPY ./DOCKER/chain_* $ECM_PATH
 COPY ./DOCKER/config.toml  $ECM_PATH
+
+#-----------------------------------------------------------------------------
+# root dir
 
 # persist data, set user
 VOLUME /home/$USER/.eris

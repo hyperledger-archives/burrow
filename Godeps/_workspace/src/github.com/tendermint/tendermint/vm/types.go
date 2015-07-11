@@ -11,13 +11,13 @@ const (
 
 type Account struct {
 	Address     Word256
-	Balance     uint64
+	Balance     int64
 	Code        []byte
-	Nonce       uint64
+	Nonce       int64
 	StorageRoot Word256
 	Other       interface{} // For holding all other data.
 
-	Permissions *ptypes.AccountPermissions
+	Permissions ptypes.AccountPermissions
 }
 
 func (acc *Account) String() string {
@@ -29,7 +29,7 @@ type Log struct {
 	Address Word256
 	Topics  []Word256
 	Data    []byte
-	Height  uint64
+	Height  int64
 }
 
 type AppState interface {
@@ -49,8 +49,8 @@ type AppState interface {
 }
 
 type Params struct {
-	BlockHeight uint64
+	BlockHeight int64
 	BlockHash   Word256
 	BlockTime   int64
-	GasLimit    uint64
+	GasLimit    int64
 }

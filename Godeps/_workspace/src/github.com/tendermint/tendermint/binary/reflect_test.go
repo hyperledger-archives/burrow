@@ -72,13 +72,14 @@ func TestAnimalInterface(t *testing.T) {
 	ptr := reflect.New(rte).Interface()
 	fmt.Printf("ptr: %v", ptr)
 
-	// Make a binary byteslice that represents a snake.
-	snakeBytes := BinaryBytes(Snake([]byte("snake")))
+	// Make a binary byteslice that represents a *snake.
+	foo = Snake([]byte("snake"))
+	snakeBytes := BinaryBytes(foo)
 	snakeReader := bytes.NewReader(snakeBytes)
 
 	// Now you can read it.
 	n, err := new(int64), new(error)
-	it := *ReadBinary(ptr, snakeReader, n, err).(*Animal)
+	it := ReadBinary(foo, snakeReader, n, err).(Animal)
 	fmt.Println(it, reflect.TypeOf(it))
 }
 
@@ -374,7 +375,7 @@ func TestBinary(t *testing.T) {
 
 		// Read onto a pointer
 		n, err = new(int64), new(error)
-		res = ReadBinary(instancePtr, bytes.NewReader(data), n, err)
+		res = ReadBinaryPtr(instancePtr, bytes.NewReader(data), n, err)
 		if *err != nil {
 			t.Fatalf("Failed to read into instance: %v", *err)
 		}
@@ -455,7 +456,7 @@ func TestJSONFieldNames(t *testing.T) {
 func TestBadAlloc(t *testing.T) {
 	n, err := new(int64), new(error)
 	instance := new([]byte)
-	data := RandBytes(ByteSliceChunk * 100)
+	data := RandBytes(100 * 1024)
 	b := new(bytes.Buffer)
 	// this slice of data claims to be much bigger than it really is
 	WriteUvarint(uint(10000000000000000), b, n, err)

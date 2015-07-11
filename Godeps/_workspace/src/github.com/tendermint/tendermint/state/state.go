@@ -2,12 +2,12 @@ package state
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
@@ -16,10 +16,10 @@ import (
 
 var (
 	stateKey                     = []byte("stateKey")
-	minBondAmount                = uint64(1)           // TODO adjust
-	defaultAccountsCacheCapacity = 1000                // TODO adjust
-	unbondingPeriodBlocks        = uint(60 * 24 * 365) // TODO probably better to make it time based.
-	validatorTimeoutBlocks       = uint(10)            // TODO adjust
+	minBondAmount                = int64(1)           // TODO adjust
+	defaultAccountsCacheCapacity = 1000               // TODO adjust
+	unbondingPeriodBlocks        = int(60 * 24 * 365) // TODO probably better to make it time based.
+	validatorTimeoutBlocks       = int(10)            // TODO adjust
 )
 
 //-----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ var (
 type State struct {
 	DB                   dbm.DB
 	ChainID              string
-	LastBlockHeight      uint
+	LastBlockHeight      int
 	LastBlockHash        []byte
 	LastBlockParts       types.PartSetHeader
 	LastBlockTime        time.Time
@@ -50,7 +50,7 @@ func LoadState(db dbm.DB) *State {
 	} else {
 		r, n, err := bytes.NewReader(buf), new(int64), new(error)
 		s.ChainID = binary.ReadString(r, n, err)
-		s.LastBlockHeight = binary.ReadUvarint(r, n, err)
+		s.LastBlockHeight = binary.ReadVarint(r, n, err)
 		s.LastBlockHash = binary.ReadByteSlice(r, n, err)
 		s.LastBlockParts = binary.ReadBinary(types.PartSetHeader{}, r, n, err).(types.PartSetHeader)
 		s.LastBlockTime = binary.ReadTime(r, n, err)
@@ -67,7 +67,8 @@ func LoadState(db dbm.DB) *State {
 		s.nameReg = merkle.NewIAVLTree(binary.BasicCodec, NameRegCodec, 0, db)
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
-			panic(*err)
+			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
+			Exit(Fmt("Data has been corrupted or its spec has changed: %v\n", *err))
 		}
 		// TODO: ensure that buf is completely read.
 	}
@@ -80,7 +81,7 @@ func (s *State) Save() {
 	s.nameReg.Save()
 	buf, n, err := new(bytes.Buffer), new(int64), new(error)
 	binary.WriteString(s.ChainID, buf, n, err)
-	binary.WriteUvarint(s.LastBlockHeight, buf, n, err)
+	binary.WriteVarint(s.LastBlockHeight, buf, n, err)
 	binary.WriteByteSlice(s.LastBlockHash, buf, n, err)
 	binary.WriteBinary(s.LastBlockParts, buf, n, err)
 	binary.WriteTime(s.LastBlockTime, buf, n, err)
@@ -91,6 +92,7 @@ func (s *State) Save() {
 	binary.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
 	binary.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
 	if *err != nil {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic(*err)
 	}
 	s.DB.Set(stateKey, buf.Bytes())
@@ -126,11 +128,11 @@ func (s *State) Hash() []byte {
 		s.validatorInfos,
 		s.nameReg,
 	}
-	return merkle.HashFromHashables(hashables)
+	return merkle.SimpleHashFromHashables(hashables)
 }
 
 // Mutates the block in place and updates it with new state hash.
-func (s *State) SetBlockStateHash(block *types.Block) error {
+func (s *State) ComputeBlockStateHash(block *types.Block) error {
 	sCopy := s.Copy()
 	// sCopy has no event cache in it, so this won't fire events
 	err := execBlock(sCopy, block, types.PartSetHeader{})
@@ -149,6 +151,7 @@ func (s *State) SetDB(db dbm.DB) {
 //-------------------------------------
 // State.accounts
 
+// Returns nil if account does not exist with given address.
 // The returned Account is a copy, so mutating it
 // has no side effects.
 // Implements Statelike
@@ -213,11 +216,13 @@ func (s *State) unbondValidator(val *Validator) {
 	// Move validator to UnbondingValidators
 	val, removed := s.BondedValidators.Remove(val.Address)
 	if !removed {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic("Couldn't remove validator for unbonding")
 	}
 	val.UnbondHeight = s.LastBlockHeight + 1
 	added := s.UnbondingValidators.Add(val)
 	if !added {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic("Couldn't add validator for unbonding")
 	}
 }
@@ -226,11 +231,13 @@ func (s *State) rebondValidator(val *Validator) {
 	// Move validator to BondingValidators
 	val, removed := s.UnbondingValidators.Remove(val.Address)
 	if !removed {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic("Couldn't remove validator for rebonding")
 	}
 	val.BondHeight = s.LastBlockHeight + 1
 	added := s.BondedValidators.Add(val)
 	if !added {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic("Couldn't add validator for rebonding")
 	}
 }
@@ -238,17 +245,21 @@ func (s *State) rebondValidator(val *Validator) {
 func (s *State) releaseValidator(val *Validator) {
 	// Update validatorInfo
 	valInfo := s.GetValidatorInfo(val.Address)
+	// SANITY CHECK
 	if valInfo == nil {
 		panic("Couldn't find validatorInfo for release")
 	}
+	// SANITY CHECK END
 	valInfo.ReleasedHeight = s.LastBlockHeight + 1
 	s.SetValidatorInfo(valInfo)
 
 	// Send coins back to UnbondTo outputs
 	accounts, err := getOrMakeOutputs(s, nil, valInfo.UnbondTo)
+	// SANITY CHECK
 	if err != nil {
 		panic("Couldn't get or make unbondTo accounts")
 	}
+	// SANITY CHECK END
 	adjustByOutputs(accounts, valInfo.UnbondTo)
 	for _, acc := range accounts {
 		s.UpdateAccount(acc)
@@ -257,6 +268,7 @@ func (s *State) releaseValidator(val *Validator) {
 	// Remove validator from UnbondingValidators
 	_, removed := s.UnbondingValidators.Remove(val.Address)
 	if !removed {
+		// SOMETHING HAS GONE HORRIBLY WRONG
 		panic("Couldn't remove validator for release")
 	}
 }
@@ -264,9 +276,11 @@ func (s *State) releaseValidator(val *Validator) {
 func (s *State) destroyValidator(val *Validator) {
 	// Update validatorInfo
 	valInfo := s.GetValidatorInfo(val.Address)
+	// SANITY CHECK
 	if valInfo == nil {
 		panic("Couldn't find validatorInfo for release")
 	}
+	// SANITY CHECK END
 	valInfo.DestroyedHeight = s.LastBlockHeight + 1
 	valInfo.DestroyedAmount = val.VotingPower
 	s.SetValidatorInfo(valInfo)
@@ -276,6 +290,7 @@ func (s *State) destroyValidator(val *Validator) {
 	if !removed {
 		_, removed := s.UnbondingValidators.Remove(val.Address)
 		if !removed {
+			// SOMETHING HAS GONE HORRIBLY WRONG
 			panic("Couldn't remove validator for destruction")
 		}
 	}
@@ -357,5 +372,5 @@ type InvalidTxError struct {
 }
 
 func (txErr InvalidTxError) Error() string {
-	return fmt.Sprintf("Invalid tx: [%v] reason: [%v]", txErr.Tx, txErr.Reason)
+	return Fmt("Invalid tx: [%v] reason: [%v]", txErr.Tx, txErr.Reason)
 }

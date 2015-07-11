@@ -33,17 +33,17 @@ func (this *consensus) State() (*ConsensusState, error) {
 
 // Get all validators.
 func (this *consensus) Validators() (*ValidatorList, error) {
-	var blockHeight uint
+	var blockHeight int
 	bondedValidators := make([]*state.Validator, 0)
 	unbondingValidators := make([]*state.Validator, 0)
 
 	s := this.consensusState.GetState()
 	blockHeight = s.LastBlockHeight
-	s.BondedValidators.Iterate(func(index uint, val *state.Validator) bool {
+	s.BondedValidators.Iterate(func(index int, val *state.Validator) bool {
 		bondedValidators = append(bondedValidators, val)
 		return false
 	})
-	s.UnbondingValidators.Iterate(func(index uint, val *state.Validator) bool {
+	s.UnbondingValidators.Iterate(func(index int, val *state.Validator) bool {
 		unbondingValidators = append(unbondingValidators, val)
 		return false
 	})

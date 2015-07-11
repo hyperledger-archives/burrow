@@ -115,7 +115,7 @@ func (this *blockchain) GenesisHash() ([]byte, error) {
 	return this.testOutput.GenesisHash.Hash, nil
 }
 
-func (this *blockchain) LatestBlockHeight() (uint, error) {
+func (this *blockchain) LatestBlockHeight() (int, error) {
 	return this.testOutput.LatestBlockHeight.Height, nil
 }
 
@@ -127,7 +127,7 @@ func (this *blockchain) Blocks([]*ep.FilterData) (*ep.Blocks, error) {
 	return this.testOutput.Blocks, nil
 }
 
-func (this *blockchain) Block(height uint) (*types.Block, error) {
+func (this *blockchain) Block(height int) (*types.Block, error) {
 	return this.testOutput.Block, nil
 }
 
@@ -211,7 +211,7 @@ func (this *transactor) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
 	return this.testOutput.UnconfirmedTxs, nil
 }
 
-func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*ep.Receipt, error) {
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*ep.Receipt, error) {
 	if address == nil || len(address) == 0 {
 		return this.testOutput.TxCreateReceipt, nil
 	}

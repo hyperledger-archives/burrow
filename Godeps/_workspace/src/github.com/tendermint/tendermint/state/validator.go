@@ -15,11 +15,11 @@ type ValidatorInfo struct {
 	Address         []byte                `json:"address"`
 	PubKey          account.PubKeyEd25519 `json:"pub_key"`
 	UnbondTo        []*types.TxOutput     `json:"unbond_to"`
-	FirstBondHeight uint                  `json:"first_bond_height"`
-	FirstBondAmount uint64                `json:"first_bond_amount"`
-	DestroyedHeight uint                  `json:"destroyed_height"` // If destroyed
-	DestroyedAmount uint64                `json:"destroyed_amount"` // If destroyed
-	ReleasedHeight  uint                  `json:"released_height"`  // If released
+	FirstBondHeight int                   `json:"first_bond_height"`
+	FirstBondAmount int64                 `json:"first_bond_amount"`
+	DestroyedHeight int                   `json:"destroyed_height"` // If destroyed
+	DestroyedAmount int64                 `json:"destroyed_amount"` // If destroyed
+	ReleasedHeight  int                   `json:"released_height"`  // If released
 }
 
 func (valInfo *ValidatorInfo) Copy() *ValidatorInfo {
@@ -48,14 +48,15 @@ var ValidatorInfoCodec = binary.Codec{
 type Validator struct {
 	Address          []byte                `json:"address"`
 	PubKey           account.PubKeyEd25519 `json:"pub_key"`
-	BondHeight       uint                  `json:"bond_height"`
-	UnbondHeight     uint                  `json:"unbond_height"`
-	LastCommitHeight uint                  `json:"last_commit_height"`
-	VotingPower      uint64                `json:"voting_power"`
+	BondHeight       int                   `json:"bond_height"`
+	UnbondHeight     int                   `json:"unbond_height"`
+	LastCommitHeight int                   `json:"last_commit_height"`
+	VotingPower      int64                 `json:"voting_power"`
 	Accum            int64                 `json:"accum"`
 }
 
 // Creates a new copy of the validator so we can mutate accum.
+// Panics if the validator is nil.
 func (v *Validator) Copy() *Validator {
 	vCopy := *v
 	return &vCopy
@@ -76,12 +77,16 @@ func (v *Validator) CompareAccum(other *Validator) *Validator {
 		} else if bytes.Compare(v.Address, other.Address) > 0 {
 			return other
 		} else {
+			// SANITY CHECK
 			panic("Cannot compare identical validators")
 		}
 	}
 }
 
 func (v *Validator) String() string {
+	if v == nil {
+		return "nil-Validator"
+	}
 	return fmt.Sprintf("Validator{%X %v %v-%v-%v VP:%v A:%v}",
 		v.Address,
 		v.PubKey,
@@ -93,7 +98,7 @@ func (v *Validator) String() string {
 }
 
 func (v *Validator) Hash() []byte {
-	return binary.BinarySha256(v)
+	return binary.BinaryRipemd160(v)
 }
 
 //-------------------------------------

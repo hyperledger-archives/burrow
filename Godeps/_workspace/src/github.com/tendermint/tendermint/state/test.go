@@ -23,29 +23,29 @@ func Tempfile(prefix string) (*os.File, string) {
 	return file, file.Name()
 }
 
-func RandAccount(randBalance bool, minBalance uint64) (*account.Account, *account.PrivAccount) {
+func RandAccount(randBalance bool, minBalance int64) (*account.Account, *account.PrivAccount) {
 	privAccount := account.GenPrivAccount()
-	perms := ptypes.NewDefaultAccountPermissions()
+	perms := ptypes.DefaultAccountPermissions
 	acc := &account.Account{
 		Address:     privAccount.PubKey.Address(),
 		PubKey:      privAccount.PubKey,
-		Sequence:    RandUint(),
+		Sequence:    RandInt(),
 		Balance:     minBalance,
 		Permissions: perms,
 	}
 	if randBalance {
-		acc.Balance += uint64(RandUint32())
+		acc.Balance += int64(RandUint32())
 	}
 	return acc, privAccount
 }
 
-func RandValidator(randBonded bool, minBonded uint64) (*ValidatorInfo, *Validator, *PrivValidator) {
+func RandValidator(randBonded bool, minBonded int64) (*ValidatorInfo, *Validator, *PrivValidator) {
 	privVal := GenPrivValidator()
 	_, tempFilePath := Tempfile("priv_validator_")
 	privVal.SetFile(tempFilePath)
 	bonded := minBonded
 	if randBonded {
-		bonded += uint64(RandUint32())
+		bonded += int64(RandUint32())
 	}
 	valInfo := &ValidatorInfo{
 		Address: privVal.Address,
@@ -69,16 +69,16 @@ func RandValidator(randBonded bool, minBonded uint64) (*ValidatorInfo, *Validato
 	return valInfo, val, privVal
 }
 
-func RandGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool, minBonded uint64) (*State, []*account.PrivAccount, []*PrivValidator) {
-	db := dbm.NewMemDB()
+func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*GenesisDoc, []*account.PrivAccount, []*PrivValidator) {
 	accounts := make([]GenesisAccount, numAccounts)
 	privAccounts := make([]*account.PrivAccount, numAccounts)
+	defaultPerms := ptypes.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := RandAccount(randBalance, minBalance)
 		accounts[i] = GenesisAccount{
 			Address:     account.Address,
 			Amount:      account.Balance,
-			Permissions: ptypes.NewDefaultAccountPermissions(),
+			Permissions: &defaultPerms, // This will get copied into each state.Account.
 		}
 		privAccounts[i] = privAccount
 	}
@@ -99,15 +99,19 @@ func RandGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 		privValidators[i] = privVal
 	}
 	sort.Sort(PrivValidatorsByAddress(privValidators))
-	s0 := MakeGenesisState(db, &GenesisDoc{
+	return &GenesisDoc{
 		GenesisTime: time.Now(),
 		ChainID:     "tendermint_test",
 		Accounts:    accounts,
 		Validators:  validators,
-		Params: &GenesisParams{
-			GlobalPermissions: ptypes.NewDefaultAccountPermissions(),
-		},
-	})
+	}, privAccounts, privValidators
+
+}
+
+func RandGenesisState(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*State, []*account.PrivAccount, []*PrivValidator) {
+	db := dbm.NewMemDB()
+	genDoc, privAccounts, privValidators := RandGenesisDoc(numAccounts, randBalance, minBalance, numValidators, randBonded, minBonded)
+	s0 := MakeGenesisState(db, genDoc)
 	s0.Save()
 	return s0, privAccounts, privValidators
 }

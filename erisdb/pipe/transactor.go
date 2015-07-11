@@ -47,14 +47,14 @@ func (this *transactor) Call(address, data []byte) (*Call, error) {
 	caller := &vm.Account{Address: cmn.Zero256}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
-		BlockHeight: uint64(st.LastBlockHeight),
+		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    10000000,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := uint64(1000000000)
+	gas := int64(1000000000)
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -72,14 +72,14 @@ func (this *transactor) CallCode(code, data []byte) (*Call, error) {
 	caller := &vm.Account{Address: cmn.Zero256}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
-		BlockHeight: uint64(st.LastBlockHeight),
+		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    10000000,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := uint64(1000000000)
+	gas := int64(1000000000)
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -94,14 +94,14 @@ func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
 	chainId := config.GetString("chain_id")
-	txHash := types.TxId(chainId, tx)
+	txHash := types.TxID(chainId, tx)
 	var createsContract uint8
 	var contractAddr []byte
 	// check if creates new contract
 	if callTx, ok := tx.(*types.CallTx); ok {
 		if len(callTx.Address) == 0 {
 			createsContract = 1
-			contractAddr = state.NewContractAddress(callTx.Input.Address, uint64(callTx.Input.Sequence))
+			contractAddr = state.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
 		}
 	}
 	return &Receipt{txHash, createsContract, contractAddr}, nil
@@ -113,7 +113,7 @@ func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
 	return &UnconfirmedTxs{transactions}, nil
 }
 
-func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error) {
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error) {
 	fmt.Printf("ADDRESS: %v\n", address)
 	var addr []byte
 	if len(address) == 0 {
@@ -132,7 +132,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee ui
 	pa := account.GenPrivAccountFromKey(key)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
-	var sequence uint
+	var sequence int
 	if acc == nil {
 		sequence = 1
 	} else {
@@ -213,7 +213,7 @@ func toVMAccount(acc *account.Account) *vm.Account {
 		Address:     cmn.LeftPadWord256(acc.Address),
 		Balance:     acc.Balance,
 		Code:        acc.Code, // This is crazy.
-		Nonce:       uint64(acc.Sequence),
+		Nonce:       int64(acc.Sequence),
 		StorageRoot: cmn.LeftPadWord256(acc.StorageRoot),
 		Other:       acc.PubKey,
 	}

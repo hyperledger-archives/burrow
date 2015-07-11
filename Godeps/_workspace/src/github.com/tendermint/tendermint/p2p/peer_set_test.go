@@ -1,16 +1,15 @@
 package p2p
 
 import (
-	"math/rand"
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"code.google.com/p/go-uuid/uuid"
 )
 
 // Returns an empty dummy peer
 func randPeer() *Peer {
 	return &Peer{
-		Key: Fmt("%v.%v.%v.%v:%v", rand.Int()%256, rand.Int()%256, rand.Int()%256, rand.Int()%256, rand.Int()%10000+80),
+		Key: uuid.New(),
 	}
 }
 

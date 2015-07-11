@@ -27,11 +27,9 @@ func (err *ErrVoteConflictingSignature) Error() string {
 }
 
 // Represents a prevote, precommit, or commit vote from validators for consensus.
-// Commit votes get aggregated into the next block's Validaiton.
-// See the whitepaper for details.
 type Vote struct {
-	Height     uint                     `json:"height"`
-	Round      uint                     `json:"round"`
+	Height     int                      `json:"height"`
+	Round      int                      `json:"round"`
 	Type       byte                     `json:"type"`
 	BlockHash  []byte                   `json:"block_hash"`  // empty if vote is nil.
 	BlockParts PartSetHeader            `json:"block_parts"` // zero if vote is nil.
@@ -42,7 +40,6 @@ type Vote struct {
 const (
 	VoteTypePrevote   = byte(0x01)
 	VoteTypePrecommit = byte(0x02)
-	VoteTypeCommit    = byte(0x03)
 )
 
 func (vote *Vote) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
@@ -57,17 +54,32 @@ func (vote *Vote) Copy() *Vote {
 }
 
 func (vote *Vote) String() string {
+	if vote == nil {
+		return "nil-Vote"
+	}
 	var typeString string
 	switch vote.Type {
 	case VoteTypePrevote:
 		typeString = "Prevote"
 	case VoteTypePrecommit:
 		typeString = "Precommit"
-	case VoteTypeCommit:
-		typeString = "Commit"
 	default:
 		panic("Unknown vote type")
 	}
 
 	return fmt.Sprintf("Vote{%v/%02d/%v(%v) %X#%v %v}", vote.Height, vote.Round, vote.Type, typeString, Fingerprint(vote.BlockHash), vote.BlockParts, vote.Signature)
+}
+
+//--------------------------------------------------------------------------------
+// TODO: Move blocks/Validation to here?
+
+// Common interface between *consensus.VoteSet and types.Validation
+type VoteSetReader interface {
+	Height() int
+	Round() int
+	Type() byte
+	Size() int
+	BitArray() *BitArray
+	GetByIndex(int) *Vote
+	IsCommit() bool
 }

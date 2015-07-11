@@ -2,6 +2,7 @@ package state
 
 import (
 	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
@@ -23,19 +24,19 @@ var GenDocKey = []byte("GenDocKey")
 
 type BasicAccount struct {
 	Address []byte `json:"address"`
-	Amount  uint64 `json:"amount"`
+	Amount  int64  `json:"amount"`
 }
 
 type GenesisAccount struct {
 	Address     []byte                     `json:"address"`
-	Amount      uint64                     `json:"amount"`
+	Amount      int64                      `json:"amount"`
 	Name        string                     `json:"name"`
 	Permissions *ptypes.AccountPermissions `json:"permissions"`
 }
 
 type GenesisValidator struct {
 	PubKey   account.PubKeyEd25519 `json:"pub_key"`
-	Amount   uint64                `json:"amount"`
+	Amount   int64                 `json:"amount"`
 	Name     string                `json:"name"`
 	UnbondTo []BasicAccount        `json:"unbond_to"`
 }
@@ -59,7 +60,8 @@ func GenesisDocFromJSON(jsonBlob []byte) (genState *GenesisDoc) {
 	var err error
 	binary.ReadJSON(&genState, jsonBlob, &err)
 	if err != nil {
-		panic(Fmt("Couldn't read GenesisDoc: %v", err))
+		log.Error(Fmt("Couldn't read GenesisDoc: %v", err))
+		os.Exit(1)
 	}
 	return
 }
@@ -67,7 +69,8 @@ func GenesisDocFromJSON(jsonBlob []byte) (genState *GenesisDoc) {
 func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
-		panic(Fmt("Couldn't read GenesisDoc file: %v", err))
+		log.Error(Fmt("Couldn't read GenesisDoc file: %v", err))
+		os.Exit(1)
 	}
 	genDoc := GenesisDocFromJSON(jsonBlob)
 	return genDoc, MakeGenesisState(db, genDoc)
@@ -85,9 +88,9 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	// Make accounts state tree
 	accounts := merkle.NewIAVLTree(binary.BasicCodec, account.AccountCodec, defaultAccountsCacheCapacity, db)
 	for _, genAcc := range genDoc.Accounts {
-		perm := ptypes.NewDefaultAccountPermissions()
+		perm := ptypes.ZeroAccountPermissions
 		if genAcc.Permissions != nil {
-			perm = genAcc.Permissions
+			perm = *genAcc.Permissions
 		}
 		acc := &account.Account{
 			Address:     genAcc.Address,
@@ -101,12 +104,12 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 
 	// global permissions are saved as the 0 address
 	// so they are included in the accounts tree
-	globalPerms := ptypes.NewDefaultAccountPermissions()
+	globalPerms := ptypes.DefaultAccountPermissions
 	if genDoc.Params != nil && genDoc.Params.GlobalPermissions != nil {
-		globalPerms = genDoc.Params.GlobalPermissions
+		globalPerms = *genDoc.Params.GlobalPermissions
 		// XXX: make sure the set bits are all true
 		// Without it the HasPermission() functions will fail
-		globalPerms.Base.SetBit = ptypes.AllSet
+		globalPerms.Base.SetBit = ptypes.AllPermFlags
 	}
 
 	permsAcc := &account.Account{
@@ -151,7 +154,7 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 
 	// Make namereg tree
 	nameReg := merkle.NewIAVLTree(binary.BasicCodec, NameRegCodec, 0, db)
-	// TODO: add names to genesis.json
+	// TODO: add names, contracts to genesis.json
 
 	// IAVLTrees must be persisted before copy operations.
 	accounts.Save()

@@ -68,7 +68,7 @@ func (this *blockchain) GenesisHash() ([]byte, error) {
 }
 
 // Get the latest block height.
-func (this *blockchain) LatestBlockHeight() (uint, error) {
+func (this *blockchain) LatestBlockHeight() (int, error) {
 	return this.blockStore.Height(), nil
 }
 
@@ -81,8 +81,8 @@ func (this *blockchain) LatestBlock() (*types.Block, error) {
 // TODO Caps on total number of blocks should be set.
 func (this *blockchain) Blocks(fda []*FilterData) (*Blocks, error) {
 	newFda := fda
-	var minHeight uint
-	var maxHeight uint
+	var minHeight int
+	var maxHeight int
 	height := this.blockStore.Height()
 	if height == 0 {
 		return &Blocks{0, 0, []*types.BlockMeta{}}, nil
@@ -116,7 +116,7 @@ func (this *blockchain) Blocks(fda []*FilterData) (*Blocks, error) {
 }
 
 // Get the block at height 'height'
-func (this *blockchain) Block(height uint) (*types.Block, error) {
+func (this *blockchain) Block(height int) (*types.Block, error) {
 	if height == 0 {
 		return nil, fmt.Errorf("height must be greater than 0")
 	}
@@ -137,54 +137,54 @@ func (this *accounts) matchBlock(block, fda []*FilterData) bool {
 // Ops: All
 type BlockHeightFilter struct {
 	op    string
-	value uint
-	match func(uint, uint) bool
+	value int
+	match func(int, int) bool
 }
 
 func (this *BlockHeightFilter) Configure(fd *FilterData) error {
 	op := fd.Op
-	var val uint
+	var val int
 	if fd.Value == "min" {
 		val = 0
 	} else if fd.Value == "max" {
 		val = math.MaxUint32
 	} else {
-		tv, err := strconv.ParseUint(fd.Value, 10, 0)
+		tv, err := strconv.ParseInt(fd.Value, 10, 0)
 		if err != nil {
 			return fmt.Errorf("Wrong value type.")
 		}
-		val = uint(tv)
+		val = int(tv)
 	}
 
 	if op == "==" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a == b
 		}
 	} else if op == "!=" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a != b
 		}
 	} else if op == "<=" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a <= b
 		}
 	} else if op == ">=" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a >= b
 		}
 	} else if op == "<" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a < b
 		}
 	} else if op == ">" {
-		this.match = func(a, b uint) bool {
+		this.match = func(a, b int) bool {
 			return a > b
 		}
 	} else {
 		return fmt.Errorf("Op: " + this.op + " is not supported for 'height' filtering")
 	}
 	this.op = op
-	this.value = uint(val)
+	this.value = val
 	return nil
 }
 
@@ -197,25 +197,25 @@ func (this *BlockHeightFilter) Match(v interface{}) bool {
 }
 
 // TODO i should start using named return params...
-func getHeightMinMax(fda []*FilterData, height uint) (uint, uint, []*FilterData, error) {
+func getHeightMinMax(fda []*FilterData, height int) (int, int, []*FilterData, error) {
 
-	min := uint(0)
+	min := 0
 	max := height
 
 	for len(fda) > 0 {
 		fd := fda[0]
 		if strings.EqualFold(fd.Field, "height") {
-			var val uint
+			var val int
 			if fd.Value == "min" {
 				val = 0
 			} else if fd.Value == "max" {
 				val = height
 			} else {
-				v, err := strconv.ParseUint(fd.Value, 10, 0)
+				v, err := strconv.ParseInt(fd.Value, 10, 0)
 				if err != nil {
 					return 0, 0, nil, fmt.Errorf("Wrong value type")
 				}
-				val = uint(v)
+				val = int(v)
 			}
 			switch fd.Op {
 			case "==":
@@ -261,7 +261,7 @@ func getHeightMinMax(fda []*FilterData, height uint) (uint, uint, []*FilterData,
 	return min, max, fda, nil
 }
 
-func min(x, y uint) uint {
+func min(x, y int) int {
 	if x > y {
 		return y
 	}

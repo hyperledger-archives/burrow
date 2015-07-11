@@ -32,10 +32,10 @@ type (
 		Info() (*BlockchainInfo, error)
 		GenesisHash() ([]byte, error)
 		ChainId() (string, error)
-		LatestBlockHeight() (uint, error)
+		LatestBlockHeight() (int, error)
 		LatestBlock() (*types.Block, error)
 		Blocks([]*FilterData) (*Blocks, error)
-		Block(height uint) (*types.Block, error)
+		Block(height int) (*types.Block, error)
 	}
 
 	Consensus interface {
@@ -62,7 +62,7 @@ type (
 		Call(address, data []byte) (*Call, error)
 		CallCode(code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
-		Transact(privKey, address, data []byte, gasLimit, fee uint64) (*Receipt, error)
+		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
 	}

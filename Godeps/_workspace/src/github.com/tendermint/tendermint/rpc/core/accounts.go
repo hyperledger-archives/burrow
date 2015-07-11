@@ -47,7 +47,7 @@ func GetStorage(address, key []byte) (*ctypes.ResponseGetStorage, error) {
 }
 
 func ListAccounts() (*ctypes.ResponseListAccounts, error) {
-	var blockHeight uint
+	var blockHeight int
 	var accounts []*acm.Account
 	state := consensusState.GetState()
 	blockHeight = state.LastBlockHeight

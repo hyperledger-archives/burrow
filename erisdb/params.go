@@ -31,7 +31,7 @@ type (
 
 	// Get a block
 	HeightParam struct {
-		Height uint `json:"height"`
+		Height int `json:"height"`
 	}
 
 	// Get a series of blocks
@@ -77,7 +77,7 @@ type (
 		PrivKey  []byte `json:"priv_key"`
 		Data     []byte `json:"data"`
 		Address  []byte `json:"address"`
-		Fee      uint64 `json:"fee"`
-		GasLimit uint64 `json:"gas_limit"`
+		Fee      int64  `json:"fee"`
+		GasLimit int64  `json:"gas_limit"`
 	}
 )

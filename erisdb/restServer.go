@@ -208,7 +208,7 @@ func (this *RestServer) handleBlocks(c *gin.Context) {
 }
 
 func (this *RestServer) handleBlock(c *gin.Context) {
-	height := c.MustGet("height").(uint)
+	height := c.MustGet("height").(int)
 	block, err := this.pipe.Blockchain().Block(height)
 	if err != nil {
 		c.AbortWithError(500, err)
@@ -451,7 +451,7 @@ func heightParam(c *gin.Context) {
 	if h < 0 {
 		c.AbortWithError(400, fmt.Errorf("Negative number used as height."))
 	}
-	c.Set("height", uint(h))
+	c.Set("height", h)
 	c.Next()
 }
 

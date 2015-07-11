@@ -60,9 +60,6 @@ type VM struct {
 	callDepth int
 
 	evc events.Fireable
-
-	perms   bool // permission checking can be turned off
-	snative bool // access to snatives
 }
 
 func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
@@ -80,25 +77,17 @@ func (vm *VM) SetFireable(evc events.Fireable) {
 	vm.evc = evc
 }
 
-// to allow calls to native DougContracts (off by default)
-func (vm *VM) EnableSNatives() {
-	vm.snative = true
-}
-
-// run permission checks before call and create
-func (vm *VM) EnablePermissions() {
-	vm.perms = true
-}
-
-// XXX: it is the duty of the contract writer to call known permissions
+// CONTRACT: it is the duty of the contract writer to call known permissions
 // we do not convey if a permission is not set
 // (unlike in state/execution, where we guarantee HasPermission is called
 // on known permissions and panics else)
+// If the perm is not defined in the acc nor set by default in GlobalPermissions,
+// prints a log warning and returns false.
 func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if appState == nil {
-			fmt.Printf("\n\n***** Unknown permission %b! ********\n\n", perm)
+			log.Warn(Fmt("\n\n***** Unknown permission %b! ********\n\n", perm))
 			return false
 		}
 		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
@@ -110,7 +99,7 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 // value: To be transferred from caller to callee. Refunded upon error.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
 
 	exception := new(string)
 	defer func() {
@@ -125,8 +114,9 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, ga
 		}
 	}()
 
+	// SNATIVE ACCESS
 	// if code is empty, callee may be snative contract
-	if vm.snative && len(code) == 0 {
+	if len(code) == 0 {
 		if snativeContract, ok := RegisteredSNativeContracts[callee.Address]; ok {
 			output, err = snativeContract(vm.appState, caller, input)
 			if err != nil {
@@ -135,6 +125,7 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, ga
 			return
 		}
 	}
+	// SNATIVE ACCESS END
 
 	if err = transfer(caller, callee, value); err != nil {
 		*exception = err.Error()
@@ -159,14 +150,14 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value uint64, ga
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
 	dbg.Printf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address[:4], callee.Address, len(callee.Code), *gas, input)
 
 	var (
-		pc     uint64 = 0
-		stack         = NewStack(dataStackCapacity, gas, &err)
-		memory        = make([]byte, memoryCapacity)
-		ok            = false // convenience
+		pc     int64 = 0
+		stack        = NewStack(dataStackCapacity, gas, &err)
+		memory       = make([]byte, memoryCapacity)
+		ok           = false // convenience
 	)
 
 	for {
@@ -438,7 +429,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			if idx < 32 {
 				res = val[idx]
 			}
-			stack.Push64(uint64(res))
+			stack.Push64(int64(res))
 			dbg.Printf(" => 0x%X\n", res)
 
 		case SHA3: // 0x20
@@ -494,7 +485,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			dbg.Printf(" => 0x%X\n", res)
 
 		case CALLDATASIZE: // 0x36
-			stack.Push64(uint64(len(input)))
+			stack.Push64(int64(len(input)))
 			dbg.Printf(" => %d\n", len(input))
 
 		case CALLDATACOPY: // 0x37
@@ -513,7 +504,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			dbg.Printf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
-			l := uint64(len(code))
+			l := int64(len(code))
 			stack.Push64(l)
 			dbg.Printf(" => %d\n", l)
 
@@ -546,7 +537,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			code := acc.Code
-			l := uint64(len(code))
+			l := int64(len(code))
 			stack.Push64(l)
 			dbg.Printf(" => %d\n", l)
 
@@ -584,11 +575,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 
 		case TIMESTAMP: // 0x42
 			time := vm.params.BlockTime
-			stack.Push64(uint64(time))
+			stack.Push64(int64(time))
 			dbg.Printf(" => 0x%X\n", time)
 
 		case BLOCKHEIGHT: // 0x43
-			number := uint64(vm.params.BlockHeight)
+			number := int64(vm.params.BlockHeight)
 			stack.Push64(number)
 			dbg.Printf(" => 0x%X\n", number)
 
@@ -654,7 +645,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			stack.Push64(pc)
 
 		case MSIZE: // 0x59
-			stack.Push64(uint64(len(memory)))
+			stack.Push64(int64(len(memory)))
 
 		case GAS: // 0x5A
 			stack.Push64(*gas)
@@ -665,7 +656,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			// Do nothing
 
 		case PUSH1, PUSH2, PUSH3, PUSH4, PUSH5, PUSH6, PUSH7, PUSH8, PUSH9, PUSH10, PUSH11, PUSH12, PUSH13, PUSH14, PUSH15, PUSH16, PUSH17, PUSH18, PUSH19, PUSH20, PUSH21, PUSH22, PUSH23, PUSH24, PUSH25, PUSH26, PUSH27, PUSH28, PUSH29, PUSH30, PUSH31, PUSH32:
-			a := uint64(op - PUSH1 + 1)
+			a := int64(op - PUSH1 + 1)
 			codeSegment, ok := subslice(code, pc+1, a)
 			if !ok {
 				return nil, firstErr(err, ErrCodeOutOfBounds)
@@ -708,7 +699,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			dbg.Printf(" => %v\n", log)
 
 		case CREATE: // 0xF0
-			if vm.perms && !HasPermission(vm.appState, callee, ptypes.CreateContract) {
+			if !HasPermission(vm.appState, callee, ptypes.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
 			contractValue := stack.Pop64()
@@ -736,7 +727,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 			}
 
 		case CALL, CALLCODE: // 0xF1, 0xF2
-			if vm.perms && !HasPermission(vm.appState, callee, ptypes.Call) {
+			if !HasPermission(vm.appState, callee, ptypes.Call) {
 				return nil, ErrPermission{"call"}
 			}
 			gasLimit := stack.Pop64()
@@ -782,12 +773,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
 				} else {
 					if acc == nil {
-						if _, ok := RegisteredSNativeContracts[addr]; vm.snative && ok {
+						if _, ok := RegisteredSNativeContracts[addr]; ok {
 							acc = &Account{Address: addr}
 						} else {
 							// if we have not seen the account before, create it
 							// so we can send funds
-							if vm.perms && !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
+							if !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
 								return nil, ErrPermission{"create_account"}
 							}
 							acc = &Account{Address: addr}
@@ -852,8 +843,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value uint64, ga
 	}
 }
 
-func subslice(data []byte, offset, length uint64) (ret []byte, ok bool) {
-	size := uint64(len(data))
+func subslice(data []byte, offset, length int64) (ret []byte, ok bool) {
+	size := int64(len(data))
 	if size < offset {
 		return nil, false
 	} else if size < offset+length {
@@ -872,15 +863,15 @@ func rightMostBytes(data []byte, n int) []byte {
 	return data[offset:]
 }
 
-func codeGetOp(code []byte, n uint64) OpCode {
-	if uint64(len(code)) <= n {
+func codeGetOp(code []byte, n int64) OpCode {
+	if int64(len(code)) <= n {
 		return OpCode(0) // stop
 	} else {
 		return OpCode(code[n])
 	}
 }
 
-func jump(code []byte, to uint64, pc *uint64) (err error) {
+func jump(code []byte, to int64, pc *int64) (err error) {
 	dest := codeGetOp(code, to)
 	if dest != JUMPDEST {
 		dbg.Printf(" ~> %v invalid jump dest %v\n", to, dest)
@@ -899,7 +890,7 @@ func firstErr(errA, errB error) error {
 	}
 }
 
-func useGas(gas *uint64, gasToUse uint64) bool {
+func useGas(gas *int64, gasToUse int64) bool {
 	if *gas > gasToUse {
 		*gas -= gasToUse
 		return true
@@ -908,7 +899,7 @@ func useGas(gas *uint64, gasToUse uint64) bool {
 	}
 }
 
-func transfer(from, to *Account, amount uint64) error {
+func transfer(from, to *Account, amount int64) error {
 	if from.Balance < amount {
 		return ErrInsufficientBalance
 	} else {

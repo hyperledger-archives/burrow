@@ -151,6 +151,7 @@ func (c *MConnection) String() string {
 }
 
 func (c *MConnection) flush() {
+	log.Debug("Flush", "conn", c)
 	err := c.bufWriter.Flush()
 	if err != nil {
 		log.Warn("MConnection flush failed", "error", err)
@@ -402,13 +403,13 @@ FOR_LOOP:
 			// do nothing
 			log.Debug("Receive Pong")
 		case packetTypeMsg:
-			pkt, n, err := msgPacket{}, new(int64), new(error)
-			binary.ReadBinary(&pkt, c.bufReader, n, err)
-			c.recvMonitor.Update(int(*n))
-			if *err != nil {
+			pkt, n, err := msgPacket{}, int64(0), error(nil)
+			binary.ReadBinaryPtr(&pkt, c.bufReader, &n, &err)
+			c.recvMonitor.Update(int(n))
+			if err != nil {
 				if atomic.LoadUint32(&c.stopped) != 1 {
-					log.Warn("Connection failed @ recvRoutine", "connection", c, "error", *err)
-					c.stopForError(*err)
+					log.Warn("Connection failed @ recvRoutine", "connection", c, "error", err)
+					c.stopForError(err)
 				}
 				break FOR_LOOP
 			}
@@ -416,9 +417,16 @@ FOR_LOOP:
 			if !ok || channel == nil {
 				panic(Fmt("Unknown channel %X", pkt.ChannelId))
 			}
-			msgBytes := channel.recvMsgPacket(pkt)
+			msgBytes, err := channel.recvMsgPacket(pkt)
+			if err != nil {
+				if atomic.LoadUint32(&c.stopped) != 1 {
+					log.Warn("Connection failed @ recvRoutine", "connection", c, "error", err)
+					c.stopForError(err)
+				}
+				break FOR_LOOP
+			}
 			if msgBytes != nil {
-				//log.Debug("Received bytes", "chId", pkt.ChannelId, "msgBytes", msgBytes)
+				log.Debug("Received bytes", "chId", pkt.ChannelId, "msgBytes", msgBytes)
 				c.onReceive(pkt.ChannelId, msgBytes)
 			}
 		default:
@@ -441,9 +449,9 @@ FOR_LOOP:
 
 type ChannelDescriptor struct {
 	Id                 byte
-	Priority           uint
-	SendQueueCapacity  uint
-	RecvBufferCapacity uint
+	Priority           int
+	SendQueueCapacity  int
+	RecvBufferCapacity int
 }
 
 func (chDesc *ChannelDescriptor) FillDefaults() {
@@ -462,10 +470,10 @@ type Channel struct {
 	desc          *ChannelDescriptor
 	id            byte
 	sendQueue     chan []byte
-	sendQueueSize uint32 // atomic.
+	sendQueueSize int32 // atomic.
 	recving       []byte
 	sending       []byte
-	priority      uint
+	priority      int
 	recentlySent  int64 // exponential moving average
 }
 
@@ -494,7 +502,7 @@ func (ch *Channel) sendBytes(bytes []byte) bool {
 		// timeout
 		return false
 	case ch.sendQueue <- bytes:
-		atomic.AddUint32(&ch.sendQueueSize, 1)
+		atomic.AddInt32(&ch.sendQueueSize, 1)
 		return true
 	}
 }
@@ -505,7 +513,7 @@ func (ch *Channel) sendBytes(bytes []byte) bool {
 func (ch *Channel) trySendBytes(bytes []byte) bool {
 	select {
 	case ch.sendQueue <- bytes:
-		atomic.AddUint32(&ch.sendQueueSize, 1)
+		atomic.AddInt32(&ch.sendQueueSize, 1)
 		return true
 	default:
 		return false
@@ -514,7 +522,7 @@ func (ch *Channel) trySendBytes(bytes []byte) bool {
 
 // Goroutine-safe
 func (ch *Channel) loadSendQueueSize() (size int) {
-	return int(atomic.LoadUint32(&ch.sendQueueSize))
+	return int(atomic.LoadInt32(&ch.sendQueueSize))
 }
 
 // Goroutine-safe
@@ -545,7 +553,7 @@ func (ch *Channel) nextMsgPacket() msgPacket {
 	if len(ch.sending) <= maxMsgPacketSize {
 		packet.EOF = byte(0x01)
 		ch.sending = nil
-		atomic.AddUint32(&ch.sendQueueSize, ^uint32(0)) // decrement sendQueueSize
+		atomic.AddInt32(&ch.sendQueueSize, -1) // decrement sendQueueSize
 	} else {
 		packet.EOF = byte(0x00)
 		ch.sending = ch.sending[MinInt(maxMsgPacketSize, len(ch.sending)):]
@@ -557,6 +565,7 @@ func (ch *Channel) nextMsgPacket() msgPacket {
 // Not goroutine-safe
 func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int64, err error) {
 	packet := ch.nextMsgPacket()
+	log.Debug("Write Msg Packet", "conn", ch.conn, "packet", packet)
 	binary.WriteByte(packetTypeMsg, w, &n, &err)
 	binary.WriteBinary(packet, w, &n, &err)
 	if err != nil {
@@ -567,14 +576,18 @@ func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int64, err error) {
 
 // Handles incoming msgPackets. Returns a msg bytes if msg is complete.
 // Not goroutine-safe
-func (ch *Channel) recvMsgPacket(pkt msgPacket) []byte {
-	ch.recving = append(ch.recving, pkt.Bytes...)
-	if pkt.EOF == byte(0x01) {
+func (ch *Channel) recvMsgPacket(packet msgPacket) ([]byte, error) {
+	log.Debug("Read Msg Packet", "conn", ch.conn, "packet", packet)
+	if binary.MaxBinaryReadSize < len(ch.recving)+len(packet.Bytes) {
+		return nil, binary.ErrBinaryReadSizeOverflow
+	}
+	ch.recving = append(ch.recving, packet.Bytes...)
+	if packet.EOF == byte(0x01) {
 		msgBytes := ch.recving
 		ch.recving = make([]byte, 0, defaultRecvBufferCapacity)
-		return msgBytes
+		return msgBytes, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // Call this periodically to update stats for throttling purposes.
@@ -602,7 +615,7 @@ type msgPacket struct {
 }
 
 func (p msgPacket) String() string {
-	return fmt.Sprintf("MsgPacket{%X:%X}", p.ChannelId, p.Bytes)
+	return fmt.Sprintf("MsgPacket{%X:%X T:%X}", p.ChannelId, p.Bytes, p.EOF)
 }
 
 //-----------------------------------------------------------------------------

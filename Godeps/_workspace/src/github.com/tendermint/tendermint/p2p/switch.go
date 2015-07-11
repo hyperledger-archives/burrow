@@ -53,10 +53,12 @@ type Switch struct {
 
 var (
 	ErrSwitchDuplicatePeer = errors.New("Duplicate peer")
+	ErrSwitchMaxPeersPerIP = errors.New("IP has too many peers")
 )
 
 const (
 	peerDialTimeoutSeconds = 3
+	maxPeersPerIP          = 3
 )
 
 func NewSwitch() *Switch {
@@ -119,6 +121,11 @@ func (sw *Switch) SetNodeInfo(nodeInfo *types.NodeInfo) {
 	sw.nodeInfo = nodeInfo
 }
 
+// Not goroutine safe.
+func (sw *Switch) NodeInfo() *types.NodeInfo {
+	return sw.nodeInfo
+}
+
 func (sw *Switch) Start() {
 	if atomic.CompareAndSwapUint32(&sw.running, 0, 1) {
 		// Start reactors
@@ -162,8 +169,13 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	if err != nil {
 		return nil, err
 	}
+	// check version, chain id
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
 		return nil, err
+	}
+	// avoid self
+	if peerNodeInfo.UUID == sw.nodeInfo.UUID {
+		return nil, fmt.Errorf("Ignoring connection from self")
 	}
 
 	// the peerNodeInfo is not verified,
@@ -178,10 +190,21 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	}
 	peer := newPeer(conn, peerNodeInfo, outbound, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 
+	// restrict the number of peers we're willing to connect to behind a single IP
+	var numPeersOnThisIP int
+	peers := sw.Peers().List()
+	for _, p := range peers {
+		if p.Host == peerNodeInfo.Host {
+			numPeersOnThisIP += 1
+		}
+	}
+	if numPeersOnThisIP == maxPeersPerIP {
+		log.Info("Ignoring peer as we have the max allowed for that IP", "IP", peerNodeInfo.Host, "peer", peer, "max", maxPeersPerIP)
+		return nil, ErrSwitchMaxPeersPerIP
+	}
+
 	// Add the peer to .peers
-	if sw.peers.Add(peer) {
-		log.Info("Added peer", "peer", peer)
-	} else {
+	if !sw.peers.Add(peer) {
 		log.Info("Ignoring duplicate peer", "peer", peer)
 		return nil, ErrSwitchDuplicatePeer
 	}
@@ -189,12 +212,14 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	if atomic.LoadUint32(&sw.running) == 1 {
 		sw.startInitPeer(peer)
 	}
+
+	log.Info("Added peer", "peer", peer)
 	return peer, nil
 }
 
 func (sw *Switch) startInitPeer(peer *Peer) {
-	peer.start()
-	sw.addPeerToReactors(peer)
+	peer.start()               // spawn send/recv routines
+	sw.addPeerToReactors(peer) // run AddPeer on each reactor
 }
 
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress) (*Peer, error) {
@@ -297,7 +322,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		}
 		// NOTE: We don't yet have the external address of the
 		// remote (if they have a listener at all).
-		// PEXReactor's pexRoutine will handle that.
+		// The peerHandshake will take care of that
 	}
 
 	// cleanup

@@ -35,7 +35,7 @@ type (
 	BlockchainInfo struct {
 		ChainId           string           `json:"chain_id"`
 		GenesisHash       []byte           `json:"genesis_hash"`
-		LatestBlockHeight uint             `json:"latest_block_height"`
+		LatestBlockHeight int              `json:"latest_block_height"`
 		LatestBlock       *types.BlockMeta `json:"latest_block"`
 	}
 
@@ -46,7 +46,7 @@ type (
 
 	// Get the latest
 	LatestBlockHeight struct {
-		Height uint `json:"height"`
+		Height int `json:"height"`
 	}
 
 	ChainId struct {
@@ -55,8 +55,8 @@ type (
 
 	// GetBlocks
 	Blocks struct {
-		MinHeight  uint               `json:"min_height"`
-		MaxHeight  uint               `json:"max_height"`
+		MinHeight  int                `json:"min_height"`
+		MaxHeight  int                `json:"max_height"`
 		BlockMetas []*types.BlockMeta `json:"block_metas"`
 	}
 
@@ -64,8 +64,8 @@ type (
 
 	// ConsensusState
 	ConsensusState struct {
-		Height     uint             `json:"height"`
-		Round      uint             `json:"round"`
+		Height     int              `json:"height"`
+		Round      int              `json:"round"`
 		Step       uint8            `json:"step"`
 		StartTime  string           `json:"start_time"`
 		CommitTime string           `json:"commit_time"`
@@ -75,7 +75,7 @@ type (
 
 	// Validators
 	ValidatorList struct {
-		BlockHeight         uint            `json:"block_height"`
+		BlockHeight         int             `json:"block_height"`
 		BondedValidators    []*sm.Validator `json:"bonded_validators"`
 		UnbondingValidators []*sm.Validator `json:"unbonding_validators"`
 	}
@@ -135,7 +135,7 @@ type (
 	// Call or CallCode
 	Call struct {
 		Return  string `json:"return"`
-		GasUsed uint64 `json:"gas_used"`
+		GasUsed int64  `json:"gas_used"`
 		// TODO ...
 	}
 
