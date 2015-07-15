@@ -171,7 +171,6 @@ func (this *ErisDbJsonService) EventPoll(request *rpc.RPCRequest, requester inte
 	subId := param.SubId
 
 	result, errC := this.eventSubs.poll(subId)
-
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

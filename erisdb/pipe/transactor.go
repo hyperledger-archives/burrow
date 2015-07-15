@@ -6,6 +6,7 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
@@ -19,13 +20,15 @@ const (
 )
 
 type transactor struct {
+	eventSwitch tEvents.Fireable
 	consensusState *cs.ConsensusState
 	mempoolReactor *mempl.MempoolReactor
 	eventEmitter   EventEmitter
 }
 
-func newTransactor(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor, eventEmitter EventEmitter) *transactor {
+func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor, eventEmitter EventEmitter) *transactor {
 	txs := &transactor{
+		eventSwitch,
 		consensusState,
 		mempoolReactor,
 		eventEmitter,
@@ -54,7 +57,12 @@ func (this *transactor) Call(address, data []byte) (*Call, error) {
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+<<<<<<< HEAD
 	gas := int64(1000000000)
+=======
+	vmach.SetFireable(this.eventSwitch)
+	gas := uint64(1000000000)
+>>>>>>> master
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
