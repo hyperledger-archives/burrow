@@ -212,7 +212,7 @@ func logHandler(c *gin.Context) {
 	statusCode := c.Writer.Status()
 	comment := c.Errors.String()
 
-	log.Info("[GIN] HTTP: " + clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
+	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
 
 }
 

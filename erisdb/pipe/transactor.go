@@ -20,7 +20,7 @@ const (
 )
 
 type transactor struct {
-	eventSwitch tEvents.Fireable
+	eventSwitch    tEvents.Fireable
 	consensusState *cs.ConsensusState
 	mempoolReactor *mempl.MempoolReactor
 	eventEmitter   EventEmitter

@@ -61,7 +61,22 @@ type (
 		HandleMethodNotAllowed bool
 		ForwardedByClientIP    bool
 	}
+
+	RoutesInfo []RouteInfo
+	RouteInfo  struct {
+		Method  string
+		Path    string
+		Handler string
+	}
 )
+
+func (c HandlersChain) Last() HandlerFunc {
+	length := len(c)
+	if length > 0 {
+		return c[length-1]
+	}
+	return nil
+}
 
 // Returns a new blank Engine instance without any middleware attached.
 // The most basic configuration
@@ -179,6 +194,28 @@ func (engine *Engine) addRoute(method, path string, handlers HandlersChain) {
 		})
 	}
 	root.addRoute(path, handlers)
+}
+
+func (engine *Engine) Routes() (routes RoutesInfo) {
+	for _, tree := range engine.trees {
+		routes = iterate("", tree.method, routes, tree.root)
+	}
+	return routes
+}
+
+func iterate(path, method string, routes RoutesInfo, root *node) RoutesInfo {
+	path += root.path
+	if len(root.handlers) > 0 {
+		routes = append(routes, RouteInfo{
+			Method:  method,
+			Path:    path,
+			Handler: nameOfFunction(root.handlers.Last()),
+		})
+	}
+	for _, node := range root.children {
+		routes = iterate(path, method, routes, node)
+	}
+	return routes
 }
 
 // The router is attached to a http.Server and starts listening and serving HTTP requests.

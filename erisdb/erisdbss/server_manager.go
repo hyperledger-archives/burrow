@@ -80,7 +80,7 @@ func (this *CmdProcess) Kill() error {
 	if err != nil {
 		return err
 	}
-	_ , err2 := this.cmd.Process.Wait()
+	_, err2 := this.cmd.Process.Wait()
 	return err2
 }
 

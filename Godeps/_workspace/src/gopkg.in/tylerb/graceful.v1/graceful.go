@@ -54,12 +54,15 @@ type Server struct {
 	// and the server to shut down.
 	interrupt chan os.Signal
 
+	// stopLock is used to protect against concurrent calls to Stop
+	stopLock sync.Mutex
+
 	// stopChan is the channel on which callers may block while waiting for
 	// the server to stop.
 	stopChan chan struct{}
 
-	// stopLock is used to protect access to the stopChan.
-	stopLock sync.RWMutex
+	// chanLock is used to protect access to the various channel constructors.
+	chanLock sync.RWMutex
 
 	// connections holds all connections managed by graceful
 	connections map[net.Conn]struct{}
@@ -119,8 +122,10 @@ func ListenAndServeTLS(server *http.Server, certFile, keyFile string, timeout ti
 	return srv.ListenAndServeTLS(certFile, keyFile)
 }
 
-// ListenAndServeTLS is equivalent to http.Server.ListenAndServeTLS with graceful shutdown enabled.
-func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+// ListenTLS is a convenience method that creates an https listener using the
+// provided cert and key files. Use this method if you need access to the
+// listener object directly. When ready, pass it to the Serve method.
+func (srv *Server) ListenTLS(certFile, keyFile string) (net.Listener, error) {
 	// Create the listener ourselves so we can control its lifetime
 	addr := srv.Addr
 	if addr == "" {
@@ -139,16 +144,25 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	conn, err := net.Listen("tcp", addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tlsListener := tls.NewListener(conn, config)
-	return srv.Serve(tlsListener)
+	return tlsListener, nil
+}
+
+// ListenAndServeTLS is equivalent to http.Server.ListenAndServeTLS with graceful shutdown enabled.
+func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+	l, err := srv.ListenTLS(certFile, keyFile)
+	if err != nil {
+		return err
+	}
+	return srv.Serve(l)
 }
 
 // ListenAndServeTLSConfig can be used with an existing TLS config and is equivalent to
@@ -201,12 +215,10 @@ func (srv *Server) Serve(listener net.Listener) error {
 	go srv.manageConnections(add, remove, shutdown, kill)
 
 	interrupt := srv.interruptChan()
-
 	// Set up the interrupt handler
 	if !srv.NoSignalHandling {
 		signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 	}
-
 	go srv.handleInterrupt(interrupt, listener)
 
 	// Serve with graceful listener.
@@ -226,58 +238,58 @@ func (srv *Server) Serve(listener net.Listener) error {
 // timeout given when constructing the server, as this is an explicit
 // command to stop the server.
 func (srv *Server) Stop(timeout time.Duration) {
+	srv.stopLock.Lock()
 	srv.Timeout = timeout
 	interrupt := srv.interruptChan()
 	interrupt <- syscall.SIGINT
+	srv.stopLock.Unlock()
 }
 
 // StopChan gets the stop channel which will block until
 // stopping has completed, at which point it is closed.
 // Callers should never close the stop channel.
 func (srv *Server) StopChan() <-chan struct{} {
-	srv.stopLock.Lock()
+	srv.chanLock.Lock()
 	if srv.stopChan == nil {
 		srv.stopChan = make(chan struct{})
 	}
-	srv.stopLock.Unlock()
+	srv.chanLock.Unlock()
 	return srv.stopChan
 }
 
 func (srv *Server) manageConnections(add, remove chan net.Conn, shutdown chan chan struct{}, kill chan struct{}) {
-	{
-		var done chan struct{}
-		srv.connections = map[net.Conn]struct{}{}
-		for {
-			select {
-			case conn := <-add:
-				srv.connections[conn] = struct{}{}
-			case conn := <-remove:
-				delete(srv.connections, conn)
-				if done != nil && len(srv.connections) == 0 {
-					done <- struct{}{}
-					return
-				}
-			case done = <-shutdown:
-				if len(srv.connections) == 0 {
-					done <- struct{}{}
-					return
-				}
-			case <-kill:
-				for k := range srv.connections {
-					_ = k.Close() // nothing to do here if it errors
-				}
+	var done chan struct{}
+	srv.connections = map[net.Conn]struct{}{}
+	for {
+		select {
+		case conn := <-add:
+			srv.connections[conn] = struct{}{}
+		case conn := <-remove:
+			delete(srv.connections, conn)
+			if done != nil && len(srv.connections) == 0 {
+				done <- struct{}{}
 				return
 			}
+		case done = <-shutdown:
+			if len(srv.connections) == 0 {
+				done <- struct{}{}
+				return
+			}
+		case <-kill:
+			for k := range srv.connections {
+				_ = k.Close() // nothing to do here if it errors
+			}
+			return
 		}
 	}
 }
 
 func (srv *Server) interruptChan() chan os.Signal {
-	srv.stopLock.Lock()
+	srv.chanLock.Lock()
 	if srv.interrupt == nil {
 		srv.interrupt = make(chan os.Signal, 1)
 	}
-	srv.stopLock.Unlock()
+	srv.chanLock.Unlock()
 
 	return srv.interrupt
 }
@@ -292,8 +304,11 @@ func (srv *Server) handleInterrupt(interrupt chan os.Signal, listener net.Listen
 		srv.ShutdownInitiated()
 	}
 
+	srv.stopLock.Lock()
 	signal.Stop(interrupt)
 	close(interrupt)
+	srv.interrupt = nil
+	srv.stopLock.Unlock()
 }
 
 func (srv *Server) shutdown(shutdown chan chan struct{}, kill chan struct{}) {
@@ -311,9 +326,9 @@ func (srv *Server) shutdown(shutdown chan chan struct{}, kill chan struct{}) {
 		<-done
 	}
 	// Close the stopChan to wake up any blocked goroutines.
-	srv.stopLock.Lock()
+	srv.chanLock.Lock()
 	if srv.stopChan != nil {
 		close(srv.stopChan)
 	}
-	srv.stopLock.Unlock()
+	srv.chanLock.Unlock()
 }

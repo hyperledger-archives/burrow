@@ -21,22 +21,22 @@
 		},
 		{
 			"ImportPath": "github.com/gin-gonic/gin",
-			"Comment": "v1.0rc1-99-gd6425f1",
-			"Rev": "d6425f1692d4aa170ece887b62bb75c9c4da5829"
+			"Comment": "v1.0rc1-104-g1a7ab6e",
+			"Rev": "1a7ab6e4d5fdc72d6df30ef562102ae6e0d18518"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",
-			"Rev": "6fd0f867fef40c540fa05c59f86396de10a632a6"
+			"Rev": "a3ec486e6a7a41858210b0fc5d7b5df593b3c4a3"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15/stack",
-			"Comment": "v2.3-38-g352fceb",
-			"Rev": "352fceb48e895bd1dd0b9f5d3ae8f8516c49af0f"
+			"Comment": "v2.3-42-gee210fc",
+			"Rev": "ee210fc98cc7756aa0cf55d8d554148828e8e658"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15/term",
-			"Comment": "v2.3-38-g352fceb",
-			"Rev": "352fceb48e895bd1dd0b9f5d3ae8f8516c49af0f"
+			"Comment": "v2.3-42-gee210fc",
+			"Rev": "ee210fc98cc7756aa0cf55d8d554148828e8e658"
 		},
 		{
 			"ImportPath": "github.com/manucorporat/sse",
@@ -52,7 +52,7 @@
 		},
 		{
 			"ImportPath": "github.com/naoina/toml",
-			"Rev": "7b2dffbeaee47506726f29e36d19cf4ee90d361b"
+			"Rev": "5667c316ee9576e9d5bca793ce4ec813a88ce7d3"
 		},
 		{
 			"ImportPath": "github.com/sfreiberg/gotwilio",
@@ -60,15 +60,22 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
-			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
+			"Comment": "v1.0-17-g089c718",
+			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/require",
+			"Comment": "v1.0-17-g089c718",
+			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/suite",
-			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
+			"Comment": "v1.0-17-g089c718",
+			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
-			"Rev": "315fcfb05d4d46d4354b313d146ef688dda272a9"
+			"Rev": "a06509502ca32565bdf74afc1e573050023f261c"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gosnappy/snappy",
@@ -169,20 +176,44 @@
 		},
 		{
 			"ImportPath": "github.com/tommy351/gin-cors",
-			"Rev": "f7219a698f21b23d73ae9330d3c5842951ce0b6a"
+			"Rev": "dc91dec6313ae4db53481bf3b29cf6b94bf80357"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/nacl/box",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/nacl/secretbox",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/poly1305",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ripemd160",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
+			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "3cffabab72adf04f8e3b01c5baf775361837b5fe"
+			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "3cffabab72adf04f8e3b01c5baf775361837b5fe"
+			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
-			"Comment": "v5.7.1",
-			"Rev": "df95f9de27b8022e57f8ce09448cee6b1170bb3d"
+			"Comment": "v5.8",
+			"Rev": "c06d47f593d786142436a43334f724d819093c04"
 		},
 		{
 			"ImportPath": "gopkg.in/fatih/set.v0",
@@ -191,8 +222,8 @@
 		},
 		{
 			"ImportPath": "gopkg.in/tylerb/graceful.v1",
-			"Comment": "v1.1",
-			"Rev": "ff79a7f00848198d26054b472aafb1043c4b3507"
+			"Comment": "v1.2.1",
+			"Rev": "ac9ebe4f1ee151ac1eeeaef32957085cba64d508"
 		}
 	]
 }

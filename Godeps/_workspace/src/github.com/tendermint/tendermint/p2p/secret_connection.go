@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/nacl/box"
-	"golang.org/x/crypto/nacl/secretbox"
-	"golang.org/x/crypto/ripemd160"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/nacl/box"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/nacl/secretbox"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	bm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"

@@ -324,7 +324,7 @@ func NewSessionManager(maxSessions uint, wss WebSocketService) *SessionManager {
 	}
 }
 
-// TODO 
+// TODO
 func (this *SessionManager) Shutdown() {
 	this.activeSessions = nil
 }

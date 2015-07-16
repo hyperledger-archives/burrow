@@ -121,14 +121,14 @@ var testDataJson = `{
       "unbonding_validators": []
     },
     "network_info": {
-      "client_version": "0.3.0",
+      "client_version": "0.5.0",
       "moniker": "anothertester",
       "listening": false,
       "listeners": [],
       "peers": []
     },
     "client_version": {
-      "client_version": "0.3.0"
+      "client_version": "0.5.0"
     },
     "moniker": {
       "moniker": "anothertester"
