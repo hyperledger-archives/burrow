@@ -140,6 +140,7 @@ var testDataJson = `{
       "listeners": []
     },
     "peers": [],
+    "peer": null,
     "tx_create_receipt": {
       "tx_hash": "C1C84BCD4CCA6D6132D1E702FA4A7618DBCDB52F",
       "creates_contract": 1,
@@ -185,21 +186,50 @@ var testDataJson = `{
     },
     "accounts": {
       "accounts": [
-        {
+      {
+        "address": "0000000000000000000000000000000000000000",
+        "balance": 1337,
+        "code": "",
+        "permissions": {
+          "base": {
+            "perms": 126,
+            "set": 1095216660607
+          },
+          "roles": []
+        },
+        "pub_key": null,
+        "sequence": 0,
+        "storage_root": ""
+      },
+      {
           "address": "0000000000000000000000000000000000000002",
           "pub_key": null,
           "sequence": 0,
           "balance": 565000000000,
           "code": "",
-          "storage_root": ""
-        },
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
+      },
         {
           "address": "0000000000000000000000000000000000000004",
           "pub_key": null,
           "sequence": 0,
           "balance": 110000000000,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
@@ -207,7 +237,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 110000000000,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "9E54C9ECA9A3FD5D4496696818DA17A9E17F69DA",
@@ -215,7 +252,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 525000000000,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "F81CB9ED0A868BD961C4F5BBC0E39B763B89FCB6",
@@ -223,7 +267,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 690000000000,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         }
 
       ]
@@ -234,7 +285,14 @@ var testDataJson = `{
       "sequence": 0,
       "balance": 0,
       "code": "",
-      "storage_root": ""
+      "storage_root": "",
+      "permissions": {
+        "base": {
+          "perms": 0,
+          "set": 0
+        },
+        "roles": []
+      }
     },
     "storage": {
       "storage_root": "",
@@ -245,9 +303,8 @@ var testDataJson = `{
       "value": ""
     },
     "blockchain_info": {
-      "client_version": "",
       "chain_id": "my_tests",
-      "genesis_hash": "DA4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5FC",
+      "genesis_hash": "59A43DA6B4C9685E2D8840158768746093A71925",
       "latest_block_height": 0,
       "latest_block": null
     },
@@ -255,11 +312,12 @@ var testDataJson = `{
       "chain_id": "my_tests"
     },
     "genesis_hash": {
-      "hash": "DA4F4DC4A54620F1E0AA1213631C4DC2957B7415E3F8C066C30009BC57C4E5FC"
+      "hash": "59A43DA6B4C9685E2D8840158768746093A71925"
     },
     "latest_block_height": {
       "height": 0
     },
+    "latest_block" : null,
     "block": null,
     "blocks": {
       "min_height": 0,
@@ -270,7 +328,24 @@ var testDataJson = `{
       "address": "",
       "pub_key": [ 1, "" ],
       "priv_key": [ 1, "" ]
-    }
+    },
+    "evt_sub": {
+      "sub_id": "1234123412341234123412341234123412341234123412341234123412341234"
+    },
+    "evt_poll": {
+      "events": [{
+        "address": "0000000000000000000000009FC1ECFCAE2A554D4D1A000D0D80F748E66359E3",
+        "topics": [
+          "0FC28FCE5E54AC6458756FC24DC51A931CA7AD21440CFCA44933AE774ED5F70C",
+          "0000000000000000000000000000000000000000000000000000000000000005",
+          "0000000000000000000000000000000000000000000000000000000000000019",
+          "000000000000000000000000000000000000000000000000000000000000001E"
+        ],
+        "data": "41646465642074776F206E756D62657273000000000000000000000000000000",
+        "height": 1
+      }]
+    },
+    "evt_unsub": {"result": true}
   }
 }`
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"sync/atomic"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
@@ -22,24 +21,22 @@ type Peer struct {
 	Data *CMap // User data.
 }
 
+// NOTE: blocking
+// Before creating a peer with newPeer(), perform a handshake on connection.
 func peerHandshake(conn net.Conn, ourNodeInfo *types.NodeInfo) (*types.NodeInfo, error) {
 	var peerNodeInfo = new(types.NodeInfo)
-	var wg sync.WaitGroup
 	var err1 error
 	var err2 error
-	wg.Add(2)
-	go func() {
-		var n int64
-		binary.WriteBinary(ourNodeInfo, conn, &n, &err1)
-		wg.Done()
-	}()
-	go func() {
-		var n int64
-		binary.ReadBinary(peerNodeInfo, conn, &n, &err2)
-		log.Info("Peer handshake", "peerNodeInfo", peerNodeInfo)
-		wg.Done()
-	}()
-	wg.Wait()
+	Parallel(
+		func() {
+			var n int64
+			binary.WriteBinary(ourNodeInfo, conn, &n, &err1)
+		},
+		func() {
+			var n int64
+			binary.ReadBinary(peerNodeInfo, conn, &n, &err2)
+			log.Info("Peer handshake", "peerNodeInfo", peerNodeInfo)
+		})
 	if err1 != nil {
 		return nil, err1
 	}
@@ -49,6 +46,7 @@ func peerHandshake(conn net.Conn, ourNodeInfo *types.NodeInfo) (*types.NodeInfo,
 	return peerNodeInfo, nil
 }
 
+// NOTE: call peerHandshake on conn before calling newPeer().
 func newPeer(conn net.Conn, peerNodeInfo *types.NodeInfo, outbound bool, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{})) *Peer {
 	var p *Peer
 	onReceive := func(chId byte, msgBytes []byte) {
@@ -68,7 +66,7 @@ func newPeer(conn net.Conn, peerNodeInfo *types.NodeInfo, outbound bool, reactor
 		mconn:    mconn,
 		running:  0,
 		NodeInfo: peerNodeInfo,
-		Key:      peerNodeInfo.UUID,
+		Key:      peerNodeInfo.PubKey.KeyString(),
 		Data:     NewCMap(),
 	}
 	return p

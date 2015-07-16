@@ -57,12 +57,8 @@ func (this *transactor) Call(address, data []byte) (*Call, error) {
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-<<<<<<< HEAD
-	gas := int64(1000000000)
-=======
 	vmach.SetFireable(this.eventSwitch)
-	gas := uint64(1000000000)
->>>>>>> master
+	gas := int64(1000000000)
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -135,9 +131,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
 
-	key := [64]byte{}
-	copy(key[:], privKey[0:64])
-	pa := account.GenPrivAccountFromKey(key)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int

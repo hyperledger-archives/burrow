@@ -293,14 +293,14 @@ func adjustByOutputs(accounts map[string]*account.Account, outs []*types.TxOutpu
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func ExecTx(blockCache *BlockCache, tx_ types.Tx, runCall bool, evc events.Fireable) (err error) {
+func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireable) (err error) {
 
 	// TODO: do something with fees
 	fees := int64(0)
 	_s := blockCache.State() // hack to access validators and block height
 
 	// Exec tx
-	switch tx := tx_.(type) {
+	switch tx := tx.(type) {
 	case *types.SendTx:
 		accounts, err := getInputs(blockCache, tx.Inputs)
 		if err != nil {
@@ -750,9 +750,12 @@ func ExecTx(blockCache *BlockCache, tx_ types.Tx, runCall bool, evc events.Firea
 			return types.ErrTxInvalidSignature
 		}
 
-		// tx.Height must be equal to the next height
-		if tx.Height != _s.LastBlockHeight+1 {
-			return errors.New(Fmt("Invalid rebond height.  Expected %v, got %v", _s.LastBlockHeight+1, tx.Height))
+		// tx.Height must be in a suitable range
+		minRebondHeight := _s.LastBlockHeight - (validatorTimeoutBlocks / 2)
+		maxRebondHeight := _s.LastBlockHeight + 2
+		if !((minRebondHeight <= tx.Height) && (tx.Height <= maxRebondHeight)) {
+			return errors.New(Fmt("Rebond height not in range.  Expected %v <= %v <= %v",
+				minRebondHeight, tx.Height, maxRebondHeight))
 		}
 
 		// Good!

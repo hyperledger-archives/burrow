@@ -697,21 +697,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			vm.appState.AddLog(log)
 			if vm.evc != nil {
-				eventId := "Solidity/" + fmt.Sprintf("%X", callee.Address.Bytes()[12:])
-				solLog := &SolLog{
-					Address: fmt.Sprintf("%X",log.Address.Bytes()),
-					Data:    fmt.Sprintf("%X", log.Data),
-					Height:  log.Height}
-				solLog.Topics = []string{}
-				for _, ts := range log.Topics {
-					solLog.Topics = append(solLog.Topics, fmt.Sprintf("%X",ts.Bytes()))
-				}
-				vm.evc.FireEvent(eventId, solLog)
-				fmt.Println("***************************************************************")
-				fmt.Printf("%v\n", solLog)
-				fmt.Println("***************************************************************")
+				eventId := types.EventStringLogEvent(callee.Address.Postfix(20))
+				fmt.Printf("eventId: %s\n", eventId)
+				vm.evc.FireEvent(eventId, log)
 			}
-			dbg.Printf(" => %v\n", log)
+			// Using sol-log for this as well since 'log' will print garbage.
+			dbg.Printf(" => T:%X D:%X\n", log.Topics, log.Data)
 
 		case CREATE: // 0xF0
 			if !HasPermission(vm.appState, callee, ptypes.CreateContract) {

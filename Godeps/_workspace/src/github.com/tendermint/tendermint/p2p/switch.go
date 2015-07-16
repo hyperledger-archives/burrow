@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
@@ -48,17 +49,18 @@ type Switch struct {
 	peers        *PeerSet
 	dialing      *CMap
 	running      uint32
-	nodeInfo     *types.NodeInfo // our node info
+	nodeInfo     *types.NodeInfo    // our node info
+	nodePrivKey  acm.PrivKeyEd25519 // our node privkey
 }
 
 var (
-	ErrSwitchDuplicatePeer = errors.New("Duplicate peer")
-	ErrSwitchMaxPeersPerIP = errors.New("IP has too many peers")
+	ErrSwitchDuplicatePeer      = errors.New("Duplicate peer")
+	ErrSwitchMaxPeersPerIPRange = errors.New("IP range has too many peers")
 )
 
 const (
-	peerDialTimeoutSeconds = 3
-	maxPeersPerIP          = 3
+	peerDialTimeoutSeconds = 3  // TODO make this configurable
+	maxNumPeers            = 50 // TODO make this configurable
 )
 
 func NewSwitch() *Switch {
@@ -70,6 +72,7 @@ func NewSwitch() *Switch {
 		dialing:      NewCMap(),
 		running:      0,
 		nodeInfo:     nil,
+		nodePrivKey:  nil,
 	}
 	return sw
 }
@@ -126,6 +129,15 @@ func (sw *Switch) NodeInfo() *types.NodeInfo {
 	return sw.nodeInfo
 }
 
+// Not goroutine safe.
+// NOTE: Overwrites sw.nodeInfo.PubKey
+func (sw *Switch) SetNodePrivKey(nodePrivKey acm.PrivKeyEd25519) {
+	sw.nodePrivKey = nodePrivKey
+	if sw.nodeInfo != nil {
+		sw.nodeInfo.PubKey = nodePrivKey.PubKey().(acm.PubKeyEd25519)
+	}
+}
+
 func (sw *Switch) Start() {
 	if atomic.CompareAndSwapUint32(&sw.running, 0, 1) {
 		// Start reactors
@@ -163,50 +175,54 @@ func (sw *Switch) Stop() {
 }
 
 // NOTE: This performs a blocking handshake before the peer is added.
+// CONTRACT: Iff error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, error) {
-	// First, perform handshake
-	peerNodeInfo, err := peerHandshake(conn, sw.nodeInfo)
+	// First, encrypt the connection.
+	sconn, err := MakeSecretConnection(conn, sw.nodePrivKey)
 	if err != nil {
 		return nil, err
 	}
-	// check version, chain id
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+	// Then, perform node handshake
+	peerNodeInfo, err := peerHandshake(sconn, sw.nodeInfo)
+	if err != nil {
+		sconn.Close()
 		return nil, err
 	}
-	// avoid self
-	if peerNodeInfo.UUID == sw.nodeInfo.UUID {
+	// Check that the professed PubKey matches the sconn's.
+	if !peerNodeInfo.PubKey.Equals(sconn.RemotePubKey()) {
+		sconn.Close()
+		return nil, fmt.Errorf("Ignoring connection with unmatching pubkey: %v vs %v",
+			peerNodeInfo.PubKey, sconn.RemotePubKey())
+	}
+	// Avoid self
+	if peerNodeInfo.PubKey.Equals(sw.nodeInfo.PubKey) {
+		sconn.Close()
 		return nil, fmt.Errorf("Ignoring connection from self")
 	}
+	// Check version, chain id
+	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+		sconn.Close()
+		return nil, err
+	}
 
-	// the peerNodeInfo is not verified,
-	// so we overwrite the IP with that from the conn
+	// The peerNodeInfo is not verified, so overwrite.
+	// Overwrite the IP with that from the conn
 	// and if we dialed out, the port too
-	// everything else we just have to trust
-	ip, port, _ := net.SplitHostPort(conn.RemoteAddr().String())
+	// Everything else we just have to trust
+	ip, port, _ := net.SplitHostPort(sconn.RemoteAddr().String())
 	peerNodeInfo.Host = ip
 	if outbound {
 		porti, _ := strconv.Atoi(port)
 		peerNodeInfo.P2PPort = uint16(porti)
 	}
-	peer := newPeer(conn, peerNodeInfo, outbound, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
-
-	// restrict the number of peers we're willing to connect to behind a single IP
-	var numPeersOnThisIP int
-	peers := sw.Peers().List()
-	for _, p := range peers {
-		if p.Host == peerNodeInfo.Host {
-			numPeersOnThisIP += 1
-		}
-	}
-	if numPeersOnThisIP == maxPeersPerIP {
-		log.Info("Ignoring peer as we have the max allowed for that IP", "IP", peerNodeInfo.Host, "peer", peer, "max", maxPeersPerIP)
-		return nil, ErrSwitchMaxPeersPerIP
-	}
+	peer := newPeer(sconn, peerNodeInfo, outbound, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 
 	// Add the peer to .peers
-	if !sw.peers.Add(peer) {
-		log.Info("Ignoring duplicate peer", "peer", peer)
-		return nil, ErrSwitchDuplicatePeer
+	// ignore if duplicate or if we already have too many for that IP range
+	if err := sw.peers.Add(peer); err != nil {
+		log.Info("Ignoring peer", "error", err, "peer", peer)
+		peer.stop() // will also close sconn
+		return nil, err
 	}
 
 	if atomic.LoadUint32(&sw.running) == 1 {
@@ -314,15 +330,29 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		if !ok {
 			break
 		}
-		// New inbound connection!
-		peer, err := sw.AddPeerWithConnection(inConn, false)
-		if err != nil {
-			log.Info(Fmt("Ignoring error from inbound connection: %v\n%v", peer, err))
+
+		// ignore connection if we already have enough
+		if maxNumPeers <= sw.peers.Size() {
+			log.Debug("Ignoring inbound connection: already have enough peers", "conn", inConn, "numPeers", sw.peers.Size(), "max", maxNumPeers)
 			continue
 		}
-		// NOTE: We don't yet have the external address of the
+
+		// Ignore connections from IP ranges for which we have too many
+		if sw.peers.HasMaxForIPRange(inConn) {
+			log.Debug("Ignoring inbound connection: already have enough peers for that IP range", "address", inConn.RemoteAddr().String())
+			continue
+		}
+
+		// New inbound connection!
+		_, err := sw.AddPeerWithConnection(inConn, false)
+		if err != nil {
+			log.Info("Ignoring inbound connection: error on AddPeerWithConnection", "conn", inConn, "error", err)
+			continue
+		}
+
+		// NOTE: We don't yet have the listening port of the
 		// remote (if they have a listener at all).
-		// The peerHandshake will take care of that
+		// The peerHandshake will handle that
 	}
 
 	// cleanup

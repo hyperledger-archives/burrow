@@ -1,8 +1,11 @@
 package account
 
 import (
+	"bytes"
 	"errors"
+
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519/extra25519"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 )
@@ -48,6 +51,18 @@ func (pubKey PubKeyEd25519) VerifyBytes(msg []byte, sig_ Signature) bool {
 	return ed25519.Verify(pubKeyBytes, msg, sigBytes)
 }
 
+// For use with golang/crypto/nacl/box
+// If error, returns nil.
+func (pubKey PubKeyEd25519) ToCurve25519() *[32]byte {
+	keyEd25519, keyCurve25519 := new([32]byte), new([32]byte)
+	copy(keyEd25519[:], pubKey)
+	ok := extra25519.PublicKeyToCurve25519(keyCurve25519, keyEd25519)
+	if !ok {
+		return nil
+	}
+	return keyCurve25519
+}
+
 func (pubKey PubKeyEd25519) ValidateBasic() error {
 	if len(pubKey) != ed25519.PublicKeySize {
 		return errors.New("Invalid PubKeyEd25519 key size")
@@ -57,4 +72,18 @@ func (pubKey PubKeyEd25519) ValidateBasic() error {
 
 func (pubKey PubKeyEd25519) String() string {
 	return Fmt("PubKeyEd25519{%X}", []byte(pubKey))
+}
+
+// Must return the full bytes in hex.
+// Used for map keying, etc.
+func (pubKey PubKeyEd25519) KeyString() string {
+	return Fmt("%X", []byte(pubKey))
+}
+
+func (pubKey PubKeyEd25519) Equals(other PubKey) bool {
+	if _, ok := other.(PubKeyEd25519); ok {
+		return bytes.Equal(pubKey, other.(PubKeyEd25519))
+	} else {
+		return false
+	}
 }

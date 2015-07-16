@@ -98,7 +98,7 @@ SKIP_UPNP:
 	return dl
 }
 
-// TODO: prevent abuse, esp a bunch of connections coming from the same IP range.
+// Accept connections and pass on the channel
 func (l *DefaultListener) listenRoutine() {
 	for {
 		conn, err := l.listener.Accept()

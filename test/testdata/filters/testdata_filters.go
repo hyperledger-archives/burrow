@@ -135,19 +135,48 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 0,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         }
       ]
     },
     "accounts1": {
       "accounts": [
         {
+          "address": "0000000000000000000000000000000000000000",
+          "balance": 1337,
+          "code": "",
+          "permissions": {
+            "base": {
+              "perms": 126,
+              "set": 1095216660607
+            },
+            "roles": []
+          },
+          "pub_key": null,
+          "sequence": 0,
+          "storage_root": ""
+        },
+        {
           "address": "000000000000000000000000000000000000000D",
           "pub_key": null,
           "sequence": 0,
           "balance": 13,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "000000000000000000000000000000000000000E",
@@ -155,7 +184,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 14,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "000000000000000000000000000000000000000F",
@@ -163,7 +199,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 15,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         }
       ]
     },
@@ -175,7 +218,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 5,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "0000000000000000000000000000000000000006",
@@ -183,7 +233,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 6,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         },
         {
           "address": "0000000000000000000000000000000000000007",
@@ -191,7 +248,14 @@ var testDataJson = `{
           "sequence": 0,
           "balance": 7,
           "code": "",
-          "storage_root": ""
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 0,
+              "set": 0
+            },
+            "roles": []
+          }
         }
       ]
     }
