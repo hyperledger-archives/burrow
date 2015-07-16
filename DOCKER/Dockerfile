@@ -45,8 +45,8 @@ RUN git clone --quiet https://$REPO . && \
 ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
 COPY . $REPO
 WORKDIR $REPO
-RUN go build -o /usr/local/bin/erisdb ./cmd/erisdb && \
-  go build -o /usr/local/bin/erisdbss ./cmd/erisdbss
+RUN cd ./cmd/erisdb && go get -d && go build -o /usr/local/bin/erisdb && \
+  cd ../erisdbss && go build -o /usr/local/bin/erisdbss && cd ../..
 
 #-----------------------------------------------------------------------------
 # install mint-client tools
