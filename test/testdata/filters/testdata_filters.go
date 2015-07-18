@@ -1,9 +1,9 @@
 package filters
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 )
 
 var testDataJson = `{
@@ -98,36 +98,15 @@ var testDataJson = `{
       ]
     }
   },
-  "input": {
-    "filters0": [
+  "GetAccounts0": {
+    "input": [
       {
         "field": "balance",
         "op": "==",
         "value": "0"
       }
     ],
-    "filters1": [
-      {
-        "field": "balance",
-        "op": ">",
-        "value": "12"
-      }
-    ],
-    "filters2": [
-      {
-        "field": "balance",
-        "op": ">=",
-        "value": "5"
-      },
-      {
-        "field": "balance",
-        "op": "<",
-        "value": "8"
-      }
-    ]
-  },
-  "output": {
-    "accounts0": {
+    "output": {
       "accounts": [
         {
           "address": "1000000000000000000000000000000000000000",
@@ -145,8 +124,17 @@ var testDataJson = `{
           }
         }
       ]
-    },
-    "accounts1": {
+    }
+  },
+  "GetAccounts1": {
+    "input": [
+      {
+        "field": "balance",
+        "op": ">",
+        "value": "12"
+      }
+    ],
+    "output": {
       "accounts": [
         {
           "address": "0000000000000000000000000000000000000000",
@@ -209,8 +197,22 @@ var testDataJson = `{
           }
         }
       ]
-    },
-    "accounts2": {
+    }
+  },
+  "GetAccounts2": {
+    "input": [
+      {
+        "field": "balance",
+        "op": ">=",
+        "value": "5"
+      },
+      {
+        "field": "balance",
+        "op": "<",
+        "value": "8"
+      }
+    ],
+    "output": {
       "accounts": [
         {
           "address": "0000000000000000000000000000000000000005",
@@ -270,22 +272,16 @@ type (
 		Genesis       *state.GenesisDoc    `json:"genesis"`
 	}
 
-	Input struct {
-		Filters0 []*ep.FilterData `json:"filters0"`
-		Filters1 []*ep.FilterData `json:"filters1"`
-		Filters2 []*ep.FilterData `json:"filters2"`
-	}
-
-	Output struct {
-		Accounts0 *ep.AccountList `json:"accounts0"`
-		Accounts1 *ep.AccountList `json:"accounts1"`
-		Accounts2 *ep.AccountList `json:"accounts2"`
+	GetAccountData struct {
+		Input  []*ep.FilterData `json:"input"`
+		Output *ep.AccountList  `json:"output"`
 	}
 
 	TestData struct {
-		ChainData *ChainData `json:"chain_data"`
-		Input     *Input     `json:"input"`
-		Output    *Output    `json:"output"`
+		ChainData    *ChainData `json:"chain_data"`
+		GetAccounts0 *GetAccountData
+		GetAccounts1 *GetAccountData
+		GetAccounts2 *GetAccountData
 	}
 )
 

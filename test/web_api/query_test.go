@@ -73,30 +73,30 @@ func (this *QuerySuite) TearDownSuite() {
 
 // TODO less duplication.
 func (this *QuerySuite) Test_Accounts0() {
-	fd := this.testData.Input.Filters0
+	fd := this.testData.GetAccounts0.Input
 	resp := this.get("/accounts?" + generateQuery(fd))
 	ret := &ep.AccountList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(this.testData.Output.Accounts0, ret)
+	this.Equal(this.testData.GetAccounts0.Output, ret)
 }
 
 func (this *QuerySuite) Test_Accounts1() {
-	fd := this.testData.Input.Filters1
+	fd := this.testData.GetAccounts1.Input
 	resp := this.get("/accounts?" + generateQuery(fd))
 	ret := &ep.AccountList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(this.testData.Output.Accounts1, ret)
+	this.Equal(this.testData.GetAccounts1.Output, ret)
 }
 
 func (this *QuerySuite) Test_Accounts2() {
-	fd := this.testData.Input.Filters2
+	fd := this.testData.GetAccounts2.Input
 	resp := this.get("/accounts?" + generateQuery(fd))
 	ret := &ep.AccountList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(this.testData.Output.Accounts2, ret)
+	this.Equal(this.testData.GetAccounts2.Output, ret)
 }
 
 // ********************************************* Utilities *********************************************
