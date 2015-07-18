@@ -15,7 +15,7 @@ import (
 const TendermintConfigDefault = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-moniker = "anothertester"
+moniker = "__MONIKER__"
 seeds = ""
 fast_sync = false
 db_backend = "leveldb"

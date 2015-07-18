@@ -3,6 +3,7 @@ package web_api
 // Basic imports
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
@@ -74,7 +75,7 @@ func (this *WebApiSuite) Test_A0_ConsensusState() {
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	ret.StartTime = ""
-	this.Equal(ret, this.testData.Output.ConsensusState)
+	this.Equal(ret, this.testData.GetConsensusState.Output)
 }
 
 func (this *WebApiSuite) Test_A1_Validators() {
@@ -82,7 +83,7 @@ func (this *WebApiSuite) Test_A1_Validators() {
 	ret := &ep.ValidatorList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Validators)
+	this.Equal(ret, this.testData.GetValidators.Output)
 }
 
 // ********************************************* Network *********************************************
@@ -92,7 +93,7 @@ func (this *WebApiSuite) Test_B0_NetworkInfo() {
 	ret := &ep.NetworkInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.NetworkInfo)
+	this.Equal(ret, this.testData.GetNetworkInfo.Output)
 }
 
 func (this *WebApiSuite) Test_B1_ClientVersion() {
@@ -100,7 +101,7 @@ func (this *WebApiSuite) Test_B1_ClientVersion() {
 	ret := &ep.ClientVersion{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.ClientVersion)
+	this.Equal(ret, this.testData.GetClientVersion.Output)
 }
 
 func (this *WebApiSuite) Test_B2_Moniker() {
@@ -108,7 +109,7 @@ func (this *WebApiSuite) Test_B2_Moniker() {
 	ret := &ep.Moniker{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Moniker)
+	this.Equal(ret, this.testData.GetMoniker.Output)
 }
 
 func (this *WebApiSuite) Test_B3_Listening() {
@@ -116,7 +117,7 @@ func (this *WebApiSuite) Test_B3_Listening() {
 	ret := &ep.Listening{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Listening)
+	this.Equal(ret, this.testData.IsListening.Output)
 }
 
 func (this *WebApiSuite) Test_B4_Listeners() {
@@ -124,7 +125,7 @@ func (this *WebApiSuite) Test_B4_Listeners() {
 	ret := &ep.Listeners{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Listeners)
+	this.Equal(ret, this.testData.GetListeners.Output)
 }
 
 func (this *WebApiSuite) Test_B5_Peers() {
@@ -132,25 +133,25 @@ func (this *WebApiSuite) Test_B5_Peers() {
 	ret := []*ep.Peer{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Peers)
+	this.Equal(ret, this.testData.GetPeers.Output)
 }
 
 // ********************************************* Transactions *********************************************
 
 func (this *WebApiSuite) Test_C0_TxCreate() {
-	resp := this.postJson("/unsafe/txpool", this.testData.Input.TxCreate)
+	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
 	ret := &ep.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.TxCreateReceipt)
+	this.Equal(ret, this.testData.TransactCreate.Output)
 }
 
 func (this *WebApiSuite) Test_C1_Tx() {
-	resp := this.postJson("/unsafe/txpool", this.testData.Input.Tx)
+	resp := this.postJson("/unsafe/txpool", this.testData.Transact.Input)
 	ret := &ep.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.TxReceipt)
+	this.Equal(ret, this.testData.Transact.Output)
 }
 
 func (this *WebApiSuite) Test_C2_UnconfirmedTxs() {
@@ -158,94 +159,95 @@ func (this *WebApiSuite) Test_C2_UnconfirmedTxs() {
 	ret := &ep.UnconfirmedTxs{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.UnconfirmedTxs)
+	this.Equal(ret, this.testData.GetUnconfirmedTxs.Output)
 }
 
 func (this *WebApiSuite) Test_C3_CallCode() {
-	resp := this.postJson("/codecalls", this.testData.Input.CallCode)
+	resp := this.postJson("/codecalls", this.testData.CallCode.Input)
 	ret := &ep.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.CallCode)
+	this.Equal(ret, this.testData.CallCode.Output)
 }
 
 // ********************************************* Accounts *********************************************
 
-func (this *WebApiSuite) Test_D0_Accounts() {
+func (this *WebApiSuite) Test_D0_GetAccounts() {
 	resp := this.get("/accounts")
 	ret := &ep.AccountList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Accounts)
+	this.Equal(ret, this.testData.GetAccounts.Output)
 }
 
-func (this *WebApiSuite) Test_D1_Account() {
-	resp := this.get("/accounts/" + this.testData.Input.AccountAddress)
+func (this *WebApiSuite) Test_D1_GetAccount() {
+	addr := hex.EncodeToString(this.testData.GetAccount.Input.Address)
+	resp := this.get("/accounts/" + addr)
 	ret := &account.Account{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Account)
+	this.Equal(ret, this.testData.GetAccount.Output)
 }
 
-func (this *WebApiSuite) Test_D2_Storage() {
-	resp := this.get("/accounts/" + this.testData.Input.AccountAddress + "/storage")
+func (this *WebApiSuite) Test_D2_GetStorage() {
+	addr := hex.EncodeToString(this.testData.GetStorage.Input.Address)
+	resp := this.get("/accounts/" + addr + "/storage")
 	ret := &ep.Storage{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Storage)
+	this.Equal(ret, this.testData.GetStorage.Output)
 }
 
-func (this *WebApiSuite) Test_D3_StorageAt() {
-	addr := this.testData.Input.AccountAddress
-	key := this.testData.Input.StorageAddress
+func (this *WebApiSuite) Test_D3_GetStorageAt() {
+	addr := hex.EncodeToString(this.testData.GetStorageAt.Input.Address)
+	key := hex.EncodeToString(this.testData.GetStorageAt.Input.Key)
 	resp := this.get("/accounts/" + addr + "/storage/" + key)
 	ret := &ep.StorageItem{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.StorageAt)
+	this.Equal(ret, this.testData.GetStorageAt.Output)
 }
 
 // ********************************************* Blockchain *********************************************
 
-func (this *WebApiSuite) Test_E0_BlockchainInfo() {
+func (this *WebApiSuite) Test_E0_GetBlockchainInfo() {
 	resp := this.get("/blockchain")
 	ret := &ep.BlockchainInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.BlockchainInfo)
+	this.Equal(ret, this.testData.GetBlockchainInfo.Output)
 }
 
-func (this *WebApiSuite) Test_E1_ChainId() {
+func (this *WebApiSuite) Test_E1_GetChainId() {
 	resp := this.get("/blockchain/chain_id")
 	ret := &ep.ChainId{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.ChainId)
+	this.Equal(ret, this.testData.GetChainId.Output)
 }
 
-func (this *WebApiSuite) Test_E2_GenesisHash() {
+func (this *WebApiSuite) Test_E2_GetGenesisHash() {
 	resp := this.get("/blockchain/genesis_hash")
 	ret := &ep.GenesisHash{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.GenesisHash)
+	this.Equal(ret, this.testData.GetGenesisHash.Output)
 }
 
-func (this *WebApiSuite) Test_E3_LatestBlockHeight() {
+func (this *WebApiSuite) Test_E3_GetLatestBlockHeight() {
 	resp := this.get("/blockchain/latest_block_height")
 	ret := &ep.LatestBlockHeight{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.LatestBlockHeight)
+	this.Equal(ret, this.testData.GetLatestBlockHeight.Output)
 }
 
-func (this *WebApiSuite) Test_E4_Blocks() {
-	br := this.testData.Input.BlockRange
-	resp := this.get(fmt.Sprintf("/blockchain/blocks?q=height:%d..%d", br.Min, br.Max))
+func (this *WebApiSuite) Test_E4_GetBlocks() {
+	resp := this.get("/blockchain/blocks")
 	ret := &ep.Blocks{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Blocks)
+	this.Equal(ret, this.testData.GetBlocks.Output)
 }
 
 // ********************************************* Utilities *********************************************

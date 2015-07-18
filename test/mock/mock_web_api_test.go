@@ -3,7 +3,7 @@ package mock
 // Basic imports
 import (
 	"bytes"
-	"fmt"
+	"encoding/hex"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
@@ -67,186 +67,206 @@ func (this *MockSuite) TearDownSuite() {
 	<-sec
 }
 
+// ********************************************* Accounts *********************************************
+
+func (this *MockSuite) TestGetAccounts() {
+	resp := this.get("/accounts")
+	ret := &ep.AccountList{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetAccounts.Output)
+}
+
+func (this *MockSuite) TestGetAccount() {
+	addr := hex.EncodeToString(this.testData.GetAccount.Input.Address)
+	resp := this.get("/accounts/" + addr)
+	ret := &account.Account{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetAccount.Output)
+}
+
+func (this *MockSuite) TestGetStorage() {
+	addr := hex.EncodeToString(this.testData.GetStorage.Input.Address)
+	resp := this.get("/accounts/" + addr + "/storage")
+	ret := &ep.Storage{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetStorage.Output)
+}
+
+func (this *MockSuite) TestGetStorageAt() {
+	addr := hex.EncodeToString(this.testData.GetStorageAt.Input.Address)
+	key := hex.EncodeToString(this.testData.GetStorageAt.Input.Key)
+	resp := this.get("/accounts/" + addr + "/storage/" + key)
+	ret := &ep.StorageItem{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetStorageAt.Output)
+}
+
+// ********************************************* Blockchain *********************************************
+
+func (this *MockSuite) TestGetBlockchainInfo() {
+	resp := this.get("/blockchain")
+	ret := &ep.BlockchainInfo{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetBlockchainInfo.Output)
+}
+
+func (this *MockSuite) TestGetChainId() {
+	resp := this.get("/blockchain/chain_id")
+	ret := &ep.ChainId{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetChainId.Output)
+}
+
+func (this *MockSuite) TestGetGenesisHash() {
+	resp := this.get("/blockchain/genesis_hash")
+	ret := &ep.GenesisHash{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetGenesisHash.Output)
+}
+
+func (this *MockSuite) TestLatestBlockHeight() {
+	resp := this.get("/blockchain/latest_block_height")
+	ret := &ep.LatestBlockHeight{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetLatestBlockHeight.Output)
+}
+
+func (this *MockSuite) TestBlocks() {
+	resp := this.get("/blockchain/blocks")
+	ret := &ep.Blocks{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetBlocks.Output)
+}
+
 // ********************************************* Consensus *********************************************
 
-func (this *MockSuite) Test_A0_ConsensusState() {
+func (this *MockSuite) TestGetConsensusState() {
 	resp := this.get("/consensus")
 	ret := &ep.ConsensusState{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	ret.StartTime = ""
-	this.Equal(ret, this.testData.Output.ConsensusState)
+	this.Equal(ret, this.testData.GetConsensusState.Output)
 }
 
-func (this *MockSuite) Test_A1_Validators() {
+func (this *MockSuite) TestGetValidators() {
 	resp := this.get("/consensus/validators")
 	ret := &ep.ValidatorList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Validators)
+	this.Equal(ret, this.testData.GetValidators.Output)
 }
 
 // ********************************************* Network *********************************************
 
-func (this *MockSuite) Test_B0_NetworkInfo() {
+func (this *MockSuite) TestGetNetworkInfo() {
 	resp := this.get("/network")
 	ret := &ep.NetworkInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.NetworkInfo)
+	this.Equal(ret, this.testData.GetNetworkInfo.Output)
 }
 
-func (this *MockSuite) Test_B1_ClientVersion() {
+func (this *MockSuite) TestGetClientVersion() {
 	resp := this.get("/network/client_version")
 	ret := &ep.ClientVersion{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.ClientVersion)
+	this.Equal(ret, this.testData.GetClientVersion.Output)
 }
 
-func (this *MockSuite) Test_B2_Moniker() {
+func (this *MockSuite) TestGetMoniker() {
 	resp := this.get("/network/moniker")
 	ret := &ep.Moniker{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Moniker)
+	this.Equal(ret, this.testData.GetMoniker.Output)
 }
 
-func (this *MockSuite) Test_B3_Listening() {
+func (this *MockSuite) TestIsListening() {
 	resp := this.get("/network/listening")
 	ret := &ep.Listening{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Listening)
+	this.Equal(ret, this.testData.IsListening.Output)
 }
 
-func (this *MockSuite) Test_B4_Listeners() {
+func (this *MockSuite) TestGetListeners() {
 	resp := this.get("/network/listeners")
 	ret := &ep.Listeners{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Listeners)
+	this.Equal(ret, this.testData.GetListeners.Output)
 }
 
-func (this *MockSuite) Test_B5_Peers() {
+func (this *MockSuite) TestGetPeers() {
 	resp := this.get("/network/peers")
 	ret := []*ep.Peer{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Peers)
+	this.Equal(ret, this.testData.GetPeers.Output)
 }
+
+/*
+func (this *MockSuite) TestGetPeer() {
+	addr := this.testData.GetPeer.Input.Address
+	resp := this.get("/network/peer/" + addr)
+	ret := []*ep.Peer{}
+	errD := this.codec.Decode(ret, resp.Body)
+	this.NoError(errD)
+	this.Equal(ret, this.testData.GetPeers.Output)
+}
+*/
 
 // ********************************************* Transactions *********************************************
 
-func (this *MockSuite) Test_C0_TxCreate() {
-	resp := this.postJson("/unsafe/txpool", this.testData.Input.TxCreate)
+func (this *MockSuite) TestTransactCreate() {
+	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
 	ret := &ep.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.TxCreateReceipt)
+	this.Equal(ret, this.testData.TransactCreate.Output)
 }
 
-func (this *MockSuite) Test_C1_Tx() {
-	resp := this.postJson("/unsafe/txpool", this.testData.Input.Tx)
+func (this *MockSuite) TestTransact() {
+	resp := this.postJson("/unsafe/txpool", this.testData.Transact.Input)
 	ret := &ep.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.TxReceipt)
+	this.Equal(ret, this.testData.Transact.Output)
 }
 
-func (this *MockSuite) Test_C2_UnconfirmedTxs() {
+func (this *MockSuite) TestGetUnconfirmedTxs() {
 	resp := this.get("/txpool")
 	ret := &ep.UnconfirmedTxs{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.UnconfirmedTxs)
+	this.Equal(ret, this.testData.GetUnconfirmedTxs.Output)
 }
 
-func (this *MockSuite) Test_C3_CallCode() {
-	resp := this.postJson("/codecalls", this.testData.Input.CallCode)
+func (this *MockSuite) TestCallCode() {
+	resp := this.postJson("/codecalls", this.testData.CallCode.Input)
 	ret := &ep.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.CallCode)
+	this.Equal(ret, this.testData.CallCode.Output)
 }
 
-// ********************************************* Accounts *********************************************
-
-func (this *MockSuite) Test_D0_Accounts() {
-	resp := this.get("/accounts")
-	ret := &ep.AccountList{}
+func (this *MockSuite) TestCall() {
+	resp := this.postJson("/calls", this.testData.Call.Input)
+	ret := &ep.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Accounts)
-}
-
-func (this *MockSuite) Test_D1_Account() {
-	resp := this.get("/accounts/" + this.testData.Input.AccountAddress)
-	ret := &account.Account{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Account)
-}
-
-func (this *MockSuite) Test_D2_Storage() {
-	resp := this.get("/accounts/" + this.testData.Input.AccountAddress + "/storage")
-	ret := &ep.Storage{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Storage)
-}
-
-func (this *MockSuite) Test_D3_StorageAt() {
-	addr := this.testData.Input.AccountAddress
-	key := this.testData.Input.StorageAddress
-	resp := this.get("/accounts/" + addr + "/storage/" + key)
-	ret := &ep.StorageItem{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.StorageAt)
-}
-
-// ********************************************* Blockchain *********************************************
-
-func (this *MockSuite) Test_E0_BlockchainInfo() {
-	resp := this.get("/blockchain")
-	ret := &ep.BlockchainInfo{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.BlockchainInfo)
-}
-
-func (this *MockSuite) Test_E1_ChainId() {
-	resp := this.get("/blockchain/chain_id")
-	ret := &ep.ChainId{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.ChainId)
-}
-
-func (this *MockSuite) Test_E2_GenesisHash() {
-	resp := this.get("/blockchain/genesis_hash")
-	ret := &ep.GenesisHash{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.GenesisHash)
-}
-
-func (this *MockSuite) Test_E3_LatestBlockHeight() {
-	resp := this.get("/blockchain/latest_block_height")
-	ret := &ep.LatestBlockHeight{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.LatestBlockHeight)
-}
-
-func (this *MockSuite) Test_E4_Blocks() {
-	br := this.testData.Input.BlockRange
-	resp := this.get(fmt.Sprintf("/blockchain/blocks?q=height:%d..%d", br.Min, br.Max))
-	ret := &ep.Blocks{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Output.Blocks)
+	this.Equal(ret, this.testData.CallCode.Output)
 }
 
 // ********************************************* Utilities *********************************************

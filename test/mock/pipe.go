@@ -9,7 +9,7 @@ import (
 
 // Base struct.
 type MockPipe struct {
-	testOutput *td.Output
+	testData   *td.TestData
 	accounts   ep.Accounts
 	blockchain ep.Blockchain
 	consensus  ep.Consensus
@@ -20,15 +20,14 @@ type MockPipe struct {
 
 // Create a new mock tendermint pipe.
 func NewMockPipe(td *td.TestData) ep.Pipe {
-	testOutput := td.Output
-	accounts := &accounts{testOutput}
-	blockchain := &blockchain{testOutput}
-	consensus := &consensus{testOutput}
-	events := &events{testOutput}
-	net := &net{testOutput}
-	transactor := &transactor{testOutput}
+	accounts := &accounts{td}
+	blockchain := &blockchain{td}
+	consensus := &consensus{td}
+	events := &events{td}
+	net := &net{td}
+	transactor := &transactor{td}
 	return &MockPipe{
-		testOutput,
+		td,
 		accounts,
 		blockchain,
 		consensus,
@@ -71,82 +70,82 @@ func (this *MockPipe) Transactor() ep.Transactor {
 
 // Accounts
 type accounts struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	return this.testOutput.GenPrivAccount, nil
+	return this.testData.GenPrivAccount.Output, nil
 }
 
 func (this *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, error) {
-	return this.testOutput.GenPrivAccount, nil
+	return this.testData.GenPrivAccount.Output, nil
 }
 
 func (this *accounts) Accounts([]*ep.FilterData) (*ep.AccountList, error) {
-	return this.testOutput.Accounts, nil
+	return this.testData.GetAccounts.Output, nil
 }
 
 func (this *accounts) Account(address []byte) (*account.Account, error) {
-	return this.testOutput.Account, nil
+	return this.testData.GetAccount.Output, nil
 }
 
 func (this *accounts) Storage(address []byte) (*ep.Storage, error) {
-	return this.testOutput.Storage, nil
+	return this.testData.GetStorage.Output, nil
 }
 
 func (this *accounts) StorageAt(address, key []byte) (*ep.StorageItem, error) {
-	return this.testOutput.StorageAt, nil
+	return this.testData.GetStorageAt.Output, nil
 }
 
 // Blockchain
 type blockchain struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *blockchain) Info() (*ep.BlockchainInfo, error) {
-	return this.testOutput.BlockchainInfo, nil
+	return this.testData.GetBlockchainInfo.Output, nil
 }
 
 func (this *blockchain) ChainId() (string, error) {
-	return this.testOutput.ChainId.ChainId, nil
+	return this.testData.GetChainId.Output.ChainId, nil
 }
 
 func (this *blockchain) GenesisHash() ([]byte, error) {
-	return this.testOutput.GenesisHash.Hash, nil
+	return this.testData.GetGenesisHash.Output.Hash, nil
 }
 
 func (this *blockchain) LatestBlockHeight() (int, error) {
-	return this.testOutput.LatestBlockHeight.Height, nil
+	return this.testData.GetLatestBlockHeight.Output.Height, nil
 }
 
 func (this *blockchain) LatestBlock() (*types.Block, error) {
-	return nil, nil
+	return this.testData.GetLatestBlock.Output, nil
 }
 
 func (this *blockchain) Blocks([]*ep.FilterData) (*ep.Blocks, error) {
-	return this.testOutput.Blocks, nil
+	return this.testData.GetBlocks.Output, nil
 }
 
 func (this *blockchain) Block(height int) (*types.Block, error) {
-	return this.testOutput.Block, nil
+	return this.testData.GetBlock.Output, nil
 }
 
 // Consensus
 type consensus struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *consensus) State() (*ep.ConsensusState, error) {
-	return this.testOutput.ConsensusState, nil
+	return this.testData.GetConsensusState.Output, nil
 }
 
 func (this *consensus) Validators() (*ep.ValidatorList, error) {
-	return this.testOutput.Validators, nil
+	return this.testData.GetValidators.Output, nil
 }
 
 // Events
 type events struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *events) Subscribe(subId, event string, callback func(interface{})) (bool, error) {
@@ -159,48 +158,49 @@ func (this *events) Unsubscribe(subId string) (bool, error) {
 
 // Net
 type net struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *net) Info() (*ep.NetworkInfo, error) {
-	return this.testOutput.NetworkInfo, nil
+	return this.testData.GetNetworkInfo.Output, nil
 }
 
 func (this *net) ClientVersion() (string, error) {
-	return this.testOutput.ClientVersion.ClientVersion, nil
+	return this.testData.GetClientVersion.Output.ClientVersion, nil
 }
 
 func (this *net) Moniker() (string, error) {
-	return this.testOutput.Moniker.Moniker, nil
+	return this.testData.GetMoniker.Output.Moniker, nil
 }
 
 func (this *net) Listening() (bool, error) {
-	return this.testOutput.Listening.Listening, nil
+	return this.testData.IsListening.Output.Listening, nil
 }
 
 func (this *net) Listeners() ([]string, error) {
-	return this.testOutput.Listeners.Listeners, nil
+	return this.testData.GetListeners.Output.Listeners, nil
 }
 
 func (this *net) Peers() ([]*ep.Peer, error) {
-	return this.testOutput.Peers, nil
+	return this.testData.GetPeers.Output, nil
 }
 
 func (this *net) Peer(address string) (*ep.Peer, error) {
+	// return this.testData.GetPeer.Output, nil
 	return nil, nil
 }
 
 // Txs
 type transactor struct {
-	testOutput *td.Output
+	testData *td.TestData
 }
 
 func (this *transactor) Call(address, data []byte) (*ep.Call, error) {
-	return nil, nil
+	return this.testData.Call.Output, nil
 }
 
 func (this *transactor) CallCode(code, data []byte) (*ep.Call, error) {
-	return this.testOutput.CallCode, nil
+	return this.testData.CallCode.Output, nil
 }
 
 func (this *transactor) BroadcastTx(tx types.Tx) (*ep.Receipt, error) {
@@ -208,14 +208,14 @@ func (this *transactor) BroadcastTx(tx types.Tx) (*ep.Receipt, error) {
 }
 
 func (this *transactor) UnconfirmedTxs() (*ep.UnconfirmedTxs, error) {
-	return this.testOutput.UnconfirmedTxs, nil
+	return this.testData.GetUnconfirmedTxs.Output, nil
 }
 
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*ep.Receipt, error) {
 	if address == nil || len(address) == 0 {
-		return this.testOutput.TxCreateReceipt, nil
+		return this.testData.TransactCreate.Output, nil
 	}
-	return this.testOutput.TxReceipt, nil
+	return this.testData.Transact.Output, nil
 }
 
 func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {

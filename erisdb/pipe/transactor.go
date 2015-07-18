@@ -143,7 +143,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	fmt.Printf("NONCE: %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
-		Amount:   1000,
+		Amount:   1,
 		Sequence: sequence,
 		PubKey:   pa.PubKey,
 	}
