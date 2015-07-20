@@ -267,6 +267,7 @@ var testDataJson = `{
 var serverDuration uint = 100
 
 type (
+	
 	ChainData struct {
 		PrivValidator *state.PrivValidator `json:"priv_validator"`
 		Genesis       *state.GenesisDoc    `json:"genesis"`

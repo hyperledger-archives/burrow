@@ -26,10 +26,10 @@ func (acc *Account) String() string {
 }
 
 type Log struct {
-	Address Word256
-	Topics  []Word256
-	Data    []byte
-	Height  int64
+	Address Word256   `json:"address"`
+	Topics  []Word256 `json:"topics"`
+	Data    []byte    `json:"data"`
+	Height  int64     `json:"height"`
 }
 
 type AppState interface {
