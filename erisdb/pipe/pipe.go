@@ -4,6 +4,7 @@ package pipe
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
+	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
@@ -15,6 +16,7 @@ type (
 		Blockchain() Blockchain
 		Consensus() Consensus
 		Events() EventEmitter
+		NameReg() NameReg
 		Net() Net
 		Transactor() Transactor
 	}
@@ -47,6 +49,11 @@ type (
 		Subscribe(subId, event string, callback func(interface{})) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
+	
+	NameReg interface {
+		 Entry(key string) (*types.NameRegEntry, error)
+		 Entries([]*FilterData) (*ctypes.ResponseListNames, error)
+	}
 
 	Net interface {
 		Info() (*NetworkInfo, error)
@@ -63,6 +70,7 @@ type (
 		CallCode(code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
+		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
 	}
@@ -75,6 +83,7 @@ type PipeImpl struct {
 	blockchain Blockchain
 	consensus  Consensus
 	events     EventEmitter
+	namereg    NameReg
 	net        Net
 	txs        Transactor
 }
@@ -85,6 +94,7 @@ func NewPipe(tNode *node.Node) Pipe {
 	blockchain := newBlockchain(tNode.BlockStore())
 	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
 	events := newEvents(tNode.EventSwitch())
+	namereg := newNamereg(tNode.ConsensusState())
 	net := newNetwork(tNode.Switch())
 	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
 	return &PipeImpl{
@@ -93,6 +103,7 @@ func NewPipe(tNode *node.Node) Pipe {
 		blockchain,
 		consensus,
 		events,
+		namereg,
 		net,
 		txs,
 	}
@@ -112,6 +123,10 @@ func (this *PipeImpl) Consensus() Consensus {
 
 func (this *PipeImpl) Events() EventEmitter {
 	return this.events
+}
+
+func (this *PipeImpl) NameReg() NameReg {
+	return this.namereg
 }
 
 func (this *PipeImpl) Net() Net {

@@ -50,6 +50,9 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.POST("/event_subs", this.handleEventSubscribe)
 	router.GET("/event_subs/:id", this.handleEventPoll)
 	router.DELETE("/event_subs/:id", this.handleEventUnsubscribe)
+	// NameReg
+	router.GET("/namereg", parseQuery, this.handleNameRegEntries)
+	router.GET("/namereg/:key", nameParam, this.handleNameRegEntry)
 	// Network
 	router.GET("/network", this.handleNetworkInfo)
 	router.GET("/network/client_version", this.handleClientVersion)
@@ -67,6 +70,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	// Unsafe
 	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
 	router.POST("/unsafe/txpool", this.handleTransact)
+	router.POST("/unsafe/namereg/txpool", this.handleTransactNameReg)
 	router.POST("/unsafe/tx_signer", this.handleSignTx)
 	this.running = true
 }
@@ -273,6 +277,32 @@ func (this *RestServer) handleEventUnsubscribe(c *gin.Context) {
 	this.codec.Encode(&ep.EventUnsub{true}, c.Writer)
 }
 
+// ********************************* NameReg *********************************
+
+func (this *RestServer) handleNameRegEntries(c *gin.Context) {
+	var filters []*ep.FilterData
+	fs, exists := c.Get("filters")
+	if exists {
+		filters = fs.([]*ep.FilterData)
+	}
+	entries, err := this.pipe.NameReg().Entries(filters)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+	c.Writer.WriteHeader(200)
+	this.codec.Encode(entries, c.Writer)
+}
+
+func (this *RestServer) handleNameRegEntry(c *gin.Context) {
+	name := c.MustGet("name").(string)
+	entry, err := this.pipe.NameReg().Entry(name)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+	c.Writer.WriteHeader(200)
+	this.codec.Encode(entry, c.Writer)
+}
+
 // ********************************* Network *********************************
 
 func (this *RestServer) handleNetworkInfo(c *gin.Context) {
@@ -407,6 +437,20 @@ func (this *RestServer) handleTransact(c *gin.Context) {
 	this.codec.Encode(receipt, c.Writer)
 }
 
+func (this *RestServer) handleTransactNameReg(c *gin.Context) {
+	param := &TransactNameRegParam{}
+	errD := this.codec.Decode(param, c.Request.Body)
+	if errD != nil {
+		c.AbortWithError(500, errD)
+	}
+	receipt, err := this.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+	c.Writer.WriteHeader(200)
+	this.codec.Encode(receipt, c.Writer)
+}
+
 func (this *RestServer) handleSignTx(c *gin.Context) {
 	param := &SignTxParam{}
 	errD := this.codec.Decode(param, c.Request.Body)
@@ -430,6 +474,12 @@ func addressParam(c *gin.Context) {
 	}
 	bts, _ := hex.DecodeString(addr)
 	c.Set("addrBts", bts)
+	c.Next()
+}
+
+func nameParam(c *gin.Context) {
+	name := c.Param("key")
+	c.Set("name", name)
 	c.Next()
 }
 

@@ -2,6 +2,7 @@ package testdata
 
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
@@ -466,6 +467,44 @@ var testDataJson = `{
         }
       ]
     }
+  },
+  "TransactNameReg": {
+    "input": {
+      "priv_key": "6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
+      "name": "testKey",
+      "data": "testValue",
+      "amount": 10000,
+      "fee": 0
+    },
+    "output": {
+      "tx_hash": "98B0D5162C7CB86FF94BE2C00469107B7CA51CF3",
+      "creates_contract": 0,
+      "contract_addr": ""
+    }
+  },
+  "GetNameRegEntry": {
+    "input": {
+      "name": "testKey"
+    },
+    "output": {
+      "name": "testKey",
+      "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
+      "data": "testData",
+      "expires": 250 }
+  },
+  "GetNameRegEntries": {
+    "input": {
+      "filters": []
+    },
+    "output": {
+      "block_height": 1,
+      "names":[ {
+        "name": "testKey",
+        "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
+        "data": "testData",
+        "expires": 250
+      } ]
+    }
   }
 }`
 
@@ -602,6 +641,21 @@ type (
 		Output *ep.EventUnsub  `json:"output"`
 	}
 
+	TransactNameRegData struct {
+		Input  *edb.TransactNameRegParam `json:"input"`
+		Output *ep.Receipt               `json:"output"`
+	}
+
+	GetNameRegEntryData struct {
+		Input  *edb.NameRegEntryParam `json:"input"`
+		Output *types.NameRegEntry    `json:"output"`
+	}
+
+	GetNameRegEntriesData struct {
+		Input  *edb.FilterListParam      `json:"input"`
+		Output *ctypes.ResponseListNames `json:"output"`
+	}
+
 	/*
 		EventPollData struct {
 			Input  *edb.SubIdParam  `json:"input"`
@@ -631,14 +685,17 @@ type (
 		IsListening          *IsListeningData
 		GetListeners         *GetListenersData
 		GetPeers             *GetPeersData
+		Transact             *TransactData
+		TransactCreate       *TransactCreateData
+		TransactNameReg      *TransactNameRegData
+		GetUnconfirmedTxs    *GetUnconfirmedTxsData
+		CallCode             *CallCodeData
+		Call                 *CallData
+		EventSubscribe       *EventSubscribeData
+		EventUnsubscribe     *EventUnsubscribeData
+		GetNameRegEntry      *GetNameRegEntryData
+		GetNameRegEntries    *GetNameRegEntriesData
 		// GetPeer              *GetPeerData
-		Transact          *TransactData
-		TransactCreate    *TransactCreateData
-		GetUnconfirmedTxs *GetUnconfirmedTxsData
-		CallCode          *CallCodeData
-		Call              *CallData
-		EventSubscribe    *EventSubscribeData
-		EventUnsubscribe  *EventUnsubscribeData
 		// EventPoll            *EventPollData
 	}
 )

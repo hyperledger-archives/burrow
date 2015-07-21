@@ -3,6 +3,7 @@ package mock
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 )
@@ -14,6 +15,7 @@ type MockPipe struct {
 	blockchain ep.Blockchain
 	consensus  ep.Consensus
 	events     ep.EventEmitter
+	namereg    ep.NameReg
 	net        ep.Net
 	transactor ep.Transactor
 }
@@ -24,6 +26,7 @@ func NewMockPipe(td *td.TestData) ep.Pipe {
 	blockchain := &blockchain{td}
 	consensus := &consensus{td}
 	events := &events{td}
+	namereg := &namereg{td}
 	net := &net{td}
 	transactor := &transactor{td}
 	return &MockPipe{
@@ -32,6 +35,7 @@ func NewMockPipe(td *td.TestData) ep.Pipe {
 		blockchain,
 		consensus,
 		events,
+		namereg,
 		net,
 		transactor,
 	}
@@ -57,6 +61,11 @@ func (this *MockPipe) Consensus() ep.Consensus {
 func (this *MockPipe) Events() ep.EventEmitter {
 	return this.events
 }
+
+func (this *MockPipe) NameReg() ep.NameReg {
+	return this.namereg
+}
+
 
 func (this *MockPipe) Net() ep.Net {
 	return this.net
@@ -156,6 +165,20 @@ func (this *events) Unsubscribe(subId string) (bool, error) {
 	return true, nil
 }
 
+
+// NameReg
+type namereg struct {
+	testData *td.TestData
+}
+
+func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
+	return this.testData.GetNameRegEntry.Output, nil
+}
+
+func (this *namereg) Entries(filters []*ep.FilterData) (*ctypes.ResponseListNames, error) {
+	return this.testData.GetNameRegEntries.Output, nil
+}
+
 // Net
 type net struct {
 	testData *td.TestData
@@ -216,6 +239,10 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		return this.testData.TransactCreate.Output, nil
 	}
 	return this.testData.Transact.Output, nil
+}
+
+func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*ep.Receipt, error) {
+	return this.testData.TransactNameReg.Output, nil
 }
 
 func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {

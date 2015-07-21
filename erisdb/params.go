@@ -15,7 +15,13 @@ type (
 	}
 
 	// Used to send an address
+	// TODO deprecate in favor of 'FilterListParam'
 	AccountsParam struct {
+		Filters []*pipe.FilterData `json:"filters"`
+	}
+	
+	// Used to send an address
+	FilterListParam struct {
 		Filters []*pipe.FilterData `json:"filters"`
 	}
 
@@ -35,6 +41,7 @@ type (
 	}
 
 	// Get a series of blocks
+	// TODO deprecate in favor of 'FilterListParam'
 	BlocksParam struct {
 		Filters []*pipe.FilterData `json:"filters"`
 	}
@@ -80,4 +87,19 @@ type (
 		Fee      int64  `json:"fee"`
 		GasLimit int64  `json:"gas_limit"`
 	}
+	
+	NameRegEntryParam struct {
+		Name string `json:"name"`
+	}
+
+	// Used when sending a namereg transaction to be created and signed on the server
+	// (using the private key). This only uses the standard key type for now.
+	TransactNameRegParam struct {
+		PrivKey []byte `json:"priv_key"`
+		Name    string `json:"name"`
+		Data    string `json:"data"`
+		Fee     int64  `json:"fee"`
+		Amount  int64  `json:"amount"`
+	}
+	
 )

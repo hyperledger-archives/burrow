@@ -118,7 +118,6 @@ func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
 }
 
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error) {
-	fmt.Printf("ADDRESS: %v\n", address)
 	var addr []byte
 	if len(address) == 0 {
 		addr = nil
@@ -140,7 +139,6 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	fmt.Printf("NONCE: %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   1,
@@ -162,6 +160,30 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.BroadcastTx(txS)
 }
 
+func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error) {
+	
+	if len(privKey) != 64 {
+		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
+	}
+
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	cache := this.mempoolReactor.Mempool.GetCache()
+	acc := cache.GetAccount(pa.Address)
+	var sequence int
+	if acc == nil {
+		sequence = 1
+	} else {
+		sequence = acc.Sequence + 1
+	}
+	tx := types.NewNameTxWithNonce(pa.PubKey, name, data, amount, fee, sequence)
+	// Got ourselves a tx.
+	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
+	if errS != nil {
+		return nil, errS
+	}
+	return this.BroadcastTx(txS)
+}
+
 // Sign a transaction
 func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
 	// more checks?
@@ -173,6 +195,10 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 	}
 	chainId := config.GetString("chain_id")
 	switch tx.(type) {
+	case *types.NameTx:
+		nameTx := tx.(*types.NameTx)
+		nameTx.Input.PubKey = privAccounts[0].PubKey
+		nameTx.Input.Signature = privAccounts[0].Sign(config.GetString("chain_id"), nameTx)
 	case *types.SendTx:
 		sendTx := tx.(*types.SendTx)
 		for i, input := range sendTx.Inputs {

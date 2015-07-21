@@ -42,9 +42,12 @@ const (
 	GET_UNCONFIRMED_TXS       = SERVICE_NAME + ".getUnconfirmedTxs"
 	SIGN_TX                   = SERVICE_NAME + ".signTx"
 	TRANSACT                  = SERVICE_NAME + ".transact"
+	TRANSACT_NAMEREG          = SERVICE_NAME + ".transactNameReg"
 	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
 	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
 	EVENT_POLL                = SERVICE_NAME + ".eventPoll"
+	GET_NAMEREG_ENTRY         = SERVICE_NAME + ".getNameRegEntry" // Namereg
+	GET_NAMEREG_ENTRIES       = SERVICE_NAME + ".getNameRegEntries"
 )
 
 // The rpc method handlers.
@@ -60,7 +63,7 @@ type RequestHandlerFunc func(*rpc.RPCRequest, interface{}) (interface{}, int, er
 func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap := make(map[string]RequestHandlerFunc)
 	// Accounts
-	dhMap[GET_ACCOUNTS] = this.AccountList
+	dhMap[GET_ACCOUNTS] = this.Accounts
 	dhMap[GET_ACCOUNT] = this.Account
 	dhMap[GET_STORAGE] = this.AccountStorage
 	dhMap[GET_STORAGE_AT] = this.AccountStorageAt
@@ -92,6 +95,10 @@ func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap[GET_UNCONFIRMED_TXS] = this.UnconfirmedTxs
 	dhMap[SIGN_TX] = this.SignTx
 	dhMap[TRANSACT] = this.Transact
+	dhMap[TRANSACT_NAMEREG] = this.TransactNameReg
+	// Namereg
+	dhMap[GET_NAMEREG_ENTRY] = this.NameRegEntry
+	dhMap[GET_NAMEREG_ENTRIES] = this.NameRegEntries
 
 	return dhMap
 }
@@ -140,7 +147,7 @@ func (this *ErisDbMethods) Account(request *rpc.RPCRequest, requester interface{
 	return account, 0, nil
 }
 
-func (this *ErisDbMethods) AccountList(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AccountsParam{}
 	fmt.Printf("ACCOUNT LIST REQUEST: %v\n", request)
 	err := this.codec.DecodeBytes(param, request.Params)
@@ -394,6 +401,19 @@ func (this *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface
 	return receipt, 0, nil
 }
 
+func (this *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &TransactNameRegParam{}
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	receipt, errC := this.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return receipt, 0, nil
+}
+
 func (this *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	txs, errC := this.pipe.Transactor().UnconfirmedTxs()
 	if errC != nil {
@@ -415,6 +435,39 @@ func (this *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return txRet, 0, nil
+}
+
+
+// *************************************** Name Registry ***************************************
+
+func (this *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &NameRegEntryParam{}
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	name := param.Name
+	// TODO is address check?
+	entry, errC := this.pipe.NameReg().Entry(name)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return entry, 0, nil
+}
+
+func (this *ErisDbMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &FilterListParam{}
+	fmt.Printf("ACCOUNT LIST REQUEST: %v\n", request)
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	fmt.Printf("PARAMS: %v\n", param)
+	list, errC := this.pipe.NameReg().Entries(param.Filters)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return list, 0, nil
 }
 
 // **************************************************************************************
