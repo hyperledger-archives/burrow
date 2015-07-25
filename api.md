@@ -172,10 +172,11 @@ These are the types of transactions:
 
 ```
 {
-	input: <TxInput>
-	name:  <string>
-	data:  <string>
-	fee:   <number>
+	input:  <TxInput>
+	name:   <string>
+	data:   <string>
+	amount: <number>
+	fee:    <number>
 }
 ```
 
@@ -336,6 +337,40 @@ Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Input` will subscribe to 
 }
 ```
 
+#### Log
+
+This notifies you when the VM fires a log-event. This happens for example when a solidity event is fired.
+
+Event ID: `Log/<address>`
+
+Example: `Log/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Input` will subscribe to all log events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
+
+type Log struct {
+	Address Word256
+	Topics  []Word256
+	Data    []byte
+	Height  uint64
+}
+
+Event object:
+
+```
+{
+	address: <string>
+	topics:  []<string>
+	data:    <string>
+	height   <number>
+}
+```
+
+`address` is the address of the account that created the log event.
+
+`topics` is the parameters listed as topics. In a (named) Solidity event they would be the hash of the event name, followed by each param with the `indexed` modifier.
+
+`data` the data. In a Solidity event these would be the params without the `indexed` modifier.
+
+`height` is the current block-height.
+
 #### New Block
 
 This notifies you when a new block is committed.
@@ -444,6 +479,12 @@ Event object:
 | [EventUnsubscribe](#event-unsubscribe) | erisdb.eventUnsubscribe | DELETE | `/event_subs/:id` |
 | [EventPoll](#event-poll) | erisdb.eventPoll | GET | `/event_subs/:id` |
 
+###Name-registry
+| Name | RPC method name | HTTP method | HTTP endpoint |
+| :--- | :-------------- | :---------: | :------------ |
+| [GetNameRegEntry](#get-namereg-entry) | erisdb.getNameRegEntry | GET | `/namereg/:key` |
+| [GetNameRegEntries](#get-namereg-entries) | erisdb.getNameRegEntries | GET | `/namereg` |
+
 ###Network
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
@@ -463,6 +504,7 @@ NOTE: Get peer is not fully implemented.
 | [BroadcastTx](#broadcast-tx) | erisdb.broadcastTx | POST | `/txpool` |
 | [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.getUnconfirmedTxs | GET | `/txpool` |
 
+
 ###Code execution
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
@@ -475,6 +517,7 @@ NOTE: Get peer is not fully implemented.
 | :--- | :-------------- | :---------: | :------------ |
 | [SignTx](#sign-tx) | erisdb.signTx | POST | `/unsafe/tx_signer` |
 | [Transact](#transact) | erisdb.transact | POST | `/unsafe/txpool` |
+| [TransactNameReg](#transact-name-reg) | erisdb.transactNameReg | POST | `/unsafe/namereg/txpool` |
 | [GenPrivAccount](#gen-priv-account) | erisdb.genPrivAccount | GET | `/unsafe/pa_generator` |
 
 Here are the catagories.
@@ -483,6 +526,7 @@ Here are the catagories.
 * [BlockChain](#blockchain)
 * [Consensus](#consensus)
 * [Events](#events)
+* [Name-registry](#name-registry)
 * [Network](#network)
 * [Transactions](#transactions)
 * [Code Execution (calls)](#calls)
@@ -1190,6 +1234,100 @@ For more information about events and the event system, see the [Event system](#
 
 ***
 
+
+<a name="name-registry"></a>
+####Name-registry
+
+<a name="get-namereg-entries"></a>
+####GetNameRegEntries
+
+This will return a list of name reg entries. Filters may be used.
+
+#####HTTP
+
+Method: GET
+
+Endpoint: `/namereg`
+
+#####JSON-RPC
+
+Method: `erisdb.getNameRegEntries`
+
+Parameter:
+
+```
+{
+	filters: [<FilterData>]
+}
+```
+
+##### Filters
+
+| Field | Underlying type | Ops | Example Queries |
+| :---- | :-------------- | :-- | :-------------- |
+| `expires` | int | `<`, `>`, `<=`, `>=`, `==` | `q=expires:<=50` |
+| `owner` | byte[] | `==`, `!=` | `q=owner:1010101010101010101010101010101010101010` |
+| `name` | string | `==`, `!=` | `q=name:!=somekey` |
+| `data` | string | `==`, `!=` | `q=name:!=somedata` |
+
+NOTE: While it is supported, there is no point in using `name:==...`, as it would search the entire map of names for that entry. Instead you should use the method `GetNameRegEntry` which takes the name (key) as argument.
+
+#####Return value
+
+```
+{
+	block_height: <number>
+	names:        <NameRegEntry>
+}
+```
+
+#####Additional info
+
+See GetNameRegEntry below for more info on the `NameRegEntry` object.
+
+See the section on [Filters](#queries-filters) for info on the `FilterData` object.
+
+***
+
+<a name="get-namereg-entry"></a>
+####GetNameRegEntry
+
+Get a namereg entry by its key.
+
+#####HTTP
+
+Method: GET 
+
+Endpoint: `/namereg/:name`
+
+Params: The key (a string)
+
+
+#####JSON-RPC
+
+Method: `erisdb.getNameRegEntry`
+
+Parameter:
+
+```
+{
+	name: <string>
+}
+```
+
+#####Return value
+
+```
+{
+	owner:   <string>
+	name:    <string>
+	data:    <string>
+	expires: <number>
+}
+```
+
+***
+
 <a name="network"></a>
 ###Network
 
@@ -1596,7 +1734,7 @@ Parameters:
 <a name="unsafe"></a>
 ###Unsafe 
 
-These methods are unsafe because they require that a private key is either transmitted or received. They are supposed to be used mostly in development/debugging, and should normally not be used in a production environment.
+These methods are unsafe because they require that a private key is either transmitted or received. They are supposed to be used only in development.
 
 ***
 
@@ -1640,7 +1778,7 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 <a name="transact"></a>
 ####Transact
 
-Convenience method for sending a transaction "old Ethereum dev style". It will do the following things:
+Convenience method for sending a transaction. It will do the following things:
 
 * Use the private key to create a private account object (i.e. generate public key and address).
 * Use the other parameters to create a `CallTx` object.
@@ -1657,19 +1795,21 @@ Body: See JSON-RPC parameters.
 
 #####JSON-RPC
 
-Method: `erisdb.SignTx`
+Method: `erisdb.transact`
 
 Parameters: 
 
 ```
 {
-	priv_key:  <PrivKey>
+	priv_key:  <string>
 	data:      <string>
 	address:   <string>
 	fee:       <number>
 	gas_limit: <number>
 }
 ```
+
+private key is the hex string only.
 
 #####Return value
 
@@ -1686,6 +1826,59 @@ The same as with BroadcastTx:
 #####Additional info
 
 See [The transaction types](#the-transaction-types) for more info on the `CallTx` type. 
+
+***
+
+
+<a name="transact-name-reg"></a>
+####TransactNameReg
+
+Convenience method for sending a transaction to the name registry. It will do the following things:
+
+* Use the private key to create a private account object (i.e. generate public key and address).
+* Use the other parameters to create a `NameTx` object.
+* Sign the transaction.
+* Broadcast the transaction.
+
+#####HTTP
+
+Method: POST
+
+Endpoint: `/unsafe/namereg/txpool`
+
+Body: See JSON-RPC parameters.
+
+#####JSON-RPC
+
+Method: `erisdb.transactNameReg`
+
+Parameters: 
+
+```
+{
+	priv_key:  <string>
+	name:      <string>
+	data:      <string>
+	fee:       <number>
+	amount:    <number>
+}
+```
+
+#####Return value
+
+The same as with BroadcastTx:
+
+```
+{
+	tx_hash:          <string>
+	creates_contract: <number> (always 0)
+	contract_addr:    <string> (always empty)
+}
+```
+
+#####Additional info
+
+See [The transaction types](#the-transaction-types) for more info on the `NameTx` type. 
 
 ***
 
@@ -1798,9 +1991,9 @@ The structure of a normal query is: `q=field:[op]value+field2:[op2]value2+ ... `
 - `q` means it's a query.
 - `+` is the filter separator.
 - `field` is the field name.
-- `:` is the field-statement separator.
+- `:` is the field:relation separator.
 - `op` is the relational operator, `>, <, >=, <=, ==, !=`.
-- `value` is always a string value, e.g. `balance:>=5` or `language:==golang`. 
+- `value` is the value to compare against, e.g. `balance:>=5` or `language:==golang`. 
 
 There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are number-strings. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive; if it is put on the left-hand side it is the minimum value, and on the right-hand side it means the maximum value. Let `height` be an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
 
