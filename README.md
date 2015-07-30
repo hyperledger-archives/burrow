@@ -1,12 +1,12 @@
 # Eris-DB (Alpha)
 
-`eris-db` is Eris' blockchain-client. It consists of a [Tendermint](http://tendermint.com/) node wrapped by a simple server. Tendermint is a blockchain-client with a PoS consensus system for agreeing on blocks. This makes it perfect for Eris chains.
-
-The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The documentation can be found [here](TODO). We also have javascript bindings for the RPC methods in [erisdb-js](https://github.com/eris-ltd/erisdb-js).
+`eris-db` is Eris' blockchain-client. It consists of a [Tendermint](http://tendermint.com/) node wrapped by a simple server. The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The web-APIs are documented in `api.md`. We also have javascript bindings for the RPC methods in [eris-db.js](https://github.com/eris-ltd/eris-db.js).
 
 ## Installation
 
-There are no binary downloads, and probably won't be before `1.0`.
+There are no pre-built releases other then the docker images.
+
+The recommended way of working with eris-db is through [eris-cli](https://github.com/eris-ltd/eris-cli) (develop branch as of now).
 
 ### Building from source
 
@@ -28,19 +28,17 @@ To run `erisdb`, just type `$ erisdb /path/to/working/folder`
 
 This will start the node using the provided folder as working dir. If the path is omitted it defaults to `~/.erisdb` 
 
-##### Windows
+#### Docker
 
-The server itself run on Windows, and it is possible to tweak Tendermint so that it works on Windows too (did so myself, mostly just some network and file stuff), but we do not recommend that. Eris programs are supposed to run on Linux; preferably through docker. One reason for this is security. The new `eris` command-line tool (formerly `epm`) will make the management of these containers easy.
+It is best to use [eris-cli](https://github.com/eris-ltd/eris-cli) which will help setting up and running eris-db (and individual chains) through docker.
+
+##### Others
 
 Tendermint officially supports only 64 bit Ubuntu. 
 
-#### Docker
-
-Work in progress.
-
-`$ ./docker_build.sh` to build the image. After that, use ` $ ./docker_run.sh` to run with the default workdir (/home/.eris/.eris-db).
-
 ### Usage
+
+####Native
 
 The simplest way to get started is by simply running `$ erisdb`. That will start a fresh node with `~/.erisdb` as the working directory, and the default settings. You will be asked to type in a hostname, which could be anything. `anonymous` is a commonly used one.
 
@@ -156,6 +154,8 @@ log_file=""
 
 ### Server-server
 
+**NOTE: This feature is being deprecated in favor of `eris-cli` generation of configurable throw-away chains.**
+
 The library includes a "server-server". This server accepts POST requests with some chain data (such as priv_validator.json and genesis.json), and will use that to create a new working directory in the temp folder, write the data, deploy a new node in that folder, generate a port, use it to serve that node and then pass the url back in the response. It will also manage all the servers and shut them down as they become inactive. 
 
 NOTE: This is not safe in production, as it requires private keys to be passed over a network, but it is useful when doing tests. If the same chain data is used, then each node is  guaranteed to give the same output (for the same input) when calling the methods.
@@ -164,20 +164,8 @@ To start one up, just run `go install` in the `erisdb/cmd/erisdbss` directory, t
 
 ### Testing
 
-Run using `go test` as usual. There are 3 tiers of tests:
-
-* Tier 1 is unit tests of components, such as the http/websocket servers, query parser and event cache.
-* Tier 2 is a full client-server test of `erisdb` using a mock implementation of the [Pipe](https://github.com/eris-ltd/erisdb/blob/master/erisdb/pipe/pipe.go).
-* Tier 3 is a full client-server test of `erisdb` using a live node.
-
-More tests will be added continuously.
-
-#### JSON test-data
-
-The tests uses test data in JSON form. This means the same data can be used to do integration tests with clients; whether it's our own javascript client (it uses the server-server btw) or if we or someone else decides to create clients in other languages.
-
-As of `0.9.0`, the test-data needs to be cleaned up a bit, and there really should be some tools available for generating new sets. It will probably take a few minor versions before it is convenient to work with.
+In root: `go test ./...`
 
 ### Benchmarking
 
-As of `0.9.0`, there are no benchmarks. We aim to have a framework built before `1.0`.
+As of `0.11.0`, there are no benchmarks. We aim to have a framework built before `1.0`.
