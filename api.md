@@ -141,7 +141,6 @@ The corresponding Ed25519 public key: `[1, "CB3688B7561D488A2A4834E1AEE9398BEF94
 
 The corresponding Ed25519 private key: `[1, "6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"]`
 
-
 <a name="the-transaction-types"></a>
 ###The transaction types
 
@@ -443,6 +442,27 @@ Event object:
 ```
 <Tx>
 ```
+
+<a name="namereg">
+### Name-registry
+
+The name-registry is a built-in key-value store that allow you to store bulk data in a different storage. It is currently regulated by the use of Tendermint tokens. The cost of storing some `Data` in the name-registry is this:
+
+```
+TotalCost = Cost*NumberOfBlocks
+
+Cost = CostPerBlock*CostPerByte*(length(Data) + 32)
+
+CostPerBlock = 1
+
+CostPerByte = 1
+
+length(Data) = the number of bytes in 'Data'.
+```
+
+To pay this cost you use the `amount` field in the namereg transaction. If you want to store a 3 kb document for 10 blocks, the total cost would be `1*1*(3000 + 32)*10 = 30320` tendermint tokens.
+
+See the [TransactNameReg](#transact-name-reg) method for more info about adding entries to the name-registry, and the methods in the [Name-registry](#name-registry) for accessing them.
 
 <a name="methods"></a>
 ##Methods
