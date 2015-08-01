@@ -108,6 +108,8 @@ case $CMD in
 	;;
 "run" ) $ECM_PATH/chain_run.sh
 	;;
-*)	echo "Enter a command for starting the chain (install, new, run)"
+"api" ) $ECM_PATH/chain_api.sh
+  ;;
+*)	echo "Enter a command for starting the chain (install, new, run, api)"
 	;;
 esac
