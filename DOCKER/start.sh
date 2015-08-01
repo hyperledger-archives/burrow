@@ -19,7 +19,7 @@ fi
 
 
 # TODO: deal with chain numbers
-# and eg. $CONTAINER_NAME 
+# and eg. $CONTAINER_NAME
 CHAIN_DIR="/home/$USER/.eris/blockchains/$CHAIN_ID"
 
 # set the tendermint directory
@@ -62,6 +62,8 @@ case $CMD in
 	;;
 "run" ) $ECM_PATH/chain_run.sh
 	;;
-*)	echo "Enter a command for starting the chain (install, new, run)"
+"api" ) $ECM_PATH/chain_api.sh
+  ;;
+*)	echo "Enter a command for starting the chain (install, new, run, api)"
 	;;
 esac
