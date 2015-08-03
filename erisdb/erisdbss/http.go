@@ -21,6 +21,7 @@ fast_sync = false
 db_backend = "leveldb"
 log_level = "debug"
 node_laddr = ""
+rpc_laddr = ""
 `
 
 // User data accepts a private validator and genesis json object.

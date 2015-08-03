@@ -66,8 +66,8 @@ type (
 	}
 
 	Transactor interface {
-		Call(address, data []byte) (*Call, error)
-		CallCode(code, data []byte) (*Call, error)
+		Call(fromAddress, toAddress, data []byte) (*Call, error)
+		CallCode(fromAddress, code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)

@@ -218,11 +218,11 @@ type transactor struct {
 	testData *td.TestData
 }
 
-func (this *transactor) Call(address, data []byte) (*ep.Call, error) {
+func (this *transactor) Call(fromAddress, toAddress, data []byte) (*ep.Call, error) {
 	return this.testData.Call.Output, nil
 }
 
-func (this *transactor) CallCode(code, data []byte) (*ep.Call, error) {
+func (this *transactor) CallCode(from, code, data []byte) (*ep.Call, error) {
 	return this.testData.CallCode.Output, nil
 }
 

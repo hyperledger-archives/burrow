@@ -38,16 +38,19 @@ func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusSta
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (this *transactor) Call(address, data []byte) (*Call, error) {
+func (this *transactor) Call(fromAddress, toAddress, data []byte) (*Call, error) {
 
 	st := this.consensusState.GetState() // performs a copy
 	cache := state.NewBlockCache(st)
-	outAcc := cache.GetAccount(address)
+	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
-		return nil, fmt.Errorf("Account %x does not exist", address)
+		return nil, fmt.Errorf("Account %X does not exist", toAddress)
+	}
+	if fromAddress == nil {
+		fromAddress = []byte{}
 	}
 	callee := toVMAccount(outAcc)
-	caller := &vm.Account{Address: cmn.Zero256}
+	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
@@ -68,12 +71,14 @@ func (this *transactor) Call(address, data []byte) (*Call, error) {
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (this *transactor) CallCode(code, data []byte) (*Call, error) {
-
+func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) {
+	if fromAddress == nil {
+		fromAddress = []byte{}
+	}
 	st := this.consensusState.GetState() // performs a copy
 	cache := this.mempoolReactor.Mempool.GetCache()
-	callee := &vm.Account{Address: cmn.Zero256}
-	caller := &vm.Account{Address: cmn.Zero256}
+	callee := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),

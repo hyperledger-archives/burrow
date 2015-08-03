@@ -19,7 +19,7 @@ type (
 	AccountsParam struct {
 		Filters []*pipe.FilterData `json:"filters"`
 	}
-	
+
 	// Used to send an address
 	FilterListParam struct {
 		Filters []*pipe.FilterData `json:"filters"`
@@ -63,11 +63,13 @@ type (
 	// Used when doing calls
 	CallParam struct {
 		Address []byte `json:"address"`
+		From    []byte `json:"from"`
 		Data    []byte `json:"data"`
 	}
 
 	// Used when doing code calls
 	CallCodeParam struct {
+		From []byte `json:"from"`
 		Code []byte `json:"code"`
 		Data []byte `json:"data"`
 	}
@@ -87,7 +89,7 @@ type (
 		Fee      int64  `json:"fee"`
 		GasLimit int64  `json:"gas_limit"`
 	}
-	
+
 	NameRegEntryParam struct {
 		Name string `json:"name"`
 	}
@@ -101,5 +103,4 @@ type (
 		Fee     int64  `json:"fee"`
 		Amount  int64  `json:"amount"`
 	}
-	
 )

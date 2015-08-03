@@ -14,7 +14,7 @@ import (
 	"path"
 )
 
-const ERISDB_VERSION = "0.11.0"
+const ERISDB_VERSION = "0.11.1"
 const TENDERMINT_VERSION = "0.5.0"
 
 var log = log15.New("module", "eris/erisdb_server")
@@ -79,7 +79,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	return proc, nil
 }
 
-// Private. Create a new node
+// Private. Create a new node.
 func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	laddr := tmConfig.GetString("node_laddr")
 	if laddr != "" {
@@ -94,7 +94,10 @@ func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	if len(tmConfig.GetString("seeds")) > 0 {
 		nd.DialSeed()
 	}
-
+	
+	if len(tmConfig.GetString("rpc_laddr")) > 0 {
+		nd.StartRPC()
+	}
 	ready <- struct{}{}
 	// Block until everything is shut down.
 	<-shutDown
