@@ -25,6 +25,10 @@
 			"Rev": "1a7ab6e4d5fdc72d6df30ef562102ae6e0d18518"
 		},
 		{
+			"ImportPath": "github.com/google/go-snappy/snappy",
+			"Rev": "eaa750b9bf4dcb7cb20454be850613b66cda3273"
+		},
+		{
 			"ImportPath": "github.com/gorilla/websocket",
 			"Rev": "a3ec486e6a7a41858210b0fc5d7b5df593b3c4a3"
 		},
@@ -76,10 +80,6 @@
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
 			"Rev": "a06509502ca32565bdf74afc1e573050023f261c"
-		},
-		{
-			"ImportPath": "github.com/syndtr/gosnappy/snappy",
-			"Rev": "156a073208e131d7d2e212cb749feae7c339e846"
 		},
 		{
 			"ImportPath": "github.com/tendermint/ed25519",
