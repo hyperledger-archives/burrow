@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 func TestSignAndValidate(t *testing.T) {
@@ -25,7 +25,9 @@ func TestSignAndValidate(t *testing.T) {
 	}
 
 	// Mutate the signature, just one bit.
-	sig.(SignatureEd25519)[0] ^= byte(0x01)
+	sigEd := sig.(SignatureEd25519)
+	sigEd[0] ^= byte(0x01)
+	sig = Signature(sigEd)
 
 	if pubKey.VerifyBytes(msg, sig) {
 		t.Errorf("Account message signature verification should have failed but passed instead")
@@ -43,20 +45,20 @@ func TestBinaryDecode(t *testing.T) {
 	t.Logf("msg: %X, sig: %X", msg, sig)
 
 	buf, n, err := new(bytes.Buffer), new(int64), new(error)
-	binary.WriteBinary(sig, buf, n, err)
+	wire.WriteBinary(sig, buf, n, err)
 	if *err != nil {
 		t.Fatalf("Failed to write Signature: %v", err)
 	}
 
-	if len(buf.Bytes()) != ed25519.SignatureSize+3 {
-		// 1 byte TypeByte, 2 bytes length, 64 bytes signature bytes
+	if len(buf.Bytes()) != ed25519.SignatureSize+1 {
+		// 1 byte TypeByte, 64 bytes signature bytes
 		t.Fatalf("Unexpected signature write size: %v", len(buf.Bytes()))
 	}
 	if buf.Bytes()[0] != SignatureTypeEd25519 {
 		t.Fatalf("Unexpected signature type byte")
 	}
 
-	sig2, ok := binary.ReadBinary(SignatureEd25519{}, buf, n, err).(SignatureEd25519)
+	sig2, ok := wire.ReadBinary(SignatureEd25519{}, buf, n, err).(SignatureEd25519)
 	if !ok || *err != nil {
 		t.Fatalf("Failed to read Signature: %v", err)
 	}

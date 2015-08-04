@@ -94,7 +94,7 @@ func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	if len(tmConfig.GetString("seeds")) > 0 {
 		nd.DialSeed()
 	}
-	
+
 	if len(tmConfig.GetString("rpc_laddr")) > 0 {
 		nd.StartRPC()
 	}

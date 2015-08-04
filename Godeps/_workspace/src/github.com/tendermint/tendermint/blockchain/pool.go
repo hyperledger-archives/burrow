@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
@@ -34,6 +33,8 @@ var (
 */
 
 type BlockPool struct {
+	BaseService
+
 	// block requests
 	requestsMtx   sync.Mutex
 	requests      map[int]*bpRequest
@@ -48,12 +49,10 @@ type BlockPool struct {
 	requestsCh chan<- BlockRequest
 	timeoutsCh chan<- string
 	repeater   *RepeatTimer
-
-	running int32 // atomic
 }
 
 func NewBlockPool(start int, requestsCh chan<- BlockRequest, timeoutsCh chan<- string) *BlockPool {
-	return &BlockPool{
+	bp := &BlockPool{
 		peers: make(map[string]*bpPeer),
 
 		requests:      make(map[int]*bpRequest),
@@ -63,35 +62,28 @@ func NewBlockPool(start int, requestsCh chan<- BlockRequest, timeoutsCh chan<- s
 
 		requestsCh: requestsCh,
 		timeoutsCh: timeoutsCh,
-		repeater:   NewRepeatTimer("", requestIntervalMS*time.Millisecond),
-
-		running: 0,
+		repeater:   nil,
 	}
+	bp.BaseService = *NewBaseService(log, "BlockPool", bp)
+	return bp
 }
 
-func (pool *BlockPool) Start() {
-	if atomic.CompareAndSwapInt32(&pool.running, 0, 1) {
-		log.Info("Starting BlockPool")
-		go pool.run()
-	}
+func (pool *BlockPool) OnStart() {
+	pool.BaseService.OnStart()
+	pool.repeater = NewRepeatTimer("", requestIntervalMS*time.Millisecond)
+	go pool.run()
 }
 
-func (pool *BlockPool) Stop() {
-	if atomic.CompareAndSwapInt32(&pool.running, 1, 0) {
-		log.Info("Stopping BlockPool")
-		pool.repeater.Stop()
-	}
-}
-
-func (pool *BlockPool) IsRunning() bool {
-	return atomic.LoadInt32(&pool.running) == 1
+func (pool *BlockPool) OnStop() {
+	pool.BaseService.OnStop()
+	pool.repeater.Stop()
 }
 
 // Run spawns requests as needed.
 func (pool *BlockPool) run() {
 RUN_LOOP:
 	for {
-		if atomic.LoadInt32(&pool.running) == 0 {
+		if !pool.IsRunning() {
 			break RUN_LOOP
 		}
 		_, numPending, _ := pool.GetStatus()
@@ -136,11 +128,9 @@ func (pool *BlockPool) PopRequest() {
 	pool.requestsMtx.Lock() // Lock
 	defer pool.requestsMtx.Unlock()
 
-	// SANITY CHECK
 	if r := pool.requests[pool.height]; r == nil || r.block == nil {
-		panic("PopRequest() requires a valid block")
+		PanicSanity("PopRequest() requires a valid block")
 	}
-	// SANITY CHECK END
 
 	delete(pool.requests, pool.height)
 	pool.height++
@@ -153,11 +143,9 @@ func (pool *BlockPool) RedoRequest(height int) {
 	defer pool.requestsMtx.Unlock()
 
 	request := pool.requests[height]
-	// SANITY CHECK
 	if request.block == nil {
-		panic("Expected block to be non-nil")
+		PanicSanity("Expected block to be non-nil")
 	}
-	// SANITY CHECK END
 	// TODO: record this malfeasance
 	// maybe punish peer on switch (an invalid block!)
 	pool.RemovePeer(request.peerId) // Lock on peersMtx.
@@ -301,14 +289,14 @@ func (pool *BlockPool) makeNextRequest() {
 }
 
 func (pool *BlockPool) sendRequest(height int, peerId string) {
-	if atomic.LoadInt32(&pool.running) == 0 {
+	if !pool.IsRunning() {
 		return
 	}
 	pool.requestsCh <- BlockRequest{height, peerId}
 }
 
 func (pool *BlockPool) sendTimeout(peerId string) {
-	if atomic.LoadInt32(&pool.running) == 0 {
+	if !pool.IsRunning() {
 		return
 	}
 	pool.timeoutsCh <- peerId
@@ -354,12 +342,12 @@ func requestRoutine(pool *BlockPool, height int) {
 	PICK_LOOP:
 		for {
 			if !pool.IsRunning() {
-				log.Debug("BlockPool not running. Stopping requestRoutine", "height", height)
+				log.Info("BlockPool not running. Stopping requestRoutine", "height", height)
 				return
 			}
 			peer = pool.pickIncrAvailablePeer(height)
 			if peer == nil {
-				//log.Debug("No peers available", "height", height)
+				//log.Info("No peers available", "height", height)
 				time.Sleep(requestIntervalMS * time.Millisecond)
 				continue PICK_LOOP
 			}

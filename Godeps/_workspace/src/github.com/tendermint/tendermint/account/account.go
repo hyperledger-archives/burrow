@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // Signable is an interface for all signable things.
@@ -21,8 +22,7 @@ func SignBytes(chainID string, o Signable) []byte {
 	buf, n, err := new(bytes.Buffer), new(int64), new(error)
 	o.WriteSignBytes(chainID, buf, n, err)
 	if *err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(err)
+		PanicCrisis(err)
 	}
 	return buf.Bytes()
 }
@@ -36,7 +36,7 @@ func HashSignBytes(chainID string, o Signable) []byte {
 
 // Account resides in the application state, and is mutated by transactions
 // on the blockchain.
-// Serialized by binary.[read|write]Reflect
+// Serialized by wire.[read|write]Reflect
 type Account struct {
 	Address     []byte `json:"address"`
 	PubKey      PubKey `json:"pub_key"`
@@ -61,14 +61,14 @@ func (acc *Account) String() string {
 }
 
 func AccountEncoder(o interface{}, w io.Writer, n *int64, err *error) {
-	binary.WriteBinary(o.(*Account), w, n, err)
+	wire.WriteBinary(o.(*Account), w, n, err)
 }
 
 func AccountDecoder(r io.Reader, n *int64, err *error) interface{} {
-	return binary.ReadBinary(&Account{}, r, n, err)
+	return wire.ReadBinary(&Account{}, r, n, err)
 }
 
-var AccountCodec = binary.Codec{
+var AccountCodec = wire.Codec{
 	Encode: AccountEncoder,
 	Decode: AccountDecoder,
 }

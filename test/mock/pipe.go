@@ -2,8 +2,8 @@ package mock
 
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 )
@@ -65,7 +65,6 @@ func (this *MockPipe) Events() ep.EventEmitter {
 func (this *MockPipe) NameReg() ep.NameReg {
 	return this.namereg
 }
-
 
 func (this *MockPipe) Net() ep.Net {
 	return this.net
@@ -164,7 +163,6 @@ func (this *events) Subscribe(subId, event string, callback func(interface{})) (
 func (this *events) Unsubscribe(subId string) (bool, error) {
 	return true, nil
 }
-
 
 // NameReg
 type namereg struct {

@@ -9,9 +9,9 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 const (
@@ -36,10 +36,7 @@ func (part *Part) Hash() []byte {
 		return part.hash
 	} else {
 		hasher := ripemd160.New()
-		_, err := hasher.Write(part.Bytes)
-		if err != nil {
-			panic(err)
-		}
+		hasher.Write(part.Bytes) // doesn't err
 		part.hash = hasher.Sum(nil)
 		return part.hash
 	}
@@ -79,7 +76,7 @@ func (psh PartSetHeader) Equals(other PartSetHeader) bool {
 }
 
 func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"hash":"%X","total":%v}`, psh.Hash, psh.Total)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"hash":"%X","total":%v}`, psh.Hash, psh.Total)), w, n, err)
 }
 
 //-------------------------------------
@@ -226,7 +223,7 @@ func (ps *PartSet) IsComplete() bool {
 
 func (ps *PartSet) GetReader() io.Reader {
 	if !ps.IsComplete() {
-		panic("Cannot GetReader() on incomplete PartSet")
+		PanicSanity("Cannot GetReader() on incomplete PartSet")
 	}
 	buf := []byte{}
 	for _, part := range ps.parts {

@@ -1,4 +1,4 @@
-package binary
+package wire
 
 import (
 	"bytes"
@@ -15,8 +15,6 @@ type SimpleStruct struct {
 	Bytes  []byte
 	Time   time.Time
 }
-
-//-------------------------------------
 
 type Animal interface{}
 
@@ -265,6 +263,9 @@ func validateComplex2(o interface{}, t *testing.T) {
 
 type ComplexStructArray struct {
 	Animals []Animal
+	Bytes   [5]byte
+	Ints    [5]int
+	Array   SimpleArray
 }
 
 func constructComplexArray() interface{} {
@@ -287,6 +288,9 @@ func constructComplexArray() interface{} {
 				Bytes: []byte("hizz"),
 			},
 		},
+		Bytes: [5]byte{1, 10, 50, 100, 200},
+		Ints:  [5]int{1, 2, 3, 4, 5},
+		Array: SimpleArray([5]byte{1, 10, 50, 100, 200}),
 	}
 	return c
 }
@@ -352,7 +356,7 @@ func TestBinary(t *testing.T) {
 
 	for i, testCase := range testCases {
 
-		log.Info(fmt.Sprintf("Running test case %v", i))
+		log.Notice(fmt.Sprintf("Running test case %v", i))
 
 		// Construct an object
 		o := testCase.Constructor()
@@ -394,7 +398,7 @@ func TestJSON(t *testing.T) {
 
 	for i, testCase := range testCases {
 
-		log.Info(fmt.Sprintf("Running test case %v", i))
+		log.Notice(fmt.Sprintf("Running test case %v", i))
 
 		// Construct an object
 		o := testCase.Constructor()
@@ -463,4 +467,41 @@ func TestBadAlloc(t *testing.T) {
 	b.Write(data)
 	res := ReadBinary(instance, b, n, err)
 	fmt.Println(res, *err)
+}
+
+//------------------------------------------------------------------------------
+
+type SimpleArray [5]byte
+
+func TestSimpleArray(t *testing.T) {
+	var foo SimpleArray
+
+	// Type of pointer to array
+	rt := reflect.TypeOf(&foo)
+	fmt.Printf("rt: %v\n", rt) // *binary.SimpleArray
+
+	// Type of array itself.
+	// NOTE: normally this is acquired through other means
+	// like introspecting on method signatures, or struct fields.
+	rte := rt.Elem()
+	fmt.Printf("rte: %v\n", rte) // binary.SimpleArray
+
+	// Get a new pointer to the array
+	// NOTE: calling .Interface() is to get the actual value,
+	// instead of reflection values.
+	ptr := reflect.New(rte).Interface()
+	fmt.Printf("ptr: %v\n", ptr) // &[0 0 0 0 0]
+
+	// Make a simple int aray
+	fooArray := SimpleArray([5]byte{1, 10, 50, 100, 200})
+	fooBytes := BinaryBytes(fooArray)
+	fooReader := bytes.NewReader(fooBytes)
+
+	// Now you can read it.
+	n, err := new(int64), new(error)
+	it := ReadBinary(foo, fooReader, n, err).(SimpleArray)
+
+	if !bytes.Equal(it[:], fooArray[:]) {
+		t.Errorf("Expected %v but got %v", fooArray, it)
+	}
 }

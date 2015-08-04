@@ -5,15 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync/atomic"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 const (
@@ -39,6 +38,8 @@ type consensusReactor interface {
 
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
+	p2p.BaseReactor
+
 	sw         *p2p.Switch
 	state      *sm.State
 	store      *BlockStore
@@ -47,19 +48,15 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	lastBlock  *types.Block
-	quit       chan struct{}
-	running    uint32
 
 	evsw events.Fireable
 }
 
 func NewBlockchainReactor(state *sm.State, store *BlockStore, sync bool) *BlockchainReactor {
-	// SANITY CHECK
 	if state.LastBlockHeight != store.Height() &&
 		state.LastBlockHeight != store.Height()-1 { // XXX double check this logic.
-		panic(Fmt("state (%v) and store (%v) height mismatch", state.LastBlockHeight, store.Height()))
+		PanicSanity(Fmt("state (%v) and store (%v) height mismatch", state.LastBlockHeight, store.Height()))
 	}
-	// SANITY CHECK END
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -74,31 +71,22 @@ func NewBlockchainReactor(state *sm.State, store *BlockStore, sync bool) *Blockc
 		sync:       sync,
 		requestsCh: requestsCh,
 		timeoutsCh: timeoutsCh,
-		quit:       make(chan struct{}),
-		running:    uint32(0),
 	}
+	bcR.BaseReactor = *p2p.NewBaseReactor(log, "BlockchainReactor", bcR)
 	return bcR
 }
 
-// Implements Reactor
-func (bcR *BlockchainReactor) Start(sw *p2p.Switch) {
-	if atomic.CompareAndSwapUint32(&bcR.running, 0, 1) {
-		log.Info("Starting BlockchainReactor")
-		bcR.sw = sw
-		if bcR.sync {
-			bcR.pool.Start()
-			go bcR.poolRoutine()
-		}
+func (bcR *BlockchainReactor) OnStart() {
+	bcR.BaseReactor.OnStart()
+	if bcR.sync {
+		bcR.pool.Start()
+		go bcR.poolRoutine()
 	}
 }
 
-// Implements Reactor
-func (bcR *BlockchainReactor) Stop() {
-	if atomic.CompareAndSwapUint32(&bcR.running, 1, 0) {
-		log.Info("Stopping BlockchainReactor")
-		close(bcR.quit)
-		bcR.pool.Stop()
-	}
+func (bcR *BlockchainReactor) OnStop() {
+	bcR.BaseReactor.OnStop()
+	bcR.pool.Stop()
 }
 
 // Implements Reactor
@@ -132,7 +120,7 @@ func (bcR *BlockchainReactor) Receive(chId byte, src *p2p.Peer, msgBytes []byte)
 		return
 	}
 
-	log.Info("Received message", "msg", msg)
+	log.Notice("Received message", "msg", msg)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
@@ -177,7 +165,7 @@ FOR_LOOP:
 	for {
 		select {
 		case request := <-bcR.requestsCh: // chan BlockRequest
-			peer := bcR.sw.Peers().Get(request.PeerId)
+			peer := bcR.Switch.Peers().Get(request.PeerId)
 			if peer == nil {
 				// We can't assign the request.
 				continue FOR_LOOP
@@ -191,17 +179,17 @@ FOR_LOOP:
 			}
 		case peerId := <-bcR.timeoutsCh: // chan string
 			// Peer timed out.
-			peer := bcR.sw.Peers().Get(peerId)
+			peer := bcR.Switch.Peers().Get(peerId)
 			if peer != nil {
-				bcR.sw.StopPeerForError(peer, errors.New("BlockchainReactor Timeout"))
+				bcR.Switch.StopPeerForError(peer, errors.New("BlockchainReactor Timeout"))
 			}
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
 		case _ = <-switchToConsensusTicker.C:
 			height, numPending, numUnassigned := bcR.pool.GetStatus()
-			outbound, inbound, _ := bcR.sw.NumPeers()
-			log.Debug("Consensus ticker", "numUnassigned", numUnassigned, "numPending", numPending,
+			outbound, inbound, _ := bcR.Switch.NumPeers()
+			log.Info("Consensus ticker", "numUnassigned", numUnassigned, "numPending", numPending,
 				"total", len(bcR.pool.requests), "outbound", outbound, "inbound", inbound)
 			// NOTE: this condition is very strict right now. may need to weaken
 			// If all `maxPendingRequests` requests are unassigned
@@ -210,10 +198,10 @@ FOR_LOOP:
 			allUnassigned := numPending == numUnassigned
 			enoughPeers := outbound+inbound >= 3
 			if maxPending && allUnassigned && enoughPeers {
-				log.Info("Time to switch to consensus reactor!", "height", height)
+				log.Notice("Time to switch to consensus reactor!", "height", height)
 				bcR.pool.Stop()
 
-				conR := bcR.sw.Reactor("CONSENSUS").(consensusReactor)
+				conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
 				conR.SwitchToConsensus(bcR.state)
 
 				break FOR_LOOP
@@ -224,7 +212,7 @@ FOR_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
 				first, second := bcR.pool.PeekTwoBlocks()
-				//log.Debug("TrySync peeked", "first", first, "second", second)
+				//log.Info("TrySync peeked", "first", first, "second", second)
 				if first == nil || second == nil {
 					// We need both to sync the first block.
 					break SYNC_LOOP
@@ -235,7 +223,7 @@ FOR_LOOP:
 				err := bcR.state.BondedValidators.VerifyValidation(
 					bcR.state.ChainID, first.Hash(), firstPartsHeader, first.Height, second.LastValidation)
 				if err != nil {
-					log.Debug("error in validation", "error", err)
+					log.Info("error in validation", "error", err)
 					bcR.pool.RedoRequest(first.Height)
 					break SYNC_LOOP
 				} else {
@@ -243,26 +231,26 @@ FOR_LOOP:
 					err := sm.ExecBlock(bcR.state, first, firstPartsHeader)
 					if err != nil {
 						// TODO This is bad, are we zombie?
-						panic(Fmt("Failed to process committed block: %v", err))
+						PanicQ(Fmt("Failed to process committed block: %v", err))
 					}
 					bcR.store.SaveBlock(first, firstParts, second.LastValidation)
 					bcR.state.Save()
 				}
 			}
 			continue FOR_LOOP
-		case <-bcR.quit:
+		case <-bcR.Quit:
 			break FOR_LOOP
 		}
 	}
 }
 
 func (bcR *BlockchainReactor) BroadcastStatusResponse() error {
-	bcR.sw.Broadcast(BlockchainChannel, &bcStatusResponseMessage{bcR.store.Height()})
+	bcR.Switch.Broadcast(BlockchainChannel, &bcStatusResponseMessage{bcR.store.Height()})
 	return nil
 }
 
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
-	bcR.sw.Broadcast(BlockchainChannel, &bcStatusRequestMessage{bcR.store.Height()})
+	bcR.Switch.Broadcast(BlockchainChannel, &bcStatusRequestMessage{bcR.store.Height()})
 	return nil
 }
 
@@ -283,19 +271,19 @@ const (
 
 type BlockchainMessage interface{}
 
-var _ = binary.RegisterInterface(
+var _ = wire.RegisterInterface(
 	struct{ BlockchainMessage }{},
-	binary.ConcreteType{&bcBlockRequestMessage{}, msgTypeBlockRequest},
-	binary.ConcreteType{&bcBlockResponseMessage{}, msgTypeBlockResponse},
-	binary.ConcreteType{&bcStatusResponseMessage{}, msgTypeStatusResponse},
-	binary.ConcreteType{&bcStatusRequestMessage{}, msgTypeStatusRequest},
+	wire.ConcreteType{&bcBlockRequestMessage{}, msgTypeBlockRequest},
+	wire.ConcreteType{&bcBlockResponseMessage{}, msgTypeBlockResponse},
+	wire.ConcreteType{&bcStatusResponseMessage{}, msgTypeStatusResponse},
+	wire.ConcreteType{&bcStatusRequestMessage{}, msgTypeStatusRequest},
 )
 
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
 	n := new(int64)
 	r := bytes.NewReader(bz)
-	msg = binary.ReadBinary(struct{ BlockchainMessage }{}, r, n, &err).(struct{ BlockchainMessage }).BlockchainMessage
+	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, n, &err).(struct{ BlockchainMessage }).BlockchainMessage
 	return
 }
 

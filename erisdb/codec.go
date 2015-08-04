@@ -1,7 +1,7 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"io"
 	"io/ioutil"
@@ -20,13 +20,13 @@ func NewTCodec() rpc.Codec {
 func (this *TCodec) Encode(v interface{}, w io.Writer) error {
 	var err error
 	var n int64
-	binary.WriteJSON(v, w, &n, &err)
+	wire.WriteJSON(v, w, &n, &err)
 	return err
 }
 
 // Encode to a byte array.
 func (this *TCodec) EncodeBytes(v interface{}) ([]byte, error) {
-	return binary.JSONBytes(v), nil
+	return wire.JSONBytes(v), nil
 }
 
 // Decode from an io.Reader.
@@ -36,13 +36,13 @@ func (this *TCodec) Decode(v interface{}, r io.Reader) error {
 		return errR
 	}
 	var err error
-	binary.ReadJSON(v, bts, &err)
+	wire.ReadJSON(v, bts, &err)
 	return err
 }
 
 // Decode from a byte array.
 func (this *TCodec) DecodeBytes(v interface{}, bts []byte) error {
 	var err error
-	binary.ReadJSON(v, bts, &err)
+	wire.ReadJSON(v, bts, &err)
 	return err
 }

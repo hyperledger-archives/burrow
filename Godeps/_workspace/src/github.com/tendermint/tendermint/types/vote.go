@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -28,12 +28,12 @@ func (err *ErrVoteConflictingSignature) Error() string {
 
 // Represents a prevote, precommit, or commit vote from validators for consensus.
 type Vote struct {
-	Height     int                      `json:"height"`
-	Round      int                      `json:"round"`
-	Type       byte                     `json:"type"`
-	BlockHash  []byte                   `json:"block_hash"`  // empty if vote is nil.
-	BlockParts PartSetHeader            `json:"block_parts"` // zero if vote is nil.
-	Signature  account.SignatureEd25519 `json:"signature"`
+	Height     int                  `json:"height"`
+	Round      int                  `json:"round"`
+	Type       byte                 `json:"type"`
+	BlockHash  []byte               `json:"block_hash"`  // empty if vote is nil.
+	BlockParts PartSetHeader        `json:"block_parts"` // zero if vote is nil.
+	Signature  acm.SignatureEd25519 `json:"signature"`
 }
 
 // Types of votes
@@ -43,9 +43,9 @@ const (
 )
 
 func (vote *Vote) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"vote":{"block_hash":"%X","block_parts":%v`, vote.BlockHash, vote.BlockParts)), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"height":%v,"round":%v,"type":%v}}`, vote.Height, vote.Round, vote.Type)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"vote":{"block_hash":"%X","block_parts":%v`, vote.BlockHash, vote.BlockParts)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"height":%v,"round":%v,"type":%v}}`, vote.Height, vote.Round, vote.Type)), w, n, err)
 }
 
 func (vote *Vote) Copy() *Vote {
@@ -64,7 +64,7 @@ func (vote *Vote) String() string {
 	case VoteTypePrecommit:
 		typeString = "Precommit"
 	default:
-		panic("Unknown vote type")
+		PanicSanity("Unknown vote type")
 	}
 
 	return fmt.Sprintf("Vote{%v/%02d/%v(%v) %X#%v %v}", vote.Height, vote.Round, vote.Type, typeString, Fingerprint(vote.BlockHash), vote.BlockParts, vote.Signature)

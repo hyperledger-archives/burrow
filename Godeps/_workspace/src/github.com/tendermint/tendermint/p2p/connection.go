@@ -11,8 +11,8 @@ import (
 	"time"
 
 	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/mxk/go1/flowcontrol"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary" //"github.com/tendermint/log15"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire" //"github.com/tendermint/log15"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 	flushThrottleMS           = 50
 	idleTimeoutMinutes        = 5
 	updateStatsSeconds        = 2
-	pingTimeoutMinutes        = 2
+	pingTimeoutSeconds        = 40
 	defaultSendRate           = 51200 // 5Kb/s
 	defaultRecvRate           = 51200 // 5Kb/s
 	defaultSendQueueCapacity  = 1
@@ -50,7 +50,7 @@ There are two methods for sending messages:
 
 `Send(chId, msg)` is a blocking call that waits until `msg` is successfully queued
 for the channel with the given id byte `chId`, or until the request times out.
-The message `msg` is serialized using the `tendermint/binary` submodule's
+The message `msg` is serialized using the `tendermint/wire` submodule's
 `WriteBinary()` reflection routine.
 
 `TrySend(chId, msg)` is a nonblocking call that returns false if the channel's
@@ -59,26 +59,27 @@ queue is full.
 Inbound message bytes are handled with an onReceive callback function.
 */
 type MConnection struct {
-	conn         net.Conn
-	bufReader    *bufio.Reader
-	bufWriter    *bufio.Writer
-	sendMonitor  *flow.Monitor
-	recvMonitor  *flow.Monitor
-	sendRate     int64
-	recvRate     int64
-	flushTimer   *ThrottleTimer // flush writes as necessary but throttled.
-	send         chan struct{}
+	BaseService
+
+	conn        net.Conn
+	bufReader   *bufio.Reader
+	bufWriter   *bufio.Writer
+	sendMonitor *flow.Monitor
+	recvMonitor *flow.Monitor
+	sendRate    int64
+	recvRate    int64
+	send        chan struct{}
+	pong        chan struct{}
+	channels    []*Channel
+	channelsIdx map[byte]*Channel
+	onReceive   receiveCbFunc
+	onError     errorCbFunc
+	errored     uint32
+
 	quit         chan struct{}
-	pingTimer    *RepeatTimer // send pings periodically
-	pong         chan struct{}
-	chStatsTimer *RepeatTimer // update channel stats periodically
-	channels     []*Channel
-	channelsIdx  map[byte]*Channel
-	onReceive    receiveCbFunc
-	onError      errorCbFunc
-	started      uint32
-	stopped      uint32
-	errored      uint32
+	flushTimer   *ThrottleTimer // flush writes as necessary but throttled.
+	pingTimer    *RepeatTimer   // send pings periodically
+	chStatsTimer *RepeatTimer   // update channel stats periodically
 
 	LocalAddress  *NetAddress
 	RemoteAddress *NetAddress
@@ -87,21 +88,24 @@ type MConnection struct {
 func NewMConnection(conn net.Conn, chDescs []*ChannelDescriptor, onReceive receiveCbFunc, onError errorCbFunc) *MConnection {
 
 	mconn := &MConnection{
-		conn:          conn,
-		bufReader:     bufio.NewReaderSize(conn, minReadBufferSize),
-		bufWriter:     bufio.NewWriterSize(conn, minWriteBufferSize),
-		sendMonitor:   flow.New(0, 0),
-		recvMonitor:   flow.New(0, 0),
-		sendRate:      defaultSendRate,
-		recvRate:      defaultRecvRate,
-		flushTimer:    NewThrottleTimer("flush", flushThrottleMS*time.Millisecond),
-		send:          make(chan struct{}, 1),
-		quit:          make(chan struct{}),
-		pingTimer:     NewRepeatTimer("ping", pingTimeoutMinutes*time.Minute),
-		pong:          make(chan struct{}),
-		chStatsTimer:  NewRepeatTimer("chStats", updateStatsSeconds*time.Second),
-		onReceive:     onReceive,
-		onError:       onError,
+		conn:        conn,
+		bufReader:   bufio.NewReaderSize(conn, minReadBufferSize),
+		bufWriter:   bufio.NewWriterSize(conn, minWriteBufferSize),
+		sendMonitor: flow.New(0, 0),
+		recvMonitor: flow.New(0, 0),
+		sendRate:    defaultSendRate,
+		recvRate:    defaultRecvRate,
+		send:        make(chan struct{}, 1),
+		pong:        make(chan struct{}),
+		onReceive:   onReceive,
+		onError:     onError,
+
+		// Initialized in Start()
+		quit:         nil,
+		flushTimer:   nil,
+		pingTimer:    nil,
+		chStatsTimer: nil,
+
 		LocalAddress:  NewNetAddress(conn.LocalAddr()),
 		RemoteAddress: NewNetAddress(conn.RemoteAddr()),
 	}
@@ -118,32 +122,35 @@ func NewMConnection(conn net.Conn, chDescs []*ChannelDescriptor, onReceive recei
 	mconn.channels = channels
 	mconn.channelsIdx = channelsIdx
 
+	mconn.BaseService = *NewBaseService(log, "MConnection", mconn)
+
 	return mconn
 }
 
-// .Start() begins multiplexing packets to and from "channels".
-func (c *MConnection) Start() {
-	if atomic.CompareAndSwapUint32(&c.started, 0, 1) {
-		log.Debug("Starting MConnection", "connection", c)
-		go c.sendRoutine()
-		go c.recvRoutine()
-	}
+func (c *MConnection) OnStart() {
+	c.BaseService.OnStart()
+	c.quit = make(chan struct{})
+	c.flushTimer = NewThrottleTimer("flush", flushThrottleMS*time.Millisecond)
+	c.pingTimer = NewRepeatTimer("ping", pingTimeoutSeconds*time.Second)
+	c.chStatsTimer = NewRepeatTimer("chStats", updateStatsSeconds*time.Second)
+	go c.sendRoutine()
+	go c.recvRoutine()
 }
 
-func (c *MConnection) Stop() {
-	if atomic.CompareAndSwapUint32(&c.stopped, 0, 1) {
-		log.Debug("Stopping MConnection", "connection", c)
+func (c *MConnection) OnStop() {
+	c.BaseService.OnStop()
+	c.flushTimer.Stop()
+	c.pingTimer.Stop()
+	c.chStatsTimer.Stop()
+	if c.quit != nil {
 		close(c.quit)
-		c.conn.Close()
-		c.flushTimer.Stop()
-		c.chStatsTimer.Stop()
-		c.pingTimer.Stop()
-		// We can't close pong safely here because
-		// recvRoutine may write to it after we've stopped.
-		// Though it doesn't need to get closed at all,
-		// we close it @ recvRoutine.
-		// close(c.pong)
 	}
+	c.conn.Close()
+	// We can't close pong safely here because
+	// recvRoutine may write to it after we've stopped.
+	// Though it doesn't need to get closed at all,
+	// we close it @ recvRoutine.
+	// close(c.pong)
 }
 
 func (c *MConnection) String() string {
@@ -178,11 +185,11 @@ func (c *MConnection) stopForError(r interface{}) {
 
 // Queues a message to be sent to channel.
 func (c *MConnection) Send(chId byte, msg interface{}) bool {
-	if atomic.LoadUint32(&c.stopped) == 1 {
+	if !c.IsRunning() {
 		return false
 	}
 
-	log.Debug("Send", "channel", chId, "connection", c, "msg", msg) //, "bytes", binary.BinaryBytes(msg))
+	log.Info("Send", "channel", chId, "conn", c, "msg", msg) //, "bytes", wire.BinaryBytes(msg))
 
 	// Send message to channel.
 	channel, ok := c.channelsIdx[chId]
@@ -191,7 +198,7 @@ func (c *MConnection) Send(chId byte, msg interface{}) bool {
 		return false
 	}
 
-	success := channel.sendBytes(binary.BinaryBytes(msg))
+	success := channel.sendBytes(wire.BinaryBytes(msg))
 	if success {
 		// Wake up sendRoutine if necessary
 		select {
@@ -199,7 +206,7 @@ func (c *MConnection) Send(chId byte, msg interface{}) bool {
 		default:
 		}
 	} else {
-		log.Warn("Send failed", "channel", chId, "connection", c, "msg", msg)
+		log.Warn("Send failed", "channel", chId, "conn", c, "msg", msg)
 	}
 	return success
 }
@@ -207,11 +214,11 @@ func (c *MConnection) Send(chId byte, msg interface{}) bool {
 // Queues a message to be sent to channel.
 // Nonblocking, returns true if successful.
 func (c *MConnection) TrySend(chId byte, msg interface{}) bool {
-	if atomic.LoadUint32(&c.stopped) == 1 {
+	if !c.IsRunning() {
 		return false
 	}
 
-	log.Debug("TrySend", "channel", chId, "connection", c, "msg", msg)
+	log.Info("TrySend", "channel", chId, "conn", c, "msg", msg)
 
 	// Send message to channel.
 	channel, ok := c.channelsIdx[chId]
@@ -220,7 +227,7 @@ func (c *MConnection) TrySend(chId byte, msg interface{}) bool {
 		return false
 	}
 
-	ok = channel.trySendBytes(binary.BinaryBytes(msg))
+	ok = channel.trySendBytes(wire.BinaryBytes(msg))
 	if ok {
 		// Wake up sendRoutine if necessary
 		select {
@@ -233,7 +240,7 @@ func (c *MConnection) TrySend(chId byte, msg interface{}) bool {
 }
 
 func (c *MConnection) CanSend(chId byte) bool {
-	if atomic.LoadUint32(&c.stopped) == 1 {
+	if !c.IsRunning() {
 		return false
 	}
 
@@ -263,13 +270,13 @@ FOR_LOOP:
 				channel.updateStats()
 			}
 		case <-c.pingTimer.Ch:
-			log.Debug("Send Ping")
-			binary.WriteByte(packetTypePing, c.bufWriter, &n, &err)
+			log.Info("Send Ping")
+			wire.WriteByte(packetTypePing, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.pong:
-			log.Debug("Send Pong")
-			binary.WriteByte(packetTypePong, c.bufWriter, &n, &err)
+			log.Info("Send Pong")
+			wire.WriteByte(packetTypePong, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.quit:
@@ -286,11 +293,11 @@ FOR_LOOP:
 			}
 		}
 
-		if atomic.LoadUint32(&c.stopped) == 1 {
+		if !c.IsRunning() {
 			break FOR_LOOP
 		}
 		if err != nil {
-			log.Warn("Connection failed @ sendRoutine", "connection", c, "error", err)
+			log.Warn("Connection failed @ sendRoutine", "conn", c, "error", err)
 			c.stopForError(err)
 			break FOR_LOOP
 		}
@@ -339,7 +346,7 @@ func (c *MConnection) sendMsgPacket() bool {
 	if leastChannel == nil {
 		return true
 	} else {
-		// log.Debug("Found a msgPacket to send")
+		// log.Info("Found a msgPacket to send")
 	}
 
 	// Make & send a msgPacket from this channel
@@ -368,7 +375,7 @@ FOR_LOOP:
 		/*
 			// Peek into bufReader for debugging
 			if numBytes := c.bufReader.Buffered(); numBytes > 0 {
-				log.Debug("Peek connection buffer", "numBytes", numBytes, "bytes", log15.Lazy{func() []byte {
+				log.Info("Peek connection buffer", "numBytes", numBytes, "bytes", log15.Lazy{func() []byte {
 					bytes, err := c.bufReader.Peek(MinInt(numBytes, 100))
 					if err == nil {
 						return bytes
@@ -383,11 +390,11 @@ FOR_LOOP:
 		// Read packet type
 		var n int64
 		var err error
-		pktType := binary.ReadByte(c.bufReader, &n, &err)
+		pktType := wire.ReadByte(c.bufReader, &n, &err)
 		c.recvMonitor.Update(int(n))
 		if err != nil {
-			if atomic.LoadUint32(&c.stopped) != 1 {
-				log.Warn("Connection failed @ recvRoutine (reading byte)", "connection", c, "error", err)
+			if c.IsRunning() {
+				log.Warn("Connection failed @ recvRoutine (reading byte)", "conn", c, "error", err)
 				c.stopForError(err)
 			}
 			break FOR_LOOP
@@ -397,30 +404,30 @@ FOR_LOOP:
 		switch pktType {
 		case packetTypePing:
 			// TODO: prevent abuse, as they cause flush()'s.
-			log.Debug("Receive Ping")
+			log.Info("Receive Ping")
 			c.pong <- struct{}{}
 		case packetTypePong:
 			// do nothing
-			log.Debug("Receive Pong")
+			log.Info("Receive Pong")
 		case packetTypeMsg:
 			pkt, n, err := msgPacket{}, int64(0), error(nil)
-			binary.ReadBinaryPtr(&pkt, c.bufReader, &n, &err)
+			wire.ReadBinaryPtr(&pkt, c.bufReader, &n, &err)
 			c.recvMonitor.Update(int(n))
 			if err != nil {
-				if atomic.LoadUint32(&c.stopped) != 1 {
-					log.Warn("Connection failed @ recvRoutine", "connection", c, "error", err)
+				if c.IsRunning() {
+					log.Warn("Connection failed @ recvRoutine", "conn", c, "error", err)
 					c.stopForError(err)
 				}
 				break FOR_LOOP
 			}
 			channel, ok := c.channelsIdx[pkt.ChannelId]
 			if !ok || channel == nil {
-				panic(Fmt("Unknown channel %X", pkt.ChannelId))
+				PanicQ(Fmt("Unknown channel %X", pkt.ChannelId))
 			}
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {
-				if atomic.LoadUint32(&c.stopped) != 1 {
-					log.Warn("Connection failed @ recvRoutine", "connection", c, "error", err)
+				if c.IsRunning() {
+					log.Warn("Connection failed @ recvRoutine", "conn", c, "error", err)
 					c.stopForError(err)
 				}
 				break FOR_LOOP
@@ -430,7 +437,7 @@ FOR_LOOP:
 				c.onReceive(pkt.ChannelId, msgBytes)
 			}
 		default:
-			panic(Fmt("Unknown message type %X", pktType))
+			PanicSanity(Fmt("Unknown message type %X", pktType))
 		}
 
 		// TODO: shouldn't this go in the sendRoutine?
@@ -480,7 +487,7 @@ type Channel struct {
 func newChannel(conn *MConnection, desc *ChannelDescriptor) *Channel {
 	desc.FillDefaults()
 	if desc.Priority <= 0 {
-		panic("Channel default priority must be a postive integer")
+		PanicSanity("Channel default priority must be a postive integer")
 	}
 	return &Channel{
 		conn:      conn,
@@ -566,8 +573,8 @@ func (ch *Channel) nextMsgPacket() msgPacket {
 func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int64, err error) {
 	packet := ch.nextMsgPacket()
 	log.Debug("Write Msg Packet", "conn", ch.conn, "packet", packet)
-	binary.WriteByte(packetTypeMsg, w, &n, &err)
-	binary.WriteBinary(packet, w, &n, &err)
+	wire.WriteByte(packetTypeMsg, w, &n, &err)
+	wire.WriteBinary(packet, w, &n, &err)
 	if err != nil {
 		ch.recentlySent += n
 	}
@@ -578,8 +585,8 @@ func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int64, err error) {
 // Not goroutine-safe
 func (ch *Channel) recvMsgPacket(packet msgPacket) ([]byte, error) {
 	log.Debug("Read Msg Packet", "conn", ch.conn, "packet", packet)
-	if binary.MaxBinaryReadSize < len(ch.recving)+len(packet.Bytes) {
-		return nil, binary.ErrBinaryReadSizeOverflow
+	if wire.MaxBinaryReadSize < len(ch.recving)+len(packet.Bytes) {
+		return nil, wire.ErrBinaryReadSizeOverflow
 	}
 	ch.recving = append(ch.recving, packet.Bytes...)
 	if packet.EOF == byte(0x01) {

@@ -95,6 +95,19 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	return v
 }
 
+func (vm *VM) fireCallEvent(exception *string, output *[]byte, caller, callee *Account, input []byte, value int64, gas *int64) {
+	// fire the post call event (including exception if applicable)
+	if vm.evc != nil {
+		vm.evc.FireEvent(types.EventStringAccCall(callee.Address.Postfix(20)), types.EventMsgCall{
+			&types.CallData{caller.Address.Postfix(20), callee.Address.Postfix(20), input, value, *gas},
+			vm.origin.Postfix(20),
+			vm.txid,
+			*output,
+			*exception,
+		})
+	}
+}
+
 // CONTRACT appState is aware of caller and callee, so we can just mutate them.
 // value: To be transferred from caller to callee. Refunded upon error.
 // gas:   Available gas. No refunds for gas.
@@ -102,30 +115,8 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
 
 	exception := new(string)
-	defer func() {
-		if vm.evc != nil {
-			vm.evc.FireEvent(types.EventStringAccReceive(callee.Address.Postfix(20)), types.EventMsgCall{
-				&types.CallData{caller.Address.Postfix(20), callee.Address.Postfix(20), input, value, *gas},
-				vm.origin.Postfix(20),
-				vm.txid,
-				output,
-				*exception,
-			})
-		}
-	}()
-
-	// SNATIVE ACCESS
-	// if code is empty, callee may be snative contract
-	if len(code) == 0 {
-		if snativeContract, ok := RegisteredSNativeContracts[callee.Address]; ok {
-			output, err = snativeContract(vm.appState, caller, input)
-			if err != nil {
-				*exception = err.Error()
-			}
-			return
-		}
-	}
-	// SNATIVE ACCESS END
+	// fire the post call event (including exception if applicable)
+	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
 
 	if err = transfer(caller, callee, value); err != nil {
 		*exception = err.Error()
@@ -141,12 +132,24 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas
 			err := transfer(callee, caller, value)
 			if err != nil {
 				// data has been corrupted in ram
-				panic("Could not return value to caller")
+				PanicCrisis("Could not return value to caller")
 			}
 		}
 	}
 
 	return
+}
+
+// Try to deduct gasToUse from gasLeft.  If ok return false, otherwise
+// set err and return true.
+func useGasNegative(gasLeft *int64, gasToUse int64, err *error) bool {
+	if *gasLeft >= gasToUse {
+		*gasLeft -= gasToUse
+		return false
+	} else if *err == nil {
+		*err = ErrInsufficientGas
+	}
+	return true
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
@@ -157,12 +160,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 		pc     int64 = 0
 		stack        = NewStack(dataStackCapacity, gas, &err)
 		memory       = make([]byte, memoryCapacity)
-		ok           = false // convenience
 	)
 
 	for {
-		// If there is an error, return
-		if err != nil {
+
+		// Use BaseOp gas.
+		if useGasNegative(gas, GasBaseOp, &err) {
 			return nil, err
 		}
 
@@ -433,8 +436,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X\n", res)
 
 		case SHA3: // 0x20
-			if ok = useGas(gas, GasSha3); !ok {
-				return nil, firstErr(err, ErrInsufficientGas)
+			if useGasNegative(gas, GasSha3, &err) {
+				return nil, err
 			}
 			offset, size := stack.Pop64(), stack.Pop64()
 			data, ok := subslice(memory, offset, size)
@@ -451,8 +454,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case BALANCE: // 0x31
 			addr := stack.Pop()
-			if ok = useGas(gas, GasGetAccount); !ok {
-				return nil, firstErr(err, ErrInsufficientGas)
+			if useGasNegative(gas, GasGetAccount, &err) {
+				return nil, err
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
@@ -529,8 +532,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case EXTCODESIZE: // 0x3B
 			addr := stack.Pop()
-			if ok = useGas(gas, GasGetAccount); !ok {
-				return nil, firstErr(err, ErrInsufficientGas)
+			if useGasNegative(gas, GasGetAccount, &err) {
+				return nil, err
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
@@ -543,8 +546,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case EXTCODECOPY: // 0x3C
 			addr := stack.Pop()
-			if ok = useGas(gas, GasGetAccount); !ok {
-				return nil, firstErr(err, ErrInsufficientGas)
+			if useGasNegative(gas, GasGetAccount, &err) {
+				return nil, err
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
@@ -588,8 +591,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => %v\n", vm.params.GasLimit)
 
 		case POP: // 0x50
-			stack.Pop()
-			dbg.Printf(" => %v\n", vm.params.GasLimit)
+			popped := stack.Pop()
+			dbg.Printf(" => 0x%X\n", popped)
 
 		case MLOAD: // 0x51
 			offset := stack.Pop64()
@@ -625,8 +628,10 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
+			if useGasNegative(gas, GasStorageUpdate, &err) {
+				return nil, err
+			}
 			vm.appState.SetStorage(callee.Address, loc, data)
-			useGas(gas, GasStorageUpdate)
 			dbg.Printf(" {0x%X : 0x%X}\n", loc, data)
 
 		case JUMP: // 0x56
@@ -759,13 +764,20 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			// Begin execution
 			var ret []byte
 			var err error
-			if nativeContract := nativeContracts[addr]; nativeContract != nil {
+			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
-				ret, err = nativeContract(args, &gasLimit)
+				ret, err = nativeContract(vm.appState, callee, args, &gasLimit)
+
+				// for now we fire the Call event. maybe later we'll fire more particulars
+				var exception string
+				if err != nil {
+					exception = err.Error()
+				}
+				vm.fireCallEvent(&exception, &ret, callee, &Account{Address: addr}, args, value, gas)
 			} else {
 				// EVM contract
-				if ok = useGas(gas, GasGetAccount); !ok {
-					return nil, firstErr(err, ErrInsufficientGas)
+				if useGasNegative(gas, GasGetAccount, &err) {
+					return nil, err
 				}
 				acc := vm.appState.GetAccount(addr)
 				// since CALL is used also for sending funds,
@@ -779,19 +791,18 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
 				} else {
 					if acc == nil {
-						if _, ok := RegisteredSNativeContracts[addr]; ok {
-							acc = &Account{Address: addr}
-						} else {
-							// if we have not seen the account before, create it
-							// so we can send funds
-							if !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
-								return nil, ErrPermission{"create_account"}
-							}
-							acc = &Account{Address: addr}
+						// nil account means we're sending funds to a new account
+						if !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
+							return nil, ErrPermission{"create_account"}
 						}
+						acc = &Account{Address: addr}
 						vm.appState.UpdateAccount(acc)
+						// send funds to new account
+						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
+					} else {
+						// call standard contract
+						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 					}
-					ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 				}
 			}
 
@@ -824,8 +835,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case SUICIDE: // 0xFF
 			addr := stack.Pop()
-			if ok = useGas(gas, GasGetAccount); !ok {
-				return nil, firstErr(err, ErrInsufficientGas)
+			if useGasNegative(gas, GasGetAccount, &err) {
+				return nil, err
 			}
 			// TODO if the receiver is , then make it the fee.
 			receiver := vm.appState.GetAccount(addr)
@@ -893,15 +904,6 @@ func firstErr(errA, errB error) error {
 		return errA
 	} else {
 		return errB
-	}
-}
-
-func useGas(gas *int64, gasToUse int64) bool {
-	if *gas > gasToUse {
-		*gas -= gasToUse
-		return true
-	} else {
-		return false
 	}
 }
 

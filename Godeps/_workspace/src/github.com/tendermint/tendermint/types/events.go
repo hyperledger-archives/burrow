@@ -14,12 +14,16 @@ func EventStringAccOutput(addr []byte) string {
 	return fmt.Sprintf("Acc/%X/Output", addr)
 }
 
-func EventStringAccReceive(addr []byte) string {
-	return fmt.Sprintf("Acc/%X/Receive", addr)
+func EventStringAccCall(addr []byte) string {
+	return fmt.Sprintf("Acc/%X/Call", addr)
 }
 
 func EventStringLogEvent(addr []byte) string {
 	return fmt.Sprintf("Log/%X", addr)
+}
+
+func EventStringPermissions(name string) string {
+	return fmt.Sprintf("Permissions/%s", name)
 }
 
 func EventStringBond() string {

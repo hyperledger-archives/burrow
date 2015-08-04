@@ -137,20 +137,22 @@ var testDataJson = `{
     "output": {
       "accounts": [
         {
-          "address": "0000000000000000000000000000000000000000",
-          "balance": 1337,
-          "code": "",
-          "permissions": {
-            "base": {
-              "perms": 126,
-              "set": 1095216660607
-            },
-            "roles": []
-          },
-          "pub_key": null,
-          "sequence": 0,
-          "storage_root": ""
-        },
+	      "address": "0000000000000000000000000000000000000000",
+	      "pub_key": null,
+	      "sequence": 0,
+	      "balance": 1337,
+	      "code": "",
+	      "storage_root": "",
+	      "permissions": {
+	        "base": {
+	          "perms": 2302,
+	          "set": 16383
+	        },
+	        "roles": [
+	          
+	        ]
+	      }
+	    },
         {
           "address": "000000000000000000000000000000000000000D",
           "pub_key": null,

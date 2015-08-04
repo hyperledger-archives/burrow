@@ -12,7 +12,6 @@ import (
 	"net"
 	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
@@ -74,19 +73,17 @@ const (
 
 /* AddrBook - concurrency safe peer address manager */
 type AddrBook struct {
-	filePath string
+	QuitService
 
 	mtx        sync.Mutex
+	filePath   string
 	rand       *rand.Rand
 	key        string
 	ourAddrs   map[string]*NetAddress
 	addrLookup map[string]*knownAddress // new & old
 	addrNew    []map[string]*knownAddress
 	addrOld    []map[string]*knownAddress
-	started    uint32
-	stopped    uint32
 	wg         sync.WaitGroup
-	quit       chan struct{}
 	nOld       int
 	nNew       int
 }
@@ -98,15 +95,15 @@ const (
 
 // Use Start to begin processing asynchronous address updates.
 func NewAddrBook(filePath string) *AddrBook {
-	am := AddrBook{
+	am := &AddrBook{
 		rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
 		ourAddrs:   make(map[string]*NetAddress),
 		addrLookup: make(map[string]*knownAddress),
-		quit:       make(chan struct{}),
 		filePath:   filePath,
 	}
 	am.init()
-	return &am
+	am.QuitService = *NewQuitService(log, "AddrBook", am)
+	return am
 }
 
 // When modifying this, don't forget to update loadFromFile()
@@ -124,27 +121,22 @@ func (a *AddrBook) init() {
 	}
 }
 
-func (a *AddrBook) Start() {
-	if atomic.CompareAndSwapUint32(&a.started, 0, 1) {
-		log.Info("Starting AddrBook")
-		a.loadFromFile(a.filePath)
-		a.wg.Add(1)
-		go a.saveRoutine()
-	}
+func (a *AddrBook) OnStart() {
+	a.QuitService.OnStart()
+	a.loadFromFile(a.filePath)
+	a.wg.Add(1)
+	go a.saveRoutine()
 }
 
-func (a *AddrBook) Stop() {
-	if atomic.CompareAndSwapUint32(&a.stopped, 0, 1) {
-		log.Info("Stopping AddrBook")
-		close(a.quit)
-		a.wg.Wait()
-	}
+func (a *AddrBook) OnStop() {
+	a.QuitService.OnStop()
+	a.wg.Wait()
 }
 
 func (a *AddrBook) AddOurAddress(addr *NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	log.Debug("Add our address to book", "addr", addr)
+	log.Info("Add our address to book", "addr", addr)
 	a.ourAddrs[addr.String()] = addr
 }
 
@@ -159,7 +151,7 @@ func (a *AddrBook) OurAddresses() []*NetAddress {
 func (a *AddrBook) AddAddress(addr *NetAddress, src *NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	log.Debug("Add address to book", "addr", addr, "src", src)
+	log.Info("Add address to book", "addr", addr, "src", src)
 	a.addAddress(addr, src)
 }
 
@@ -210,7 +202,7 @@ func (a *AddrBook) PickAddress(newBias int) *NetAddress {
 			}
 			randIndex--
 		}
-		panic("Should not happen")
+		PanicSanity("Should not happen")
 	} else {
 		// pick random New bucket.
 		var bucket map[string]*knownAddress = nil
@@ -225,7 +217,7 @@ func (a *AddrBook) PickAddress(newBias int) *NetAddress {
 			}
 			randIndex--
 		}
-		panic("Should not happen")
+		PanicSanity("Should not happen")
 	}
 	return nil
 }
@@ -342,14 +334,14 @@ func (a *AddrBook) loadFromFile(filePath string) bool {
 	// Load addrBookJSON{}
 	r, err := os.Open(filePath)
 	if err != nil {
-		panic(Fmt("Error opening file %s: %v", filePath, err))
+		PanicCrisis(Fmt("Error opening file %s: %v", filePath, err))
 	}
 	defer r.Close()
 	aJSON := &addrBookJSON{}
 	dec := json.NewDecoder(r)
 	err = dec.Decode(aJSON)
 	if err != nil {
-		panic(Fmt("Error reading file %s: %v", filePath, err))
+		PanicCrisis(Fmt("Error reading file %s: %v", filePath, err))
 	}
 
 	// Restore all the fields...
@@ -379,16 +371,16 @@ out:
 	for {
 		select {
 		case <-dumpAddressTicker.C:
-			log.Debug("Saving AddrBook to file", "size", a.Size())
+			log.Info("Saving AddrBook to file", "size", a.Size())
 			a.saveToFile(a.filePath)
-		case <-a.quit:
+		case <-a.Quit:
 			break out
 		}
 	}
 	dumpAddressTicker.Stop()
 	a.saveToFile(a.filePath)
 	a.wg.Done()
-	log.Info("Address handler done")
+	log.Notice("Address handler done")
 }
 
 func (a *AddrBook) getBucket(bucketType byte, bucketIdx int) map[string]*knownAddress {
@@ -398,7 +390,8 @@ func (a *AddrBook) getBucket(bucketType byte, bucketIdx int) map[string]*knownAd
 	case bucketTypeOld:
 		return a.addrOld[bucketIdx]
 	default:
-		panic("Should not happen")
+		PanicSanity("Should not happen")
+		return nil
 	}
 }
 
@@ -421,7 +414,7 @@ func (a *AddrBook) addToNewBucket(ka *knownAddress, bucketIdx int) bool {
 
 	// Enforce max addresses.
 	if len(bucket) > newBucketSize {
-		log.Info("new bucket is full, expiring old ")
+		log.Notice("new bucket is full, expiring old ")
 		a.expireNew(bucketIdx)
 	}
 
@@ -549,7 +542,7 @@ func (a *AddrBook) addAddress(addr, src *NetAddress) {
 	bucket := a.calcNewBucket(addr, src)
 	a.addToNewBucket(ka, bucket)
 
-	log.Info("Added new address", "address", addr, "total", a.size())
+	log.Notice("Added new address", "address", addr, "total", a.size())
 }
 
 // Make space in the new buckets by expiring the really bad entries.
@@ -558,7 +551,7 @@ func (a *AddrBook) expireNew(bucketIdx int) {
 	for addrStr, ka := range a.addrNew[bucketIdx] {
 		// If an entry is bad, throw it away
 		if ka.isBad() {
-			log.Info(Fmt("expiring bad address %v", addrStr))
+			log.Notice(Fmt("expiring bad address %v", addrStr))
 			a.removeFromBucket(ka, bucketTypeNew, bucketIdx)
 			return
 		}

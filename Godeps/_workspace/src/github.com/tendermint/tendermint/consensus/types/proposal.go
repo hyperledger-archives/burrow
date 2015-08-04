@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -17,11 +17,11 @@ var (
 )
 
 type Proposal struct {
-	Height           int                      `json:"height"`
-	Round            int                      `json:"round"`
-	BlockPartsHeader types.PartSetHeader      `json:"block_parts_header"`
-	POLRound         int                      `json:"pol_round"` // -1 if null.
-	Signature        account.SignatureEd25519 `json:"signature"`
+	Height           int                  `json:"height"`
+	Round            int                  `json:"round"`
+	BlockPartsHeader types.PartSetHeader  `json:"block_parts_header"`
+	POLRound         int                  `json:"pol_round"` // -1 if null.
+	Signature        acm.SignatureEd25519 `json:"signature"`
 }
 
 func NewProposal(height int, round int, blockPartsHeader types.PartSetHeader, polRound int) *Proposal {
@@ -39,9 +39,9 @@ func (p *Proposal) String() string {
 }
 
 func (p *Proposal) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
-	binary.WriteTo([]byte(`,"proposal":{"block_parts_header":`), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
+	wire.WriteTo([]byte(`,"proposal":{"block_parts_header":`), w, n, err)
 	p.BlockPartsHeader.WriteSignBytes(w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"height":%v,"pol_round":%v`, p.Height, p.POLRound)), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"round":%v}}`, p.Round)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"height":%v,"pol_round":%v`, p.Height, p.POLRound)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"round":%v}}`, p.Round)), w, n, err)
 }

@@ -30,17 +30,18 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 func SimpleHashFromTwoHashes(left []byte, right []byte) []byte {
 	var n int64
 	var err error
 	var hasher = ripemd160.New()
-	binary.WriteByteSlice(left, hasher, &n, &err)
-	binary.WriteByteSlice(right, hasher, &n, &err)
+	wire.WriteByteSlice(left, hasher, &n, &err)
+	wire.WriteByteSlice(right, hasher, &n, &err)
 	if err != nil {
-		panic(err)
+		PanicCrisis(err)
 	}
 	return hasher.Sum(nil)
 }
@@ -71,9 +72,9 @@ func SimpleHashFromBinaries(items []interface{}) []byte {
 // General Convenience
 func SimpleHashFromBinary(item interface{}) []byte {
 	hasher, n, err := ripemd160.New(), new(int64), new(error)
-	binary.WriteBinary(item, hasher, n, err)
+	wire.WriteBinary(item, hasher, n, err)
 	if *err != nil {
-		panic(err)
+		PanicCrisis(err)
 	}
 	return hasher.Sum(nil)
 }
@@ -162,7 +163,8 @@ func computeHashFromInnerHashes(index int, total int, leafHash []byte, innerHash
 	}
 	switch total {
 	case 0:
-		panic("Cannot call computeHashFromInnerHashes() with 0 total")
+		PanicSanity("Cannot call computeHashFromInnerHashes() with 0 total")
+		return nil
 	case 1:
 		if len(innerHashes) != 0 {
 			return nil

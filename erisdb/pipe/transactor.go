@@ -134,8 +134,12 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pk := &[64]byte{}
+	for i := 0; i < 64; i++ {
+		pk[i] = privKey[i]
+	}
+	fmt.Printf("PK BYTES FROM TRANSACT: %x\n", pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
@@ -166,12 +170,16 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 }
 
 func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error) {
-	
+
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pk := &[64]byte{}
+	for i := 0; i < 64; i++ {
+		pk[i] = privKey[i]
+	}
+	fmt.Printf("PK BYTES FROM TRANSACT NAMEREG: %x\n", pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
@@ -243,11 +251,10 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 // No idea what this does.
 func toVMAccount(acc *account.Account) *vm.Account {
 	return &vm.Account{
-		Address:     cmn.LeftPadWord256(acc.Address),
-		Balance:     acc.Balance,
-		Code:        acc.Code, // This is crazy.
-		Nonce:       int64(acc.Sequence),
-		StorageRoot: cmn.LeftPadWord256(acc.StorageRoot),
-		Other:       acc.PubKey,
+		Address: cmn.LeftPadWord256(acc.Address),
+		Balance: acc.Balance,
+		Code:    acc.Code,
+		Nonce:   int64(acc.Sequence),
+		Other:   acc.PubKey,
 	}
 }

@@ -3,8 +3,8 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
 	"os"
@@ -266,7 +266,7 @@ func writeJSON(file string, v interface{}) error {
 	if errC != nil {
 		return errC
 	}
-	binary.WriteJSON(v, fo, &n, &errW)
+	wire.WriteJSON(v, fo, &n, &errW)
 	if errW != nil {
 		return errW
 	}

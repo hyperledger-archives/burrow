@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync/atomic"
 	"time"
 
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 type Reactor interface {
-	Start(sw *Switch)
-	Stop()
+	Service // Start, Stop
+
+	SetSwitch(*Switch)
 	GetChannels() []*ChannelDescriptor
 	AddPeer(peer *Peer)
 	RemovePeer(peer *Peer, reason interface{})
@@ -24,14 +25,25 @@ type Reactor interface {
 
 //--------------------------------------
 
-type BaseReactor struct{}
+type BaseReactor struct {
+	QuitService // Provides Start, Stop, .Quit
+	Switch      *Switch
+}
 
-func (_ BaseReactor) Start(sw *Switch)                               {}
-func (_ BaseReactor) Stop()                                          {}
-func (_ BaseReactor) GetChannels() []*ChannelDescriptor              { return nil }
-func (_ BaseReactor) AddPeer(peer *Peer)                             {}
-func (_ BaseReactor) RemovePeer(peer *Peer, reason interface{})      {}
-func (_ BaseReactor) Receive(chId byte, peer *Peer, msgBytes []byte) {}
+func NewBaseReactor(log log15.Logger, name string, impl Reactor) *BaseReactor {
+	return &BaseReactor{
+		QuitService: *NewQuitService(log, name, impl),
+		Switch:      nil,
+	}
+}
+
+func (br *BaseReactor) SetSwitch(sw *Switch) {
+	br.Switch = sw
+}
+func (_ *BaseReactor) GetChannels() []*ChannelDescriptor              { return nil }
+func (_ *BaseReactor) AddPeer(peer *Peer)                             {}
+func (_ *BaseReactor) RemovePeer(peer *Peer, reason interface{})      {}
+func (_ *BaseReactor) Receive(chId byte, peer *Peer, msgBytes []byte) {}
 
 //-----------------------------------------------------------------------------
 
@@ -42,13 +54,14 @@ or more `Channels`.  So while sending outgoing messages is typically performed o
 incoming messages are received on the reactor.
 */
 type Switch struct {
+	BaseService
+
 	listeners    []Listener
 	reactors     map[string]Reactor
 	chDescs      []*ChannelDescriptor
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *CMap
-	running      uint32
 	nodeInfo     *types.NodeInfo    // our node info
 	nodePrivKey  acm.PrivKeyEd25519 // our node privkey
 }
@@ -59,8 +72,9 @@ var (
 )
 
 const (
-	peerDialTimeoutSeconds = 3  // TODO make this configurable
-	maxNumPeers            = 50 // TODO make this configurable
+	peerDialTimeoutSeconds  = 3  // TODO make this configurable
+	handshakeTimeoutSeconds = 20 // TODO make this configurable
+	maxNumPeers             = 50 // TODO make this configurable
 )
 
 func NewSwitch() *Switch {
@@ -70,10 +84,9 @@ func NewSwitch() *Switch {
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      NewCMap(),
-		running:      0,
 		nodeInfo:     nil,
-		nodePrivKey:  nil,
 	}
+	sw.BaseService = *NewBaseService(log, "P2P Switch", sw)
 	return sw
 }
 
@@ -85,12 +98,13 @@ func (sw *Switch) AddReactor(name string, reactor Reactor) Reactor {
 	for _, chDesc := range reactorChannels {
 		chId := chDesc.Id
 		if sw.reactorsByCh[chId] != nil {
-			panic(fmt.Sprintf("Channel %X has multiple reactors %v & %v", chId, sw.reactorsByCh[chId], reactor))
+			PanicSanity(fmt.Sprintf("Channel %X has multiple reactors %v & %v", chId, sw.reactorsByCh[chId], reactor))
 		}
 		sw.chDescs = append(sw.chDescs, chDesc)
 		sw.reactorsByCh[chId] = reactor
 	}
 	sw.reactors[name] = reactor
+	reactor.SetSwitch(sw)
 	return reactor
 }
 
@@ -138,48 +152,51 @@ func (sw *Switch) SetNodePrivKey(nodePrivKey acm.PrivKeyEd25519) {
 	}
 }
 
-func (sw *Switch) Start() {
-	if atomic.CompareAndSwapUint32(&sw.running, 0, 1) {
-		// Start reactors
-		for _, reactor := range sw.reactors {
-			reactor.Start(sw)
-		}
-		// Start peers
-		for _, peer := range sw.peers.List() {
-			sw.startInitPeer(peer)
-		}
-		// Start listeners
-		for _, listener := range sw.listeners {
-			go sw.listenerRoutine(listener)
-		}
+// Switch.Start() starts all the reactors, peers, and listeners.
+func (sw *Switch) OnStart() {
+	sw.BaseService.OnStart()
+	// Start reactors
+	for _, reactor := range sw.reactors {
+		reactor.Start()
+	}
+	// Start peers
+	for _, peer := range sw.peers.List() {
+		sw.startInitPeer(peer)
+	}
+	// Start listeners
+	for _, listener := range sw.listeners {
+		go sw.listenerRoutine(listener)
 	}
 }
 
-func (sw *Switch) Stop() {
-	if atomic.CompareAndSwapUint32(&sw.running, 1, 0) {
-		// Stop listeners
-		for _, listener := range sw.listeners {
-			listener.Stop()
-		}
-		sw.listeners = nil
-		// Stop peers
-		for _, peer := range sw.peers.List() {
-			peer.stop()
-		}
-		sw.peers = NewPeerSet()
-		// Stop reactors
-		for _, reactor := range sw.reactors {
-			reactor.Stop()
-		}
+func (sw *Switch) OnStop() {
+	sw.BaseService.OnStop()
+	// Stop listeners
+	for _, listener := range sw.listeners {
+		listener.Stop()
+	}
+	sw.listeners = nil
+	// Stop peers
+	for _, peer := range sw.peers.List() {
+		peer.Stop()
+	}
+	sw.peers = NewPeerSet()
+	// Stop reactors
+	for _, reactor := range sw.reactors {
+		reactor.Stop()
 	}
 }
 
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: Iff error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, error) {
+	// Set deadline for handshake so we don't block forever on conn.ReadFull
+	conn.SetDeadline(time.Now().Add(handshakeTimeoutSeconds * time.Second))
+
 	// First, encrypt the connection.
 	sconn, err := MakeSecretConnection(conn, sw.nodePrivKey)
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 	// Then, perform node handshake
@@ -205,9 +222,8 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 		return nil, err
 	}
 
-	// The peerNodeInfo is not verified, so overwrite.
-	// Overwrite the IP with that from the conn
-	// and if we dialed out, the port too
+	// The peerNodeInfo is not verified, so overwrite
+	// the IP, and the port too if we dialed out
 	// Everything else we just have to trust
 	ip, port, _ := net.SplitHostPort(sconn.RemoteAddr().String())
 	peerNodeInfo.Host = ip
@@ -220,39 +236,41 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	// Add the peer to .peers
 	// ignore if duplicate or if we already have too many for that IP range
 	if err := sw.peers.Add(peer); err != nil {
-		log.Info("Ignoring peer", "error", err, "peer", peer)
-		peer.stop() // will also close sconn
+		log.Notice("Ignoring peer", "error", err, "peer", peer)
+		peer.Stop()
 		return nil, err
 	}
 
-	if atomic.LoadUint32(&sw.running) == 1 {
+	// remove deadline and start peer
+	conn.SetDeadline(time.Time{})
+	if sw.IsRunning() {
 		sw.startInitPeer(peer)
 	}
 
-	log.Info("Added peer", "peer", peer)
+	log.Notice("Added peer", "peer", peer)
 	return peer, nil
 }
 
 func (sw *Switch) startInitPeer(peer *Peer) {
-	peer.start()               // spawn send/recv routines
+	peer.Start()               // spawn send/recv routines
 	sw.addPeerToReactors(peer) // run AddPeer on each reactor
 }
 
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress) (*Peer, error) {
-	log.Debug("Dialing address", "address", addr)
+	log.Info("Dialing address", "address", addr)
 	sw.dialing.Set(addr.IP.String(), addr)
 	conn, err := addr.DialTimeout(peerDialTimeoutSeconds * time.Second)
 	sw.dialing.Delete(addr.IP.String())
 	if err != nil {
-		log.Debug("Failed dialing address", "address", addr, "error", err)
+		log.Info("Failed dialing address", "address", addr, "error", err)
 		return nil, err
 	}
 	peer, err := sw.AddPeerWithConnection(conn, true)
 	if err != nil {
-		log.Debug("Failed adding peer", "address", addr, "conn", conn, "error", err)
+		log.Info("Failed adding peer", "address", addr, "conn", conn, "error", err)
 		return nil, err
 	}
-	log.Info("Dialed and added peer", "address", addr, "peer", peer)
+	log.Notice("Dialed and added peer", "address", addr, "peer", peer)
 	return peer, nil
 }
 
@@ -265,7 +283,7 @@ func (sw *Switch) IsDialing(addr *NetAddress) bool {
 // which receives success values for each attempted send (false if times out)
 func (sw *Switch) Broadcast(chId byte, msg interface{}) chan bool {
 	successChan := make(chan bool, len(sw.peers.List()))
-	log.Debug("Broadcast", "channel", chId, "msg", msg)
+	log.Info("Broadcast", "channel", chId, "msg", msg)
 	for _, peer := range sw.peers.List() {
 		go func(peer *Peer) {
 			success := peer.Send(chId, msg)
@@ -297,18 +315,18 @@ func (sw *Switch) Peers() IPeerSet {
 // Disconnect from a peer due to external error.
 // TODO: make record depending on reason.
 func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
-	log.Info("Stopping peer for error", "peer", peer, "error", reason)
+	log.Notice("Stopping peer for error", "peer", peer, "error", reason)
 	sw.peers.Remove(peer)
-	peer.stop()
+	peer.Stop()
 	sw.removePeerFromReactors(peer, reason)
 }
 
 // Disconnect from a peer gracefully.
 // TODO: handle graceful disconnects.
 func (sw *Switch) StopPeerGracefully(peer *Peer) {
-	log.Info("Stopping peer gracefully")
+	log.Notice("Stopping peer gracefully")
 	sw.peers.Remove(peer)
-	peer.stop()
+	peer.Stop()
 	sw.removePeerFromReactors(peer, nil)
 }
 
@@ -333,20 +351,20 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 		// ignore connection if we already have enough
 		if maxNumPeers <= sw.peers.Size() {
-			log.Debug("Ignoring inbound connection: already have enough peers", "conn", inConn, "numPeers", sw.peers.Size(), "max", maxNumPeers)
+			log.Info("Ignoring inbound connection: already have enough peers", "address", inConn.RemoteAddr().String(), "numPeers", sw.peers.Size(), "max", maxNumPeers)
 			continue
 		}
 
 		// Ignore connections from IP ranges for which we have too many
 		if sw.peers.HasMaxForIPRange(inConn) {
-			log.Debug("Ignoring inbound connection: already have enough peers for that IP range", "address", inConn.RemoteAddr().String())
+			log.Info("Ignoring inbound connection: already have enough peers for that IP range", "address", inConn.RemoteAddr().String())
 			continue
 		}
 
 		// New inbound connection!
 		_, err := sw.AddPeerWithConnection(inConn, false)
 		if err != nil {
-			log.Info("Ignoring inbound connection: error on AddPeerWithConnection", "conn", inConn, "error", err)
+			log.Notice("Ignoring inbound connection: error on AddPeerWithConnection", "address", inConn.RemoteAddr().String(), "error", err)
 			continue
 		}
 

@@ -7,13 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 )
 
 /*
@@ -81,11 +80,11 @@ x 		- roles: has, add, rm
 var user = makeUsers(10)
 var chainID = "testchain"
 
-func makeUsers(n int) []*account.PrivAccount {
-	accounts := []*account.PrivAccount{}
+func makeUsers(n int) []*acm.PrivAccount {
+	accounts := []*acm.PrivAccount{}
 	for i := 0; i < n; i++ {
 		secret := []byte("mysecret" + strconv.Itoa(i))
-		user := account.GenPrivAccountFromSecret(secret)
+		user := acm.GenPrivAccountFromSecret(secret)
 		accounts = append(accounts, user)
 	}
 	return accounts
@@ -115,7 +114,7 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) GenesisDoc
 		Accounts: genAccounts,
 		Validators: []GenesisValidator{
 			GenesisValidator{
-				PubKey: user[0].PubKey.(account.PubKeyEd25519),
+				PubKey: user[0].PubKey.(acm.PubKeyEd25519),
 				Amount: 10,
 				UnbondTo: []BasicAccount{
 					BasicAccount{
@@ -344,11 +343,11 @@ func TestCallPermission(t *testing.T) {
 
 	//------------------------------
 	// call to simple contract
-	fmt.Println("##### SIMPLE CONTRACT")
+	fmt.Println("\n##### SIMPLE CONTRACT")
 
 	// create simple contract
 	simpleContractAddr := NewContractAddress(user[0].Address, 100)
-	simpleAcc := &account.Account{
+	simpleAcc := &acm.Account{
 		Address:     simpleContractAddr,
 		Balance:     0,
 		Code:        []byte{0x60},
@@ -367,14 +366,14 @@ func TestCallPermission(t *testing.T) {
 
 	//----------------------------------------------------------
 	// call to contract that calls simple contract - without perm
-	fmt.Println("##### CALL TO SIMPLE CONTRACT (FAIL)")
+	fmt.Println("\n##### CALL TO SIMPLE CONTRACT (FAIL)")
 
 	// create contract that calls the simple contract
 	contractCode := callContractCode(simpleContractAddr)
 	caller1ContractAddr := NewContractAddress(user[0].Address, 101)
-	caller1Acc := &account.Account{
+	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
-		Balance:     0,
+		Balance:     10000,
 		Code:        contractCode,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
@@ -386,15 +385,15 @@ func TestCallPermission(t *testing.T) {
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
 
 	//----------------------------------------------------------
 	// call to contract that calls simple contract - with perm
-	fmt.Println("##### CALL TO SIMPLE CONTRACT (PASS)")
+	fmt.Println("\n##### CALL TO SIMPLE CONTRACT (PASS)")
 
 	// A single input, having the permission, and the contract has permission
 	caller1Acc.Permissions.Base.Set(ptypes.Call, true)
@@ -402,8 +401,8 @@ func TestCallPermission(t *testing.T) {
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception:", exception)
 	}
@@ -412,11 +411,11 @@ func TestCallPermission(t *testing.T) {
 	// call to contract that calls contract that calls simple contract - without perm
 	// caller1Contract calls simpleContract. caller2Contract calls caller1Contract.
 	// caller1Contract does not have call perms, but caller2Contract does.
-	fmt.Println("##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (FAIL)")
+	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (FAIL)")
 
 	contractCode2 := callContractCode(caller1ContractAddr)
 	caller2ContractAddr := NewContractAddress(user[0].Address, 102)
-	caller2Acc := &account.Account{
+	caller2Acc := &acm.Account{
 		Address:     caller2ContractAddr,
 		Balance:     1000,
 		Code:        contractCode2,
@@ -432,8 +431,8 @@ func TestCallPermission(t *testing.T) {
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, caller2ContractAddr, nil, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -442,7 +441,7 @@ func TestCallPermission(t *testing.T) {
 	// call to contract that calls contract that calls simple contract - without perm
 	// caller1Contract calls simpleContract. caller2Contract calls caller1Contract.
 	// both caller1 and caller2 have permission
-	fmt.Println("##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (PASS)")
+	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (PASS)")
 
 	caller1Acc.Permissions.Base.Set(ptypes.Call, true)
 	blockCache.UpdateAccount(caller1Acc)
@@ -450,8 +449,8 @@ func TestCallPermission(t *testing.T) {
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, caller2ContractAddr, nil, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
@@ -467,7 +466,7 @@ func TestCreatePermission(t *testing.T) {
 
 	//------------------------------
 	// create a simple contract
-	fmt.Println("##### CREATE SIMPLE CONTRACT")
+	fmt.Println("\n##### CREATE SIMPLE CONTRACT")
 
 	contractCode := []byte{0x60}
 	createCode := wrapContractForCreate(contractCode)
@@ -490,7 +489,7 @@ func TestCreatePermission(t *testing.T) {
 
 	//------------------------------
 	// create contract that uses the CREATE op
-	fmt.Println("##### CREATE FACTORY")
+	fmt.Println("\n##### CREATE FACTORY")
 
 	contractCode = []byte{0x60}
 	createCode = wrapContractForCreate(contractCode)
@@ -515,20 +514,20 @@ func TestCreatePermission(t *testing.T) {
 
 	//------------------------------
 	// call the contract (should FAIL)
-	fmt.Println("###### CALL THE FACTORY (FAIL)")
+	fmt.Println("\n###### CALL THE FACTORY (FAIL)")
 
 	// A single input, having the permission, should succeed
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(contractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(contractAddr)) //
 	if exception == "" {
 		t.Fatal("expected exception")
 	}
 
 	//------------------------------
 	// call the contract (should PASS)
-	fmt.Println("###### CALL THE FACTORY (PASS)")
+	fmt.Println("\n###### CALL THE FACTORY (PASS)")
 
 	contractAcc.Permissions.Base.Set(ptypes.CreateContract, true)
 	blockCache.UpdateAccount(contractAcc)
@@ -536,19 +535,19 @@ func TestCreatePermission(t *testing.T) {
 	// A single input, having the permission, should succeed
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(contractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(contractAddr)) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
 
 	//--------------------------------
-	fmt.Println("##### CALL to empty address")
+	fmt.Println("\n##### CALL to empty address")
 	zeroAddr := LeftPadBytes([]byte{}, 20)
 	code := callContractCode(zeroAddr)
 
 	contractAddr = NewContractAddress(user[0].Address, 110)
-	contractAcc = &account.Account{
+	contractAcc = &acm.Account{
 		Address:     contractAddr,
 		Balance:     1000,
 		Code:        code,
@@ -563,8 +562,8 @@ func TestCreatePermission(t *testing.T) {
 	// this should call the 0 address but not create ...
 	tx, _ = types.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(zeroAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(zeroAddr)) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
@@ -579,7 +578,7 @@ func TestBondPermission(t *testing.T) {
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st := MakeGenesisState(stateDB, &genDoc)
 	blockCache := NewBlockCache(st)
-	var bondAcc *account.Account
+	var bondAcc *acm.Account
 
 	//------------------------------
 	// one bonder without permission should fail
@@ -800,7 +799,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	// create contract that calls the simple contract
 	contractCode := callContractCode(user[9].Address)
 	caller1ContractAddr := NewContractAddress(user[4].Address, 101)
-	caller1Acc := &account.Account{
+	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
 		Balance:     0,
 		Code:        contractCode,
@@ -814,8 +813,8 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCall, _ := types.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
 	txCall.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, txCall, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception := execTxWaitEvent(t, blockCache, txCall, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -829,13 +828,16 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCall, _ = types.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
 	txCall.Sign(chainID, user[0])
 
-	// we need to subscribe to the Receive event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, txCall, types.EventStringAccReceive(caller1ContractAddr)) //
+	// we need to subscribe to the Call event to detect the exception
+	_, exception = execTxWaitEvent(t, blockCache, txCall, types.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
 
 }
+
+// holla at my boy
+var DougAddress = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, []byte("THISISDOUG")...)
 
 func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.GetDB("state")
@@ -851,8 +853,8 @@ func TestSNativeCALL(t *testing.T) {
 	// Test CALL to SNative contracts
 
 	// make the main contract once
-	doug := &account.Account{
-		Address:     ptypes.DougAddress,
+	doug := &acm.Account{
+		Address:     DougAddress,
 		Balance:     0,
 		Code:        nil,
 		Sequence:    0,
@@ -860,11 +862,12 @@ func TestSNativeCALL(t *testing.T) {
 		Permissions: ptypes.ZeroAccountPermissions,
 	}
 	doug.Permissions.Base.Set(ptypes.Call, true)
+	//doug.Permissions.Base.Set(ptypes.HasBase, true)
 	blockCache.UpdateAccount(doug)
 
-	fmt.Println("#### hasBasePerm")
-	// hasBasePerm
-	snativeAddress, data := snativePermTestInput("hasBasePerm", user[3], ptypes.Bond, false)
+	fmt.Println("\n#### HasBase")
+	// HasBase
+	snativeAddress, data := snativePermTestInputCALL("has_base", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
@@ -874,12 +877,12 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("#### setBasePerm")
-	// setBasePerm
-	snativeAddress, data = snativePermTestInput("setBasePerm", user[3], ptypes.Bond, false)
+	fmt.Println("\n#### SetBase")
+	// SetBase
+	snativeAddress, data = snativePermTestInputCALL("set_base", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.Bond, false)
+	snativeAddress, data = snativePermTestInputCALL("has_base", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret) {
@@ -887,9 +890,9 @@ func TestSNativeCALL(t *testing.T) {
 		}
 		return nil
 	})
-	snativeAddress, data = snativePermTestInput("setBasePerm", user[3], ptypes.CreateContract, true)
+	snativeAddress, data = snativePermTestInputCALL("set_base", user[3], ptypes.CreateContract, true)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
+	snativeAddress, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -898,12 +901,12 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("#### unsetBasePerm")
-	// unsetBasePerm
-	snativeAddress, data = snativePermTestInput("unsetBasePerm", user[3], ptypes.CreateContract, false)
+	fmt.Println("\n#### UnsetBase")
+	// UnsetBase
+	snativeAddress, data = snativePermTestInputCALL("unset_base", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
+	snativeAddress, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -911,12 +914,12 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("#### setGlobalPerm")
-	// setGlobalPerm
-	snativeAddress, data = snativePermTestInput("setGlobalPerm", user[3], ptypes.CreateContract, true)
+	fmt.Println("\n#### SetGlobal")
+	// SetGlobalPerm
+	snativeAddress, data = snativePermTestInputCALL("set_global", user[3], ptypes.CreateContract, true)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
+	snativeAddress, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -925,12 +928,9 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	// clearBasePerm
-	// TODO
-
-	fmt.Println("#### hasRole")
-	// hasRole
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "bumble")
+	fmt.Println("\n#### HasRole")
+	// HasRole
+	snativeAddress, data = snativeRoleTestInputCALL("has_role", user[3], "bumble")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -939,19 +939,19 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("#### addRole")
-	// addRole
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
+	fmt.Println("\n#### AddRole")
+	// AddRole
+	snativeAddress, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
-	snativeAddress, data = snativeRoleTestInput("addRole", user[3], "chuck")
+	snativeAddress, data = snativeRoleTestInputCALL("add_role", user[3], "chuck")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
+	snativeAddress, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -959,12 +959,12 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("#### rmRole")
-	// rmRole
-	snativeAddress, data = snativeRoleTestInput("rmRole", user[3], "chuck")
+	fmt.Println("\n#### RmRole")
+	// RmRole
+	snativeAddress, data = snativeRoleTestInputCALL("rm_role", user[3], "chuck")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
+	snativeAddress, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -973,7 +973,7 @@ func TestSNativeCALL(t *testing.T) {
 	})
 }
 
-func TestSNativeCallTx(t *testing.T) {
+func TestSNativeTx(t *testing.T) {
 	stateDB := dbm.GetDB("state")
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
@@ -984,127 +984,74 @@ func TestSNativeCallTx(t *testing.T) {
 	blockCache := NewBlockCache(st)
 
 	//----------------------------------------------------------
-	// Test CallTx to SNative contracts
-	var doug *account.Account = nil
+	// Test SNativeTx
 
-	fmt.Println("#### hasBasePerm")
-	// hasBasePerm
-	snativeAddress, data := snativePermTestInput("hasBasePerm", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		// return value should be true or false as a 32 byte array...
-		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
-			return fmt.Errorf("Expected 1. Got %X", ret)
-		}
-		return nil
-	})
+	fmt.Println("\n#### SetBase")
+	// SetBase
+	snativeArgs := snativePermTestInputTx("set_base", user[3], ptypes.Bond, false)
+	testSNativeTxExpectFail(t, blockCache, snativeArgs)
+	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
+	acc := blockCache.GetAccount(user[3].Address)
+	if v, _ := acc.Permissions.Base.Get(ptypes.Bond); v {
+		t.Fatal("expected permission to be set false")
+	}
+	snativeArgs = snativePermTestInputTx("set_base", user[3], ptypes.CreateContract, true)
+	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
+	acc = blockCache.GetAccount(user[3].Address)
+	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); !v {
+		t.Fatal("expected permission to be set true")
+	}
 
-	fmt.Println("#### setBasePerm")
-	// setBasePerm
-	snativeAddress, data = snativePermTestInput("setBasePerm", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		// return value should be true or false as a 32 byte array...
-		if !IsZeros(ret) {
-			return fmt.Errorf("Expected 0. Got %X", ret)
-		}
-		return nil
-	})
-	snativeAddress, data = snativePermTestInput("setBasePerm", user[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		// return value should be true or false as a 32 byte array...
-		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
-			return fmt.Errorf("Expected 1. Got %X", ret)
-		}
-		return nil
-	})
+	fmt.Println("\n#### UnsetBase")
+	// UnsetBase
+	snativeArgs = snativePermTestInputTx("unset_base", user[3], ptypes.CreateContract, false)
+	testSNativeTxExpectFail(t, blockCache, snativeArgs)
+	testSNativeTxExpectPass(t, blockCache, ptypes.UnsetBase, snativeArgs)
+	acc = blockCache.GetAccount(user[3].Address)
+	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); v {
+		t.Fatal("expected permission to be set false")
+	}
 
-	fmt.Println("#### unsetBasePerm")
-	// unsetBasePerm
-	snativeAddress, data = snativePermTestInput("unsetBasePerm", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		if !IsZeros(ret) {
-			return fmt.Errorf("Expected 0. Got %X", ret)
-		}
-		return nil
-	})
+	fmt.Println("\n#### SetGlobal")
+	// SetGlobalPerm
+	snativeArgs = snativePermTestInputTx("set_global", user[3], ptypes.CreateContract, true)
+	testSNativeTxExpectFail(t, blockCache, snativeArgs)
+	testSNativeTxExpectPass(t, blockCache, ptypes.SetGlobal, snativeArgs)
+	acc = blockCache.GetAccount(ptypes.GlobalPermissionsAddress)
+	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); !v {
+		t.Fatal("expected permission to be set true")
+	}
 
-	fmt.Println("#### setGlobalPerm")
-	// setGlobalPerm
-	snativeAddress, data = snativePermTestInput("setGlobalPerm", user[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativePermTestInput("hasBasePerm", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		// return value should be true or false as a 32 byte array...
-		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
-			return fmt.Errorf("Expected 1. Got %X", ret)
-		}
-		return nil
-	})
+	fmt.Println("\n#### AddRole")
+	// AddRole
+	snativeArgs = snativeRoleTestInputTx("add_role", user[3], "chuck")
+	testSNativeTxExpectFail(t, blockCache, snativeArgs)
+	testSNativeTxExpectPass(t, blockCache, ptypes.AddRole, snativeArgs)
+	acc = blockCache.GetAccount(user[3].Address)
+	if v := acc.Permissions.HasRole("chuck"); !v {
+		t.Fatal("expected role to be added")
+	}
 
-	// clearBasePerm
-	// TODO
-
-	fmt.Println("#### hasRole")
-	// hasRole
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "bumble")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
-			return fmt.Errorf("Expected 1. Got %X", ret)
-		}
-		return nil
-	})
-
-	fmt.Println("#### addRole")
-	// addRole
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		if !IsZeros(ret) {
-			return fmt.Errorf("Expected 0. Got %X", ret)
-		}
-		return nil
-	})
-	snativeAddress, data = snativeRoleTestInput("addRole", user[3], "chuck")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
-			return fmt.Errorf("Expected 1. Got %X", ret)
-		}
-		return nil
-	})
-
-	fmt.Println("#### rmRole")
-	// rmRole
-	snativeAddress, data = snativeRoleTestInput("rmRole", user[3], "chuck")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, data = snativeRoleTestInput("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, snativeAddress, data, func(ret []byte) error {
-		if !IsZeros(ret) {
-			return fmt.Errorf("Expected 0. Got %X", ret)
-		}
-		return nil
-	})
+	fmt.Println("\n#### RmRole")
+	// RmRole
+	snativeArgs = snativeRoleTestInputTx("rm_role", user[3], "chuck")
+	testSNativeTxExpectFail(t, blockCache, snativeArgs)
+	testSNativeTxExpectPass(t, blockCache, ptypes.RmRole, snativeArgs)
+	acc = blockCache.GetAccount(user[3].Address)
+	if v := acc.Permissions.HasRole("chuck"); v {
+		t.Fatal("expected role to be removed")
+	}
 }
 
 //-------------------------------------------------------------------------------------
 // helpers
 
-// run ExecTx and wait for the Receive event on given addr
+var ExceptionTimeOut = "timed out waiting for event"
+
+// run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
 func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx types.Tx, eventid string) (interface{}, string) {
-	evsw := new(events.EventSwitch)
+	evsw := events.NewEventSwitch()
 	evsw.Start()
 	ch := make(chan interface{})
 	evsw.AddListenerForEvent("test", eventid, func(msg interface{}) {
@@ -1117,7 +1064,14 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx types.Tx, eventid 
 		}
 		evc.Flush()
 	}()
-	msg := <-ch
+	ticker := time.NewTicker(5 * time.Second)
+	var msg interface{}
+	select {
+	case msg = <-ch:
+	case <-ticker.C:
+		return nil, ExceptionTimeOut
+	}
+
 	switch ev := msg.(type) {
 	case types.EventMsgCallTx:
 		return ev, ev.Exception
@@ -1130,52 +1084,77 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx types.Tx, eventid 
 	}
 }
 
+// give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
+func testSNativeCALLExpectFail(t *testing.T, blockCache *BlockCache, doug *acm.Account, snativeAddress, data []byte) {
+	testSNativeCALL(t, false, blockCache, doug, snativeAddress, data, nil)
+}
+
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
-func testSNativeCALLExpectPass(t *testing.T, blockCache *BlockCache, doug *account.Account, snativeAddress, data []byte, f func([]byte) error) {
-	perm := vm.RegisteredSNativePermissions[LeftPadWord256(snativeAddress)]
-	var addr []byte
-	if doug != nil {
-		contractCode := callContractCode(snativeAddress)
-		doug.Code = contractCode
+func testSNativeCALLExpectPass(t *testing.T, blockCache *BlockCache, doug *acm.Account, snativeAddress, data []byte, f func([]byte) error) {
+	testSNativeCALL(t, true, blockCache, doug, snativeAddress, data, f)
+}
+
+func testSNativeCALL(t *testing.T, expectPass bool, blockCache *BlockCache, doug *acm.Account, snativeAddress, data []byte, f func([]byte) error) {
+	if expectPass {
+		perm, err := ptypes.PermStringToFlag(TrimmedString(snativeAddress))
+		if err != nil {
+			t.Fatal(err)
+		}
 		doug.Permissions.Base.Set(perm, true)
-		blockCache.UpdateAccount(doug)
-		addr = doug.Address
-	} else {
-		acc := blockCache.GetAccount(user[0].Address)
-		acc.Permissions.Base.Set(perm, true)
-		blockCache.UpdateAccount(acc)
-		addr = snativeAddress
 	}
+	var addr []byte
+	contractCode := callContractCode(snativeAddress)
+	doug.Code = contractCode
+	blockCache.UpdateAccount(doug)
+	addr = doug.Address
 	tx, _ := types.NewCallTx(blockCache, user[0].PubKey, addr, data, 100, 10000, 100)
 	tx.Sign(chainID, user[0])
-	ev, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(snativeAddress)) //
-	if exception != "" {
-		t.Fatal("Unexpected exception", exception)
+	fmt.Println("subscribing to", types.EventStringAccCall(snativeAddress))
+	ev, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccCall(snativeAddress))
+	if exception == ExceptionTimeOut {
+		t.Fatal("Timed out waiting for event")
 	}
-	evv := ev.(types.EventMsgCall)
-	ret := evv.Return
-	if err := f(ret); err != nil {
-		t.Fatal(err)
+	if expectPass {
+		if exception != "" {
+			t.Fatal("Unexpected exception", exception)
+		}
+		evv := ev.(types.EventMsgCall)
+		ret := evv.Return
+		if err := f(ret); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		if exception == "" {
+			t.Fatal("Expected exception")
+		}
 	}
 }
 
-// assumes the contract has not been given the permission. calls the it, it calls the snative, expects to fail
-func testSNativeCALLExpectFail(t *testing.T, blockCache *BlockCache, doug *account.Account, snativeAddress, data []byte) {
-	var addr []byte
-	if doug != nil {
-		contractCode := callContractCode(snativeAddress)
-		doug.Code = contractCode
-		blockCache.UpdateAccount(doug)
-		addr = doug.Address
-	} else {
-		addr = snativeAddress
+func testSNativeTxExpectFail(t *testing.T, blockCache *BlockCache, snativeArgs ptypes.PermArgs) {
+	testSNativeTx(t, false, blockCache, 0, snativeArgs)
+}
+
+func testSNativeTxExpectPass(t *testing.T, blockCache *BlockCache, perm ptypes.PermFlag, snativeArgs ptypes.PermArgs) {
+	testSNativeTx(t, true, blockCache, perm, snativeArgs)
+}
+
+func testSNativeTx(t *testing.T, expectPass bool, blockCache *BlockCache, perm ptypes.PermFlag, snativeArgs ptypes.PermArgs) {
+	if expectPass {
+		acc := blockCache.GetAccount(user[0].Address)
+		acc.Permissions.Base.Set(perm, true)
+		blockCache.UpdateAccount(acc)
 	}
-	tx, _ := types.NewCallTx(blockCache, user[0].PubKey, addr, data, 100, 10000, 100)
+	tx, _ := types.NewPermissionsTx(blockCache, user[0].PubKey, snativeArgs)
 	tx.Sign(chainID, user[0])
-	fmt.Println("subscribing to", types.EventStringAccReceive(snativeAddress))
-	_, exception := execTxWaitEvent(t, blockCache, tx, types.EventStringAccReceive(snativeAddress))
-	if exception == "" {
-		t.Fatal("Expected exception")
+	err := ExecTx(blockCache, tx, true, nil)
+	if expectPass {
+		if err != nil {
+			t.Fatal("Unexpected exception", err)
+		}
+	} else {
+		if err == nil {
+			t.Fatal("Expected exception")
+		}
 	}
 }
 
@@ -1189,28 +1168,53 @@ func boolToWord256(v bool) Word256 {
 	return LeftPadWord256([]byte{vint})
 }
 
-func snativePermTestInput(name string, user *account.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, data []byte) {
+func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, data []byte) {
 	addr = LeftPadWord256([]byte(name)).Postfix(20)
 	switch name {
-	case "hasBasePerm", "unsetBasePerm":
+	case "has_base", "unset_base":
 		data = LeftPadBytes(user.Address, 32)
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
-	case "setBasePerm":
+	case "set_base":
 		data = LeftPadBytes(user.Address, 32)
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
 		data = append(data, boolToWord256(val).Bytes()...)
-	case "setGlobalPerm":
+	case "set_global":
 		data = Uint64ToWord256(uint64(perm)).Bytes()
 		data = append(data, boolToWord256(val).Bytes()...)
-	case "clearBasePerm":
 	}
 	return
 }
 
-func snativeRoleTestInput(name string, user *account.PrivAccount, role string) (addr []byte, data []byte) {
+func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (snativeArgs ptypes.PermArgs) {
+	switch name {
+	case "has_base":
+		snativeArgs = &ptypes.HasBaseArgs{user.Address, perm}
+	case "unset_base":
+		snativeArgs = &ptypes.UnsetBaseArgs{user.Address, perm}
+	case "set_base":
+		snativeArgs = &ptypes.SetBaseArgs{user.Address, perm, val}
+	case "set_global":
+		snativeArgs = &ptypes.SetGlobalArgs{perm, val}
+	}
+	return
+}
+
+func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (addr []byte, data []byte) {
 	addr = LeftPadWord256([]byte(name)).Postfix(20)
 	data = LeftPadBytes(user.Address, 32)
 	data = append(data, LeftPadBytes([]byte(role), 32)...)
+	return
+}
+
+func snativeRoleTestInputTx(name string, user *acm.PrivAccount, role string) (snativeArgs ptypes.PermArgs) {
+	switch name {
+	case "has_role":
+		snativeArgs = &ptypes.HasRoleArgs{user.Address, role}
+	case "add_role":
+		snativeArgs = &ptypes.AddRoleArgs{user.Address, role}
+	case "rm_role":
+		snativeArgs = &ptypes.RmRoleArgs{user.Address, role}
+	}
 	return
 }
 

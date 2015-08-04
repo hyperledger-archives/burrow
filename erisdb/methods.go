@@ -439,7 +439,6 @@ func (this *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}
 	return txRet, 0, nil
 }
 
-
 // *************************************** Name Registry ***************************************
 
 func (this *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
@@ -10,14 +10,13 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 )
 
-func toVMAccount(acc *account.Account) *vm.Account {
+func toVMAccount(acc *acm.Account) *vm.Account {
 	return &vm.Account{
-		Address:     LeftPadWord256(acc.Address),
-		Balance:     acc.Balance,
-		Code:        acc.Code, // This is crazy.
-		Nonce:       int64(acc.Sequence),
-		StorageRoot: LeftPadWord256(acc.StorageRoot),
-		Other:       acc.PubKey,
+		Address: LeftPadWord256(acc.Address),
+		Balance: acc.Balance,
+		Code:    acc.Code, // This is crazy.
+		Nonce:   int64(acc.Sequence),
+		Other:   acc.PubKey,
 	}
 }
 
@@ -25,25 +24,25 @@ func toVMAccount(acc *account.Account) *vm.Account {
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func Call(address, data []byte) (*ctypes.ResponseCall, error) {
+func Call(fromAddress, toAddress, data []byte) (*ctypes.ResponseCall, error) {
 	st := consensusState.GetState() // performs a copy
 	cache := state.NewBlockCache(st)
-	outAcc := cache.GetAccount(address)
+	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
-		return nil, fmt.Errorf("Account %x does not exist", address)
+		return nil, fmt.Errorf("Account %x does not exist", toAddress)
 	}
 	callee := toVMAccount(outAcc)
-	caller := &vm.Account{Address: Zero256}
+	caller := &vm.Account{Address: LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    10000000,
+		GasLimit:    st.GetGasLimit(),
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := int64(1000000000)
+	gas := st.GetGasLimit()
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -53,22 +52,22 @@ func Call(address, data []byte) (*ctypes.ResponseCall, error) {
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func CallCode(code, data []byte) (*ctypes.ResponseCall, error) {
+func CallCode(fromAddress, code, data []byte) (*ctypes.ResponseCall, error) {
 
 	st := consensusState.GetState() // performs a copy
 	cache := mempoolReactor.Mempool.GetCache()
-	callee := &vm.Account{Address: Zero256}
-	caller := &vm.Account{Address: Zero256}
+	callee := &vm.Account{Address: LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    10000000,
+		GasLimit:    st.GetGasLimit(),
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := int64(1000000000)
+	gas := st.GetGasLimit()
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -78,7 +77,7 @@ func CallCode(code, data []byte) (*ctypes.ResponseCall, error) {
 
 //-----------------------------------------------------------------------------
 
-func SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
+func SignTx(tx types.Tx, privAccounts []*acm.PrivAccount) (types.Tx, error) {
 	// more checks?
 
 	for i, privAccount := range privAccounts {
@@ -101,17 +100,17 @@ func SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) 
 		bondTx := tx.(*types.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), bondTx).(account.SignatureEd25519)
+		bondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), bondTx).(acm.SignatureEd25519)
 		for i, input := range bondTx.Inputs {
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(config.GetString("chain_id"), bondTx)
 		}
 	case *types.UnbondTx:
 		unbondTx := tx.(*types.UnbondTx)
-		unbondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), unbondTx).(account.SignatureEd25519)
+		unbondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), unbondTx).(acm.SignatureEd25519)
 	case *types.RebondTx:
 		rebondTx := tx.(*types.RebondTx)
-		rebondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), rebondTx).(account.SignatureEd25519)
+		rebondTx.Signature = privAccounts[0].Sign(config.GetString("chain_id"), rebondTx).(acm.SignatureEd25519)
 	}
 	return tx, nil
 }

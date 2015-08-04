@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"sort"
 
-	ac "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
 	storage := merkle.NewIAVLTree(
-		binary.BasicCodec,
-		binary.BasicCodec,
+		wire.BasicCodec,
+		wire.BasicCodec,
 		1024,
 		db,
 	)
@@ -23,6 +23,7 @@ func makeStorage(db dbm.DB, root []byte) merkle.Tree {
 	return storage
 }
 
+// The blockcache helps prevent unnecessary IAVLTree updates and garbage generation.
 type BlockCache struct {
 	db       dbm.DB
 	backend  *State
@@ -48,7 +49,7 @@ func (cache *BlockCache) State() *State {
 //-------------------------------------
 // BlockCache.account
 
-func (cache *BlockCache) GetAccount(addr []byte) *ac.Account {
+func (cache *BlockCache) GetAccount(addr []byte) *acm.Account {
 	acc, _, removed, _ := cache.accounts[string(addr)].unpack()
 	if removed {
 		return nil
@@ -61,24 +62,20 @@ func (cache *BlockCache) GetAccount(addr []byte) *ac.Account {
 	}
 }
 
-func (cache *BlockCache) UpdateAccount(acc *ac.Account) {
+func (cache *BlockCache) UpdateAccount(acc *acm.Account) {
 	addr := acc.Address
 	_, storage, removed, _ := cache.accounts[string(addr)].unpack()
-	// SANITY CHECK
 	if removed {
-		panic("UpdateAccount on a removed account")
+		PanicSanity("UpdateAccount on a removed account")
 	}
-	// SANITY CHECK END
 	cache.accounts[string(addr)] = accountInfo{acc, storage, false, true}
 }
 
 func (cache *BlockCache) RemoveAccount(addr []byte) {
-	// SANITY CHECK
 	_, _, removed, _ := cache.accounts[string(addr)].unpack()
 	if removed {
-		panic("RemoveAccount on a removed account")
+		PanicSanity("RemoveAccount on a removed account")
 	}
-	// SANITY CHECK END
 	cache.accounts[string(addr)] = accountInfo{nil, nil, true, false}
 }
 
@@ -95,11 +92,9 @@ func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
 
 	// Get or load storage
 	acc, storage, removed, dirty := cache.accounts[string(addr.Postfix(20))].unpack()
-	// SANITY CHECK
 	if removed {
-		panic("GetStorage() on removed account")
+		PanicSanity("GetStorage() on removed account")
 	}
-	// SANITY CHECK END
 	if acc != nil && storage == nil {
 		storage = makeStorage(cache.db, acc.StorageRoot)
 		cache.accounts[string(addr.Postfix(20))] = accountInfo{acc, storage, false, dirty}
@@ -119,12 +114,10 @@ func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
 
 // NOTE: Set value to zero to removed from the trie.
 func (cache *BlockCache) SetStorage(addr Word256, key Word256, value Word256) {
-	// SANITY CHECK
 	_, _, removed, _ := cache.accounts[string(addr.Postfix(20))].unpack()
 	if removed {
-		panic("SetStorage() on a removed account")
+		PanicSanity("SetStorage() on a removed account")
 	}
-	// SANITY CHECK END
 	cache.storages[Tuple256{addr, key}] = storageInfo{value, true}
 }
 
@@ -151,12 +144,10 @@ func (cache *BlockCache) UpdateNameRegEntry(entry *types.NameRegEntry) {
 }
 
 func (cache *BlockCache) RemoveNameRegEntry(name string) {
-	// SANITY CHECK
 	_, removed, _ := cache.names[name].unpack()
 	if removed {
-		panic("RemoveNameRegEntry on a removed entry")
+		PanicSanity("RemoveNameRegEntry on a removed entry")
 	}
-	// SANITY CHECK END
 	cache.names[name] = nameInfo{nil, true, false}
 }
 
@@ -178,7 +169,7 @@ func (cache *BlockCache) Sync() {
 	// Later we'll iterate over all the users and save storage + update storage root.
 	var (
 		curAddr       Word256
-		curAcc        *ac.Account
+		curAcc        *acm.Account
 		curAccRemoved bool
 		curStorage    merkle.Tree
 	)
@@ -222,8 +213,7 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveAccount(acc.Address)
 			if !removed {
-				// SOMETHING HORRIBLE HAS GONE WRONG
-				panic(Fmt("Could not remove account to be removed: %X", acc.Address))
+				PanicCrisis(Fmt("Could not remove account to be removed: %X", acc.Address))
 			}
 		} else {
 			if acc == nil {
@@ -256,8 +246,7 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveNameRegEntry(nameStr)
 			if !removed {
-				// SOMETHING HORRIBLE HAS GONE WRONG
-				panic(Fmt("Could not remove namereg entry to be removed: %s", nameStr))
+				PanicCrisis(Fmt("Could not remove namereg entry to be removed: %s", nameStr))
 			}
 		} else {
 			if entry == nil {
@@ -274,13 +263,13 @@ func (cache *BlockCache) Sync() {
 //-----------------------------------------------------------------------------
 
 type accountInfo struct {
-	account *ac.Account
+	account *acm.Account
 	storage merkle.Tree
 	removed bool
 	dirty   bool
 }
 
-func (accInfo accountInfo) unpack() (*ac.Account, merkle.Tree, bool, bool) {
+func (accInfo accountInfo) unpack() (*acm.Account, merkle.Tree, bool, bool) {
 	return accInfo.account, accInfo.storage, accInfo.removed, accInfo.dirty
 }
 

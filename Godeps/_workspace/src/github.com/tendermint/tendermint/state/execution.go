@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
@@ -57,29 +57,28 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 	}
 
 	// Update Validator.LastCommitHeight as necessary.
-	// If we panic in here, something has gone horribly wrong
 	for i, precommit := range block.LastValidation.Precommits {
 		if precommit == nil {
 			continue
 		}
 		_, val := s.LastBondedValidators.GetByIndex(i)
 		if val == nil {
-			panic(Fmt("Failed to fetch validator at index %v", i))
+			PanicCrisis(Fmt("Failed to fetch validator at index %v", i))
 		}
 		if _, val_ := s.BondedValidators.GetByAddress(val.Address); val_ != nil {
 			val_.LastCommitHeight = block.Height - 1
 			updated := s.BondedValidators.Update(val_)
 			if !updated {
-				panic("Failed to update bonded validator LastCommitHeight")
+				PanicCrisis("Failed to update bonded validator LastCommitHeight")
 			}
 		} else if _, val_ := s.UnbondingValidators.GetByAddress(val.Address); val_ != nil {
 			val_.LastCommitHeight = block.Height - 1
 			updated := s.UnbondingValidators.Update(val_)
 			if !updated {
-				panic("Failed to update unbonding validator LastCommitHeight")
+				PanicCrisis("Failed to update unbonding validator LastCommitHeight")
 			}
 		} else {
-			panic("Could not find validator")
+			PanicCrisis("Could not find validator")
 		}
 	}
 
@@ -119,7 +118,7 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 	s.BondedValidators.Iterate(func(index int, val *Validator) bool {
 		lastActivityHeight := MaxInt(val.BondHeight, val.LastCommitHeight)
 		if lastActivityHeight+validatorTimeoutBlocks < block.Height {
-			log.Info("Validator timeout", "validator", val, "height", block.Height)
+			log.Notice("Validator timeout", "validator", val, "height", block.Height)
 			toTimeout = append(toTimeout, val)
 		}
 		return false
@@ -138,11 +137,11 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 }
 
 // The accounts from the TxInputs must either already have
-// account.PubKey.(type) != nil, (it must be known),
+// acm.PubKey.(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PubKey set to nil.
-func getInputs(state AccountGetter, ins []*types.TxInput) (map[string]*account.Account, error) {
-	accounts := map[string]*account.Account{}
+func getInputs(state AccountGetter, ins []*types.TxInput) (map[string]*acm.Account, error) {
+	accounts := map[string]*acm.Account{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[string(in.Address)]; ok {
@@ -161,9 +160,9 @@ func getInputs(state AccountGetter, ins []*types.TxInput) (map[string]*account.A
 	return accounts, nil
 }
 
-func getOrMakeOutputs(state AccountGetter, accounts map[string]*account.Account, outs []*types.TxOutput) (map[string]*account.Account, error) {
+func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, outs []*types.TxOutput) (map[string]*acm.Account, error) {
 	if accounts == nil {
-		accounts = make(map[string]*account.Account)
+		accounts = make(map[string]*acm.Account)
 	}
 
 	// we should err if an account is being created but the inputs don't have permission
@@ -182,7 +181,7 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*account.Account,
 				}
 				checkedCreatePerms = true
 			}
-			acc = &account.Account{
+			acc = &acm.Account{
 				Address:     out.Address,
 				PubKey:      nil,
 				Sequence:    0,
@@ -195,7 +194,7 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*account.Account,
 	return accounts, nil
 }
 
-func checkInputPubKey(acc *account.Account, in *types.TxInput) error {
+func checkInputPubKey(acc *acm.Account, in *types.TxInput) error {
 	if acc.PubKey == nil {
 		if in.PubKey == nil {
 			return types.ErrTxUnknownPubKey
@@ -210,14 +209,12 @@ func checkInputPubKey(acc *account.Account, in *types.TxInput) error {
 	return nil
 }
 
-func validateInputs(accounts map[string]*account.Account, signBytes []byte, ins []*types.TxInput) (total int64, err error) {
+func validateInputs(accounts map[string]*acm.Account, signBytes []byte, ins []*types.TxInput) (total int64, err error) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
-		// SANITY CHECK
 		if acc == nil {
-			panic("validateInputs() expects account in accounts")
+			PanicSanity("validateInputs() expects account in accounts")
 		}
-		// SANITY CHECK END
 		err = validateInput(acc, signBytes, in)
 		if err != nil {
 			return
@@ -228,7 +225,7 @@ func validateInputs(accounts map[string]*account.Account, signBytes []byte, ins 
 	return total, nil
 }
 
-func validateInput(acc *account.Account, signBytes []byte, in *types.TxInput) (err error) {
+func validateInput(acc *acm.Account, signBytes []byte, in *types.TxInput) (err error) {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
@@ -263,30 +260,26 @@ func validateOutputs(outs []*types.TxOutput) (total int64, err error) {
 	return total, nil
 }
 
-func adjustByInputs(accounts map[string]*account.Account, ins []*types.TxInput) {
+func adjustByInputs(accounts map[string]*acm.Account, ins []*types.TxInput) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
-		// SANITY CHECK
 		if acc == nil {
-			panic("adjustByInputs() expects account in accounts")
+			PanicSanity("adjustByInputs() expects account in accounts")
 		}
 		if acc.Balance < in.Amount {
-			panic("adjustByInputs() expects sufficient funds")
+			PanicSanity("adjustByInputs() expects sufficient funds")
 		}
-		// SANITY CHECK END
 		acc.Balance -= in.Amount
 		acc.Sequence += 1
 	}
 }
 
-func adjustByOutputs(accounts map[string]*account.Account, outs []*types.TxOutput) {
+func adjustByOutputs(accounts map[string]*acm.Account, outs []*types.TxOutput) {
 	for _, out := range outs {
 		acc := accounts[string(out.Address)]
-		// SANITY CHECK
 		if acc == nil {
-			panic("adjustByOutputs() expects account in accounts")
+			PanicSanity("adjustByOutputs() expects account in accounts")
 		}
-		// SANITY CHECK END
 		acc.Balance += out.Amount
 	}
 }
@@ -319,7 +312,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			return err
 		}
 
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
 		if err != nil {
 			return err
@@ -354,19 +347,19 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		return nil
 
 	case *types.CallTx:
-		var inAcc, outAcc *account.Account
+		var inAcc, outAcc *acm.Account
 
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
-			log.Debug(Fmt("Can't find in account %X", tx.Input.Address))
+			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
 			return types.ErrTxInvalidAddress
 		}
 
-		createAccount := len(tx.Address) == 0
-		if createAccount {
+		createContract := len(tx.Address) == 0
+		if createContract {
 			if !hasCreateContractPermission(blockCache, inAcc) {
-				return fmt.Errorf("Account %X does not have Create permission", tx.Input.Address)
+				return fmt.Errorf("Account %X does not have CreateContract permission", tx.Input.Address)
 			}
 		} else {
 			if !hasCallPermission(blockCache, inAcc) {
@@ -376,123 +369,131 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			log.Debug(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			log.Info(Fmt("Can't find pubkey for %X", tx.Input.Address))
 			return err
 		}
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			log.Debug(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			log.Info(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			log.Debug(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
 			return types.ErrTxInsufficientFunds
 		}
 
-		if !createAccount {
+		if !createContract {
 			// Validate output
 			if len(tx.Address) != 20 {
-				log.Debug(Fmt("Destination address is not 20 bytes %X", tx.Address))
+				log.Info(Fmt("Destination address is not 20 bytes %X", tx.Address))
 				return types.ErrTxInvalidAddress
 			}
-			// this may be nil if we are still in mempool and contract was created in same block as this tx
+			// check if its a native contract
+			if vm.RegisteredNativeContract(LeftPadWord256(tx.Address)) {
+				return fmt.Errorf("NativeContracts can not be called using CallTx. Use a contract or the appropriate tx type (eg. PermissionsTx, NameTx)")
+			}
+
+			// Output account may be nil if we are still in mempool and contract was created in same block as this tx
 			// but that's fine, because the account will be created properly when the create tx runs in the block
 			// and then this won't return nil. otherwise, we take their fee
-			// it may also be nil if its an snative (not a "real" account)
 			outAcc = blockCache.GetAccount(tx.Address)
 		}
 
-		log.Debug(Fmt("Out account: %v", outAcc))
+		log.Info(Fmt("Out account: %v", outAcc))
 
 		// Good!
 		value := tx.Input.Amount - tx.Fee
 		inAcc.Sequence += 1
+		inAcc.Balance -= tx.Fee
+		blockCache.UpdateAccount(inAcc)
 
+		// The logic in runCall MUST NOT return.
 		if runCall {
 
+			// VM call variables
 			var (
 				gas     int64       = tx.GasLimit
 				err     error       = nil
 				caller  *vm.Account = toVMAccount(inAcc)
-				callee  *vm.Account = nil
+				callee  *vm.Account = nil // initialized below
 				code    []byte      = nil
+				ret     []byte      = nil
 				txCache             = NewTxCache(blockCache)
 				params              = vm.Params{
 					BlockHeight: int64(_s.LastBlockHeight),
 					BlockHash:   LeftPadWord256(_s.LastBlockHash),
 					BlockTime:   _s.LastBlockTime.Unix(),
-					GasLimit:    10000000,
+					GasLimit:    _s.GetGasLimit(),
 				}
 			)
 
-			// get or create callee
-			if !createAccount {
-
-				if outAcc == nil || len(outAcc.Code) == 0 {
-					// check if its an snative
-					if _, ok := vm.RegisteredSNativeContracts[LeftPadWord256(tx.Address)]; ok {
-						// set the outAcc (simply a placeholder until we reach the call)
-						outAcc = &account.Account{Address: tx.Address}
-					} else {
-						// if you call an account that doesn't exist
-						// or an account with no code then we take fees (sorry pal)
-						// NOTE: it's fine to create a contract and call it within one
-						// block (nonce will prevent re-ordering of those txs)
-						// but to create with one account and call with another
-						// you have to wait a block to avoid a re-ordering attack
-						// that will take your fees
-						inAcc.Balance -= tx.Fee
-						blockCache.UpdateAccount(inAcc)
-						if outAcc == nil {
-							log.Debug(Fmt("Cannot find destination address %X. Deducting fee from caller", tx.Address))
-						} else {
-							log.Debug(Fmt("Attempting to call an account (%X) with no code. Deducting fee from caller", tx.Address))
-						}
-						return types.ErrTxInvalidAddress
-					}
+			if !createContract && (outAcc == nil || len(outAcc.Code) == 0) {
+				// if you call an account that doesn't exist
+				// or an account with no code then we take fees (sorry pal)
+				// NOTE: it's fine to create a contract and call it within one
+				// block (nonce will prevent re-ordering of those txs)
+				// but to create with one contract and call with another
+				// you have to wait a block to avoid a re-ordering attack
+				// that will take your fees
+				if outAcc == nil {
+					log.Info(Fmt("%X tries to call %X but it does not exist.",
+						inAcc.Address, tx.Address))
+				} else {
+					log.Info(Fmt("%X tries to call %X but code is blank.",
+						inAcc.Address, tx.Address))
 				}
-				callee = toVMAccount(outAcc)
-				code = callee.Code
-				log.Debug(Fmt("Calling contract %X with code %X", callee.Address, callee.Code))
-			} else {
-				callee = txCache.CreateAccount(caller)
-				log.Debug(Fmt("Created new account %X", callee.Address))
-				code = tx.Data
+				err = types.ErrTxInvalidAddress
+				goto CALL_COMPLETE
 			}
-			log.Debug(Fmt("Code for this contract: %X", code))
 
-			txCache.UpdateAccount(caller) // because we bumped nonce
-			txCache.UpdateAccount(callee) // so the txCache knows about the callee and the create and/or transfer takes effect
-
-			vmach := vm.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx))
-			vmach.SetFireable(evc)
-
-			// NOTE: Call() transfers the value from caller to callee iff call succeeds.
-			ret, err := vmach.Call(caller, callee, code, tx.Data, value, &gas)
-			exception := ""
-			if err != nil {
-				exception = err.Error()
-				// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-				log.Debug(Fmt("Error on execution: %v", err))
-				inAcc.Balance -= tx.Fee
-				blockCache.UpdateAccount(inAcc)
-				// Throw away 'txCache' which holds incomplete updates (don't sync it).
+			// get or create callee
+			if createContract {
+				// We already checked for permission
+				callee = txCache.CreateAccount(caller)
+				log.Info(Fmt("Created new contract %X", callee.Address))
+				code = tx.Data
 			} else {
-				log.Debug("Successful execution")
-				// Success
-				if createAccount {
+				callee = toVMAccount(outAcc)
+				log.Info(Fmt("Calling contract %X with code %X", callee.Address, callee.Code))
+				code = callee.Code
+			}
+			log.Info(Fmt("Code for this contract: %X", code))
+
+			// Run VM call and sync txCache to blockCache.
+			{ // Capture scope for goto.
+				// Write caller/callee to txCache.
+				txCache.UpdateAccount(caller)
+				txCache.UpdateAccount(callee)
+				vmach := vm.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx))
+				vmach.SetFireable(evc)
+				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
+				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
+				if err != nil {
+					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+					log.Info(Fmt("Error on execution: %v", err))
+					goto CALL_COMPLETE
+				}
+
+				log.Info("Successful execution")
+				if createContract {
 					callee.Code = ret
 				}
-
 				txCache.Sync()
 			}
+
+		CALL_COMPLETE: // err may or may not be nil.
+
 			// Create a receipt from the ret and whether errored.
-			log.Info("VM call complete", "caller", caller, "callee", callee, "return", ret, "err", err)
+			log.Notice("VM call complete", "caller", caller, "callee", callee, "return", ret, "err", err)
 
 			// Fire Events for sender and receiver
 			// a separate event will be fired from vm for each additional call
 			if evc != nil {
+				exception := ""
+				if err != nil {
+					exception = err.Error()
+				}
 				evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventMsgCallTx{tx, ret, exception})
 				evc.FireEvent(types.EventStringAccOutput(tx.Address), types.EventMsgCallTx{tx, ret, exception})
 			}
@@ -502,7 +503,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			// So mempool will skip the actual .Call(),
 			// and only deduct from the caller's balance.
 			inAcc.Balance -= value
-			if createAccount {
+			if createContract {
 				inAcc.Sequence += 1
 			}
 			blockCache.UpdateAccount(inAcc)
@@ -511,12 +512,12 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		return nil
 
 	case *types.NameTx:
-		var inAcc *account.Account
+		var inAcc *acm.Account
 
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
-			log.Debug(Fmt("Can't find in account %X", tx.Input.Address))
+			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
 			return types.ErrTxInvalidAddress
 		}
 		// check permission
@@ -525,24 +526,24 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			log.Debug(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			log.Info(Fmt("Can't find pubkey for %X", tx.Input.Address))
 			return err
 		}
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			log.Debug(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			log.Info(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
 			return err
 		}
 		// fee is in addition to the amount which is used to determine the TTL
 		if tx.Input.Amount < tx.Fee {
-			log.Debug(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
 			return types.ErrTxInsufficientFunds
 		}
 
 		// validate the input strings
 		if err := tx.ValidateStrings(); err != nil {
-			log.Debug(err.Error())
+			log.Info(err.Error())
 			return types.ErrTxInvalidString
 		}
 
@@ -553,7 +554,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		expiresIn := int(value / costPerBlock)
 		lastBlockHeight := _s.LastBlockHeight
 
-		log.Debug("New NameTx", "value", value, "costPerBlock", costPerBlock, "expiresIn", expiresIn, "lastBlock", lastBlockHeight)
+		log.Info("New NameTx", "value", value, "costPerBlock", costPerBlock, "expiresIn", expiresIn, "lastBlock", lastBlockHeight)
 
 		// check if the name exists
 		entry := blockCache.GetNameRegEntry(tx.Name)
@@ -564,8 +565,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner
 				if bytes.Compare(entry.Owner, tx.Input.Address) != 0 {
-					log.Debug(Fmt("Sender %X is trying to update a name (%s) for which he is not owner", tx.Input.Address, tx.Name))
-					return types.ErrIncorrectOwner
+					log.Info(Fmt("Sender %X is trying to update a name (%s) for which he is not owner", tx.Input.Address, tx.Name))
+					return types.ErrTxPermissionDenied
 				}
 			} else {
 				expired = true
@@ -575,7 +576,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			if value == 0 && len(tx.Data) == 0 {
 				// maybe we reward you for telling us we can delete this crap
 				// (owners if not expired, anyone if expired)
-				log.Debug("Removing namereg entry", "name", entry.Name)
+				log.Info("Removing namereg entry", "name", entry.Name)
 				blockCache.RemoveNameRegEntry(entry.Name)
 			} else {
 				// update the entry by bumping the expiry
@@ -586,7 +587,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
-					log.Debug("An old namereg entry has expired and been reclaimed", "name", entry.Name, "expiresIn", expiresIn, "owner", entry.Owner)
+					log.Info("An old namereg entry has expired and been reclaimed", "name", entry.Name, "expiresIn", expiresIn, "owner", entry.Owner)
 				} else {
 					// since the size of the data may have changed
 					// we use the total amount of "credit"
@@ -597,7 +598,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 						return errors.New(Fmt("Names must be registered for at least %d blocks", types.MinNameRegistrationPeriod))
 					}
 					entry.Expires = lastBlockHeight + expiresIn
-					log.Debug("Updated namereg entry", "name", entry.Name, "expiresIn", expiresIn, "oldCredit", oldCredit, "value", value, "credit", credit)
+					log.Info("Updated namereg entry", "name", entry.Name, "expiresIn", expiresIn, "oldCredit", oldCredit, "value", value, "credit", credit)
 				}
 				entry.Data = tx.Data
 				blockCache.UpdateNameRegEntry(entry)
@@ -613,7 +614,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				Data:    tx.Data,
 				Expires: lastBlockHeight + expiresIn,
 			}
-			log.Debug("Creating namereg entry", "name", entry.Name, "expiresIn", expiresIn)
+			log.Info("Creating namereg entry", "name", entry.Name, "expiresIn", expiresIn)
 			blockCache.UpdateNameRegEntry(entry)
 		}
 
@@ -661,12 +662,9 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			return fmt.Errorf("At least one input lacks permission to bond")
 		}
 
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
 		if err != nil {
-			return err
-		}
-		if err := tx.PubKey.ValidateBasic(); err != nil {
 			return err
 		}
 		if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
@@ -704,10 +702,10 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			Accum:       0,
 		})
 		if !added {
-			// SOMETHING HAS GONE HORRIBLY WRONG
-			panic("Failed to add validator")
+			PanicCrisis("Failed to add validator")
 		}
 		if evc != nil {
+			// TODO: fire for all inputs
 			evc.FireEvent(types.EventStringBond(), tx)
 		}
 		return nil
@@ -720,7 +718,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 
 		// Verify the signature
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
 			return types.ErrTxInvalidSignature
 		}
@@ -745,7 +743,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 
 		// Verify the signature
-		signBytes := account.SignBytes(_s.ChainID, tx)
+		signBytes := acm.SignBytes(_s.ChainID, tx)
 		if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
 			return types.ErrTxInvalidSignature
 		}
@@ -774,8 +772,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				return types.ErrTxInvalidAddress
 			}
 		}
-		voteASignBytes := account.SignBytes(_s.ChainID, &tx.VoteA)
-		voteBSignBytes := account.SignBytes(_s.ChainID, &tx.VoteB)
+		voteASignBytes := acm.SignBytes(_s.ChainID, &tx.VoteA)
+		voteBSignBytes := acm.SignBytes(_s.ChainID, &tx.VoteB)
 		if !accused.PubKey.VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
 			!accused.PubKey.VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
 			return types.ErrTxInvalidSignature
@@ -804,19 +802,111 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 		return nil
 
+	case *types.PermissionsTx:
+		var inAcc *acm.Account
+
+		// Validate input
+		inAcc = blockCache.GetAccount(tx.Input.Address)
+		if inAcc == nil {
+			log.Debug(Fmt("Can't find in account %X", tx.Input.Address))
+			return types.ErrTxInvalidAddress
+		}
+
+		permFlag := tx.PermArgs.PermFlag()
+		// check permission
+		if !HasPermission(blockCache, inAcc, permFlag) {
+			return fmt.Errorf("Account %X does not have moderator permission %s (%b)", tx.Input.Address, ptypes.PermFlagToString(permFlag), permFlag)
+		}
+
+		// pubKey should be present in either "inAcc" or "tx.Input"
+		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
+			log.Debug(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			return err
+		}
+		signBytes := acm.SignBytes(_s.ChainID, tx)
+		err := validateInput(inAcc, signBytes, tx.Input)
+		if err != nil {
+			log.Debug(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			return err
+		}
+
+		value := tx.Input.Amount
+
+		log.Debug("New PermissionsTx", "function", ptypes.PermFlagToString(permFlag), "args", tx.PermArgs)
+
+		var permAcc *acm.Account
+		switch args := tx.PermArgs.(type) {
+		case *ptypes.HasBaseArgs:
+			// this one doesn't make sense from txs
+			return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
+		case *ptypes.SetBaseArgs:
+			if permAcc = blockCache.GetAccount(args.Address); permAcc == nil {
+				return fmt.Errorf("Trying to update permissions for unknown account %X", args.Address)
+			}
+			err = permAcc.Permissions.Base.Set(args.Permission, args.Value)
+		case *ptypes.UnsetBaseArgs:
+			if permAcc = blockCache.GetAccount(args.Address); permAcc == nil {
+				return fmt.Errorf("Trying to update permissions for unknown account %X", args.Address)
+			}
+			err = permAcc.Permissions.Base.Unset(args.Permission)
+		case *ptypes.SetGlobalArgs:
+			if permAcc = blockCache.GetAccount(ptypes.GlobalPermissionsAddress); permAcc == nil {
+				PanicSanity("can't find global permissions account")
+			}
+			err = permAcc.Permissions.Base.Set(args.Permission, args.Value)
+		case *ptypes.HasRoleArgs:
+			return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
+		case *ptypes.AddRoleArgs:
+			if permAcc = blockCache.GetAccount(args.Address); permAcc == nil {
+				return fmt.Errorf("Trying to update roles for unknown account %X", args.Address)
+			}
+			if !permAcc.Permissions.AddRole(args.Role) {
+				return fmt.Errorf("Role (%s) already exists for account %X", args.Role, args.Address)
+			}
+		case *ptypes.RmRoleArgs:
+			if permAcc = blockCache.GetAccount(args.Address); permAcc == nil {
+				return fmt.Errorf("Trying to update roles for unknown account %X", args.Address)
+			}
+			if !permAcc.Permissions.RmRole(args.Role) {
+				return fmt.Errorf("Role (%s) does not exist for account %X", args.Role, args.Address)
+			}
+		default:
+			PanicSanity(Fmt("invalid permission function: %s", ptypes.PermFlagToString(permFlag)))
+		}
+
+		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
+		if err != nil {
+			return err
+		}
+
+		// Good!
+		inAcc.Sequence += 1
+		inAcc.Balance -= value
+		blockCache.UpdateAccount(inAcc)
+		if permAcc != nil {
+			blockCache.UpdateAccount(permAcc)
+		}
+
+		if evc != nil {
+			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), tx)
+			evc.FireEvent(types.EventStringPermissions(ptypes.PermFlagToString(permFlag)), tx)
+		}
+
+		return nil
+
 	default:
-		// SANITY CHECK (binary decoding should catch bad tx types
-		// before they get here
-		panic("Unknown Tx type")
+		// binary decoding should not let this happen
+		PanicSanity("Unknown Tx type")
+		return nil
 	}
 }
 
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(state AccountGetter, acc *account.Account, perm ptypes.PermFlag) bool {
-	if perm > ptypes.AllBasePermFlags {
-		panic("Checking an unknown permission in state should never happen")
+func HasPermission(state AccountGetter, acc *acm.Account, perm ptypes.PermFlag) bool {
+	if perm > ptypes.AllPermFlags {
+		PanicSanity("Checking an unknown permission in state should never happen")
 	}
 
 	if acc == nil {
@@ -824,23 +914,25 @@ func HasPermission(state AccountGetter, acc *account.Account, perm ptypes.PermFl
 		// this needs to fall back to global or do some other specific things
 		// eg. a bondAcc may be nil and so can only bond if global bonding is true
 	}
+	permString := ptypes.PermFlagToString(perm)
 
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
-		log.Debug("Account does not have permission", "account", acc, "accPermissions", acc.Permissions, "perm", perm)
 		if state == nil {
-			panic("All known global permissions should be set!")
+			PanicSanity("All known global permissions should be set!")
 		}
-		log.Debug("Querying GlobalPermissionsAddress")
+		log.Info("Permission for account is not set. Querying GlobalPermissionsAddress", "perm", permString)
 		return HasPermission(nil, state.GetAccount(ptypes.GlobalPermissionsAddress), perm)
+	} else if v {
+		log.Info("Account has permission", "address", Fmt("%X", acc.Address), "perm", permString)
 	} else {
-		log.Debug("Account has permission", "account", acc, "accPermissions", acc.Permissions, "perm", perm)
+		log.Info("Account does not have permission", "address", Fmt("%X", acc.Address), "perm", permString)
 	}
 	return v
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(state AccountGetter, accs map[string]*account.Account) bool {
+func hasSendPermission(state AccountGetter, accs map[string]*acm.Account) bool {
 	for _, acc := range accs {
 		if !HasPermission(state, acc, ptypes.Send) {
 			return false
@@ -849,19 +941,19 @@ func hasSendPermission(state AccountGetter, accs map[string]*account.Account) bo
 	return true
 }
 
-func hasNamePermission(state AccountGetter, acc *account.Account) bool {
+func hasNamePermission(state AccountGetter, acc *acm.Account) bool {
 	return HasPermission(state, acc, ptypes.Name)
 }
 
-func hasCallPermission(state AccountGetter, acc *account.Account) bool {
+func hasCallPermission(state AccountGetter, acc *acm.Account) bool {
 	return HasPermission(state, acc, ptypes.Call)
 }
 
-func hasCreateContractPermission(state AccountGetter, acc *account.Account) bool {
+func hasCreateContractPermission(state AccountGetter, acc *acm.Account) bool {
 	return HasPermission(state, acc, ptypes.CreateContract)
 }
 
-func hasCreateAccountPermission(state AccountGetter, accs map[string]*account.Account) bool {
+func hasCreateAccountPermission(state AccountGetter, accs map[string]*acm.Account) bool {
 	for _, acc := range accs {
 		if !HasPermission(state, acc, ptypes.CreateAccount) {
 			return false
@@ -870,11 +962,11 @@ func hasCreateAccountPermission(state AccountGetter, accs map[string]*account.Ac
 	return true
 }
 
-func hasBondPermission(state AccountGetter, acc *account.Account) bool {
+func hasBondPermission(state AccountGetter, acc *acm.Account) bool {
 	return HasPermission(state, acc, ptypes.Bond)
 }
 
-func hasBondOrSendPermission(state AccountGetter, accs map[string]*account.Account) bool {
+func hasBondOrSendPermission(state AccountGetter, accs map[string]*acm.Account) bool {
 	for _, acc := range accs {
 		if !HasPermission(state, acc, ptypes.Bond) {
 			if !HasPermission(state, acc, ptypes.Send) {

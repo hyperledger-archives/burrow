@@ -7,9 +7,9 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 type PeerMessage struct {
@@ -19,6 +19,8 @@ type PeerMessage struct {
 }
 
 type TestReactor struct {
+	BaseReactor
+
 	mtx          sync.Mutex
 	channels     []*ChannelDescriptor
 	peersAdded   []*Peer
@@ -29,17 +31,13 @@ type TestReactor struct {
 }
 
 func NewTestReactor(channels []*ChannelDescriptor, logMessages bool) *TestReactor {
-	return &TestReactor{
+	tr := &TestReactor{
 		channels:     channels,
 		logMessages:  logMessages,
 		msgsReceived: make(map[byte][]PeerMessage),
 	}
-}
-
-func (tr *TestReactor) Start(sw *Switch) {
-}
-
-func (tr *TestReactor) Stop() {
+	tr.BaseReactor = *NewBaseReactor(log, "TestReactor", tr)
+	return tr
 }
 
 func (tr *TestReactor) GetChannels() []*ChannelDescriptor {
@@ -94,7 +92,7 @@ func makeSwitchPair(t testing.TB, initSwitch func(*Switch) *Switch) (*Switch, *S
 	})
 	s2.SetNodePrivKey(s2PrivKey)
 
-	// Start switches
+	// Start switches and reactors
 	s1.Start()
 	s2.Start()
 
@@ -132,11 +130,11 @@ func TestSwitches(t *testing.T) {
 		sw.AddReactor("foo", NewTestReactor([]*ChannelDescriptor{
 			&ChannelDescriptor{Id: byte(0x00), Priority: 10},
 			&ChannelDescriptor{Id: byte(0x01), Priority: 10},
-		}, true)).Start(sw) // Start the reactor
+		}, true))
 		sw.AddReactor("bar", NewTestReactor([]*ChannelDescriptor{
 			&ChannelDescriptor{Id: byte(0x02), Priority: 10},
 			&ChannelDescriptor{Id: byte(0x03), Priority: 10},
-		}, true)).Start(sw) // Start the reactor
+		}, true))
 		return sw
 	})
 	defer s1.Stop()
@@ -166,8 +164,8 @@ func TestSwitches(t *testing.T) {
 	if len(ch0Msgs) != 1 {
 		t.Errorf("Expected to have received 1 message in ch0")
 	}
-	if !bytes.Equal(ch0Msgs[0].Bytes, binary.BinaryBytes(ch0Msg)) {
-		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", binary.BinaryBytes(ch0Msg), ch0Msgs[0].Bytes)
+	if !bytes.Equal(ch0Msgs[0].Bytes, wire.BinaryBytes(ch0Msg)) {
+		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", wire.BinaryBytes(ch0Msg), ch0Msgs[0].Bytes)
 	}
 
 	// Check message on ch1
@@ -175,8 +173,8 @@ func TestSwitches(t *testing.T) {
 	if len(ch1Msgs) != 1 {
 		t.Errorf("Expected to have received 1 message in ch1")
 	}
-	if !bytes.Equal(ch1Msgs[0].Bytes, binary.BinaryBytes(ch1Msg)) {
-		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", binary.BinaryBytes(ch1Msg), ch1Msgs[0].Bytes)
+	if !bytes.Equal(ch1Msgs[0].Bytes, wire.BinaryBytes(ch1Msg)) {
+		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", wire.BinaryBytes(ch1Msg), ch1Msgs[0].Bytes)
 	}
 
 	// Check message on ch2
@@ -184,8 +182,8 @@ func TestSwitches(t *testing.T) {
 	if len(ch2Msgs) != 1 {
 		t.Errorf("Expected to have received 1 message in ch2")
 	}
-	if !bytes.Equal(ch2Msgs[0].Bytes, binary.BinaryBytes(ch2Msg)) {
-		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", binary.BinaryBytes(ch2Msg), ch2Msgs[0].Bytes)
+	if !bytes.Equal(ch2Msgs[0].Bytes, wire.BinaryBytes(ch2Msg)) {
+		t.Errorf("Unexpected message bytes. Wanted: %X, Got: %X", wire.BinaryBytes(ch2Msg), ch2Msgs[0].Bytes)
 	}
 
 }

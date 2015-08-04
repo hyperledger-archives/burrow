@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/alert"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 func StartHTTPServer(listenAddr string, handler http.Handler) (net.Listener, error) {
-	log.Info(Fmt("Starting RPC HTTP server on %v", listenAddr))
+	log.Notice(Fmt("Starting RPC HTTP server on %v", listenAddr))
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to listen to %v", listenAddr)
@@ -34,7 +34,7 @@ func StartHTTPServer(listenAddr string, handler http.Handler) (net.Listener, err
 
 func WriteRPCResponse(w http.ResponseWriter, res RPCResponse) {
 	buf, n, err := new(bytes.Buffer), new(int64), new(error)
-	binary.WriteJSON(res, buf, n, err)
+	wire.WriteJSON(res, buf, n, err)
 	if *err != nil {
 		log.Warn("Failed to write RPC response", "error", err)
 	}
@@ -75,7 +75,7 @@ func RecoverAndLogHandler(handler http.Handler) http.Handler {
 					// For the rest,
 					log.Error("Panic in RPC HTTP handler", "error", e, "stack", string(debug.Stack()))
 					rww.WriteHeader(http.StatusInternalServerError)
-					WriteRPCResponse(rww, NewRPCResponse(nil, Fmt("Internal Server Error: %v", e)))
+					WriteRPCResponse(rww, NewRPCResponse("", nil, Fmt("Internal Server Error: %v", e)))
 				}
 			}
 
@@ -84,7 +84,7 @@ func RecoverAndLogHandler(handler http.Handler) http.Handler {
 			if rww.Status == -1 {
 				rww.Status = 200
 			}
-			log.Debug("Served RPC HTTP response",
+			log.Info("Served RPC HTTP response",
 				"method", r.Method, "url", r.URL,
 				"status", rww.Status, "duration", durationMS,
 				"remoteAddr", r.RemoteAddr,

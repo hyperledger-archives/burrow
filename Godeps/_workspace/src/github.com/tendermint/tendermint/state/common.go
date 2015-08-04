@@ -1,13 +1,13 @@
 package state
 
 import (
-	ac "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 )
 
 type AccountGetter interface {
-	GetAccount(addr []byte) *ac.Account
+	GetAccount(addr []byte) *acm.Account
 }
 
 type VMAccountState interface {

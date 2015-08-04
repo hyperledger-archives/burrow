@@ -5,8 +5,8 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 type IAVLProof struct {
@@ -46,17 +46,17 @@ func (branch IAVLProofInnerNode) Hash(childHash []byte) []byte {
 	hasher := ripemd160.New()
 	buf := new(bytes.Buffer)
 	n, err := int64(0), error(nil)
-	binary.WriteInt8(branch.Height, buf, &n, &err)
-	binary.WriteVarint(branch.Size, buf, &n, &err)
+	wire.WriteInt8(branch.Height, buf, &n, &err)
+	wire.WriteVarint(branch.Size, buf, &n, &err)
 	if len(branch.Left) == 0 {
-		binary.WriteByteSlice(childHash, buf, &n, &err)
-		binary.WriteByteSlice(branch.Right, buf, &n, &err)
+		wire.WriteByteSlice(childHash, buf, &n, &err)
+		wire.WriteByteSlice(branch.Right, buf, &n, &err)
 	} else {
-		binary.WriteByteSlice(branch.Left, buf, &n, &err)
-		binary.WriteByteSlice(childHash, buf, &n, &err)
+		wire.WriteByteSlice(branch.Left, buf, &n, &err)
+		wire.WriteByteSlice(childHash, buf, &n, &err)
 	}
 	if err != nil {
-		panic(Fmt("Failed to hash IAVLProofInnerNode: %v", err))
+		PanicCrisis(Fmt("Failed to hash IAVLProofInnerNode: %v", err))
 	}
 	// fmt.Printf("InnerNode hash bytes: %X\n", buf.Bytes())
 	hasher.Write(buf.Bytes())
@@ -72,12 +72,12 @@ func (leaf IAVLProofLeafNode) Hash() []byte {
 	hasher := ripemd160.New()
 	buf := new(bytes.Buffer)
 	n, err := int64(0), error(nil)
-	binary.WriteInt8(0, buf, &n, &err)
-	binary.WriteVarint(1, buf, &n, &err)
-	binary.WriteByteSlice(leaf.KeyBytes, buf, &n, &err)
-	binary.WriteByteSlice(leaf.ValueBytes, buf, &n, &err)
+	wire.WriteInt8(0, buf, &n, &err)
+	wire.WriteVarint(1, buf, &n, &err)
+	wire.WriteByteSlice(leaf.KeyBytes, buf, &n, &err)
+	wire.WriteByteSlice(leaf.ValueBytes, buf, &n, &err)
 	if err != nil {
-		panic(Fmt("Failed to hash IAVLProofLeafNode: %v", err))
+		PanicCrisis(Fmt("Failed to hash IAVLProofLeafNode: %v", err))
 	}
 	// fmt.Printf("LeafNode hash bytes:   %X\n", buf.Bytes())
 	hasher.Write(buf.Bytes())
@@ -91,11 +91,11 @@ func (node *IAVLNode) constructProof(t *IAVLTree, key interface{}, proof *IAVLPr
 			n, err := int64(0), error(nil)
 			t.keyCodec.Encode(node.key, keyBuf, &n, &err)
 			if err != nil {
-				panic(Fmt("Failed to encode node.key: %v", err))
+				PanicCrisis(Fmt("Failed to encode node.key: %v", err))
 			}
 			t.valueCodec.Encode(node.value, valueBuf, &n, &err)
 			if err != nil {
-				panic(Fmt("Failed to encode node.value: %v", err))
+				PanicCrisis(Fmt("Failed to encode node.value: %v", err))
 			}
 			leaf := IAVLProofLeafNode{
 				KeyBytes:   keyBuf.Bytes(),

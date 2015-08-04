@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 type Block struct {
@@ -75,7 +75,7 @@ func (b *Block) Hash() []byte {
 }
 
 func (b *Block) MakePartSet() *PartSet {
-	return NewPartSetFromData(binary.BinaryBytes(b))
+	return NewPartSetFromData(wire.BinaryBytes(b))
 }
 
 // Convenience.
@@ -137,7 +137,7 @@ func (h *Header) Hash() []byte {
 		return nil
 	}
 
-	return binary.BinaryRipemd160(h)
+	return wire.BinaryRipemd160(h)
 }
 
 func (h *Header) StringIndented(indent string) string {
@@ -310,7 +310,7 @@ func (data *Data) Hash() []byte {
 	if data.hash == nil {
 		bs := make([]interface{}, len(data.Txs))
 		for i, tx := range data.Txs {
-			bs[i] = account.SignBytes(config.GetString("chain_id"), tx)
+			bs[i] = acm.SignBytes(config.GetString("chain_id"), tx)
 		}
 		data.hash = merkle.SimpleHashFromBinaries(bs) // NOTE: leaves are TxIDs.
 	}

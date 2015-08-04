@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
-	"sync/atomic"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -19,11 +18,9 @@ var (
 
 // MempoolReactor handles mempool tx broadcasting amongst peers.
 type MempoolReactor struct {
-	sw      *p2p.Switch
-	quit    chan struct{}
-	started uint32
-	stopped uint32
+	p2p.BaseReactor
 
+	sw      *p2p.Switch
 	Mempool *Mempool
 
 	evsw events.Fireable
@@ -31,27 +28,15 @@ type MempoolReactor struct {
 
 func NewMempoolReactor(mempool *Mempool) *MempoolReactor {
 	memR := &MempoolReactor{
-		quit:    make(chan struct{}),
 		Mempool: mempool,
 	}
+	memR.BaseReactor = *p2p.NewBaseReactor(log, "MempoolReactor", memR)
 	return memR
 }
 
-// Implements Reactor
-func (memR *MempoolReactor) Start(sw *p2p.Switch) {
-	if atomic.CompareAndSwapUint32(&memR.started, 0, 1) {
-		memR.sw = sw
-		log.Info("Starting MempoolReactor")
-	}
-}
+// func (memR *MempoolReactor) OnStart() { memR.BaseReactor.OnStart() }
 
-// Implements Reactor
-func (memR *MempoolReactor) Stop() {
-	if atomic.CompareAndSwapUint32(&memR.stopped, 0, 1) {
-		log.Info("Stopping MempoolReactor")
-		close(memR.quit)
-	}
-}
+// func (memR *MempoolReactor) OnStop() { memR.BaseReactor.OnStop() }
 
 // Implements Reactor
 func (memR *MempoolReactor) GetChannels() []*p2p.ChannelDescriptor {
@@ -78,22 +63,22 @@ func (memR *MempoolReactor) Receive(chId byte, src *p2p.Peer, msgBytes []byte) {
 		log.Warn("Error decoding message", "error", err)
 		return
 	}
-	log.Info("MempoolReactor received message", "msg", msg)
+	log.Notice("MempoolReactor received message", "msg", msg)
 
 	switch msg := msg.(type) {
 	case *TxMessage:
 		err := memR.Mempool.AddTx(msg.Tx)
 		if err != nil {
 			// Bad, seen, or conflicting tx.
-			log.Debug("Could not add tx", "tx", msg.Tx)
+			log.Info("Could not add tx", "tx", msg.Tx)
 			return
 		} else {
-			log.Debug("Added valid tx", "tx", msg.Tx)
+			log.Info("Added valid tx", "tx", msg.Tx)
 		}
 		// Share tx.
 		// We use a simple shotgun approach for now.
 		// TODO: improve efficiency
-		for _, peer := range memR.sw.Peers().List() {
+		for _, peer := range memR.Switch.Peers().List() {
 			if peer.Key == src.Key {
 				continue
 			}
@@ -111,7 +96,7 @@ func (memR *MempoolReactor) BroadcastTx(tx types.Tx) error {
 		return err
 	}
 	msg := &TxMessage{Tx: tx}
-	memR.sw.Broadcast(MempoolChannel, msg)
+	memR.Switch.Broadcast(MempoolChannel, msg)
 	return nil
 }
 
@@ -129,16 +114,16 @@ const (
 
 type MempoolMessage interface{}
 
-var _ = binary.RegisterInterface(
+var _ = wire.RegisterInterface(
 	struct{ MempoolMessage }{},
-	binary.ConcreteType{&TxMessage{}, msgTypeTx},
+	wire.ConcreteType{&TxMessage{}, msgTypeTx},
 )
 
 func DecodeMessage(bz []byte) (msgType byte, msg MempoolMessage, err error) {
 	msgType = bz[0]
 	n := new(int64)
 	r := bytes.NewReader(bz)
-	msg = binary.ReadBinary(struct{ MempoolMessage }{}, r, n, &err).(struct{ MempoolMessage }).MempoolMessage
+	msg = wire.ReadBinary(struct{ MempoolMessage }{}, r, n, &err).(struct{ MempoolMessage }).MempoolMessage
 	return
 }
 

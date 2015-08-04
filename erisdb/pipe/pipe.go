@@ -49,10 +49,10 @@ type (
 		Subscribe(subId, event string, callback func(interface{})) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
-	
+
 	NameReg interface {
-		 Entry(key string) (*types.NameRegEntry, error)
-		 Entries([]*FilterData) (*ctypes.ResponseListNames, error)
+		Entry(key string) (*types.NameRegEntry, error)
+		Entries([]*FilterData) (*ctypes.ResponseListNames, error)
 	}
 
 	Net interface {

@@ -5,9 +5,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 	ErrTxInvalidPubKey        = errors.New("Error invalid pubkey")
 	ErrTxInvalidSignature     = errors.New("Error invalid signature")
 	ErrTxInvalidString        = errors.New("Error invalid string")
-	ErrIncorrectOwner         = errors.New("Error incorrect owner")
+	ErrTxPermissionDenied     = errors.New("Error permission denied")
 )
 
 type ErrTxInvalidSequence struct {
@@ -44,7 +45,11 @@ Validation Txs:
  - BondTx         New validator posts a bond
  - UnbondTx       Validator leaves
  - DupeoutTx      Validator dupes out (equivocates)
+
+Admin Txs:
+ - PermissionsTx
 */
+
 type Tx interface {
 	WriteSignBytes(chainID string, w io.Writer, n *int64, err *error)
 }
@@ -61,28 +66,32 @@ const (
 	TxTypeUnbond  = byte(0x12)
 	TxTypeRebond  = byte(0x13)
 	TxTypeDupeout = byte(0x14)
+
+	// Admin transactions
+	TxTypePermissions = byte(0x20)
 )
 
-// for binary.readReflect
-var _ = binary.RegisterInterface(
+// for wire.readReflect
+var _ = wire.RegisterInterface(
 	struct{ Tx }{},
-	binary.ConcreteType{&SendTx{}, TxTypeSend},
-	binary.ConcreteType{&CallTx{}, TxTypeCall},
-	binary.ConcreteType{&NameTx{}, TxTypeName},
-	binary.ConcreteType{&BondTx{}, TxTypeBond},
-	binary.ConcreteType{&UnbondTx{}, TxTypeUnbond},
-	binary.ConcreteType{&RebondTx{}, TxTypeRebond},
-	binary.ConcreteType{&DupeoutTx{}, TxTypeDupeout},
+	wire.ConcreteType{&SendTx{}, TxTypeSend},
+	wire.ConcreteType{&CallTx{}, TxTypeCall},
+	wire.ConcreteType{&NameTx{}, TxTypeName},
+	wire.ConcreteType{&BondTx{}, TxTypeBond},
+	wire.ConcreteType{&UnbondTx{}, TxTypeUnbond},
+	wire.ConcreteType{&RebondTx{}, TxTypeRebond},
+	wire.ConcreteType{&DupeoutTx{}, TxTypeDupeout},
+	wire.ConcreteType{&PermissionsTx{}, TxTypePermissions},
 )
 
 //-----------------------------------------------------------------------------
 
 type TxInput struct {
-	Address   []byte            `json:"address"`   // Hash of the PubKey
-	Amount    int64             `json:"amount"`    // Must not exceed account balance
-	Sequence  int               `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-	Signature account.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    account.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+	Address   []byte        `json:"address"`   // Hash of the PubKey
+	Amount    int64         `json:"amount"`    // Must not exceed account balance
+	Sequence  int           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+	Signature acm.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+	PubKey    acm.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
 }
 
 func (txIn *TxInput) ValidateBasic() error {
@@ -96,7 +105,7 @@ func (txIn *TxInput) ValidateBasic() error {
 }
 
 func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
 }
 
 func (txIn *TxInput) String() string {
@@ -121,7 +130,7 @@ func (txOut *TxOutput) ValidateBasic() error {
 }
 
 func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
 }
 
 func (txOut *TxOutput) String() string {
@@ -136,22 +145,22 @@ type SendTx struct {
 }
 
 func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
 		if i != len(tx.Inputs)-1 {
-			binary.WriteTo([]byte(","), w, n, err)
+			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
-	binary.WriteTo([]byte(`],"outputs":[`), w, n, err)
+	wire.WriteTo([]byte(`],"outputs":[`), w, n, err)
 	for i, out := range tx.Outputs {
 		out.WriteSignBytes(w, n, err)
 		if i != len(tx.Outputs)-1 {
-			binary.WriteTo([]byte(","), w, n, err)
+			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
-	binary.WriteTo([]byte(`]}]}`), w, n, err)
+	wire.WriteTo([]byte(`]}]}`), w, n, err)
 }
 
 func (tx *SendTx) String() string {
@@ -169,11 +178,11 @@ type CallTx struct {
 }
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
-	binary.WriteTo([]byte(`}]}`), w, n, err)
+	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
 func (tx *CallTx) String() string {
@@ -190,12 +199,12 @@ type NameTx struct {
 }
 
 func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"data":%s,"fee":%v`, TxTypeName, jsonEscape(tx.Data), tx.Fee)), w, n, err)
-	binary.WriteTo([]byte(`,"input":`), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"data":%s,"fee":%v`, TxTypeName, jsonEscape(tx.Data), tx.Fee)), w, n, err)
+	wire.WriteTo([]byte(`,"input":`), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"name":%s`, jsonEscape(tx.Name))), w, n, err)
-	binary.WriteTo([]byte(`}]}`), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"name":%s`, jsonEscape(tx.Name))), w, n, err)
+	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
 func (tx *NameTx) ValidateStrings() error {
@@ -231,31 +240,31 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    account.PubKeyEd25519    `json:"pub_key"`
-	Signature account.SignatureEd25519 `json:"signature"`
-	Inputs    []*TxInput               `json:"inputs"`
-	UnbondTo  []*TxOutput              `json:"unbond_to"`
+	PubKey    acm.PubKeyEd25519    `json:"pub_key"`
+	Signature acm.SignatureEd25519 `json:"signature"`
+	Inputs    []*TxInput           `json:"inputs"`
+	UnbondTo  []*TxOutput          `json:"unbond_to"`
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeBond)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeBond)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
 		if i != len(tx.Inputs)-1 {
-			binary.WriteTo([]byte(","), w, n, err)
+			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
-	binary.WriteTo([]byte(Fmt(`],"pub_key":`)), w, n, err)
-	binary.WriteTo(binary.JSONBytes(tx.PubKey), w, n, err)
-	binary.WriteTo([]byte(`,"unbond_to":[`), w, n, err)
+	wire.WriteTo([]byte(Fmt(`],"pub_key":`)), w, n, err)
+	wire.WriteTo(wire.JSONBytes(tx.PubKey), w, n, err)
+	wire.WriteTo([]byte(`,"unbond_to":[`), w, n, err)
 	for i, out := range tx.UnbondTo {
 		out.WriteSignBytes(w, n, err)
 		if i != len(tx.UnbondTo)-1 {
-			binary.WriteTo([]byte(","), w, n, err)
+			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
-	binary.WriteTo([]byte(`]}]}`), w, n, err)
+	wire.WriteTo([]byte(`]}]}`), w, n, err)
 }
 
 func (tx *BondTx) String() string {
@@ -265,14 +274,14 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   []byte                   `json:"address"`
-	Height    int                      `json:"height"`
-	Signature account.SignatureEd25519 `json:"signature"`
+	Address   []byte               `json:"address"`
+	Height    int                  `json:"height"`
+	Signature acm.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *UnbondTx) String() string {
@@ -282,14 +291,14 @@ func (tx *UnbondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   []byte                   `json:"address"`
-	Height    int                      `json:"height"`
-	Signature account.SignatureEd25519 `json:"signature"`
+	Address   []byte               `json:"address"`
+	Height    int                  `json:"height"`
+	Signature acm.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	binary.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	binary.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *RebondTx) String() string {
@@ -305,7 +314,7 @@ type DupeoutTx struct {
 }
 
 func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	panic("DupeoutTx has no sign bytes")
+	PanicSanity("DupeoutTx has no sign bytes")
 }
 
 func (tx *DupeoutTx) String() string {
@@ -314,10 +323,30 @@ func (tx *DupeoutTx) String() string {
 
 //-----------------------------------------------------------------------------
 
+type PermissionsTx struct {
+	Input    *TxInput        `json:"input"`
+	PermArgs ptypes.PermArgs `json:"args"`
+}
+
+func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"args":"`, TxTypePermissions)), w, n, err)
+	wire.WriteJSON(tx.PermArgs, w, n, err)
+	wire.WriteTo([]byte(`","input":`), w, n, err)
+	tx.Input.WriteSignBytes(w, n, err)
+	wire.WriteTo([]byte(`}]}`), w, n, err)
+}
+
+func (tx *PermissionsTx) String() string {
+	return Fmt("PermissionsTx{%v -> %v}", tx.Input, tx.PermArgs)
+}
+
+//-----------------------------------------------------------------------------
+
 // This should match the leaf hashes of Block.Data.Hash()'s SimpleMerkleTree.
 func TxID(chainID string, tx Tx) []byte {
-	signBytes := account.SignBytes(chainID, tx)
-	return binary.BinaryRipemd160(signBytes)
+	signBytes := acm.SignBytes(chainID, tx)
+	return wire.BinaryRipemd160(signBytes)
 }
 
 //--------------------------------------------------------------------------------
@@ -326,7 +355,7 @@ func TxID(chainID string, tx Tx) []byte {
 func jsonEscape(str string) string {
 	escapedBytes, err := json.Marshal(str)
 	if err != nil {
-		panic(Fmt("Error json-escaping a string", str))
+		PanicSanity(Fmt("Error json-escaping a string", str))
 	}
 	return string(escapedBytes)
 }

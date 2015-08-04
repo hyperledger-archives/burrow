@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 /*
@@ -59,20 +59,18 @@ func (bs *BlockStore) LoadBlock(height int) *types.Block {
 	if r == nil {
 		return nil
 	}
-	meta := binary.ReadBinary(&types.BlockMeta{}, r, &n, &err).(*types.BlockMeta)
+	meta := wire.ReadBinary(&types.BlockMeta{}, r, &n, &err).(*types.BlockMeta)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading block meta: %v", err))
+		PanicCrisis(Fmt("Error reading block meta: %v", err))
 	}
 	bytez := []byte{}
 	for i := 0; i < meta.PartsHeader.Total; i++ {
 		part := bs.LoadBlockPart(height, i)
 		bytez = append(bytez, part.Bytes...)
 	}
-	block := binary.ReadBinary(&types.Block{}, bytes.NewReader(bytez), &n, &err).(*types.Block)
+	block := wire.ReadBinary(&types.Block{}, bytes.NewReader(bytez), &n, &err).(*types.Block)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading block: %v", err))
+		PanicCrisis(Fmt("Error reading block: %v", err))
 	}
 	return block
 }
@@ -84,10 +82,9 @@ func (bs *BlockStore) LoadBlockPart(height int, index int) *types.Part {
 	if r == nil {
 		return nil
 	}
-	part := binary.ReadBinary(&types.Part{}, r, &n, &err).(*types.Part)
+	part := wire.ReadBinary(&types.Part{}, r, &n, &err).(*types.Part)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading block part: %v", err))
+		PanicCrisis(Fmt("Error reading block part: %v", err))
 	}
 	return part
 }
@@ -99,10 +96,9 @@ func (bs *BlockStore) LoadBlockMeta(height int) *types.BlockMeta {
 	if r == nil {
 		return nil
 	}
-	meta := binary.ReadBinary(&types.BlockMeta{}, r, &n, &err).(*types.BlockMeta)
+	meta := wire.ReadBinary(&types.BlockMeta{}, r, &n, &err).(*types.BlockMeta)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading block meta: %v", err))
+		PanicCrisis(Fmt("Error reading block meta: %v", err))
 	}
 	return meta
 }
@@ -116,10 +112,9 @@ func (bs *BlockStore) LoadBlockValidation(height int) *types.Validation {
 	if r == nil {
 		return nil
 	}
-	validation := binary.ReadBinary(&types.Validation{}, r, &n, &err).(*types.Validation)
+	validation := wire.ReadBinary(&types.Validation{}, r, &n, &err).(*types.Validation)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading validation: %v", err))
+		PanicCrisis(Fmt("Error reading validation: %v", err))
 	}
 	return validation
 }
@@ -132,10 +127,9 @@ func (bs *BlockStore) LoadSeenValidation(height int) *types.Validation {
 	if r == nil {
 		return nil
 	}
-	validation := binary.ReadBinary(&types.Validation{}, r, &n, &err).(*types.Validation)
+	validation := wire.ReadBinary(&types.Validation{}, r, &n, &err).(*types.Validation)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Error reading validation: %v", err))
+		PanicCrisis(Fmt("Error reading validation: %v", err))
 	}
 	return validation
 }
@@ -148,17 +142,15 @@ func (bs *BlockStore) LoadSeenValidation(height int) *types.Validation {
 func (bs *BlockStore) SaveBlock(block *types.Block, blockParts *types.PartSet, seenValidation *types.Validation) {
 	height := block.Height
 	if height != bs.height+1 {
-		// SANITY CHECK
-		panic(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.height+1, height))
+		PanicSanity(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.height+1, height))
 	}
 	if !blockParts.IsComplete() {
-		// SANITY CHECK
-		panic(Fmt("BlockStore can only save complete block part sets"))
+		PanicSanity(Fmt("BlockStore can only save complete block part sets"))
 	}
 
 	// Save block meta
 	meta := types.NewBlockMeta(block, blockParts)
-	metaBytes := binary.BinaryBytes(meta)
+	metaBytes := wire.BinaryBytes(meta)
 	bs.db.Set(calcBlockMetaKey(height), metaBytes)
 
 	// Save block parts
@@ -167,11 +159,11 @@ func (bs *BlockStore) SaveBlock(block *types.Block, blockParts *types.PartSet, s
 	}
 
 	// Save block validation (duplicate and separate from the Block)
-	blockValidationBytes := binary.BinaryBytes(block.LastValidation)
+	blockValidationBytes := wire.BinaryBytes(block.LastValidation)
 	bs.db.Set(calcBlockValidationKey(height-1), blockValidationBytes)
 
 	// Save seen validation (seen +2/3 precommits for block)
-	seenValidationBytes := binary.BinaryBytes(seenValidation)
+	seenValidationBytes := wire.BinaryBytes(seenValidation)
 	bs.db.Set(calcSeenValidationKey(height), seenValidationBytes)
 
 	// Save new BlockStoreStateJSON descriptor
@@ -182,12 +174,10 @@ func (bs *BlockStore) SaveBlock(block *types.Block, blockParts *types.PartSet, s
 }
 
 func (bs *BlockStore) saveBlockPart(height int, index int, part *types.Part) {
-	// SANITY CHECK
 	if height != bs.height+1 {
-		panic(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.height+1, height))
+		PanicSanity(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.height+1, height))
 	}
-	// SANITY CHECK END
-	partBytes := binary.BinaryBytes(part)
+	partBytes := wire.BinaryBytes(part)
 	bs.db.Set(calcBlockPartKey(height, index), partBytes)
 }
 
@@ -220,8 +210,7 @@ type BlockStoreStateJSON struct {
 func (bsj BlockStoreStateJSON) Save(db dbm.DB) {
 	bytes, err := json.Marshal(bsj)
 	if err != nil {
-		// SANITY CHECK
-		panic(Fmt("Could not marshal state bytes: %v", err))
+		PanicSanity(Fmt("Could not marshal state bytes: %v", err))
 	}
 	db.Set(blockStoreKey, bytes)
 }
@@ -236,8 +225,7 @@ func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 	bsj := BlockStoreStateJSON{}
 	err := json.Unmarshal(bytes, &bsj)
 	if err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(Fmt("Could not unmarshal bytes: %X", bytes))
+		PanicCrisis(Fmt("Could not unmarshal bytes: %X", bytes))
 	}
 	return bsj
 }

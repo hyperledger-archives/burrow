@@ -93,20 +93,22 @@ var testDataJson = `{
     "output": {
       "accounts": [
         {
-          "address": "0000000000000000000000000000000000000000",
-          "balance": 1337,
-          "code": "",
-          "permissions": {
-            "base": {
-              "perms": 126,
-              "set": 1095216660607
-            },
-            "roles": []
-          },
-          "pub_key": null,
-          "sequence": 0,
-          "storage_root": ""
-        },
+	      "address": "0000000000000000000000000000000000000000",
+	      "pub_key": null,
+	      "sequence": 0,
+	      "balance": 1337,
+	      "code": "",
+	      "storage_root": "",
+	      "permissions": {
+	        "base": {
+	          "perms": 2302,
+	          "set": 16383
+	        },
+	        "roles": [
+	          
+	        ]
+	      }
+	    },
         {
           "address": "0000000000000000000000000000000000000002",
           "pub_key": null,
@@ -209,18 +211,18 @@ var testDataJson = `{
       "address": "",
       "pub_key": [
         1,
-        ""
+        "0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "priv_key": [
         1,
-        ""
+        "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       ]
     }
   },
   "GetBlockchainInfo": {
     "output": {
       "chain_id": "my_tests",
-      "genesis_hash": "59A43DA6B4C9685E2D8840158768746093A71925",
+      "genesis_hash": "B901B9254D84CB509492E6C82245C54F1D84856D",
       "latest_block_height": 0,
       "latest_block": null
     }
@@ -232,7 +234,7 @@ var testDataJson = `{
   },
   "GetGenesisHash": {
     "output": {
-      "hash": "59A43DA6B4C9685E2D8840158768746093A71925"
+      "hash": "B901B9254D84CB509492E6C82245C54F1D84856D"
     }
   },
   "GetLatestBlockHeight": {

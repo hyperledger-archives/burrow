@@ -5,13 +5,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/merkle"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -49,22 +49,22 @@ func LoadState(db dbm.DB) *State {
 		return nil
 	} else {
 		r, n, err := bytes.NewReader(buf), new(int64), new(error)
-		s.ChainID = binary.ReadString(r, n, err)
-		s.LastBlockHeight = binary.ReadVarint(r, n, err)
-		s.LastBlockHash = binary.ReadByteSlice(r, n, err)
-		s.LastBlockParts = binary.ReadBinary(types.PartSetHeader{}, r, n, err).(types.PartSetHeader)
-		s.LastBlockTime = binary.ReadTime(r, n, err)
-		s.BondedValidators = binary.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
-		s.LastBondedValidators = binary.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
-		s.UnbondingValidators = binary.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
-		accountsHash := binary.ReadByteSlice(r, n, err)
-		s.accounts = merkle.NewIAVLTree(binary.BasicCodec, account.AccountCodec, defaultAccountsCacheCapacity, db)
+		s.ChainID = wire.ReadString(r, n, err)
+		s.LastBlockHeight = wire.ReadVarint(r, n, err)
+		s.LastBlockHash = wire.ReadByteSlice(r, n, err)
+		s.LastBlockParts = wire.ReadBinary(types.PartSetHeader{}, r, n, err).(types.PartSetHeader)
+		s.LastBlockTime = wire.ReadTime(r, n, err)
+		s.BondedValidators = wire.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
+		s.LastBondedValidators = wire.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
+		s.UnbondingValidators = wire.ReadBinary(&ValidatorSet{}, r, n, err).(*ValidatorSet)
+		accountsHash := wire.ReadByteSlice(r, n, err)
+		s.accounts = merkle.NewIAVLTree(wire.BasicCodec, acm.AccountCodec, defaultAccountsCacheCapacity, db)
 		s.accounts.Load(accountsHash)
-		validatorInfosHash := binary.ReadByteSlice(r, n, err)
-		s.validatorInfos = merkle.NewIAVLTree(binary.BasicCodec, ValidatorInfoCodec, 0, db)
+		validatorInfosHash := wire.ReadByteSlice(r, n, err)
+		s.validatorInfos = merkle.NewIAVLTree(wire.BasicCodec, ValidatorInfoCodec, 0, db)
 		s.validatorInfos.Load(validatorInfosHash)
-		nameRegHash := binary.ReadByteSlice(r, n, err)
-		s.nameReg = merkle.NewIAVLTree(binary.BasicCodec, NameRegCodec, 0, db)
+		nameRegHash := wire.ReadByteSlice(r, n, err)
+		s.nameReg = merkle.NewIAVLTree(wire.BasicCodec, NameRegCodec, 0, db)
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
 			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
@@ -80,20 +80,19 @@ func (s *State) Save() {
 	s.validatorInfos.Save()
 	s.nameReg.Save()
 	buf, n, err := new(bytes.Buffer), new(int64), new(error)
-	binary.WriteString(s.ChainID, buf, n, err)
-	binary.WriteVarint(s.LastBlockHeight, buf, n, err)
-	binary.WriteByteSlice(s.LastBlockHash, buf, n, err)
-	binary.WriteBinary(s.LastBlockParts, buf, n, err)
-	binary.WriteTime(s.LastBlockTime, buf, n, err)
-	binary.WriteBinary(s.BondedValidators, buf, n, err)
-	binary.WriteBinary(s.LastBondedValidators, buf, n, err)
-	binary.WriteBinary(s.UnbondingValidators, buf, n, err)
-	binary.WriteByteSlice(s.accounts.Hash(), buf, n, err)
-	binary.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
-	binary.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
+	wire.WriteString(s.ChainID, buf, n, err)
+	wire.WriteVarint(s.LastBlockHeight, buf, n, err)
+	wire.WriteByteSlice(s.LastBlockHash, buf, n, err)
+	wire.WriteBinary(s.LastBlockParts, buf, n, err)
+	wire.WriteTime(s.LastBlockTime, buf, n, err)
+	wire.WriteBinary(s.BondedValidators, buf, n, err)
+	wire.WriteBinary(s.LastBondedValidators, buf, n, err)
+	wire.WriteBinary(s.UnbondingValidators, buf, n, err)
+	wire.WriteByteSlice(s.accounts.Hash(), buf, n, err)
+	wire.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
+	wire.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
 	if *err != nil {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic(*err)
+		PanicCrisis(*err)
 	}
 	s.DB.Set(stateKey, buf.Bytes())
 }
@@ -149,24 +148,32 @@ func (s *State) SetDB(db dbm.DB) {
 }
 
 //-------------------------------------
+// State.params
+
+func (s *State) GetGasLimit() int64 {
+	return 1000000 // TODO
+}
+
+// State.params
+//-------------------------------------
 // State.accounts
 
 // Returns nil if account does not exist with given address.
 // The returned Account is a copy, so mutating it
 // has no side effects.
 // Implements Statelike
-func (s *State) GetAccount(address []byte) *account.Account {
+func (s *State) GetAccount(address []byte) *acm.Account {
 	_, acc := s.accounts.Get(address)
 	if acc == nil {
 		return nil
 	}
-	return acc.(*account.Account).Copy()
+	return acc.(*acm.Account).Copy()
 }
 
 // The account is copied before setting, so mutating it
 // afterwards has no side effects.
 // Implements Statelike
-func (s *State) UpdateAccount(account *account.Account) bool {
+func (s *State) UpdateAccount(account *acm.Account) bool {
 	return s.accounts.Set(account.Address, account.Copy())
 }
 
@@ -216,14 +223,12 @@ func (s *State) unbondValidator(val *Validator) {
 	// Move validator to UnbondingValidators
 	val, removed := s.BondedValidators.Remove(val.Address)
 	if !removed {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic("Couldn't remove validator for unbonding")
+		PanicCrisis("Couldn't remove validator for unbonding")
 	}
 	val.UnbondHeight = s.LastBlockHeight + 1
 	added := s.UnbondingValidators.Add(val)
 	if !added {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic("Couldn't add validator for unbonding")
+		PanicCrisis("Couldn't add validator for unbonding")
 	}
 }
 
@@ -231,35 +236,29 @@ func (s *State) rebondValidator(val *Validator) {
 	// Move validator to BondingValidators
 	val, removed := s.UnbondingValidators.Remove(val.Address)
 	if !removed {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic("Couldn't remove validator for rebonding")
+		PanicCrisis("Couldn't remove validator for rebonding")
 	}
 	val.BondHeight = s.LastBlockHeight + 1
 	added := s.BondedValidators.Add(val)
 	if !added {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic("Couldn't add validator for rebonding")
+		PanicCrisis("Couldn't add validator for rebonding")
 	}
 }
 
 func (s *State) releaseValidator(val *Validator) {
 	// Update validatorInfo
 	valInfo := s.GetValidatorInfo(val.Address)
-	// SANITY CHECK
 	if valInfo == nil {
-		panic("Couldn't find validatorInfo for release")
+		PanicSanity("Couldn't find validatorInfo for release")
 	}
-	// SANITY CHECK END
 	valInfo.ReleasedHeight = s.LastBlockHeight + 1
 	s.SetValidatorInfo(valInfo)
 
 	// Send coins back to UnbondTo outputs
 	accounts, err := getOrMakeOutputs(s, nil, valInfo.UnbondTo)
-	// SANITY CHECK
 	if err != nil {
-		panic("Couldn't get or make unbondTo accounts")
+		PanicSanity("Couldn't get or make unbondTo accounts")
 	}
-	// SANITY CHECK END
 	adjustByOutputs(accounts, valInfo.UnbondTo)
 	for _, acc := range accounts {
 		s.UpdateAccount(acc)
@@ -268,19 +267,16 @@ func (s *State) releaseValidator(val *Validator) {
 	// Remove validator from UnbondingValidators
 	_, removed := s.UnbondingValidators.Remove(val.Address)
 	if !removed {
-		// SOMETHING HAS GONE HORRIBLY WRONG
-		panic("Couldn't remove validator for release")
+		PanicCrisis("Couldn't remove validator for release")
 	}
 }
 
 func (s *State) destroyValidator(val *Validator) {
 	// Update validatorInfo
 	valInfo := s.GetValidatorInfo(val.Address)
-	// SANITY CHECK
 	if valInfo == nil {
-		panic("Couldn't find validatorInfo for release")
+		PanicSanity("Couldn't find validatorInfo for release")
 	}
-	// SANITY CHECK END
 	valInfo.DestroyedHeight = s.LastBlockHeight + 1
 	valInfo.DestroyedAmount = val.VotingPower
 	s.SetValidatorInfo(valInfo)
@@ -290,8 +286,7 @@ func (s *State) destroyValidator(val *Validator) {
 	if !removed {
 		_, removed := s.UnbondingValidators.Remove(val.Address)
 		if !removed {
-			// SOMETHING HAS GONE HORRIBLY WRONG
-			panic("Couldn't remove validator for destruction")
+			PanicCrisis("Couldn't remove validator for destruction")
 		}
 	}
 
@@ -307,7 +302,7 @@ func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
 // State.storage
 
 func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
-	storage = merkle.NewIAVLTree(binary.BasicCodec, binary.BasicCodec, 1024, s.DB)
+	storage = merkle.NewIAVLTree(wire.BasicCodec, wire.BasicCodec, 1024, s.DB)
 	storage.Load(hash)
 	return storage
 }
@@ -344,14 +339,14 @@ func (s *State) SetNameReg(nameReg merkle.Tree) {
 }
 
 func NameRegEncoder(o interface{}, w io.Writer, n *int64, err *error) {
-	binary.WriteBinary(o.(*types.NameRegEntry), w, n, err)
+	wire.WriteBinary(o.(*types.NameRegEntry), w, n, err)
 }
 
 func NameRegDecoder(r io.Reader, n *int64, err *error) interface{} {
-	return binary.ReadBinary(&types.NameRegEntry{}, r, n, err)
+	return wire.ReadBinary(&types.NameRegEntry{}, r, n, err)
 }
 
-var NameRegCodec = binary.Codec{
+var NameRegCodec = wire.Codec{
 	Encode: NameRegEncoder,
 	Decode: NameRegDecoder,
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync/atomic"
+	"time"
 
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p/upnp"
@@ -15,31 +15,33 @@ type Listener interface {
 	InternalAddress() *NetAddress
 	ExternalAddress() *NetAddress
 	String() string
-	Stop()
+	Stop() bool
 }
 
 // Implements Listener
 type DefaultListener struct {
+	BaseService
+
 	listener    net.Listener
 	intAddr     *NetAddress
 	extAddr     *NetAddress
 	connections chan net.Conn
-	stopped     uint32
 }
 
 const (
 	numBufferedConnections = 10
 	defaultExternalPort    = 8770
+	tryListenSeconds       = 5
 )
 
 func splitHostPort(addr string) (host string, port int) {
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
-		panic(err)
+		PanicSanity(err)
 	}
 	port, err = strconv.Atoi(portStr)
 	if err != nil {
-		panic(err)
+		PanicSanity(err)
 	}
 	return host, port
 }
@@ -49,13 +51,22 @@ func NewDefaultListener(protocol string, lAddr string, requireUPNPHairpin bool) 
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
 
 	// Create listener
-	listener, err := net.Listen(protocol, lAddr)
+	var listener net.Listener
+	var err error
+	for i := 0; i < tryListenSeconds; i++ {
+		listener, err = net.Listen(protocol, lAddr)
+		if err == nil {
+			break
+		} else if i < tryListenSeconds-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
 	if err != nil {
-		panic(err)
+		PanicCrisis(err)
 	}
 	// Actual listener local IP & port
 	listenerIP, listenerPort := splitHostPort(listener.Addr().String())
-	log.Debug("Local listener", "ip", listenerIP, "port", listenerPort)
+	log.Info("Local listener", "ip", listenerIP, "port", listenerPort)
 
 	// Determine internal address...
 	var intAddr *NetAddress = NewNetAddressString(lAddr)
@@ -83,7 +94,7 @@ SKIP_UPNP:
 		extAddr = getNaiveExternalAddress(listenerPort)
 	}
 	if extAddr == nil {
-		panic("Could not determine external address!")
+		PanicCrisis("Could not determine external address!")
 	}
 
 	dl := &DefaultListener{
@@ -92,10 +103,19 @@ SKIP_UPNP:
 		extAddr:     extAddr,
 		connections: make(chan net.Conn, numBufferedConnections),
 	}
-
-	go dl.listenRoutine()
-
+	dl.BaseService = *NewBaseService(log, "DefaultListener", dl)
+	dl.Start() // Started upon construction
 	return dl
+}
+
+func (l *DefaultListener) OnStart() {
+	l.BaseService.OnStart()
+	go l.listenRoutine()
+}
+
+func (l *DefaultListener) OnStop() {
+	l.BaseService.OnStop()
+	l.listener.Close()
 }
 
 // Accept connections and pass on the channel
@@ -103,14 +123,14 @@ func (l *DefaultListener) listenRoutine() {
 	for {
 		conn, err := l.listener.Accept()
 
-		if atomic.LoadUint32(&l.stopped) == 1 {
+		if !l.IsRunning() {
 			break // Go to cleanup
 		}
 
 		// listener wasn't stopped,
 		// yet we encountered an error.
 		if err != nil {
-			panic(err)
+			PanicCrisis(err)
 		}
 
 		l.connections <- conn
@@ -143,12 +163,6 @@ func (l *DefaultListener) NetListener() net.Listener {
 	return l.listener
 }
 
-func (l *DefaultListener) Stop() {
-	if atomic.CompareAndSwapUint32(&l.stopped, 0, 1) {
-		l.listener.Close()
-	}
-}
-
 func (l *DefaultListener) String() string {
 	return fmt.Sprintf("Listener(@%v)", l.extAddr)
 }
@@ -157,16 +171,16 @@ func (l *DefaultListener) String() string {
 
 // UPNP external address discovery & port mapping
 func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
-	log.Debug("Getting UPNP external address")
+	log.Info("Getting UPNP external address")
 	nat, err := upnp.Discover()
 	if err != nil {
-		log.Debug("Could not perform UPNP discover", "error", err)
+		log.Info("Could not perform UPNP discover", "error", err)
 		return nil
 	}
 
 	ext, err := nat.GetExternalAddress()
 	if err != nil {
-		log.Debug("Could not get UPNP external address", "error", err)
+		log.Info("Could not get UPNP external address", "error", err)
 		return nil
 	}
 
@@ -177,11 +191,11 @@ func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 
 	externalPort, err = nat.AddPortMapping("tcp", externalPort, internalPort, "tendermint", 0)
 	if err != nil {
-		log.Debug("Could not add UPNP port mapping", "error", err)
+		log.Info("Could not add UPNP port mapping", "error", err)
 		return nil
 	}
 
-	log.Debug("Got UPNP external address", "address", ext)
+	log.Info("Got UPNP external address", "address", ext)
 	return NewNetAddressIPPort(ext, uint16(externalPort))
 }
 
@@ -189,7 +203,7 @@ func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 func getNaiveExternalAddress(port int) *NetAddress {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		panic(Fmt("Could not fetch interface addresses: %v", err))
+		PanicCrisis(Fmt("Could not fetch interface addresses: %v", err))
 	}
 
 	for _, a := range addrs {

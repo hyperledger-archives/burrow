@@ -6,11 +6,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // VoteSet helps collect signatures from validators at each height+round
@@ -37,7 +37,7 @@ type VoteSet struct {
 // Constructs a new VoteSet struct used to accumulate votes for given height/round.
 func NewVoteSet(height int, round int, type_ byte, valSet *sm.ValidatorSet) *VoteSet {
 	if height == 0 {
-		panic("Cannot make VoteSet for height == 0, doesn't make sense.")
+		PanicSanity("Cannot make VoteSet for height == 0, doesn't make sense.")
 	}
 	return &VoteSet{
 		height:        height,
@@ -131,7 +131,7 @@ func (voteSet *VoteSet) addVote(val *sm.Validator, valIndex int, vote *types.Vot
 	}
 
 	// Check signature.
-	if !val.PubKey.VerifyBytes(account.SignBytes(config.GetString("chain_id"), vote), vote.Signature) {
+	if !val.PubKey.VerifyBytes(acm.SignBytes(config.GetString("chain_id"), vote), vote.Signature) {
 		// Bad signature.
 		return false, 0, types.ErrVoteInvalidSignature
 	}
@@ -151,7 +151,7 @@ func (voteSet *VoteSet) addVote(val *sm.Validator, valIndex int, vote *types.Vot
 	// Add vote.
 	voteSet.votes[valIndex] = vote
 	voteSet.votesBitArray.SetIndex(valIndex, true)
-	blockKey := string(vote.BlockHash) + string(binary.BinaryBytes(vote.BlockParts))
+	blockKey := string(vote.BlockHash) + string(wire.BinaryBytes(vote.BlockParts))
 	totalBlockHashVotes := voteSet.votesByBlock[blockKey] + val.VotingPower
 	voteSet.votesByBlock[blockKey] = totalBlockHashVotes
 	voteSet.totalVotes += val.VotingPower
@@ -187,7 +187,7 @@ func (voteSet *VoteSet) GetByAddress(address []byte) *types.Vote {
 	defer voteSet.mtx.Unlock()
 	valIndex, val := voteSet.valSet.GetByAddress(address)
 	if val == nil {
-		panic("GetByAddress(address) returned nil")
+		PanicSanity("GetByAddress(address) returned nil")
 	}
 	return voteSet.votes[valIndex]
 }
@@ -273,12 +273,12 @@ func (voteSet *VoteSet) StringShort() string {
 
 func (voteSet *VoteSet) MakeValidation() *types.Validation {
 	if voteSet.type_ != types.VoteTypePrecommit {
-		panic("Cannot MakeValidation() unless VoteSet.Type is types.VoteTypePrecommit")
+		PanicSanity("Cannot MakeValidation() unless VoteSet.Type is types.VoteTypePrecommit")
 	}
 	voteSet.mtx.Lock()
 	defer voteSet.mtx.Unlock()
 	if len(voteSet.maj23Hash) == 0 {
-		panic("Cannot MakeValidation() unless a blockhash has +2/3")
+		PanicSanity("Cannot MakeValidation() unless a blockhash has +2/3")
 	}
 	precommits := make([]*types.Vote, voteSet.valSet.Size())
 	voteSet.valSet.Iterate(func(valIndex int, val *sm.Validator) bool {

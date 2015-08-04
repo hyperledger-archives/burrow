@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
-	"sync/atomic"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 var pexErrInvalidMessage = errors.New("Invalid PEX message")
@@ -27,39 +26,28 @@ PEXReactor handles PEX (peer exchange) and ensures that an
 adequate number of peers are connected to the switch.
 */
 type PEXReactor struct {
-	sw      *Switch
-	quit    chan struct{}
-	started uint32
-	stopped uint32
+	BaseReactor
 
+	sw   *Switch
 	book *AddrBook
-
 	evsw events.Fireable
 }
 
 func NewPEXReactor(book *AddrBook) *PEXReactor {
 	pexR := &PEXReactor{
-		quit: make(chan struct{}),
 		book: book,
 	}
+	pexR.BaseReactor = *NewBaseReactor(log, "PEXReactor", pexR)
 	return pexR
 }
 
-// Implements Reactor
-func (pexR *PEXReactor) Start(sw *Switch) {
-	if atomic.CompareAndSwapUint32(&pexR.started, 0, 1) {
-		log.Info("Starting PEXReactor")
-		pexR.sw = sw
-		go pexR.ensurePeersRoutine()
-	}
+func (pexR *PEXReactor) OnStart() {
+	pexR.BaseReactor.OnStart()
+	go pexR.ensurePeersRoutine()
 }
 
-// Implements Reactor
-func (pexR *PEXReactor) Stop() {
-	if atomic.CompareAndSwapUint32(&pexR.stopped, 0, 1) {
-		log.Info("Stopping PEXReactor")
-		close(pexR.quit)
-	}
+func (pexR *PEXReactor) OnStop() {
+	pexR.BaseReactor.OnStop()
 }
 
 // Implements Reactor
@@ -103,7 +91,7 @@ func (pexR *PEXReactor) Receive(chId byte, src *Peer, msgBytes []byte) {
 		log.Warn("Error decoding message", "error", err)
 		return
 	}
-	log.Info("Received message", "msg", msg)
+	log.Notice("Received message", "msg", msg)
 
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
@@ -147,7 +135,7 @@ FOR_LOOP:
 		select {
 		case <-timer.Ch:
 			pexR.ensurePeers()
-		case <-pexR.quit:
+		case <-pexR.Quit:
 			break FOR_LOOP
 		}
 	}
@@ -158,9 +146,9 @@ FOR_LOOP:
 
 // Ensures that sufficient peers are connected. (once)
 func (pexR *PEXReactor) ensurePeers() {
-	numOutPeers, _, numDialing := pexR.sw.NumPeers()
+	numOutPeers, _, numDialing := pexR.Switch.NumPeers()
 	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
-	log.Debug("Ensure peers", "numOutPeers", numOutPeers, "numDialing", numDialing, "numToDial", numToDial)
+	log.Info("Ensure peers", "numOutPeers", numOutPeers, "numDialing", numDialing, "numToDial", numToDial)
 	if numToDial <= 0 {
 		return
 	}
@@ -179,18 +167,18 @@ func (pexR *PEXReactor) ensurePeers() {
 				break
 			}
 			alreadySelected := toDial.Has(try.IP.String())
-			alreadyDialing := pexR.sw.IsDialing(try)
-			alreadyConnected := pexR.sw.Peers().Has(try.IP.String())
+			alreadyDialing := pexR.Switch.IsDialing(try)
+			alreadyConnected := pexR.Switch.Peers().Has(try.IP.String())
 			if alreadySelected || alreadyDialing || alreadyConnected {
 				/*
-					log.Debug("Cannot dial address", "addr", try,
+					log.Info("Cannot dial address", "addr", try,
 						"alreadySelected", alreadySelected,
 						"alreadyDialing", alreadyDialing,
 						"alreadyConnected", alreadyConnected)
 				*/
 				continue
 			} else {
-				log.Debug("Will dial address", "addr", try)
+				log.Info("Will dial address", "addr", try)
 				picked = try
 				break
 			}
@@ -204,7 +192,7 @@ func (pexR *PEXReactor) ensurePeers() {
 	// Dial picked addresses
 	for _, item := range toDial.Values() {
 		go func(picked *NetAddress) {
-			_, err := pexR.sw.DialPeerWithAddress(picked)
+			_, err := pexR.Switch.DialPeerWithAddress(picked)
 			if err != nil {
 				pexR.book.MarkAttempt(picked)
 			}
@@ -213,10 +201,10 @@ func (pexR *PEXReactor) ensurePeers() {
 
 	// If we need more addresses, pick a random peer and ask for more.
 	if pexR.book.NeedMoreAddrs() {
-		if peers := pexR.sw.Peers().List(); len(peers) > 0 {
+		if peers := pexR.Switch.Peers().List(); len(peers) > 0 {
 			i := rand.Int() % len(peers)
 			peer := peers[i]
-			log.Debug("No addresses to dial. Sending pexRequest to random peer", "peer", peer)
+			log.Info("No addresses to dial. Sending pexRequest to random peer", "peer", peer)
 			pexR.RequestPEX(peer)
 		}
 	}
@@ -237,17 +225,17 @@ const (
 
 type PexMessage interface{}
 
-var _ = binary.RegisterInterface(
+var _ = wire.RegisterInterface(
 	struct{ PexMessage }{},
-	binary.ConcreteType{&pexRequestMessage{}, msgTypeRequest},
-	binary.ConcreteType{&pexAddrsMessage{}, msgTypeAddrs},
+	wire.ConcreteType{&pexRequestMessage{}, msgTypeRequest},
+	wire.ConcreteType{&pexAddrsMessage{}, msgTypeAddrs},
 )
 
 func DecodeMessage(bz []byte) (msgType byte, msg PexMessage, err error) {
 	msgType = bz[0]
 	n := new(int64)
 	r := bytes.NewReader(bz)
-	msg = binary.ReadBinary(struct{ PexMessage }{}, r, n, &err).(struct{ PexMessage }).PexMessage
+	msg = wire.ReadBinary(struct{ PexMessage }{}, r, n, &err).(struct{ PexMessage }).PexMessage
 	return
 }
 

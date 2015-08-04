@@ -1,6 +1,6 @@
 # Eris DB web APIs (draft)
 
-### for eris-db version 0.10.x
+### for eris-db version 0.11.x
 
 Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
 
@@ -12,6 +12,7 @@ Eris DB allows remote access to its functionality over http and websocket. It cu
 - [Common objects and formatting](#formatting-conventions)
 - [Event-system](#event-system)
 - [Methods](#methods)
+- [NameReg](#namereg)
 - [Filters](#queries-filters)
 
 <a name="http-requests"></a>
@@ -535,7 +536,6 @@ NOTE: Get peer is not fully implemented.
 ####Unsafe
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [SignTx](#sign-tx) | erisdb.signTx | POST | `/unsafe/tx_signer` |
 | [Transact](#transact) | erisdb.transact | POST | `/unsafe/txpool` |
 | [TransactNameReg](#transact-name-reg) | erisdb.transactNameReg | POST | `/unsafe/namereg/txpool` |
 | [GenPrivAccount](#gen-priv-account) | erisdb.genPrivAccount | GET | `/unsafe/pa_generator` |
@@ -1583,9 +1583,11 @@ TODO
 ***
 
 <a name="broadcast-tx"></a>
-####BroadcastTx
+####BroadcastTx 
 
-Broadcast a given (signed) transaction to the node. It will be added to the tx pool if there are no issues, and if it is accepted by all validators it will eventually be committed to a block. 
+Broadcast a given (signed) transaction to the node. It will be added to the tx pool if there are no issues, and if it is accepted by all validators it will eventually be committed to a block.
+
+WARNING: BroadcastTx will not be useful until we add a client-side signing solution. 
 
 #####HTTP
 
@@ -1705,7 +1707,7 @@ Parameters:
 
 #####Additional info
 
-`data` is a string of data formatted in accordance with the [contract ABI](TODO).
+`data` is a string of data formatted in accordance with the.
 
 ***
 
@@ -1755,43 +1757,6 @@ Parameters:
 ###Unsafe 
 
 These methods are unsafe because they require that a private key is either transmitted or received. They are supposed to be used only in development.
-
-***
-
-<a name="sign-tx"></a>
-####SignTx
-
-Send an unsigned transaction to the node for signing. 
-
-#####HTTP
-
-Method: POST
-
-Endpoint: `/unsafe/tx_signer`
-
-Body:
-
-```
-<Tx>
-```
-
-#####JSON-RPC
-
-Method: `erisdb.SignTx`
-
-Parameters: 
-
-```
-<Tx>
-```
-
-#####Return value
-
-The same transaction but signed.
-
-#####Additional info
-
-See [The transaction types](#the-transaction-types) for more info on the `Tx` types. 
 
 ***
 

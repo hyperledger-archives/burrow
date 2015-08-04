@@ -1,5 +1,8 @@
 // Uses nacl's secret_box to encrypt a net.Conn.
 // It is (meant to be) an implementation of the STS protocol.
+// Note we do not (yet) assume that a remote peer's pubkey
+// is known ahead of time, and thus we are technically
+// still vulnerable to MITM. (TODO!)
 // See docs/sts-final.pdf for more info
 package p2p
 
@@ -11,7 +14,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/nacl/box"
@@ -19,8 +21,8 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	bm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // 2 + 1024 == 1026 total frame size
@@ -28,6 +30,7 @@ const dataLenSize = 2 // uint16 to describe the length, is <= dataMaxSize
 const dataMaxSize = 1024
 const totalFrameSize = dataMaxSize + dataLenSize
 const sealedFrameSize = totalFrameSize + secretbox.Overhead
+const authSigMsgSize = (32 + 1) + (64 + 1) // fixed size (length prefixed) byte arrays
 
 // Implements net.Conn
 type SecretConnection struct {
@@ -51,6 +54,8 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey acm.PrivKeyEd25519
 	locEphPub, locEphPriv := genEphKeys()
 
 	// Write local ephemeral pubkey and receive one too.
+	// NOTE: every 32-byte string is accepted as a Curve25519 public key
+	// (see DJB's Curve25519 paper: http://cr.yp.to/ecdh/curve25519-20060209.pdf)
 	remEphPub, err := shareEphPubKey(conn, locEphPub)
 	if err != nil {
 		return nil, err
@@ -74,7 +79,6 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey acm.PrivKeyEd25519
 		recvBuffer: nil,
 		recvNonce:  recvNonce,
 		sendNonce:  sendNonce,
-		remPubKey:  nil,
 		shrSecret:  shrSecret,
 	}
 
@@ -82,10 +86,11 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey acm.PrivKeyEd25519
 	locSignature := signChallenge(challenge, locPrivKey)
 
 	// Share (in secret) each other's pubkey & challenge signature
-	remPubKey, remSignature, err := shareAuthSignature(sc, locPubKey, locSignature)
+	authSigMsg, err := shareAuthSignature(sc, locPubKey, locSignature)
 	if err != nil {
 		return nil, err
 	}
+	remPubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
 	if !remPubKey.VerifyBytes(challenge[:], remSignature) {
 		return nil, errors.New("Challenge verification failed")
 	}
@@ -158,7 +163,10 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 	incr2Nonce(sc.recvNonce)
 	// end decryption
 
-	var chunkLength = binary.BigEndian.Uint16(frame)
+	var chunkLength = binary.BigEndian.Uint16(frame) // read the first two bytes
+	if chunkLength > dataMaxSize {
+		return 0, errors.New("chunkLength is greater than dataMaxSize")
+	}
 	var chunk = frame[dataLenSize : dataLenSize+chunkLength]
 
 	n = copy(data, chunk)
@@ -182,28 +190,24 @@ func genEphKeys() (ephPub, ephPriv *[32]byte) {
 	var err error
 	ephPub, ephPriv, err = box.GenerateKey(crand.Reader)
 	if err != nil {
-		panic("Could not generate ephemeral keypairs")
+		PanicCrisis("Could not generate ephemeral keypairs")
 	}
 	return
 }
 
 func shareEphPubKey(conn io.ReadWriteCloser, locEphPub *[32]byte) (remEphPub *[32]byte, err error) {
 	var err1, err2 error
-	var wg sync.WaitGroup
-	wg.Add(2)
 
-	go func() {
-		defer wg.Done()
-		_, err1 = conn.Write(locEphPub[:])
-	}()
+	Parallel(
+		func() {
+			_, err1 = conn.Write(locEphPub[:])
+		},
+		func() {
+			remEphPub = new([32]byte)
+			_, err2 = io.ReadFull(conn, remEphPub[:])
+		},
+	)
 
-	go func() {
-		defer wg.Done()
-		remEphPub = new([32]byte)
-		_, err2 = io.ReadFull(conn, remEphPub[:])
-	}()
-
-	wg.Wait()
 	if err1 != nil {
 		return nil, err1
 	}
@@ -260,34 +264,33 @@ type authSigMessage struct {
 	Sig acm.SignatureEd25519
 }
 
-func shareAuthSignature(sc *SecretConnection, pubKey acm.PubKeyEd25519, signature acm.SignatureEd25519) (acm.PubKeyEd25519, acm.SignatureEd25519, error) {
+func shareAuthSignature(sc *SecretConnection, pubKey acm.PubKeyEd25519, signature acm.SignatureEd25519) (*authSigMessage, error) {
 	var recvMsg authSigMessage
 	var err1, err2 error
 
 	Parallel(
 		func() {
-			msgBytes := bm.BinaryBytes(authSigMessage{pubKey, signature})
+			msgBytes := wire.BinaryBytes(authSigMessage{pubKey, signature})
 			_, err1 = sc.Write(msgBytes)
 		},
 		func() {
-			// NOTE relies on atomicity of small data.
-			readBuffer := make([]byte, dataMaxSize)
-			_, err2 = sc.Read(readBuffer)
+			readBuffer := make([]byte, authSigMsgSize)
+			_, err2 = io.ReadFull(sc, readBuffer)
 			if err2 != nil {
 				return
 			}
 			n := int64(0) // not used.
-			recvMsg = bm.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), &n, &err2).(authSigMessage)
+			recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), &n, &err2).(authSigMessage)
 		})
 
 	if err1 != nil {
-		return nil, nil, err1
+		return nil, err1
 	}
 	if err2 != nil {
-		return nil, nil, err2
+		return nil, err2
 	}
 
-	return recvMsg.Key, recvMsg.Sig, nil
+	return &recvMsg, nil
 }
 
 func verifyChallengeSignature(challenge *[32]byte, remPubKey acm.PubKeyEd25519, remSignature acm.SignatureEd25519) bool {

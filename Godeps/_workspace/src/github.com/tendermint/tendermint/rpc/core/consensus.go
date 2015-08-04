@@ -1,10 +1,10 @@
 package core
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 func ListValidators() (*ctypes.ResponseListValidators, error) {
@@ -33,7 +33,7 @@ func DumpConsensusState() (*ctypes.ResponseDumpConsensusState, error) {
 		// TODO: clean this up?
 		peerState := peer.Data.Get(cm.PeerStateKey).(*cm.PeerState)
 		peerRoundState := peerState.GetRoundState()
-		peerRoundStateStr := peer.Key + ":" + string(binary.JSONBytes(peerRoundState))
+		peerRoundStateStr := peer.Key + ":" + string(wire.JSONBytes(peerRoundState))
 		peerRoundStates = append(peerRoundStates, peerRoundStateStr)
 	}
 	return &ctypes.ResponseDumpConsensusState{roundState.String(), peerRoundStates}, nil

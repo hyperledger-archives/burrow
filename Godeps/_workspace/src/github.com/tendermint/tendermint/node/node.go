@@ -2,7 +2,6 @@ package node
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
@@ -24,15 +22,10 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/server"
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 import _ "net/http/pprof"
-
-func init() {
-	go func() {
-		fmt.Println(http.ListenAndServe("0.0.0.0:6060", nil))
-	}()
-}
 
 type Node struct {
 	sw               *p2p.Switch
@@ -63,17 +56,19 @@ func NewNode() *Node {
 		state.Save()
 		// write the gendoc to db
 		buf, n, err := new(bytes.Buffer), new(int64), new(error)
-		binary.WriteJSON(genDoc, buf, n, err)
+		wire.WriteJSON(genDoc, buf, n, err)
 		stateDB.Set(sm.GenDocKey, buf.Bytes())
 		if *err != nil {
-			panic(Fmt("Unable to write gendoc to db: %v", err))
+			log.Error("Unable to write gendoc to db", "error", err)
+			os.Exit(1)
 		}
 	} else {
 		genDocBytes := stateDB.Get(sm.GenDocKey)
 		err := new(error)
-		binary.ReadJSONPtr(&genDoc, genDocBytes, err)
+		wire.ReadJSONPtr(&genDoc, genDocBytes, err)
 		if *err != nil {
-			panic(Fmt("Unable to read gendoc from db: %v", err))
+			log.Error("Unable to read gendoc from db", "error", err)
+			os.Exit(1)
 		}
 	}
 	// add the chainid to the global config
@@ -84,41 +79,41 @@ func NewNode() *Node {
 	privValidatorFile := config.GetString("priv_validator_file")
 	if _, err := os.Stat(privValidatorFile); err == nil {
 		privValidator = sm.LoadPrivValidator(privValidatorFile)
-		log.Info("Loaded PrivValidator",
+		log.Notice("Loaded PrivValidator",
 			"file", privValidatorFile, "privValidator", privValidator)
 	} else {
 		privValidator = sm.GenPrivValidator()
 		privValidator.SetFile(privValidatorFile)
 		privValidator.Save()
-		log.Info("Generated PrivValidator", "file", privValidatorFile)
+		log.Notice("Generated PrivValidator", "file", privValidatorFile)
 	}
 
 	// Generate node PrivKey
 	privKey := acm.GenPrivKeyEd25519()
 
 	// Make event switch
-	eventSwitch := new(events.EventSwitch)
+	eventSwitch := events.NewEventSwitch()
 	eventSwitch.Start()
 
-	// Get PEXReactor
+	// Make PEXReactor
 	book := p2p.NewAddrBook(config.GetString("addrbook_file"))
 	pexReactor := p2p.NewPEXReactor(book)
 
-	// Get BlockchainReactor
+	// Make BlockchainReactor
 	bcReactor := bc.NewBlockchainReactor(state.Copy(), blockStore, config.GetBool("fast_sync"))
 
-	// Get MempoolReactor
+	// Make MempoolReactor
 	mempool := mempl.NewMempool(state.Copy())
 	mempoolReactor := mempl.NewMempoolReactor(mempool)
 
-	// Get ConsensusReactor
+	// Make ConsensusReactor
 	consensusState := consensus.NewConsensusState(state.Copy(), blockStore, mempoolReactor)
 	consensusReactor := consensus.NewConsensusReactor(consensusState, blockStore, config.GetBool("fast_sync"))
 	if privValidator != nil {
 		consensusReactor.SetPrivValidator(privValidator)
 	}
 
-	// Make Switch
+	// Make p2p network switch
 	sw := p2p.NewSwitch()
 	sw.AddReactor("PEX", pexReactor)
 	sw.AddReactor("MEMPOOL", mempoolReactor)
@@ -147,7 +142,6 @@ func NewNode() *Node {
 
 // Call Start() after adding the listeners.
 func (n *Node) Start() {
-	log.Info("Starting Node", "chainID", config.GetString("chain_id"))
 	n.book.Start()
 	n.sw.SetNodeInfo(makeNodeInfo(n.sw, n.privKey))
 	n.sw.SetNodePrivKey(n.privKey)
@@ -155,7 +149,7 @@ func (n *Node) Start() {
 }
 
 func (n *Node) Stop() {
-	log.Info("Stopping Node")
+	log.Notice("Stopping Node")
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
 	n.book.Stop()
@@ -172,7 +166,7 @@ func SetFireable(evsw *events.EventSwitch, eventables ...events.Eventable) {
 // Add listeners before starting the Node.
 // The first listener is the primary listener (in NodeInfo)
 func (n *Node) AddListener(l p2p.Listener) {
-	log.Info(Fmt("Added %v", l))
+	log.Notice(Fmt("Added %v", l))
 	n.sw.AddListener(l)
 	n.book.AddOurAddress(l.ExternalAddress())
 }
@@ -200,12 +194,12 @@ func (n *Node) dialSeed(addr *p2p.NetAddress) {
 		//n.book.MarkAttempt(addr)
 		return
 	} else {
-		log.Info("Connected to seed", "peer", peer)
+		log.Notice("Connected to seed", "peer", peer)
 		n.book.AddAddress(addr, addr)
 	}
 }
 
-func (n *Node) StartRPC() net.Listener {
+func (n *Node) StartRPC() (net.Listener, error) {
 	core.SetBlockStore(n.blockStore)
 	core.SetConsensusState(n.consensusState)
 	core.SetConsensusReactor(n.consensusReactor)
@@ -215,14 +209,12 @@ func (n *Node) StartRPC() net.Listener {
 	core.SetGenDoc(n.genDoc)
 
 	listenAddr := config.GetString("rpc_laddr")
+
 	mux := http.NewServeMux()
-	rpcserver.RegisterEventsHandler(mux, n.evsw)
+	wm := rpcserver.NewWebsocketManager(core.Routes, n.evsw)
+	mux.HandleFunc("/websocket", wm.WebsocketHandler)
 	rpcserver.RegisterRPCFuncs(mux, core.Routes)
-	listener, err := rpcserver.StartHTTPServer(listenAddr, mux)
-	if err != nil {
-		panic(err)
-	}
-	return listener
+	return rpcserver.StartHTTPServer(listenAddr, mux)
 }
 
 func (n *Node) Switch() *p2p.Switch {
@@ -270,7 +262,7 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 	_, rpcPortStr, _ := net.SplitHostPort(rpcListenAddr)
 	rpcPort, err := strconv.Atoi(rpcPortStr)
 	if err != nil {
-		panic(Fmt("Expected numeric RPC.ListenAddr port but got %v", rpcPortStr))
+		PanicSanity(Fmt("Expected numeric RPC.ListenAddr port but got %v", rpcPortStr))
 	}
 
 	// We assume that the rpcListener has the same ExternalAddress.
@@ -291,6 +283,8 @@ func RunNode() {
 	n.AddListener(l)
 	n.Start()
 
+	log.Notice("Started node", "nodeInfo", n.sw.NodeInfo())
+
 	// If seedNode is provided by config, dial out.
 	if config.GetString("seeds") != "" {
 		n.DialSeed()
@@ -298,7 +292,10 @@ func RunNode() {
 
 	// Run the RPC server.
 	if config.GetString("rpc_laddr") != "" {
-		n.StartRPC()
+		_, err := n.StartRPC()
+		if err != nil {
+			PanicCrisis(err)
+		}
 	}
 
 	// Sleep forever and then...

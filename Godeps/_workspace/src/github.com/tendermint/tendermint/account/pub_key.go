@@ -2,17 +2,16 @@ package account
 
 import (
 	"bytes"
-	"errors"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519/extra25519"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 )
 
 // PubKey is part of Account and Validator.
 type PubKey interface {
-	IsNil() bool
 	Address() []byte
 	VerifyBytes(msg []byte, sig Signature) bool
 }
@@ -22,21 +21,33 @@ const (
 	PubKeyTypeEd25519 = byte(0x01)
 )
 
-// for binary.readReflect
-var _ = binary.RegisterInterface(
+// for wire.readReflect
+var _ = wire.RegisterInterface(
 	struct{ PubKey }{},
-	binary.ConcreteType{PubKeyEd25519{}, PubKeyTypeEd25519},
+	wire.ConcreteType{PubKeyEd25519{}, PubKeyTypeEd25519},
 )
 
 //-------------------------------------
 
 // Implements PubKey
-type PubKeyEd25519 []byte
+type PubKeyEd25519 [32]byte
 
-func (pubKey PubKeyEd25519) IsNil() bool { return false }
-
-// TODO: Or should this just be BinaryRipemd160(key)? (The difference is the TypeByte.)
-func (pubKey PubKeyEd25519) Address() []byte { return binary.BinaryRipemd160(pubKey) }
+// TODO: Slicing the array gives us length prefixing but loses the type byte.
+// Revisit if we add more pubkey types.
+// For now, we artificially append the type byte in front to give us backwards
+// compatibility for when the pubkey wasn't fixed length array
+func (pubKey PubKeyEd25519) Address() []byte {
+	w, n, err := new(bytes.Buffer), new(int64), new(error)
+	wire.WriteBinary(pubKey[:], w, n, err)
+	if *err != nil {
+		PanicCrisis(*err)
+	}
+	// append type byte
+	encodedPubkey := append([]byte{1}, w.Bytes()...)
+	hasher := ripemd160.New()
+	hasher.Write(encodedPubkey) // does not error
+	return hasher.Sum(nil)
+}
 
 // TODO: Consider returning a reason for failure, or logging a runtime type mismatch.
 func (pubKey PubKeyEd25519) VerifyBytes(msg []byte, sig_ Signature) bool {
@@ -44,45 +55,35 @@ func (pubKey PubKeyEd25519) VerifyBytes(msg []byte, sig_ Signature) bool {
 	if !ok {
 		return false
 	}
-	pubKeyBytes := new([32]byte)
-	copy(pubKeyBytes[:], pubKey)
-	sigBytes := new([64]byte)
-	copy(sigBytes[:], sig)
-	return ed25519.Verify(pubKeyBytes, msg, sigBytes)
+	pubKeyBytes := [32]byte(pubKey)
+	sigBytes := [64]byte(sig)
+	return ed25519.Verify(&pubKeyBytes, msg, &sigBytes)
 }
 
 // For use with golang/crypto/nacl/box
 // If error, returns nil.
 func (pubKey PubKeyEd25519) ToCurve25519() *[32]byte {
-	keyEd25519, keyCurve25519 := new([32]byte), new([32]byte)
-	copy(keyEd25519[:], pubKey)
-	ok := extra25519.PublicKeyToCurve25519(keyCurve25519, keyEd25519)
+	keyCurve25519, pubKeyBytes := new([32]byte), [32]byte(pubKey)
+	ok := extra25519.PublicKeyToCurve25519(keyCurve25519, &pubKeyBytes)
 	if !ok {
 		return nil
 	}
 	return keyCurve25519
 }
 
-func (pubKey PubKeyEd25519) ValidateBasic() error {
-	if len(pubKey) != ed25519.PublicKeySize {
-		return errors.New("Invalid PubKeyEd25519 key size")
-	}
-	return nil
-}
-
 func (pubKey PubKeyEd25519) String() string {
-	return Fmt("PubKeyEd25519{%X}", []byte(pubKey))
+	return Fmt("PubKeyEd25519{%X}", pubKey[:])
 }
 
 // Must return the full bytes in hex.
 // Used for map keying, etc.
 func (pubKey PubKeyEd25519) KeyString() string {
-	return Fmt("%X", []byte(pubKey))
+	return Fmt("%X", pubKey[:])
 }
 
 func (pubKey PubKeyEd25519) Equals(other PubKey) bool {
-	if _, ok := other.(PubKeyEd25519); ok {
-		return bytes.Equal(pubKey, other.(PubKeyEd25519))
+	if otherEd, ok := other.(PubKeyEd25519); ok {
+		return bytes.Equal(pubKey[:], otherEd[:])
 	} else {
 		return false
 	}

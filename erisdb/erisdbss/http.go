@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	"github.com/eris-ltd/eris-db/server"
 	"net/http"
 	"os"
@@ -96,7 +96,7 @@ func (this *ServerServer) handleFunc(c *gin.Context) {
 	bts := buf.Bytes()
 	var errDC error
 	reqData := &RequestData{}
-	binary.ReadJSON(reqData, bts, &errDC)
+	wire.ReadJSON(reqData, bts, &errDC)
 	if errDC != nil {
 		http.Error(c.Writer, "Failed to decode json.", 400)
 		return

@@ -9,8 +9,8 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
@@ -167,7 +167,6 @@ func (this *MockSuite) TestGetValidators() {
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetValidators.Output)
 }
-
 
 // ********************************************* NameReg *********************************************
 

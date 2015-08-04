@@ -10,21 +10,25 @@ const (
 )
 
 type Account struct {
-	Address     Word256
-	Balance     int64
-	Code        []byte
-	Nonce       int64
-	StorageRoot Word256
-	Other       interface{} // For holding all other data.
+	Address Word256
+	Balance int64
+	Code    []byte
+	Nonce   int64
+	Other   interface{} // For holding all other data.
 
 	Permissions ptypes.AccountPermissions
 }
 
 func (acc *Account) String() string {
-	return Fmt("VMAccount{%X B:%v C:%X N:%v S:%X}",
-		acc.Address, acc.Balance, acc.Code, acc.Nonce, acc.StorageRoot)
+	if acc == nil {
+		return "nil-VMAccount"
+	}
+	return Fmt("VMAccount{%X B:%v C:%X N:%v}",
+		acc.Address, acc.Balance, acc.Code, acc.Nonce)
 }
 
+// NOTE: This is serialized as an event from vm/vm.
+// See: EventStringLogEvent
 type Log struct {
 	Address Word256   `json:"address"`
 	Topics  []Word256 `json:"topics"`

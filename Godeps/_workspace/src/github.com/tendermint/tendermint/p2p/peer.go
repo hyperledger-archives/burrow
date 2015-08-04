@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync/atomic"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/binary"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 type Peer struct {
+	BaseService
+
 	outbound bool
 	mconn    *MConnection
-	running  uint32
 
 	*types.NodeInfo
 	Key  string
@@ -30,12 +30,12 @@ func peerHandshake(conn net.Conn, ourNodeInfo *types.NodeInfo) (*types.NodeInfo,
 	Parallel(
 		func() {
 			var n int64
-			binary.WriteBinary(ourNodeInfo, conn, &n, &err1)
+			wire.WriteBinary(ourNodeInfo, conn, &n, &err1)
 		},
 		func() {
 			var n int64
-			binary.ReadBinary(peerNodeInfo, conn, &n, &err2)
-			log.Info("Peer handshake", "peerNodeInfo", peerNodeInfo)
+			wire.ReadBinary(peerNodeInfo, conn, &n, &err2)
+			log.Notice("Peer handshake", "peerNodeInfo", peerNodeInfo)
 		})
 	if err1 != nil {
 		return nil, err1
@@ -52,42 +52,34 @@ func newPeer(conn net.Conn, peerNodeInfo *types.NodeInfo, outbound bool, reactor
 	onReceive := func(chId byte, msgBytes []byte) {
 		reactor := reactorsByCh[chId]
 		if reactor == nil {
-			panic(Fmt("Unknown channel %X", chId))
+			PanicSanity(Fmt("Unknown channel %X", chId))
 		}
 		reactor.Receive(chId, p, msgBytes)
 	}
 	onError := func(r interface{}) {
-		p.stop()
+		p.Stop()
 		onPeerError(p, r)
 	}
 	mconn := NewMConnection(conn, chDescs, onReceive, onError)
 	p = &Peer{
 		outbound: outbound,
 		mconn:    mconn,
-		running:  0,
 		NodeInfo: peerNodeInfo,
 		Key:      peerNodeInfo.PubKey.KeyString(),
 		Data:     NewCMap(),
 	}
+	p.BaseService = *NewBaseService(log, "Peer", p)
 	return p
 }
 
-func (p *Peer) start() {
-	if atomic.CompareAndSwapUint32(&p.running, 0, 1) {
-		log.Debug("Starting Peer", "peer", p)
-		p.mconn.Start()
-	}
+func (p *Peer) OnStart() {
+	p.BaseService.OnStart()
+	p.mconn.Start()
 }
 
-func (p *Peer) stop() {
-	if atomic.CompareAndSwapUint32(&p.running, 1, 0) {
-		log.Debug("Stopping Peer", "peer", p)
-		p.mconn.Stop()
-	}
-}
-
-func (p *Peer) IsRunning() bool {
-	return atomic.LoadUint32(&p.running) == 1
+func (p *Peer) OnStop() {
+	p.BaseService.OnStop()
+	p.mconn.Stop()
 }
 
 func (p *Peer) Connection() *MConnection {
@@ -99,28 +91,28 @@ func (p *Peer) IsOutbound() bool {
 }
 
 func (p *Peer) Send(chId byte, msg interface{}) bool {
-	if atomic.LoadUint32(&p.running) == 0 {
+	if !p.IsRunning() {
 		return false
 	}
 	return p.mconn.Send(chId, msg)
 }
 
 func (p *Peer) TrySend(chId byte, msg interface{}) bool {
-	if atomic.LoadUint32(&p.running) == 0 {
+	if !p.IsRunning() {
 		return false
 	}
 	return p.mconn.TrySend(chId, msg)
 }
 
 func (p *Peer) CanSend(chId byte) bool {
-	if atomic.LoadUint32(&p.running) == 0 {
+	if !p.IsRunning() {
 		return false
 	}
 	return p.mconn.CanSend(chId)
 }
 
 func (p *Peer) WriteTo(w io.Writer) (n int64, err error) {
-	binary.WriteString(p.Key, w, &n, &err)
+	wire.WriteString(p.Key, w, &n, &err)
 	return
 }
 

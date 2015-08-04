@@ -17,7 +17,7 @@ type namereg struct {
 }
 
 func newNamereg(consensusState *cm.ConsensusState) *namereg {
-	
+
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("name", &sync.Pool{
@@ -67,7 +67,7 @@ func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResponseListNames, 
 	}
 	state.GetNames().Iterate(func(key interface{}, value interface{}) bool {
 		nre := value.(*types.NameRegEntry)
-		if filter.Match(nre){
+		if filter.Match(nre) {
 			names = append(names, nre)
 		}
 		return false
