@@ -145,7 +145,7 @@ The corresponding Ed25519 private key: `[1, "6B72D45EB65F619F11CE580C8CAED9E0BAD
 <a name="the-transaction-types"></a>
 ###The transaction types
 
-These are the types of transactions:
+These are the types of transactions. Note that in DApp programming you would only use the `CallTx`, and maybe `NameTx`.
 
 ####SendTx
 
@@ -312,13 +312,15 @@ Event object:
 <Tx>
 ```
 
-#### Account Receive
+#### Account Call
 
-This notifies you when an account is the target of a call, like when calling an accessor function.
+This notifies you when an account is the target of a call. This event is emitted when `CallTx`s (transactions) that target the given account has been finalized. It is possible to listen to this event when creating new contracts as well; it will fire when the transaction is committed (or not, in which case the 'exception' field will explain why it failed). 
 
-Event ID: `Acc/<address>/Receive`
+**NOTE: The naming here is a bit unfortunate. Ethereum uses 'transaction' for (state-changing) transactions to a contract account, and 'call' for read-only calls like is used for accessor functions and such. Tendermint on the other hand, which uses many types of transactions uses 'CallTx' for a transaction made to a contract account, since it calls the code in that contract, and refers to these simply as 'calls'. Read-only calls is normally referred to as 'simulated calls'.** 
 
-Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Input` will subscribe to call receive events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
+Event ID: `Acc/<address>/Call`
+
+Example: `Acc/B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7/Call` will subscribe to events from the account with address: B4F9DA82738D37A1D83AD2CDD0C0D3CBA76EA4E7.
 
 
 ```
@@ -525,18 +527,17 @@ NOTE: Get peer is not fully implemented.
 | [BroadcastTx](#broadcast-tx) | erisdb.broadcastTx | POST | `/txpool` |
 | [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.getUnconfirmedTxs | GET | `/txpool` |
 
-
 ###Code execution
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Call](#call) | erisdb.call | POST | `/calls` |
 | [CallCode](#call-code) | erisdb.callCode | POST | `/codecalls` |
 
-
 ####Unsafe
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Transact](#transact) | erisdb.transact | POST | `/unsafe/txpool` |
+| [Transact](#transact-and-hold) | erisdb.transactAndHold | POST | `/unsafe/txpool?hold=true` |
 | [TransactNameReg](#transact-name-reg) | erisdb.transactNameReg | POST | `/unsafe/namereg/txpool` |
 | [GenPrivAccount](#gen-priv-account) | erisdb.genPrivAccount | GET | `/unsafe/pa_generator` |
 
@@ -1812,8 +1813,76 @@ The same as with BroadcastTx:
 
 See [The transaction types](#the-transaction-types) for more info on the `CallTx` type. 
 
+If you want to hold the tx, use `/unsafe/txpool?hold=true`. See `TransactAndHold` below.
+
 ***
 
+<a name="transact-and-hold"></a>
+####TransactAndHold
+
+Convenience method for sending a transaction and holding until it's been committed (or not). It will do the following things:
+
+* Use the private key to create a private account object (i.e. generate public key and address).
+* Use the other parameters to create a `CallTx` object.
+* Sign the transaction.
+* Broadcast the transaction.
+* Wait until the transaction is fully processed. 
+
+When holding, the request will eventually timeout if the transaction is not processed nor produce an error. The response will then be an error that includes the transaction hash (which can be used for further investigation).
+
+#####HTTP
+
+Method: POST
+
+Endpoint: `/unsafe/txpool`
+
+Query: `?hold=true`
+
+Body: See JSON-RPC parameters.
+
+#####JSON-RPC
+
+Method: `erisdb.transactAndHold`
+
+Parameters: 
+
+```
+{
+	priv_key:  <string>
+	data:      <string>
+	address:   <string>
+	fee:       <number>
+	gas_limit: <number>
+}
+```
+
+private key is the hex string only.
+
+#####Return value
+
+```
+{
+	call_data: {
+		caller: <string>
+    	callee: <string>
+    	data:   <string>
+    	value:  <number>
+    	gas:    <number>
+	}
+	origin:     <string>
+	tx_id:      <string>
+	return:     <string>
+	exception:  <string>
+}
+```
+
+#####Additional info
+
+See [The transaction types](#the-transaction-types) for more info on the `CallTx` type. 
+
+If you don't want to hold the tx, either use `/unsafe/txpool?hold=false` or omit the query entirely. See `Transact` for the regular version.
+
+***
 
 <a name="transact-name-reg"></a>
 ####TransactNameReg

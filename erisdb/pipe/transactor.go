@@ -1,6 +1,7 @@
 package pipe
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
@@ -11,12 +12,7 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-)
-
-const (
-	DEFAULT_BLOCKS_WAIT = 10
-	SUB_ID              = "TransactorSubBlock"
-	EVENT_ID            = "NewBlock"
+	"time"
 )
 
 type transactor struct {
@@ -135,9 +131,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
 	pk := &[64]byte{}
-	for i := 0; i < 64; i++ {
-		pk[i] = privKey[i]
-	}
+	copy(pk[:], privKey)
 	fmt.Printf("PK BYTES FROM TRANSACT: %x\n", pk)
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
@@ -169,15 +163,54 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.BroadcastTx(txS)
 }
 
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error) {
+	rec, tErr := this.Transact(privKey, address, data, gasLimit, fee)
+	if tErr != nil {
+		return nil, tErr
+	}
+	var addr []byte
+	if rec.CreatesContract == 1 {
+		addr = rec.ContractAddr
+	} else {
+		addr = address
+	}
+	wc := make(chan *types.EventMsgCall)
+	subId := fmt.Sprintf("%X", rec.TxHash)
+	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt interface{}) {
+		event := evt.(types.EventMsgCall)
+		if bytes.Equal(event.TxID, rec.TxHash) {
+			wc <- &event
+		}
+	})
+	
+	timer := time.NewTimer(10 * time.Second)
+	toChan := timer.C
+	
+	var ret *types.EventMsgCall
+	var rErr error
+	 
+	select {
+	case <-toChan:
+		rErr = fmt.Errorf("Transaction timed out. Hash: " + subId)
+	case e := <-wc:
+		timer.Stop()
+		if e.Exception != "" {
+			rErr = fmt.Errorf("Error when transacting: " + e.Exception)
+		} else {
+			ret = e
+		}
+	}
+	this.eventEmitter.Unsubscribe(subId)
+	return ret, rErr
+}
+
 func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
 	pk := &[64]byte{}
-	for i := 0; i < 64; i++ {
-		pk[i] = privKey[i]
-	}
+	copy(pk[:], privKey)
 	fmt.Printf("PK BYTES FROM TRANSACT NAMEREG: %x\n", pk)
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()

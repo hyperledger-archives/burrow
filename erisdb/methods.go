@@ -42,6 +42,7 @@ const (
 	GET_UNCONFIRMED_TXS       = SERVICE_NAME + ".getUnconfirmedTxs"
 	SIGN_TX                   = SERVICE_NAME + ".signTx"
 	TRANSACT                  = SERVICE_NAME + ".transact"
+	TRANSACT_AND_HOLD         = SERVICE_NAME + ".transactAndHold"
 	TRANSACT_NAMEREG          = SERVICE_NAME + ".transactNameReg"
 	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
 	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
@@ -95,6 +96,7 @@ func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap[GET_UNCONFIRMED_TXS] = this.UnconfirmedTxs
 	dhMap[SIGN_TX] = this.SignTx
 	dhMap[TRANSACT] = this.Transact
+	dhMap[TRANSACT_AND_HOLD] = this.TransactAndHold
 	dhMap[TRANSACT_NAMEREG] = this.TransactNameReg
 	// Namereg
 	dhMap[GET_NAMEREG_ENTRY] = this.NameRegEntry
@@ -401,6 +403,19 @@ func (this *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
+}
+
+func (this *ErisDbMethods) TransactAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &TransactParam{}
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	ce, errC := this.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return ce, 0, nil
 }
 
 func (this *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

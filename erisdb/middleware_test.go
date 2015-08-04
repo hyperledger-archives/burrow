@@ -8,20 +8,20 @@ import (
 
 // Test empty query.
 func TestEmptyQuery(t *testing.T) {
-	arr, err := _parseQuery("")
+	arr, err := _parseSearchQuery("")
 	assert.NoError(t, err)
 	assert.Nil(t, arr, "Array should be nil")
 }
 
 // Test no colon separated filter.
 func TestQueryNoColonSeparator(t *testing.T) {
-	_, err := _parseQuery("test")
+	_, err := _parseSearchQuery("test")
 	assert.Error(t, err, "Should detect missing colon.")
 }
 
 // Test no colon separated filter and proper filters mixed.
 func TestQueryNoColonSeparatorMulti(t *testing.T) {
-	_, err := _parseQuery("test test1:24 test2")
+	_, err := _parseSearchQuery("test test1:24 test2")
 	assert.Error(t, err, "Should detect missing colon.")
 }
 
@@ -67,7 +67,7 @@ func TestQueryNEQ(t *testing.T) {
 
 func TestCombined(t *testing.T) {
 	q := "balance:>=5 sequence:<8"
-	arr, err := _parseQuery(q)
+	arr, err := _parseSearchQuery(q)
 	assert.NoError(t, err)
 	assert.Len(t, arr, 2)
 	f0 := arr[0]
@@ -103,13 +103,13 @@ func TestRangeQueryWildcardULB(t *testing.T) {
 
 // Test a range query with no upper bounds term.
 func TestRangeQueryBotchedMax(t *testing.T) {
-	_, err := _parseQuery("test:5..")
+	_, err := _parseSearchQuery("test:5..")
 	assert.Error(t, err, "Malformed range-query passed")
 }
 
 // Test a range query with no lower bounds term.
 func TestRangeQueryBotchedMin(t *testing.T) {
-	_, err := _parseQuery("test:..5")
+	_, err := _parseSearchQuery("test:..5")
 	assert.Error(t, err, "Malformed range-query passed")
 }
 
@@ -120,7 +120,7 @@ func testOp(op string, t *testing.T) {
 }
 
 func assertFilter(t *testing.T, filter, field, op, val string) {
-	arr, err := _parseQuery(filter)
+	arr, err := _parseSearchQuery(filter)
 	assert.NoError(t, err)
 	assert.NotNil(t, arr)
 	assert.Len(t, arr, 1)
@@ -128,7 +128,7 @@ func assertFilter(t *testing.T, filter, field, op, val string) {
 }
 
 func assertRangeFilter(t *testing.T, min, max, res0, res1 string) {
-	arr, err := _parseQuery("test:" + min + ".." + max)
+	arr, err := _parseSearchQuery("test:" + min + ".." + max)
 	assert.NoError(t, err)
 	assert.NotNil(t, arr)
 	assert.Len(t, arr, 2)

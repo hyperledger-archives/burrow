@@ -239,6 +239,10 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.testData.Transact.Output, nil
 }
 
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error) {
+	return nil, nil
+}
+
 func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*ep.Receipt, error) {
 	return this.testData.TransactNameReg.Output, nil
 }

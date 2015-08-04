@@ -70,6 +70,7 @@ type (
 		CallCode(fromAddress, code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
+		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)

@@ -31,7 +31,7 @@ func NewRestServer(codec rpc.Codec, pipe ep.Pipe, eventSubs *EventSubscriptions)
 // Starting the server means registering all the handlers with the router.
 func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	// Accounts
-	router.GET("/accounts", parseQuery, this.handleAccounts)
+	router.GET("/accounts", parseSearchQuery, this.handleAccounts)
 	router.GET("/accounts/:address", addressParam, this.handleAccount)
 	router.GET("/accounts/:address/storage", addressParam, this.handleStorage)
 	router.GET("/accounts/:address/storage/:key", addressParam, keyParam, this.handleStorageAt)
@@ -41,7 +41,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/blockchain/genesis_hash", this.handleGenesisHash)
 	router.GET("/blockchain/latest_block_height", this.handleLatestBlockHeight)
 	router.GET("/blockchain/latest_block", this.handleLatestBlock)
-	router.GET("/blockchain/blocks", parseQuery, this.handleBlocks)
+	router.GET("/blockchain/blocks", parseSearchQuery, this.handleBlocks)
 	router.GET("/blockchain/block/:height", heightParam, this.handleBlock)
 	// Consensus
 	router.GET("/consensus", this.handleConsensusState)
@@ -51,7 +51,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.GET("/event_subs/:id", this.handleEventPoll)
 	router.DELETE("/event_subs/:id", this.handleEventUnsubscribe)
 	// NameReg
-	router.GET("/namereg", parseQuery, this.handleNameRegEntries)
+	router.GET("/namereg", parseSearchQuery, this.handleNameRegEntries)
 	router.GET("/namereg/:key", nameParam, this.handleNameRegEntry)
 	// Network
 	router.GET("/network", this.handleNetworkInfo)
@@ -69,7 +69,7 @@ func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	router.POST("/codecalls", this.handleCallCode)
 	// Unsafe
 	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
-	router.POST("/unsafe/txpool", this.handleTransact)
+	router.POST("/unsafe/txpool", parseTxModifier, this.handleTransact)
 	router.POST("/unsafe/namereg/txpool", this.handleTransactNameReg)
 	router.POST("/unsafe/tx_signer", this.handleSignTx)
 	this.running = true
@@ -424,17 +424,29 @@ func (this *RestServer) handleCallCode(c *gin.Context) {
 }
 
 func (this *RestServer) handleTransact(c *gin.Context) {
+	
+	_, hold := c.Get("hold")
+	
 	param := &TransactParam{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
-	if err != nil {
-		c.AbortWithError(500, err)
+	if hold {
+		res, err := this.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+		if err != nil {
+			c.AbortWithError(500, err)
+		}
+		c.Writer.WriteHeader(200)
+		this.codec.Encode(res, c.Writer)
+	} else {
+		receipt, err := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+		if err != nil {
+			c.AbortWithError(500, err)
+		}
+		c.Writer.WriteHeader(200)
+		this.codec.Encode(receipt, c.Writer)
 	}
-	c.Writer.WriteHeader(200)
-	this.codec.Encode(receipt, c.Writer)
 }
 
 func (this *RestServer) handleTransactNameReg(c *gin.Context) {
@@ -521,10 +533,23 @@ func peerAddressParam(c *gin.Context) {
 	c.Next()
 }
 
-func parseQuery(c *gin.Context) {
+func parseTxModifier(c *gin.Context) {
+	hold := c.Query("hold")
+	if hold == "true" {
+		c.Set("hold", true)
+	} else if (hold != "") {
+		if hold != "false" {
+			c.Writer.WriteHeader(400)
+			c.Writer.Write([]byte("tx hold must be either 'true' or 'false', found: " + hold))
+			c.Abort()
+		}
+	}
+}
+
+func parseSearchQuery(c *gin.Context) {
 	q := c.Query("q")
 	if q != "" {
-		data, err := _parseQuery(q)
+		data, err := _parseSearchQuery(q)
 		if err != nil {
 			c.Writer.WriteHeader(400)
 			c.Writer.Write([]byte(err.Error()))
@@ -536,7 +561,7 @@ func parseQuery(c *gin.Context) {
 	}
 }
 
-func _parseQuery(queryString string) ([]*ep.FilterData, error) {
+func _parseSearchQuery(queryString string) ([]*ep.FilterData, error) {
 	if len(queryString) == 0 {
 		return nil, nil
 	}
