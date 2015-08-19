@@ -144,8 +144,8 @@ json_rpc_endpoint="/rpc"
 [web_socket]
 websocket_endpoint="/socketrpc"
 max_websocket_sessions=50
-read_buffer_size = 2048
-write_buffer_size = 2048
+read_buffer_size = 4096
+write_buffer_size = 4096
 [logging]
 console_log_level="info"
 file_log_level="warn"

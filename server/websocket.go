@@ -13,18 +13,14 @@ import (
 // to net in connections/session management. At some point...
 
 const (
-	// Size of read channel.
-	readChanBufferSize = 10
-	// Size of write channel.
-	writeChanBufferSize = 10
 	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
+	writeWait = 0 * time.Second
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 10 * time.Second
+	pongWait = 0 * time.Second
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 0 * time.Second
 	// Maximum message size allowed from a peer.
-	maxMessageSize = 2048
+	maxMessageSize = 4096
 )
 
 // Services requests. Message bytes are passed along with the session
@@ -213,8 +209,8 @@ func (this *WSSession) readPump() {
 			}()
 	*/
 	this.wsConn.SetReadLimit(maxMessageSize)
-	this.wsConn.SetReadDeadline(time.Now().Add(pongWait))
-	this.wsConn.SetPongHandler(func(string) error { this.wsConn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	// this.wsConn.SetReadDeadline(time.Now().Add(pongWait))
+	// this.wsConn.SetPongHandler(func(string) error { this.wsConn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
 		// Read
@@ -227,23 +223,9 @@ func (this *WSSession) readPump() {
 			this.writeCloseChan <- struct{}{}
 			return
 		}
-		// Wrong message type.
+		
 		if msgType != websocket.TextMessage {
-			var typeStr string
-			if msgType == websocket.BinaryMessage {
-				typeStr = "Binary"
-			} else if msgType == websocket.CloseMessage {
-				typeStr = "Close"
-			} else if msgType == websocket.PingMessage {
-				typeStr = "Ping"
-			} else if msgType == websocket.PingMessage {
-				typeStr = "Pong"
-			} else {
-				// This should not be possible.
-				typeStr = "Unknown ID: " + fmt.Sprintf("%d", msgType)
-			}
-
-			log.Info("Receiving non text-message from client, closing.", "type", typeStr)
+			log.Info("Receiving non text-message from client, closing.")
 			this.writeCloseChan <- struct{}{}
 			return
 		}
@@ -268,10 +250,10 @@ func (this *WSSession) writePump() {
 			wpm.Unlock()
 		}()
 	*/
-	ticker := time.NewTicker(pingPeriod)
+	// ticker := time.NewTicker(pingPeriod)
 
 	defer func() {
-		ticker.Stop()
+		// ticker.Stop()
 		this.Close()
 	}()
 
@@ -291,12 +273,15 @@ func (this *WSSession) writePump() {
 		case <-this.writeCloseChan:
 			return
 		// Ticker run out. Time for another ping message.
+		/*
 		case <-ticker.C:
 			if err := this.write(websocket.PingMessage, []byte{}); err != nil {
 				log.Debug("Failed to write ping message to socket. Closing.")
 				return
 			}
+			*/
 		}
+		
 	}
 }
 
@@ -402,7 +387,7 @@ func (this *SessionManager) createSession(wsConn *websocket.Conn) (*WSSession, e
 		sessionManager: this,
 		id:             newId,
 		wsConn:         wsConn,
-		writeChan:      make(chan []byte, writeChanBufferSize),
+		writeChan:      make(chan []byte, maxMessageSize),
 		writeCloseChan: make(chan struct{}),
 		service:        this.service,
 	}

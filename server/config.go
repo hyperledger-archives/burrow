@@ -73,8 +73,8 @@ func DefaultServerConfig() *ServerConfig {
 		WebSocket: WebSocket{
 			WebSocketEndpoint:    "/socketrpc",
 			MaxWebSocketSessions: 50,
-			ReadBufferSize:       2048,
-			WriteBufferSize:      2048,
+			ReadBufferSize:       4096,
+			WriteBufferSize:      4096,
 		},
 		Logging: Logging{
 			ConsoleLogLevel: "info",
