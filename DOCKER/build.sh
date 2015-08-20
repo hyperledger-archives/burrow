@@ -1,4 +1,5 @@
 #!/bin/sh
+
 base=github.com/eris-ltd/eris-db
 release="0.10"
 repo=$GOPATH/src/$base

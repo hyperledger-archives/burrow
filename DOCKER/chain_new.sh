@@ -3,12 +3,12 @@
 echo "new chain: $CHAIN_ID"
 
 if [ "$GENERATE_GENESIS" = "true" ]; then
-	mintgen --single $CHAIN_DIR
+	mintgen random --dir="/home/eris/.eris/blockchains/$CHAIN_ID" 1 $CHAIN_ID
 	ifExit "Error creating genesis file"
 fi
 
 if [ "$RUN" = "true" ]; then
-	tendermint node	
+	tendermint node
 	ifExit "Error starting tendermint"
 else
 	# this will just run for a second and quit

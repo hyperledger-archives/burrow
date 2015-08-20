@@ -4,15 +4,6 @@ MAINTAINER Eris Industries <support@erisindustries.com>
 
 #-----------------------------------------------------------------------------
 # dependencies
-
-# Set the env variables to non-interactive
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBIAN_PRIORITY critical
-ENV DEBCONF_NOWARNINGS yes
-ENV TERM linux
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-
-# grab deps (gmp)
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
     libgmp3-dev && \
@@ -29,7 +20,7 @@ COPY DOCKER/start.sh /usr/local/bin/erisdb-wrapper
 
 # set the repo and install tendermint
 ENV REPO github.com/tendermint/tendermint
-ENV BRANCH f2f437a328cb3e277bc4ac74e4a1180f1c28efbc
+ENV BRANCH 4ee387d0770ed379e2d524f7077938517b38cd7c
 # note, we want to lock in the same commit number
 #  as eris-db has vendored.
 RUN mkdir --parents $GOPATH/src/$REPO
@@ -74,8 +65,8 @@ RUN rm -rf $GOPATH/src/* && \
 
 ENV ECM_PATH /usr/local/lib/ecm/
 RUN mkdir -p $ECM_PATH
-COPY ./DOCKER/chain_* $ECM_PATH
-COPY ./DOCKER/config.toml  $ECM_PATH
+COPY DOCKER/chain_* $ECM_PATH
+COPY DOCKER/config.toml $ECM_PATH
 
 #-----------------------------------------------------------------------------
 # root dir
