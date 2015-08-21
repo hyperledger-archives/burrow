@@ -283,7 +283,7 @@ func (sw *Switch) IsDialing(addr *NetAddress) bool {
 // which receives success values for each attempted send (false if times out)
 func (sw *Switch) Broadcast(chId byte, msg interface{}) chan bool {
 	successChan := make(chan bool, len(sw.peers.List()))
-	log.Info("Broadcast", "channel", chId, "msg", msg)
+	log.Debug("Broadcast", "channel", chId, "msg", msg)
 	for _, peer := range sw.peers.List() {
 		go func(peer *Peer) {
 			success := peer.Send(chId, msg)

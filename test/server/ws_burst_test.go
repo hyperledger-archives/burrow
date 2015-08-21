@@ -5,7 +5,7 @@ import (
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/server"
 	"testing"
-	// "time"
+	"time"
 )
 
 const CONNS = 100
@@ -101,8 +101,8 @@ func wsClient(doneChan chan bool, errChan chan error) {
 		<-readChan
 		i++
 	}
-
 	client.Close()
+	time.Sleep(100*time.Millisecond)
 	
 	doneChan <- true
 }

@@ -20,7 +20,7 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = 0 * time.Second
 	// Maximum message size allowed from a peer.
-	maxMessageSize = 4096
+	maxMessageSize = 1000000
 )
 
 // Services requests. Message bytes are passed along with the session
@@ -171,7 +171,7 @@ func (this *WSSession) Close() {
 		this.closed = true
 		this.wsConn.Close()
 		this.sessionManager.removeSession(this.id)
-		log.Debug("Closing websocket connection.", "sessionId", this.id, "remaining", len(this.sessionManager.activeSessions))
+		log.Info("Closing websocket connection.", "sessionId", this.id, "remaining", len(this.sessionManager.activeSessions))
 		this.sessionManager.notifyClosed(this)
 	}
 }
@@ -219,7 +219,7 @@ func (this *WSSession) readPump() {
 		// Read error.
 		if err != nil {
 			// Socket could have been gracefully closed, so not really an error.
-			log.Debug("Socket closed. Removing.", "error", err.Error())
+			log.Info("Socket closed. Removing.", "error", err.Error())
 			this.writeCloseChan <- struct{}{}
 			return
 		}
@@ -229,9 +229,11 @@ func (this *WSSession) readPump() {
 			this.writeCloseChan <- struct{}{}
 			return
 		}
-
-		// Process the request.
-		this.service.Process(msg, this)
+		
+		go func(){
+			// Process the request.
+			this.service.Process(msg, this)
+		}()
 	}
 }
 

@@ -42,7 +42,7 @@ const (
 	dataStackCapacity       = 1024
 	callStackCapacity       = 100         // TODO ensure usage.
 	memoryCapacity          = 1024 * 1024 // 1 MB
-	dbg               Debug = true
+	dbg               Debug = false
 )
 
 func (d Debug) Printf(s string, a ...interface{}) {

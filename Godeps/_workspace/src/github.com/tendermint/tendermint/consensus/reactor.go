@@ -342,7 +342,7 @@ OUTER_LOOP:
 
 		// Send proposal Block parts?
 		if rs.ProposalBlockParts.HasHeader(prs.ProposalBlockPartsHeader) {
-			//log.Info("ProposalBlockParts matched", "blockParts", prs.ProposalBlockParts)
+			//log.Debug("ProposalBlockParts matched", "blockParts", prs.ProposalBlockParts)
 			if index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom(); ok {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
@@ -358,12 +358,12 @@ OUTER_LOOP:
 
 		// If the peer is on a previous height, help catch up.
 		if (0 < prs.Height) && (prs.Height < rs.Height) {
-			//log.Info("Data catchup", "height", rs.Height, "peerHeight", prs.Height, "peerProposalBlockParts", prs.ProposalBlockParts)
+			//log.Debug("Data catchup", "height", rs.Height, "peerHeight", prs.Height, "peerProposalBlockParts", prs.ProposalBlockParts)
 			if index, ok := prs.ProposalBlockParts.Not().PickRandom(); ok {
 				// Ensure that the peer's PartSetHeader is correct
 				blockMeta := conR.blockStore.LoadBlockMeta(prs.Height)
 				if !blockMeta.PartsHeader.Equals(prs.ProposalBlockPartsHeader) {
-					log.Info("Peer ProposalBlockPartsHeader mismatch, sleeping",
+					log.Debug("Peer ProposalBlockPartsHeader mismatch, sleeping",
 						"peerHeight", prs.Height, "blockPartsHeader", blockMeta.PartsHeader, "peerBlockPartsHeader", prs.ProposalBlockPartsHeader)
 					time.Sleep(peerGossipSleepDuration)
 					continue OUTER_LOOP
@@ -386,7 +386,7 @@ OUTER_LOOP:
 				ps.SetHasProposalBlockPart(prs.Height, prs.Round, index)
 				continue OUTER_LOOP
 			} else {
-				//log.Info("No parts to send in catch-up, sleeping")
+				//log.Debug("No parts to send in catch-up, sleeping")
 				time.Sleep(peerGossipSleepDuration)
 				continue OUTER_LOOP
 			}
@@ -394,7 +394,7 @@ OUTER_LOOP:
 
 		// If height and round don't match, sleep.
 		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
-			//log.Info("Peer Height|Round mismatch, sleeping", "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
+			//log.Debug("Peer Height|Round mismatch, sleeping", "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
 			time.Sleep(peerGossipSleepDuration)
 			continue OUTER_LOOP
 		}
@@ -464,35 +464,35 @@ OUTER_LOOP:
 			// If there are lastCommits to send...
 			if prs.Step == RoundStepNewHeight {
 				if ps.PickSendVote(rs.LastCommit) {
-					log.Info("Picked rs.LastCommit to send")
+					log.Debug("Picked rs.LastCommit to send")
 					continue OUTER_LOOP
 				}
 			}
 			// If there are prevotes to send...
 			if rs.Round == prs.Round && prs.Step <= RoundStepPrevote {
 				if ps.PickSendVote(rs.Votes.Prevotes(rs.Round)) {
-					log.Info("Picked rs.Prevotes(rs.Round) to send")
+					log.Debug("Picked rs.Prevotes(rs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
 			// If there are precommits to send...
 			if rs.Round == prs.Round && prs.Step <= RoundStepPrecommit {
 				if ps.PickSendVote(rs.Votes.Precommits(rs.Round)) {
-					log.Info("Picked rs.Precommits(rs.Round) to send")
+					log.Debug("Picked rs.Precommits(rs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
 			// If there are prevotes to send for the last round...
 			if rs.Round == prs.Round+1 && prs.Step <= RoundStepPrevote {
 				if ps.PickSendVote(rs.Votes.Prevotes(prs.Round)) {
-					log.Info("Picked rs.Prevotes(prs.Round) to send")
+					log.Debug("Picked rs.Prevotes(prs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
 			// If there are precommits to send for the last round...
 			if rs.Round == prs.Round+1 && prs.Step <= RoundStepPrecommit {
 				if ps.PickSendVote(rs.Votes.Precommits(prs.Round)) {
-					log.Info("Picked rs.Precommits(prs.Round) to send")
+					log.Debug("Picked rs.Precommits(prs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
@@ -500,7 +500,7 @@ OUTER_LOOP:
 			if 0 <= prs.ProposalPOLRound {
 				if polPrevotes := rs.Votes.Prevotes(prs.ProposalPOLRound); polPrevotes != nil {
 					if ps.PickSendVote(polPrevotes) {
-						log.Info("Picked rs.Prevotes(prs.ProposalPOLRound) to send")
+						log.Debug("Picked rs.Prevotes(prs.ProposalPOLRound) to send")
 						continue OUTER_LOOP
 					}
 				}
@@ -511,7 +511,7 @@ OUTER_LOOP:
 		// If peer is lagging by height 1, send LastCommit.
 		if prs.Height != 0 && rs.Height == prs.Height+1 {
 			if ps.PickSendVote(rs.LastCommit) {
-				log.Info("Picked rs.LastCommit to send")
+				log.Debug("Picked rs.LastCommit to send")
 				continue OUTER_LOOP
 			}
 		}
@@ -522,9 +522,9 @@ OUTER_LOOP:
 			// Load the block validation for prs.Height,
 			// which contains precommit signatures for prs.Height.
 			validation := conR.blockStore.LoadBlockValidation(prs.Height)
-			log.Info("Loaded BlockValidation for catch-up", "height", prs.Height, "validation", validation)
+			log.Debug("Loaded BlockValidation for catch-up", "height", prs.Height, "validation", validation)
 			if ps.PickSendVote(validation) {
-				log.Info("Picked Catchup validation to send")
+				log.Debug("Picked Catchup validation to send")
 				continue OUTER_LOOP
 			}
 		}
@@ -532,7 +532,7 @@ OUTER_LOOP:
 		if sleeping == 0 {
 			// We sent nothing. Sleep...
 			sleeping = 1
-			log.Info("No votes to send, sleeping", "peer", peer,
+			log.Debug("No votes to send, sleeping", "peer", peer,
 				"localPV", rs.Votes.Prevotes(rs.Round).BitArray(), "peerPV", prs.Prevotes,
 				"localPC", rs.Votes.Precommits(rs.Round).BitArray(), "peerPC", prs.Precommits)
 		} else if sleeping == 2 {
@@ -768,23 +768,23 @@ func (ps *PeerState) setHasVote(height int, round int, type_ byte, index int) {
 			switch type_ {
 			case types.VoteTypePrevote:
 				ps.Prevotes.SetIndex(index, true)
-				log.Info("SetHasVote(round-match)", "prevotes", ps.Prevotes, "index", index)
+				log.Debug("SetHasVote(round-match)", "prevotes", ps.Prevotes, "index", index)
 			case types.VoteTypePrecommit:
 				ps.Precommits.SetIndex(index, true)
-				log.Info("SetHasVote(round-match)", "precommits", ps.Precommits, "index", index)
+				log.Debug("SetHasVote(round-match)", "precommits", ps.Precommits, "index", index)
 			}
 		} else if ps.CatchupCommitRound == round {
 			switch type_ {
 			case types.VoteTypePrevote:
 			case types.VoteTypePrecommit:
 				ps.CatchupCommit.SetIndex(index, true)
-				log.Info("SetHasVote(CatchupCommit)", "precommits", ps.Precommits, "index", index)
+				log.Debug("SetHasVote(CatchupCommit)", "precommits", ps.Precommits, "index", index)
 			}
 		} else if ps.ProposalPOLRound == round {
 			switch type_ {
 			case types.VoteTypePrevote:
 				ps.ProposalPOL.SetIndex(index, true)
-				log.Info("SetHasVote(ProposalPOL)", "prevotes", ps.Prevotes, "index", index)
+				log.Debug("SetHasVote(ProposalPOL)", "prevotes", ps.Prevotes, "index", index)
 			case types.VoteTypePrecommit:
 			}
 		}
@@ -794,7 +794,7 @@ func (ps *PeerState) setHasVote(height int, round int, type_ byte, index int) {
 			case types.VoteTypePrevote:
 			case types.VoteTypePrecommit:
 				ps.LastCommit.SetIndex(index, true)
-				log.Info("setHasVote(LastCommit)", "lastCommit", ps.LastCommit, "index", index)
+				log.Debug("setHasVote(LastCommit)", "lastCommit", ps.LastCommit, "index", index)
 			}
 		}
 	} else {
