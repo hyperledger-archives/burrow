@@ -6,7 +6,7 @@ MAINTAINER Eris Industries <support@erisindustries.com>
 # dependencies
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-    libgmp3-dev && \
+    libgmp3-dev jq && \
   rm -rf /var/lib/apt/lists/*
 
 #-----------------------------------------------------------------------------
@@ -67,6 +67,8 @@ ENV ECM_PATH /usr/local/lib/ecm/
 RUN mkdir -p $ECM_PATH
 COPY DOCKER/chain_* $ECM_PATH
 COPY DOCKER/config.toml $ECM_PATH
+RUN chown -R eris $ECM_PATH
+
 
 #-----------------------------------------------------------------------------
 # root dir
