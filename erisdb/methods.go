@@ -3,7 +3,6 @@ package erisdb
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
@@ -151,12 +150,10 @@ func (this *ErisDbMethods) Account(request *rpc.RPCRequest, requester interface{
 
 func (this *ErisDbMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AccountsParam{}
-	fmt.Printf("ACCOUNT LIST REQUEST: %v\n", request)
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	fmt.Printf("PARAMS: %v\n", param)
 	list, errC := this.pipe.Accounts().Accounts(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
@@ -473,12 +470,10 @@ func (this *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester inter
 
 func (this *ErisDbMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &FilterListParam{}
-	fmt.Printf("ACCOUNT LIST REQUEST: %v\n", request)
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	fmt.Printf("PARAMS: %v\n", param)
 	list, errC := this.pipe.NameReg().Entries(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC

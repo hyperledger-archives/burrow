@@ -135,7 +135,6 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	}
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM TRANSACT: %x\n", pk)
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
@@ -147,6 +146,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	} else {
 		sequence = acc.Sequence + 1
 	}
+	// fmt.Printf("Sequence %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   1,
@@ -217,7 +217,8 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	}
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM TRANSACT NAMEREG: %x\n", pk)
+	this.txMtx.Lock()
+	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)

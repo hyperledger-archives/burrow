@@ -703,7 +703,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			vm.appState.AddLog(log)
 			if vm.evc != nil {
 				eventId := types.EventStringLogEvent(callee.Address.Postfix(20))
-				fmt.Printf("eventId: %s\n", eventId)
 				vm.evc.FireEvent(eventId, log)
 			}
 			// Using sol-log for this as well since 'log' will print garbage.

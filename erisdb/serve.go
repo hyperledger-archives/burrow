@@ -14,7 +14,7 @@ import (
 	"path"
 )
 
-const ERISDB_VERSION = "0.11.4"
+const ERISDB_VERSION = "0.11.5"
 const TENDERMINT_VERSION = "0.5.0"
 
 var log = log15.New("module", "eris/erisdb_server")

@@ -30,7 +30,7 @@ func NewErisDbWsService(codec rpc.Codec, pipe ep.Pipe) server.WebSocketService {
 
 // Process a request.
 func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
-	fmt.Printf("REQUEST: %s\n", string(msg))
+	log.Debug("REQUEST: %s\n", string(msg))
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
@@ -76,7 +76,7 @@ func (this *ErisDbWsService) writeError(msg, id string, code int, session *serve
 func (this *ErisDbWsService) writeResponse(id string, result interface{}, session *server.WSSession) {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
-	fmt.Printf("Response: %v\n", response)
+	log.Debug("RESPONSE: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
 		return
