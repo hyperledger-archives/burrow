@@ -2,7 +2,6 @@ package erisdb
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
@@ -117,10 +116,10 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 
 // Helper for writing responses.
 func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
-	fmt.Printf("Result: %v\n", result)
+	log.Debug("Result: %v\n", result)
 	response := rpc.NewRPCResponse(id, result)
 	err := this.codec.Encode(response, w)
-	fmt.Printf("Response: %v\n", response)
+	log.Debug("Response: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
 		return

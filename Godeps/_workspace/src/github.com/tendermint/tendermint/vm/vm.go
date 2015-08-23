@@ -42,7 +42,7 @@ const (
 	dataStackCapacity       = 1024
 	callStackCapacity       = 100         // TODO ensure usage.
 	memoryCapacity          = 1024 * 1024 // 1 MB
-	dbg               Debug = true
+	dbg               Debug = false
 )
 
 func (d Debug) Printf(s string, a ...interface{}) {
@@ -703,7 +703,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			vm.appState.AddLog(log)
 			if vm.evc != nil {
 				eventId := types.EventStringLogEvent(callee.Address.Postfix(20))
-				fmt.Printf("eventId: %s\n", eventId)
 				vm.evc.FireEvent(eventId, log)
 			}
 			// Using sol-log for this as well since 'log' will print garbage.

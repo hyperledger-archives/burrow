@@ -12,6 +12,7 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type transactor struct {
 	consensusState *cs.ConsensusState
 	mempoolReactor *mempl.MempoolReactor
 	eventEmitter   EventEmitter
+	txMtx          *sync.Mutex
 }
 
 func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor, eventEmitter EventEmitter) *transactor {
@@ -28,6 +30,7 @@ func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusSta
 		consensusState,
 		mempoolReactor,
 		eventEmitter,
+		&sync.Mutex{},
 	}
 	return txs
 }
@@ -132,7 +135,8 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	}
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM TRANSACT: %x\n", pk)
+	this.txMtx.Lock()
+	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
@@ -142,6 +146,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	} else {
 		sequence = acc.Sequence + 1
 	}
+	// fmt.Printf("Sequence %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   1,
@@ -155,6 +160,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		Fee:      fee,
 		Data:     data,
 	}
+	
 	// Got ourselves a tx.
 	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
 	if errS != nil {
@@ -182,13 +188,13 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 			wc <- &event
 		}
 	})
-	
-	timer := time.NewTimer(10 * time.Second)
+
+	timer := time.NewTimer(300 * time.Second)
 	toChan := timer.C
-	
+
 	var ret *types.EventMsgCall
 	var rErr error
-	 
+
 	select {
 	case <-toChan:
 		rErr = fmt.Errorf("Transaction timed out. Hash: " + subId)
@@ -211,7 +217,8 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	}
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM TRANSACT NAMEREG: %x\n", pk)
+	this.txMtx.Lock()
+	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
