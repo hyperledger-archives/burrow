@@ -51,6 +51,9 @@ export NODE_HOST
 export ECM_PATH  # set by Dockerfile
 
 
+# print the version
+bash $ECM_PATH/version.sh
+
 #-----------------------------------------------------------------------
 # either we are fetching a chain for the first time,
 # creating one from scratch, or running one we already have

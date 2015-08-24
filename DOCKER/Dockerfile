@@ -67,6 +67,7 @@ ENV ECM_PATH /usr/local/lib/ecm/
 RUN mkdir -p $ECM_PATH
 COPY DOCKER/chain_* $ECM_PATH
 COPY DOCKER/config.toml $ECM_PATH
+COPY DOCKER/version.sh $ECM_PATH
 RUN chown -R eris $ECM_PATH
 
 

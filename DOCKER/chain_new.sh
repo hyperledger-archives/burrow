@@ -16,7 +16,14 @@ else
 	cp genesis.json $CHAIN_DIR/genesis.json
 fi
 
-mintconfig $CONFIG_OPTS > $CHAIN_DIR/config.toml
+# if no config was given, lay one with the given options
+if [ ! -f $CHAIN_DIR/config.toml ]; then
+	echo "running mintconfig $CONFIG_OPTS"
+	mintconfig $CONFIG_OPTS > $CHAIN_DIR/config.toml
+else
+	echo "found config file:"
+	cat $CHAIN_DIR/config.toml
+fi
 
 if [ "$RUN" = "true" ]; then
 	tendermint node
