@@ -16,6 +16,7 @@ else
 	cp genesis.json $CHAIN_DIR/genesis.json
 fi
 
+
 # if no config was given, lay one with the given options
 if [ ! -f $CHAIN_DIR/config.toml ]; then
 	echo "running mintconfig $CONFIG_OPTS"

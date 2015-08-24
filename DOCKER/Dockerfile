@@ -10,23 +10,17 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 #-----------------------------------------------------------------------------
-# start script
-
-# install the wrapper/start script
-COPY DOCKER/start.sh /usr/local/bin/erisdb-wrapper
-
-#-----------------------------------------------------------------------------
 # install tendermint
 
-# set the repo and install tendermint
+# set the repo and install tendermint -- should track vendored commit
 ENV REPO github.com/tendermint/tendermint
-ENV BRANCH 4ee387d0770ed379e2d524f7077938517b38cd7c
+ENV COMMIT 4ee387d0770ed379e2d524f7077938517b38cd7c
 # note, we want to lock in the same commit number
 #  as eris-db has vendored.
 RUN mkdir --parents $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone --quiet https://$REPO . && \
-  git checkout --quiet $BRANCH && \
+  git checkout --quiet $COMMIT && \
   go build -o /usr/local/bin/tendermint ./cmd/tendermint
 
 #-----------------------------------------------------------------------------
@@ -58,18 +52,24 @@ RUN git clone --quiet https://$REPO . && \
 
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
+  unset COMMIT && \
   unset BRANCH
+
+#-----------------------------------------------------------------------------
+# start script
+
+# install the wrapper/start script
+COPY DOCKER/start.sh /usr/local/bin/erisdb-wrapper
 
 #-----------------------------------------------------------------------------
 # chain manager scripts and default mint config
 
-ENV ECM_PATH /usr/local/lib/ecm/
+ENV ECM_PATH /usr/local/lib/ecm
 RUN mkdir -p $ECM_PATH
-COPY DOCKER/chain_* $ECM_PATH
-COPY DOCKER/config.toml $ECM_PATH
-COPY DOCKER/version.sh $ECM_PATH
+COPY DOCKER/chain_* $ECM_PATH/
+COPY DOCKER/config.toml $ECM_PATH/
+COPY DOCKER/version.sh $ECM_PATH/
 RUN chown -R eris $ECM_PATH
-
 
 #-----------------------------------------------------------------------------
 # root dir
@@ -82,9 +82,8 @@ RUN mkdir --parents /home/$USER/.eris/blockchains/tendermint
 ENV TMROOT /home/$USER/.eris/blockchains/tendermint
 
 # run tendermint
-# really should be entrypoint but broken in API 1.19
 # ports: 1337:eris-db API; 46656:mint-peer; 46657:mint-rpc
 EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
-CMD ["erisdb-wrapper"]
+ENTRYPOINT ["erisdb-wrapper"]
