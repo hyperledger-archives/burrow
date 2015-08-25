@@ -1,24 +1,26 @@
 #!/bin/sh
 
-base=github.com/eris-ltd/eris-db
-release="0.10"
-repo=$GOPATH/src/$base
-branch=${ERISDB_BUILD_BRANCH:=develop}
+release_maj="0.10"
+release_min="0.10.1"
+
 start=`pwd`
+branch=${ERISDB_BUILD_BRANCH:=master}
+base=github.com/eris-ltd/eris-db
+repo=$GOPATH/src/$base
 
 cd $repo
 
-if [ "$DEV" != "true" ]; then
-	git checkout $branch
-	git pull origin
-fi
+# if [ "$DEV" != "true" ]; then
+# 	git checkout $branch
+# 	git pull origin
+# fi
 
 if [ "$ERISDB_BUILD_BRANCH" = "master" ]; then
-  docker build -t eris/erisdb:$release -f DOCKER/Dockerfile .
-  docker tag eris/erisdb:$release eris/erisdb:latest
+  docker build -t eris/erisdb:latest -f DOCKER/Dockerfile .
+  docker tag -f eris/erisdb:latest eris/erisdb:$release_maj
+  docker tag -f eris/erisdb:latest eris/erisdb:$release_min
 else
   docker build -t eris/erisdb:$branch -f DOCKER/Dockerfile .
 fi
-
 
 cd $start

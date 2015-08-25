@@ -17,9 +17,8 @@ if [ "$CHAIN_ID" = "" ]; then
 	exit 1
 fi
 
-
 # TODO: deal with chain numbers
-# and eg. $CONTAINER_NAME 
+# and eg. $CONTAINER_NAME
 CHAIN_DIR="/home/$USER/.eris/blockchains/$CHAIN_ID"
 
 # set the tendermint directory
@@ -43,6 +42,51 @@ if [ ! $ECM_PATH ]; then
 	ECM_PATH=.
 fi
 
+#------------------------------------------------
+# dump key files if they are in env vars
+
+if [ -z "$KEY" ]
+then
+  echo "No Key Given"
+else
+  echo "Key Given. Writing priv_validator.json"
+	echo "$KEY" >> $CHAIN_DIR/priv_validator.json
+fi
+
+if [ -z "$GENESIS" ]
+then
+  echo "No Genesis Given"
+else
+  echo "Genesis Given. Writing genesis.json"
+	echo "$GENESIS" > $CHAIN_DIR/genesis.json
+fi
+
+if [ -z "$GENESIS_CSV" ]
+then
+  echo "No Genesis_CSV Given"
+else
+  echo "Genesis_CSV Given. Writing genesis.csv"
+  echo "$GENESIS_CSV" > $CHAIN_DIR/genesis.csv
+fi
+
+if [ -z "$CHAIN_CONFIG" ]
+then
+  echo "No Chain Config Given"
+else
+  echo "Chain Config Given. Writing config.toml"
+	echo "$CHAIN_CONFIG" > $CHAIN_DIR/config.toml
+fi
+
+if [ -z "$SERVER_CONFIG" ]
+then
+  echo "No Server Config Given"
+else
+  echo "Server Config Given. Writing server_conf.toml"
+	echo "$SERVER_CONFIG" > $CHAIN_DIR/server_conf.toml
+fi
+
+#------------------------------------------------
+# export important vars
 
 export TMROOT
 export CHAIN_DIR
@@ -50,6 +94,8 @@ export NODE_ADDR
 export NODE_HOST
 export ECM_PATH  # set by Dockerfile
 
+# print the version
+bash $ECM_PATH/version.sh
 
 #-----------------------------------------------------------------------
 # either we are fetching a chain for the first time,
