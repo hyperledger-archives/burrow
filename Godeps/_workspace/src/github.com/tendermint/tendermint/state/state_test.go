@@ -569,6 +569,52 @@ proof-of-work chain as proof of what happened while they were gone `
 
 }
 
+func TestSuicide(t *testing.T) {
+
+	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
+
+	acc0 := state.GetAccount(privAccounts[0].PubKey.Address())
+	acc0PubKey := privAccounts[0].PubKey
+	acc1 := state.GetAccount(privAccounts[1].PubKey.Address())
+	acc2 := state.GetAccount(privAccounts[2].Address)
+	sendingAmount, leftoverBalance, oldBalance := int64(1), acc1.Balance, acc2.Balance
+
+	newAcc1 := state.GetAccount(acc1.Address)
+
+	// store 0x1 and 0x1, then suicide :)
+	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
+	contractCode = append(contractCode, acc2.Address...)
+	contractCode = append(contractCode, 0xff)
+	newAcc1.Code = contractCode
+	state.UpdateAccount(newAcc1)
+	tx := &types.CallTx{
+		Input: &types.TxInput{
+			Address:  acc0.Address,
+			Amount:   sendingAmount,
+			Sequence: acc0.Sequence + 1,
+			PubKey:   acc0PubKey,
+		},
+		Address:  acc1.Address,
+		GasLimit: 1000,
+	}
+
+	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
+	err := execTxWithState(state, tx, true)
+	if err != nil {
+		t.Errorf("Got error in executing call transaction, %v", err)
+	}
+	newAcc2 := state.GetAccount(acc2.Address)
+	newBalance := sendingAmount + leftoverBalance + oldBalance
+	if newAcc2.Balance != newBalance {
+		t.Errorf("Unexpected newAcc2 balance. Expected %v, got %v",
+			newAcc2.Balance, newBalance)
+	}
+	newAcc1 = state.GetAccount(acc1.Address)
+	if newAcc1 != nil {
+		t.Errorf("Expected account to be removed")
+	}
+}
+
 func TestAddValidator(t *testing.T) {
 
 	// Generate a state, save & load it.
