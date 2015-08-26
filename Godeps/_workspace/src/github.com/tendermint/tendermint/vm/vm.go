@@ -174,9 +174,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		switch op {
 
-		case STOP: // 0x00
-			return nil, nil
-
 		case ADD: // 0x01
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
@@ -703,6 +700,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			vm.appState.AddLog(log)
 			if vm.evc != nil {
 				eventId := types.EventStringLogEvent(callee.Address.Postfix(20))
+				fmt.Printf("eventId: %s\n", eventId)
 				vm.evc.FireEvent(eventId, log)
 			}
 			// Using sol-log for this as well since 'log' will print garbage.
@@ -837,7 +835,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			// TODO if the receiver is , then make it the fee.
+			// TODO if the receiver is , then make it the fee. (?)
+			// TODO: create account if doesn't exist (no reason not to)
 			receiver := vm.appState.GetAccount(addr)
 			if receiver == nil {
 				return nil, firstErr(err, ErrUnknownAddress)
@@ -848,6 +847,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			vm.appState.RemoveAccount(callee)
 			dbg.Printf(" => (%X) %v\n", addr[:4], balance)
 			fallthrough
+
+		case STOP: // 0x00
+			return nil, nil
 
 		default:
 			dbg.Printf("(pc) %-3v Invalid opcode %X\n", pc, op)
