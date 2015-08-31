@@ -2,7 +2,7 @@
 
 echo "your new chain, kind marmot: $CHAIN_ID"
 
-if [ "$GENERATE_GENESIS" = "true" ]; then
+if [ ! -f $CHAIN_DIR/genesis.json ]; then
 	if [ "$CSV" = "" ]; then
 		mintgen random --dir="$CHAIN_DIR" 1 $CHAIN_ID
 		ifExit "Error creating random genesis file"
