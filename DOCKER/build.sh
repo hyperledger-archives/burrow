@@ -1,7 +1,7 @@
 #!/bin/sh
 
 release_maj="0.10"
-release_min="0.10.1"
+release_min="0.10.2"
 
 start=`pwd`
 branch=${ERISDB_BUILD_BRANCH:=master}
