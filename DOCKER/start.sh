@@ -33,6 +33,9 @@ fi
 if [ ! $NODE_HOST ]; then
 	NODE_HOST=interblock.io:46657
 fi
+if [ ! $P2P_HOST ]; then
+	P2P_HOST=interblock.io:46656
+fi
 if [ ! $NODE_ADDR ]; then
 	NODE_ADDR=http://$NODE_HOST
 fi
@@ -92,6 +95,7 @@ export TMROOT
 export CHAIN_DIR
 export NODE_ADDR
 export NODE_HOST
+export P2P_HOST
 export ECM_PATH  # set by Dockerfile
 
 # print the version

@@ -37,7 +37,7 @@ if [ ! -e "${CHAIN_DIR}/config.toml" ]; then
 	ifExit "Error copying config file from $ECM_PATH to $CHAIN_DIR"
 
 	if [ "$SEED_NODE" = "" ]; then
-		SEED_NODE=$NODE_HOST
+		SEED_NODE=$P2P_HOST
 	fi
 
 	if [ "$HOST_NAME" = "" ]; then
@@ -49,7 +49,7 @@ fi
 if [ "$SEED_NODE" != "" ]; then
 	echo "Seed node: $SEED_NODE"
 	# NOTE the NODE_HOST must not have any slashes (no http://)
-	sed -i "s/^\(seeds\s*=\s*\).*\$/\1\"$NODE_HOST\"/" "${CHAIN_DIR}/config.toml"
+	sed -i "s/^\(seeds\s*=\s*\).*\$/\1\"$SEED_NODE\"/" "${CHAIN_DIR}/config.toml"
 	ifExit "Error setting seed node in config.toml"
 fi
 
