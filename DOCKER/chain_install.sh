@@ -3,10 +3,12 @@
 #-----------------------------------------------------------------------
 # get genesis, seed, copy config
 
+export MINTX_NODE_ADDR=$NODE_ADDR
+
 # get genesis if not already
 if [ ! -e "${CHAIN_DIR}/genesis.json" ]; then
 	# etcb chain (given by $NODE_ADDR)
-	REFS_CHAIN_ID=$(mintinfo --node-addr $NODE_ADDR genesis chain_id)
+	REFS_CHAIN_ID=$(mintinfo genesis chain_id)
 	ifExit "Error fetching default chain id from $NODE_ADDR"
 	REFS_CHAIN_ID=$(echo "$REFS_CHAIN_ID" | tr -d '"') # remove surrounding quotes
 
@@ -16,16 +18,16 @@ if [ ! -e "${CHAIN_DIR}/genesis.json" ]; then
 	# for a different chain, use etcb (ie namereg on the ref chain)
 	if [ "$CHAIN_ID" = "$REFS_CHAIN_ID" ] ; then
 		# grab genesis.json 
-		mintinfo --node-addr $NODE_ADDR genesis > "${CHAIN_DIR}/genesis.json"
+		mintinfo genesis > "${CHAIN_DIR}/genesis.json"
 		ifExit "Error fetching genesis.json from $NODE_ADDR"
 	else 
 		# fetch genesis from etcb
-		GENESIS=$(mintinfo --node-addr $NODE_ADDR names "${CHAIN_ID}_genesis.json" data)
+		GENESIS=$(mintinfo names "${CHAIN_ID}/genesis" data)
 		ifExit "Error fetching genesis.json for $CHAIN_ID: $GENESIS"
 
 		echo $GENESIS > "${CHAIN_DIR}/genesis.json"
 
-		SEED_NODE=$(mintinfo --node-addr $NODE_ADDR names "${CHAIN_ID}_seed" data)
+		SEED_NODE=$(mintinfo names "${CHAIN_ID}/seeds" data)
 		ifExit "Error grabbing seed node from $NODE_ADDR for $CHAIN_ID"
 	fi
 fi
@@ -33,11 +35,11 @@ fi
 # copy in config if not already
 if [ ! -e "${CHAIN_DIR}/config.toml" ]; then
 	echo "laying default config..."
-	cp $ECM_PATH/config.toml "${CHAIN_DIR}/config.toml"
-	ifExit "Error copying config file from $ECM_PATH to $CHAIN_DIR"
+	mintconfig > $CHAIN_DIR/config.toml
+	ifExit "Error creating config"
 
 	if [ "$SEED_NODE" = "" ]; then
-		SEED_NODE=$P2P_HOST
+		SEED_NODE=$P2P_ADDR
 	fi
 
 	if [ "$HOST_NAME" = "" ]; then
@@ -48,7 +50,7 @@ fi
 # set seed node and host name
 if [ "$SEED_NODE" != "" ]; then
 	echo "Seed node: $SEED_NODE"
-	# NOTE the NODE_HOST must not have any slashes (no http://)
+	# NOTE the NODE_ADDR must not have any slashes (no http://)
 	sed -i "s/^\(seeds\s*=\s*\).*\$/\1\"$SEED_NODE\"/" "${CHAIN_DIR}/config.toml"
 	ifExit "Error setting seed node in config.toml"
 fi
