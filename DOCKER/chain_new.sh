@@ -26,11 +26,12 @@ else
 	cat $CHAIN_DIR/config.toml
 fi
 
-if [ "$RUN" = "true" ]; then
-	tendermint node
-	ifExit "Error starting tendermint"
+if [ $ERISDB_API ]; then
+	echo "Running chain $CHAIN_ID (via ErisDB API)"
+	erisdb $TMROOT
+	ifExit "Error starting erisdb"
 else
-	# this will just run for a second and quit
-	tendermint node & last_pid=$! && sleep 1 && kill -KILL $last_pid
+	echo Running chain $CHAIN_ID
+	tendermint node
 	ifExit "Error starting tendermint"
 fi
