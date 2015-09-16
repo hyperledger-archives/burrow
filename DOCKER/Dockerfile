@@ -13,13 +13,14 @@ RUN apt-get update && \
 # install tendermint
 
 # set the repo and install tendermint -- should track vendored commit
-ENV REPO github.com/tendermint/tendermint
+ENV REPO_ALIAS github.com/tendermint/tendermint
+ENV REPO github.com/eris-ltd/tendermint
 #ENV COMMIT 4ee387d0770ed379e2d524f7077938517b38cd7c
-ENV COMMIT json_time
+ENV COMMIT working
 # note, we want to lock in the same commit number
 #  as eris-db has vendored.
 RUN mkdir --parents $GOPATH/src/$REPO
-WORKDIR $GOPATH/src/$REPO
+WORKDIR $GOPATH/src/$REPO_ALIAS
 RUN git clone --quiet https://$REPO . && \
   git checkout --quiet $COMMIT && \
   go build -o /usr/local/bin/tendermint ./cmd/tendermint
