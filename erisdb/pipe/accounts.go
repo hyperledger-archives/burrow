@@ -48,10 +48,8 @@ func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*account.PrivAccoun
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", pk)
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	return pa, nil
 }
 

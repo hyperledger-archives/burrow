@@ -14,7 +14,9 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
@@ -53,22 +55,22 @@ func NewRPCFunc(f interface{}, args []string) *RPCFunc {
 func funcArgTypes(f interface{}) []reflect.Type {
 	t := reflect.TypeOf(f)
 	n := t.NumIn()
-	types := make([]reflect.Type, n)
+	typez := make([]reflect.Type, n)
 	for i := 0; i < n; i++ {
-		types[i] = t.In(i)
+		typez[i] = t.In(i)
 	}
-	return types
+	return typez
 }
 
 // return a function's return types
 func funcReturnTypes(f interface{}) []reflect.Type {
 	t := reflect.TypeOf(f)
 	n := t.NumOut()
-	types := make([]reflect.Type, n)
+	typez := make([]reflect.Type, n)
 	for i := 0; i < n; i++ {
-		types[i] = t.Out(i)
+		typez[i] = t.Out(i)
 	}
-	return types
+	return typez
 }
 
 // function introspection
@@ -93,27 +95,27 @@ func makeJSONRPCHandler(funcMap map[string]*RPCFunc) http.HandlerFunc {
 			return
 		}
 		if len(r.URL.Path) > 1 {
-			WriteRPCResponse(w, NewRPCResponse(request.Id, nil, fmt.Sprintf("Invalid JSONRPC endpoint %s", r.URL.Path)))
+			WriteRPCResponse(w, NewRPCResponse(request.ID, nil, fmt.Sprintf("Invalid JSONRPC endpoint %s", r.URL.Path)))
 			return
 		}
 		rpcFunc := funcMap[request.Method]
 		if rpcFunc == nil {
-			WriteRPCResponse(w, NewRPCResponse(request.Id, nil, "RPC method unknown: "+request.Method))
+			WriteRPCResponse(w, NewRPCResponse(request.ID, nil, "RPC method unknown: "+request.Method))
 			return
 		}
 		args, err := jsonParamsToArgs(rpcFunc, request.Params)
 		if err != nil {
-			WriteRPCResponse(w, NewRPCResponse(request.Id, nil, err.Error()))
+			WriteRPCResponse(w, NewRPCResponse(request.ID, nil, err.Error()))
 			return
 		}
 		returns := rpcFunc.f.Call(args)
 		log.Info("HTTPJSONRPC", "method", request.Method, "args", args, "returns", returns)
 		result, err := unreflectResult(returns)
 		if err != nil {
-			WriteRPCResponse(w, NewRPCResponse(request.Id, nil, err.Error()))
+			WriteRPCResponse(w, NewRPCResponse(request.ID, nil, err.Error()))
 			return
 		}
-		WriteRPCResponse(w, NewRPCResponse(request.Id, result, ""))
+		WriteRPCResponse(w, NewRPCResponse(request.ID, result, ""))
 	}
 }
 
@@ -205,8 +207,9 @@ func _jsonStringToArg(ty reflect.Type, arg string) (reflect.Value, error) {
 
 const (
 	writeChanCapacity     = 20
-	WSWriteTimeoutSeconds = 10 // exposed for tests
-	WSReadTimeoutSeconds  = 10 // exposed for tests
+	wsWriteTimeoutSeconds = 30 // each write times out after this
+	wsReadTimeoutSeconds  = 30 // connection times out if we haven't received *anything* in this long, not even pings.
+	wsPingTickerSeconds   = 10 // send a ping every PingTickerSeconds.
 )
 
 // a single websocket connection
@@ -219,6 +222,7 @@ type WSConnection struct {
 	baseConn    *websocket.Conn
 	writeChan   chan RPCResponse
 	readTimeout *time.Timer
+	pingTicker  *time.Ticker
 
 	funcMap map[string]*RPCFunc
 	evsw    *events.EventSwitch
@@ -238,33 +242,36 @@ func NewWSConnection(baseConn *websocket.Conn, funcMap map[string]*RPCFunc, evsw
 }
 
 // wsc.Start() blocks until the connection closes.
-func (wsc *WSConnection) OnStart() {
+func (wsc *WSConnection) OnStart() error {
 	wsc.QuitService.OnStart()
 
 	// Read subscriptions/unsubscriptions to events
 	go wsc.readRoutine()
 
 	// Custom Ping handler to touch readTimeout
-	wsc.readTimeout = time.NewTimer(time.Second * WSReadTimeoutSeconds)
+	wsc.readTimeout = time.NewTimer(time.Second * wsReadTimeoutSeconds)
+	wsc.pingTicker = time.NewTicker(time.Second * wsPingTickerSeconds)
 	wsc.baseConn.SetPingHandler(func(m string) error {
-		wsc.baseConn.WriteControl(websocket.PongMessage, []byte(m), time.Now().Add(time.Second*WSWriteTimeoutSeconds))
-		wsc.readTimeout.Reset(time.Second * WSReadTimeoutSeconds)
+		wsc.baseConn.WriteControl(websocket.PongMessage, []byte(m), time.Now().Add(time.Second*wsWriteTimeoutSeconds))
+		wsc.readTimeout.Reset(time.Second * wsReadTimeoutSeconds)
 		return nil
 	})
 	wsc.baseConn.SetPongHandler(func(m string) error {
-		wsc.readTimeout.Reset(time.Second * WSReadTimeoutSeconds)
+		wsc.readTimeout.Reset(time.Second * wsReadTimeoutSeconds)
 		return nil
 	})
 	go wsc.readTimeoutRoutine()
 
 	// Write responses, BLOCKING.
 	wsc.writeRoutine()
+	return nil
 }
 
 func (wsc *WSConnection) OnStop() {
 	wsc.QuitService.OnStop()
 	wsc.evsw.RemoveListener(wsc.id)
 	wsc.readTimeout.Stop()
+	wsc.pingTicker.Stop()
 	// The write loop closes the websocket connection
 	// when it exits its loop, and the read loop
 	// closes the writeChan
@@ -302,7 +309,7 @@ func (wsc *WSConnection) readRoutine() {
 		default:
 			var in []byte
 			// Do not set a deadline here like below:
-			// wsc.baseConn.SetReadDeadline(time.Now().Add(time.Second * WSReadTimeoutSeconds))
+			// wsc.baseConn.SetReadDeadline(time.Now().Add(time.Second * wsReadTimeoutSeconds))
 			// The client may not send anything for a while.
 			// We use `readTimeout` to handle read timeouts.
 			_, in, err := wsc.baseConn.ReadMessage()
@@ -317,22 +324,23 @@ func (wsc *WSConnection) readRoutine() {
 			err = json.Unmarshal(in, &request)
 			if err != nil {
 				errStr := fmt.Sprintf("Error unmarshaling data: %s", err.Error())
-				wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, errStr))
+				wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, errStr))
 				continue
 			}
 			switch request.Method {
 			case "subscribe":
 				if len(request.Params) != 1 {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, "subscribe takes 1 event parameter string"))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, "subscribe takes 1 event parameter string"))
 					continue
 				}
 				if event, ok := request.Params[0].(string); !ok {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, "subscribe takes 1 event parameter string"))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, "subscribe takes 1 event parameter string"))
 					continue
 				} else {
 					log.Notice("Subscribe to event", "id", wsc.id, "event", event)
-					wsc.evsw.AddListenerForEvent(wsc.id, event, func(msg interface{}) {
-						wsc.writeRPCResponse(NewRPCResponse(request.Id, RPCEventResult{event, msg}, ""))
+					wsc.evsw.AddListenerForEvent(wsc.id, event, func(msg types.EventData) {
+						// NOTE: RPCResponses of subscribed events have id suffix "#event"
+						wsc.writeRPCResponse(NewRPCResponse(request.ID+"#event", ctypes.ResultEvent{event, msg}, ""))
 					})
 					continue
 				}
@@ -340,39 +348,41 @@ func (wsc *WSConnection) readRoutine() {
 				if len(request.Params) == 0 {
 					log.Notice("Unsubscribe from all events", "id", wsc.id)
 					wsc.evsw.RemoveListener(wsc.id)
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, ""))
 					continue
 				} else if len(request.Params) == 1 {
 					if event, ok := request.Params[0].(string); !ok {
-						wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, "unsubscribe takes 0 or 1 event parameter strings"))
+						wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, "unsubscribe takes 0 or 1 event parameter strings"))
 						continue
 					} else {
 						log.Notice("Unsubscribe from event", "id", wsc.id, "event", event)
 						wsc.evsw.RemoveListenerForEvent(event, wsc.id)
+						wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, ""))
 						continue
 					}
 				} else {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, "unsubscribe takes 0 or 1 event parameter strings"))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, "unsubscribe takes 0 or 1 event parameter strings"))
 					continue
 				}
 			default:
 				rpcFunc := wsc.funcMap[request.Method]
 				if rpcFunc == nil {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, "RPC method unknown: "+request.Method))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, "RPC method unknown: "+request.Method))
 					continue
 				}
 				args, err := jsonParamsToArgs(rpcFunc, request.Params)
 				if err != nil {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, err.Error()))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, err.Error()))
 					continue
 				}
 				returns := rpcFunc.f.Call(args)
 				log.Info("WSJSONRPC", "method", request.Method, "args", args, "returns", returns)
 				result, err := unreflectResult(returns)
 				if err != nil {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, nil, err.Error()))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, nil, err.Error()))
 					continue
 				} else {
-					wsc.writeRPCResponse(NewRPCResponse(request.Id, result, ""))
+					wsc.writeRPCResponse(NewRPCResponse(request.ID, result, ""))
 					continue
 				}
 			}
@@ -383,19 +393,26 @@ func (wsc *WSConnection) readRoutine() {
 // receives on a write channel and writes out on the socket
 func (wsc *WSConnection) writeRoutine() {
 	defer wsc.baseConn.Close()
-	n, err := new(int64), new(error)
+	var n, err = int64(0), error(nil)
 	for {
 		select {
 		case <-wsc.Quit:
 			return
+		case <-wsc.pingTicker.C:
+			err := wsc.baseConn.WriteMessage(websocket.PingMessage, []byte{})
+			if err != nil {
+				log.Error("Failed to write ping message on websocket", "error", err)
+				wsc.Stop()
+				return
+			}
 		case msg := <-wsc.writeChan:
 			buf := new(bytes.Buffer)
-			wire.WriteJSON(msg, buf, n, err)
-			if *err != nil {
+			wire.WriteJSON(msg, buf, &n, &err)
+			if err != nil {
 				log.Error("Failed to marshal RPCResponse to JSON", "error", err)
 			} else {
-				wsc.baseConn.SetWriteDeadline(time.Now().Add(time.Second * WSWriteTimeoutSeconds))
-				if err := wsc.baseConn.WriteMessage(websocket.TextMessage, buf.Bytes()); err != nil {
+				wsc.baseConn.SetWriteDeadline(time.Now().Add(time.Second * wsWriteTimeoutSeconds))
+				if err = wsc.baseConn.WriteMessage(websocket.TextMessage, buf.Bytes()); err != nil {
 					log.Warn("Failed to write response on websocket", "error", err)
 					wsc.Stop()
 					return
@@ -407,8 +424,9 @@ func (wsc *WSConnection) writeRoutine() {
 
 //----------------------------------------
 
-// main manager for all websocket connections
-// holds the event switch
+// Main manager for all websocket connections
+// Holds the event switch
+// NOTE: The websocket path is defined externally, e.g. in node/node.go
 type WebsocketManager struct {
 	websocket.Upgrader
 	funcMap map[string]*RPCFunc

@@ -12,6 +12,7 @@ import (
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
@@ -83,7 +84,7 @@ var chainID = "testchain"
 func makeUsers(n int) []*acm.PrivAccount {
 	accounts := []*acm.PrivAccount{}
 	for i := 0; i < n; i++ {
-		secret := []byte("mysecret" + strconv.Itoa(i))
+		secret := ("mysecret" + strconv.Itoa(i))
 		user := acm.GenPrivAccountFromSecret(secret)
 		accounts = append(accounts, user)
 	}
@@ -1054,7 +1055,7 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx types.Tx, eventid 
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 	ch := make(chan interface{})
-	evsw.AddListenerForEvent("test", eventid, func(msg interface{}) {
+	evsw.AddListenerForEvent("test", eventid, func(msg types.EventData) {
 		ch <- msg
 	})
 	evc := events.NewEventCache(evsw)
@@ -1073,9 +1074,9 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx types.Tx, eventid 
 	}
 
 	switch ev := msg.(type) {
-	case types.EventMsgCallTx:
+	case types.EventDataTx:
 		return ev, ev.Exception
-	case types.EventMsgCall:
+	case types.EventDataCall:
 		return ev, ev.Exception
 	case string:
 		return nil, ev
@@ -1118,7 +1119,7 @@ func testSNativeCALL(t *testing.T, expectPass bool, blockCache *BlockCache, doug
 		if exception != "" {
 			t.Fatal("Unexpected exception", exception)
 		}
-		evv := ev.(types.EventMsgCall)
+		evv := ev.(types.EventDataCall)
 		ret := evv.Return
 		if err := f(ret); err != nil {
 			t.Fatal(err)

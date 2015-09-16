@@ -18,9 +18,11 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/server"
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
@@ -37,8 +39,8 @@ type Node struct {
 	mempoolReactor   *mempl.MempoolReactor
 	consensusState   *consensus.ConsensusState
 	consensusReactor *consensus.ConsensusReactor
-	privValidator    *sm.PrivValidator
-	genDoc           *sm.GenesisDoc
+	privValidator    *types.PrivValidator
+	genDoc           *stypes.GenesisDoc
 	privKey          acm.PrivKeyEd25519
 }
 
@@ -50,39 +52,37 @@ func NewNode() *Node {
 	// Get State
 	stateDB := dbm.GetDB("state")
 	state := sm.LoadState(stateDB)
-	var genDoc *sm.GenesisDoc
+	var genDoc *stypes.GenesisDoc
 	if state == nil {
 		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
 		state.Save()
 		// write the gendoc to db
 		buf, n, err := new(bytes.Buffer), new(int64), new(error)
 		wire.WriteJSON(genDoc, buf, n, err)
-		stateDB.Set(sm.GenDocKey, buf.Bytes())
+		stateDB.Set(stypes.GenDocKey, buf.Bytes())
 		if *err != nil {
-			log.Error("Unable to write gendoc to db", "error", err)
-			os.Exit(1)
+			Exit(Fmt("Unable to write gendoc to db: %v", err))
 		}
 	} else {
-		genDocBytes := stateDB.Get(sm.GenDocKey)
+		genDocBytes := stateDB.Get(stypes.GenDocKey)
 		err := new(error)
 		wire.ReadJSONPtr(&genDoc, genDocBytes, err)
 		if *err != nil {
-			log.Error("Unable to read gendoc from db", "error", err)
-			os.Exit(1)
+			Exit(Fmt("Unable to read gendoc from db: %v", err))
 		}
 	}
 	// add the chainid to the global config
 	config.Set("chain_id", state.ChainID)
 
 	// Get PrivValidator
-	var privValidator *sm.PrivValidator
+	var privValidator *types.PrivValidator
 	privValidatorFile := config.GetString("priv_validator_file")
 	if _, err := os.Stat(privValidatorFile); err == nil {
-		privValidator = sm.LoadPrivValidator(privValidatorFile)
+		privValidator = types.LoadPrivValidator(privValidatorFile)
 		log.Notice("Loaded PrivValidator",
 			"file", privValidatorFile, "privValidator", privValidator)
 	} else {
-		privValidator = sm.GenPrivValidator()
+		privValidator = types.GenPrivValidator()
 		privValidator.SetFile(privValidatorFile)
 		privValidator.Save()
 		log.Notice("Generated PrivValidator", "file", privValidatorFile)
@@ -93,7 +93,10 @@ func NewNode() *Node {
 
 	// Make event switch
 	eventSwitch := events.NewEventSwitch()
-	eventSwitch.Start()
+	_, err := eventSwitch.Start()
+	if err != nil {
+		Exit(Fmt("Failed to start switch: %v", err))
+	}
 
 	// Make PEXReactor
 	book := p2p.NewAddrBook(config.GetString("addrbook_file"))
@@ -141,11 +144,12 @@ func NewNode() *Node {
 }
 
 // Call Start() after adding the listeners.
-func (n *Node) Start() {
+func (n *Node) Start() error {
 	n.book.Start()
 	n.sw.SetNodeInfo(makeNodeInfo(n.sw, n.privKey))
 	n.sw.SetNodePrivKey(n.privKey)
-	n.sw.Start()
+	_, err := n.sw.Start()
+	return err
 }
 
 func (n *Node) Stop() {
@@ -243,12 +247,17 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 		PubKey:  privKey.PubKey().(acm.PubKeyEd25519),
 		Moniker: config.GetString("moniker"),
 		ChainID: config.GetString("chain_id"),
-		Version: config.GetString("version"),
+		Version: types.Versions{
+			Tendermint: Version,
+			P2P:        p2p.Version,
+			RPC:        rpc.Version,
+			Wire:       wire.Version,
+		},
 	}
 
 	// include git hash in the nodeInfo if available
 	if rev, err := ReadFile(config.GetString("revisions_file")); err == nil {
-		nodeInfo.Revision = string(rev)
+		nodeInfo.Version.Revision = string(rev)
 	}
 
 	if !sw.IsListening() {
@@ -279,9 +288,12 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 func RunNode() {
 	// Create & start node
 	n := NewNode()
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), false)
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
 	n.AddListener(l)
-	n.Start()
+	err := n.Start()
+	if err != nil {
+		Exit(Fmt("Failed to start node: %v", err))
+	}
 
 	log.Notice("Started node", "nodeInfo", n.sw.NodeInfo())
 

@@ -1,19 +1,18 @@
 package state
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-
 	"bytes"
 	"testing"
 	"time"
+
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 func execTxWithState(state *State, tx types.Tx, runCall bool) error {
 	cache := NewBlockCache(state)
-	err := ExecTx(cache, tx, runCall, nil)
-	if err != nil {
+	if err := ExecTx(cache, tx, runCall, nil); err != nil {
 		return err
 	} else {
 		cache.Sync()
@@ -91,6 +90,7 @@ func makeBlock(t *testing.T, state *State, validation *types.Validation, txs []t
 			Txs: txs,
 		},
 	}
+	block.FillHeader()
 
 	// Fill in block StateHash
 	err := state.ComputeBlockStateHash(block)
@@ -219,12 +219,12 @@ func TestNameTxs(t *testing.T) {
 	startingBlock := state.LastBlockHeight
 
 	// try some bad names. these should all fail
-	names := []string{"", "\n", "123#$%", "\x00", string([]byte{20, 40, 60, 80}), "baffledbythespectacleinallofthisyouseeehesaidwithouteyes", "no spaces please"}
+	names := []string{"", "\n", "123#$%", "\x00", string([]byte{20, 40, 60, 80}), "baffledbythespectacleinallofthisyouseeehesaidwithouteyessurprised", "no spaces please"}
 	data := "something about all this just doesn't feel right."
 	fee := int64(1000)
 	numDesiredBlocks := 5
 	for _, name := range names {
-		amt := fee + int64(numDesiredBlocks)*types.NameCostPerByte*types.NameCostPerBlock*types.BaseEntryCost(name, data)
+		amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
 		tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 		tx.Sign(state.ChainID, privAccounts[0])
 
@@ -237,7 +237,7 @@ func TestNameTxs(t *testing.T) {
 	name := "hold_it_chum"
 	datas := []string{"cold&warm", "!@#$%^&*()", "<<<>>>>", "because why would you ever need a ~ or a & or even a % in a json file? make your case and we'll talk"}
 	for _, data := range datas {
-		amt := fee + int64(numDesiredBlocks)*types.NameCostPerByte*types.NameCostPerBlock*types.BaseEntryCost(name, data)
+		amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
 		tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 		tx.Sign(state.ChainID, privAccounts[0])
 
@@ -266,9 +266,9 @@ func TestNameTxs(t *testing.T) {
 	}
 
 	// try a good one, check data, owner, expiry
-	name = "looking_good/karaoke_bar"
-	data = "on this side of neptune there are 1234567890 people: first is OMNIVORE. Or is it. Ok this is pretty restrictive. No exclamations :(. Faces tho :')"
-	amt := fee + int64(numDesiredBlocks)*types.NameCostPerByte*types.NameCostPerBlock*types.BaseEntryCost(name, data)
+	name = "@looking_good/karaoke_bar.broadband"
+	data = "on this side of neptune there are 1234567890 people: first is OMNIVORE+-3. Or is it. Ok this is pretty restrictive. No exclamations :(. Faces tho :')"
+	amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
 	tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithState(state, tx, true); err != nil {
@@ -325,7 +325,7 @@ func TestNameTxs(t *testing.T) {
 	data = "In the beginning there was no thing, not even the beginning. It hadn't been here, no there, nor for that matter anywhere, not especially because it had not to even exist, let alone to not. Nothing especially odd about that."
 	oldCredit := amt - fee
 	numDesiredBlocks = 10
-	amt = fee + (int64(numDesiredBlocks)*types.NameCostPerByte*types.NameCostPerBlock*types.BaseEntryCost(name, data) - oldCredit)
+	amt = fee + (int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data) - oldCredit)
 	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithState(state, tx, true); err != nil {
@@ -351,7 +351,7 @@ func TestNameTxs(t *testing.T) {
 	// test removal by key1 after expiry
 	name = "looking_good/karaoke_bar"
 	data = "some data"
-	amt = fee + int64(numDesiredBlocks)*types.NameCostPerByte*types.NameCostPerBlock*types.BaseEntryCost(name, data)
+	amt = fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
 	tx, _ = types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithState(state, tx, true); err != nil {
@@ -511,7 +511,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		tx.Input.Sequence += 1
 		tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
 		err = execTxWithState(state, tx, true)
-		if err != types.ErrTxInvalidString {
+		if _, ok := err.(types.ErrTxInvalidString); !ok {
 			t.Errorf("Expected invalid string error. Got: %s", err.Error())
 		}
 	}
@@ -577,34 +577,41 @@ func TestSuicide(t *testing.T) {
 	acc0PubKey := privAccounts[0].PubKey
 	acc1 := state.GetAccount(privAccounts[1].PubKey.Address())
 	acc2 := state.GetAccount(privAccounts[2].Address)
-	sendingAmount, leftoverBalance, oldBalance := int64(1), acc1.Balance, acc2.Balance
+	sendingAmount, refundedBalance, oldBalance := int64(1), acc1.Balance, acc2.Balance
 
 	newAcc1 := state.GetAccount(acc1.Address)
 
-	// store 0x1 and 0x1, then suicide :)
+	// store 0x1 at 0x1, push an address, then suicide :)
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
 	contractCode = append(contractCode, acc2.Address...)
 	contractCode = append(contractCode, 0xff)
 	newAcc1.Code = contractCode
 	state.UpdateAccount(newAcc1)
-	tx := &types.CallTx{
-		Input: &types.TxInput{
-			Address:  acc0.Address,
-			Amount:   sendingAmount,
-			Sequence: acc0.Sequence + 1,
-			PubKey:   acc0PubKey,
-		},
-		Address:  acc1.Address,
-		GasLimit: 1000,
-	}
 
+	// send call tx with no data, cause suicide
+	tx := types.NewCallTxWithNonce(acc0PubKey, acc1.Address, nil, sendingAmount, 1000, 0, acc0.Sequence+1)
 	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
-	err := execTxWithState(state, tx, true)
-	if err != nil {
+
+	// we use cache instead of execTxWithState so we can run the tx twice
+	cache := NewBlockCache(state)
+	if err := ExecTx(cache, tx, true, nil); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
+
+	// if we do it again, we won't get an error, but the suicide
+	// shouldn't happen twice and the caller should lose fee
+	tx.Input.Sequence += 1
+	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
+	if err := ExecTx(cache, tx, true, nil); err != nil {
+		t.Errorf("Got error in executing call transaction, %v", err)
+	}
+
+	// commit the block
+	cache.Sync()
+
+	// acc2 should receive the sent funds and the contracts balance
 	newAcc2 := state.GetAccount(acc2.Address)
-	newBalance := sendingAmount + leftoverBalance + oldBalance
+	newBalance := sendingAmount + refundedBalance + oldBalance
 	if newAcc2.Balance != newBalance {
 		t.Errorf("Unexpected newAcc2 balance. Expected %v, got %v",
 			newAcc2.Balance, newBalance)
@@ -613,6 +620,7 @@ func TestSuicide(t *testing.T) {
 	if newAcc1 != nil {
 		t.Errorf("Expected account to be removed")
 	}
+
 }
 
 func TestAddValidator(t *testing.T) {
@@ -668,11 +676,11 @@ func TestAddValidator(t *testing.T) {
 	// The validation for the next block should only require 1 signature
 	// (the new validator wasn't active for block0)
 	precommit0 := &types.Vote{
-		Height:     1,
-		Round:      0,
-		Type:       types.VoteTypePrecommit,
-		BlockHash:  block0.Hash(),
-		BlockParts: block0Parts.Header(),
+		Height:           1,
+		Round:            0,
+		Type:             types.VoteTypePrecommit,
+		BlockHash:        block0.Hash(),
+		BlockPartsHeader: block0Parts.Header(),
 	}
 	privValidators[0].SignVote(s0.ChainID, precommit0)
 

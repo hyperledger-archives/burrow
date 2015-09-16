@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 )
 
 // Filter for account code.
@@ -41,7 +41,7 @@ func (this *AccountCallTxHashFilter) Configure(fd *ep.FilterData) error {
 }
 
 func (this *AccountCallTxHashFilter) Match(v interface{}) bool {
-	emct, ok := v.(*types.EventMsgCall)
+	emct, ok := v.(*types.EventDataCall)
 	if !ok {
 		return false
 	}

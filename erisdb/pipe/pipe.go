@@ -46,13 +46,13 @@ type (
 	}
 
 	EventEmitter interface {
-		Subscribe(subId, event string, callback func(interface{})) (bool, error)
+		Subscribe(subId, event string, callback func(types.EventData)) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
 
 	NameReg interface {
 		Entry(key string) (*types.NameRegEntry, error)
-		Entries([]*FilterData) (*ctypes.ResponseListNames, error)
+		Entries([]*FilterData) (*ctypes.ResultListNames, error)
 	}
 
 	Net interface {
@@ -70,7 +70,7 @@ type (
 		CallCode(fromAddress, code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
-		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error)
+		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)

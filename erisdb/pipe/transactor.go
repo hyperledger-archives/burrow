@@ -133,11 +133,9 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
@@ -160,7 +158,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		Fee:      fee,
 		Data:     data,
 	}
-	
+
 	// Got ourselves a tx.
 	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
 	if errS != nil {
@@ -169,7 +167,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.BroadcastTx(txS)
 }
 
-func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error) {
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error) {
 	rec, tErr := this.Transact(privKey, address, data, gasLimit, fee)
 	if tErr != nil {
 		return nil, tErr
@@ -180,10 +178,10 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	} else {
 		addr = address
 	}
-	wc := make(chan *types.EventMsgCall)
+	wc := make(chan *types.EventDataCall)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt interface{}) {
-		event := evt.(types.EventMsgCall)
+	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt types.EventData) {
+		event := evt.(types.EventDataCall)
 		if bytes.Equal(event.TxID, rec.TxHash) {
 			wc <- &event
 		}
@@ -192,7 +190,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	timer := time.NewTimer(300 * time.Second)
 	toChan := timer.C
 
-	var ret *types.EventMsgCall
+	var ret *types.EventDataCall
 	var rErr error
 
 	select {
@@ -215,11 +213,9 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int

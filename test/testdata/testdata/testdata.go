@@ -3,7 +3,7 @@ package testdata
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
@@ -222,7 +222,7 @@ var testDataJson = `{
   "GetBlockchainInfo": {
     "output": {
       "chain_id": "my_tests",
-      "genesis_hash": "B901B9254D84CB509492E6C82245C54F1D84856D",
+      "genesis_hash": "0A8C453DB67BE52D32F9451212E8CE0E172AE56C",
       "latest_block_height": 0,
       "latest_block": null
     }
@@ -234,7 +234,7 @@ var testDataJson = `{
   },
   "GetGenesisHash": {
     "output": {
-      "hash": "B901B9254D84CB509492E6C82245C54F1D84856D"
+      "hash": "0A8C453DB67BE52D32F9451212E8CE0E172AE56C"
     }
   },
   "GetLatestBlockHeight": {
@@ -367,7 +367,7 @@ var testDataJson = `{
     "output": {
       "tx_hash": "BD5D35871770DB04726843A4C07A26CDE69EB860",
       "creates_contract": 1,
-      "contract_addr": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3"
+      "contract_addr": "576439CD5C22EB6F3AE1AC1EC5101C5CE1E120D8"
     }
   },
   "GetUnconfirmedTxs": {
@@ -499,7 +499,7 @@ var testDataJson = `{
     "input": {
       "filters": []
     },
-    "output": {
+    "output": [11, {
       "block_height": 1,
       "names":[ {
         "name": "testKey",
@@ -507,7 +507,7 @@ var testDataJson = `{
         "data": "testData",
         "expires": 250
       } ]
-    }
+    }]
   }
 }`
 
@@ -515,8 +515,8 @@ var serverDuration uint = 100
 
 type (
 	ChainData struct {
-		PrivValidator *state.PrivValidator `json:"priv_validator"`
-		Genesis       *state.GenesisDoc    `json:"genesis"`
+		PrivValidator *types.PrivValidator `json:"priv_validator"`
+		Genesis       *stypes.GenesisDoc   `json:"genesis"`
 	}
 
 	GetAccountData struct {
@@ -655,8 +655,8 @@ type (
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *edb.FilterListParam      `json:"input"`
-		Output *ctypes.ResponseListNames `json:"output"`
+		Input  *edb.FilterListParam    `json:"input"`
+		Output *ctypes.ResultListNames `json:"output"`
 	}
 
 	/*

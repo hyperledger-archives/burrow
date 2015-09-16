@@ -1,10 +1,12 @@
 package common
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 )
@@ -67,7 +69,7 @@ func WriteFile(filePath string, contents []byte) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("File written to %v.\n", filePath)
+	// fmt.Printf("File written to %v.\n", filePath)
 	return nil
 }
 
@@ -197,4 +199,27 @@ func (af *AutoFile) openFile() error {
 	}
 	af.file = file
 	return nil
+}
+
+func Tempfile(prefix string) (*os.File, string) {
+	file, err := ioutil.TempFile("", prefix)
+	if err != nil {
+		PanicCrisis(err)
+	}
+	return file, file.Name()
+}
+
+func Prompt(prompt string, defaultValue string) (string, error) {
+	fmt.Print(prompt)
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return defaultValue, err
+	} else {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			return defaultValue, nil
+		}
+		return line, nil
+	}
 }

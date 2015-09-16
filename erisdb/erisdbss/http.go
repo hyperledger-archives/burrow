@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	"github.com/eris-ltd/eris-db/server"
 	"net/http"
@@ -32,8 +33,8 @@ rpc_laddr = ""
 // TODO more stuff, like tendermint and server config files. Will probably
 // wait with this until the eris/EPM integration.
 type RequestData struct {
-	PrivValidator *state.PrivValidator `json:"priv_validator"`
-	Genesis       *state.GenesisDoc    `json:"genesis"`
+	PrivValidator *types.PrivValidator `json:"priv_validator"`
+	Genesis       *stypes.GenesisDoc   `json:"genesis"`
 	MaxDuration   uint                 `json:"max_duration"`
 }
 
