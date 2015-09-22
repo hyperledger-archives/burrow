@@ -1,7 +1,7 @@
 #! /bin/bash
 
 ifExit(){
-	if [ $? -ne 0 ]; then
+	if [[ $? != 0 ]]; then
 		echo "ifExit"
 		echo "$1"
 		for var in "$@"
@@ -13,7 +13,7 @@ ifExit(){
 }
 
 if0Exit(){
-	if [ $? -e 0 ]; then
+	if [[ $? == 0 ]]; then
 		echo "if0Exit"
 		echo "$1"
 		for var in "$@"
