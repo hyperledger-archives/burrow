@@ -92,4 +92,4 @@ ENV TMROOT /home/$USER/.eris/blockchains/tendermint
 EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
-ENTRYPOINT ["erisdb-wrapper"]
+CMD "erisdb-wrapper"

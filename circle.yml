@@ -26,11 +26,6 @@ deployment:
   master:
     branch: master
     commands:
-      - "export ERISDB_BUILD_BRANCH=$CIRCLE_BRANCH && DOCKER/build.sh"
-      - docker push eris/erisdb:latest
-      - docker push eris/erisdb:0.10
-  develop:
-    branch: develop
-    commands:
-      - "export ERISDB_BUILD_BRANCH=$CIRCLE_BRANCH && DOCKER/build.sh"
-      - docker push eris/erisdb:develop
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - DOCKER/build.sh
+      - docker push quay.io/eris/erisdb
