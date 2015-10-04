@@ -219,7 +219,7 @@ func getHeightMinMax(fda []*FilterData, height int) (int, int, []*FilterData, er
 			}
 			switch fd.Op {
 			case "==":
-				if val > height && val < 0 {
+				if val > height || val < 0 {
 					return 0, 0, nil, fmt.Errorf("No such block: %d (chain height: %d\n", val, height)
 				}
 				min = val

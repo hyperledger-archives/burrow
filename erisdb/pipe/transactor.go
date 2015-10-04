@@ -146,7 +146,6 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	// fmt.Printf("Sequence %d\n", sequence)
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   1,
