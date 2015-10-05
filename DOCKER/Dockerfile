@@ -1,5 +1,5 @@
 # Pull base image.
-FROM eris/base
+FROM quay.io/eris/base
 MAINTAINER Eris Industries <support@erisindustries.com>
 
 #-----------------------------------------------------------------------------
