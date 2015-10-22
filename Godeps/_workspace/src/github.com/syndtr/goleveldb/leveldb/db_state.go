@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/journal"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/memdb"
+	"github.comsyndtr/goleveldb/leveldb/journal"
+	"github.comsyndtr/goleveldb/leveldb/memdb"
 )
 
 type memDB struct {

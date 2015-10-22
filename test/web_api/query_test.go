@@ -4,7 +4,7 @@ package web_api
 import (
 	"bytes"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/suite"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"

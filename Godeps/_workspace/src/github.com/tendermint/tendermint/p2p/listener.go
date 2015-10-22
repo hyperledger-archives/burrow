@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p/upnp"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/p2p/upnp"
 )
 
 type Listener interface {

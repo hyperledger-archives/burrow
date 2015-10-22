@@ -11,7 +11,7 @@ package iterator
 import (
 	"errors"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
+	"github.comsyndtr/goleveldb/leveldb/util"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/sfreiberg/gotwilio"
+	"github.comsfreiberg/gotwilio"
 )
 
 var lastAlertUnix int64 = 0

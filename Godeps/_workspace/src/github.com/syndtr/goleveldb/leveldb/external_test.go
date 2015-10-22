@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/testutil"
+	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.comsyndtr/goleveldb/leveldb/testutil"
 )
 
 var _ = testutil.Defer(func() {

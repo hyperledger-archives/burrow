@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	"github.com/tendermint/tendermint/account"
+	cmn "github.com/tendermint/tendermint/common"
+	cs "github.com/tendermint/tendermint/consensus"
+	tEvents "github.com/tendermint/tendermint/events"
+	mempl "github.com/tendermint/tendermint/mempool"
+	"github.com/tendermint/tendermint/state"
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/vm"
 	"sync"
 	"time"
 )
@@ -225,7 +225,7 @@ func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*Receipt,
 	copy(pk[:], privKey)
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	cache := this.mempoolReactor.Mempool.GetCache()
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
@@ -267,9 +267,10 @@ func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*R
 	wc := make(chan *types.SendTx)
 	subId := fmt.Sprintf("%X", rec.TxHash)
 	
-	this.eventEmitter.Subscribe(subId, types.EventStringAccOutput(toAddress), func(evt interface{}) {
-		event := evt.(*types.SendTx)
-		wc <- event
+	this.eventEmitter.Subscribe(subId, types.EventStringAccOutput(toAddress), func(evt types.EventData) {
+		event := evt.(types.EventDataTx)
+		tx := event.Tx.(*types.SendTx)
+		wc <- tx
 	})
 
 	timer := time.NewTimer(300 * time.Second)
@@ -277,10 +278,7 @@ func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*R
 
 	var rErr error
 
-	// FOR NOW
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 
 	select {
 	case <-toChan:

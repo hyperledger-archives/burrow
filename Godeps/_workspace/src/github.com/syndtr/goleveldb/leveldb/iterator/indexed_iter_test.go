@@ -11,9 +11,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/comparer"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/testutil"
+	"github.comsyndtr/goleveldb/leveldb/comparer"
+	. "github.comsyndtr/goleveldb/leveldb/iterator"
+	"github.comsyndtr/goleveldb/leveldb/testutil"
 )
 
 type keyValue struct {

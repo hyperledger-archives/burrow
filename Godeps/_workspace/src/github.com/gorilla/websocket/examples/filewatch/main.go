@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
+	"github.comgorilla/websocket"
 )
 
 const (

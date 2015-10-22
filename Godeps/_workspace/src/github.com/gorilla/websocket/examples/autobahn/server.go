@@ -8,7 +8,7 @@ package main
 import (
 	"errors"
 	"flag"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
+	"github.comgorilla/websocket"
 	"io"
 	"log"
 	"net/http"

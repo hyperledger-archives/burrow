@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
+	"github.comnaoina/toml"
 )
 
 func BenchmarkUnmarshal(b *testing.B) {

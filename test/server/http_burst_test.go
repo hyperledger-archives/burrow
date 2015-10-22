@@ -2,7 +2,7 @@ package server
 
 import (
 	// "fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"

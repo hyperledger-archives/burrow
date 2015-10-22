@@ -1,10 +1,10 @@
 package pipe
 
 import (
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	cm "github.com/tendermint/tendermint/consensus"
+	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/wire"
 )
 
 // The consensus struct.
@@ -23,7 +23,7 @@ func (this *consensus) State() (*ConsensusState, error) {
 	peerRoundStates := []string{}
 	for _, peer := range this.p2pSwitch.Peers().List() {
 		// TODO: clean this up?
-		peerState := peer.Data.Get(cm.PeerStateKey).(*cm.PeerState)
+		peerState := peer.Data.Get(types.PeerStateKey).(*cm.PeerState)
 		peerRoundState := peerState.GetRoundState()
 		peerRoundStateStr := peer.Key + ":" + string(wire.JSONBytes(peerRoundState))
 		peerRoundStates = append(peerRoundStates, peerRoundStateStr)

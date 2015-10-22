@@ -10,8 +10,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/memdb"
+	"github.comsyndtr/goleveldb/leveldb/errors"
+	"github.comsyndtr/goleveldb/leveldb/memdb"
 )
 
 type ErrBatchCorrupted struct {
