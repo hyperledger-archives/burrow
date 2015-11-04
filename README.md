@@ -14,9 +14,11 @@ The recommended way of working with eris-db is through [eris-cli](https://github
 
 Make sure you have the proper [Go](https://golang.org/) distribution for your OS and architecture. The recommended version is `1.4.2`. Follow the instructions on how to set up GOROOT and GOPATH.
 
-You will also need the following libraries: `git, mercurial, libgmp3-dev`
+You will also need the following libraries: `git, libgmp3-dev`
 
-On Ubuntu: `sudo apt-get install git mercurial libgmp3-dev`
+On Ubuntu: `sudo apt-get install git libgmp3-dev`
+
+On Mac: `brew install git gmp`
 
 Next you pull in the code:
 
