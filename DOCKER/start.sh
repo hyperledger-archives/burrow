@@ -38,7 +38,7 @@ fi
 
 # TODO: deal with chain numbers
 # and eg. $CONTAINER_NAME
-CHAIN_DIR="/home/$USER/.eris/blockchains/$CHAIN_ID"
+CHAIN_DIR="/home/$USER/.eris/chains/$CHAIN_ID"
 
 # set the tendermint directory
 TMROOT=$CHAIN_DIR
@@ -50,7 +50,7 @@ fi
 
 # our root chain
 if [ ! $ROOT_CHAIN_ID ]; then
-	ROOT_CHAIN_ID=etcb_testnet	
+	ROOT_CHAIN_ID=etcb_testnet
 fi
 if [ ! $NODE_ADDR ]; then
 	NODE_ADDR=interblock.io:46657

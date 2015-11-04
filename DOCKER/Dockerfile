@@ -84,8 +84,8 @@ RUN chown -R eris $ECM_PATH
 VOLUME /home/$USER/.eris
 WORKDIR /home/$USER/.eris
 USER $USER
-RUN mkdir --parents /home/$USER/.eris/blockchains/tendermint
-ENV TMROOT /home/$USER/.eris/blockchains/tendermint
+RUN mkdir --parents /home/$USER/.eris/chains/tendermint
+ENV TMROOT /home/$USER/.eris/chains/tendermint
 
 # run tendermint
 # ports: 1337:eris-db API; 46656:mint-peer; 46657:mint-rpc
