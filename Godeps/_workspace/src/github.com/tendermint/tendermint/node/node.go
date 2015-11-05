@@ -2,10 +2,10 @@ package node
 
 import (
 	"bytes"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +24,7 @@ import (
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
@@ -44,7 +45,15 @@ type Node struct {
 	privKey          acm.PrivKeyEd25519
 }
 
-func NewNode() *Node {
+func NewNodeDefaultPrivVal() *Node {
+	// Get PrivValidator
+	privValidatorFile := config.GetString("priv_validator_file")
+	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
+
+	return NewNode(privValidator)
+}
+
+func NewNode(privValidator *types.PrivValidator) *Node {
 	// Get BlockStore
 	blockStoreDB := dbm.GetDB("blockstore")
 	blockStore := bc.NewBlockStore(blockStoreDB)
@@ -73,20 +82,6 @@ func NewNode() *Node {
 	}
 	// add the chainid to the global config
 	config.Set("chain_id", state.ChainID)
-
-	// Get PrivValidator
-	var privValidator *types.PrivValidator
-	privValidatorFile := config.GetString("priv_validator_file")
-	if _, err := os.Stat(privValidatorFile); err == nil {
-		privValidator = types.LoadPrivValidator(privValidatorFile)
-		log.Notice("Loaded PrivValidator",
-			"file", privValidatorFile, "privValidator", privValidator)
-	} else {
-		privValidator = types.GenPrivValidator()
-		privValidator.SetFile(privValidatorFile)
-		privValidator.Save()
-		log.Notice("Generated PrivValidator", "file", privValidatorFile)
-	}
 
 	// Generate node PrivKey
 	privKey := acm.GenPrivKeyEd25519()
@@ -126,6 +121,17 @@ func NewNode() *Node {
 	// add the event switch to all services
 	// they should all satisfy events.Eventable
 	SetFireable(eventSwitch, pexReactor, bcReactor, mempoolReactor, consensusReactor)
+
+	// run the profile server
+	profileHost := config.GetString("prof_laddr")
+	if profileHost != "" {
+		go func() {
+			log.Warn("Profile server", "error", http.ListenAndServe(profileHost, nil))
+		}()
+	}
+
+	// set vm log level
+	vm.SetDebug(config.GetBool("vm_log"))
 
 	return &Node{
 		sw:               sw,
@@ -256,7 +262,7 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 	}
 
 	// include git hash in the nodeInfo if available
-	if rev, err := ReadFile(config.GetString("revisions_file")); err == nil {
+	if rev, err := ReadFile(config.GetString("revision_file")); err == nil {
 		nodeInfo.Version.Revision = string(rev)
 	}
 
@@ -286,8 +292,31 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 //------------------------------------------------------------------------------
 
 func RunNode() {
+
+	// Wait until the genesis doc becomes available
+	genDocFile := config.GetString("genesis_file")
+	if !FileExists(genDocFile) {
+		log.Notice(Fmt("Waiting for genesis file %v...", genDocFile))
+		for {
+			time.Sleep(time.Second)
+			if FileExists(genDocFile) {
+				break
+			}
+			jsonBlob, err := ioutil.ReadFile(genDocFile)
+			if err != nil {
+				Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+			}
+			genDoc := stypes.GenesisDocFromJSON(jsonBlob)
+			if genDoc.ChainID == "" {
+				PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
+			}
+			config.Set("chain_id", genDoc.ChainID)
+			config.Set("genesis_doc", genDoc)
+		}
+	}
+
 	// Create & start node
-	n := NewNode()
+	n := NewNodeDefaultPrivVal()
 	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
 	n.AddListener(l)
 	err := n.Start()

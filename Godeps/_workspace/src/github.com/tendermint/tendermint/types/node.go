@@ -19,7 +19,7 @@ type NodeInfo struct {
 
 type Versions struct {
 	Revision   string `json:"revision"`
-	Tendermint string `json"tendermint"`
+	Tendermint string `json:"tendermint"`
 	P2P        string `json:"p2p"`
 	RPC        string `json:"rpc"`
 	Wire       string `json:"wire"`

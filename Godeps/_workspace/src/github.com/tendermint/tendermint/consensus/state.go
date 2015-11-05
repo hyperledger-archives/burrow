@@ -1308,14 +1308,12 @@ func (cs *ConsensusState) saveBlock(block *types.Block, blockParts *types.PartSe
 	cs.stagedState.Save()
 
 	// Update mempool.
-	cs.mempoolReactor.Mempool.ResetForBlockAndState(block, cs.stagedState)
+	cs.mempoolReactor.ResetForBlockAndState(block, cs.stagedState)
 
 	// Fire off event
 	if cs.evsw != nil && cs.evc != nil {
-		go func(block *types.Block) {
-			cs.evsw.FireEvent(types.EventStringNewBlock(), types.EventDataNewBlock{block})
-			cs.evc.Flush()
-		}(block)
+		cs.evsw.FireEvent(types.EventStringNewBlock(), types.EventDataNewBlock{block})
+		go cs.evc.Flush()
 	}
 
 }

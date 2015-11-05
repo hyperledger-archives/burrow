@@ -3,7 +3,6 @@
 package tendermint_test
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
 	"os"
 	"path"
 	"strings"
@@ -47,10 +46,8 @@ func GetConfig(rootDir string) cfg.Config {
 	rootDir = getTMRoot(rootDir)
 	initTMRoot(rootDir)
 
-	var mapConfig = cfg.MapConfig(make(map[string]interface{}))
 	configFilePath := path.Join(rootDir, "config.toml")
-	configFileBytes := MustReadFile(configFilePath)
-	err := toml.Unmarshal(configFileBytes, mapConfig)
+	mapConfig, err := cfg.ReadMapConfigFromFile(configFilePath)
 	if err != nil {
 		Exit(Fmt("Could not read config: %v", err))
 	}
@@ -70,15 +67,13 @@ func GetConfig(rootDir string) cfg.Config {
 	mapConfig.SetDefault("db_backend", "memdb")
 	mapConfig.SetDefault("db_dir", rootDir+"/data")
 	mapConfig.SetDefault("log_level", "debug")
+	mapConfig.SetDefault("vm_log", true)
 	mapConfig.SetDefault("rpc_laddr", "0.0.0.0:36657")
-	mapConfig.SetDefault("revisions_file", rootDir+"/revisions")
+	mapConfig.SetDefault("prof_laddr", "")
+	mapConfig.SetDefault("revision_file", rootDir+"/revision")
+	mapConfig.SetDefault("local_routing", false)
+	mapConfig.SetDefault("signer", "default")
 	return mapConfig
-}
-
-func ensureDefault(mapConfig cfg.MapConfig, key string, value interface{}) {
-	if !mapConfig.IsSet(key) {
-		mapConfig[key] = value
-	}
 }
 
 var defaultConfigTmpl = `# This is a TOML config file.
