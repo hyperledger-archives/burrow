@@ -23,7 +23,7 @@ func (this *consensus) State() (*ConsensusState, error) {
 	peerRoundStates := []string{}
 	for _, peer := range this.p2pSwitch.Peers().List() {
 		// TODO: clean this up?
-		peerState := peer.Data.Get(cm.PeerStateKey).(*cm.PeerState)
+		peerState := peer.Data.Get(types.PeerStateKey).(*cm.PeerState)
 		peerRoundState := peerState.GetRoundState()
 		peerRoundStateStr := peer.Key + ":" + string(wire.JSONBytes(peerRoundState))
 		peerRoundStates = append(peerRoundStates, peerRoundStateStr)
