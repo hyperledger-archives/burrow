@@ -105,8 +105,8 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 	}
 	callback := func(ret types.EventData) {
 		writeErr := this.writeResponse(subId, ret, session)
-		if(writeErr != nil){
-			this.pipe.Events().Unsubscribe(subId);
+		if writeErr != nil {
+			this.pipe.Events().Unsubscribe(subId)
 		}
 	}
 	_, errC := this.pipe.Events().Subscribe(subId, eventId, callback)
