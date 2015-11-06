@@ -42,7 +42,7 @@ type PrivValidator struct {
 	LastRound  int               `json:"last_round"`
 	LastStep   int8              `json:"last_step"`
 
-	// NOTE: A safer implemention leaves PrivKey empty and uses a secure key signing service.
+	// PrivKey should be empty if a Signer other than the default is being used.
 	PrivKey acm.PrivKeyEd25519 `json:"priv_key"`
 	signer  Signer
 
@@ -52,6 +52,9 @@ type PrivValidator struct {
 	mtx      sync.Mutex
 }
 
+// XXX: This is used to sign votes.
+// It is the caller's duty to verify the msg before calling Sign,
+// eg. to avoid double signing.
 type Signer interface {
 	Sign(msg []byte) acm.SignatureEd25519
 }
