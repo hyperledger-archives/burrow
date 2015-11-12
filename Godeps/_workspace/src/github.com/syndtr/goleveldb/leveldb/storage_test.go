@@ -17,8 +17,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
+	"github.comsyndtr/goleveldb/leveldb/storage"
+	"github.comsyndtr/goleveldb/leveldb/util"
 )
 
 const typeShift = 4

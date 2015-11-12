@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/wire"
 )
 
 type PeerMessage struct {
@@ -56,12 +57,12 @@ func (tr *TestReactor) RemovePeer(peer *Peer, reason interface{}) {
 	tr.peersRemoved = append(tr.peersRemoved, peer)
 }
 
-func (tr *TestReactor) Receive(chId byte, peer *Peer, msgBytes []byte) {
+func (tr *TestReactor) Receive(chID byte, peer *Peer, msgBytes []byte) {
 	if tr.logMessages {
 		tr.mtx.Lock()
 		defer tr.mtx.Unlock()
-		//fmt.Printf("Received: %X, %X\n", chId, msgBytes)
-		tr.msgsReceived[chId] = append(tr.msgsReceived[chId], PeerMessage{peer.Key, msgBytes, tr.msgsCounter})
+		//fmt.Printf("Received: %X, %X\n", chID, msgBytes)
+		tr.msgsReceived[chID] = append(tr.msgsReceived[chID], PeerMessage{peer.Key, msgBytes, tr.msgsCounter})
 		tr.msgsCounter++
 	}
 }
@@ -80,7 +81,7 @@ func makeSwitchPair(t testing.TB, initSwitch func(*Switch) *Switch) (*Switch, *S
 		PubKey:  s1PrivKey.PubKey().(acm.PubKeyEd25519),
 		Moniker: "switch1",
 		ChainID: "testing",
-		Version: "123.123.123",
+		Version: types.Versions{Tendermint: "123.123.123"},
 	})
 	s1.SetNodePrivKey(s1PrivKey)
 	s2 := initSwitch(NewSwitch())
@@ -88,7 +89,7 @@ func makeSwitchPair(t testing.TB, initSwitch func(*Switch) *Switch) (*Switch, *S
 		PubKey:  s2PrivKey.PubKey().(acm.PubKeyEd25519),
 		Moniker: "switch2",
 		ChainID: "testing",
-		Version: "123.123.123",
+		Version: types.Versions{Tendermint: "123.123.123"},
 	})
 	s2.SetNodePrivKey(s2PrivKey)
 
@@ -97,7 +98,7 @@ func makeSwitchPair(t testing.TB, initSwitch func(*Switch) *Switch) (*Switch, *S
 	s2.Start()
 
 	// Create a listener for s1
-	l := NewDefaultListener("tcp", ":8001", true)
+	l := NewDefaultListener("tcp", ":8001")
 
 	// Dial the listener & add the connection to s2.
 	lAddr := l.ExternalAddress()
@@ -128,12 +129,12 @@ func TestSwitches(t *testing.T) {
 	s1, s2 := makeSwitchPair(t, func(sw *Switch) *Switch {
 		// Make two reactors of two channels each
 		sw.AddReactor("foo", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{Id: byte(0x00), Priority: 10},
-			&ChannelDescriptor{Id: byte(0x01), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x00), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x01), Priority: 10},
 		}, true))
 		sw.AddReactor("bar", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{Id: byte(0x02), Priority: 10},
-			&ChannelDescriptor{Id: byte(0x03), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x02), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x03), Priority: 10},
 		}, true))
 		return sw
 	})
@@ -195,12 +196,12 @@ func BenchmarkSwitches(b *testing.B) {
 	s1, s2 := makeSwitchPair(b, func(sw *Switch) *Switch {
 		// Make bar reactors of bar channels each
 		sw.AddReactor("foo", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{Id: byte(0x00), Priority: 10},
-			&ChannelDescriptor{Id: byte(0x01), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x00), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x01), Priority: 10},
 		}, false))
 		sw.AddReactor("bar", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{Id: byte(0x02), Priority: 10},
-			&ChannelDescriptor{Id: byte(0x03), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x02), Priority: 10},
+			&ChannelDescriptor{ID: byte(0x03), Priority: 10},
 		}, false))
 		return sw
 	})
@@ -215,8 +216,8 @@ func BenchmarkSwitches(b *testing.B) {
 
 	// Send random message from foo channel to another
 	for i := 0; i < b.N; i++ {
-		chId := byte(i % 4)
-		successChan := s1.Broadcast(chId, "test data")
+		chID := byte(i % 4)
+		successChan := s1.Broadcast(chID, "test data")
 		for s := range successChan {
 			if s {
 				numSuccess += 1

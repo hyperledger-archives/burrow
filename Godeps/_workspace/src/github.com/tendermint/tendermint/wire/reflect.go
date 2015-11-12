@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/common"
 )
 
 const (
@@ -93,7 +93,7 @@ var (
 )
 
 const (
-	rfc2822 = "Mon Jan 02 15:04:05 -0700 2006"
+	iso8601 = "2006-01-02T15:04:05.000Z" // forced microseconds
 )
 
 // NOTE: do not access typeInfos directly, but call GetTypeInfo()
@@ -419,11 +419,14 @@ func writeReflectBinary(rv reflect.Value, rt reflect.Type, opts Options, w io.Wr
 			if !ok {
 				switch crt.Kind() {
 				case reflect.Ptr:
-					*err = errors.New(Fmt("Unexpected pointer type %v. Was it registered as a value receiver rather than as a pointer receiver?", crt))
+					*err = errors.New(Fmt("Unexpected pointer type %v for registered interface %v. "+
+						"Was it registered as a value receiver rather than as a pointer receiver?", crt, rt.Name()))
 				case reflect.Struct:
-					*err = errors.New(Fmt("Unexpected struct type %v. Was it registered as a pointer receiver rather than as a value receiver?", crt))
+					*err = errors.New(Fmt("Unexpected struct type %v for registered interface %v. "+
+						"Was it registered as a pointer receiver rather than as a value receiver?", crt, rt.Name()))
 				default:
-					*err = errors.New(Fmt("Unexpected type %v.", crt))
+					*err = errors.New(Fmt("Unexpected type %v for registered interface %v. "+
+						"If this is intentional, please register it.", crt, rt.Name()))
 				}
 				return
 			}
@@ -585,6 +588,7 @@ func readByteJSON(o interface{}) (typeByte byte, rest interface{}, err error) {
 
 // Contract: Caller must ensure that rt is supported
 // (e.g. is recursively composed of supported native types, and structs and slices.)
+// rv and rt refer to the object we're unmarhsaling into, whereas o is the result of naiive json unmarshal (map[string]interface{})
 func readReflectJSON(rv reflect.Value, rt reflect.Type, o interface{}, err *error) {
 
 	// Get typeInfo
@@ -727,7 +731,7 @@ func readReflectJSON(rv reflect.Value, rt reflect.Type, o interface{}, err *erro
 				return
 			}
 			log.Info(Fmt("Read time: %v", str))
-			t, err_ := time.Parse(rfc2822, str)
+			t, err_ := time.Parse(iso8601, str)
 			if err_ != nil {
 				*err = err_
 				return
@@ -818,11 +822,14 @@ func writeReflectJSON(rv reflect.Value, rt reflect.Type, w io.Writer, n *int64, 
 			if !ok {
 				switch crt.Kind() {
 				case reflect.Ptr:
-					*err = errors.New(Fmt("Unexpected pointer type %v. Was it registered as a value receiver rather than as a pointer receiver?", crt))
+					*err = errors.New(Fmt("Unexpected pointer type %v for registered interface %v. "+
+						"Was it registered as a value receiver rather than as a pointer receiver?", crt, rt.Name()))
 				case reflect.Struct:
-					*err = errors.New(Fmt("Unexpected struct type %v. Was it registered as a pointer receiver rather than as a value receiver?", crt))
+					*err = errors.New(Fmt("Unexpected struct type %v for registered interface %v. "+
+						"Was it registered as a pointer receiver rather than as a value receiver?", crt, rt.Name()))
 				default:
-					*err = errors.New(Fmt("Unexpected type %v.", crt))
+					*err = errors.New(Fmt("Unexpected type %v for registered interface %v. "+
+						"If this is intentional, please register it.", crt, rt.Name()))
 				}
 				return
 			}
@@ -901,8 +908,8 @@ func writeReflectJSON(rv reflect.Value, rt reflect.Type, w io.Writer, n *int64, 
 	case reflect.Struct:
 		if rt == timeType {
 			// Special case: time.Time
-			t := rv.Interface().(time.Time)
-			str := t.Format(rfc2822)
+			t := rv.Interface().(time.Time).UTC()
+			str := t.Format(iso8601)
 			jsonBytes, err_ := json.Marshal(str)
 			if err_ != nil {
 				*err = err_

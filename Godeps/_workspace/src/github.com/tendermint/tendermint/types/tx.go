@@ -5,10 +5,12 @@ import (
 	"errors"
 	"io"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
+
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	ptypes "github.com/tendermint/tendermint/permission/types"
+	"github.com/tendermint/tendermint/wire"
 )
 
 var (
@@ -20,9 +22,16 @@ var (
 	ErrTxUnknownPubKey        = errors.New("Error unknown pubkey")
 	ErrTxInvalidPubKey        = errors.New("Error invalid pubkey")
 	ErrTxInvalidSignature     = errors.New("Error invalid signature")
-	ErrTxInvalidString        = errors.New("Error invalid string")
 	ErrTxPermissionDenied     = errors.New("Error permission denied")
 )
+
+type ErrTxInvalidString struct {
+	Msg string
+}
+
+func (e ErrTxInvalidString) Error() string {
+	return e.Msg
+}
 
 type ErrTxInvalidSequence struct {
 	Got      int
@@ -189,6 +198,15 @@ func (tx *CallTx) String() string {
 	return Fmt("CallTx{%v -> %x: %x}", tx.Input, tx.Address, tx.Data)
 }
 
+func NewContractAddress(caller []byte, nonce int) []byte {
+	temp := make([]byte, 32+8)
+	copy(temp, caller)
+	PutInt64BE(temp[32:], int64(nonce))
+	hasher := ripemd160.New()
+	hasher.Write(temp) // does not error
+	return hasher.Sum(nil)
+}
+
 //-----------------------------------------------------------------------------
 
 type NameTx struct {
@@ -209,28 +227,24 @@ func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *err
 
 func (tx *NameTx) ValidateStrings() error {
 	if len(tx.Name) == 0 {
-		return errors.New("Name must not be empty")
+		return ErrTxInvalidString{"Name must not be empty"}
 	}
 	if len(tx.Name) > MaxNameLength {
-		return errors.New(Fmt("Name is too long. Max %d bytes", MaxNameLength))
+		return ErrTxInvalidString{Fmt("Name is too long. Max %d bytes", MaxNameLength)}
 	}
 	if len(tx.Data) > MaxDataLength {
-		return errors.New(Fmt("Data is too long. Max %d bytes", MaxDataLength))
+		return ErrTxInvalidString{Fmt("Data is too long. Max %d bytes", MaxDataLength)}
 	}
 
 	if !validateNameRegEntryName(tx.Name) {
-		return errors.New(Fmt("Invalid characters found in NameTx.Name (%s). Only alphanumeric, underscores, and forward slashes allowed", tx.Name))
+		return ErrTxInvalidString{Fmt("Invalid characters found in NameTx.Name (%s). Only alphanumeric, underscores, dashes, forward slashes, and @ are allowed", tx.Name)}
 	}
 
 	if !validateNameRegEntryData(tx.Data) {
-		return errors.New(Fmt("Invalid characters found in NameTx.Data (%s). Only the kind of things found in a JSON file are allowed", tx.Data))
+		return ErrTxInvalidString{Fmt("Invalid characters found in NameTx.Data (%s). Only the kind of things found in a JSON file are allowed", tx.Data)}
 	}
 
 	return nil
-}
-
-func (tx *NameTx) BaseEntryCost() int64 {
-	return BaseEntryCost(tx.Name, tx.Data)
 }
 
 func (tx *NameTx) String() string {

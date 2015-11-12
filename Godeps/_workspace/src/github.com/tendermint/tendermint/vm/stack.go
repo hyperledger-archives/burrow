@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/common"
 )
 
 // Not goroutine safe
@@ -104,6 +104,10 @@ func (st *Stack) Dup(n int) {
 
 // Not an opcode, costs no gas.
 func (st *Stack) Peek() Word256 {
+	if st.ptr == 0 {
+		st.setErr(ErrDataStackUnderflow)
+		return Zero256
+	}
 	return st.data[st.ptr-1]
 }
 

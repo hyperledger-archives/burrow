@@ -6,7 +6,7 @@
 
 package leveldb
 
-import "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/comparer"
+import "github.comsyndtr/goleveldb/leveldb/comparer"
 
 type iComparer struct {
 	ucmp comparer.Comparer

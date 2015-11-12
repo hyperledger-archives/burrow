@@ -9,9 +9,9 @@ package leveldb
 import (
 	"bytes"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/filter"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
+	"github.comsyndtr/goleveldb/leveldb/filter"
+	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.comsyndtr/goleveldb/leveldb/storage"
 	"io"
 	"math/rand"
 	"testing"

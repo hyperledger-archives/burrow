@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/events"
+	ptypes "github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/vm"
 )
 
 // NOTE: If an error occurs during block execution, state will be left
@@ -101,8 +101,8 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 
 	// If any unbonding periods are over,
 	// reward account with bonded coins.
-	toRelease := []*Validator{}
-	s.UnbondingValidators.Iterate(func(index int, val *Validator) bool {
+	toRelease := []*types.Validator{}
+	s.UnbondingValidators.Iterate(func(index int, val *types.Validator) bool {
 		if val.UnbondHeight+unbondingPeriodBlocks < block.Height {
 			toRelease = append(toRelease, val)
 		}
@@ -114,8 +114,8 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 
 	// If any validators haven't signed in a while,
 	// unbond them, they have timed out.
-	toTimeout := []*Validator{}
-	s.BondedValidators.Iterate(func(index int, val *Validator) bool {
+	toTimeout := []*types.Validator{}
+	s.BondedValidators.Iterate(func(index int, val *types.Validator) bool {
 		lastActivityHeight := MaxInt(val.BondHeight, val.LastCommitHeight)
 		if lastActivityHeight+validatorTimeoutBlocks < block.Height {
 			log.Notice("Validator timeout", "validator", val, "height", block.Height)
@@ -337,11 +337,11 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// if the evc is nil, nothing will happen
 		if evc != nil {
 			for _, i := range tx.Inputs {
-				evc.FireEvent(types.EventStringAccInput(i.Address), tx)
+				evc.FireEvent(types.EventStringAccInput(i.Address), types.EventDataTx{tx, nil, ""})
 			}
 
 			for _, o := range tx.Outputs {
-				evc.FireEvent(types.EventStringAccOutput(o.Address), tx)
+				evc.FireEvent(types.EventStringAccOutput(o.Address), types.EventDataTx{tx, nil, ""})
 			}
 		}
 		return nil
@@ -494,8 +494,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				if err != nil {
 					exception = err.Error()
 				}
-				evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventMsgCallTx{tx, ret, exception})
-				evc.FireEvent(types.EventStringAccOutput(tx.Address), types.EventMsgCallTx{tx, ret, exception})
+				evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, ret, exception})
+				evc.FireEvent(types.EventStringAccOutput(tx.Address), types.EventDataTx{tx, ret, exception})
 			}
 		} else {
 			// The mempool does not call txs until
@@ -543,14 +543,13 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 
 		// validate the input strings
 		if err := tx.ValidateStrings(); err != nil {
-			log.Info(err.Error())
-			return types.ErrTxInvalidString
+			return err
 		}
 
 		value := tx.Input.Amount - tx.Fee
 
 		// let's say cost of a name for one block is len(data) + 32
-		costPerBlock := types.NameCostPerBlock * types.NameCostPerByte * tx.BaseEntryCost()
+		costPerBlock := types.NameCostPerBlock(types.NameBaseCost(tx.Name, tx.Data))
 		expiresIn := int(value / costPerBlock)
 		lastBlockHeight := _s.LastBlockHeight
 
@@ -591,7 +590,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				} else {
 					// since the size of the data may have changed
 					// we use the total amount of "credit"
-					oldCredit := int64(entry.Expires-lastBlockHeight) * types.BaseEntryCost(entry.Name, entry.Data)
+					oldCredit := int64(entry.Expires-lastBlockHeight) * types.NameBaseCost(entry.Name, entry.Data)
 					credit := oldCredit + value
 					expiresIn = int(credit / costPerBlock)
 					if expiresIn < types.MinNameRegistrationPeriod {
@@ -626,6 +625,11 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		blockCache.UpdateAccount(inAcc)
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
+
+		if evc != nil {
+			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, nil, ""})
+			evc.FireEvent(types.EventStringNameReg(tx.Name), types.EventDataTx{tx, nil, ""})
+		}
 
 		return nil
 
@@ -686,7 +690,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			blockCache.UpdateAccount(acc)
 		}
 		// Add ValidatorInfo
-		_s.SetValidatorInfo(&ValidatorInfo{
+		_s.SetValidatorInfo(&types.ValidatorInfo{
 			Address:         tx.PubKey.Address(),
 			PubKey:          tx.PubKey,
 			UnbondTo:        tx.UnbondTo,
@@ -694,7 +698,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			FirstBondAmount: outTotal,
 		})
 		// Add Validator
-		added := _s.BondedValidators.Add(&Validator{
+		added := _s.BondedValidators.Add(&types.Validator{
 			Address:     tx.PubKey.Address(),
 			PubKey:      tx.PubKey,
 			BondHeight:  _s.LastBlockHeight + 1,
@@ -706,7 +710,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 		if evc != nil {
 			// TODO: fire for all inputs
-			evc.FireEvent(types.EventStringBond(), tx)
+			evc.FireEvent(types.EventStringBond(), types.EventDataTx{tx, nil, ""})
 		}
 		return nil
 
@@ -731,7 +735,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// Good!
 		_s.unbondValidator(val)
 		if evc != nil {
-			evc.FireEvent(types.EventStringUnbond(), tx)
+			evc.FireEvent(types.EventStringUnbond(), types.EventDataTx{tx, nil, ""})
 		}
 		return nil
 
@@ -759,7 +763,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// Good!
 		_s.rebondValidator(val)
 		if evc != nil {
-			evc.FireEvent(types.EventStringRebond(), tx)
+			evc.FireEvent(types.EventStringRebond(), types.EventDataTx{tx, nil, ""})
 		}
 		return nil
 
@@ -798,7 +802,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// Good! (Bad validator!)
 		_s.destroyValidator(accused)
 		if evc != nil {
-			evc.FireEvent(types.EventStringDupeout(), tx)
+			evc.FireEvent(types.EventStringDupeout(), types.EventDataTx{tx, nil, ""})
 		}
 		return nil
 
@@ -888,8 +892,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 
 		if evc != nil {
-			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), tx)
-			evc.FireEvent(types.EventStringPermissions(ptypes.PermFlagToString(permFlag)), tx)
+			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, nil, ""})
+			evc.FireEvent(types.EventStringPermissions(ptypes.PermFlagToString(permFlag)), types.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -975,4 +979,15 @@ func hasBondOrSendPermission(state AccountGetter, accs map[string]*acm.Account) 
 		}
 	}
 	return true
+}
+
+//-----------------------------------------------------------------------------
+
+type InvalidTxError struct {
+	Tx     types.Tx
+	Reason error
+}
+
+func (txErr InvalidTxError) Error() string {
+	return Fmt("Invalid tx: [%v] reason: [%v]", txErr.Tx, txErr.Reason)
 }

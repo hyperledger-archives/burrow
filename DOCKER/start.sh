@@ -2,12 +2,31 @@
 
 ifExit(){
 	if [ $? -ne 0 ]; then
-		echo $1
+		echo "ifExit"
+		echo "$1"
+		for var in "$@"
+		do
+			    echo "$var"
+		done
 		exit 1
 	fi
 }
 
+if0Exit(){
+	if [ $? -e 0 ]; then
+		echo "if0Exit"
+		echo "$1"
+		for var in "$@"
+		do
+			    echo "$var"
+		done
+		exit 1
+	fi
+}
+
+
 export -f ifExit
+export -f if0Exit
 
 #------------------------------------------------
 # set and export directories
@@ -30,11 +49,14 @@ if [ ! -d "$CHAIN_DIR" ]; then
 fi
 
 # our root chain
-if [ ! $NODE_HOST ]; then
-	NODE_HOST=interblock.io:46657
+if [ ! $ROOT_CHAIN_ID ]; then
+	ROOT_CHAIN_ID=etcb_testnet	
 fi
 if [ ! $NODE_ADDR ]; then
-	NODE_ADDR=http://$NODE_HOST
+	NODE_ADDR=interblock.io:46657
+fi
+if [ ! $P2P_ADDR ]; then
+	P2P_ADDR=interblock.io:46656
 fi
 
 # where the etcb client scripts are
@@ -91,8 +113,12 @@ fi
 export TMROOT
 export CHAIN_DIR
 export NODE_ADDR
-export NODE_HOST
+export P2P_ADDR
 export ECM_PATH  # set by Dockerfile
+
+export MINTX_NODE_ADDR=$NODE_ADDR
+export MINTX_SIGN_ADDR=keys:4767
+
 
 # print the version
 bash $ECM_PATH/version.sh
@@ -108,8 +134,14 @@ case $CMD in
 	;;
 "run" ) $ECM_PATH/chain_run.sh
 	;;
+<<<<<<< HEAD
 "api" ) $ECM_PATH/chain_api.sh
   ;;
 *)	echo "Enter a command for starting the chain (install, new, run, api)"
+=======
+"register" ) $ECM_PATH/chain_register.sh
+	;;
+*)	echo "Enter a command for starting the chain (new, install, run, register)"
+>>>>>>> fix_versions
 	;;
 esac

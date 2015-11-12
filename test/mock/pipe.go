@@ -1,11 +1,12 @@
 package mock
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+
+	"github.com/tendermint/tendermint/account"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 // Base struct.
@@ -156,7 +157,7 @@ type events struct {
 	testData *td.TestData
 }
 
-func (this *events) Subscribe(subId, event string, callback func(interface{})) (bool, error) {
+func (this *events) Subscribe(subId, event string, callback func(types.EventData)) (bool, error) {
 	return true, nil
 }
 
@@ -173,7 +174,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return this.testData.GetNameRegEntry.Output, nil
 }
 
-func (this *namereg) Entries(filters []*ep.FilterData) (*ctypes.ResponseListNames, error) {
+func (this *namereg) Entries(filters []*ep.FilterData) (*ctypes.ResultListNames, error) {
 	return this.testData.GetNameRegEntries.Output, nil
 }
 
@@ -239,7 +240,16 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.testData.Transact.Output, nil
 }
 
-func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error) {
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error) {
+	return nil, nil
+}
+
+
+func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*ep.Receipt, error) {
+	return nil, nil
+}
+
+func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*ep.Receipt, error) {
 	return nil, nil
 }
 

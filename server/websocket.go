@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"

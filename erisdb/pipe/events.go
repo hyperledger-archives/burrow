@@ -1,7 +1,8 @@
 package pipe
 
 import (
-	evts "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	evts "github.com/tendermint/tendermint/events"
+	"github.com/tendermint/tendermint/types"
 )
 
 // TODO improve
@@ -16,7 +17,7 @@ func newEvents(eventSwitch *evts.EventSwitch) *events {
 }
 
 // Subscribe to an event.
-func (this *events) Subscribe(subId, event string, callback func(interface{})) (bool, error) {
+func (this *events) Subscribe(subId, event string, callback func(types.EventData)) (bool, error) {
 	this.eventSwitch.AddListenerForEvent(subId, event, callback)
 	return true, nil
 }

@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/log15"
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/types"
 )
 
 type Reactor interface {
@@ -20,7 +20,7 @@ type Reactor interface {
 	GetChannels() []*ChannelDescriptor
 	AddPeer(peer *Peer)
 	RemovePeer(peer *Peer, reason interface{})
-	Receive(chId byte, peer *Peer, msgBytes []byte)
+	Receive(chID byte, peer *Peer, msgBytes []byte)
 }
 
 //--------------------------------------
@@ -43,7 +43,7 @@ func (br *BaseReactor) SetSwitch(sw *Switch) {
 func (_ *BaseReactor) GetChannels() []*ChannelDescriptor              { return nil }
 func (_ *BaseReactor) AddPeer(peer *Peer)                             {}
 func (_ *BaseReactor) RemovePeer(peer *Peer, reason interface{})      {}
-func (_ *BaseReactor) Receive(chId byte, peer *Peer, msgBytes []byte) {}
+func (_ *BaseReactor) Receive(chID byte, peer *Peer, msgBytes []byte) {}
 
 //-----------------------------------------------------------------------------
 
@@ -96,12 +96,12 @@ func (sw *Switch) AddReactor(name string, reactor Reactor) Reactor {
 	// No two reactors can share the same channel.
 	reactorChannels := reactor.GetChannels()
 	for _, chDesc := range reactorChannels {
-		chId := chDesc.Id
-		if sw.reactorsByCh[chId] != nil {
-			PanicSanity(fmt.Sprintf("Channel %X has multiple reactors %v & %v", chId, sw.reactorsByCh[chId], reactor))
+		chID := chDesc.ID
+		if sw.reactorsByCh[chID] != nil {
+			PanicSanity(fmt.Sprintf("Channel %X has multiple reactors %v & %v", chID, sw.reactorsByCh[chID], reactor))
 		}
 		sw.chDescs = append(sw.chDescs, chDesc)
-		sw.reactorsByCh[chId] = reactor
+		sw.reactorsByCh[chID] = reactor
 	}
 	sw.reactors[name] = reactor
 	reactor.SetSwitch(sw)
@@ -153,11 +153,14 @@ func (sw *Switch) SetNodePrivKey(nodePrivKey acm.PrivKeyEd25519) {
 }
 
 // Switch.Start() starts all the reactors, peers, and listeners.
-func (sw *Switch) OnStart() {
+func (sw *Switch) OnStart() error {
 	sw.BaseService.OnStart()
 	// Start reactors
 	for _, reactor := range sw.reactors {
-		reactor.Start()
+		_, err := reactor.Start()
+		if err != nil {
+			return err
+		}
 	}
 	// Start peers
 	for _, peer := range sw.peers.List() {
@@ -167,6 +170,7 @@ func (sw *Switch) OnStart() {
 	for _, listener := range sw.listeners {
 		go sw.listenerRoutine(listener)
 	}
+	return nil
 }
 
 func (sw *Switch) OnStop() {
@@ -281,17 +285,16 @@ func (sw *Switch) IsDialing(addr *NetAddress) bool {
 // Broadcast runs a go routine for each attempted send, which will block
 // trying to send for defaultSendTimeoutSeconds. Returns a channel
 // which receives success values for each attempted send (false if times out)
-func (sw *Switch) Broadcast(chId byte, msg interface{}) chan bool {
+func (sw *Switch) Broadcast(chID byte, msg interface{}) chan bool {
 	successChan := make(chan bool, len(sw.peers.List()))
-	log.Debug("Broadcast", "channel", chId, "msg", msg)
+	log.Info("Broadcast", "channel", chID, "msg", msg)
 	for _, peer := range sw.peers.List() {
 		go func(peer *Peer) {
-			success := peer.Send(chId, msg)
+			success := peer.Send(chID, msg)
 			successChan <- success
 		}(peer)
 	}
 	return successChan
-
 }
 
 // Returns the count of outbound/inbound and outbound-dialing peers.

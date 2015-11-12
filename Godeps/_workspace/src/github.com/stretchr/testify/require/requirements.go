@@ -3,7 +3,7 @@ package require
 import (
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestingT interface {

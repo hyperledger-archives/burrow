@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/tendermint/tendermint/p2p"
 )
 
 func TestNodeStartStop(t *testing.T) {
 	// Create & start node
 	n := NewNode()
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), false)
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
 	n.AddListener(l)
 	n.Start()
 	log.Notice("Started node", "nodeInfo", n.sw.NodeInfo())

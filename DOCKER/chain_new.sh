@@ -2,7 +2,9 @@
 
 echo "your new chain, kind marmot: $CHAIN_ID"
 
-if [ "$GENERATE_GENESIS" = "true" ]; then
+# lay the genesis
+# if it exists, just overwrite the chain id
+if [ ! -f $CHAIN_DIR/genesis.json ]; then
 	if [ "$CSV" = "" ]; then
 		mintgen random --dir="$CHAIN_DIR" 1 $CHAIN_ID
 		ifExit "Error creating random genesis file"
@@ -26,11 +28,15 @@ else
 	cat $CHAIN_DIR/config.toml
 fi
 
-if [ "$RUN" = "true" ]; then
-	tendermint node
-	ifExit "Error starting tendermint"
+# run the node.
+# TODO: maybe bring back this stopping option if we think its useful
+# tendermint node & last_pid=$! && sleep 1 && kill -KILL $last_pid
+if [ $ERISDB_API ]; then
+	echo "Running chain $CHAIN_ID (via ErisDB API)"
+	erisdb $TMROOT
+	ifExit "Error starting erisdb"
 else
-	# this will just run for a second and quit
-	tendermint node & last_pid=$! && sleep 1 && kill -KILL $last_pid
+	echo Running chain $CHAIN_ID
+	tendermint node
 	ifExit "Error starting tendermint"
 fi

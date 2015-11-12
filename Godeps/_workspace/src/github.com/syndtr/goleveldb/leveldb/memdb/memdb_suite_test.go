@@ -3,7 +3,7 @@ package memdb
 import (
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/testutil"
+	"github.comsyndtr/goleveldb/leveldb/testutil"
 )
 
 func TestMemDB(t *testing.T) {

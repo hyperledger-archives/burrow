@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
+	"github.comsyndtr/goleveldb/leveldb/iterator"
+	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.comsyndtr/goleveldb/leveldb/storage"
 )
 
 func randomString(r *rand.Rand, n int) []byte {

@@ -3,13 +3,13 @@
 package tendermint_test
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
+	"github.comnaoina/toml"
 	"os"
 	"path"
 	"strings"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
+	. "github.com/tendermint/tendermint/common"
+	cfg "github.com/tendermint/tendermint/config"
 )
 
 func init() {
@@ -35,8 +35,8 @@ func initTMRoot(rootDir string) {
 	// Write default config file if missing.
 	if !FileExists(configFilePath) {
 		// Ask user for moniker
-		moniker := cfg.Prompt("Type hostname: ", "anonymous")
-		MustWriteFile(configFilePath, []byte(defaultConfig(moniker)))
+		// moniker := cfg.Prompt("Type hostname: ", "anonymous")
+		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")))
 	}
 	if !FileExists(genesisFilePath) {
 		MustWriteFile(genesisFilePath, []byte(defaultGenesis))
@@ -59,15 +59,12 @@ func GetConfig(rootDir string) cfg.Config {
 	if mapConfig.IsSet("chain_id") {
 		Exit("Cannot set 'chain_id' via config.toml")
 	}
-	if mapConfig.IsSet("version") {
-		Exit("Cannot set 'version' via config.toml")
-	}
 	mapConfig.SetDefault("chain_id", "tendermint_test")
-	mapConfig.SetDefault("version", "0.5.0")
 	mapConfig.SetDefault("genesis_file", rootDir+"/genesis.json")
 	mapConfig.SetDefault("moniker", "anonymous")
 	mapConfig.SetDefault("node_laddr", "0.0.0.0:36656")
 	mapConfig.SetDefault("fast_sync", false)
+	mapConfig.SetDefault("skip_upnp", true)
 	mapConfig.SetDefault("addrbook_file", rootDir+"/addrbook.json")
 	mapConfig.SetDefault("priv_validator_file", rootDir+"/priv_validator.json")
 	mapConfig.SetDefault("db_backend", "memdb")

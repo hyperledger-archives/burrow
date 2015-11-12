@@ -8,18 +8,17 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/events"
+	ptypes "github.com/tendermint/tendermint/permission/types"
+	"github.com/tendermint/tendermint/types"
+	. "github.com/tendermint/tendermint/vm"
 )
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
 		accounts: make(map[string]*Account),
 		storage:  make(map[string]Word256),
-		logs:     nil,
 	}
 	// For default permissions
 	fas.accounts[ptypes.GlobalPermissionsAddress256.String()] = &Account{
@@ -158,7 +157,7 @@ func runVMWaitEvents(t *testing.T, ourVm *VM, caller, callee *Account, subscribe
 	evsw.Start()
 	ch := make(chan interface{})
 	fmt.Printf("subscribe to %x\n", subscribeAddr)
-	evsw.AddListenerForEvent("test", types.EventStringAccCall(subscribeAddr), func(msg interface{}) {
+	evsw.AddListenerForEvent("test", types.EventStringAccCall(subscribeAddr), func(msg types.EventData) {
 		ch <- msg
 	})
 	evc := events.NewEventCache(evsw)
@@ -175,9 +174,9 @@ func runVMWaitEvents(t *testing.T, ourVm *VM, caller, callee *Account, subscribe
 	}()
 	msg := <-ch
 	switch ev := msg.(type) {
-	case types.EventMsgCallTx:
+	case types.EventDataTx:
 		return ev.Exception
-	case types.EventMsgCall:
+	case types.EventDataCall:
 		return ev.Exception
 	case string:
 		return ev

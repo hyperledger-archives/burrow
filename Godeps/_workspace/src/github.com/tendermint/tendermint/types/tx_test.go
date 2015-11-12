@@ -3,10 +3,10 @@ package types
 import (
 	"testing"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	ptypes "github.com/tendermint/tendermint/permission/types"
 )
 
 var chainID string
@@ -92,9 +92,7 @@ func TestNameTxSignable(t *testing.T) {
 
 func TestBondTxSignable(t *testing.T) {
 	privKeyBytes := make([]byte, 64)
-	var privKeyArray [64]byte
-	copy(privKeyArray[:], privKeyBytes)
-	privAccount := acm.GenPrivAccountFromPrivKeyBytes(&privKeyArray)
+	privAccount := acm.GenPrivAccountFromPrivKeyBytes(privKeyBytes)
 	bondTx := &BondTx{
 		PubKey: privAccount.PubKey.(acm.PubKeyEd25519),
 		Inputs: []*TxInput{

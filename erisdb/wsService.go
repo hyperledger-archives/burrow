@@ -6,6 +6,8 @@ import (
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
+
+	"github.com/tendermint/tendermint/types"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -73,15 +75,15 @@ func (this *ErisDbWsService) writeError(msg, id string, code int, session *serve
 }
 
 // Convenience method for writing responses.
-func (this *ErisDbWsService) writeResponse(id string, result interface{}, session *server.WSSession) {
+func (this *ErisDbWsService) writeResponse(id string, result interface{}, session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
 	log.Debug("RESPONSE: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
-		return
+		return err
 	}
-	session.Write(bts)
+	return session.Write(bts)
 }
 
 // *************************************** Events ************************************
@@ -101,8 +103,11 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 	if errSID != nil {
 		return nil, rpc.INTERNAL_ERROR, errSID
 	}
-	callback := func(ret interface{}) {
-		this.writeResponse(subId, ret, session)
+	callback := func(ret types.EventData) {
+		writeErr := this.writeResponse(subId, ret, session)
+		if writeErr != nil {
+			this.pipe.Events().Unsubscribe(subId)
+		}
 	}
 	_, errC := this.pipe.Events().Subscribe(subId, eventId, callback)
 	if errC != nil {

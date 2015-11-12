@@ -1,7 +1,7 @@
 package core
 
 import (
-	rpc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/server"
+	rpc "github.com/tendermint/tendermint/rpc/server"
 )
 
 // TODO: eliminate redundancy between here and reading code from core/

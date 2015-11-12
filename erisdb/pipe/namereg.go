@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	types "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	cm "github.com/tendermint/tendermint/consensus"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	types "github.com/tendermint/tendermint/types"
 	"sync"
 )
 
@@ -56,7 +56,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResponseListNames, error) {
+func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResultListNames, error) {
 	var blockHeight int
 	var names []*types.NameRegEntry
 	state := this.consensusState.GetState()
@@ -72,7 +72,7 @@ func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResponseListNames, 
 		}
 		return false
 	})
-	return &ctypes.ResponseListNames{blockHeight, names}, nil
+	return &ctypes.ResultListNames{blockHeight, names}, nil
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.

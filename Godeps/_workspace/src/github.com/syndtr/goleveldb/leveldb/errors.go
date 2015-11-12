@@ -7,7 +7,7 @@
 package leveldb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
+	"github.comsyndtr/goleveldb/leveldb/errors"
 )
 
 var (

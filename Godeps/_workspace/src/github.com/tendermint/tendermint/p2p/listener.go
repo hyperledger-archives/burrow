@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p/upnp"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/p2p/upnp"
 )
 
 type Listener interface {
@@ -46,7 +46,7 @@ func splitHostPort(addr string) (host string, port int) {
 	return host, port
 }
 
-func NewDefaultListener(protocol string, lAddr string, requireUPNPHairpin bool) Listener {
+func NewDefaultListener(protocol string, lAddr string) Listener {
 	// Local listen IP & port
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
 
@@ -73,22 +73,12 @@ func NewDefaultListener(protocol string, lAddr string, requireUPNPHairpin bool) 
 
 	// Determine external address...
 	var extAddr *NetAddress
-	// If the lAddrIP is INADDR_ANY, try UPnP
-	if lAddrIP == "" || lAddrIP == "0.0.0.0" {
-		if requireUPNPHairpin {
-			upnpCapabilities, err := upnp.Probe()
-			if err != nil {
-				log.Warn("Failed to probe UPNP", "error", err)
-				goto SKIP_UPNP
-			}
-			if !upnpCapabilities.Hairpin {
-				goto SKIP_UPNP
-			}
+	if !config.GetBool("skip_upnp") {
+		// If the lAddrIP is INADDR_ANY, try UPnP
+		if lAddrIP == "" || lAddrIP == "0.0.0.0" {
+			extAddr = getUPNPExternalAddress(lAddrPort, listenerPort)
 		}
-		extAddr = getUPNPExternalAddress(lAddrPort, listenerPort)
 	}
-SKIP_UPNP:
-
 	// Otherwise just use the local address...
 	if extAddr == nil {
 		extAddr = getNaiveExternalAddress(listenerPort)
@@ -108,9 +98,10 @@ SKIP_UPNP:
 	return dl
 }
 
-func (l *DefaultListener) OnStart() {
+func (l *DefaultListener) OnStart() error {
 	l.BaseService.OnStart()
 	go l.listenRoutine()
+	return nil
 }
 
 func (l *DefaultListener) OnStop() {

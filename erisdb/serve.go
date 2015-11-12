@@ -3,18 +3,17 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
-	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/log15"
+	. "github.com/tendermint/tendermint/common"
+	cfg "github.com/tendermint/tendermint/config"
+	tmcfg "github.com/tendermint/tendermint/config/tendermint"
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/p2p"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
 	"path"
 )
 
-const ERISDB_VERSION = "0.11.5"
 const TENDERMINT_VERSION = "0.5.0"
 
 var log = log15.New("module", "eris/erisdb_server")
@@ -83,7 +82,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	laddr := tmConfig.GetString("node_laddr")
 	if laddr != "" {
-		l := p2p.NewDefaultListener("tcp", laddr, false)
+		l := p2p.NewDefaultListener("tcp", laddr)
 		nd.AddListener(l)
 	}
 

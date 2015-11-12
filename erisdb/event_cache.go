@@ -5,6 +5,8 @@ import (
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"sync"
 	"time"
+
+	"github.com/tendermint/tendermint/types"
 )
 
 var (
@@ -90,7 +92,7 @@ func (this *EventSubscriptions) add(eventId string) (string, error) {
 	}
 	cache := newEventCache()
 	_, errC := this.eventEmitter.Subscribe(subId, eventId,
-		func(evt interface{}) {
+		func(evt types.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)

@@ -3,7 +3,7 @@ package stringutil_test
 import (
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/go-stringutil"
+	"github.comnaoina/go-stringutil"
 )
 
 var benchcaseForCamelCase = "the_quick_brown_fox_jumps_over_the_lazy_dog"

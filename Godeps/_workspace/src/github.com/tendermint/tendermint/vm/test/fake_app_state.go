@@ -1,15 +1,14 @@
 package vm
 
 import (
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
+	. "github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/vm"
+	"github.com/tendermint/tendermint/vm/sha3"
 )
 
 type FakeAppState struct {
 	accounts map[string]*Account
 	storage  map[string]Word256
-	logs     []*Log
 }
 
 func (fas *FakeAppState) GetAccount(addr Word256) *Account {
@@ -67,10 +66,6 @@ func (fas *FakeAppState) SetStorage(addr Word256, key Word256, value Word256) {
 	}
 
 	fas.storage[addr.String()+key.String()] = value
-}
-
-func (fas *FakeAppState) AddLog(log *Log) {
-	fas.logs = append(fas.logs, log)
 }
 
 // Creates a 20 byte address and bumps the nonce.

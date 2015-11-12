@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
+	"github.com/tendermint/tendermint/account"
+	cmn "github.com/tendermint/tendermint/common"
+	cs "github.com/tendermint/tendermint/consensus"
+	mempl "github.com/tendermint/tendermint/mempool"
 	"sync"
 )
 
@@ -48,10 +48,8 @@ func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*account.PrivAccoun
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
-	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", pk)
-	pa := account.GenPrivAccountFromPrivKeyBytes(pk)
+	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
 	return pa, nil
 }
 

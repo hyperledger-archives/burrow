@@ -7,11 +7,11 @@
 package leveldb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
+	"github.comsyndtr/goleveldb/leveldb/errors"
+	"github.comsyndtr/goleveldb/leveldb/iterator"
+	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.comsyndtr/goleveldb/leveldb/storage"
+	"github.comsyndtr/goleveldb/leveldb/util"
 )
 
 // Reader is the interface that wraps basic Get and NewIterator methods.

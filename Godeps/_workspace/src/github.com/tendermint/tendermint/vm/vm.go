@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"math/big"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/events"
+	ptypes "github.com/tendermint/tendermint/permission/types"
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/vm/sha3"
 )
 
 var (
@@ -42,7 +42,7 @@ const (
 	dataStackCapacity       = 1024
 	callStackCapacity       = 100         // TODO ensure usage.
 	memoryCapacity          = 1024 * 1024 // 1 MB
-	dbg               Debug = false
+	dbg               Debug = true
 )
 
 func (d Debug) Printf(s string, a ...interface{}) {
@@ -98,7 +98,7 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, caller, callee *Account, input []byte, value int64, gas *int64) {
 	// fire the post call event (including exception if applicable)
 	if vm.evc != nil {
-		vm.evc.FireEvent(types.EventStringAccCall(callee.Address.Postfix(20)), types.EventMsgCall{
+		vm.evc.FireEvent(types.EventStringAccCall(callee.Address.Postfix(20)), types.EventDataCall{
 			&types.CallData{caller.Address.Postfix(20), callee.Address.Postfix(20), input, value, *gas},
 			vm.origin.Postfix(20),
 			vm.txid,
@@ -173,9 +173,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 		dbg.Printf("(pc) %-3d (op) %-14s (st) %-4d ", pc, op.String(), stack.Len())
 
 		switch op {
-
-		case STOP: // 0x00
-			return nil, nil
 
 		case ADD: // 0x01
 			x, y := stack.Pop(), stack.Pop()
@@ -694,19 +691,18 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if !ok {
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			log := &Log{
-				callee.Address,
-				topics,
-				data,
-				vm.params.BlockHeight,
-			}
-			vm.appState.AddLog(log)
 			if vm.evc != nil {
-				eventId := types.EventStringLogEvent(callee.Address.Postfix(20))
-				vm.evc.FireEvent(eventId, log)
+				eventID := types.EventStringLogEvent(callee.Address.Postfix(20))
+				fmt.Printf("eventID: %s\n", eventID)
+				log := types.EventDataLog{
+					callee.Address,
+					topics,
+					data,
+					vm.params.BlockHeight,
+				}
+				vm.evc.FireEvent(eventID, log)
 			}
-			// Using sol-log for this as well since 'log' will print garbage.
-			dbg.Printf(" => T:%X D:%X\n", log.Topics, log.Data)
+			dbg.Printf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
 			if !HasPermission(vm.appState, callee, ptypes.CreateContract) {
@@ -772,6 +768,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				if err != nil {
 					exception = err.Error()
 				}
+				// NOTE: these fire call events and not particular events for eg name reg or permissions
 				vm.fireCallEvent(&exception, &ret, callee, &Account{Address: addr}, args, value, gas)
 			} else {
 				// EVM contract
@@ -837,7 +834,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			// TODO if the receiver is , then make it the fee.
+			// TODO if the receiver is , then make it the fee. (?)
+			// TODO: create account if doesn't exist (no reason not to)
 			receiver := vm.appState.GetAccount(addr)
 			if receiver == nil {
 				return nil, firstErr(err, ErrUnknownAddress)
@@ -848,6 +846,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			vm.appState.RemoveAccount(callee)
 			dbg.Printf(" => (%X) %v\n", addr[:4], balance)
 			fallthrough
+
+		case STOP: // 0x00
+			return nil, nil
 
 		default:
 			dbg.Printf("(pc) %-3v Invalid opcode %X\n", pc, op)

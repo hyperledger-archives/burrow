@@ -2,10 +2,10 @@ package pipe
 
 import (
 	"fmt"
-	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	bc "github.com/tendermint/tendermint/blockchain"
+	dbm "github.com/tendermint/tendermint/db"
+	"github.com/tendermint/tendermint/state"
+	"github.com/tendermint/tendermint/types"
 	"math"
 	"strconv"
 	"strings"
@@ -219,7 +219,7 @@ func getHeightMinMax(fda []*FilterData, height int) (int, int, []*FilterData, er
 			}
 			switch fd.Op {
 			case "==":
-				if val > height && val < 0 {
+				if val > height || val < 0 {
 					return 0, 0, nil, fmt.Errorf("No such block: %d (chain height: %d\n", val, height)
 				}
 				min = val

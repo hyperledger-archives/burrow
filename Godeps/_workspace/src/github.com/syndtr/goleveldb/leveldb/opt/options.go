@@ -8,9 +8,9 @@
 package opt
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/cache"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/comparer"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/filter"
+	"github.comsyndtr/goleveldb/leveldb/cache"
+	"github.comsyndtr/goleveldb/leveldb/comparer"
+	"github.comsyndtr/goleveldb/leveldb/filter"
 	"math"
 )
 

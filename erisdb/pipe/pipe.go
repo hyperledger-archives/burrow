@@ -2,10 +2,10 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/account"
+	"github.com/tendermint/tendermint/node"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 type (
@@ -46,13 +46,13 @@ type (
 	}
 
 	EventEmitter interface {
-		Subscribe(subId, event string, callback func(interface{})) (bool, error)
+		Subscribe(subId, event string, callback func(types.EventData)) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
 
 	NameReg interface {
 		Entry(key string) (*types.NameRegEntry, error)
-		Entries([]*FilterData) (*ctypes.ResponseListNames, error)
+		Entries([]*FilterData) (*ctypes.ResultListNames, error)
 	}
 
 	Net interface {
@@ -69,8 +69,10 @@ type (
 		Call(fromAddress, toAddress, data []byte) (*Call, error)
 		CallCode(fromAddress, code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
+		Send(privKey, toAddress []byte, amount int64) (*Receipt, error)
+		SendAndHold(privKey, toAddress []byte, amount int64) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
-		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventMsgCall, error)
+		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
 		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
@@ -98,6 +100,7 @@ func NewPipe(tNode *node.Node) Pipe {
 	namereg := newNamereg(tNode.ConsensusState())
 	net := newNetwork(tNode.Switch())
 	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
+	
 	return &PipeImpl{
 		tNode,
 		accounts,

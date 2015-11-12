@@ -2,13 +2,15 @@ package testdata
 
 import (
 	"fmt"
-	"github.com/tendermint/tendermint/binary"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
 	"os"
 	"path"
+
+	. "github.com/tendermint/tendermint/common"
+	stypes "github.com/tendermint/tendermint/state/types"
+	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/wire"
 )
 
 const TendermintConfigDefault = `# This is a TOML config file.
@@ -23,7 +25,7 @@ node_laddr = ""
 rpc_laddr = ""
 `
 
-func CreateTempWorkDir(privValidator *state.PrivValidator, genesis *state.GenesisDoc, folderName string) (string, error) {
+func CreateTempWorkDir(privValidator *types.PrivValidator, genesis *stypes.GenesisDoc, folderName string) (string, error) {
 
 	workDir := path.Join(os.TempDir(), folderName)
 	os.RemoveAll(workDir)
@@ -68,7 +70,7 @@ func CreateTempWorkDir(privValidator *state.PrivValidator, genesis *state.Genesi
 	return workDir, nil
 }
 
-// Used to write json files using tendermints binary package.
+// Used to write json files using tendermints wire package.
 func writeJSON(file string, v interface{}) error {
 	var n int64
 	var errW error
@@ -76,7 +78,7 @@ func writeJSON(file string, v interface{}) error {
 	if errC != nil {
 		return errC
 	}
-	binary.WriteJSON(v, fo, &n, &errW)
+	wire.WriteJSON(v, fo, &n, &errW)
 	if errW != nil {
 		return errW
 	}

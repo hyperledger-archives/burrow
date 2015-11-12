@@ -3,10 +3,12 @@ package erisdb
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/types"
 )
 
 var mockInterval = 10 * time.Millisecond
@@ -14,13 +16,13 @@ var mockInterval = 10 * time.Millisecond
 type mockSub struct {
 	subId    string
 	eventId  string
-	f        func(interface{})
+	f        func(types.EventData)
 	shutdown bool
 	sdChan   chan struct{}
 }
 
 // A mock event
-func newMockSub(subId, eventId string, f func(interface{})) mockSub {
+func newMockSub(subId, eventId string, f func(types.EventData)) mockSub {
 	return mockSub{subId, eventId, f, false, make(chan struct{})}
 }
 
@@ -32,7 +34,7 @@ func newMockEventEmitter() *mockEventEmitter {
 	return &mockEventEmitter{make(map[string]mockSub)}
 }
 
-func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(interface{})) (bool, error) {
+func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(types.EventData)) (bool, error) {
 	if _, ok := this.subs[subId]; ok {
 		return false, nil
 	}
@@ -45,7 +47,7 @@ func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(int
 	go func() {
 		for {
 			if !me.shutdown {
-				me.f(struct{}{})
+				me.f(types.EventDataNewBlock{})
 			} else {
 				return
 			}

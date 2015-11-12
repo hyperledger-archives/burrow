@@ -12,11 +12,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/journal"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
+	"github.comsyndtr/goleveldb/leveldb/errors"
+	"github.comsyndtr/goleveldb/leveldb/journal"
+	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.comsyndtr/goleveldb/leveldb/storage"
+	"github.comsyndtr/goleveldb/leveldb/util"
 )
 
 type ErrManifestCorrupted struct {

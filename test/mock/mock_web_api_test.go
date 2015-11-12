@@ -5,12 +5,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/log15"
+	"github.com/tendermint/tendermint/account"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
@@ -180,7 +180,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 
 func (this *MockSuite) TestGetNameRegEntries() {
 	resp := this.get("/namereg")
-	ret := &ctypes.ResponseListNames{}
+	ret := &ctypes.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntries.Output)

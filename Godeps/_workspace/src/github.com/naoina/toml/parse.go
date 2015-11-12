@@ -3,7 +3,7 @@ package toml
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml/ast"
+	"github.comnaoina/toml/ast"
 )
 
 // Parse returns an AST representation of TOML.

@@ -10,8 +10,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/comparer"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/memdb"
+	"github.comsyndtr/goleveldb/leveldb/comparer"
+	"github.comsyndtr/goleveldb/leveldb/memdb"
 )
 
 type tbRec struct {

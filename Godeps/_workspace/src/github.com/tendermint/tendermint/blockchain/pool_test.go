@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/types"
 )
 
 type testPeer struct {
@@ -17,16 +17,16 @@ type testPeer struct {
 func makePeers(numPeers int, minHeight, maxHeight int) map[string]testPeer {
 	peers := make(map[string]testPeer, numPeers)
 	for i := 0; i < numPeers; i++ {
-		peerId := RandStr(12)
+		peerID := RandStr(12)
 		height := minHeight + rand.Intn(maxHeight-minHeight)
-		peers[peerId] = testPeer{peerId, height}
+		peers[peerID] = testPeer{peerID, height}
 	}
 	return peers
 }
 
 func TestBasic(t *testing.T) {
-	peers := makePeers(10, 0, 1000)
 	start := 42
+	peers := makePeers(10, start+1, 1000)
 	timeoutsCh := make(chan string, 100)
 	requestsCh := make(chan BlockRequest, 100)
 	pool := NewBlockPool(start, requestsCh, timeoutsCh)
@@ -57,8 +57,8 @@ func TestBasic(t *testing.T) {
 	// Pull from channels
 	for {
 		select {
-		case peerId := <-timeoutsCh:
-			t.Errorf("timeout: %v", peerId)
+		case peerID := <-timeoutsCh:
+			t.Errorf("timeout: %v", peerID)
 		case request := <-requestsCh:
 			log.Info("TEST: Pulled new BlockRequest", "request", request)
 			if request.Height == 300 {
@@ -67,8 +67,8 @@ func TestBasic(t *testing.T) {
 			// Request desired, pretend like we got the block immediately.
 			go func() {
 				block := &types.Block{Header: &types.Header{Height: request.Height}}
-				pool.AddBlock(block, request.PeerId)
-				log.Info("TEST: Added block", "block", request.Height, "peer", request.PeerId)
+				pool.AddBlock(request.PeerID, block, 123)
+				log.Info("TEST: Added block", "block", request.Height, "peer", request.PeerID)
 			}()
 		}
 	}
@@ -77,12 +77,16 @@ func TestBasic(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	peers := makePeers(10, 0, 1000)
 	start := 42
+	peers := makePeers(10, start+1, 1000)
 	timeoutsCh := make(chan string, 100)
 	requestsCh := make(chan BlockRequest, 100)
 	pool := NewBlockPool(start, requestsCh, timeoutsCh)
 	pool.Start()
+
+	for _, peer := range peers {
+		log.Info("Peer", "id", peer.id)
+	}
 
 	// Introduce each peer.
 	go func() {
@@ -111,9 +115,9 @@ func TestTimeout(t *testing.T) {
 	timedOut := map[string]struct{}{}
 	for {
 		select {
-		case peerId := <-timeoutsCh:
-			log.Info("Timeout", "peerId", peerId)
-			if _, ok := timedOut[peerId]; !ok {
+		case peerID := <-timeoutsCh:
+			log.Info("Timeout", "peerID", peerID)
+			if _, ok := timedOut[peerID]; !ok {
 				counter++
 				if counter == len(peers) {
 					return // Done!
