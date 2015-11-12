@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.comnaoina/toml/ast"
+	"github.com/naoina/toml/ast"
 )
 
 const (

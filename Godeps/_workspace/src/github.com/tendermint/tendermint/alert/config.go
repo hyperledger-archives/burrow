@@ -1,7 +1,7 @@
 package alert
 
 import (
-	cfg "github.com/tendermint/tendermint/config"
+	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
 )
 
 var config cfg.Config = nil

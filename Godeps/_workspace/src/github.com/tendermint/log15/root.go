@@ -3,8 +3,8 @@ package log15
 import (
 	"os"
 
-	"github.cominconshreveable/log15/term"
-	"github.commattn/go-colorable"
+	"github.com/inconshreveable/log15/term"
+	"github.com/mattn/go-colorable"
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 
 	"go/ast"
 
-	"github.comnaoina/go-stringutil"
+	"github.com/naoina/go-stringutil"
 )
 
 const (

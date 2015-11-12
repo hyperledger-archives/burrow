@@ -3,7 +3,7 @@ package iterator_test
 import (
 	"testing"
 
-	"github.comsyndtr/goleveldb/leveldb/testutil"
+	"github.com/syndtr/goleveldb/leveldb/testutil"
 )
 
 func TestIterator(t *testing.T) {

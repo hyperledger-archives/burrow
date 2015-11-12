@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 func decodeEncode(v *sessionRecord) (res bool, err error) {

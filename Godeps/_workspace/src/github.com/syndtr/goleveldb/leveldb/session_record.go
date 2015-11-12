@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	"github.comsyndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 type byteReader interface {

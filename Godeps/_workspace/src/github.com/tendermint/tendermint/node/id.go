@@ -1,7 +1,7 @@
 package node
 
 import (
-	acm "github.com/tendermint/tendermint/account"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	"time"
 )
 

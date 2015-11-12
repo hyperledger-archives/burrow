@@ -3,7 +3,7 @@ package db
 import (
 	"path"
 
-	. "github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 )
 
 type DB interface {

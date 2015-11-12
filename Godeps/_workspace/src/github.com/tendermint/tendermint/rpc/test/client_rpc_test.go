@@ -1,7 +1,7 @@
 package rpctest
 
 import (
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
 	"testing"
 )
 

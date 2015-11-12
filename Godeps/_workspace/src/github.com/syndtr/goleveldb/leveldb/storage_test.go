@@ -17,8 +17,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.comsyndtr/goleveldb/leveldb/storage"
-	"github.comsyndtr/goleveldb/leveldb/util"
+	"github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const typeShift = 4

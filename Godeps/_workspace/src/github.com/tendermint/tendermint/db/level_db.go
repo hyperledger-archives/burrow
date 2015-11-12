@@ -2,12 +2,12 @@ package db
 
 import (
 	"fmt"
-	"github.comsyndtr/goleveldb/leveldb"
-	"github.comsyndtr/goleveldb/leveldb/errors"
-	"github.comsyndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"path"
 
-	. "github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 )
 
 type LevelDB struct {

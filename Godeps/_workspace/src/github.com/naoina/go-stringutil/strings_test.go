@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.comnaoina/go-stringutil"
+	"github.com/naoina/go-stringutil"
 )
 
 func TestToUpperCamelCase(t *testing.T) {

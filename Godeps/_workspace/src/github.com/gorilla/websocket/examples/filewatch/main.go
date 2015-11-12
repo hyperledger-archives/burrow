@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.comgorilla/websocket"
+	"github.com/gorilla/websocket"
 )
 
 const (

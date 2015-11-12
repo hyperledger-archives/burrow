@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.comsyndtr/goleveldb/leveldb/iterator"
-	"github.comsyndtr/goleveldb/leveldb/opt"
-	"github.comsyndtr/goleveldb/leveldb/storage"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/storage"
 )
 
 func randomString(r *rand.Rand, n int) []byte {

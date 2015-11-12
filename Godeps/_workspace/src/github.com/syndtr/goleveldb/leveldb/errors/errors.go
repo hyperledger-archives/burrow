@@ -11,8 +11,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.comsyndtr/goleveldb/leveldb/storage"
-	"github.comsyndtr/goleveldb/leveldb/util"
+	"github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 var (

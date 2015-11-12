@@ -4,9 +4,9 @@ import (
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 
-	"github.com/tendermint/tendermint/account"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 // Base struct.
@@ -243,7 +243,6 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error) {
 	return nil, nil
 }
-
 
 func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*ep.Receipt, error) {
 	return nil, nil

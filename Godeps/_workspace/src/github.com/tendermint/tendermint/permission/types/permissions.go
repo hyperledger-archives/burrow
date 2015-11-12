@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	. "github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 )
 
 //------------------------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.cominconshreveable/log15/stack"
+	"github.com/inconshreveable/log15/stack"
 )
 
 type testType struct{}

@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/tendermint/tendermint/account"
-	cmn "github.com/tendermint/tendermint/common"
-	cs "github.com/tendermint/tendermint/consensus"
-	tEvents "github.com/tendermint/tendermint/events"
-	mempl "github.com/tendermint/tendermint/mempool"
-	"github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/vm"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 	"sync"
 	"time"
 )
@@ -216,11 +216,11 @@ func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*Receipt,
 	} else {
 		toAddr = toAddress
 	}
-	
+
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	
+
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
 	this.txMtx.Lock()
@@ -234,22 +234,22 @@ func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*Receipt,
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	
+
 	tx := types.NewSendTx()
-	
+
 	txInput := &types.TxInput{
 		Address:  pa.Address,
 		Amount:   amount,
 		Sequence: sequence,
 		PubKey:   pa.PubKey,
 	}
-	
+
 	tx.Inputs = append(tx.Inputs, txInput)
-	
+
 	txOutput := &types.TxOutput{toAddr, amount}
-	
-	tx.Outputs = append(tx.Outputs, txOutput);
-	
+
+	tx.Outputs = append(tx.Outputs, txOutput)
+
 	// Got ourselves a tx.
 	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
 	if errS != nil {
@@ -263,10 +263,10 @@ func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*R
 	if tErr != nil {
 		return nil, tErr
 	}
-	
+
 	wc := make(chan *types.SendTx)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	
+
 	this.eventEmitter.Subscribe(subId, types.EventStringAccOutput(toAddress), func(evt types.EventData) {
 		event := evt.(types.EventDataTx)
 		tx := event.Tx.(*types.SendTx)

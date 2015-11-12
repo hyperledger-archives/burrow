@@ -7,7 +7,7 @@
 package leveldb
 
 import (
-	"github.comsyndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var (

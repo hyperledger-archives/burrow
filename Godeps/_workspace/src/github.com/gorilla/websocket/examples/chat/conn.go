@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.comgorilla/websocket"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"

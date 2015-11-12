@@ -3,7 +3,7 @@ package toml
 import (
 	"fmt"
 
-	"github.comnaoina/toml/ast"
+	"github.com/naoina/toml/ast"
 )
 
 // Parse returns an AST representation of TOML.

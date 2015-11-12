@@ -1,9 +1,9 @@
 package pipe
 
 import (
-	"github.com/tendermint/tendermint/account"
-	csus "github.com/tendermint/tendermint/consensus"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
+	csus "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 type (

@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
@@ -223,14 +223,14 @@ func (this *WSSession) readPump() {
 			this.writeCloseChan <- struct{}{}
 			return
 		}
-		
+
 		if msgType != websocket.TextMessage {
 			log.Info("Receiving non text-message from client, closing.")
 			this.writeCloseChan <- struct{}{}
 			return
 		}
-		
-		go func(){
+
+		go func() {
 			// Process the request.
 			this.service.Process(msg, this)
 		}()
@@ -274,16 +274,16 @@ func (this *WSSession) writePump() {
 			}
 		case <-this.writeCloseChan:
 			return
-		// Ticker run out. Time for another ping message.
-		/*
-		case <-ticker.C:
-			if err := this.write(websocket.PingMessage, []byte{}); err != nil {
-				log.Debug("Failed to write ping message to socket. Closing.")
-				return
-			}
+			// Ticker run out. Time for another ping message.
+			/*
+				case <-ticker.C:
+					if err := this.write(websocket.PingMessage, []byte{}); err != nil {
+						log.Debug("Failed to write ping message to socket. Closing.")
+						return
+					}
 			*/
 		}
-		
+
 	}
 }
 

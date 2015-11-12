@@ -5,7 +5,7 @@ import (
 	"io"
 	"math/rand"
 
-	"github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
 )
 
 func main() {

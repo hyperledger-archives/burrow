@@ -4,11 +4,13 @@ package transacting
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/suite"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
 	// "github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	// ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
@@ -16,10 +18,8 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"testing"
-	"github.com/gin-gonic/gin"
-	"github.com/tendermint/log15"
 	"runtime"
+	"testing"
 )
 
 func init() {

@@ -3,8 +3,8 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	cors "github.com/tommy351/gin-cors"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	cors "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tommy351/gin-cors"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"

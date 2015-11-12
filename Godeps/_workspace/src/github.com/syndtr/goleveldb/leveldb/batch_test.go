@@ -10,8 +10,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.comsyndtr/goleveldb/leveldb/comparer"
-	"github.comsyndtr/goleveldb/leveldb/memdb"
+	"github.com/syndtr/goleveldb/leveldb/comparer"
+	"github.com/syndtr/goleveldb/leveldb/memdb"
 )
 
 type tbRec struct {

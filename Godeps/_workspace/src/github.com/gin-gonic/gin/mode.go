@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/gin-gonic/gin/binding"
-	"github.commattn/go-colorable"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin/binding"
+	"github.com/mattn/go-colorable"
 )
 
 const ENV_GIN_MODE = "GIN_MODE"
