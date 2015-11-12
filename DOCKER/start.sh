@@ -1,7 +1,7 @@
 #! /bin/bash
 
 ifExit(){
-	if [ $? -ne 0 ]; then
+	if [[ $? != 0 ]]; then
 		echo "ifExit"
 		echo "$1"
 		for var in "$@"
@@ -13,7 +13,7 @@ ifExit(){
 }
 
 if0Exit(){
-	if [ $? -e 0 ]; then
+	if [[ $? == 0 ]]; then
 		echo "if0Exit"
 		echo "$1"
 		for var in "$@"
@@ -38,7 +38,7 @@ fi
 
 # TODO: deal with chain numbers
 # and eg. $CONTAINER_NAME
-CHAIN_DIR="/home/$USER/.eris/blockchains/$CHAIN_ID"
+CHAIN_DIR="/home/$USER/.eris/chains/$CHAIN_ID"
 
 # set the tendermint directory
 TMROOT=$CHAIN_DIR
@@ -50,7 +50,7 @@ fi
 
 # our root chain
 if [ ! $ROOT_CHAIN_ID ]; then
-	ROOT_CHAIN_ID=etcb_testnet	
+	ROOT_CHAIN_ID=etcb_testnet
 fi
 if [ ! $NODE_ADDR ]; then
 	NODE_ADDR=interblock.io:46657
@@ -119,7 +119,6 @@ export ECM_PATH  # set by Dockerfile
 export MINTX_NODE_ADDR=$NODE_ADDR
 export MINTX_SIGN_ADDR=keys:4767
 
-
 # print the version
 bash $ECM_PATH/version.sh
 
@@ -134,14 +133,8 @@ case $CMD in
 	;;
 "run" ) $ECM_PATH/chain_run.sh
 	;;
-<<<<<<< HEAD
-"api" ) $ECM_PATH/chain_api.sh
-  ;;
-*)	echo "Enter a command for starting the chain (install, new, run, api)"
-=======
 "register" ) $ECM_PATH/chain_register.sh
 	;;
 *)	echo "Enter a command for starting the chain (new, install, run, register)"
->>>>>>> fix_versions
 	;;
 esac

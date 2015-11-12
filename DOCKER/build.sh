@@ -1,9 +1,5 @@
 #!/bin/sh
 
-<<<<<<< HEAD
-release_maj="0.10"
-release_min="0.10.2"
-=======
 if [ "$CIRCLE_BRANCH" ]
 then
   repo=`pwd`
@@ -15,7 +11,6 @@ branch=${CIRCLE_BRANCH:=master}
 
 release_min=$(cat $repo/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 release_maj=$(echo $release_min | cut -d . -f 1-2)
->>>>>>> fix_versions
 
 start=`pwd`
 image_base=quay.io/eris/erisdb
