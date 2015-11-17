@@ -191,31 +191,31 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/box",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/secretbox",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/poly1305",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ripemd160",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
+			"Rev": "02a186af8b62cb007f392270669b91be5527d39c"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
