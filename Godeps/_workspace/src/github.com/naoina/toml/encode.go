@@ -2,14 +2,13 @@ package toml
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 	"strconv"
 	"time"
 
 	"go/ast"
 
-	"github.com/naoina/go-stringutil"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/go-stringutil"
 )
 
 const (
@@ -42,29 +41,6 @@ const (
 //   Field int `toml:",omitempty"`
 func Marshal(v interface{}) ([]byte, error) {
 	return marshal(nil, "", reflect.ValueOf(v), false, false)
-}
-
-// A Encoder writes TOML to an output stream.
-type Encoder struct {
-	w io.Writer
-}
-
-// NewEncoder returns a new Encoder that writes to w.
-func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{
-		w: w,
-	}
-}
-
-// Encode writes the TOML of v to the stream.
-// See the documentation for Marshal for details about the conversion of Go values to TOML.
-func (e *Encoder) Encode(v interface{}) error {
-	b, err := Marshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = e.w.Write(b)
-	return err
 }
 
 // Marshaler is the interface implemented by objects that can marshal themshelves into valid TOML.

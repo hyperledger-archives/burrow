@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/syndtr/goleveldb/leveldb/journal"
-	"github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/journal"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
 )
 
 // Logging.
@@ -182,7 +182,7 @@ func (s *session) newManifest(rec *sessionRecord, v *version) (err error) {
 		defer v.release()
 	}
 	if rec == nil {
-		rec = &sessionRecord{}
+		rec = &sessionRecord{numLevel: s.o.GetNumLevel()}
 	}
 	s.fillRecord(rec, true)
 	v.fillRecord(rec)

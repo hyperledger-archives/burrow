@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +23,7 @@ import (
 	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
@@ -75,18 +75,8 @@ func NewNode() *Node {
 	config.Set("chain_id", state.ChainID)
 
 	// Get PrivValidator
-	var privValidator *types.PrivValidator
 	privValidatorFile := config.GetString("priv_validator_file")
-	if _, err := os.Stat(privValidatorFile); err == nil {
-		privValidator = types.LoadPrivValidator(privValidatorFile)
-		log.Notice("Loaded PrivValidator",
-			"file", privValidatorFile, "privValidator", privValidator)
-	} else {
-		privValidator = types.GenPrivValidator()
-		privValidator.SetFile(privValidatorFile)
-		privValidator.Save()
-		log.Notice("Generated PrivValidator", "file", privValidatorFile)
-	}
+	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
 
 	// Generate node PrivKey
 	privKey := acm.GenPrivKeyEd25519()
@@ -126,6 +116,17 @@ func NewNode() *Node {
 	// add the event switch to all services
 	// they should all satisfy events.Eventable
 	SetFireable(eventSwitch, pexReactor, bcReactor, mempoolReactor, consensusReactor)
+
+	// run the profile server
+	profileHost := config.GetString("prof_laddr")
+	if profileHost != "" {
+		go func() {
+			log.Warn("Profile server", "error", http.ListenAndServe(profileHost, nil))
+		}()
+	}
+
+	// set vm log level
+	vm.SetDebug(config.GetBool("vm_log"))
 
 	return &Node{
 		sw:               sw,
@@ -256,7 +257,7 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 	}
 
 	// include git hash in the nodeInfo if available
-	if rev, err := ReadFile(config.GetString("revisions_file")); err == nil {
+	if rev, err := ReadFile(config.GetString("revision_file")); err == nil {
 		nodeInfo.Version.Revision = string(rev)
 	}
 
@@ -286,6 +287,19 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 //------------------------------------------------------------------------------
 
 func RunNode() {
+
+	// Wait until the genesis doc becomes available
+	genDocFile := config.GetString("genesis_file")
+	if !FileExists(genDocFile) {
+		log.Notice(Fmt("Waiting for genesis file %v...", genDocFile))
+		for {
+			time.Sleep(time.Second)
+			if FileExists(genDocFile) {
+				break
+			}
+		}
+	}
+
 	// Create & start node
 	n := NewNode()
 	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))

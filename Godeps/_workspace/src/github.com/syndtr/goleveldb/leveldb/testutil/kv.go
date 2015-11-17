@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type KeyValueEntry struct {

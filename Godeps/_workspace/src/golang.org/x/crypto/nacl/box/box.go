@@ -18,9 +18,9 @@ This package is interoperable with NaCl: http://nacl.cr.yp.to/box.html.
 package box
 
 import (
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/golang.org/x/crypto/curve25519"
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/golang.org/x/crypto/nacl/secretbox"
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/golang.org/x/crypto/salsa20/salsa"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/curve25519"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/nacl/secretbox"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/salsa20/salsa"
 	"io"
 )
 

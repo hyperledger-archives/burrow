@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/naoina/toml"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
 )
 
 const (
