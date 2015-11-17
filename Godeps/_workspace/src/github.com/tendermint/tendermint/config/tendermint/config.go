@@ -1,7 +1,7 @@
 package tendermint
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
+	"github.com/naoina/toml"
 	"os"
 	"path"
 	"strings"
@@ -30,8 +30,8 @@ func initTMRoot(rootDir string) {
 	// Write default config file if missing.
 	if !FileExists(configFilePath) {
 		// Ask user for moniker
-		moniker := cfg.Prompt("Type hostname: ", "anonymous")
-		MustWriteFile(configFilePath, []byte(defaultConfig(moniker)))
+		// moniker := cfg.Prompt("Type hostname: ", "anonymous")
+		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")))
 	}
 	if !FileExists(genesisFilePath) {
 		MustWriteFile(genesisFilePath, []byte(defaultGenesis))
@@ -54,16 +54,13 @@ func GetConfig(rootDir string) cfg.Config {
 	if mapConfig.IsSet("chain_id") {
 		Exit("Cannot set 'chain_id' via config.toml")
 	}
-	if mapConfig.IsSet("version") {
-		Exit("Cannot set 'version' via config.toml")
-	}
-	mapConfig.SetDefault("chain_id", "tendermint_testnet_9")
-	mapConfig.SetDefault("version", "0.5.0") // JAE: encrypted p2p!
+	mapConfig.SetDefault("chain_id", "tendermint_testnet_10")
 	mapConfig.SetDefault("genesis_file", rootDir+"/genesis.json")
 	mapConfig.SetDefault("moniker", "anonymous")
 	mapConfig.SetDefault("node_laddr", "0.0.0.0:46656")
 	// mapConfig.SetDefault("seeds", "goldenalchemist.chaintest.net:46656")
 	mapConfig.SetDefault("fast_sync", true)
+	mapConfig.SetDefault("skip_upnp", false)
 	mapConfig.SetDefault("addrbook_file", rootDir+"/addrbook.json")
 	mapConfig.SetDefault("priv_validator_file", rootDir+"/priv_validator.json")
 	mapConfig.SetDefault("db_backend", "leveldb")
@@ -88,7 +85,7 @@ node_laddr = "0.0.0.0:46656"
 seeds = "goldenalchemist.chaintest.net:46656"
 fast_sync = true
 db_backend = "leveldb"
-log_level = "debug"
+log_level = "notice"
 rpc_laddr = "0.0.0.0:46657"
 `
 
@@ -98,81 +95,61 @@ func defaultConfig(moniker string) (defaultConfig string) {
 }
 
 var defaultGenesis = `{
-    "chain_id": "tendermint_testnet_9",
+    "chain_id": "tendermint_testnet_11",
     "accounts": [
         {
             "address": "9FCBA7F840A0BFEBBE755E853C9947270A912D04",
-            "amount": 690000000000
+            "amount": 1995999998000000
+        },
+        {
+            "address": "964B1493BBE3312278B7DEB94C39149F7899A345",
+            "amount": 100000000000000
+        },
+        {
+            "address": "B9FA4AB462B9C6BF6A62DB4AE77C9E7087209A04",
+            "amount": 1000000000000
+        },
+        {
+            "address": "F171824590D69386F709E7B6704B369C5A370D60",
+            "amount": 1000000000000
+        },
+        {
+            "address": "56EFE746A13D9A6054AC89C3E2A361C2DB8B9EAE",
+            "amount": 1000000000000
+        },
+        {
+            "address": "7C2E032D8407EDF66A04D88CF0E1D9B15D98AE2D",
+            "amount": 1000000000000
         },
         {
             "address": "A88A61069B6660F30F65E8786AFDD4F1D8F625E9",
-						"amount": 1000000
-				},
+            "amount": 1000000
+        },
         {
             "address": "EE2EE9247973B4AFC3867CFE5F415410AC251B61",
-						"amount": 1000000
-				}
+            "amount": 1000000
+        }
     ],
     "validators": [
         {
             "pub_key": [1, "178EC6008A4364508979C70CBF100BD4BCBAA12DDE6251F5F486B4FD09014F06"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "93E243AC8A01F723DE353A4FA1ED911529CCB6E5",
-                    "amount":  5000000000
-                }
-            ]
+            "amount": 100000000000
         },
         {
             "pub_key": [1, "2A77777CC51467DE42350D4A8F34720D527734189BE64C7A930DD169E1FED3C6"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "93E243AC8A01F723DE353A4FA1ED911529CCB6E5",
-                    "amount":  5000000000
-                }
-            ]
+            "amount": 100000000000
         },
         {
             "pub_key": [1, "3718E69D09B11B3AD3FA31AEF07EC416D2AEED241CACE7B0F30AE9803FFB0F08"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "93E243AC8A01F723DE353A4FA1ED911529CCB6E5",
-                    "amount":  5000000000
-                }
-            ]
+            "amount": 100000000000
         },
         {
             "pub_key": [1, "C6B0440DEACD1E4CF1C736CEB8E38E788B700BA2B2045A55CB657A455CF5F889"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "93E243AC8A01F723DE353A4FA1ED911529CCB6E5",
-                    "amount":  5000000000
-                }
-            ]
+            "amount": 100000000000
         },
         {
             "pub_key": [1, "3BA1190D54F91EFBF8B0125F7EC116AD4BA2894B6EE38564A5D5FD3230D91F7B"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "93E243AC8A01F723DE353A4FA1ED911529CCB6E5",
-                    "amount":  5000000000
-                }
-            ]
-        },
-        {
-            "pub_key": [1, "E56663353D01C58A1D4CDB4D14B70C2E3335BE1EBB6C3F697AF7882C03837962"],
-            "amount": 5000000000,
-            "unbond_to": [
-                {
-                    "address": "9E54C9ECA9A3FD5D4496696818DA17A9E17F69DA",
-                    "amount":  5000000000
-                }
-            ]
+            "amount": 100000000000
         }
     ]
 }`

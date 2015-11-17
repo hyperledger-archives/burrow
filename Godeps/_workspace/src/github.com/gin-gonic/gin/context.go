@@ -14,8 +14,8 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin/binding"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin/render"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/manucorporat/sse"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/net/context"
+	"github.com/manucorporat/sse"
 )
 
 const (

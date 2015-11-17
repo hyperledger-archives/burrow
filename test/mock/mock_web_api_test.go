@@ -180,7 +180,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 
 func (this *MockSuite) TestGetNameRegEntries() {
 	resp := this.get("/namereg")
-	ret := &ctypes.ResponseListNames{}
+	ret := &ctypes.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntries.Output)

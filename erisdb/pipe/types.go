@@ -3,8 +3,6 @@ package pipe
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	csus "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus/types"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
@@ -64,20 +62,20 @@ type (
 
 	// ConsensusState
 	ConsensusState struct {
-		Height     int              `json:"height"`
-		Round      int              `json:"round"`
-		Step       uint8            `json:"step"`
-		StartTime  string           `json:"start_time"`
-		CommitTime string           `json:"commit_time"`
-		Validators []*sm.Validator  `json:"validators"`
-		Proposal   *ctypes.Proposal `json:"proposal"`
+		Height     int                `json:"height"`
+		Round      int                `json:"round"`
+		Step       uint8              `json:"step"`
+		StartTime  string             `json:"start_time"`
+		CommitTime string             `json:"commit_time"`
+		Validators []*types.Validator `json:"validators"`
+		Proposal   *types.Proposal    `json:"proposal"`
 	}
 
 	// Validators
 	ValidatorList struct {
-		BlockHeight         int             `json:"block_height"`
-		BondedValidators    []*sm.Validator `json:"bonded_validators"`
-		UnbondingValidators []*sm.Validator `json:"unbonding_validators"`
+		BlockHeight         int                `json:"block_height"`
+		BondedValidators    []*types.Validator `json:"bonded_validators"`
+		UnbondingValidators []*types.Validator `json:"unbonding_validators"`
 	}
 
 	// *********************************** Events ***********************************

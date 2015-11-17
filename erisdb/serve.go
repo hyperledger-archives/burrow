@@ -82,7 +82,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	laddr := tmConfig.GetString("node_laddr")
 	if laddr != "" {
-		l := p2p.NewDefaultListener("tcp", laddr, false)
+		l := p2p.NewDefaultListener("tcp", laddr)
 		nd.AddListener(l)
 	}
 

@@ -4,15 +4,14 @@ import (
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
 )
 
 type TxCache struct {
 	backend  *BlockCache
 	accounts map[Word256]vmAccountInfo
 	storages map[Tuple256]Word256
-	logs     []*vm.Log
 }
 
 func NewTxCache(backend *BlockCache) *TxCache {
@@ -20,7 +19,6 @@ func NewTxCache(backend *BlockCache) *TxCache {
 		backend:  backend,
 		accounts: make(map[Word256]vmAccountInfo),
 		storages: make(map[Tuple256]Word256),
-		logs:     make([]*vm.Log, 0),
 	}
 }
 
@@ -138,18 +136,11 @@ func (cache *TxCache) Sync() {
 	}
 }
 
-func (cache *TxCache) AddLog(log *vm.Log) {
-	cache.logs = append(cache.logs, log)
-}
-
 //-----------------------------------------------------------------------------
 
 // Convenience function to return address of new contract
 func NewContractAddress(caller []byte, nonce int) []byte {
-	temp := make([]byte, 32+8)
-	copy(temp, caller)
-	PutInt64BE(temp[32:], int64(nonce))
-	return sha3.Sha3(temp)[:20]
+	return types.NewContractAddress(caller, nonce)
 }
 
 // Converts backend.Account to vm.Account struct.

@@ -8,9 +8,8 @@ machine:
 
 dependencies:
   pre:
-    - sudo curl -L -o /usr/bin/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.6.0-circleci'; chmod 0755 /usr/bin/docker; true
+    - sudo curl -L -o /usr/bin/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.8.2-circleci'; chmod 0755 /usr/bin/docker; true
     - sudo service docker start
-    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
 
   override:
@@ -26,11 +25,6 @@ deployment:
   master:
     branch: master
     commands:
-      - "export ERISDB_BUILD_BRANCH=$CIRCLE_BRANCH && DOCKER/build.sh"
-      - docker push eris/erisdb:latest
-      - docker push eris/erisdb:0.10
-  develop:
-    branch: develop
-    commands:
-      - "export ERISDB_BUILD_BRANCH=$CIRCLE_BRANCH && DOCKER/build.sh"
-      - docker push eris/erisdb:develop
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - DOCKER/build.sh
+      - docker push quay.io/eris/erisdb

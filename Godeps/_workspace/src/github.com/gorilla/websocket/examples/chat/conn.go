@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"

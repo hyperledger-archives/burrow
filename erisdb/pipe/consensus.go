@@ -3,7 +3,7 @@ package pipe
 import (
 	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
@@ -23,7 +23,7 @@ func (this *consensus) State() (*ConsensusState, error) {
 	peerRoundStates := []string{}
 	for _, peer := range this.p2pSwitch.Peers().List() {
 		// TODO: clean this up?
-		peerState := peer.Data.Get(cm.PeerStateKey).(*cm.PeerState)
+		peerState := peer.Data.Get(types.PeerStateKey).(*cm.PeerState)
 		peerRoundState := peerState.GetRoundState()
 		peerRoundStateStr := peer.Key + ":" + string(wire.JSONBytes(peerRoundState))
 		peerRoundStates = append(peerRoundStates, peerRoundStateStr)
@@ -34,16 +34,16 @@ func (this *consensus) State() (*ConsensusState, error) {
 // Get all validators.
 func (this *consensus) Validators() (*ValidatorList, error) {
 	var blockHeight int
-	bondedValidators := make([]*state.Validator, 0)
-	unbondingValidators := make([]*state.Validator, 0)
+	bondedValidators := make([]*types.Validator, 0)
+	unbondingValidators := make([]*types.Validator, 0)
 
 	s := this.consensusState.GetState()
 	blockHeight = s.LastBlockHeight
-	s.BondedValidators.Iterate(func(index int, val *state.Validator) bool {
+	s.BondedValidators.Iterate(func(index int, val *types.Validator) bool {
 		bondedValidators = append(bondedValidators, val)
 		return false
 	})
-	s.UnbondingValidators.Iterate(func(index int, val *state.Validator) bool {
+	s.UnbondingValidators.Iterate(func(index int, val *types.Validator) bool {
 		unbondingValidators = append(unbondingValidators, val)
 		return false
 	})

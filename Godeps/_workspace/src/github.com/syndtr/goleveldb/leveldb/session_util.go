@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/journal"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/syndtr/goleveldb/leveldb/journal"
+	"github.com/syndtr/goleveldb/leveldb/storage"
 )
 
 // Logging.

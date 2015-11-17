@@ -1,9 +1,11 @@
 package filters
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+
+	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 var testDataJson = `{
@@ -269,10 +271,9 @@ var testDataJson = `{
 var serverDuration uint = 100
 
 type (
-	
 	ChainData struct {
-		PrivValidator *state.PrivValidator `json:"priv_validator"`
-		Genesis       *state.GenesisDoc    `json:"genesis"`
+		PrivValidator *types.PrivValidator `json:"priv_validator"`
+		Genesis       *stypes.GenesisDoc   `json:"genesis"`
 	}
 
 	GetAccountData struct {

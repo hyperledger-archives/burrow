@@ -42,7 +42,7 @@ const (
 	SIGN_TX                   = SERVICE_NAME + ".signTx"
 	TRANSACT                  = SERVICE_NAME + ".transact"
 	TRANSACT_AND_HOLD         = SERVICE_NAME + ".transactAndHold"
-	SEND                  	  = SERVICE_NAME + ".send"
+	SEND                      = SERVICE_NAME + ".send"
 	SEND_AND_HOLD             = SERVICE_NAME + ".sendAndHold"
 	TRANSACT_NAMEREG          = SERVICE_NAME + ".transactNameReg"
 	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
