@@ -14,8 +14,6 @@ import (
 	"path"
 )
 
-const TENDERMINT_VERSION = "0.5.0"
-
 var log = log15.New("module", "eris/erisdb_server")
 var tmConfig cfg.Config
 
@@ -52,7 +50,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	// Get tendermint configuration
 	tmConfig = tmcfg.GetConfig(workDir)
-	tmConfig.Set("version", TENDERMINT_VERSION)
+	tmConfig.Set("version", node.Version)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
 
 	// Set the node up.
