@@ -2,7 +2,6 @@ package pipe
 
 import (
 	"fmt"
-	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
@@ -14,13 +13,19 @@ import (
 
 const BLOCK_MAX = 50
 
+type BlockStore interface {
+	Height() int
+	LoadBlockMeta(height int) *types.BlockMeta
+	LoadBlock(height int) *types.Block
+}
+
 // The blockchain struct.
 type blockchain struct {
-	blockStore    *bc.BlockStore
+	blockStore    BlockStore
 	filterFactory *FilterFactory
 }
 
-func newBlockchain(blockStore *bc.BlockStore) *blockchain {
+func newBlockchain(blockStore BlockStore) *blockchain {
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("height", &sync.Pool{

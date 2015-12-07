@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	"sync"
+
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	types "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"sync"
+
+	"github.com/eris-ltd/eris-db/tmsp"
 )
 
 // The net struct.
 type namereg struct {
-	consensusState *cm.ConsensusState
-	filterFactory  *FilterFactory
+	erisdbApp     *tmsp.ErisDBApp
+	filterFactory *FilterFactory
 }
 
-func newNamereg(consensusState *cm.ConsensusState) *namereg {
+func newNamereg(erisdbApp *tmsp.ErisDBApp) *namereg {
 
 	ff := NewFilterFactory()
 
@@ -44,11 +46,11 @@ func newNamereg(consensusState *cm.ConsensusState) *namereg {
 		},
 	})
 
-	return &namereg{consensusState, ff}
+	return &namereg{erisdbApp, ff}
 }
 
 func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
-	st := this.consensusState.GetState() // performs a copy
+	st := this.erisdbApp.GetState() // performs a copy
 	entry := st.GetNameRegEntry(key)
 	if entry == nil {
 		return nil, fmt.Errorf("Entry %s not found", key)
@@ -59,7 +61,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResultListNames, error) {
 	var blockHeight int
 	var names []*types.NameRegEntry
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	blockHeight = state.LastBlockHeight
 	filter, err := this.filterFactory.NewFilter(filters)
 	if err != nil {

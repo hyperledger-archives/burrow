@@ -3,9 +3,11 @@ package pipe
 
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
+	em "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+
+	"github.com/eris-ltd/eris-db/tmsp"
 )
 
 type (
@@ -79,7 +81,8 @@ type (
 
 // Base struct for getting rpc proxy objects (node.Node has no interface).
 type PipeImpl struct {
-	tNode      *node.Node
+	//tNode      *node.Node
+	erisdbApp  *tmsp.ErisDBApp
 	accounts   Accounts
 	blockchain Blockchain
 	consensus  Consensus
@@ -90,23 +93,28 @@ type PipeImpl struct {
 }
 
 // Create a new rpc pipe.
-func NewPipe(tNode *node.Node) Pipe {
-	accounts := newAccounts(tNode.ConsensusState(), tNode.MempoolReactor())
-	blockchain := newBlockchain(tNode.BlockStore())
-	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
-	events := newEvents(tNode.EventSwitch())
-	namereg := newNamereg(tNode.ConsensusState())
-	net := newNetwork(tNode.Switch())
-	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
+func NewPipe(erisdbApp *tmsp.ErisDBApp) Pipe {
+	eventSwitch := em.NewEventSwitch()
+	events := newEvents(eventSwitch)
+
+	accounts := newAccounts(erisdbApp)
+	namereg := newNamereg(erisdbApp)
+	txs := newTransactor(eventSwitch, erisdbApp, events)
+
+	// TODO: make interface to tendermint core's rpc for these
+	// blockchain := newBlockchain(blockStore)
+	// consensus := newConsensus(erisdbApp)
+	// net := newNetwork(erisdbApp)
+
 	return &PipeImpl{
-		tNode,
-		accounts,
-		blockchain,
-		consensus,
-		events,
-		namereg,
-		net,
-		txs,
+		erisdbApp: erisdbApp,
+		accounts:  accounts,
+		// blockchain,
+		// consensus,
+		events:  events,
+		namereg: namereg,
+		// net,
+		txs: txs,
 	}
 }
 

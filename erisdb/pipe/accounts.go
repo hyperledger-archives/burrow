@@ -4,21 +4,21 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sync"
+
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
-	"sync"
+
+	"github.com/eris-ltd/eris-db/tmsp"
 )
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
-	consensusState *cs.ConsensusState
-	mempoolReactor *mempl.MempoolReactor
-	filterFactory  *FilterFactory
+	erisdbApp     *tmsp.ErisDBApp
+	filterFactory *FilterFactory
 }
 
-func newAccounts(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor) *accounts {
+func newAccounts(erisdbApp *tmsp.ErisDBApp) *accounts {
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("code", &sync.Pool{
@@ -33,7 +33,7 @@ func newAccounts(consensusState *cs.ConsensusState, mempoolReactor *mempl.Mempoo
 		},
 	})
 
-	return &accounts{consensusState, mempoolReactor, ff}
+	return &accounts{erisdbApp, ff}
 
 }
 
@@ -56,7 +56,7 @@ func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*account.PrivAccoun
 // Get all accounts.
 func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
 	accounts := make([]*account.Account, 0)
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	filter, err := this.filterFactory.NewFilter(fda)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
@@ -73,7 +73,7 @@ func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
 
 // Get an account.
 func (this *accounts) Account(address []byte) (*account.Account, error) {
-	cache := this.mempoolReactor.Mempool.GetCache()
+	cache := this.erisdbApp.GetState() // NOTE: we want to read from mempool!
 	acc := cache.GetAccount(address)
 	if acc == nil {
 		acc = this.newAcc(address)
@@ -85,7 +85,7 @@ func (this *accounts) Account(address []byte) (*account.Account, error) {
 // Both the key and value is returned.
 func (this *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	account := state.GetAccount(address)
 	if account == nil {
 		return &StorageItem{key, []byte{}}, nil
@@ -103,7 +103,7 @@ func (this *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 // Get the storage of the account with address 'address'.
 func (this *accounts) Storage(address []byte) (*Storage, error) {
 
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	account := state.GetAccount(address)
 	storageItems := make([]StorageItem, 0)
 	if account == nil {

@@ -4,31 +4,30 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
 	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-	"sync"
-	"time"
+
+	"github.com/eris-ltd/eris-db/tmsp"
 )
 
 type transactor struct {
-	eventSwitch    tEvents.Fireable
-	consensusState *cs.ConsensusState
-	mempoolReactor *mempl.MempoolReactor
-	eventEmitter   EventEmitter
-	txMtx          *sync.Mutex
+	eventSwitch  tEvents.Fireable
+	erisdbApp    *tmsp.ErisDBApp
+	eventEmitter EventEmitter
+	txMtx        *sync.Mutex
 }
 
-func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor, eventEmitter EventEmitter) *transactor {
+func newTransactor(eventSwitch tEvents.Fireable, erisdbApp *tmsp.ErisDBApp, eventEmitter EventEmitter) *transactor {
 	txs := &transactor{
 		eventSwitch,
-		consensusState,
-		mempoolReactor,
+		erisdbApp,
 		eventEmitter,
 		&sync.Mutex{},
 	}
@@ -39,7 +38,7 @@ func newTransactor(eventSwitch tEvents.Fireable, consensusState *cs.ConsensusSta
 // Cannot be used to create new contracts
 func (this *transactor) Call(fromAddress, toAddress, data []byte) (*Call, error) {
 
-	st := this.consensusState.GetState() // performs a copy
+	st := this.erisdbApp.GetState() // performs a copy
 	cache := state.NewBlockCache(st)
 	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
@@ -74,8 +73,8 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) 
 	if fromAddress == nil {
 		fromAddress = []byte{}
 	}
-	st := this.consensusState.GetState() // performs a copy
-	cache := this.mempoolReactor.Mempool.GetCache()
+	st := this.erisdbApp.GetState()  // performs a copy
+	cache := state.NewBlockCache(st) // TODO: should use mempool cache!
 	callee := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
@@ -97,10 +96,13 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) 
 
 // Broadcast a transaction.
 func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
-	err := this.mempoolReactor.BroadcastTx(tx)
-	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
-	}
+	// TODO-RPC !
+	/*
+		err := this.mempoolReactor.BroadcastTx(tx)
+		if err != nil {
+			return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+		}*/
+
 	chainId := config.GetString("chain_id")
 	txHash := types.TxID(chainId, tx)
 	var createsContract uint8
@@ -117,8 +119,8 @@ func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
 
 // Get all unconfirmed txs.
 func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
-	transactions := this.mempoolReactor.Mempool.GetProposalTxs()
-	return &UnconfirmedTxs{transactions}, nil
+	// TODO-RPC
+	return &UnconfirmedTxs{}, nil
 }
 
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error) {
@@ -136,7 +138,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
-	cache := this.mempoolReactor.Mempool.GetCache()
+	cache := this.erisdbApp.GetState() // TODO: use mempool cache!
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
 	if acc == nil {
@@ -216,7 +218,7 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
-	cache := this.mempoolReactor.Mempool.GetCache()
+	cache := this.erisdbApp.GetState() // TODO: use mempool cache
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
 	if acc == nil {
