@@ -2,12 +2,12 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	em "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
+	em "github.com/tendermint/tendermint/events"
+	"github.com/tendermint/tendermint/types"
 
 	"github.com/eris-ltd/eris-db/tmsp"
+	txs "github.com/eris-ltd/eris-db/txs"
 )
 
 type (
@@ -53,8 +53,8 @@ type (
 	}
 
 	NameReg interface {
-		Entry(key string) (*types.NameRegEntry, error)
-		Entries([]*FilterData) (*ctypes.ResultListNames, error)
+		Entry(key string) (*txs.NameRegEntry, error)
+		Entries([]*FilterData) (*ResultListNames, error)
 	}
 
 	Net interface {
@@ -70,12 +70,12 @@ type (
 	Transactor interface {
 		Call(fromAddress, toAddress, data []byte) (*Call, error)
 		CallCode(fromAddress, code, data []byte) (*Call, error)
-		BroadcastTx(tx types.Tx) (*Receipt, error)
+		BroadcastTx(tx txs.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
-		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error)
+		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
-		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
+		SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error)
 	}
 )
 

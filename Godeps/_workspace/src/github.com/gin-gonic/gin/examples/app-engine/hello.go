@@ -1,7 +1,7 @@
 package hello
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"net/http"
 )
 

@@ -4,8 +4,8 @@ package transacting
 import (
 	"bytes"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
-	// "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/stretchr/testify/suite"
+	// "github.com/tendermint/tendermint/types"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	// ep "github.com/eris-ltd/eris-db/erisdb/pipe"
@@ -17,8 +17,8 @@ import (
 	"os"
 	"path"
 	"testing"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	"github.com/gin-gonic/gin"
+	"github.com/tendermint/log15"
 	"runtime"
 )
 

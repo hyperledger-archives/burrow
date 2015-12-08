@@ -7,14 +7,14 @@ import (
 	"os"
 	"path"
 
-	. "github.com/tendermint/tendermint/common"
-	stypes "github.com/tendermint/tendermint/state/types"
+	. "github.com/tendermint/go-common"
+	stypes "github.com/eris-ltd/eris-db/state/types"
 	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/wire"
+	"github.com/tendermint/go-wire"
 )
 
 const TendermintConfigDefault = `# This is a TOML config file.
-# For more information, see https://github.com/toml-lang/toml
+# For more information, see https:/github.com/toml-lang/toml
 
 moniker = "__MONIKER__"
 seeds = ""

@@ -3,10 +3,11 @@ package erisdb
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"strings"
+
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	"strings"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 // TODO use the method name definition file.

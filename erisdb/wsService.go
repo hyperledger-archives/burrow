@@ -7,7 +7,7 @@ import (
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 // Used for ErisDb. Implements WebSocketService.

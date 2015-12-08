@@ -3,9 +3,9 @@ package wire
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
+	"code.google.com/p/go.crypto/ripemd160"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/common"
 )
 
 func BinaryBytes(o interface{}) []byte {

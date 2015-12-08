@@ -4,8 +4,8 @@ import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	stypes "github.com/eris-ltd/eris-db/state/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 var testDataJson = `{

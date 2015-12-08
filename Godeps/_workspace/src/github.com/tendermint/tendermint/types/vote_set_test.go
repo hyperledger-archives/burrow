@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"sort"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common/test"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
+	. "github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/common/test"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
 
 	"testing"
 )

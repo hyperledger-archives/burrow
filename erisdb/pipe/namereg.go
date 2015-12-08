@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	types "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-
 	"github.com/eris-ltd/eris-db/tmsp"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 // The net struct.
@@ -58,7 +56,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResultListNames, error) {
+func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 	var blockHeight int
 	var names []*types.NameRegEntry
 	state := this.erisdbApp.GetState()
@@ -74,7 +72,12 @@ func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResultListNames, er
 		}
 		return false
 	})
-	return &ctypes.ResultListNames{blockHeight, names}, nil
+	return &ResultListNames{blockHeight, names}, nil
+}
+
+type ResultListNames struct {
+	BlockHeight int                   `json:"block_height"`
+	Names       []*types.NameRegEntry `json:"names"`
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.

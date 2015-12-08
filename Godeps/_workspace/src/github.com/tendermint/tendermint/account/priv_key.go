@@ -1,10 +1,10 @@
 package account
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519/extra25519"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	"github.com/tendermint/ed25519"
+	"github.com/tendermint/ed25519/extra25519"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/wire"
 )
 
 // PrivKey is part of PrivAccount and state.PrivValidator.

@@ -8,11 +8,11 @@ import (
 	"math"
 	"sync"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	acm "github.com/tendermint/tendermint/account"
+	. "github.com/tendermint/tendermint/common"
+	"github.com/tendermint/tendermint/wire"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
+	"github.com/tendermint/ed25519"
 )
 
 const (

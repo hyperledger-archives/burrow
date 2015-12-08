@@ -1,13 +1,13 @@
 package tendermint
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml"
+	"github.com/naoina/toml"
 	"os"
 	"path"
 	"strings"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
+	. "github.com/tendermint/tendermint/common"
+	cfg "github.com/tendermint/tendermint/config"
 )
 
 func getTMRoot(rootDir string) string {

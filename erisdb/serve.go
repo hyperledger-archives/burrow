@@ -6,17 +6,17 @@ import (
 	"bytes"
 	"path"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
-	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	sm "github.com/eris-ltd/eris-db/state"
+	stypes "github.com/eris-ltd/eris-db/state/types"
+	. "github.com/tendermint/go-common"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/go-p2p"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/log15"
+	cfg "github.com/tendermint/go-config"
+	tmcfg "github.com/tendermint/tendermint/config/tendermint"
+	"github.com/tendermint/tendermint/events"
+	"github.com/tendermint/tendermint/node"
 
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
@@ -37,7 +37,7 @@ var tmConfig cfg.Config
 // that.
 func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	log.Info("ErisDB Serve initializing.")
-	errEns := EnsureDir(workDir)
+	errEns := EnsureDir(workDir, 0777)
 
 	if errEns != nil {
 		return nil, errEns
@@ -82,7 +82,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
 		state.Save()
 		// write the gendoc to db
-		buf, n, err := new(bytes.Buffer), new(int64), new(error)
+		buf, n, err := new(bytes.Buffer), new(int), new(error)
 		wire.WriteJSON(genDoc, buf, n, err)
 		stateDB.Set(stypes.GenDocKey, buf.Bytes())
 		if *err != nil {
@@ -137,7 +137,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	laddr := tmConfig.GetString("node_laddr")
 	if laddr != "" {
-		l := p2p.NewDefaultListener("tcp", laddr)
+		l := p2p.NewDefaultListener("tcp", laddr, tmConfig.GetBool("skip_upnp"))
 		nd.AddListener(l)
 	}
 

@@ -1,9 +1,10 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	csus "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
+	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
+	csus "github.com/tendermint/tendermint/consensus"
+	"github.com/tendermint/tendermint/types"
 )
 
 type (
@@ -124,8 +125,8 @@ type (
 
 	// used in Peers and BlockchainInfo
 	Peer struct {
-		nodeInfo   *types.NodeInfo `json:"node_info"`
-		IsOutbound bool            `json:"is_outbound"`
+		nodeInfo   *p2p.NodeInfo `json:"node_info"`
+		IsOutbound bool          `json:"is_outbound"`
 	}
 
 	// *********************************** Transactions ***********************************

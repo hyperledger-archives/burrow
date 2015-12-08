@@ -3,14 +3,16 @@ package erisdb
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/util"
-	"strconv"
-	"strings"
 )
 
 // Provides a REST-like web-api. Implements server.Server
@@ -424,9 +426,9 @@ func (this *RestServer) handleCallCode(c *gin.Context) {
 }
 
 func (this *RestServer) handleTransact(c *gin.Context) {
-	
+
 	_, hold := c.Get("hold")
-	
+
 	param := &TransactParam{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
@@ -537,7 +539,7 @@ func parseTxModifier(c *gin.Context) {
 	hold := c.Query("hold")
 	if hold == "true" {
 		c.Set("hold", true)
-	} else if (hold != "") {
+	} else if hold != "" {
 		if hold != "false" {
 			c.Writer.WriteHeader(400)
 			c.Writer.Write([]byte("tx hold must be either 'true' or 'false', found: " + hold))

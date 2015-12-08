@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	acm "github.com/eris-ltd/eris-db/account"
+	cmn "github.com/tendermint/go-common"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )
@@ -38,31 +38,31 @@ func newAccounts(erisdbApp *tmsp.ErisDBApp) *accounts {
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	pa := account.GenPrivAccount()
+func (this *accounts) GenPrivAccount() (*acm.PrivAccount, error) {
+	pa := acm.GenPrivAccount()
 	return pa, nil
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error) {
+func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*acm.PrivAccount, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
 	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GenPrivAccountFromPrivKeyBytes(privKey)
 	return pa, nil
 }
 
 // Get all accounts.
 func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
-	accounts := make([]*account.Account, 0)
+	accounts := make([]*acm.Account, 0)
 	state := this.erisdbApp.GetState()
 	filter, err := this.filterFactory.NewFilter(fda)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
 	state.GetAccounts().Iterate(func(key interface{}, value interface{}) bool {
-		acc := value.(*account.Account)
+		acc := value.(*acm.Account)
 		if filter.Match(acc) {
 			accounts = append(accounts, acc)
 		}
@@ -72,7 +72,7 @@ func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
 }
 
 // Get an account.
-func (this *accounts) Account(address []byte) (*account.Account, error) {
+func (this *accounts) Account(address []byte) (*acm.Account, error) {
 	cache := this.erisdbApp.GetState() // NOTE: we want to read from mempool!
 	acc := cache.GetAccount(address)
 	if acc == nil {
@@ -121,8 +121,8 @@ func (this *accounts) Storage(address []byte) (*Storage, error) {
 }
 
 // Create a new account.
-func (this *accounts) newAcc(address []byte) *account.Account {
-	return &account.Account{
+func (this *accounts) newAcc(address []byte) *acm.Account {
+	return &acm.Account{
 		Address:     address,
 		PubKey:      nil,
 		Sequence:    0,
@@ -165,7 +165,7 @@ func (this *AccountCodeFilter) Configure(fd *FilterData) error {
 }
 
 func (this *AccountCodeFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}
@@ -196,7 +196,7 @@ func (this *AccountBalanceFilter) Configure(fd *FilterData) error {
 }
 
 func (this *AccountBalanceFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}

@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/net/netutil"
+	"golang.org/x/net/netutil"
 )
 
 // Server wraps an http.Server with graceful connection handling.

@@ -11,7 +11,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin/render"
+	"github.com/gin-gonic/gin/render"
 )
 
 const Version = "v1.0rc2"

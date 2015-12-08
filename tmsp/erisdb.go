@@ -7,12 +7,13 @@ import (
 	//sm "github.com/eris-ltd/eris-db/state"
 	// txs "github.com/eris-ltd/eris-db/txs"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	txs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	sm "github.com/eris-ltd/eris-db/state"
+	types "github.com/eris-ltd/eris-db/txs"
 
-	"github.com/tendermint/tmsp/types"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/tendermint/events"
+
+	tmsp "github.com/tendermint/tmsp/types"
 )
 
 //--------------------------------------------------------------------------------
@@ -39,7 +40,7 @@ func NewErisDBApp(s *sm.State, evsw *events.EventSwitch) *ErisDBApp {
 }
 
 // Implements tmsp.Application
-func (app *ErisDBApp) Open() types.AppContext {
+func (app *ErisDBApp) Open() tmsp.AppContext {
 	app.mtx.Lock()
 	state := app.state.Copy()
 	app.mtx.Unlock()
@@ -72,36 +73,36 @@ func (appC *ErisDBAppContext) Info() []string {
 	return []string{"ErisDB"}
 }
 
-func (appC *ErisDBAppContext) SetOption(key string, value string) types.RetCode {
+func (appC *ErisDBAppContext) SetOption(key string, value string) tmsp.RetCode {
 	return 0
 }
 
-func (appC ErisDBAppContext) AppendTx(txBytes []byte) ([]types.Event, types.RetCode) {
-	var n int64
+func (appC ErisDBAppContext) AppendTx(txBytes []byte) ([]tmsp.Event, tmsp.RetCode) {
+	var n int
 	var err error
-	tx := new(txs.Tx)
+	tx := new(types.Tx)
 	buf := bytes.NewBuffer(txBytes)
-	wire.ReadBinaryPtr(tx, buf, &n, &err)
+	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
 		// TODO: handle error
-		return nil, types.RetCodeEncodingError
+		return nil, tmsp.RetCodeEncodingError
 	}
 
 	err = sm.ExecTx(appC.cache, *tx, true, appC.evc)
 	if err != nil {
 		// TODO: handle error
-		return nil, types.RetCodeInternalError // ?!
+		return nil, tmsp.RetCodeInternalError // ?!
 	}
 
-	return nil, types.RetCodeOK
+	return nil, tmsp.RetCodeOK
 }
 
-func (appC *ErisDBAppContext) GetHash() ([]byte, types.RetCode) {
+func (appC *ErisDBAppContext) GetHash() ([]byte, tmsp.RetCode) {
 	appC.cache.Sync()
-	return appC.state.Hash(), types.RetCodeOK
+	return appC.state.Hash(), tmsp.RetCodeOK
 }
 
-func (appC *ErisDBAppContext) Commit() types.RetCode {
+func (appC *ErisDBAppContext) Commit() tmsp.RetCode {
 	// save state to disk
 	appC.state.Save()
 
@@ -115,7 +116,7 @@ func (appC *ErisDBAppContext) Commit() types.RetCode {
 	return 0
 }
 
-func (appC *ErisDBAppContext) Rollback() types.RetCode {
+func (appC *ErisDBAppContext) Rollback() tmsp.RetCode {
 	appC.app.mtx.Lock()
 	appC.state = appC.app.state
 	appC.app.mtx.Unlock()
@@ -124,11 +125,11 @@ func (appC *ErisDBAppContext) Rollback() types.RetCode {
 	return 0
 }
 
-func (appC *ErisDBAppContext) AddListener(key string) types.RetCode {
+func (appC *ErisDBAppContext) AddListener(key string) tmsp.RetCode {
 	return 0
 }
 
-func (appC *ErisDBAppContext) RemListener(key string) types.RetCode {
+func (appC *ErisDBAppContext) RemListener(key string) tmsp.RetCode {
 	return 0
 }
 

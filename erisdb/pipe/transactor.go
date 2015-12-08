@@ -7,12 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/evm"
+	"github.com/eris-ltd/eris-db/state"
+	"github.com/eris-ltd/eris-db/txs"
+
+	cmn "github.com/tendermint/go-common"
+	tEvents "github.com/tendermint/tendermint/events"
+	mintTypes "github.com/tendermint/tendermint/types"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )
@@ -182,7 +184,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	}
 	wc := make(chan *types.EventDataCall)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt types.EventData) {
+	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt mintTypes.EventData) {
 		event := evt.(types.EventDataCall)
 		if bytes.Equal(event.TxID, rec.TxHash) {
 			wc <- &event

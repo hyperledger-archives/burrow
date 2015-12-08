@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/tendermint/tendermint/common"
 )
 
 // Not goroutine safe

@@ -3,8 +3,8 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
 	"os"
