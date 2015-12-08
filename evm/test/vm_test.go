@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/tendermint/events"
-	"github.com/tendermint/tendermint/types"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	. "github.com/eris-ltd/eris-db/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )

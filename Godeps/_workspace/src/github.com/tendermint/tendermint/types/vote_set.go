@@ -6,9 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
 
 // VoteSet helps collect signatures from validators at each height+round
@@ -130,7 +129,7 @@ func (voteSet *VoteSet) addVote(val *Validator, valIndex int, vote *Vote) (bool,
 	}
 
 	// Check signature.
-	if !val.PubKey.VerifyBytes(acm.SignBytes(config.GetString("chain_id"), vote), vote.Signature) {
+	if !val.PubKey.VerifyBytes(SignBytes(config.GetString("chain_id"), vote), vote.Signature) {
 		// Bad signature.
 		return false, 0, ErrVoteInvalidSignature
 	}
@@ -202,6 +201,9 @@ func (voteSet *VoteSet) HasTwoThirdsMajority() bool {
 
 func (voteSet *VoteSet) IsCommit() bool {
 	if voteSet == nil {
+		return false
+	}
+	if voteSet.type_ != VoteTypePrecommit {
 		return false
 	}
 	voteSet.mtx.Lock()
@@ -302,32 +304,20 @@ func (voteSet *VoteSet) MakeValidation() *Validation {
 //--------------------------------------------------------------------------------
 // For testing...
 
-func RandValidator(randBonded bool, minBonded int64) (*ValidatorInfo, *Validator, *PrivValidator) {
+func RandValidator(randPower bool, minPower int64) (*Validator, *PrivValidator) {
 	privVal := GenPrivValidator()
 	_, tempFilePath := Tempfile("priv_validator_")
 	privVal.SetFile(tempFilePath)
-	bonded := minBonded
-	if randBonded {
-		bonded += int64(RandUint32())
-	}
-	valInfo := &ValidatorInfo{
-		Address: privVal.Address,
-		PubKey:  privVal.PubKey,
-		UnbondTo: []*TxOutput{&TxOutput{
-			Amount:  bonded,
-			Address: privVal.Address,
-		}},
-		FirstBondHeight: 0,
-		FirstBondAmount: bonded,
+	votePower := minPower
+	if randPower {
+		votePower += int64(RandUint32())
 	}
 	val := &Validator{
-		Address:          valInfo.Address,
-		PubKey:           valInfo.PubKey,
-		BondHeight:       0,
-		UnbondHeight:     0,
+		Address:          privVal.Address,
+		PubKey:           privVal.PubKey,
 		LastCommitHeight: 0,
-		VotingPower:      valInfo.FirstBondAmount,
+		VotingPower:      votePower,
 		Accum:            0,
 	}
-	return valInfo, val, privVal
+	return val, privVal
 }

@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/eris-ltd/eris-db",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.2",
 	"Packages": [
 		"./..."
 	],
@@ -11,11 +11,6 @@
 			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
 		},
 		{
-			"ImportPath": "code.google.com/p/mxk/go1/flowcontrol",
-			"Comment": "null-12",
-			"Rev": "5ff2502e25566863e8a0136c7aae8838e4c7de39"
-		},
-		{
 			"ImportPath": "github.com/agl/ed25519/edwards25519",
 			"Rev": "d2b94fd789ea21d12fac1a4443dd3a3f79cda72c"
 		},
@@ -23,10 +18,6 @@
 			"ImportPath": "github.com/gin-gonic/gin",
 			"Comment": "v1.0rc1-104-g1a7ab6e",
 			"Rev": "1a7ab6e4d5fdc72d6df30ef562102ae6e0d18518"
-		},
-		{
-			"ImportPath": "github.com/google/go-snappy/snappy",
-			"Rev": "eaa750b9bf4dcb7cb20454be850613b66cda3273"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",
@@ -79,11 +70,55 @@
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
-			"Rev": "a06509502ca32565bdf74afc1e573050023f261c"
+			"Rev": "4875955338b0a434238a31165cb87255ab6e9e4a"
+		},
+		{
+			"ImportPath": "github.com/syndtr/gosnappy/snappy",
+			"Rev": "156a073208e131d7d2e212cb749feae7c339e846"
 		},
 		{
 			"ImportPath": "github.com/tendermint/ed25519",
 			"Rev": "533fb6548e2071076888eda3c38749d707ba49bc"
+		},
+		{
+			"ImportPath": "github.com/tendermint/flowcontrol",
+			"Rev": "84d9671090430e8ec80e35b339907e0579b999eb"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-clist",
+			"Rev": "e3d88d2d7964e5f6a98bf27267f34c2e9f1737d2"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-common",
+			"Rev": "3b50efbe025fae9be5c7efa01ad1781ac4221e85"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-config",
+			"Rev": "3b895c7ce4999ee6fff7b7ca6253f0b41d9bf85c"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-crypto",
+			"Rev": "32b3a27a9a7a4c3c94c406cc10fc7749e639bdd3"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-db",
+			"Rev": "28d39f8726c76b163e881c3d05dad227c93200ae"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-logger",
+			"Rev": "b072ed317354e6b507d6abde4c0cfbb516f31ab5"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-merkle",
+			"Rev": "57679f46d7faf8017d112f6948bd605a83094c1f"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-p2p",
+			"Rev": "4347b91b89fb93bf37e1d233468f0d879df941ba"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-wire",
+			"Rev": "7effba5ee3e0c4ca611f9e0227843c863d05cd02"
 		},
 		{
 			"ImportPath": "github.com/tendermint/log15",
@@ -91,99 +126,72 @@
 			"Rev": "c65281bb703b7612f60558e75b07c434c06e2636"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/account",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
-		},
-		{
 			"ImportPath": "github.com/tendermint/tendermint/alert",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/blockchain",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/common",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"ImportPath": "github.com/tendermint/tendermint/config/tendermint",
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/config",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"ImportPath": "github.com/tendermint/tendermint/config/tendermint_test",
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/consensus",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/db",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/events",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/logger",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/mempool",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/merkle",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/node",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/p2p",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/permission/types",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"ImportPath": "github.com/tendermint/tendermint/proxy",
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/rpc",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/state",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/types",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"Comment": "0.2-19-g12c7f00",
+			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/vm",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"ImportPath": "github.com/tendermint/tmsp/server",
+			"Rev": "1b7ca808beb0d1be7bc9a606f6aa46cc1f65fd93"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/wire",
-			"Comment": "0.1-26-g85d5b16",
-			"Rev": "85d5b16dbc610a6a27f6c3d4ece0316907babec6"
+			"ImportPath": "github.com/tendermint/tmsp/types",
+			"Rev": "1b7ca808beb0d1be7bc9a606f6aa46cc1f65fd93"
 		},
 		{
 			"ImportPath": "github.com/tommy351/gin-cors",
@@ -191,35 +199,35 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/box",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/secretbox",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/poly1305",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ripemd160",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
-			"Rev": "4d8f0cfeca8290cfc0091edf678a138ce669b1bb"
+			"Rev": "4ed45ec682102c643324fae5dff8dab085b6c300"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
+			"Rev": "e0403b4e005737430c05a57aac078479844f919c"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
+			"Rev": "e0403b4e005737430c05a57aac078479844f919c"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",

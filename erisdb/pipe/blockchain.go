@@ -2,9 +2,9 @@ package pipe
 
 import (
 	"fmt"
-	dbm "github.com/tendermint/go-db"
+	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/state"
-	"github.com/tendermint/tendermint/types"
 	"math"
 	"strconv"
 	"strings"

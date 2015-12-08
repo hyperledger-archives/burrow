@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math"
+	"os"
 	"sync"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 
-	"github.com/tendermint/ed25519"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
 )
 
 const (
@@ -35,12 +35,12 @@ func voteToStep(vote *Vote) int8 {
 }
 
 type PrivValidator struct {
-	Address    []byte             `json:"address"`
-	PubKey     acm.PubKeyEd25519  `json:"pub_key"`
-	PrivKey    acm.PrivKeyEd25519 `json:"priv_key"`
-	LastHeight int                `json:"last_height"`
-	LastRound  int                `json:"last_round"`
-	LastStep   int8               `json:"last_step"`
+	Address    []byte                `json:"address"`
+	PubKey     crypto.PubKeyEd25519  `json:"pub_key"`
+	PrivKey    crypto.PrivKeyEd25519 `json:"priv_key"`
+	LastHeight int                   `json:"last_height"`
+	LastRound  int                   `json:"last_round"`
+	LastStep   int8                  `json:"last_step"`
 
 	// For persistence.
 	// Overloaded for testing.
@@ -53,8 +53,8 @@ func GenPrivValidator() *PrivValidator {
 	privKeyBytes := new([64]byte)
 	copy(privKeyBytes[:32], CRandBytes(32))
 	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	pubKey := acm.PubKeyEd25519(*pubKeyBytes)
-	privKey := acm.PrivKeyEd25519(*privKeyBytes)
+	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
+	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
 	return &PrivValidator{
 		Address:    pubKey.Address(),
 		PubKey:     pubKey,
@@ -79,6 +79,21 @@ func LoadPrivValidator(filePath string) *PrivValidator {
 	return privVal
 }
 
+func LoadOrGenPrivValidator(filePath string) *PrivValidator {
+	var privValidator *PrivValidator
+	if _, err := os.Stat(filePath); err == nil {
+		privValidator = LoadPrivValidator(filePath)
+		log.Notice("Loaded PrivValidator",
+			"file", filePath, "privValidator", privValidator)
+	} else {
+		privValidator = GenPrivValidator()
+		privValidator.SetFile(filePath)
+		privValidator.Save()
+		log.Notice("Generated PrivValidator", "file", filePath)
+	}
+	return privValidator
+}
+
 func (privVal *PrivValidator) SetFile(filePath string) {
 	privVal.mtx.Lock()
 	defer privVal.mtx.Unlock()
@@ -96,7 +111,7 @@ func (privVal *PrivValidator) save() {
 		PanicSanity("Cannot save PrivValidator: filePath not set")
 	}
 	jsonBytes := wire.JSONBytes(privVal)
-	err := WriteFileAtomic(privVal.filePath, jsonBytes)
+	err := WriteFileAtomic(privVal.filePath, jsonBytes, 0600)
 	if err != nil {
 		// `@; BOOM!!!
 		PanicCrisis(err)
@@ -135,7 +150,7 @@ func (privVal *PrivValidator) SignVote(chainID string, vote *Vote) error {
 }
 
 func (privVal *PrivValidator) SignVoteUnsafe(chainID string, vote *Vote) {
-	vote.Signature = privVal.PrivKey.Sign(acm.SignBytes(chainID, vote)).(acm.SignatureEd25519)
+	vote.Signature = privVal.PrivKey.Sign(SignBytes(chainID, vote)).(crypto.SignatureEd25519)
 }
 
 func (privVal *PrivValidator) SignProposal(chainID string, proposal *Proposal) error {
@@ -152,30 +167,10 @@ func (privVal *PrivValidator) SignProposal(chainID string, proposal *Proposal) e
 		privVal.save()
 
 		// Sign
-		proposal.Signature = privVal.PrivKey.Sign(acm.SignBytes(chainID, proposal)).(acm.SignatureEd25519)
+		proposal.Signature = privVal.PrivKey.Sign(SignBytes(chainID, proposal)).(crypto.SignatureEd25519)
 		return nil
 	} else {
 		return errors.New(fmt.Sprintf("Attempt of duplicate signing of proposal: Height %v, Round %v", proposal.Height, proposal.Round))
-	}
-}
-
-func (privVal *PrivValidator) SignRebondTx(chainID string, rebondTx *RebondTx) error {
-	privVal.mtx.Lock()
-	defer privVal.mtx.Unlock()
-	if privVal.LastHeight < rebondTx.Height {
-
-		// Persist height/round/step
-		// Prevent doing anything else for this rebondTx.Height.
-		privVal.LastHeight = rebondTx.Height
-		privVal.LastRound = math.MaxInt32 // MaxInt64 overflows on 32bit architectures.
-		privVal.LastStep = math.MaxInt8
-		privVal.save()
-
-		// Sign
-		rebondTx.Signature = privVal.PrivKey.Sign(acm.SignBytes(chainID, rebondTx)).(acm.SignatureEd25519)
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Attempt of duplicate signing of rebondTx: Height %v", rebondTx.Height))
 	}
 }
 

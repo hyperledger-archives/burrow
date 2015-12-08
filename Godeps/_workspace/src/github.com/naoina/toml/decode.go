@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/naoina/toml/ast"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/toml/ast"
 )
 
 const (

@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"gopkg.in/fatih/set.v0"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/gopkg.in/fatih/set.v0"
 )
 
 type OpCode byte

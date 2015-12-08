@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	bc "github.com/tendermint/tendermint/blockchain"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/events"
-	"github.com/tendermint/tendermint/p2p"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -22,9 +22,8 @@ const (
 	DataChannel  = byte(0x21)
 	VoteChannel  = byte(0x22)
 
-	PeerStateKey = "ConsensusReactor.peerState"
-
 	peerGossipSleepDuration = 100 * time.Millisecond // Time to sleep if there's nothing to send.
+	maxConsensusMessageSize = 1048576                // 1MB; NOTE: keep in sync with types.PartSet sizes.
 )
 
 //-----------------------------------------------------------------------------
@@ -107,7 +106,7 @@ func (conR *ConsensusReactor) AddPeer(peer *p2p.Peer) {
 
 	// Create peerState for peer
 	peerState := NewPeerState(peer)
-	peer.Data.Set(PeerStateKey, peerState)
+	peer.Data.Set(types.PeerStateKey, peerState)
 
 	// Begin gossip routines for this peer.
 	go conR.gossipDataRoutine(peer, peerState)
@@ -138,7 +137,7 @@ func (conR *ConsensusReactor) Receive(chID byte, peer *p2p.Peer, msgBytes []byte
 	}
 
 	// Get peer states
-	ps := peer.Data.Get(PeerStateKey).(*PeerState)
+	ps := peer.Data.Get(types.PeerStateKey).(*PeerState)
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
 		log.Warn("Error decoding message", "channel", chID, "peer", peer, "msg", msg, "error", err, "bytes", msgBytes)
@@ -455,35 +454,21 @@ OUTER_LOOP:
 				}
 			}
 			// If there are prevotes to send...
-			if rs.Round == prs.Round && prs.Step <= RoundStepPrevote {
-				if ps.PickSendVote(rs.Votes.Prevotes(rs.Round)) {
-					log.Info("Picked rs.Prevotes(rs.Round) to send")
-					continue OUTER_LOOP
-				}
-			}
-			// If there are precommits to send...
-			if rs.Round == prs.Round && prs.Step <= RoundStepPrecommit {
-				if ps.PickSendVote(rs.Votes.Precommits(rs.Round)) {
-					log.Info("Picked rs.Precommits(rs.Round) to send")
-					continue OUTER_LOOP
-				}
-			}
-			// If there are prevotes to send for the last round...
-			if rs.Round == prs.Round+1 && prs.Step <= RoundStepPrevote {
+			if prs.Step <= RoundStepPrevote && prs.Round != -1 && prs.Round <= rs.Round {
 				if ps.PickSendVote(rs.Votes.Prevotes(prs.Round)) {
 					log.Info("Picked rs.Prevotes(prs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
-			// If there are precommits to send for the last round...
-			if rs.Round == prs.Round+1 && prs.Step <= RoundStepPrecommit {
+			// If there are precommits to send...
+			if prs.Step <= RoundStepPrecommit && prs.Round != -1 && prs.Round <= rs.Round {
 				if ps.PickSendVote(rs.Votes.Precommits(prs.Round)) {
 					log.Info("Picked rs.Precommits(prs.Round) to send")
 					continue OUTER_LOOP
 				}
 			}
 			// If there are POLPrevotes to send...
-			if 0 <= prs.ProposalPOLRound {
+			if prs.ProposalPOLRound != -1 {
 				if polPrevotes := rs.Votes.Prevotes(prs.ProposalPOLRound); polPrevotes != nil {
 					if ps.PickSendVote(polPrevotes) {
 						log.Info("Picked rs.Prevotes(prs.ProposalPOLRound) to send")
@@ -548,8 +533,8 @@ type PeerRoundState struct {
 	Precommits               *BitArray           // All precommits peer has for this round
 	LastCommitRound          int                 // Round of commit for last height. -1 if none.
 	LastCommit               *BitArray           // All commit precommits of commit for last height.
-	CatchupCommitRound       int                 // Round that we believe commit round is. -1 if none.
-	CatchupCommit            *BitArray           // All commit precommits peer has for this height
+	CatchupCommitRound       int                 // Round that we have commit for. Not necessarily unique. -1 if none.
+	CatchupCommit            *BitArray           // All commit precommits peer has for this height & CatchupCommitRound
 }
 
 //-----------------------------------------------------------------------------
@@ -586,6 +571,14 @@ func (ps *PeerState) GetRoundState() *PeerRoundState {
 
 	prs := ps.PeerRoundState // copy
 	return &prs
+}
+
+// Returns an atomic snapshot of the PeerRoundState's height
+// used by the mempool to ensure peers are caught up before broadcasting new txs
+func (ps *PeerState) GetHeight() int {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+	return ps.PeerRoundState.Height
 }
 
 func (ps *PeerState) SetHasProposal(proposal *types.Proposal) {
@@ -696,14 +689,18 @@ func (ps *PeerState) getVoteBitArray(height, round int, type_ byte) *BitArray {
 	return nil
 }
 
-// NOTE: 'round' is what we know to be the commit round for height.
+// 'round': A round for which we have a +2/3 commit.
 func (ps *PeerState) ensureCatchupCommitRound(height, round int, numValidators int) {
 	if ps.Height != height {
 		return
 	}
-	if ps.CatchupCommitRound != -1 && ps.CatchupCommitRound != round {
-		PanicSanity(Fmt("Conflicting CatchupCommitRound. Height: %v, Orig: %v, New: %v", height, ps.CatchupCommitRound, round))
-	}
+	/*
+		NOTE: This is wrong, 'round' could change.
+		e.g. if orig round is not the same as block LastValidation round.
+		if ps.CatchupCommitRound != -1 && ps.CatchupCommitRound != round {
+			PanicSanity(Fmt("Conflicting CatchupCommitRound. Height: %v, Orig: %v, New: %v", height, ps.CatchupCommitRound, round))
+		}
+	*/
 	if ps.CatchupCommitRound == round {
 		return // Nothing to do!
 	}
@@ -917,9 +914,9 @@ var _ = wire.RegisterInterface(
 // TODO: check for unnecessary extra bytes at the end.
 func DecodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 	msgType = bz[0]
-	n := new(int64)
+	n := new(int)
 	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ ConsensusMessage }{}, r, n, &err).(struct{ ConsensusMessage }).ConsensusMessage
+	msg = wire.ReadBinary(struct{ ConsensusMessage }{}, r, maxConsensusMessageSize, n, &err).(struct{ ConsensusMessage }).ConsensusMessage
 	return
 }
 

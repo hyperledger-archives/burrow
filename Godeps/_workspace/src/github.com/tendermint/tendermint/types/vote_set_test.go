@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"sort"
 
-	. "github.com/tendermint/tendermint/common"
-	. "github.com/tendermint/tendermint/common/test"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common/test"
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
 
 	"testing"
 )
@@ -15,7 +15,7 @@ func randVoteSet(height int, round int, type_ byte, numValidators int, votingPow
 	vals := make([]*Validator, numValidators)
 	privValidators := make([]*PrivValidator, numValidators)
 	for i := 0; i < numValidators; i++ {
-		_, val, privValidator := RandValidator(false, votingPower)
+		val, privValidator := RandValidator(false, votingPower)
 		vals[i] = val
 		privValidators[i] = privValidator
 	}

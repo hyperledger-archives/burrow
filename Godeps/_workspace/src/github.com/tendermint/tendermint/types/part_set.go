@@ -7,11 +7,11 @@ import (
 	"io"
 	"sync"
 
-	"code.google.com/p/go.crypto/ripemd160"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
 
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/merkle"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
 
 const (
@@ -75,7 +75,7 @@ func (psh PartSetHeader) Equals(other PartSetHeader) bool {
 	return psh.Total == other.Total && bytes.Equal(psh.Hash, other.Hash)
 }
 
-func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int64, err *error) {
+func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"hash":"%X","total":%v}`, psh.Hash, psh.Total)), w, n, err)
 }
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
 
 var (
@@ -16,13 +16,14 @@ var (
 )
 
 type Proposal struct {
-	Height           int                  `json:"height"`
-	Round            int                  `json:"round"`
-	BlockPartsHeader PartSetHeader        `json:"block_parts_header"`
-	POLRound         int                  `json:"pol_round"` // -1 if null.
-	Signature        acm.SignatureEd25519 `json:"signature"`
+	Height           int                     `json:"height"`
+	Round            int                     `json:"round"`
+	BlockPartsHeader PartSetHeader           `json:"block_parts_header"`
+	POLRound         int                     `json:"pol_round"` // -1 if null.
+	Signature        crypto.SignatureEd25519 `json:"signature"`
 }
 
+// polRound: -1 if no polRound.
 func NewProposal(height int, round int, blockPartsHeader PartSetHeader, polRound int) *Proposal {
 	return &Proposal{
 		Height:           height,
@@ -37,7 +38,7 @@ func (p *Proposal) String() string {
 		p.BlockPartsHeader, p.POLRound, p.Signature)
 }
 
-func (p *Proposal) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (p *Proposal) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
 	wire.WriteTo([]byte(`,"proposal":{"block_parts_header":`), w, n, err)
 	p.BlockPartsHeader.WriteSignBytes(w, n, err)

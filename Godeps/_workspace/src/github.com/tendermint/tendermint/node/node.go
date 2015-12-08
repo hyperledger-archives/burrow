@@ -2,29 +2,28 @@ package node
 
 import (
 	"bytes"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	acm "github.com/tendermint/tendermint/account"
-	bc "github.com/tendermint/tendermint/blockchain"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/consensus"
-	dbm "github.com/tendermint/tendermint/db"
-	"github.com/tendermint/tendermint/events"
-	mempl "github.com/tendermint/tendermint/mempool"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/rpc"
-	"github.com/tendermint/tendermint/rpc/core"
-	"github.com/tendermint/tendermint/rpc/server"
-	sm "github.com/tendermint/tendermint/state"
-	stypes "github.com/tendermint/tendermint/state/types"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
+	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/proxy"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/server"
+	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 import _ "net/http/pprof"
@@ -32,16 +31,14 @@ import _ "net/http/pprof"
 type Node struct {
 	sw               *p2p.Switch
 	evsw             *events.EventSwitch
-	book             *p2p.AddrBook
 	blockStore       *bc.BlockStore
-	pexReactor       *p2p.PEXReactor
 	bcReactor        *bc.BlockchainReactor
 	mempoolReactor   *mempl.MempoolReactor
 	consensusState   *consensus.ConsensusState
 	consensusReactor *consensus.ConsensusReactor
 	privValidator    *types.PrivValidator
-	genDoc           *stypes.GenesisDoc
-	privKey          acm.PrivKeyEd25519
+	genesisDoc       *types.GenesisDoc
+	privKey          crypto.PrivKeyEd25519
 }
 
 func NewNode() *Node {
@@ -50,46 +47,23 @@ func NewNode() *Node {
 	blockStore := bc.NewBlockStore(blockStoreDB)
 
 	// Get State
-	stateDB := dbm.GetDB("state")
-	state := sm.LoadState(stateDB)
-	var genDoc *stypes.GenesisDoc
-	if state == nil {
-		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
-		state.Save()
-		// write the gendoc to db
-		buf, n, err := new(bytes.Buffer), new(int64), new(error)
-		wire.WriteJSON(genDoc, buf, n, err)
-		stateDB.Set(stypes.GenDocKey, buf.Bytes())
-		if *err != nil {
-			Exit(Fmt("Unable to write gendoc to db: %v", err))
-		}
-	} else {
-		genDocBytes := stateDB.Get(stypes.GenDocKey)
-		err := new(error)
-		wire.ReadJSONPtr(&genDoc, genDocBytes, err)
-		if *err != nil {
-			Exit(Fmt("Unable to read gendoc from db: %v", err))
-		}
-	}
+	state := getState()
+
+	// Create two proxyAppCtx connections,
+	// one for the consensus and one for the mempool.
+	proxyAddr := config.GetString("proxy_app")
+	proxyAppCtxMempool := getProxyApp(proxyAddr, state.LastAppHash)
+	proxyAppCtxConsensus := getProxyApp(proxyAddr, state.LastAppHash)
+
 	// add the chainid to the global config
 	config.Set("chain_id", state.ChainID)
 
 	// Get PrivValidator
-	var privValidator *types.PrivValidator
 	privValidatorFile := config.GetString("priv_validator_file")
-	if _, err := os.Stat(privValidatorFile); err == nil {
-		privValidator = types.LoadPrivValidator(privValidatorFile)
-		log.Notice("Loaded PrivValidator",
-			"file", privValidatorFile, "privValidator", privValidator)
-	} else {
-		privValidator = types.GenPrivValidator()
-		privValidator.SetFile(privValidatorFile)
-		privValidator.Save()
-		log.Notice("Generated PrivValidator", "file", privValidatorFile)
-	}
+	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
 
 	// Generate node PrivKey
-	privKey := acm.GenPrivKeyEd25519()
+	privKey := crypto.GenPrivKeyEd25519()
 
 	// Make event switch
 	eventSwitch := events.NewEventSwitch()
@@ -98,19 +72,15 @@ func NewNode() *Node {
 		Exit(Fmt("Failed to start switch: %v", err))
 	}
 
-	// Make PEXReactor
-	book := p2p.NewAddrBook(config.GetString("addrbook_file"))
-	pexReactor := p2p.NewPEXReactor(book)
-
 	// Make BlockchainReactor
-	bcReactor := bc.NewBlockchainReactor(state.Copy(), blockStore, config.GetBool("fast_sync"))
+	bcReactor := bc.NewBlockchainReactor(state.Copy(), proxyAppCtxConsensus, blockStore, config.GetBool("fast_sync"))
 
 	// Make MempoolReactor
-	mempool := mempl.NewMempool(state.Copy())
+	mempool := mempl.NewMempool(proxyAppCtxMempool)
 	mempoolReactor := mempl.NewMempoolReactor(mempool)
 
 	// Make ConsensusReactor
-	consensusState := consensus.NewConsensusState(state.Copy(), blockStore, mempoolReactor)
+	consensusState := consensus.NewConsensusState(state.Copy(), proxyAppCtxConsensus, blockStore, mempool)
 	consensusReactor := consensus.NewConsensusReactor(consensusState, blockStore, config.GetBool("fast_sync"))
 	if privValidator != nil {
 		consensusReactor.SetPrivValidator(privValidator)
@@ -118,34 +88,38 @@ func NewNode() *Node {
 
 	// Make p2p network switch
 	sw := p2p.NewSwitch()
-	sw.AddReactor("PEX", pexReactor)
 	sw.AddReactor("MEMPOOL", mempoolReactor)
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 	sw.AddReactor("CONSENSUS", consensusReactor)
 
 	// add the event switch to all services
 	// they should all satisfy events.Eventable
-	SetFireable(eventSwitch, pexReactor, bcReactor, mempoolReactor, consensusReactor)
+	SetFireable(eventSwitch, bcReactor, mempoolReactor, consensusReactor)
+
+	// run the profile server
+	profileHost := config.GetString("prof_laddr")
+	if profileHost != "" {
+		go func() {
+			log.Warn("Profile server", "error", http.ListenAndServe(profileHost, nil))
+		}()
+	}
 
 	return &Node{
 		sw:               sw,
 		evsw:             eventSwitch,
-		book:             book,
 		blockStore:       blockStore,
-		pexReactor:       pexReactor,
 		bcReactor:        bcReactor,
 		mempoolReactor:   mempoolReactor,
 		consensusState:   consensusState,
 		consensusReactor: consensusReactor,
 		privValidator:    privValidator,
-		genDoc:           genDoc,
+		genesisDoc:       state.GenesisDoc,
 		privKey:          privKey,
 	}
 }
 
 // Call Start() after adding the listeners.
 func (n *Node) Start() error {
-	n.book.Start()
 	n.sw.SetNodeInfo(makeNodeInfo(n.sw, n.privKey))
 	n.sw.SetNodePrivKey(n.privKey)
 	_, err := n.sw.Start()
@@ -156,7 +130,6 @@ func (n *Node) Stop() {
 	log.Notice("Stopping Node")
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
-	n.book.Stop()
 }
 
 // Add the event switch to reactors, mempool, etc.
@@ -172,7 +145,6 @@ func SetFireable(evsw *events.EventSwitch, eventables ...events.Eventable) {
 func (n *Node) AddListener(l p2p.Listener) {
 	log.Notice(Fmt("Added %v", l))
 	n.sw.AddListener(l)
-	n.book.AddOurAddress(l.ExternalAddress())
 }
 
 // Dial a list of seeds in random order
@@ -195,11 +167,9 @@ func (n *Node) dialSeed(addr *p2p.NetAddress) {
 	peer, err := n.sw.DialPeerWithAddress(addr)
 	if err != nil {
 		log.Error("Error dialing seed", "error", err)
-		//n.book.MarkAttempt(addr)
 		return
 	} else {
 		log.Notice("Connected to seed", "peer", peer)
-		n.book.AddAddress(addr, addr)
 	}
 }
 
@@ -210,7 +180,7 @@ func (n *Node) StartRPC() (net.Listener, error) {
 	core.SetMempoolReactor(n.mempoolReactor)
 	core.SetSwitch(n.sw)
 	core.SetPrivValidator(n.privValidator)
-	core.SetGenDoc(n.genDoc)
+	core.SetGenesisDoc(n.genesisDoc)
 
 	listenAddr := config.GetString("rpc_laddr")
 
@@ -241,23 +211,23 @@ func (n *Node) EventSwitch() *events.EventSwitch {
 	return n.evsw
 }
 
-func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
+func makeNodeInfo(sw *p2p.Switch, privKey crypto.PrivKeyEd25519) *p2p.NodeInfo {
 
-	nodeInfo := &types.NodeInfo{
-		PubKey:  privKey.PubKey().(acm.PubKeyEd25519),
+	nodeInfo := &p2p.NodeInfo{
+		PubKey:  privKey.PubKey().(crypto.PubKeyEd25519),
 		Moniker: config.GetString("moniker"),
-		ChainID: config.GetString("chain_id"),
-		Version: types.Versions{
-			Tendermint: Version,
-			P2P:        p2p.Version,
-			RPC:        rpc.Version,
-			Wire:       wire.Version,
+		Network: config.GetString("chain_id"),
+		Version: Version,
+		Other: []string{
+			Fmt("p2p_version=%v", p2p.Version),
+			Fmt("rpc_version=%v", rpc.Version),
+			Fmt("wire_version=%v", wire.Version),
 		},
 	}
 
 	// include git hash in the nodeInfo if available
-	if rev, err := ReadFile(config.GetString("revisions_file")); err == nil {
-		nodeInfo.Version.Revision = string(rev)
+	if rev, err := ReadFile(config.GetString("revision_file")); err == nil {
+		nodeInfo.Other = append(nodeInfo.Other, Fmt("revision=%v", string(rev)))
 	}
 
 	if !sw.IsListening() {
@@ -268,27 +238,44 @@ func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
 	p2pHost := p2pListener.ExternalAddress().IP.String()
 	p2pPort := p2pListener.ExternalAddress().Port
 	rpcListenAddr := config.GetString("rpc_laddr")
-	_, rpcPortStr, _ := net.SplitHostPort(rpcListenAddr)
-	rpcPort, err := strconv.Atoi(rpcPortStr)
-	if err != nil {
-		PanicSanity(Fmt("Expected numeric RPC.ListenAddr port but got %v", rpcPortStr))
-	}
 
 	// We assume that the rpcListener has the same ExternalAddress.
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
-	nodeInfo.Host = p2pHost
-	nodeInfo.P2PPort = p2pPort
-	nodeInfo.RPCPort = uint16(rpcPort)
+	nodeInfo.ListenAddr = Fmt("%v:%v", p2pHost, p2pPort)
+	nodeInfo.Other = append(nodeInfo.Other, Fmt("rpc_addr=%v", rpcListenAddr))
 	return nodeInfo
 }
 
 //------------------------------------------------------------------------------
 
 func RunNode() {
+
+	// Wait until the genesis doc becomes available
+	genDocFile := config.GetString("genesis_file")
+	if !FileExists(genDocFile) {
+		log.Notice(Fmt("Waiting for genesis file %v...", genDocFile))
+		for {
+			time.Sleep(time.Second)
+			if !FileExists(genDocFile) {
+				continue
+			}
+			jsonBlob, err := ioutil.ReadFile(genDocFile)
+			if err != nil {
+				Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+			}
+			genDoc := types.GenesisDocFromJSON(jsonBlob)
+			if genDoc.ChainID == "" {
+				PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
+			}
+			config.Set("chain_id", genDoc.ChainID)
+			config.Set("genesis_doc", genDoc)
+		}
+	}
+
 	// Create & start node
 	n := NewNode()
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), config.GetBool("skip_upnp"))
 	n.AddListener(l)
 	err := n.Start()
 	if err != nil {
@@ -314,4 +301,39 @@ func RunNode() {
 	TrapSignal(func() {
 		n.Stop()
 	})
+}
+
+// Load the most recent state from "state" db,
+// or create a new one (and save) from genesis.
+func getState() *sm.State {
+	stateDB := dbm.GetDB("state")
+	state := sm.LoadState(stateDB)
+	if state == nil {
+		state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
+		state.Save()
+	}
+	return state
+}
+
+// Get a connection to the proxyAppCtx addr.
+// Check the current hash, and panic if it doesn't match.
+func getProxyApp(addr string, hash []byte) proxy.AppContext {
+	proxyConn, err := Connect(addr)
+	if err != nil {
+		Exit(Fmt("Failed to connect to proxy for mempool: %v", err))
+	}
+	proxyAppCtx := proxy.NewRemoteAppContext(proxyConn, 1024)
+
+	proxyAppCtx.Start()
+
+	// Check the hash
+	currentHash, err := proxyAppCtx.GetHashSync()
+	if err != nil {
+		PanicCrisis(Fmt("Error in getting proxyAppCtx hash: %v", err))
+	}
+	if !bytes.Equal(hash, currentHash) {
+		PanicCrisis(Fmt("ProxyApp hash does not match.  Expected %X, got %X", hash, currentHash))
+	}
+
+	return proxyAppCtx
 }

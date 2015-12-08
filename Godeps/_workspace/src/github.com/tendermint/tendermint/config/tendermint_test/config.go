@@ -3,13 +3,12 @@
 package tendermint_test
 
 import (
-	"github.com/naoina/toml"
 	"os"
 	"path"
 	"strings"
 
-	. "github.com/tendermint/tendermint/common"
-	cfg "github.com/tendermint/tendermint/config"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-config"
 )
 
 func init() {
@@ -27,7 +26,7 @@ func getTMRoot(rootDir string) string {
 
 func initTMRoot(rootDir string) {
 	rootDir = getTMRoot(rootDir)
-	EnsureDir(rootDir)
+	EnsureDir(rootDir, 0700)
 
 	configFilePath := path.Join(rootDir, "config.toml")
 	genesisFilePath := path.Join(rootDir, "genesis.json")
@@ -36,10 +35,10 @@ func initTMRoot(rootDir string) {
 	if !FileExists(configFilePath) {
 		// Ask user for moniker
 		// moniker := cfg.Prompt("Type hostname: ", "anonymous")
-		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")))
+		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")), 0644)
 	}
 	if !FileExists(genesisFilePath) {
-		MustWriteFile(genesisFilePath, []byte(defaultGenesis))
+		MustWriteFile(genesisFilePath, []byte(defaultGenesis), 0644)
 	}
 }
 
@@ -47,10 +46,8 @@ func GetConfig(rootDir string) cfg.Config {
 	rootDir = getTMRoot(rootDir)
 	initTMRoot(rootDir)
 
-	var mapConfig = cfg.MapConfig(make(map[string]interface{}))
 	configFilePath := path.Join(rootDir, "config.toml")
-	configFileBytes := MustReadFile(configFilePath)
-	err := toml.Unmarshal(configFileBytes, mapConfig)
+	mapConfig, err := cfg.ReadMapConfigFromFile(configFilePath)
 	if err != nil {
 		Exit(Fmt("Could not read config: %v", err))
 	}
@@ -61,6 +58,7 @@ func GetConfig(rootDir string) cfg.Config {
 	}
 	mapConfig.SetDefault("chain_id", "tendermint_test")
 	mapConfig.SetDefault("genesis_file", rootDir+"/genesis.json")
+	mapConfig.SetDefault("proxy_app", "tcp://127.0.0.1:36658")
 	mapConfig.SetDefault("moniker", "anonymous")
 	mapConfig.SetDefault("node_laddr", "0.0.0.0:36656")
 	mapConfig.SetDefault("fast_sync", false)
@@ -70,20 +68,17 @@ func GetConfig(rootDir string) cfg.Config {
 	mapConfig.SetDefault("db_backend", "memdb")
 	mapConfig.SetDefault("db_dir", rootDir+"/data")
 	mapConfig.SetDefault("log_level", "debug")
+	mapConfig.SetDefault("vm_log", true)
 	mapConfig.SetDefault("rpc_laddr", "0.0.0.0:36657")
-	mapConfig.SetDefault("revisions_file", rootDir+"/revisions")
+	mapConfig.SetDefault("prof_laddr", "")
+	mapConfig.SetDefault("revision_file", rootDir+"/revision")
 	return mapConfig
-}
-
-func ensureDefault(mapConfig cfg.MapConfig, key string, value interface{}) {
-	if !mapConfig.IsSet(key) {
-		mapConfig[key] = value
-	}
 }
 
 var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
+proxy_app = "tcp://127.0.0.1:36658"
 moniker = "__MONIKER__"
 node_laddr = "0.0.0.0:36656"
 seeds = ""

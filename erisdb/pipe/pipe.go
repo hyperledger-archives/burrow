@@ -2,9 +2,9 @@
 package pipe
 
 import (
+	em "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/account"
-	em "github.com/tendermint/tendermint/events"
-	"github.com/tendermint/tendermint/types"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 	txs "github.com/eris-ltd/eris-db/txs"

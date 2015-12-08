@@ -12,9 +12,9 @@ import (
 	"github.com/eris-ltd/eris-db/state"
 	"github.com/eris-ltd/eris-db/txs"
 
-	cmn "github.com/tendermint/go-common"
-	tEvents "github.com/tendermint/tendermint/events"
-	mintTypes "github.com/tendermint/tendermint/types"
+	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	mintTypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )

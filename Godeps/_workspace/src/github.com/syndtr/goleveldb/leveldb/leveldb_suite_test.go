@@ -3,7 +3,7 @@ package leveldb
 import (
 	"testing"
 
-	"github.com/syndtr/goleveldb/leveldb/testutil"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/testutil"
 )
 
 func TestLevelDB(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/tendermint/events"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	"github.com/eris-ltd/eris-db/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	types "github.com/eris-ltd/eris-db/txs"

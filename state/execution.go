@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/tendermint/events"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/evm"

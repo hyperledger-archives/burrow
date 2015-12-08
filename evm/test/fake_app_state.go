@@ -1,7 +1,7 @@
 package vm
 
 import (
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
 	. "github.com/eris-ltd/eris-db/evm"
 	"github.com/eris-ltd/eris-db/evm/sha3"
 )

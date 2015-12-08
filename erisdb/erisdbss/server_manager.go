@@ -3,8 +3,8 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
 	"os"
@@ -63,7 +63,7 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 		log.Debug(text)
 		if strings.Index(text, this.token) != -1 {
 			log.Debug("Token found", "token", this.token)
-			go func(){
+			go func() {
 				for scanner.Scan() {
 					text := scanner.Text()
 					log.Debug(text)

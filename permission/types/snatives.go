@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/tendermint/go-wire"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
 
 //---------------------------------------------------------------------------------------------------

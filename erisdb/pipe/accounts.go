@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
 	acm "github.com/eris-ltd/eris-db/account"
-	cmn "github.com/tendermint/go-common"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )

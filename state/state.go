@@ -11,13 +11,13 @@ import (
 	. "github.com/eris-ltd/eris-db/state/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/tendermint/go-common"
-	dbm "github.com/tendermint/go-db"
-	"github.com/tendermint/go-merkle"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 
-	"github.com/tendermint/tendermint/events"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 var (

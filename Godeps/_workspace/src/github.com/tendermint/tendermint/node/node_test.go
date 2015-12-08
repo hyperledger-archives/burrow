@@ -4,14 +4,28 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
-	"github.com/tendermint/tendermint/p2p"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p"
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tmsp/server"
+	"github.com/tendermint/tmsp/example"
 )
 
 func TestNodeStartStop(t *testing.T) {
+
+	// Start a dummy app
+	go func() {
+		_, err := server.StartListener(config.GetString("proxy_app"), example.NewDummyApplication())
+		if err != nil {
+			Exit(err.Error())
+		}
+	}()
+	// wait for the server
+	time.Sleep(time.Second * 2)
+
 	// Create & start node
 	n := NewNode()
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), config.GetBool("skip_upnp"))
 	n.AddListener(l)
 	n.Start()
 	log.Notice("Started node", "nodeInfo", n.sw.NodeInfo())

@@ -11,12 +11,12 @@ import (
 	"sort"
 	"sync/atomic"
 
-	"github.com/syndtr/goleveldb/leveldb/cache"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/storage"
-	"github.com/syndtr/goleveldb/leveldb/table"
-	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/cache"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/table"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // tFile holds basic information about a table.
@@ -441,26 +441,22 @@ func newTableOps(s *session) *tOps {
 	var (
 		cacher cache.Cacher
 		bcache *cache.Cache
-		bpool  *util.BufferPool
 	)
 	if s.o.GetOpenFilesCacheCapacity() > 0 {
 		cacher = cache.NewLRU(s.o.GetOpenFilesCacheCapacity())
 	}
-	if !s.o.GetDisableBlockCache() {
+	if !s.o.DisableBlockCache {
 		var bcacher cache.Cacher
 		if s.o.GetBlockCacheCapacity() > 0 {
 			bcacher = cache.NewLRU(s.o.GetBlockCacheCapacity())
 		}
 		bcache = cache.NewCache(bcacher)
 	}
-	if !s.o.GetDisableBufferPool() {
-		bpool = util.NewBufferPool(s.o.GetBlockSize() + 5)
-	}
 	return &tOps{
 		s:      s,
 		cache:  cache.NewCache(cacher),
 		bcache: bcache,
-		bpool:  bpool,
+		bpool:  util.NewBufferPool(s.o.GetBlockSize() + 5),
 	}
 }
 

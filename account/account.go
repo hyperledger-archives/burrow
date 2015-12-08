@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-merkle"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 

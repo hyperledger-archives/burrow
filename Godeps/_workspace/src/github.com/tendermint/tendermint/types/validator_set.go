@@ -6,9 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/merkle"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
 )
 
 // ValidatorSet represent a set of *Validator at a given height.
@@ -36,9 +35,14 @@ func NewValidatorSet(vals []*Validator) *ValidatorSet {
 		validators[i] = val.Copy()
 	}
 	sort.Sort(ValidatorsByAddress(validators))
-	return &ValidatorSet{
+	vs := &ValidatorSet{
 		Validators: validators,
 	}
+
+	if vals != nil {
+		vs.IncrementAccum(1)
+	}
+	return vs
 }
 
 // TODO: mind the overflow when times and votingPower shares too large.
@@ -230,7 +234,7 @@ func (valSet *ValidatorSet) VerifyValidation(chainID string,
 		}
 		_, val := valSet.GetByIndex(idx)
 		// Validate signature
-		precommitSignBytes := account.SignBytes(chainID, precommit)
+		precommitSignBytes := SignBytes(chainID, precommit)
 		if !val.PubKey.VerifyBytes(precommitSignBytes, precommit.Signature) {
 			return fmt.Errorf("Invalid validation -- invalid signature: %v", precommit)
 		}

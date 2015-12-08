@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 var (

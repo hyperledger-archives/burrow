@@ -4,9 +4,9 @@ import (
 	"sort"
 	"time"
 
-	. "github.com/tendermint/go-common"
-	dbm "github.com/tendermint/go-db"
-	"github.com/tendermint/tendermint/types"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/state/types"

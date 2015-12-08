@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type tSet struct {
@@ -300,7 +300,7 @@ func (v *version) offsetOf(ikey iKey) (n uint64, err error) {
 	return
 }
 
-func (v *version) pickMemdbLevel(umin, umax []byte) (level int) {
+func (v *version) pickLevel(umin, umax []byte) (level int) {
 	if !v.tables[0].overlaps(v.s.icmp, umin, umax, true) {
 		var overlaps tFiles
 		maxLevel := v.s.o.GetMaxMemCompationLevel()

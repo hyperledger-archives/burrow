@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"sort"
 
-	. "github.com/tendermint/go-common"
-	dbm "github.com/tendermint/go-db"
-	"github.com/tendermint/go-merkle"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/txs"

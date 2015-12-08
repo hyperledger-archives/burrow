@@ -9,7 +9,7 @@ import (
 
 	"go/ast"
 
-	"github.com/naoina/go-stringutil"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/naoina/go-stringutil"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
 )
 
 type TxCache struct {

@@ -5,14 +5,14 @@ import (
 	"errors"
 	"io"
 
-	"golang.org/x/crypto/ripemd160"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	"github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types" // votes for dupeout ..
 )
 
 var (

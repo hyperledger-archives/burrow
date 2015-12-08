@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/merkle"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
+
+const MaxBlockSize = 22020096 // 21MB TODO make it configurable
 
 type Block struct {
 	*Header        `json:"header"`
@@ -56,7 +57,7 @@ func (b *Block) ValidateBasic(chainID string, lastBlockHeight int, lastBlockHash
 	if !bytes.Equal(b.DataHash, b.Data.Hash()) {
 		return errors.New(Fmt("Wrong Block.Header.DataHash.  Expected %X, got %X", b.DataHash, b.Data.Hash()))
 	}
-	// NOTE: the StateHash is validated later.
+	// NOTE: the AppHash and ValidatorsHash are validated later.
 	return nil
 }
 
@@ -66,8 +67,7 @@ func (b *Block) FillHeader() {
 }
 
 // Computes and returns the block hash.
-// If the block is incomplete (e.g. missing Header.StateHash)
-// then the hash is nil, to prevent the usage of that hash.
+// If the block is incomplete, block hash is nil for safety.
 func (b *Block) Hash() []byte {
 	if b.Header == nil || b.Data == nil || b.LastValidation == nil {
 		return nil
@@ -132,12 +132,13 @@ type Header struct {
 	LastBlockParts     PartSetHeader `json:"last_block_parts"`
 	LastValidationHash []byte        `json:"last_validation_hash"`
 	DataHash           []byte        `json:"data_hash"`
-	StateHash          []byte        `json:"state_hash"`
+	ValidatorsHash     []byte        `json:"validators_hash"`
+	AppHash            []byte        `json:"app_hash"`
 }
 
 // NOTE: hash is nil if required fields are missing.
 func (h *Header) Hash() []byte {
-	if len(h.StateHash) == 0 {
+	if len(h.ValidatorsHash) == 0 {
 		return nil
 	}
 	return merkle.SimpleHashFromMap(map[string]interface{}{
@@ -150,7 +151,8 @@ func (h *Header) Hash() []byte {
 		"LastBlockParts": h.LastBlockParts,
 		"LastValidation": h.LastValidationHash,
 		"Data":           h.DataHash,
-		"State":          h.StateHash,
+		"Validators":     h.ValidatorsHash,
+		"App":            h.AppHash,
 	})
 }
 
@@ -164,9 +166,12 @@ func (h *Header) StringIndented(indent string) string {
 %s  Time:           %v
 %s  Fees:           %v
 %s  NumTxs:         %v
-%s  LastBlockHash:  %X
+%s  LastBlock:      %X
 %s  LastBlockParts: %v
-%s  StateHash:      %X
+%s  LastValidation: %X
+%s  Data:           %X
+%s  Validators:     %X
+%s  App:            %X
 %s}#%X`,
 		indent, h.ChainID,
 		indent, h.Height,
@@ -175,7 +180,10 @@ func (h *Header) StringIndented(indent string) string {
 		indent, h.NumTxs,
 		indent, h.LastBlockHash,
 		indent, h.LastBlockParts,
-		indent, h.StateHash,
+		indent, h.LastValidationHash,
+		indent, h.DataHash,
+		indent, h.ValidatorsHash,
+		indent, h.AppHash,
 		indent, h.Hash())
 }
 
@@ -322,11 +330,11 @@ type Data struct {
 
 func (data *Data) Hash() []byte {
 	if data.hash == nil {
-		bs := make([]interface{}, len(data.Txs))
+		txs := make([]interface{}, len(data.Txs))
 		for i, tx := range data.Txs {
-			bs[i] = acm.SignBytes(config.GetString("chain_id"), tx)
+			txs[i] = tx
 		}
-		data.hash = merkle.SimpleHashFromBinaries(bs) // NOTE: leaves are TxIDs.
+		data.hash = merkle.SimpleHashFromBinaries(txs) // NOTE: leaves are TxIDs.
 	}
 	return data.hash
 }

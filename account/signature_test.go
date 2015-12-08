@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/tendermint/ed25519"
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 )
 
 func TestSignAndValidate(t *testing.T) {

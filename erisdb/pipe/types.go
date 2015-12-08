@@ -1,10 +1,10 @@
 package pipe
 
 import (
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p" // NodeInfo (drop this!)
+	csus "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/account"
-	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
-	csus "github.com/tendermint/tendermint/consensus"
-	"github.com/tendermint/tendermint/types"
 )
 
 type (

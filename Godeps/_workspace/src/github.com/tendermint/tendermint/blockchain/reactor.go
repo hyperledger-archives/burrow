@@ -7,12 +7,13 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/events"
-	"github.com/tendermint/tendermint/p2p"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/proxy"
+	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -28,6 +29,7 @@ const (
 	statusUpdateIntervalSeconds = 10
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
+	maxBlockchainResponseSize        = types.MaxBlockSize + 2
 )
 
 type consensusReactor interface {
@@ -40,19 +42,20 @@ type consensusReactor interface {
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	sw         *p2p.Switch
-	state      *sm.State
-	store      *BlockStore
-	pool       *BlockPool
-	sync       bool
-	requestsCh chan BlockRequest
-	timeoutsCh chan string
-	lastBlock  *types.Block
+	sw          *p2p.Switch
+	state       *sm.State
+	proxyAppCtx proxy.AppContext // same as consensus.proxyAppCtx
+	store       *BlockStore
+	pool        *BlockPool
+	sync        bool
+	requestsCh  chan BlockRequest
+	timeoutsCh  chan string
+	lastBlock   *types.Block
 
 	evsw events.Fireable
 }
 
-func NewBlockchainReactor(state *sm.State, store *BlockStore, sync bool) *BlockchainReactor {
+func NewBlockchainReactor(state *sm.State, proxyAppCtx proxy.AppContext, store *BlockStore, sync bool) *BlockchainReactor {
 	if state.LastBlockHeight != store.Height() &&
 		state.LastBlockHeight != store.Height()-1 { // XXX double check this logic.
 		PanicSanity(Fmt("state (%v) and store (%v) height mismatch", state.LastBlockHeight, store.Height()))
@@ -65,12 +68,13 @@ func NewBlockchainReactor(state *sm.State, store *BlockStore, sync bool) *Blockc
 		timeoutsCh,
 	)
 	bcR := &BlockchainReactor{
-		state:      state,
-		store:      store,
-		pool:       pool,
-		sync:       sync,
-		requestsCh: requestsCh,
-		timeoutsCh: timeoutsCh,
+		state:       state,
+		proxyAppCtx: proxyAppCtx,
+		store:       store,
+		pool:        pool,
+		sync:        sync,
+		requestsCh:  requestsCh,
+		timeoutsCh:  timeoutsCh,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor(log, "BlockchainReactor", bcR)
 	return bcR
@@ -192,7 +196,7 @@ FOR_LOOP:
 		case _ = <-switchToConsensusTicker.C:
 			height, numPending := bcR.pool.GetStatus()
 			outbound, inbound, _ := bcR.Switch.NumPeers()
-			log.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requests),
+			log.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
 				"outbound", outbound, "inbound", inbound)
 			if bcR.pool.IsCaughtUp() {
 				log.Notice("Time to switch to consensus reactor!", "height", height)
@@ -217,7 +221,7 @@ FOR_LOOP:
 				firstParts := first.MakePartSet()
 				firstPartsHeader := firstParts.Header()
 				// Finally, verify the first block using the second's validation.
-				err := bcR.state.BondedValidators.VerifyValidation(
+				err := bcR.state.Validators.VerifyValidation(
 					bcR.state.ChainID, first.Hash(), firstPartsHeader, first.Height, second.LastValidation)
 				if err != nil {
 					log.Info("error in validation", "error", err)
@@ -225,10 +229,15 @@ FOR_LOOP:
 					break SYNC_LOOP
 				} else {
 					bcR.pool.PopRequest()
-					err := sm.ExecBlock(bcR.state, first, firstPartsHeader)
+					err := bcR.state.ExecBlock(bcR.proxyAppCtx, first, firstPartsHeader)
 					if err != nil {
 						// TODO This is bad, are we zombie?
 						PanicQ(Fmt("Failed to process committed block: %v", err))
+					}
+					err = bcR.state.Commit(bcR.proxyAppCtx)
+					if err != nil {
+						// TODO Handle gracefully.
+						PanicQ(Fmt("Failed to commit block at application: %v", err))
 					}
 					bcR.store.SaveBlock(first, firstParts, second.LastValidation)
 					bcR.state.Save()
@@ -279,10 +288,10 @@ var _ = wire.RegisterInterface(
 // TODO: ensure that bz is completely read.
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
-	n := int64(0)
+	n := int(0)
 	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
-	if err != nil && n != int64(len(bz)) {
+	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, maxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
+	if err != nil && n != len(bz) {
 		err = errors.New("DecodeMessage() had bytes left over.")
 	}
 	return
@@ -300,6 +309,7 @@ func (m *bcBlockRequestMessage) String() string {
 
 //-------------------------------------
 
+// NOTE: keep up-to-date with maxBlockchainResponseSize
 type bcBlockResponseMessage struct {
 	Block *types.Block
 }
