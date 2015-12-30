@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/eris-ltd/eris-db",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.1",
 	"Packages": [
 		"./..."
 	],
@@ -25,22 +25,18 @@
 			"Rev": "1a7ab6e4d5fdc72d6df30ef562102ae6e0d18518"
 		},
 		{
-			"ImportPath": "github.com/google/go-snappy/snappy",
-			"Rev": "eaa750b9bf4dcb7cb20454be850613b66cda3273"
-		},
-		{
 			"ImportPath": "github.com/gorilla/websocket",
-			"Rev": "a3ec486e6a7a41858210b0fc5d7b5df593b3c4a3"
+			"Rev": "1f87405cd9755fc388e111c4003caca4a2f52fa6"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15/stack",
-			"Comment": "v2.3-42-gee210fc",
-			"Rev": "ee210fc98cc7756aa0cf55d8d554148828e8e658"
+			"Comment": "v2.3-38-g352fceb",
+			"Rev": "352fceb48e895bd1dd0b9f5d3ae8f8516c49af0f"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15/term",
-			"Comment": "v2.3-42-gee210fc",
-			"Rev": "ee210fc98cc7756aa0cf55d8d554148828e8e658"
+			"Comment": "v2.3-38-g352fceb",
+			"Rev": "352fceb48e895bd1dd0b9f5d3ae8f8516c49af0f"
 		},
 		{
 			"ImportPath": "github.com/manucorporat/sse",
@@ -48,7 +44,7 @@
 		},
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
-			"Rev": "d67e0b7d1797975196499f79bcc322c08b9f218b"
+			"Rev": "043ae16291351db8465272edf465c9f388161627"
 		},
 		{
 			"ImportPath": "github.com/naoina/go-stringutil",
@@ -56,7 +52,7 @@
 		},
 		{
 			"ImportPath": "github.com/naoina/toml",
-			"Rev": "5667c316ee9576e9d5bca793ce4ec813a88ce7d3"
+			"Rev": "7b2dffbeaee47506726f29e36d19cf4ee90d361b"
 		},
 		{
 			"ImportPath": "github.com/sfreiberg/gotwilio",
@@ -79,7 +75,11 @@
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
-			"Rev": "a06509502ca32565bdf74afc1e573050023f261c"
+			"Rev": "63c9e642efad852f49e20a6f90194cae112fd2ac"
+		},
+		{
+			"ImportPath": "github.com/syndtr/gosnappy/snappy",
+			"Rev": "ce8acff4829e0c2458a67ead32390ac0a381c862"
 		},
 		{
 			"ImportPath": "github.com/tendermint/ed25519",
@@ -87,8 +87,8 @@
 		},
 		{
 			"ImportPath": "github.com/tendermint/log15",
-			"Comment": "v2.3-36-gc65281b",
-			"Rev": "c65281bb703b7612f60558e75b07c434c06e2636"
+			"Comment": "v2.3-36-g6e46075",
+			"Rev": "6e460758f10ef42a4724b8e4a82fee59aaa0e41d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/account",
@@ -215,16 +215,16 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
+			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "10576091dc82c9c109dddfb5ed77bdbbc87a9af8"
+			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
-			"Comment": "v5.8",
-			"Rev": "c06d47f593d786142436a43334f724d819093c04"
+			"Comment": "v5.12",
+			"Rev": "d5acf1dac43705f8bfbb71d878e290e2bed3950b"
 		},
 		{
 			"ImportPath": "gopkg.in/fatih/set.v0",

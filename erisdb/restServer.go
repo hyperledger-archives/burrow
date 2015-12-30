@@ -424,9 +424,9 @@ func (this *RestServer) handleCallCode(c *gin.Context) {
 }
 
 func (this *RestServer) handleTransact(c *gin.Context) {
-	
+
 	_, hold := c.Get("hold")
-	
+
 	param := &TransactParam{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
@@ -537,7 +537,7 @@ func parseTxModifier(c *gin.Context) {
 	hold := c.Query("hold")
 	if hold == "true" {
 		c.Set("hold", true)
-	} else if (hold != "") {
+	} else if hold != "" {
 		if hold != "false" {
 			c.Writer.WriteHeader(400)
 			c.Writer.Write([]byte("tx hold must be either 'true' or 'false', found: " + hold))

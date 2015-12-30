@@ -2,8 +2,6 @@ package toml
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
@@ -49,29 +47,6 @@ func Unmarshal(data []byte, v interface{}) error {
 		return fmt.Errorf("toml: unmarshal: %v", err)
 	}
 	return nil
-}
-
-// A Decoder reads and decodes TOML from an input stream.
-type Decoder struct {
-	r io.Reader
-}
-
-// NewDecoder returns a new Decoder that reads from r.
-// Note that it reads all from r before parsing it.
-func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{
-		r: r,
-	}
-}
-
-// Decode parses the TOML data from its input and stores it in the value pointed to by v.
-// See the documentation for Unmarshal for details about the conversion of TOML into a Go value.
-func (d *Decoder) Decode(v interface{}) error {
-	b, err := ioutil.ReadAll(d.r)
-	if err != nil {
-		return err
-	}
-	return Unmarshal(b, v)
 }
 
 // Unmarshaler is the interface implemented by objects that can unmarshal a

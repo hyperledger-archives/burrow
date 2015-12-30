@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/google/go-snappy/snappy"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/gosnappy/snappy"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/cache"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/comparer"

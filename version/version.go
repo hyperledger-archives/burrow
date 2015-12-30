@@ -1,3 +1,7 @@
 package version
 
-const VERSION = "0.10.4"
+import (
+
+)
+
+const Version = "0.11.0"

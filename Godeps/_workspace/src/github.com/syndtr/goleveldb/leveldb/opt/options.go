@@ -34,11 +34,10 @@ var (
 	DefaultCompactionTotalSize           = 10 * MiB
 	DefaultCompactionTotalSizeMultiplier = 10.0
 	DefaultCompressionType               = SnappyCompression
-	DefaultIteratorSamplingRate          = 1 * MiB
-	DefaultMaxMemCompationLevel          = 2
-	DefaultNumLevel                      = 7
 	DefaultOpenFilesCacher               = LRUCacher
 	DefaultOpenFilesCacheCapacity        = 500
+	DefaultMaxMemCompationLevel          = 2
+	DefaultNumLevel                      = 7
 	DefaultWriteBuffer                   = 4 * MiB
 	DefaultWriteL0PauseTrigger           = 12
 	DefaultWriteL0SlowdownTrigger        = 8
@@ -154,7 +153,7 @@ type Options struct {
 	BlockCacher Cacher
 
 	// BlockCacheCapacity defines the capacity of the 'sorted table' block caching.
-	// Use -1 for zero, this has same effect as specifying NoCacher to BlockCacher.
+	// Use -1 for zero, this has same effect with specifying NoCacher to BlockCacher.
 	//
 	// The default value is 8MiB.
 	BlockCacheCapacity int
@@ -250,11 +249,6 @@ type Options struct {
 	// The default value (DefaultCompression) uses snappy compression.
 	Compression Compression
 
-	// DisableBufferPool allows disable use of util.BufferPool functionality.
-	//
-	// The default value is false.
-	DisableBufferPool bool
-
 	// DisableBlockCache allows disable use of cache.Cache functionality on
 	// 'sorted table' block.
 	//
@@ -294,13 +288,6 @@ type Options struct {
 	// The default value is nil.
 	Filter filter.Filter
 
-	// IteratorSamplingRate defines approximate gap (in bytes) between read
-	// sampling of an iterator. The samples will be used to determine when
-	// compaction should be triggered.
-	//
-	// The default is 1MiB.
-	IteratorSamplingRate int
-
 	// MaxMemCompationLevel defines maximum level a newly compacted 'memdb'
 	// will be pushed into if doesn't creates overlap. This should less than
 	// NumLevel. Use -1 for level-0.
@@ -321,15 +308,10 @@ type Options struct {
 	OpenFilesCacher Cacher
 
 	// OpenFilesCacheCapacity defines the capacity of the open files caching.
-	// Use -1 for zero, this has same effect as specifying NoCacher to OpenFilesCacher.
+	// Use -1 for zero, this has same effect with specifying NoCacher to OpenFilesCacher.
 	//
 	// The default value is 500.
 	OpenFilesCacheCapacity int
-
-	// If true then opens DB in read-only mode.
-	//
-	// The default value is false.
-	ReadOnly bool
 
 	// Strict defines the DB strict level.
 	Strict Strict
@@ -373,9 +355,9 @@ func (o *Options) GetBlockCacher() Cacher {
 }
 
 func (o *Options) GetBlockCacheCapacity() int {
-	if o == nil || o.BlockCacheCapacity == 0 {
+	if o == nil || o.BlockCacheCapacity <= 0 {
 		return DefaultBlockCacheCapacity
-	} else if o.BlockCacheCapacity < 0 {
+	} else if o.BlockCacheCapacity == -1 {
 		return 0
 	}
 	return o.BlockCacheCapacity
@@ -482,20 +464,6 @@ func (o *Options) GetCompression() Compression {
 	return o.Compression
 }
 
-func (o *Options) GetDisableBufferPool() bool {
-	if o == nil {
-		return false
-	}
-	return o.DisableBufferPool
-}
-
-func (o *Options) GetDisableBlockCache() bool {
-	if o == nil {
-		return false
-	}
-	return o.DisableBlockCache
-}
-
 func (o *Options) GetDisableCompactionBackoff() bool {
 	if o == nil {
 		return false
@@ -524,19 +492,12 @@ func (o *Options) GetFilter() filter.Filter {
 	return o.Filter
 }
 
-func (o *Options) GetIteratorSamplingRate() int {
-	if o == nil || o.IteratorSamplingRate <= 0 {
-		return DefaultIteratorSamplingRate
-	}
-	return o.IteratorSamplingRate
-}
-
 func (o *Options) GetMaxMemCompationLevel() int {
 	level := DefaultMaxMemCompationLevel
 	if o != nil {
 		if o.MaxMemCompationLevel > 0 {
 			level = o.MaxMemCompationLevel
-		} else if o.MaxMemCompationLevel < 0 {
+		} else if o.MaxMemCompationLevel == -1 {
 			level = 0
 		}
 	}
@@ -564,19 +525,12 @@ func (o *Options) GetOpenFilesCacher() Cacher {
 }
 
 func (o *Options) GetOpenFilesCacheCapacity() int {
-	if o == nil || o.OpenFilesCacheCapacity == 0 {
+	if o == nil || o.OpenFilesCacheCapacity <= 0 {
 		return DefaultOpenFilesCacheCapacity
-	} else if o.OpenFilesCacheCapacity < 0 {
+	} else if o.OpenFilesCacheCapacity == -1 {
 		return 0
 	}
 	return o.OpenFilesCacheCapacity
-}
-
-func (o *Options) GetReadOnly() bool {
-	if o == nil {
-		return false
-	}
-	return o.ReadOnly
 }
 
 func (o *Options) GetStrict(strict Strict) bool {

@@ -167,16 +167,44 @@ Here is a list of the current built in validators:
 		inside of you program you know the struct will be valid, but need to
 		verify it has been assigned.
 
+	exists
+		Is a special tag without a validation function attached. It is used when a field
+		is a Pointer, Interface or Invalid and you wish to validate that it exists.
+		Example: want to ensure a bool exists if you define the bool as a pointer and
+		use exists it will ensure there is a value; couldn't use required as it would
+		fail when the bool was false. exists will fail is the value is a Pointer, Interface
+		or Invalid and is nil. (Usage: exists)
+
 	omitempty
 		Allows conditional validation, for example if a field is not set with
 		a value (Determined by the required validator) then other validation
 		such as min or max won't run, but if a value is set validation will run.
 		(Usage: omitempty)
 
+	dive
+		This tells the validator to dive into a slice, array or map and validate that
+		level of the slice, array or map with the validation tags that follow.
+		Multidimensional nesting is also supported, each level you wish to dive will
+		require another dive tag. (Usage: dive)
+		Example: [][]string with validation tag "gt=0,dive,len=1,dive,required"
+		gt=0 will be applied to []
+		len=1 will be applied to []string
+		required will be applied to string
+		Example2: [][]string with validation tag "gt=0,dive,dive,required"
+		gt=0 will be applied to []
+		[]string will be spared validation
+		required will be applied to string
+		NOTE: in Example2 if the required validation failed, but all others passed
+		the hierarchy of FieldError's in the middle with have their IsPlaceHolder field
+		set to true. If a FieldError has IsSliceOrMap=true or IsMap=true then the
+		FieldError is a Slice or Map field and if IsPlaceHolder=true then contains errors
+		within its SliceOrArrayErrs or MapErrs fields.
+
 	required
-		This validates that the value is not the data types default value.
+		This validates that the value is not the data types default zero value.
 		For numbers ensures value is not zero. For strings ensures value is
-		not "". For slices, arrays, and maps, ensures the length is not zero.
+		not "". For slices, maps, pointers, interfaces, channels and functions
+		ensures the value is not nil.
 		(Usage: required)
 
 	len

@@ -119,7 +119,6 @@ export ECM_PATH  # set by Dockerfile
 export MINTX_NODE_ADDR=$NODE_ADDR
 export MINTX_SIGN_ADDR=keys:4767
 
-
 # print the version
 bash $ECM_PATH/version.sh
 

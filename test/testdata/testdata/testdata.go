@@ -305,7 +305,7 @@ var testDataJson = `{
   },
   "GetNetworkInfo": {
     "output": {
-      "client_version": "0.5.0",
+      "client_version": "0.5.2",
       "moniker": "__MONIKER__",
       "listening": false,
       "listeners": [],
@@ -314,7 +314,7 @@ var testDataJson = `{
   },
   "GetClientVersion": {
     "output": {
-      "client_version": "0.5.0"
+      "client_version": "0.5.2"
     }
   },
   "GetMoniker": {

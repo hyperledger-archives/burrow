@@ -69,6 +69,8 @@ type (
 		Call(fromAddress, toAddress, data []byte) (*Call, error)
 		CallCode(fromAddress, code, data []byte) (*Call, error)
 		BroadcastTx(tx types.Tx) (*Receipt, error)
+		Send(privKey, toAddress []byte, amount int64) (*Receipt, error)
+		SendAndHold(privKey, toAddress []byte, amount int64) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
 		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
@@ -98,6 +100,7 @@ func NewPipe(tNode *node.Node) Pipe {
 	namereg := newNamereg(tNode.ConsensusState())
 	net := newNetwork(tNode.Switch())
 	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
+
 	return &PipeImpl{
 		tNode,
 		accounts,

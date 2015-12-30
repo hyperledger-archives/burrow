@@ -63,7 +63,7 @@ func (this *CmdProcess) Start(doneChan chan<- error) {
 		log.Debug(text)
 		if strings.Index(text, this.token) != -1 {
 			log.Debug("Token found", "token", this.token)
-			go func(){
+			go func() {
 				for scanner.Scan() {
 					text := scanner.Text()
 					log.Debug(text)

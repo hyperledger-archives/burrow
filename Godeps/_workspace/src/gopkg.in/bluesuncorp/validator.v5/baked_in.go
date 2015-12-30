@@ -424,10 +424,12 @@ func hasValue(top interface{}, current interface{}, field interface{}, param str
 	st := reflect.ValueOf(field)
 
 	switch st.Kind() {
-
-	case reflect.Slice, reflect.Map, reflect.Array:
-		return field != nil && int64(st.Len()) > 0
-
+	case reflect.Invalid:
+		return false
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return !st.IsNil()
+	case reflect.Array:
+		return field != reflect.Zero(reflect.TypeOf(field)).Interface()
 	default:
 		return field != nil && field != reflect.Zero(reflect.TypeOf(field)).Interface()
 	}
@@ -592,7 +594,7 @@ func isGte(top interface{}, current interface{}, field interface{}, param string
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(len(st.String())) >= p
+		return int64(utf8.RuneCountInString(st.String())) >= p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
@@ -637,7 +639,7 @@ func isGt(top interface{}, current interface{}, field interface{}, param string)
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(len(st.String())) > p
+		return int64(utf8.RuneCountInString(st.String())) > p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
@@ -681,7 +683,7 @@ func hasLengthOf(top interface{}, current interface{}, field interface{}, param 
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(len(st.String())) == p
+		return int64(utf8.RuneCountInString(st.String())) == p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
@@ -875,7 +877,7 @@ func isLte(top interface{}, current interface{}, field interface{}, param string
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(len(st.String())) <= p
+		return int64(utf8.RuneCountInString(st.String())) <= p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
@@ -920,7 +922,7 @@ func isLt(top interface{}, current interface{}, field interface{}, param string)
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(len(st.String())) < p
+		return int64(utf8.RuneCountInString(st.String())) < p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
