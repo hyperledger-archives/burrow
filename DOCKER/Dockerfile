@@ -26,21 +26,11 @@ RUN git clone --quiet https://$REPO . && \
   go build -o /usr/local/bin/tendermint ./cmd/tendermint
 
 #-----------------------------------------------------------------------------
-# install erisdb
-
-# set the repo and install erisdb
-ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
-COPY . $REPO
-WORKDIR $REPO
-RUN cd ./cmd/erisdb && go build -o /usr/local/bin/erisdb && \
-  cd ../erisdbss && go build -o /usr/local/bin/erisdbss && cd ../..
-
-#-----------------------------------------------------------------------------
 # install mint-client tools
 
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
-ENV BRANCH develop
+ENV BRANCH master
 RUN mkdir --parents $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone --quiet https://$REPO . && \
@@ -50,10 +40,20 @@ RUN git clone --quiet https://$REPO . && \
   mv ./mint-client /usr/local/bin/
 
 #-----------------------------------------------------------------------------
+# install erisdb
+
+# set the repo and install erisdb
+ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
+COPY . $REPO
+WORKDIR $REPO
+RUN cd ./cmd/erisdb && go build -o /usr/local/bin/erisdb && cd ../..
+
+#-----------------------------------------------------------------------------
 # cleanup
 
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
+  unset REPO_ALIAS && \
   unset COMMIT && \
   unset BRANCH
 
