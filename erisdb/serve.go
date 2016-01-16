@@ -3,15 +3,24 @@
 package erisdb
 
 import (
+	"encoding/hex"
+	"fmt"
+	"path"
+	"strings"
+
+	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	"github.com/eris-ltd/eris-db/server"
+
+	"github.com/eris-ltd/mint-client/mintx/core"
+
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
 	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	"github.com/eris-ltd/eris-db/server"
-	"path"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
 
 var log = log15.New("module", "eris/erisdb_server")
@@ -53,9 +62,28 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	tmConfig.Set("version", node.Version)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
 
+	// load the priv validator
+	privVal := types.LoadPrivValidator(tmConfig.GetString("priv_validator_file"))
+
+	// possibly set the signer to use eris-keys
+	signerCfg := tmConfig.GetString("signer")
+	if !(signerCfg == "default" || signerCfg == "") {
+		spl := strings.Split(signerCfg, ":")
+		if len(spl) != 2 {
+			panic(`"signer" field in config.toml should be "default" or "ERIS_KEYS_HOST:ERIS_KEYS_PORT"`)
+		}
+
+		// TODO: if a privKey is found in the privVal, warn the user that we want to import it to eris-keys and delete it
+
+		host := signerCfg
+		addr := hex.EncodeToString(privVal.Address)
+		signer := NewErisSigner(host, addr)
+		privVal.SetSigner(signer)
+	}
+
 	// Set the node up.
 	nodeRd := make(chan struct{})
-	nd := node.NewNode()
+	nd := node.NewNode(privVal)
 	// Load the supporting objects.
 	pipe := ep.NewPipe(nd)
 	codec := &TCodec{}
@@ -99,4 +127,26 @@ func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 	// Block until everything is shut down.
 	<-shutDown
 	nd.Stop()
+}
+
+type ErisSigner struct {
+	Host       string
+	Address    string
+	SessionKey string
+}
+
+func NewErisSigner(host, address string) *ErisSigner {
+	if !strings.HasPrefix(host, "http://") {
+		host = fmt.Sprintf("http://%s", host)
+	}
+	return &ErisSigner{Host: host, Address: address}
+}
+
+func (es *ErisSigner) Sign(msg []byte) acm.SignatureEd25519 {
+	msgHex := hex.EncodeToString(msg)
+	sig, err := core.Sign(msgHex, es.Address, es.Host)
+	if err != nil {
+		panic(err)
+	}
+	return acm.SignatureEd25519(sig)
 }

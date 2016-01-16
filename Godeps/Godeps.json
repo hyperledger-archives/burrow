@@ -92,98 +92,98 @@
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/account",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/alert",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/blockchain",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/common",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/config",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/consensus",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/db",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/events",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/logger",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/mempool",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/merkle",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/node",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/p2p",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/permission/types",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/rpc",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/state",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/types",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/vm",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tendermint/tendermint/wire",
-			"Comment": "0.1-56-gd51741d",
-			"Rev": "d51741df7220f7506334ab43563bfa98f5062058"
+			"Comment": "0.1-63-gb0c1ee2",
+			"Rev": "b0c1ee2c3ad851cf4e7b9dc95c2e65559e5d447d"
 		},
 		{
 			"ImportPath": "github.com/tommy351/gin-cors",

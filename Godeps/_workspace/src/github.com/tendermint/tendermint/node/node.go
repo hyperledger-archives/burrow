@@ -2,6 +2,7 @@ package node
 
 import (
 	"bytes"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -44,7 +45,15 @@ type Node struct {
 	privKey          acm.PrivKeyEd25519
 }
 
-func NewNode() *Node {
+func NewNodeDefaultPrivVal() *Node {
+	// Get PrivValidator
+	privValidatorFile := config.GetString("priv_validator_file")
+	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
+
+	return NewNode(privValidator)
+}
+
+func NewNode(privValidator *types.PrivValidator) *Node {
 	// Get BlockStore
 	blockStoreDB := dbm.GetDB("blockstore")
 	blockStore := bc.NewBlockStore(blockStoreDB)
@@ -61,22 +70,18 @@ func NewNode() *Node {
 		wire.WriteJSON(genDoc, buf, n, err)
 		stateDB.Set(stypes.GenDocKey, buf.Bytes())
 		if *err != nil {
-			Exit(Fmt("Unable to write gendoc to db: %v", err))
+			Exit(Fmt("Unable to write gendoc to db: %v", *err))
 		}
 	} else {
 		genDocBytes := stateDB.Get(stypes.GenDocKey)
 		err := new(error)
 		wire.ReadJSONPtr(&genDoc, genDocBytes, err)
 		if *err != nil {
-			Exit(Fmt("Unable to read gendoc from db: %v", err))
+			Exit(Fmt("Unable to read gendoc from db: %v", *err))
 		}
 	}
 	// add the chainid to the global config
 	config.Set("chain_id", state.ChainID)
-
-	// Get PrivValidator
-	privValidatorFile := config.GetString("priv_validator_file")
-	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
 
 	// Generate node PrivKey
 	privKey := acm.GenPrivKeyEd25519()
@@ -297,11 +302,21 @@ func RunNode() {
 			if FileExists(genDocFile) {
 				break
 			}
+			jsonBlob, err := ioutil.ReadFile(genDocFile)
+			if err != nil {
+				Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+			}
+			genDoc := stypes.GenesisDocFromJSON(jsonBlob)
+			if genDoc.ChainID == "" {
+				PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
+			}
+			config.Set("chain_id", genDoc.ChainID)
+			config.Set("genesis_doc", genDoc)
 		}
 	}
 
 	// Create & start node
-	n := NewNode()
+	n := NewNodeDefaultPrivVal()
 	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"))
 	n.AddListener(l)
 	err := n.Start()
