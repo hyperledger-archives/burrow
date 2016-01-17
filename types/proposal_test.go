@@ -3,9 +3,9 @@ package types
 import (
 	"testing"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	_ "github.com/tendermint/go-config/tendermint_test"
 )
 
 func TestProposalSignable(t *testing.T) {

@@ -8,11 +8,11 @@ import (
 	"math"
 	"sync"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/wire"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/github.com/tendermint/ed25519"
+	"github.com/tendermint/tendermint/go-ed25519"
 )
 
 const (

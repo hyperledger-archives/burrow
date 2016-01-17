@@ -5,12 +5,12 @@ import (
 	"errors"
 	"io"
 
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	ptypes "github.com/tendermint/tendermint/permission/types"
-	"github.com/tendermint/tendermint/wire"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	"github.com/tendermint/go-wire"
 )
 
 var (

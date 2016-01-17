@@ -3,10 +3,10 @@ package types
 import (
 	"testing"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
-	ptypes "github.com/tendermint/tendermint/permission/types"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	_ "github.com/tendermint/go-config/tendermint_test"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 
 var chainID string
