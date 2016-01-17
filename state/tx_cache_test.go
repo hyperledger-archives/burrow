@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/tendermint/tendermint/wire"
+	"github.com/tendermint/go-wire"
 )
 
 func TestStateToFromVMAccount(t *testing.T) {

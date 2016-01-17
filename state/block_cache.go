@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"sort"
 
-	acm "github.com/tendermint/tendermint/account"
-	"github.com/tendermint/tendermint/wire"
-	. "github.com/tendermint/tendermint/common"
-	dbm "github.com/tendermint/tendermint/db"
-	"github.com/tendermint/tendermint/merkle"
-	"github.com/tendermint/tendermint/types"
+	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/go-merkle"
+	"github.com/eris-ltd/eris-db/types"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {

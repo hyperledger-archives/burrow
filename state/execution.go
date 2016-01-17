@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/events"
-	ptypes "github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/vm"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-events"
+	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
+	"github.com/eris-ltd/eris-db/types"
+	"github.com/eris-ltd/eris-db/vm"
 )
 
 // NOTE: If an error occurs during block execution, state will be left

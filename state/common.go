@@ -1,9 +1,9 @@
 package state
 
 import (
-	acm "github.com/tendermint/tendermint/account"
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/vm"
+	acm "github.com/eris-ltd/eris-db/account"
+	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/vm"
 )
 
 type AccountGetter interface {

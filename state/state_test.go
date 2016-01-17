@@ -1,9 +1,9 @@
 package state
 
 import (
-	"github.com/tendermint/tendermint/account"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
+	_ "github.com/tendermint/go-config/tendermint_test"
+	"github.com/eris-ltd/eris-db/types"
 
 	"bytes"
 	"testing"
