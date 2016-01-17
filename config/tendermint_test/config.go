@@ -27,7 +27,7 @@ func getTMRoot(rootDir string) string {
 
 func initTMRoot(rootDir string) {
 	rootDir = getTMRoot(rootDir)
-	EnsureDir(rootDir)
+	EnsureDir(rootDir, os.ModeDir)
 
 	configFilePath := path.Join(rootDir, "config.toml")
 	genesisFilePath := path.Join(rootDir, "genesis.json")
@@ -36,10 +36,10 @@ func initTMRoot(rootDir string) {
 	if !FileExists(configFilePath) {
 		// Ask user for moniker
 		// moniker := cfg.Prompt("Type hostname: ", "anonymous")
-		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")))
+		MustWriteFile(configFilePath, []byte(defaultConfig("anonymous")), os.ModePerm)
 	}
 	if !FileExists(genesisFilePath) {
-		MustWriteFile(genesisFilePath, []byte(defaultGenesis))
+		MustWriteFile(genesisFilePath, []byte(defaultGenesis), os.ModePerm)
 	}
 }
 
