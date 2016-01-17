@@ -12,7 +12,7 @@ import (
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 
-	"github.com/tendermint/tendermint/go-ed25519"
+	"github.com/tendermint/go-ed25519"
 )
 
 const (
