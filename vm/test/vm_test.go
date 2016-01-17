@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/events"
-	ptypes "github.com/tendermint/tendermint/permission/types"
-	"github.com/tendermint/tendermint/types"
-	. "github.com/tendermint/tendermint/vm"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-events"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	"github.com/eris-ltd/eris-db/types"
+	. "github.com/eris-ltd/eris-db/vm"
 )
 
 func newAppState() *FakeAppState {

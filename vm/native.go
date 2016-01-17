@@ -2,8 +2,8 @@ package vm
 
 import (
 	"crypto/sha256"
-	"github.com/tendermint/tendermint/Godeps/_workspace/src/code.google.com/p/go.crypto/ripemd160"
-	. "github.com/tendermint/tendermint/common"
+	"code.google.com/p/go.crypto/ripemd160"
+	. "github.com/tendermint/go-common"
 )
 
 var registeredNativeContracts = make(map[Word256]NativeContract)
