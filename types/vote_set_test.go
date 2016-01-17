@@ -6,7 +6,7 @@ import (
 
 	. "github.com/tendermint/go-common"
 	. "github.com/tendermint/go-common/test"
-	_ "github.com/tendermint/go-config/tendermint_test"
+	_ "github.com/eris-ltd/eris-db/config/tendermint_test"
 
 	"testing"
 )
