@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/tendermint/tendermint/common"
-	"github.com/tendermint/tendermint/types"
+	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/types"
 )
 
 const (

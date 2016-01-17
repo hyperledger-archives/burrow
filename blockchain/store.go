@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/tendermint/tendermint/wire"
-	. "github.com/tendermint/tendermint/common"
-	dbm "github.com/tendermint/tendermint/db"
-	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	dbm "github.com/tendermint/go-db"
+	"github.com/eris-ltd/eris-db/types"
 )
 
 /*
