@@ -12,7 +12,7 @@ import (
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 
-	"github.com/tendermint/go-ed25519"
+	"github.com/tendermint/ed25519"
 )
 
 const (
@@ -96,7 +96,7 @@ func (privVal *PrivValidator) save() {
 		PanicSanity("Cannot save PrivValidator: filePath not set")
 	}
 	jsonBytes := wire.JSONBytes(privVal)
-	err := WriteFileAtomic(privVal.filePath, jsonBytes)
+	err := WriteFileAtomic(privVal.filePath, jsonBytes, 0600)
 	if err != nil {
 		// `@; BOOM!!!
 		PanicCrisis(err)
