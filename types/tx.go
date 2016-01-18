@@ -53,7 +53,7 @@ Admin Txs:
 */
 
 type Tx interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int64, err *error)
+	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 }
 
 // Types of Tx implementations
@@ -106,7 +106,7 @@ func (txIn *TxInput) ValidateBasic() error {
 	return nil
 }
 
-func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int64, err *error) {
+func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
 }
 
@@ -131,7 +131,7 @@ func (txOut *TxOutput) ValidateBasic() error {
 	return nil
 }
 
-func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int64, err *error) {
+func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"address":"%X","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
 }
 
@@ -146,7 +146,7 @@ type SendTx struct {
 	Outputs []*TxOutput `json:"outputs"`
 }
 
-func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
 	for i, in := range tx.Inputs {
@@ -179,7 +179,7 @@ type CallTx struct {
 	Data     []byte   `json:"data"`
 }
 
-func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
@@ -209,7 +209,7 @@ type NameTx struct {
 	Fee   int64    `json:"fee"`
 }
 
-func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"data":%s,"fee":%v`, TxTypeName, jsonEscape(tx.Data), tx.Fee)), w, n, err)
 	wire.WriteTo([]byte(`,"input":`), w, n, err)
@@ -257,7 +257,7 @@ type BondTx struct {
 	UnbondTo  []*TxOutput          `json:"unbond_to"`
 }
 
-func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeBond)), w, n, err)
 	for i, in := range tx.Inputs {
@@ -290,7 +290,7 @@ type UnbondTx struct {
 	Signature acm.SignatureEd25519 `json:"signature"`
 }
 
-func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
 }
@@ -307,7 +307,7 @@ type RebondTx struct {
 	Signature acm.SignatureEd25519 `json:"signature"`
 }
 
-func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
 }
@@ -324,7 +324,7 @@ type DupeoutTx struct {
 	VoteB   Vote   `json:"vote_b"`
 }
 
-func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	PanicSanity("DupeoutTx has no sign bytes")
 }
 
@@ -339,7 +339,7 @@ type PermissionsTx struct {
 	PermArgs ptypes.PermArgs `json:"args"`
 }
 
-func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"args":"`, TxTypePermissions)), w, n, err)
 	wire.WriteJSON(tx.PermArgs, w, n, err)

@@ -24,6 +24,7 @@ var (
 )
 
 type Part struct {
+	Index int								 `json:"index"`
 	Proof merkle.SimpleProof `json:"proof"`
 	Bytes []byte             `json:"bytes"`
 
@@ -75,7 +76,7 @@ func (psh PartSetHeader) Equals(other PartSetHeader) bool {
 	return psh.Total == other.Total && bytes.Equal(psh.Hash, other.Hash)
 }
 
-func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int64, err *error) {
+func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"hash":"%X","total":%v}`, psh.Hash, psh.Total)), w, n, err)
 }
 

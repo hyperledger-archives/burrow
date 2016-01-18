@@ -42,7 +42,7 @@ const (
 	VoteTypePrecommit = byte(0x02)
 )
 
-func (vote *Vote) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
+func (vote *Vote) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":"%s"`, chainID)), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"vote":{"block_hash":"%X","block_parts_header":%v`, vote.BlockHash, vote.BlockPartsHeader)), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"height":%v,"round":%v,"type":%v}}`, vote.Height, vote.Round, vote.Type)), w, n, err)
