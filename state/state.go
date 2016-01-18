@@ -51,22 +51,22 @@ func LoadState(db dbm.DB) *State {
 	if len(buf) == 0 {
 		return nil
 	} else {
-		r, n, err := bytes.NewReader(buf), new(int64), new(error)
-		s.ChainID = wire.ReadString(r, n, err)
+		r, n, err := bytes.NewReader(buf), new(int), new(error)
+		s.ChainID = wire.ReadString(r, 0, n, err)
 		s.LastBlockHeight = wire.ReadVarint(r, n, err)
-		s.LastBlockHash = wire.ReadByteSlice(r, n, err)
-		s.LastBlockParts = wire.ReadBinary(types.PartSetHeader{}, r, n, err).(types.PartSetHeader)
+		s.LastBlockHash = wire.ReadByteSlice(r, 0, n, err)
+		s.LastBlockParts = wire.ReadBinary(types.PartSetHeader{}, r, 0, n, err).(types.PartSetHeader)
 		s.LastBlockTime = wire.ReadTime(r, n, err)
-		s.BondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, n, err).(*types.ValidatorSet)
-		s.LastBondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, n, err).(*types.ValidatorSet)
-		s.UnbondingValidators = wire.ReadBinary(&types.ValidatorSet{}, r, n, err).(*types.ValidatorSet)
-		accountsHash := wire.ReadByteSlice(r, n, err)
+		s.BondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, 0, n, err).(*types.ValidatorSet)
+		s.LastBondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, 0, n, err).(*types.ValidatorSet)
+		s.UnbondingValidators = wire.ReadBinary(&types.ValidatorSet{}, r, 0, n, err).(*types.ValidatorSet)
+		accountsHash := wire.ReadByteSlice(r, 0, n, err)
 		s.accounts = merkle.NewIAVLTree(wire.BasicCodec, acm.AccountCodec, defaultAccountsCacheCapacity, db)
 		s.accounts.Load(accountsHash)
-		validatorInfosHash := wire.ReadByteSlice(r, n, err)
+		validatorInfosHash := wire.ReadByteSlice(r, 0, n, err)
 		s.validatorInfos = merkle.NewIAVLTree(wire.BasicCodec, types.ValidatorInfoCodec, 0, db)
 		s.validatorInfos.Load(validatorInfosHash)
-		nameRegHash := wire.ReadByteSlice(r, n, err)
+		nameRegHash := wire.ReadByteSlice(r, 0, n, err)
 		s.nameReg = merkle.NewIAVLTree(wire.BasicCodec, NameRegCodec, 0, db)
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
@@ -82,7 +82,7 @@ func (s *State) Save() {
 	s.accounts.Save()
 	s.validatorInfos.Save()
 	s.nameReg.Save()
-	buf, n, err := new(bytes.Buffer), new(int64), new(error)
+	buf, n, err := new(bytes.Buffer), new(int), new(error)
 	wire.WriteString(s.ChainID, buf, n, err)
 	wire.WriteVarint(s.LastBlockHeight, buf, n, err)
 	wire.WriteByteSlice(s.LastBlockHash, buf, n, err)
@@ -340,12 +340,12 @@ func (s *State) SetNameReg(nameReg merkle.Tree) {
 	s.nameReg = nameReg
 }
 
-func NameRegEncoder(o interface{}, w io.Writer, n *int64, err *error) {
+func NameRegEncoder(o interface{}, w io.Writer, n *int, err *error) {
 	wire.WriteBinary(o.(*types.NameRegEntry), w, n, err)
 }
 
-func NameRegDecoder(r io.Reader, n *int64, err *error) interface{} {
-	return wire.ReadBinary(&types.NameRegEntry{}, r, n, err)
+func NameRegDecoder(r io.Reader, n *int, err *error) interface{} {
+	return wire.ReadBinary(&types.NameRegEntry{}, r, 0, n, err)
 }
 
 var NameRegCodec = wire.Codec{
