@@ -1,10 +1,11 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
-	rpc "github.com/eris-ltd/eris-db/rpc"
 	"io"
 	"io/ioutil"
+
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	rpc "github.com/eris-ltd/eris-db/rpc"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.
