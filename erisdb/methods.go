@@ -3,10 +3,13 @@ package erisdb
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"strings"
+
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	"strings"
+
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // TODO use the method name definition file.
@@ -381,12 +384,14 @@ func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface
 }
 
 func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &types.CallTx{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	var err error
+	// Special because Tx is an interface
+	param := new(types.Tx)
+	wire.ReadJSONPtr(param, request.Params, &err)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := this.pipe.Transactor().BroadcastTx(param)
+	receipt, errC := this.pipe.Transactor().BroadcastTx(*param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

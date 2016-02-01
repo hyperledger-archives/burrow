@@ -3,14 +3,18 @@ package erisdb
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"io/ioutil"
+	"strconv"
+	"strings"
+
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/util"
-	"strconv"
-	"strings"
+
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // Provides a REST-like web-api. Implements server.Server
@@ -372,12 +376,15 @@ func (this *RestServer) handlePeer(c *gin.Context) {
 // ********************************* Transactions *********************************
 
 func (this *RestServer) handleBroadcastTx(c *gin.Context) {
-	param := &types.CallTx{}
-	errD := this.codec.Decode(param, c.Request.Body)
-	if errD != nil {
-		c.AbortWithError(500, errD)
+	// Special because Tx is an interface
+	param := new(types.Tx)
+	b, err := ioutil.ReadAll(c.Request.Body)
+	defer c.Request.Body.Close()
+	wire.ReadJSONPtr(param, b, &err)
+	if err != nil {
+		c.AbortWithError(500, err)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(param)
+	receipt, err := this.pipe.Transactor().BroadcastTx(*param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
