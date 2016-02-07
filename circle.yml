@@ -32,8 +32,6 @@ deployment:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - DOCKER/build.sh
       - docker push quay.io/eris/erisdb
-
-deployment:
   develop:
     branch: develop
     commands:
