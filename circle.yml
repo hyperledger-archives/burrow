@@ -2,9 +2,7 @@ machine:
   environment:
     GOPATH: /home/ubuntu/.go_workspace
     REPO: ${GOPATH}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-    #INTEGRATION_TESTS_BRANCH: develop
-    #INTEGRATION_TESTS_PATH: $HOME/integration-tests
-    DOCKER_VERSION: 1.8.2
+    DOCKER_VERSION: 1.9.1
     DOCKER_MACHINE_VERSION: 0.5.4
   post:
     - rm -rf $GOPATH/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
@@ -19,7 +17,6 @@ dependencies:
     - sudo service docker start
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
     - sudo curl -sSL -o /usr/bin/docker-machine https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine_linux-amd64; sudo chmod 0755 /usr/bin/docker-machine
-    # - git clone https://github.com/eris-ltd/integration-tests $INTEGRATION_TESTS_PATH
     - "cd ./cmd/erisdb && go get -d && go build"
     - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
     - chmod +x ~/bin/erisdb
@@ -27,11 +24,18 @@ dependencies:
 test:
   override:
     - go test -v ./...
-    #- bash $INTEGRATION_TESTS_PATH/test.sh
 
 deployment:
   master:
     branch: master
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - DOCKER/build.sh
+      - docker push quay.io/eris/erisdb
+
+deployment:
+  develop:
+    branch: develop
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - DOCKER/build.sh

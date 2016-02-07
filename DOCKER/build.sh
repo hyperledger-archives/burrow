@@ -22,7 +22,7 @@ if [ "$branch" = "master" ]; then
   docker tag -f $image_base:latest $image_base:$release_maj
   docker tag -f $image_base:latest $image_base:$release_min
 else
-  docker build -t $image_base:$branch -f DOCKER/Dockerfile .
+  docker build -t $image_base:$release_min -f DOCKER/Dockerfile .
 fi
 
 cd $start
