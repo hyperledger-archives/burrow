@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160"
 
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"

@@ -1,0 +1,58 @@
+syntax = "proto3";
+package types;
+
+// This file is copied from http://github.com/tendermint/tmsp
+
+//----------------------------------------
+// Message types
+
+enum MessageType {
+  NullMessage = 0x00;
+
+  Echo       = 0x01;
+  Flush      = 0x02;
+  Info       = 0x03;
+  SetOption  = 0x04;
+  Exception  = 0x05;
+  AppendTx   = 0x11;
+  CheckTx    = 0x12;
+  GetHash    = 0x13;
+  Query      = 0x14;
+}
+
+//----------------------------------------
+// Code types
+
+enum CodeType {
+  OK                  = 0;
+  InternalError       = 1;
+  Unauthorized        = 2;
+  InsufficientFees    = 3;
+  UnknownRequest      = 4;
+  EncodingError       = 5;
+  BadNonce            = 6;
+  UnknownAccount      = 7;
+  InsufficientFunds   = 8;
+}
+
+//----------------------------------------
+// Request types
+
+message Request {
+            MessageType       type        = 1;
+            bytes             data        = 2;
+            string            key         = 3;
+            string            value       = 4;
+}
+
+//----------------------------------------
+// Response types
+
+message Response {
+            MessageType       type        = 1;
+            bytes             data        = 2;
+            CodeType          code        = 3;
+            string            error       = 4;
+            string            log         = 5;
+}
+
