@@ -1,7 +1,7 @@
 package test
 
 import (
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
 )
 
 // Contract: !bytes.Equal(input, output) && len(input) >= len(output)

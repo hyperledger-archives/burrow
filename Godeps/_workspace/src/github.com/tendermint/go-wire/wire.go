@@ -6,7 +6,7 @@ import (
 	"io"
 	"reflect"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
 )
 
 var ErrBinaryReadSizeOverflow = errors.New("Error: binary read size overflow")

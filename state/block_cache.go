@@ -4,22 +4,16 @@ import (
 	"bytes"
 	"sort"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/go-merkle"
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
-	storage := merkle.NewIAVLTree(
-		wire.BasicCodec,
-		wire.BasicCodec,
-		1024,
-		db,
-	)
+	storage := merkle.NewIAVLTree(1024, db)
 	storage.Load(root)
 	return storage
 }
@@ -104,10 +98,10 @@ func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
 	}
 
 	// Load and set cache
-	_, val_ := storage.Get(key.Bytes())
+	_, val_, _ := storage.Get(key.Bytes())
 	value = Zero256
 	if val_ != nil {
-		value = LeftPadWord256(val_.([]byte))
+		value = LeftPadWord256(val_)
 	}
 	cache.storages[Tuple256{addr, key}] = storageInfo{value, false}
 	return value

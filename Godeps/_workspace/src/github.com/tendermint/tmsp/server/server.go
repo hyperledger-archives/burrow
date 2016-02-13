@@ -7,9 +7,9 @@ import (
 	"net"
 	"strings"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tmsp/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/tmsp/types"
 )
 
 // var maxNumberConnections = 2

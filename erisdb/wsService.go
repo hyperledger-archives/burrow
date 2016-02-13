@@ -7,7 +7,7 @@ import (
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/go-events"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -103,7 +103,7 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 	if errSID != nil {
 		return nil, rpc.INTERNAL_ERROR, errSID
 	}
-	callback := func(ret types.EventData) {
+	callback := func(ret events.EventData) {
 		this.writeResponse(subId, ret, session)
 	}
 	_, errC := this.pipe.Events().Subscribe(subId, eventId, callback)

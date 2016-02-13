@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 

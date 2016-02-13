@@ -12,9 +12,9 @@ import (
 	"github.com/eris-ltd/eris-db/state"
 	"github.com/eris-ltd/eris-db/txs"
 
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	tEvents "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	mintTypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	cmn "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	tEvents "github.com/tendermint/go-events"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )
@@ -184,7 +184,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	}
 	wc := make(chan *types.EventDataCall)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt mintTypes.EventData) {
+	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt tEvents.EventData) {
 		event := evt.(types.EventDataCall)
 		if bytes.Equal(event.TxID, rec.TxHash) {
 			wc <- &event
@@ -268,7 +268,7 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 		bondTx := tx.(*types.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = privAccounts[0].Sign(chainId, bondTx).(account.SignatureEd25519)
+		bondTx.Signature = privAccounts[0].Sign(chainId, bondTx).(crypto.SignatureEd25519)
 		for i, input := range bondTx.Inputs {
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(chainId, bondTx)
@@ -276,11 +276,11 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 		break
 	case *types.UnbondTx:
 		unbondTx := tx.(*types.UnbondTx)
-		unbondTx.Signature = privAccounts[0].Sign(chainId, unbondTx).(account.SignatureEd25519)
+		unbondTx.Signature = privAccounts[0].Sign(chainId, unbondTx).(crypto.SignatureEd25519)
 		break
 	case *types.RebondTx:
 		rebondTx := tx.(*types.RebondTx)
-		rebondTx.Signature = privAccounts[0].Sign(chainId, rebondTx).(account.SignatureEd25519)
+		rebondTx.Signature = privAccounts[0].Sign(chainId, rebondTx).(crypto.SignatureEd25519)
 		break
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)

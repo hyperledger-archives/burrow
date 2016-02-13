@@ -1,8 +1,8 @@
 package pipe
 
 import (
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-config"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	cfg "github.com/tendermint/go-config"
+	"github.com/tendermint/log15"
 )
 
 var log = log15.New("module", "eris/erisdb_pipe")

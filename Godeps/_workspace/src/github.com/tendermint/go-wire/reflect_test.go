@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
 )
 
 type SimpleStruct struct {

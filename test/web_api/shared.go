@@ -2,7 +2,7 @@ package web_api
 
 import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	"github.com/tendermint/log15"
 	"os"
 	"runtime"
 )

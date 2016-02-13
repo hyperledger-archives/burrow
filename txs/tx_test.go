@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
+	. "github.com/tendermint/go-common"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )

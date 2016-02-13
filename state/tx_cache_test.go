@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 )
 
 func TestStateToFromVMAccount(t *testing.T) {

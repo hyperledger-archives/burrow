@@ -6,23 +6,23 @@ import (
 	"bytes"
 	"path"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-config"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-p2p"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
 	sm "github.com/eris-ltd/eris-db/state"
 	stypes "github.com/eris-ltd/eris-db/state/types"
+	. "github.com/tendermint/go-common"
+	cfg "github.com/tendermint/go-config"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/go-events"
+	"github.com/tendermint/go-p2p"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/log15"
+	tmcfg "github.com/tendermint/tendermint/config/tendermint"
+	"github.com/tendermint/tendermint/node"
 
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
 
-	tmsp "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tmsp/server"
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
+	tmsp "github.com/tendermint/tmsp/server"
 )
 
 const ERISDB_VERSION = "0.11.5"
@@ -143,11 +143,13 @@ func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
 
 	nd.Start()
 
-	// If seedNode is provided by config, dial out.
+	/*
+			// If seedNode is provided by config, dial out.
+			// should be handled by core
 
-	if len(tmConfig.GetString("seeds")) > 0 {
-		nd.DialSeed()
-	}
+		if len(tmConfig.GetString("seeds")) > 0 {
+				nd.DialSeed()
+			}*/
 
 	if len(tmConfig.GetString("rpc_laddr")) > 0 {
 		nd.StartRPC()

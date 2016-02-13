@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	tdb "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
+	tdb "github.com/tendermint/go-db"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/state/types"
 )

@@ -20,9 +20,9 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/nacl/secretbox"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 )
 
 // 2 + 1024 == 1026 total frame size

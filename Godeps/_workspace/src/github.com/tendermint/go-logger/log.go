@@ -3,8 +3,8 @@ package logger
 import (
 	"os"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/log15"
 )
 
 var rootHandler log15.Handler

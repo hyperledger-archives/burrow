@@ -3,8 +3,8 @@ package merkle
 import (
 	"bytes"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common/test"
+	. "github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common/test"
 
 	"fmt"
 	"testing"

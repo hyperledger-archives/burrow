@@ -3,8 +3,8 @@ package crypto
 import (
 	"fmt"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 )
 
 // Signature is a part of Txs and consensus Votes.

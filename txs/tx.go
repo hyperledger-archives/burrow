@@ -7,12 +7,13 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"github.com/tendermint/go-crypto"
 )
 
 var (
@@ -98,11 +99,11 @@ var _ = wire.RegisterInterface(
 //-----------------------------------------------------------------------------
 
 type TxInput struct {
-	Address   []byte        `json:"address"`   // Hash of the PubKey
-	Amount    int64         `json:"amount"`    // Must not exceed account balance
-	Sequence  int           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-	Signature acm.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    acm.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+	Address   []byte           `json:"address"`   // Hash of the PubKey
+	Amount    int64            `json:"amount"`    // Must not exceed account balance
+	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+	PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
 }
 
 func (txIn *TxInput) ValidateBasic() error {
@@ -256,10 +257,10 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    acm.PubKeyEd25519    `json:"pub_key"`
-	Signature acm.SignatureEd25519 `json:"signature"`
-	Inputs    []*TxInput           `json:"inputs"`
-	UnbondTo  []*TxOutput          `json:"unbond_to"`
+	PubKey    crypto.PubKeyEd25519    `json:"pub_key"`
+	Signature crypto.SignatureEd25519 `json:"signature"`
+	Inputs    []*TxInput              `json:"inputs"`
+	UnbondTo  []*TxOutput             `json:"unbond_to"`
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -290,9 +291,9 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   []byte               `json:"address"`
-	Height    int                  `json:"height"`
-	Signature acm.SignatureEd25519 `json:"signature"`
+	Address   []byte                  `json:"address"`
+	Height    int                     `json:"height"`
+	Signature crypto.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -307,9 +308,9 @@ func (tx *UnbondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   []byte               `json:"address"`
-	Height    int                  `json:"height"`
-	Signature acm.SignatureEd25519 `json:"signature"`
+	Address   []byte                  `json:"address"`
+	Height    int                     `json:"height"`
+	Signature crypto.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

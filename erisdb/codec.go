@@ -1,7 +1,7 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"io"
 	"io/ioutil"

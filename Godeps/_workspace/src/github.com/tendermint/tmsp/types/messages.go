@@ -1,6 +1,6 @@
 package types
 
-import "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+import "github.com/tendermint/go-wire"
 
 const (
 	requestTypeEcho      = byte(0x01)

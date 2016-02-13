@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/go-events"
 )
 
 var (
@@ -92,7 +92,7 @@ func (this *EventSubscriptions) add(eventId string) (string, error) {
 	}
 	cache := newEventCache()
 	_, errC := this.eventEmitter.Subscribe(subId, eventId,
-		func(evt types.EventData) {
+		func(evt events.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)

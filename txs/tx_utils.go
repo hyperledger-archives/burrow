@@ -4,6 +4,8 @@ import (
 	"fmt"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+
+	"github.com/tendermint/go-crypto"
 )
 
 type AccountGetter interface {
@@ -20,7 +22,7 @@ func NewSendTx() *SendTx {
 	}
 }
 
-func (tx *SendTx) AddInput(st AccountGetter, pubkey acm.PubKey, amt int64) error {
+func (tx *SendTx) AddInput(st AccountGetter, pubkey crypto.PubKey, amt int64) error {
 	addr := pubkey.Address()
 	acc := st.GetAccount(addr)
 	if acc == nil {
@@ -29,13 +31,13 @@ func (tx *SendTx) AddInput(st AccountGetter, pubkey acm.PubKey, amt int64) error
 	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence+1)
 }
 
-func (tx *SendTx) AddInputWithNonce(pubkey acm.PubKey, amt int64, nonce int) error {
+func (tx *SendTx) AddInputWithNonce(pubkey crypto.PubKey, amt int64, nonce int) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: acm.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{},
 		PubKey:    pubkey,
 	})
 	return nil
@@ -61,7 +63,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount *acm.PrivAccount)
 //----------------------------------------------------------------------------
 // CallTx interface for creating tx
 
-func NewCallTx(st AccountGetter, from acm.PubKey, to, data []byte, amt, gasLimit, fee int64) (*CallTx, error) {
+func NewCallTx(st AccountGetter, from crypto.PubKey, to, data []byte, amt, gasLimit, fee int64) (*CallTx, error) {
 	addr := from.Address()
 	acc := st.GetAccount(addr)
 	if acc == nil {
@@ -72,13 +74,13 @@ func NewCallTx(st AccountGetter, from acm.PubKey, to, data []byte, amt, gasLimit
 	return NewCallTxWithNonce(from, to, data, amt, gasLimit, fee, nonce), nil
 }
 
-func NewCallTxWithNonce(from acm.PubKey, to, data []byte, amt, gasLimit, fee int64, nonce int) *CallTx {
+func NewCallTxWithNonce(from crypto.PubKey, to, data []byte, amt, gasLimit, fee int64, nonce int) *CallTx {
 	addr := from.Address()
 	input := &TxInput{
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: acm.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{},
 		PubKey:    from,
 	}
 
@@ -99,7 +101,7 @@ func (tx *CallTx) Sign(chainID string, privAccount *acm.PrivAccount) {
 //----------------------------------------------------------------------------
 // NameTx interface for creating tx
 
-func NewNameTx(st AccountGetter, from acm.PubKey, name, data string, amt, fee int64) (*NameTx, error) {
+func NewNameTx(st AccountGetter, from crypto.PubKey, name, data string, amt, fee int64) (*NameTx, error) {
 	addr := from.Address()
 	acc := st.GetAccount(addr)
 	if acc == nil {
@@ -110,13 +112,13 @@ func NewNameTx(st AccountGetter, from acm.PubKey, name, data string, amt, fee in
 	return NewNameTxWithNonce(from, name, data, amt, fee, nonce), nil
 }
 
-func NewNameTxWithNonce(from acm.PubKey, name, data string, amt, fee int64, nonce int) *NameTx {
+func NewNameTxWithNonce(from crypto.PubKey, name, data string, amt, fee int64, nonce int) *NameTx {
 	addr := from.Address()
 	input := &TxInput{
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: acm.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{},
 		PubKey:    from,
 	}
 
@@ -136,8 +138,8 @@ func (tx *NameTx) Sign(chainID string, privAccount *acm.PrivAccount) {
 //----------------------------------------------------------------------------
 // BondTx interface for adding inputs/outputs and adding signatures
 
-func NewBondTx(pubkey acm.PubKey) (*BondTx, error) {
-	pubkeyEd, ok := pubkey.(acm.PubKeyEd25519)
+func NewBondTx(pubkey crypto.PubKey) (*BondTx, error) {
+	pubkeyEd, ok := pubkey.(crypto.PubKeyEd25519)
 	if !ok {
 		return nil, fmt.Errorf("Pubkey must be ed25519")
 	}
@@ -148,7 +150,7 @@ func NewBondTx(pubkey acm.PubKey) (*BondTx, error) {
 	}, nil
 }
 
-func (tx *BondTx) AddInput(st AccountGetter, pubkey acm.PubKey, amt int64) error {
+func (tx *BondTx) AddInput(st AccountGetter, pubkey crypto.PubKey, amt int64) error {
 	addr := pubkey.Address()
 	acc := st.GetAccount(addr)
 	if acc == nil {
@@ -157,13 +159,13 @@ func (tx *BondTx) AddInput(st AccountGetter, pubkey acm.PubKey, amt int64) error
 	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence+1)
 }
 
-func (tx *BondTx) AddInputWithNonce(pubkey acm.PubKey, amt int64, nonce int) error {
+func (tx *BondTx) AddInputWithNonce(pubkey crypto.PubKey, amt int64, nonce int) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: acm.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{},
 		PubKey:    pubkey,
 	})
 	return nil
@@ -179,7 +181,7 @@ func (tx *BondTx) AddOutput(addr []byte, amt int64) error {
 
 func (tx *BondTx) SignBond(chainID string, privAccount *acm.PrivAccount) error {
 	sig := privAccount.Sign(chainID, tx)
-	sigEd, ok := sig.(acm.SignatureEd25519)
+	sigEd, ok := sig.(crypto.SignatureEd25519)
 	if !ok {
 		return fmt.Errorf("Bond signer must be ED25519")
 	}
@@ -207,7 +209,7 @@ func NewUnbondTx(addr []byte, height int) *UnbondTx {
 }
 
 func (tx *UnbondTx) Sign(chainID string, privAccount *acm.PrivAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).(acm.SignatureEd25519)
+	tx.Signature = privAccount.Sign(chainID, tx).(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------
@@ -221,13 +223,13 @@ func NewRebondTx(addr []byte, height int) *RebondTx {
 }
 
 func (tx *RebondTx) Sign(chainID string, privAccount *acm.PrivAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).(acm.SignatureEd25519)
+	tx.Signature = privAccount.Sign(chainID, tx).(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------------
 // PermissionsTx interface for creating tx
 
-func NewPermissionsTx(st AccountGetter, from acm.PubKey, args ptypes.PermArgs) (*PermissionsTx, error) {
+func NewPermissionsTx(st AccountGetter, from crypto.PubKey, args ptypes.PermArgs) (*PermissionsTx, error) {
 	addr := from.Address()
 	acc := st.GetAccount(addr)
 	if acc == nil {
@@ -238,13 +240,13 @@ func NewPermissionsTx(st AccountGetter, from acm.PubKey, args ptypes.PermArgs) (
 	return NewPermissionsTxWithNonce(from, args, nonce), nil
 }
 
-func NewPermissionsTxWithNonce(from acm.PubKey, args ptypes.PermArgs, nonce int) *PermissionsTx {
+func NewPermissionsTxWithNonce(from crypto.PubKey, args ptypes.PermArgs, nonce int) *PermissionsTx {
 	addr := from.Address()
 	input := &TxInput{
 		Address:   addr,
 		Amount:    1, // NOTE: amounts can't be 0 ...
 		Sequence:  nonce,
-		Signature: acm.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{},
 		PubKey:    from,
 	}
 

@@ -4,12 +4,13 @@ import (
 	"sort"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/state/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/tendermint/types"
 )
 
 func RandAccount(randBalance bool, minBalance int64) (*acm.Account, *acm.PrivAccount) {
@@ -46,7 +47,7 @@ func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numVali
 	for i := 0; i < numValidators; i++ {
 		val, privVal := types.RandValidator(randBonded, minBonded)
 		validators[i] = GenesisValidator{
-			PubKey: val.PubKey,
+			PubKey: val.PubKey.(crypto.PubKeyEd25519),
 			Amount: val.VotingPower,
 			UnbondTo: []BasicAccount{
 				{

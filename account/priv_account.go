@@ -1,19 +1,20 @@
 package account
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	"github.com/tendermint/ed25519"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
 )
 
 type PrivAccount struct {
-	Address []byte  `json:"address"`
-	PubKey  PubKey  `json:"pub_key"`
-	PrivKey PrivKey `json:"priv_key"`
+	Address []byte         `json:"address"`
+	PubKey  crypto.PubKey  `json:"pub_key"`
+	PrivKey crypto.PrivKey `json:"priv_key"`
 }
 
 func (pA *PrivAccount) Generate(index int) *PrivAccount {
-	newPrivKey := pA.PrivKey.(PrivKeyEd25519).Generate(index)
+	newPrivKey := pA.PrivKey.(crypto.PrivKeyEd25519).Generate(index)
 	newPubKey := newPrivKey.PubKey()
 	newAddress := newPubKey.Address()
 	return &PrivAccount{
@@ -23,7 +24,7 @@ func (pA *PrivAccount) Generate(index int) *PrivAccount {
 	}
 }
 
-func (pA *PrivAccount) Sign(chainID string, o Signable) Signature {
+func (pA *PrivAccount) Sign(chainID string, o Signable) crypto.Signature {
 	return pA.PrivKey.Sign(SignBytes(chainID, o))
 }
 
@@ -38,8 +39,8 @@ func GenPrivAccount() *PrivAccount {
 	privKeyBytes := new([64]byte)
 	copy(privKeyBytes[:32], CRandBytes(32))
 	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	pubKey := PubKeyEd25519(*pubKeyBytes)
-	privKey := PrivKeyEd25519(*privKeyBytes)
+	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
+	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
 	return &PrivAccount{
 		Address: pubKey.Address(),
 		PubKey:  pubKey,
@@ -58,8 +59,8 @@ func GenPrivAccountFromSecret(secret string) *PrivAccount {
 	privKeyBytes := new([64]byte)
 	copy(privKeyBytes[:32], privKey32)
 	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	pubKey := PubKeyEd25519(*pubKeyBytes)
-	privKey := PrivKeyEd25519(*privKeyBytes)
+	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
+	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
 	return &PrivAccount{
 		Address: pubKey.Address(),
 		PubKey:  pubKey,
@@ -74,8 +75,8 @@ func GenPrivAccountFromPrivKeyBytes(privKeyBytes []byte) *PrivAccount {
 	var privKeyArray [64]byte
 	copy(privKeyArray[:], privKeyBytes)
 	pubKeyBytes := ed25519.MakePublicKey(&privKeyArray)
-	pubKey := PubKeyEd25519(*pubKeyBytes)
-	privKey := PrivKeyEd25519(privKeyArray)
+	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
+	privKey := crypto.PrivKeyEd25519(privKeyArray)
 	return &PrivAccount{
 		Address: pubKey.Address(),
 		PubKey:  pubKey,

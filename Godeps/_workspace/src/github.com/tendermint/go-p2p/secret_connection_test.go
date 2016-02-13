@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
 )
 
 type dummyConn struct {

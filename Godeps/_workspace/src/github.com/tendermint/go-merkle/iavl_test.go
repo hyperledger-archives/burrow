@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common/test"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common/test"
+	"github.com/tendermint/go-db"
+	"github.com/tendermint/go-wire"
 
 	"runtime"
 	"testing"

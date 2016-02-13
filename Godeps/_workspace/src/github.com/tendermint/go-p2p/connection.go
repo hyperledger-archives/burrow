@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/flowcontrol"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire" //"github.com/tendermint/log15"
+	flow "github.com/tendermint/flowcontrol"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire" //"github.com/tendermint/log15"
 )
 
 const (

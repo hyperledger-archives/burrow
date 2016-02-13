@@ -3,9 +3,9 @@ package types
 import (
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-crypto"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 

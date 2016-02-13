@@ -1,7 +1,7 @@
 package logger
 
 import (
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-config"
+	cfg "github.com/tendermint/go-config"
 )
 
 var config cfg.Config = nil

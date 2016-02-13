@@ -1,7 +1,7 @@
 package state
 
 import (
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/evm"
 )

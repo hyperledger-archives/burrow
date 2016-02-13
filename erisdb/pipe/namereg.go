@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	sm "github.com/eris-ltd/eris-db/state"
 	"github.com/eris-ltd/eris-db/tmsp"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -65,8 +66,8 @@ func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetNames().Iterate(func(key interface{}, value interface{}) bool {
-		nre := value.(*types.NameRegEntry)
+	state.GetNames().Iterate(func(key, value []byte) bool {
+		nre := sm.DecodeNameRegEntry(value)
 		if filter.Match(nre) {
 			names = append(names, nre)
 		}

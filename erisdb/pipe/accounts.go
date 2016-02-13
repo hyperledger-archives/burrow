@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
 	acm "github.com/eris-ltd/eris-db/account"
+	cmn "github.com/tendermint/go-common"
 
 	"github.com/eris-ltd/eris-db/tmsp"
 )
@@ -61,8 +61,8 @@ func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetAccounts().Iterate(func(key interface{}, value interface{}) bool {
-		acc := value.(*acm.Account)
+	state.GetAccounts().Iterate(func(key, value []byte) bool {
+		acc := acm.DecodeAccount(value)
 		if filter.Match(acc) {
 			accounts = append(accounts, acc)
 		}
@@ -93,11 +93,11 @@ func (this *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 	storageRoot := account.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
-	_, value := storageTree.Get(cmn.LeftPadWord256(key).Bytes())
+	_, value, _ := storageTree.Get(cmn.LeftPadWord256(key).Bytes())
 	if value == nil {
 		return &StorageItem{key, []byte{}}, nil
 	}
-	return &StorageItem{key, value.([]byte)}, nil
+	return &StorageItem{key, value}, nil
 }
 
 // Get the storage of the account with address 'address'.
@@ -112,9 +112,9 @@ func (this *accounts) Storage(address []byte) (*Storage, error) {
 	storageRoot := account.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
-	storageTree.Iterate(func(key interface{}, value interface{}) bool {
+	storageTree.Iterate(func(key, value []byte) bool {
 		storageItems = append(storageItems, StorageItem{
-			key.([]byte), value.([]byte)})
+			key, value})
 		return false
 	})
 	return &Storage{storageRoot, storageItems}, nil

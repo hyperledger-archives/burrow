@@ -41,7 +41,7 @@ package common
 import (
 	"sync/atomic"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	"github.com/tendermint/log15"
 )
 
 type Service interface {

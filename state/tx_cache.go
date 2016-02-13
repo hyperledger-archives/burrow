@@ -6,7 +6,8 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
 )
 
 type TxCache struct {
@@ -161,7 +162,7 @@ func toVMAccount(acc *acm.Account) *vm.Account {
 
 // Converts vm.Account to backend.Account struct.
 func toStateAccount(acc *vm.Account) *acm.Account {
-	var pubKey acm.PubKey
+	var pubKey crypto.PubKey
 	var storageRoot []byte
 	if acc.Other != nil {
 		pubKey, storageRoot = acc.Other.(vmAccountOther).unpack()
@@ -181,11 +182,11 @@ func toStateAccount(acc *vm.Account) *acm.Account {
 // Everything in acmAccount that doesn't belong in
 // exported vmAccount fields.
 type vmAccountOther struct {
-	PubKey      acm.PubKey
+	PubKey      crypto.PubKey
 	StorageRoot []byte
 }
 
-func (accOther vmAccountOther) unpack() (acm.PubKey, []byte) {
+func (accOther vmAccountOther) unpack() (crypto.PubKey, []byte) {
 	return accOther.PubKey, accOther.StorageRoot
 }
 

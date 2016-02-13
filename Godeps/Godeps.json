@@ -126,66 +126,6 @@
 			"Rev": "c65281bb703b7612f60558e75b07c434c06e2636"
 		},
 		{
-			"ImportPath": "github.com/tendermint/tendermint/alert",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/blockchain",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/config/tendermint",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/config/tendermint_test",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/consensus",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/events",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/mempool",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/node",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/proxy",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/rpc",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/state",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
-			"ImportPath": "github.com/tendermint/tendermint/types",
-			"Comment": "0.2-19-g12c7f00",
-			"Rev": "12c7f00c44c4a0f9922cbcdf7491d8433639667c"
-		},
-		{
 			"ImportPath": "github.com/tendermint/tmsp/server",
 			"Rev": "1b7ca808beb0d1be7bc9a606f6aa46cc1f65fd93"
 		},

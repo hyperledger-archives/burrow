@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-merkle"
+	"github.com/tendermint/go-wire"
 )
 
 // Signable is an interface for all signable things.
@@ -38,12 +39,12 @@ func HashSignBytes(chainID string, o Signable) []byte {
 // on the blockchain.
 // Serialized by wire.[read|write]Reflect
 type Account struct {
-	Address     []byte `json:"address"`
-	PubKey      PubKey `json:"pub_key"`
-	Sequence    int    `json:"sequence"`
-	Balance     int64  `json:"balance"`
-	Code        []byte `json:"code"`         // VM code
-	StorageRoot []byte `json:"storage_root"` // VM storage merkle root.
+	Address     []byte        `json:"address"`
+	PubKey      crypto.PubKey `json:"pub_key"`
+	Sequence    int           `json:"sequence"`
+	Balance     int64         `json:"balance"`
+	Code        []byte        `json:"code"`         // VM code
+	StorageRoot []byte        `json:"storage_root"` // VM storage merkle root.
 
 	Permissions ptypes.AccountPermissions `json:"permissions"`
 }
@@ -71,4 +72,19 @@ func AccountDecoder(r io.Reader, n *int, err *error) interface{} {
 var AccountCodec = wire.Codec{
 	Encode: AccountEncoder,
 	Decode: AccountDecoder,
+}
+
+func EncodeAccount(acc *Account) []byte {
+	w := new(bytes.Buffer)
+	var n int
+	var err error
+	AccountEncoder(acc, w, &n, &err)
+	return w.Bytes()
+}
+
+func DecodeAccount(accBytes []byte) *Account {
+	var n int
+	var err error
+	acc := AccountDecoder(bytes.NewBuffer(accBytes), &n, &err)
+	return acc.(*Account)
 }

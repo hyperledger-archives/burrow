@@ -11,13 +11,13 @@ import (
 	. "github.com/eris-ltd/eris-db/state/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-common"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-merkle"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-wire"
+	. "github.com/tendermint/go-common"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/go-events"
+	"github.com/tendermint/go-merkle"
+	"github.com/tendermint/go-wire"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 var (
@@ -65,13 +65,13 @@ func LoadState(db dbm.DB) *State {
 		s.LastBondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
 		s.UnbondingValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
 		accountsHash := wire.ReadByteSlice(r, maxLoadStateElementSize, n, err)
-		s.accounts = merkle.NewIAVLTree(wire.BasicCodec, acm.AccountCodec, defaultAccountsCacheCapacity, db)
+		s.accounts = merkle.NewIAVLTree(defaultAccountsCacheCapacity, db)
 		s.accounts.Load(accountsHash)
 		//validatorInfosHash := wire.ReadByteSlice(r, maxLoadStateElementSize, n, err)
 		//s.validatorInfos = merkle.NewIAVLTree(wire.BasicCodec, types.ValidatorInfoCodec, 0, db)
 		//s.validatorInfos.Load(validatorInfosHash)
 		nameRegHash := wire.ReadByteSlice(r, maxLoadStateElementSize, n, err)
-		s.nameReg = merkle.NewIAVLTree(wire.BasicCodec, NameRegCodec, 0, db)
+		s.nameReg = merkle.NewIAVLTree(0, db)
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
 			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
@@ -167,22 +167,20 @@ func (s *State) GetGasLimit() int64 {
 // State.accounts
 
 // Returns nil if account does not exist with given address.
-// The returned Account is a copy, so mutating it
-// has no side effects.
 // Implements Statelike
 func (s *State) GetAccount(address []byte) *acm.Account {
-	_, acc := s.accounts.Get(address)
-	if acc == nil {
+	_, accBytes, _ := s.accounts.Get(address)
+	if accBytes == nil {
 		return nil
 	}
-	return acc.(*acm.Account).Copy()
+	return acm.DecodeAccount(accBytes)
 }
 
 // The account is copied before setting, so mutating it
 // afterwards has no side effects.
 // Implements Statelike
 func (s *State) UpdateAccount(account *acm.Account) bool {
-	return s.accounts.Set(account.Address, account)
+	return s.accounts.Set(account.Address, acm.EncodeAccount(account))
 }
 
 // Implements Statelike
@@ -316,7 +314,7 @@ func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
 // State.storage
 
 func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
-	storage = merkle.NewIAVLTree(wire.BasicCodec, wire.BasicCodec, 1024, s.DB)
+	storage = merkle.NewIAVLTree(1024, s.DB)
 	storage.Load(hash)
 	return storage
 }
@@ -326,20 +324,31 @@ func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
 // State.nameReg
 
 func (s *State) GetNameRegEntry(name string) *txs.NameRegEntry {
-	_, value := s.nameReg.Get(name)
-	if value == nil {
+	_, valueBytes, _ := s.nameReg.Get([]byte(name))
+	if valueBytes == nil {
 		return nil
 	}
 
-	return value.(*txs.NameRegEntry).Copy()
+	return DecodeNameRegEntry(valueBytes)
+}
+
+func DecodeNameRegEntry(entryBytes []byte) *txs.NameRegEntry {
+	var n int
+	var err error
+	value := NameRegCodec.Decode(bytes.NewBuffer(entryBytes), &n, &err)
+	return value.(*txs.NameRegEntry)
 }
 
 func (s *State) UpdateNameRegEntry(entry *txs.NameRegEntry) bool {
-	return s.nameReg.Set(entry.Name, entry)
+	w := new(bytes.Buffer)
+	var n int
+	var err error
+	NameRegCodec.Encode(entry, w, &n, &err)
+	return s.nameReg.Set([]byte(entry.Name), w.Bytes())
 }
 
 func (s *State) RemoveNameRegEntry(name string) bool {
-	_, removed := s.nameReg.Remove(name)
+	_, removed := s.nameReg.Remove([]byte(name))
 	return removed
 }
 
@@ -395,7 +404,7 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	}
 
 	// Make accounts state tree
-	accounts := merkle.NewIAVLTree(wire.BasicCodec, acm.AccountCodec, defaultAccountsCacheCapacity, db)
+	accounts := merkle.NewIAVLTree(defaultAccountsCacheCapacity, db)
 	for _, genAcc := range genDoc.Accounts {
 		perm := ptypes.ZeroAccountPermissions
 		if genAcc.Permissions != nil {
@@ -408,7 +417,7 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 			Balance:     genAcc.Amount,
 			Permissions: perm,
 		}
-		accounts.Set(acc.Address, acc)
+		accounts.Set(acc.Address, acm.EncodeAccount(acc))
 	}
 
 	// global permissions are saved as the 0 address
@@ -428,7 +437,7 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	accounts.Set(permsAcc.Address, permsAcc)
+	accounts.Set(permsAcc.Address, acm.EncodeAccount(permsAcc))
 
 	// Make validatorInfos state tree && validators slice
 	/*
@@ -464,7 +473,7 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	*/
 
 	// Make namereg tree
-	nameReg := merkle.NewIAVLTree(wire.BasicCodec, NameRegCodec, 0, db)
+	nameReg := merkle.NewIAVLTree(0, db)
 	// TODO: add names, contracts to genesis.json
 
 	// IAVLTrees must be persisted before copy operations.
