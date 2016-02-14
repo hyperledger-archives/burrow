@@ -33,18 +33,18 @@ var (
 
 // NOTE: not goroutine-safe.
 type State struct {
-	DB                   dbm.DB
-	ChainID              string
-	LastBlockHeight      int
-	LastBlockHash        []byte
-	LastBlockParts       types.PartSetHeader
-	LastBlockTime        time.Time
-	BondedValidators     *types.ValidatorSet
-	LastBondedValidators *types.ValidatorSet
-	UnbondingValidators  *types.ValidatorSet
-	accounts             merkle.Tree // Shouldn't be accessed directly.
-	validatorInfos       merkle.Tree // Shouldn't be accessed directly.
-	nameReg              merkle.Tree // Shouldn't be accessed directly.
+	DB              dbm.DB
+	ChainID         string
+	LastBlockHeight int
+	LastBlockHash   []byte
+	LastBlockParts  types.PartSetHeader
+	LastBlockTime   time.Time
+	//	BondedValidators     *types.ValidatorSet
+	//	LastBondedValidators *types.ValidatorSet
+	//	UnbondingValidators  *types.ValidatorSet
+	accounts       merkle.Tree // Shouldn't be accessed directly.
+	validatorInfos merkle.Tree // Shouldn't be accessed directly.
+	nameReg        merkle.Tree // Shouldn't be accessed directly.
 
 	evc events.Fireable // typically an events.EventCache
 }
@@ -61,9 +61,9 @@ func LoadState(db dbm.DB) *State {
 		s.LastBlockHash = wire.ReadByteSlice(r, maxLoadStateElementSize, n, err)
 		s.LastBlockParts = wire.ReadBinary(types.PartSetHeader{}, r, maxLoadStateElementSize, n, err).(types.PartSetHeader)
 		s.LastBlockTime = wire.ReadTime(r, n, err)
-		s.BondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
-		s.LastBondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
-		s.UnbondingValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
+		// s.BondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
+		// s.LastBondedValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
+		// s.UnbondingValidators = wire.ReadBinary(&types.ValidatorSet{}, r, maxLoadStateElementSize, n, err).(*types.ValidatorSet)
 		accountsHash := wire.ReadByteSlice(r, maxLoadStateElementSize, n, err)
 		s.accounts = merkle.NewIAVLTree(defaultAccountsCacheCapacity, db)
 		s.accounts.Load(accountsHash)
@@ -92,9 +92,9 @@ func (s *State) Save() {
 	wire.WriteByteSlice(s.LastBlockHash, buf, n, err)
 	wire.WriteBinary(s.LastBlockParts, buf, n, err)
 	wire.WriteTime(s.LastBlockTime, buf, n, err)
-	wire.WriteBinary(s.BondedValidators, buf, n, err)
-	wire.WriteBinary(s.LastBondedValidators, buf, n, err)
-	wire.WriteBinary(s.UnbondingValidators, buf, n, err)
+	// wire.WriteBinary(s.BondedValidators, buf, n, err)
+	// wire.WriteBinary(s.LastBondedValidators, buf, n, err)
+	// wire.WriteBinary(s.UnbondingValidators, buf, n, err)
 	wire.WriteByteSlice(s.accounts.Hash(), buf, n, err)
 	//wire.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
 	wire.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
@@ -109,16 +109,16 @@ func (s *State) Save() {
 // as if State were copied by value.
 func (s *State) Copy() *State {
 	return &State{
-		DB:                   s.DB,
-		ChainID:              s.ChainID,
-		LastBlockHeight:      s.LastBlockHeight,
-		LastBlockHash:        s.LastBlockHash,
-		LastBlockParts:       s.LastBlockParts,
-		LastBlockTime:        s.LastBlockTime,
-		BondedValidators:     s.BondedValidators.Copy(),     // TODO remove need for Copy() here.
-		LastBondedValidators: s.LastBondedValidators.Copy(), // That is, make updates to the validator set
-		UnbondingValidators:  s.UnbondingValidators.Copy(),  // copy the valSet lazily.
-		accounts:             s.accounts.Copy(),
+		DB:              s.DB,
+		ChainID:         s.ChainID,
+		LastBlockHeight: s.LastBlockHeight,
+		LastBlockHash:   s.LastBlockHash,
+		LastBlockParts:  s.LastBlockParts,
+		LastBlockTime:   s.LastBlockTime,
+		// BondedValidators:     s.BondedValidators.Copy(),     // TODO remove need for Copy() here.
+		// LastBondedValidators: s.LastBondedValidators.Copy(), // That is, make updates to the validator set
+		// UnbondingValidators: s.UnbondingValidators.Copy(), // copy the valSet lazily.
+		accounts: s.accounts.Copy(),
 		//validatorInfos:       s.validatorInfos.Copy(),
 		nameReg: s.nameReg.Copy(),
 		evc:     nil,
@@ -128,9 +128,9 @@ func (s *State) Copy() *State {
 // Returns a hash that represents the state data, excluding Last*
 func (s *State) Hash() []byte {
 	return merkle.SimpleHashFromMap(map[string]interface{}{
-		"BondedValidators":    s.BondedValidators,
-		"UnbondingValidators": s.UnbondingValidators,
-		"Accounts":            s.accounts,
+		//"BondedValidators":    s.BondedValidators,
+		//"UnbondingValidators": s.UnbondingValidators,
+		"Accounts": s.accounts,
 		//"ValidatorInfos":      s.validatorInfos,
 		"NameRegistry": s.nameReg,
 	})

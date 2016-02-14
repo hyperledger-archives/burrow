@@ -3,10 +3,11 @@ package types
 import (
 	"testing"
 
-	. "github.com/tendermint/go-common"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
 
 var chainID string
@@ -94,7 +95,7 @@ func TestBondTxSignable(t *testing.T) {
 	privKeyBytes := make([]byte, 64)
 	privAccount := acm.GenPrivAccountFromPrivKeyBytes(privKeyBytes)
 	bondTx := &BondTx{
-		PubKey: privAccount.PubKey.(acm.PubKeyEd25519),
+		PubKey: privAccount.PubKey.(crypto.PubKeyEd25519),
 		Inputs: []*TxInput{
 			&TxInput{
 				Address:  []byte("input1"),
@@ -120,7 +121,7 @@ func TestBondTxSignable(t *testing.T) {
 	}
 	signBytes := acm.SignBytes(chainID, bondTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"pub_key":[1,"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29"],"unbond_to":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
+	expected := Fmt(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"pub_key":"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29","unbond_to":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
 		config.GetString("chain_id"))
 	if signStr != expected {
 		t.Errorf("Unexpected sign string for BondTx. \nGot %s\nExpected %s", signStr, expected)
@@ -168,11 +169,12 @@ func TestPermissionsTxSignable(t *testing.T) {
 			Value:      true,
 		},
 	}
+
 	signBytes := acm.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[32,{"args":"[2,{"address":"6164647265737331","permission":1,"value":true}]","input":{"address":"696E70757431","amount":12345,"sequence":250}}]}`,
 		config.GetString("chain_id"))
 	if signStr != expected {
-		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
+		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
 }

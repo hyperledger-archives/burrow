@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
+	. "github.com/eris-ltd/eris-db/evm"
+	"github.com/eris-ltd/eris-db/txs"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-events"
-	"github.com/tendermint/tendermint/types"
-	. "github.com/eris-ltd/eris-db/evm"
 )
 
 var expectedData = []byte{0x10}
@@ -44,7 +44,7 @@ func TestLog4(t *testing.T) {
 
 	doneChan := make(chan struct{}, 1)
 
-	eventSwitch.AddListenerForEvent("test", eventID, func(event types.EventData) {
+	eventSwitch.AddListenerForEvent("test", eventID, func(event events.EventData) {
 		logEvent := event.(types.EventDataLog)
 		// No need to test address as this event would not happen if it wasn't correct
 		if !reflect.DeepEqual(logEvent.Topics, expectedTopics) {

@@ -4,22 +4,23 @@ package mock
 import (
 	"bytes"
 	"encoding/hex"
+	"net/http"
+	"os"
+	"runtime"
+	"testing"
+
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/log15"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	"net/http"
-	"os"
-	"runtime"
-	"testing"
+	"github.com/eris-ltd/eris-db/txs"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/log15"
 )
 
 func init() {
@@ -180,7 +181,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 
 func (this *MockSuite) TestGetNameRegEntries() {
 	resp := this.get("/namereg")
-	ret := &ctypes.ResultListNames{}
+	ret := &ep.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntries.Output)

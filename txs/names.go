@@ -53,3 +53,9 @@ func (entry *NameRegEntry) Copy() *NameRegEntry {
 	entryCopy := *entry
 	return &entryCopy
 }
+
+// XXX: vestige of an older time
+type ResultListNames struct {
+	BlockHeight int             `json:"block_height"`
+	Names       []*NameRegEntry `json:"names"`
+}

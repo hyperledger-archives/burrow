@@ -7,13 +7,13 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 
-	"github.com/tendermint/tendermint/types" // votes for dupeout ..
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/types" // votes for dupeout ..
 )
 
 var (
@@ -257,7 +257,7 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    crypto.PubKeyEd25519    `json:"pub_key"`
+	PubKey    crypto.PubKeyEd25519    `json:"pub_key"` // NOTE: these don't have type byte
 	Signature crypto.SignatureEd25519 `json:"signature"`
 	Inputs    []*TxInput              `json:"inputs"`
 	UnbondTo  []*TxOutput             `json:"unbond_to"`
@@ -348,7 +348,7 @@ type PermissionsTx struct {
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"args":"`, TxTypePermissions)), w, n, err)
-	wire.WriteJSON(tx.PermArgs, w, n, err)
+	wire.WriteJSON(&tx.PermArgs, w, n, err)
 	wire.WriteTo([]byte(`","input":`), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
 	wire.WriteTo([]byte(`}]}`), w, n, err)

@@ -29,14 +29,18 @@ func (this *consensus) Validators() (*ValidatorList, error) {
 
 	s := this.erisdbApp.GetState()
 	blockHeight = s.LastBlockHeight
-	s.BondedValidators.Iterate(func(index int, val *types.Validator) bool {
-		bondedValidators = append(bondedValidators, val)
-		return false
-	})
-	s.UnbondingValidators.Iterate(func(index int, val *types.Validator) bool {
-		unbondingValidators = append(unbondingValidators, val)
-		return false
-	})
+
+	// TODO: rpc
+
+	/*
+		s.BondedValidators.Iterate(func(index int, val *types.Validator) bool {
+			bondedValidators = append(bondedValidators, val)
+			return false
+		})
+		s.UnbondingValidators.Iterate(func(index int, val *types.Validator) bool {
+			unbondingValidators = append(unbondingValidators, val)
+			return false
+		})*/
 
 	return &ValidatorList{blockHeight, bondedValidators, unbondingValidators}, nil
 }

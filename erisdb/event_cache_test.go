@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/go-events"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -47,7 +48,7 @@ func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(eve
 	go func() {
 		for {
 			if !me.shutdown {
-				me.f(events.EventDataNewBlock{})
+				me.f(types.EventDataNewBlock{})
 			} else {
 				return
 			}

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-events"
-	"github.com/tendermint/tendermint/types"
 	. "github.com/eris-ltd/eris-db/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	"github.com/eris-ltd/eris-db/txs"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-events"
 )
 
 func newAppState() *FakeAppState {
@@ -157,7 +157,7 @@ func runVMWaitEvents(t *testing.T, ourVm *VM, caller, callee *Account, subscribe
 	evsw.Start()
 	ch := make(chan interface{})
 	fmt.Printf("subscribe to %x\n", subscribeAddr)
-	evsw.AddListenerForEvent("test", types.EventStringAccCall(subscribeAddr), func(msg types.EventData) {
+	evsw.AddListenerForEvent("test", types.EventStringAccCall(subscribeAddr), func(msg events.EventData) {
 		ch <- msg
 	})
 	evc := events.NewEventCache(evsw)

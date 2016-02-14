@@ -3,12 +3,12 @@ package erisdbss
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/eris-ltd/eris-db/server"
+	stypes "github.com/eris-ltd/eris-db/state/types"
 	"github.com/gin-gonic/gin"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/server"
-	stypes "github.com/eris-ltd/eris-db/state/types"
 	"net/http"
 	"os"
 )
@@ -63,7 +63,7 @@ type ServerServer struct {
 // Create a new ServerServer with the given base directory.
 func NewServerServer(baseDir string) *ServerServer {
 	os.RemoveAll(baseDir)
-	EnsureDir(baseDir)
+	EnsureDir(baseDir, 0777)
 	return &ServerServer{serverManager: NewServerManager(100, baseDir)}
 }
 

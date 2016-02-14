@@ -31,10 +31,10 @@ const TENDERMINT_VERSION = "0.5.0"
 var log = log15.New("module", "eris/erisdb_server")
 var tmConfig cfg.Config
 
-// This function returns a properly configured ErisDb server process with a running
-// tendermint node attached to it. To start listening for incoming requests, call
-// 'Start()' on the process. Make sure to register any start event listeners before
-// that.
+// This function returns a properly configured ErisDb server process,
+// with a tmsp listener for talking to tendermint core.
+// To start listening for incoming requests, call 'Start()' on the process.
+// Make sure to register any start event listeners first
 func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	log.Info("ErisDB Serve initializing.")
 	errEns := EnsureDir(workDir, 0777)
@@ -63,6 +63,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	}
 
 	// Get tendermint configuration
+	// TODO replace
 	tmConfig = tmcfg.GetConfig(workDir)
 	tmConfig.Set("version", TENDERMINT_VERSION)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
@@ -118,7 +119,6 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	evtSubs := NewEventSubscriptions(pipe.Events())
 	// The services.
 	tmwss := NewErisDbWsService(codec, pipe)
-	//
 	tmjs := NewErisDbJsonService(codec, pipe, evtSubs)
 	// The servers.
 	jsonServer := NewJsonRpcServer(tmjs)

@@ -1,12 +1,13 @@
 package mock
 
 import (
+	"github.com/eris-ltd/eris-db/account"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	types "github.com/eris-ltd/eris-db/txs"
 
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/tendermint/go-events"
+	mintTypes "github.com/tendermint/tendermint/types"
 )
 
 // Base struct.
@@ -26,7 +27,7 @@ func NewMockPipe(td *td.TestData) ep.Pipe {
 	accounts := &accounts{td}
 	blockchain := &blockchain{td}
 	consensus := &consensus{td}
-	events := &events{td}
+	eventer := &eventer{td}
 	namereg := &namereg{td}
 	net := &net{td}
 	transactor := &transactor{td}
@@ -35,7 +36,7 @@ func NewMockPipe(td *td.TestData) ep.Pipe {
 		accounts,
 		blockchain,
 		consensus,
-		events,
+		eventer,
 		namereg,
 		net,
 		transactor,
@@ -127,7 +128,7 @@ func (this *blockchain) LatestBlockHeight() (int, error) {
 	return this.testData.GetLatestBlockHeight.Output.Height, nil
 }
 
-func (this *blockchain) LatestBlock() (*types.Block, error) {
+func (this *blockchain) LatestBlock() (*mintTypes.Block, error) {
 	return this.testData.GetLatestBlock.Output, nil
 }
 
@@ -135,7 +136,7 @@ func (this *blockchain) Blocks([]*ep.FilterData) (*ep.Blocks, error) {
 	return this.testData.GetBlocks.Output, nil
 }
 
-func (this *blockchain) Block(height int) (*types.Block, error) {
+func (this *blockchain) Block(height int) (*mintTypes.Block, error) {
 	return this.testData.GetBlock.Output, nil
 }
 
@@ -153,15 +154,15 @@ func (this *consensus) Validators() (*ep.ValidatorList, error) {
 }
 
 // Events
-type events struct {
+type eventer struct {
 	testData *td.TestData
 }
 
-func (this *events) Subscribe(subId, event string, callback func(types.EventData)) (bool, error) {
+func (this *eventer) Subscribe(subId, event string, callback func(events.EventData)) (bool, error) {
 	return true, nil
 }
 
-func (this *events) Unsubscribe(subId string) (bool, error) {
+func (this *eventer) Unsubscribe(subId string) (bool, error) {
 	return true, nil
 }
 
@@ -174,7 +175,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return this.testData.GetNameRegEntry.Output, nil
 }
 
-func (this *namereg) Entries(filters []*ep.FilterData) (*ctypes.ResultListNames, error) {
+func (this *namereg) Entries(filters []*ep.FilterData) (*ep.ResultListNames, error) {
 	return this.testData.GetNameRegEntries.Output, nil
 }
 
