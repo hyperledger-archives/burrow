@@ -40,8 +40,7 @@ func newTransactor(eventSwitch tEvents.Fireable, erisdbApp *tmsp.ErisDBApp, even
 // Cannot be used to create new contracts
 func (this *transactor) Call(fromAddress, toAddress, data []byte) (*Call, error) {
 
-	st := this.erisdbApp.GetState() // performs a copy
-	cache := state.NewBlockCache(st)
+	cache := this.erisdbApp.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
 		return nil, fmt.Errorf("Account %X does not exist", toAddress)
@@ -52,6 +51,7 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (*Call, error)
 	callee := toVMAccount(outAcc)
 	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
+	st := this.erisdbApp.GetState() // for block height, time
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
@@ -75,11 +75,11 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) 
 	if fromAddress == nil {
 		fromAddress = []byte{}
 	}
-	st := this.erisdbApp.GetState()  // performs a copy
-	cache := state.NewBlockCache(st) // TODO: should use mempool cache!
+	cache := this.erisdbApp.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	callee := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
+	st := this.erisdbApp.GetState() // for block height, time
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
@@ -98,12 +98,11 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) 
 
 // Broadcast a transaction.
 func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
-	// TODO-RPC !
-	/*
-		err := this.mempoolReactor.BroadcastTx(tx)
-		if err != nil {
-			return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
-		}*/
+
+	err := this.erisdbApp.BroadcastTx(tx)
+	if err != nil {
+		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+	}
 
 	chainId := config.GetString("chain_id")
 	txHash := types.TxID(chainId, tx)
@@ -125,6 +124,7 @@ func (this *transactor) UnconfirmedTxs() (*UnconfirmedTxs, error) {
 	return &UnconfirmedTxs{}, nil
 }
 
+// Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error) {
 	var addr []byte
 	if len(address) == 0 {
@@ -140,7 +140,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
-	cache := this.erisdbApp.GetState() // TODO: use mempool cache!
+	cache := this.erisdbApp.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
 	if acc == nil {
@@ -220,7 +220,7 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	this.txMtx.Lock()
 	defer this.txMtx.Unlock()
 	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
-	cache := this.erisdbApp.GetState() // TODO: use mempool cache
+	cache := this.erisdbApp.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	acc := cache.GetAccount(pa.Address)
 	var sequence int
 	if acc == nil {

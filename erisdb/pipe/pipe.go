@@ -93,8 +93,7 @@ type PipeImpl struct {
 }
 
 // Create a new rpc pipe.
-func NewPipe(erisdbApp *tmsp.ErisDBApp) Pipe {
-	eventSwitch := em.NewEventSwitch()
+func NewPipe(erisdbApp *tmsp.ErisDBApp, eventSwitch *em.EventSwitch) Pipe {
 	events := newEvents(eventSwitch)
 
 	accounts := newAccounts(erisdbApp)

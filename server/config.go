@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/naoina/toml"
 	"github.com/eris-ltd/eris-db/files"
+	"github.com/naoina/toml"
 )
 
 // Standard configuration file for the server.
@@ -14,6 +14,7 @@ type (
 		HTTP      HTTP      `toml:"HTTP"`
 		WebSocket WebSocket `toml:"web_socket"`
 		Logging   Logging   `toml:"logging"`
+		Consensus Consensus `toml:"consensus"`
 	}
 
 	Bind struct {
@@ -54,6 +55,10 @@ type (
 		FileLogLevel    string `toml:"file_log_level"`
 		LogFile         string `toml:"log_file"`
 	}
+
+	Consensus struct {
+		TendermintHost string `toml"tendermint_host"`
+	}
 )
 
 func DefaultServerConfig() *ServerConfig {
@@ -80,6 +85,9 @@ func DefaultServerConfig() *ServerConfig {
 			ConsoleLogLevel: "info",
 			FileLogLevel:    "warn",
 			LogFile:         "",
+		},
+		Consensus: Consensus{
+			TendermintHost: "0.0.0.0:46657",
 		},
 	}
 }

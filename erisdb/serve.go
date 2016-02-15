@@ -101,7 +101,9 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	config.Set("chain_id", state.ChainID)
 
 	evsw := events.NewEventSwitch()
+	evsw.Start()
 	app := edbapp.NewErisDBApp(state, evsw)
+	app.SetHostAddress(sConf.Consensus.TendermintHost)
 
 	// Start the tmsp listener for state update commands
 	go func() {
@@ -114,7 +116,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	}()
 
 	// Load supporting objects.
-	pipe := ep.NewPipe(app)
+	pipe := ep.NewPipe(app, evsw)
 	codec := &TCodec{}
 	evtSubs := NewEventSubscriptions(pipe.Events())
 	// The services.
