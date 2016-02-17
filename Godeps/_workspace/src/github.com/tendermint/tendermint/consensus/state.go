@@ -340,8 +340,8 @@ func (cs *ConsensusState) reconstructLastCommit(state *sm.State) {
 	if state.LastBlockHeight == 0 {
 		return
 	}
-	lastPrecommits := types.NewVoteSet(state.LastBlockHeight, 0, types.VoteTypePrecommit, state.LastBondedValidators)
 	seenValidation := cs.blockStore.LoadSeenValidation(state.LastBlockHeight)
+	lastPrecommits := types.NewVoteSet(state.LastBlockHeight, seenValidation.Round(), types.VoteTypePrecommit, state.LastBondedValidators)
 	for idx, precommit := range seenValidation.Precommits {
 		if precommit == nil {
 			continue
