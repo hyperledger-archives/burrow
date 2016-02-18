@@ -130,8 +130,8 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (code tmsp.CodeType, result []byte,
 		return tmsp.CodeType_EncodingError, nil, fmt.Sprintf("Encoding error: %v", err)
 	}
 
-	// we need the lock because CheckTx can run concurrently with GetHash,
-	// and GetHash refreshes the checkCache
+	// we need the lock because CheckTx can run concurrently with Commit,
+	// and Commit refreshes the checkCache
 	app.mtx.Lock()
 	defer app.mtx.Unlock()
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
@@ -143,8 +143,8 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (code tmsp.CodeType, result []byte,
 }
 
 // Implements tmsp.Application
-// GetHash should commit the state (called at end of block)
-func (app *ErisDBApp) GetHash() (hash []byte, log string) {
+// Commit the state (called at end of block)
+func (app *ErisDBApp) Commit() (hash []byte, log string) {
 	// sync the AppendTx cache
 	app.cache.Sync()
 

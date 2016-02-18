@@ -1,4 +1,4 @@
-package example
+package dummy
 
 import (
 	"strings"
@@ -42,7 +42,7 @@ func (app *DummyApplication) CheckTx(tx []byte) (code types.CodeType, result []b
 	return types.CodeType_OK, nil, ""
 }
 
-func (app *DummyApplication) GetHash() (hash []byte, log string) {
+func (app *DummyApplication) Commit() (hash []byte, log string) {
 	hash = app.state.Hash()
 	return hash, ""
 }

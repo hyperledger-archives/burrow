@@ -207,8 +207,8 @@ func (cli *TMSPClient) CheckTxAsync(tx []byte) *ReqRes {
 	return cli.queueRequest(types.RequestCheckTx(tx))
 }
 
-func (cli *TMSPClient) GetHashAsync() *ReqRes {
-	return cli.queueRequest(types.RequestGetHash())
+func (cli *TMSPClient) CommitAsync() *ReqRes {
+	return cli.queueRequest(types.RequestCommit())
 }
 
 func (cli *TMSPClient) QueryAsync(query []byte) *ReqRes {
@@ -216,6 +216,11 @@ func (cli *TMSPClient) QueryAsync(query []byte) *ReqRes {
 }
 
 //----------------------------------------
+
+func (cli *TMSPClient) FlushSync() error {
+	cli.queueRequest(types.RequestFlush()).Wait()
+	return cli.err
+}
 
 func (cli *TMSPClient) InfoSync() (info string, err error) {
 	reqres := cli.queueRequest(types.RequestInfo())
@@ -226,9 +231,13 @@ func (cli *TMSPClient) InfoSync() (info string, err error) {
 	return string(reqres.Response.Data), nil
 }
 
-func (cli *TMSPClient) FlushSync() error {
-	cli.queueRequest(types.RequestFlush()).Wait()
-	return cli.err
+func (cli *TMSPClient) SetOptionSync(key string, value string) (log string, err error) {
+	reqres := cli.queueRequest(types.RequestSetOption(key, value))
+	cli.FlushSync()
+	if cli.err != nil {
+		return "", cli.err
+	}
+	return reqres.Response.Log, nil
 }
 
 func (cli *TMSPClient) AppendTxSync(tx []byte) (code types.CodeType, result []byte, log string, err error) {
@@ -251,8 +260,8 @@ func (cli *TMSPClient) CheckTxSync(tx []byte) (code types.CodeType, result []byt
 	return res.Code, res.Data, res.Log, nil
 }
 
-func (cli *TMSPClient) GetHashSync() (hash []byte, log string, err error) {
-	reqres := cli.queueRequest(types.RequestGetHash())
+func (cli *TMSPClient) CommitSync() (hash []byte, log string, err error) {
+	reqres := cli.queueRequest(types.RequestCommit())
 	cli.FlushSync()
 	if cli.err != nil {
 		return nil, "", cli.err
