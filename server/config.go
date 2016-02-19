@@ -57,7 +57,8 @@ type (
 	}
 
 	Consensus struct {
-		TendermintHost string `toml"tendermint_host"`
+		TendermintHost string `toml:"tendermint_host"`
+		TMSPListener   string `toml:"tmsp_listener"`
 	}
 )
 
@@ -88,6 +89,7 @@ func DefaultServerConfig() *ServerConfig {
 		},
 		Consensus: Consensus{
 			TendermintHost: "0.0.0.0:46657",
+			TMSPListener:   "tcp://0.0.0.0:46658",
 		},
 	}
 }

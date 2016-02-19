@@ -151,7 +151,7 @@
 		},
 		{
 			"ImportPath": "github.com/tendermint/go-rpc",
-			"Rev": "1370f89864b10518e9753078dc2d7f769685e9a0"
+			"Rev": "6607232a5daf1b474c4578836750e71943793c48"
 		},
 		{
 			"ImportPath": "github.com/tendermint/go-wire",

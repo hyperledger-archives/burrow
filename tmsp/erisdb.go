@@ -57,7 +57,7 @@ func (app *ErisDBApp) ResetCheckCache() {
 
 func (app *ErisDBApp) SetHostAddress(host string) {
 	app.host = host
-	app.client = client.NewClientURI(fmt.Sprintf("http://%s", host))
+	app.client = client.NewClientURI(host) //fmt.Sprintf("http://%s", host))
 }
 
 // Broadcast a tx to the tendermint core
