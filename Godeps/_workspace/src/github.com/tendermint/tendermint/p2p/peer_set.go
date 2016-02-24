@@ -17,7 +17,7 @@ type IPeerSet interface {
 //-----------------------------------------------------------------------------
 
 var (
-	maxPeersPerIPRange = [4]int{11, 7, 5, 3} // ...
+	maxPeersPerIPRange = [4]int{11, 7, 5, 3} // XXX: Make this configurable!
 )
 
 // PeerSet is a special structure for keeping a table of peers.
@@ -152,6 +152,9 @@ func NewNestedCounter() *nestedCounter {
 func (ps *PeerSet) HasMaxForIPRange(conn net.Conn) (ok bool) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
+
+	return false // NEVER ENOUGH IPs muahahaha
+
 	ip, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 	ipBytes := strings.Split(ip, ".")
 
