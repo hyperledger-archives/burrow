@@ -54,9 +54,9 @@ func (ps *PeerSet) Add(peer *Peer) error {
 
 	// ensure we havent maxed out connections for the peer's IP range yet
 	// and update the IP range counters
-	if !ps.incrIPRangeCounts(peer.Host) {
+	/*if !ps.incrIPRangeCounts(peer.Host) {
 		return ErrSwitchMaxPeersPerIPRange
-	}
+	}*/
 
 	index := len(ps.list)
 	// Appending is safe even with other goroutines
