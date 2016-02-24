@@ -110,6 +110,8 @@ func (na *NetAddress) DialTimeout(timeout time.Duration) (net.Conn, error) {
 }
 
 func (na *NetAddress) Routable() bool {
+	return true
+
 	if config.GetBool("local_routing") {
 		return na.Valid()
 	}
