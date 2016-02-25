@@ -2,7 +2,7 @@
 	"ImportPath": "github.com/eris-ltd/eris-db",
 	"GoVersion": "go1.5.1",
 	"Packages": [
-		"./cmd/erisdb"
+		"./cmd/erisdb/..."
 	],
 	"Deps": [
 		{
@@ -80,6 +80,10 @@
 		{
 			"ImportPath": "github.com/tendermint/flowcontrol",
 			"Rev": "84d9671090430e8ec80e35b339907e0579b999eb"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-clist",
+			"Rev": "634527f5b60fd7c71ca811262493df2ad65ee0ca"
 		},
 		{
 			"ImportPath": "github.com/tendermint/log15",

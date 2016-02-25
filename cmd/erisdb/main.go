@@ -5,8 +5,8 @@ import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	"os"
 
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/Sirupsen/logrus" // hack cuz godeps :(
-	_ "github.com/tendermint/go-clist"                                               // godeps ...
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/Sirupsen/logrus"     // hack cuz godeps :(
+	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-clist" // godeps ...
 )
 
 // TODO the input stuff.
