@@ -2,7 +2,7 @@
 	"ImportPath": "github.com/eris-ltd/eris-db",
 	"GoVersion": "go1.5.1",
 	"Packages": [
-		"./cmd/erisdb/..."
+		"./..."
 	],
 	"Deps": [
 		{
@@ -64,6 +64,14 @@
 		{
 			"ImportPath": "github.com/sfreiberg/gotwilio",
 			"Rev": "b7230c284bd0c1614c94d00b9998c49f9a2737d8"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/suite",
+			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
