@@ -2,7 +2,7 @@
 	"ImportPath": "github.com/eris-ltd/eris-db",
 	"GoVersion": "go1.5.1",
 	"Packages": [
-		"./..."
+		"./erisdb/"
 	],
 	"Deps": [
 		{
@@ -18,6 +18,14 @@
 		{
 			"ImportPath": "github.com/agl/ed25519/edwards25519",
 			"Rev": "d2b94fd789ea21d12fac1a4443dd3a3f79cda72c"
+		},
+		{
+			"ImportPath": "github.com/eris-ltd/common/go/log",
+			"Rev": "26df169480eef97df7ed9f5419b7367895d077b4"
+		},
+		{
+			"ImportPath": "github.com/eris-ltd/mint-client/mintx/core",
+			"Rev": "5f320d2908e20efce7a56f28493be8b04d4f85ef"
 		},
 		{
 			"ImportPath": "github.com/gin-gonic/gin",
@@ -47,6 +55,10 @@
 			"Rev": "043ae16291351db8465272edf465c9f388161627"
 		},
 		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "fdbe02a1b44e75977b2690062b83cf507d70c013"
+		},
+		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
@@ -60,16 +72,6 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/require",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/suite",
 			"Comment": "v1.0-17-g089c718",
 			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
 		},

@@ -11,7 +11,7 @@ import (
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
 
-	"github.com/eris-ltd/mint-client/mintx/core"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/eris-ltd/mint-client/mintx/core"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
 	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
