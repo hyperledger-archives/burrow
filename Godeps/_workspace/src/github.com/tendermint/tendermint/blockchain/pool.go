@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/code.google.com/p/mxk/go1/flowcontrol"
+	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/mxk/go-flowrate/flowrate"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 )
