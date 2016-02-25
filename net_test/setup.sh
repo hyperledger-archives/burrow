@@ -25,5 +25,7 @@ done
 
 # start the local proxy
 mintconfig --skip-upnp --seeds=$SEED > ./data/local/config.toml
+rm -rf ./data/local_data
 cp -r ./data/local ./data/local_data # so we don't contaminate the real dir
 eris chains new --dir $(pwd)/data/local_data $NAME
+#erisdb ./data/local_data &> erisdb.log &

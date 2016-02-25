@@ -19,7 +19,7 @@ else
 fi
 set -e
 
-N=10
+N=50
 for i in `seq 1 $N`; do
 	mintx send --to=$TO --addr=$ADDR --amt=1 --sign --broadcast --chainID=$NAME
 done
