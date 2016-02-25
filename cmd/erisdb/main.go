@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	_ "github.com/Sirupsen/logrus" // hack cuz godeps :(
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	"os"
 )
