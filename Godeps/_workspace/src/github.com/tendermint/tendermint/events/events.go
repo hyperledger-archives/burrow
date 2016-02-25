@@ -154,7 +154,7 @@ func (cell *eventCell) RemoveListener(listenerID string) int {
 func (cell *eventCell) FireEvent(data types.EventData) {
 	cell.mtx.RLock()
 	for _, listener := range cell.listeners {
-		listener(data)
+		listener(data) // XXX: make sure this doesn't block on removing listeners!
 	}
 	cell.mtx.RUnlock()
 }

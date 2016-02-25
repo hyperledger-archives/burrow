@@ -206,7 +206,7 @@ func _jsonStringToArg(ty reflect.Type, arg string) (reflect.Value, error) {
 // rpc.websocket
 
 const (
-	writeChanCapacity     = 20
+	writeChanCapacity     = 100
 	wsWriteTimeoutSeconds = 30 // each write times out after this
 	wsReadTimeoutSeconds  = 30 // connection times out if we haven't received *anything* in this long, not even pings.
 	wsPingTickerSeconds   = 10 // send a ping every PingTickerSeconds.
@@ -269,7 +269,7 @@ func (wsc *WSConnection) OnStart() error {
 
 func (wsc *WSConnection) OnStop() {
 	wsc.QuitService.OnStop()
-	wsc.evsw.RemoveListener(wsc.id)
+	go wsc.evsw.RemoveListener(wsc.id) // deadlocks if an event triggers Stop
 	wsc.readTimeout.Stop()
 	wsc.pingTicker.Stop()
 	// The write loop closes the websocket connection
