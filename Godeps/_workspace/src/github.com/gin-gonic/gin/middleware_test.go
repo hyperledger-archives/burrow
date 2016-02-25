@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/manucorporat/sse"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMiddlewareGeneralCase(t *testing.T) {

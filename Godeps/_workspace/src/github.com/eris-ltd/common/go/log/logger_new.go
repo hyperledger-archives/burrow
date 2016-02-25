@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"sort"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
 type ErisFormatter struct{}

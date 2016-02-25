@@ -2,18 +2,13 @@
 	"ImportPath": "github.com/eris-ltd/eris-db",
 	"GoVersion": "go1.5.1",
 	"Packages": [
-		"./erisdb/"
+		"./cmd/erisdb"
 	],
 	"Deps": [
 		{
-			"ImportPath": "code.google.com/p/go.crypto/ripemd160",
-			"Comment": "null-236",
-			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
-		},
-		{
-			"ImportPath": "code.google.com/p/mxk/go1/flowcontrol",
-			"Comment": "null-12",
-			"Rev": "5ff2502e25566863e8a0136c7aae8838e4c7de39"
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.9.0-15-g219c8cb",
+			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
 		},
 		{
 			"ImportPath": "github.com/agl/ed25519/edwards25519",
@@ -59,6 +54,10 @@
 			"Rev": "fdbe02a1b44e75977b2690062b83cf507d70c013"
 		},
 		{
+			"ImportPath": "github.com/mxk/go-flowrate/flowrate",
+			"Rev": "cca7078d478f8520f85629ad7c68962d31ed7682"
+		},
+		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
@@ -69,11 +68,6 @@
 		{
 			"ImportPath": "github.com/sfreiberg/gotwilio",
 			"Rev": "b7230c284bd0c1614c94d00b9998c49f9a2737d8"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/assert",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
@@ -222,6 +216,10 @@
 		{
 			"ImportPath": "golang.org/x/net/netutil",
 			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "5eaf0df67e70d6997a9fe0ed24383fa1b01638d3"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
