@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/mxk/go-flowrate/flowrate"
+	flow "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/flowcontrol"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire" //"github.com/tendermint/log15"
 )
