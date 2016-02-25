@@ -2,7 +2,7 @@
 // Written by Maxim Khitrov (November 2012)
 //
 
-package flowrate
+package flowcontrol
 
 import (
 	"math"

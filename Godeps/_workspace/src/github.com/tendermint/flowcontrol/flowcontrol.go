@@ -2,9 +2,9 @@
 // Written by Maxim Khitrov (November 2012)
 //
 
-// Package flowrate provides the tools for monitoring and limiting the flow rate
-// of an arbitrary data stream.
-package flowrate
+// Package flowcontrol provides the tools for monitoring and limiting the
+// transfer rate of an arbitrary data stream.
+package flowcontrol
 
 import (
 	"math"
@@ -70,6 +70,14 @@ func (m *Monitor) Update(n int) int {
 	m.update(n)
 	m.mu.Unlock()
 	return n
+}
+
+// Hack to set the current rEMA.
+func (m *Monitor) SetREMA(rEMA float64) {
+	m.mu.Lock()
+	m.rEMA = rEMA
+	m.samples++
+	m.mu.Unlock()
 }
 
 // IO is a convenience method intended to wrap io.Reader and io.Writer method

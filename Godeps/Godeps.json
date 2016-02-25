@@ -54,10 +54,6 @@
 			"Rev": "fdbe02a1b44e75977b2690062b83cf507d70c013"
 		},
 		{
-			"ImportPath": "github.com/mxk/go-flowrate/flowrate",
-			"Rev": "cca7078d478f8520f85629ad7c68962d31ed7682"
-		},
-		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
@@ -80,6 +76,10 @@
 		{
 			"ImportPath": "github.com/tendermint/ed25519",
 			"Rev": "533fb6548e2071076888eda3c38749d707ba49bc"
+		},
+		{
+			"ImportPath": "github.com/tendermint/flowcontrol",
+			"Rev": "84d9671090430e8ec80e35b339907e0579b999eb"
 		},
 		{
 			"ImportPath": "github.com/tendermint/log15",
