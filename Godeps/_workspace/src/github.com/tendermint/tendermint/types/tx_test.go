@@ -176,3 +176,34 @@ func TestPermissionsTxSignable(t *testing.T) {
 		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
 }
+
+func TestDupeoutTxSignable(t *testing.T) {
+	privAcc := acm.GenPrivAccount()
+	partSetHeader := PartSetHeader{Total: 10, Hash: []byte("partsethash")}
+	voteA := &Vote{
+		Height:           10,
+		Round:            2,
+		Type:             VoteTypePrevote,
+		BlockHash:        []byte("myblockhash"),
+		BlockPartsHeader: partSetHeader,
+	}
+	sig := privAcc.Sign(chainID, voteA)
+	voteA.Signature = sig.(acm.SignatureEd25519)
+	voteB := voteA.Copy()
+	voteB.BlockHash = []byte("myotherblockhash")
+	sig = privAcc.Sign(chainID, voteB)
+	voteB.Signature = sig.(acm.SignatureEd25519)
+
+	dupeoutTx := &DupeoutTx{
+		Address: []byte("address1"),
+		VoteA:   *voteA,
+		VoteB:   *voteB,
+	}
+	signBytes := acm.SignBytes(chainID, dupeoutTx)
+	signStr := string(signBytes)
+	expected := Fmt(`{"chain_id":"%s","tx":[20,{"address":"6164647265737331","vote_a":%v,"vote_b":%v}]}`,
+		config.GetString("chain_id"), *voteA, *voteB)
+	if signStr != expected {
+		t.Errorf("Got unexpected sign string for DupeoutTx")
+	}
+}

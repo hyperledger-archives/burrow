@@ -328,7 +328,8 @@ type DupeoutTx struct {
 }
 
 func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int64, err *error) {
-	PanicSanity("DupeoutTx has no sign bytes")
+	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
+	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","vote_a":%v,"vote_b":%v}]}`, TxTypeDupeout, tx.Address, tx.VoteA, tx.VoteB)), w, n, err)
 }
 
 func (tx *DupeoutTx) String() string {
