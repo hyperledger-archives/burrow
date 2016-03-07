@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+// This file was forked from go-ethereum and modified to suit erisdb
+
 package vmbridge
 
 import (
@@ -23,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 
 	mintcommon "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
 	mintvm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
 )
 
@@ -31,6 +34,7 @@ type VMEnv struct {
 	params mintvm.Params
 	origin common.Address
 	value  *big.Int
+	evc    events.Fireable
 
 	depth int
 	typ   vm.Type
@@ -46,6 +50,10 @@ func NewEnv(appState mintvm.AppState, params mintvm.Params, origin mintcommon.Wo
 		value:  big.NewInt(value),
 		typ:    vm.StdVmTy,
 	}
+}
+
+func (env *VMEnv) SetFireable(evc events.Fireable) {
+	env.evc = evc
 }
 
 func (self *VMEnv) Origin() common.Address   { return self.origin }
@@ -83,6 +91,21 @@ func (self *VMEnv) GetHash(n uint64) common.Hash {
 func (self *VMEnv) AddLog(log *vm.Log) {
 	// TODO: something about logs?!
 	// self.state.AddLog(log)
+
+	// TODO: fire event
+	/*
+		if vm.evc != nil {
+			eventID := types.EventStringLogEvent(callee.Address.Postfix(20))
+			fmt.Printf("eventID: %s\n", eventID)
+			log := types.EventDataLog{
+				callee.Address,
+				topics,
+				data,
+				vm.params.BlockHeight,
+			}
+			vm.evc.FireEvent(eventID, log)
+		}
+	*/
 }
 
 func (self *VMEnv) StructLogs() []vm.StructLog {
@@ -106,25 +129,20 @@ func (self *VMEnv) Transfer(from, to vm.Account, amount *big.Int) {
 }
 
 //-------------------------------
-// calls ... TODO!
 
 func (self *VMEnv) Call(me vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
-	return nil, nil
-	// return Call(self, me, addr, data, gas, price, value)
+	return Call(self, me, addr, data, gas, price, value)
 }
 func (self *VMEnv) CallCode(me vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
-	return nil, nil
-	// return CallCode(self, me, addr, data, gas, price, value)
+	return CallCode(self, me, addr, data, gas, price, value)
 }
 
 func (self *VMEnv) DelegateCall(me vm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error) {
-	return nil, nil
-	//return DelegateCall(self, me, addr, data, gas, price)
+	return DelegateCall(self, me, addr, data, gas, price)
 }
 
 func (self *VMEnv) Create(me vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
-	return nil, common.Address{}, nil
-	//	return Create(self, me, data, gas, price, value)
+	return Create(self, me, data, gas, price, value)
 }
 
 //----------------------------------
