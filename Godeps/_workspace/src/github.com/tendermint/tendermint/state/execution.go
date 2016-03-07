@@ -11,6 +11,7 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vmbridge"
 )
 
 // NOTE: If an error occurs during block execution, state will be left
@@ -465,7 +466,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := vm.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx))
+
+				vmach := vmbridge.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx), value)
 				vmach.SetFireable(evc)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
