@@ -27,7 +27,7 @@ import (
 )
 
 type VMEnv struct {
-	db     *Database
+	state  *Database
 	params mintvm.Params
 	origin common.Address
 	value  *big.Int
@@ -40,7 +40,7 @@ type VMEnv struct {
 
 func NewEnv(appState mintvm.AppState, params mintvm.Params, origin mintcommon.Word256, value int64) *VMEnv {
 	return &VMEnv{
-		db:     NewDatabase(appState),
+		state:  NewDatabase(appState),
 		params: params,
 		origin: common.BytesToAddress(origin.Postfix(20)),
 		value:  big.NewInt(value),
@@ -55,11 +55,15 @@ func (self *VMEnv) Time() *big.Int           { return big.NewInt(self.params.Blo
 func (self *VMEnv) Difficulty() *big.Int     { return big.NewInt(0) }
 func (self *VMEnv) GasLimit() *big.Int       { return big.NewInt(self.params.GasLimit) }
 func (self *VMEnv) Value() *big.Int          { return self.value }
-func (self *VMEnv) Db() vm.Database          { return self.db }
+func (self *VMEnv) Db() vm.Database          { return self.state }
 func (self *VMEnv) Depth() int               { return self.depth }
 func (self *VMEnv) SetDepth(i int)           { self.depth = i }
 func (self *VMEnv) VmType() vm.Type          { return self.typ }
 func (self *VMEnv) SetVmType(t vm.Type)      { self.typ = t }
+
+//---------
+// need the chain
+
 func (self *VMEnv) GetHash(n uint64) common.Hash {
 	// TODO
 	/*
@@ -73,29 +77,36 @@ func (self *VMEnv) GetHash(n uint64) common.Hash {
 	return common.Hash{}
 }
 
-//---------
+//------------------------------
+// logs logs logs
 
 func (self *VMEnv) AddLog(log *vm.Log) {
+	// TODO: something about logs?!
 	// self.state.AddLog(log)
 }
+
+func (self *VMEnv) StructLogs() []vm.StructLog {
+	return self.logs
+}
+
+func (self *VMEnv) AddStructLog(log vm.StructLog) {
+	self.logs = append(self.logs, log)
+}
+
+//-------------------------------
+// transfers
+
 func (self *VMEnv) CanTransfer(from common.Address, balance *big.Int) bool {
-	return false
-	// return self.state.GetBalance(from).Cmp(balance) >= 0
-}
-
-func (self *VMEnv) MakeSnapshot() vm.Database {
-	return nil
-	// return self.state.Copy()
-}
-
-func (self *VMEnv) SetSnapshot(copy vm.Database) {
-
-	//	self.state.Set(copy.(*state.StateDB))
+	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
 
 func (self *VMEnv) Transfer(from, to vm.Account, amount *big.Int) {
-	// Transfer(from, to, amount)
+	from.SubBalance(amount)
+	to.AddBalance(amount)
 }
+
+//-------------------------------
+// calls ... TODO!
 
 func (self *VMEnv) Call(me vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
 	return nil, nil
@@ -116,10 +127,17 @@ func (self *VMEnv) Create(me vm.ContractRef, data []byte, gas, price, value *big
 	//	return Create(self, me, data, gas, price, value)
 }
 
-func (self *VMEnv) StructLogs() []vm.StructLog {
-	return self.logs
+//----------------------------------
+// snapshots not needed
+
+func (self *VMEnv) MakeSnapshot() vm.Database {
+	// not used.
+	// could just return a copy of the underlying state.
+	// we use maps for intermediate state
+	return nil
 }
 
-func (self *VMEnv) AddStructLog(log vm.StructLog) {
-	self.logs = append(self.logs, log)
+func (self *VMEnv) SetSnapshot(copy vm.Database) {
+	// we should never actually need to call this
+	// see MakeSnapshot.
 }

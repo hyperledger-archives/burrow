@@ -25,6 +25,7 @@ type VMBridge struct {
 }
 
 func (vmb *VMBridge) SetFireable(evc events.Fireable) {
+	// TODO
 }
 
 func (vmb *VMBridge) Call(caller, callee *vm.Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
