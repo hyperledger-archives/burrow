@@ -340,8 +340,8 @@ func (cs *ConsensusState) reconstructLastCommit(state *sm.State) {
 	if state.LastBlockHeight == 0 {
 		return
 	}
-	lastPrecommits := types.NewVoteSet(state.LastBlockHeight, 0, types.VoteTypePrecommit, state.LastBondedValidators)
 	seenValidation := cs.blockStore.LoadSeenValidation(state.LastBlockHeight)
+	lastPrecommits := types.NewVoteSet(state.LastBlockHeight, seenValidation.Round(), types.VoteTypePrecommit, state.LastBondedValidators)
 	for idx, precommit := range seenValidation.Precommits {
 		if precommit == nil {
 			continue
@@ -1308,7 +1308,7 @@ func (cs *ConsensusState) saveBlock(block *types.Block, blockParts *types.PartSe
 	cs.stagedState.Save()
 
 	// Update mempool.
-	cs.mempoolReactor.ResetForBlockAndState(block, cs.stagedState)
+	cs.mempoolReactor.Mempool.ResetForBlockAndState(block, cs.stagedState)
 
 	// Fire off event
 	if cs.evsw != nil && cs.evc != nil {

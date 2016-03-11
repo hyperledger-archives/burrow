@@ -152,7 +152,8 @@ func NewNode(privValidator *types.PrivValidator) *Node {
 // Call Start() after adding the listeners.
 func (n *Node) Start() error {
 	n.book.Start()
-	n.sw.SetNodeInfo(makeNodeInfo(n.sw, n.privKey))
+	genState := sm.MakeGenesisState(dbm.NewMemDB(), n.genDoc)
+	n.sw.SetNodeInfo(makeNodeInfo(n.sw, n.privKey, genState.Hash()))
 	n.sw.SetNodePrivKey(n.privKey)
 	_, err := n.sw.Start()
 	return err
@@ -247,12 +248,13 @@ func (n *Node) EventSwitch() *events.EventSwitch {
 	return n.evsw
 }
 
-func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519) *types.NodeInfo {
+func makeNodeInfo(sw *p2p.Switch, privKey acm.PrivKeyEd25519, genesisRoot []byte) *types.NodeInfo {
 
 	nodeInfo := &types.NodeInfo{
 		PubKey:  privKey.PubKey().(acm.PubKeyEd25519),
 		Moniker: config.GetString("moniker"),
 		ChainID: config.GetString("chain_id"),
+		Genesis: genesisRoot,
 		Version: types.Versions{
 			Tendermint: Version,
 			P2P:        p2p.Version,

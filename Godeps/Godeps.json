@@ -6,18 +6,21 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "code.google.com/p/go.crypto/ripemd160",
-			"Comment": "null-236",
-			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
-		},
-		{
-			"ImportPath": "code.google.com/p/mxk/go1/flowcontrol",
-			"Comment": "null-12",
-			"Rev": "5ff2502e25566863e8a0136c7aae8838e4c7de39"
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.9.0-15-g219c8cb",
+			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
 		},
 		{
 			"ImportPath": "github.com/agl/ed25519/edwards25519",
 			"Rev": "d2b94fd789ea21d12fac1a4443dd3a3f79cda72c"
+		},
+		{
+			"ImportPath": "github.com/eris-ltd/common/go/log",
+			"Rev": "26df169480eef97df7ed9f5419b7367895d077b4"
+		},
+		{
+			"ImportPath": "github.com/eris-ltd/mint-client/mintx/core",
+			"Rev": "5f320d2908e20efce7a56f28493be8b04d4f85ef"
 		},
 		{
 			"ImportPath": "github.com/gin-gonic/gin",
@@ -47,6 +50,10 @@
 			"Rev": "043ae16291351db8465272edf465c9f388161627"
 		},
 		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "fdbe02a1b44e75977b2690062b83cf507d70c013"
+		},
+		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
@@ -60,18 +67,11 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/require",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
+			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/suite",
-			"Comment": "v1.0-17-g089c718",
-			"Rev": "089c7181b8c728499929ff09b62d3fdd8df8adff"
+			"Rev": "de7fcff264cd05cc0c90c509ea789a436a0dd206"
 		},
 		{
 			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
@@ -84,6 +84,14 @@
 		{
 			"ImportPath": "github.com/tendermint/ed25519",
 			"Rev": "533fb6548e2071076888eda3c38749d707ba49bc"
+		},
+		{
+			"ImportPath": "github.com/tendermint/flowcontrol",
+			"Rev": "84d9671090430e8ec80e35b339907e0579b999eb"
+		},
+		{
+			"ImportPath": "github.com/tendermint/go-clist",
+			"Rev": "634527f5b60fd7c71ca811262493df2ad65ee0ca"
 		},
 		{
 			"ImportPath": "github.com/tendermint/log15",
@@ -220,6 +228,10 @@
 		{
 			"ImportPath": "golang.org/x/net/netutil",
 			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "5eaf0df67e70d6997a9fe0ed24383fa1b01638d3"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
