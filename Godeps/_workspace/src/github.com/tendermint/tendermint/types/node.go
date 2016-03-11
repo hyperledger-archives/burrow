@@ -60,7 +60,7 @@ func (ni *NodeInfo) CompatibleWith(no *NodeInfo) error {
 
 	// nodes must share a common genesis root
 	if !bytes.Equal(ni.Genesis, no.Genesis) {
-		return fmt.Errorf("Peer has a different genesis root. Got %v, expected %v", no.Genesis, ni.Genesis)
+		return fmt.Errorf("Peer has a different genesis root. Got %X, expected %X", no.Genesis, ni.Genesis)
 	}
 
 	return nil
