@@ -17,7 +17,7 @@ type IPeerSet interface {
 //-----------------------------------------------------------------------------
 
 var (
-	maxPeersPerIPRange = [4]int{11, 7, 5, 3} // ...
+	maxPeersPerIPRange = [4]int{11, 7, 5, 3} // XXX: Make this configurable!
 )
 
 // PeerSet is a special structure for keeping a table of peers.
@@ -54,9 +54,9 @@ func (ps *PeerSet) Add(peer *Peer) error {
 
 	// ensure we havent maxed out connections for the peer's IP range yet
 	// and update the IP range counters
-	if !ps.incrIPRangeCounts(peer.Host) {
+	/*if !ps.incrIPRangeCounts(peer.Host) {
 		return ErrSwitchMaxPeersPerIPRange
-	}
+	}*/
 
 	index := len(ps.list)
 	// Appending is safe even with other goroutines
@@ -152,6 +152,9 @@ func NewNestedCounter() *nestedCounter {
 func (ps *PeerSet) HasMaxForIPRange(conn net.Conn) (ok bool) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
+
+	return false // NEVER ENOUGH IPs muahahaha
+
 	ip, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 	ipBytes := strings.Split(ip, ".")
 

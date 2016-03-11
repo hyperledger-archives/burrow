@@ -1,15 +1,18 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 	"strings"
+
+	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
 )
 
 type NodeInfo struct {
 	PubKey  acm.PubKeyEd25519 `json:"pub_key"`
 	Moniker string            `json:"moniker"`
 	ChainID string            `json:"chain_id"`
+	Genesis []byte            `json:"genesis"`
 	Host    string            `json:"host"`
 	P2PPort uint16            `json:"p2p_port"`
 	RPCPort uint16            `json:"rpc_port"`
@@ -25,7 +28,7 @@ type Versions struct {
 	Wire       string `json:"wire"`
 }
 
-// CONTRACT: two nodes with the same Tendermint major and minor version and with the same ChainID are compatible
+// CONTRACT: two nodes with the same Tendermint major and minor version and with the same ChainID and Genesis are compatible
 func (ni *NodeInfo) CompatibleWith(no *NodeInfo) error {
 	iM, im, _, ie := splitVersion(ni.Version.Tendermint)
 	oM, om, _, oe := splitVersion(no.Version.Tendermint)
@@ -53,6 +56,11 @@ func (ni *NodeInfo) CompatibleWith(no *NodeInfo) error {
 	// nodes must be on the same chain_id
 	if ni.ChainID != no.ChainID {
 		return fmt.Errorf("Peer is on a different chain_id. Got %v, expected %v", no.ChainID, ni.ChainID)
+	}
+
+	// nodes must share a common genesis root
+	if !bytes.Equal(ni.Genesis, no.Genesis) {
+		return fmt.Errorf("Peer has a different genesis root. Got %X, expected %X", no.Genesis, ni.Genesis)
 	}
 
 	return nil

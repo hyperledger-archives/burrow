@@ -220,7 +220,7 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 		sconn.Close()
 		return nil, fmt.Errorf("Ignoring connection from self")
 	}
-	// Check version, chain id
+	// Check version, chain id, genesis hash
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
 		sconn.Close()
 		return nil, err
