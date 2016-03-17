@@ -11,6 +11,7 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vmbridge"
 )
 
 // NOTE: If an error occurs during block execution, state will be left
@@ -450,6 +451,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			// get or create callee
 			if createContract {
 				// We already checked for permission
+				// NOTE: this Create is different than the one done by contracts (see ethcore.Create)
 				callee = txCache.CreateAccount(caller)
 				log.Info(Fmt("Created new contract %X", callee.Address))
 				code = tx.Data
@@ -465,10 +467,11 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := vm.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx))
+
+				vmach := vmbridge.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx), value)
 				vmach.SetFireable(evc)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
-				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
+				ret, err = vmach.Call(caller, callee, code, tx.Data, value, gas)
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 					log.Info(Fmt("Error on execution: %v", err))
