@@ -3,8 +3,8 @@ package account
 import (
 	"github.com/tendermint/ed25519"
 	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 )
 
 type PrivAccount struct {
@@ -37,7 +37,7 @@ func (pA *PrivAccount) String() string {
 // Generates a new account with private key.
 func GenPrivAccount() *PrivAccount {
 	privKeyBytes := new([64]byte)
-	copy(privKeyBytes[:32], CRandBytes(32))
+	copy(privKeyBytes[:32], crypto.CRandBytes(32))
 	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
 	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
 	privKey := crypto.PrivKeyEd25519(*privKeyBytes)

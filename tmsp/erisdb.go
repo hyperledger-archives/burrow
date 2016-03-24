@@ -100,7 +100,7 @@ func (app *ErisDBApp) SetOption(key string, value string) (log string) {
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) AppendTx(txBytes []byte) (code tmsp.CodeType, result []byte, log string) {
+func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
 	var n int
 	var err error
@@ -108,26 +108,25 @@ func (app ErisDBApp) AppendTx(txBytes []byte) (code tmsp.CodeType, result []byte
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.CodeType_EncodingError, nil, fmt.Sprintf("Encoding error: %v", err)
+		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
-		return tmsp.CodeType_InternalError, nil, fmt.Sprintf("Encoding error: %v", err)
+		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Encoding error: %v", err))
 	}
-
-	return tmsp.CodeType_OK, nil, ""
+	return tmsp.NewResultOK(nil, "Success")
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) CheckTx(txBytes []byte) (code tmsp.CodeType, result []byte, log string) {
+func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 	var n int
 	var err error
 	tx := new(types.Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.CodeType_EncodingError, nil, fmt.Sprintf("Encoding error: %v", err)
+		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
 	// we need the lock because CheckTx can run concurrently with Commit,
@@ -136,15 +135,15 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (code tmsp.CodeType, result []byte,
 	defer app.mtx.Unlock()
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
-		return tmsp.CodeType_InternalError, nil, fmt.Sprintf("Encoding error: %v", err)
+		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	return tmsp.CodeType_OK, nil, ""
+	return tmsp.NewResultOK(nil, "Success")
 }
 
 // Implements tmsp.Application
 // Commit the state (called at end of block)
-func (app *ErisDBApp) Commit() (hash []byte, log string) {
+func (app *ErisDBApp) Commit() (res tmsp.Result) {
 	// sync the AppendTx cache
 	app.cache.Sync()
 
@@ -157,9 +156,9 @@ func (app *ErisDBApp) Commit() (hash []byte, log string) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	return app.state.Hash(), ""
+	return tmsp.NewResultOK(app.state.Hash(), "Success")
 }
 
-func (app *ErisDBApp) Query(query []byte) (code tmsp.CodeType, result []byte, log string) {
-	return tmsp.CodeType_OK, nil, ""
+func (app *ErisDBApp) Query(query []byte) (res tmsp.Result) {
+	return tmsp.NewResultOK(nil, "Success")
 }

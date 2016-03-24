@@ -108,7 +108,7 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	// Start the tmsp listener for state update commands
 	go func() {
 		// TODO config
-		_, err := tmsp.StartListener(sConf.Consensus.TMSPListener, app)
+		_, err := tmsp.NewServer(sConf.Consensus.TMSPListener, app)
 		if err != nil {
 			// TODO: play nice
 			Exit(err.Error())
