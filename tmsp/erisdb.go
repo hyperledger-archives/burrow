@@ -120,6 +120,10 @@ func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 
 // Implements tmsp.Application
 func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
+	log.Info("Check Tx", "tx", txBytes)
+	defer func() {
+		log.Info("Check Tx", "res", res)
+	}()
 	var n int
 	var err error
 	tx := new(types.Tx)
