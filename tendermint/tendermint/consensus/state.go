@@ -157,14 +157,14 @@ import (
 	"sync"
 	"time"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	acm "github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	bc "github.com/eris-ltd/eris-db/tendermint/tendermint/blockchain"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/events"
+	mempl "github.com/eris-ltd/eris-db/tendermint/tendermint/mempool"
+	sm "github.com/eris-ltd/eris-db/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 var (

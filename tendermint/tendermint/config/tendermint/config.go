@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	cfg "github.com/eris-ltd/eris-db/tendermint/tendermint/config"
 )
 
 func getTMRoot(rootDir string) string {

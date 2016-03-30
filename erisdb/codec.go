@@ -4,7 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 )
 

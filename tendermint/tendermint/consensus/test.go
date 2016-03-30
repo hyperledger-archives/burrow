@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	bc "github.com/eris-ltd/eris-db/tendermint/tendermint/blockchain"
+	dbm "github.com/eris-ltd/eris-db/tendermint/tendermint/db"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/events"
+	mempl "github.com/eris-ltd/eris-db/tendermint/tendermint/mempool"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
+	sm "github.com/eris-ltd/eris-db/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 //-------------------------------------------------------------------------------

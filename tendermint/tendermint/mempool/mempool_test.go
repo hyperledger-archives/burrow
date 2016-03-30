@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 	"github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tmsp/example/counter"
 	tmsp "github.com/tendermint/tmsp/types"

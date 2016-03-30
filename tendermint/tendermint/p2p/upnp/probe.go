@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
 )
 
 type UPNPCapabilities struct {

@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	_ "github.com/eris-ltd/eris-db/tendermint/tendermint/config/tendermint_test"
+	dbm "github.com/eris-ltd/eris-db/tendermint/tendermint/db"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
+	sm "github.com/eris-ltd/eris-db/tendermint/tendermint/state"
+	stypes "github.com/eris-ltd/eris-db/tendermint/tendermint/state/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 func TestNodeStartStop(t *testing.T) {

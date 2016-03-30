@@ -1,9 +1,9 @@
 package vm
 
 import (
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/sha3"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/vm"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/vm/sha3"
 )
 
 type FakeAppState struct {

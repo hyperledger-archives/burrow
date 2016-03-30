@@ -9,11 +9,11 @@ import (
 	"os"
 	"sync"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	acm "github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/ed25519"
+	"github.com/eris-ltd/eris-db/tendermint/ed25519"
 )
 
 const (

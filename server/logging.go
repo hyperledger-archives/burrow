@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
+	"github.com/eris-ltd/eris-db/tendermint/log15"
 	"os"
 )
 

@@ -13,14 +13,14 @@ import (
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/eris-ltd/mint-client/mintx/core"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config"
-	tmcfg "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/log15"
+	acm "github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	cfg "github.com/eris-ltd/eris-db/tendermint/tendermint/config"
+	tmcfg "github.com/eris-ltd/eris-db/tendermint/tendermint/config/tendermint"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/node"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 var log = log15.New("module", "eris/erisdb_server")

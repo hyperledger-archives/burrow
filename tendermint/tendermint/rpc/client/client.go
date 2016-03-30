@@ -7,9 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 func Call(remote string, method string, params []interface{}, dest interface{}) (interface{}, error) {

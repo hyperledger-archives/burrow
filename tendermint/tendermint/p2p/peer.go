@@ -5,9 +5,9 @@ import (
 	"io"
 	"net"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 type Peer struct {

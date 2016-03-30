@@ -5,8 +5,8 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
 	"io"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 // Node

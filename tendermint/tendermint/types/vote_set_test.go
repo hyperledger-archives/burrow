@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"sort"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common/test"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
+	acm "github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common/test"
+	_ "github.com/eris-ltd/eris-db/tendermint/tendermint/config/tendermint_test"
 
 	"testing"
 )

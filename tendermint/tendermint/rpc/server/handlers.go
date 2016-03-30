@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/events"
+	ctypes "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core/types"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 func RegisterRPCFuncs(mux *http.ServeMux, funcMap map[string]*RPCFunc) {

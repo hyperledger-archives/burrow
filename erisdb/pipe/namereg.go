@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	types "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	cm "github.com/eris-ltd/eris-db/tendermint/tendermint/consensus"
+	ctypes "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core/types"
+	types "github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 	"sync"
 )
 

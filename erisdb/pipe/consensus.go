@@ -1,10 +1,10 @@
 package pipe
 
 import (
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	cm "github.com/eris-ltd/eris-db/tendermint/tendermint/consensus"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 // The consensus struct.

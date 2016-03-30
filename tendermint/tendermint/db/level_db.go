@@ -7,7 +7,7 @@ import (
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/opt"
 	"path"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
 )
 
 type LevelDB struct {

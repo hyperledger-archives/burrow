@@ -3,7 +3,7 @@ package vm
 import (
 	"crypto/sha256"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/golang.org/x/crypto/ripemd160"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
 )
 
 var registeredNativeContracts = make(map[Word256]NativeContract)

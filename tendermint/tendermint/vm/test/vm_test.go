@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/events"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/events"
+	ptypes "github.com/eris-ltd/eris-db/tendermint/tendermint/permission/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/vm"
 )
 
 func newAppState() *FakeAppState {

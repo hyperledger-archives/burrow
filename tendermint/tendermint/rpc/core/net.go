@@ -1,10 +1,10 @@
 package core
 
 import (
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	dbm "github.com/eris-ltd/eris-db/tendermint/tendermint/db"
+	ctypes "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core/types"
+	sm "github.com/eris-ltd/eris-db/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 //-----------------------------------------------------------------------------

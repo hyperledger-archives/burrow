@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/logger"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/logger"
 )
 
 var log = logger.New("module", "state")

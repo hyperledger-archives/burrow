@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
-	_ "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/config/tendermint_test"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	_ "github.com/eris-ltd/eris-db/tendermint/tendermint/config/tendermint_test"
+	ctypes "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 //--------------------------------------------------------------------------------

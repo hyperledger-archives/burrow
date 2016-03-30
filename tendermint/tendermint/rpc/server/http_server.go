@@ -10,10 +10,10 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/alert"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/alert"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/types"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/wire"
 )
 
 func StartHTTPServer(listenAddr string, handler http.Handler) (net.Listener, error) {

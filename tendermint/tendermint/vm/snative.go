@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	ptypes "github.com/eris-ltd/eris-db/tendermint/tendermint/permission/types"
 )
 
 //------------------------------------------------------------------------------------------------

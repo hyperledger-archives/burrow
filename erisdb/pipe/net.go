@@ -1,7 +1,7 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
 )
 
 // The net struct.

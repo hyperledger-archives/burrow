@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"testing"
 
-	acm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	nm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/p2p"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	cclient "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core_client"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	acm "github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	. "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	nm "github.com/eris-ltd/eris-db/tendermint/tendermint/node"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/p2p"
+	ctypes "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core/types"
+	cclient "github.com/eris-ltd/eris-db/tendermint/tendermint/rpc/core_client"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 // global variables for use across all tests

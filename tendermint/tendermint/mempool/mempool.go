@@ -6,10 +6,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/go-clist"
+	"github.com/eris-ltd/eris-db/tendermint/go-clist"
 
-	sm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	sm "github.com/eris-ltd/eris-db/tendermint/tendermint/state"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/types"
 )
 
 /*

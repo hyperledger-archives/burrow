@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
+	"github.com/eris-ltd/eris-db/tendermint/tendermint/account"
+	cmn "github.com/eris-ltd/eris-db/tendermint/tendermint/common"
+	cs "github.com/eris-ltd/eris-db/tendermint/tendermint/consensus"
+	mempl "github.com/eris-ltd/eris-db/tendermint/tendermint/mempool"
 	"sync"
 )
 
