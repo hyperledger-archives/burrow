@@ -1,27 +1,47 @@
 machine:
+  environment:
+    GO15VENDOREXPERIMENT: 1
+    # We want to work from GOPATH src
+    GOPATH_REPO: ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+    HOME_REPO: ${HOME}/${CIRCLE_PROJECT_REPONAME}
   post:
-    - rm -rf ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-    - mkdir -p ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
-    - cp -r ${HOME}/${CIRCLE_PROJECT_REPONAME} ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+    - mkdir -p $GOPATH_REPO
+    # Will overwrite anything from cache, note trailing slash on source matters
+    - rsync -a --delete $HOME_REPO/ $GOPATH_REPO
+    - rm -rf $HOME_REPO
+    # Let our build_dir point a go src location
+    - ln -s $GOPATH_REPO $HOME_REPO
     - git config --global user.email "billings@erisindustries.com"
     - git config --global user.name "Billings the Bot"
 
 dependencies:
   pre:
-    - sudo curl -L -o /usr/bin/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.9.0-circleci'; sudo chmod 0755 /usr/bin/docker; true
+    - mkdir -p ~/cache
+    # Fill cache of overrides 
+    - test -e ~/cache/docker || curl -L -o ~/cache/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.9.0-circleci'
+    # leaving here in case we wish to override go version
+    # - test -e ~/cache/go || curl https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz | tar xzC ~/cache
+    # - sudo rm -rf /usr/local/go
+    # - sudo cp -r ~/cache/go /usr/local/go
+    # Override host docker
+    - sudo cp ~/cache/docker /usr/bin/dockeu
+    - sudo chmod +x /usr/bin/docker
+    # Override host go
     - sudo service docker start
-    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    # Install erisdb cmd for tests
+    - cd $GOPATH_REPO && go install ./cmd/erisdb
 
-  override:
-    - "cd ./cmd/erisdb && go get -d && go build"
-    - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
-    - chmod +x ~/bin/erisdb
-
+  cache_directories:
+    - ~/cache
 test:
+  pre:
+    - go get github.com/stretchr/testify
+    - go get github.com/Masterminds/glide
   override:
-    - glide install
-    - go test -v ./...
+    # We only wish to test our packages not vendored ones
+    - cd $GOPATH_REPO && glide novendor | xargs go test -v
 
 deployment:
   master:

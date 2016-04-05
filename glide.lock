@@ -1,5 +1,5 @@
-hash: 1e7060a87d782c00c610b8c90c8d10cec951de25cc002e0755064aa89f8ab1f4
-updated: 2016-04-05T10:51:31.176092763-04:00
+hash: ebfa16e47dd0e0b486fc4435f53391b6bd9df5cb6dda53377ad2a0cde065c056
+updated: 2016-04-08T18:00:31.443217762+01:00
 imports:
 - name: github.com/gin-gonic/gin
   version: 233291e4e2d016084f9e42e786e45dad8858ace4
@@ -11,7 +11,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/snappy
-  version: 857ad66e003f466b64f9055849bab122efd4c87a
+  version: cef980a12b316c5b7e5bb3a8e168eb43ae999a88
 - name: github.com/gorilla/websocket
   version: e2e3d8414d0fbae04004f151979f4e27c6747fe7
 - name: github.com/inconshreveable/log15
@@ -33,6 +33,8 @@ imports:
   - ast
 - name: github.com/sfreiberg/gotwilio
   version: f024bbefe80fdb7bcc8c43b6add05dae97744e0e
+- name: github.com/stretchr/testify
+  version: 0744955171b0b6e1871ff9d7366abc2b7a7fcec0
 - name: github.com/syndtr/goleveldb
   version: 93fc893f2dadb96ffde441c7546cc67ea290a3a8
   subpackages:
@@ -84,7 +86,7 @@ imports:
   - server
   - types
 - name: github.com/tendermint/go-wire
-  version: 7a15dd53dfdecc0f967676edcd6b335c59344c83
+  version: 3b0adbc86ed8425eaed98516165b6788d9f4de7a
 - name: github.com/tendermint/log15
   version: 6e460758f10ef42a4724b8e4a82fee59aaa0e41d
 - name: github.com/tendermint/tendermint
@@ -112,7 +114,7 @@ imports:
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: 9e7f5dc375abeb9619ea3c5c58502c428f457aa2
+  version: 3fbbcd23f1cb824e69491a5930cfeff09b12f4d2
   subpackages:
   - ripemd160
   - nacl/secretbox
@@ -128,7 +130,7 @@ imports:
   - context
   - netutil
 - name: golang.org/x/sys
-  version: b323466d0bc6669362b0836480b30452d2c00db9
+  version: a80ff226bd294315526e7ae48959d55635143ea7
   subpackages:
   - unix
 - name: gopkg.in/fatih/set.v0
