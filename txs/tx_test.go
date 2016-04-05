@@ -13,8 +13,8 @@ import (
 var chainID string
 
 func init() {
+	tendermint_test.ResetConfig("txs_test")
 	chainID = config.GetString("chain_id")
-	tendermint_test.ResetConfig("state_test")
 }
 
 func TestSendTxSignable(t *testing.T) {

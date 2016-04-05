@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/suite"
 	"github.com/eris-ltd/eris-db/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
@@ -15,6 +13,8 @@ import (
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -68,7 +68,8 @@ func (this *WebApiSuite) TearDownSuite() {
 }
 
 // ********************************************* Consensus *********************************************
-
+// TODO
+/*
 func (this *WebApiSuite) Test_A0_ConsensusState() {
 	resp := this.get("/consensus")
 	ret := &ep.ConsensusState{}
@@ -135,9 +136,11 @@ func (this *WebApiSuite) Test_B5_Peers() {
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetPeers.Output)
 }
+*/
 
 // ********************************************* Transactions *********************************************
-
+// TODO
+/*
 func (this *WebApiSuite) Test_C0_TxCreate() {
 	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
 	ret := &ep.Receipt{}
@@ -169,7 +172,7 @@ func (this *WebApiSuite) Test_C3_CallCode() {
 	this.NoError(errD)
 	this.Equal(ret, this.testData.CallCode.Output)
 }
-
+*/
 // ********************************************* Accounts *********************************************
 
 func (this *WebApiSuite) Test_D0_GetAccounts() {
@@ -209,6 +212,8 @@ func (this *WebApiSuite) Test_D3_GetStorageAt() {
 }
 
 // ********************************************* Blockchain *********************************************
+// TODO
+/*
 
 func (this *WebApiSuite) Test_E0_GetBlockchainInfo() {
 	resp := this.get("/blockchain")
@@ -249,6 +254,7 @@ func (this *WebApiSuite) Test_E4_GetBlocks() {
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetBlocks.Output)
 }
+*/
 
 // ********************************************* Utilities *********************************************
 
