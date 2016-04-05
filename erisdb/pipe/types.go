@@ -2,6 +2,8 @@ package pipe
 
 import (
 	"github.com/eris-ltd/eris-db/account"
+	txs "github.com/eris-ltd/eris-db/txs"
+
 	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
 	csus "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/types"
@@ -140,7 +142,7 @@ type (
 
 	// UnconfirmedTxs
 	UnconfirmedTxs struct {
-		Txs []types.Tx `json:"txs"`
+		Txs []txs.Tx `json:"txs"`
 	}
 
 	// BroadcastTx or Transact
