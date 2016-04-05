@@ -9,7 +9,7 @@ import (
 
 	. "github.com/tendermint/go-common"
 	stypes "github.com/eris-ltd/eris-db/state/types"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/go-wire"
 )
 

@@ -2,13 +2,15 @@ package pipe
 
 import (
 	"fmt"
-	dbm "github.com/tendermint/go-db"
-	"github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/state"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
+
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/tendermint/types"
+
+	"github.com/eris-ltd/eris-db/state"
 )
 
 const BLOCK_MAX = 50

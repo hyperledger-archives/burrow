@@ -7,13 +7,14 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/tendermint/tendermint/config/tendermint_test"
 )
 
 var chainID string
 
 func init() {
 	chainID = config.GetString("chain_id")
+	tendermint_test.ResetConfig("state_test")
 }
 
 func TestSendTxSignable(t *testing.T) {

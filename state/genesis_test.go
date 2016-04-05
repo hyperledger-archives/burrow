@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	tdb "github.com/tendermint/go-db"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/state/types"
+	tdb "github.com/tendermint/go-db"
 )
 
 var chain_id = "lone_ranger"
@@ -41,7 +41,7 @@ var g1 = fmt.Sprintf(`
     "validators": [
         {
             "amount": 100000000,
-            "pub_key": [1,"F6C79CF0CB9D66B677988BCB9B8EADD9A091CD465A60542A8AB85476256DBA92"],
+            "pub_key": "F6C79CF0CB9D66B677988BCB9B8EADD9A091CD465A60542A8AB85476256DBA92",
             "unbond_to": [
                 {
                     "address": "964B1493BBE3312278B7DEB94C39149F7899A345",

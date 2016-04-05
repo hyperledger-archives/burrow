@@ -1,8 +1,8 @@
 hash: 1e7060a87d782c00c610b8c90c8d10cec951de25cc002e0755064aa89f8ab1f4
-updated: 2016-03-24T15:29:10.141565751-04:00
+updated: 2016-04-05T10:51:31.176092763-04:00
 imports:
 - name: github.com/gin-gonic/gin
-  version: 4a6bc4aac4607e253bcda67c8c5bcda693d2388e
+  version: 233291e4e2d016084f9e42e786e45dad8858ace4
   subpackages:
   - binding
   - render
@@ -11,11 +11,11 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/snappy
-  version: 5f1c01d9f64b941dd9582c638279d046eda6ca31
+  version: 857ad66e003f466b64f9055849bab122efd4c87a
 - name: github.com/gorilla/websocket
   version: e2e3d8414d0fbae04004f151979f4e27c6747fe7
 - name: github.com/inconshreveable/log15
-  version: 210d6fdc4d979ef6579778f1b6ed84571454abb4
+  version: 57a084d014d4150152b19e4e531399a7145d1540
   subpackages:
   - stack
   - term
@@ -34,7 +34,7 @@ imports:
 - name: github.com/sfreiberg/gotwilio
   version: f024bbefe80fdb7bcc8c43b6add05dae97744e0e
 - name: github.com/syndtr/goleveldb
-  version: 917f41c560270110ceb73c5b38be2a9127387071
+  version: 93fc893f2dadb96ffde441c7546cc67ea290a3a8
   subpackages:
   - leveldb
   - leveldb/errors
@@ -74,7 +74,7 @@ imports:
 - name: github.com/tendermint/go-merkle
   version: 05042c6ab9cad51d12e4cecf717ae68e3b1409a8
 - name: github.com/tendermint/go-p2p
-  version: 10619248c665dee6b8f81455f7f27ab93d5ec366
+  version: 78c9d526c31d5ae06d5793b865d25a9407b635dc
   subpackages:
   - upnp
 - name: github.com/tendermint/go-rpc
@@ -84,11 +84,11 @@ imports:
   - server
   - types
 - name: github.com/tendermint/go-wire
-  version: b281aa123700812f0331e3354941cdd842952432
+  version: 7a15dd53dfdecc0f967676edcd6b335c59344c83
 - name: github.com/tendermint/log15
   version: 6e460758f10ef42a4724b8e4a82fee59aaa0e41d
 - name: github.com/tendermint/tendermint
-  version: a8ee0377d5d408574042a0fa792eeeec296f9465
+  version: 39d72d581144b1b98487b012ec6b7255c5839c50
   subpackages:
   - config/tendermint
   - consensus
@@ -102,7 +102,7 @@ imports:
   - state
   - version
 - name: github.com/tendermint/tmsp
-  version: 1dfc6950dddf47ff397e670a67d405d25da138ea
+  version: 82a411fca58b3b1e2ac8fc3a6784a17579012d68
   subpackages:
   - server
   - types
@@ -112,7 +112,7 @@ imports:
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: c197bcf24cde29d3f73c7b4ac6fd41f4384e8af6
+  version: 9e7f5dc375abeb9619ea3c5c58502c428f457aa2
   subpackages:
   - ripemd160
   - nacl/secretbox
@@ -128,7 +128,7 @@ imports:
   - context
   - netutil
 - name: golang.org/x/sys
-  version: afce3de5756ca82699128ebae46ac95ad59d6297
+  version: b323466d0bc6669362b0836480b30452d2c00db9
   subpackages:
   - unix
 - name: gopkg.in/fatih/set.v0

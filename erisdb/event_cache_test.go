@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-events"
-	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 var mockInterval = 10 * time.Millisecond

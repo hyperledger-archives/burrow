@@ -64,7 +64,7 @@ var testDataJson = `{
         }
       ]
     }
-  }
+  },
   "GetAccount": {
     "input": {
       "address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3"
@@ -103,9 +103,7 @@ var testDataJson = `{
 	          "perms": 2302,
 	          "set": 16383
 	        },
-	        "roles": [
-	          
-	        ]
+	        "roles": []
 	      }
 	    },
         {
@@ -268,10 +266,7 @@ var testDataJson = `{
       "validators": [
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
+          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
           "bond_height": 0,
           "unbond_height": 0,
           "last_commit_height": 0,
@@ -288,10 +283,7 @@ var testDataJson = `{
       "bonded_validators": [
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
+          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
           "bond_height": 0,
           "unbond_height": 0,
           "last_commit_height": 0,
@@ -498,7 +490,7 @@ var testDataJson = `{
     "input": {
       "filters": []
     },
-    "output": [11, {
+    "output": {
       "block_height": 1,
       "names":[ {
         "name": "testKey",
@@ -506,7 +498,7 @@ var testDataJson = `{
         "data": "testData",
         "expires": 250
       } ]
-    }]
+    }
   }
 }`
 

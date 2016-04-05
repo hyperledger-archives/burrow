@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
-	"github.com/tendermint/tendermint/types"
+	tmtypes "github.com/tendermint/tendermint/types"
 	"net/http"
 	"os"
 )
@@ -33,9 +33,9 @@ rpc_laddr = ""
 // TODO more stuff, like tendermint and server config files. Will probably
 // wait with this until the eris/EPM integration.
 type RequestData struct {
-	PrivValidator *types.PrivValidator `json:"priv_validator"`
-	Genesis       *stypes.GenesisDoc   `json:"genesis"`
-	MaxDuration   uint                 `json:"max_duration"`
+	PrivValidator *tmtypes.PrivValidator `json:"priv_validator"`
+	Genesis       *stypes.GenesisDoc     `json:"genesis"`
+	MaxDuration   uint                   `json:"max_duration"`
 }
 
 // The response is the port of the newly generated server. The assumption
