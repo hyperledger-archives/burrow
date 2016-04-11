@@ -1,5 +1,5 @@
 # Using glide with this repository
-We use the (glide)[https://github.com/Masterminds/glide] tool to manage our go
+We use the [glide](https://github.com/Masterminds/glide) tool to manage our go
 dependencies.
 
 In this repo we maintain a set of vendored dependencies under vendor/. Make sure
