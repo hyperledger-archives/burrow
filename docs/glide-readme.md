@@ -48,5 +48,5 @@ Instead use:
 glide novendor | xargs go test
 ```
 
-Where `glide novendro` returns a newline-delimited list of packages in this project
+Where `glide novendor` returns a newline-delimited list of packages in this project
 excluding vendor of the form `./<package name>/...`.
