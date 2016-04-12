@@ -35,6 +35,8 @@ type ErisDBApp struct {
 	// client to the tendermint core rpc
 	client *client.ClientURI
 	host   string // tendermint core endpoint
+
+	nTxs int // count txs in a block
 }
 
 func (app *ErisDBApp) GetState() *sm.State {
@@ -96,6 +98,8 @@ func (app *ErisDBApp) SetOption(key string, value string) (log string) {
 
 // Implements tmsp.Application
 func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+	app.nTxs += 1
+
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
 	var n int
 	var err error
@@ -149,8 +153,12 @@ func (app *ErisDBApp) Commit() (res tmsp.Result) {
 	// sync the AppendTx cache
 	app.cache.Sync()
 
+	// if there were any txs in the block,
 	// reset the check cache to the new height
-	app.checkCache = sm.NewBlockCache(app.state)
+	if app.nTxs > 0 {
+		app.checkCache = sm.NewBlockCache(app.state)
+	}
+	app.nTxs = 0
 
 	// save state to disk
 	app.state.Save()
