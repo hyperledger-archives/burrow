@@ -97,7 +97,8 @@ func (app *ErisDBApp) SetOption(key string, value string) (log string) {
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+
 	app.nTxs += 1
 
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
@@ -110,15 +111,17 @@ func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
+	log.Info("AppendTx", "tx", *tx)
+
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Encoding error: %v", err))
+		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 	return tmsp.NewResultOK(nil, "Success")
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 	var n int
 	var err error
 	tx := new(types.Tx)
@@ -128,7 +131,7 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	log.Info("CheckTx", "tx", tx)
+	log.Info("CheckTx", "tx", *tx)
 
 	// TODO: make errors tmsp aware
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
@@ -156,6 +159,7 @@ func (app *ErisDBApp) Commit() (res tmsp.Result) {
 	// if there were any txs in the block,
 	// reset the check cache to the new height
 	if app.nTxs > 0 {
+		log.Info("Reset checkCache", "txs", app.nTxs)
 		app.checkCache = sm.NewBlockCache(app.state)
 	}
 	app.nTxs = 0
