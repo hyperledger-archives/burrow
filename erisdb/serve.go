@@ -4,10 +4,12 @@ package erisdb
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"path"
+	"strings"
+	"sync"
 
-	sm "github.com/eris-ltd/eris-db/state"
-	stypes "github.com/eris-ltd/eris-db/state/types"
 	. "github.com/tendermint/go-common"
 	cfg "github.com/tendermint/go-config"
 	dbm "github.com/tendermint/go-db"
@@ -15,14 +17,19 @@ import (
 	"github.com/tendermint/go-p2p"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/log15"
-	tmcfg "github.com/tendermint/tendermint/config/tendermint"
-	"github.com/tendermint/tendermint/node"
 
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/proxy"
+	"github.com/tendermint/tendermint/types"
+	tmspcli "github.com/tendermint/tmsp/client"
+	tmsp "github.com/tendermint/tmsp/server"
+
+	tmcfg "github.com/eris-ltd/eris-db/config/tendermint"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
-
+	sm "github.com/eris-ltd/eris-db/state"
+	stypes "github.com/eris-ltd/eris-db/state/types"
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
-	tmsp "github.com/tendermint/tmsp/server"
 )
 
 const ERISDB_VERSION = "0.11.5"
@@ -35,7 +42,7 @@ var tmConfig cfg.Config
 // with a tmsp listener for talking to tendermint core.
 // To start listening for incoming requests, call 'Start()' on the process.
 // Make sure to register any start event listeners first
-func ServeErisDB(workDir string) (*server.ServeProcess, error) {
+func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	log.Info("ErisDB Serve initializing.")
 	errEns := EnsureDir(workDir, 0777)
 
@@ -68,19 +75,15 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	tmConfig.Set("version", TENDERMINT_VERSION)
 	cfg.ApplyConfig(tmConfig) // Notify modules of new config
 
-	// Set the node up.
-	// nodeRd := make(chan struct{})
-	// nd := node.NewNode()
-
 	// Load the application state
 	// The app state used to be managed by tendermint node,
 	// but is now managed by ErisDB.
 	// The tendermint core only stores the blockchain (history of txs)
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("app_state")
 	state := sm.LoadState(stateDB)
 	var genDoc *stypes.GenesisDoc
 	if state == nil {
-		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
+		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("erisdb_genesis_file"))
 		state.Save()
 		// write the gendoc to db
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
@@ -102,18 +105,25 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 
 	evsw := events.NewEventSwitch()
 	evsw.Start()
+
 	app := edbapp.NewErisDBApp(state, evsw)
 	app.SetHostAddress(sConf.Consensus.TendermintHost)
 
-	// Start the tmsp listener for state update commands
-	go func() {
-		// TODO config
-		_, err := tmsp.NewServer(sConf.Consensus.TMSPListener, app)
-		if err != nil {
-			// TODO: play nice
-			Exit(err.Error())
-		}
-	}()
+	if inProc {
+		fmt.Println("Starting tm node in proc")
+		startTMNode(app)
+	} else {
+		fmt.Println("Starting tmsp listener")
+		// Start the tmsp listener for state update commands
+		go func() {
+			// TODO config
+			_, err := tmsp.NewServer(sConf.Consensus.TMSPListener, app)
+			if err != nil {
+				// TODO: play nice
+				Exit(err.Error())
+			}
+		}()
+	}
 
 	// Load supporting objects.
 	pipe := ep.NewPipe(app, evsw)
@@ -133,6 +143,51 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	//go startNode(nd, nodeRd, stopChan)
 	//<-nodeRd
 	return proc, nil
+}
+
+func startTMNode(app *edbapp.ErisDBApp) {
+	// get the genesis
+	genDocFile := config.GetString("tendermint_genesis_file")
+	jsonBlob, err := ioutil.ReadFile(genDocFile)
+	if err != nil {
+		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+	}
+	genDoc := types.GenesisDocFromJSON(jsonBlob)
+	if genDoc.ChainID == "" {
+		PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
+	}
+	config.Set("chain_id", genDoc.ChainID)
+	config.Set("genesis_doc", genDoc)
+
+	// Get PrivValidator
+	privValidatorFile := config.GetString("priv_validator_file")
+	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
+	nd := node.NewNode(privValidator, func(addr string, hash []byte) proxy.AppConn {
+		// TODO: Check the hash
+		return tmspcli.NewLocalClient(new(sync.Mutex), app)
+	})
+
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), config.GetBool("skip_upnp"))
+	nd.AddListener(l)
+	if err := nd.Start(); err != nil {
+		Exit(Fmt("Failed to start node: %v", err))
+	}
+
+	log.Notice("Started node", "nodeInfo", nd.NodeInfo())
+
+	// If seedNode is provided by config, dial out.
+	if config.GetString("seeds") != "" {
+		seeds := strings.Split(config.GetString("seeds"), ",")
+		nd.DialSeeds(seeds)
+	}
+
+	// Run the RPC server.
+	if config.GetString("rpc_laddr") != "" {
+		_, err := nd.StartRPC()
+		if err != nil {
+			PanicCrisis(err)
+		}
+	}
 }
 
 // Private. Create a new node.
