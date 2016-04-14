@@ -19,6 +19,7 @@ import (
 	"github.com/tendermint/tendermint/node"
 
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	evm "github.com/eris-ltd/eris-db/evm"
 	"github.com/eris-ltd/eris-db/server"
 
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
@@ -104,6 +105,8 @@ func ServeErisDB(workDir string) (*server.ServeProcess, error) {
 	evsw.Start()
 	app := edbapp.NewErisDBApp(state, evsw)
 	app.SetHostAddress(sConf.Consensus.TendermintHost)
+
+	evm.SetDebug(sConf.Logging.VMLog)
 
 	// Start the tmsp listener for state update commands
 	go func() {
