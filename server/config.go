@@ -54,6 +54,7 @@ type (
 		ConsoleLogLevel string `toml:"console_log_level"`
 		FileLogLevel    string `toml:"file_log_level"`
 		LogFile         string `toml:"log_file"`
+		VMLog           bool   `toml:"vm_log"`
 	}
 
 	Consensus struct {
