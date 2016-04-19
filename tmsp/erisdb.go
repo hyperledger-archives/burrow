@@ -35,6 +35,8 @@ type ErisDBApp struct {
 	// client to the tendermint core rpc
 	client *client.ClientURI
 	host   string // tendermint core endpoint
+
+	nTxs int // count txs in a block
 }
 
 func (app *ErisDBApp) GetState() *sm.State {
@@ -43,16 +45,11 @@ func (app *ErisDBApp) GetState() *sm.State {
 	return app.state.Copy()
 }
 
+// TODO: this is used for call/callcode and to get nonces during mempool.
+// the former should work on last committed state only and the later should
+// be handled by the client, or a separate wallet-like nonce tracker thats not part of the app
 func (app *ErisDBApp) GetCheckCache() *sm.BlockCache {
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
 	return app.checkCache
-}
-
-func (app *ErisDBApp) ResetCheckCache() {
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
-	app.checkCache = sm.NewBlockCache(app.state)
 }
 
 func (app *ErisDBApp) SetHostAddress(host string) {
@@ -100,7 +97,10 @@ func (app *ErisDBApp) SetOption(key string, value string) (log string) {
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+
+	app.nTxs += 1
+
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
 	var n int
 	var err error
@@ -111,19 +111,17 @@ func (app ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
+	log.Info("AppendTx", "tx", *tx)
+
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Encoding error: %v", err))
+		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 	return tmsp.NewResultOK(nil, "Success")
 }
 
 // Implements tmsp.Application
-func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
-	log.Info("Check Tx", "tx", txBytes)
-	defer func() {
-		log.Info("Check Tx", "res", res)
-	}()
+func (app *ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 	var n int
 	var err error
 	tx := new(types.Tx)
@@ -133,13 +131,12 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	// we need the lock because CheckTx can run concurrently with Commit,
-	// and Commit refreshes the checkCache
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
+	log.Info("CheckTx", "tx", *tx)
+
+	// TODO: make errors tmsp aware
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Encoding error: %v", err))
+		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 
 	return tmsp.NewResultOK(nil, "Success")
@@ -147,12 +144,25 @@ func (app ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 
 // Implements tmsp.Application
 // Commit the state (called at end of block)
+// NOTE: CheckTx/AppendTx must not run concurrently with Commit -
+//	the mempool should run during AppendTxs, but lock for Commit and Update
 func (app *ErisDBApp) Commit() (res tmsp.Result) {
+	app.mtx.Lock() // the lock protects app.state
+	defer app.mtx.Unlock()
+
+	app.state.LastBlockHeight += 1
+	log.Info("Commit", "block", app.state.LastBlockHeight)
+
 	// sync the AppendTx cache
 	app.cache.Sync()
 
+	// if there were any txs in the block,
 	// reset the check cache to the new height
-	app.ResetCheckCache()
+	if app.nTxs > 0 {
+		log.Info("Reset checkCache", "txs", app.nTxs)
+		app.checkCache = sm.NewBlockCache(app.state)
+	}
+	app.nTxs = 0
 
 	// save state to disk
 	app.state.Save()
