@@ -10,10 +10,6 @@ import (
 	"io"
 )
 
-// maxOffset limits how far copy back-references can go, the same as the C++
-// code.
-const maxOffset = 1 << 15
-
 func load32(b []byte, i int) uint32 {
 	b = b[i : i+4 : len(b)] // Help the compiler eliminate bounds checks on the next line.
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
@@ -178,13 +174,20 @@ func hash(u, shift uint32) uint32 {
 // 	minNonLiteralBlockSize <= len(src) && len(src) <= maxBlockSize
 func encodeBlock(dst, src []byte) (d int) {
 	// Initialize the hash table. Its size ranges from 1<<8 to 1<<14 inclusive.
-	const maxTableSize = 1 << 14
+	// The table element type is uint16, as s < sLimit and sLimit < len(src)
+	// and len(src) <= maxBlockSize and maxBlockSize == 65536.
+	const (
+		maxTableSize = 1 << 14
+		// tableMask is redundant, but helps the compiler eliminate bounds
+		// checks.
+		tableMask = maxTableSize - 1
+	)
 	shift, tableSize := uint32(32-8), 1<<8
 	for tableSize < maxTableSize && tableSize < len(src) {
 		shift--
 		tableSize *= 2
 	}
-	var table [maxTableSize]int32
+	var table [maxTableSize]uint16
 
 	// sLimit is when to stop looking for offset/length copies. The inputMargin
 	// lets us use a fast path for emitLiteral in the main loop, while we are
@@ -204,12 +207,13 @@ func encodeBlock(dst, src []byte) (d int) {
 		//
 		// Heuristic match skipping: If 32 bytes are scanned with no matches
 		// found, start looking only at every other byte. If 32 more bytes are
-		// scanned, look at every third byte, etc.. When a match is found,
-		// immediately go back to looking at every byte. This is a small loss
-		// (~5% performance, ~0.1% density) for compressible data due to more
-		// bookkeeping, but for non-compressible data (such as JPEG) it's a
-		// huge win since the compressor quickly "realizes" the data is
-		// incompressible and doesn't bother looking for matches everywhere.
+		// scanned (or skipped), look at every third byte, etc.. When a match
+		// is found, immediately go back to looking at every byte. This is a
+		// small loss (~5% performance, ~0.1% density) for compressible data
+		// due to more bookkeeping, but for non-compressible data (such as
+		// JPEG) it's a huge win since the compressor quickly "realizes" the
+		// data is incompressible and doesn't bother looking for matches
+		// everywhere.
 		//
 		// The "skip" variable keeps track of how many bytes there are since
 		// the last match; dividing it by 32 (ie. right-shifting by five) gives
@@ -220,13 +224,14 @@ func encodeBlock(dst, src []byte) (d int) {
 		candidate := 0
 		for {
 			s = nextS
-			nextS = s + skip>>5
-			skip++
+			bytesBetweenHashLookups := skip >> 5
+			nextS = s + bytesBetweenHashLookups
+			skip += bytesBetweenHashLookups
 			if nextS > sLimit {
 				goto emitRemainder
 			}
-			candidate = int(table[nextHash])
-			table[nextHash] = int32(s)
+			candidate = int(table[nextHash&tableMask])
+			table[nextHash&tableMask] = uint16(s)
 			nextHash = hash(load32(src, nextS), shift)
 			if load32(src, s) == load32(src, candidate) {
 				break
@@ -267,10 +272,10 @@ func encodeBlock(dst, src []byte) (d int) {
 			// three load32 calls.
 			x := load64(src, s-1)
 			prevHash := hash(uint32(x>>0), shift)
-			table[prevHash] = int32(s - 1)
+			table[prevHash&tableMask] = uint16(s - 1)
 			currHash := hash(uint32(x>>8), shift)
-			candidate = int(table[currHash])
-			table[currHash] = int32(s)
+			candidate = int(table[currHash&tableMask])
+			table[currHash&tableMask] = uint16(s)
 			if uint32(x>>8) != load32(src, candidate) {
 				nextHash = hash(uint32(x>>16), shift)
 				s++

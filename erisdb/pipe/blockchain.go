@@ -7,10 +7,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/eris-ltd/eris-db/state"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"
-
-	"github.com/eris-ltd/eris-db/state"
 )
 
 const BLOCK_MAX = 50
@@ -44,7 +43,7 @@ func newBlockchain(blockStore BlockStore) *blockchain {
 func (this *blockchain) Info() (*BlockchainInfo, error) {
 	chainId := config.GetString("chain_id")
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("erisdb_genesis_file"))
 	genesisHash := genesisState.Hash()
 	latestHeight := this.blockStore.Height()
 
@@ -70,7 +69,7 @@ func (this *blockchain) ChainId() (string, error) {
 // Get the hash of the genesis block.
 func (this *blockchain) GenesisHash() ([]byte, error) {
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("erisdb_genesis_file"))
 	return genesisState.Hash(), nil
 }
 

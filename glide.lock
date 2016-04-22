@@ -1,8 +1,14 @@
 hash: ebfa16e47dd0e0b486fc4435f53391b6bd9df5cb6dda53377ad2a0cde065c056
-updated: 2016-04-08T18:00:31.443217762+01:00
+updated: 2016-04-19T16:32:29.646405777+01:00
 imports:
+- name: github.com/btcsuite/btcd
+  version: 474547b211c8f5566d094478318fcfd3c2c838d4
+  subpackages:
+  - btcec
+- name: github.com/btcsuite/fastsha256
+  version: 302ad4db268b46f9ebda3078f6f7397f96047735
 - name: github.com/gin-gonic/gin
-  version: 233291e4e2d016084f9e42e786e45dad8858ace4
+  version: 542be2fe77724f800fcab7eb6c01a4e597fb8506
   subpackages:
   - binding
   - render
@@ -11,7 +17,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/snappy
-  version: cef980a12b316c5b7e5bb3a8e168eb43ae999a88
+  version: 774a97396f7bfa4165e9dcf4bfa0747ea3edcc02
 - name: github.com/gorilla/websocket
   version: e2e3d8414d0fbae04004f151979f4e27c6747fe7
 - name: github.com/inconshreveable/log15
@@ -34,7 +40,7 @@ imports:
 - name: github.com/sfreiberg/gotwilio
   version: f024bbefe80fdb7bcc8c43b6add05dae97744e0e
 - name: github.com/stretchr/testify
-  version: 0744955171b0b6e1871ff9d7366abc2b7a7fcec0
+  version: c5d7a69bf8a2c9c374798160849c071093e41dd1
 - name: github.com/syndtr/goleveldb
   version: 93fc893f2dadb96ffde441c7546cc67ea290a3a8
   subpackages:
@@ -66,7 +72,7 @@ imports:
 - name: github.com/tendermint/go-config
   version: c47b67203b070d8bea835a928d50cb739972c48a
 - name: github.com/tendermint/go-crypto
-  version: 3f0d9b3f29f30e5d0cbc2cef04fa45e5a606c622
+  version: d57d5ff3c925149e62f3a3c3f6ecaf4c8250d678
 - name: github.com/tendermint/go-db
   version: a7878f1d0d8eaebf15f87bc2df15f7a1088cce7f
 - name: github.com/tendermint/go-events
@@ -90,21 +96,21 @@ imports:
 - name: github.com/tendermint/log15
   version: 6e460758f10ef42a4724b8e4a82fee59aaa0e41d
 - name: github.com/tendermint/tendermint
-  version: 39d72d581144b1b98487b012ec6b7255c5839c50
+  version: 0df4a723e9d189db26577a2a7b17652e8f1fd2f4
   subpackages:
   - config/tendermint
   - consensus
   - node
   - rpc/core/types
   - types
+  - proxy
   - blockchain
   - mempool
-  - proxy
   - rpc/core
   - state
   - version
 - name: github.com/tendermint/tmsp
-  version: 82a411fca58b3b1e2ac8fc3a6784a17579012d68
+  version: d471b06bd8ddb12f7275d49422b9b376dbdd84ad
   subpackages:
   - server
   - types
@@ -114,7 +120,7 @@ imports:
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: 3fbbcd23f1cb824e69491a5930cfeff09b12f4d2
+  version: 2f6fccd33b9b1fc23ebb73ad4890698820f7174d
   subpackages:
   - ripemd160
   - nacl/secretbox
@@ -130,7 +136,7 @@ imports:
   - context
   - netutil
 - name: golang.org/x/sys
-  version: a80ff226bd294315526e7ae48959d55635143ea7
+  version: f64b50fbea64174967a8882830d621a18ee1548e
   subpackages:
   - unix
 - name: gopkg.in/fatih/set.v0
@@ -139,4 +145,6 @@ imports:
   version: c193cecd124b5cc722d7ee5538e945bdb3348435
 - name: gopkg.in/tylerb/graceful.v1
   version: 9a3d4236b03bb5d26f7951134d248f9d5510d599
+- name: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
 devImports: []
