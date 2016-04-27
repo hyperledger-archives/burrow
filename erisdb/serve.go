@@ -40,7 +40,7 @@ var tmConfig cfg.Config
 
 // This function returns a properly configured ErisDb server process,
 // with a tmsp listener for talking to tendermint core.
-// To start listening for incoming requests, call 'Start()' on the process.
+// To start listening for incoming HTTP requests on the Rest server, call 'Start()' on the process.
 // Make sure to register any start event listeners first
 func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	log.Info("ErisDB Serve initializing.")
@@ -50,9 +50,17 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 		return nil, errEns
 	}
 
-	var sConf *server.ServerConfig
+	// there are two types of config we need to load,
+	// one for the erisdb server and one for tendermint.
+	// even if consensus isn't in process, the tendermint libs (eg. db)
+	// expect tendermint/go-config to be setup.
+	// Regardless, both configs are expected in the same file (root/config.toml)
+	// Some of this stuff is implicit and maybe a little confusing,
+	// but cfg mgmt across projects probably often is!
 
-	sConfPath := path.Join(workDir, "server_conf.toml")
+	// Get an erisdb configuration
+	var sConf *server.ServerConfig
+	sConfPath := path.Join(workDir, "config.toml")
 	if !FileExists(sConfPath) {
 		log.Info("No server configuration, using default.")
 		log.Info("Writing to: " + sConfPath)
@@ -70,22 +78,20 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	}
 
 	// Get tendermint configuration
-	// TODO replace
 	tmConfig = tmcfg.GetConfig(workDir)
-	tmConfig.Set("version", TENDERMINT_VERSION)
-	cfg.ApplyConfig(tmConfig) // Notify modules of new config
+	// tmConfig.Set("tm.version", TENDERMINT_VERSION) // ?
+	cfg.ApplyConfig(tmConfig) // Notify in proc tendermint of new config
 
 	// Load the application state
 	// The app state used to be managed by tendermint node,
 	// but is now managed by ErisDB.
 	// The tendermint core only stores the blockchain (history of txs)
-	stateDB := dbm.GetDB("app_state")
+	stateDB := dbm.GetDB("app_state", config.GetString("erisdb.db_backend"), config.GetString("erisdb.db_dir"))
 	state := sm.LoadState(stateDB)
 	var genDoc *stypes.GenesisDoc
 	if state == nil {
-		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("erisdb_genesis_file"))
+		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
 		state.Save()
-		// write the gendoc to db
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
 		wire.WriteJSON(genDoc, buf, n, err)
 		stateDB.Set(stypes.GenDocKey, buf.Bytes())
@@ -101,14 +107,23 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 		}
 	}
 	// add the chainid to the global config
-	config.Set("chain_id", state.ChainID)
+	// for now it's same for both of them
+	config.Set("tm.chain_id", state.ChainID)
+	config.Set("erisdb.chain_id", state.ChainID)
 
+	// *****************************
+	// erisdb-tmsp app
+
+	// start the event switch for state related events
+	// (transactions to/from acconts, etc)
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 
+	// create the app
 	app := edbapp.NewErisDBApp(state, evsw)
-	app.SetHostAddress(sConf.Consensus.TendermintHost)
 
+	// so we know where to find the consensus host (for eg. blockchain/consensus rpcs)
+	app.SetHostAddress(sConf.Consensus.TendermintHost)
 	if inProc {
 		fmt.Println("Starting tm node in proc")
 		startTMNode(app)
@@ -125,6 +140,9 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 		}()
 	}
 
+	// *****************************
+	// Boot the erisdb restful API servers
+
 	// Load supporting objects.
 	pipe := ep.NewPipe(app, evsw)
 	codec := &TCodec{}
@@ -139,15 +157,13 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	// Create a server process.
 	proc := server.NewServeProcess(sConf, jsonServer, restServer, wsServer)
 
-	//stopChan := proc.StopEventChannel()
-	//go startNode(nd, nodeRd, stopChan)
-	//<-nodeRd
 	return proc, nil
 }
 
+// start an inproc tendermint node
 func startTMNode(app *edbapp.ErisDBApp) {
 	// get the genesis
-	genDocFile := config.GetString("tendermint_genesis_file")
+	genDocFile := config.GetString("tm.genesis_file")
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
@@ -156,8 +172,8 @@ func startTMNode(app *edbapp.ErisDBApp) {
 	if genDoc.ChainID == "" {
 		PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
 	}
-	config.Set("chain_id", genDoc.ChainID)
-	config.Set("genesis_doc", genDoc)
+	config.Set("tm.chain_id", genDoc.ChainID)
+	config.Set("tm.genesis_doc", genDoc)
 
 	// Get PrivValidator
 	privValidatorFile := config.GetString("priv_validator_file")
@@ -188,31 +204,4 @@ func startTMNode(app *edbapp.ErisDBApp) {
 			PanicCrisis(err)
 		}
 	}
-}
-
-// Private. Create a new node.
-func startNode(nd *node.Node, ready chan struct{}, shutDown <-chan struct{}) {
-	laddr := tmConfig.GetString("node_laddr")
-	if laddr != "" {
-		l := p2p.NewDefaultListener("tcp", laddr, tmConfig.GetBool("skip_upnp"))
-		nd.AddListener(l)
-	}
-
-	nd.Start()
-
-	/*
-			// If seedNode is provided by config, dial out.
-			// should be handled by core
-
-		if len(tmConfig.GetString("seeds")) > 0 {
-				nd.DialSeed()
-			}*/
-
-	if len(tmConfig.GetString("rpc_laddr")) > 0 {
-		nd.StartRPC()
-	}
-	ready <- struct{}{}
-	// Block until everything is shut down.
-	<-shutDown
-	nd.Stop()
 }
