@@ -24,12 +24,14 @@ import (
 	tmspcli "github.com/tendermint/tmsp/client"
 	tmsp "github.com/tendermint/tmsp/server"
 
-	tmcfg "github.com/eris-ltd/eris-db/config/tendermint"
+	edbcfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/server"
 	sm "github.com/eris-ltd/eris-db/state"
 	stypes "github.com/eris-ltd/eris-db/state/types"
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
+
+	tmcfg "github.com/tendermint/tendermint/config/tendermint" // for inproc only!
 )
 
 const ERISDB_VERSION = "0.11.5"
@@ -59,19 +61,19 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	// but cfg mgmt across projects probably often is!
 
 	// Get an erisdb configuration
-	var sConf *server.ServerConfig
-	sConfPath := path.Join(workDir, "config.toml")
-	if !FileExists(sConfPath) {
+	var edbConf *edbcfg.ErisDBConfig
+	edbConfPath := path.Join(workDir, "config.toml")
+	if !FileExists(edbConfPath) {
 		log.Info("No server configuration, using default.")
-		log.Info("Writing to: " + sConfPath)
-		sConf = server.DefaultServerConfig()
-		errW := server.WriteServerConfig(sConfPath, sConf)
+		log.Info("Writing to: " + edbConfPath)
+		edbConf = edbcfg.DefaultErisDBConfig()
+		errW := edbcfg.WriteErisDBConfig(edbConfPath, edbConf)
 		if errW != nil {
 			panic(errW)
 		}
 	} else {
 		var errRSC error
-		sConf, errRSC = server.ReadServerConfig(sConfPath)
+		edbConf, errRSC = edbcfg.ReadErisDBConfig(edbConfPath)
 		if errRSC != nil {
 			log.Error("Server config file error.", "error", errRSC.Error())
 		}
@@ -86,11 +88,11 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	// The app state used to be managed by tendermint node,
 	// but is now managed by ErisDB.
 	// The tendermint core only stores the blockchain (history of txs)
-	stateDB := dbm.GetDB("app_state", config.GetString("erisdb.db_backend"), config.GetString("erisdb.db_dir"))
+	stateDB := dbm.GetDB("app_state", edbConf.DB.Backend, workDir+"/data")
 	state := sm.LoadState(stateDB)
 	var genDoc *stypes.GenesisDoc
 	if state == nil {
-		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("erisdb.genesis_file"))
+		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, workDir+"/genesis.json")
 		state.Save()
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
 		wire.WriteJSON(genDoc, buf, n, err)
@@ -121,7 +123,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	app := edbapp.NewErisDBApp(state, evsw)
 
 	// so we know where to find the consensus host (for eg. blockchain/consensus rpcs)
-	app.SetHostAddress(sConf.Consensus.TendermintHost)
+	app.SetHostAddress(edbConf.Tendermint.Host)
 	if inProc {
 		fmt.Println("Starting tm node in proc")
 		startTMNode(app)
@@ -130,7 +132,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 		// Start the tmsp listener for state update commands
 		go func() {
 			// TODO config
-			_, err := tmsp.NewServer(sConf.Consensus.TMSPListener, app)
+			_, err := tmsp.NewServer(edbConf.TMSP.Listener, app)
 			if err != nil {
 				// TODO: play nice
 				Exit(err.Error())
@@ -151,9 +153,9 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	// The servers.
 	jsonServer := NewJsonRpcServer(tmjs)
 	restServer := NewRestServer(codec, pipe, evtSubs)
-	wsServer := server.NewWebSocketServer(sConf.WebSocket.MaxWebSocketSessions, tmwss)
+	wsServer := server.NewWebSocketServer(edbConf.Server.WebSocket.MaxWebSocketSessions, tmwss)
 	// Create a server process.
-	proc := server.NewServeProcess(sConf, jsonServer, restServer, wsServer)
+	proc := server.NewServeProcess(&edbConf.Server, jsonServer, restServer, wsServer)
 
 	return proc, nil
 }

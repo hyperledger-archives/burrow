@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	cfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/util"
 )
@@ -31,7 +31,7 @@ func NewRestServer(codec rpc.Codec, pipe ep.Pipe, eventSubs *EventSubscriptions)
 }
 
 // Starting the server means registering all the handlers with the router.
-func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (this *RestServer) Start(config *cfg.ServerConfig, router *gin.Engine) {
 	// Accounts
 	router.GET("/accounts", parseSearchQuery, this.handleAccounts)
 	router.GET("/accounts/:address", addressParam, this.handleAccount)

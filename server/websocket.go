@@ -2,11 +2,14 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
+
+	cfg "github.com/eris-ltd/eris-db/config"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 // TODO too much fluff. Should probably phase gorilla out and move closer
@@ -39,7 +42,7 @@ type WebSocketServer struct {
 	running        bool
 	maxSessions    uint
 	sessionManager *SessionManager
-	config         *ServerConfig
+	config         *cfg.ServerConfig
 	allOrigins     bool
 }
 
@@ -56,7 +59,7 @@ func NewWebSocketServer(maxSessions uint, service WebSocketService) *WebSocketSe
 }
 
 // Start the server. Adds the handler to the router and sets everything up.
-func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
+func (this *WebSocketServer) Start(config *cfg.ServerConfig, router *gin.Engine) {
 
 	this.config = config
 
