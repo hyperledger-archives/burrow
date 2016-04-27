@@ -24,6 +24,11 @@ func init() {
 	tendermint_test.ResetConfig("permissions_test")
 }
 
+var (
+	dbBackend = "memdb"
+	dbDir     = ""
+)
+
 /*
 Permission Tests:
 
@@ -136,7 +141,7 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) GenesisDoc
 }
 
 func TestSendFails(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(ptypes.Call, true)
@@ -204,7 +209,7 @@ func TestSendFails(t *testing.T) {
 }
 
 func TestName(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true)
 	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Name, true)
@@ -238,7 +243,7 @@ func TestName(t *testing.T) {
 }
 
 func TestCallFails(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(ptypes.Call, true)
@@ -308,7 +313,7 @@ func TestCallFails(t *testing.T) {
 }
 
 func TestSendPermission(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true) // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
@@ -344,7 +349,7 @@ func TestSendPermission(t *testing.T) {
 }
 
 func TestCallPermission(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
@@ -466,7 +471,7 @@ func TestCallPermission(t *testing.T) {
 }
 
 func TestCreatePermission(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true)           // give the 0 account permission
@@ -584,7 +589,7 @@ func TestCreatePermission(t *testing.T) {
 
 /* TODO
 func TestBondPermission(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state",dbBackend,dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st := MakeGenesisState(stateDB, &genDoc)
 	blockCache := NewBlockCache(st)
@@ -708,7 +713,7 @@ func TestBondPermission(t *testing.T) {
 */
 
 func TestCreateAccountPermission(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true)          // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)          // give the 0 account permission
@@ -851,7 +856,7 @@ func TestCreateAccountPermission(t *testing.T) {
 var DougAddress = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, []byte("THISISDOUG")...)
 
 func TestSNativeCALL(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
 	genDoc.Accounts[3].Permissions.Base.Set(ptypes.Bond, true) // some arbitrary permission to play with
@@ -985,7 +990,7 @@ func TestSNativeCALL(t *testing.T) {
 }
 
 func TestSNativeTx(t *testing.T) {
-	stateDB := dbm.GetDB("state")
+	stateDB := dbm.GetDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
 	genDoc.Accounts[3].Permissions.Base.Set(ptypes.Bond, true) // some arbitrary permission to play with
