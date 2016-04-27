@@ -104,7 +104,7 @@ func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
 
-	chainId := config.GetString("chain_id")
+	chainId := config.GetString("erisdb.chain_id")
 	txHash := types.TxID(chainId, tx)
 	var createsContract uint8
 	var contractAddr []byte
@@ -246,12 +246,12 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 			return nil, fmt.Errorf("Invalid (empty) privAccount @%v", i)
 		}
 	}
-	chainId := config.GetString("chain_id")
+	chainId := config.GetString("erisdb.chain_id")
 	switch tx.(type) {
 	case *types.NameTx:
 		nameTx := tx.(*types.NameTx)
 		nameTx.Input.PubKey = privAccounts[0].PubKey
-		nameTx.Input.Signature = privAccounts[0].Sign(config.GetString("chain_id"), nameTx)
+		nameTx.Input.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), nameTx)
 	case *types.SendTx:
 		sendTx := tx.(*types.SendTx)
 		for i, input := range sendTx.Inputs {

@@ -90,7 +90,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	state := sm.LoadState(stateDB)
 	var genDoc *stypes.GenesisDoc
 	if state == nil {
-		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
+		genDoc, state = sm.MakeGenesisStateFromFile(stateDB, config.GetString("erisdb.genesis_file"))
 		state.Save()
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
 		wire.WriteJSON(genDoc, buf, n, err)
@@ -106,9 +106,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 			Exit(Fmt("Unable to read gendoc from db: %v", err))
 		}
 	}
-	// add the chainid to the global config
-	// for now it's same for both of them
-	config.Set("tm.chain_id", state.ChainID)
+	// add the chainid
 	config.Set("erisdb.chain_id", state.ChainID)
 
 	// *****************************
@@ -176,14 +174,14 @@ func startTMNode(app *edbapp.ErisDBApp) {
 	config.Set("tm.genesis_doc", genDoc)
 
 	// Get PrivValidator
-	privValidatorFile := config.GetString("priv_validator_file")
+	privValidatorFile := config.GetString("tm.priv_validator_file")
 	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
 	nd := node.NewNode(privValidator, func(addr string, hash []byte) proxy.AppConn {
 		// TODO: Check the hash
 		return tmspcli.NewLocalClient(new(sync.Mutex), app)
 	})
 
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), config.GetBool("skip_upnp"))
+	l := p2p.NewDefaultListener("tcp", config.GetString("tm.node_laddr"), config.GetBool("tm.skip_upnp"))
 	nd.AddListener(l)
 	if err := nd.Start(); err != nil {
 		Exit(Fmt("Failed to start node: %v", err))
@@ -192,13 +190,13 @@ func startTMNode(app *edbapp.ErisDBApp) {
 	log.Notice("Started node", "nodeInfo", nd.NodeInfo())
 
 	// If seedNode is provided by config, dial out.
-	if config.GetString("seeds") != "" {
-		seeds := strings.Split(config.GetString("seeds"), ",")
+	if config.GetString("tm.seeds") != "" {
+		seeds := strings.Split(config.GetString("tm.seeds"), ",")
 		nd.DialSeeds(seeds)
 	}
 
 	// Run the RPC server.
-	if config.GetString("rpc_laddr") != "" {
+	if config.GetString("tm.rpc_laddr") != "" {
 		_, err := nd.StartRPC()
 		if err != nil {
 			PanicCrisis(err)
