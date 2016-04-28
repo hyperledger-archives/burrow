@@ -36,4 +36,3 @@ deployment:
     branch: develop
     commands:
       - DOCKER/build.sh
-      - docker push quay.io/eris/erisdb
