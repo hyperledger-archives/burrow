@@ -8,7 +8,9 @@ import (
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
+	"github.com/tendermint/go-rpc/types"
 	"github.com/tendermint/go-wire"
+	tmsptypes "github.com/tendermint/tmsp/types"
 )
 
 type ResultGetStorage struct {
@@ -92,7 +94,9 @@ type ResultGetAccount struct {
 }
 
 type ResultBroadcastTx struct {
-	Receipt Receipt `json:"receipt"`
+	Code tmsptypes.CodeType `json:"code"`
+	Data []byte             `json:"data"`
+	Log  string             `json:"log"`
 }
 
 type Receipt struct {
@@ -124,14 +128,7 @@ type ResultEvent struct {
 }
 
 //----------------------------------------
-// response & result types
-
-type Response struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      string `json:"id"`
-	Result  Result `json:"result"`
-	Error   string `json:"error"`
-}
+// result types
 
 const (
 	ResultTypeGetStorage         = byte(0x01)
@@ -155,11 +152,13 @@ const (
 	ResultTypeEvent              = byte(0x13) // so websockets can respond to rpc functions
 )
 
-type Result interface{}
+type ErisDBResult interface {
+	rpctypes.Result
+}
 
 // for wire.readReflect
 var _ = wire.RegisterInterface(
-	struct{ Result }{},
+	struct{ ErisDBResult }{},
 	wire.ConcreteType{&ResultGetStorage{}, ResultTypeGetStorage},
 	wire.ConcreteType{&ResultCall{}, ResultTypeCall},
 	wire.ConcreteType{&ResultListAccounts{}, ResultTypeListAccounts},

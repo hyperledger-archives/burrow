@@ -17,7 +17,8 @@ func GetAccount(address []byte) (*ctypes.ResultGetAccount, error) {
 	// cache := mempoolReactor.Mempool.GetCache()
 	account := cache.GetAccount(address)
 	if account == nil {
-		return nil, nil
+		log.Warn("Nil Account")
+		return &ctypes.ResultGetAccount{nil}, nil
 	}
 	return &ctypes.ResultGetAccount{account}, nil
 }

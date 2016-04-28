@@ -6,26 +6,34 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
 	"path"
 	"strings"
 	"sync"
 
+	// tendermint support libs
 	. "github.com/tendermint/go-common"
 	cfg "github.com/tendermint/go-config"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
-	"github.com/tendermint/go-p2p"
+	rpcserver "github.com/tendermint/go-rpc/server"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/log15"
 
+	// for inproc tendermint
+	"github.com/tendermint/go-p2p"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tendermint/types"
 	tmspcli "github.com/tendermint/tmsp/client"
+
+	// tmsp server
 	tmsp "github.com/tendermint/tmsp/server"
 
 	edbcfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	rpccore "github.com/eris-ltd/eris-db/rpc/core"
 	"github.com/eris-ltd/eris-db/server"
 	sm "github.com/eris-ltd/eris-db/state"
 	stypes "github.com/eris-ltd/eris-db/state/types"
@@ -126,7 +134,8 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	app.SetHostAddress(edbConf.Tendermint.Host)
 	if inProc {
 		fmt.Println("Starting tm node in proc")
-		startTMNode(app)
+		// will also start the go-rpc server (46657 api)
+		startTMNode(app, workDir)
 	} else {
 		fmt.Println("Starting tmsp listener")
 		// Start the tmsp listener for state update commands
@@ -161,7 +170,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 }
 
 // start an inproc tendermint node
-func startTMNode(app *edbapp.ErisDBApp) {
+func startTMNode(app *edbapp.ErisDBApp, workDir string) {
 	// get the genesis
 	genDocFile := config.GetString("tm.genesis_file")
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
@@ -199,9 +208,46 @@ func startTMNode(app *edbapp.ErisDBApp) {
 
 	// Run the RPC server.
 	if config.GetString("tm.rpc_laddr") != "" {
-		_, err := nd.StartRPC()
+		_, err := StartRPC(nd, app)
 		if err != nil {
 			PanicCrisis(err)
 		}
 	}
+}
+
+func StartRPC(n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
+	rpccore.SetErisDBApp(edbApp)
+	rpccore.SetBlockStore(n.BlockStore())
+	rpccore.SetConsensusState(n.ConsensusState())
+	rpccore.SetConsensusReactor(n.ConsensusReactor())
+	rpccore.SetMempoolReactor(n.MempoolReactor())
+	rpccore.SetSwitch(n.Switch())
+	rpccore.SetPrivValidator(n.PrivValidator())
+	rpccore.SetGenDoc(LoadGenDoc())
+
+	listenAddrs := strings.Split(config.GetString("tm.rpc_laddr"), ",")
+
+	// we may expose the rpc over both a unix and tcp socket
+	listeners := make([]net.Listener, len(listenAddrs))
+	for i, listenAddr := range listenAddrs {
+		mux := http.NewServeMux()
+		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.EventSwitch())
+		mux.HandleFunc("/websocket", wm.WebsocketHandler)
+		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes)
+		listener, err := rpcserver.StartHTTPServer(listenAddr, mux)
+		if err != nil {
+			return nil, err
+		}
+		listeners[i] = listener
+	}
+	return listeners, nil
+}
+
+func LoadGenDoc() *stypes.GenesisDoc {
+	genDocFile := config.GetString("tm.genesis_file")
+	jsonBlob, err := ioutil.ReadFile(genDocFile)
+	if err != nil {
+		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+	}
+	return stypes.GenesisDocFromJSON(jsonBlob)
 }

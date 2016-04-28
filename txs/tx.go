@@ -369,6 +369,13 @@ func TxID(chainID string, tx Tx) []byte {
 
 //-----------------------------------------------------------------------------
 
+func EncodeTx(tx Tx) []byte {
+	wrapTx := struct {
+		Tx Tx `json:"unwrap"`
+	}{tx}
+	return wire.JSONBytes(wrapTx)
+}
+
 // panic on err
 func DecodeTx(txBytes []byte) Tx {
 	var n int

@@ -60,7 +60,6 @@ func (app *ErisDBApp) SetHostAddress(host string) {
 // Broadcast a tx to the tendermint core
 // NOTE: this assumes we know the address of core
 func (app *ErisDBApp) BroadcastTx(tx types.Tx) error {
-	var result ctypes.TMResult
 	buf := new(bytes.Buffer)
 	var n int
 	var err error
@@ -72,6 +71,8 @@ func (app *ErisDBApp) BroadcastTx(tx types.Tx) error {
 	params := map[string]interface{}{
 		"tx": hex.EncodeToString(buf.Bytes()),
 	}
+
+	var result ctypes.TMResult
 	_, err = app.client.Call("broadcast_tx_sync", params, &result)
 	return err
 }
@@ -117,6 +118,7 @@ func (app *ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
+	// TODO: need to return receipt so rpc.ResultBroadcastTx.Data (or Log) is the receipt
 	return tmsp.NewResultOK(nil, "Success")
 }
 
@@ -139,6 +141,7 @@ func (app *ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 
+	// TODO: need to return receipt so rpc.ResultBroadcastTx.Data (or Log) is the receipt
 	return tmsp.NewResultOK(nil, "Success")
 }
 

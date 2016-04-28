@@ -3,10 +3,10 @@ package types
 import (
 	"time"
 
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 
 //------------------------------------------------------------
@@ -30,10 +30,10 @@ type GenesisAccount struct {
 }
 
 type GenesisValidator struct {
-	PubKey   crypto.PubKeyEd25519 `json:"pub_key"`
-	Amount   int64                `json:"amount"`
-	Name     string               `json:"name"`
-	UnbondTo []BasicAccount       `json:"unbond_to"`
+	PubKey   crypto.PubKey  `json:"pub_key"`
+	Amount   int64          `json:"amount"`
+	Name     string         `json:"name"`
+	UnbondTo []BasicAccount `json:"unbond_to"`
 }
 
 type GenesisParams struct {
