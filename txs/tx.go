@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -364,6 +365,21 @@ func (tx *PermissionsTx) String() string {
 func TxID(chainID string, tx Tx) []byte {
 	signBytes := acm.SignBytes(chainID, tx)
 	return wire.BinaryRipemd160(signBytes)
+}
+
+//-----------------------------------------------------------------------------
+
+// panic on err
+func DecodeTx(txBytes []byte) Tx {
+	var n int
+	var err error
+	tx := new(Tx)
+	buf := bytes.NewBuffer(txBytes)
+	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
+	if err != nil {
+		panic(err)
+	}
+	return *tx
 }
 
 //--------------------------------------------------------------------------------
