@@ -18,7 +18,7 @@ dependencies:
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
     - sudo curl -sSL -o /usr/bin/docker-machine https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine_linux-amd64; sudo chmod 0755 /usr/bin/docker-machine
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
-    - "cd ./cmd/erisdb && go get -d && go build"
+    - "cd ./cmd/erisdb && go build"
     - "mv ~/eris-db/cmd/erisdb/erisdb ~/bin"
     - chmod +x ~/bin/erisdb
 
