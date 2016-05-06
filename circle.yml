@@ -39,6 +39,7 @@ test:
   pre:
     - go get github.com/stretchr/testify
     - go get github.com/Masterminds/glide
+    - cd $GOPATH_REPO && glide install
   override:
     # We only wish to test our packages not vendored ones
     - cd $GOPATH_REPO && glide novendor | xargs go test -v
