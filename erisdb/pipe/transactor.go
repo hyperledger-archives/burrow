@@ -97,7 +97,7 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (*Call, error) 
 }
 
 // Broadcast a transaction.
-func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
+func (this *transactor) BroadcastTx(tx txs.Tx) (*Receipt, error) {
 
 	err := this.erisdbApp.BroadcastTx(tx)
 	if err != nil {
@@ -105,11 +105,11 @@ func (this *transactor) BroadcastTx(tx types.Tx) (*Receipt, error) {
 	}
 
 	chainId := config.GetString("erisdb.chain_id")
-	txHash := types.TxID(chainId, tx)
+	txHash := txs.TxID(chainId, tx)
 	var createsContract uint8
 	var contractAddr []byte
 	// check if creates new contract
-	if callTx, ok := tx.(*types.CallTx); ok {
+	if callTx, ok := tx.(*txs.CallTx); ok {
 		if len(callTx.Address) == 0 {
 			createsContract = 1
 			contractAddr = state.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
@@ -149,13 +149,13 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 		sequence = acc.Sequence + 1
 	}
 	// fmt.Printf("Sequence %d\n", sequence)
-	txInput := &types.TxInput{
+	txInput := &txs.TxInput{
 		Address:  pa.Address,
 		Amount:   1,
 		Sequence: sequence,
 		PubKey:   pa.PubKey,
 	}
-	tx := &types.CallTx{
+	tx := &txs.CallTx{
 		Input:    txInput,
 		Address:  addr,
 		GasLimit: gasLimit,
@@ -171,7 +171,7 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee in
 	return this.BroadcastTx(txS)
 }
 
-func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error) {
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
 	rec, tErr := this.Transact(privKey, address, data, gasLimit, fee)
 	if tErr != nil {
 		return nil, tErr
@@ -182,10 +182,10 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	} else {
 		addr = address
 	}
-	wc := make(chan *types.EventDataCall)
+	wc := make(chan *txs.EventDataCall)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt tEvents.EventData) {
-		event := evt.(types.EventDataCall)
+	this.eventEmitter.Subscribe(subId, txs.EventStringAccCall(addr), func(evt tEvents.EventData) {
+		event := evt.(txs.EventDataCall)
 		if bytes.Equal(event.TxID, rec.TxHash) {
 			wc <- &event
 		}
@@ -194,7 +194,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	timer := time.NewTimer(300 * time.Second)
 	toChan := timer.C
 
-	var ret *types.EventDataCall
+	var ret *txs.EventDataCall
 	var rErr error
 
 	select {
@@ -228,7 +228,7 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	tx := types.NewNameTxWithNonce(pa.PubKey, name, data, amount, fee, sequence)
+	tx := txs.NewNameTxWithNonce(pa.PubKey, name, data, amount, fee, sequence)
 	// Got ourselves a tx.
 	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
 	if errS != nil {
@@ -238,7 +238,7 @@ func (this *transactor) TransactNameReg(privKey []byte, name, data string, amoun
 }
 
 // Sign a transaction
-func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
+func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error) {
 	// more checks?
 
 	for i, privAccount := range privAccounts {
@@ -248,24 +248,24 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 	}
 	chainId := config.GetString("erisdb.chain_id")
 	switch tx.(type) {
-	case *types.NameTx:
-		nameTx := tx.(*types.NameTx)
+	case *txs.NameTx:
+		nameTx := tx.(*txs.NameTx)
 		nameTx.Input.PubKey = privAccounts[0].PubKey
 		nameTx.Input.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), nameTx)
-	case *types.SendTx:
-		sendTx := tx.(*types.SendTx)
+	case *txs.SendTx:
+		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
 			input.PubKey = privAccounts[i].PubKey
 			input.Signature = privAccounts[i].Sign(chainId, sendTx)
 		}
 		break
-	case *types.CallTx:
-		callTx := tx.(*types.CallTx)
+	case *txs.CallTx:
+		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
 		callTx.Input.Signature = privAccounts[0].Sign(chainId, callTx)
 		break
-	case *types.BondTx:
-		bondTx := tx.(*types.BondTx)
+	case *txs.BondTx:
+		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
 		bondTx.Signature = privAccounts[0].Sign(chainId, bondTx).(crypto.SignatureEd25519)
@@ -274,12 +274,12 @@ func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount)
 			input.Signature = privAccounts[i+1].Sign(chainId, bondTx)
 		}
 		break
-	case *types.UnbondTx:
-		unbondTx := tx.(*types.UnbondTx)
+	case *txs.UnbondTx:
+		unbondTx := tx.(*txs.UnbondTx)
 		unbondTx.Signature = privAccounts[0].Sign(chainId, unbondTx).(crypto.SignatureEd25519)
 		break
-	case *types.RebondTx:
-		rebondTx := tx.(*types.RebondTx)
+	case *txs.RebondTx:
+		rebondTx := tx.(*txs.RebondTx)
 		rebondTx.Signature = privAccounts[0].Sign(chainId, rebondTx).(crypto.SignatureEd25519)
 		break
 	default:

@@ -378,7 +378,7 @@ func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface
 }
 
 func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &types.CallTx{}
+	param := &txs.CallTx{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
