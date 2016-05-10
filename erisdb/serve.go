@@ -250,25 +250,3 @@ func LoadGenDoc() *stypes.GenesisDoc {
 	}
 	return stypes.GenesisDocFromJSON(jsonBlob)
 }
-
-type ErisSigner struct {
-	Host       string
-	Address    string
-	SessionKey string
-}
-
-func NewErisSigner(host, address string) *ErisSigner {
-	if !strings.HasPrefix(host, "http://") {
-		host = fmt.Sprintf("http://%s", host)
-	}
-	return &ErisSigner{Host: host, Address: address}
-}
-
-func (es *ErisSigner) Sign(msg []byte) acm.SignatureEd25519 {
-	msgHex := hex.EncodeToString(msg)
-	sig, err := core.Sign(msgHex, es.Address, es.Host)
-	if err != nil {
-		panic(err)
-	}
-	return acm.SignatureEd25519(sig)
-}
