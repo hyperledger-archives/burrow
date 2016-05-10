@@ -1,8 +1,8 @@
-hash: 03fc6626a41c42482068e6bb7c691f003d555d21ef8ee6d4d358ca0994b2975d
-updated: 2016-05-05T14:28:48.951275503+01:00
+hash: a6917bb6310c1da8c811026f209ba9d0d51783a8e8b83e3eb73df9fc4b14f46f
+updated: 2016-05-10T15:55:18.049756292+01:00
 imports:
 - name: github.com/btcsuite/btcd
-  version: 0d7f52660096c5a22f2cb95c102e0693f773a593
+  version: 2554caee5919958c0d4b41db8035f0e12ce6f624
   subpackages:
   - btcec
 - name: github.com/btcsuite/fastsha256
@@ -39,8 +39,6 @@ imports:
   version: 751171607256bb66e64c9f0220c00662420c38e9
   subpackages:
   - ast
-- name: github.com/sfreiberg/gotwilio
-  version: f024bbefe80fdb7bcc8c43b6add05dae97744e0e
 - name: github.com/stretchr/testify
   version: 6cb3b85ef5a0efef77caef88363ec4d4b5c0976d
 - name: github.com/syndtr/goleveldb
@@ -65,14 +63,12 @@ imports:
   - extra25519
 - name: github.com/tendermint/flowcontrol
   version: 84d9671090430e8ec80e35b339907e0579b999eb
-- name: github.com/tendermint/go-alert
-  version: b824a5721dd8bdda6e5f3033ea35df3d82e4516d
 - name: github.com/tendermint/go-clist
   version: 634527f5b60fd7c71ca811262493df2ad65ee0ca
 - name: github.com/tendermint/go-common
   version: dcfa46af1341d03b80d32e4901019d1668b978b9
 - name: github.com/tendermint/go-config
-  version: 4a3947582fc1b0b42967fbda4836437538e6b94c
+  version: 150209dfcfdc7042dd8efc120e97398ea936e53e
 - name: github.com/tendermint/go-crypto
   version: 41cfb7b677f4e16cdfd22b6ce0946c89919fbc7b
 - name: github.com/tendermint/go-db
@@ -80,7 +76,7 @@ imports:
 - name: github.com/tendermint/go-events
   version: 7b75ca7bb55aa25e9ef765eb8c0b69486b227357
 - name: github.com/tendermint/go-logger
-  version: 84391b36d3f5960e691c688d06b768708f0fa2f3
+  version: 529efe50eab1a8a9c111d55f4de4ecd95f482761
 - name: github.com/tendermint/go-merkle
   version: 05042c6ab9cad51d12e4cecf717ae68e3b1409a8
 - name: github.com/tendermint/go-p2p
@@ -88,7 +84,7 @@ imports:
   subpackages:
   - upnp
 - name: github.com/tendermint/go-rpc
-  version: e8538d606aa9700da03f748f61d734e8cbc1438b
+  version: 1d9e89812adc202811b7fb8e9e0837e73adadb43
   subpackages:
   - server
   - client
@@ -113,7 +109,7 @@ imports:
   - state
   - version
 - name: github.com/tendermint/tmsp
-  version: 9a8d40b87cceeb44117c6ae08fa0ff636747d3c8
+  version: 7ffd2899092f47110a5ffebe20247a9b7f80f4ad
   subpackages:
   - server
   - types
@@ -123,7 +119,7 @@ imports:
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: 019870fc9d457ee8abd13a2e93e3f2a3b55b7119
+  version: 91ab96ae987aef3e74ab78b3aaf026109d206148
   subpackages:
   - ripemd160
   - nacl/secretbox

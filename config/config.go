@@ -141,3 +141,12 @@ func WriteErisDBConfig(filePath string, cfg *ErisDBConfig) error {
 	}
 	return files.WriteAndBackup(filePath, bts)
 }
+
+// Write a server configuration file.
+func WriteServerConfig(filePath string, cfg *ServerConfig) error {
+	bts, err := toml.Marshal(*cfg)
+	if err != nil {
+		return err
+	}
+	return files.WriteAndBackup(filePath, bts)
+}

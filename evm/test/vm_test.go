@@ -157,7 +157,7 @@ func runVMWaitEvents(t *testing.T, ourVm *VM, caller, callee *Account, subscribe
 	evsw.Start()
 	ch := make(chan interface{})
 	fmt.Printf("subscribe to %x\n", subscribeAddr)
-	evsw.AddListenerForEvent("test", types.EventStringAccCall(subscribeAddr), func(msg events.EventData) {
+	evsw.AddListenerForEvent("test", txs.EventStringAccCall(subscribeAddr), func(msg events.EventData) {
 		ch <- msg
 	})
 	evc := events.NewEventCache(evsw)
@@ -174,9 +174,9 @@ func runVMWaitEvents(t *testing.T, ourVm *VM, caller, callee *Account, subscribe
 	}()
 	msg := <-ch
 	switch ev := msg.(type) {
-	case types.EventDataTx:
+	case txs.EventDataTx:
 		return ev.Exception
-	case types.EventDataCall:
+	case txs.EventDataCall:
 		return ev.Exception
 	case string:
 		return ev
