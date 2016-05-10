@@ -129,7 +129,7 @@ func GenPrivAccountResult() (ctypes.ErisDBResult, error) {
 	}
 }
 
-func SignTxResult(tx types.Tx, privAccounts []*acm.PrivAccount) (ctypes.ErisDBResult, error) {
+func SignTxResult(tx txs.Tx, privAccounts []*acm.PrivAccount) (ctypes.ErisDBResult, error) {
 	if r, err := SignTx(tx, privAccounts); err != nil {
 		return nil, err
 	} else {
@@ -137,7 +137,7 @@ func SignTxResult(tx types.Tx, privAccounts []*acm.PrivAccount) (ctypes.ErisDBRe
 	}
 }
 
-func BroadcastTxResult(tx types.Tx) (ctypes.ErisDBResult, error) {
+func BroadcastTxResult(tx txs.Tx) (ctypes.ErisDBResult, error) {
 	if r, err := BroadcastTxSync(tx); err != nil {
 		return nil, err
 	} else {

@@ -48,7 +48,7 @@ func newNamereg(erisdbApp *tmsp.ErisDBApp) *namereg {
 	return &namereg{erisdbApp, ff}
 }
 
-func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
+func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
 	st := this.erisdbApp.GetState() // performs a copy
 	entry := st.GetNameRegEntry(key)
 	if entry == nil {
@@ -59,7 +59,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 
 func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 	var blockHeight int
-	var names []*types.NameRegEntry
+	var names []*txs.NameRegEntry
 	state := this.erisdbApp.GetState()
 	blockHeight = state.LastBlockHeight
 	filter, err := this.filterFactory.NewFilter(filters)
@@ -77,8 +77,8 @@ func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 }
 
 type ResultListNames struct {
-	BlockHeight int                   `json:"block_height"`
-	Names       []*types.NameRegEntry `json:"names"`
+	BlockHeight int                 `json:"block_height"`
+	Names       []*txs.NameRegEntry `json:"names"`
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.
@@ -110,7 +110,7 @@ func (this *NameRegNameFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegNameFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -149,7 +149,7 @@ func (this *NameRegOwnerFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegOwnerFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -185,7 +185,7 @@ func (this *NameRegDataFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegDataFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -216,7 +216,7 @@ func (this *NameRegExpiresFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegExpiresFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}

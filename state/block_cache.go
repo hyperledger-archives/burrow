@@ -120,7 +120,7 @@ func (cache *BlockCache) SetStorage(addr Word256, key Word256, value Word256) {
 //-------------------------------------
 // BlockCache.names
 
-func (cache *BlockCache) GetNameRegEntry(name string) *types.NameRegEntry {
+func (cache *BlockCache) GetNameRegEntry(name string) *txs.NameRegEntry {
 	entry, removed, _ := cache.names[name].unpack()
 	if removed {
 		return nil
@@ -133,7 +133,7 @@ func (cache *BlockCache) GetNameRegEntry(name string) *types.NameRegEntry {
 	}
 }
 
-func (cache *BlockCache) UpdateNameRegEntry(entry *types.NameRegEntry) {
+func (cache *BlockCache) UpdateNameRegEntry(entry *txs.NameRegEntry) {
 	name := entry.Name
 	cache.names[name] = nameInfo{entry, false, true}
 }
@@ -278,11 +278,11 @@ func (stjInfo storageInfo) unpack() (Word256, bool) {
 }
 
 type nameInfo struct {
-	name    *types.NameRegEntry
+	name    *txs.NameRegEntry
 	removed bool
 	dirty   bool
 }
 
-func (nInfo nameInfo) unpack() (*types.NameRegEntry, bool, bool) {
+func (nInfo nameInfo) unpack() (*txs.NameRegEntry, bool, bool) {
 	return nInfo.name, nInfo.removed, nInfo.dirty
 }

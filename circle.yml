@@ -24,15 +24,13 @@ dependencies:
     # - sudo rm -rf /usr/local/go
     # - sudo cp -r ~/cache/go /usr/local/go
     # Override host docker
-    - sudo cp ~/cache/docker /usr/bin/dockeu
+    - sudo cp ~/cache/docker /usr/bin/docker
     - sudo chmod +x /usr/bin/docker
     # Override host go
     - sudo service docker start
     # NOTE [ben]: @afdudley, this is a temporary hack to enable PRs as of 0.12.0
     # - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
-    # Install erisdb cmd for tests
-    - cd $GOPATH_REPO && go install ./cmd/erisdb
   cache_directories:
     - ~/cache
 
@@ -40,6 +38,9 @@ test:
   pre:
     - go get github.com/stretchr/testify
     - go get github.com/Masterminds/glide
+    - cd $GOPATH_REPO && glide install
+    # Install erisdb cmd for tests
+    - cd $GOPATH_REPO && go install ./cmd/erisdb
   override:
     # We only wish to test our packages not vendored ones
     - cd $GOPATH_REPO && glide novendor | xargs go test -v

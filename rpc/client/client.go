@@ -53,9 +53,9 @@ func GetAccount(client rpcclient.Client, addr []byte) (*acm.Account, error) {
 	return res.(*ctypes.ResultGetAccount).Account, nil
 }
 
-func SignTx(client rpcclient.Client, tx types.Tx, privAccs []*acm.PrivAccount) (types.Tx, error) {
+func SignTx(client rpcclient.Client, tx txs.Tx, privAccs []*acm.PrivAccount) (txs.Tx, error) {
 	wrapTx := struct {
-		types.Tx `json:"unwrap"`
+		txs.Tx `json:"unwrap"`
 	}{tx}
 	var res ctypes.ErisDBResult
 	var err error
@@ -71,9 +71,9 @@ func SignTx(client rpcclient.Client, tx types.Tx, privAccs []*acm.PrivAccount) (
 	return res.(*ctypes.ResultSignTx).Tx, nil
 }
 
-func BroadcastTx(client rpcclient.Client, tx types.Tx) (ctypes.Receipt, error) {
+func BroadcastTx(client rpcclient.Client, tx txs.Tx) (ctypes.Receipt, error) {
 	wrapTx := struct {
-		types.Tx `json:"unwrap"`
+		txs.Tx `json:"unwrap"`
 	}{tx}
 	var res ctypes.ErisDBResult
 	var err error
@@ -155,7 +155,7 @@ func Call(client rpcclient.Client, fromAddress, toAddress, data []byte) (*ctypes
 	return res.(*ctypes.ResultCall), err
 }
 
-func GetName(client rpcclient.Client, name string) (*types.NameRegEntry, error) {
+func GetName(client rpcclient.Client, name string) (*txs.NameRegEntry, error) {
 	var res ctypes.ErisDBResult
 	var err error
 	switch cli := client.(type) {

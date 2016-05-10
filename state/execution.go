@@ -22,7 +22,7 @@ import (
 
 // NOTE: If an error occurs during block execution, state will be left
 // at an invalid state.  Copy the state before calling ExecBlock!
-func ExecBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeader) error {
+func ExecBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) error {
 	err := execBlock(s, block, blockPartsHeader)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func ExecBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 // executes transactions of a block, does not check block.StateHash
 // NOTE: If an error occurs during block execution, state will be left
 // at an invalid state.  Copy the state before calling execBlock!
-func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeader) error {
+func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) error {
 	// Basic block validation.
 	err := block.ValidateBasic(s.ChainID, s.LastBlockHeight, s.LastBlockHash, s.LastBlockParts, s.LastBlockTime)
 	if err != nil {
@@ -108,8 +108,8 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 
 	// If any unbonding periods are over,
 	// reward account with bonded coins.
-	toRelease := []*types.Validator{}
-	s.UnbondingValidators.Iterate(func(index int, val *types.Validator) bool {
+	toRelease := []*txs.Validator{}
+	s.UnbondingValidators.Iterate(func(index int, val *txs.Validator) bool {
 		if val.UnbondHeight+unbondingPeriodBlocks < block.Height {
 			toRelease = append(toRelease, val)
 		}
@@ -121,8 +121,8 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 
 	// If any validators haven't signed in a while,
 	// unbond them, they have timed out.
-	toTimeout := []*types.Validator{}
-	s.BondedValidators.Iterate(func(index int, val *types.Validator) bool {
+	toTimeout := []*txs.Validator{}
+	s.BondedValidators.Iterate(func(index int, val *txs.Validator) bool {
 		lastActivityHeight := MaxInt(val.BondHeight, val.LastCommitHeight)
 		if lastActivityHeight+validatorTimeoutBlocks < block.Height {
 			log.Notice("Validator timeout", "validator", val, "height", block.Height)
@@ -148,16 +148,16 @@ func execBlock(s *State, block *types.Block, blockPartsHeader types.PartSetHeade
 // acm.PubKey.(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PubKey set to nil.
-func getInputs(state AccountGetter, ins []*types.TxInput) (map[string]*acm.Account, error) {
+func getInputs(state AccountGetter, ins []*txs.TxInput) (map[string]*acm.Account, error) {
 	accounts := map[string]*acm.Account{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[string(in.Address)]; ok {
-			return nil, types.ErrTxDuplicateAddress
+			return nil, txs.ErrTxDuplicateAddress
 		}
 		acc := state.GetAccount(in.Address)
 		if acc == nil {
-			return nil, types.ErrTxInvalidAddress
+			return nil, txs.ErrTxInvalidAddress
 		}
 		// PubKey should be present in either "account" or "in"
 		if err := checkInputPubKey(acc, in); err != nil {
@@ -168,7 +168,7 @@ func getInputs(state AccountGetter, ins []*types.TxInput) (map[string]*acm.Accou
 	return accounts, nil
 }
 
-func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, outs []*types.TxOutput) (map[string]*acm.Account, error) {
+func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, outs []*txs.TxOutput) (map[string]*acm.Account, error) {
 	if accounts == nil {
 		accounts = make(map[string]*acm.Account)
 	}
@@ -178,7 +178,7 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, out
 	for _, out := range outs {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[string(out.Address)]; ok {
-			return nil, types.ErrTxDuplicateAddress
+			return nil, txs.ErrTxDuplicateAddress
 		}
 		acc := state.GetAccount(out.Address)
 		// output account may be nil (new)
@@ -202,13 +202,13 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, out
 	return accounts, nil
 }
 
-func checkInputPubKey(acc *acm.Account, in *types.TxInput) error {
+func checkInputPubKey(acc *acm.Account, in *txs.TxInput) error {
 	if acc.PubKey == nil {
 		if in.PubKey == nil {
-			return types.ErrTxUnknownPubKey
+			return txs.ErrTxUnknownPubKey
 		}
 		if !bytes.Equal(in.PubKey.Address(), acc.Address) {
-			return types.ErrTxInvalidPubKey
+			return txs.ErrTxInvalidPubKey
 		}
 		acc.PubKey = in.PubKey
 	} else {
@@ -217,7 +217,7 @@ func checkInputPubKey(acc *acm.Account, in *types.TxInput) error {
 	return nil
 }
 
-func validateInputs(accounts map[string]*acm.Account, signBytes []byte, ins []*types.TxInput) (total int64, err error) {
+func validateInputs(accounts map[string]*acm.Account, signBytes []byte, ins []*txs.TxInput) (total int64, err error) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
@@ -233,30 +233,30 @@ func validateInputs(accounts map[string]*acm.Account, signBytes []byte, ins []*t
 	return total, nil
 }
 
-func validateInput(acc *acm.Account, signBytes []byte, in *types.TxInput) (err error) {
+func validateInput(acc *acm.Account, signBytes []byte, in *txs.TxInput) (err error) {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
 	}
 	// Check signatures
 	if !acc.PubKey.VerifyBytes(signBytes, in.Signature) {
-		return types.ErrTxInvalidSignature
+		return txs.ErrTxInvalidSignature
 	}
 	// Check sequences
 	if acc.Sequence+1 != in.Sequence {
-		return types.ErrTxInvalidSequence{
+		return txs.ErrTxInvalidSequence{
 			Got:      in.Sequence,
 			Expected: acc.Sequence + 1,
 		}
 	}
 	// Check amount
 	if acc.Balance < in.Amount {
-		return types.ErrTxInsufficientFunds
+		return txs.ErrTxInsufficientFunds
 	}
 	return nil
 }
 
-func validateOutputs(outs []*types.TxOutput) (total int64, err error) {
+func validateOutputs(outs []*txs.TxOutput) (total int64, err error) {
 	for _, out := range outs {
 		// Check TxOutput basic
 		if err := out.ValidateBasic(); err != nil {
@@ -268,7 +268,7 @@ func validateOutputs(outs []*types.TxOutput) (total int64, err error) {
 	return total, nil
 }
 
-func adjustByInputs(accounts map[string]*acm.Account, ins []*types.TxInput) {
+func adjustByInputs(accounts map[string]*acm.Account, ins []*txs.TxInput) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
@@ -282,7 +282,7 @@ func adjustByInputs(accounts map[string]*acm.Account, ins []*types.TxInput) {
 	}
 }
 
-func adjustByOutputs(accounts map[string]*acm.Account, outs []*types.TxOutput) {
+func adjustByOutputs(accounts map[string]*acm.Account, outs []*txs.TxOutput) {
 	for _, out := range outs {
 		acc := accounts[string(out.Address)]
 		if acc == nil {
@@ -294,7 +294,7 @@ func adjustByOutputs(accounts map[string]*acm.Account, outs []*types.TxOutput) {
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireable) (err error) {
+func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable) (err error) {
 
 	// TODO: do something with fees
 	fees := int64(0)
@@ -302,7 +302,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 
 	// Exec tx
 	switch tx := tx.(type) {
-	case *types.SendTx:
+	case *txs.SendTx:
 		accounts, err := getInputs(blockCache, tx.Inputs)
 		if err != nil {
 			return err
@@ -330,7 +330,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 			return err
 		}
 		if outTotal > inTotal {
-			return types.ErrTxInsufficientFunds
+			return txs.ErrTxInsufficientFunds
 		}
 		fee := inTotal - outTotal
 		fees += fee
@@ -345,23 +345,23 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// if the evc is nil, nothing will happen
 		if evc != nil {
 			for _, i := range tx.Inputs {
-				evc.FireEvent(types.EventStringAccInput(i.Address), types.EventDataTx{tx, nil, ""})
+				evc.FireEvent(txs.EventStringAccInput(i.Address), txs.EventDataTx{tx, nil, ""})
 			}
 
 			for _, o := range tx.Outputs {
-				evc.FireEvent(types.EventStringAccOutput(o.Address), types.EventDataTx{tx, nil, ""})
+				evc.FireEvent(txs.EventStringAccOutput(o.Address), txs.EventDataTx{tx, nil, ""})
 			}
 		}
 		return nil
 
-	case *types.CallTx:
+	case *txs.CallTx:
 		var inAcc, outAcc *acm.Account
 
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
 			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
-			return types.ErrTxInvalidAddress
+			return txs.ErrTxInvalidAddress
 		}
 
 		createContract := len(tx.Address) == 0
@@ -388,14 +388,14 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 		if tx.Input.Amount < tx.Fee {
 			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
-			return types.ErrTxInsufficientFunds
+			return txs.ErrTxInsufficientFunds
 		}
 
 		if !createContract {
 			// Validate output
 			if len(tx.Address) != 20 {
 				log.Info(Fmt("Destination address is not 20 bytes %X", tx.Address))
-				return types.ErrTxInvalidAddress
+				return txs.ErrTxInvalidAddress
 			}
 			// check if its a native contract
 			if vm.RegisteredNativeContract(LeftPadWord256(tx.Address)) {
@@ -451,7 +451,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 					log.Info(Fmt("%X tries to call %X but code is blank.",
 						inAcc.Address, tx.Address))
 				}
-				err = types.ErrTxInvalidAddress
+				err = txs.ErrTxInvalidAddress
 				goto CALL_COMPLETE
 			}
 
@@ -473,7 +473,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := vm.NewVM(txCache, params, caller.Address, types.TxID(_s.ChainID, tx))
+				vmach := vm.NewVM(txCache, params, caller.Address, txs.TxID(_s.ChainID, tx))
 				vmach.SetFireable(evc)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
@@ -502,8 +502,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				if err != nil {
 					exception = err.Error()
 				}
-				evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, ret, exception})
-				evc.FireEvent(types.EventStringAccOutput(tx.Address), types.EventDataTx{tx, ret, exception})
+				evc.FireEvent(txs.EventStringAccInput(tx.Input.Address), txs.EventDataTx{tx, ret, exception})
+				evc.FireEvent(txs.EventStringAccOutput(tx.Address), txs.EventDataTx{tx, ret, exception})
 			}
 		} else {
 			// The mempool does not call txs until
@@ -519,14 +519,14 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 
 		return nil
 
-	case *types.NameTx:
+	case *txs.NameTx:
 		var inAcc *acm.Account
 
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
 			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
-			return types.ErrTxInvalidAddress
+			return txs.ErrTxInvalidAddress
 		}
 		// check permission
 		if !hasNamePermission(blockCache, inAcc) {
@@ -546,7 +546,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// fee is in addition to the amount which is used to determine the TTL
 		if tx.Input.Amount < tx.Fee {
 			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
-			return types.ErrTxInsufficientFunds
+			return txs.ErrTxInsufficientFunds
 		}
 
 		// validate the input strings
@@ -557,7 +557,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		value := tx.Input.Amount - tx.Fee
 
 		// let's say cost of a name for one block is len(data) + 32
-		costPerBlock := types.NameCostPerBlock(types.NameBaseCost(tx.Name, tx.Data))
+		costPerBlock := txs.NameCostPerBlock(txs.NameBaseCost(tx.Name, tx.Data))
 		expiresIn := int(value / costPerBlock)
 		lastBlockHeight := _s.LastBlockHeight
 
@@ -573,7 +573,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				// ensure we are owner
 				if bytes.Compare(entry.Owner, tx.Input.Address) != 0 {
 					log.Info(Fmt("Sender %X is trying to update a name (%s) for which he is not owner", tx.Input.Address, tx.Name))
-					return types.ErrTxPermissionDenied
+					return txs.ErrTxPermissionDenied
 				}
 			} else {
 				expired = true
@@ -589,8 +589,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				// update the entry by bumping the expiry
 				// and changing the data
 				if expired {
-					if expiresIn < types.MinNameRegistrationPeriod {
-						return errors.New(Fmt("Names must be registered for at least %d blocks", types.MinNameRegistrationPeriod))
+					if expiresIn < txs.MinNameRegistrationPeriod {
+						return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
@@ -598,11 +598,11 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				} else {
 					// since the size of the data may have changed
 					// we use the total amount of "credit"
-					oldCredit := int64(entry.Expires-lastBlockHeight) * types.NameBaseCost(entry.Name, entry.Data)
+					oldCredit := int64(entry.Expires-lastBlockHeight) * txs.NameBaseCost(entry.Name, entry.Data)
 					credit := oldCredit + value
 					expiresIn = int(credit / costPerBlock)
-					if expiresIn < types.MinNameRegistrationPeriod {
-						return errors.New(Fmt("Names must be registered for at least %d blocks", types.MinNameRegistrationPeriod))
+					if expiresIn < txs.MinNameRegistrationPeriod {
+						return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					log.Info("Updated namereg entry", "name", entry.Name, "expiresIn", expiresIn, "oldCredit", oldCredit, "value", value, "credit", credit)
@@ -611,11 +611,11 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 				blockCache.UpdateNameRegEntry(entry)
 			}
 		} else {
-			if expiresIn < types.MinNameRegistrationPeriod {
-				return errors.New(Fmt("Names must be registered for at least %d blocks", types.MinNameRegistrationPeriod))
+			if expiresIn < txs.MinNameRegistrationPeriod {
+				return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 			}
 			// entry does not exist, so create it
-			entry = &types.NameRegEntry{
+			entry = &txs.NameRegEntry{
 				Name:    tx.Name,
 				Owner:   tx.Input.Address,
 				Data:    tx.Data,
@@ -635,8 +635,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if evc != nil {
-			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, nil, ""})
-			evc.FireEvent(types.EventStringNameReg(tx.Name), types.EventDataTx{tx, nil, ""})
+			evc.FireEvent(txs.EventStringAccInput(tx.Input.Address), txs.EventDataTx{tx, nil, ""})
+			evc.FireEvent(txs.EventStringNameReg(tx.Name), txs.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -644,7 +644,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		// Consensus related Txs inactivated for now
 		// TODO!
 		/*
-			case *types.BondTx:
+			case *txs.BondTx:
 						valInfo := blockCache.State().GetValidatorInfo(tx.PubKey.Address())
 						if valInfo != nil {
 							// TODO: In the future, check that the validator wasn't destroyed,
@@ -683,14 +683,14 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 							return err
 						}
 						if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return types.ErrTxInvalidSignature
+							return txs.ErrTxInvalidSignature
 						}
 						outTotal, err := validateOutputs(tx.UnbondTo)
 						if err != nil {
 							return err
 						}
 						if outTotal > inTotal {
-							return types.ErrTxInsufficientFunds
+							return txs.ErrTxInsufficientFunds
 						}
 						fee := inTotal - outTotal
 						fees += fee
@@ -701,7 +701,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 							blockCache.UpdateAccount(acc)
 						}
 						// Add ValidatorInfo
-						_s.SetValidatorInfo(&types.ValidatorInfo{
+						_s.SetValidatorInfo(&txs.ValidatorInfo{
 							Address:         tx.PubKey.Address(),
 							PubKey:          tx.PubKey,
 							UnbondTo:        tx.UnbondTo,
@@ -709,7 +709,7 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 							FirstBondAmount: outTotal,
 						})
 						// Add Validator
-						added := _s.BondedValidators.Add(&types.Validator{
+						added := _s.BondedValidators.Add(&txs.Validator{
 							Address:     tx.PubKey.Address(),
 							PubKey:      tx.PubKey,
 							BondHeight:  _s.LastBlockHeight + 1,
@@ -721,21 +721,21 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 						}
 						if evc != nil {
 							// TODO: fire for all inputs
-							evc.FireEvent(types.EventStringBond(), types.EventDataTx{tx, nil, ""})
+							evc.FireEvent(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
-					case *types.UnbondTx:
+					case *txs.UnbondTx:
 						// The validator must be active
 						_, val := _s.BondedValidators.GetByAddress(tx.Address)
 						if val == nil {
-							return types.ErrTxInvalidAddress
+							return txs.ErrTxInvalidAddress
 						}
 
 						// Verify the signature
 						signBytes := acm.SignBytes(_s.ChainID, tx)
 						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return types.ErrTxInvalidSignature
+							return txs.ErrTxInvalidSignature
 						}
 
 						// tx.Height must be greater than val.LastCommitHeight
@@ -746,21 +746,21 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 						// Good!
 						_s.unbondValidator(val)
 						if evc != nil {
-							evc.FireEvent(types.EventStringUnbond(), types.EventDataTx{tx, nil, ""})
+							evc.FireEvent(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
-					case *types.RebondTx:
+					case *txs.RebondTx:
 						// The validator must be inactive
 						_, val := _s.UnbondingValidators.GetByAddress(tx.Address)
 						if val == nil {
-							return types.ErrTxInvalidAddress
+							return txs.ErrTxInvalidAddress
 						}
 
 						// Verify the signature
 						signBytes := acm.SignBytes(_s.ChainID, tx)
 						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return types.ErrTxInvalidSignature
+							return txs.ErrTxInvalidSignature
 						}
 
 						// tx.Height must be in a suitable range
@@ -774,24 +774,24 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 						// Good!
 						_s.rebondValidator(val)
 						if evc != nil {
-							evc.FireEvent(types.EventStringRebond(), types.EventDataTx{tx, nil, ""})
+							evc.FireEvent(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
-					case *types.DupeoutTx:
+					case *txs.DupeoutTx:
 						// Verify the signatures
 						_, accused := _s.BondedValidators.GetByAddress(tx.Address)
 						if accused == nil {
 							_, accused = _s.UnbondingValidators.GetByAddress(tx.Address)
 							if accused == nil {
-								return types.ErrTxInvalidAddress
+								return txs.ErrTxInvalidAddress
 							}
 						}
 						voteASignBytes := acm.SignBytes(_s.ChainID, &tx.VoteA)
 						voteBSignBytes := acm.SignBytes(_s.ChainID, &tx.VoteB)
 						if !accused.PubKey.VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
 							!accused.PubKey.VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
-							return types.ErrTxInvalidSignature
+							return txs.ErrTxInvalidSignature
 						}
 
 						// Verify equivocation
@@ -813,19 +813,19 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 						// Good! (Bad validator!)
 						_s.destroyValidator(accused)
 						if evc != nil {
-							evc.FireEvent(types.EventStringDupeout(), types.EventDataTx{tx, nil, ""})
+							evc.FireEvent(txs.EventStringDupeout(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 		*/
 
-	case *types.PermissionsTx:
+	case *txs.PermissionsTx:
 		var inAcc *acm.Account
 
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
 			log.Debug(Fmt("Can't find in account %X", tx.Input.Address))
-			return types.ErrTxInvalidAddress
+			return txs.ErrTxInvalidAddress
 		}
 
 		permFlag := tx.PermArgs.PermFlag()
@@ -904,8 +904,8 @@ func ExecTx(blockCache *BlockCache, tx types.Tx, runCall bool, evc events.Fireab
 		}
 
 		if evc != nil {
-			evc.FireEvent(types.EventStringAccInput(tx.Input.Address), types.EventDataTx{tx, nil, ""})
-			evc.FireEvent(types.EventStringPermissions(ptypes.PermFlagToString(permFlag)), types.EventDataTx{tx, nil, ""})
+			evc.FireEvent(txs.EventStringAccInput(tx.Input.Address), txs.EventDataTx{tx, nil, ""})
+			evc.FireEvent(txs.EventStringPermissions(ptypes.PermFlagToString(permFlag)), txs.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -996,7 +996,7 @@ func hasBondOrSendPermission(state AccountGetter, accs map[string]*acm.Account) 
 //-----------------------------------------------------------------------------
 
 type InvalidTxError struct {
-	Tx     types.Tx
+	Tx     txs.Tx
 	Reason error
 }
 

@@ -383,10 +383,8 @@ func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface
 }
 
 func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	var err error
-	// Special because Tx is an interface
-	param := new(types.Tx)
-	wire.ReadJSONPtr(param, request.Params, &err)
+	param := &txs.CallTx{}
+	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}

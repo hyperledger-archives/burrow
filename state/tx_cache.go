@@ -142,7 +142,7 @@ func (cache *TxCache) Sync() {
 
 // Convenience function to return address of new contract
 func NewContractAddress(caller []byte, nonce int) []byte {
-	return types.NewContractAddress(caller, nonce)
+	return txs.NewContractAddress(caller, nonce)
 }
 
 // Converts backend.Account to vm.Account struct.

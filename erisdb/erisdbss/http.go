@@ -3,14 +3,15 @@ package erisdbss
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/eris-ltd/eris-db/server"
+	"net/http"
+	"os"
+
+	"github.com/eris-ltd/eris-db/config"
 	stypes "github.com/eris-ltd/eris-db/state/types"
 	"github.com/gin-gonic/gin"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 	tmtypes "github.com/tendermint/tendermint/types"
-	"net/http"
-	"os"
 )
 
 const TendermintConfigDefault = `# This is a TOML config file.
@@ -68,7 +69,7 @@ func NewServerServer(baseDir string) *ServerServer {
 }
 
 // Start the server.
-func (this *ServerServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (this *ServerServer) Start(config *config.ServerConfig, router *gin.Engine) {
 	router.POST("/server", this.handleFunc)
 	this.running = true
 }

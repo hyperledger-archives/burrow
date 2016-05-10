@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-events"
-	"github.com/eris-ltd/eris-db/txs"
 )
 
 var mockInterval = 10 * time.Millisecond
@@ -48,7 +48,7 @@ func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(eve
 	go func() {
 		for {
 			if !me.shutdown {
-				me.f(types.EventDataNewBlock{})
+				me.f(txs.EventDataNewBlock{})
 			} else {
 				return
 			}
