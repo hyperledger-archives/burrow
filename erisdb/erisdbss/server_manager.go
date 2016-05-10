@@ -3,16 +3,18 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
-	"github.com/eris-ltd/eris-db/files"
-	"github.com/eris-ltd/eris-db/server"
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/files"
+	"github.com/eris-ltd/eris-db/server"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 )
 
 const (
@@ -161,17 +163,17 @@ func reap(sm *ServerManager) {
 func (this *ServerManager) add(data *RequestData) (*ResponseData, error) {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
-	config := server.DefaultServerConfig()
+	cfg := config.DefaultServerConfig()
 	// Port is PORT_BASE + a value between 1 and the max number of servers.
 	id, errId := this.idPool.GetId()
 	if errId != nil {
 		return nil, errId
 	}
 	port := uint16(PORT_BASE + id)
-	config.Bind.Port = port
+	cfg.Bind.Port = port
 
 	folderName := fmt.Sprintf("testnode%d", port)
-	workDir, errCWD := this.createWorkDir(data, config, folderName)
+	workDir, errCWD := this.createWorkDir(data, &cfg, folderName)
 	if errCWD != nil {
 		return nil, errCWD
 	}
@@ -220,7 +222,7 @@ func (this *ServerManager) killAll() {
 // Old folders are cleared out. before creating them, and the server will
 // clean out all of this servers workdir (defaults to ~/.edbservers) when
 // starting and when stopping.
-func (this *ServerManager) createWorkDir(data *RequestData, config *server.ServerConfig, folderName string) (string, error) {
+func (this *ServerManager) createWorkDir(data *RequestData, cfg *config.ServerConfig, folderName string) (string, error) {
 
 	workDir := path.Join(this.baseDir, folderName)
 	os.RemoveAll(workDir)
@@ -256,7 +258,7 @@ func (this *ServerManager) createWorkDir(data *RequestData, config *server.Serve
 	log.Info("File written.", "name", genesisName)
 
 	// Write server config.
-	errWC := server.WriteServerConfig(scName, config)
+	errWC := config.WriteServerConfig(scName, cfg)
 	if errWC != nil {
 		return "", errWC
 	}

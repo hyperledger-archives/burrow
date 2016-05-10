@@ -6,7 +6,14 @@ import (
 	"encoding/hex"
 	"fmt"
 	// edb "github.com/eris-ltd/erisdb/erisdb"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
+	"testing"
+
 	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
@@ -15,11 +22,6 @@ import (
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path"
-	"testing"
 )
 
 const WAPIS_URL = "http://localhost:31404/server"
@@ -37,9 +39,9 @@ func (this *WebApiSuite) SetupSuite() {
 	gin.SetMode(gin.ReleaseMode)
 	baseDir := path.Join(os.TempDir(), "/.edbservers")
 	ss := ess.NewServerServer(baseDir)
-	cfg := server.DefaultServerConfig()
+	cfg := config.DefaultServerConfig()
 	cfg.Bind.Port = uint16(31404)
-	proc := server.NewServeProcess(cfg, ss)
+	proc := server.NewServeProcess(&cfg, ss)
 	err := proc.Start()
 	if err != nil {
 		panic(err)

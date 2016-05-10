@@ -15,7 +15,7 @@ func init() {
 	tendermint_test.ResetConfig("state_test")
 }
 
-func execTxWithState(state *State, tx types.Tx, runCall bool) error {
+func execTxWithState(state *State, tx txs.Tx, runCall bool) error {
 	cache := NewBlockCache(state)
 	if err := ExecTx(cache, tx, runCall, nil); err != nil {
 		return err
@@ -25,7 +25,7 @@ func execTxWithState(state *State, tx types.Tx, runCall bool) error {
 	}
 }
 
-func execTxWithStateNewBlock(state *State, tx types.Tx, runCall bool) error {
+func execTxWithStateNewBlock(state *State, tx txs.Tx, runCall bool) error {
 	if err := execTxWithState(state, tx, runCall); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func TestCopyState(t *testing.T) {
 }
 
 /*
-func makeBlock(t *testing.T, state *State, validation *tmtypes.Commit, txs []types.Tx) *tmtypes.Block {
+func makeBlock(t *testing.T, state *State, validation *tmtypes.Commit, txs []txs.Tx) *tmtypes.Block {
 	if validation == nil {
 		validation = &tmtypes.Commit{}
 	}
@@ -186,7 +186,7 @@ func TestTxSequence(t *testing.T) {
 	// The tx should only pass when i == 1.
 	for i := -1; i < 3; i++ {
 		sequence := acc0.Sequence + i
-		tx := types.NewSendTx()
+		tx := txs.NewSendTx()
 		tx.AddInputWithNonce(acc0PubKey, 1, sequence)
 		tx.AddOutput(acc1.Address, 1)
 		tx.Inputs[0].Signature = privAccounts[0].Sign(state.ChainID, tx)
@@ -221,7 +221,7 @@ func TestTxSequence(t *testing.T) {
 func TestNameTxs(t *testing.T) {
 	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
 
-	types.MinNameRegistrationPeriod = 5
+	txs.MinNameRegistrationPeriod = 5
 	startingBlock := state.LastBlockHeight
 
 	// try some bad names. these should all fail
@@ -230,8 +230,8 @@ func TestNameTxs(t *testing.T) {
 	fee := int64(1000)
 	numDesiredBlocks := 5
 	for _, name := range names {
-		amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
-		tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+		amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+		tx, _ := txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 		tx.Sign(state.ChainID, privAccounts[0])
 
 		if err := execTxWithState(state, tx, true); err == nil {
@@ -243,8 +243,8 @@ func TestNameTxs(t *testing.T) {
 	name := "hold_it_chum"
 	datas := []string{"cold&warm", "!@#$%^&*()", "<<<>>>>", "because why would you ever need a ~ or a & or even a % in a json file? make your case and we'll talk"}
 	for _, data := range datas {
-		amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
-		tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+		amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+		tx, _ := txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 		tx.Sign(state.ChainID, privAccounts[0])
 
 		if err := execTxWithState(state, tx, true); err == nil {
@@ -252,7 +252,7 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *types.NameRegEntry, name, data string, addr []byte, expires int) {
+	validateEntry := func(t *testing.T, entry *txs.NameRegEntry, name, data string, addr []byte, expires int) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
@@ -274,8 +274,8 @@ func TestNameTxs(t *testing.T) {
 	// try a good one, check data, owner, expiry
 	name = "@looking_good/karaoke_bar.broadband"
 	data = "on this side of neptune there are 1234567890 people: first is OMNIVORE+-3. Or is it. Ok this is pretty restrictive. No exclamations :(. Faces tho :')"
-	amt := fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
-	tx, _ := types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+	amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+	tx, _ := txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithState(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -284,7 +284,7 @@ func TestNameTxs(t *testing.T) {
 	validateEntry(t, entry, name, data, privAccounts[0].Address, startingBlock+numDesiredBlocks)
 
 	// fail to update it as non-owner, in same block
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithState(state, tx, true); err == nil {
 		t.Fatal("Expected error")
@@ -292,7 +292,7 @@ func TestNameTxs(t *testing.T) {
 
 	// update it as owner, just to increase expiry, in same block
 	// NOTE: we have to resend the data or it will clear it (is this what we want?)
-	tx, _ = types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithStateNewBlock(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -301,7 +301,7 @@ func TestNameTxs(t *testing.T) {
 	validateEntry(t, entry, name, data, privAccounts[0].Address, startingBlock+numDesiredBlocks*2)
 
 	// update it as owner, just to increase expiry, in next block
-	tx, _ = types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithStateNewBlock(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -311,7 +311,7 @@ func TestNameTxs(t *testing.T) {
 
 	// fail to update it as non-owner
 	state.LastBlockHeight = entry.Expires - 1
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithState(state, tx, true); err == nil {
 		t.Fatal("Expected error")
@@ -319,7 +319,7 @@ func TestNameTxs(t *testing.T) {
 
 	// once expires, non-owner succeeds
 	state.LastBlockHeight = entry.Expires
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithState(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -331,8 +331,8 @@ func TestNameTxs(t *testing.T) {
 	data = "In the beginning there was no thing, not even the beginning. It hadn't been here, no there, nor for that matter anywhere, not especially because it had not to even exist, let alone to not. Nothing especially odd about that."
 	oldCredit := amt - fee
 	numDesiredBlocks = 10
-	amt = fee + (int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data) - oldCredit)
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	amt = fee + (int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data) - oldCredit)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithState(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -343,7 +343,7 @@ func TestNameTxs(t *testing.T) {
 	// test removal
 	amt = fee
 	data = ""
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithStateNewBlock(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -357,8 +357,8 @@ func TestNameTxs(t *testing.T) {
 	// test removal by key1 after expiry
 	name = "looking_good/karaoke_bar"
 	data = "some data"
-	amt = fee + int64(numDesiredBlocks)*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
-	tx, _ = types.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
+	amt = fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+	tx, _ = txs.NewNameTx(state, privAccounts[0].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[0])
 	if err := execTxWithState(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -369,7 +369,7 @@ func TestNameTxs(t *testing.T) {
 
 	amt = fee
 	data = ""
-	tx, _ = types.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
+	tx, _ = txs.NewNameTx(state, privAccounts[1].PubKey, name, data, amt, fee)
 	tx.Sign(state.ChainID, privAccounts[1])
 	if err := execTxWithStateNewBlock(state, tx, true); err != nil {
 		t.Fatal(err)
@@ -394,17 +394,17 @@ func TestTxs(t *testing.T) {
 	// SendTx.
 	{
 		state := state.Copy()
-		tx := &types.SendTx{
-			Inputs: []*types.TxInput{
-				&types.TxInput{
+		tx := &txs.SendTx{
+			Inputs: []*txs.TxInput{
+				&txs.TxInput{
 					Address:  acc0.Address,
 					Amount:   1,
 					Sequence: acc0.Sequence + 1,
 					PubKey:   acc0PubKey,
 				},
 			},
-			Outputs: []*types.TxOutput{
-				&types.TxOutput{
+			Outputs: []*txs.TxOutput{
+				&txs.TxOutput{
 					Address: acc1.Address,
 					Amount:  1,
 				},
@@ -434,8 +434,8 @@ func TestTxs(t *testing.T) {
 		newAcc1 := state.GetAccount(acc1.Address)
 		newAcc1.Code = []byte{0x60}
 		state.UpdateAccount(newAcc1)
-		tx := &types.CallTx{
-			Input: &types.TxInput{
+		tx := &txs.CallTx{
+			Input: &txs.TxInput{
 				Address:  acc0.Address,
 				Amount:   1,
 				Sequence: acc0.Sequence + 1,
@@ -483,8 +483,8 @@ proof-of-work chain as proof of what happened while they were gone `
 		entryAmount := int64(10000)
 
 		state := state.Copy()
-		tx := &types.NameTx{
-			Input: &types.TxInput{
+		tx := &txs.NameTx{
+			Input: &txs.TxInput{
 				Address:  acc0.Address,
 				Amount:   entryAmount,
 				Sequence: acc0.Sequence + 1,
@@ -517,7 +517,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		tx.Input.Sequence += 1
 		tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
 		err = execTxWithState(state, tx, true)
-		if _, ok := err.(types.ErrTxInvalidString); !ok {
+		if _, ok := err.(txs.ErrTxInvalidString); !ok {
 			t.Errorf("Expected invalid string error. Got: %s", err.Error())
 		}
 	}
@@ -526,18 +526,18 @@ proof-of-work chain as proof of what happened while they were gone `
 	/*
 		{
 			state := state.Copy()
-			tx := &types.BondTx{
+			tx := &txs.BondTx{
 				PubKey: acc0PubKey.(crypto.PubKeyEd25519),
-				Inputs: []*types.TxInput{
-					&types.TxInput{
+				Inputs: []*txs.TxInput{
+					&txs.TxInput{
 						Address:  acc0.Address,
 						Amount:   1,
 						Sequence: acc0.Sequence + 1,
 						PubKey:   acc0PubKey,
 					},
 				},
-				UnbondTo: []*types.TxOutput{
-					&types.TxOutput{
+				UnbondTo: []*txs.TxOutput{
+					&txs.TxOutput{
 						Address: acc0.Address,
 						Amount:  1,
 					},
@@ -596,7 +596,7 @@ func TestSuicide(t *testing.T) {
 	state.UpdateAccount(newAcc1)
 
 	// send call tx with no data, cause suicide
-	tx := types.NewCallTxWithNonce(acc0PubKey, acc1.Address, nil, sendingAmount, 1000, 0, acc0.Sequence+1)
+	tx := txs.NewCallTxWithNonce(acc0PubKey, acc1.Address, nil, sendingAmount, 1000, 0, acc0.Sequence+1)
 	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
@@ -638,18 +638,18 @@ func TestAddValidator(t *testing.T) {
 
 	// The first privAccount will become a validator
 	acc0 := privAccounts[0]
-	bondTx := &types.BondTx{
+	bondTx := &txs.BondTx{
 		PubKey: acc0.PubKey.(account.PubKeyEd25519),
-		Inputs: []*types.TxInput{
-			&types.TxInput{
+		Inputs: []*txs.TxInput{
+			&txs.TxInput{
 				Address:  acc0.Address,
 				Amount:   1000,
 				Sequence: 1,
 				PubKey:   acc0.PubKey,
 			},
 		},
-		UnbondTo: []*types.TxOutput{
-			&types.TxOutput{
+		UnbondTo: []*txs.TxOutput{
+			&txs.TxOutput{
 				Address: acc0.Address,
 				Amount:  1000,
 			},
@@ -659,7 +659,7 @@ func TestAddValidator(t *testing.T) {
 	bondTx.Inputs[0].Signature = acc0.Sign(s0.ChainID, bondTx)
 
 	// Make complete block and blockParts
-	block0 := makeBlock(t, s0, nil, []types.Tx{bondTx})
+	block0 := makeBlock(t, s0, nil, []txs.Tx{bondTx})
 	block0Parts := block0.MakePartSet()
 
 	// Sanity check
@@ -683,18 +683,18 @@ func TestAddValidator(t *testing.T) {
 
 	// The validation for the next block should only require 1 signature
 	// (the new validator wasn't active for block0)
-	precommit0 := &types.Vote{
+	precommit0 := &txs.Vote{
 		Height:           1,
 		Round:            0,
-		Type:             types.VoteTypePrecommit,
+		Type:             txs.VoteTypePrecommit,
 		BlockHash:        block0.Hash(),
 		BlockPartsHeader: block0Parts.Header(),
 	}
 	privValidators[0].SignVote(s0.ChainID, precommit0)
 
 	block1 := makeBlock(t, s0,
-		&types.Validation{
-			Precommits: []*types.Vote{
+		&txs.Validation{
+			Precommits: []*txs.Vote{
 				precommit0,
 			},
 		}, nil,
