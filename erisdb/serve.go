@@ -3,7 +3,6 @@
 package erisdb
 
 import (
-  "encoding/hex"
 	"bytes"
 	"fmt"
 	"io/ioutil"

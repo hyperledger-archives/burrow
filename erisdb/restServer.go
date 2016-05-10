@@ -379,7 +379,7 @@ func (this *RestServer) handleBroadcastTx(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(*param)
+	receipt, err := this.pipe.Transactor().BroadcastTx(param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
