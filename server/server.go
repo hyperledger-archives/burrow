@@ -3,12 +3,15 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	cors "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tommy351/gin-cors"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"
 	"time"
+
+	cfg "github.com/eris-ltd/eris-db/config"
+
+	"github.com/gin-gonic/gin"
+	cors "github.com/tommy351/gin-cors"
+	"gopkg.in/tylerb/graceful.v1"
 )
 
 var (
@@ -21,7 +24,7 @@ type HttpService interface {
 
 // A server serves a number of different http calls.
 type Server interface {
-	Start(*ServerConfig, *gin.Engine)
+	Start(*cfg.ServerConfig, *gin.Engine)
 	Running() bool
 	ShutDown()
 }
@@ -35,7 +38,7 @@ type Server interface {
 // 'Start()'. Stop event listeners can be added up to the point where
 // the server is stopped and the event is fired.
 type ServeProcess struct {
-	config           *ServerConfig
+	config           *cfg.ServerConfig
 	servers          []Server
 	stopChan         chan struct{}
 	stoppedChan      chan struct{}
@@ -183,18 +186,18 @@ func (this *ServeProcess) StopEventChannel() <-chan struct{} {
 }
 
 // Creates a new serve process.
-func NewServeProcess(config *ServerConfig, servers ...Server) *ServeProcess {
-	var cfg *ServerConfig
+func NewServeProcess(config *cfg.ServerConfig, servers ...Server) *ServeProcess {
+	var scfg cfg.ServerConfig
 	if config == nil {
-		cfg = DefaultServerConfig()
+		scfg = cfg.DefaultServerConfig()
 	} else {
-		cfg = config
+		scfg = *config
 	}
 	stopChan := make(chan struct{}, 1)
 	stoppedChan := make(chan struct{}, 1)
 	startListeners := make([]chan struct{}, 0)
 	stopListeners := make([]chan struct{}, 0)
-	sp := &ServeProcess{cfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
+	sp := &ServeProcess{&scfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
 	return sp
 }
 
@@ -216,7 +219,7 @@ func logHandler(c *gin.Context) {
 
 }
 
-func NewCORSMiddleware(options CORS) gin.HandlerFunc {
+func NewCORSMiddleware(options cfg.CORS) gin.HandlerFunc {
 	o := cors.Options{
 		AllowCredentials: options.AllowCredentials,
 		AllowHeaders:     options.AllowHeaders,

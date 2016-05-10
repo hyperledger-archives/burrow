@@ -4,21 +4,21 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	cmn "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	cs "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	mempl "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/mempool"
 	"sync"
+
+	acm "github.com/eris-ltd/eris-db/account"
+	cmn "github.com/tendermint/go-common"
+
+	"github.com/eris-ltd/eris-db/tmsp"
 )
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
-	consensusState *cs.ConsensusState
-	mempoolReactor *mempl.MempoolReactor
-	filterFactory  *FilterFactory
+	erisdbApp     *tmsp.ErisDBApp
+	filterFactory *FilterFactory
 }
 
-func newAccounts(consensusState *cs.ConsensusState, mempoolReactor *mempl.MempoolReactor) *accounts {
+func newAccounts(erisdbApp *tmsp.ErisDBApp) *accounts {
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("code", &sync.Pool{
@@ -33,36 +33,36 @@ func newAccounts(consensusState *cs.ConsensusState, mempoolReactor *mempl.Mempoo
 		},
 	})
 
-	return &accounts{consensusState, mempoolReactor, ff}
+	return &accounts{erisdbApp, ff}
 
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	pa := account.GenPrivAccount()
+func (this *accounts) GenPrivAccount() (*acm.PrivAccount, error) {
+	pa := acm.GenPrivAccount()
 	return pa, nil
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error) {
+func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*acm.PrivAccount, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
 	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GenPrivAccountFromPrivKeyBytes(privKey)
 	return pa, nil
 }
 
 // Get all accounts.
 func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
-	accounts := make([]*account.Account, 0)
-	state := this.consensusState.GetState()
+	accounts := make([]*acm.Account, 0)
+	state := this.erisdbApp.GetState()
 	filter, err := this.filterFactory.NewFilter(fda)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetAccounts().Iterate(func(key interface{}, value interface{}) bool {
-		acc := value.(*account.Account)
+	state.GetAccounts().Iterate(func(key, value []byte) bool {
+		acc := acm.DecodeAccount(value)
 		if filter.Match(acc) {
 			accounts = append(accounts, acc)
 		}
@@ -72,8 +72,8 @@ func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
 }
 
 // Get an account.
-func (this *accounts) Account(address []byte) (*account.Account, error) {
-	cache := this.mempoolReactor.Mempool.GetCache()
+func (this *accounts) Account(address []byte) (*acm.Account, error) {
+	cache := this.erisdbApp.GetState() // NOTE: we want to read from mempool!
 	acc := cache.GetAccount(address)
 	if acc == nil {
 		acc = this.newAcc(address)
@@ -85,7 +85,7 @@ func (this *accounts) Account(address []byte) (*account.Account, error) {
 // Both the key and value is returned.
 func (this *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	account := state.GetAccount(address)
 	if account == nil {
 		return &StorageItem{key, []byte{}}, nil
@@ -93,17 +93,17 @@ func (this *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 	storageRoot := account.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
-	_, value := storageTree.Get(cmn.LeftPadWord256(key).Bytes())
+	_, value, _ := storageTree.Get(cmn.LeftPadWord256(key).Bytes())
 	if value == nil {
 		return &StorageItem{key, []byte{}}, nil
 	}
-	return &StorageItem{key, value.([]byte)}, nil
+	return &StorageItem{key, value}, nil
 }
 
 // Get the storage of the account with address 'address'.
 func (this *accounts) Storage(address []byte) (*Storage, error) {
 
-	state := this.consensusState.GetState()
+	state := this.erisdbApp.GetState()
 	account := state.GetAccount(address)
 	storageItems := make([]StorageItem, 0)
 	if account == nil {
@@ -112,17 +112,17 @@ func (this *accounts) Storage(address []byte) (*Storage, error) {
 	storageRoot := account.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
-	storageTree.Iterate(func(key interface{}, value interface{}) bool {
+	storageTree.Iterate(func(key, value []byte) bool {
 		storageItems = append(storageItems, StorageItem{
-			key.([]byte), value.([]byte)})
+			key, value})
 		return false
 	})
 	return &Storage{storageRoot, storageItems}, nil
 }
 
 // Create a new account.
-func (this *accounts) newAcc(address []byte) *account.Account {
-	return &account.Account{
+func (this *accounts) newAcc(address []byte) *acm.Account {
+	return &acm.Account{
 		Address:     address,
 		PubKey:      nil,
 		Sequence:    0,
@@ -165,7 +165,7 @@ func (this *AccountCodeFilter) Configure(fd *FilterData) error {
 }
 
 func (this *AccountCodeFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}
@@ -196,7 +196,7 @@ func (this *AccountBalanceFilter) Configure(fd *FilterData) error {
 }
 
 func (this *AccountBalanceFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}

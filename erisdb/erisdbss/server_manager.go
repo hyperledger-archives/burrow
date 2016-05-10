@@ -3,10 +3,10 @@ package erisdbss
 import (
 	"bufio"
 	"fmt"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	"github.com/eris-ltd/eris-db/files"
 	"github.com/eris-ltd/eris-db/server"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 	"os"
 	"os/exec"
 	"path"
@@ -224,7 +224,7 @@ func (this *ServerManager) createWorkDir(data *RequestData, config *server.Serve
 
 	workDir := path.Join(this.baseDir, folderName)
 	os.RemoveAll(workDir)
-	errED := EnsureDir(workDir)
+	errED := EnsureDir(workDir, 0777)
 	if errED != nil {
 		return "", errED
 	}
@@ -266,7 +266,7 @@ func (this *ServerManager) createWorkDir(data *RequestData, config *server.Serve
 
 // Used to write json files using tendermints binary package.
 func writeJSON(file string, v interface{}) error {
-	var n int64
+	var n int
 	var errW error
 	fo, errC := os.Create(file)
 	if errC != nil {

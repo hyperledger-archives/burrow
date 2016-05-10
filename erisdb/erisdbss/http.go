@@ -3,18 +3,18 @@ package erisdbss
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/common"
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 	"github.com/eris-ltd/eris-db/server"
+	stypes "github.com/eris-ltd/eris-db/state/types"
+	"github.com/gin-gonic/gin"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
+	tmtypes "github.com/tendermint/tendermint/types"
 	"net/http"
 	"os"
 )
 
 const TendermintConfigDefault = `# This is a TOML config file.
-# For more information, see https://github.com/toml-lang/toml
+# For more information, see https:/github.com/toml-lang/toml
 
 moniker = "__MONIKER__"
 seeds = ""
@@ -33,9 +33,9 @@ rpc_laddr = ""
 // TODO more stuff, like tendermint and server config files. Will probably
 // wait with this until the eris/EPM integration.
 type RequestData struct {
-	PrivValidator *types.PrivValidator `json:"priv_validator"`
-	Genesis       *stypes.GenesisDoc   `json:"genesis"`
-	MaxDuration   uint                 `json:"max_duration"`
+	PrivValidator *tmtypes.PrivValidator `json:"priv_validator"`
+	Genesis       *stypes.GenesisDoc     `json:"genesis"`
+	MaxDuration   uint                   `json:"max_duration"`
 }
 
 // The response is the port of the newly generated server. The assumption
@@ -63,7 +63,7 @@ type ServerServer struct {
 // Create a new ServerServer with the given base directory.
 func NewServerServer(baseDir string) *ServerServer {
 	os.RemoveAll(baseDir)
-	EnsureDir(baseDir)
+	EnsureDir(baseDir, 0777)
 	return &ServerServer{serverManager: NewServerManager(100, baseDir)}
 }
 

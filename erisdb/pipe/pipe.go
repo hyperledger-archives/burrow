@@ -2,10 +2,12 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/node"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	em "github.com/tendermint/go-events"
+	"github.com/tendermint/tendermint/types"
+
+	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/tmsp"
+	txs "github.com/eris-ltd/eris-db/txs"
 )
 
 type (
@@ -46,13 +48,13 @@ type (
 	}
 
 	EventEmitter interface {
-		Subscribe(subId, event string, callback func(types.EventData)) (bool, error)
+		Subscribe(subId, event string, callback func(em.EventData)) (bool, error)
 		Unsubscribe(subId string) (bool, error)
 	}
 
 	NameReg interface {
-		Entry(key string) (*types.NameRegEntry, error)
-		Entries([]*FilterData) (*ctypes.ResultListNames, error)
+		Entry(key string) (*txs.NameRegEntry, error)
+		Entries([]*FilterData) (*ResultListNames, error)
 	}
 
 	Net interface {
@@ -68,20 +70,21 @@ type (
 	Transactor interface {
 		Call(fromAddress, toAddress, data []byte) (*Call, error)
 		CallCode(fromAddress, code, data []byte) (*Call, error)
-		BroadcastTx(tx types.Tx) (*Receipt, error)
-		Send(privKey, toAddress []byte, amount int64) (*Receipt, error)
-		SendAndHold(privKey, toAddress []byte, amount int64) (*Receipt, error)
+		// Send(privKey, toAddress []byte, amount int64) (*Receipt, error)
+		// SendAndHold(privKey, toAddress []byte, amount int64) (*Receipt, error)
+		BroadcastTx(tx txs.Tx) (*Receipt, error)
 		Transact(privKey, address, data []byte, gasLimit, fee int64) (*Receipt, error)
-		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error)
+		TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error)
 		TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*Receipt, error)
 		UnconfirmedTxs() (*UnconfirmedTxs, error)
-		SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error)
+		SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error)
 	}
 )
 
 // Base struct for getting rpc proxy objects (node.Node has no interface).
 type PipeImpl struct {
-	tNode      *node.Node
+	//tNode      *node.Node
+	erisdbApp  *tmsp.ErisDBApp
 	accounts   Accounts
 	blockchain Blockchain
 	consensus  Consensus
@@ -91,25 +94,41 @@ type PipeImpl struct {
 	txs        Transactor
 }
 
+// NOTE: [ben] the introduction of tmsp has cut off a corner here and
+// the dependency on needs to be encapsulated
+
 // Create a new rpc pipe.
-func NewPipe(tNode *node.Node) Pipe {
-	accounts := newAccounts(tNode.ConsensusState(), tNode.MempoolReactor())
-	blockchain := newBlockchain(tNode.BlockStore())
-	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
-	events := newEvents(tNode.EventSwitch())
-	namereg := newNamereg(tNode.ConsensusState())
-	net := newNetwork(tNode.Switch())
-	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
+// <<<<<<< HEAD
+// func NewPipe(tNode *node.Node) Pipe {
+// 	accounts := newAccounts(tNode.ConsensusState(), tNode.MempoolReactor())
+// 	blockchain := newBlockchain(tNode.BlockStore())
+// 	consensus := newConsensus(tNode.ConsensusState(), tNode.Switch())
+// 	events := newEvents(tNode.EventSwitch())
+// 	namereg := newNamereg(tNode.ConsensusState())
+// 	net := newNetwork(tNode.Switch())
+// 	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
+// =======
+func NewPipe(erisdbApp *tmsp.ErisDBApp, eventSwitch *em.EventSwitch) Pipe {
+	events := newEvents(eventSwitch)
+
+	accounts := newAccounts(erisdbApp)
+	namereg := newNamereg(erisdbApp)
+	txs := newTransactor(eventSwitch, erisdbApp, events)
+
+	// TODO: make interface to tendermint core's rpc for these
+	// blockchain := newBlockchain(blockStore)
+	// consensus := newConsensus(erisdbApp)
+	// net := newNetwork(erisdbApp)
 
 	return &PipeImpl{
-		tNode,
-		accounts,
-		blockchain,
-		consensus,
-		events,
-		namereg,
-		net,
-		txs,
+		erisdbApp: erisdbApp,
+		accounts:  accounts,
+		// blockchain,
+		// consensus,
+		events:  events,
+		namereg: namereg,
+		// net,
+		txs: txs,
 	}
 }
 

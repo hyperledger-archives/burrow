@@ -4,7 +4,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
+	wire "github.com/tendermint/go-wire"
+
 	rpc "github.com/eris-ltd/eris-db/rpc"
 )
 
@@ -20,7 +21,7 @@ func NewTCodec() rpc.Codec {
 // Encode to an io.Writer.
 func (this *TCodec) Encode(v interface{}, w io.Writer) error {
 	var err error
-	var n int64
+	var n int
 	wire.WriteJSON(v, w, &n, &err)
 	return err
 }

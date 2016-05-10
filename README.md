@@ -5,6 +5,15 @@ Master [![Circle CI](https://circleci.com/gh/eris-ltd/eris-db/tree/master.svg?st
 
 `eris-db` is Eris' blockchain-client. It consists of a [Tendermint](http://tendermint.com/) node wrapped by a simple server. The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The web-APIs are documented in `api.md`. We also have javascript bindings for the RPC methods in [eris-db.js](https://github.com/eris-ltd/eris-db.js).
 
+
+# TMSP-TODO
+
+- second genesis file
+- get tests working
+- eris-cli wrapping
+
+
+
 ## Installation
 
 There are no pre-built releases other then the docker images.

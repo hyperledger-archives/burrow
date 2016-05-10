@@ -4,8 +4,8 @@ import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	stypes "github.com/eris-ltd/eris-db/state/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 var testDataJson = `{
@@ -88,7 +88,7 @@ var testDataJson = `{
       ],
       "validators": [
         {
-          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
+          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
           "amount": 5000000000,
           "unbond_to": [
             {
