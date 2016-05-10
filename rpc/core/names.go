@@ -19,7 +19,7 @@ func GetName(name string) (*ctypes.ResultGetName, error) {
 
 func ListNames() (*ctypes.ResultListNames, error) {
 	var blockHeight int
-	var names []*types.NameRegEntry
+	var names []*txs.NameRegEntry
 	state := erisdbApp.GetState()
 	blockHeight = state.LastBlockHeight
 	state.GetNames().Iterate(func(key []byte, value []byte) bool {

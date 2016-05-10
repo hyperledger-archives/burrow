@@ -374,7 +374,7 @@ func (this *RestServer) handlePeer(c *gin.Context) {
 // ********************************* Transactions *********************************
 
 func (this *RestServer) handleBroadcastTx(c *gin.Context) {
-	param := &types.CallTx{}
+	param := &txs.CallTx{}
 	errD := this.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)

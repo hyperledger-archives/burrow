@@ -1,4 +1,4 @@
-package types
+package txs
 
 import (
 	cfg "github.com/tendermint/go-config"

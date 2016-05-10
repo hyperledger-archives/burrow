@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -41,7 +42,7 @@ func (this *AccountCallTxHashFilter) Configure(fd *ep.FilterData) error {
 }
 
 func (this *AccountCallTxHashFilter) Match(v interface{}) bool {
-	emct, ok := v.(*types.EventDataCall)
+	emct, ok := v.(*txs.EventDataCall)
 	if !ok {
 		return false
 	}

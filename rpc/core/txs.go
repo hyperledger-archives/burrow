@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/evm"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
@@ -79,7 +80,7 @@ func CallCode(fromAddress, code, data []byte) (*ctypes.ResultCall, error) {
 
 //-----------------------------------------------------------------------------
 
-func SignTx(tx types.Tx, privAccounts []*acm.PrivAccount) (*ctypes.ResultSignTx, error) {
+func SignTx(tx txs.Tx, privAccounts []*acm.PrivAccount) (*ctypes.ResultSignTx, error) {
 	// more checks?
 
 	for i, privAccount := range privAccounts {
@@ -88,18 +89,18 @@ func SignTx(tx types.Tx, privAccounts []*acm.PrivAccount) (*ctypes.ResultSignTx,
 		}
 	}
 	switch tx.(type) {
-	case *types.SendTx:
-		sendTx := tx.(*types.SendTx)
+	case *txs.SendTx:
+		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
 			input.PubKey = privAccounts[i].PubKey
 			input.Signature = privAccounts[i].Sign(config.GetString("erisdb.chain_id"), sendTx)
 		}
-	case *types.CallTx:
-		callTx := tx.(*types.CallTx)
+	case *txs.CallTx:
+		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
 		callTx.Input.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), callTx)
-	case *types.BondTx:
-		bondTx := tx.(*types.BondTx)
+	case *txs.BondTx:
+		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
 		bondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), bondTx).(crypto.SignatureEd25519)
@@ -107,11 +108,11 @@ func SignTx(tx types.Tx, privAccounts []*acm.PrivAccount) (*ctypes.ResultSignTx,
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(config.GetString("erisdb.chain_id"), bondTx)
 		}
-	case *types.UnbondTx:
-		unbondTx := tx.(*types.UnbondTx)
+	case *txs.UnbondTx:
+		unbondTx := tx.(*txs.UnbondTx)
 		unbondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), unbondTx).(crypto.SignatureEd25519)
-	case *types.RebondTx:
-		rebondTx := tx.(*types.RebondTx)
+	case *txs.RebondTx:
+		rebondTx := tx.(*txs.RebondTx)
 		rebondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), rebondTx).(crypto.SignatureEd25519)
 	}
 	return &ctypes.ResultSignTx{tx}, nil

@@ -17,21 +17,19 @@ machine:
 dependencies:
   pre:
     - mkdir -p ~/cache
-    # Fill cache of overrides 
+    # Fill cache of overrides
     - test -e ~/cache/docker || curl -L -o ~/cache/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.9.0-circleci'
     # leaving here in case we wish to override go version
     # - test -e ~/cache/go || curl https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz | tar xzC ~/cache
     # - sudo rm -rf /usr/local/go
     # - sudo cp -r ~/cache/go /usr/local/go
     # Override host docker
-    - sudo cp ~/cache/docker /usr/bin/dockeu
+    - sudo cp ~/cache/docker /usr/bin/docker
     - sudo chmod +x /usr/bin/docker
     # Override host go
     - sudo service docker start
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
-    # Install erisdb cmd for tests
-    - cd $GOPATH_REPO && go install ./cmd/erisdb
 
   cache_directories:
     - ~/cache
@@ -39,6 +37,9 @@ test:
   pre:
     - go get github.com/stretchr/testify
     - go get github.com/Masterminds/glide
+    - cd $GOPATH_REPO && glide install
+    # Install erisdb cmd for tests
+    - cd $GOPATH_REPO && go install ./cmd/erisdb
   override:
     # We only wish to test our packages not vendored ones
     - cd $GOPATH_REPO && glide novendor | xargs go test -v
