@@ -9,6 +9,7 @@ import (
 	mempl "github.com/tendermint/tendermint/mempool"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/go-p2p"
 )
 
@@ -20,6 +21,12 @@ var p2pSwitch *p2p.Switch
 var privValidator *tmtypes.PrivValidator
 var genDoc *stypes.GenesisDoc // cache the genesis structure
 var erisdbApp *tmsp.ErisDBApp
+
+var config cfg.Config = nil
+
+func SetConfig(c cfg.Config) {
+	config = c
+}
 
 func SetErisDBApp(edbApp *tmsp.ErisDBApp) {
 	erisdbApp = edbApp
