@@ -40,7 +40,6 @@ RUN git clone --quiet https://$REPO . && \
 
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
-  unset REPO_ALIAS && \
   unset COMMIT && \
   unset BRANCH
 
