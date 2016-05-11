@@ -8,7 +8,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	types "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-events"
 )
@@ -103,8 +103,8 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, caller, callee *Account, input []byte, value int64, gas *int64) {
 	// fire the post call event (including exception if applicable)
 	if vm.evc != nil {
-		vm.evc.FireEvent(types.EventStringAccCall(callee.Address.Postfix(20)), types.EventDataCall{
-			&types.CallData{caller.Address.Postfix(20), callee.Address.Postfix(20), input, value, *gas},
+		vm.evc.FireEvent(txs.EventStringAccCall(callee.Address.Postfix(20)), txs.EventDataCall{
+			&txs.CallData{caller.Address.Postfix(20), callee.Address.Postfix(20), input, value, *gas},
 			vm.origin.Postfix(20),
 			vm.txid,
 			*output,
@@ -704,9 +704,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			data = copyslice(data)
 			if vm.evc != nil {
-				eventID := types.EventStringLogEvent(callee.Address.Postfix(20))
+				eventID := txs.EventStringLogEvent(callee.Address.Postfix(20))
 				fmt.Printf("eventID: %s\n", eventID)
-				log := types.EventDataLog{
+				log := txs.EventDataLog{
 					callee.Address,
 					topics,
 					data,

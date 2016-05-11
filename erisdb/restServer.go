@@ -374,15 +374,12 @@ func (this *RestServer) handlePeer(c *gin.Context) {
 // ********************************* Transactions *********************************
 
 func (this *RestServer) handleBroadcastTx(c *gin.Context) {
-	// Special because Tx is an interface
-	param := new(types.Tx)
-	b, err := ioutil.ReadAll(c.Request.Body)
-	defer c.Request.Body.Close()
-	wire.ReadJSONPtr(param, b, &err)
-	if err != nil {
-		c.AbortWithError(500, err)
+	param := &txs.CallTx{}
+	errD := this.codec.Decode(param, c.Request.Body)
+	if errD != nil {
+		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(*param)
+	receipt, err := this.pipe.Transactor().BroadcastTx(param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

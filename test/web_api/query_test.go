@@ -4,18 +4,20 @@ package web_api
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/suite"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
+	"testing"
+
+	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	fd "github.com/eris-ltd/eris-db/test/testdata/filters"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path"
-	"testing"
+	"github.com/stretchr/testify/suite"
 )
 
 const QS_URL = "http://localhost:31403/server"
@@ -32,9 +34,9 @@ type QuerySuite struct {
 func (this *QuerySuite) SetupSuite() {
 	baseDir := path.Join(os.TempDir(), "/.edbservers")
 	ss := ess.NewServerServer(baseDir)
-	cfg := server.DefaultServerConfig()
+	cfg := config.DefaultServerConfig()
 	cfg.Bind.Port = uint16(31403)
-	proc := server.NewServeProcess(cfg, ss)
+	proc := server.NewServeProcess(&cfg, ss)
 	err := proc.Start()
 	if err != nil {
 		panic(err)

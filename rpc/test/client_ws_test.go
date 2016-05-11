@@ -22,7 +22,7 @@ func TestWSConnect(t *testing.T) {
 // receive a new block message
 func TestWSNewBlock(t *testing.T) {
 	wsc := newWSClient(t)
-	eid := types.EventStringNewBlock()
+	eid := txs.EventStringNewBlock()
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -40,7 +40,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient(t)
-	eid := types.EventStringNewBlock()
+	eid := txs.EventStringNewBlock()
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -56,8 +56,8 @@ func TestWSSend(t *testing.T) {
 	amt := int64(100)
 
 	wsc := newWSClient(t)
-	eidInput := types.EventStringAccInput(user[0].Address)
-	eidOutput := types.EventStringAccOutput(toAddr)
+	eidInput := txs.EventStringAccInput(user[0].Address)
+	eidOutput := txs.EventStringAccOutput(toAddr)
 	subscribe(t, wsc, eidInput)
 	subscribe(t, wsc, eidOutput)
 	defer func() {
@@ -78,7 +78,7 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient(t)
-	eid := types.EventStringAccInput(user[0].Address)
+	eid := txs.EventStringAccInput(user[0].Address)
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -106,7 +106,7 @@ func TestWSCallWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient(t)
-	eid1 := types.EventStringAccInput(user[0].Address)
+	eid1 := txs.EventStringAccInput(user[0].Address)
 	subscribe(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, eid1)
@@ -124,7 +124,7 @@ func TestWSCallWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = int64(10001)
-	eid2 := types.EventStringAccOutput(contractAddr)
+	eid2 := txs.EventStringAccOutput(contractAddr)
 	subscribe(t, wsc, eid2)
 	defer func() {
 		unsubscribe(t, wsc, eid2)
@@ -154,7 +154,7 @@ func TestWSCallNoWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = int64(10001)
-	eid := types.EventStringAccOutput(contractAddr)
+	eid := txs.EventStringAccOutput(contractAddr)
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -190,7 +190,7 @@ func TestWSCallCall(t *testing.T) {
 
 	// susbscribe to the new contracts
 	amt = int64(10001)
-	eid1 := types.EventStringAccCall(contractAddr1)
+	eid1 := txs.EventStringAccCall(contractAddr1)
 	subscribe(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, eid1)
@@ -207,6 +207,6 @@ func TestWSCallCall(t *testing.T) {
 	waitForEvent(t, wsc, eid1, true, func() {
 		tx := makeDefaultCallTx(t, wsTyp, contractAddr2, nil, amt, gasLim, fee)
 		broadcastTx(t, wsTyp, tx)
-		*txid = types.TxID(chainID, tx)
+		*txid = txs.TxID(chainID, tx)
 	}, unmarshalValidateCall(user[0].Address, returnVal, txid))
 }

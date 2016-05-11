@@ -11,6 +11,7 @@ import (
 
 	// edb "github.com/eris-ltd/erisdb/erisdb"
 	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
@@ -50,10 +51,10 @@ func (this *MockSuite) SetupSuite() {
 	evtSubs := edb.NewEventSubscriptions(pipe.Events())
 	// The server
 	restServer := edb.NewRestServer(codec, pipe, evtSubs)
-	sConf := server.DefaultServerConfig()
+	sConf := config.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc := server.NewServeProcess(sConf, restServer)
+	proc := server.NewServeProcess(&sConf, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)
@@ -173,7 +174,7 @@ func (this *MockSuite) TestGetValidators() {
 
 func (this *MockSuite) TestGetNameRegEntry() {
 	resp := this.get("/namereg/" + this.testData.GetNameRegEntry.Input.Name)
-	ret := &types.NameRegEntry{}
+	ret := &txs.NameRegEntry{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntry.Output)

@@ -76,7 +76,7 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           *types.CallTx          `json:"tx"`
+		Tx           *txs.CallTx            `json:"tx"`
 		PrivAccounts []*account.PrivAccount `json:"priv_accounts"`
 	}
 

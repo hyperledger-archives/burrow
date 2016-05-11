@@ -1,4 +1,4 @@
-package types
+package txs
 
 import (
 	"github.com/tendermint/go-logger"

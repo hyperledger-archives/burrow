@@ -62,15 +62,15 @@ func testSignedTx(t *testing.T, typ string) {
 func testOneSignTx(t *testing.T, typ string, addr []byte, amt int64) {
 	tx := makeDefaultSendTx(t, typ, addr, amt)
 	tx2 := signTx(t, typ, tx, user[0])
-	tx2hash := types.TxID(chainID, tx2)
+	tx2hash := txs.TxID(chainID, tx2)
 	tx.SignInput(chainID, 0, user[0])
-	txhash := types.TxID(chainID, tx)
+	txhash := txs.TxID(chainID, tx)
 	if bytes.Compare(txhash, tx2hash) != 0 {
 		t.Fatal("Got different signatures for signing via rpc vs tx_utils")
 	}
 
 	tx_ := signTx(t, typ, tx, user[0])
-	tx = tx_.(*types.SendTx)
+	tx = tx_.(*txs.SendTx)
 	checkTx(t, user[0].Address, user[0], tx)
 }
 
@@ -86,11 +86,11 @@ func testBroadcastTx(t *testing.T, typ string) {
 		t.Fatal("Failed to compute tx hash")
 	}
 	pool := node.MempoolReactor().Mempool
-	txs := pool.Reap(-1)
-	if len(txs) != mempoolCount {
-		t.Fatalf("The mem pool has %d txs. Expected %d", len(txs), mempoolCount)
+	trnxs := pool.Reap(-1)
+	if len(trnxs) != mempoolCount {
+		t.Fatalf("The mem pool has %d txs. Expected %d", len(trnxs), mempoolCount)
 	}
-	tx2 := types.DecodeTx(txs[mempoolCount-1]).(*types.SendTx)
+	tx2 := txs.DecodeTx(trnxs[mempoolCount-1]).(*txs.SendTx)
 	n, err := new(int), new(error)
 	buf1, buf2 := new(bytes.Buffer), new(bytes.Buffer)
 	tx.WriteSignBytes(chainID, buf1, n, err)
@@ -102,7 +102,7 @@ func testBroadcastTx(t *testing.T, typ string) {
 
 func testGetStorage(t *testing.T, typ string) {
 	wsc := newWSClient(t)
-	eid := types.EventStringNewBlock()
+	eid := txs.EventStringNewBlock()
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -154,7 +154,7 @@ func testCallCode(t *testing.T, typ string) {
 
 func testCall(t *testing.T, typ string) {
 	wsc := newWSClient(t)
-	eid := types.EventStringNewBlock()
+	eid := txs.EventStringNewBlock()
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -194,7 +194,7 @@ func testNameReg(t *testing.T, typ string) {
 	client := clients[typ]
 	wsc := newWSClient(t)
 
-	types.MinNameRegistrationPeriod = 1
+	txs.MinNameRegistrationPeriod = 1
 
 	// register a new name, check if its there
 	// since entries ought to be unique and these run against different clients, we append the typ
@@ -202,9 +202,9 @@ func testNameReg(t *testing.T, typ string) {
 	data := "if not now, when"
 	fee := int64(1000)
 	numDesiredBlocks := int64(2)
-	amt := fee + numDesiredBlocks*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
+	amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 
-	eid := types.EventStringNameReg(name)
+	eid := txs.EventStringNameReg(name)
 	subscribe(t, wsc, eid)
 
 	tx := makeDefaultNameTx(t, typ, name, data, amt, fee)
@@ -238,7 +238,7 @@ func testNameReg(t *testing.T, typ string) {
 
 	// for the rest we just use new block event
 	// since we already tested the namereg event
-	eid = types.EventStringNewBlock()
+	eid = txs.EventStringNewBlock()
 	subscribe(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, eid)
@@ -248,7 +248,7 @@ func testNameReg(t *testing.T, typ string) {
 	// update the data as the owner, make sure still there
 	numDesiredBlocks = int64(2)
 	data = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
-	amt = fee + numDesiredBlocks*types.NameByteCostMultiplier*types.NameBlockCostMultiplier*types.NameBaseCost(name, data)
+	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 	tx = makeDefaultNameTx(t, typ, name, data, amt, fee)
 	broadcastTx(t, typ, tx)
 	// commit block
@@ -262,7 +262,7 @@ func testNameReg(t *testing.T, typ string) {
 	// try to update as non owner, should fail
 	nonce := getNonce(t, typ, user[1].Address)
 	data2 := "this is not my beautiful house"
-	tx = types.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee, nonce+1)
+	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee, nonce+1)
 	tx.Sign(chainID, user[1])
 	_, err := edbcli.BroadcastTx(client, tx)
 	if err == nil {

@@ -40,12 +40,12 @@ func TestLog4(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to start eventSwitch: %v", err)
 	}
-	eventID := types.EventStringLogEvent(account2.Address.Postfix(20))
+	eventID := txs.EventStringLogEvent(account2.Address.Postfix(20))
 
 	doneChan := make(chan struct{}, 1)
 
 	eventSwitch.AddListenerForEvent("test", eventID, func(event events.EventData) {
-		logEvent := event.(types.EventDataLog)
+		logEvent := event.(txs.EventDataLog)
 		// No need to test address as this event would not happen if it wasn't correct
 		if !reflect.DeepEqual(logEvent.Topics, expectedTopics) {
 			t.Errorf("Event topics are wrong. Got: %v. Expected: %v", logEvent.Topics, expectedTopics)
