@@ -90,13 +90,6 @@ type (
 		GasLimit int64  `json:"gas_limit"`
 	}
 
-	// Used when sending a 'Send' transaction.
-	SendParam struct {
-		PrivKey   []byte `json:"priv_key"`
-		ToAddress []byte `json:"to_address"`
-		Amount    int64  `json:"amount"`
-	}
-
 	NameRegEntryParam struct {
 		Name string `json:"name"`
 	}
