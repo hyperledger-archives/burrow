@@ -73,7 +73,7 @@ USER $USER
 RUN mkdir --parents /home/$USER/.eris/chains/tendermint
 ENV TMROOT /home/$USER/.eris/chains/tendermint
 
-# run tendermint
+# run eris-db
 # ports: 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc
 EXPOSE 1337
 EXPOSE 46656
