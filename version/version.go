@@ -17,4 +17,4 @@
 package version
 
 const VERSION = "0.12.0"
-const TENDERMINT_VERSION = "0.5.0"
+const TENDERMINT_VERSION = "0.6.0"
