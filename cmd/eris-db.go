@@ -76,23 +76,48 @@ func AddGlobalFlags() {
 //------------------------------------------------------------------------------
 // Defaults
 
+// defaultVerbose is set to false unless the ERIS_DB_VERBOSE environment
+// variable is set to a parsable boolean.
 func defaultVerbose() bool {
   return setDefaultBool("ERIS_DB_VERBOSE", false)
 }
 
+// defaultDebug is set to false unless the ERIS_DB_DEBUG environment
+// variable is set to a parsable boolean.
 func defaultDebug() bool {
   return setDefaultBool("ERIS_DB_DEBUG", false)
 }
 
+// defaultOutput is set to true unless the ERIS_DB_OUTPUT environment
+// variable is set to a parsable boolean.
 func defaultOutput() bool {
   return setDefaultBool("ERIS_DB_OUTPUT", true)
 }
 
-func setDefaultBool(envVar string, def bool) bool {
+// setDefaultBool returns the provided default value if the environment variab;e
+// is not set or not parsable as a bool.
+func setDefaultBool(environmentVariable string, defaultValue bool) bool {
+	value := os.Getenv(environmentVariable)
+	if value != "" {
+		if parsedValue, err := strconv.ParseBool(value); err == nil {
+  		return parsedValue
+    }
+	}
+	return defaultValue
+}
+
+func setDefaultString(envVar, def string) string {
 	env := os.Getenv(envVar)
 	if env != "" {
-		i, _ := strconv.ParseBool(env)
-		return i
+		return env
+	}
+	return def
+}
+
+func setDefaultStringSlice(envVar string, def []string) []string {
+	env := os.Getenv(envVar)
+	if env != "" {
+		return strings.Split(env, ",")
 	}
 	return def
 }
