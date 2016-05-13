@@ -27,4 +27,24 @@ import (
   serve "github.com/eris-ltd/eris-db/serve"
 )
 
-var
+var ServeCmd = &cobra.Command {
+  Use:   "serve",
+  Short: "Eris-DB serve starts an eris-db node with client API enabled by default.",
+  Long:  `Eris-DB serve starts an eris-db node with client API enabled by default.
+The Eris-DB node is modularly configured for the consensus engine and application
+manager.  The client API can be disabled.`,
+  Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory,
+$ eris-db serve myChainId --work-dir=/path/to/config -- will start the Eris-DB node based on the configuration file provided and assert the chain id matches.`,
+  PreRun: func(cmd *cobra.Command, args []string) {
+
+    // TODO: [ben] log marmotty welcome
+  }
+}
+
+
+//------------------------------------------------------------------------------
+// functions
+
+func Serve(cmd *cobra.Command, args []string) {
+
+}

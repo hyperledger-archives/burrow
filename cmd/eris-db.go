@@ -24,10 +24,14 @@ import (
 
   common "github.com/eris-ltd/common/go/common"
 
-  version "github.com/eris-ltd/eris-db/version"
+  defintion "github.com/eris-ltd/eris-db/defintions"
+  version   "github.com/eris-ltd/eris-db/version"
 )
 
 const VERSION = version.VERSION
+
+// Global Do struct
+var do *definitions.Do
 
 var ErisDbCmd = &cobra.Command {
   Use:   "eris-db"
@@ -47,8 +51,15 @@ Complete documentation is available at https://docs.erisindustries.com
 }
 
 func Execute() {
+  InitErisDb()
+  AddGlobalFlags()
   AddCommands()
   ErisDbCmd.Execute()
+}
+
+func InitErisDb() {
+  // initialise an empty do struct for command execution
+	do = definitions.NowDo()
 }
 
 func AddCommands() {
@@ -57,7 +68,31 @@ func AddCommands() {
 }
 
 func AddGlobalFlags() {
-	ErisCMCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v", defaultVerbose(), "verbose output; more output than no output flags; less output than debug level; default respects $ERIS_DB_VERBOSE")
-	ErisCMCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", defaultDebug(), "debug level output; the most output available for eris-db; if it is too chatty use verbose flag; default respects $ERIS_DB_DEBUG")
-	ErisCMCmd.PersistentFlags().BoolVarP(&do.Output, "output", "o", defaultOutput(), "should eris-db provide an output of its job; default respects $ERIS_DB_OUTPUT")
+	ErisDbCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v", defaultVerbose(), "verbose output; more output than no output flags; less output than debug level; default respects $ERIS_DB_VERBOSE")
+	ErisDbCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", defaultDebug(), "debug level output; the most output available for eris-db; if it is too chatty use verbose flag; default respects $ERIS_DB_DEBUG")
+	ErisDbCmd.PersistentFlags().BoolVarP(&do.Output, "output", "o", defaultOutput(), "should eris-db provide an output of its execution; default respects $ERIS_DB_OUTPUT")
+}
+
+//------------------------------------------------------------------------------
+// Defaults
+
+func defaultVerbose() bool {
+  return setDefaultBool("ERIS_DB_VERBOSE", false)
+}
+
+func defaultDebug() bool {
+  return setDefaultBool("ERIS_DB_DEBUG", false)
+}
+
+func defaultOutput() bool {
+  return setDefaultBool("ERIS_DB_OUTPUT", true)
+}
+
+func setDefaultBool(envVar string, def bool) bool {
+	env := os.Getenv(envVar)
+	if env != "" {
+		i, _ := strconv.ParseBool(env)
+		return i
+	}
+	return def
 }
