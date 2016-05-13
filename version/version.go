@@ -16,5 +16,25 @@
 
 package version
 
+import (
+  "fmt"
+)
+
 const VERSION = "0.12.0"
 const TENDERMINT_VERSION = "0.6.0"
+
+const (
+  // Client identifier to advertise over the network
+  clientIdentifier = "eris-db"
+  // Major version component of the current release
+  versionMajor     = 0
+  // Minor version component of the current release
+  versionMinor     = 12
+  // Patch version component of the current release
+  versionPatch     = 0
+)
+
+func GetVersionString() string {
+  return fmt.Sprintf("%s-%d.%d.%d", clientIdentifier, versionMajor, versionMinor,
+    versionPatch)
+}
