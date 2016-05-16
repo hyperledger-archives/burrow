@@ -18,13 +18,13 @@ package commands
 
 import (
   "fmt"
-  "os"
+  // "os"
 
   cobra "github.com/spf13/cobra"
 
-  common "github.com/eris-ltd/common/go/common"
+  // common "github.com/eris-ltd/common/go/common"
 
-  serve "github.com/eris-ltd/eris-db/serve"
+  // definitions "github.com/eris-ltd/eris-db/definitions"
 )
 
 var ServeCmd = &cobra.Command {
@@ -36,15 +36,28 @@ manager.  The client API can be disabled.`,
   Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory,
 $ eris-db serve myChainId --work-dir=/path/to/config -- will start the Eris-DB node based on the configuration file provided and assert the chain id matches.`,
   PreRun: func(cmd *cobra.Command, args []string) {
-
+    fmt.Println("pre-run serving")
     // TODO: [ben] log marmotty welcome
-  }
+  },
+  Run: func(cmd *cobra.Command, args []string) {
+    serve()
+  },
+}
+
+// build the serve subcommand
+func buildServeCommand() {
+  addServeFlags()
+}
+
+func addServeFlags() {
+  fmt.Println("Adding Serve flags")
 }
 
 
 //------------------------------------------------------------------------------
 // functions
 
-func Serve(cmd *cobra.Command, args []string) {
+func serve() {
 
+  fmt.Println("Served")
 }
