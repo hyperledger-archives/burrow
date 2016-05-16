@@ -67,7 +67,7 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 
 	// Get an erisdb configuration
 	var edbConf *edbcfg.ErisDBConfig
-	edbConfPath := path.Join(workDir, "config.toml")
+	edbConfPath := path.Join(workDir, "server_config.toml")
 	if !FileExists(edbConfPath) {
 		log.Info("No server configuration, using default.")
 		log.Info("Writing to: " + edbConfPath)
