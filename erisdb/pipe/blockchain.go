@@ -22,11 +22,13 @@ type BlockStore interface {
 
 // The blockchain struct.
 type blockchain struct {
+	chainID       string
+	genDocFile    string // XXX
 	blockStore    BlockStore
 	filterFactory *FilterFactory
 }
 
-func newBlockchain(blockStore BlockStore) *blockchain {
+func newBlockchain(chainID, genDocFile string, blockStore BlockStore) *blockchain {
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("height", &sync.Pool{
@@ -35,15 +37,14 @@ func newBlockchain(blockStore BlockStore) *blockchain {
 		},
 	})
 
-	return &blockchain{blockStore, ff}
+	return &blockchain{chainID, genDocFile, blockStore, ff}
 
 }
 
 // Get the status.
 func (this *blockchain) Info() (*BlockchainInfo, error) {
-	chainId := config.GetString("erisdb.chain_id")
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("erisdb.genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, this.genDocFile)
 	genesisHash := genesisState.Hash()
 	latestHeight := this.blockStore.Height()
 
@@ -54,7 +55,7 @@ func (this *blockchain) Info() (*BlockchainInfo, error) {
 	}
 
 	return &BlockchainInfo{
-		chainId,
+		this.chainID,
 		genesisHash,
 		latestHeight,
 		latestBlockMeta,
@@ -63,13 +64,13 @@ func (this *blockchain) Info() (*BlockchainInfo, error) {
 
 // Get the chain id.
 func (this *blockchain) ChainId() (string, error) {
-	return config.GetString("erisdb.chain_id"), nil
+	return this.chainID, nil
 }
 
 // Get the hash of the genesis block.
 func (this *blockchain) GenesisHash() ([]byte, error) {
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("erisdb.genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, this.genDocFile)
 	return genesisState.Hash(), nil
 }
 

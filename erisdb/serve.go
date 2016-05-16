@@ -88,13 +88,12 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	tmConfig = tmcfg.GetConfig(workDir)
 
 	// tmConfig.Set("tm.version", TENDERMINT_VERSION) // ?
-	cfg.ApplyConfig(tmConfig) // Notify in proc tendermint of new config
 
 	// Load the application state
 	// The app state used to be managed by tendermint node,
 	// but is now managed by ErisDB.
 	// The tendermint core only stores the blockchain (history of txs)
-	stateDB := dbm.GetDB("app_state", edbConf.DB.Backend, workDir+"/data")
+	stateDB := dbm.NewDB("app_state", edbConf.DB.Backend, workDir+"/data")
 	state := sm.LoadState(stateDB)
 	var genDoc *stypes.GenesisDoc
 	if state == nil {
@@ -115,7 +114,6 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 		}
 	}
 	// add the chainid
-	config.Set("erisdb.chain_id", state.ChainID)
 
 	// *****************************
 	// erisdb-tmsp app
@@ -133,7 +131,8 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	if inProc {
 		fmt.Println("Starting tm node in proc")
 		// will also start the go-rpc server (46657 api)
-		startTMNode(app, workDir)
+
+		startTMNode(tmConfig, app, workDir)
 	} else {
 		fmt.Println("Starting tmsp listener")
 		// Start the tmsp listener for state update commands
@@ -150,8 +149,9 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 	// *****************************
 	// Boot the erisdb restful API servers
 
+	genDocFile := tmConfig.GetString("genesis_file") // XXX
 	// Load supporting objects.
-	pipe := ep.NewPipe(app, evsw)
+	pipe := ep.NewPipe(state.ChainID, genDocFile, app, evsw)
 	codec := &TCodec{}
 	evtSubs := NewEventSubscriptions(pipe.Events())
 	// The services.
@@ -168,9 +168,9 @@ func ServeErisDB(workDir string, inProc bool) (*server.ServeProcess, error) {
 }
 
 // start an inproc tendermint node
-func startTMNode(app *edbapp.ErisDBApp, workDir string) {
+func startTMNode(config cfg.Config, app *edbapp.ErisDBApp, workDir string) {
 	// get the genesis
-	genDocFile := config.GetString("tm.genesis_file")
+	genDocFile := config.GetString("genesis_file")
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
@@ -179,18 +179,17 @@ func startTMNode(app *edbapp.ErisDBApp, workDir string) {
 	if genDoc.ChainID == "" {
 		PanicSanity(Fmt("Genesis doc %v must include non-empty chain_id", genDocFile))
 	}
-	config.Set("tm.chain_id", genDoc.ChainID)
-	config.Set("tm.genesis_doc", genDoc)
+	config.Set("chain_id", genDoc.ChainID)
 
 	// Get PrivValidator
-	privValidatorFile := config.GetString("tm.priv_validator_file")
+	privValidatorFile := config.GetString("priv_validator_file")
 	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
-	nd := node.NewNode(privValidator, func(addr string, hash []byte) proxy.AppConn {
+	nd := node.NewNode(config, privValidator, func(addr string, hash []byte) proxy.AppConn {
 		// TODO: Check the hash
 		return tmspcli.NewLocalClient(new(sync.Mutex), app)
 	})
 
-	l := p2p.NewDefaultListener("tcp", config.GetString("tm.node_laddr"), config.GetBool("tm.skip_upnp"))
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), config.GetBool("skip_upnp"))
 	nd.AddListener(l)
 	if err := nd.Start(); err != nil {
 		Exit(Fmt("Failed to start node: %v", err))
@@ -199,21 +198,23 @@ func startTMNode(app *edbapp.ErisDBApp, workDir string) {
 	log.Notice("Started node", "nodeInfo", nd.NodeInfo())
 
 	// If seedNode is provided by config, dial out.
-	if config.GetString("tm.seeds") != "" {
-		seeds := strings.Split(config.GetString("tm.seeds"), ",")
+	if config.GetString("seeds") != "" {
+		seeds := strings.Split(config.GetString("seeds"), ",")
 		nd.DialSeeds(seeds)
 	}
 
 	// Run the RPC server.
-	if config.GetString("tm.rpc_laddr") != "" {
-		_, err := StartRPC(nd, app)
+	if config.GetString("rpc_laddr") != "" {
+		_, err := StartRPC(config, nd, app)
 		if err != nil {
 			PanicCrisis(err)
 		}
 	}
 }
 
-func StartRPC(n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
+func StartRPC(config cfg.Config, n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
+	rpccore.SetConfig(config)
+
 	rpccore.SetErisDBApp(edbApp)
 	rpccore.SetBlockStore(n.BlockStore())
 	rpccore.SetConsensusState(n.ConsensusState())
@@ -221,9 +222,9 @@ func StartRPC(n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
 	rpccore.SetMempoolReactor(n.MempoolReactor())
 	rpccore.SetSwitch(n.Switch())
 	rpccore.SetPrivValidator(n.PrivValidator())
-	rpccore.SetGenDoc(LoadGenDoc())
+	rpccore.SetGenDoc(LoadGenDoc(config.GetString("genesis_file")))
 
-	listenAddrs := strings.Split(config.GetString("tm.rpc_laddr"), ",")
+	listenAddrs := strings.Split(config.GetString("rpc_laddr"), ",")
 
 	// we may expose the rpc over both a unix and tcp socket
 	listeners := make([]net.Listener, len(listenAddrs))
@@ -241,8 +242,7 @@ func StartRPC(n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
 	return listeners, nil
 }
 
-func LoadGenDoc() *stypes.GenesisDoc {
-	genDocFile := config.GetString("tm.genesis_file")
+func LoadGenDoc(genDocFile string) *stypes.GenesisDoc {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))

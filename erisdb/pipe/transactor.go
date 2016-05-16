@@ -20,14 +20,16 @@ import (
 )
 
 type transactor struct {
+	chainID      string
 	eventSwitch  tEvents.Fireable
 	erisdbApp    *tmsp.ErisDBApp
 	eventEmitter EventEmitter
 	txMtx        *sync.Mutex
 }
 
-func newTransactor(eventSwitch tEvents.Fireable, erisdbApp *tmsp.ErisDBApp, eventEmitter EventEmitter) *transactor {
+func newTransactor(chainID string, eventSwitch tEvents.Fireable, erisdbApp *tmsp.ErisDBApp, eventEmitter EventEmitter) *transactor {
 	txs := &transactor{
+		chainID,
 		eventSwitch,
 		erisdbApp,
 		eventEmitter,
@@ -104,8 +106,7 @@ func (this *transactor) BroadcastTx(tx txs.Tx) (*Receipt, error) {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
 
-	chainId := config.GetString("erisdb.chain_id")
-	txHash := txs.TxID(chainId, tx)
+	txHash := txs.TxID(this.chainID, tx)
 	var createsContract uint8
 	var contractAddr []byte
 	// check if creates new contract
@@ -246,41 +247,40 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 			return nil, fmt.Errorf("Invalid (empty) privAccount @%v", i)
 		}
 	}
-	chainId := config.GetString("erisdb.chain_id")
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
 		nameTx.Input.PubKey = privAccounts[0].PubKey
-		nameTx.Input.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), nameTx)
+		nameTx.Input.Signature = privAccounts[0].Sign(this.chainID, nameTx)
 	case *txs.SendTx:
 		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
 			input.PubKey = privAccounts[i].PubKey
-			input.Signature = privAccounts[i].Sign(chainId, sendTx)
+			input.Signature = privAccounts[i].Sign(this.chainID, sendTx)
 		}
 		break
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
-		callTx.Input.Signature = privAccounts[0].Sign(chainId, callTx)
+		callTx.Input.Signature = privAccounts[0].Sign(this.chainID, callTx)
 		break
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = privAccounts[0].Sign(chainId, bondTx).(crypto.SignatureEd25519)
+		bondTx.Signature = privAccounts[0].Sign(this.chainID, bondTx).(crypto.SignatureEd25519)
 		for i, input := range bondTx.Inputs {
 			input.PubKey = privAccounts[i+1].PubKey
-			input.Signature = privAccounts[i+1].Sign(chainId, bondTx)
+			input.Signature = privAccounts[i+1].Sign(this.chainID, bondTx)
 		}
 		break
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
-		unbondTx.Signature = privAccounts[0].Sign(chainId, unbondTx).(crypto.SignatureEd25519)
+		unbondTx.Signature = privAccounts[0].Sign(this.chainID, unbondTx).(crypto.SignatureEd25519)
 		break
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
-		rebondTx.Signature = privAccounts[0].Sign(chainId, rebondTx).(crypto.SignatureEd25519)
+		rebondTx.Signature = privAccounts[0].Sign(this.chainID, rebondTx).(crypto.SignatureEd25519)
 		break
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)

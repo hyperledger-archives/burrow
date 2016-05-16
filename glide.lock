@@ -1,5 +1,5 @@
-hash: a6917bb6310c1da8c811026f209ba9d0d51783a8e8b83e3eb73df9fc4b14f46f
-updated: 2016-05-10T15:55:18.049756292+01:00
+hash: 9cba3c71b5ea9762cc27faa683ad5611c47de7761f5633131b92cde7961eb227
+updated: 2016-05-11T16:58:37.071884134-04:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 2554caee5919958c0d4b41db8035f0e12ce6f624
@@ -68,11 +68,11 @@ imports:
 - name: github.com/tendermint/go-common
   version: dcfa46af1341d03b80d32e4901019d1668b978b9
 - name: github.com/tendermint/go-config
-  version: 150209dfcfdc7042dd8efc120e97398ea936e53e
+  version: 2d53a767e86786e610f90171e455c98a9927ad60
 - name: github.com/tendermint/go-crypto
   version: 41cfb7b677f4e16cdfd22b6ce0946c89919fbc7b
 - name: github.com/tendermint/go-db
-  version: 16d1493718a519baff4f92dfec63a463525fb2fb
+  version: 31fdd21c7eaeed53e0ea7ca597fb1e960e2988a5
 - name: github.com/tendermint/go-events
   version: 7b75ca7bb55aa25e9ef765eb8c0b69486b227357
 - name: github.com/tendermint/go-logger
@@ -80,7 +80,7 @@ imports:
 - name: github.com/tendermint/go-merkle
   version: 05042c6ab9cad51d12e4cecf717ae68e3b1409a8
 - name: github.com/tendermint/go-p2p
-  version: 78c9d526c31d5ae06d5793b865d25a9407b635dc
+  version: 7d997ca8e658731a22de53f11efaedee0c764b8d
   subpackages:
   - upnp
 - name: github.com/tendermint/go-rpc
@@ -94,7 +94,7 @@ imports:
 - name: github.com/tendermint/log15
   version: 6e460758f10ef42a4724b8e4a82fee59aaa0e41d
 - name: github.com/tendermint/tendermint
-  version: a31b718cff5a3ae95377fa4488ac303f8ec2da2f
+  version: b2e612fb79f204a5c8ebf63d9824b6119c42b84c
   subpackages:
   - config/tendermint
   - consensus
@@ -119,7 +119,7 @@ imports:
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: 91ab96ae987aef3e74ab78b3aaf026109d206148
+  version: b76c864ef1dca1d8f271f917c290cddcce3d9e0d
   subpackages:
   - ripemd160
   - nacl/secretbox
@@ -135,7 +135,7 @@ imports:
   - context
   - netutil
 - name: golang.org/x/sys
-  version: b776ec39b3e54652e09028aaaaac9757f4f8211a
+  version: 806cb00533e5af545ce95e84b349404f8e5ff7a8
   subpackages:
   - unix
 - name: gopkg.in/fatih/set.v0
