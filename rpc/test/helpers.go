@@ -15,6 +15,7 @@ import (
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
+	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
@@ -29,6 +30,7 @@ import (
 
 // global variables for use across all tests
 var (
+	config            cfg.Config
 	node              *nm.Node
 	mempoolCount      = 0
 	chainID           string
@@ -44,7 +46,6 @@ var (
 )
 
 func init() {
-	tendermint_test.ResetConfig("rpc_test_client_test")
 	initGlobalVariables()
 
 	saveNewPriv()
@@ -52,8 +53,9 @@ func init() {
 
 // initialize config and create new node
 func initGlobalVariables() {
-	chainID = config.GetString("tm.chain_id")
-	rpcAddr = config.GetString("tm.rpc_laddr")
+	config = tendermint_test.ResetConfig("rpc_test_client_test")
+	chainID = config.GetString("chain_id")
+	rpcAddr = config.GetString("rpc_laddr")
 	config.Set("erisdb.chain_id", chainID)
 	requestAddr = rpcAddr
 	websocketAddr = rpcAddr
@@ -68,7 +70,7 @@ func initGlobalVariables() {
 	}
 
 	// write the genesis
-	MustWriteFile(config.GetString("tm.genesis_file"), []byte(defaultGenesis), 0600)
+	MustWriteFile(config.GetString("genesis_file"), []byte(defaultGenesis), 0600)
 
 	// TODO: change consensus/state.go timeouts to be shorter
 
@@ -91,8 +93,8 @@ func makeUsers(n int) []*acm.PrivAccount {
 
 // create a new node and sleep forever
 func newNode(ready chan struct{}) {
-	stateDB := dbm.GetDB("app_state", "memdb", "")
-	genDoc, state := sm.MakeGenesisStateFromFile(stateDB, config.GetString("tm.genesis_file"))
+	stateDB := dbm.NewDB("app_state", "memdb", "")
+	genDoc, state := sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
 	state.Save()
 	buf, n, err := new(bytes.Buffer), new(int), new(error)
 	wire.WriteJSON(genDoc, buf, n, err)
@@ -106,15 +108,15 @@ func newNode(ready chan struct{}) {
 	app := edbapp.NewErisDBApp(state, evsw)
 
 	// Create & start node
-	privValidatorFile := config.GetString("tm.priv_validator_file")
+	privValidatorFile := config.GetString("priv_validator_file")
 	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
-	node = nm.NewNode(privValidator, nm.GetProxyApp)
-	l := p2p.NewDefaultListener("tcp", config.GetString("tm.node_laddr"), true)
+	node = nm.NewNode(config, privValidator, nm.GetProxyApp)
+	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), true)
 	node.AddListener(l)
 	node.Start()
 
 	// Run the RPC server.
-	edb.StartRPC(node, app)
+	edb.StartRPC(config, node, app)
 	ready <- struct{}{}
 
 	// Sleep forever
@@ -129,7 +131,7 @@ func saveNewPriv() {
 		PubKey:  crypto.PubKeyEd25519(user[0].PubKey.(crypto.PubKeyEd25519)),
 		PrivKey: crypto.PrivKeyEd25519(user[0].PrivKey.(crypto.PrivKeyEd25519)),
 	}
-	priv.SetFile(config.GetString("tm.priv_validator_file"))
+	priv.SetFile(config.GetString("priv_validator_file"))
 	priv.Save()
 }
 

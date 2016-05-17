@@ -83,6 +83,8 @@ type (
 
 // Base struct for getting rpc proxy objects (node.Node has no interface).
 type PipeImpl struct {
+	chainID    string
+	genDocFile string
 	//tNode      *node.Node
 	erisdbApp  *tmsp.ErisDBApp
 	accounts   Accounts
@@ -108,21 +110,23 @@ type PipeImpl struct {
 // 	net := newNetwork(tNode.Switch())
 // 	txs := newTransactor(tNode.EventSwitch(), tNode.ConsensusState(), tNode.MempoolReactor(), events)
 // =======
-func NewPipe(erisdbApp *tmsp.ErisDBApp, eventSwitch *em.EventSwitch) Pipe {
+func NewPipe(chainID, genDocFile string, erisdbApp *tmsp.ErisDBApp, eventSwitch *em.EventSwitch) Pipe {
 	events := newEvents(eventSwitch)
 
 	accounts := newAccounts(erisdbApp)
 	namereg := newNamereg(erisdbApp)
-	txs := newTransactor(eventSwitch, erisdbApp, events)
+	txs := newTransactor(chainID, eventSwitch, erisdbApp, events)
 
 	// TODO: make interface to tendermint core's rpc for these
-	// blockchain := newBlockchain(blockStore)
+	// blockchain := newBlockchain(chainID, genDocFile, blockStore)
 	// consensus := newConsensus(erisdbApp)
 	// net := newNetwork(erisdbApp)
 
 	return &PipeImpl{
-		erisdbApp: erisdbApp,
-		accounts:  accounts,
+		chainID:    chainID,
+		genDocFile: genDocFile,
+		erisdbApp:  erisdbApp,
+		accounts:   accounts,
 		// blockchain,
 		// consensus,
 		events:  events,

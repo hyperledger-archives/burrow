@@ -1,37 +1,11 @@
 package: github.com/eris-ltd/eris-db
 import:
+- package: github.com/tendermint/tendermint
+  version: 55ef4b225fb0aa5637a96d36a8c0d030a59dc21d
 - package: github.com/gin-gonic/gin
 - package: github.com/gorilla/websocket
 - package: github.com/naoina/toml
-- package: github.com/tendermint/ed25519
-- package: github.com/tendermint/go-common
-- package: github.com/tendermint/go-config
-  version: 150209dfcfdc7042dd8efc120e97398ea936e53e
-- package: github.com/tendermint/go-crypto
-- package: github.com/tendermint/go-db
-  version: develop
-- package: github.com/tendermint/go-events
-- package: github.com/tendermint/go-logger
-- package: github.com/tendermint/go-merkle
-- package: github.com/tendermint/go-p2p
-  version: 78c9d526c31d5ae06d5793b865d25a9407b635dc
 - package: github.com/stretchr/testify
-- package: github.com/tendermint/go-rpc
-- package: github.com/tendermint/go-wire
-  version: 3b0adbc86ed8425eaed98516165b6788d9f4de7a
-- package: github.com/tendermint/log15
-- package: github.com/tendermint/tendermint
-  version: a31b718cff5a3ae95377fa4488ac303f8ec2da2f
-  subpackages:
-  - config/tendermint
-  - consensus
-  - node
-  - rpc/core/types
-  - types
-- package: github.com/tendermint/tmsp
-  subpackages:
-  - server
-  - types
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
   subpackages:
