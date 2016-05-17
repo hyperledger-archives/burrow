@@ -1,13 +1,7 @@
 # Pull base image.
-FROM quay.io/eris/base
+FROM quay.io/eris/build
 MAINTAINER Eris Industries <support@erisindustries.com>
 
-#-----------------------------------------------------------------------------
-# dependencies
-RUN apt-get update && \
-  apt-get install -y --no-install-recommends \
-    libgmp3-dev jq && \
-  rm -rf /var/lib/apt/lists/*
 
 #-----------------------------------------------------------------------------
 # install tendermint
@@ -19,7 +13,7 @@ ENV REPO github.com/eris-ltd/tendermint
 ENV COMMIT working
 # note, we want to lock in the same commit number
 #  as eris-db has vendored.
-RUN mkdir --parents $GOPATH/src/$REPO
+RUN mkdir -p $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO_ALIAS
 RUN git clone --quiet https://$REPO . && \
   git checkout --quiet $COMMIT && \
@@ -31,7 +25,7 @@ RUN git clone --quiet https://$REPO . && \
 # set the repo and install mint-client
 ENV REPO github.com/eris-ltd/mint-client
 ENV BRANCH master
-RUN mkdir --parents $GOPATH/src/$REPO
+RUN mkdir -p $GOPATH/src/$REPO
 WORKDIR $GOPATH/src/$REPO
 RUN git clone --quiet https://$REPO . && \
   git checkout --quiet $BRANCH && \
@@ -84,7 +78,7 @@ RUN chown -R eris $ECM_PATH
 VOLUME /home/$USER/.eris
 WORKDIR /home/$USER/.eris
 USER $USER
-RUN mkdir --parents /home/$USER/.eris/chains/tendermint
+RUN mkdir -p /home/$USER/.eris/chains/tendermint
 ENV TMROOT /home/$USER/.eris/chains/tendermint
 
 # run tendermint
