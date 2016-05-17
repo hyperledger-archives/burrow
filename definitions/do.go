@@ -26,6 +26,7 @@ type Do struct {
 	Debug        bool     // ERIS_DB_DEBUG
 	Verbose      bool     // ERIS_DB_VERBOSE
 	Output       bool     // ERIS_DB_OUTPUT
+  WorkDir      string
   // Capital configuration options explicitly extracted from the Viper config
 	ChainId      string   // has to be set to non-empty string,
                         // uniquely identifying the chain.
@@ -46,6 +47,7 @@ func NowDo() *Do {
 	// the default value for output is set to true in cmd/eris-db.go;
 	// avoid double setting it here though
 	do.Output = false
+  do.WorkDir = ""
   do.ChainId = ""
 	do.Config = viper.New()
 	return do

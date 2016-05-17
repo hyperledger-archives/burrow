@@ -36,7 +36,6 @@ manager.  The client API can be disabled.`,
   Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory,
 $ eris-db serve myChainId --work-dir=/path/to/config -- will start the Eris-DB node based on the configuration file provided and assert the chain id matches.`,
   PreRun: func(cmd *cobra.Command, args []string) {
-    fmt.Println("pre-run serving")
     // TODO: [ben] log marmotty welcome
   },
   Run: func(cmd *cobra.Command, args []string) {
@@ -51,6 +50,8 @@ func buildServeCommand() {
 
 func addServeFlags() {
   fmt.Println("Adding Serve flags")
+  ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
+    defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
 }
 
 
@@ -58,6 +59,23 @@ func addServeFlags() {
 // functions
 
 func serve() {
+  //
+  // load config from
+  loadConfig()
+  fmt.Printf("Served from %s \n", do.WorkDir)
+}
 
-  fmt.Println("Served")
+//------------------------------------------------------------------------------
+// Viper configuration
+
+func loadConfig(conf *viper.Viper, path string) {
+  conf.
+}
+
+//------------------------------------------------------------------------------
+// Defaults
+
+func defaultWorkDir() string {
+  // if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
+  return setDefaultString("ERIS_DB_WORKDIR", "")
 }

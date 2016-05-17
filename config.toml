@@ -1,0 +1,66 @@
+# Copyright 2015, 2016 Eris Industries (UK) Ltd.
+# This file is part of Eris-RT
+#
+# Eris-RT is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Eris-RT is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+
+# This is a TOML configuration for Eris-DB chain
+
+
+[chain]
+
+# ChainId is a human-readable name to identify the chain
+# this must correspond to the chain_id given in the genesis file
+chain_id = "MyChainId"
+# semantic major and minor version
+version = "0.12"
+
+
+
+###############################################################################
+##
+##  consensus
+##
+###############################################################################
+
+  [chain.consensus]
+  # consensus defines the module to use for consensus and
+  # this will define the peer-to-peer consensus network;
+  # accepted values are "noops", "tmsp", "tendermint"
+  module = "tmsp"
+  # version is the major and minor semantic version;
+  # the version will be asserted on
+  version = "0.6"
+  # relative
+  relative_root = "tendermint"
+  config_file = "tendermint/config.toml"
+  #
+
+###############################################################################
+##
+##  application manager
+##
+###############################################################################
+
+
+[servers]
+
+
+  [servers.http]
+
+  [servers.websocket]
+  enable = true
+  endpoint = "/socketrpc"
+  max_sessions = 50
+  read_buffer_size = 4096
+  write_buffer_size = 4096
