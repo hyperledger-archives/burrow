@@ -28,7 +28,7 @@ dependencies:
     - sudo chmod +x /usr/bin/docker
     # Override host go
     - sudo service docker start
-    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    - sudo apt-get update && sudo apt-get install -y libgmp3-dev
   cache_directories:
     - ~/cache
 
@@ -44,7 +44,9 @@ test:
     # !! Currently we are just making sure our tests build, but are not running the actual tests !!
     # This is a temporary measure, as we would like our CI to do something useful for us whilst whilst
     # we stabalise our tests
-    - cd $GOPATH_REPO && glide novendor -x | xargs -I{1} find "{1}" -type d | xargs -L1 go test -c
+    # go test -c doesn't support wildcards, and we need to only pick directories that contain go files thus this
+    # crazy dance
+    - cd $GOPATH_REPO && find -path ./vendor -prune -o -name "*.go" -printf "%h\n" | sort | uniq | xargs -L1 go test -v -c
 
 deployment:
   master:
