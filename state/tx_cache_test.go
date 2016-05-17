@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"testing"
 
-
 	"github.com/tendermint/go-wire"
 )
 
 func TestStateToFromVMAccount(t *testing.T) {
-	acmAcc1, _ := stypes.RandAccount(true, 456)
+	acmAcc1, _ := RandAccount(true, 456)
 	vmAcc := toVMAccount(acmAcc1)
 	acmAcc2 := toStateAccount(vmAcc)
 
