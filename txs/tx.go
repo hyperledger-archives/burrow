@@ -331,9 +331,10 @@ type DupeoutTx struct {
 	VoteB   types.Vote `json:"vote_b"`
 }
 
-
 func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	PanicSanity("DupeoutTx has no sign bytes")
+	//PanicSanity("DupeoutTx has no sign bytes")
+	// TODO
+	return
 }
 
 func (tx *DupeoutTx) String() string {
