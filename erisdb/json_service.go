@@ -2,11 +2,14 @@ package erisdb
 
 import (
 	"encoding/json"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
+	"net/http"
+
+	cfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
-	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
@@ -21,7 +24,7 @@ func NewJsonRpcServer(service server.HttpService) *JsonRpcServer {
 }
 
 // Start adds the rpc path to the router.
-func (this *JsonRpcServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (this *JsonRpcServer) Start(config *cfg.ServerConfig, router *gin.Engine) {
 	router.POST(config.HTTP.JsonRpcEndpoint, this.handleFunc)
 	this.running = true
 }

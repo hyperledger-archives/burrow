@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	cm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/consensus"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	types "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"sync"
+
+	sm "github.com/eris-ltd/eris-db/state"
+	"github.com/eris-ltd/eris-db/tmsp"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 // The net struct.
 type namereg struct {
-	consensusState *cm.ConsensusState
-	filterFactory  *FilterFactory
+	erisdbApp     *tmsp.ErisDBApp
+	filterFactory *FilterFactory
 }
 
-func newNamereg(consensusState *cm.ConsensusState) *namereg {
+func newNamereg(erisdbApp *tmsp.ErisDBApp) *namereg {
 
 	ff := NewFilterFactory()
 
@@ -44,11 +45,11 @@ func newNamereg(consensusState *cm.ConsensusState) *namereg {
 		},
 	})
 
-	return &namereg{consensusState, ff}
+	return &namereg{erisdbApp, ff}
 }
 
-func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
-	st := this.consensusState.GetState() // performs a copy
+func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
+	st := this.erisdbApp.GetState() // performs a copy
 	entry := st.GetNameRegEntry(key)
 	if entry == nil {
 		return nil, fmt.Errorf("Entry %s not found", key)
@@ -56,23 +57,28 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*FilterData) (*ctypes.ResultListNames, error) {
+func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 	var blockHeight int
-	var names []*types.NameRegEntry
-	state := this.consensusState.GetState()
+	var names []*txs.NameRegEntry
+	state := this.erisdbApp.GetState()
 	blockHeight = state.LastBlockHeight
 	filter, err := this.filterFactory.NewFilter(filters)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetNames().Iterate(func(key interface{}, value interface{}) bool {
-		nre := value.(*types.NameRegEntry)
+	state.GetNames().Iterate(func(key, value []byte) bool {
+		nre := sm.DecodeNameRegEntry(value)
 		if filter.Match(nre) {
 			names = append(names, nre)
 		}
 		return false
 	})
-	return &ctypes.ResultListNames{blockHeight, names}, nil
+	return &ResultListNames{blockHeight, names}, nil
+}
+
+type ResultListNames struct {
+	BlockHeight int                 `json:"block_height"`
+	Names       []*txs.NameRegEntry `json:"names"`
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.
@@ -104,7 +110,7 @@ func (this *NameRegNameFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegNameFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -143,7 +149,7 @@ func (this *NameRegOwnerFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegOwnerFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -179,7 +185,7 @@ func (this *NameRegDataFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegDataFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -210,7 +216,7 @@ func (this *NameRegExpiresFilter) Configure(fd *FilterData) error {
 }
 
 func (this *NameRegExpiresFilter) Match(v interface{}) bool {
-	nre, ok := v.(*types.NameRegEntry)
+	nre, ok := v.(*txs.NameRegEntry)
 	if !ok {
 		return false
 	}

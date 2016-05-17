@@ -1,12 +1,14 @@
 package testdata
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	stypes "github.com/eris-ltd/eris-db/state/types"
+	types "github.com/eris-ltd/eris-db/txs"
+
+	"github.com/tendermint/go-wire"
+	mintTypes "github.com/tendermint/tendermint/types"
 )
 
 var testDataJson = `{
@@ -51,10 +53,7 @@ var testDataJson = `{
       ],
       "validators": [
         {
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
+          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
           "amount": 5000000000,
           "unbond_to": [
             {
@@ -104,9 +103,7 @@ var testDataJson = `{
 	          "perms": 2302,
 	          "set": 16383
 	        },
-	        "roles": [
-	          
-	        ]
+	        "roles": []
 	      }
 	    },
         {
@@ -269,10 +266,7 @@ var testDataJson = `{
       "validators": [
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
+          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
           "bond_height": 0,
           "unbond_height": 0,
           "last_commit_height": 0,
@@ -289,10 +283,7 @@ var testDataJson = `{
       "bonded_validators": [
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
+          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
           "bond_height": 0,
           "unbond_height": 0,
           "last_commit_height": 0,
@@ -499,7 +490,7 @@ var testDataJson = `{
     "input": {
       "filters": []
     },
-    "output": [11, {
+    "output": {
       "block_height": 1,
       "names":[ {
         "name": "testKey",
@@ -507,7 +498,7 @@ var testDataJson = `{
         "data": "testData",
         "expires": 250
       } ]
-    }]
+    }
   }
 }`
 
@@ -515,8 +506,8 @@ var serverDuration uint = 100
 
 type (
 	ChainData struct {
-		PrivValidator *types.PrivValidator `json:"priv_validator"`
-		Genesis       *stypes.GenesisDoc   `json:"genesis"`
+		PrivValidator *mintTypes.PrivValidator `json:"priv_validator"`
+		Genesis       *stypes.GenesisDoc       `json:"genesis"`
 	}
 
 	GetAccountData struct {
@@ -560,12 +551,12 @@ type (
 	}
 
 	GetLatestBlockData struct {
-		Output *types.Block `json:"output"`
+		Output *mintTypes.Block `json:"output"`
 	}
 
 	GetBlockData struct {
 		Input  *edb.HeightParam `json:"input"`
-		Output *types.Block     `json:"output"`
+		Output *mintTypes.Block `json:"output"`
 	}
 
 	GetBlocksData struct {
@@ -655,8 +646,8 @@ type (
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *edb.FilterListParam    `json:"input"`
-		Output *ctypes.ResultListNames `json:"output"`
+		Input  *edb.FilterListParam `json:"input"`
+		Output *ep.ResultListNames  `json:"output"`
 	}
 
 	/*
@@ -704,11 +695,15 @@ type (
 )
 
 func LoadTestData() *TestData {
-	codec := edb.NewTCodec()
-	testData := &TestData{}
-	err := codec.DecodeBytes(testData, []byte(testDataJson))
+	var err error
+	//codec := edb.NewTCodec()
+	testData := TestData{}
+	testDataI := wire.ReadJSON(testData, []byte(testDataJson), &err)
+	/*err := codec.DecodeBytes(testData, []byte(testDataJson))
+	 */
 	if err != nil {
 		panic(err)
 	}
-	return testData
+	testData = testDataI.(TestData)
+	return &testData
 }

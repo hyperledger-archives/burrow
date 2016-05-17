@@ -2,15 +2,18 @@ package server
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
 	"os"
+
+	"github.com/tendermint/log15"
+
+	cfg "github.com/eris-ltd/eris-db/config"
 )
 
 var rootHandler log15.Handler
 
 // This is basically the same code as in tendermint. Initialize root
 // and maybe later also track the loggers here.
-func InitLogger(config *ServerConfig) {
+func InitLogger(config *cfg.ServerConfig) {
 
 	consoleLogLevel := config.Logging.ConsoleLogLevel
 

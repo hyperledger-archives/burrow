@@ -10,20 +10,16 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 #-----------------------------------------------------------------------------
-# install tendermint
+# install erisdb
+#
+ENV GO15VENDOREXPERIMENT 1
 
-# set the repo and install tendermint -- should track vendored commit
-ENV REPO_ALIAS github.com/tendermint/tendermint
-ENV REPO github.com/eris-ltd/tendermint
-#ENV COMMIT 4ee387d0770ed379e2d524f7077938517b38cd7c
-ENV COMMIT working
-# note, we want to lock in the same commit number
-#  as eris-db has vendored.
-RUN mkdir --parents $GOPATH/src/$REPO
-WORKDIR $GOPATH/src/$REPO_ALIAS
-RUN git clone --quiet https://$REPO . && \
-  git checkout --quiet $COMMIT && \
-  go build -o /usr/local/bin/tendermint ./cmd/tendermint
+# set the repo and install erisdb
+ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
+WORKDIR $REPO
+COPY . $REPO
+RUN cd ./cmd/erisdb && go build -o /usr/local/bin/erisdb && \
+  cd ../erisdbss && go build -o /usr/local/bin/erisdbss && cd ../..
 
 #-----------------------------------------------------------------------------
 # install mint-client tools
@@ -40,20 +36,10 @@ RUN git clone --quiet https://$REPO . && \
   mv ./mint-client /usr/local/bin/
 
 #-----------------------------------------------------------------------------
-# install erisdb
-
-# set the repo and install erisdb
-ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
-COPY . $REPO
-WORKDIR $REPO
-RUN cd ./cmd/erisdb && go build -o /usr/local/bin/erisdb && cd ../..
-
-#-----------------------------------------------------------------------------
 # cleanup
 
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
-  unset REPO_ALIAS && \
   unset COMMIT && \
   unset BRANCH
 
@@ -88,8 +74,8 @@ RUN mkdir --parents /home/$USER/.eris/chains/tendermint
 ENV TMROOT /home/$USER/.eris/chains/tendermint
 
 # run tendermint
-# ports: 1337:eris-db API; 46656:mint-peer; 46657:mint-rpc
+# ports: 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc
 EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
-CMD "erisdb-wrapper"
+ENTRYPOINT ["erisdb"]

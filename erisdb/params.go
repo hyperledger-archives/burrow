@@ -1,9 +1,9 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/erisdb/pipe"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 type (
@@ -76,7 +76,7 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           *types.CallTx          `json:"tx"`
+		Tx           *txs.CallTx            `json:"tx"`
 		PrivAccounts []*account.PrivAccount `json:"priv_accounts"`
 	}
 
@@ -88,13 +88,6 @@ type (
 		Address  []byte `json:"address"`
 		Fee      int64  `json:"fee"`
 		GasLimit int64  `json:"gas_limit"`
-	}
-
-	// Used when sending a 'Send' transaction.
-	SendParam struct {
-		PrivKey   []byte `json:"priv_key"`
-		ToAddress []byte `json:"to_address"`
-		Amount    int64  `json:"amount"`
 	}
 
 	NameRegEntryParam struct {

@@ -2,25 +2,33 @@ package pipe
 
 import (
 	"fmt"
-	bc "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/db"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/eris-ltd/eris-db/state"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/tendermint/types"
 )
 
 const BLOCK_MAX = 50
 
+type BlockStore interface {
+	Height() int
+	LoadBlockMeta(height int) *types.BlockMeta
+	LoadBlock(height int) *types.Block
+}
+
 // The blockchain struct.
 type blockchain struct {
-	blockStore    *bc.BlockStore
+	chainID       string
+	genDocFile    string // XXX
+	blockStore    BlockStore
 	filterFactory *FilterFactory
 }
 
-func newBlockchain(blockStore *bc.BlockStore) *blockchain {
+func newBlockchain(chainID, genDocFile string, blockStore BlockStore) *blockchain {
 	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("height", &sync.Pool{
@@ -29,15 +37,14 @@ func newBlockchain(blockStore *bc.BlockStore) *blockchain {
 		},
 	})
 
-	return &blockchain{blockStore, ff}
+	return &blockchain{chainID, genDocFile, blockStore, ff}
 
 }
 
 // Get the status.
 func (this *blockchain) Info() (*BlockchainInfo, error) {
-	chainId := config.GetString("chain_id")
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, this.genDocFile)
 	genesisHash := genesisState.Hash()
 	latestHeight := this.blockStore.Height()
 
@@ -48,7 +55,7 @@ func (this *blockchain) Info() (*BlockchainInfo, error) {
 	}
 
 	return &BlockchainInfo{
-		chainId,
+		this.chainID,
 		genesisHash,
 		latestHeight,
 		latestBlockMeta,
@@ -57,13 +64,13 @@ func (this *blockchain) Info() (*BlockchainInfo, error) {
 
 // Get the chain id.
 func (this *blockchain) ChainId() (string, error) {
-	return config.GetString("chain_id"), nil
+	return this.chainID, nil
 }
 
 // Get the hash of the genesis block.
 func (this *blockchain) GenesisHash() ([]byte, error) {
 	db := dbm.NewMemDB()
-	_, genesisState := state.MakeGenesisStateFromFile(db, config.GetString("genesis_file"))
+	_, genesisState := state.MakeGenesisStateFromFile(db, this.genDocFile)
 	return genesisState.Hash(), nil
 }
 

@@ -3,18 +3,16 @@ package erisdb
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
+
+	cfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/util"
-
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/wire"
 )
 
 // Provides a REST-like web-api. Implements server.Server
@@ -33,7 +31,7 @@ func NewRestServer(codec rpc.Codec, pipe ep.Pipe, eventSubs *EventSubscriptions)
 }
 
 // Starting the server means registering all the handlers with the router.
-func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (this *RestServer) Start(config *cfg.ServerConfig, router *gin.Engine) {
 	// Accounts
 	router.GET("/accounts", parseSearchQuery, this.handleAccounts)
 	router.GET("/accounts/:address", addressParam, this.handleAccount)
@@ -376,15 +374,12 @@ func (this *RestServer) handlePeer(c *gin.Context) {
 // ********************************* Transactions *********************************
 
 func (this *RestServer) handleBroadcastTx(c *gin.Context) {
-	// Special because Tx is an interface
-	param := new(types.Tx)
-	b, err := ioutil.ReadAll(c.Request.Body)
-	defer c.Request.Body.Close()
-	wire.ReadJSONPtr(param, b, &err)
-	if err != nil {
-		c.AbortWithError(500, err)
+	param := &txs.CallTx{}
+	errD := this.codec.Decode(param, c.Request.Body)
+	if errD != nil {
+		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(*param)
+	receipt, err := this.pipe.Transactor().BroadcastTx(param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

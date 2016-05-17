@@ -4,22 +4,24 @@ package mock
 import (
 	"bytes"
 	"encoding/hex"
+	"net/http"
+	"os"
+	"runtime"
+	"testing"
+
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	"net/http"
-	"os"
-	"runtime"
-	"testing"
+	"github.com/eris-ltd/eris-db/txs"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/log15"
 )
 
 func init() {
@@ -49,10 +51,10 @@ func (this *MockSuite) SetupSuite() {
 	evtSubs := edb.NewEventSubscriptions(pipe.Events())
 	// The server
 	restServer := edb.NewRestServer(codec, pipe, evtSubs)
-	sConf := server.DefaultServerConfig()
+	sConf := config.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc := server.NewServeProcess(sConf, restServer)
+	proc := server.NewServeProcess(&sConf, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)
@@ -172,7 +174,7 @@ func (this *MockSuite) TestGetValidators() {
 
 func (this *MockSuite) TestGetNameRegEntry() {
 	resp := this.get("/namereg/" + this.testData.GetNameRegEntry.Input.Name)
-	ret := &types.NameRegEntry{}
+	ret := &txs.NameRegEntry{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntry.Output)
@@ -180,7 +182,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 
 func (this *MockSuite) TestGetNameRegEntries() {
 	resp := this.get("/namereg")
-	ret := &ctypes.ResultListNames{}
+	ret := &ep.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntries.Output)

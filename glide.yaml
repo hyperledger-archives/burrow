@@ -1,0 +1,14 @@
+package: github.com/eris-ltd/eris-db
+import:
+- package: github.com/tendermint/tendermint
+  version: 55ef4b225fb0aa5637a96d36a8c0d030a59dc21d
+- package: github.com/gin-gonic/gin
+- package: github.com/gorilla/websocket
+- package: github.com/naoina/toml
+- package: github.com/stretchr/testify
+- package: github.com/tommy351/gin-cors
+- package: golang.org/x/crypto
+  subpackages:
+  - ripemd160
+- package: gopkg.in/fatih/set.v0
+- package: gopkg.in/tylerb/graceful.v1
