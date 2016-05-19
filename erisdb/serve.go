@@ -29,7 +29,7 @@ import (
 	tmspcli "github.com/tendermint/tmsp/client"
 
 	// tmsp server
-	tmsp "github.com/tendermint/tmsp/server"
+	tmsp "github.com/eris-ltd/eris-db/consensus/tmsp"
 
 	edbcfg "github.com/eris-ltd/eris-db/config"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
