@@ -8,7 +8,7 @@ import (
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-merkle"
 
-	acm "github.com/eris-ltd/eris-db/account"
+	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	"github.com/eris-ltd/eris-db/txs"
 )
 

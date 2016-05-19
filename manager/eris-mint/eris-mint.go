@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"sync"
 
-	sm "github.com/eris-ltd/eris-db/state"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	types "github.com/eris-ltd/eris-db/txs"
 
 	"github.com/tendermint/go-events"

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/evm"
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/txs"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-events"

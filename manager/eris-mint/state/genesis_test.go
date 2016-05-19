@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/eris-ltd/eris-db/state/types"
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	tdb "github.com/tendermint/go-db"
 )
 

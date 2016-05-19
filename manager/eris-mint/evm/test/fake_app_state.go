@@ -2,8 +2,8 @@ package vm
 
 import (
 	. "github.com/tendermint/go-common"
-	. "github.com/eris-ltd/eris-db/evm"
-	"github.com/eris-ltd/eris-db/evm/sha3"
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 )
 
 type FakeAppState struct {

@@ -1,8 +1,8 @@
 package state
 
 import (
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/evm"
+	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/txs"
 

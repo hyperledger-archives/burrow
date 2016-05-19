@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	acm "github.com/eris-ltd/eris-db/account"
+	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/eris-ltd/eris-db/state/types"
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
