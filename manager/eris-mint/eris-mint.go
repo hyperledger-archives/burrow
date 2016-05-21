@@ -38,7 +38,7 @@ import (
 // Typically two connections are opened by the tendermint core:
 // one for mempool, one for consensus.
 
-type ErisDBApp struct {
+type ErisMint struct {
 	mtx sync.Mutex
 
 	state      *sm.State
