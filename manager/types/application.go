@@ -16,14 +16,18 @@
 
 package types
 
-// TODO: Result is not yet defined (originally defined as tmsp protobuf type)
+import (
+  // TODO: [ben] this is currently only used for tmsp result type; but should
+  // be removed as tmsp dependencies shouldn't feature in the application
+  // manager
+  tmsp "github.com/tendermint/tmsp"
+)
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken
 // from the tendermint socket protocol application interface;
 // but for the needs of eris-rt and generalisation improvements will be made.
 
 // Application interface applies transactions to the state.
-//
 type Application interface {
 
   // Info returns application information as a string
@@ -47,7 +51,7 @@ type Application interface {
   // TODO: implementation notes:
   // 1. at this point the transaction should already be strongly typed
   // 2.
-  AppendTx(tx []byte) Result
+  AppendTx(tx []byte) tmsp.Result
 
   // Check Transaction validates a transaction before being allowed into the
   // consensus' engine memory pool.  This is the original defintion and
@@ -58,7 +62,7 @@ type Application interface {
   // TODO: implementation notes:
   // 1. at this point the transaction should already be strongly typed
   // 2.
-  CheckTx(tx []byte) Result
+  CheckTx(tx []byte) tmsp.Result
 
   // Commit returns the root hash of the current application state
   // NOTE: [ben] Because the concept of the block has been erased here
@@ -66,12 +70,30 @@ type Application interface {
   // the opposit the principle of explicit stateless functions.
   // This will be amended when we introduce the concept of (streaming)
   // blocks in the pipe.
-  Commit() Result
+  Commit() tmsp.Result
 
   // Query for state.  This query request is not passed over the p2p network
   // and is called from Tendermint rpc directly up to the application.
   // NOTE: [ben] Eris-DB will give preference to queries from the local client
   // directly over the Eris-DB rpc.
   // We will support this for Tendermint compatibility.
-  Query(query []byte) Result
+  Query(query []byte) tmsp.Result
+}
+
+// Tendermint has a separate interface for reintroduction of blocks
+type BlockchainAware interface {
+
+  // Initialise the blockchain
+  // validators: genesis validators from tendermint core
+  InitChain(validators []*tmsp.Validator)
+
+  // Signals the beginning of a block;
+  // NOTE: [ben] currently not supported by tendermint
+  BeginBlock(height uint64)
+
+  // Signals the end of a blockchain
+  // validators: changed validators from app to Tendermint
+  // NOTE: [ben] currently not supported by tendermint
+  // not yet well defined what the change set contains.
+  EndBlock(height uint64) (validators []*tmsp.Validator)
 }
