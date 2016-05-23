@@ -34,7 +34,7 @@ import (
 )
 
 //--------------------------------------------------------------------------------
-// ErisDBApp holds the current state, runs transactions, computes hashes.
+// ErisMint holds the current state, runs transactions, computes hashes.
 // Typically two connections are opened by the tendermint core:
 // one for mempool, one for consensus.
 
@@ -55,7 +55,7 @@ type ErisMint struct {
 	nTxs int // count txs in a block
 }
 
-func (app *ErisDBApp) GetState() *sm.State {
+func (app *ErisMint) GetState() *sm.State {
 	app.mtx.Lock()
 	defer app.mtx.Unlock()
 	return app.state.Copy()
@@ -64,18 +64,18 @@ func (app *ErisDBApp) GetState() *sm.State {
 // TODO: this is used for call/callcode and to get nonces during mempool.
 // the former should work on last committed state only and the later should
 // be handled by the client, or a separate wallet-like nonce tracker thats not part of the app
-func (app *ErisDBApp) GetCheckCache() *sm.BlockCache {
+func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func (app *ErisDBApp) SetHostAddress(host string) {
+func (app *ErisMint) SetHostAddress(host string) {
 	app.host = host
 	app.client = client.NewClientURI(host) //fmt.Sprintf("http://%s", host))
 }
 
 // Broadcast a tx to the tendermint core
 // NOTE: this assumes we know the address of core
-func (app *ErisDBApp) BroadcastTx(tx types.Tx) error {
+func (app *ErisMint) BroadcastTx(tx types.Tx) error {
 	buf := new(bytes.Buffer)
 	var n int
 	var err error
@@ -93,8 +93,8 @@ func (app *ErisDBApp) BroadcastTx(tx types.Tx) error {
 	return err
 }
 
-func NewErisDBApp(s *sm.State, evsw *events.EventSwitch) *ErisDBApp {
-	return &ErisDBApp{
+func NewErisMint(s *sm.State, evsw *events.EventSwitch) *ErisMint {
+	return &ErisMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
 		checkCache: sm.NewBlockCache(s),
@@ -104,17 +104,17 @@ func NewErisDBApp(s *sm.State, evsw *events.EventSwitch) *ErisDBApp {
 }
 
 // Implements tmsp.Application
-func (app *ErisDBApp) Info() (info string) {
+func (app *ErisMint) Info() (info string) {
 	return "ErisDB"
 }
 
 // Implements tmsp.Application
-func (app *ErisDBApp) SetOption(key string, value string) (log string) {
+func (app *ErisMint) SetOption(key string, value string) (log string) {
 	return ""
 }
 
 // Implements tmsp.Application
-func (app *ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 
 	app.nTxs += 1
 
@@ -139,7 +139,7 @@ func (app *ErisDBApp) AppendTx(txBytes []byte) (res tmsp.Result) {
 }
 
 // Implements tmsp.Application
-func (app *ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 	var n int
 	var err error
 	tx := new(types.Tx)
@@ -165,7 +165,7 @@ func (app *ErisDBApp) CheckTx(txBytes []byte) (res tmsp.Result) {
 // Commit the state (called at end of block)
 // NOTE: CheckTx/AppendTx must not run concurrently with Commit -
 //	the mempool should run during AppendTxs, but lock for Commit and Update
-func (app *ErisDBApp) Commit() (res tmsp.Result) {
+func (app *ErisMint) Commit() (res tmsp.Result) {
 	app.mtx.Lock() // the lock protects app.state
 	defer app.mtx.Unlock()
 
@@ -192,6 +192,6 @@ func (app *ErisDBApp) Commit() (res tmsp.Result) {
 	return tmsp.NewResultOK(app.state.Hash(), "Success")
 }
 
-func (app *ErisDBApp) Query(query []byte) (res tmsp.Result) {
+func (app *ErisMint) Query(query []byte) (res tmsp.Result) {
 	return tmsp.NewResultOK(nil, "Success")
 }
