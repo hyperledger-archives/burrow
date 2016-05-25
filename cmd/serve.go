@@ -17,14 +17,11 @@
 package commands
 
 import (
-  "fmt"
-  // "os"
+  "os"
 
   cobra "github.com/spf13/cobra"
 
-  // common "github.com/eris-ltd/common/go/common"
-
-  // definitions "github.com/eris-ltd/eris-db/definitions"
+  log "github.com/eris-ltd/eris-logger"
 )
 
 var ServeCmd = &cobra.Command {
@@ -35,9 +32,6 @@ The Eris-DB node is modularly configured for the consensus engine and applicatio
 manager.  The client API can be disabled.`,
   Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory,
 $ eris-db serve myChainId --work-dir=/path/to/config -- will start the Eris-DB node based on the configuration file provided and assert the chain id matches.`,
-  PreRun: func(cmd *cobra.Command, args []string) {
-    // TODO: [ben] log marmotty welcome
-  },
   Run: func(cmd *cobra.Command, args []string) {
     serve()
   },
@@ -49,28 +43,30 @@ func buildServeCommand() {
 }
 
 func addServeFlags() {
-  fmt.Println("Adding Serve flags")
   ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
     defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
 }
-
 
 //------------------------------------------------------------------------------
 // functions
 
 func serve() {
-  //
-  // load config from
-  loadConfig()
-  fmt.Printf("Served from %s \n", do.WorkDir)
+  // load configuration from a single location to avoid a wrong configuration
+  // file is loaded.
+  if err := do.ReadConfig(do.WorkDir, "server_config", "toml"); err != nil {
+    log.Fatalf("Fatal error reading server_config.toml : %s \n work directory: %s \n",
+      err, do.WorkDir)
+    os.Exit(1)
+  }
+  // load chain_id for assertion
+  if do.ChainId = do.Config.GetString("chain.chain_id"); do.ChainId == "" {
+    log.Fatalf("Failed to read non-empty string for ChainId from config.")
+    os.Exit(1)
+  }
+
+  log.Info("Eris-DB serve initializing ", do.ChainId, " from ", do.WorkDir)
 }
 
-//------------------------------------------------------------------------------
-// Viper configuration
-
-func loadConfig(conf *viper.Viper, path string) {
-  conf.
-}
 
 //------------------------------------------------------------------------------
 // Defaults

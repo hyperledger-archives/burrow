@@ -17,17 +17,16 @@
 package commands
 
 import (
-  // "fmt"
   "os"
   "strconv"
   "strings"
 
   cobra "github.com/spf13/cobra"
 
-  // common "github.com/eris-ltd/common/go/common"
+  log         "github.com/eris-ltd/eris-logger"
 
   definitions "github.com/eris-ltd/eris-db/definitions"
-  version   "github.com/eris-ltd/eris-db/version"
+  version     "github.com/eris-ltd/eris-db/version"
 )
 
 const VERSION = version.VERSION
@@ -37,8 +36,8 @@ var do *definitions.Do
 
 var ErisDbCmd = &cobra.Command {
   Use:   "eris-db",
-  Short: "Eris-DB is the beating heart of the eris chain.",
-  Long:  `Eris-DB is the beating heart of the eris chain.  Eris-DB combines
+  Short: "Eris-DB is the heart of the eris chain.",
+  Long:  `Eris-DB is the heart of the eris chain.  Eris-DB combines
 a modular consensus engine and application manager to run a chain to suit
 your needs.
 
@@ -47,7 +46,13 @@ Made with <3 by Eris Industries.
 Complete documentation is available at https://docs.erisindustries.com
 ` + "\nVERSION:\n " + VERSION,
   PersistentPreRun: func(cmd *cobra.Command, args []string) {
-    // TODO: [ben] set up eris logger after glide resolution of logrus
+
+    log.SetLevel(log.WarnLevel)
+    if do.Verbose {
+      log.SetLevel(log.InfoLevel)
+    } else if do.Debug {
+      log.SetLevel(log.DebugLevel)
+    }
   },
   Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
@@ -62,26 +67,17 @@ func Execute() {
 func InitErisDb() {
   // initialise an empty do struct for command execution
 	do = definitions.NowDo()
-  // name of the configuration file without extension
-  do.Config.SetConfigName("config")
-  do.Config.SetConfigType("yaml")
-  // look for configuration file in the working directory
-  do.Config.AddConfigPath(".")
-  // but let's move the location of the configuration to
 }
 
 func AddGlobalFlags() {
 	ErisDbCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v", defaultVerbose(), "verbose output; more output than no output flags; less output than debug level; default respects $ERIS_DB_VERBOSE")
 	ErisDbCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", defaultDebug(), "debug level output; the most output available for eris-db; if it is too chatty use verbose flag; default respects $ERIS_DB_DEBUG")
-	ErisDbCmd.PersistentFlags().BoolVarP(&do.Output, "output", "o", defaultOutput(), "should eris-db provide an output of its execution; default respects $ERIS_DB_OUTPUT")
 }
 
 func AddCommands() {
   buildServeCommand()
   ErisDbCmd.AddCommand(ServeCmd)
 }
-
-
 
 //------------------------------------------------------------------------------
 // Defaults

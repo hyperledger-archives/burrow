@@ -25,7 +25,6 @@ type Do struct {
   // only set through command line flags or environment variables
 	Debug        bool     // ERIS_DB_DEBUG
 	Verbose      bool     // ERIS_DB_VERBOSE
-	Output       bool     // ERIS_DB_OUTPUT
   WorkDir      string
   // Capital configuration options explicitly extracted from the Viper config
 	ChainId      string   // has to be set to non-empty string,
@@ -46,9 +45,22 @@ func NowDo() *Do {
 	do.Verbose = false
 	// the default value for output is set to true in cmd/eris-db.go;
 	// avoid double setting it here though
-	do.Output = false
   do.WorkDir = ""
   do.ChainId = ""
 	do.Config = viper.New()
 	return do
+}
+
+// ReadConfig uses Viper to set the configuration file name, file format
+// where Eris-DB currently only uses `toml`.
+// The search directory is explicitly limited to a single location to
+// minimise the chance of loading the wrong configuration file.
+func (d *Do) ReadConfig(directory string, name string, configType string) error {
+  // name of the configuration file without extension
+  d.Config.SetConfigName(name)
+  // Eris-DB currently only uses "toml"
+  d.Config.SetConfigType(configType)
+  // look for configuration file in the working directory
+  d.Config.AddConfigPath(directory)
+  return d.Config.ReadInConfig()
 }
