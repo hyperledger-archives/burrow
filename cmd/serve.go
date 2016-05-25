@@ -17,11 +17,14 @@
 package commands
 
 import (
+  "fmt"
   "os"
 
   cobra "github.com/spf13/cobra"
 
-  log "github.com/eris-ltd/eris-logger"
+  log  "github.com/eris-ltd/eris-logger"
+
+  util "github.com/eris-ltd/eris-db/util"
 )
 
 var ServeCmd = &cobra.Command {
@@ -30,10 +33,28 @@ var ServeCmd = &cobra.Command {
   Long:  `Eris-DB serve starts an eris-db node with client API enabled by default.
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
-  Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory`,
-  Run: func(cmd *cobra.Command, args []string) {
-    serve()
+  Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file "server_config.toml" in the current working directory
+$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory`,
+  PreRun: func(cmd *cobra.Command, args []string) {
+    // if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
+    // NOTE [ben]: we can consider an `Explicit` flag that eliminates
+    // the use of any assumptions while starting Eris-DB
+    if do.WorkDir == "" {
+      if currentDirectory, err := os.Getwd(); err != nil {
+        log.Fatalf("No directory provided and failed to get current working directory: %v", err)
+        os.Exit(1)
+      } else {
+        log.Warn("No working directory provided in ERIS_DB_WORKDIR or --work-dir\n" +
+          "Will use current working directory ", currentDirectory)
+        do.WorkDir = currentDirectory
+      }
+    }
+    if !util.IsDir(do.WorkDir) {
+      log.Fatalf("Provided working directory %s is not a directory", do.WorkDir)
+    }
+    log.Debug("Working directory is set as %s", do.WorkDir)
   },
+  Run: Serve,
 }
 
 // build the serve subcommand
@@ -44,12 +65,17 @@ func buildServeCommand() {
 func addServeFlags() {
   ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
     defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
+  ServeCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "a",
+    defaultDataDir(), "specify the data directory.  If omitted and not set in $ERIS_DB_DATADIR, <working_directory>/data is taken.")
 }
 
 //------------------------------------------------------------------------------
 // functions
 
-func serve() {
+// serve() prepares the environment and sets up the core for Eris_DB to run.
+// After the setup succeeds, serve() starts the core and halts for core to
+// terminate.
+func Serve(cmd *cobra.Command, args []string) {
   // load configuration from a single location to avoid a wrong configuration
   // file is loaded.
   if err := do.ReadConfig(do.WorkDir, "server_config", "toml"); err != nil {
@@ -62,31 +88,28 @@ func serve() {
     log.Fatalf("Failed to read non-empty string for ChainId from config.")
     os.Exit(1)
   }
-
   log.Info("Eris-DB serve initializing ", do.ChainId, " from ", do.WorkDir)
-}
 
+  // Ensure data directory is set and accesible
+  if err := do.InitialiseDataDirectory(); err != nil {
+    log.Fatalf("Failed to initialise data directory (%s): %v", do.DataDir, err)
+    os.Exit(1)
+  }
+  log.Debug(fmt.Sprintf("Data directory is set at %s", do.DataDir))
+
+
+}
 
 //------------------------------------------------------------------------------
 // Defaults
 
 func defaultWorkDir() string {
   // if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
-  providedDirectory := setDefaultString("ERIS_DB_WORKDIR", "")
-  if providedDirectory == "" {
-    if currentDirectory, err := os.Getwd(); err != nil {
-      log.Fatalf("No directory provided and failed to get current working directory: %v", err)
-      os.Exit(1)
-    } else {
-      log.Warn("No working directory provided in ERIS_DB_WORKDIR or --work-dir\n" +
-        "Will use current working directory ", currentDirectory)
-      return currentDirectory
-    }
-  }
-  return providedDirectory
+  return setDefaultString("ERIS_DB_WORKDIR", "")
 }
 
-func defaultToCurrentWorkingDirectory() {
-  if do.WorkDir == "" {
-  }
+func defaultDataDir() string {
+  // As the default data directory depends on the default working directory,
+  // wait setting a default value, and initialise the data directory from serve()
+  return setDefaultString("ERIS_DB_DATADIR", "")
 }

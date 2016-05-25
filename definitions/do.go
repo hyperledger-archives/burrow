@@ -17,7 +17,12 @@
 package definitions
 
 import (
+  "path"
+  "os"
+
   viper "github.com/spf13/viper"
+
+  util "github.com/eris-ltd/eris-db/util"
 )
 
 type Do struct {
@@ -25,7 +30,14 @@ type Do struct {
   // only set through command line flags or environment variables
 	Debug        bool     // ERIS_DB_DEBUG
 	Verbose      bool     // ERIS_DB_VERBOSE
-  WorkDir      string
+
+  // Work directory is the root directory for Eris-DB to act in
+  WorkDir      string   // ERIS_DB_WORKDIR
+  // Data directory is defaulted to WorkDir + `/data`.
+  // If Eris-CLI maps a data container, DataDir is intended to point
+  // to that mapped data directory.
+  DataDir      string   // ERIS_DB_DATADIR
+
   // Capital configuration options explicitly extracted from the Viper config
 	ChainId      string   // has to be set to non-empty string,
                         // uniquely identifying the chain.
@@ -43,9 +55,8 @@ func NowDo() *Do {
 	do := new(Do)
 	do.Debug = false
 	do.Verbose = false
-	// the default value for output is set to true in cmd/eris-db.go;
-	// avoid double setting it here though
   do.WorkDir = ""
+  do.DataDir = ""
   do.ChainId = ""
 	do.Config = viper.New()
 	return do
@@ -63,4 +74,12 @@ func (d *Do) ReadConfig(directory string, name string, configType string) error 
   // look for configuration file in the working directory
   d.Config.AddConfigPath(directory)
   return d.Config.ReadInConfig()
+}
+
+// InitialiseDataDirectory will default to WorkDir/data if DataDir is empty
+func (d *Do) InitialiseDataDirectory() error {
+  if d.DataDir == "" {
+    d.DataDir = path.Join(d.WorkDir, "data")
+  }
+  return util.EnsureDir(d.DataDir, os.ModePerm)
 }
