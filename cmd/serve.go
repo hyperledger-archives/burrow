@@ -30,8 +30,7 @@ var ServeCmd = &cobra.Command {
   Long:  `Eris-DB serve starts an eris-db node with client API enabled by default.
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
-  Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory,
-$ eris-db serve myChainId --work-dir=/path/to/config -- will start the Eris-DB node based on the configuration file provided and assert the chain id matches.`,
+  Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file in the current working directory`,
   Run: func(cmd *cobra.Command, args []string) {
     serve()
   },
@@ -73,5 +72,21 @@ func serve() {
 
 func defaultWorkDir() string {
   // if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
-  return setDefaultString("ERIS_DB_WORKDIR", "")
+  providedDirectory := setDefaultString("ERIS_DB_WORKDIR", "")
+  if providedDirectory == "" {
+    if currentDirectory, err := os.Getwd(); err != nil {
+      log.Fatalf("No directory provided and failed to get current working directory: %v", err)
+      os.Exit(1)
+    } else {
+      log.Warn("No working directory provided in ERIS_DB_WORKDIR or --work-dir\n" +
+        "Will use current working directory ", currentDirectory)
+      return currentDirectory
+    }
+  }
+  return providedDirectory
+}
+
+func defaultToCurrentWorkingDirectory() {
+  if do.WorkDir == "" {
+  }
 }
