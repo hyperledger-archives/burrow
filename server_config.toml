@@ -17,6 +17,9 @@
 # This is a TOML configuration for Eris-DB chain
 
 
+
+
+
 [chain]
 
 # ChainId is a human-readable name to identify the chain
@@ -41,10 +44,11 @@ version = "0.12"
   # version is the major and minor semantic version;
   # the version will be asserted on
   version = "0.6"
-  # relative
+  # relative path to consensus' module root folder
   relative_root = "tendermint"
   config_file = "tendermint/config.toml"
-  #
+  # listener address
+  listener = "tcp://0.0.0.0:46658"
 
 ###############################################################################
 ##
@@ -52,9 +56,9 @@ version = "0.12"
 ##
 ###############################################################################
 
+  [chain.application_manager]
 
 [servers]
-
 
   [servers.http]
 
