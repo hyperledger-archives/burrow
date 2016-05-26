@@ -24,14 +24,13 @@ import (
 // Ensure the directory exists or create it if needed.
 func EnsureDir(dir string, mode os.FileMode) error {
   if fileOptions, err := os.Stat(dir); os.IsNotExist(err) {
-    err := os.MkdirAll(dir, mode)
-    if err != nil {
-      return fmt.Errorf("Could not create directory %v. %v\n", dir, err)
+    if errMake := os.MkdirAll(dir, mode); errMake != nil {
+      return fmt.Errorf("Could not create directory %s. %v", dir, err)
     }
   } else if err != nil {
     return fmt.Errorf("Error asserting directory %s: %v", dir, err)
   } else if !fileOptions.IsDir() {
-    return fmt.Errorf("Path already exists as a file: %s\n", dir)
+    return fmt.Errorf("Path already exists as a file: %s", dir)
   }
   return nil
 }
