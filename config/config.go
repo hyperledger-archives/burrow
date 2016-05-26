@@ -21,17 +21,24 @@ package config
 
 import (
   "fmt"
+  "os"
+  "path"
+
+  viper "github.com/spf13/viper"
 
   consensus   "github.com/eris-ltd/eris-db/consensus"
   definitions "github.com/eris-ltd/eris-db/definitions"
+  util        "github.com/eris-ltd/eris-db/util"
   version     "github.com/eris-ltd/eris-db/version"
 )
 
 type ModuleConfig struct {
   Module  string
+  Name    string
   Version string
   WorkDir string
   DataDir string
+  Config  *viper.Viper
 }
 
 // LoadConsensusModuleConfig wraps specifically for the consensus module
@@ -50,8 +57,29 @@ func loadModuleConfig(do *definitions.Do, module string) (ModuleConfig, error) {
     return ModuleConfig{}, fmt.Errorf("%s module %s (%s) is not supported by %s",
       module, moduleName, minorVersionString, version.GetVersionString())
   }
-  // TODO: continue
-  return ModuleConfig{}, nil
+  // set up the directory structure for the module inside the data directory
+  workDir := path.Join(do.DataDir, do.Config.GetString("chain." + module +
+    ".relative_root"))
+  if err := util.EnsureDir(workDir, os.ModePerm); err != nil {
+    return ModuleConfig{},
+      fmt.Errorf("Failed to create module root directory %s.", workDir)
+  }
+  dataDir := path.Join(workDir, "data")
+  if err := util.EnsureDir(dataDir, os.ModePerm); err != nil {
+    return ModuleConfig{},
+      fmt.Errorf("Failed to create module data directory %s.", dataDir)
+  }
+  // load configuration subtree for module
+  config := do.Config.Sub(moduleName)
+
+  return ModuleConfig {
+    Module  : module,
+    Name    : moduleName,
+    Version : minorVersionString,
+    WorkDir : workDir,
+    DataDir : dataDir,
+    Config  : config,
+  }, nil
 }
 
 //------------------------------------------------------------------------------
