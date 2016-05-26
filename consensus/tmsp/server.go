@@ -27,7 +27,9 @@ import (
 	"sync"
 
 	. "github.com/tendermint/go-common"
-	"github.com/tendermint/tmsp/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
+
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
 )
 
 // var maxNumberConnections = 2
@@ -40,10 +42,10 @@ type Server struct {
 	listener net.Listener
 
 	appMtx sync.Mutex
-	app    types.Application
+	app    manager_types.Application
 }
 
-func NewServer(protoAddr string, app types.Application) (*Server, error) {
+func NewServer(protoAddr string, app manager_types.Application) (*Server, error) {
 	parts := strings.SplitN(protoAddr, "://", 2)
 	proto, addr := parts[0], parts[1]
 	s := &Server{
@@ -92,7 +94,7 @@ func (s *Server) acceptConnectionsRoutine() {
 		}
 
 		closeConn := make(chan error, 2)              // Push to signal connection closed
-		responses := make(chan *types.Response, 1000) // A channel to buffer responses
+		responses := make(chan *tmsp_types.Response, 1000) // A channel to buffer responses
 
 		// Read requests from conn and deal with them
 		go s.handleRequests(closeConn, conn, responses)
@@ -120,13 +122,13 @@ func (s *Server) acceptConnectionsRoutine() {
 }
 
 // Read requests from conn and deal with them
-func (s *Server) handleRequests(closeConn chan error, conn net.Conn, responses chan<- *types.Response) {
+func (s *Server) handleRequests(closeConn chan error, conn net.Conn, responses chan<- *tmsp_types.Response) {
 	var count int
 	var bufReader = bufio.NewReader(conn)
 	for {
 
-		var req = &types.Request{}
-		err := types.ReadMessage(bufReader, req)
+		var req = &tmsp_types.Request{}
+		err := tmsp_types.ReadMessage(bufReader, req)
 		if err != nil {
 			if err == io.EOF {
 				closeConn <- fmt.Errorf("Connection closed by client")
@@ -142,61 +144,61 @@ func (s *Server) handleRequests(closeConn chan error, conn net.Conn, responses c
 	}
 }
 
-func (s *Server) handleRequest(req *types.Request, responses chan<- *types.Response) {
+func (s *Server) handleRequest(req *tmsp_types.Request, responses chan<- *tmsp_types.Response) {
 	switch req.Type {
-	case types.MessageType_Echo:
-		responses <- types.ResponseEcho(string(req.Data))
-	case types.MessageType_Flush:
-		responses <- types.ResponseFlush()
-	case types.MessageType_Info:
+	case tmsp_types.MessageType_Echo:
+		responses <- tmsp_types.ResponseEcho(string(req.Data))
+	case tmsp_types.MessageType_Flush:
+		responses <- tmsp_types.ResponseFlush()
+	case tmsp_types.MessageType_Info:
 		data := s.app.Info()
-		responses <- types.ResponseInfo(data)
-	case types.MessageType_SetOption:
+		responses <- tmsp_types.ResponseInfo(data)
+	case tmsp_types.MessageType_SetOption:
 		logStr := s.app.SetOption(req.Key, req.Value)
-		responses <- types.ResponseSetOption(logStr)
-	case types.MessageType_AppendTx:
+		responses <- tmsp_types.ResponseSetOption(logStr)
+	case tmsp_types.MessageType_AppendTx:
 		res := s.app.AppendTx(req.Data)
-		responses <- types.ResponseAppendTx(res.Code, res.Data, res.Log)
-	case types.MessageType_CheckTx:
+		responses <- tmsp_types.ResponseAppendTx(res.Code, res.Data, res.Log)
+	case tmsp_types.MessageType_CheckTx:
 		res := s.app.CheckTx(req.Data)
-		responses <- types.ResponseCheckTx(res.Code, res.Data, res.Log)
-	case types.MessageType_Commit:
+		responses <- tmsp_types.ResponseCheckTx(res.Code, res.Data, res.Log)
+	case tmsp_types.MessageType_Commit:
 		res := s.app.Commit()
-		responses <- types.ResponseCommit(res.Code, res.Data, res.Log)
-	case types.MessageType_Query:
+		responses <- tmsp_types.ResponseCommit(res.Code, res.Data, res.Log)
+	case tmsp_types.MessageType_Query:
 		res := s.app.Query(req.Data)
-		responses <- types.ResponseQuery(res.Code, res.Data, res.Log)
-	case types.MessageType_InitChain:
-		if app, ok := s.app.(types.BlockchainAware); ok {
+		responses <- tmsp_types.ResponseQuery(res.Code, res.Data, res.Log)
+	case tmsp_types.MessageType_InitChain:
+		if app, ok := s.app.(manager_types.BlockchainAware); ok {
 			app.InitChain(req.Validators)
-			responses <- types.ResponseInitChain()
+			responses <- tmsp_types.ResponseInitChain()
 		} else {
-			responses <- types.ResponseInitChain()
+			responses <- tmsp_types.ResponseInitChain()
 		}
-	case types.MessageType_EndBlock:
-		if app, ok := s.app.(types.BlockchainAware); ok {
+	case tmsp_types.MessageType_EndBlock:
+		if app, ok := s.app.(manager_types.BlockchainAware); ok {
 			validators := app.EndBlock(req.Height)
-			responses <- types.ResponseEndBlock(validators)
+			responses <- tmsp_types.ResponseEndBlock(validators)
 		} else {
-			responses <- types.ResponseEndBlock(nil)
+			responses <- tmsp_types.ResponseEndBlock(nil)
 		}
 	default:
-		responses <- types.ResponseException("Unknown request")
+		responses <- tmsp_types.ResponseException("Unknown request")
 	}
 }
 
 // Pull responses from 'responses' and write them to conn.
-func (s *Server) handleResponses(closeConn chan error, responses <-chan *types.Response, conn net.Conn) {
+func (s *Server) handleResponses(closeConn chan error, responses <-chan *tmsp_types.Response, conn net.Conn) {
 	var count int
 	var bufWriter = bufio.NewWriter(conn)
 	for {
 		var res = <-responses
-		err := types.WriteMessage(res, bufWriter)
+		err := tmsp_types.WriteMessage(res, bufWriter)
 		if err != nil {
 			closeConn <- fmt.Errorf("Error in handleResponses: %v", err.Error())
 			return
 		}
-		if res.Type == types.MessageType_Flush {
+		if res.Type == tmsp_types.MessageType_Flush {
 			err = bufWriter.Flush()
 			if err != nil {
 				closeConn <- fmt.Errorf("Error in handleResponses: %v", err.Error())
