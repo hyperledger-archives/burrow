@@ -14,27 +14,108 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
+// version provides the current Eris-DB version and a VersionIdentifier
+// for the modules to identify their version with.
 package version
 
 import (
   "fmt"
 )
 
+// NOTE [ben]: deprecate public const version string
 const VERSION = "0.12.0"
 const TENDERMINT_VERSION = "0.6.0"
 
 const (
   // Client identifier to advertise over the network
-  clientIdentifier = "eris-db"
+  erisClientIdentifier = "eris-db"
   // Major version component of the current release
-  versionMajor     = 0
+  erisVersionMajor     = 0
   // Minor version component of the current release
-  versionMinor     = 12
+  erisVersionMinor     = 12
   // Patch version component of the current release
-  versionPatch     = 0
+  erisVersionPatch     = 0
 )
 
-func GetVersionString() string {
-  return fmt.Sprintf("%s-%d.%d.%d", clientIdentifier, versionMajor, versionMinor,
-    versionPatch)
+var erisVersion *VersionIdentifier
+
+func init() {
+  erisVersion = New(erisClientIdentifier, erisVersionMajor,
+    erisVersionMinor, erisVersionPatch)
+}
+
+//------------------------------------------------------------------------------
+// versioning globally for Eris-DB and scoped for modules
+
+type VersionIdentifier struct {
+  clientIdentifier    string
+  versionMajor        uint8
+  versionMinor        uint8
+  versionPatch        uint8
+}
+
+func New(client string, major, minor, patch uint8) *VersionIdentifier {
+  v := new(VersionIdentifier)
+  v.clientIdentifier = client
+  v.versionMajor = major
+  v.versionMinor = minor
+  v.versionPatch = patch
+  return v
+}
+
+// GetVersionString returns `client-major.minor.patch` for Eris-DB
+// without a receiver, or for the version called on.
+// MakeVersionString builds the same version string with provided parameters.
+func GetVersionString() string { return erisVersion.GetVersionString() }
+func (v *VersionIdentifier) GetVersionString() string {
+  return fmt.Sprintf("%s-%d.%d.%d", v.clientIdentifier, v.versionMajor,
+    v.versionMinor, v.versionPatch)
+}
+// note: the arguments are passed in as int (rather than uint8)
+// because on asserting the version constructed from the configuration file
+// the casting of an int to uint8 is uglier than expanding the type range here.
+// Should the configuration file have an invalid integer (that could not convert)
+// then this will equally be reflected in a failed assertion of the version string.
+func MakeVersionString(client string, major, minor, patch int) string {
+  return fmt.Sprintf("%s-%d.%d.%d", client, major, minor, patch)
+}
+
+// GetMinorVersionString returns `client-major.minor` for Eris-DB
+// without a receiver, or for the version called on.
+// MakeMinorVersionString builds the same version string with
+// provided parameters.
+func GetMinorVersionString() string { return erisVersion.GetVersionString() }
+func (v *VersionIdentifier) GetMinorVersionString() string {
+  return fmt.Sprintf("%s-%d.%d", v.clientIdentifier, v.versionMajor,
+    v.versionMinor)
+}
+// note: similar remark applies here on the use of `int` over `uint8`
+// for the arguments as above for MakeVersionString()
+func MakeMinorVersionString(client string, major, minor, patch int) string {
+  return fmt.Sprintf("%s-%d.%d", client, major, minor)
+}
+
+// GetVersion returns a tuple of client, major, minor, and patch as types,
+// either for Eris-DB without a receiver or the called version structure.
+func GetVersion() (client string, major, minor, patch uint8) {
+  return erisVersion.GetVersion() }
+func (version *VersionIdentifier)  GetVersion() (
+  client string, major, minor, patch uint8) {
+  return version.clientIdentifier, version.versionMajor, version.versionMinor,
+    version.versionPatch
+}
+
+//------------------------------------------------------------------------------
+// Matching functions
+
+// MatchesMinorVersion matches the client identifier, major and minor version
+// number of the reference version identifier to be equal with the receivers.
+func MatchesMinorVersion(referenceVersion *VersionIdentifier) bool {
+  return erisVersion.MatchesMinorVersion(referenceVersion) }
+func (version *VersionIdentifier) MatchesMinorVersion(
+  referenceVersion *VersionIdentifier) bool {
+  referenceClient, referenceMajor, referenceMinor, _ := referenceVersion.GetVersion()
+  return version.clientIdentifier == referenceClient &&
+    version.versionMajor == referenceMajor &&
+    version.versionMinor == referenceMinor
 }

@@ -14,11 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-# This is a TOML configuration for Eris-DB chain
-
-
-
-
+# This is a TOML configuration for Eris-DB chains
 
 [chain]
 
@@ -26,9 +22,8 @@
 # this must correspond to the chain_id given in the genesis file
 chain_id = "MyChainId"
 # semantic major and minor version
-version = "0.12"
-
-
+major_version = 0
+minor_version = 12
 
 ###############################################################################
 ##
@@ -40,15 +35,13 @@ version = "0.12"
   # consensus defines the module to use for consensus and
   # this will define the peer-to-peer consensus network;
   # accepted values are "noops", "tmsp", "tendermint"
-  module = "tmsp"
+  name = "tmsp"
   # version is the major and minor semantic version;
   # the version will be asserted on
-  version = "0.6"
+  major_version = 0
+  minor_version = 6
   # relative path to consensus' module root folder
   relative_root = "tendermint"
-  config_file = "tendermint/config.toml"
-  # listener address
-  listener = "tcp://0.0.0.0:46658"
 
 ###############################################################################
 ##
@@ -68,3 +61,15 @@ version = "0.12"
   max_sessions = 50
   read_buffer_size = 4096
   write_buffer_size = 4096
+
+################################################################################
+##
+## Tendermint Socket Protocol (TMSP)
+##
+## TMSP expects a tendermint process to run and connect to Eris-DB
+##
+################################################################################
+
+[tmsp]
+# listener address for accepting tendermint socket protocol connections
+listener = "tcp://0.0.0.0:46658"

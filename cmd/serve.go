@@ -24,7 +24,8 @@ import (
 
   log  "github.com/eris-ltd/eris-logger"
 
-  util "github.com/eris-ltd/eris-db/util"
+  config "github.com/eris-ltd/eris-db/config"
+  util   "github.com/eris-ltd/eris-db/util"
 )
 
 var ServeCmd = &cobra.Command {
@@ -97,6 +98,7 @@ func Serve(cmd *cobra.Command, args []string) {
   }
   log.Debug(fmt.Sprintf("Data directory is set at %s", do.DataDir))
 
+  config.LoadConsensusModuleConfig(do)
 
 }
 
