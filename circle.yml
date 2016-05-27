@@ -38,7 +38,7 @@ test:
     - go get github.com/Masterminds/glide
     - cd $GOPATH_REPO && glide install
     # Install erisdb cmd for tests
-    - cd $GOPATH_REPO && go install ./cmd/erisdb
+    - cd $GOPATH_REPO && go install ./cmd/eris-db
   override:
     # We only wish to test our packages not vendored ones
     - cd $GOPATH_REPO && glide novendor | xargs go test -v
