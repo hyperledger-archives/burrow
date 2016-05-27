@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/evm"
-	"github.com/eris-ltd/eris-db/state"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 
 	cmn "github.com/tendermint/go-common"

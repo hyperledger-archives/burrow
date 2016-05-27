@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/eris-ltd/eris-db/state"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"
 )

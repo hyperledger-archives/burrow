@@ -35,8 +35,8 @@ import (
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	rpccore "github.com/eris-ltd/eris-db/rpc/core"
 	"github.com/eris-ltd/eris-db/server"
-	sm "github.com/eris-ltd/eris-db/state"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
 
 	tmcfg "github.com/tendermint/tendermint/config/tendermint" // for inproc only!

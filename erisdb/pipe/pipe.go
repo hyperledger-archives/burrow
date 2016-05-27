@@ -5,7 +5,7 @@ import (
 	em "github.com/tendermint/go-events"
 	"github.com/tendermint/tendermint/types"
 
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	"github.com/eris-ltd/eris-db/tmsp"
 	txs "github.com/eris-ltd/eris-db/txs"
 )

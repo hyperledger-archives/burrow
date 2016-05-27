@@ -1,7 +1,7 @@
 package pipe
 
 import (
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
