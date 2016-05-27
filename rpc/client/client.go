@@ -3,7 +3,7 @@ package client
 import (
 	rpcclient "github.com/tendermint/go-rpc/client"
 
-	acm "github.com/eris-ltd/eris-db/account"
+	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )

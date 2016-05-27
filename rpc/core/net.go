@@ -2,7 +2,7 @@ package core
 
 import (
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
-	sm "github.com/eris-ltd/eris-db/state"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/tendermint/tendermint/types"
 
 	dbm "github.com/tendermint/go-db"

@@ -1,7 +1,7 @@
 package core
 
 import (
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/eris-ltd/eris-db/tmsp"
 
 	bc "github.com/tendermint/tendermint/blockchain"

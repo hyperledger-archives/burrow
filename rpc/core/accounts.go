@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	acm "github.com/eris-ltd/eris-db/account"
+	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
 	. "github.com/tendermint/go-common"
 )
