@@ -12,7 +12,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ess "github.com/eris-ltd/eris-db/erisdb/erisdbss"

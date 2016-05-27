@@ -4,7 +4,7 @@ import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/tendermint/tendermint/types"
 )
 

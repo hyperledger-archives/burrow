@@ -8,7 +8,7 @@ import (
 	"path"
 
 	. "github.com/tendermint/go-common"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/go-wire"
 )

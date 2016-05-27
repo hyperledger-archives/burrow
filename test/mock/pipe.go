@@ -1,7 +1,7 @@
 package mock
 
 import (
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	types "github.com/eris-ltd/eris-db/txs"

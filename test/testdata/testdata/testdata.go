@@ -1,10 +1,10 @@
 package testdata
 
 import (
-	"github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	types "github.com/eris-ltd/eris-db/txs"
 
 	"github.com/tendermint/go-wire"
