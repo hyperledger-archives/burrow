@@ -17,29 +17,21 @@
 // version provides the current Eris-DB version and a VersionIdentifier
 // for the modules to identify their version with.
 
-package consensus
+package manager
 
 import (
-  // noops      "github.com/eris-ltd/eris-db/consensus/noops"
-  tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
-  tmsp       "github.com/eris-ltd/eris-db/consensus/tmsp"
+  erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 )
 
 //------------------------------------------------------------------------------
 // Helper functions
 
-func AssertValidConsensusModule(name, minorVersionString string) bool {
+func AssertValidApplicationManagerModule(name, minorVersionString string) bool {
   switch name {
-  case "noops" :
-    // noops should not have any external interfaces that can change
-    // over iterations
-    return true
-  case "tmsp" :
-    return minorVersionString == tmsp.GetTmspVersion().GetMinorVersionString()
-  case "tendermint" :
-    return minorVersionString == tendermint.GetTendermintVersion().GetMinorVersionString()
-  case "bigchaindb" :
-    // TODO: [ben] implement BigchainDB as consensus engine
+  case "erismint" :
+    return minorVersionString == erismint.GetErisMintVersion().GetMinorVersionString()
+  case "geth" :
+    // TODO: [ben] implement Geth 1.4 as an application manager
     return false
   }
   return false

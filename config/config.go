@@ -28,6 +28,7 @@ import (
 
   consensus   "github.com/eris-ltd/eris-db/consensus"
   definitions "github.com/eris-ltd/eris-db/definitions"
+  manager     "github.com/eris-ltd/eris-db/manager"
   util        "github.com/eris-ltd/eris-db/util"
   version     "github.com/eris-ltd/eris-db/version"
 )
@@ -44,6 +45,12 @@ type ModuleConfig struct {
 // LoadConsensusModuleConfig wraps specifically for the consensus module
 func LoadConsensusModuleConfig(do *definitions.Do) (ModuleConfig, error) {
   return loadModuleConfig(do, "consensus")
+}
+
+// LoadApplicationManagerModuleConfig wraps specifically for the application
+// manager
+func LoadApplicationManagerModuleConfig(do *definitions.Do) (ModuleConfig, error) {
+  return loadModuleConfig(do, "manager")
 }
 
 // Generic Module loader for configuration information
@@ -70,7 +77,14 @@ func loadModuleConfig(do *definitions.Do, module string) (ModuleConfig, error) {
       fmt.Errorf("Failed to create module data directory %s.", dataDir)
   }
   // load configuration subtree for module
-  config := do.Config.Sub(moduleName)
+  // TODO: [ben] Viper internally panics if `moduleName` contains an unallowed
+  // character (eg, a dash).  Either this needs to be wrapped in a go-routine
+  // and recovered from or a PR to viper is needed to address this bug.
+  subConfig := do.Config.Sub(moduleName)
+  if subConfig == nil {
+    return ModuleConfig{},
+      fmt.Errorf("Failed to read configuration section for %s.", moduleName)
+  }
 
   return ModuleConfig {
     Module  : module,
@@ -78,7 +92,7 @@ func loadModuleConfig(do *definitions.Do, module string) (ModuleConfig, error) {
     Version : minorVersionString,
     WorkDir : workDir,
     DataDir : dataDir,
-    Config  : config,
+    Config  : subConfig,
   }, nil
 }
 
@@ -89,6 +103,8 @@ func assertValidModule(module, name, minorVersionString string) bool {
   switch module {
   case "consensus" :
     return consensus.AssertValidConsensusModule(name, minorVersionString)
+  case "manager" :
+    return manager.AssertValidApplicationManagerModule(name, minorVersionString)
   }
   return false
 }

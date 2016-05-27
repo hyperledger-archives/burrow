@@ -98,8 +98,19 @@ func Serve(cmd *cobra.Command, args []string) {
   }
   log.Debug(fmt.Sprintf("Data directory is set at %s", do.DataDir))
 
-  config.LoadConsensusModuleConfig(do)
+  consensusConfig, err := config.LoadConsensusModuleConfig(do)
+  if err != nil {
+    log.Fatalf("Failed to load consensus module configuration: %s.", err)
+    os.Exit(1)
+  }
 
+  managerConfig, err := config.LoadApplicationManagerModuleConfig(do)
+  if err != nil {
+    log.Fatalf("Failed to load application manager module configuration: %s.", err)
+    os.Exit(1)
+  }
+
+  fmt.Printf("Consensus %s, App %s", consensusConfig.Version, managerConfig.Version)
 }
 
 //------------------------------------------------------------------------------

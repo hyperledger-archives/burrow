@@ -49,7 +49,16 @@ minor_version = 12
 ##
 ###############################################################################
 
-  [chain.application_manager]
+  [chain.manager]
+  # application manager name defines the module to use for handling
+  # the transactions.  Supported names are `erismint`
+  name = "erismint"
+  # version is the major and minor semantic version;
+  # the version will be asserted on
+  major_version = 0
+  minor_version = 12
+  # relative path to application manager root folder
+  relative_root = "erismint"
 
 [servers]
 
@@ -73,3 +82,12 @@ minor_version = 12
 [tmsp]
 # listener address for accepting tendermint socket protocol connections
 listener = "tcp://0.0.0.0:46658"
+
+################################################################################
+##
+## Eris-Mint
+##
+##
+################################################################################
+
+[erismint]
