@@ -112,7 +112,7 @@ listener = "tcp://0.0.0.0:46658"
   # if not already present.
   [tendermint.configuration]
   # moniker is the name of the node on the tendermint p2p network
-  moniker = "defaulttester.com"
+  moniker = "anonymous_marmot"
   # seeds lists the peers tendermint can connect to join the network
   seeds = ""
   # fast_sync allows a tendermint node to catch up faster when joining
@@ -120,8 +120,43 @@ listener = "tcp://0.0.0.0:46658"
   # NOTE: Tendermint has reported potential issues with fast_sync enabled.
   # The recommended setting is for keeping it disabled.
   fast_sync = false
-  # Database backend to use. Supported
+  # database backend to use for Tendermint. Supported `leveldb` and `memdb`.
   db_backend = "leveldb"
+  # logging level. Suppored `debug`, `notice`, `info` [ben: incomplete, see Tendermint]
+  log_level = "notice"
+  # node local address
+  node_laddr = "0.0.0.0:46656"
+  # rpc local address
+  rpc_laddr = "0.0.0.0:46657"
+  # proxy application address - used for tmsp connections,
+  # and this port should not be exposed for in-process Tendermint
+  proxy_app = "tcp://127.0.0.1:46658"
+
+  # Extended Tendermint configuration settings
+  # for reference to Tendermint see https://github.com/tendermint/tendermint/blob/master/config/tendermint/config.go
+
+  # genesis_file = "./data/tendermint/genesis.json"
+  # skip_upnp = false
+  # addrbook_file = "./data/tendermint/addrbook.json"
+  # priv_validator_file = "./data/tendermint/priv_validator.json"
+  # db_dir = "./data/tendermint/data"
+  # prof_laddr = ""
+  # revision_file = "./data/tendermint/revision"
+  # cswal = "./data/tendermint/datat/cswal"
+  # cswal_light = false
+
+  # block_size = 10000
+  # disable_data_hash = false
+  # timeout_propose = 3000
+  # timeout_propose_delta = 500
+  # timeout_prevote = 1000
+  # timeout_prevote_delta = 500
+  # timeout_precommit = 1000
+  # timeout_precommit_delta = 500
+  # timeout_commit = 1000
+  # mempool_recheck = true
+  # mempool_recheck_empty = true
+  # mempool_broadcast = true
 
 ################################################################################
 ##
