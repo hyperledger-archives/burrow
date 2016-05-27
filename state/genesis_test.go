@@ -4,11 +4,17 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"testing"
+	"time"
 
+	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/state/types"
+
+	. "github.com/tendermint/go-common"
 	tdb "github.com/tendermint/go-db"
+	"github.com/tendermint/tendermint/types"
 )
 
 var chain_id = "lone_ranger"
@@ -41,7 +47,7 @@ var g1 = fmt.Sprintf(`
     "validators": [
         {
             "amount": 100000000,
-            "pub_key": "F6C79CF0CB9D66B677988BCB9B8EADD9A091CD465A60542A8AB85476256DBA92",
+            "pub_key": [1,"F6C79CF0CB9D66B677988BCB9B8EADD9A091CD465A60542A8AB85476256DBA92"],
             "unbond_to": [
                 {
                     "address": "964B1493BBE3312278B7DEB94C39149F7899A345",
@@ -84,4 +90,69 @@ func TestGenesisMakeState(t *testing.T) {
 	if v != (send1 > 0) {
 		t.Fatalf("Incorrect permission for send. Got %v, expected %v\n", v, send1 > 0)
 	}
+}
+
+//-------------------------------------------------------
+
+func RandGenesisState(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*State, []*acm.PrivAccount, []*types.PrivValidator) {
+	db := tdb.NewMemDB()
+	genDoc, privAccounts, privValidators := RandGenesisDoc(numAccounts, randBalance, minBalance, numValidators, randBonded, minBonded)
+	s0 := MakeGenesisState(db, genDoc)
+	s0.Save()
+	return s0, privAccounts, privValidators
+}
+
+func RandAccount(randBalance bool, minBalance int64) (*acm.Account, *acm.PrivAccount) {
+	privAccount := acm.GenPrivAccount()
+	perms := ptypes.DefaultAccountPermissions
+	acc := &acm.Account{
+		Address:     privAccount.PubKey.Address(),
+		PubKey:      privAccount.PubKey,
+		Sequence:    RandInt(),
+		Balance:     minBalance,
+		Permissions: perms,
+	}
+	if randBalance {
+		acc.Balance += int64(RandUint32())
+	}
+	return acc, privAccount
+}
+
+func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*GenesisDoc, []*acm.PrivAccount, []*types.PrivValidator) {
+	accounts := make([]GenesisAccount, numAccounts)
+	privAccounts := make([]*acm.PrivAccount, numAccounts)
+	defaultPerms := ptypes.DefaultAccountPermissions
+	for i := 0; i < numAccounts; i++ {
+		account, privAccount := RandAccount(randBalance, minBalance)
+		accounts[i] = GenesisAccount{
+			Address:     account.Address,
+			Amount:      account.Balance,
+			Permissions: &defaultPerms, // This will get copied into each state.Account.
+		}
+		privAccounts[i] = privAccount
+	}
+	validators := make([]GenesisValidator, numValidators)
+	privValidators := make([]*types.PrivValidator, numValidators)
+	for i := 0; i < numValidators; i++ {
+		valInfo, privVal := types.RandValidator(randBonded, minBonded)
+		validators[i] = GenesisValidator{
+			PubKey: valInfo.PubKey,
+			Amount: valInfo.VotingPower,
+			UnbondTo: []BasicAccount{
+				{
+					Address: valInfo.PubKey.Address(),
+					Amount:  valInfo.VotingPower,
+				},
+			},
+		}
+		privValidators[i] = privVal
+	}
+	sort.Sort(types.PrivValidatorsByAddress(privValidators))
+	return &GenesisDoc{
+		GenesisTime: time.Now(),
+		ChainID:     "tendermint_test",
+		Accounts:    accounts,
+		Validators:  validators,
+	}, privAccounts, privValidators
+
 }
