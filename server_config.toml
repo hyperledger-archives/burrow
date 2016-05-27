@@ -18,9 +18,10 @@
 
 [chain]
 
-# ChainId is a human-readable name to identify the chain
-# this must correspond to the chain_id given in the genesis file
-chain_id = "MyChainId"
+# ChainId is a human-readable name to identify the chain.
+# This must correspond to the chain_id defined in the genesis file
+# and the assertion here provides a safe-guard on misconfiguring chains.
+assert_chain_id = "MyChainId"
 # semantic major and minor version
 major_version = 0
 minor_version = 12
@@ -35,7 +36,7 @@ minor_version = 12
   # consensus defines the module to use for consensus and
   # this will define the peer-to-peer consensus network;
   # accepted values are "noops", "tmsp", "tendermint"
-  name = "tmsp"
+  name = "tendermint"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
@@ -72,10 +73,20 @@ minor_version = 12
   write_buffer_size = 4096
 
 ################################################################################
+################################################################################
+##
+## Module configurations - dynamically loaded based on chain configuration
+##
+################################################################################
+################################################################################
+
+
+################################################################################
 ##
 ## Tendermint Socket Protocol (TMSP)
+## version 0.6.0
 ##
-## TMSP expects a tendermint process to run and connect to Eris-DB
+## TMSP expects a tendermint consensus process to run and connect to Eris-DB
 ##
 ################################################################################
 
@@ -85,8 +96,40 @@ listener = "tcp://0.0.0.0:46658"
 
 ################################################################################
 ##
-## Eris-Mint
+## Tendermint
+## version 0.6.0
 ##
+## in-process execution of Tendermint consensus engine
+##
+################################################################################
+
+[tendermint]
+
+  # tendermint requires an external configuration file present on disk
+  # in the tendermint root directory.
+  # Eris-DB's tendermint consensus module will extract this subtree from
+  # the configuration file and write it in the tendermint root directory,
+  # if not already present.
+  [tendermint.configuration]
+  # moniker is the name of the node on the tendermint p2p network
+  moniker = "defaulttester.com"
+  # seeds lists the peers tendermint can connect to join the network
+  seeds = ""
+  # fast_sync allows a tendermint node to catch up faster when joining
+  # the network.
+  # NOTE: Tendermint has reported potential issues with fast_sync enabled.
+  # The recommended setting is for keeping it disabled.
+  fast_sync = false
+  # Database backend to use. Supported
+  db_backend = "leveldb"
+
+################################################################################
+##
+## Eris-Mint
+## version 0.12.0
+##
+## The original Ethereum virtual machine with IAVL merkle trees
+## and tendermint/go-wire encoding
 ##
 ################################################################################
 

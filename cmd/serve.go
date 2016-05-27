@@ -85,7 +85,8 @@ func Serve(cmd *cobra.Command, args []string) {
     os.Exit(1)
   }
   // load chain_id for assertion
-  if do.ChainId = do.Config.GetString("chain.chain_id"); do.ChainId == "" {
+  if do.ChainId = do.Config.GetString("chain.assert_chain_id");
+    do.ChainId == "" {
     log.Fatalf("Failed to read non-empty string for ChainId from config.")
     os.Exit(1)
   }
@@ -110,7 +111,9 @@ func Serve(cmd *cobra.Command, args []string) {
     os.Exit(1)
   }
 
-  fmt.Printf("Consensus %s, App %s", consensusConfig.Version, managerConfig.Version)
+  fmt.Printf("Consensus %s, App %s\n", consensusConfig.Version, managerConfig.Version)
+
+
 }
 
 //------------------------------------------------------------------------------
