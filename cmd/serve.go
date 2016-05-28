@@ -24,8 +24,8 @@ import (
 
   log  "github.com/eris-ltd/eris-logger"
 
-  config "github.com/eris-ltd/eris-db/config"
-  util   "github.com/eris-ltd/eris-db/util"
+  core "github.com/eris-ltd/eris-db/core"
+  util "github.com/eris-ltd/eris-db/util"
 )
 
 var ServeCmd = &cobra.Command {
@@ -99,13 +99,13 @@ func Serve(cmd *cobra.Command, args []string) {
   }
   log.Debug(fmt.Sprintf("Data directory is set at %s", do.DataDir))
 
-  consensusConfig, err := config.LoadConsensusModuleConfig(do)
+  consensusConfig, err := core.LoadConsensusModuleConfig(do)
   if err != nil {
     log.Fatalf("Failed to load consensus module configuration: %s.", err)
     os.Exit(1)
   }
 
-  managerConfig, err := config.LoadApplicationManagerModuleConfig(do)
+  managerConfig, err := core.LoadApplicationManagerModuleConfig(do)
   if err != nil {
     log.Fatalf("Failed to load application manager module configuration: %s.", err)
     os.Exit(1)
