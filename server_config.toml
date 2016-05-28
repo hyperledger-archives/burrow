@@ -104,59 +104,21 @@ listener = "tcp://0.0.0.0:46658"
 ################################################################################
 
 [tendermint]
+# Tendermint requires an external configuration file present on disk
+# in the tendermint root directory.
+# Eris-DB's tendermint consensus module will copy this configuration file from
+# the Eris-DB working directory to the Tendermint working directory
+# as `config.toml`.
+# Eris-DB will respect the configurations set in this file where applicable,
+# but reserves the option to override or block conflicting settings.
+configuration_file = "tendermint_config.toml"
+#
+genesis_file = "genesis.json"
+#
+genesis_
+addressbook_file = "addrbook.json"
+private_validator_file = "priv_validator.json"
 
-  # tendermint requires an external configuration file present on disk
-  # in the tendermint root directory.
-  # Eris-DB's tendermint consensus module will extract this subtree from
-  # the configuration file and write it in the tendermint root directory,
-  # if not already present.
-  [tendermint.configuration]
-  # moniker is the name of the node on the tendermint p2p network
-  moniker = "anonymous_marmot"
-  # seeds lists the peers tendermint can connect to join the network
-  seeds = ""
-  # fast_sync allows a tendermint node to catch up faster when joining
-  # the network.
-  # NOTE: Tendermint has reported potential issues with fast_sync enabled.
-  # The recommended setting is for keeping it disabled.
-  fast_sync = false
-  # database backend to use for Tendermint. Supported `leveldb` and `memdb`.
-  db_backend = "leveldb"
-  # logging level. Suppored `debug`, `notice`, `info` [ben: incomplete, see Tendermint]
-  log_level = "notice"
-  # node local address
-  node_laddr = "0.0.0.0:46656"
-  # rpc local address
-  rpc_laddr = "0.0.0.0:46657"
-  # proxy application address - used for tmsp connections,
-  # and this port should not be exposed for in-process Tendermint
-  proxy_app = "tcp://127.0.0.1:46658"
-
-  # Extended Tendermint configuration settings
-  # for reference to Tendermint see https://github.com/tendermint/tendermint/blob/master/config/tendermint/config.go
-
-  # genesis_file = "./data/tendermint/genesis.json"
-  # skip_upnp = false
-  # addrbook_file = "./data/tendermint/addrbook.json"
-  # priv_validator_file = "./data/tendermint/priv_validator.json"
-  # db_dir = "./data/tendermint/data"
-  # prof_laddr = ""
-  # revision_file = "./data/tendermint/revision"
-  # cswal = "./data/tendermint/datat/cswal"
-  # cswal_light = false
-
-  # block_size = 10000
-  # disable_data_hash = false
-  # timeout_propose = 3000
-  # timeout_propose_delta = 500
-  # timeout_prevote = 1000
-  # timeout_prevote_delta = 500
-  # timeout_precommit = 1000
-  # timeout_precommit_delta = 500
-  # timeout_commit = 1000
-  # mempool_recheck = true
-  # mempool_recheck_empty = true
-  # mempool_broadcast = true
 
 ################################################################################
 ##
