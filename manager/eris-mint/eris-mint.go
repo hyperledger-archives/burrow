@@ -30,8 +30,9 @@ import (
 
   log "github.com/eris-ltd/eris-logger"
 
-  sm    "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-  types "github.com/eris-ltd/eris-db/txs"
+  manager_types "github.com/eris-ltd/eris-db/manager/types"
+  sm            "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+  types         "github.com/eris-ltd/eris-db/txs"
 )
 
 //--------------------------------------------------------------------------------
@@ -55,6 +56,14 @@ type ErisMint struct {
 
   nTxs int // count txs in a block
 }
+
+// NOTE [ben] Compiler check to ensure ErisMint successfully implements
+// eris-db/manager/types.Application
+var _ manager_types.Application = (*ErisMint)(nil)
+// NOTE: [ben] also automatically implements tmsp.Application,
+// undesired but unharmful
+// var _ tmsp.Application = (*ErisMint)(nil)
+
 
 func (app *ErisMint) GetState() *sm.State {
   app.mtx.Lock()
@@ -104,17 +113,17 @@ func NewErisMint(s *sm.State, evsw *events.EventSwitch) *ErisMint {
   }
 }
 
-// Implements tmsp.Application
+// Implements manager/types.Application
 func (app *ErisMint) Info() (info string) {
   return "ErisDB"
 }
 
-// Implements tmsp.Application
+// Implements manager/types.Application
 func (app *ErisMint) SetOption(key string, value string) (log string) {
   return ""
 }
 
-// Implements tmsp.Application
+// Implements manager/types.Application
 func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 
   app.nTxs += 1
@@ -139,7 +148,7 @@ func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
   return tmsp.NewResultOK(nil, "Success")
 }
 
-// Implements tmsp.Application
+// Implements manager/types.Application
 func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
   var n int
   var err error
@@ -162,7 +171,7 @@ func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
   return tmsp.NewResultOK(nil, "Success")
 }
 
-// Implements tmsp.Application
+// Implements manager/types.Application
 // Commit the state (called at end of block)
 // NOTE: CheckTx/AppendTx must not run concurrently with Commit -
 //  the mempool should run during AppendTxs, but lock for Commit and Update
