@@ -49,9 +49,11 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig) (*TendermintConfig, er
   }
   // wrap a copy of the viper config in a tendermint/go-config interface
   tmintConfig := GetTendermintConfig(tendermintConfigViper)
+  // complete the tendermint configuration with default flags
   tmintConfig.AssertTendermintDefaults(moduleConfig.ChainId,
     moduleConfig.WorkDir, moduleConfig.DataDir, moduleConfig.RootDir)
-  fmt.Printf("Moniker is %s", tmintConfig.GetString("moniker"))
+
+  // newNode := node.NewNode()
 
   //   newNode := node.NewNode()
   //   return &TendermintNode{
