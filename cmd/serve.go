@@ -112,7 +112,7 @@ func Serve(cmd *cobra.Command, args []string) {
   }
 
   fmt.Printf("Consensus %s, App %s\n", consensusConfig.Version, managerConfig.Version)
-
+  core.NewCore(do.ChainId, consensusConfig, managerConfig)
 
 }
 

@@ -14,20 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-// config defines simple types in a separate package to avoid cyclical imports
-package config
+package consensus
 
 import (
-  viper "github.com/spf13/viper"
+  config "github.com/eris-ltd/eris-db/config"
+
+  tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
 )
 
-type ModuleConfig struct {
-  Module  string
-  Name    string
-  Version string
-  WorkDir string
-  DataDir string
-  RootDir string
-  ChainId string
-  Config  *viper.Viper
+type ConsensusEngine struct {
+  //
+  Communicator
+
+  // application manager
+
 }
+
+func NewConsensusEngine(moduleConfig *config.ModuleConfig) {
+  tendermint.NewTendermintNode(moduleConfig)
+}
+
+type Communicator interface {
+  // Unicast()
+  Broadcast()
+}
+
+type ConsensusModule interface {
+  Start()
+}
+
+// func (consensusEngine *ConsensusEngine) setCommunicator (communicator *)

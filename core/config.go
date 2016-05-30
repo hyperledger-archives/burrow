@@ -33,37 +33,37 @@ import (
 )
 
 // LoadConsensusModuleConfig wraps specifically for the consensus module
-func LoadConsensusModuleConfig(do *definitions.Do) (config.ModuleConfig, error) {
+func LoadConsensusModuleConfig(do *definitions.Do) (*config.ModuleConfig, error) {
   return loadModuleConfig(do, "consensus")
 }
 
 // LoadApplicationManagerModuleConfig wraps specifically for the application
 // manager
-func LoadApplicationManagerModuleConfig(do *definitions.Do) (config.ModuleConfig, error) {
+func LoadApplicationManagerModuleConfig(do *definitions.Do) (*config.ModuleConfig, error) {
   return loadModuleConfig(do, "manager")
 }
 
 // Generic Module loader for configuration information
-func loadModuleConfig(do *definitions.Do, module string) (config.ModuleConfig, error) {
+func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, error) {
   moduleName := do.Config.GetString("chain." + module + ".name")
   majorVersion := do.Config.GetInt("chain." + module + ".major_version")
   minorVersion := do.Config.GetInt("chain." + module + ".minor_version")
   minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
     minorVersion, 0)
   if !assertValidModule(module, moduleName, minorVersionString) {
-    return config.ModuleConfig{}, fmt.Errorf("%s module %s (%s) is not supported by %s",
+    return nil, fmt.Errorf("%s module %s (%s) is not supported by %s",
       module, moduleName, minorVersionString, version.GetVersionString())
   }
   // set up the directory structure for the module inside the data directory
   workDir := path.Join(do.DataDir, do.Config.GetString("chain." + module +
     ".relative_root"))
   if err := util.EnsureDir(workDir, os.ModePerm); err != nil {
-    return config.ModuleConfig{},
+    return nil,
       fmt.Errorf("Failed to create module root directory %s.", workDir)
   }
   dataDir := path.Join(workDir, "data")
   if err := util.EnsureDir(dataDir, os.ModePerm); err != nil {
-    return config.ModuleConfig{},
+    return nil,
       fmt.Errorf("Failed to create module data directory %s.", dataDir)
   }
   // load configuration subtree for module
@@ -72,16 +72,18 @@ func loadModuleConfig(do *definitions.Do, module string) (config.ModuleConfig, e
   // and recovered from or a PR to viper is needed to address this bug.
   subConfig := do.Config.Sub(moduleName)
   if subConfig == nil {
-    return config.ModuleConfig{},
+    return nil,
       fmt.Errorf("Failed to read configuration section for %s.", moduleName)
   }
 
-  return config.ModuleConfig {
+  return &config.ModuleConfig {
     Module  : module,
     Name    : moduleName,
     Version : minorVersionString,
     WorkDir : workDir,
     DataDir : dataDir,
+    RootDir : do.WorkDir, // Eris-DB's working directory
+    ChainId : do.ChainId,
     Config  : subConfig,
   }, nil
 }

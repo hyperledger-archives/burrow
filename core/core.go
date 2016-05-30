@@ -14,20 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-// config defines simple types in a separate package to avoid cyclical imports
-package config
+package core
 
 import (
-  viper "github.com/spf13/viper"
+  config    "github.com/eris-ltd/eris-db/config"
+  consensus "github.com/eris-ltd/eris-db/consensus"
 )
 
-type ModuleConfig struct {
-  Module  string
-  Name    string
-  Version string
-  WorkDir string
-  DataDir string
-  RootDir string
-  ChainId string
-  Config  *viper.Viper
+// Core is the high-level structure
+type Core struct {
+  chainId string
+  // pipe    Pipe
+}
+
+func NewCore(chainId string, consensusConfig *config.ModuleConfig,
+  managerConfig *config.ModuleConfig) *Core {
+
+  consensus.NewConsensusEngine(consensusConfig)
+
+  // create state
+  // from genesis
+  // create event switch
+  // give state and evsw to app
+  // give app to consensus
+  // create new Pipe
+  // give app
+  // create servers
+  return &Core{}
 }
