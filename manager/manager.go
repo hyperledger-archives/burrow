@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-// version provides the current Eris-DB version and a VersionIdentifier
-// for the modules to identify their version with.
-
 package manager
 
 import (
@@ -32,10 +29,12 @@ import (
 // NOTE: [ben] Currently we only have a single `generic` definition
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
-func NewApplication(moduleConfig *config.ModuleConfig) (types.Application,
+func NewApplication(moduleConfig *config.ModuleConfig,
+  consensusMinorVersion string) (types.Application,
   error) {
   switch moduleConfig.Name {
   case "erismint" :
+
     return newErisMintPH(moduleConfig)
   }
   return nil, fmt.Errorf("PLACEHOLDER")

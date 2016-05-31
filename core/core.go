@@ -17,18 +17,27 @@
 package core
 
 import (
+  // TODO: [ben] swap out go-events with eris-db/event (currently unused)
+  events "github.com/tendermint/go-events"
+
   config    "github.com/eris-ltd/eris-db/config"
   consensus "github.com/eris-ltd/eris-db/consensus"
+  // manager   "github.com/eris-ltd/eris-db/manager"
 )
 
 // Core is the high-level structure
 type Core struct {
   chainId string
+  evsw    *events.EventSwitch
   // pipe    Pipe
 }
 
 func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   managerConfig *config.ModuleConfig) *Core {
+
+  // start new event switch, TODO: [ben] replace with eris-db/event
+  evsw := events.NewEventSwitch()
+  evsw.Start()
 
   consensus.NewConsensusEngine(consensusConfig)
 
@@ -42,3 +51,10 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   // create servers
   return &Core{}
 }
+
+//------------------------------------------------------------------------------
+// Explicit switch that can later be abstracted into an `Engine` definition
+// where the Engine defines the explicit interaction of a specific application
+// manager with a consensus engine.
+// TODO: [ben] before such Engine abstraction,
+// think about many-manager-to-one-consensus

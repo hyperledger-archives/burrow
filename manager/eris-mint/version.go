@@ -31,7 +31,23 @@ const (
   erisMintVersionPatch     = 0
 )
 
+// Define the compatible consensus engines this application manager
+// is compatible and has been tested with.
+var compatibleConsensus = [...]string {
+  "tendermint-0.6",
+  "tmsp-0.6",
+}
+
 func GetErisMintVersion() *version.VersionIdentifier {
   return version.New(erisMintClientIdentifier, erisMintVersionMajor,
     erisMintVersionMinor, erisMintVersionPatch)
+}
+
+func IsCompatibleConsensus(consensusMinorVersion string) bool {
+  for _, supported := range compatibleConsensus {
+    if consensusMinorVersion == supported {
+      return true
+    }
+  }
+  return false
 }
