@@ -34,9 +34,11 @@ func NewApplication(moduleConfig *config.ModuleConfig,
   error) {
   switch moduleConfig.Name {
   case "erismint" :
-    if err := erismint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
+    if err := erismint.AssertCompatibleConsensus(consensusMinorVersion);
+      err != nil {
       return nil, err
     }
+
     return newErisMintPH(moduleConfig)
   }
   return nil, fmt.Errorf("PLACEHOLDER")

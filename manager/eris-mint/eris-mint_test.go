@@ -17,7 +17,6 @@
 package erismint
 
 import (
-  "fmt"
   "testing"
 
   assert "github.com/stretchr/testify/assert"

@@ -25,6 +25,9 @@ assert_chain_id = "MyChainId"
 # semantic major and minor version
 major_version = 0
 minor_version = 12
+# genesis file, relative path is to eris-db working directory
+genesis_file = "genesis.json"
+
 
 ###############################################################################
 ##
@@ -168,3 +171,6 @@ listener = "tcp://0.0.0.0:46658"
 ################################################################################
 
 [erismint]
+# Database backend to use for ErisMint state database.
+# Supported `leveldb` and `memdb`.
+db_backend = "leveldb"
