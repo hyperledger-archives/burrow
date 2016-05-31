@@ -28,8 +28,6 @@ func TestCompatibleConsensus(t *testing.T) {
   // compatible consensus engine
 
   for _, listedConsensus := range compatibleConsensus {
-    assert.Equal(t, IsCompatibleConsensus(listedConsensus), true,
-      fmt.Sprintf("ErisMint (%s) failed compatibility test with consensus %s",
-      GetErisMintVersion(), listedConsensus))
+    assert.Nil(t, AssertCompatibleConsensus(listedConsensus))
   }
 }

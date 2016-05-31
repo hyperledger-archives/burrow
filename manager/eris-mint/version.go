@@ -17,6 +17,8 @@
 package erismint
 
 import (
+  "fmt"
+
   version "github.com/eris-ltd/eris-db/version"
 )
 
@@ -43,11 +45,12 @@ func GetErisMintVersion() *version.VersionIdentifier {
     erisMintVersionMinor, erisMintVersionPatch)
 }
 
-func IsCompatibleConsensus(consensusMinorVersion string) bool {
+func AssertCompatibleConsensus(consensusMinorVersion string) error {
   for _, supported := range compatibleConsensus {
     if consensusMinorVersion == supported {
-      return true
+      return nil
     }
   }
-  return false
+  return fmt.Errorf("ErisMint (%s) is not compatible with consensus engine %s",
+    GetErisMintVersion(), consensusMinorVersion)
 }
