@@ -20,11 +20,12 @@
 package types
 
 import (
-	transactions "github.com/eris-ltd/eris-db/txs"
-
 	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
 	csus "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/types"
+
+	account      "github.com/eris-ltd/eris-db/account"
+	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 type (
@@ -33,7 +34,7 @@ type (
 
 	// Accounts
 	AccountList struct {
-		Accounts []*Account `json:"accounts"`
+		Accounts []*account.Account `json:"accounts"`
 	}
 
 	// A contract account storage item.
@@ -160,7 +161,7 @@ type (
 
 	// UnconfirmedTxs
 	UnconfirmedTxs struct {
-		Txs []transactions.Tx `json:"txs"`
+		Txs []transaction.Tx `json:"txs"`
 	}
 
 	// BroadcastTx or Transact
@@ -192,5 +193,5 @@ func FromRoundState(rs *csus.RoundState) *ConsensusState {
 
 type ResultListNames struct {
 	BlockHeight int                 `json:"block_height"`
-	Names       []*transactions.NameRegEntry `json:"names"`
+	Names       []*transaction.NameRegEntry `json:"names"`
 }

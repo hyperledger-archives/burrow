@@ -8,7 +8,7 @@ import (
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-events"
 
-	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 

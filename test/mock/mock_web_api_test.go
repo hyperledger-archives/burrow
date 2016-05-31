@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/config"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	ep "github.com/eris-ltd/eris-db/erisdb/pipe"

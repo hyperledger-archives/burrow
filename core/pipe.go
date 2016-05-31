@@ -32,7 +32,8 @@ import (
   events           "github.com/tendermint/go-events"
   tendermint_types "github.com/tendermint/tendermint/types"
 
-  transactions "github.com/eris-ltd/eris-db/txs"
+  account     "github.com/eris-ltd/eris-db/account"
+  transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 type Pipe interface {
@@ -46,10 +47,10 @@ type Pipe interface {
 }
 
 type Accounts interface {
-  GenPrivAccount() (*types.PrivAccount, error)
-  GenPrivAccountFromKey(privKey []byte) (*types.PrivAccount, error)
+  GenPrivAccount() (*account.PrivAccount, error)
+  GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error)
   Accounts([]*types.FilterData) (*types.AccountList, error)
-  Account(address []byte) (*types.Account, error)
+  Account(address []byte) (*account.Account, error)
   Storage(address []byte) (*types.Storage, error)
   StorageAt(address, key []byte) (*types.StorageItem, error)
 }
@@ -75,7 +76,7 @@ type EventEmitter interface {
 }
 
 type NameReg interface {
-  Entry(key string) (*transactions.NameRegEntry, error)
+  Entry(key string) (*transaction.NameRegEntry, error)
   Entries([]*types.FilterData) (*types.ResultListNames, error)
 }
 
@@ -94,14 +95,14 @@ type Transactor interface {
   CallCode(fromAddress, code, data []byte) (*types.Call, error)
   // Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
   // SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
-  BroadcastTx(tx transactions.Tx) (*types.Receipt, error)
+  BroadcastTx(tx transaction.Tx) (*types.Receipt, error)
   Transact(privKey, address, data []byte, gasLimit,
     fee int64) (*types.Receipt, error)
   TransactAndHold(privKey, address, data []byte, gasLimit,
-    fee int64) (*transactions.EventDataCall, error)
+    fee int64) (*transaction.EventDataCall, error)
   TransactNameReg(privKey []byte, name, data string, amount,
     fee int64) (*types.Receipt, error)
   UnconfirmedTxs() (*types.UnconfirmedTxs, error)
-  SignTx(tx transactions.Tx,
-    privAccounts []*types.PrivAccount) (transactions.Tx, error)
+  SignTx(tx transaction.Tx,
+    privAccounts []*account.PrivAccount) (transaction.Tx, error)
 }

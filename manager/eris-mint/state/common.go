@@ -2,7 +2,7 @@ package state
 
 import (
 	. "github.com/tendermint/go-common"
-	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 )
 

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	acm "github.com/eris-ltd/eris-db/account"
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	edbcli "github.com/eris-ltd/eris-db/rpc/client"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"

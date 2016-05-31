@@ -1,7 +1,7 @@
 package erisdb
 
 import (
-	"github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/erisdb/pipe"
 	"github.com/eris-ltd/eris-db/txs"
 )

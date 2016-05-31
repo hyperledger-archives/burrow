@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"

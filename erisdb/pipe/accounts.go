@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	acm "github.com/eris-ltd/eris-db/manager/eris-mint/account"
+	acm "github.com/eris-ltd/eris-db/account"
 	cmn "github.com/tendermint/go-common"
 
 	"github.com/eris-ltd/eris-db/tmsp"
