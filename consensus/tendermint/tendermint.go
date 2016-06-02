@@ -21,8 +21,10 @@ package tendermint
 
 import (
   "fmt"
+  "path"
 
-  node "github.com/tendermint/tendermint/node"
+  node             "github.com/tendermint/tendermint/node"
+  tendermint_types "github.com/tendermint/tendermint/types"
 
   config        "github.com/eris-ltd/eris-db/config"
   manager_types "github.com/eris-ltd/eris-db/manager/types"
@@ -55,9 +57,17 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
   // complete the tendermint configuration with default flags
   tmintConfig.AssertTendermintDefaults(moduleConfig.ChainId,
     moduleConfig.WorkDir, moduleConfig.DataDir, moduleConfig.RootDir)
+  // override tendermint configurations to force consistency with overruling
+  // settings
+  tmintConfig.AssertTendermintConsistency(moduleConfig)
 
-
-
+  // TODO: [ben] do not "or Generate Validator keys", rather fail directly
+  // TODO: [ben] implement the signer for Private validator over eris-keys
+  // TODO: [ben] copy from rootDir to tendermint workingDir;
+  privateValidator := tendermint_types.LoadOrGenPrivValidator(
+    path.Join(moduleConfig.WorkDir,
+    moduleConfig.Config.GetString("private_validator_file")))
+  fmt.Printf("priv: %s", privateValidator.Address)
   // newNode := node.NewNode(tmintConfig, )
 
   //   newNode := node.NewNode()

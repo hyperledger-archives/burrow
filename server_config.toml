@@ -107,6 +107,13 @@ listener = "tcp://0.0.0.0:46658"
 ################################################################################
 
 [tendermint]
+# private validator file is used by tendermint to keep the status
+# of the private validator, but also (currently) holds the private key
+# for the private vaildator to sign with.  This private key needs to be moved
+# out and directly managed by eris-keys
+# This file needs to be in the working directory of tendermint.
+private_validator_file = "priv_validator.json"
+
   # Tendermint requires additional configuration parameters.
   # Eris-DB's tendermint consensus module will load [tendermint.configuration]
   # as the configuration for Tendermint.

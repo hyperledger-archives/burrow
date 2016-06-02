@@ -77,14 +77,15 @@ func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, 
   }
 
   return &config.ModuleConfig {
-    Module  : module,
-    Name    : moduleName,
-    Version : minorVersionString,
-    WorkDir : workDir,
-    DataDir : dataDir,
-    RootDir : do.WorkDir, // Eris-DB's working directory
-    ChainId : do.ChainId,
-    Config  : subConfig,
+    Module  :     module,
+    Name    :     moduleName,
+    Version :     minorVersionString,
+    WorkDir :     workDir,
+    DataDir :     dataDir,
+    RootDir :     do.WorkDir, // Eris-DB's working directory
+    ChainId :     do.ChainId,
+    GenesisFile : do.GenesisFile,
+    Config :      subConfig,
   }, nil
 }
 

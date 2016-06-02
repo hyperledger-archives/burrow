@@ -106,6 +106,7 @@ func Serve(cmd *cobra.Command, args []string) {
     "chainId": do.ChainId,
     "workingDirectory": do.WorkDir,
     "dataDirectory": do.DataDir,
+    "genesisFile": do.GenesisFile,
     }).Info("Eris-DB serve configuring")
 
   consensusConfig, err := core.LoadConsensusModuleConfig(do)

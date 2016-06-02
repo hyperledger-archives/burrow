@@ -25,6 +25,8 @@ import (
 
   tendermintConfig "github.com/tendermint/go-config"
   viper            "github.com/spf13/viper"
+
+  config "github.com/eris-ltd/eris-db/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements
@@ -89,6 +91,21 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("mempool_recheck", true)
 	tmintConfig.SetDefault("mempool_recheck_empty", true)
 	tmintConfig.SetDefault("mempool_broadcast", true)
+}
+
+//------------------------------------------------------------------------------
+// Tendermint consistency checks
+
+func(tmintConfig *TendermintConfig) AssertTendermintConsistency(
+  consensusConfig *config.ModuleConfig) {
+
+  tmintConfig.Set("chain_id", consensusConfig.ChainId)
+  tmintConfig.Set("genesis_file", consensusConfig.GenesisFile)
+  // private validator file
+  if consensusConfig.Config.IsSet("private_validator_file") {
+    tmintConfig.Set("priv_validator_file",
+      consensusConfig.Config.GetString("priv_validator_file"))
+  }
 }
 
 // implement interface github.com/tendermint/go-config/config.Config
