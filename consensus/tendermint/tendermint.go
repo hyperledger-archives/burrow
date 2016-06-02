@@ -65,7 +65,7 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
   // TODO: [ben] implement the signer for Private validator over eris-keys
   // TODO: [ben] copy from rootDir to tendermint workingDir;
   privateValidator := tendermint_types.LoadOrGenPrivValidator(
-    path.Join(moduleConfig.WorkDir,
+    path.Join(moduleConfig.RootDir,
     moduleConfig.Config.GetString("private_validator_file")))
   fmt.Printf("priv: %s", privateValidator.Address)
   // newNode := node.NewNode(tmintConfig, )
