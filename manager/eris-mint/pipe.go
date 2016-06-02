@@ -20,8 +20,11 @@ import (
   "bytes"
   "fmt"
 
-  db   "github.com/tendermint/go-db"
-  wire "github.com/tendermint/go-wire"
+  db     "github.com/tendermint/go-db"
+  events "github.com/tendermint/go-events"
+  wire   "github.com/tendermint/go-wire"
+
+  log "github.com/eris-ltd/eris-logger"
 
   config      "github.com/eris-ltd/eris-db/config"
   state       "github.com/eris-ltd/eris-db/manager/eris-mint/state"
@@ -30,25 +33,48 @@ import (
 
 type ErisMintPipe struct {
   erisMintState *state.State
+  eventSwitch   *events.EventSwitch
+  erisMint      *ErisMint
 }
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-  genesisFile string) (*ErisMintPipe, error) {
+  genesisFile string, eventSwitch *events.EventSwitch) (*ErisMintPipe, error) {
 
   startedState, err := startState(moduleConfig.DataDir,
-    moduleConfig.Config.GetString("db_backend"), genesisFile)
+    moduleConfig.Config.GetString("db_backend"), genesisFile,
+    moduleConfig.ChainId)
   if err != nil {
     return nil, fmt.Errorf("Failed to start state: %v", err)
   }
-  return &ErisMintPipe{
+  // assert ChainId matches genesis ChainId
+
+  // start the application
+  erisMint := NewErisMint(startedState, eventSwitch)
+
+  // NOTE: [ben] Set Host opens an RPC pipe to Tendermint;  this is a remnant
+  // of the old Eris-DB / Tendermint and should be
+  tendermintHost := moduleConfig.Config.GetString("tendermint_host")
+  log.Debug("Starting ErisMint RPC client to Tendermint host on %s",
+    tendermintHost)
+  erisMint.SetHostAddress(tendermintHost)
+
+  return &ErisMintPipe {
     erisMintState: startedState,
+    eventSwitch:   eventSwitch,
+    erisMint:      erisMint,
   }, nil
 }
 
 //------------------------------------------------------------------------------
 // Start state
 
-func startState(dataDir, backend, genesisFile string) (*state.State, error) {
+// Start state tries to load the existing state in the data directory;
+// if an existing database can be loaded, it will validate that the
+// chainId in the genesis of that loaded state matches the asserted chainId.
+// If no state can be loaded, the JSON genesis file will be loaded into the
+// state database as the zero state.
+func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
+  error) {
   // avoid Tendermints PanicSanity and return a clean error
   if backend != db.DBBackendMemDB &&
     backend != db.DBBackendLevelDB {
@@ -69,12 +95,17 @@ func startState(dataDir, backend, genesisFile string) (*state.State, error) {
 			return nil, fmt.Errorf("Unable to write genesisDoc to db: %v", err)
 		}
 	} else {
-		genDocBytes := stateDB.Get(state_types.GenDocKey)
+		loadedGenesisDocBytes := stateDB.Get(state_types.GenDocKey)
 		err := new(error)
-		wire.ReadJSONPtr(&genesisDoc, genDocBytes, err)
+		wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
 		if *err != nil {
-			return nil, fmt.Errorf("Unable to read genesisDoc from db: %v", err)
+			return nil, fmt.Errorf("Unable to read genesisDoc from db on startState: %v", err)
 		}
+    // assert loaded genesis doc has the same chainId as the provided chainId
+    if genesisDoc.ChainID != chainId {
+      return nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
+      genesisDoc.ChainID, chainId)
+    }
 	}
 
   return newState, nil

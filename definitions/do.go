@@ -41,6 +41,7 @@ type Do struct {
   // Capital configuration options explicitly extracted from the Viper config
 	ChainId      string   // has to be set to non-empty string,
                         // uniquely identifying the chain.
+  GenesisFile  string
 	// ChainType    string
 	// CSV          string
 	// AccountTypes []string
@@ -58,6 +59,7 @@ func NowDo() *Do {
   do.WorkDir = ""
   do.DataDir = ""
   do.ChainId = ""
+  do.GenesisFile = ""
 	do.Config = viper.New()
 	return do
 }

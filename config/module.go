@@ -22,12 +22,13 @@ import (
 )
 
 type ModuleConfig struct {
-  Module  string
-  Name    string
-  Version string
-  WorkDir string
-  DataDir string
-  RootDir string
-  ChainId string
-  Config  *viper.Viper
+  Module      string
+  Name        string
+  Version     string
+  WorkDir     string
+  DataDir     string
+  RootDir     string
+  ChainId     string
+  GenesisFile string
+  Config      *viper.Viper
 }

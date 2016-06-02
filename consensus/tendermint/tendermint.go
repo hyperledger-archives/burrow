@@ -24,7 +24,8 @@ import (
 
   node "github.com/tendermint/tendermint/node"
 
-  config "github.com/eris-ltd/eris-db/config"
+  config        "github.com/eris-ltd/eris-db/config"
+  manager_types "github.com/eris-ltd/eris-db/manager/types"
   // files  "github.com/eris-ltd/eris-db/files"
 )
 
@@ -32,7 +33,8 @@ type TendermintNode struct {
   tmintNode *node.Node
 }
 
-func NewTendermintNode(moduleConfig *config.ModuleConfig) (*TendermintConfig, error) {
+func NewTendermintNode(moduleConfig *config.ModuleConfig,
+  applicaton *manager_types.Application) (*TendermintNode, error) {
   // re-assert proper configuration for module
   if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
     return nil, fmt.Errorf("Version string %s did not match %s",
@@ -45,7 +47,8 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig) (*TendermintConfig, er
   // subtree. To shield in go-routine, or PR to viper.
   tendermintConfigViper := moduleConfig.Config.Sub("configuration")
   if tendermintConfigViper == nil {
-    return nil, fmt.Errorf("Failed to extract Tendermint configuration subtree.")
+    return nil,
+      fmt.Errorf("Failed to extract Tendermint configuration subtree.")
   }
   // wrap a copy of the viper config in a tendermint/go-config interface
   tmintConfig := GetTendermintConfig(tendermintConfigViper)
@@ -53,7 +56,9 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig) (*TendermintConfig, er
   tmintConfig.AssertTendermintDefaults(moduleConfig.ChainId,
     moduleConfig.WorkDir, moduleConfig.DataDir, moduleConfig.RootDir)
 
-  // newNode := node.NewNode()
+
+
+  // newNode := node.NewNode(tmintConfig, )
 
   //   newNode := node.NewNode()
   //   return &TendermintNode{

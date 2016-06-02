@@ -17,29 +17,40 @@
 package core
 
 import (
+  "fmt"
+
   // TODO: [ben] swap out go-events with eris-db/event (currently unused)
   events "github.com/tendermint/go-events"
 
-  config    "github.com/eris-ltd/eris-db/config"
-  consensus "github.com/eris-ltd/eris-db/consensus"
-  // manager   "github.com/eris-ltd/eris-db/manager"
+  config      "github.com/eris-ltd/eris-db/config"
+  consensus   "github.com/eris-ltd/eris-db/consensus"
+  definitions "github.com/eris-ltd/eris-db/definitions"
+  manager     "github.com/eris-ltd/eris-db/manager"
 )
 
 // Core is the high-level structure
 type Core struct {
   chainId string
   evsw    *events.EventSwitch
-  // pipe    Pipe
+  pipe    definitions.Pipe
 }
 
-func NewCore(chainId string, consensusConfig *config.ModuleConfig,
-  managerConfig *config.ModuleConfig) *Core {
+func NewCore(chainId, genesisFile string, consensusConfig *config.ModuleConfig,
+  managerConfig *config.ModuleConfig) (*Core, error) {
 
   // start new event switch, TODO: [ben] replace with eris-db/event
   evsw := events.NewEventSwitch()
   evsw.Start()
 
-  consensus.NewConsensusEngine(consensusConfig)
+  // start a new application pipe that will load an application manager
+  pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
+    consensusConfig.Version, genesisFile)
+  if err != nil {
+    return nil, fmt.Errorf("PLACEHOLDER")
+  }
+  // pass the
+  consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
+
 
   // create state
   // from genesis
@@ -49,7 +60,7 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   // create new Pipe
   // give app
   // create servers
-  return &Core{}
+  return &Core{}, fmt.Errorf("PLACEHOLDER")
 }
 
 //------------------------------------------------------------------------------

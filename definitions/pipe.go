@@ -14,11 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package core
-
-import (
-  types "github.com/eris-ltd/eris-db/core/types"
-)
+package definitions
 
 // TODO: [ben] This respects the old Pipe interface from Eris-DB.
 // This made sense as a wrapper around the old Tendermint, but now
@@ -34,6 +30,7 @@ import (
 
   account     "github.com/eris-ltd/eris-db/account"
   transaction "github.com/eris-ltd/eris-db/txs"
+  types       "github.com/eris-ltd/eris-db/core/types"
 )
 
 type Pipe interface {

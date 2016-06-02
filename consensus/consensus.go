@@ -19,7 +19,8 @@ package consensus
 import (
   config "github.com/eris-ltd/eris-db/config"
 
-  tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
+  definitions "github.com/eris-ltd/eris-db/definitions"
+  tendermint  "github.com/eris-ltd/eris-db/consensus/tendermint"
 )
 
 type ConsensusEngine struct {
@@ -30,8 +31,17 @@ type ConsensusEngine struct {
 
 }
 
+func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
+  pipe definitions.Pipe) error {
+  switch moduleConfig.Name {
+  case "tendermint" :
+    tendermint.NewTendermintNode(moduleConfig, nil)
+  }
+  return nil
+}
+
 func NewConsensusEngine(moduleConfig *config.ModuleConfig) {
-  tendermint.NewTendermintNode(moduleConfig)
+
 }
 
 type Communicator interface {

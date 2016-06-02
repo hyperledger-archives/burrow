@@ -125,7 +125,7 @@ listener = "tcp://0.0.0.0:46658"
   # database backend to use for Tendermint. Supported `leveldb` and `memdb`.
   db_backend = "leveldb"
   # logging level. Suppored `debug`, `notice`, `info` [ben: incomplete, see Tendermint]
-  log_level = "notice"
+  log_level = "info"
   # node local address
   node_laddr = "0.0.0.0:46656"
   # rpc local address
@@ -174,3 +174,6 @@ listener = "tcp://0.0.0.0:46658"
 # Database backend to use for ErisMint state database.
 # Supported `leveldb` and `memdb`.
 db_backend = "leveldb"
+# tendermint host address needs to correspond to tendermints configuration
+# of the rpc local address
+tendermint_host = "0.0.0.0:46657"

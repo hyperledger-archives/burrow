@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"time"
@@ -150,6 +151,17 @@ func (s *State) ComputeBlockStateHash(block *types.Block) error {
 	return nil
 }
 */
+
+func (s *State) GetGenesisDoc() (*GenesisDoc, error) {
+	var genesisDoc *GenesisDoc
+	loadedGenesisDocBytes := s.DB.Get(GenDocKey)
+	err := new(error)
+	wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
+	if *err != nil {
+		return nil, fmt.Errorf("Unable to read genesisDoc from db on Get: %v", err)
+	}
+	return genesisDoc, nil
+}
 
 func (s *State) SetDB(db dbm.DB) {
 	s.DB = db

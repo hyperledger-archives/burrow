@@ -19,35 +19,30 @@ package manager
 import (
   "fmt"
 
-  config   "github.com/eris-ltd/eris-db/config"
-  erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
-  types    "github.com/eris-ltd/eris-db/manager/types"
+  events "github.com/tendermint/go-events"
+
+  config      "github.com/eris-ltd/eris-db/config"
+  definitions "github.com/eris-ltd/eris-db/definitions"
+  erismint    "github.com/eris-ltd/eris-db/manager/eris-mint"
+  // types       "github.com/eris-ltd/eris-db/manager/types"
 )
 
-// NewApplication returns an initialised application interface
+// NewApplicationPipe returns an initialised Pipe interface
 // based on the loaded module configuration file.
 // NOTE: [ben] Currently we only have a single `generic` definition
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
-func NewApplication(moduleConfig *config.ModuleConfig,
-  consensusMinorVersion string) (types.Application,
-  error) {
+func NewApplicationPipe(moduleConfig *config.ModuleConfig,
+  evsw *events.EventSwitch, consensusMinorVersion,
+  genesisFile string) (definitions.Pipe, error) {
   switch moduleConfig.Name {
   case "erismint" :
     if err := erismint.AssertCompatibleConsensus(consensusMinorVersion);
       err != nil {
       return nil, err
     }
-
-    return newErisMintPH(moduleConfig)
+    erismint.NewErisMintPipe(moduleConfig, genesisFile, evsw)
+    // TODO: ErisMintPipe does not yet implement definitions.Pipe
   }
-  return nil, fmt.Errorf("PLACEHOLDER")
-}
-
-//------------------------------------------------------------------------------
-// Eris-Mint
-
-func newErisMintPH(moduleConfig *config.ModuleConfig) (*erismint.ErisMint,
-  error) {
   return nil, fmt.Errorf("PLACEHOLDER")
 }
