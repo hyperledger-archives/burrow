@@ -17,8 +17,8 @@
 package commands
 
 import (
-  "fmt"
   "os"
+  "path"
 
   cobra "github.com/spf13/cobra"
 
@@ -45,15 +45,13 @@ $ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB
         log.Fatalf("No directory provided and failed to get current working directory: %v", err)
         os.Exit(1)
       } else {
-        log.Warn("No working directory provided in ERIS_DB_WORKDIR or --work-dir\n" +
-          "Will use current working directory ", currentDirectory)
+
         do.WorkDir = currentDirectory
       }
     }
     if !util.IsDir(do.WorkDir) {
       log.Fatalf("Provided working directory %s is not a directory", do.WorkDir)
     }
-    log.Debug("Working directory is set as %s", do.WorkDir)
   },
   Run: Serve,
 }
@@ -80,8 +78,10 @@ func Serve(cmd *cobra.Command, args []string) {
   // load configuration from a single location to avoid a wrong configuration
   // file is loaded.
   if err := do.ReadConfig(do.WorkDir, "server_config", "toml"); err != nil {
-    log.Fatalf("Fatal error reading server_config.toml : %s \n work directory: %s \n",
-      err, do.WorkDir)
+    log.WithFields(log.Fields{
+        "directory": do.WorkDir,
+        "file": "server_config.toml",
+      }).Fatalf("Fatal error reading configuration")
     os.Exit(1)
   }
   // load chain_id for assertion
@@ -90,14 +90,23 @@ func Serve(cmd *cobra.Command, args []string) {
     log.Fatalf("Failed to read non-empty string for ChainId from config.")
     os.Exit(1)
   }
-  log.Info("Eris-DB serve initializing ", do.ChainId, " from ", do.WorkDir)
-
+  // load the genesis file path
+  if do.GenesisFile = path.Join(do.WorkDir,
+    do.Config.GetString("chain.genesis_file"));
+    do.GenesisFile == "" {
+    log.Fatalf("Failed to read non-empty string for genesis file from config.")
+    os.Exit(1)
+  }
   // Ensure data directory is set and accesible
   if err := do.InitialiseDataDirectory(); err != nil {
     log.Fatalf("Failed to initialise data directory (%s): %v", do.DataDir, err)
     os.Exit(1)
   }
-  log.Debug(fmt.Sprintf("Data directory is set at %s", do.DataDir))
+  log.WithFields(log.Fields{
+    "chainId": do.ChainId,
+    "workingDirectory": do.WorkDir,
+    "dataDirectory": do.DataDir,
+    }).Info("Eris-DB serve configuring")
 
   consensusConfig, err := core.LoadConsensusModuleConfig(do)
   if err != nil {
@@ -110,10 +119,11 @@ func Serve(cmd *cobra.Command, args []string) {
     log.Fatalf("Failed to load application manager module configuration: %s.", err)
     os.Exit(1)
   }
-
-  fmt.Printf("Consensus %s, App %s\n", consensusConfig.Version, managerConfig.Version)
-  core.NewCore(do.ChainId, consensusConfig, managerConfig)
-
+  log.WithFields(log.Fields{
+    "consensusModule": consensusConfig.Version,
+    "applicationManager": managerConfig.Version,
+  }).Debug("Modules configured")
+  core.NewCore(do.ChainId, do.GenesisFile, consensusConfig, managerConfig)
 }
 
 //------------------------------------------------------------------------------
