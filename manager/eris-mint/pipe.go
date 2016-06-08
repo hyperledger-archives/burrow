@@ -27,6 +27,7 @@ import (
   log "github.com/eris-ltd/eris-logger"
 
   config      "github.com/eris-ltd/eris-db/config"
+  definitions "github.com/eris-ltd/eris-db/definitions"
   state       "github.com/eris-ltd/eris-db/manager/eris-mint/state"
   state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 )
@@ -35,6 +36,14 @@ type ErisMintPipe struct {
   erisMintState *state.State
   eventSwitch   *tendermint_events.EventSwitch
   erisMint      *ErisMint
+  // Pipe implementations
+  accounts      definitions.Accounts
+  blockchain    definitions.Blockchain
+  consensus     definitions.Consensus
+  events        definitions.EventEmitter
+  namereg       definitions.NameReg
+  net           definitions.Net
+  transactor    definitions.Transactor
 }
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
@@ -52,11 +61,14 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   erisMint := NewErisMint(startedState, eventSwitch)
 
   // NOTE: [ben] Set Host opens an RPC pipe to Tendermint;  this is a remnant
-  // of the old Eris-DB / Tendermint and should be
+  // of the old Eris-DB / Tendermint and should be considered as an in-process
+  // call when possible
   tendermintHost := moduleConfig.Config.GetString("tendermint_host")
   log.Debug("Starting ErisMint RPC client to Tendermint host on %s",
     tendermintHost)
   erisMint.SetHostAddress(tendermintHost)
+
+
 
   return &ErisMintPipe {
     erisMintState: startedState,
@@ -113,3 +125,31 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for ErisMintPipe
+
+func (pipe *ErisMintPipe) Accounts() definitions.Accounts {
+  return pipe.accounts
+}
+
+func (pipe *ErisMintPipe) Blockchain() definitions.Blockchain {
+  return pipe.blockchain
+}
+
+func (pipe *ErisMintPipe) Consensus() definitions.Consensus {
+  return pipe.consensus
+}
+
+func (pipe *ErisMintPipe) Events() definitions.EventEmitter {
+  return pipe.events
+}
+
+func (pipe *ErisMintPipe) NameReg() definitions.NameReg {
+  return pipe.namereg
+}
+
+func (pipe *ErisMintPipe) Net() definitions.Net {
+  return pipe.net
+}
+
+func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
+  return pipe.transactor
+}
