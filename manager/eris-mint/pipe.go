@@ -68,12 +68,25 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
     tendermintHost)
   erisMint.SetHostAddress(tendermintHost)
 
-
+  // initialise the components of the pipe
+  events := newEvents(eventSwitch)
+  accounts := newAccounts(erisMint)
+  namereg := newNameReg(erisMint)
+  transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
+    events)
+  // TODO: make interface to tendermint core's rpc for these
+  // blockchain := newBlockchain(chainID, genDocFile, blockStore)
+  // consensus := newConsensus(erisdbApp)
+  // net := newNetwork(erisdbApp)
 
   return &ErisMintPipe {
     erisMintState: startedState,
     eventSwitch:   eventSwitch,
     erisMint:      erisMint,
+    accounts:      accounts,
+    events:        events,
+    namereg:       namereg,
+    transactor:    transactor,
   }, nil
 }
 

@@ -42,7 +42,6 @@ func NewApplicationPipe(moduleConfig *config.ModuleConfig,
       return nil, err
     }
     return erismint.NewErisMintPipe(moduleConfig, genesisFile, evsw)
-    // TODO: ErisMintPipe does not yet implement definitions.Pipe
   }
   return nil, fmt.Errorf("PLACEHOLDER")
 }

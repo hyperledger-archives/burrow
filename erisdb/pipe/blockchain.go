@@ -10,6 +10,8 @@ import (
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"
+
+  core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 const BLOCK_MAX = 50
@@ -25,11 +27,11 @@ type blockchain struct {
 	chainID       string
 	genDocFile    string // XXX
 	blockStore    BlockStore
-	filterFactory *FilterFactory
+	filterFactory *core_types.FilterFactory
 }
 
 func newBlockchain(chainID, genDocFile string, blockStore BlockStore) *blockchain {
-	ff := NewFilterFactory()
+	ff := core_types.NewFilterFactory()
 
 	ff.RegisterFilterPool("height", &sync.Pool{
 		New: func() interface{} {

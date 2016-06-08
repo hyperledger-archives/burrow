@@ -26,17 +26,19 @@ import (
 
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
+
+  core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 // The net struct.
 type namereg struct {
 	erisMint      *ErisMint
-	filterFactory *FilterFactory
+	filterFactory *core_types.FilterFactory
 }
 
-func newNamereg(erisMint *ErisMint) *namereg {
+func newNameReg(erisMint *ErisMint) *namereg {
 
-	ff := NewFilterFactory()
+	ff := core_types.NewFilterFactory()
 
 	ff.RegisterFilterPool("name", &sync.Pool{
 		New: func() interface{} {
@@ -74,7 +76,7 @@ func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
+func (this *namereg) Entries(filters []*core_types.FilterData) (*core_types.ResultListNames, error) {
 	var blockHeight int
 	var names []*txs.NameRegEntry
 	state := this.erisMint.GetState()
@@ -90,7 +92,7 @@ func (this *namereg) Entries(filters []*FilterData) (*ResultListNames, error) {
 		}
 		return false
 	})
-	return &ResultListNames{blockHeight, names}, nil
+	return &core_types.ResultListNames{blockHeight, names}, nil
 }
 
 type ResultListNames struct {
@@ -106,7 +108,7 @@ type NameRegNameFilter struct {
 	match func(string, string) bool
 }
 
-func (this *NameRegNameFilter) Configure(fd *FilterData) error {
+func (this *NameRegNameFilter) Configure(fd *core_types.FilterData) error {
 	op := fd.Op
 	val := fd.Value
 
@@ -142,7 +144,7 @@ type NameRegOwnerFilter struct {
 	match func([]byte, []byte) bool
 }
 
-func (this *NameRegOwnerFilter) Configure(fd *FilterData) error {
+func (this *NameRegOwnerFilter) Configure(fd *core_types.FilterData) error {
 	op := fd.Op
 	val, err := hex.DecodeString(fd.Value)
 
@@ -181,7 +183,7 @@ type NameRegDataFilter struct {
 	match func(string, string) bool
 }
 
-func (this *NameRegDataFilter) Configure(fd *FilterData) error {
+func (this *NameRegDataFilter) Configure(fd *core_types.FilterData) error {
 	op := fd.Op
 	val := fd.Value
 
@@ -217,12 +219,12 @@ type NameRegExpiresFilter struct {
 	match func(int64, int64) bool
 }
 
-func (this *NameRegExpiresFilter) Configure(fd *FilterData) error {
-	val, err := ParseNumberValue(fd.Value)
+func (this *NameRegExpiresFilter) Configure(fd *core_types.FilterData) error {
+	val, err := core_types.ParseNumberValue(fd.Value)
 	if err != nil {
 		return err
 	}
-	match, err2 := GetRangeFilter(fd.Op, "expires")
+	match, err2 := core_types.GetRangeFilter(fd.Op, "expires")
 	if err2 != nil {
 		return err2
 	}
