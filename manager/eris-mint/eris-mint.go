@@ -22,7 +22,7 @@ import (
   "fmt"
   "sync"
 
-  events "github.com/tendermint/go-events"
+  tendermint_events "github.com/tendermint/go-events"
   client "github.com/tendermint/go-rpc/client"
   wire   "github.com/tendermint/go-wire"
   ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -47,8 +47,8 @@ type ErisMint struct {
   cache      *sm.BlockCache
   checkCache *sm.BlockCache // for CheckTx (eg. so we get nonces right)
 
-  evc  *events.EventCache
-  evsw *events.EventSwitch
+  evc  *tendermint_events.EventCache
+  evsw *tendermint_events.EventSwitch
 
   // client to the tendermint core rpc
   client *client.ClientURI
@@ -103,12 +103,12 @@ func (app *ErisMint) BroadcastTx(tx types.Tx) error {
   return err
 }
 
-func NewErisMint(s *sm.State, evsw *events.EventSwitch) *ErisMint {
+func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch) *ErisMint {
   return &ErisMint{
     state:      s,
     cache:      sm.NewBlockCache(s),
     checkCache: sm.NewBlockCache(s),
-    evc:        events.NewEventCache(evsw),
+    evc:        tendermint_events.NewEventCache(evsw),
     evsw:       evsw,
   }
 }

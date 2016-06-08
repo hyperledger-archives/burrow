@@ -48,14 +48,14 @@ func NewCore(chainId, genesisFile string, consensusConfig *config.ModuleConfig,
   if err != nil {
     return nil, fmt.Errorf("PLACEHOLDER")
   }
-  // pass the
+  // pass the consensus engine into the pipe
   consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
 
 
-  // create state
-  // from genesis
-  // create event switch
-  // give state and evsw to app
+  // [x] create state
+  // [x] from genesis
+  // [x] create event switch
+  // [x] give state and evsw to app
   // give app to consensus
   // create new Pipe
   // give app

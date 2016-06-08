@@ -21,7 +21,7 @@ import (
   "fmt"
 
   db     "github.com/tendermint/go-db"
-  events "github.com/tendermint/go-events"
+  tendermint_events "github.com/tendermint/go-events"
   wire   "github.com/tendermint/go-wire"
 
   log "github.com/eris-ltd/eris-logger"
@@ -33,12 +33,12 @@ import (
 
 type ErisMintPipe struct {
   erisMintState *state.State
-  eventSwitch   *events.EventSwitch
+  eventSwitch   *tendermint_events.EventSwitch
   erisMint      *ErisMint
 }
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-  genesisFile string, eventSwitch *events.EventSwitch) (*ErisMintPipe, error) {
+  genesisFile string, eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
 
   startedState, err := startState(moduleConfig.DataDir,
     moduleConfig.Config.GetString("db_backend"), genesisFile,
@@ -110,3 +110,6 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 
   return newState, nil
 }
+
+//------------------------------------------------------------------------------
+// Implement definitions.Pipe for ErisMintPipe
