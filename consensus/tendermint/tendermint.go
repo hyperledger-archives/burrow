@@ -33,6 +33,7 @@ import (
   log "github.com/eris-ltd/eris-logger"
 
   config        "github.com/eris-ltd/eris-db/config"
+  definitions   "github.com/eris-ltd/eris-db/definitions"
   manager_types "github.com/eris-ltd/eris-db/manager/types"
   // files  "github.com/eris-ltd/eris-db/files"
 )
@@ -41,6 +42,10 @@ type TendermintNode struct {
   tmintNode   *node.Node
   tmintConfig *TendermintConfig
 }
+
+// NOTE [ben] Compiler check to ensure TendermintNode successfully implements
+// eris-db/definitions.Consensus
+var _ definitions.ConsensusEngine = (*TendermintNode)(nil)
 
 func NewTendermintNode(moduleConfig *config.ModuleConfig,
   application manager_types.Application) (*TendermintNode, error) {

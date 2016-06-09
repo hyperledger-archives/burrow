@@ -44,6 +44,7 @@ type Pipe interface {
   Transactor() Transactor
   // NOTE: [ben] added to Pipe interface on 0.12 refactor
   GetApplication() manager_types.Application
+  SetConsensusEngine(consensus ConsensusEngine) error
 }
 
 type Accounts interface {

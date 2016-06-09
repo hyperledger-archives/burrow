@@ -58,10 +58,10 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   // [x] from genesis
   // [x] create event switch
   // [x] give state and evsw to app
-  // give app to consensus
-  // create new Pipe
-  // give app
-  // create servers
+  // [x] give app to consensus
+  // [x] create new Pipe
+  // [x] give consensus to pipe
+  // [ ] create servers
   return &Core{}, fmt.Errorf("PLACEHOLDER")
 }
 

@@ -17,43 +17,25 @@
 package consensus
 
 import (
-  config "github.com/eris-ltd/eris-db/config"
+  "fmt"
 
+  config      "github.com/eris-ltd/eris-db/config"
   definitions "github.com/eris-ltd/eris-db/definitions"
   tendermint  "github.com/eris-ltd/eris-db/consensus/tendermint"
 )
-
-type ConsensusEngine struct {
-  //
-  Communicator
-
-  // application manager
-
-}
 
 func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
   pipe definitions.Pipe) error {
   switch moduleConfig.Name {
   case "tendermint" :
-    _, err := tendermint.NewTendermintNode(moduleConfig, pipe.GetApplication())
+    tendermintNode, err := tendermint.NewTendermintNode(moduleConfig,
+      pipe.GetApplication())
     if err != nil {
-      return err
+      return fmt.Errorf("Failed to load Tendermint node: %v", err)
+    }
+    if err := pipe.SetConsensusEngine(tendermintNode); err != nil {
+      return fmt.Errorf("Failed to hand Tendermint node to pipe: %v", err)
     }
   }
   return nil
 }
-
-func NewConsensusEngine(moduleConfig *config.ModuleConfig) {
-
-}
-
-type Communicator interface {
-  // Unicast()
-  Broadcast()
-}
-
-type ConsensusModule interface {
-  Start()
-}
-
-// func (consensusEngine *ConsensusEngine) setCommunicator (communicator *)

@@ -398,7 +398,7 @@ func (s *State) SetFireable(evc events.Fireable) {
 // Genesis
 
 func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
-	jsonBlob, err := ioutil.ReadFile(genDocFile)
+  jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
 	}

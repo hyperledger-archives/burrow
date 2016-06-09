@@ -34,17 +34,19 @@ import (
 )
 
 type ErisMintPipe struct {
-  erisMintState *state.State
-  eventSwitch   *tendermint_events.EventSwitch
-  erisMint      *ErisMint
+  erisMintState   *state.State
+  eventSwitch     *tendermint_events.EventSwitch
+  erisMint        *ErisMint
   // Pipe implementations
-  accounts      definitions.Accounts
-  blockchain    definitions.Blockchain
-  consensus     definitions.Consensus
-  events        definitions.EventEmitter
-  namereg       definitions.NameReg
-  net           definitions.Net
-  transactor    definitions.Transactor
+  accounts        definitions.Accounts
+  blockchain      definitions.Blockchain
+  consensus       definitions.Consensus
+  events          definitions.EventEmitter
+  namereg         definitions.NameReg
+  net             definitions.Net
+  transactor      definitions.Transactor
+  // Consensus interface
+  consensusEngine definitions.ConsensusEngine
 }
 
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
@@ -96,6 +98,7 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
     events:        events,
     namereg:       namereg,
     transactor:    transactor,
+    consensus:     nil,
   }, nil
 }
 
@@ -178,4 +181,14 @@ func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
 
 func (pipe *ErisMintPipe) GetApplication() manager_types.Application {
   return pipe.erisMint
+}
+
+func (pipe *ErisMintPipe) SetConsensusEngine(
+  consensus definitions.ConsensusEngine) error {
+  if pipe.consensusEngine == nil {
+    pipe.consensusEngine = consensus
+  } else {
+    return fmt.Errorf("Failed to set consensus engine for pipe; already set")
+  }
+  return nil
 }
