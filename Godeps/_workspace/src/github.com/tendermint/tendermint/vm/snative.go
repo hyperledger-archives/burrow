@@ -53,13 +53,14 @@ contract Permissions {
 
 // function identifiers from the solidity abi
 var PermsMap = map[string]SNativeFuncDescription{
-	"054556ac": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
+	//"054556ac": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
+	"e8145855": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
 	"180d26f2": SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
 	"3a3fcc59": SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
-	"9a1c4141": SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
+	"3fbf7da5": SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
 	"9ea53314": SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
 	"bb37737a": SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
-	"ded3350a": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
+	"28fd0194": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
 }
 
 func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {

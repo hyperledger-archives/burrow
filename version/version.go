@@ -16,5 +16,7 @@
 
 package version
 
-const VERSION = "0.12.0"
 const TENDERMINT_VERSION = "0.5.0"
+// IMPORTANT: Eris-DB version must be on the last line of this file for
+// the deployment script DOCKER/build.sh to pick up the right label.
+const VERSION = "0.12.0"
