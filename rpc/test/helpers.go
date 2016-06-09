@@ -9,8 +9,8 @@ import (
 	edb "github.com/eris-ltd/eris-db/erisdb"
 	edbcli "github.com/eris-ltd/eris-db/rpc/client"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
-	sm "github.com/eris-ltd/eris-db/state"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	edbapp "github.com/eris-ltd/eris-db/tmsp"
 	txs "github.com/eris-ltd/eris-db/txs"
 

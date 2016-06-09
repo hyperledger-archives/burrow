@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/evm"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
-	"github.com/eris-ltd/eris-db/state"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"

@@ -41,7 +41,7 @@ fi
 CHAIN_DIR="/home/$USER/.eris/chains/$CHAIN_ID"
 
 # set the tendermint directory
-TMROOT=$CHAIN_DIR
+TMROOT="$CHAIN_DIR"/tendermint
 
 if [ ! -d "$CHAIN_DIR" ]; then
 	mkdir -p $CHAIN_DIR

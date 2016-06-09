@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
-	sm "github.com/eris-ltd/eris-db/state"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 )
 

@@ -33,7 +33,7 @@ fi
 # tendermint node & last_pid=$! && sleep 1 && kill -KILL $last_pid
 if [ $ERISDB_API ]; then
 	echo "Running chain $CHAIN_ID (via ErisDB API)"
-	erisdb $TMROOT
+	erisdb $CHAIN_DIR
 	ifExit "Error starting erisdb"
 else
 	echo Running chain $CHAIN_ID

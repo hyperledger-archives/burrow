@@ -54,7 +54,8 @@ func (this *accounts) GenPrivAccountFromKey(privKey []byte) (*acm.PrivAccount, e
 }
 
 // Get all accounts.
-func (this *accounts) Accounts(fda []*FilterData) (*AccountList, error) {
+func (this *accounts) Accounts(fda []*core_types.FilterData) (*AccountList,
+  error) {
 	accounts := make([]*acm.Account, 0)
 	state := this.erisdbApp.GetState()
 	filter, err := this.filterFactory.NewFilter(fda)
@@ -141,7 +142,7 @@ type AccountCodeFilter struct {
 	match func([]byte, []byte) bool
 }
 
-func (this *AccountCodeFilter) Configure(fd *FilterData) error {
+func (this *AccountCodeFilter) Configure(fd *core_types.FilterData) error {
 	op := fd.Op
 	val, err := hex.DecodeString(fd.Value)
 
@@ -180,7 +181,7 @@ type AccountBalanceFilter struct {
 	match func(int64, int64) bool
 }
 
-func (this *AccountBalanceFilter) Configure(fd *FilterData) error {
+func (this *AccountBalanceFilter) Configure(fd *core_types.FilterData) error {
 	val, err := ParseNumberValue(fd.Value)
 	if err != nil {
 		return err

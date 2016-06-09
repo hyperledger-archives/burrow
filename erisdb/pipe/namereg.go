@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	sm "github.com/eris-ltd/eris-db/state"
+	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/tmsp"
 	"github.com/eris-ltd/eris-db/txs"
 )

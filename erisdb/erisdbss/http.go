@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/eris-ltd/eris-db/config"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/gin-gonic/gin"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"

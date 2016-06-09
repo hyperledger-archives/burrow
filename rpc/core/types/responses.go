@@ -2,7 +2,7 @@ package core_types
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
-	stypes "github.com/eris-ltd/eris-db/state/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	txtypes "github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
 
