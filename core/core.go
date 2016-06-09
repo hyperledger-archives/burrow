@@ -22,6 +22,8 @@ import (
   // TODO: [ben] swap out go-events with eris-db/event (currently unused)
   events "github.com/tendermint/go-events"
 
+  log "github.com/eris-ltd/eris-logger"
+
   config      "github.com/eris-ltd/eris-db/config"
   consensus   "github.com/eris-ltd/eris-db/consensus"
   definitions "github.com/eris-ltd/eris-db/definitions"
@@ -35,19 +37,19 @@ type Core struct {
   pipe    definitions.Pipe
 }
 
-func NewCore(chainId, genesisFile string, consensusConfig *config.ModuleConfig,
+func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   managerConfig *config.ModuleConfig) (*Core, error) {
-
   // start new event switch, TODO: [ben] replace with eris-db/event
   evsw := events.NewEventSwitch()
   evsw.Start()
 
   // start a new application pipe that will load an application manager
   pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
-    consensusConfig.Version, genesisFile)
+    consensusConfig.Version)
   if err != nil {
-    return nil, fmt.Errorf("PLACEHOLDER")
+    return nil, fmt.Errorf("Failed to load application pipe: %v", err)
   }
+  log.Debug("Loaded pipe with application manager")
   // pass the consensus engine into the pipe
   consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
 

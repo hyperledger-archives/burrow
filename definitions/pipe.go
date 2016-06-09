@@ -28,9 +28,10 @@ import (
   events           "github.com/tendermint/go-events"
   tendermint_types "github.com/tendermint/tendermint/types"
 
-  account     "github.com/eris-ltd/eris-db/account"
-  transaction "github.com/eris-ltd/eris-db/txs"
-  types       "github.com/eris-ltd/eris-db/core/types"
+  account       "github.com/eris-ltd/eris-db/account"
+  manager_types "github.com/eris-ltd/eris-db/manager/types"
+  transaction   "github.com/eris-ltd/eris-db/txs"
+  types         "github.com/eris-ltd/eris-db/core/types"
 )
 
 type Pipe interface {
@@ -41,6 +42,8 @@ type Pipe interface {
   NameReg() NameReg
   Net() Net
   Transactor() Transactor
+  // NOTE: [ben] added to Pipe interface on 0.12 refactor
+  GetApplication() manager_types.Application
 }
 
 type Accounts interface {

@@ -22,9 +22,15 @@ package tendermint
 import (
   "fmt"
   "path"
+  "strings"
+  "sync"
 
   node             "github.com/tendermint/tendermint/node"
+  proxy            "github.com/tendermint/tendermint/proxy"
+  p2p              "github.com/tendermint/go-p2p"
   tendermint_types "github.com/tendermint/tendermint/types"
+
+  log "github.com/eris-ltd/eris-logger"
 
   config        "github.com/eris-ltd/eris-db/config"
   manager_types "github.com/eris-ltd/eris-db/manager/types"
@@ -32,11 +38,12 @@ import (
 )
 
 type TendermintNode struct {
-  tmintNode *node.Node
+  tmintNode   *node.Node
+  tmintConfig *TendermintConfig
 }
 
 func NewTendermintNode(moduleConfig *config.ModuleConfig,
-  applicaton *manager_types.Application) (*TendermintNode, error) {
+  application manager_types.Application) (*TendermintNode, error) {
   // re-assert proper configuration for module
   if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
     return nil, fmt.Errorf("Version string %s did not match %s",
@@ -57,24 +64,70 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
   // complete the tendermint configuration with default flags
   tmintConfig.AssertTendermintDefaults(moduleConfig.ChainId,
     moduleConfig.WorkDir, moduleConfig.DataDir, moduleConfig.RootDir)
+
+  privateValidatorFilePath := path.Join(moduleConfig.RootDir,
+    moduleConfig.Config.GetString("private_validator_file"))
+  if moduleConfig.Config.GetString("private_validator_file") == "" {
+    return nil, fmt.Errorf("No private validator file provided.")
+  }
   // override tendermint configurations to force consistency with overruling
   // settings
-  tmintConfig.AssertTendermintConsistency(moduleConfig)
-
+  tmintConfig.AssertTendermintConsistency(moduleConfig,
+    privateValidatorFilePath)
+  log.WithFields(log.Fields{
+    "chainId": tmintConfig.GetString("chain_id"),
+    "genesisFile": tmintConfig.GetString("genesis_file"),
+    "nodeLocalAddress": tmintConfig.GetString("node_laddr"),
+    "moniker": tmintConfig.GetString("moniker"),
+    "seeds": tmintConfig.GetString("seeds"),
+    "fastSync": tmintConfig.GetBool("fast_sync"),
+    "rpcLocalAddress": tmintConfig.GetString("rpc_laddr"),
+    "databaseDirectory": tmintConfig.GetString("db_dir"),
+    "privateValidatorFile": tmintConfig.GetString("priv_validator_file"),
+    "privValFile": moduleConfig.Config.GetString("private_validator_file"),
+    }).Debug("Loaded Tendermint sub-configuration")
   // TODO: [ben] do not "or Generate Validator keys", rather fail directly
   // TODO: [ben] implement the signer for Private validator over eris-keys
   // TODO: [ben] copy from rootDir to tendermint workingDir;
   privateValidator := tendermint_types.LoadOrGenPrivValidator(
     path.Join(moduleConfig.RootDir,
     moduleConfig.Config.GetString("private_validator_file")))
-  fmt.Printf("priv: %s", privateValidator.Address)
-  // newNode := node.NewNode(tmintConfig, )
 
-  //   newNode := node.NewNode()
-  //   return &TendermintNode{
-  //     node: newNode,
-  //   }
-  return nil, fmt.Errorf("PLACEHOLDER")
+  newNode := node.NewNode(tmintConfig, privateValidator, func(addr string,
+    hash []byte) proxy.AppConn {
+      return NewLocalClient(new(sync.Mutex), application)
+    })
+
+  listener := p2p.NewDefaultListener("tcp", tmintConfig.GetString("node_laddr"),
+    tmintConfig.GetBool("skip_upnp"))
+
+  newNode.AddListener(listener)
+  // TODO: [ben] delay starting the node to a different function, to hand
+  // control over events to Core
+  if err := newNode.Start(); err != nil {
+    newNode.Stop()
+    return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
+  }
+  log.WithFields(log.Fields{
+    "nodeAddress": tmintConfig.GetString("node_laddr"),
+    "transportProtocol": "tcp",
+    "upnp": !tmintConfig.GetBool("skip_upnp"),
+    "moniker": tmintConfig.GetString("moniker"),
+    }).Info("Tendermint consensus node started")
+
+  // If seedNode is provided by config, dial out.
+  if tmintConfig.GetString("seeds") != "" {
+    seeds := strings.Split(tmintConfig.GetString("seeds"), ",")
+    newNode.DialSeeds(seeds)
+    log.WithFields(log.Fields{
+      "seeds": seeds,
+      }).Debug("Tendermint node called seeds")
+  }
+
+  return &TendermintNode{
+    tmintNode:   newNode,
+    tmintConfig: tmintConfig,
+    }, nil
 }
 
 

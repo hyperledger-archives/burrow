@@ -35,7 +35,10 @@ func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
   pipe definitions.Pipe) error {
   switch moduleConfig.Name {
   case "tendermint" :
-    tendermint.NewTendermintNode(moduleConfig, nil)
+    _, err := tendermint.NewTendermintNode(moduleConfig, pipe.GetApplication())
+    if err != nil {
+      return err
+    }
   }
   return nil
 }

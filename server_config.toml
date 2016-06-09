@@ -111,7 +111,7 @@ listener = "tcp://0.0.0.0:46658"
 # of the private validator, but also (currently) holds the private key
 # for the private vaildator to sign with.  This private key needs to be moved
 # out and directly managed by eris-keys
-# This file needs to be in the working directory of tendermint.
+# This file needs to be in the root directory
 private_validator_file = "priv_validator.json"
 
   # Tendermint requires additional configuration parameters.

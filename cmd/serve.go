@@ -91,9 +91,9 @@ func Serve(cmd *cobra.Command, args []string) {
     os.Exit(1)
   }
   // load the genesis file path
-  if do.GenesisFile = path.Join(do.WorkDir,
-    do.Config.GetString("chain.genesis_file"));
-    do.GenesisFile == "" {
+  do.GenesisFile = path.Join(do.WorkDir,
+    do.Config.GetString("chain.genesis_file"))
+  if do.Config.GetString("chain.genesis_file") == "" {
     log.Fatalf("Failed to read non-empty string for genesis file from config.")
     os.Exit(1)
   }
@@ -124,7 +124,10 @@ func Serve(cmd *cobra.Command, args []string) {
     "consensusModule": consensusConfig.Version,
     "applicationManager": managerConfig.Version,
   }).Debug("Modules configured")
-  core.NewCore(do.ChainId, do.GenesisFile, consensusConfig, managerConfig)
+  _, err = core.NewCore(do.ChainId, consensusConfig, managerConfig)
+  if err != nil {
+    log.Fatalf("Failed to load core: %s", err)
+  }
 }
 
 //------------------------------------------------------------------------------

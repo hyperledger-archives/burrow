@@ -21,6 +21,8 @@ import (
 
   events "github.com/tendermint/go-events"
 
+  log "github.com/eris-ltd/eris-logger"
+
   config      "github.com/eris-ltd/eris-db/config"
   definitions "github.com/eris-ltd/eris-db/definitions"
   erismint    "github.com/eris-ltd/eris-db/manager/eris-mint"
@@ -33,15 +35,19 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-  evsw *events.EventSwitch, consensusMinorVersion,
-  genesisFile string) (definitions.Pipe, error) {
+  evsw *events.EventSwitch, consensusMinorVersion string) (definitions.Pipe,
+  error) {
   switch moduleConfig.Name {
   case "erismint" :
     if err := erismint.AssertCompatibleConsensus(consensusMinorVersion);
       err != nil {
       return nil, err
     }
-    return erismint.NewErisMintPipe(moduleConfig, genesisFile, evsw)
+    log.WithFields(log.Fields{
+      "compatibleConsensus": consensusMinorVersion,
+      "erisMintVersion": erismint.GetErisMintVersion().GetVersionString(),
+    }).Debug("Loading ErisMint")
+    return erismint.NewErisMintPipe(moduleConfig, evsw)
   }
-  return nil, fmt.Errorf("PLACEHOLDER")
+  return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
 }

@@ -20,8 +20,8 @@
 package tendermint
 
 import (
-  "time"
   "path"
+  "time"
 
   tendermintConfig "github.com/tendermint/go-config"
   viper            "github.com/spf13/viper"
@@ -97,15 +97,12 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 // Tendermint consistency checks
 
 func(tmintConfig *TendermintConfig) AssertTendermintConsistency(
-  consensusConfig *config.ModuleConfig) {
+  consensusConfig *config.ModuleConfig, privateValidatorFilePath string) {
 
   tmintConfig.Set("chain_id", consensusConfig.ChainId)
   tmintConfig.Set("genesis_file", consensusConfig.GenesisFile)
   // private validator file
-  if consensusConfig.Config.IsSet("private_validator_file") {
-    tmintConfig.Set("priv_validator_file",
-      consensusConfig.Config.GetString("priv_validator_file"))
-  }
+  tmintConfig.Set("priv_validator_file", privateValidatorFilePath)
 }
 
 // implement interface github.com/tendermint/go-config/config.Config

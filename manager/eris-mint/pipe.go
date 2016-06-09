@@ -26,10 +26,11 @@ import (
 
   log "github.com/eris-ltd/eris-logger"
 
-  config      "github.com/eris-ltd/eris-db/config"
-  definitions "github.com/eris-ltd/eris-db/definitions"
-  state       "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-  state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+  config        "github.com/eris-ltd/eris-db/config"
+  definitions   "github.com/eris-ltd/eris-db/definitions"
+  manager_types "github.com/eris-ltd/eris-db/manager/types"
+  state         "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+  state_types   "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 )
 
 type ErisMintPipe struct {
@@ -46,17 +47,25 @@ type ErisMintPipe struct {
   transactor    definitions.Transactor
 }
 
+// NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
+// eris-db/definitions.Pipe
+var _ definitions.Pipe = (*ErisMintPipe)(nil)
+
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-  genesisFile string, eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
+  eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
 
   startedState, err := startState(moduleConfig.DataDir,
-    moduleConfig.Config.GetString("db_backend"), genesisFile,
+    moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
     moduleConfig.ChainId)
   if err != nil {
     return nil, fmt.Errorf("Failed to start state: %v", err)
   }
   // assert ChainId matches genesis ChainId
-
+  log.WithFields(log.Fields{
+    "chainId": startedState.ChainID,
+    "lastBlockHeight": startedState.LastBlockHeight,
+    "lastBlockHash": startedState.LastBlockHash,
+    }).Debug("Loaded state")
   // start the application
   erisMint := NewErisMint(startedState, eventSwitch)
 
@@ -64,8 +73,8 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   // of the old Eris-DB / Tendermint and should be considered as an in-process
   // call when possible
   tendermintHost := moduleConfig.Config.GetString("tendermint_host")
-  log.Debug("Starting ErisMint RPC client to Tendermint host on %s",
-    tendermintHost)
+  log.Debug(fmt.Sprintf("Starting ErisMint RPC client to Tendermint host on %s",
+    tendermintHost))
   erisMint.SetHostAddress(tendermintHost)
 
   // initialise the components of the pipe
@@ -165,4 +174,8 @@ func (pipe *ErisMintPipe) Net() definitions.Net {
 
 func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
   return pipe.transactor
+}
+
+func (pipe *ErisMintPipe) GetApplication() manager_types.Application {
+  return pipe.erisMint
 }
