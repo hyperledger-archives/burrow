@@ -135,7 +135,7 @@ func (aP *AccountPermissions) HasRole(role string) bool {
 
 // Returns true if the role is added, and false if it already exists
 func (aP *AccountPermissions) AddRole(role string) bool {
-	role = string(LeftPadBytes([]byte(role), 32))
+	role = string(RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {
 			return false
