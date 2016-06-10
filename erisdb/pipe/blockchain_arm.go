@@ -1,5 +1,3 @@
-// +build !arm
-
 package pipe
 
 import (
@@ -149,7 +147,7 @@ func (this *BlockHeightFilter) Configure(fd *FilterData) error {
 	if fd.Value == "min" {
 		val = 0
 	} else if fd.Value == "max" {
-		val = math.MaxUint32
+		val = math.MaxInt32
 	} else {
 		tv, err := strconv.ParseInt(fd.Value, 10, 0)
 		if err != nil {
