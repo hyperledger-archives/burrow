@@ -1,2 +1,2 @@
 # json break
-echo "ecm version 0.11.0"
+echo "ecm version 0.12.0"

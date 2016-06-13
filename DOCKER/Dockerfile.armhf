@@ -1,7 +1,6 @@
 # Pull base image.
-FROM quay.io/eris/build
+FROM quay.io/eris/build:arm
 MAINTAINER Eris Industries <support@erisindustries.com>
-
 
 #-----------------------------------------------------------------------------
 # install tendermint
