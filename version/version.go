@@ -23,6 +23,9 @@ import (
   "fmt"
 )
 
+// IMPORTANT: this version number needs to be manually kept
+// in sync at the bottom of this file for the deployment scripts to parse
+// the version number.
 const (
   // Client identifier to advertise over the network
   erisClientIdentifier = "eris-db"

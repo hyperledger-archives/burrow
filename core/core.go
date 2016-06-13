@@ -53,16 +53,11 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
   // pass the consensus engine into the pipe
   consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
 
-
-  // [x] create state
-  // [x] from genesis
-  // [x] create event switch
-  // [x] give state and evsw to app
-  // [x] give app to consensus
-  // [x] create new Pipe
-  // [x] give consensus to pipe
-  // [ ] create servers
-  return &Core{}, fmt.Errorf("PLACEHOLDER")
+  return &Core{
+    chainId: chainId,
+    evsw: evsw,
+    pipe: pipe,
+    }, nil
 }
 
 //------------------------------------------------------------------------------
@@ -71,3 +66,13 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 // manager with a consensus engine.
 // TODO: [ben] before such Engine abstraction,
 // think about many-manager-to-one-consensus
+
+//------------------------------------------------------------------------------
+// Server functions
+// NOTE: [ben] in phase 0 we exactly take over the full server architecture
+// from Eris-DB and Tendermint; This is a draft and will be overhauled.
+
+// func (core *Core) StartGateway() {
+//   codec := &TCodec{}
+//   eventSubscriptions :=
+// }
