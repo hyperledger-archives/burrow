@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	cfg "github.com/eris-ltd/eris-db/config"
-
 	"github.com/gin-gonic/gin"
 	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
@@ -24,7 +22,7 @@ type HttpService interface {
 
 // A server serves a number of different http calls.
 type Server interface {
-	Start(*cfg.ServerConfig, *gin.Engine)
+	Start(*ServerConfig, *gin.Engine)
 	Running() bool
 	ShutDown()
 }
@@ -38,7 +36,7 @@ type Server interface {
 // 'Start()'. Stop event listeners can be added up to the point where
 // the server is stopped and the event is fired.
 type ServeProcess struct {
-	config           *cfg.ServerConfig
+	config           *ServerConfig
 	servers          []Server
 	stopChan         chan struct{}
 	stoppedChan      chan struct{}
@@ -186,10 +184,11 @@ func (this *ServeProcess) StopEventChannel() <-chan struct{} {
 }
 
 // Creates a new serve process.
-func NewServeProcess(config *cfg.ServerConfig, servers ...Server) *ServeProcess {
-	var scfg cfg.ServerConfig
+func NewServeProcess(config *ServerConfig, servers ...Server) (*ServeProcess,
+  error) {
+	var scfg ServerConfig
 	if config == nil {
-		scfg = cfg.DefaultServerConfig()
+		return nil, fmt.Errorf("Nil passed as server configuration")
 	} else {
 		scfg = *config
 	}
@@ -198,7 +197,7 @@ func NewServeProcess(config *cfg.ServerConfig, servers ...Server) *ServeProcess 
 	startListeners := make([]chan struct{}, 0)
 	stopListeners := make([]chan struct{}, 0)
 	sp := &ServeProcess{&scfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
-	return sp
+	return sp, nil
 }
 
 // Used to enable log15 logging instead of the default Gin logging.
@@ -219,7 +218,7 @@ func logHandler(c *gin.Context) {
 
 }
 
-func NewCORSMiddleware(options cfg.CORS) gin.HandlerFunc {
+func NewCORSMiddleware(options CORS) gin.HandlerFunc {
 	o := cors.Options{
 		AllowCredentials: options.AllowCredentials,
 		AllowHeaders:     options.AllowHeaders,

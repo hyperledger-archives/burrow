@@ -5,15 +5,13 @@ import (
 	"os"
 
 	"github.com/tendermint/log15"
-
-	cfg "github.com/eris-ltd/eris-db/config"
 )
 
 var rootHandler log15.Handler
 
 // This is basically the same code as in tendermint. Initialize root
 // and maybe later also track the loggers here.
-func InitLogger(config *cfg.ServerConfig) {
+func InitLogger(config *ServerConfig) {
 
 	consoleLogLevel := config.Logging.ConsoleLogLevel
 
