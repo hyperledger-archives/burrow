@@ -38,7 +38,7 @@ type WebSocketService interface {
 type WebSocketServer struct {
 	upgrader       websocket.Upgrader
 	running        bool
-	maxSessions    uint
+	maxSessions    uint16
 	sessionManager *SessionManager
 	config         *ServerConfig
 	allOrigins     bool
@@ -49,7 +49,7 @@ type WebSocketServer struct {
 // NOTE: This is not the total number of connections allowed - only those that are
 // upgraded to websockets. Requesting a websocket connection will fail with a 503 if
 // the server is at capacity.
-func NewWebSocketServer(maxSessions uint, service WebSocketService) *WebSocketServer {
+func NewWebSocketServer(maxSessions uint16, service WebSocketService) *WebSocketServer {
 	return &WebSocketServer{
 		maxSessions:    maxSessions,
 		sessionManager: NewSessionManager(maxSessions, service),
@@ -290,7 +290,7 @@ func (this *WSSession) writePump() {
 
 // Session manager handles the adding, tracking and removing of session objects.
 type SessionManager struct {
-	maxSessions     uint
+	maxSessions     uint16
 	activeSessions  map[uint]*WSSession
 	idPool          *IdPool
 	mtx             *sync.Mutex
@@ -300,11 +300,11 @@ type SessionManager struct {
 }
 
 // Create a new WebsocketManager.
-func NewSessionManager(maxSessions uint, wss WebSocketService) *SessionManager {
+func NewSessionManager(maxSessions uint16, wss WebSocketService) *SessionManager {
 	return &SessionManager{
 		maxSessions:     maxSessions,
 		activeSessions:  make(map[uint]*WSSession),
-		idPool:          NewIdPool(maxSessions),
+		idPool:          NewIdPool(uint(maxSessions)),
 		mtx:             &sync.Mutex{},
 		service:         wss,
 		openEventChans:  []chan *WSSession{},

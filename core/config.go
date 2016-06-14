@@ -28,6 +28,7 @@ import (
   config      "github.com/eris-ltd/eris-db/config"
   definitions "github.com/eris-ltd/eris-db/definitions"
   manager     "github.com/eris-ltd/eris-db/manager"
+  server      "github.com/eris-ltd/eris-db/server"
   util        "github.com/eris-ltd/eris-db/util"
   version     "github.com/eris-ltd/eris-db/version"
 )
@@ -88,6 +89,18 @@ func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, 
     Config :      subConfig,
   }, nil
 }
+
+// LoadServerModuleConfig wraps specifically for the servers run by core
+func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
+  // load configuration subtree for servers
+  subConfig := do.Config.Sub("servers")
+  if subConfig == nil {
+    return nil,
+      fmt.Errorf("Failed to read configuration section for servers")
+  }
+  return server.ReadServerConfig(subConfig)
+}
+
 
 //------------------------------------------------------------------------------
 // Helper functions

@@ -88,7 +88,6 @@ genesis_file = "genesis.json"
   json_rpc_endpoint="/rpc"
 
   [servers.websocket]
-  enable = true
   endpoint = "/socketrpc"
   max_sessions = 50
   read_buffer_size = 4096

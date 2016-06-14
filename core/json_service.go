@@ -26,8 +26,8 @@ func NewJsonRpcServer(service server.HttpService) *JsonRpcServer {
 }
 
 // Start adds the rpc path to the router.
-func (this *JsonRpcServer) Start(jsonRpcEndpoint string, router *gin.Engine) {
-	router.POST(jsonRpcEndpoint, this.handleFunc)
+func (this *JsonRpcServer) Start(config *server.ServerConfig, router *gin.Engine) {
+	router.POST(config.HTTP.JsonRpcEndpoint, this.handleFunc)
 	this.running = true
 }
 
