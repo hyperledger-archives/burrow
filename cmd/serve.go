@@ -135,8 +135,17 @@ func Serve(cmd *cobra.Command, args []string) {
     log.Fatalf("Failed to load server configuration: %s.", err)
     os.Exit(1)
   }
-  _, err = newCore.NewGateway(serverConfig)
-
+  serverProcess, err := newCore.NewGateway(serverConfig)
+  if err != nil {
+    log.Fatalf("Failed to load servers: %s.", err)
+    os.Exit(1)
+  }
+  err = serverProcess.Start()
+  if err != nil {
+    log.Fatalf("Failed to start servers: %s.", err)
+    os.Exit(1)
+  }
+  <- serverProcess.StopEventChannel()
 }
 
 //------------------------------------------------------------------------------
