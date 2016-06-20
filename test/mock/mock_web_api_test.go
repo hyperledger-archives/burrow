@@ -9,11 +9,10 @@ import (
 	"runtime"
 	"testing"
 
-	// edb "github.com/eris-ltd/erisdb/erisdb"
 	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/config"
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	core "github.com/eris-ltd/eris-db/core"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
@@ -47,10 +46,10 @@ func (this *MockSuite) SetupSuite() {
 	// Load the supporting objects.
 	testData := td.LoadTestData()
 	pipe := NewMockPipe(testData)
-	codec := &edb.TCodec{}
-	evtSubs := edb.NewEventSubscriptions(pipe.Events())
+	codec := &core_types.TCodec{}
+	evtSubs := core.NewEventSubscriptions(pipe.Events())
 	// The server
-	restServer := edb.NewRestServer(codec, pipe, evtSubs)
+	restServer := core.NewRestServer(codec, pipe, evtSubs)
 	sConf := config.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
@@ -60,7 +59,7 @@ func (this *MockSuite) SetupSuite() {
 		panic(err)
 	}
 	this.serveProcess = proc
-	this.codec = edb.NewTCodec()
+	this.codec = core_types.NewTCodec()
 	this.testData = testData
 	this.sUrl = "http://localhost:31402"
 }
@@ -75,7 +74,7 @@ func (this *MockSuite) TearDownSuite() {
 
 func (this *MockSuite) TestGetAccounts() {
 	resp := this.get("/accounts")
-	ret := &ep.AccountList{}
+	ret := &core_types.AccountList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetAccounts.Output)
@@ -93,7 +92,7 @@ func (this *MockSuite) TestGetAccount() {
 func (this *MockSuite) TestGetStorage() {
 	addr := hex.EncodeToString(this.testData.GetStorage.Input.Address)
 	resp := this.get("/accounts/" + addr + "/storage")
-	ret := &ep.Storage{}
+	ret := &core_types.Storage{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetStorage.Output)
@@ -103,7 +102,7 @@ func (this *MockSuite) TestGetStorageAt() {
 	addr := hex.EncodeToString(this.testData.GetStorageAt.Input.Address)
 	key := hex.EncodeToString(this.testData.GetStorageAt.Input.Key)
 	resp := this.get("/accounts/" + addr + "/storage/" + key)
-	ret := &ep.StorageItem{}
+	ret := &core_types.StorageItem{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetStorageAt.Output)
@@ -113,7 +112,7 @@ func (this *MockSuite) TestGetStorageAt() {
 
 func (this *MockSuite) TestGetBlockchainInfo() {
 	resp := this.get("/blockchain")
-	ret := &ep.BlockchainInfo{}
+	ret := &core_types.BlockchainInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetBlockchainInfo.Output)
@@ -121,7 +120,7 @@ func (this *MockSuite) TestGetBlockchainInfo() {
 
 func (this *MockSuite) TestGetChainId() {
 	resp := this.get("/blockchain/chain_id")
-	ret := &ep.ChainId{}
+	ret := &core_types.ChainId{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetChainId.Output)
@@ -129,7 +128,7 @@ func (this *MockSuite) TestGetChainId() {
 
 func (this *MockSuite) TestGetGenesisHash() {
 	resp := this.get("/blockchain/genesis_hash")
-	ret := &ep.GenesisHash{}
+	ret := &core_types.GenesisHash{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetGenesisHash.Output)
@@ -137,7 +136,7 @@ func (this *MockSuite) TestGetGenesisHash() {
 
 func (this *MockSuite) TestLatestBlockHeight() {
 	resp := this.get("/blockchain/latest_block_height")
-	ret := &ep.LatestBlockHeight{}
+	ret := &core_types.LatestBlockHeight{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetLatestBlockHeight.Output)
@@ -145,7 +144,7 @@ func (this *MockSuite) TestLatestBlockHeight() {
 
 func (this *MockSuite) TestBlocks() {
 	resp := this.get("/blockchain/blocks")
-	ret := &ep.Blocks{}
+	ret := &core_types.Blocks{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetBlocks.Output)
@@ -155,7 +154,7 @@ func (this *MockSuite) TestBlocks() {
 
 func (this *MockSuite) TestGetConsensusState() {
 	resp := this.get("/consensus")
-	ret := &ep.ConsensusState{}
+	ret := &core_types.ConsensusState{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	ret.StartTime = ""
@@ -164,7 +163,7 @@ func (this *MockSuite) TestGetConsensusState() {
 
 func (this *MockSuite) TestGetValidators() {
 	resp := this.get("/consensus/validators")
-	ret := &ep.ValidatorList{}
+	ret := &core_types.ValidatorList{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetValidators.Output)
@@ -182,7 +181,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 
 func (this *MockSuite) TestGetNameRegEntries() {
 	resp := this.get("/namereg")
-	ret := &ep.ResultListNames{}
+	ret := &core_types.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNameRegEntries.Output)
@@ -192,7 +191,7 @@ func (this *MockSuite) TestGetNameRegEntries() {
 
 func (this *MockSuite) TestGetNetworkInfo() {
 	resp := this.get("/network")
-	ret := &ep.NetworkInfo{}
+	ret := &core_types.NetworkInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetNetworkInfo.Output)
@@ -200,7 +199,7 @@ func (this *MockSuite) TestGetNetworkInfo() {
 
 func (this *MockSuite) TestGetClientVersion() {
 	resp := this.get("/network/client_version")
-	ret := &ep.ClientVersion{}
+	ret := &core_types.ClientVersion{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetClientVersion.Output)
@@ -208,7 +207,7 @@ func (this *MockSuite) TestGetClientVersion() {
 
 func (this *MockSuite) TestGetMoniker() {
 	resp := this.get("/network/moniker")
-	ret := &ep.Moniker{}
+	ret := &core_types.Moniker{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetMoniker.Output)
@@ -216,7 +215,7 @@ func (this *MockSuite) TestGetMoniker() {
 
 func (this *MockSuite) TestIsListening() {
 	resp := this.get("/network/listening")
-	ret := &ep.Listening{}
+	ret := &core_types.Listening{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.IsListening.Output)
@@ -224,7 +223,7 @@ func (this *MockSuite) TestIsListening() {
 
 func (this *MockSuite) TestGetListeners() {
 	resp := this.get("/network/listeners")
-	ret := &ep.Listeners{}
+	ret := &core_types.Listeners{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetListeners.Output)
@@ -232,7 +231,7 @@ func (this *MockSuite) TestGetListeners() {
 
 func (this *MockSuite) TestGetPeers() {
 	resp := this.get("/network/peers")
-	ret := []*ep.Peer{}
+	ret := []*core_types.Peer{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetPeers.Output)
@@ -242,7 +241,7 @@ func (this *MockSuite) TestGetPeers() {
 func (this *MockSuite) TestGetPeer() {
 	addr := this.testData.GetPeer.Input.Address
 	resp := this.get("/network/peer/" + addr)
-	ret := []*ep.Peer{}
+	ret := []*core_types.Peer{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetPeers.Output)
@@ -253,7 +252,7 @@ func (this *MockSuite) TestGetPeer() {
 
 func (this *MockSuite) TestTransactCreate() {
 	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
-	ret := &ep.Receipt{}
+	ret := &core_types.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.TransactCreate.Output)
@@ -261,7 +260,7 @@ func (this *MockSuite) TestTransactCreate() {
 
 func (this *MockSuite) TestTransact() {
 	resp := this.postJson("/unsafe/txpool", this.testData.Transact.Input)
-	ret := &ep.Receipt{}
+	ret := &core_types.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.Transact.Output)
@@ -269,7 +268,7 @@ func (this *MockSuite) TestTransact() {
 
 func (this *MockSuite) TestTransactNameReg() {
 	resp := this.postJson("/unsafe/namereg/txpool", this.testData.TransactNameReg.Input)
-	ret := &ep.Receipt{}
+	ret := &core_types.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.TransactNameReg.Output)
@@ -277,7 +276,7 @@ func (this *MockSuite) TestTransactNameReg() {
 
 func (this *MockSuite) TestGetUnconfirmedTxs() {
 	resp := this.get("/txpool")
-	ret := &ep.UnconfirmedTxs{}
+	ret := &core_types.UnconfirmedTxs{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetUnconfirmedTxs.Output)
@@ -285,7 +284,7 @@ func (this *MockSuite) TestGetUnconfirmedTxs() {
 
 func (this *MockSuite) TestCallCode() {
 	resp := this.postJson("/codecalls", this.testData.CallCode.Input)
-	ret := &ep.Call{}
+	ret := &core_types.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.CallCode.Output)
@@ -293,7 +292,7 @@ func (this *MockSuite) TestCallCode() {
 
 func (this *MockSuite) TestCall() {
 	resp := this.postJson("/calls", this.testData.Call.Input)
-	ret := &ep.Call{}
+	ret := &core_types.Call{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.CallCode.Output)

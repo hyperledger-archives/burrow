@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	edbcli "github.com/eris-ltd/eris-db/rpc/client"
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	edb "github.com/eris-ltd/eris-db/core"
+	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	edbapp "github.com/eris-ltd/eris-db/tmsp"
+	edbcli "github.com/eris-ltd/eris-db/rpc/client"
+	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
@@ -105,7 +105,7 @@ func newNode(ready chan struct{}) {
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 	// create the app
-	app := edbapp.NewErisDBApp(state, evsw)
+	app := erismint.NewErisMint(state, evsw)
 
 	// Create & start node
 	privValidatorFile := config.GetString("priv_validator_file")
