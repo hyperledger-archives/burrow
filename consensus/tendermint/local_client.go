@@ -31,6 +31,10 @@ import (
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 )
 
+// NOTE [ben] Compiler check to ensure localClient successfully implements
+// tendermint/tmsp/client
+var _ tmsp_client.Client = (*localClient)(nil)
+
 type localClient struct {
 	mtx         *sync.Mutex
 	Application manager_types.Application

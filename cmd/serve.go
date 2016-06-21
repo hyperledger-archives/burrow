@@ -124,10 +124,28 @@ func Serve(cmd *cobra.Command, args []string) {
     "consensusModule": consensusConfig.Version,
     "applicationManager": managerConfig.Version,
   }).Debug("Modules configured")
-  _, err = core.NewCore(do.ChainId, consensusConfig, managerConfig)
+
+  newCore, err := core.NewCore(do.ChainId, consensusConfig, managerConfig)
   if err != nil {
     log.Fatalf("Failed to load core: %s", err)
   }
+
+  serverConfig, err := core.LoadServerConfig(do)
+  if err != nil {
+    log.Fatalf("Failed to load server configuration: %s.", err)
+    os.Exit(1)
+  }
+  serverProcess, err := newCore.NewGateway(serverConfig)
+  if err != nil {
+    log.Fatalf("Failed to load servers: %s.", err)
+    os.Exit(1)
+  }
+  err = serverProcess.Start()
+  if err != nil {
+    log.Fatalf("Failed to start servers: %s.", err)
+    os.Exit(1)
+  }
+  <- serverProcess.StopEventChannel()
 }
 
 //------------------------------------------------------------------------------

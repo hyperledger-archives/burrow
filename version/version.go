@@ -23,10 +23,9 @@ import (
   "fmt"
 )
 
-// NOTE [ben]: deprecate public const version string
-const VERSION = "0.12.0"
-const TENDERMINT_VERSION = "0.6.0"
-
+// IMPORTANT: this version number needs to be manually kept
+// in sync at the bottom of this file for the deployment scripts to parse
+// the version number.
 const (
   // Client identifier to advertise over the network
   erisClientIdentifier = "eris-db"
@@ -120,3 +119,11 @@ func (version *VersionIdentifier) MatchesMinorVersion(
     version.versionMajor == referenceMajor &&
     version.versionMinor == referenceMinor
 }
+
+//------------------------------------------------------------------------------
+// Version number for DOCKER/build.sh
+
+// NOTE [ben]: deprecate public const version string
+// IMPORTANT: Eris-DB version must be on the last line of this file for
+// the deployment script DOCKER/build.sh to pick up the right label.
+const VERSION = "0.12.0"

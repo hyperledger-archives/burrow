@@ -2,10 +2,11 @@ package filters
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
-	. "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"sync"
 	"testing"
+
+	. "github.com/eris-ltd/eris-db/manager/eris-mint"
+	"github.com/stretchr/testify/suite"
 )
 
 const OBJECTS = 100

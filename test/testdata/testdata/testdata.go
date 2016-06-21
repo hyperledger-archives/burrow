@@ -2,12 +2,11 @@ package testdata
 
 import (
 	"github.com/eris-ltd/eris-db/account"
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	core "github.com/eris-ltd/eris-db/core"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	types "github.com/eris-ltd/eris-db/txs"
 
-	"github.com/tendermint/go-wire"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -511,23 +510,23 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  *edb.AddressParam `json:"input"`
-		Output *account.Account  `json:"output"`
+		Input  *core.AddressParam `json:"input"`
+		Output *account.Account   `json:"output"`
 	}
 
 	GetAccountsData struct {
-		Input  *edb.AccountsParam `json:"input"`
-		Output *ep.AccountList    `json:"output"`
+		Input  *core.AccountsParam     `json:"input"`
+		Output *core_types.AccountList `json:"output"`
 	}
 
 	GetStorageData struct {
-		Input  *edb.AddressParam `json:"input"`
-		Output *ep.Storage       `json:"output"`
+		Input  *core.AddressParam  `json:"input"`
+		Output *core_types.Storage `json:"output"`
 	}
 
 	GetStorageAtData struct {
-		Input  *edb.StorageAtParam `json:"input"`
-		Output *ep.StorageItem     `json:"output"`
+		Input  *core.StorageAtParam    `json:"input"`
+		Output *core_types.StorageItem `json:"output"`
 	}
 
 	GenPrivAccountData struct {
@@ -535,19 +534,19 @@ type (
 	}
 
 	GetBlockchainInfoData struct {
-		Output *ep.BlockchainInfo `json:"output"`
+		Output *core_types.BlockchainInfo `json:"output"`
 	}
 
 	GetChainIdData struct {
-		Output *ep.ChainId `json:"output"`
+		Output *core_types.ChainId `json:"output"`
 	}
 
 	GetGenesisHashData struct {
-		Output *ep.GenesisHash `json:"output"`
+		Output *core_types.GenesisHash `json:"output"`
 	}
 
 	GetLatestBlockHeightData struct {
-		Output *ep.LatestBlockHeight `json:"output"`
+		Output *core_types.LatestBlockHeight `json:"output"`
 	}
 
 	GetLatestBlockData struct {
@@ -555,105 +554,105 @@ type (
 	}
 
 	GetBlockData struct {
-		Input  *edb.HeightParam `json:"input"`
-		Output *mintTypes.Block `json:"output"`
+		Input  *core.HeightParam `json:"input"`
+		Output *mintTypes.Block  `json:"output"`
 	}
 
 	GetBlocksData struct {
-		Input  *edb.BlocksParam `json:"input"`
-		Output *ep.Blocks       `json:"output"`
+		Input  *core.BlocksParam  `json:"input"`
+		Output *core_types.Blocks `json:"output"`
 	}
 
 	GetConsensusStateData struct {
-		Output *ep.ConsensusState `json:"output"`
+		Output *core_types.ConsensusState `json:"output"`
 	}
 
 	GetValidatorsData struct {
-		Output *ep.ValidatorList `json:"output"`
+		Output *core_types.ValidatorList `json:"output"`
 	}
 
 	GetNetworkInfoData struct {
-		Output *ep.NetworkInfo `json:"output"`
+		Output *core_types.NetworkInfo `json:"output"`
 	}
 
 	GetClientVersionData struct {
-		Output *ep.ClientVersion `json:"output"`
+		Output *core_types.ClientVersion `json:"output"`
 	}
 
 	GetMonikerData struct {
-		Output *ep.Moniker `json:"output"`
+		Output *core_types.Moniker `json:"output"`
 	}
 
 	IsListeningData struct {
-		Output *ep.Listening `json:"output"`
+		Output *core_types.Listening `json:"output"`
 	}
 
 	GetListenersData struct {
-		Output *ep.Listeners `json:"output"`
+		Output *core_types.Listeners `json:"output"`
 	}
 
 	GetPeersData struct {
-		Output []*ep.Peer `json:"output"`
+		Output []*core_types.Peer `json:"output"`
 	}
 
 	GetPeerData struct {
-		Input  *edb.PeerParam `json:"input"`
-		Output *ep.Peer       `json:"output"`
+		Input  *core.PeerParam  `json:"input"`
+		Output *core_types.Peer `json:"output"`
 	}
 
 	TransactData struct {
-		Input  *edb.TransactParam `json:"input"`
-		Output *ep.Receipt        `json:"output"`
+		Input  *core.TransactParam `json:"input"`
+		Output *core_types.Receipt `json:"output"`
 	}
 
 	TransactCreateData struct {
-		Input  *edb.TransactParam `json:"input"`
-		Output *ep.Receipt        `json:"output"`
+		Input  *core.TransactParam `json:"input"`
+		Output *core_types.Receipt `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
-		Output *ep.UnconfirmedTxs `json:"output"`
+		Output *core_types.UnconfirmedTxs `json:"output"`
 	}
 
 	CallCodeData struct {
-		Input  *edb.CallCodeParam `json:"input"`
-		Output *ep.Call           `json:"output"`
+		Input  *core.CallCodeParam `json:"input"`
+		Output *core_types.Call    `json:"output"`
 	}
 
 	CallData struct {
-		Input  *edb.CallParam `json:"input"`
-		Output *ep.Call       `json:"output"`
+		Input  *core.CallParam  `json:"input"`
+		Output *core_types.Call `json:"output"`
 	}
 
 	EventSubscribeData struct {
-		Input  *edb.EventIdParam `json:"input"`
-		Output *ep.EventSub      `json:"output"`
+		Input  *core.EventIdParam   `json:"input"`
+		Output *core_types.EventSub `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
-		Input  *edb.SubIdParam `json:"input"`
-		Output *ep.EventUnsub  `json:"output"`
+		Input  *core.SubIdParam       `json:"input"`
+		Output *core_types.EventUnsub `json:"output"`
 	}
 
 	TransactNameRegData struct {
-		Input  *edb.TransactNameRegParam `json:"input"`
-		Output *ep.Receipt               `json:"output"`
+		Input  *core.TransactNameRegParam `json:"input"`
+		Output *core_types.Receipt        `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
-		Input  *edb.NameRegEntryParam `json:"input"`
-		Output *types.NameRegEntry    `json:"output"`
+		Input  *core.NameRegEntryParam `json:"input"`
+		Output *types.NameRegEntry     `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *edb.FilterListParam `json:"input"`
-		Output *ep.ResultListNames  `json:"output"`
+		Input  *core.FilterListParam       `json:"input"`
+		Output *core_types.ResultListNames `json:"output"`
 	}
 
 	/*
 		EventPollData struct {
-			Input  *edb.SubIdParam  `json:"input"`
-			Output *ep.PollResponse `json:"output"`
+			Input  *core.SubIdParam  `json:"input"`
+			Output *core_types.PollResponse `json:"output"`
 		}
 	*/
 
@@ -696,7 +695,7 @@ type (
 
 func LoadTestData() *TestData {
 	var err error
-	//codec := edb.NewTCodec()
+	//codec := core_types.NewTCodec()
 	testData := TestData{}
 	testDataI := wire.ReadJSON(testData, []byte(testDataJson), &err)
 	/*err := codec.DecodeBytes(testData, []byte(testDataJson))

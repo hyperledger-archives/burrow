@@ -1,8 +1,7 @@
 package filters
 
 import (
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/tendermint/tendermint/types"
@@ -151,7 +150,7 @@ var testDataJson = `{
 	          "set": 16383
 	        },
 	        "roles": [
-	          
+
 	        ]
 	      }
 	    },
@@ -277,8 +276,8 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  []*ep.FilterData `json:"input"`
-		Output *ep.AccountList  `json:"output"`
+		Input  []*core_types.FilterData `json:"input"`
+		Output *core_types.AccountList  `json:"output"`
 	}
 
 	TestData struct {
@@ -290,7 +289,7 @@ type (
 )
 
 func LoadTestData() *TestData {
-	codec := edb.NewTCodec()
+	codec := core_types.NewTCodec()
 	testData := &TestData{}
 	err := codec.DecodeBytes(testData, []byte(testDataJson))
 	if err != nil {

@@ -66,14 +66,37 @@ genesis_file = "genesis.json"
 
 [servers]
 
+  [servers.bind]
+  address = ""
+  port = 1337
+
+  [servers.tls]
+  tls=false
+  cert_path=""
+  key_path=""
+
+  [servers.cors]
+  enable=false
+  allow_origins=[]
+  allow_credentials=false
+  allow_methods=[]
+  allow_headers=[]
+  expose_headers=[]
+  max_age=0
+
   [servers.http]
+  json_rpc_endpoint="/rpc"
 
   [servers.websocket]
-  enable = true
   endpoint = "/socketrpc"
   max_sessions = 50
   read_buffer_size = 4096
   write_buffer_size = 4096
+
+  [servers.logging]
+  console_log_level="info"
+  file_log_level="warn"
+  log_file=""
 
 ################################################################################
 ################################################################################

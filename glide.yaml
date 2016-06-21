@@ -4,7 +4,6 @@ import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/tendermint/tendermint
-  version: 55ef4b225fb0aa5637a96d36a8c0d030a59dc21d
 - package: github.com/gin-gonic/gin
 - package: github.com/gorilla/websocket
 - package: github.com/naoina/toml
@@ -15,3 +14,5 @@ import:
   - ripemd160
 - package: gopkg.in/fatih/set.v0
 - package: gopkg.in/tylerb/graceful.v1
+- package: golang.org/x/net/http2
+  version: master
