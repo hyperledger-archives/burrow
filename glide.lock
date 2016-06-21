@@ -1,45 +1,94 @@
-hash: 3cbc670949fad7c035e6afc0f72060a29d3f82e0ed75e698f0bb50b3b47009b2
-updated: 2016-05-17T10:49:40.457365687+01:00
+hash: 11dc81a6cb059737f9fb51d33ea7d80dd6edfa1f4293f6b4b74507011a536f32
+updated: 2016-06-21T11:22:28.775429287+01:00
 imports:
+- name: github.com/Azure/go-ansiterm
+  version: 388960b655244e76e24c75f48631564eaefade62
+  subpackages:
+  - winterm
 - name: github.com/btcsuite/btcd
-  version: f893558d782396f10c2fe49a8bc73deff4a36d14
+  version: 7de7bddba9d9a8b0b7490931e346e8f10d0bdb7f
   subpackages:
   - btcec
 - name: github.com/btcsuite/fastsha256
   version: 302ad4db268b46f9ebda3078f6f7397f96047735
+- name: github.com/bugsnag/bugsnag-go
+  version: 31ae3484de3e96dbc4de1756b14ad6393b94103c
+  subpackages:
+  - errors
+- name: github.com/bugsnag/osext
+  version: 0dd3f918b21bec95ace9dc86c7e70266cfc5c702
+- name: github.com/bugsnag/panicwrap
+  version: d6191e27ad06236eaad65d79e49a08b03b9f8029
 - name: github.com/BurntSushi/toml
   version: f0aeabca5a127c4078abb8c8d64298b147264b55
+- name: github.com/docker/docker
+  version: 097d1a2b6186dcf1df8ae6135470871aca309a31
+  subpackages:
+  - pkg/term
+  - pkg/system
+  - pkg/term/windows
+- name: github.com/docker/go-units
+  version: f2d77a61e3c169b43402a0a1e84f06daf29b8190
+- name: github.com/eris-ltd/eris-logger
+  version: ea48a395d6ecc0eccc67a26da9fc7a6106fabb84
+- name: github.com/fsnotify/fsnotify
+  version: 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
 - name: github.com/gin-gonic/gin
-  version: 542be2fe77724f800fcab7eb6c01a4e597fb8506
+  version: f931d1ea80ae95a6fc739213cdd9399bd2967fb6
   subpackages:
   - binding
   - render
 - name: github.com/go-stack/stack
   version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
 - name: github.com/golang/protobuf
-  version: 2402d76f3d41f928c7902a765dfc872356dd3aad
+  version: 0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0
   subpackages:
   - proto
 - name: github.com/golang/snappy
-  version: d7b1e156f50d3c4664f683603af70e3e47fa0aa2
+  version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
 - name: github.com/gorilla/websocket
-  version: 1f512fc3f05332ba7117626cdfb4e07474e58e60
+  version: a68708917c6a4f06314ab4e52493cc61359c9d42
+- name: github.com/hashicorp/hcl
+  version: da486364306ed66c218be9b7953e19173447c18b
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/token
+  - json/parser
+  - hcl/scanner
+  - hcl/strconv
+  - json/scanner
+  - json/token
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/magiconair/properties
+  version: c265cfa48dda6474e208715ca93e987829f572f8
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
 - name: github.com/mattn/go-colorable
-  version: e8a10ddc7d2a7fe255f6fd7f501070a4cb62c183
+  version: 9056b7a9f2d1f2d96498d6d146acd1f9d5ed3d59
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
-- name: github.com/naoina/go-stringutil
-  version: 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
+- name: github.com/mitchellh/mapstructure
+  version: d2dd0262208475919e1a362f675cfc0e7c10e905
 - name: github.com/naoina/toml
   version: 751171607256bb66e64c9f0220c00662420c38e9
-  subpackages:
-  - ast
+- name: github.com/Sirupsen/logrus
+  version: f3cfb454f4c209e6668c95216c4744b8fddb2356
+- name: github.com/spf13/cast
+  version: 27b586b42e29bec072fe7379259cc719e1289da6
+- name: github.com/spf13/cobra
+  version: bc81c21bd0d8be5ba2d6630a505d79d4467566e7
+- name: github.com/spf13/jwalterweatherman
+  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
+- name: github.com/spf13/pflag
+  version: 367864438f1b1a3c7db4da06a2f55b144e6784e0
+- name: github.com/spf13/viper
+  version: c1ccc378a054ea8d4e38d8c67f6938d4760b53dd
 - name: github.com/stretchr/testify
-  version: 6cb3b85ef5a0efef77caef88363ec4d4b5c0976d
+  version: d77da356e56a7428ad25149ca77381849a6a5232
 - name: github.com/syndtr/goleveldb
-  version: cfa635847112c5dc4782e128fa7e0d05fdbfb394
+  version: fa5b5c78794bc5c18f330361059f871ae8c2b9d6
   subpackages:
   - leveldb
   - leveldb/errors
@@ -89,36 +138,33 @@ imports:
 - name: github.com/tendermint/go-wire
   version: 3b0adbc86ed8425eaed98516165b6788d9f4de7a
 - name: github.com/tendermint/log15
-  version: a36450f4378275a02e1259eb5a868879019bcd41
+  version: 9545b249b3aacafa97f79e0838b02b274adc6f5f
   subpackages:
   - term
 - name: github.com/tendermint/tendermint
-  version: 55ef4b225fb0aa5637a96d36a8c0d030a59dc21d
+  version: aaea0c5d2e3ecfbf29f2608f9d43649ec7f07f50
   subpackages:
-  - config/tendermint
   - node
   - proxy
   - types
   - consensus
+  - rpc/core/types
   - blockchain
   - mempool
-  - config/tendermint_test
-  - rpc/core/types
   - rpc/core
   - state
   - version
 - name: github.com/tendermint/tmsp
-  version: 7ffd2899092f47110a5ffebe20247a9b7f80f4ad
+  version: 73e5c3cb7bbee2f9c49792e5a0fcbcab442bf7dc
   subpackages:
   - client
-  - server
   - types
   - example/dummy
   - example/nil
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto
-  version: b6789ab629056511030d652d851e7dc10c9e9c9e
+  version: f3241ce8505855877cc8a9717bd61a0f7c4ea83c
   subpackages:
   - ripemd160
   - nacl/secretbox
@@ -129,20 +175,36 @@ imports:
   - openpgp/errors
   - curve25519
 - name: golang.org/x/net
-  version: f315505cf3349909cdf013ea56690da34e96a451
+  version: 7c71ca708c71bcbd0e6c856b01468ee07fe24557
   subpackages:
+  - http2
   - context
   - netutil
+  - trace
+  - http2/hpack
+  - lex/httplex
+  - internal/timeseries
 - name: golang.org/x/sys
-  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  version: 62bee037599929a6e9146f29d10dd5208c43507d
   subpackages:
   - unix
+- name: google.golang.org/grpc
+  version: e78224b060cf3215247b7be455f80ea22e469b66
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - transport
+  - peer
 - name: gopkg.in/fatih/set.v0
   version: 27c40922c40b43fe04554d8223a402af3ea333f3
 - name: gopkg.in/go-playground/validator.v8
   version: c193cecd124b5cc722d7ee5538e945bdb3348435
 - name: gopkg.in/tylerb/graceful.v1
-  version: 9a3d4236b03bb5d26f7951134d248f9d5510d599
+  version: ecde8c8f16df93a994dda8936c8f60f0c26c28ab
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
 devImports: []
