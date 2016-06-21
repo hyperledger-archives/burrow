@@ -94,3 +94,34 @@ func (core *Core) NewGateway(config *server.ServerConfig) (*server.ServeProcess,
 
 	return proc, nil
 }
+
+
+// func StartRPC(config cfg.Config, n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
+// 	rpccore.SetConfig(config)
+//
+// 	rpccore.SetErisDBApp(edbApp)
+// 	rpccore.SetBlockStore(n.BlockStore())
+// 	rpccore.SetConsensusState(n.ConsensusState())
+// 	rpccore.SetConsensusReactor(n.ConsensusReactor())
+// 	rpccore.SetMempoolReactor(n.MempoolReactor())
+// 	rpccore.SetSwitch(n.Switch())
+// 	rpccore.SetPrivValidator(n.PrivValidator())
+// 	rpccore.SetGenDoc(LoadGenDoc(config.GetString("genesis_file")))
+//
+// 	listenAddrs := strings.Split(config.GetString("rpc_laddr"), ",")
+//
+// 	// we may expose the rpc over both a unix and tcp socket
+// 	listeners := make([]net.Listener, len(listenAddrs))
+// 	for i, listenAddr := range listenAddrs {
+// 		mux := http.NewServeMux()
+// 		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.EventSwitch())
+// 		mux.HandleFunc("/websocket", wm.WebsocketHandler)
+// 		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes)
+// 		listener, err := rpcserver.StartHTTPServer(listenAddr, mux)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		listeners[i] = listener
+// 	}
+// 	return listeners, nil
+// }
