@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	tmsp_client "github.com/tendermint/tmsp/client"
-	tmsp_types  "github.com/tendermint/tmsp/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
 
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 )
@@ -68,13 +68,13 @@ func (app *localClient) Stop() bool {
 
 func (app *localClient) FlushAsync() *tmsp_client.ReqRes {
 	// Do nothing
-	return newLocalReqRes(tmsp_types.RequestFlush(), nil)
+	return newLocalReqRes(tmsp_types.ToRequestFlush(), nil)
 }
 
 func (app *localClient) EchoAsync(msg string) *tmsp_client.ReqRes {
 	return app.callback(
-		tmsp_types.RequestEcho(msg),
-		tmsp_types.ResponseEcho(msg),
+		tmsp_types.ToRequestEcho(msg),
+		tmsp_types.ToResponseEcho(msg),
 	)
 }
 
@@ -83,8 +83,8 @@ func (app *localClient) InfoAsync() *tmsp_client.ReqRes {
 	info := app.Application.Info()
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestInfo(),
-		tmsp_types.ResponseInfo(info),
+		tmsp_types.ToRequestInfo(),
+		tmsp_types.ToResponseInfo(info),
 	)
 }
 
@@ -93,8 +93,8 @@ func (app *localClient) SetOptionAsync(key string, value string) *tmsp_client.Re
 	log := app.Application.SetOption(key, value)
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestSetOption(key, value),
-		tmsp_types.ResponseSetOption(log),
+		tmsp_types.ToRequestSetOption(key, value),
+		tmsp_types.ToResponseSetOption(log),
 	)
 }
 
@@ -103,8 +103,8 @@ func (app *localClient) AppendTxAsync(tx []byte) *tmsp_client.ReqRes {
 	res := app.Application.AppendTx(tx)
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestAppendTx(tx),
-		tmsp_types.ResponseAppendTx(res.Code, res.Data, res.Log),
+		tmsp_types.ToRequestAppendTx(tx),
+		tmsp_types.ToResponseAppendTx(res.Code, res.Data, res.Log),
 	)
 }
 
@@ -113,8 +113,8 @@ func (app *localClient) CheckTxAsync(tx []byte) *tmsp_client.ReqRes {
 	res := app.Application.CheckTx(tx)
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestCheckTx(tx),
-		tmsp_types.ResponseCheckTx(res.Code, res.Data, res.Log),
+		tmsp_types.ToRequestCheckTx(tx),
+		tmsp_types.ToResponseCheckTx(res.Code, res.Data, res.Log),
 	)
 }
 
@@ -123,8 +123,8 @@ func (app *localClient) QueryAsync(tx []byte) *tmsp_client.ReqRes {
 	res := app.Application.Query(tx)
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestQuery(tx),
-		tmsp_types.ResponseQuery(res.Code, res.Data, res.Log),
+		tmsp_types.ToRequestQuery(tx),
+		tmsp_types.ToResponseQuery(res.Code, res.Data, res.Log),
 	)
 }
 
@@ -133,8 +133,8 @@ func (app *localClient) CommitAsync() *tmsp_client.ReqRes {
 	res := app.Application.Commit()
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestCommit(),
-		tmsp_types.ResponseCommit(res.Code, res.Data, res.Log),
+		tmsp_types.ToRequestCommit(),
+		tmsp_types.ToResponseCommit(res.Code, res.Data, res.Log),
 	)
 }
 
@@ -144,8 +144,8 @@ func (app *localClient) InitChainAsync(validators []*tmsp_types.Validator) *tmsp
 		bcApp.InitChain(validators)
 	}
 	reqRes := app.callback(
-		tmsp_types.RequestInitChain(validators),
-		tmsp_types.ResponseInitChain(),
+		tmsp_types.ToRequestInitChain(validators),
+		tmsp_types.ToResponseInitChain(),
 	)
 	app.mtx.Unlock()
 	return reqRes
@@ -158,8 +158,8 @@ func (app *localClient) BeginBlockAsync(height uint64) *tmsp_client.ReqRes {
 	}
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestBeginBlock(height),
-		tmsp_types.ResponseBeginBlock(),
+		tmsp_types.ToRequestBeginBlock(height),
+		tmsp_types.ToResponseBeginBlock(),
 	)
 }
 
@@ -171,8 +171,8 @@ func (app *localClient) EndBlockAsync(height uint64) *tmsp_client.ReqRes {
 	}
 	app.mtx.Unlock()
 	return app.callback(
-		tmsp_types.RequestEndBlock(height),
-		tmsp_types.ResponseEndBlock(validators),
+		tmsp_types.ToRequestEndBlock(height),
+		tmsp_types.ToResponseEndBlock(validators),
 	)
 }
 

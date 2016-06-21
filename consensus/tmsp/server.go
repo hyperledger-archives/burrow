@@ -93,7 +93,7 @@ func (s *Server) acceptConnectionsRoutine() {
 			fmt.Println("Accepted a new connection")
 		}
 
-		closeConn := make(chan error, 2)              // Push to signal connection closed
+		closeConn := make(chan error, 2)                   // Push to signal connection closed
 		responses := make(chan *tmsp_types.Response, 1000) // A channel to buffer responses
 
 		// Read requests from conn and deal with them
@@ -145,45 +145,46 @@ func (s *Server) handleRequests(closeConn chan error, conn net.Conn, responses c
 }
 
 func (s *Server) handleRequest(req *tmsp_types.Request, responses chan<- *tmsp_types.Response) {
-	switch req.Type {
-	case tmsp_types.MessageType_Echo:
-		responses <- tmsp_types.ResponseEcho(string(req.Data))
-	case tmsp_types.MessageType_Flush:
-		responses <- tmsp_types.ResponseFlush()
-	case tmsp_types.MessageType_Info:
+	switch r := req.Value.(type) {
+	case *tmsp_types.Request_Echo:
+		responses <- tmsp_types.ToResponseEcho(r.Echo.Message)
+	case *tmsp_types.Request_Flush:
+		responses <- tmsp_types.ToResponseFlush()
+	case *tmsp_types.Request_Info:
 		data := s.app.Info()
-		responses <- tmsp_types.ResponseInfo(data)
-	case tmsp_types.MessageType_SetOption:
-		logStr := s.app.SetOption(req.Key, req.Value)
-		responses <- tmsp_types.ResponseSetOption(logStr)
-	case tmsp_types.MessageType_AppendTx:
-		res := s.app.AppendTx(req.Data)
-		responses <- tmsp_types.ResponseAppendTx(res.Code, res.Data, res.Log)
-	case tmsp_types.MessageType_CheckTx:
-		res := s.app.CheckTx(req.Data)
-		responses <- tmsp_types.ResponseCheckTx(res.Code, res.Data, res.Log)
-	case tmsp_types.MessageType_Commit:
+		responses <- tmsp_types.ToResponseInfo(data)
+	case *tmsp_types.Request_SetOption:
+		so := r.SetOption
+		logStr := s.app.SetOption(so.Key, so.Value)
+		responses <- tmsp_types.ToResponseSetOption(logStr)
+	case *tmsp_types.Request_AppendTx:
+		res := s.app.AppendTx(r.AppendTx.Tx)
+		responses <- tmsp_types.ToResponseAppendTx(res.Code, res.Data, res.Log)
+	case *tmsp_types.Request_CheckTx:
+		res := s.app.CheckTx(r.CheckTx.Tx)
+		responses <- tmsp_types.ToResponseCheckTx(res.Code, res.Data, res.Log)
+	case *tmsp_types.Request_Commit:
 		res := s.app.Commit()
-		responses <- tmsp_types.ResponseCommit(res.Code, res.Data, res.Log)
-	case tmsp_types.MessageType_Query:
-		res := s.app.Query(req.Data)
-		responses <- tmsp_types.ResponseQuery(res.Code, res.Data, res.Log)
-	case tmsp_types.MessageType_InitChain:
-		if app, ok := s.app.(manager_types.BlockchainAware); ok {
-			app.InitChain(req.Validators)
-			responses <- tmsp_types.ResponseInitChain()
+		responses <- tmsp_types.ToResponseCommit(res.Code, res.Data, res.Log)
+	case *tmsp_types.Request_Query:
+		res := s.app.Query(r.Query.Query)
+		responses <- tmsp_types.ToResponseQuery(res.Code, res.Data, res.Log)
+	case *tmsp_types.Request_InitChain:
+		if app, ok := s.app.(tmsp_types.BlockchainAware); ok {
+			app.InitChain(r.InitChain.Validators)
+			responses <- tmsp_types.ToResponseInitChain()
 		} else {
-			responses <- tmsp_types.ResponseInitChain()
+			responses <- tmsp_types.ToResponseInitChain()
 		}
-	case tmsp_types.MessageType_EndBlock:
-		if app, ok := s.app.(manager_types.BlockchainAware); ok {
-			validators := app.EndBlock(req.Height)
-			responses <- tmsp_types.ResponseEndBlock(validators)
+	case *tmsp_types.Request_EndBlock:
+		if app, ok := s.app.(tmsp_types.BlockchainAware); ok {
+			validators := app.EndBlock(r.EndBlock.Height)
+			responses <- tmsp_types.ToResponseEndBlock(validators)
 		} else {
-			responses <- tmsp_types.ResponseEndBlock(nil)
+			responses <- tmsp_types.ToResponseEndBlock(nil)
 		}
 	default:
-		responses <- tmsp_types.ResponseException("Unknown request")
+		responses <- tmsp_types.ToResponseException("Unknown request")
 	}
 }
 
@@ -198,10 +199,10 @@ func (s *Server) handleResponses(closeConn chan error, responses <-chan *tmsp_ty
 			closeConn <- fmt.Errorf("Error in handleResponses: %v", err.Error())
 			return
 		}
-		if res.Type == tmsp_types.MessageType_Flush {
+		if _, ok := res.Value.(*tmsp_types.Response_Flush); ok {
 			err = bufWriter.Flush()
 			if err != nil {
-				closeConn <- fmt.Errorf("Error in handleResponses: %v", err.Error())
+				closeConn <- fmt.Errorf("Error in handleValue: %v", err.Error())
 				return
 			}
 		}
