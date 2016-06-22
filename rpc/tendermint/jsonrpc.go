@@ -1,4 +1,4 @@
-package rpc
+package rpc_tendermint
 
 import (
 	"encoding/json"

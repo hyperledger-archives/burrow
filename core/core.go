@@ -24,12 +24,16 @@ import (
 
   log "github.com/eris-ltd/eris-logger"
 
-  config      "github.com/eris-ltd/eris-db/config"
-  consensus   "github.com/eris-ltd/eris-db/consensus"
-  core_types  "github.com/eris-ltd/eris-db/core/types"
-  definitions "github.com/eris-ltd/eris-db/definitions"
-  manager     "github.com/eris-ltd/eris-db/manager"
-  server      "github.com/eris-ltd/eris-db/server"
+  config         "github.com/eris-ltd/eris-db/config"
+  consensus      "github.com/eris-ltd/eris-db/consensus"
+  definitions    "github.com/eris-ltd/eris-db/definitions"
+	event          "github.com/eris-ltd/eris-db/event"
+  manager        "github.com/eris-ltd/eris-db/manager"
+  // rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
+  rpc_v0         "github.com/eris-ltd/eris-db/rpc/v0"
+  // rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+  // rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+  server         "github.com/eris-ltd/eris-db/server"
 )
 
 // Core is the high-level structure
@@ -76,14 +80,14 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 
 func (core *Core) NewGateway(config *server.ServerConfig) (*server.ServeProcess,
   error) {
-  codec := &core_types.TCodec{}
-  eventSubscriptions := NewEventSubscriptions(core.pipe.Events())
+  codec := &rpc_v0.TCodec{}
+  eventSubscriptions := event.NewEventSubscriptions(core.pipe.Events())
   // The services.
-  tmwss := NewErisDbWsService(codec, core.pipe)
-  tmjs := NewErisDbJsonService(codec, core.pipe, eventSubscriptions)
+  tmwss := rpc_v0.NewErisDbWsService(codec, core.pipe)
+  tmjs := rpc_v0.NewErisDbJsonService(codec, core.pipe, eventSubscriptions)
   // The servers.
-	jsonServer := NewJsonRpcServer(tmjs)
-	restServer := NewRestServer(codec, core.pipe, eventSubscriptions)
+	jsonServer := rpc_v0.NewJsonRpcServer(tmjs)
+	restServer := rpc_v0.NewRestServer(codec, core.pipe, eventSubscriptions)
 	wsServer := server.NewWebSocketServer(config.WebSocket.MaxWebSocketSessions,
     tmwss)
 	// Create a server process.

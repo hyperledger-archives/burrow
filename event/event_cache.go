@@ -1,13 +1,11 @@
-package core
+package event
 
 import (
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/tendermint/go-events"
-
-  definitions "github.com/eris-ltd/eris-db/definitions"
+	evts "github.com/tendermint/go-events"
 )
 
 var (
@@ -48,12 +46,12 @@ func (this *EventCache) poll() []interface{} {
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type EventSubscriptions struct {
 	mtx          *sync.Mutex
-	eventEmitter definitions.EventEmitter
+	eventEmitter EventEmitter
 	subs         map[string]*EventCache
 	reap         bool
 }
 
-func NewEventSubscriptions(eventEmitter definitions.EventEmitter) *EventSubscriptions {
+func NewEventSubscriptions(eventEmitter EventEmitter) *EventSubscriptions {
 	es := &EventSubscriptions{
 		mtx:          &sync.Mutex{},
 		eventEmitter: eventEmitter,
@@ -86,14 +84,14 @@ func reap(es *EventSubscriptions) {
 // a delay - though a conflict is practically impossible, and if it does
 // happen it's for an insignificant amount of time (the time it takes to
 // carry out EventCache.poll() ).
-func (this *EventSubscriptions) add(eventId string) (string, error) {
-	subId, errSID := generateSubId()
+func (this *EventSubscriptions) Add(eventId string) (string, error) {
+	subId, errSID := GenerateSubId()
 	if errSID != nil {
 		return "", errSID
 	}
 	cache := newEventCache()
 	_, errC := this.eventEmitter.Subscribe(subId, eventId,
-		func(evt events.EventData) {
+		func(evt evts.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)
@@ -106,7 +104,7 @@ func (this *EventSubscriptions) add(eventId string) (string, error) {
 	return subId, nil
 }
 
-func (this *EventSubscriptions) poll(subId string) ([]interface{}, error) {
+func (this *EventSubscriptions) Poll(subId string) ([]interface{}, error) {
 	sub, ok := this.subs[subId]
 	if !ok {
 		return nil, fmt.Errorf("Subscription not active. ID: " + subId)
@@ -114,7 +112,7 @@ func (this *EventSubscriptions) poll(subId string) ([]interface{}, error) {
 	return sub.poll(), nil
 }
 
-func (this *EventSubscriptions) remove(subId string) error {
+func (this *EventSubscriptions) Remove(subId string) error {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
 	// TODO Check this.

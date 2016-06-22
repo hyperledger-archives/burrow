@@ -14,9 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package event
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"strings"
+
 	evts "github.com/tendermint/go-events"
 )
 
@@ -24,6 +28,11 @@ import (
 // TODO: [ben] yes please ^^^
 // [ben] To improve this we will switch out go-events with eris-db/event so
 // that there is no need anymore for this poor wrapper.
+
+type EventEmitter interface {
+  Subscribe(subId, event string, callback func(evts.EventData)) (bool, error)
+  Unsubscribe(subId string) (bool, error)
+}
 
 // The events struct has methods for working with events.
 type events struct {
@@ -44,4 +53,35 @@ func (this *events) Subscribe(subId, event string, callback func(evts.EventData)
 func (this *events) Unsubscribe(subId string) (bool, error) {
 	this.eventSwitch.RemoveListener(subId)
 	return true, nil
+}
+
+// *********************************** Events ***********************************
+
+// EventSubscribe
+type EventSub struct {
+	SubId string `json:"sub_id"`
+}
+
+// EventUnsubscribe
+type EventUnsub struct {
+	Result bool `json:"result"`
+}
+
+// EventPoll
+type PollResponse struct {
+	Events []interface{} `json:"events"`
+}
+
+// **************************************************************************************
+// Helper function
+
+func GenerateSubId() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	rStr := hex.EncodeToString(b)
+	return strings.ToUpper(rStr), nil
+
 }

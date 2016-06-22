@@ -1,8 +1,8 @@
-package core
+package rpc_v0
 
 import (
 	"github.com/eris-ltd/eris-db/account"
-  core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -17,12 +17,12 @@ type (
 	// Used to send an address
 	// TODO deprecate in favor of 'FilterListParam'
 	AccountsParam struct {
-		Filters []*core_types.FilterData `json:"filters"`
+		Filters []*event.FilterData `json:"filters"`
 	}
 
 	// Used to send an address
 	FilterListParam struct {
-		Filters []*core_types.FilterData `json:"filters"`
+		Filters []*event.FilterData `json:"filters"`
 	}
 
 	PrivKeyParam struct {
@@ -43,7 +43,7 @@ type (
 	// Get a series of blocks
 	// TODO deprecate in favor of 'FilterListParam'
 	BlocksParam struct {
-		Filters []*core_types.FilterData `json:"filters"`
+		Filters []*event.FilterData `json:"filters"`
 	}
 
 	// Event Id

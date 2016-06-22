@@ -31,7 +31,7 @@ import (
 
   "github.com/eris-ltd/eris-db/account"
   core_types  "github.com/eris-ltd/eris-db/core/types"
-  definitions "github.com/eris-ltd/eris-db/definitions"
+	event       "github.com/eris-ltd/eris-db/event"
   "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
   "github.com/eris-ltd/eris-db/manager/eris-mint/state"
   "github.com/eris-ltd/eris-db/txs"
@@ -41,12 +41,12 @@ type transactor struct {
 	chainID      string
 	eventSwitch  tEvents.Fireable
 	erisMint     *ErisMint
-	eventEmitter definitions.EventEmitter
+	eventEmitter event.EventEmitter
 	txMtx        *sync.Mutex
 }
 
 func newTransactor(chainID string, eventSwitch tEvents.Fireable,
-	erisMint *ErisMint, eventEmitter definitions.EventEmitter) *transactor {
+	erisMint *ErisMint, eventEmitter event.EventEmitter) *transactor {
 	txs := &transactor{
 		chainID,
 		eventSwitch,

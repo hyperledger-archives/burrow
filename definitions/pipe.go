@@ -25,10 +25,10 @@ package definitions
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 
 import (
-  events           "github.com/tendermint/go-events"
   tendermint_types "github.com/tendermint/tendermint/types"
 
   account       "github.com/eris-ltd/eris-db/account"
+	event         "github.com/eris-ltd/eris-db/event"
   manager_types "github.com/eris-ltd/eris-db/manager/types"
   transaction   "github.com/eris-ltd/eris-db/txs"
   types         "github.com/eris-ltd/eris-db/core/types"
@@ -38,7 +38,7 @@ type Pipe interface {
   Accounts() Accounts
   Blockchain() Blockchain
   Consensus() Consensus
-  Events() EventEmitter
+  Events() event.EventEmitter
   NameReg() NameReg
   Net() Net
   Transactor() Transactor
@@ -50,7 +50,7 @@ type Pipe interface {
 type Accounts interface {
   GenPrivAccount() (*account.PrivAccount, error)
   GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error)
-  Accounts([]*types.FilterData) (*types.AccountList, error)
+  Accounts([]*event.FilterData) (*types.AccountList, error)
   Account(address []byte) (*account.Account, error)
   Storage(address []byte) (*types.Storage, error)
   StorageAt(address, key []byte) (*types.StorageItem, error)
@@ -62,7 +62,7 @@ type Blockchain interface {
   ChainId() (string, error)
   LatestBlockHeight() (int, error)
   LatestBlock() (*tendermint_types.Block, error)
-  Blocks([]*types.FilterData) (*types.Blocks, error)
+  Blocks([]*event.FilterData) (*types.Blocks, error)
   Block(height int) (*tendermint_types.Block, error)
 }
 
@@ -71,14 +71,9 @@ type Consensus interface {
   Validators() (*types.ValidatorList, error)
 }
 
-type EventEmitter interface {
-  Subscribe(subId, event string, callback func(events.EventData)) (bool, error)
-  Unsubscribe(subId string) (bool, error)
-}
-
 type NameReg interface {
   Entry(key string) (*transaction.NameRegEntry, error)
-  Entries([]*types.FilterData) (*types.ResultListNames, error)
+  Entries([]*event.FilterData) (*types.ResultListNames, error)
 }
 
 type Net interface {

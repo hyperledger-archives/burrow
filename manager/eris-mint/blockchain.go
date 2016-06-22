@@ -29,6 +29,7 @@ import (
   "github.com/tendermint/tendermint/types"
 
   core_types "github.com/eris-ltd/eris-db/core/types"
+	event      "github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 )
 
@@ -45,11 +46,11 @@ type blockchain struct {
 	chainID       string
 	genDocFile    string // XXX
 	blockStore    BlockStore
-	filterFactory *core_types.FilterFactory
+	filterFactory *event.FilterFactory
 }
 
 func newBlockchain(chainID, genDocFile string, blockStore BlockStore) *blockchain {
-	ff := core_types.NewFilterFactory()
+	ff := event.NewFilterFactory()
 
 	ff.RegisterFilterPool("height", &sync.Pool{
 		New: func() interface{} {
@@ -106,7 +107,7 @@ func (this *blockchain) LatestBlock() (*types.Block, error) {
 
 // Get the blocks from 'minHeight' to 'maxHeight'.
 // TODO Caps on total number of blocks should be set.
-func (this *blockchain) Blocks(fda []*core_types.FilterData) (*core_types.Blocks, error) {
+func (this *blockchain) Blocks(fda []*event.FilterData) (*core_types.Blocks, error) {
 	newFda := fda
 	var minHeight int
 	var maxHeight int
@@ -156,7 +157,7 @@ func (this *blockchain) Block(height int) (*types.Block, error) {
 }
 
 // Function for matching accounts against filter data.
-func (this *accounts) matchBlock(block, fda []*core_types.FilterData) bool {
+func (this *accounts) matchBlock(block, fda []*event.FilterData) bool {
 	return false
 }
 
@@ -168,7 +169,7 @@ type BlockHeightFilter struct {
 	match func(int, int) bool
 }
 
-func (this *BlockHeightFilter) Configure(fd *core_types.FilterData) error {
+func (this *BlockHeightFilter) Configure(fd *event.FilterData) error {
 	op := fd.Op
 	var val int
 	if fd.Value == "min" {
@@ -224,7 +225,7 @@ func (this *BlockHeightFilter) Match(v interface{}) bool {
 }
 
 // TODO i should start using named return params...
-func getHeightMinMax(fda []*core_types.FilterData, height int) (int, int, []*core_types.FilterData, error) {
+func getHeightMinMax(fda []*event.FilterData, height int) (int, int, []*event.FilterData, error) {
 
 	min := 0
 	max := height

@@ -2,7 +2,9 @@ package mock
 
 import (
 	"github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
+	core_types  "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event       "github.com/eris-ltd/eris-db/event"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	types "github.com/eris-ltd/eris-db/txs"
 
@@ -12,17 +14,17 @@ import (
 // Base struct.
 type MockPipe struct {
 	testData   *td.TestData
-	accounts   core_types.Accounts
-	blockchain core_types.Blockchain
-	consensus  core_types.Consensus
-	events     core_types.EventEmitter
-	namereg    core_types.NameReg
-	net        core_types.Net
-	transactor core_types.Transactor
+	accounts   definitions.Accounts
+	blockchain definitions.Blockchain
+	consensus  definitions.Consensus
+	events     event.EventEmitter
+	namereg    definitions.NameReg
+	net        definitions.Net
+	transactor definitions.Transactor
 }
 
 // Create a new mock tendermint pipe.
-func NewMockPipe(td *td.TestData) core_types.Pipe {
+func NewMockPipe(td *td.TestData) definitions.Pipe {
 	accounts := &accounts{td}
 	blockchain := &blockchain{td}
 	consensus := &consensus{td}
@@ -43,23 +45,23 @@ func NewMockPipe(td *td.TestData) core_types.Pipe {
 }
 
 // Create a mock pipe with default mock data.
-func NewDefaultMockPipe() core_types.Pipe {
+func NewDefaultMockPipe() definitions.Pipe {
 	return NewMockPipe(td.LoadTestData())
 }
 
-func (this *MockPipe) Accounts() core_types.Accounts {
+func (this *MockPipe) Accounts() definitions.Accounts {
 	return this.accounts
 }
 
-func (this *MockPipe) Blockchain() core_types.Blockchain {
+func (this *MockPipe) Blockchain() definitions.Blockchain {
 	return this.blockchain
 }
 
-func (this *MockPipe) Consensus() core_types.Consensus {
+func (this *MockPipe) Consensus() definitions.Consensus {
 	return this.consensus
 }
 
-func (this *MockPipe) Events() core_types.EventEmitter {
+func (this *MockPipe) Events() event.EventEmitter {
 	return this.events
 }
 
@@ -90,7 +92,7 @@ func (this *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, e
 	return this.testData.GenPrivAccount.Output, nil
 }
 
-func (this *accounts) Accounts([]*core_types.FilterData) (*core_types.AccountList, error) {
+func (this *accounts) Accounts([]*event.FilterData) (*core_types.AccountList, error) {
 	return this.testData.GetAccounts.Output, nil
 }
 
@@ -131,7 +133,7 @@ func (this *blockchain) LatestBlock() (*mintTypes.Block, error) {
 	return this.testData.GetLatestBlock.Output, nil
 }
 
-func (this *blockchain) Blocks([]*core_types.FilterData) (*core_types.Blocks, error) {
+func (this *blockchain) Blocks([]*event.FilterData) (*core_types.Blocks, error) {
 	return this.testData.GetBlocks.Output, nil
 }
 
@@ -174,7 +176,7 @@ func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
 	return this.testData.GetNameRegEntry.Output, nil
 }
 
-func (this *namereg) Entries(filters []*core_types.FilterData) (*core_types.ResultListNames, error) {
+func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
 	return this.testData.GetNameRegEntries.Output, nil
 }
 

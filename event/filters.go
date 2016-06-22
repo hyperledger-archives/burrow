@@ -1,4 +1,4 @@
-package types
+package event
 
 import (
 	"fmt"
