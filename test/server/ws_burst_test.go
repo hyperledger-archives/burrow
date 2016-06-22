@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const CONNS = 100
+const CONNS uint16 = 100
 const MESSAGES = 1000
 
 // To keep track of new websocket sessions on the server.
@@ -52,7 +52,8 @@ func TestWsFlooding(t *testing.T) {
 
 	sc.Run(oChan, cChan)
 
-	serveProcess := NewServeScumSocket(wsServer)
+	serveProcess, err := NewServeScumSocket(wsServer)
+	assert.NoError(t, err, "Failed to serve new websocket.")
 	errServe := serveProcess.Start()
 	assert.NoError(t, errServe, "ScumSocketed!")
 	t.Logf("Flooding...")
@@ -72,10 +73,10 @@ func TestWsFlooding(t *testing.T) {
 func runWs() error {
 	doneChan := make(chan bool)
 	errChan := make(chan error)
-	for i := 0; i < CONNS; i++ {
+	for i := uint16(0); i < CONNS; i++ {
 		go wsClient(doneChan, errChan)
 	}
-	runners := 0
+	runners := uint16(0)
 	for runners < CONNS {
 		select {
 		case _ = <-doneChan:

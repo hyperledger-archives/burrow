@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/config"
 	core "github.com/eris-ltd/eris-db/core"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/rpc"
@@ -50,10 +49,10 @@ func (this *MockSuite) SetupSuite() {
 	evtSubs := core.NewEventSubscriptions(pipe.Events())
 	// The server
 	restServer := core.NewRestServer(codec, pipe, evtSubs)
-	sConf := config.DefaultServerConfig()
+	sConf := server.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc := server.NewServeProcess(&sConf, restServer)
+	proc := server.NewServeProcess(sConf, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)

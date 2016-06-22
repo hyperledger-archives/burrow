@@ -5,8 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/eris-ltd/eris-db/config"
-	"github.com/eris-ltd/eris-db/rpc"
+	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
@@ -29,7 +28,7 @@ func NewScumbagServer() server.Server {
 	return &ScumbagServer{}
 }
 
-func (this *ScumbagServer) Start(sc *config.ServerConfig, g *gin.Engine) {
+func (this *ScumbagServer) Start(sc *server.ServerConfig, g *gin.Engine) {
 	g.GET("/scumbag", func(c *gin.Context) {
 		c.String(200, "Scumbag")
 	})
@@ -47,25 +46,26 @@ func (this *ScumbagServer) ShutDown() {
 type ScumSocketService struct{}
 
 func (this *ScumSocketService) Process(data []byte, session *server.WSSession) {
-	resp := rpc.NewRPCResponse("1", "Scumbag")
+	resp := rpc_tendermint.NewRPCResponse("1", "Scumbag")
 	bts, _ := json.Marshal(resp)
 	session.Write(bts)
 }
 
-func NewScumsocketServer(maxConnections uint) *server.WebSocketServer {
+func NewScumsocketServer(maxConnections uint16) *server.WebSocketServer {
 	sss := &ScumSocketService{}
 	return server.NewWebSocketServer(maxConnections, sss)
 }
 
-func NewServeScumbag() *server.ServeProcess {
-	cfg := config.DefaultServerConfig()
+func NewServeScumbag() (*server.ServeProcess, error) {
+	cfg := server.DefaultServerConfig()
 	cfg.Bind.Port = uint16(31400)
-	return server.NewServeProcess(&cfg, NewScumbagServer())
+	return server.NewServeProcess(cfg, NewScumbagServer())
 }
 
-func NewServeScumSocket(wsServer *server.WebSocketServer) *server.ServeProcess {
-	cfg := config.DefaultServerConfig()
+func NewServeScumSocket(wsServer *server.WebSocketServer) (*server.ServeProcess,
+	error) {
+	cfg := server.DefaultServerConfig()
 	cfg.WebSocket.WebSocketEndpoint = "/scumsocket"
 	cfg.Bind.Port = uint16(31401)
-	return server.NewServeProcess(&cfg, wsServer)
+	return server.NewServeProcess(cfg, wsServer)
 }

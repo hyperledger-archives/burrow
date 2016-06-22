@@ -9,7 +9,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/go-events"
+	evts "github.com/tendermint/go-events"
 )
 
 var mockInterval = 10 * time.Millisecond
@@ -17,13 +17,13 @@ var mockInterval = 10 * time.Millisecond
 type mockSub struct {
 	subId    string
 	eventId  string
-	f        func(events.EventData)
+	f        func(evts.EventData)
 	shutdown bool
 	sdChan   chan struct{}
 }
 
 // A mock event
-func newMockSub(subId, eventId string, f func(events.EventData)) mockSub {
+func newMockSub(subId, eventId string, f func(evts.EventData)) mockSub {
 	return mockSub{subId, eventId, f, false, make(chan struct{})}
 }
 
@@ -35,7 +35,7 @@ func newMockEventEmitter() *mockEventEmitter {
 	return &mockEventEmitter{make(map[string]mockSub)}
 }
 
-func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(events.EventData)) (bool, error) {
+func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evts.EventData)) (bool, error) {
 	if _, ok := this.subs[subId]; ok {
 		return false, nil
 	}
