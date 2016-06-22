@@ -1,6 +1,8 @@
 package testdata
 
 import (
+  wire "github.com/tendermint/go-wire"
+
 	account    "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event      "github.com/eris-ltd/eris-db/event"

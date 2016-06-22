@@ -1,14 +1,16 @@
 package mock
 
 import (
-	"github.com/eris-ltd/eris-db/account"
-	core_types  "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event       "github.com/eris-ltd/eris-db/event"
-	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	types "github.com/eris-ltd/eris-db/txs"
+	account       "github.com/eris-ltd/eris-db/account"
+	core_types    "github.com/eris-ltd/eris-db/core/types"
+	definitions   "github.com/eris-ltd/eris-db/definitions"
+	event         "github.com/eris-ltd/eris-db/event"
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
+	td            "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	types         "github.com/eris-ltd/eris-db/txs"
 
 	mintTypes "github.com/tendermint/tendermint/types"
+	evts    "github.com/tendermint/go-events"
 )
 
 // Base struct.
@@ -65,18 +67,27 @@ func (this *MockPipe) Events() event.EventEmitter {
 	return this.events
 }
 
-func (this *MockPipe) NameReg() core_types.NameReg {
+func (this *MockPipe) NameReg() definitions.NameReg {
 	return this.namereg
 }
 
-func (this *MockPipe) Net() core_types.Net {
+func (this *MockPipe) Net() definitions.Net {
 	return this.net
 }
 
-func (this *MockPipe) Transactor() core_types.Transactor {
+func (this *MockPipe) Transactor() definitions.Transactor {
 	return this.transactor
 }
 
+func (this *MockPipe) GetApplication() manager_types.Application {
+	// TODO: [ben] mock application
+	return nil
+}
+
+func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
+	// TODO: [ben] mock consensus engine
+	return nil
+}
 // Components
 
 // Accounts
@@ -159,7 +170,7 @@ type eventer struct {
 	testData *td.TestData
 }
 
-func (this *eventer) Subscribe(subId, event string, callback func(events.EventData)) (bool, error) {
+func (this *eventer) Subscribe(subId, event string, callback func(evts.EventData)) (bool, error) {
 	return true, nil
 }
 

@@ -9,12 +9,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/account"
-	core "github.com/eris-ltd/eris-db/core"
+	account    "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/server"
-	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	event      "github.com/eris-ltd/eris-db/event"
+	rpc        "github.com/eris-ltd/eris-db/rpc"
+	rpc_v0     "github.com/eris-ltd/eris-db/rpc/v0"
+	server     "github.com/eris-ltd/eris-db/server"
+	td         "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/eris-ltd/eris-db/txs"
 
 	"github.com/gin-gonic/gin"
@@ -45,20 +46,20 @@ func (this *MockSuite) SetupSuite() {
 	// Load the supporting objects.
 	testData := td.LoadTestData()
 	pipe := NewMockPipe(testData)
-	codec := &core_types.TCodec{}
-	evtSubs := core.NewEventSubscriptions(pipe.Events())
+	codec := &rpc_v0.TCodec{}
+	evtSubs := event.NewEventSubscriptions(pipe.Events())
 	// The server
-	restServer := core.NewRestServer(codec, pipe, evtSubs)
+	restServer := rpc_v0.NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc := server.NewServeProcess(sConf, restServer)
+	proc, _ := server.NewServeProcess(sConf, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)
 	}
 	this.serveProcess = proc
-	this.codec = core_types.NewTCodec()
+	this.codec = rpc_v0.NewTCodec()
 	this.testData = testData
 	this.sUrl = "http://localhost:31402"
 }

@@ -65,9 +65,9 @@ func TestWsFlooding(t *testing.T) {
 	assert.NoError(t, errRun, "ScumSocketed!")
 	assert.NoError(t, errStop, "ScumSocketed!")
 	o, c, a := sc.Report()
-	assert.Equal(t, o, CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
-	assert.Equal(t, c, CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
-	assert.Equal(t, a, 0, "Server registered '%d' conns still active after shutting down.", a)
+	assert.Equal(t, uint16(o), CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
+	assert.Equal(t, uint16(c), CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
+	assert.Equal(t, uint16(a), uint16(0), "Server registered '%d' conns still active after shutting down.", a)
 }
 
 func runWs() error {
