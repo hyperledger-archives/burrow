@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/server"
 	edb "github.com/eris-ltd/eris-db/core"
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
@@ -31,7 +32,7 @@ import (
 
 // global variables for use across all tests
 var (
-	config            cfg.Config
+	config            server.ServerConfig
 	node              *nm.Node
 	mempoolCount      = 0
 	chainID           string
