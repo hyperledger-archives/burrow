@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	edbcli "github.com/eris-ltd/eris-db/rpc/client"
+	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"

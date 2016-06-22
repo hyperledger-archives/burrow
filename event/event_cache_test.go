@@ -82,7 +82,7 @@ func TestSubReaping(t *testing.T) {
 		for i := 0; i < NUM_SUBS; i++ {
 			time.Sleep(2 * time.Millisecond)
 			go func() {
-				id, err := eSubs.add("WeirdEvent")
+				id, err := eSubs.Add("WeirdEvent")
 				if err != nil {
 					doneChan <- err
 					return
@@ -127,7 +127,7 @@ func TestSubManualClose(t *testing.T) {
 		for i := 0; i < NUM_SUBS; i++ {
 			time.Sleep(2 * time.Millisecond)
 			go func() {
-				id, err := eSubs.add("WeirdEvent")
+				id, err := eSubs.Add("WeirdEvent")
 				if err != nil {
 					doneChan <- err
 					return
@@ -141,7 +141,7 @@ func TestSubManualClose(t *testing.T) {
 					doneChan <- err2
 				}
 				time.Sleep(100 * time.Millisecond)
-				err3 := eSubs.remove(id)
+				err3 := eSubs.Remove(id)
 				if err3 != nil {
 					doneChan <- err3
 				}
@@ -176,7 +176,7 @@ func TestSubFlooding(t *testing.T) {
 		for i := 0; i < NUM_SUBS; i++ {
 			time.Sleep(1 * time.Millisecond)
 			go func() {
-				id, err := eSubs.add("WeirdEvent")
+				id, err := eSubs.Add("WeirdEvent")
 				if err != nil {
 					doneChan <- err
 					return
@@ -190,7 +190,7 @@ func TestSubFlooding(t *testing.T) {
 					doneChan <- err2
 				}
 				time.Sleep(1000 * time.Millisecond)
-				err3 := eSubs.remove(id)
+				err3 := eSubs.Remove(id)
 				if err3 != nil {
 					doneChan <- err3
 				}
