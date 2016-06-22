@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	txtypes "github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
 

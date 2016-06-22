@@ -10,7 +10,7 @@ import (
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	edbcli "github.com/eris-ltd/eris-db/rpc/client"
+	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
