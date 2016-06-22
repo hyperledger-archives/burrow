@@ -93,27 +93,27 @@ func SignTx(tx txs.Tx, privAccounts []*acm.PrivAccount) (*ctypes.ResultSignTx, e
 		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
 			input.PubKey = privAccounts[i].PubKey
-			input.Signature = privAccounts[i].Sign(config.GetString("erisdb.chain_id"), sendTx)
+			input.Signature = privAccounts[i].Sign(config.ChainId, sendTx)
 		}
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
-		callTx.Input.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), callTx)
+		callTx.Input.Signature = privAccounts[0].Sign(config.ChainId, callTx)
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), bondTx).(crypto.SignatureEd25519)
+		bondTx.Signature = privAccounts[0].Sign(config.ChainId, bondTx).(crypto.SignatureEd25519)
 		for i, input := range bondTx.Inputs {
 			input.PubKey = privAccounts[i+1].PubKey
-			input.Signature = privAccounts[i+1].Sign(config.GetString("erisdb.chain_id"), bondTx)
+			input.Signature = privAccounts[i+1].Sign(config.ChainId, bondTx)
 		}
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
-		unbondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), unbondTx).(crypto.SignatureEd25519)
+		unbondTx.Signature = privAccounts[0].Sign(config.ChainId, unbondTx).(crypto.SignatureEd25519)
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
-		rebondTx.Signature = privAccounts[0].Sign(config.GetString("erisdb.chain_id"), rebondTx).(crypto.SignatureEd25519)
+		rebondTx.Signature = privAccounts[0].Sign(config.ChainId, rebondTx).(crypto.SignatureEd25519)
 	}
 	return &ctypes.ResultSignTx{tx}, nil
 }
