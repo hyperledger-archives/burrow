@@ -1,4 +1,4 @@
-package core
+package rpc_v0
 
 import (
 	"encoding/json"
@@ -8,10 +8,11 @@ import (
 
   log "github.com/eris-ltd/eris-logger"
 
-	core_types  "github.com/eris-ltd/eris-db/core/types"
-  definitions "github.com/eris-ltd/eris-db/definitions"
-	rpc         "github.com/eris-ltd/eris-db/rpc"
-	server      "github.com/eris-ltd/eris-db/server"
+  definitions    "github.com/eris-ltd/eris-db/definitions"
+	event          "github.com/eris-ltd/eris-db/event"
+	rpc            "github.com/eris-ltd/eris-db/rpc"
+	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+	server         "github.com/eris-ltd/eris-db/server"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -39,18 +40,18 @@ func NewErisDbWsService(codec rpc.Codec,
 func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 	log.Debug("REQUEST: %s\n", string(msg))
 	// Create new request object and unmarshal.
-	req := &rpc.RPCRequest{}
+	req := &rpc_tendermint.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
 
 	// Error when unmarshaling.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg), "", rpc.PARSE_ERROR, session)
+		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg), "", rpc_tendermint.PARSE_ERROR, session)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id, rpc.INVALID_REQUEST, session)
+		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id, rpc_tendermint.INVALID_REQUEST, session)
 		return
 	}
 
@@ -64,13 +65,13 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 			this.writeResponse(req.Id, resp, session)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, session)
+		this.writeError("Method not found: "+mName, req.Id, rpc_tendermint.METHOD_NOT_FOUND, session)
 	}
 }
 
 // Convenience method for writing error responses.
 func (this *ErisDbWsService) writeError(msg, id string, code int, session *server.WSSession) {
-	response := rpc.NewRPCErrorResponse(id, code, msg)
+	response := rpc_tendermint.NewRPCErrorResponse(id, code, msg)
 	bts, err := this.codec.EncodeBytes(response)
 	// If there's an error here all bets are off.
 	if err != nil {
@@ -81,11 +82,11 @@ func (this *ErisDbWsService) writeError(msg, id string, code int, session *serve
 
 // Convenience method for writing responses.
 func (this *ErisDbWsService) writeResponse(id string, result interface{}, session *server.WSSession) error {
-	response := rpc.NewRPCResponse(id, result)
+	response := rpc_tendermint.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
 	log.Debug("RESPONSE: %v\n", response)
 	if err != nil {
-		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
+		this.writeError("Internal error: "+err.Error(), id, rpc_tendermint.INTERNAL_ERROR, session)
 		return err
 	}
 	return session.Write(bts)
@@ -93,20 +94,20 @@ func (this *ErisDbWsService) writeResponse(id string, result interface{}, sessio
 
 // *************************************** Events ************************************
 
-func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbWsService) EventSubscribe(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
 	session, ok := requester.(*server.WSSession)
 	if !ok {
-		return 0, rpc.INTERNAL_ERROR, fmt.Errorf("Passing wrong object to websocket events")
+		return 0, rpc_tendermint.INTERNAL_ERROR, fmt.Errorf("Passing wrong object to websocket events")
 	}
 	param := &EventIdParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
-		return nil, rpc.INVALID_PARAMS, err
+		return nil, rpc_tendermint.INVALID_PARAMS, err
 	}
 	eventId := param.EventId
-	subId, errSID := generateSubId()
+	subId, errSID := event.GenerateSubId()
 	if errSID != nil {
-		return nil, rpc.INTERNAL_ERROR, errSID
+		return nil, rpc_tendermint.INTERNAL_ERROR, errSID
 	}
 
 	callback := func(ret events.EventData) {
@@ -114,26 +115,26 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 	}
 	_, errC := this.pipe.Events().Subscribe(subId, eventId, callback)
 	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
+		return nil, rpc_tendermint.INTERNAL_ERROR, errC
 	}
-	return &core_types.EventSub{subId}, 0, nil
+	return &event.EventSub{subId}, 0, nil
 }
 
-func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbWsService) EventUnsubscribe(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
-		return nil, rpc.INVALID_PARAMS, err
+		return nil, rpc_tendermint.INVALID_PARAMS, err
 	}
 	eventId := param.EventId
 
 	result, errC := this.pipe.Events().Unsubscribe(eventId)
 	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
+		return nil, rpc_tendermint.INTERNAL_ERROR, errC
 	}
-	return &core_types.EventUnsub{result}, 0, nil
+	return &event.EventUnsub{result}, 0, nil
 }
 
-func (this *ErisDbWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return nil, rpc.INTERNAL_ERROR, fmt.Errorf("Cannot poll with websockets")
+func (this *ErisDbWsService) EventPoll(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
+	return nil, rpc_tendermint.INTERNAL_ERROR, fmt.Errorf("Cannot poll with websockets")
 }

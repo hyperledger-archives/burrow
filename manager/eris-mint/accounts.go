@@ -26,18 +26,19 @@ import (
 
   tendermint_common "github.com/tendermint/go-common"
 
-  account     "github.com/eris-ltd/eris-db/account"
-  core_types  "github.com/eris-ltd/eris-db/core/types"
+  account    "github.com/eris-ltd/eris-db/account"
+  core_types "github.com/eris-ltd/eris-db/core/types"
+	event      "github.com/eris-ltd/eris-db/event"
 )
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
   erisMint      *ErisMint
-  filterFactory *core_types.FilterFactory
+  filterFactory *event.FilterFactory
 }
 
 func newAccounts(erisMint *ErisMint) *accounts {
-  ff := core_types.NewFilterFactory()
+  ff := event.NewFilterFactory()
 
   ff.RegisterFilterPool("code", &sync.Pool{
     New: func() interface{} {
@@ -73,7 +74,7 @@ func (this *accounts) GenPrivAccountFromKey(privKey []byte) (
 }
 
 // Get all accounts.
-func (this *accounts) Accounts(fda []*core_types.FilterData) (
+func (this *accounts) Accounts(fda []*event.FilterData) (
   *core_types.AccountList, error) {
   accounts := make([]*account.Account, 0)
   state := this.erisMint.GetState()
@@ -161,7 +162,7 @@ type AccountCodeFilter struct {
   match func([]byte, []byte) bool
 }
 
-func (this *AccountCodeFilter) Configure(fd *core_types.FilterData) error {
+func (this *AccountCodeFilter) Configure(fd *event.FilterData) error {
   op := fd.Op
   val, err := hex.DecodeString(fd.Value)
 
@@ -200,12 +201,12 @@ type AccountBalanceFilter struct {
   match func(int64, int64) bool
 }
 
-func (this *AccountBalanceFilter) Configure(fd *core_types.FilterData) error {
-  val, err := core_types.ParseNumberValue(fd.Value)
+func (this *AccountBalanceFilter) Configure(fd *event.FilterData) error {
+  val, err := event.ParseNumberValue(fd.Value)
   if err != nil {
     return err
   }
-  match, err2 := core_types.GetRangeFilter(fd.Op, "balance")
+  match, err2 := event.GetRangeFilter(fd.Op, "balance")
   if err2 != nil {
     return err2
   }

@@ -276,7 +276,7 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  []*core_types.FilterData `json:"input"`
+		Input  []*event.FilterData `json:"input"`
 		Output *core_types.AccountList  `json:"output"`
 	}
 

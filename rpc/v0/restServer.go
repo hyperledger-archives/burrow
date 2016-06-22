@@ -1,4 +1,4 @@
-package core
+package rpc_v0
 
 import (
 	"encoding/hex"
@@ -10,6 +10,7 @@ import (
 
   core_types  "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
+	event       "github.com/eris-ltd/eris-db/event"
 	rpc         "github.com/eris-ltd/eris-db/rpc"
   server      "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
@@ -22,12 +23,13 @@ import (
 type RestServer struct {
 	codec     rpc.Codec
 	pipe      definitions.Pipe
-	eventSubs *EventSubscriptions
+	eventSubs *event.EventSubscriptions
 	running   bool
 }
 
 // Create a new rest server.
-func NewRestServer(codec rpc.Codec, pipe definitions.Pipe, eventSubs *EventSubscriptions) *RestServer {
+func NewRestServer(codec rpc.Codec, pipe definitions.Pipe,
+	eventSubs *event.EventSubscriptions) *RestServer {
 	return &RestServer{codec: codec, pipe: pipe, eventSubs: eventSubs}
 }
 
@@ -108,10 +110,10 @@ func (this *RestServer) handleGenPrivAcc(c *gin.Context) {
 }
 
 func (this *RestServer) handleAccounts(c *gin.Context) {
-	var filters []*core_types.FilterData
+	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
-		filters = fs.([]*core_types.FilterData)
+		filters = fs.([]*event.FilterData)
 	}
 	accs, err := this.pipe.Accounts().Accounts(filters)
 	if err != nil {
@@ -200,10 +202,10 @@ func (this *RestServer) handleLatestBlock(c *gin.Context) {
 }
 
 func (this *RestServer) handleBlocks(c *gin.Context) {
-	var filters []*core_types.FilterData
+	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
-		filters = fs.([]*core_types.FilterData)
+		filters = fs.([]*event.FilterData)
 	}
 
 	blocks, err := this.pipe.Blockchain().Blocks(filters)
@@ -252,41 +254,41 @@ func (this *RestServer) handleEventSubscribe(c *gin.Context) {
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	subId, err := this.eventSubs.add(param.EventId)
+	subId, err := this.eventSubs.Add(param.EventId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.EventSub{subId}, c.Writer)
+	this.codec.Encode(&event.EventSub{subId}, c.Writer)
 }
 
 func (this *RestServer) handleEventPoll(c *gin.Context) {
 	subId := c.MustGet("id").(string)
-	data, err := this.eventSubs.poll(subId)
+	data, err := this.eventSubs.Poll(subId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.PollResponse{data}, c.Writer)
+	this.codec.Encode(&event.PollResponse{data}, c.Writer)
 }
 
 func (this *RestServer) handleEventUnsubscribe(c *gin.Context) {
 	subId := c.MustGet("id").(string)
-	err := this.eventSubs.remove(subId)
+	err := this.eventSubs.Remove(subId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.EventUnsub{true}, c.Writer)
+	this.codec.Encode(&event.EventUnsub{true}, c.Writer)
 }
 
 // ********************************* NameReg *********************************
 
 func (this *RestServer) handleNameRegEntries(c *gin.Context) {
-	var filters []*core_types.FilterData
+	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
-		filters = fs.([]*core_types.FilterData)
+		filters = fs.([]*event.FilterData)
 	}
 	entries, err := this.pipe.NameReg().Entries(filters)
 	if err != nil {
@@ -564,12 +566,12 @@ func parseSearchQuery(c *gin.Context) {
 	}
 }
 
-func _parseSearchQuery(queryString string) ([]*core_types.FilterData, error) {
+func _parseSearchQuery(queryString string) ([]*event.FilterData, error) {
 	if len(queryString) == 0 {
 		return nil, nil
 	}
 	filters := strings.Split(queryString, " ")
-	fdArr := []*core_types.FilterData{}
+	fdArr := []*event.FilterData{}
 	for _, f := range filters {
 		kv := strings.Split(f, ":")
 		if len(kv) != 2 {
@@ -592,10 +594,10 @@ func _parseSearchQuery(queryString string) ([]*core_types.FilterData, error) {
 }
 
 // Parse the query statement and create . Two filter data in case of a range param.
-func toFilterData(field, stmt string) (*core_types.FilterData, *core_types.FilterData, error) {
+func toFilterData(field, stmt string) (*event.FilterData, *event.FilterData, error) {
 	// In case statement is empty
 	if stmt == "" {
-		return &core_types.FilterData{field, "==", ""}, nil, nil
+		return &event.FilterData{field, "==", ""}, nil, nil
 	}
 	// Simple routine based on string splitting. TODO add quoted range query.
 	if stmt[0] == '>' || stmt[0] == '<' || stmt[0] == '=' || stmt[0] == '!' {
@@ -603,18 +605,18 @@ func toFilterData(field, stmt string) (*core_types.FilterData, *core_types.Filte
 		// peek at next and check if it's a "=".
 
 		if len(stmt) == 1 {
-			return &core_types.FilterData{field, stmt[0:1], ""}, nil, nil
+			return &event.FilterData{field, stmt[0:1], ""}, nil, nil
 		} else if stmt[1] == '=' {
-			return &core_types.FilterData{field, stmt[:2], stmt[2:]}, nil, nil
+			return &event.FilterData{field, stmt[:2], stmt[2:]}, nil, nil
 		} else {
-			return &core_types.FilterData{field, stmt[0:1], stmt[1:]}, nil, nil
+			return &event.FilterData{field, stmt[0:1], stmt[1:]}, nil, nil
 		}
 	} else {
 		// Either we have a range query here or a malformed query.
 		rng := strings.Split(stmt, "..")
 		// This is for when there is no op, but the value is not empty.
 		if len(rng) == 1 {
-			return &core_types.FilterData{field, "==", stmt}, nil, nil
+			return &event.FilterData{field, "==", stmt}, nil, nil
 		}
 		// The rest.
 		if len(rng) != 2 || rng[0] == "" || rng[1] == "" {
@@ -632,7 +634,7 @@ func toFilterData(field, stmt string) (*core_types.FilterData, *core_types.Filte
 		} else {
 			max = rng[1]
 		}
-		return &core_types.FilterData{field, ">=", min}, &core_types.FilterData{field, "<=", max}, nil
+		return &event.FilterData{field, ">=", min}, &event.FilterData{field, "<=", max}, nil
 	}
 	return nil, nil, nil
 }

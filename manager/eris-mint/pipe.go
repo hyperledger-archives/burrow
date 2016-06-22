@@ -28,6 +28,7 @@ import (
 
   config        "github.com/eris-ltd/eris-db/config"
   definitions   "github.com/eris-ltd/eris-db/definitions"
+	event         "github.com/eris-ltd/eris-db/event"
   manager_types "github.com/eris-ltd/eris-db/manager/types"
   state         "github.com/eris-ltd/eris-db/manager/eris-mint/state"
   state_types   "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
@@ -41,7 +42,7 @@ type ErisMintPipe struct {
   accounts        definitions.Accounts
   blockchain      definitions.Blockchain
   consensus       definitions.Consensus
-  events          definitions.EventEmitter
+  events          event.EventEmitter
   namereg         definitions.NameReg
   net             definitions.Net
   transactor      definitions.Transactor
@@ -52,6 +53,10 @@ type ErisMintPipe struct {
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
 // eris-db/definitions.Pipe
 var _ definitions.Pipe = (*ErisMintPipe)(nil)
+
+// NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
+// eris-db/definitions.TendermintPipe
+var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
@@ -163,7 +168,7 @@ func (pipe *ErisMintPipe) Consensus() definitions.Consensus {
   return pipe.consensus
 }
 
-func (pipe *ErisMintPipe) Events() definitions.EventEmitter {
+func (pipe *ErisMintPipe) Events() event.EventEmitter {
   return pipe.events
 }
 

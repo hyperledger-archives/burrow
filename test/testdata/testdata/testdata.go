@@ -626,12 +626,12 @@ type (
 
 	EventSubscribeData struct {
 		Input  *core.EventIdParam   `json:"input"`
-		Output *core_types.EventSub `json:"output"`
+		Output *event.EventSub `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
 		Input  *core.SubIdParam       `json:"input"`
-		Output *core_types.EventUnsub `json:"output"`
+		Output *event.EventUnsub `json:"output"`
 	}
 
 	TransactNameRegData struct {
@@ -652,7 +652,7 @@ type (
 	/*
 		EventPollData struct {
 			Input  *core.SubIdParam  `json:"input"`
-			Output *core_types.PollResponse `json:"output"`
+			Output *event.PollResponse `json:"output"`
 		}
 	*/
 

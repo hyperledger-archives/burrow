@@ -28,17 +28,18 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 
   core_types "github.com/eris-ltd/eris-db/core/types"
+	event      "github.com/eris-ltd/eris-db/event"
 )
 
 // The net struct.
 type namereg struct {
 	erisMint      *ErisMint
-	filterFactory *core_types.FilterFactory
+	filterFactory *event.FilterFactory
 }
 
 func newNameReg(erisMint *ErisMint) *namereg {
 
-	ff := core_types.NewFilterFactory()
+	ff := event.NewFilterFactory()
 
 	ff.RegisterFilterPool("name", &sync.Pool{
 		New: func() interface{} {
@@ -76,7 +77,7 @@ func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*core_types.FilterData) (*core_types.ResultListNames, error) {
+func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
 	var blockHeight int
 	var names []*txs.NameRegEntry
 	state := this.erisMint.GetState()
@@ -108,7 +109,7 @@ type NameRegNameFilter struct {
 	match func(string, string) bool
 }
 
-func (this *NameRegNameFilter) Configure(fd *core_types.FilterData) error {
+func (this *NameRegNameFilter) Configure(fd *event.FilterData) error {
 	op := fd.Op
 	val := fd.Value
 
@@ -144,7 +145,7 @@ type NameRegOwnerFilter struct {
 	match func([]byte, []byte) bool
 }
 
-func (this *NameRegOwnerFilter) Configure(fd *core_types.FilterData) error {
+func (this *NameRegOwnerFilter) Configure(fd *event.FilterData) error {
 	op := fd.Op
 	val, err := hex.DecodeString(fd.Value)
 
@@ -183,7 +184,7 @@ type NameRegDataFilter struct {
 	match func(string, string) bool
 }
 
-func (this *NameRegDataFilter) Configure(fd *core_types.FilterData) error {
+func (this *NameRegDataFilter) Configure(fd *event.FilterData) error {
 	op := fd.Op
 	val := fd.Value
 
@@ -219,12 +220,12 @@ type NameRegExpiresFilter struct {
 	match func(int64, int64) bool
 }
 
-func (this *NameRegExpiresFilter) Configure(fd *core_types.FilterData) error {
-	val, err := core_types.ParseNumberValue(fd.Value)
+func (this *NameRegExpiresFilter) Configure(fd *event.FilterData) error {
+	val, err := event.ParseNumberValue(fd.Value)
 	if err != nil {
 		return err
 	}
-	match, err2 := core_types.GetRangeFilter(fd.Op, "expires")
+	match, err2 := event.GetRangeFilter(fd.Op, "expires")
 	if err2 != nil {
 		return err2
 	}

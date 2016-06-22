@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/eris-ltd/eris-db/manager/eris-mint"
+	event "github.com/eris-ltd/eris-db/event"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -77,8 +78,8 @@ func (this *StringFilter) Match(v interface{}) bool {
 // Test suite
 type FilterSuite struct {
 	suite.Suite
-	objects       []FilterableObject
-	filterFactory *FilterFactory
+	objects       []event.FilterableObject
+	filterFactory *event.FilterFactory
 }
 
 func (this *FilterSuite) SetupSuite() {

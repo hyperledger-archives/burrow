@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package rpc_v0
 
 import (
 	"io"
