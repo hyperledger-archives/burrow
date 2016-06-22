@@ -30,12 +30,12 @@ import (
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
 	manager "github.com/eris-ltd/eris-db/manager"
-	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
-	rpccore "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	rpccore "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
 	// rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+	"github.com/eris-ltd/eris-db/manager/eris-mint"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/tendermint/go-rpc/server"
 	"github.com/tendermint/tendermint/node"

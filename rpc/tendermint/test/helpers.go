@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/server"
 	edb "github.com/eris-ltd/eris-db/core"
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
@@ -23,14 +22,16 @@ import (
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
+	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/tendermint/config/tendermint_test"
 	nm "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/server"
 )
 
 // global variables for use across all tests
 var (
-	config            server.ServerConfig
+	config            cfg.Config
 	node              *nm.Node
 	mempoolCount      = 0
 	chainID           string
@@ -116,7 +117,7 @@ func newNode(ready chan struct{}) {
 	node.Start()
 
 	// Run the RPC server.
-	edb.StartRPC(config, node, app)
+	edb.StartRPC(server.DefaultServerConfig(), node, app)
 	ready <- struct{}{}
 
 	// Sleep forever
