@@ -158,3 +158,33 @@ func ReadServerConfig(viper *viper.Viper) (*ServerConfig, error) {
     },
   }, nil
 }
+
+// NOTE: [ben] only preserved for /test/server tests; but should not be used and
+// will be deprecated.
+func DefaultServerConfig() *ServerConfig {
+	cp := ""
+	kp := ""
+	return &ServerConfig{
+		Bind: Bind{
+			Address: "",
+			Port:    1337,
+		},
+		TLS: TLS{TLS: false,
+			CertPath: cp,
+			KeyPath:  kp,
+		},
+		CORS: CORS{},
+		HTTP: HTTP{JsonRpcEndpoint: "/rpc"},
+		WebSocket: WebSocket{
+			WebSocketEndpoint:    "/socketrpc",
+			MaxWebSocketSessions: 50,
+			ReadBufferSize:       4096,
+			WriteBufferSize:      4096,
+		},
+		Logging: Logging{
+			ConsoleLogLevel: "info",
+			FileLogLevel:    "warn",
+			LogFile:         "",
+		},
+	}
+}

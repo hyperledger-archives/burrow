@@ -14,7 +14,8 @@ const (
 
 // Send a burst of GET messages to the server.
 func TestHttpFlooding(t *testing.T) {
-	serveProcess := NewServeScumbag()
+	serveProcess, err := NewServeScumbag()
+	assert.NoError(t, err, "Error creating new Server")
 	errSS := serveProcess.Start()
 	assert.NoError(t, errSS, "Scumbag-ed!")
 	t.Logf("Flooding http requests.")
