@@ -78,7 +78,7 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 // NOTE: [ben] in phase 0 we exactly take over the full server architecture
 // from Eris-DB and Tendermint; This is a draft and will be overhauled.
 
-func (core *Core) NewGateway(config *server.ServerConfig) (*server.ServeProcess,
+func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProcess,
   error) {
   codec := &rpc_v0.TCodec{}
   eventSubscriptions := event.NewEventSubscriptions(core.pipe.Events())

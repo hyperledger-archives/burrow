@@ -2,7 +2,7 @@ package core
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 	rpc "github.com/tendermint/go-rpc/server"
 )

@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/server"
 	edb "github.com/eris-ltd/eris-db/core"
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	edbcli "github.com/eris-ltd/eris-db/rpc/client"
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
-	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
@@ -30,7 +30,7 @@ import (
 
 // global variables for use across all tests
 var (
-	config            cfg.Config
+	config            server.ServerConfig
 	node              *nm.Node
 	mempoolCount      = 0
 	chainID           string
