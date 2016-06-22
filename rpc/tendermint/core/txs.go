@@ -28,7 +28,7 @@ func toVMAccount(acc *acm.Account) *vm.Account {
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
 func Call(fromAddress, toAddress, data []byte) (*ctypes.ResultCall, error) {
-	st := erisdbApp.GetState()
+	st := erisMint.GetState()
 	cache := state.NewBlockCache(st)
 	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
@@ -57,8 +57,8 @@ func Call(fromAddress, toAddress, data []byte) (*ctypes.ResultCall, error) {
 // Cannot be used to create new contracts
 func CallCode(fromAddress, code, data []byte) (*ctypes.ResultCall, error) {
 
-	st := erisdbApp.GetState()
-	cache := erisdbApp.GetCheckCache()
+	st := erisMint.GetState()
+	cache := erisMint.GetCheckCache()
 	callee := &vm.Account{Address: LeftPadWord256(fromAddress)}
 	caller := &vm.Account{Address: LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)

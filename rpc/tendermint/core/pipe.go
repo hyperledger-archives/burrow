@@ -1,8 +1,8 @@
 package core
 
 import (
+	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	"github.com/eris-ltd/eris-db/tmsp"
 
 	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/consensus"
@@ -20,7 +20,7 @@ var mempoolReactor *mempl.MempoolReactor
 var p2pSwitch *p2p.Switch
 var privValidator *tmtypes.PrivValidator
 var genDoc *stypes.GenesisDoc // cache the genesis structure
-var erisdbApp *tmsp.ErisDBApp
+var erisMint *erismint.ErisMint
 
 var config cfg.Config = nil
 
@@ -28,8 +28,8 @@ func SetConfig(c cfg.Config) {
 	config = c
 }
 
-func SetErisDBApp(edbApp *tmsp.ErisDBApp) {
-	erisdbApp = edbApp
+func SetErisDBApp(edbApp *erismint.ErisMint) {
+	erisMint = edbApp
 }
 
 func SetBlockStore(bs *bc.BlockStore) {
