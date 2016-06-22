@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 )

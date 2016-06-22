@@ -5,7 +5,7 @@ import (
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 

@@ -11,7 +11,7 @@ import (
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/client"
-	ctypes "github.com/eris-ltd/eris-db/rpc/core/types"
+	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
