@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	. "github.com/tendermint/go-common"
@@ -13,7 +14,7 @@ func GenPrivAccount() (*ctypes.ResultGenPrivAccount, error) {
 
 // If the account is not known, returns nil, nil.
 func GetAccount(address []byte) (*ctypes.ResultGetAccount, error) {
-	cache := erisdbApp.GetCheckCache()
+	cache := erisMint.GetCheckCache()
 	// cache := mempoolReactor.Mempool.GetCache()
 	account := cache.GetAccount(address)
 	if account == nil {
@@ -24,7 +25,7 @@ func GetAccount(address []byte) (*ctypes.ResultGetAccount, error) {
 }
 
 func GetStorage(address, key []byte) (*ctypes.ResultGetStorage, error) {
-	state := erisdbApp.GetState()
+	state := erisMint.GetState()
 	// state := consensusState.GetState()
 	account := state.GetAccount(address)
 	if account == nil {
@@ -43,7 +44,7 @@ func GetStorage(address, key []byte) (*ctypes.ResultGetStorage, error) {
 func ListAccounts() (*ctypes.ResultListAccounts, error) {
 	var blockHeight int
 	var accounts []*acm.Account
-	state := erisdbApp.GetState()
+	state := erisMint.GetState()
 	blockHeight = state.LastBlockHeight
 	state.GetAccounts().Iterate(func(key []byte, value []byte) bool {
 		accounts = append(accounts, acm.DecodeAccount(value))
@@ -53,7 +54,7 @@ func ListAccounts() (*ctypes.ResultListAccounts, error) {
 }
 
 func DumpStorage(address []byte) (*ctypes.ResultDumpStorage, error) {
-	state := erisdbApp.GetState()
+	state := erisMint.GetState()
 	account := state.GetAccount(address)
 	if account == nil {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)

@@ -9,7 +9,7 @@ import (
 )
 
 func GetName(name string) (*ctypes.ResultGetName, error) {
-	st := erisdbApp.GetState()
+	st := erisMint.GetState()
 	entry := st.GetNameRegEntry(name)
 	if entry == nil {
 		return nil, fmt.Errorf("Name %s not found", name)
@@ -20,7 +20,7 @@ func GetName(name string) (*ctypes.ResultGetName, error) {
 func ListNames() (*ctypes.ResultListNames, error) {
 	var blockHeight int
 	var names []*txs.NameRegEntry
-	state := erisdbApp.GetState()
+	state := erisMint.GetState()
 	blockHeight = state.LastBlockHeight
 	state.GetNames().Iterate(func(key []byte, value []byte) bool {
 		names = append(names, sm.DecodeNameRegEntry(value))
