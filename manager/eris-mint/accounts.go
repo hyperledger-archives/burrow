@@ -26,10 +26,15 @@ import (
 
   tendermint_common "github.com/tendermint/go-common"
 
-  account    "github.com/eris-ltd/eris-db/account"
-  core_types "github.com/eris-ltd/eris-db/core/types"
-	event      "github.com/eris-ltd/eris-db/event"
+  account     "github.com/eris-ltd/eris-db/account"
+  core_types  "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event       "github.com/eris-ltd/eris-db/event"
 )
+
+// NOTE [ben] Compiler check to ensure Accounts successfully implements
+// eris-db/definitions.Accounts
+var _ definitions.Accounts = (*accounts)(nil)
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {

@@ -26,12 +26,13 @@ import (
 
   log "github.com/eris-ltd/eris-logger"
 
-  config        "github.com/eris-ltd/eris-db/config"
-  definitions   "github.com/eris-ltd/eris-db/definitions"
-	event         "github.com/eris-ltd/eris-db/event"
-  manager_types "github.com/eris-ltd/eris-db/manager/types"
-  state         "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-  state_types   "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+  config               "github.com/eris-ltd/eris-db/config"
+  definitions          "github.com/eris-ltd/eris-db/definitions"
+	event                "github.com/eris-ltd/eris-db/event"
+  manager_types        "github.com/eris-ltd/eris-db/manager/types"
+	// rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+  state                "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+  state_types          "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 )
 
 type ErisMintPipe struct {
@@ -39,13 +40,13 @@ type ErisMintPipe struct {
   eventSwitch     *tendermint_events.EventSwitch
   erisMint        *ErisMint
   // Pipe implementations
-  accounts        definitions.Accounts
-  blockchain      definitions.Blockchain
-  consensus       definitions.Consensus
+  accounts        *accounts
+  blockchain      *blockchain
+  consensus       *consensus
   events          event.EventEmitter
-  namereg         definitions.NameReg
-  net             definitions.Net
-  transactor      definitions.Transactor
+  namereg         *namereg
+  net             *network
+  transactor      *transactor
   // Consensus interface
   consensusEngine definitions.ConsensusEngine
 }
@@ -56,7 +57,7 @@ var _ definitions.Pipe = (*ErisMintPipe)(nil)
 
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
 // eris-db/definitions.TendermintPipe
-var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
+// var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
@@ -197,3 +198,10 @@ func (pipe *ErisMintPipe) SetConsensusEngine(
   }
   return nil
 }
+
+//------------------------------------------------------------------------------
+// Implement definitions.TendermintPipe for ErisMintPipe
+
+// func (pipe *ErisMintPipe) Status() (*rpc_tendermint_types.ResultStatus, error) {
+//
+// }

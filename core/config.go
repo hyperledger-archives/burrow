@@ -98,7 +98,9 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
     return nil,
       fmt.Errorf("Failed to read configuration section for servers")
   }
-  return server.ReadServerConfig(subConfig)
+  serverConfig, err := server.ReadServerConfig(subConfig)
+	serverConfig.ChainId = do.ChainId
+	return serverConfig, err
 }
 
 

@@ -5,11 +5,11 @@ import (
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 
 	bc "github.com/tendermint/tendermint/blockchain"
+	server "github.com/eris-ltd/eris-db/server"
 	"github.com/tendermint/tendermint/consensus"
 	mempl "github.com/tendermint/tendermint/mempool"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/go-p2p"
 )
 
@@ -22,14 +22,14 @@ var privValidator *tmtypes.PrivValidator
 var genDoc *stypes.GenesisDoc // cache the genesis structure
 var erisMint *erismint.ErisMint
 
-var config cfg.Config = nil
+var config server.ServerConfig = server.ServerConfig{}
 
-func SetConfig(c cfg.Config) {
+func SetConfig(c server.ServerConfig) {
 	config = c
 }
 
-func SetErisDBApp(edbApp *erismint.ErisMint) {
-	erisMint = edbApp
+func SetErisMint(em *erismint.ErisMint) {
+	erisMint = em
 }
 
 func SetBlockStore(bs *bc.BlockStore) {

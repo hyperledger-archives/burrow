@@ -21,8 +21,13 @@ package erismint
 import (
 	"github.com/tendermint/tendermint/types"
 
-  core_types "github.com/eris-ltd/eris-db/core/types"
+  core_types  "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
 )
+
+// NOTE [ben] Compiler check to ensure Accounts successfully implements
+// eris-db/definitions.Accounts
+var _ definitions.Consensus = (*consensus)(nil)
 
 // The consensus struct.
 type consensus struct {

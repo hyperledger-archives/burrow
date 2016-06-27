@@ -17,53 +17,58 @@
 package core
 
 import (
-  "fmt"
+	"fmt"
+	"net/http"
+	"net"
+	"strings"
 
-  // TODO: [ben] swap out go-events with eris-db/event (currently unused)
-  events "github.com/tendermint/go-events"
+	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
+	events "github.com/tendermint/go-events"
 
-  log "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-  config         "github.com/eris-ltd/eris-db/config"
-  consensus      "github.com/eris-ltd/eris-db/consensus"
-  definitions    "github.com/eris-ltd/eris-db/definitions"
-	event          "github.com/eris-ltd/eris-db/event"
-  manager        "github.com/eris-ltd/eris-db/manager"
-  // rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
-  rpc_v0         "github.com/eris-ltd/eris-db/rpc/v0"
-  // rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
-  // rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
-  server         "github.com/eris-ltd/eris-db/server"
+	config "github.com/eris-ltd/eris-db/config"
+	consensus "github.com/eris-ltd/eris-db/consensus"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
+	manager "github.com/eris-ltd/eris-db/manager"
+	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
+	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
+	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+	// rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+	server "github.com/eris-ltd/eris-db/server"
+	"github.com/tendermint/go-rpc/server"
 )
 
 // Core is the high-level structure
 type Core struct {
-  chainId string
-  evsw    *events.EventSwitch
-  pipe    definitions.Pipe
+	chainId string
+	evsw    *events.EventSwitch
+	pipe    definitions.Pipe
 }
 
 func NewCore(chainId string, consensusConfig *config.ModuleConfig,
-  managerConfig *config.ModuleConfig) (*Core, error) {
-  // start new event switch, TODO: [ben] replace with eris-db/event
-  evsw := events.NewEventSwitch()
-  evsw.Start()
+	managerConfig *config.ModuleConfig) (*Core, error) {
+	// start new event switch, TODO: [ben] replace with eris-db/event
+	evsw := events.NewEventSwitch()
+	evsw.Start()
 
-  // start a new application pipe that will load an application manager
-  pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
-    consensusConfig.Version)
-  if err != nil {
-    return nil, fmt.Errorf("Failed to load application pipe: %v", err)
-  }
-  log.Debug("Loaded pipe with application manager")
-  // pass the consensus engine into the pipe
-  consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
+	// start a new application pipe that will load an application manager
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
+		consensusConfig.Version)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
+	}
+	log.Debug("Loaded pipe with application manager")
+	// pass the consensus engine into the pipe
+	consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
 
-  return &Core{
-    chainId: chainId,
-    evsw: evsw,
-    pipe: pipe,
-    }, nil
+	return &Core{
+		chainId: chainId,
+		evsw:    evsw,
+		pipe:    pipe,
+	}, nil
 }
 
 //------------------------------------------------------------------------------
@@ -79,48 +84,54 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 // from Eris-DB and Tendermint; This is a draft and will be overhauled.
 
 func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProcess,
-  error) {
-  codec := &rpc_v0.TCodec{}
-  eventSubscriptions := event.NewEventSubscriptions(core.pipe.Events())
-  // The services.
-  tmwss := rpc_v0.NewErisDbWsService(codec, core.pipe)
-  tmjs := rpc_v0.NewErisDbJsonService(codec, core.pipe, eventSubscriptions)
-  // The servers.
+	error) {
+	codec := &rpc_v0.TCodec{}
+	eventSubscriptions := event.NewEventSubscriptions(core.pipe.Events())
+	// The services.
+	tmwss := rpc_v0.NewErisDbWsService(codec, core.pipe)
+	tmjs := rpc_v0.NewErisDbJsonService(codec, core.pipe, eventSubscriptions)
+	// The servers.
 	jsonServer := rpc_v0.NewJsonRpcServer(tmjs)
 	restServer := rpc_v0.NewRestServer(codec, core.pipe, eventSubscriptions)
 	wsServer := server.NewWebSocketServer(config.WebSocket.MaxWebSocketSessions,
-    tmwss)
+		tmwss)
 	// Create a server process.
 	proc, err := server.NewServeProcess(config, jsonServer, restServer, wsServer)
-  if err != nil {
-    return nil, fmt.Errorf("Failed to load gateway: %v", err)
-  }
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load gateway: %v", err)
+	}
 
 	return proc, nil
 }
 
+func (core *Core) NewGatewayTendermint(config server.ServerConfig) (
+	*server, error)
+)
 
-// func StartRPC(config cfg.Config, n *node.Node, edbApp *edbapp.ErisDBApp) ([]net.Listener, error) {
-// 	rpccore.SetConfig(config)
+// func (core *Core) StartRPC(config server.ServerConfig) ([]net.Listener, error) {
+// 	rpc_tendermint.SetConfig(config)
 //
-// 	rpccore.SetErisDBApp(edbApp)
-// 	rpccore.SetBlockStore(n.BlockStore())
-// 	rpccore.SetConsensusState(n.ConsensusState())
-// 	rpccore.SetConsensusReactor(n.ConsensusReactor())
-// 	rpccore.SetMempoolReactor(n.MempoolReactor())
-// 	rpccore.SetSwitch(n.Switch())
-// 	rpccore.SetPrivValidator(n.PrivValidator())
-// 	rpccore.SetGenDoc(LoadGenDoc(config.GetString("genesis_file")))
+// 	rpc_tendermint.SetErisMint(core.pipe.GetApplication())
+// 	rpc_tendermint.SetBlockStore(n.BlockStore())
+// 	rpc_tendermint.SetConsensusState(n.ConsensusState())
+// 	rpc_tendermint.SetConsensusReactor(n.ConsensusReactor())
+// 	rpc_tendermint.SetMempoolReactor(n.MempoolReactor())
+// 	rpc_tendermint.SetSwitch(n.Switch())
+// 	rpc_tendermint.SetPrivValidator(n.PrivValidator())
+// 	// TODO: programming
+// 	//rpc_tendermint.SetGenDoc(LoadGenDoc(config.GetString("genesis_file")))
 //
-// 	listenAddrs := strings.Split(config.GetString("rpc_laddr"), ",")
+// 	// TODO: also programming
+// 	//listenAddrs := strings.Split(config.GetString("rpc_laddr"), ",")
+// 	listenAddrs := strings.Split("127.0.0.1", ",")
 //
 // 	// we may expose the rpc over both a unix and tcp socket
 // 	listeners := make([]net.Listener, len(listenAddrs))
 // 	for i, listenAddr := range listenAddrs {
 // 		mux := http.NewServeMux()
-// 		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.EventSwitch())
+// 		wm := rpcserver.NewWebsocketManager(rpc_tendermint.Routes, n.EventSwitch())
 // 		mux.HandleFunc("/websocket", wm.WebsocketHandler)
-// 		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes)
+// 		rpcserver.RegisterRPCFuncs(mux, rpc_tendermint.Routes)
 // 		listener, err := rpcserver.StartHTTPServer(listenAddr, mux)
 // 		if err != nil {
 // 			return nil, err

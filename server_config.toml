@@ -64,6 +64,14 @@ genesis_file = "genesis.json"
   # relative path to application manager root folder
   relative_root = "erismint"
 
+################################################################################
+################################################################################
+##
+## Server configurations
+##
+################################################################################
+################################################################################
+
 [servers]
 
   [servers.bind]
@@ -71,21 +79,21 @@ genesis_file = "genesis.json"
   port = 1337
 
   [servers.tls]
-  tls=false
-  cert_path=""
-  key_path=""
+  tls = false
+  cert_path = ""
+  key_path = ""
 
   [servers.cors]
-  enable=false
-  allow_origins=[]
-  allow_credentials=false
-  allow_methods=[]
-  allow_headers=[]
-  expose_headers=[]
-  max_age=0
+  enable = false
+  allow_origins = []
+  allow_credentials = false
+  allow_methods = []
+  allow_headers = []
+  expose_headers = []
+  max_age = 0
 
   [servers.http]
-  json_rpc_endpoint="/rpc"
+  json_rpc_endpoint = "/rpc"
 
   [servers.websocket]
   endpoint = "/socketrpc"
@@ -93,10 +101,15 @@ genesis_file = "genesis.json"
   read_buffer_size = 4096
   write_buffer_size = 4096
 
+	[servers.tendermint]
+	# Multiple listeners can be separated with a comma
+	rpc_local_address = "0.0.0.0:46657"
+	endpoint = "/websocket"
+
   [servers.logging]
-  console_log_level="info"
-  file_log_level="warn"
-  log_file=""
+  console_log_level = "info"
+  file_log_level = "warn"
+  log_file = ""
 
 ################################################################################
 ################################################################################
@@ -159,6 +172,8 @@ private_validator_file = "priv_validator.json"
   # node local address
   node_laddr = "0.0.0.0:46656"
   # rpc local address
+	# NOTE: value is ignored when run in-process as RPC is
+	# handled by [servers.tendermint]
   rpc_laddr = "0.0.0.0:46657"
   # proxy application address - used for tmsp connections,
   # and this port should not be exposed for in-process Tendermint

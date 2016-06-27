@@ -25,12 +25,14 @@ import (
 
 type (
   ServerConfig struct {
-    Bind      Bind      `toml:"bind"`
-    TLS       TLS       `toml:"TLS"`
-    CORS      CORS      `toml:"CORS"`
-    HTTP      HTTP      `toml:"HTTP"`
-    WebSocket WebSocket `toml:"web_socket"`
-    Logging   Logging   `toml:"logging"`
+		ChainId    string
+    Bind       Bind      `toml:"bind"`
+    TLS        TLS       `toml:"TLS"`
+    CORS       CORS      `toml:"CORS"`
+    HTTP       HTTP      `toml:"HTTP"`
+    WebSocket  WebSocket `toml:"web_socket"`
+		Tendermint Tendermint
+    Logging    Logging   `toml:"logging"`
   }
 
   Bind struct {
@@ -65,6 +67,11 @@ type (
     ReadBufferSize       uint64 `toml:"read_buffer_size"`
     WriteBufferSize      uint64 `toml:"write_buffer_size"`
   }
+
+	Tendermint struct {
+		RpcLocalAddress string
+		Endpoint        string
+	}
 
   Logging struct {
     ConsoleLogLevel string `toml:"console_log_level"`
@@ -151,6 +158,10 @@ func ReadServerConfig(viper *viper.Viper) (*ServerConfig, error) {
       ReadBufferSize:       readBufferSizeUint64,
       WriteBufferSize:      writeBufferSizeUint64,
     },
+		Tendermint: Tendermint {
+			RpcLocalAddress: viper.GetString("tendermint.rpc_local_address")
+			Endpoint:        viper.GetString("tendermint.endpoint")
+		},
     Logging: Logging{
       ConsoleLogLevel: viper.GetString("logging.console_log_level"),
       FileLogLevel:    viper.GetString("logging.file_log_level"),
@@ -180,6 +191,10 @@ func DefaultServerConfig() *ServerConfig {
 			MaxWebSocketSessions: 50,
 			ReadBufferSize:       4096,
 			WriteBufferSize:      4096,
+		},
+		Tendermint: Tendermint {
+			RpcLocalAddress: "0.0.0.0:46657"
+			Endpoint:        "/websocket"
 		},
 		Logging: Logging{
 			ConsoleLogLevel: "info",

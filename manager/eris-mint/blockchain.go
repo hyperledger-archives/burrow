@@ -28,9 +28,10 @@ import (
   dbm "github.com/tendermint/go-db"
   "github.com/tendermint/tendermint/types"
 
-  core_types "github.com/eris-ltd/eris-db/core/types"
-	event      "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
+  core_types  "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event       "github.com/eris-ltd/eris-db/event"
+	state       "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 )
 
 const BLOCK_MAX = 50
@@ -40,6 +41,10 @@ type BlockStore interface {
 	LoadBlockMeta(height int) *types.BlockMeta
 	LoadBlock(height int) *types.Block
 }
+
+// NOTE [ben] Compiler check to ensure Blockchain successfully implements
+// eris-db/definitions.Blockchain
+var _ definitions.Blockchain = (*blockchain)(nil)
 
 // The blockchain struct.
 type blockchain struct {

@@ -15,7 +15,6 @@ import (
 	txs "github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
-	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
@@ -23,9 +22,11 @@ import (
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
+	cfg "github.com/tendermint/go-config"
 	"github.com/tendermint/tendermint/config/tendermint_test"
 	nm "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/server"
 )
 
 // global variables for use across all tests
@@ -116,7 +117,7 @@ func newNode(ready chan struct{}) {
 	node.Start()
 
 	// Run the RPC server.
-	edb.StartRPC(config, node, app)
+	edb.StartRPC(server.DefaultServerConfig(), node, app)
 	ready <- struct{}{}
 
 	// Sleep forever
