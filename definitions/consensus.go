@@ -16,12 +16,26 @@
 
 package definitions
 
+import (
+	crypto           "github.com/tendermint/go-crypto"
+	p2p              "github.com/tendermint/go-p2p"
+	tendermint_types "github.com/tendermint/tendermint/types"
+)
+
 // TODO: [ben] explore the value of abstracting the consensus into an interface
 // currently we cut a corner here and suffices to have direct calls.
 
-// for now an empty interface
+// for now wrap the interface closely around the available Tendermint functions
 type ConsensusEngine interface {
+	// BlockStore
+	Height() int
+	LoadBlockMeta(height int) *tendermint_types.BlockMeta
 
+	// Peer-2-Peer
+	NodeInfo() *p2p.NodeInfo
+
+	// Private Validator
+	PublicValidatorKey() crypto.PubKey
 }
 
 // type Communicator interface {

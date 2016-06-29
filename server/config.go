@@ -159,8 +159,8 @@ func ReadServerConfig(viper *viper.Viper) (*ServerConfig, error) {
       WriteBufferSize:      writeBufferSizeUint64,
     },
 		Tendermint: Tendermint {
-			RpcLocalAddress: viper.GetString("tendermint.rpc_local_address")
-			Endpoint:        viper.GetString("tendermint.endpoint")
+			RpcLocalAddress: viper.GetString("tendermint.rpc_local_address"),
+			Endpoint:        viper.GetString("tendermint.endpoint"),
 		},
     Logging: Logging{
       ConsoleLogLevel: viper.GetString("logging.console_log_level"),
@@ -193,8 +193,8 @@ func DefaultServerConfig() *ServerConfig {
 			WriteBufferSize:      4096,
 		},
 		Tendermint: Tendermint {
-			RpcLocalAddress: "0.0.0.0:46657"
-			Endpoint:        "/websocket"
+			RpcLocalAddress: "0.0.0.0:46657",
+			Endpoint:        "/websocket",
 		},
 		Logging: Logging{
 			ConsoleLogLevel: "info",

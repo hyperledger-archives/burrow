@@ -25,9 +25,10 @@ import (
 	"strings"
 	"sync"
 
-	p2p "github.com/tendermint/go-p2p"
-	node "github.com/tendermint/tendermint/node"
-	proxy "github.com/tendermint/tendermint/proxy"
+	crypto           "github.com/tendermint/go-crypto"
+	p2p              "github.com/tendermint/go-p2p"
+	node             "github.com/tendermint/tendermint/node"
+	proxy            "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
 	log "github.com/eris-ltd/eris-logger"
@@ -133,6 +134,41 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
 		tmintNode:   newNode,
 		tmintConfig: tmintConfig,
 	}, nil
+}
+
+//------------------------------------------------------------------------------
+// ConsensusEngine implementation
+
+func (this *TendermintNode) Height() int {
+	return this.tmintNode.BlockStore().Height()
+}
+
+func (this *TendermintNode) LoadBlockMeta(height int) *tendermint_types.BlockMeta {
+	return this.tmintNode.BlockStore().LoadBlockMeta(height)
+}
+
+func (this *TendermintNode) NodeInfo() *p2p.NodeInfo {
+	var copyNodeInfo = new(p2p.NodeInfo)
+	// call Switch().NodeInfo is not go-routine safe, so copy
+	*copyNodeInfo = *this.tmintNode.Switch().NodeInfo()
+	return copyNodeInfo
+}
+
+func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
+	// TODO: [ben] this is abetment, not yet a go-routine safe solution
+	var copyPublicValidatorKey crypto.PubKey
+	// crypto.PubKey is an interface so copy underlying struct
+	publicKey := this.tmintNode.PrivValidator().PubKey
+	switch publicKey.(type) {
+	case crypto.PubKeyEd25519 :
+		// type crypto.PubKeyEd25519 is [32]byte
+		copyKeyBytes := publicKey.(crypto.PubKeyEd25519)
+		copyPublicValidatorKey = crypto.PubKey(copyKeyBytes)
+	default :
+		// TODO: [ben] add error return to all these calls
+		copyPublicValidatorKey = nil
+	}
+	return copyPublicValidatorKey
 }
 
 //------------------------------------------------------------------------------

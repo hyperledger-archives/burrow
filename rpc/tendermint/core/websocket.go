@@ -17,30 +17,46 @@
 package core
 
 import (
+	"fmt"
 	"net"
+	"net/http"
+	"strings"
 
-	rpcserver "github.com/tendermint/go-rpc"
+	rpcserver "github.com/tendermint/go-rpc/server"
 	events    "github.com/tendermint/go-events"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
+	server      "github.com/eris-ltd/eris-db/server"
+
 )
 
 type TendermintWebsocketServer struct {
-	tendermintPipe definitions.TendermintPipe
-	listeners      []net.Listeners
+	routes    TendermintRoutes
+	listeners []net.Listener
 }
 
 func NewTendermintWebsocketServer(config *server.ServerConfig,
 	tendermintPipe definitions.TendermintPipe, evsw *events.EventSwitch) (
 	*TendermintWebsocketServer, error) {
 
-	listenersAddresses := strings.Split(config.Tendermint.RpcLocalAddress, ",")
-	listeners := make([]net.Listeners, len(listenersAddresses))
-	for i, listenerAddress := range listenersAddresses {
+	if tendermintPipe == nil {
+		return nil, fmt.Errorf("No Tendermint pipe provided.")
+	}
+	tendermintRoutes := TendermintRoutes {
+		tendermintPipe: tendermintPipe,
+	}
+	routes := tendermintRoutes.GetRoutes()
+	listenerAddresses := strings.Split(config.Tendermint.RpcLocalAddress, ",")
+	if len(listenerAddresses) == 0 {
+		return nil, fmt.Errorf("No RPC listening addresses provided in [servers.tendermint.rpc_local_address] in configuration file: %s",
+			listenerAddresses)
+	}
+	listeners := make([]net.Listener, len(listenerAddresses))
+	for i, listenerAddress := range listenerAddresses {
 		mux := http.NewServeMux()
-		wm := rpcserver.NewWebsocketManager(Routes, evsw)
+		wm := rpcserver.NewWebsocketManager(routes, evsw)
 		mux.HandleFunc(config.Tendermint.Endpoint, wm.WebsocketHandler)
-		rpcserver.RegisterRPCFuncs(mux, Routes)
+		rpcserver.RegisterRPCFuncs(mux, routes)
 		listener, err := rpcserver.StartHTTPServer(listenerAddress, mux)
 		if err != nil {
 			return nil, err
@@ -48,7 +64,7 @@ func NewTendermintWebsocketServer(config *server.ServerConfig,
 		listeners[i] = listener
 	}
 	return &TendermintWebsocketServer {
-		tendermintPipe: tendermintPipe,
-		listeners:      listeners,
+		routes:    tendermintRoutes,
+		listeners: listeners,
 	}, nil
 }

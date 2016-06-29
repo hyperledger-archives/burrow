@@ -18,9 +18,6 @@ package core
 
 import (
 	"fmt"
-	"net/http"
-	"net"
-	"strings"
 
 	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
 	events "github.com/tendermint/go-events"
@@ -38,14 +35,14 @@ import (
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
 	// rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
 	server "github.com/eris-ltd/eris-db/server"
-	"github.com/tendermint/go-rpc/server"
 )
 
 // Core is the high-level structure
 type Core struct {
 	chainId string
-	evsw    *events.EventSwitch
-	pipe    definitions.Pipe
+	evsw           *events.EventSwitch
+	pipe           definitions.Pipe
+	tendermintPipe definitions.TendermintPipe
 }
 
 func NewCore(chainId string, consensusConfig *config.ModuleConfig,
@@ -104,9 +101,14 @@ func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProces
 	return proc, nil
 }
 
-func (core *Core) NewGatewayTendermint(config server.ServerConfig) (
-	*server, error)
-)
+func (core *Core) NewGatewayTendermint(config *server.ServerConfig) (
+	*rpc_tendermint.TendermintWebsocketServer, error) {
+	if core.tendermintPipe == nil {
+		return nil, fmt.Errorf("No Tendermint pipe has been initialised for Tendermint gateway.")
+	}
+	return rpc_tendermint.NewTendermintWebsocketServer(config,
+		core.tendermintPipe, core.evsw)
+}
 
 // func (core *Core) StartRPC(config server.ServerConfig) ([]net.Listener, error) {
 // 	rpc_tendermint.SetConfig(config)

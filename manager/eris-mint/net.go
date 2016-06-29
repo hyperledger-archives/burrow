@@ -19,12 +19,12 @@
 package erismint
 
 import (
-  core_types "github.com/eris-ltd/eris-db/core/types"
+  core_types           "github.com/eris-ltd/eris-db/core/types"
 )
 
 // TODO-RPC!
 
-// The net struct.
+// The network structure
 type network struct {
 }
 
@@ -32,7 +32,13 @@ func newNetwork() *network {
 	return &network{}
 }
 
+//------------------------------------------------------------------------------
+// Tendermint Pipe implementation
+
+
+
 //-----------------------------------------------------------------------------
+// Eris-DB v0 Pipe implementation
 
 // Get the complete net info.
 func (this *network) Info() (*core_types.NetworkInfo, error) {
@@ -68,3 +74,6 @@ func (this *network) Peers() ([]*core_types.Peer, error) {
 func (this *network) Peer(address string) (*core_types.Peer, error) {
 	return &core_types.Peer{}, nil
 }
+
+//------------------------------------------------------------------------------
+//

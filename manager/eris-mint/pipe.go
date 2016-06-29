@@ -20,19 +20,22 @@ import (
   "bytes"
   "fmt"
 
-  db     "github.com/tendermint/go-db"
+  db                "github.com/tendermint/go-db"
   tendermint_events "github.com/tendermint/go-events"
-  wire   "github.com/tendermint/go-wire"
+	tendermint_types  "github.com/tendermint/tendermint/types"
+  wire              "github.com/tendermint/go-wire"
 
   log "github.com/eris-ltd/eris-logger"
 
-  config               "github.com/eris-ltd/eris-db/config"
-  definitions          "github.com/eris-ltd/eris-db/definitions"
+	account              "github.com/eris-ltd/eris-db/account"
+	config               "github.com/eris-ltd/eris-db/config"
+	definitions          "github.com/eris-ltd/eris-db/definitions"
 	event                "github.com/eris-ltd/eris-db/event"
-  manager_types        "github.com/eris-ltd/eris-db/manager/types"
-	// rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-  state                "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-  state_types          "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	manager_types        "github.com/eris-ltd/eris-db/manager/types"
+	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+	state                "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	state_types          "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	transaction          "github.com/eris-ltd/eris-db/txs"
 )
 
 type ErisMintPipe struct {
@@ -45,10 +48,13 @@ type ErisMintPipe struct {
   consensus       *consensus
   events          event.EventEmitter
   namereg         *namereg
-  net             *network
+  network         *network
   transactor      *transactor
   // Consensus interface
   consensusEngine definitions.ConsensusEngine
+	// Genesis cache
+	genesisDoc      *state_types.GenesisDoc
+	genesisState    *state.State
 }
 
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
@@ -62,7 +68,7 @@ var _ definitions.Pipe = (*ErisMintPipe)(nil)
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
 
-  startedState, err := startState(moduleConfig.DataDir,
+  startedState, genesisDoc, err := startState(moduleConfig.DataDir,
     moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
     moduleConfig.ChainId)
   if err != nil {
@@ -104,7 +110,10 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
     events:        events,
     namereg:       namereg,
     transactor:    transactor,
+		network:       newNetwork(),
     consensus:     nil,
+		genesisDoc:    genesisDoc,
+		genesisState:  nil,
   }, nil
 }
 
@@ -117,11 +126,11 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 // If no state can be loaded, the JSON genesis file will be loaded into the
 // state database as the zero state.
 func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
-  error) {
+  *state_types.GenesisDoc, error) {
   // avoid Tendermints PanicSanity and return a clean error
   if backend != db.DBBackendMemDB &&
     backend != db.DBBackendLevelDB {
-    return nil, fmt.Errorf("Dababase backend %s is not supported by %s",
+    return nil, nil, fmt.Errorf("Dababase backend %s is not supported by %s",
       backend, GetErisMintVersion)
   }
 
@@ -135,23 +144,23 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 		wire.WriteJSON(genesisDoc, buf, n, err)
 		stateDB.Set(state_types.GenDocKey, buf.Bytes())
 		if *err != nil {
-			return nil, fmt.Errorf("Unable to write genesisDoc to db: %v", err)
+			return nil, nil, fmt.Errorf("Unable to write genesisDoc to db: %v", err)
 		}
 	} else {
 		loadedGenesisDocBytes := stateDB.Get(state_types.GenDocKey)
 		err := new(error)
 		wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
 		if *err != nil {
-			return nil, fmt.Errorf("Unable to read genesisDoc from db on startState: %v", err)
+			return nil, nil, fmt.Errorf("Unable to read genesisDoc from db on startState: %v", err)
 		}
     // assert loaded genesis doc has the same chainId as the provided chainId
     if genesisDoc.ChainID != chainId {
-      return nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
+      return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
       genesisDoc.ChainID, chainId)
     }
 	}
 
-  return newState, nil
+  return newState, genesisDoc, nil
 }
 
 //------------------------------------------------------------------------------
@@ -178,7 +187,7 @@ func (pipe *ErisMintPipe) NameReg() definitions.NameReg {
 }
 
 func (pipe *ErisMintPipe) Net() definitions.Net {
-  return pipe.net
+  return pipe.network
 }
 
 func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
@@ -202,6 +211,99 @@ func (pipe *ErisMintPipe) SetConsensusEngine(
 //------------------------------------------------------------------------------
 // Implement definitions.TendermintPipe for ErisMintPipe
 
-// func (pipe *ErisMintPipe) Status() (*rpc_tendermint_types.ResultStatus, error) {
-//
-// }
+func (pipe *ErisMintPipe) Status() (*rpc_tendermint_types.ResultStatus, error) {
+	memoryDatabase := db.NewMemDB()
+	if pipe.genesisState == nil {
+		pipe.genesisState = state.MakeGenesisState(memoryDatabase, pipe.genesisDoc)
+	}
+	genesisHash := pipe.genesisState.Hash()
+	if pipe.consensusEngine == nil {
+		return nil, fmt.Errorf("Consensus Engine is not set in pipe.")
+	}
+	latestHeight := pipe.consensusEngine.Height()
+	var (
+		latestBlockMeta *tendermint_types.BlockMeta
+		latestBlockHash []byte
+		latestBlockTime int64
+	)
+	if latestHeight != 0 {
+		latestBlockMeta = pipe.consensusEngine.LoadBlockMeta(latestHeight)
+		latestBlockHash = latestBlockMeta.Hash
+		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
+	}
+	return &rpc_tendermint_types.ResultStatus{
+		NodeInfo:          pipe.consensusEngine.NodeInfo(),
+		GenesisHash:       genesisHash,
+		PubKey:            pipe.consensusEngine.PublicValidatorKey(),
+		LatestBlockHash:   latestBlockHash,
+		LatestBlockHeight: latestHeight,
+		LatestBlockTime:   latestBlockTime}, nil
+}
+
+func (pipe *ErisMintPipe) NetInfo() (*rpc_tendermint_types.ResultNetInfo, error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) Genesis() (*rpc_tendermint_types.ResultGenesis, error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+// Accounts
+func (pipe *ErisMintPipe) GetAccount(address []byte) (*rpc_tendermint_types.ResultGetAccount,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) ListAccounts() (*rpc_tendermint_types.ResultListAccounts, error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) GetStorage(address, key []byte) (*rpc_tendermint_types.ResultGetStorage,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) DumpStorage(address []byte) (*rpc_tendermint_types.ResultDumpStorage,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+// Call
+func (pipe *ErisMintPipe) Call(fromAddres, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tendermint_types.ResultCall,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+// TODO: [ben] deprecate as we should not allow unsafe behaviour
+// where a user is allowed to send a private key over the wire,
+// especially unencrypted.
+func (pipe *ErisMintPipe) SignTransaction(transaction transaction.Tx,
+	privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+// Name registry
+func (pipe *ErisMintPipe) GetName(name string) (*rpc_tendermint_types.ResultGetName, error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) ListNames() (*rpc_tendermint_types.ResultListNames, error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+// Memory pool
+func (pipe *ErisMintPipe) BroadcastTxAsync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
+
+func (pipe *ErisMintPipe) BroadcastTxSync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+	error) {
+	return nil, fmt.Errorf("Unimplemented.")
+}
