@@ -31,9 +31,8 @@ import (
 	manager "github.com/eris-ltd/eris-db/manager"
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
-	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
-	// rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	server "github.com/eris-ltd/eris-db/server"
 )
 
@@ -60,11 +59,22 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 	log.Debug("Loaded pipe with application manager")
 	// pass the consensus engine into the pipe
 	consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
-
+	tendermintPipe, err := pipe.GetTendermintPipe()
+	if err != nil {
+		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
+			managerConfig.Version))
+		return &Core{
+			chainId:        chainId,
+			evsw:           evsw,
+			pipe:           pipe,
+			tendermintPipe: nil,
+		}, nil
+	}
 	return &Core{
-		chainId: chainId,
-		evsw:    evsw,
-		pipe:    pipe,
+		chainId:        chainId,
+		evsw:           evsw,
+		pipe:           pipe,
+		tendermintPipe: tendermintPipe,
 	}, nil
 }
 
@@ -109,36 +119,3 @@ func (core *Core) NewGatewayTendermint(config *server.ServerConfig) (
 	return rpc_tendermint.NewTendermintWebsocketServer(config,
 		core.tendermintPipe, core.evsw)
 }
-
-// func (core *Core) StartRPC(config server.ServerConfig) ([]net.Listener, error) {
-// 	rpc_tendermint.SetConfig(config)
-//
-// 	rpc_tendermint.SetErisMint(core.pipe.GetApplication())
-// 	rpc_tendermint.SetBlockStore(n.BlockStore())
-// 	rpc_tendermint.SetConsensusState(n.ConsensusState())
-// 	rpc_tendermint.SetConsensusReactor(n.ConsensusReactor())
-// 	rpc_tendermint.SetMempoolReactor(n.MempoolReactor())
-// 	rpc_tendermint.SetSwitch(n.Switch())
-// 	rpc_tendermint.SetPrivValidator(n.PrivValidator())
-// 	// TODO: programming
-// 	//rpc_tendermint.SetGenDoc(LoadGenDoc(config.GetString("genesis_file")))
-//
-// 	// TODO: also programming
-// 	//listenAddrs := strings.Split(config.GetString("rpc_laddr"), ",")
-// 	listenAddrs := strings.Split("127.0.0.1", ",")
-//
-// 	// we may expose the rpc over both a unix and tcp socket
-// 	listeners := make([]net.Listener, len(listenAddrs))
-// 	for i, listenAddr := range listenAddrs {
-// 		mux := http.NewServeMux()
-// 		wm := rpcserver.NewWebsocketManager(rpc_tendermint.Routes, n.EventSwitch())
-// 		mux.HandleFunc("/websocket", wm.WebsocketHandler)
-// 		rpcserver.RegisterRPCFuncs(mux, rpc_tendermint.Routes)
-// 		listener, err := rpcserver.StartHTTPServer(listenAddr, mux)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		listeners[i] = listener
-// 	}
-// 	return listeners, nil
-// }

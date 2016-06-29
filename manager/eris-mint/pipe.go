@@ -62,8 +62,8 @@ type ErisMintPipe struct {
 var _ definitions.Pipe = (*ErisMintPipe)(nil)
 
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
-// eris-db/definitions.TendermintPipe
-// var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
+// eris-db/definitions.erisTendermintPipe
+var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
@@ -206,6 +206,11 @@ func (pipe *ErisMintPipe) SetConsensusEngine(
     return fmt.Errorf("Failed to set consensus engine for pipe; already set")
   }
   return nil
+}
+
+func (pipe *ErisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
+	error) {
+	return definitions.TendermintPipe(pipe), nil
 }
 
 //------------------------------------------------------------------------------

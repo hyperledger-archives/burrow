@@ -45,6 +45,8 @@ type Pipe interface {
   // NOTE: [ben] added to Pipe interface on 0.12 refactor
   GetApplication() manager_types.Application
   SetConsensusEngine(consensus ConsensusEngine) error
+	// Support for Tendermint RPC
+	GetTendermintPipe() (TendermintPipe, error)
 }
 
 type Accounts interface {

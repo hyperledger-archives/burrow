@@ -145,6 +145,10 @@ func Serve(cmd *cobra.Command, args []string) {
     log.Fatalf("Failed to start servers: %s.", err)
     os.Exit(1)
   }
+	_, err = newCore.NewGatewayTendermint(serverConfig)
+	if err != nil {
+		log.Fatalf("Failed to start Tendermint gateway")
+	}
   <- serverProcess.StopEventChannel()
 }
 
