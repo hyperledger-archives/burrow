@@ -28,7 +28,7 @@ func SetConfig(c server.ServerConfig) {
 	config = c
 }
 
-func SetErisMint(em *erismint.ErisMint) {
+func SetApplication(em *erismint.ErisMint) {
 	erisMint = em
 }
 

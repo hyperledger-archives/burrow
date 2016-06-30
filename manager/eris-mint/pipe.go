@@ -246,7 +246,17 @@ func (pipe *ErisMintPipe) Status() (*rpc_tendermint_types.ResultStatus, error) {
 }
 
 func (pipe *ErisMintPipe) NetInfo() (*rpc_tendermint_types.ResultNetInfo, error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	listening := pipe.consensusEngine.IsListening()
+	listeners := []string{}
+	for _, listener := range pipe.consensusEngine.Listeners() {
+		listeners = append(listeners, listener.String())
+	}
+  peers := pipe.consensusEngine.Peers()
+	return &rpc_tendermint_types.ResultNetInfo{
+		Listening: listening,
+		Listeners: listeners,
+		Peers:     peers,
+	}, nil
 }
 
 func (pipe *ErisMintPipe) Genesis() (*rpc_tendermint_types.ResultGenesis, error) {
