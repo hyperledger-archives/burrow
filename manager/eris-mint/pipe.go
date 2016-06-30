@@ -112,6 +112,7 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
     transactor:    transactor,
 		network:       newNetwork(),
     consensus:     nil,
+		// genesis cache
 		genesisDoc:    genesisDoc,
 		genesisState:  nil,
   }, nil
@@ -260,7 +261,10 @@ func (pipe *ErisMintPipe) NetInfo() (*rpc_tendermint_types.ResultNetInfo, error)
 }
 
 func (pipe *ErisMintPipe) Genesis() (*rpc_tendermint_types.ResultGenesis, error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	return &rpc_tendermint_types.ResultGenesis {
+		// TODO: [ben] sharing pointer to unmutated GenesisDoc, but is not immutable
+		Genesis: pipe.genesisDoc,
+	}, nil
 }
 
 // Accounts
