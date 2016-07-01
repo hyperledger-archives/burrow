@@ -48,7 +48,7 @@ type TendermintPipe interface {
 		error)
 
 	// Call
-	Call(fromAddres, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
+	Call(fromAddress, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
 		error)
 
 	CallCode(fromAddress, code, data []byte) (*rpc_tendermint_types.ResultCall,
@@ -57,7 +57,7 @@ type TendermintPipe interface {
 	// TODO: [ben] deprecate as we should not allow unsafe behaviour
 	// where a user is allowed to send a private key over the wire,
 	// especially unencrypted.
-	SignTransaction(transaction transaction.Tx,
+	SignTransaction(tx transaction.Tx,
 		privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
 		error)
 

@@ -37,7 +37,7 @@ const (
 // is compatible and has been tested with.
 var compatibleConsensus = [...]string {
   "tendermint-0.6",
-  "tmsp-0.6",
+  // "tmsp-0.6",
 }
 
 func GetErisMintVersion() *version.VersionIdentifier {

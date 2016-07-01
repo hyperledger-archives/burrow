@@ -20,12 +20,13 @@ import (
   "bytes"
   "fmt"
 
-  db                "github.com/tendermint/go-db"
+	crypto            "github.com/tendermint/go-crypto"
+	db                "github.com/tendermint/go-db"
 	tendermint_common "github.com/tendermint/go-common"
-  tendermint_events "github.com/tendermint/go-events"
+	tendermint_events "github.com/tendermint/go-events"
 	tendermint_types  "github.com/tendermint/tendermint/types"
 	tmsp_types        "github.com/tendermint/tmsp/types"
-  wire              "github.com/tendermint/go-wire"
+	wire              "github.com/tendermint/go-wire"
 
   log "github.com/eris-ltd/eris-logger"
 
@@ -38,6 +39,7 @@ import (
 	state                "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	state_types          "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	transaction          "github.com/eris-ltd/eris-db/txs"
+	vm                   "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 )
 
 type ErisMintPipe struct {
@@ -332,32 +334,118 @@ func (pipe *ErisMintPipe) DumpStorage(address []byte) (*rpc_tendermint_types.Res
 }
 
 // Call
-func (pipe *ErisMintPipe) Call(fromAddres, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
+func (pipe *ErisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	st := pipe.erisMint.GetState()
+	cache := state.NewBlockCache(st)
+	outAcc := cache.GetAccount(toAddress)
+	if outAcc == nil {
+		return nil, fmt.Errorf("Account %x does not exist", toAddress)
+	}
+	callee := toVMAccount(outAcc)
+	caller := &vm.Account{Address: tendermint_common.LeftPadWord256(fromAddress)}
+	txCache := state.NewTxCache(cache)
+	params := vm.Params{
+		BlockHeight: int64(st.LastBlockHeight),
+		BlockHash:   tendermint_common.LeftPadWord256(st.LastBlockHash),
+		BlockTime:   st.LastBlockTime.Unix(),
+		GasLimit:    st.GetGasLimit(),
+	}
+
+	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	gas := st.GetGasLimit()
+	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
+	if err != nil {
+		return nil, err
+	}
+	return &rpc_tendermint_types.ResultCall{Return: ret}, nil
 }
 
 func (pipe *ErisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tendermint_types.ResultCall,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	st := pipe.erisMint.GetState()
+	cache := pipe.erisMint.GetCheckCache()
+	callee := &vm.Account{Address: tendermint_common.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: tendermint_common.LeftPadWord256(fromAddress)}
+	txCache := state.NewTxCache(cache)
+	params := vm.Params{
+		BlockHeight: int64(st.LastBlockHeight),
+		BlockHash:   tendermint_common.LeftPadWord256(st.LastBlockHash),
+		BlockTime:   st.LastBlockTime.Unix(),
+		GasLimit:    st.GetGasLimit(),
+	}
+
+	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	gas := st.GetGasLimit()
+	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
+	if err != nil {
+		return nil, err
+	}
+	return &rpc_tendermint_types.ResultCall{Return: ret}, nil
 }
 
 // TODO: [ben] deprecate as we should not allow unsafe behaviour
 // where a user is allowed to send a private key over the wire,
 // especially unencrypted.
-func (pipe *ErisMintPipe) SignTransaction(transaction transaction.Tx,
+func (pipe *ErisMintPipe) SignTransaction(tx transaction.Tx,
 	privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+
+	for i, privAccount := range privAccounts {
+		if privAccount == nil || privAccount.PrivKey == nil {
+			return nil, fmt.Errorf("Invalid (empty) privAccount @%v", i)
+		}
+	}
+	switch tx.(type) {
+	case *transaction.SendTx:
+		sendTx := tx.(*transaction.SendTx)
+		for i, input := range sendTx.Inputs {
+			input.PubKey = privAccounts[i].PubKey
+			input.Signature = privAccounts[i].Sign(pipe.transactor.chainID, sendTx)
+		}
+	case *transaction.CallTx:
+		callTx := tx.(*transaction.CallTx)
+		callTx.Input.PubKey = privAccounts[0].PubKey
+		callTx.Input.Signature = privAccounts[0].Sign(pipe.transactor.chainID, callTx)
+	case *transaction.BondTx:
+		bondTx := tx.(*transaction.BondTx)
+		// the first privaccount corresponds to the BondTx pub key.
+		// the rest to the inputs
+		bondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, bondTx).(crypto.SignatureEd25519)
+		for i, input := range bondTx.Inputs {
+			input.PubKey = privAccounts[i+1].PubKey
+			input.Signature = privAccounts[i+1].Sign(pipe.transactor.chainID, bondTx)
+		}
+	case *transaction.UnbondTx:
+		unbondTx := tx.(*transaction.UnbondTx)
+		unbondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, unbondTx).(crypto.SignatureEd25519)
+	case *transaction.RebondTx:
+		rebondTx := tx.(*transaction.RebondTx)
+		rebondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, rebondTx).(crypto.SignatureEd25519)
+	}
+	return &rpc_tendermint_types.ResultSignTx{tx}, nil
 }
 
 // Name registry
 func (pipe *ErisMintPipe) GetName(name string) (*rpc_tendermint_types.ResultGetName, error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	currentState := pipe.erisMint.GetState()
+	entry := currentState.GetNameRegEntry(name)
+	if entry == nil {
+		return nil, fmt.Errorf("Name %s not found", name)
+	}
+	return &rpc_tendermint_types.ResultGetName{entry}, nil
 }
 
 func (pipe *ErisMintPipe) ListNames() (*rpc_tendermint_types.ResultListNames, error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	var blockHeight int
+	var names []*transaction.NameRegEntry
+	currentState := pipe.erisMint.GetState()
+	blockHeight = currentState.LastBlockHeight
+	currentState.GetNames().Iterate(func(key []byte, value []byte) bool {
+		names = append(names, state.DecodeNameRegEntry(value))
+		return false
+	})
+	return &rpc_tendermint_types.ResultListNames{blockHeight, names}, nil
 }
 
 // Memory pool
