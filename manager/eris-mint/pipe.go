@@ -24,6 +24,7 @@ import (
 	tendermint_common "github.com/tendermint/go-common"
   tendermint_events "github.com/tendermint/go-events"
 	tendermint_types  "github.com/tendermint/tendermint/types"
+	tmsp_types        "github.com/tendermint/tmsp/types"
   wire              "github.com/tendermint/go-wire"
 
   log "github.com/eris-ltd/eris-logger"
@@ -370,7 +371,41 @@ func (pipe *ErisMintPipe) BroadcastTxAsync(tx transaction.Tx) (
 	return &rpc_tendermint_types.ResultBroadcastTx{}, nil
 }
 
-func (pipe *ErisMintPipe) BroadcastTxSync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	responseChannel := make(chan *tmsp_types.Response, 1)
+	err := pipe.consensusEngine.BroadcastTransaction(transaction.EncodeTx(tx),
+		func(res *tmsp_types.Response) { responseChannel <- res	})
+	if err != nil {
+		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+	}
+	// NOTE: [ben] This Response is set in /tmsp/client/local_remote_client.go
+	// a call to Application, here implemented by ErisMint, over local callback,
+	// or TMSP RPC call.  Hence the result is determined by ErisMint/erismint.go
+	// CheckTx() Result (Result converted to ReqRes into Response returned here)
+	// NOTE: [ben] BroadcastTx wraps around CheckTx for Tendermint
+	response := <-responseChannel
+	responseCheckTx := response.GetCheckTx()
+	if responseCheckTx == nil {
+		return nil, fmt.Errorf("Error, application did not return CheckTx response.")
+	}
+	resultBroadCastTx := &rpc_tendermint_types.ResultBroadcastTx {
+		Code: responseCheckTx.Code,
+		Data: responseCheckTx.Data,
+		Log:  responseCheckTx.Log,
+	}
+	switch responseCheckTx.Code {
+	case tmsp_types.CodeType_OK:
+		return resultBroadCastTx, nil
+	case tmsp_types.CodeType_EncodingError:
+		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
+	case tmsp_types.CodeType_InternalError:
+		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
+	default:
+		log.WithFields(log.Fields{
+			"application": GetErisMintVersion().GetVersionString(),
+			"TMSP_code_type": responseCheckTx.Code,
+		}).Warn("Unknown error returned from Tendermint CheckTx on BroadcastTxSync")
+		return resultBroadCastTx, fmt.Errorf("Unknown error returned: " + responseCheckTx.Log)
+	}
 }
