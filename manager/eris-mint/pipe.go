@@ -21,6 +21,7 @@ import (
   "fmt"
 
   db                "github.com/tendermint/go-db"
+	tendermint_common "github.com/tendermint/go-common"
   tendermint_events "github.com/tendermint/go-events"
 	tendermint_types  "github.com/tendermint/tendermint/types"
   wire              "github.com/tendermint/go-wire"
@@ -270,21 +271,63 @@ func (pipe *ErisMintPipe) Genesis() (*rpc_tendermint_types.ResultGenesis, error)
 // Accounts
 func (pipe *ErisMintPipe) GetAccount(address []byte) (*rpc_tendermint_types.ResultGetAccount,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	cache := pipe.erisMint.GetCheckCache()
+	// cache := mempoolReactor.Mempool.GetCache()
+	account := cache.GetAccount(address)
+	if account == nil {
+		log.Warn("Nil Account")
+		return &rpc_tendermint_types.ResultGetAccount{nil}, nil
+	}
+	return &rpc_tendermint_types.ResultGetAccount{account}, nil
 }
 
 func (pipe *ErisMintPipe) ListAccounts() (*rpc_tendermint_types.ResultListAccounts, error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	var blockHeight int
+	var accounts []*account.Account
+	state := pipe.erisMint.GetState()
+	blockHeight = state.LastBlockHeight
+	state.GetAccounts().Iterate(func(key []byte, value []byte) bool {
+		accounts = append(accounts, account.DecodeAccount(value))
+		return false
+	})
+	return &rpc_tendermint_types.ResultListAccounts{blockHeight, accounts}, nil
 }
 
 func (pipe *ErisMintPipe) GetStorage(address, key []byte) (*rpc_tendermint_types.ResultGetStorage,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	state := pipe.erisMint.GetState()
+	// state := consensusState.GetState()
+	account := state.GetAccount(address)
+	if account == nil {
+		return nil, fmt.Errorf("UnknownAddress: %X", address)
+	}
+	storageRoot := account.StorageRoot
+	storageTree := state.LoadStorage(storageRoot)
+
+	_, value, exists := storageTree.Get(
+		tendermint_common.LeftPadWord256(key).Bytes())
+	if !exists { // value == nil {
+		return &rpc_tendermint_types.ResultGetStorage{key, nil}, nil
+	}
+	return &rpc_tendermint_types.ResultGetStorage{key, value}, nil
 }
 
 func (pipe *ErisMintPipe) DumpStorage(address []byte) (*rpc_tendermint_types.ResultDumpStorage,
 	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+	state := pipe.erisMint.GetState()
+	account := state.GetAccount(address)
+	if account == nil {
+		return nil, fmt.Errorf("UnknownAddress: %X", address)
+	}
+	storageRoot := account.StorageRoot
+	storageTree := state.LoadStorage(storageRoot)
+	storageItems := []rpc_tendermint_types.StorageItem{}
+	storageTree.Iterate(func(key []byte, value []byte) bool {
+		storageItems = append(storageItems, rpc_tendermint_types.StorageItem{key,
+			value})
+		return false
+	})
+	return &rpc_tendermint_types.ResultDumpStorage{storageRoot, storageItems}, nil
 }
 
 // Call
@@ -317,9 +360,14 @@ func (pipe *ErisMintPipe) ListNames() (*rpc_tendermint_types.ResultListNames, er
 }
 
 // Memory pool
-func (pipe *ErisMintPipe) BroadcastTxAsync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
-	error) {
-	return nil, fmt.Errorf("Unimplemented.")
+// NOTE: transaction must be signed
+func (pipe *ErisMintPipe) BroadcastTxAsync(tx transaction.Tx) (
+	*rpc_tendermint_types.ResultBroadcastTx, error) {
+	err := pipe.consensusEngine.BroadcastTransaction(transaction.EncodeTx(tx), nil)
+	if err != nil {
+		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+	}
+	return &rpc_tendermint_types.ResultBroadcastTx{}, nil
 }
 
 func (pipe *ErisMintPipe) BroadcastTxSync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,

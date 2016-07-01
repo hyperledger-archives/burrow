@@ -5,20 +5,20 @@ import (
 
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	txs "github.com/eris-ltd/eris-db/txs"
-	"github.com/tendermint/tendermint/types"
+	// "github.com/tendermint/tendermint/types"
 	tmsp "github.com/tendermint/tmsp/types"
 )
 
 //-----------------------------------------------------------------------------
 
-// NOTE: tx must be signed
-func BroadcastTxAsync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
-	err := mempoolReactor.BroadcastTx(tx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
-	}
-	return &ctypes.ResultBroadcastTx{}, nil
-}
+// // NOTE: tx must be signed
+// func BroadcastTxAsync(tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+// 	err := mempoolReactor.BroadcastTx(tx, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+// 	}
+// 	return &ctypes.ResultBroadcastTx{}, nil
+// }
 
 // Note: tx must be signed
 func BroadcastTxSync(tx txs.Tx) (*ctypes.ResultBroadcastTx, error) {

@@ -30,6 +30,7 @@ import (
 	node             "github.com/tendermint/tendermint/node"
 	proxy            "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
+	tmsp_types       "github.com/tendermint/tmsp/types"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -192,6 +193,11 @@ func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
 		copyPublicValidatorKey = nil
 	}
 	return copyPublicValidatorKey
+}
+
+func (this *TendermintNode) BroadcastTransaction(transaction []byte,
+	callback func(*tmsp_types.Response)) error {
+	return this.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
 }
 
 //------------------------------------------------------------------------------
