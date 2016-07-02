@@ -144,7 +144,13 @@ func (tmintConfig *TendermintConfig) GetMapString(key string) map[string]string 
 }
 
 func (tmintConfig *TendermintConfig) GetConfig(key string) tendermintConfig.Config {
-  return &TendermintConfig {
+	// TODO: [ben] log out a warning as this indicates a potentially breaking code
+	// change from Tendermints side
+	if !tmintConfig.subTree.IsSet(key) {
+		return &TendermintConfig {
+			subTree: viper.New(),
+		}}
+	return &TendermintConfig {
     subTree: tmintConfig.subTree.Sub(key),
   }
 }

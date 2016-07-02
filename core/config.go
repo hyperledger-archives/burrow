@@ -71,6 +71,10 @@ func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, 
   // TODO: [ben] Viper internally panics if `moduleName` contains an unallowed
   // character (eg, a dash).  Either this needs to be wrapped in a go-routine
   // and recovered from or a PR to viper is needed to address this bug.
+	if !do.Config.IsSet(moduleName) {
+		return nil, fmt.Errorf("Failed to read configuration section for %s",
+			moduleName)
+	}
   subConfig := do.Config.Sub(moduleName)
   if subConfig == nil {
     return nil,
@@ -93,7 +97,10 @@ func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, 
 // LoadServerModuleConfig wraps specifically for the servers run by core
 func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
   // load configuration subtree for servers
-  subConfig := do.Config.Sub("servers")
+	if !do.Config.IsSet("servers") {
+		return nil, fmt.Errorf("Failed to read configuration section for servers")
+	}
+	subConfig := do.Config.Sub("servers")
   if subConfig == nil {
     return nil,
       fmt.Errorf("Failed to read configuration section for servers")
