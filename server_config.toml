@@ -205,6 +205,26 @@ private_validator_file = "priv_validator.json"
   # mempool_recheck_empty = true
   # mempool_broadcast = true
 
+		[tendermint.configuration.p2p]
+		# Switch config keys
+		dial_timeout_seconds = 3
+		handshake_timeout_seconds = 20
+		max_num_peers = 20
+		authenticated_encryption = true
+
+		# MConnection config keys
+		send_rate = 512000
+		recv_rate = 512000
+
+		# Fuzz params
+		fuzz_enable = false # use the fuzz wrapped conn
+		fuzz_active = false # toggle fuzzing
+		fuzz_mode = "drop"  # eg. drop, delay
+		fuzz_max_delay_milliseconds = 3000
+		fuzz_prob_drop_rw = 0.2
+		fuzz_prob_drop_conn = 0.00
+		fuzz_prob_sleep = 0.00
+
 ################################################################################
 ##
 ## Eris-Mint

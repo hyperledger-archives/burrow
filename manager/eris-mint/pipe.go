@@ -91,8 +91,6 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
   // of the old Eris-DB / Tendermint and should be considered as an in-process
   // call when possible
   tendermintHost := moduleConfig.Config.GetString("tendermint_host")
-  log.Debug(fmt.Sprintf("Starting ErisMint RPC client to Tendermint host on %s",
-    tendermintHost))
   erisMint.SetHostAddress(tendermintHost)
 
   // initialise the components of the pipe
