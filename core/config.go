@@ -20,92 +20,99 @@
 package core
 
 import (
-  "fmt"
-  "os"
-  "path"
+	"fmt"
+	"os"
+	"path"
 
-  consensus   "github.com/eris-ltd/eris-db/consensus"
-  config      "github.com/eris-ltd/eris-db/config"
-  definitions "github.com/eris-ltd/eris-db/definitions"
-  manager     "github.com/eris-ltd/eris-db/manager"
-  server      "github.com/eris-ltd/eris-db/server"
-  util        "github.com/eris-ltd/eris-db/util"
-  version     "github.com/eris-ltd/eris-db/version"
+	config "github.com/eris-ltd/eris-db/config"
+	consensus "github.com/eris-ltd/eris-db/consensus"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	manager "github.com/eris-ltd/eris-db/manager"
+	server "github.com/eris-ltd/eris-db/server"
+	util "github.com/eris-ltd/eris-db/util"
+	version "github.com/eris-ltd/eris-db/version"
+	"github.com/spf13/viper"
 )
 
 // LoadConsensusModuleConfig wraps specifically for the consensus module
 func LoadConsensusModuleConfig(do *definitions.Do) (*config.ModuleConfig, error) {
-  return loadModuleConfig(do, "consensus")
+	return loadModuleConfigFromDo(do, "consensus")
 }
 
 // LoadApplicationManagerModuleConfig wraps specifically for the application
 // manager
 func LoadApplicationManagerModuleConfig(do *definitions.Do) (*config.ModuleConfig, error) {
-  return loadModuleConfig(do, "manager")
+	return loadModuleConfigFromDo(do, "manager")
+}
+
+func loadModuleConfigFromDo(do *definitions.Do, module string) (*config.ModuleConfig, error) {
+	return LoadModuleConfig(do.Config, do.WorkDir, do.DataDir,
+		do.GenesisFile, do.ChainId, module)
 }
 
 // Generic Module loader for configuration information
-func loadModuleConfig(do *definitions.Do, module string) (*config.ModuleConfig, error) {
-  moduleName := do.Config.GetString("chain." + module + ".name")
-  majorVersion := do.Config.GetInt("chain." + module + ".major_version")
-  minorVersion := do.Config.GetInt("chain." + module + ".minor_version")
-  minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
-    minorVersion, 0)
-  if !assertValidModule(module, moduleName, minorVersionString) {
-    return nil, fmt.Errorf("%s module %s (%s) is not supported by %s",
-      module, moduleName, minorVersionString, version.GetVersionString())
-  }
-  // set up the directory structure for the module inside the data directory
-  workDir := path.Join(do.DataDir, do.Config.GetString("chain." + module +
-    ".relative_root"))
-  if err := util.EnsureDir(workDir, os.ModePerm); err != nil {
-    return nil,
-      fmt.Errorf("Failed to create module root directory %s.", workDir)
-  }
-  dataDir := path.Join(workDir, "data")
-  if err := util.EnsureDir(dataDir, os.ModePerm); err != nil {
-    return nil,
-      fmt.Errorf("Failed to create module data directory %s.", dataDir)
-  }
-  // load configuration subtree for module
-  // TODO: [ben] Viper internally panics if `moduleName` contains an unallowed
-  // character (eg, a dash).  Either this needs to be wrapped in a go-routine
-  // and recovered from or a PR to viper is needed to address this bug.
-	if !do.Config.IsSet(moduleName) {
+func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
+	genesisFile, chainId, module string) (*config.ModuleConfig, error) {
+	moduleName := conf.GetString("chain." + module + ".name")
+	majorVersion := conf.GetInt("chain." + module + ".major_version")
+	minorVersion := conf.GetInt("chain." + module + ".minor_version")
+	minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
+		minorVersion, 0)
+	if !assertValidModule(module, moduleName, minorVersionString) {
+		return nil, fmt.Errorf("%s module %s (%s) is not supported by %s",
+			module, moduleName, minorVersionString, version.GetVersionString())
+	}
+	// set up the directory structure for the module inside the data directory
+	workDir := path.Join(rootDataDir, conf.GetString("chain."+module+
+		".relative_root"))
+	if err := util.EnsureDir(workDir, os.ModePerm); err != nil {
+		return nil,
+			fmt.Errorf("Failed to create module root directory %s.", workDir)
+	}
+	dataDir := path.Join(workDir, "data")
+	if err := util.EnsureDir(dataDir, os.ModePerm); err != nil {
+		return nil,
+			fmt.Errorf("Failed to create module data directory %s.", dataDir)
+	}
+	// load configuration subtree for module
+	// TODO: [ben] Viper internally panics if `moduleName` contains an unallowed
+	// character (eg, a dash).  Either this needs to be wrapped in a go-routine
+	// and recovered from or a PR to viper is needed to address this bug.
+	if !conf.IsSet(moduleName) {
 		return nil, fmt.Errorf("Failed to read configuration section for %s",
 			moduleName)
 	}
-  subConfig := do.Config.Sub(moduleName)
-  if subConfig == nil {
-    return nil,
-      fmt.Errorf("Failed to read configuration section for %s.", moduleName)
-  }
+	subConfig := conf.Sub(moduleName)
+	if subConfig == nil {
+		return nil,
+			fmt.Errorf("Failed to read configuration section for %s.", moduleName)
+	}
 
-  return &config.ModuleConfig {
-    Module  :     module,
-    Name    :     moduleName,
-    Version :     minorVersionString,
-    WorkDir :     workDir,
-    DataDir :     dataDir,
-    RootDir :     do.WorkDir, // Eris-DB's working directory
-    ChainId :     do.ChainId,
-    GenesisFile : do.GenesisFile,
-    Config :      subConfig,
-  }, nil
+	return &config.ModuleConfig{
+		Module:      module,
+		Name:        moduleName,
+		Version:     minorVersionString,
+		WorkDir:     workDir,
+		DataDir:     dataDir,
+		RootDir:     rootWorkDir, // Eris-DB's working directory
+		ChainId:     chainId,
+		GenesisFile: genesisFile,
+		Config:      subConfig,
+	}, nil
 }
 
 // LoadServerModuleConfig wraps specifically for the servers run by core
 func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
-  // load configuration subtree for servers
+	// load configuration subtree for servers
 	if !do.Config.IsSet("servers") {
 		return nil, fmt.Errorf("Failed to read configuration section for servers")
 	}
 	subConfig := do.Config.Sub("servers")
-  if subConfig == nil {
-    return nil,
-      fmt.Errorf("Failed to read configuration section for servers")
-  }
-  serverConfig, err := server.ReadServerConfig(subConfig)
+	if subConfig == nil {
+		return nil,
+			fmt.Errorf("Failed to read configuration section for servers")
+	}
+	serverConfig, err := server.ReadServerConfig(subConfig)
 	serverConfig.ChainId = do.ChainId
 	return serverConfig, err
 }
@@ -115,11 +122,11 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 // Helper functions
 
 func assertValidModule(module, name, minorVersionString string) bool {
-  switch module {
-  case "consensus" :
-    return consensus.AssertValidConsensusModule(name, minorVersionString)
-  case "manager" :
-    return manager.AssertValidApplicationManagerModule(name, minorVersionString)
-  }
-  return false
+	switch module {
+	case "consensus":
+		return consensus.AssertValidConsensusModule(name, minorVersionString)
+	case "manager":
+		return manager.AssertValidApplicationManagerModule(name, minorVersionString)
+	}
+	return false
 }

@@ -1,6 +1,6 @@
 package rpctest
 
-// priv keys generated deterministically eg rpc/tests/helpers.go
+// priv keys generated deterministically eg rpc/tests/shared_test.go
 var defaultGenesis = `{
   "chain_id" : "tendermint_test",
   "accounts": [

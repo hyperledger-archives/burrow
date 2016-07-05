@@ -97,7 +97,7 @@ func Serve(cmd *cobra.Command, args []string) {
     log.Fatalf("Failed to read non-empty string for genesis file from config.")
     os.Exit(1)
   }
-  // Ensure data directory is set and accesible
+  // Ensure data directory is set and accessible
   if err := do.InitialiseDataDirectory(); err != nil {
     log.Fatalf("Failed to initialise data directory (%s): %v", do.DataDir, err)
     os.Exit(1)
