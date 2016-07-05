@@ -62,7 +62,7 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
 	// to be written in tendermint's root directory.
 	// NOTE: [ben] as elsewhere Sub panics if config file does not have this
 	// subtree. To shield in go-routine, or PR to viper.
-	if !moduleConfig.Config.IsSet("confighuration") {
+	if !moduleConfig.Config.IsSet("configuration") {
 		return nil, fmt.Errorf("Failed to extract Tendermint configuration subtree.")
 	}
 	tendermintConfigViper := moduleConfig.Config.Sub("configuration")

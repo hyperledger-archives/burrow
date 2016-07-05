@@ -58,7 +58,9 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 	}
 	log.Debug("Loaded pipe with application manager")
 	// pass the consensus engine into the pipe
-	consensus.LoadConsensusEngineInPipe(consensusConfig, pipe)
+	if e := consensus.LoadConsensusEngineInPipe(consensusConfig, pipe); e != nil {
+		return nil, fmt.Errorf("Failed to load consensus engine in pipe: %v", e)
+	}
 	tendermintPipe, err := pipe.GetTendermintPipe()
 	if err != nil {
 		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
