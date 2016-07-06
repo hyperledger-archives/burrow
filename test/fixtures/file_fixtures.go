@@ -4,7 +4,6 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"path"
 	"os"
-	"fmt"
 )
 
 // FileFixtures writes files to a temporary location for use in testing.
@@ -54,7 +53,6 @@ func (ffs *FileFixtures) AddDir(name string) string {
 
 // Cleans up the the temporary files (with fire)
 func (ffs *FileFixtures) RemoveAll() {
-	fmt.Println("cleanup!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	if err := os.RemoveAll(ffs.tempDir); err != nil {
 		// Since we expect to be called from being deferred in a test it's
 		// better if we panic here so that the caller finds

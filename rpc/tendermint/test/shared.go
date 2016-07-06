@@ -40,47 +40,52 @@ var (
 )
 
 // initialize config and create new node
-func initGlobalVariables(ffs *fixtures.FileFixtures) {
+func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	testConfigFile := ffs.AddFile("config.toml", defaultConfig)
 	rootWorkDir = ffs.AddDir("rootWorkDir")
 	rootDataDir := ffs.AddDir("rootDataDir")
 	genesisFile := ffs.AddFile("rootWorkDir/genesis.json", defaultGenesis)
+
+	if ffs.Error != nil {
+		return ffs.Error
+	}
 
 	testConfig := viper.New()
 	testConfig.SetConfigFile(testConfigFile)
 	err := testConfig.ReadInConfig()
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	chainID = testConfig.GetString("chain.assert_chain_id")
 	rpcAddr := testConfig.GetString("erismint.tendermint_host")
 	websocketAddr = rpcAddr
+	config.Tendermint.RpcLocalAddress = rpcAddr
 	websocketEndpoint = "/websocket"
 
 	consensusConfig, err := core.LoadModuleConfig(testConfig, rootWorkDir,
 		rootDataDir, genesisFile, chainID, "consensus")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	managerConfig, err := core.LoadModuleConfig(testConfig, rootWorkDir,
 		rootDataDir, genesisFile, chainID, "manager")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig)
-
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	clients = map[string]rpcclient.Client{
 		"JSONRPC": rpcclient.NewClientURI(rpcAddr),
 		"HTTP":    rpcclient.NewClientJSONRPC(rpcAddr),
 	}
+	return nil
 }
 
 // deterministic account generation, synced with genesis file in config/tendermint_test/config.go
@@ -95,18 +100,16 @@ func makeUsers(n int) []*acm.PrivAccount {
 }
 
 // create a new node and sleep forever
-func newNode(ready chan struct{}) {
-	testCore.NewGatewayTendermint(config)
+func newNode(ready chan error) {
 	// Run the RPC server.
 	_, err := testCore.NewGatewayTendermint(config)
-	if err != nil {
-		panic("Could not create tendermint gateway for testing")
-	}
-	ready <- struct{}{}
+	ready <- err
 
 	// Sleep forever
-	ch := make(chan struct{})
-	<-ch
+	if err == nil {
+		ch := make(chan struct{})
+		<-ch
+	}
 }
 
 func saveNewPriv() {

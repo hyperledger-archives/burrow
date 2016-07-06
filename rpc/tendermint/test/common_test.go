@@ -3,33 +3,36 @@ package rpctest
 import (
 	"testing"
 	"github.com/eris-ltd/eris-db/test/fixtures"
-	"os"
 	"fmt"
+	"os"
 )
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
 	ffs := fixtures.NewFileFixtures("Eris-DB")
 	defer ffs.RemoveAll()
-	fmt.Println("Defered!!")
 
-	initGlobalVariables(ffs)
+	err := initGlobalVariables(ffs)
 
-	if ffs.Error != nil {
-		panic(ffs.Error)
+	if err != nil {
+		panic(err)
 	}
 
 	saveNewPriv()
 
 	// start a node
 
-	ready := make(chan struct{})
+	ready := make(chan error)
 	go newNode(ready)
-	<-ready
+	err = <-ready
+
+	if err != nil {
+		panic(err)
+	}
 
 	returnValue := m.Run()
+	fmt.Println("foooooo", returnValue)
 
-
-	os.Exit(returnValue)
+	defer os.Exit(returnValue)
 }
 
