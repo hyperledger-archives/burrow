@@ -54,7 +54,7 @@ func loadModuleConfigFromDo(do *definitions.Do, module string) (*config.ModuleCo
 func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	genesisFile, chainId, module string) (*config.ModuleConfig, error) {
 	moduleName := conf.GetString("chain." + module + ".name")
-	fmt.Println(moduleName)
+	fmt.Println(conf)
 	majorVersion := conf.GetInt("chain." + module + ".major_version")
 	minorVersion := conf.GetInt("chain." + module + ".minor_version")
 	minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
