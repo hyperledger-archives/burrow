@@ -48,6 +48,11 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) {
 
 	testConfig := viper.New()
 	testConfig.SetConfigFile(testConfigFile)
+	err := testConfig.ReadInConfig()
+
+	if err != nil {
+		panic(err)
+	}
 
 	chainID = testConfig.GetString("chain.assert_chain_id")
 	rpcAddr := testConfig.GetString("erismint.tendermint_host")
