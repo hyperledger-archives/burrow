@@ -2,7 +2,6 @@ package rpctest
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/spf13/viper"
 	nm "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/types"
-	"os"
 	"path"
 )
 
@@ -40,30 +38,6 @@ var (
 
 	testCore *core.Core
 )
-
-func TestMain(m *testing.M) {
-	ffs := fixtures.NewFileFixtures()
-
-	initGlobalVariables(ffs)
-
-	if ffs.Error != nil {
-		panic(ffs.Error)
-	}
-
-	defer ffs.RemoveAll()
-
-	saveNewPriv()
-
-	ready := make(chan struct{})
-	go newNode(ready)
-	<-ready
-
-	returnValue := m.Run()
-
-	// start a node
-
-	os.Exit(returnValue)
-}
 
 // initialize config and create new node
 func initGlobalVariables(ffs *fixtures.FileFixtures) {
