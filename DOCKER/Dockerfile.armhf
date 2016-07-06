@@ -1,22 +1,22 @@
 # Pull base image.
-FROM quay.io/eris/build
+FROM quay.io/eris/build:arm
 MAINTAINER Eris Industries <support@erisindustries.com>
 
-
 #-----------------------------------------------------------------------------
-# install eris-db
-#
-ENV GO15VENDOREXPERIMENT 1
+# install tendermint
 
-# install glide for dependency management
-RUN	go install github.com/Masterminds/glide
-
-# set the repo and install erisdb
-ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
-WORKDIR $REPO
-COPY . $REPO
-RUN glide install
-RUN cd ./cmd/eris-db && go build -o /usr/local/bin/eris-db && cd ../..
+# set the repo and install tendermint -- should track vendored commit
+ENV REPO_ALIAS github.com/tendermint/tendermint
+ENV REPO github.com/eris-ltd/tendermint
+#ENV COMMIT 4ee387d0770ed379e2d524f7077938517b38cd7c
+ENV COMMIT working
+# note, we want to lock in the same commit number
+#  as eris-db has vendored.
+RUN mkdir -p $GOPATH/src/$REPO
+WORKDIR $GOPATH/src/$REPO_ALIAS
+RUN git clone --quiet https://$REPO . && \
+  git checkout --quiet $COMMIT && \
+  go build -o /usr/local/bin/tendermint ./cmd/tendermint
 
 #-----------------------------------------------------------------------------
 # install mint-client tools
@@ -33,11 +33,20 @@ RUN git clone --quiet https://$REPO . && \
   mv ./mint-client /usr/local/bin/
 
 #-----------------------------------------------------------------------------
+# install erisdb
+
+# set the repo and install erisdb
+ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
+COPY . $REPO
+WORKDIR $REPO
+RUN cd ./cmd/erisdb && go build -o /usr/local/bin/erisdb && cd ../..
+
+#-----------------------------------------------------------------------------
 # cleanup
 
-RUN rm -f $GOPATH/bin/glide
 RUN rm -rf $GOPATH/src/* && \
   unset REPO && \
+  unset REPO_ALIAS && \
   unset COMMIT && \
   unset BRANCH
 
@@ -65,16 +74,15 @@ RUN chown -R eris $ECM_PATH
 # root dir
 
 # persist data, set user
-WORKDIR /home/$USER/.eris
 VOLUME /home/$USER/.eris
+WORKDIR /home/$USER/.eris
 USER $USER
 RUN mkdir -p /home/$USER/.eris/chains/tendermint
-ENV CHAINROOT /home/$USER/.eris/chains/tendermint
+ENV TMROOT /home/$USER/.eris/chains/tendermint
 
-# run eris-db
-# ports: 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc
+# run tendermint
+# ports: 1337:eris-db API; 46656:mint-peer; 46657:mint-rpc
 EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
-ENTRYPOINT ["eris-db", "serve"]
-CMD["--work-dir $CHAINROOT"]
+CMD "erisdb-wrapper"
