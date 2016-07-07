@@ -1231,7 +1231,7 @@ func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.Perm
 func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (addr []byte, pF ptypes.PermFlag, data []byte) {
 	addr = LeftPadWord256([]byte(vm.PermissionsContract)).Postfix(20)
 	data = LeftPadBytes(user.Address, 32)
-	data = append(data, LeftPadBytes([]byte(role), 32)...)
+	data = append(data, RightPadBytes([]byte(role), 32)...)
 	data = append(permNameToFuncID(name), data...)
 
 	var err error
