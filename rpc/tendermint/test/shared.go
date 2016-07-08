@@ -6,79 +6,86 @@ import (
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	edb "github.com/eris-ltd/eris-db/core"
-	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
-	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	"github.com/eris-ltd/eris-db/core"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	txs "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/test/fixtures"
+	"github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
-	dbm "github.com/tendermint/go-db"
-	"github.com/tendermint/go-events"
-	"github.com/tendermint/go-p2p"
 	rpcclient "github.com/tendermint/go-rpc/client"
-	"github.com/tendermint/go-wire"
 
-	cfg "github.com/tendermint/go-config"
-	"github.com/tendermint/tendermint/config/tendermint_test"
+	"github.com/spf13/viper"
 	nm "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/types"
-	"github.com/eris-ltd/eris-db/server"
+	"path"
 )
 
 // global variables for use across all tests
 var (
-	config            cfg.Config
+	config = server.DefaultServerConfig()
+	rootWorkDir string
 	node              *nm.Node
-	mempoolCount      = 0
-	chainID           string
-	rpcAddr           string
-	requestAddr       string
-	websocketAddr     string
+	mempoolCount = 0
+	chainID string
+	websocketAddr string
 	websocketEndpoint string
-	clientURI         *rpcclient.ClientURI
-	clientJSON        *rpcclient.ClientJSONRPC
 
-	user    = makeUsers(5) // make keys
+	user = makeUsers(5) // make keys
 	clients map[string]rpcclient.Client
+
+	testCore *core.Core
 )
 
-func init() {
-	initGlobalVariables()
-
-	saveNewPriv()
-}
-
 // initialize config and create new node
-func initGlobalVariables() {
-	config = tendermint_test.ResetConfig("rpc_test_client_test")
-	chainID = config.GetString("chain_id")
-	rpcAddr = config.GetString("rpc_laddr")
-	config.Set("erisdb.chain_id", chainID)
-	requestAddr = rpcAddr
-	websocketAddr = rpcAddr
-	websocketEndpoint = "/websocket"
+func initGlobalVariables(ffs *fixtures.FileFixtures) error {
+	testConfigFile := ffs.AddFile("config.toml", defaultConfig)
+	rootWorkDir = ffs.AddDir("rootWorkDir")
+	rootDataDir := ffs.AddDir("rootDataDir")
+	genesisFile := ffs.AddFile("rootWorkDir/genesis.json", defaultGenesis)
 
-	clientURI = rpcclient.NewClientURI(requestAddr)
-	clientJSON = rpcclient.NewClientJSONRPC(requestAddr)
-
-	clients = map[string]rpcclient.Client{
-		"JSONRPC": clientJSON,
-		"HTTP":    clientURI,
+	if ffs.Error != nil {
+		return ffs.Error
 	}
 
-	// write the genesis
-	MustWriteFile(config.GetString("genesis_file"), []byte(defaultGenesis), 0600)
+	testConfig := viper.New()
+	testConfig.SetConfigFile(testConfigFile)
+	err := testConfig.ReadInConfig()
 
-	// TODO: change consensus/state.go timeouts to be shorter
+	if err != nil {
+		return err
+	}
 
-	// start a node
-	ready := make(chan struct{})
-	go newNode(ready)
-	<-ready
+	chainID = testConfig.GetString("chain.assert_chain_id")
+	rpcAddr := testConfig.GetString("erismint.tendermint_host")
+	websocketAddr = rpcAddr
+	config.Tendermint.RpcLocalAddress = rpcAddr
+	websocketEndpoint = "/websocket"
+
+	consensusConfig, err := core.LoadModuleConfig(testConfig, rootWorkDir,
+		rootDataDir, genesisFile, chainID, "consensus")
+	if err != nil {
+		return err
+	}
+
+	managerConfig, err := core.LoadModuleConfig(testConfig, rootWorkDir,
+		rootDataDir, genesisFile, chainID, "manager")
+	if err != nil {
+		return err
+	}
+
+	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig)
+	if err != nil {
+		return err
+	}
+
+	clients = map[string]rpcclient.Client{
+		"JSONRPC": rpcclient.NewClientURI(rpcAddr),
+		"HTTP":    rpcclient.NewClientJSONRPC(rpcAddr),
+	}
+	return nil
 }
 
 // deterministic account generation, synced with genesis file in config/tendermint_test/config.go
@@ -93,36 +100,16 @@ func makeUsers(n int) []*acm.PrivAccount {
 }
 
 // create a new node and sleep forever
-func newNode(ready chan struct{}) {
-	stateDB := dbm.NewDB("app_state", "memdb", "")
-	genDoc, state := sm.MakeGenesisStateFromFile(stateDB, config.GetString("genesis_file"))
-	state.Save()
-	buf, n, err := new(bytes.Buffer), new(int), new(error)
-	wire.WriteJSON(genDoc, buf, n, err)
-	stateDB.Set(stypes.GenDocKey, buf.Bytes())
-	if *err != nil {
-		Exit(Fmt("Unable to write gendoc to db: %v", err))
-	}
-	evsw := events.NewEventSwitch()
-	evsw.Start()
-	// create the app
-	app := erismint.NewErisMint(state, evsw)
-
-	// Create & start node
-	privValidatorFile := config.GetString("priv_validator_file")
-	privValidator := types.LoadOrGenPrivValidator(privValidatorFile)
-	node = nm.NewNode(config, privValidator, nm.GetProxyApp)
-	l := p2p.NewDefaultListener("tcp", config.GetString("node_laddr"), true)
-	node.AddListener(l)
-	node.Start()
-
+func newNode(ready chan error) {
 	// Run the RPC server.
-	edb.StartRPC(server.DefaultServerConfig(), node, app)
-	ready <- struct{}{}
+	_, err := testCore.NewGatewayTendermint(config)
+	ready <- err
 
 	// Sleep forever
-	ch := make(chan struct{})
-	<-ch
+	if err == nil {
+		ch := make(chan struct{})
+		<-ch
+	}
 }
 
 func saveNewPriv() {
@@ -132,7 +119,7 @@ func saveNewPriv() {
 		PubKey:  crypto.PubKeyEd25519(user[0].PubKey.(crypto.PubKeyEd25519)),
 		PrivKey: crypto.PrivKeyEd25519(user[0].PrivKey.(crypto.PrivKeyEd25519)),
 	}
-	priv.SetFile(config.GetString("priv_validator_file"))
+	priv.SetFile(path.Join(rootWorkDir, "priv_validator.json"))
 	priv.Save()
 }
 
@@ -142,7 +129,7 @@ func saveNewPriv() {
 func makeDefaultSendTx(t *testing.T, typ string, addr []byte, amt int64) *txs.SendTx {
 	nonce := getNonce(t, typ, user[0].Address)
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(user[0].PubKey, amt, nonce+1)
+	tx.AddInputWithNonce(user[0].PubKey, amt, nonce + 1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
@@ -155,14 +142,14 @@ func makeDefaultSendTxSigned(t *testing.T, typ string, addr []byte, amt int64) *
 
 func makeDefaultCallTx(t *testing.T, typ string, addr, code []byte, amt, gasLim, fee int64) *txs.CallTx {
 	nonce := getNonce(t, typ, user[0].Address)
-	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee, nonce+1)
+	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee, nonce + 1)
 	tx.Sign(chainID, user[0])
 	return tx
 }
 
 func makeDefaultNameTx(t *testing.T, typ string, name, value string, amt, fee int64) *txs.NameTx {
 	nonce := getNonce(t, typ, user[0].Address)
-	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce+1)
+	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce + 1)
 	tx.Sign(chainID, user[0])
 	return tx
 }

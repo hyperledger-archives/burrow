@@ -133,7 +133,7 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
   // avoid Tendermints PanicSanity and return a clean error
   if backend != db.DBBackendMemDB &&
     backend != db.DBBackendLevelDB {
-    return nil, nil, fmt.Errorf("Dababase backend %s is not supported by %s",
+    return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
       backend, GetErisMintVersion)
   }
 
