@@ -1,9 +1,9 @@
 package rpc_v0
 
 import (
-  core_types     "github.com/eris-ltd/eris-db/core/types"
-  definitions    "github.com/eris-ltd/eris-db/definitions"
-	rpc            "github.com/eris-ltd/eris-db/rpc"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	rpc "github.com/eris-ltd/eris-db/rpc"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
 	"github.com/eris-ltd/eris-db/txs"
 )

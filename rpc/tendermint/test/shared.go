@@ -25,15 +25,15 @@ import (
 
 // global variables for use across all tests
 var (
-	config = server.DefaultServerConfig()
-	rootWorkDir string
+	config            = server.DefaultServerConfig()
+	rootWorkDir       string
 	node              *nm.Node
-	mempoolCount = 0
-	chainID string
-	websocketAddr string
+	mempoolCount      = 0
+	chainID           string
+	websocketAddr     string
 	websocketEndpoint string
 
-	user = makeUsers(5) // make keys
+	user    = makeUsers(5) // make keys
 	clients map[string]rpcclient.Client
 
 	testCore *core.Core
@@ -129,7 +129,7 @@ func saveNewPriv() {
 func makeDefaultSendTx(t *testing.T, typ string, addr []byte, amt int64) *txs.SendTx {
 	nonce := getNonce(t, typ, user[0].Address)
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(user[0].PubKey, amt, nonce + 1)
+	tx.AddInputWithNonce(user[0].PubKey, amt, nonce+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
@@ -142,14 +142,14 @@ func makeDefaultSendTxSigned(t *testing.T, typ string, addr []byte, amt int64) *
 
 func makeDefaultCallTx(t *testing.T, typ string, addr, code []byte, amt, gasLim, fee int64) *txs.CallTx {
 	nonce := getNonce(t, typ, user[0].Address)
-	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee, nonce + 1)
+	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee, nonce+1)
 	tx.Sign(chainID, user[0])
 	return tx
 }
 
 func makeDefaultNameTx(t *testing.T, typ string, name, value string, amt, fee int64) *txs.NameTx {
 	nonce := getNonce(t, typ, user[0].Address)
-	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce + 1)
+	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce+1)
 	tx.Sign(chainID, user[0])
 	return tx
 }

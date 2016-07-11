@@ -38,7 +38,7 @@ import (
 
 // Core is the high-level structure
 type Core struct {
-	chainId string
+	chainId        string
 	evsw           *events.EventSwitch
 	pipe           definitions.Pipe
 	tendermintPipe definitions.TendermintPipe
@@ -65,14 +65,14 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 	if err != nil {
 		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
 			managerConfig.Version))
-		return &Core {
+		return &Core{
 			chainId:        chainId,
 			evsw:           evsw,
 			pipe:           pipe,
 			tendermintPipe: nil,
 		}, nil
 	}
-	return &Core {
+	return &Core{
 		chainId:        chainId,
 		evsw:           evsw,
 		pipe:           pipe,

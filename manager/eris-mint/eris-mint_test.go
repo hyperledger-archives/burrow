@@ -17,16 +17,16 @@
 package erismint
 
 import (
-  "testing"
+	"testing"
 
-  assert "github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/assert"
 )
 
 func TestCompatibleConsensus(t *testing.T) {
-  // TODO: [ben] expand by constructing and elemetary testing for each listed
-  // compatible consensus engine
+	// TODO: [ben] expand by constructing and elemetary testing for each listed
+	// compatible consensus engine
 
-  for _, listedConsensus := range compatibleConsensus {
-    assert.Nil(t, AssertCompatibleConsensus(listedConsensus))
-  }
+	for _, listedConsensus := range compatibleConsensus {
+		assert.Nil(t, AssertCompatibleConsensus(listedConsensus))
+	}
 }

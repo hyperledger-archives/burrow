@@ -29,12 +29,12 @@ import (
 	"github.com/tendermint/go-crypto"
 	tEvents "github.com/tendermint/go-events"
 
-  "github.com/eris-ltd/eris-db/account"
-  core_types  "github.com/eris-ltd/eris-db/core/types"
-	event       "github.com/eris-ltd/eris-db/event"
-  "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-  "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-  "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 type transactor struct {
@@ -60,7 +60,7 @@ func newTransactor(chainID string, eventSwitch tEvents.Fireable,
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
 func (this *transactor) Call(fromAddress, toAddress, data []byte) (
-  *core_types.Call, error) {
+	*core_types.Call, error) {
 
 	cache := this.erisMint.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	outAcc := cache.GetAccount(toAddress)
@@ -94,7 +94,7 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
 func (this *transactor) CallCode(fromAddress, code, data []byte) (
-  *core_types.Call, error) {
+	*core_types.Call, error) {
 	if fromAddress == nil {
 		fromAddress = []byte{}
 	}
@@ -148,7 +148,7 @@ func (this *transactor) UnconfirmedTxs() (*core_types.UnconfirmedTxs, error) {
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
-  fee int64) (*core_types.Receipt, error) {
+	fee int64) (*core_types.Receipt, error) {
 	var addr []byte
 	if len(address) == 0 {
 		addr = nil
@@ -236,7 +236,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 }
 
 func (this *transactor) TransactNameReg(privKey []byte, name, data string,
-  amount, fee int64) (*core_types.Receipt, error) {
+	amount, fee int64) (*core_types.Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))

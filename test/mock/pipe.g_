@@ -7,12 +7,13 @@ import (
 	core_types    "github.com/eris-ltd/eris-db/core/types"
 	definitions   "github.com/eris-ltd/eris-db/definitions"
 	event         "github.com/eris-ltd/eris-db/event"
-	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	td            "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	types         "github.com/eris-ltd/eris-db/txs"
 
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
+	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	types "github.com/eris-ltd/eris-db/txs"
+
+	evts "github.com/tendermint/go-events"
 	mintTypes "github.com/tendermint/tendermint/types"
-	evts    "github.com/tendermint/go-events"
 )
 
 // Base struct.

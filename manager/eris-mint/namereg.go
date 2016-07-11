@@ -27,8 +27,8 @@ import (
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
 
-  core_types "github.com/eris-ltd/eris-db/core/types"
-	event      "github.com/eris-ltd/eris-db/event"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
 )
 
 // The net struct.

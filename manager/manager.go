@@ -17,16 +17,16 @@
 package manager
 
 import (
-  "fmt"
+	"fmt"
 
-  events "github.com/tendermint/go-events"
+	events "github.com/tendermint/go-events"
 
-  log "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-  config      "github.com/eris-ltd/eris-db/config"
-  definitions "github.com/eris-ltd/eris-db/definitions"
-  erismint    "github.com/eris-ltd/eris-db/manager/eris-mint"
-  // types       "github.com/eris-ltd/eris-db/manager/types"
+	config "github.com/eris-ltd/eris-db/config"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
+	// types       "github.com/eris-ltd/eris-db/manager/types"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -35,19 +35,18 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-  evsw *events.EventSwitch, consensusMinorVersion string) (definitions.Pipe,
-  error) {
-  switch moduleConfig.Name {
-  case "erismint" :
-    if err := erismint.AssertCompatibleConsensus(consensusMinorVersion);
-      err != nil {
-      return nil, err
-    }
-    log.WithFields(log.Fields{
-      "compatibleConsensus": consensusMinorVersion,
-      "erisMintVersion": erismint.GetErisMintVersion().GetVersionString(),
-    }).Debug("Loading ErisMint")
-    return erismint.NewErisMintPipe(moduleConfig, evsw)
-  }
-  return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
+	evsw *events.EventSwitch, consensusMinorVersion string) (definitions.Pipe,
+	error) {
+	switch moduleConfig.Name {
+	case "erismint":
+		if err := erismint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
+			return nil, err
+		}
+		log.WithFields(log.Fields{
+			"compatibleConsensus": consensusMinorVersion,
+			"erisMintVersion":     erismint.GetErisMintVersion().GetVersionString(),
+		}).Debug("Loading ErisMint")
+		return erismint.NewErisMintPipe(moduleConfig, evsw)
+	}
+	return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
 }
