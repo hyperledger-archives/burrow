@@ -107,8 +107,8 @@ func newNode(ready chan error) {
 
 	// Sleep forever
 	if err == nil {
-		ch := make(chan struct{})
-		<-ch
+		//ch := make(chan struct{})
+		//<-ch
 	}
 }
 
