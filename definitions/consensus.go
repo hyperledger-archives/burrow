@@ -17,10 +17,10 @@
 package definitions
 
 import (
-	crypto           "github.com/tendermint/go-crypto"
-	p2p              "github.com/tendermint/go-p2p"
+	crypto "github.com/tendermint/go-crypto"
+	p2p "github.com/tendermint/go-p2p"
 	tendermint_types "github.com/tendermint/tendermint/types"
-	tmsp_types        "github.com/tendermint/tmsp/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
 
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 )
@@ -46,7 +46,6 @@ type ConsensusEngine interface {
 	// Memory pool
 	BroadcastTransaction(transaction []byte,
 		callback func(*tmsp_types.Response)) error
-
 }
 
 // type Communicator interface {

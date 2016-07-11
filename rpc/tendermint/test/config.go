@@ -220,4 +220,3 @@ db_backend = "leveldb"
 # tendermint host address needs to correspond to tendermints configuration
 # of the rpc local address
 tendermint_host = "0.0.0.0:36657"`
-

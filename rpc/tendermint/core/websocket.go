@@ -22,12 +22,11 @@ import (
 	"net/http"
 	"strings"
 
+	events "github.com/tendermint/go-events"
 	rpcserver "github.com/tendermint/go-rpc/server"
-	events    "github.com/tendermint/go-events"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
-	server      "github.com/eris-ltd/eris-db/server"
-
+	server "github.com/eris-ltd/eris-db/server"
 )
 
 type TendermintWebsocketServer struct {
@@ -42,7 +41,7 @@ func NewTendermintWebsocketServer(config *server.ServerConfig,
 	if tendermintPipe == nil {
 		return nil, fmt.Errorf("No Tendermint pipe provided.")
 	}
-	tendermintRoutes := TendermintRoutes {
+	tendermintRoutes := TendermintRoutes{
 		tendermintPipe: tendermintPipe,
 	}
 	routes := tendermintRoutes.GetRoutes()
@@ -63,7 +62,7 @@ func NewTendermintWebsocketServer(config *server.ServerConfig,
 		}
 		listeners[i] = listener
 	}
-	return &TendermintWebsocketServer {
+	return &TendermintWebsocketServer{
 		routes:    tendermintRoutes,
 		listeners: listeners,
 	}, nil

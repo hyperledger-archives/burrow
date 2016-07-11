@@ -25,82 +25,82 @@ package definitions
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 
 import (
-  tendermint_types "github.com/tendermint/tendermint/types"
+	tendermint_types "github.com/tendermint/tendermint/types"
 
-  account       "github.com/eris-ltd/eris-db/account"
-	event         "github.com/eris-ltd/eris-db/event"
-  manager_types "github.com/eris-ltd/eris-db/manager/types"
-  transaction   "github.com/eris-ltd/eris-db/txs"
-  types         "github.com/eris-ltd/eris-db/core/types"
+	account "github.com/eris-ltd/eris-db/account"
+	types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
+	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 type Pipe interface {
-  Accounts() Accounts
-  Blockchain() Blockchain
-  Consensus() Consensus
-  Events() event.EventEmitter
-  NameReg() NameReg
-  Net() Net
-  Transactor() Transactor
-  // NOTE: [ben] added to Pipe interface on 0.12 refactor
-  GetApplication() manager_types.Application
-  SetConsensusEngine(consensus ConsensusEngine) error
+	Accounts() Accounts
+	Blockchain() Blockchain
+	Consensus() Consensus
+	Events() event.EventEmitter
+	NameReg() NameReg
+	Net() Net
+	Transactor() Transactor
+	// NOTE: [ben] added to Pipe interface on 0.12 refactor
+	GetApplication() manager_types.Application
+	SetConsensusEngine(consensus ConsensusEngine) error
 	// Support for Tendermint RPC
 	GetTendermintPipe() (TendermintPipe, error)
 }
 
 type Accounts interface {
-  GenPrivAccount() (*account.PrivAccount, error)
-  GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error)
-  Accounts([]*event.FilterData) (*types.AccountList, error)
-  Account(address []byte) (*account.Account, error)
-  Storage(address []byte) (*types.Storage, error)
-  StorageAt(address, key []byte) (*types.StorageItem, error)
+	GenPrivAccount() (*account.PrivAccount, error)
+	GenPrivAccountFromKey(privKey []byte) (*account.PrivAccount, error)
+	Accounts([]*event.FilterData) (*types.AccountList, error)
+	Account(address []byte) (*account.Account, error)
+	Storage(address []byte) (*types.Storage, error)
+	StorageAt(address, key []byte) (*types.StorageItem, error)
 }
 
 type Blockchain interface {
-  Info() (*types.BlockchainInfo, error)
-  GenesisHash() ([]byte, error)
-  ChainId() (string, error)
-  LatestBlockHeight() (int, error)
-  LatestBlock() (*tendermint_types.Block, error)
-  Blocks([]*event.FilterData) (*types.Blocks, error)
-  Block(height int) (*tendermint_types.Block, error)
+	Info() (*types.BlockchainInfo, error)
+	GenesisHash() ([]byte, error)
+	ChainId() (string, error)
+	LatestBlockHeight() (int, error)
+	LatestBlock() (*tendermint_types.Block, error)
+	Blocks([]*event.FilterData) (*types.Blocks, error)
+	Block(height int) (*tendermint_types.Block, error)
 }
 
 type Consensus interface {
-  State() (*types.ConsensusState, error)
-  Validators() (*types.ValidatorList, error)
+	State() (*types.ConsensusState, error)
+	Validators() (*types.ValidatorList, error)
 }
 
 type NameReg interface {
-  Entry(key string) (*transaction.NameRegEntry, error)
-  Entries([]*event.FilterData) (*types.ResultListNames, error)
+	Entry(key string) (*transaction.NameRegEntry, error)
+	Entries([]*event.FilterData) (*types.ResultListNames, error)
 }
 
 type Net interface {
-  Info() (*types.NetworkInfo, error)
-  ClientVersion() (string, error)
-  Moniker() (string, error)
-  Listening() (bool, error)
-  Listeners() ([]string, error)
-  Peers() ([]*types.Peer, error)
-  Peer(string) (*types.Peer, error)
+	Info() (*types.NetworkInfo, error)
+	ClientVersion() (string, error)
+	Moniker() (string, error)
+	Listening() (bool, error)
+	Listeners() ([]string, error)
+	Peers() ([]*types.Peer, error)
+	Peer(string) (*types.Peer, error)
 }
 
 type Transactor interface {
-  Call(fromAddress, toAddress, data []byte) (*types.Call, error)
-  CallCode(fromAddress, code, data []byte) (*types.Call, error)
-  // Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
-  // SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
-  BroadcastTx(tx transaction.Tx) (*types.Receipt, error)
-  Transact(privKey, address, data []byte, gasLimit,
-    fee int64) (*types.Receipt, error)
-  TransactAndHold(privKey, address, data []byte, gasLimit,
-    fee int64) (*transaction.EventDataCall, error)
-  TransactNameReg(privKey []byte, name, data string, amount,
-    fee int64) (*types.Receipt, error)
-  UnconfirmedTxs() (*types.UnconfirmedTxs, error)
-  SignTx(tx transaction.Tx,
-    privAccounts []*account.PrivAccount) (transaction.Tx, error)
+	Call(fromAddress, toAddress, data []byte) (*types.Call, error)
+	CallCode(fromAddress, code, data []byte) (*types.Call, error)
+	// Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
+	// SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
+	BroadcastTx(tx transaction.Tx) (*types.Receipt, error)
+	Transact(privKey, address, data []byte, gasLimit,
+		fee int64) (*types.Receipt, error)
+	TransactAndHold(privKey, address, data []byte, gasLimit,
+		fee int64) (*transaction.EventDataCall, error)
+	TransactNameReg(privKey []byte, name, data string, amount,
+		fee int64) (*types.Receipt, error)
+	UnconfirmedTxs() (*types.UnconfirmedTxs, error)
+	SignTx(tx transaction.Tx,
+		privAccounts []*account.PrivAccount) (transaction.Tx, error)
 }

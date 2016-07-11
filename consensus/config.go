@@ -20,27 +20,27 @@
 package consensus
 
 import (
-  // noops      "github.com/eris-ltd/eris-db/consensus/noops"
-  tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
-  tmsp       "github.com/eris-ltd/eris-db/consensus/tmsp"
+	// noops      "github.com/eris-ltd/eris-db/consensus/noops"
+	tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
+	tmsp "github.com/eris-ltd/eris-db/consensus/tmsp"
 )
 
 //------------------------------------------------------------------------------
 // Helper functions
 
 func AssertValidConsensusModule(name, minorVersionString string) bool {
-  switch name {
-  case "noops" :
-    // noops should not have any external interfaces that can change
-    // over iterations
-    return true
-  case "tmsp" :
-    return minorVersionString == tmsp.GetTmspVersion().GetMinorVersionString()
-  case "tendermint" :
-    return minorVersionString == tendermint.GetTendermintVersion().GetMinorVersionString()
-  case "bigchaindb" :
-    // TODO: [ben] implement BigchainDB as consensus engine
-    return false
-  }
-  return false
+	switch name {
+	case "noops":
+		// noops should not have any external interfaces that can change
+		// over iterations
+		return true
+	case "tmsp":
+		return minorVersionString == tmsp.GetTmspVersion().GetMinorVersionString()
+	case "tendermint":
+		return minorVersionString == tendermint.GetTendermintVersion().GetMinorVersionString()
+	case "bigchaindb":
+		// TODO: [ben] implement BigchainDB as consensus engine
+		return false
+	}
+	return false
 }

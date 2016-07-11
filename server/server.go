@@ -185,7 +185,7 @@ func (this *ServeProcess) StopEventChannel() <-chan struct{} {
 
 // Creates a new serve process.
 func NewServeProcess(config *ServerConfig, servers ...Server) (*ServeProcess,
-  error) {
+	error) {
 	var scfg ServerConfig
 	if config == nil {
 		return nil, fmt.Errorf("Nil passed as server configuration")

@@ -20,13 +20,13 @@
 package tendermint
 
 import (
-  "path"
-  "time"
+	"path"
+	"time"
 
-  tendermintConfig "github.com/tendermint/go-config"
-  viper            "github.com/spf13/viper"
+	viper "github.com/spf13/viper"
+	tendermintConfig "github.com/tendermint/go-config"
 
-  config "github.com/eris-ltd/eris-db/config"
+	config "github.com/eris-ltd/eris-db/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements
@@ -40,33 +40,33 @@ var _ tendermintConfig.Config = (*TendermintConfig)(nil)
 // the tendermint configuration and set the defaults.  Hence we re-implement
 // go-config.Config on a viper subtree of the loaded Eris-DB configuration file.
 type TendermintConfig struct {
-  subTree *viper.Viper
+	subTree *viper.Viper
 }
 
 func GetTendermintConfig(loadedConfig *viper.Viper) *TendermintConfig {
-  // ensure we make an explicit copy
-  subTree := new(viper.Viper)
-  *subTree = *loadedConfig
+	// ensure we make an explicit copy
+	subTree := new(viper.Viper)
+	*subTree = *loadedConfig
 
-  return &TendermintConfig {
-    subTree : subTree,
-  }
+	return &TendermintConfig{
+		subTree: subTree,
+	}
 }
 
 //------------------------------------------------------------------------------
 // Tendermint defaults
 
 func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
-  dataDir, rootDir string) {
+	dataDir, rootDir string) {
 
-  tmintConfig.Set("chain_id", chainId)
-  tmintConfig.SetDefault("genesis_file", path.Join(rootDir, "genesis.json"))
-  tmintConfig.SetDefault("proxy_app", "tcp://127.0.0.1:46658")
+	tmintConfig.Set("chain_id", chainId)
+	tmintConfig.SetDefault("genesis_file", path.Join(rootDir, "genesis.json"))
+	tmintConfig.SetDefault("proxy_app", "tcp://127.0.0.1:46658")
 	tmintConfig.SetDefault("moniker", "anonymous_marmot")
 	tmintConfig.SetDefault("node_laddr", "0.0.0.0:46656")
 	tmintConfig.SetDefault("seeds", "")
 
-  tmintConfig.SetDefault("fast_sync", true)
+	tmintConfig.SetDefault("fast_sync", true)
 	tmintConfig.SetDefault("skip_upnp", false)
 	tmintConfig.SetDefault("addrbook_file", path.Join(rootDir, "addrbook.json"))
 	tmintConfig.SetDefault("priv_validator_file", path.Join(rootDir, "priv_validator.json"))
@@ -75,7 +75,7 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("log_level", "info")
 	tmintConfig.SetDefault("rpc_laddr", "0.0.0.0:46657")
 	tmintConfig.SetDefault("prof_laddr", "")
-	tmintConfig.SetDefault("revision_file", path.Join(workDir,"revision"))
+	tmintConfig.SetDefault("revision_file", path.Join(workDir, "revision"))
 	tmintConfig.SetDefault("cswal", path.Join(dataDir, "cswal"))
 	tmintConfig.SetDefault("cswal_light", false)
 
@@ -96,73 +96,74 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 //------------------------------------------------------------------------------
 // Tendermint consistency checks
 
-func(tmintConfig *TendermintConfig) AssertTendermintConsistency(
-  consensusConfig *config.ModuleConfig, privateValidatorFilePath string) {
+func (tmintConfig *TendermintConfig) AssertTendermintConsistency(
+	consensusConfig *config.ModuleConfig, privateValidatorFilePath string) {
 
-  tmintConfig.Set("chain_id", consensusConfig.ChainId)
-  tmintConfig.Set("genesis_file", consensusConfig.GenesisFile)
-  // private validator file
-  tmintConfig.Set("priv_validator_file", privateValidatorFilePath)
+	tmintConfig.Set("chain_id", consensusConfig.ChainId)
+	tmintConfig.Set("genesis_file", consensusConfig.GenesisFile)
+	// private validator file
+	tmintConfig.Set("priv_validator_file", privateValidatorFilePath)
 }
 
 // implement interface github.com/tendermint/go-config/config.Config
 // so that `TMROOT` and config can be circumvented
 func (tmintConfig *TendermintConfig) Get(key string) interface{} {
-  return tmintConfig.subTree.Get(key)
+	return tmintConfig.subTree.Get(key)
 }
 
 func (tmintConfig *TendermintConfig) GetBool(key string) bool {
-  return tmintConfig.subTree.GetBool(key)
+	return tmintConfig.subTree.GetBool(key)
 }
 
 func (tmintConfig *TendermintConfig) GetFloat64(key string) float64 {
-  return tmintConfig.subTree.GetFloat64(key)
+	return tmintConfig.subTree.GetFloat64(key)
 }
 
 func (tmintConfig *TendermintConfig) GetInt(key string) int {
-  return tmintConfig.subTree.GetInt(key)
+	return tmintConfig.subTree.GetInt(key)
 }
 
 func (tmintConfig *TendermintConfig) GetString(key string) string {
-  return tmintConfig.subTree.GetString(key)
+	return tmintConfig.subTree.GetString(key)
 }
 
 func (tmintConfig *TendermintConfig) GetStringSlice(key string) []string {
-  return tmintConfig.subTree.GetStringSlice(key)
+	return tmintConfig.subTree.GetStringSlice(key)
 }
 
 func (tmintConfig *TendermintConfig) GetTime(key string) time.Time {
-  return tmintConfig.subTree.GetTime(key)
+	return tmintConfig.subTree.GetTime(key)
 }
 
 func (tmintConfig *TendermintConfig) GetMap(key string) map[string]interface{} {
-  return tmintConfig.subTree.GetStringMap(key)
+	return tmintConfig.subTree.GetStringMap(key)
 }
 
 func (tmintConfig *TendermintConfig) GetMapString(key string) map[string]string {
-  return tmintConfig.subTree.GetStringMapString(key)
+	return tmintConfig.subTree.GetStringMapString(key)
 }
 
 func (tmintConfig *TendermintConfig) GetConfig(key string) tendermintConfig.Config {
 	// TODO: [ben] log out a warning as this indicates a potentially breaking code
 	// change from Tendermints side
 	if !tmintConfig.subTree.IsSet(key) {
-		return &TendermintConfig {
+		return &TendermintConfig{
 			subTree: viper.New(),
-		}}
-	return &TendermintConfig {
-    subTree: tmintConfig.subTree.Sub(key),
-  }
+		}
+	}
+	return &TendermintConfig{
+		subTree: tmintConfig.subTree.Sub(key),
+	}
 }
 
 func (tmintConfig *TendermintConfig) IsSet(key string) bool {
-  return tmintConfig.IsSet(key)
+	return tmintConfig.IsSet(key)
 }
 
 func (tmintConfig *TendermintConfig) Set(key string, value interface{}) {
-  tmintConfig.subTree.Set(key, value)
+	tmintConfig.subTree.Set(key, value)
 }
 
 func (tmintConfig *TendermintConfig) SetDefault(key string, value interface{}) {
-  tmintConfig.subTree.SetDefault(key, value)
+	tmintConfig.subTree.SetDefault(key, value)
 }

@@ -20,19 +20,19 @@
 package manager
 
 import (
-  erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
+	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 )
 
 //------------------------------------------------------------------------------
 // Helper functions
 
 func AssertValidApplicationManagerModule(name, minorVersionString string) bool {
-  switch name {
-  case "erismint" :
-    return minorVersionString == erismint.GetErisMintVersion().GetMinorVersionString()
-  case "geth" :
-    // TODO: [ben] implement Geth 1.4 as an application manager
-    return false
-  }
-  return false
+	switch name {
+	case "erismint":
+		return minorVersionString == erismint.GetErisMintVersion().GetMinorVersionString()
+	case "geth":
+		// TODO: [ben] implement Geth 1.4 as an application manager
+		return false
+	}
+	return false
 }

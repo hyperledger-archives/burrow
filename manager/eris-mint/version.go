@@ -17,40 +17,40 @@
 package erismint
 
 import (
-  "fmt"
+	"fmt"
 
-  version "github.com/eris-ltd/eris-db/version"
+	version "github.com/eris-ltd/eris-db/version"
 )
 
 const (
-  // Client identifier to advertise over the network
-  erisMintClientIdentifier = "erismint"
-  // Major version component of the current release
-  erisMintVersionMajor     = 0
-  // Minor version component of the current release
-  erisMintVersionMinor     = 12
-  // Patch version component of the current release
-  erisMintVersionPatch     = 0
+	// Client identifier to advertise over the network
+	erisMintClientIdentifier = "erismint"
+	// Major version component of the current release
+	erisMintVersionMajor = 0
+	// Minor version component of the current release
+	erisMintVersionMinor = 12
+	// Patch version component of the current release
+	erisMintVersionPatch = 0
 )
 
 // Define the compatible consensus engines this application manager
 // is compatible and has been tested with.
-var compatibleConsensus = [...]string {
-  "tendermint-0.6",
-  // "tmsp-0.6",
+var compatibleConsensus = [...]string{
+	"tendermint-0.6",
+	// "tmsp-0.6",
 }
 
 func GetErisMintVersion() *version.VersionIdentifier {
-  return version.New(erisMintClientIdentifier, erisMintVersionMajor,
-    erisMintVersionMinor, erisMintVersionPatch)
+	return version.New(erisMintClientIdentifier, erisMintVersionMajor,
+		erisMintVersionMinor, erisMintVersionPatch)
 }
 
 func AssertCompatibleConsensus(consensusMinorVersion string) error {
-  for _, supported := range compatibleConsensus {
-    if consensusMinorVersion == supported {
-      return nil
-    }
-  }
-  return fmt.Errorf("ErisMint (%s) is not compatible with consensus engine %s",
-    GetErisMintVersion(), consensusMinorVersion)
+	for _, supported := range compatibleConsensus {
+		if consensusMinorVersion == supported {
+			return nil
+		}
+	}
+	return fmt.Errorf("ErisMint (%s) is not compatible with consensus engine %s",
+		GetErisMintVersion(), consensusMinorVersion)
 }
