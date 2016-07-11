@@ -10,8 +10,8 @@ import (
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"

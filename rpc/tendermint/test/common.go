@@ -1,9 +1,9 @@
 package rpctest
 
 import (
+	"fmt"
 	"github.com/eris-ltd/eris-db/test/fixtures"
 	"testing"
-	"fmt"
 )
 
 // Needs to be in a _test.go file to be picked up

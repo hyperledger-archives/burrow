@@ -25,18 +25,18 @@ import (
 	"strings"
 	"sync"
 
-	crypto           "github.com/tendermint/go-crypto"
-	p2p              "github.com/tendermint/go-p2p"
-	node             "github.com/tendermint/tendermint/node"
-	proxy            "github.com/tendermint/tendermint/proxy"
+	crypto "github.com/tendermint/go-crypto"
+	p2p "github.com/tendermint/go-p2p"
+	node "github.com/tendermint/tendermint/node"
+	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
-	tmsp_types       "github.com/tendermint/tmsp/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
 
 	log "github.com/eris-ltd/eris-logger"
 
-	config               "github.com/eris-ltd/eris-db/config"
-	definitions          "github.com/eris-ltd/eris-db/definitions"
-	manager_types        "github.com/eris-ltd/eris-db/manager/types"
+	config "github.com/eris-ltd/eris-db/config"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	// files  "github.com/eris-ltd/eris-db/files"
 )
@@ -166,7 +166,7 @@ func (this *TendermintNode) Listeners() []p2p.Listener {
 func (this *TendermintNode) Peers() []rpc_tendermint_types.Peer {
 	peers := []rpc_tendermint_types.Peer{}
 	for _, peer := range this.tmintNode.Switch().Peers().List() {
-		peers = append(peers, rpc_tendermint_types.Peer {
+		peers = append(peers, rpc_tendermint_types.Peer{
 			NodeInfo:   *peer.NodeInfo,
 			IsOutbound: peer.IsOutbound(),
 		})
@@ -187,11 +187,11 @@ func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
 	// crypto.PubKey is an interface so copy underlying struct
 	publicKey := this.tmintNode.PrivValidator().PubKey
 	switch publicKey.(type) {
-	case crypto.PubKeyEd25519 :
+	case crypto.PubKeyEd25519:
 		// type crypto.PubKeyEd25519 is [32]byte
 		copyKeyBytes := publicKey.(crypto.PubKeyEd25519)
 		copyPublicValidatorKey = crypto.PubKey(copyKeyBytes)
-	default :
+	default:
 		// TODO: [ben] add error return to all these calls
 		copyPublicValidatorKey = nil
 	}

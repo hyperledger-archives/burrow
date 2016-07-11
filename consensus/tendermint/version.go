@@ -17,21 +17,21 @@
 package tendermint
 
 import (
-  version "github.com/eris-ltd/eris-db/version"
+	version "github.com/eris-ltd/eris-db/version"
 )
 
 const (
-  // Client identifier to advertise over the network
-  tendermintClientIdentifier = "tendermint"
-  // Major version component of the current release
-  tendermintVersionMajor     = 0
-  // Minor version component of the current release
-  tendermintVersionMinor     = 6
-  // Patch version component of the current release
-  tendermintVersionPatch     = 0
+	// Client identifier to advertise over the network
+	tendermintClientIdentifier = "tendermint"
+	// Major version component of the current release
+	tendermintVersionMajor = 0
+	// Minor version component of the current release
+	tendermintVersionMinor = 6
+	// Patch version component of the current release
+	tendermintVersionPatch = 0
 )
 
 func GetTendermintVersion() *version.VersionIdentifier {
-  return version.New(tendermintClientIdentifier, tendermintVersionMajor,
-    tendermintVersionMinor, tendermintVersionPatch)
+	return version.New(tendermintClientIdentifier, tendermintVersionMajor,
+		tendermintVersionMinor, tendermintVersionPatch)
 }

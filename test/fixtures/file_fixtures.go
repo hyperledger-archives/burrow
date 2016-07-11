@@ -2,15 +2,15 @@ package fixtures
 
 import (
 	"github.com/docker/docker/pkg/ioutils"
-	"path"
 	"os"
+	"path"
 )
 
 // FileFixtures writes files to a temporary location for use in testing.
 type FileFixtures struct {
 	tempDir string
 	// If an error has occurred setting up fixtures
-	Error   error
+	Error error
 }
 
 // Set up a new FileFixtures object by passing an interlaced list of file names
@@ -21,7 +21,7 @@ func NewFileFixtures(identifyingPrefix string) *FileFixtures {
 	dir, err := ioutils.TempDir("", identifyingPrefix)
 	return &FileFixtures{
 		tempDir: dir,
-		Error: err,
+		Error:   err,
 	}
 }
 
@@ -33,7 +33,7 @@ func (ffs *FileFixtures) AddFile(name, content string) string {
 	}
 	filePath := path.Join(ffs.tempDir, name)
 	ffs.AddDir(path.Dir(name))
-	if (ffs.Error == nil) {
+	if ffs.Error == nil {
 		ffs.Error = createWriteClose(filePath, content)
 	}
 	return filePath
@@ -49,7 +49,6 @@ func (ffs *FileFixtures) AddDir(name string) string {
 	ffs.Error = os.MkdirAll(filePath, 0777)
 	return filePath
 }
-
 
 // Cleans up the the temporary files (with fire)
 func (ffs *FileFixtures) RemoveAll() {
@@ -72,4 +71,3 @@ func createWriteClose(filename, content string) error {
 	defer f.Close()
 	return nil
 }
-

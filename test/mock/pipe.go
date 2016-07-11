@@ -1,16 +1,16 @@
 package mock
 
 import (
-	account       "github.com/eris-ltd/eris-db/account"
-	core_types    "github.com/eris-ltd/eris-db/core/types"
-	definitions   "github.com/eris-ltd/eris-db/definitions"
-	event         "github.com/eris-ltd/eris-db/event"
+	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	td            "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	types         "github.com/eris-ltd/eris-db/txs"
+	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	types "github.com/eris-ltd/eris-db/txs"
 
+	evts "github.com/tendermint/go-events"
 	mintTypes "github.com/tendermint/tendermint/types"
-	evts    "github.com/tendermint/go-events"
 )
 
 // Base struct.
@@ -88,6 +88,7 @@ func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
+
 // Components
 
 // Accounts

@@ -17,21 +17,21 @@
 package tmsp
 
 import (
-  version "github.com/eris-ltd/eris-db/version"
+	version "github.com/eris-ltd/eris-db/version"
 )
 
 const (
-  // Client identifier to advertise over the network
-  tmspClientIdentifier = "tmsp"
-  // Major version component of the current release
-  tmspVersionMajor     = 0
-  // Minor version component of the current release
-  tmspVersionMinor     = 6
-  // Patch version component of the current release
-  tmspVersionPatch     = 0
+	// Client identifier to advertise over the network
+	tmspClientIdentifier = "tmsp"
+	// Major version component of the current release
+	tmspVersionMajor = 0
+	// Minor version component of the current release
+	tmspVersionMinor = 6
+	// Patch version component of the current release
+	tmspVersionPatch = 0
 )
 
 func GetTmspVersion() *version.VersionIdentifier {
-  return version.New(tmspClientIdentifier, tmspVersionMajor, tmspVersionMinor,
-    tmspVersionPatch)
+	return version.New(tmspClientIdentifier, tmspVersionMajor, tmspVersionMinor,
+		tmspVersionPatch)
 }

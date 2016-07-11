@@ -117,7 +117,6 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	return serverConfig, err
 }
 
-
 //------------------------------------------------------------------------------
 // Helper functions
 

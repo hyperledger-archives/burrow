@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/util"
 	"github.com/eris-ltd/eris-db/rpc/tendermint/test"
+	"github.com/eris-ltd/eris-db/util"
 )
 
 func main() {

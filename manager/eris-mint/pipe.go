@@ -17,48 +17,48 @@
 package erismint
 
 import (
-  "bytes"
-  "fmt"
+	"bytes"
+	"fmt"
 
-	crypto            "github.com/tendermint/go-crypto"
-	db                "github.com/tendermint/go-db"
 	tendermint_common "github.com/tendermint/go-common"
+	crypto "github.com/tendermint/go-crypto"
+	db "github.com/tendermint/go-db"
 	tendermint_events "github.com/tendermint/go-events"
-	tendermint_types  "github.com/tendermint/tendermint/types"
-	tmsp_types        "github.com/tendermint/tmsp/types"
-	wire              "github.com/tendermint/go-wire"
+	wire "github.com/tendermint/go-wire"
+	tendermint_types "github.com/tendermint/tendermint/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
 
-  log "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-	account              "github.com/eris-ltd/eris-db/account"
-	config               "github.com/eris-ltd/eris-db/config"
-	definitions          "github.com/eris-ltd/eris-db/definitions"
-	event                "github.com/eris-ltd/eris-db/event"
-	manager_types        "github.com/eris-ltd/eris-db/manager/types"
+	account "github.com/eris-ltd/eris-db/account"
+	config "github.com/eris-ltd/eris-db/config"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
+	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	state "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	state                "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	state_types          "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	transaction          "github.com/eris-ltd/eris-db/txs"
-	vm                   "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 type ErisMintPipe struct {
-  erisMintState   *state.State
-  eventSwitch     *tendermint_events.EventSwitch
-  erisMint        *ErisMint
-  // Pipe implementations
-  accounts        *accounts
-  blockchain      *blockchain
-  consensus       *consensus
-  events          event.EventEmitter
-  namereg         *namereg
-  network         *network
-  transactor      *transactor
-  // Consensus interface
-  consensusEngine definitions.ConsensusEngine
+	erisMintState *state.State
+	eventSwitch   *tendermint_events.EventSwitch
+	erisMint      *ErisMint
+	// Pipe implementations
+	accounts   *accounts
+	blockchain *blockchain
+	consensus  *consensus
+	events     event.EventEmitter
+	namereg    *namereg
+	network    *network
+	transactor *transactor
+	// Consensus interface
+	consensusEngine definitions.ConsensusEngine
 	// Genesis cache
-	genesisDoc      *state_types.GenesisDoc
-	genesisState    *state.State
+	genesisDoc   *state_types.GenesisDoc
+	genesisState *state.State
 }
 
 // NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
@@ -70,54 +70,54 @@ var _ definitions.Pipe = (*ErisMintPipe)(nil)
 var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-  eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
+	eventSwitch *tendermint_events.EventSwitch) (*ErisMintPipe, error) {
 
-  startedState, genesisDoc, err := startState(moduleConfig.DataDir,
-    moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
-    moduleConfig.ChainId)
-  if err != nil {
-    return nil, fmt.Errorf("Failed to start state: %v", err)
-  }
-  // assert ChainId matches genesis ChainId
-  log.WithFields(log.Fields{
-    "chainId": startedState.ChainID,
-    "lastBlockHeight": startedState.LastBlockHeight,
-    "lastBlockHash": startedState.LastBlockHash,
-    }).Debug("Loaded state")
-  // start the application
-  erisMint := NewErisMint(startedState, eventSwitch)
+	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
+		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
+		moduleConfig.ChainId)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to start state: %v", err)
+	}
+	// assert ChainId matches genesis ChainId
+	log.WithFields(log.Fields{
+		"chainId":         startedState.ChainID,
+		"lastBlockHeight": startedState.LastBlockHeight,
+		"lastBlockHash":   startedState.LastBlockHash,
+	}).Debug("Loaded state")
+	// start the application
+	erisMint := NewErisMint(startedState, eventSwitch)
 
-  // NOTE: [ben] Set Host opens an RPC pipe to Tendermint;  this is a remnant
-  // of the old Eris-DB / Tendermint and should be considered as an in-process
-  // call when possible
-  tendermintHost := moduleConfig.Config.GetString("tendermint_host")
-  erisMint.SetHostAddress(tendermintHost)
+	// NOTE: [ben] Set Host opens an RPC pipe to Tendermint;  this is a remnant
+	// of the old Eris-DB / Tendermint and should be considered as an in-process
+	// call when possible
+	tendermintHost := moduleConfig.Config.GetString("tendermint_host")
+	erisMint.SetHostAddress(tendermintHost)
 
-  // initialise the components of the pipe
-  events := newEvents(eventSwitch)
-  accounts := newAccounts(erisMint)
-  namereg := newNameReg(erisMint)
-  transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
-    events)
-  // TODO: make interface to tendermint core's rpc for these
-  // blockchain := newBlockchain(chainID, genDocFile, blockStore)
-  // consensus := newConsensus(erisdbApp)
-  // net := newNetwork(erisdbApp)
+	// initialise the components of the pipe
+	events := newEvents(eventSwitch)
+	accounts := newAccounts(erisMint)
+	namereg := newNameReg(erisMint)
+	transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
+		events)
+	// TODO: make interface to tendermint core's rpc for these
+	// blockchain := newBlockchain(chainID, genDocFile, blockStore)
+	// consensus := newConsensus(erisdbApp)
+	// net := newNetwork(erisdbApp)
 
-  return &ErisMintPipe {
-    erisMintState: startedState,
-    eventSwitch:   eventSwitch,
-    erisMint:      erisMint,
-    accounts:      accounts,
-    events:        events,
-    namereg:       namereg,
-    transactor:    transactor,
+	return &ErisMintPipe{
+		erisMintState: startedState,
+		eventSwitch:   eventSwitch,
+		erisMint:      erisMint,
+		accounts:      accounts,
+		events:        events,
+		namereg:       namereg,
+		transactor:    transactor,
 		network:       newNetwork(),
-    consensus:     nil,
+		consensus:     nil,
 		// genesis cache
-		genesisDoc:    genesisDoc,
-		genesisState:  nil,
-  }, nil
+		genesisDoc:   genesisDoc,
+		genesisState: nil,
+	}, nil
 }
 
 //------------------------------------------------------------------------------
@@ -129,18 +129,18 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 // If no state can be loaded, the JSON genesis file will be loaded into the
 // state database as the zero state.
 func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
-  *state_types.GenesisDoc, error) {
-  // avoid Tendermints PanicSanity and return a clean error
-  if backend != db.DBBackendMemDB &&
-    backend != db.DBBackendLevelDB {
-    return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
-      backend, GetErisMintVersion)
-  }
+	*state_types.GenesisDoc, error) {
+	// avoid Tendermints PanicSanity and return a clean error
+	if backend != db.DBBackendMemDB &&
+		backend != db.DBBackendLevelDB {
+		return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
+			backend, GetErisMintVersion)
+	}
 
-  stateDB := db.NewDB("erismint", backend, dataDir)
-  newState := state.LoadState(stateDB)
-  var genesisDoc *state_types.GenesisDoc
-  if newState == nil {
+	stateDB := db.NewDB("erismint", backend, dataDir)
+	newState := state.LoadState(stateDB)
+	var genesisDoc *state_types.GenesisDoc
+	if newState == nil {
 		genesisDoc, newState = state.MakeGenesisStateFromFile(stateDB, genesisFile)
 		newState.Save()
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
@@ -156,59 +156,59 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 		if *err != nil {
 			return nil, nil, fmt.Errorf("Unable to read genesisDoc from db on startState: %v", err)
 		}
-    // assert loaded genesis doc has the same chainId as the provided chainId
-    if genesisDoc.ChainID != chainId {
-      return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
-      genesisDoc.ChainID, chainId)
-    }
+		// assert loaded genesis doc has the same chainId as the provided chainId
+		if genesisDoc.ChainID != chainId {
+			return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
+				genesisDoc.ChainID, chainId)
+		}
 	}
 
-  return newState, genesisDoc, nil
+	return newState, genesisDoc, nil
 }
 
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for ErisMintPipe
 
 func (pipe *ErisMintPipe) Accounts() definitions.Accounts {
-  return pipe.accounts
+	return pipe.accounts
 }
 
 func (pipe *ErisMintPipe) Blockchain() definitions.Blockchain {
-  return pipe.blockchain
+	return pipe.blockchain
 }
 
 func (pipe *ErisMintPipe) Consensus() definitions.Consensus {
-  return pipe.consensus
+	return pipe.consensus
 }
 
 func (pipe *ErisMintPipe) Events() event.EventEmitter {
-  return pipe.events
+	return pipe.events
 }
 
 func (pipe *ErisMintPipe) NameReg() definitions.NameReg {
-  return pipe.namereg
+	return pipe.namereg
 }
 
 func (pipe *ErisMintPipe) Net() definitions.Net {
-  return pipe.network
+	return pipe.network
 }
 
 func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
-  return pipe.transactor
+	return pipe.transactor
 }
 
 func (pipe *ErisMintPipe) GetApplication() manager_types.Application {
-  return pipe.erisMint
+	return pipe.erisMint
 }
 
 func (pipe *ErisMintPipe) SetConsensusEngine(
-  consensus definitions.ConsensusEngine) error {
-  if pipe.consensusEngine == nil {
-    pipe.consensusEngine = consensus
-  } else {
-    return fmt.Errorf("Failed to set consensus engine for pipe; already set")
-  }
-  return nil
+	consensus definitions.ConsensusEngine) error {
+	if pipe.consensusEngine == nil {
+		pipe.consensusEngine = consensus
+	} else {
+		return fmt.Errorf("Failed to set consensus engine for pipe; already set")
+	}
+	return nil
 }
 
 func (pipe *ErisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
@@ -254,7 +254,7 @@ func (pipe *ErisMintPipe) NetInfo() (*rpc_tendermint_types.ResultNetInfo, error)
 	for _, listener := range pipe.consensusEngine.Listeners() {
 		listeners = append(listeners, listener.String())
 	}
-  peers := pipe.consensusEngine.Peers()
+	peers := pipe.consensusEngine.Peers()
 	return &rpc_tendermint_types.ResultNetInfo{
 		Listening: listening,
 		Listeners: listeners,
@@ -263,7 +263,7 @@ func (pipe *ErisMintPipe) NetInfo() (*rpc_tendermint_types.ResultNetInfo, error)
 }
 
 func (pipe *ErisMintPipe) Genesis() (*rpc_tendermint_types.ResultGenesis, error) {
-	return &rpc_tendermint_types.ResultGenesis {
+	return &rpc_tendermint_types.ResultGenesis{
 		// TODO: [ben] sharing pointer to unmutated GenesisDoc, but is not immutable
 		Genesis: pipe.genesisDoc,
 	}, nil
@@ -461,7 +461,7 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_ty
 	error) {
 	responseChannel := make(chan *tmsp_types.Response, 1)
 	err := pipe.consensusEngine.BroadcastTransaction(transaction.EncodeTx(tx),
-		func(res *tmsp_types.Response) { responseChannel <- res	})
+		func(res *tmsp_types.Response) { responseChannel <- res })
 	if err != nil {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
@@ -475,7 +475,7 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_ty
 	if responseCheckTx == nil {
 		return nil, fmt.Errorf("Error, application did not return CheckTx response.")
 	}
-	resultBroadCastTx := &rpc_tendermint_types.ResultBroadcastTx {
+	resultBroadCastTx := &rpc_tendermint_types.ResultBroadcastTx{
 		Code: responseCheckTx.Code,
 		Data: responseCheckTx.Data,
 		Log:  responseCheckTx.Log,
@@ -489,7 +489,7 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_ty
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
 	default:
 		log.WithFields(log.Fields{
-			"application": GetErisMintVersion().GetVersionString(),
+			"application":    GetErisMintVersion().GetVersionString(),
 			"TMSP_code_type": responseCheckTx.Code,
 		}).Warn("Unknown error returned from Tendermint CheckTx on BroadcastTxSync")
 		return resultBroadCastTx, fmt.Errorf("Unknown error returned: " + responseCheckTx.Log)

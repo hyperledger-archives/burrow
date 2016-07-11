@@ -8,11 +8,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-  core_types  "github.com/eris-ltd/eris-db/core/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
-	event       "github.com/eris-ltd/eris-db/event"
-	rpc         "github.com/eris-ltd/eris-db/rpc"
-  server      "github.com/eris-ltd/eris-db/server"
+	event "github.com/eris-ltd/eris-db/event"
+	rpc "github.com/eris-ltd/eris-db/rpc"
+	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/util"
 )
