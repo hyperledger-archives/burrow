@@ -1,7 +1,6 @@
 package testdata
 
 import (
-  wire "github.com/tendermint/go-wire"
 
 	account    "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
@@ -697,15 +696,10 @@ type (
 )
 
 func LoadTestData() *TestData {
-	var err error
-	//codec := core_types.NewTCodec()
-	testData := TestData{}
-	testDataI := wire.ReadJSON(testData, []byte(testDataJson), &err)
-	/*err := codec.DecodeBytes(testData, []byte(testDataJson))
-	 */
-	if err != nil {
+	codec := rpc_v0.NewTCodec()
+	testData := &TestData{}
+	if err := codec.DecodeBytes(testData, []byte(testDataJson)); err != nil {
 		panic(err)
 	}
-	testData = testDataI.(TestData)
-	return &testData
+	return testData
 }
