@@ -29,8 +29,6 @@ import (
   version     "github.com/eris-ltd/eris-db/version"
 )
 
-const VERSION = version.VERSION
-
 // Global Do struct
 var do *definitions.Do
 
@@ -44,7 +42,7 @@ your needs.
 Made with <3 by Eris Industries.
 
 Complete documentation is available at https://docs.erisindustries.com
-` + "\nVERSION:\n " + VERSION,
+` + "\nVERSION:\n " + version.VERSION,
   PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
     log.SetLevel(log.WarnLevel)
@@ -92,12 +90,6 @@ func defaultVerbose() bool {
 // variable is set to a parsable boolean.
 func defaultDebug() bool {
   return setDefaultBool("ERIS_DB_DEBUG", false)
-}
-
-// defaultOutput is set to true unless the ERIS_DB_OUTPUT environment
-// variable is set to a parsable boolean.
-func defaultOutput() bool {
-  return setDefaultBool("ERIS_DB_OUTPUT", true)
 }
 
 // setDefaultBool returns the provided default value if the environment variab;e
