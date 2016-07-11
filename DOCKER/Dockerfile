@@ -9,7 +9,7 @@ MAINTAINER Eris Industries <support@erisindustries.com>
 ENV GO15VENDOREXPERIMENT 1
 
 # install glide for dependency management
-RUN	go install github.com/Masterminds/glide
+RUN	go get github.com/Masterminds/glide
 
 # set the repo and install erisdb
 ENV REPO $GOPATH/src/github.com/eris-ltd/eris-db
@@ -77,4 +77,4 @@ EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
 ENTRYPOINT ["eris-db", "serve"]
-CMD["--work-dir $CHAINROOT"]
+# CMD["--work-dir $CHAINROOT"]
