@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"fmt"
+	
 	account       "github.com/eris-ltd/eris-db/account"
 	core_types    "github.com/eris-ltd/eris-db/core/types"
 	definitions   "github.com/eris-ltd/eris-db/definitions"
@@ -88,6 +90,11 @@ func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
+
+func (this *MockPipe) GetTendermintPipe() (definitions.TendermintPipe, error) {
+	return nil, fmt.Errorf("Tendermint pipe is not supported by mocked pipe.")
+}
+
 // Components
 
 // Accounts
