@@ -17,16 +17,16 @@
 package commands
 
 import (
-  "os"
-  "strconv"
-  "strings"
+	"os"
+	"strconv"
+	"strings"
 
-  cobra "github.com/spf13/cobra"
+	cobra "github.com/spf13/cobra"
 
-  log         "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-  definitions "github.com/eris-ltd/eris-db/definitions"
-  version     "github.com/eris-ltd/eris-db/version"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	version "github.com/eris-ltd/eris-db/version"
 )
 
 const VERSION = version.VERSION
@@ -34,10 +34,10 @@ const VERSION = version.VERSION
 // Global Do struct
 var do *definitions.Do
 
-var ErisDbCmd = &cobra.Command {
-  Use:   "eris-db",
-  Short: "Eris-DB is the heart of the eris chain.",
-  Long:  `Eris-DB is the heart of the eris chain.  Eris-DB combines
+var ErisDbCmd = &cobra.Command{
+	Use:   "eris-db",
+	Short: "Eris-DB is the heart of the eris chain.",
+	Long: `Eris-DB is the heart of the eris chain.  Eris-DB combines
 a modular consensus engine and application manager to run a chain to suit
 your needs.
 
@@ -45,27 +45,27 @@ Made with <3 by Eris Industries.
 
 Complete documentation is available at https://docs.erisindustries.com
 ` + "\nVERSION:\n " + VERSION,
-  PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
-    log.SetLevel(log.WarnLevel)
-    if do.Verbose {
-      log.SetLevel(log.InfoLevel)
-    } else if do.Debug {
-      log.SetLevel(log.DebugLevel)
-    }
-  },
-  Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
+		log.SetLevel(log.WarnLevel)
+		if do.Verbose {
+			log.SetLevel(log.InfoLevel)
+		} else if do.Debug {
+			log.SetLevel(log.DebugLevel)
+		}
+	},
+	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
 func Execute() {
-  InitErisDb()
-  AddGlobalFlags()
-  AddCommands()
-  ErisDbCmd.Execute()
+	InitErisDb()
+	AddGlobalFlags()
+	AddCommands()
+	ErisDbCmd.Execute()
 }
 
 func InitErisDb() {
-  // initialise an empty do struct for command execution
+	// initialise an empty do struct for command execution
 	do = definitions.NowDo()
 }
 
@@ -75,8 +75,8 @@ func AddGlobalFlags() {
 }
 
 func AddCommands() {
-  buildServeCommand()
-  ErisDbCmd.AddCommand(ServeCmd)
+	buildServeCommand()
+	ErisDbCmd.AddCommand(ServeCmd)
 }
 
 //------------------------------------------------------------------------------
@@ -85,19 +85,19 @@ func AddCommands() {
 // defaultVerbose is set to false unless the ERIS_DB_VERBOSE environment
 // variable is set to a parsable boolean.
 func defaultVerbose() bool {
-  return setDefaultBool("ERIS_DB_VERBOSE", false)
+	return setDefaultBool("ERIS_DB_VERBOSE", false)
 }
 
 // defaultDebug is set to false unless the ERIS_DB_DEBUG environment
 // variable is set to a parsable boolean.
 func defaultDebug() bool {
-  return setDefaultBool("ERIS_DB_DEBUG", false)
+	return setDefaultBool("ERIS_DB_DEBUG", false)
 }
 
 // defaultOutput is set to true unless the ERIS_DB_OUTPUT environment
 // variable is set to a parsable boolean.
 func defaultOutput() bool {
-  return setDefaultBool("ERIS_DB_OUTPUT", true)
+	return setDefaultBool("ERIS_DB_OUTPUT", true)
 }
 
 // setDefaultBool returns the provided default value if the environment variab;e
@@ -106,8 +106,8 @@ func setDefaultBool(environmentVariable string, defaultValue bool) bool {
 	value := os.Getenv(environmentVariable)
 	if value != "" {
 		if parsedValue, err := strconv.ParseBool(value); err == nil {
-  		return parsedValue
-    }
+			return parsedValue
+		}
 	}
 	return defaultValue
 }

@@ -30,8 +30,8 @@ import (
 // that there is no need anymore for this poor wrapper.
 
 type EventEmitter interface {
-  Subscribe(subId, event string, callback func(evts.EventData)) (bool, error)
-  Unsubscribe(subId string) (bool, error)
+	Subscribe(subId, event string, callback func(evts.EventData)) (bool, error)
+	Unsubscribe(subId string) (bool, error)
 }
 
 // The events struct has methods for working with events.

@@ -24,7 +24,7 @@ import (
 	csus "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/types"
 
-	account      "github.com/eris-ltd/eris-db/account"
+	account "github.com/eris-ltd/eris-db/account"
 	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
@@ -192,6 +192,6 @@ func FromRoundState(rs *csus.RoundState) *ConsensusState {
 // copied in from NameReg
 
 type ResultListNames struct {
-	BlockHeight int                 `json:"block_height"`
+	BlockHeight int                         `json:"block_height"`
 	Names       []*transaction.NameRegEntry `json:"names"`
 }

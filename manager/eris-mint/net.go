@@ -19,7 +19,7 @@
 package erismint
 
 import (
-  core_types           "github.com/eris-ltd/eris-db/core/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 // TODO-RPC!
@@ -34,8 +34,6 @@ func newNetwork() *network {
 
 //------------------------------------------------------------------------------
 // Tendermint Pipe implementation
-
-
 
 //-----------------------------------------------------------------------------
 // Eris-DB v0 Pipe implementation

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
 	. "github.com/tendermint/go-common"
 	tdb "github.com/tendermint/go-db"

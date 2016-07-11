@@ -6,13 +6,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-  log "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-  definitions    "github.com/eris-ltd/eris-db/definitions"
-  event          "github.com/eris-ltd/eris-db/event"
-	rpc            "github.com/eris-ltd/eris-db/rpc"
-  rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
-  server         "github.com/eris-ltd/eris-db/server"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
+	rpc "github.com/eris-ltd/eris-db/rpc"
+	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
+	server "github.com/eris-ltd/eris-db/server"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
@@ -61,7 +61,7 @@ type ErisDbJsonService struct {
 
 // Create a new JSON-RPC 2.0 service for erisdb (tendermint).
 func NewErisDbJsonService(codec rpc.Codec, pipe definitions.Pipe,
-  eventSubs *event.EventSubscriptions) server.HttpService {
+	eventSubs *event.EventSubscriptions) server.HttpService {
 
 	tmhttps := &ErisDbJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
 	mtds := &ErisDbMethods{codec, pipe}

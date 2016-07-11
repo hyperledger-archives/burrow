@@ -27,13 +27,13 @@ import (
 	"strings"
 	"sync"
 
-  dbm "github.com/tendermint/go-db"
-  "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/go-db"
+	"github.com/tendermint/tendermint/types"
 
-  core_types  "github.com/eris-ltd/eris-db/core/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
-	event       "github.com/eris-ltd/eris-db/event"
-	state       "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	event "github.com/eris-ltd/eris-db/event"
+	state "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 )
 
 const BLOCK_MAX = 50

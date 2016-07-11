@@ -17,9 +17,9 @@
 package definitions
 
 import (
-	account              "github.com/eris-ltd/eris-db/account"
+	account "github.com/eris-ltd/eris-db/account"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	transaction          "github.com/eris-ltd/eris-db/txs"
+	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 // NOTE: [ben] TendermintPipe is the additional pipe to carry over

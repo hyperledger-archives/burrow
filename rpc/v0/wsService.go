@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-  "github.com/tendermint/go-events"
+	"github.com/tendermint/go-events"
 
-  log "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-  definitions    "github.com/eris-ltd/eris-db/definitions"
-	event          "github.com/eris-ltd/eris-db/event"
-	rpc            "github.com/eris-ltd/eris-db/rpc"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
+	rpc "github.com/eris-ltd/eris-db/rpc"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
-	server         "github.com/eris-ltd/eris-db/server"
+	server "github.com/eris-ltd/eris-db/server"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -24,7 +24,7 @@ type ErisDbWsService struct {
 
 // Create a new websocket service.
 func NewErisDbWsService(codec rpc.Codec,
-  pipe definitions.Pipe) server.WebSocketService {
+	pipe definitions.Pipe) server.WebSocketService {
 	tmwss := &ErisDbWsService{codec: codec, pipe: pipe}
 	mtds := &ErisDbMethods{codec, pipe}
 

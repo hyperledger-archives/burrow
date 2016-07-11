@@ -18,10 +18,11 @@
 // for the pipe to call into the ErisMint application
 
 package erismint
+
 import (
 	"github.com/tendermint/tendermint/types"
 
-  core_types  "github.com/eris-ltd/eris-db/core/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 )
 
@@ -66,5 +67,5 @@ func (this *consensus) Validators() (*core_types.ValidatorList, error) {
 		})*/
 
 	return &core_types.ValidatorList{blockHeight, bondedValidators,
-    unbondingValidators}, nil
+		unbondingValidators}, nil
 }

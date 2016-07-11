@@ -1,8 +1,8 @@
 package vm
 
 import (
-	. "github.com/tendermint/go-common"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	. "github.com/tendermint/go-common"
 )
 
 const (
