@@ -92,7 +92,7 @@ func defaultDebug() bool {
 	return setDefaultBool("ERIS_DB_DEBUG", false)
 }
 
-// setDefaultBool returns the provided default value if the environment variab;e
+// setDefaultBool returns the provided default value if the environment variable
 // is not set or not parsable as a bool.
 func setDefaultBool(environmentVariable string, defaultValue bool) bool {
 	value := os.Getenv(environmentVariable)
