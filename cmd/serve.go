@@ -35,7 +35,8 @@ var ServeCmd = &cobra.Command{
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
 	Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file "server_config.toml" in the current working directory
-$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory`,
+$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory
+$ eris-db serve --chainid <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
 		// NOTE [ben]: we can consider an `Explicit` flag that eliminates
@@ -45,7 +46,6 @@ $ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB
 				log.Fatalf("No directory provided and failed to get current working directory: %v", err)
 				os.Exit(1)
 			} else {
-
 				do.WorkDir = currentDirectory
 			}
 		}
@@ -62,6 +62,8 @@ func buildServeCommand() {
 }
 
 func addServeFlags() {
+	ServeCmd.PersistentFlags().StringVarP(&do.ChainId, "chainid", "c",
+		defaultChainId(), "specify the chain id to use for assertion against genesis files or existing state. If omitted, and no id is set in $CHAIN_ID, then assert_chain_id is used from the configuration file.")
 	ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
 		defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
 	ServeCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "a",
@@ -84,10 +86,12 @@ func Serve(cmd *cobra.Command, args []string) {
 		}).Fatalf("Fatal error reading configuration")
 		os.Exit(1)
 	}
-	// load chain_id for assertion
-	if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
-		log.Fatalf("Failed to read non-empty string for ChainId from config.")
-		os.Exit(1)
+	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
+	if do.ChainId == "" {
+		if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
+			log.Fatalf("Failed to read non-empty string for ChainId from config.")
+			os.Exit(1)
+		}
 	}
 	// load the genesis file path
 	do.GenesisFile = path.Join(do.WorkDir,
@@ -154,8 +158,15 @@ func Serve(cmd *cobra.Command, args []string) {
 //------------------------------------------------------------------------------
 // Defaults
 
+func defaultChainId() string {
+	// if CHAIN_ID environment variable is not set, keep do.ChainId empty to read
+	// assert_chain_id from configuration file
+	return setDefaultString("CHAIN_ID", "")
+}
+
 func defaultWorkDir() string {
 	// if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
+	// as do.WorkDir is set by the PreRun
 	return setDefaultString("ERIS_DB_WORKDIR", "")
 }
 
