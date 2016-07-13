@@ -20,7 +20,10 @@ RUN go get github.com/Masterminds/glide \
 	# build the main eris-db target
 	&& cd $ERIS_DB_SRC_PATH/cmd/eris-db \
 	&& go build \
-	&& cp eris-db $INSTALL_BASE/eris-db
+	&& cp eris-db $INSTALL_BASE/eris-db \
+	# copy the start script for eris-db \
+	&& cp $ERIS_DB_SRC_PATH/bin/start_eris_db $INSTALL_BASE \
+	&& chmod 755 $INSTALL_BASE/start_eris_db
 
 #-----------------------------------------------------------------------------
 # install mint-client [to be deprecated]
@@ -40,6 +43,19 @@ RUN git clone --quiet https://$ERIS_DB_MINT_REPO . \
 	# && go build -o $INSTALL_BASE/mintunsafe ./mintunsafe \
 	# && go build -o $INSTALL_BASE/mintkey ./mintkey \
 	# && go build -o $INSTALL_BASE/mintgen ./mintgen \
-	# && go build -o $INSTALL_BASE/mintsync ./mintsync \
+	# && go build -o $INSTALL_BASE/mintsync ./mintsync
 
-#WORKDIR $ERIS
+#-----------------------------------------------------------------------------
+# clean up [build container needs to be separated from shipped container]
+
+ RUN unset ERIS_DB_SRC_PATH \
+ 	&& unset ERIS_DB_MINT_SRC_PATH \
+ 	&& apk del --purge go git musl-dev \
+ 	&& rm -rf $GOPATH
+
+# mount the data container on the eris directory
+VOLUME $ERIS
+
+WORKDIR $ERIS
+
+ENTRYPOINT ["/usr/local/bin/start_eris_db"]
