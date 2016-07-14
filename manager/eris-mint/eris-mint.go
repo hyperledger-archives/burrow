@@ -23,16 +23,16 @@ import (
 	"sync"
 
 	tendermint_events "github.com/tendermint/go-events"
-	client "github.com/tendermint/go-rpc/client"
 	wire "github.com/tendermint/go-wire"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	rpcclient "github.com/tendermint/go-rpc/client"
 	tmsp "github.com/tendermint/tmsp/types"
 
 	log "github.com/eris-ltd/eris-logger"
 
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	types "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 //--------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ type ErisMint struct {
 	evsw *tendermint_events.EventSwitch
 
 	// client to the tendermint core rpc
-	client *client.ClientURI
+	client *rpcclient.ClientURI
 	host   string // tendermint core endpoint
 
 	nTxs int // count txs in a block
@@ -80,16 +80,16 @@ func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 
 func (app *ErisMint) SetHostAddress(host string) {
 	app.host = host
-	app.client = client.NewClientURI(host) //fmt.Sprintf("http://%s", host))
+	app.client = rpcclient.NewClientURI(host) //fmt.Sprintf("http://%s", host))
 }
 
 // Broadcast a tx to the tendermint core
 // NOTE: this assumes we know the address of core
-func (app *ErisMint) BroadcastTx(tx types.Tx) error {
+func (app *ErisMint) BroadcastTx(tx txs.Tx) error {
 	buf := new(bytes.Buffer)
 	var n int
 	var err error
-	wire.WriteBinary(struct{ types.Tx }{tx}, buf, &n, &err)
+	wire.WriteBinary(struct{ txs.Tx }{tx}, buf, &n, &err)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
 	var n int
 	var err error
-	tx := new(types.Tx)
+	tx := new(txs.Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
@@ -144,15 +144,17 @@ func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
-	// TODO: need to return receipt so rpc.ResultBroadcastTx.Data (or Log) is the receipt
-	return tmsp.NewResultOK(nil, "Success")
+
+	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
+	receiptBytes := wire.BinaryBytes(receipt)
+	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application
 func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 	var n int
 	var err error
-	tx := new(types.Tx)
+	tx := new(txs.Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
@@ -166,9 +168,9 @@ func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
-
-	// TODO: need to return receipt so rpc.ResultBroadcastTx.Data (or Log) is the receipt
-	return tmsp.NewResultOK(nil, "Success")
+	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
+	receiptBytes := wire.BinaryBytes(receipt)
+	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application

@@ -72,9 +72,9 @@ type EventDataNewBlock struct {
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {
-	Tx        Tx     `json:"tx"`
-	Return    []byte `json:"return"`
-	Exception string `json:"exception"`
+	Tx        Tx `json:"tx"`
+	Return    []byte        `json:"return"`
+	Exception string        `json:"exception"`
 }
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract

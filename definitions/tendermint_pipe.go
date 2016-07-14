@@ -18,8 +18,8 @@ package definitions
 
 import (
 	account "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/txs"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 // NOTE: [ben] TendermintPipe is the additional pipe to carry over
@@ -57,7 +57,7 @@ type TendermintPipe interface {
 	// TODO: [ben] deprecate as we should not allow unsafe behaviour
 	// where a user is allowed to send a private key over the wire,
 	// especially unencrypted.
-	SignTransaction(tx transaction.Tx,
+	SignTransaction(tx txs.Tx,
 		privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
 		error)
 
@@ -67,9 +67,9 @@ type TendermintPipe interface {
 	ListNames() (*rpc_tendermint_types.ResultListNames, error)
 
 	// Memory pool
-	BroadcastTxAsync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+	BroadcastTxAsync(transaction txs.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
 		error)
 
-	BroadcastTxSync(transaction transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+	BroadcastTxSync(transaction txs.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
 		error)
 }

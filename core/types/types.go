@@ -25,7 +25,6 @@ import (
 	"github.com/tendermint/tendermint/types"
 
 	account "github.com/eris-ltd/eris-db/account"
-	transaction "github.com/eris-ltd/eris-db/txs"
 )
 
 type (
@@ -158,21 +157,6 @@ type (
 		GasUsed int64  `json:"gas_used"`
 		// TODO ...
 	}
-
-	// UnconfirmedTxs
-	UnconfirmedTxs struct {
-		Txs []transaction.Tx `json:"txs"`
-	}
-
-	// BroadcastTx or Transact
-	Receipt struct {
-		TxHash          []byte `json:"tx_hash"`
-		CreatesContract uint8  `json:"creates_contract"`
-		ContractAddr    []byte `json:"contract_addr"`
-	}
-
-	TransactionResult struct {
-	}
 )
 
 func FromRoundState(rs *csus.RoundState) *ConsensusState {
@@ -191,7 +175,16 @@ func FromRoundState(rs *csus.RoundState) *ConsensusState {
 //------------------------------------------------------------------------------
 // copied in from NameReg
 
-type ResultListNames struct {
-	BlockHeight int                         `json:"block_height"`
-	Names       []*transaction.NameRegEntry `json:"names"`
-}
+type (
+	NameRegEntry struct {
+		Name    string `json:"name"`    // registered name for the entry
+		Owner   []byte `json:"owner"`   // address that created the entry
+		Data    string `json:"data"`    // data to store under this name
+		Expires int    `json:"expires"` // block at which this entry expires
+	}
+
+	ResultListNames struct {
+		BlockHeight int             `json:"block_height"`
+		Names       []*NameRegEntry `json:"names"`
+	}
+)

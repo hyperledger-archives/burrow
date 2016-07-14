@@ -26,17 +26,6 @@ func testStatus(t *testing.T, typ string) {
 	}
 }
 
-func testGenPriv(t *testing.T, typ string) {
-	client := clients[typ]
-	privAcc, err := edbcli.GenPrivAccount(client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(privAcc.Address) == 0 {
-		t.Fatal("Failed to generate an address")
-	}
-}
-
 func testGetAccount(t *testing.T, typ string) {
 	acc := getAccount(t, typ, user[0].Address)
 	if acc == nil {
@@ -45,18 +34,6 @@ func testGetAccount(t *testing.T, typ string) {
 	if bytes.Compare(acc.Address, user[0].Address) != 0 {
 		t.Fatalf("Failed to get correct account. Got %x, expected %x", acc.Address, user[0].Address)
 	}
-}
-
-func testSignedTx(t *testing.T, typ string) {
-	amt := int64(100)
-	toAddr := user[1].Address
-	testOneSignTx(t, typ, toAddr, amt)
-
-	toAddr = user[2].Address
-	testOneSignTx(t, typ, toAddr, amt)
-
-	toAddr = user[3].Address
-	testOneSignTx(t, typ, toAddr, amt)
 }
 
 func testOneSignTx(t *testing.T, typ string, addr []byte, amt int64) {
@@ -85,16 +62,9 @@ func testBroadcastTx(t *testing.T, typ string) {
 	if len(receipt.TxHash) == 0 {
 		t.Fatal("Failed to compute tx hash")
 	}
-	pool := node.MempoolReactor().Mempool
-	trnxs := pool.Reap(-1)
-	if len(trnxs) != mempoolCount {
-		t.Fatalf("The mem pool has %d txs. Expected %d", len(trnxs), mempoolCount)
-	}
-	tx2 := txs.DecodeTx(trnxs[mempoolCount-1]).(*txs.SendTx)
 	n, err := new(int), new(error)
 	buf1, buf2 := new(bytes.Buffer), new(bytes.Buffer)
 	tx.WriteSignBytes(chainID, buf1, n, err)
-	tx2.WriteSignBytes(chainID, buf2, n, err)
 	if bytes.Compare(buf1.Bytes(), buf2.Bytes()) != 0 {
 		t.Fatal("inconsistent hashes for mempool tx and sent tx")
 	}

@@ -18,15 +18,15 @@ import (
 )
 
 var (
-	ErrTxInvalidAddress       = errors.New("Error invalid address")
-	ErrTxDuplicateAddress     = errors.New("Error duplicate address")
-	ErrTxInvalidAmount        = errors.New("Error invalid amount")
-	ErrTxInsufficientFunds    = errors.New("Error insufficient funds")
+	ErrTxInvalidAddress = errors.New("Error invalid address")
+	ErrTxDuplicateAddress = errors.New("Error duplicate address")
+	ErrTxInvalidAmount = errors.New("Error invalid amount")
+	ErrTxInsufficientFunds = errors.New("Error insufficient funds")
 	ErrTxInsufficientGasPrice = errors.New("Error insufficient gas price")
-	ErrTxUnknownPubKey        = errors.New("Error unknown pubkey")
-	ErrTxInvalidPubKey        = errors.New("Error invalid pubkey")
-	ErrTxInvalidSignature     = errors.New("Error invalid signature")
-	ErrTxPermissionDenied     = errors.New("Error permission denied")
+	ErrTxUnknownPubKey = errors.New("Error unknown pubkey")
+	ErrTxInvalidPubKey = errors.New("Error invalid pubkey")
+	ErrTxInvalidSignature = errors.New("Error invalid signature")
+	ErrTxPermissionDenied = errors.New("Error permission denied")
 )
 
 type ErrTxInvalidString struct {
@@ -63,10 +63,6 @@ Admin Txs:
  - PermissionsTx
 */
 
-type Tx interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
-}
-
 // Types of Tx implementations
 const (
 	// Account transactions
@@ -75,9 +71,9 @@ const (
 	TxTypeName = byte(0x03)
 
 	// Validation transactions
-	TxTypeBond    = byte(0x11)
-	TxTypeUnbond  = byte(0x12)
-	TxTypeRebond  = byte(0x13)
+	TxTypeBond = byte(0x11)
+	TxTypeUnbond = byte(0x12)
+	TxTypeRebond = byte(0x13)
 	TxTypeDupeout = byte(0x14)
 
 	// Admin transactions
@@ -86,7 +82,7 @@ const (
 
 // for wire.readReflect
 var _ = wire.RegisterInterface(
-	struct{ Tx }{},
+		struct{ Tx }{},
 	wire.ConcreteType{&SendTx{}, TxTypeSend},
 	wire.ConcreteType{&CallTx{}, TxTypeCall},
 	wire.ConcreteType{&NameTx{}, TxTypeName},
@@ -99,13 +95,56 @@ var _ = wire.RegisterInterface(
 
 //-----------------------------------------------------------------------------
 
-type TxInput struct {
-	Address   []byte           `json:"address"`   // Hash of the PubKey
-	Amount    int64            `json:"amount"`    // Must not exceed account balance
-	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
-}
+type(
+	Tx interface {
+		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
+	}
+
+	// UnconfirmedTxs
+	UnconfirmedTxs struct {
+		Txs []Tx `json:"txs"`
+	}
+
+	SendTx struct {
+		Inputs  []*TxInput  `json:"inputs"`
+		Outputs []*TxOutput `json:"outputs"`
+	}
+
+	// BroadcastTx or Transact
+	Receipt struct {
+		TxHash          []byte `json:"tx_hash"`
+		CreatesContract uint8  `json:"creates_contract"`
+		ContractAddr    []byte `json:"contract_addr"`
+	}
+
+	NameTx struct {
+		Input *TxInput `json:"input"`
+		Name  string   `json:"name"`
+		Data  string   `json:"data"`
+		Fee   int64    `json:"fee"`
+	}
+
+	CallTx struct {
+		Input    *TxInput `json:"input"`
+		Address  []byte   `json:"address"`
+		GasLimit int64    `json:"gas_limit"`
+		Fee      int64    `json:"fee"`
+		Data     []byte   `json:"data"`
+	}
+
+	TxInput struct {
+		Address   []byte           `json:"address"`   // Hash of the PubKey
+		Amount    int64            `json:"amount"`    // Must not exceed account balance
+		Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+	}
+
+	TxOutput struct {
+		Address []byte `json:"address"` // Hash of the PubKey
+		Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+	}
+)
 
 func (txIn *TxInput) ValidateBasic() error {
 	if len(txIn.Address) != 20 {
@@ -127,11 +166,6 @@ func (txIn *TxInput) String() string {
 
 //-----------------------------------------------------------------------------
 
-type TxOutput struct {
-	Address []byte `json:"address"` // Hash of the PubKey
-	Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
-}
-
 func (txOut *TxOutput) ValidateBasic() error {
 	if len(txOut.Address) != 20 {
 		return ErrTxInvalidAddress
@@ -152,24 +186,19 @@ func (txOut *TxOutput) String() string {
 
 //-----------------------------------------------------------------------------
 
-type SendTx struct {
-	Inputs  []*TxInput  `json:"inputs"`
-	Outputs []*TxOutput `json:"outputs"`
-}
-
 func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
-		if i != len(tx.Inputs)-1 {
+		if i != len(tx.Inputs) - 1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
 	wire.WriteTo([]byte(`],"outputs":[`), w, n, err)
 	for i, out := range tx.Outputs {
 		out.WriteSignBytes(w, n, err)
-		if i != len(tx.Outputs)-1 {
+		if i != len(tx.Outputs) - 1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
@@ -181,14 +210,6 @@ func (tx *SendTx) String() string {
 }
 
 //-----------------------------------------------------------------------------
-
-type CallTx struct {
-	Input    *TxInput `json:"input"`
-	Address  []byte   `json:"address"`
-	GasLimit int64    `json:"gas_limit"`
-	Fee      int64    `json:"fee"`
-	Data     []byte   `json:"data"`
-}
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -203,7 +224,7 @@ func (tx *CallTx) String() string {
 }
 
 func NewContractAddress(caller []byte, nonce int) []byte {
-	temp := make([]byte, 32+8)
+	temp := make([]byte, 32 + 8)
 	copy(temp, caller)
 	PutInt64BE(temp[32:], int64(nonce))
 	hasher := ripemd160.New()
@@ -212,13 +233,6 @@ func NewContractAddress(caller []byte, nonce int) []byte {
 }
 
 //-----------------------------------------------------------------------------
-
-type NameTx struct {
-	Input *TxInput `json:"input"`
-	Name  string   `json:"name"`
-	Data  string   `json:"data"`
-	Fee   int64    `json:"fee"`
-}
 
 func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -269,7 +283,7 @@ func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeBond)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
-		if i != len(tx.Inputs)-1 {
+		if i != len(tx.Inputs) - 1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
@@ -278,7 +292,7 @@ func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(`,"unbond_to":[`), w, n, err)
 	for i, out := range tx.UnbondTo {
 		out.WriteSignBytes(w, n, err)
-		if i != len(tx.UnbondTo)-1 {
+		if i != len(tx.UnbondTo) - 1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
@@ -375,8 +389,18 @@ func EncodeTx(tx Tx) []byte {
 	wrapTx := struct {
 		Tx Tx `json:"unwrap"`
 	}{tx}
-	return wire.JSONBytes(wrapTx)
+	return wire.BinaryBytes(wrapTx)
 }
+
+//func EncodeTx(tx txs.Tx) []byte {
+//	buf := new(bytes.Buffer)
+//	var n int
+//	var err error
+//	wire.WriteBinary(struct{ types.Tx }{tx}, buf, &n, &err)
+//	if err != nil {
+//		return err
+//	}
+//}
 
 // panic on err
 func DecodeTx(txBytes []byte) Tx {
@@ -389,6 +413,22 @@ func DecodeTx(txBytes []byte) Tx {
 		panic(err)
 	}
 	return *tx
+}
+
+func GenerateReceipt(chainId string, tx Tx) Receipt {
+	receipt := Receipt{
+		TxHash:          TxID(chainId, tx),
+		CreatesContract: 0,
+		ContractAddr:    nil,
+	}
+	if callTx, ok := tx.(*CallTx); ok {
+		if len(callTx.Address) == 0 {
+			receipt.CreatesContract = 1
+			receipt.ContractAddr = NewContractAddress(callTx.Input.Address,
+				callTx.Input.Sequence)
+		}
+	}
+	return receipt
 }
 
 //--------------------------------------------------------------------------------

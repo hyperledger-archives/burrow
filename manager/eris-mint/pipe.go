@@ -39,7 +39,8 @@ import (
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	transaction "github.com/eris-ltd/eris-db/txs"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 type ErisMintPipe struct {
@@ -209,6 +210,10 @@ func (pipe *ErisMintPipe) SetConsensusEngine(
 		return fmt.Errorf("Failed to set consensus engine for pipe; already set")
 	}
 	return nil
+}
+
+func (pipe *ErisMintPipe) GetConsensusEngine() definitions.ConsensusEngine {
+	return pipe.consensusEngine
 }
 
 func (pipe *ErisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
@@ -385,7 +390,7 @@ func (pipe *ErisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tenderm
 // TODO: [ben] deprecate as we should not allow unsafe behaviour
 // where a user is allowed to send a private key over the wire,
 // especially unencrypted.
-func (pipe *ErisMintPipe) SignTransaction(tx transaction.Tx,
+func (pipe *ErisMintPipe) SignTransaction(tx txs.Tx,
 	privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
 	error) {
 
@@ -395,18 +400,18 @@ func (pipe *ErisMintPipe) SignTransaction(tx transaction.Tx,
 		}
 	}
 	switch tx.(type) {
-	case *transaction.SendTx:
-		sendTx := tx.(*transaction.SendTx)
+	case *txs.SendTx:
+		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
 			input.PubKey = privAccounts[i].PubKey
 			input.Signature = privAccounts[i].Sign(pipe.transactor.chainID, sendTx)
 		}
-	case *transaction.CallTx:
-		callTx := tx.(*transaction.CallTx)
+	case *txs.CallTx:
+		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
 		callTx.Input.Signature = privAccounts[0].Sign(pipe.transactor.chainID, callTx)
-	case *transaction.BondTx:
-		bondTx := tx.(*transaction.BondTx)
+	case *txs.BondTx:
+		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
 		bondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, bondTx).(crypto.SignatureEd25519)
@@ -414,11 +419,11 @@ func (pipe *ErisMintPipe) SignTransaction(tx transaction.Tx,
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(pipe.transactor.chainID, bondTx)
 		}
-	case *transaction.UnbondTx:
-		unbondTx := tx.(*transaction.UnbondTx)
+	case *txs.UnbondTx:
+		unbondTx := tx.(*txs.UnbondTx)
 		unbondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, unbondTx).(crypto.SignatureEd25519)
-	case *transaction.RebondTx:
-		rebondTx := tx.(*transaction.RebondTx)
+	case *txs.RebondTx:
+		rebondTx := tx.(*txs.RebondTx)
 		rebondTx.Signature = privAccounts[0].Sign(pipe.transactor.chainID, rebondTx).(crypto.SignatureEd25519)
 	}
 	return &rpc_tendermint_types.ResultSignTx{tx}, nil
@@ -436,7 +441,7 @@ func (pipe *ErisMintPipe) GetName(name string) (*rpc_tendermint_types.ResultGetN
 
 func (pipe *ErisMintPipe) ListNames() (*rpc_tendermint_types.ResultListNames, error) {
 	var blockHeight int
-	var names []*transaction.NameRegEntry
+	var names []*core_types.NameRegEntry
 	currentState := pipe.erisMint.GetState()
 	blockHeight = currentState.LastBlockHeight
 	currentState.GetNames().Iterate(func(key []byte, value []byte) bool {
@@ -447,29 +452,29 @@ func (pipe *ErisMintPipe) ListNames() (*rpc_tendermint_types.ResultListNames, er
 }
 
 // Memory pool
-// NOTE: transaction must be signed
-func (pipe *ErisMintPipe) BroadcastTxAsync(tx transaction.Tx) (
+// NOTE: txs must be signed
+func (pipe *ErisMintPipe) BroadcastTxAsync(tx txs.Tx) (
 	*rpc_tendermint_types.ResultBroadcastTx, error) {
-	err := pipe.consensusEngine.BroadcastTransaction(transaction.EncodeTx(tx), nil)
+	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx), nil)
 	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+		return nil, fmt.Errorf("Error broadcasting txs: %v", err)
 	}
 	return &rpc_tendermint_types.ResultBroadcastTx{}, nil
 }
 
-func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
+func (pipe *ErisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
 	error) {
 	responseChannel := make(chan *tmsp_types.Response, 1)
-	err := pipe.consensusEngine.BroadcastTransaction(transaction.EncodeTx(tx),
+	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx),
 		func(res *tmsp_types.Response) { responseChannel <- res })
 	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+		return nil, fmt.Errorf("Error broadcasting txs: %v", err)
 	}
-	// NOTE: [ben] This Response is set in /tmsp/client/local_remote_client.go
+	// NOTE: [ben] This Response is set in /consensus/tendermint/local_client.go
 	// a call to Application, here implemented by ErisMint, over local callback,
 	// or TMSP RPC call.  Hence the result is determined by ErisMint/erismint.go
 	// CheckTx() Result (Result converted to ReqRes into Response returned here)
-	// NOTE: [ben] BroadcastTx wraps around CheckTx for Tendermint
+	// NOTE: [ben] BroadcastTx just calls CheckTx in Tendermint (oddly... [Silas])
 	response := <-responseChannel
 	responseCheckTx := response.GetCheckTx()
 	if responseCheckTx == nil {
@@ -480,6 +485,7 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx transaction.Tx) (*rpc_tendermint_ty
 		Data: responseCheckTx.Data,
 		Log:  responseCheckTx.Log,
 	}
+	fmt.Println("MARMOT resultBroadcastTx", resultBroadCastTx)
 	switch responseCheckTx.Code {
 	case tmsp_types.CodeType_OK:
 		return resultBroadCastTx, nil

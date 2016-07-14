@@ -120,7 +120,7 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 }
 
 // Broadcast a transaction.
-func (this *transactor) BroadcastTx(tx txs.Tx) (*core_types.Receipt, error) {
+func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 
 	err := this.erisMint.BroadcastTx(tx)
 	if err != nil {
@@ -137,18 +137,18 @@ func (this *transactor) BroadcastTx(tx txs.Tx) (*core_types.Receipt, error) {
 			contractAddr = state.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
 		}
 	}
-	return &core_types.Receipt{txHash, createsContract, contractAddr}, nil
+	return &txs.Receipt{txHash, createsContract, contractAddr}, nil
 }
 
 // Get all unconfirmed txs.
-func (this *transactor) UnconfirmedTxs() (*core_types.UnconfirmedTxs, error) {
+func (this *transactor) UnconfirmedTxs() (*txs.UnconfirmedTxs, error) {
 	// TODO-RPC
-	return &core_types.UnconfirmedTxs{}, nil
+	return &txs.UnconfirmedTxs{}, nil
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
-	fee int64) (*core_types.Receipt, error) {
+	fee int64) (*txs.Receipt, error) {
 	var addr []byte
 	if len(address) == 0 {
 		addr = nil
@@ -236,7 +236,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 }
 
 func (this *transactor) TransactNameReg(privKey []byte, name, data string,
-	amount, fee int64) (*core_types.Receipt, error) {
+	amount, fee int64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
