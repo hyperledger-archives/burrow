@@ -22,8 +22,8 @@ RUN go get github.com/Masterminds/glide \
 	&& go build \
 	&& cp eris-db $INSTALL_BASE/eris-db \
 	# copy the start script for eris-db \
-	&& cp $ERIS_DB_SRC_PATH/bin/start_eris_db $INSTALL_BASE \
-	&& chmod 755 $INSTALL_BASE/start_eris_db
+	&& cp $ERIS_DB_SRC_PATH/bin/start_eris_db $INSTALL_BASE/erisdb-wrapper \
+	&& chmod 755 $INSTALL_BASE/erisdb-wrapper
 
 #-----------------------------------------------------------------------------
 # install mint-client [to be deprecated]
@@ -36,12 +36,12 @@ WORKDIR $ERIS_DB_MINT_SRC_PATH
 RUN git clone --quiet https://$ERIS_DB_MINT_REPO . \
 	&& git checkout --quiet master \
 	&& go build -o $INSTALL_BASE/mintx ./mintx \
-	&& go build -o $INSTALL_BASE/mintconfig ./mintconfig 
+	&& go build -o $INSTALL_BASE/mintconfig ./mintconfig \
+	&& go build -o $INSTALL_BASE/mintkey ./mintkey
 	# restrict build targets for re-evaluation
 	# && go build -o $INSTALL_BASE/mintdump ./mintdump \
 	# && go build -o $INSTALL_BASE/mintperms ./mintperms \
 	# && go build -o $INSTALL_BASE/mintunsafe ./mintunsafe \
-	# && go build -o $INSTALL_BASE/mintkey ./mintkey \
 	# && go build -o $INSTALL_BASE/mintgen ./mintgen \
 	# && go build -o $INSTALL_BASE/mintsync ./mintsync
 
@@ -58,4 +58,4 @@ VOLUME $ERIS
 
 WORKDIR $ERIS
 
-ENTRYPOINT ["/usr/local/bin/start_eris_db"]
+CMD "erisdb-wrapper"
