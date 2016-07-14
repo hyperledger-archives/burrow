@@ -47,11 +47,11 @@ deployment:
   master:
     branch: master
     commands:
-      - DOCKER/build.sh
+      - tests/build_tool.sh
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - docker push quay.io/eris/erisdb
   develop:
     branch: develop
     commands:
-      - DOCKER/build.sh
+      - tests/build_tool.sh
       - docker push quay.io/eris/erisdb
