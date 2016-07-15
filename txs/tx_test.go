@@ -38,10 +38,7 @@ func TestSendTxSignable(t *testing.T) {
 			},
 		},
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, sendTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"outputs":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
 		chainID)
@@ -63,10 +60,7 @@ func TestCallTxSignable(t *testing.T) {
 		Fee:      222,
 		Data:     []byte("data1"),
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, callTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[2,{"address":"636F6E747261637431","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"696E70757431","amount":12345,"sequence":67890}}]}`,
 		chainID)
@@ -86,10 +80,7 @@ func TestNameTxSignable(t *testing.T) {
 		Data: "secretly.not.google.com",
 		Fee:  1000,
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, nameTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"696E70757431","amount":12345,"sequence":250},"name":"google.com"}]}`,
 		chainID)
@@ -126,10 +117,7 @@ func TestBondTxSignable(t *testing.T) {
 			},
 		},
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, bondTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"pub_key":"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29","unbond_to":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
 		chainID)
@@ -143,10 +131,7 @@ func TestUnbondTxSignable(t *testing.T) {
 		Address: []byte("address1"),
 		Height:  111,
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, unbondTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[18,{"address":"6164647265737331","height":111}]}`,
 		chainID)
@@ -160,10 +145,7 @@ func TestRebondTxSignable(t *testing.T) {
 		Address: []byte("address1"),
 		Height:  111,
 	}
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, rebondTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[19,{"address":"6164647265737331","height":111}]}`,
 		chainID)
@@ -186,10 +168,7 @@ func TestPermissionsTxSignable(t *testing.T) {
 		},
 	}
 
-	signBytes, err := acm.SignBytes(chainID, bondTx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signBytes := acm.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
 	expected := Fmt(`{"chain_id":"%s","tx":[32,{"args":"[2,{"address":"6164647265737331","permission":1,"value":true}]","input":{"address":"696E70757431","amount":12345,"sequence":250}}]}`,
 		chainID)
