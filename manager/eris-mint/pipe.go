@@ -32,6 +32,7 @@ import (
 
 	account "github.com/eris-ltd/eris-db/account"
 	config "github.com/eris-ltd/eris-db/config"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
@@ -39,7 +40,6 @@ import (
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 

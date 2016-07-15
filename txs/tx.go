@@ -18,15 +18,15 @@ import (
 )
 
 var (
-	ErrTxInvalidAddress = errors.New("Error invalid address")
-	ErrTxDuplicateAddress = errors.New("Error duplicate address")
-	ErrTxInvalidAmount = errors.New("Error invalid amount")
-	ErrTxInsufficientFunds = errors.New("Error insufficient funds")
+	ErrTxInvalidAddress       = errors.New("Error invalid address")
+	ErrTxDuplicateAddress     = errors.New("Error duplicate address")
+	ErrTxInvalidAmount        = errors.New("Error invalid amount")
+	ErrTxInsufficientFunds    = errors.New("Error insufficient funds")
 	ErrTxInsufficientGasPrice = errors.New("Error insufficient gas price")
-	ErrTxUnknownPubKey = errors.New("Error unknown pubkey")
-	ErrTxInvalidPubKey = errors.New("Error invalid pubkey")
-	ErrTxInvalidSignature = errors.New("Error invalid signature")
-	ErrTxPermissionDenied = errors.New("Error permission denied")
+	ErrTxUnknownPubKey        = errors.New("Error unknown pubkey")
+	ErrTxInvalidPubKey        = errors.New("Error invalid pubkey")
+	ErrTxInvalidSignature     = errors.New("Error invalid signature")
+	ErrTxPermissionDenied     = errors.New("Error permission denied")
 )
 
 type ErrTxInvalidString struct {
@@ -71,9 +71,9 @@ const (
 	TxTypeName = byte(0x03)
 
 	// Validation transactions
-	TxTypeBond = byte(0x11)
-	TxTypeUnbond = byte(0x12)
-	TxTypeRebond = byte(0x13)
+	TxTypeBond    = byte(0x11)
+	TxTypeUnbond  = byte(0x12)
+	TxTypeRebond  = byte(0x13)
 	TxTypeDupeout = byte(0x14)
 
 	// Admin transactions
@@ -82,7 +82,7 @@ const (
 
 // for wire.readReflect
 var _ = wire.RegisterInterface(
-		struct{ Tx }{},
+	struct{ Tx }{},
 	wire.ConcreteType{&SendTx{}, TxTypeSend},
 	wire.ConcreteType{&CallTx{}, TxTypeCall},
 	wire.ConcreteType{&NameTx{}, TxTypeName},
@@ -95,7 +95,7 @@ var _ = wire.RegisterInterface(
 
 //-----------------------------------------------------------------------------
 
-type(
+type (
 	Tx interface {
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 	}
@@ -191,14 +191,14 @@ func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
-		if i != len(tx.Inputs) - 1 {
+		if i != len(tx.Inputs)-1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
 	wire.WriteTo([]byte(`],"outputs":[`), w, n, err)
 	for i, out := range tx.Outputs {
 		out.WriteSignBytes(w, n, err)
-		if i != len(tx.Outputs) - 1 {
+		if i != len(tx.Outputs)-1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
@@ -224,7 +224,7 @@ func (tx *CallTx) String() string {
 }
 
 func NewContractAddress(caller []byte, nonce int) []byte {
-	temp := make([]byte, 32 + 8)
+	temp := make([]byte, 32+8)
 	copy(temp, caller)
 	PutInt64BE(temp[32:], int64(nonce))
 	hasher := ripemd160.New()
@@ -283,7 +283,7 @@ func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"inputs":[`, TxTypeBond)), w, n, err)
 	for i, in := range tx.Inputs {
 		in.WriteSignBytes(w, n, err)
-		if i != len(tx.Inputs) - 1 {
+		if i != len(tx.Inputs)-1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}
@@ -292,7 +292,7 @@ func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(`,"unbond_to":[`), w, n, err)
 	for i, out := range tx.UnbondTo {
 		out.WriteSignBytes(w, n, err)
-		if i != len(tx.UnbondTo) - 1 {
+		if i != len(tx.UnbondTo)-1 {
 			wire.WriteTo([]byte(","), w, n, err)
 		}
 	}

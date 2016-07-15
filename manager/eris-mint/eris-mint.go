@@ -23,9 +23,9 @@ import (
 	"sync"
 
 	tendermint_events "github.com/tendermint/go-events"
+	rpcclient "github.com/tendermint/go-rpc/client"
 	wire "github.com/tendermint/go-wire"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpcclient "github.com/tendermint/go-rpc/client"
 	tmsp "github.com/tendermint/tmsp/types"
 
 	log "github.com/eris-ltd/eris-logger"

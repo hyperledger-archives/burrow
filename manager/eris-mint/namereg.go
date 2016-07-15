@@ -96,7 +96,7 @@ func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultLis
 }
 
 type ResultListNames struct {
-	BlockHeight int                 `json:"block_height"`
+	BlockHeight int                        `json:"block_height"`
 	Names       []*core_types.NameRegEntry `json:"names"`
 }
 

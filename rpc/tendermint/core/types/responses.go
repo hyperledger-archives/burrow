@@ -101,7 +101,7 @@ type ResultBroadcastTx struct {
 }
 
 type ResultListUnconfirmedTxs struct {
-	N   int             `json:"n_txs"`
+	N   int      `json:"n_txs"`
 	Txs []txs.Tx `json:"txs"`
 }
 

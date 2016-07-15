@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/definitions"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+	"github.com/eris-ltd/eris-db/txs"
 	rpc "github.com/tendermint/go-rpc/server"
 )
 

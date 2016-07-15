@@ -72,8 +72,8 @@ func testBroadcastTx(t *testing.T, typ string) {
 	hasher.Write(goWireBytes)
 	txHashExpected := hasher.Sum(nil)
 	if bytes.Compare(receipt.TxHash, txHashExpected) != 0 {
-		t.Fatalf("The receipt hash '%x' does not equal the ripemd160 hash of the " +
-				"transaction signed bytes calculated in the test: '%x'",
+		t.Fatalf("The receipt hash '%x' does not equal the ripemd160 hash of the "+
+			"transaction signed bytes calculated in the test: '%x'",
 			receipt.TxHash, txHashExpected)
 	}
 }

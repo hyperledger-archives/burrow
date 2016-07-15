@@ -4,8 +4,8 @@ import (
 	"fmt"
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/txs"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+	"github.com/eris-ltd/eris-db/txs"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )
