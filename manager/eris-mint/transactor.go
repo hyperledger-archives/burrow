@@ -127,7 +127,7 @@ func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
 
-	txHash := txs.TxID(this.chainID, tx)
+	txHash := txs.TxHash(this.chainID, tx)
 	var createsContract uint8
 	var contractAddr []byte
 	// check if creates new contract

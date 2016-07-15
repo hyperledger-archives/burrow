@@ -377,10 +377,18 @@ func (tx *PermissionsTx) String() string {
 
 //-----------------------------------------------------------------------------
 
-// This should match the leaf hashes of Block.Data.Hash()'s SimpleMerkleTree.
-func TxID(chainID string, tx Tx) []byte {
+func TxHash(chainID string, tx Tx) []byte {
 	signBytes := acm.SignBytes(chainID, tx)
 	return wire.BinaryRipemd160(signBytes)
+}
+
+// [Silas] Leaving this implementation here for when we transition
+func TxHashFuture(chainID string, tx Tx) []byte {
+	signBytes := acm.SignBytes(chainID, tx)
+	hasher := ripemd160.New()
+	hasher.Write(signBytes)
+	// Calling Sum(nil) just gives us the digest with nothing prefixed
+	return hasher.Sum(nil)
 }
 
 //-----------------------------------------------------------------------------
@@ -417,7 +425,7 @@ func DecodeTx(txBytes []byte) Tx {
 
 func GenerateReceipt(chainId string, tx Tx) Receipt {
 	receipt := Receipt{
-		TxHash:          TxID(chainId, tx),
+		TxHash:          TxHash(chainId, tx),
 		CreatesContract: 0,
 		ContractAddr:    nil,
 	}

@@ -28,7 +28,6 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-merkle"
 	"github.com/tendermint/go-wire"
 )
 
@@ -45,12 +44,8 @@ func SignBytes(chainID string, o Signable) []byte {
 	if *err != nil {
 		PanicCrisis(err)
 	}
-	return buf.Bytes()
-}
 
-// HashSignBytes is a convenience method for getting the hash of the bytes of a signable
-func HashSignBytes(chainID string, o Signable) []byte {
-	return merkle.SimpleHashFromBinary(SignBytes(chainID, o))
+	return buf.Bytes()
 }
 
 //-----------------------------------------------------------------------------

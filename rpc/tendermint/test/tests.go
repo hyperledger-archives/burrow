@@ -8,7 +8,8 @@ import (
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/tendermint/go-common"
+	tm_common "github.com/tendermint/go-common"
+	"golang.org/x/crypto/ripemd160"
 )
 
 var doNothing = func(eid string, b interface{}) error { return nil }
@@ -39,9 +40,9 @@ func testGetAccount(t *testing.T, typ string) {
 func testOneSignTx(t *testing.T, typ string, addr []byte, amt int64) {
 	tx := makeDefaultSendTx(t, typ, addr, amt)
 	tx2 := signTx(t, typ, tx, user[0])
-	tx2hash := txs.TxID(chainID, tx2)
+	tx2hash := txs.TxHash(chainID, tx2)
 	tx.SignInput(chainID, 0, user[0])
-	txhash := txs.TxID(chainID, tx)
+	txhash := txs.TxHash(chainID, tx)
 	if bytes.Compare(txhash, tx2hash) != 0 {
 		t.Fatal("Got different signatures for signing via rpc vs tx_utils")
 	}
@@ -63,10 +64,17 @@ func testBroadcastTx(t *testing.T, typ string) {
 		t.Fatal("Failed to compute tx hash")
 	}
 	n, err := new(int), new(error)
-	buf1, buf2 := new(bytes.Buffer), new(bytes.Buffer)
-	tx.WriteSignBytes(chainID, buf1, n, err)
-	if bytes.Compare(buf1.Bytes(), buf2.Bytes()) != 0 {
-		t.Fatal("inconsistent hashes for mempool tx and sent tx")
+	buf := new(bytes.Buffer)
+	hasher := ripemd160.New()
+	tx.WriteSignBytes(chainID, buf, n, err)
+	// [Silas] Currently tx.TxHash uses go-wire, we we drop that we can drop the prefix here
+	goWireBytes := append([]byte{0x01, 0xcf}, buf.Bytes()...)
+	hasher.Write(goWireBytes)
+	txHashExpected := hasher.Sum(nil)
+	if bytes.Compare(receipt.TxHash, txHashExpected) != 0 {
+		t.Fatalf("The receipt hash '%x' does not equal the ripemd160 hash of the " +
+				"transaction signed bytes calculated in the test: '%x'",
+			receipt.TxHash, txHashExpected)
 	}
 }
 
@@ -99,10 +107,11 @@ func testGetStorage(t *testing.T, typ string) {
 	mempoolCount = 0
 
 	v := getStorage(t, typ, contractAddr, []byte{0x1})
-	got := LeftPadWord256(v)
-	expected := LeftPadWord256([]byte{0x5})
+	got := tm_common.LeftPadWord256(v)
+	expected := tm_common.LeftPadWord256([]byte{0x5})
 	if got.Compare(expected) != 0 {
-		t.Fatalf("Wrong storage value. Got %x, expected %x", got.Bytes(), expected.Bytes())
+		t.Fatalf("Wrong storage value. Got %x, expected %x", got.Bytes(),
+			expected.Bytes())
 	}
 }
 
@@ -110,14 +119,17 @@ func testCallCode(t *testing.T, typ string) {
 	client := clients[typ]
 
 	// add two integers and return the result
-	code := []byte{0x60, 0x5, 0x60, 0x6, 0x1, 0x60, 0x0, 0x52, 0x60, 0x20, 0x60, 0x0, 0xf3}
+	code := []byte{0x60, 0x5, 0x60, 0x6, 0x1, 0x60, 0x0, 0x52, 0x60, 0x20, 0x60,
+		0x0, 0xf3}
 	data := []byte{}
 	expected := []byte{0xb}
 	callCode(t, client, user[0].PubKey.Address(), code, data, expected)
 
 	// pass two ints as calldata, add, and return the result
-	code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60, 0x20, 0x60, 0x0, 0xf3}
-	data = append(LeftPadWord256([]byte{0x5}).Bytes(), LeftPadWord256([]byte{0x6}).Bytes()...)
+	code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
+		0x20, 0x60, 0x0, 0xf3}
+	data = append(tm_common.LeftPadWord256([]byte{0x5}).Bytes(),
+		tm_common.LeftPadWord256([]byte{0x6}).Bytes()...)
 	expected = []byte{0xb}
 	callCode(t, client, user[0].PubKey.Address(), code, data, expected)
 }
