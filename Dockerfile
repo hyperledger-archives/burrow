@@ -48,10 +48,10 @@ RUN git clone --quiet https://$ERIS_DB_MINT_REPO . \
 #-----------------------------------------------------------------------------
 # clean up [build container needs to be separated from shipped container]
 
- RUN unset ERIS_DB_SRC_PATH \
- 	&& unset ERIS_DB_MINT_SRC_PATH \
- 	&& apk del --purge go git musl-dev \
- 	&& rm -rf $GOPATH
+RUN unset ERIS_DB_SRC_PATH \
+	&& unset ERIS_DB_MINT_SRC_PATH \
+	&& apk del --purge go git musl-dev \
+	&& rm -rf $GOPATH
 
 # mount the data container on the eris directory
 VOLUME $ERIS

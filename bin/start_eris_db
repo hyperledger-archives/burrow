@@ -45,9 +45,8 @@ if [ ! -d "$ERIS_DB_WORKDIR" ]; then
 	ifExit "Error making working directory $ERIS_DB_WORKDIR"
 fi
 
-# [TODO]: for transition from 0.11.4 to 0.12.1 map data directory to working directory
 export ERIS_DB_WORKDIR
-export ERIS_DB_DATADIR=$ERIS_DB_WORKDIR
+export ERIS_DB_DATADIR=$ERIS_DB_WORKDIR/data
 
 echo "env CHAIN_ID is set to $CHAIN_ID"
 echo "env ERIS_DB_WORKDIR is set to $ERIS_DB_WORKDIR"
@@ -70,9 +69,9 @@ case $CMD in
 	echo "Install is under review to be deprecated; please contact support@erisindustries.com if you encounter this error."
 	exit 1
 	;;
-"new" ) eris-db serve $CONFIG_OPTS $@
+"new" ) echo "passed new"
 	;;
-"run" ) eris-db serve $CONFIG_OPTS $@
+"run" ) echo "passed run"
 	;;
 "register" ) 
 	echo "Register is under review to be deprecated; please contact support@erisindustries.com if you encounter this error."
@@ -80,6 +79,9 @@ case $CMD in
 	;;
 # we append $@ to eris-db to expose the same flags on the docker container,
 # eg `docker run -it quay.io/eris/erisdb --chain-id=<chain_id>`, will overwrite $CHAIN_ID
-*) eris-db serve $CONFIG_OPTS $@
+*) echo "no known command given: $CMD"
 	;;
 esac
+
+echo "running eris-db serve --debug $CONFIG_OPTS $@"
+eris-db serve --debug $CONFIG_OPTS $@

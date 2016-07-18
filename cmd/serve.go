@@ -83,10 +83,10 @@ func addServeFlags() {
 func Serve(cmd *cobra.Command, args []string) {
 	// load configuration from a single location to avoid a wrong configuration
 	// file is loaded.
-	if err := do.ReadConfig(do.WorkDir, "server_config", "toml"); err != nil {
+	if err := do.ReadConfig(do.WorkDir, "config", "toml"); err != nil {
 		log.WithFields(log.Fields{
 			"directory": do.WorkDir,
-			"file":      "server_config.toml",
+			"file":      "config.toml",
 		}).Fatalf("Fatal error reading configuration")
 		os.Exit(1)
 	}
