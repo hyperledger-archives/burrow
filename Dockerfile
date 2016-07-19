@@ -17,6 +17,9 @@ COPY . $ERIS_DB_SRC_PATH
 # fetch and install eris-db and its dependencies
 	# install glide for dependency management
 RUN go get github.com/Masterminds/glide \
+	# install dependencies for eris-db with glide
+	&& cd $ERIS_DB_SRC_PATH \
+	&& glide install \
 	# build the main eris-db target
 	&& cd $ERIS_DB_SRC_PATH/cmd/eris-db \
 	&& go build \
