@@ -63,10 +63,6 @@ Admin Txs:
  - PermissionsTx
 */
 
-type Tx interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
-}
-
 // Types of Tx implementations
 const (
 	// Account transactions
@@ -99,13 +95,56 @@ var _ = wire.RegisterInterface(
 
 //-----------------------------------------------------------------------------
 
-type TxInput struct {
-	Address   []byte           `json:"address"`   // Hash of the PubKey
-	Amount    int64            `json:"amount"`    // Must not exceed account balance
-	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
-}
+type (
+	Tx interface {
+		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
+	}
+
+	// UnconfirmedTxs
+	UnconfirmedTxs struct {
+		Txs []Tx `json:"txs"`
+	}
+
+	SendTx struct {
+		Inputs  []*TxInput  `json:"inputs"`
+		Outputs []*TxOutput `json:"outputs"`
+	}
+
+	// BroadcastTx or Transact
+	Receipt struct {
+		TxHash          []byte `json:"tx_hash"`
+		CreatesContract uint8  `json:"creates_contract"`
+		ContractAddr    []byte `json:"contract_addr"`
+	}
+
+	NameTx struct {
+		Input *TxInput `json:"input"`
+		Name  string   `json:"name"`
+		Data  string   `json:"data"`
+		Fee   int64    `json:"fee"`
+	}
+
+	CallTx struct {
+		Input    *TxInput `json:"input"`
+		Address  []byte   `json:"address"`
+		GasLimit int64    `json:"gas_limit"`
+		Fee      int64    `json:"fee"`
+		Data     []byte   `json:"data"`
+	}
+
+	TxInput struct {
+		Address   []byte           `json:"address"`   // Hash of the PubKey
+		Amount    int64            `json:"amount"`    // Must not exceed account balance
+		Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+	}
+
+	TxOutput struct {
+		Address []byte `json:"address"` // Hash of the PubKey
+		Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+	}
+)
 
 func (txIn *TxInput) ValidateBasic() error {
 	if len(txIn.Address) != 20 {
@@ -127,11 +166,6 @@ func (txIn *TxInput) String() string {
 
 //-----------------------------------------------------------------------------
 
-type TxOutput struct {
-	Address []byte `json:"address"` // Hash of the PubKey
-	Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
-}
-
 func (txOut *TxOutput) ValidateBasic() error {
 	if len(txOut.Address) != 20 {
 		return ErrTxInvalidAddress
@@ -151,11 +185,6 @@ func (txOut *TxOutput) String() string {
 }
 
 //-----------------------------------------------------------------------------
-
-type SendTx struct {
-	Inputs  []*TxInput  `json:"inputs"`
-	Outputs []*TxOutput `json:"outputs"`
-}
 
 func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -182,14 +211,6 @@ func (tx *SendTx) String() string {
 
 //-----------------------------------------------------------------------------
 
-type CallTx struct {
-	Input    *TxInput `json:"input"`
-	Address  []byte   `json:"address"`
-	GasLimit int64    `json:"gas_limit"`
-	Fee      int64    `json:"fee"`
-	Data     []byte   `json:"data"`
-}
-
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(Fmt(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
@@ -212,13 +233,6 @@ func NewContractAddress(caller []byte, nonce int) []byte {
 }
 
 //-----------------------------------------------------------------------------
-
-type NameTx struct {
-	Input *TxInput `json:"input"`
-	Name  string   `json:"name"`
-	Data  string   `json:"data"`
-	Fee   int64    `json:"fee"`
-}
 
 func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(Fmt(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -363,10 +377,18 @@ func (tx *PermissionsTx) String() string {
 
 //-----------------------------------------------------------------------------
 
-// This should match the leaf hashes of Block.Data.Hash()'s SimpleMerkleTree.
-func TxID(chainID string, tx Tx) []byte {
+func TxHash(chainID string, tx Tx) []byte {
 	signBytes := acm.SignBytes(chainID, tx)
 	return wire.BinaryRipemd160(signBytes)
+}
+
+// [Silas] Leaving this implementation here for when we transition
+func TxHashFuture(chainID string, tx Tx) []byte {
+	signBytes := acm.SignBytes(chainID, tx)
+	hasher := ripemd160.New()
+	hasher.Write(signBytes)
+	// Calling Sum(nil) just gives us the digest with nothing prefixed
+	return hasher.Sum(nil)
 }
 
 //-----------------------------------------------------------------------------
@@ -375,8 +397,18 @@ func EncodeTx(tx Tx) []byte {
 	wrapTx := struct {
 		Tx Tx `json:"unwrap"`
 	}{tx}
-	return wire.JSONBytes(wrapTx)
+	return wire.BinaryBytes(wrapTx)
 }
+
+//func EncodeTx(tx txs.Tx) []byte {
+//	buf := new(bytes.Buffer)
+//	var n int
+//	var err error
+//	wire.WriteBinary(struct{ types.Tx }{tx}, buf, &n, &err)
+//	if err != nil {
+//		return err
+//	}
+//}
 
 // panic on err
 func DecodeTx(txBytes []byte) Tx {
@@ -389,6 +421,22 @@ func DecodeTx(txBytes []byte) Tx {
 		panic(err)
 	}
 	return *tx
+}
+
+func GenerateReceipt(chainId string, tx Tx) Receipt {
+	receipt := Receipt{
+		TxHash:          TxHash(chainId, tx),
+		CreatesContract: 0,
+		ContractAddr:    nil,
+	}
+	if callTx, ok := tx.(*CallTx); ok {
+		if len(callTx.Address) == 0 {
+			receipt.CreatesContract = 1
+			receipt.ContractAddr = NewContractAddress(callTx.Input.Address,
+				callTx.Input.Sequence)
+		}
+	}
+	return receipt
 }
 
 //--------------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/tendermint/config/tendermint_test"
 	// tmtypes "github.com/tendermint/tendermint/types"
 
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -252,7 +253,8 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *txs.NameRegEntry, name, data string, addr []byte, expires int) {
+	validateEntry := func(t *testing.T, entry *core_types.NameRegEntry, name,
+		data string, addr []byte, expires int) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)

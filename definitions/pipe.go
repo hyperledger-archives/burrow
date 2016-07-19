@@ -28,10 +28,11 @@ import (
 	tendermint_types "github.com/tendermint/tendermint/types"
 
 	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	transaction "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 type Pipe interface {
@@ -45,6 +46,7 @@ type Pipe interface {
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
 	SetConsensusEngine(consensus ConsensusEngine) error
+	GetConsensusEngine() ConsensusEngine
 	// Support for Tendermint RPC
 	GetTendermintPipe() (TendermintPipe, error)
 }
@@ -74,7 +76,7 @@ type Consensus interface {
 }
 
 type NameReg interface {
-	Entry(key string) (*transaction.NameRegEntry, error)
+	Entry(key string) (*core_types.NameRegEntry, error)
 	Entries([]*event.FilterData) (*types.ResultListNames, error)
 }
 
@@ -93,14 +95,14 @@ type Transactor interface {
 	CallCode(fromAddress, code, data []byte) (*types.Call, error)
 	// Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
 	// SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
-	BroadcastTx(tx transaction.Tx) (*types.Receipt, error)
+	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
 	Transact(privKey, address, data []byte, gasLimit,
-		fee int64) (*types.Receipt, error)
+		fee int64) (*txs.Receipt, error)
 	TransactAndHold(privKey, address, data []byte, gasLimit,
-		fee int64) (*transaction.EventDataCall, error)
+		fee int64) (*txs.EventDataCall, error)
 	TransactNameReg(privKey []byte, name, data string, amount,
-		fee int64) (*types.Receipt, error)
-	UnconfirmedTxs() (*types.UnconfirmedTxs, error)
-	SignTx(tx transaction.Tx,
-		privAccounts []*account.PrivAccount) (transaction.Tx, error)
+		fee int64) (*txs.Receipt, error)
+	UnconfirmedTxs() (*txs.UnconfirmedTxs, error)
+	SignTx(tx txs.Tx,
+		privAccounts []*account.PrivAccount) (txs.Tx, error)
 }

@@ -27,7 +27,8 @@ func NewJsonRpcServer(service server.HttpService) *JsonRpcServer {
 }
 
 // Start adds the rpc path to the router.
-func (this *JsonRpcServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (this *JsonRpcServer) Start(config *server.ServerConfig,
+	router *gin.Engine) {
 	router.POST(config.HTTP.JsonRpcEndpoint, this.handleFunc)
 	this.running = true
 }
@@ -85,13 +86,15 @@ func (this *ErisDbJsonService) Process(r *http.Request, w http.ResponseWriter) {
 
 	// Error when decoding.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error(), "", rpc_tendermint.PARSE_ERROR, w)
+		this.writeError("Failed to parse request: "+errU.Error(), "",
+			rpc_tendermint.PARSE_ERROR, w)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id, rpc_tendermint.INVALID_REQUEST, w)
+		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
+			rpc_tendermint.INVALID_REQUEST, w)
 		return
 	}
 
@@ -137,7 +140,8 @@ func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w ht
 // *************************************** Events ************************************
 
 // Subscribe to an event.
-func (this *ErisDbJsonService) EventSubscribe(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbJsonService) EventSubscribe(request *rpc_tendermint.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
@@ -152,7 +156,8 @@ func (this *ErisDbJsonService) EventSubscribe(request *rpc_tendermint.RPCRequest
 }
 
 // Un-subscribe from an event.
-func (this *ErisDbJsonService) EventUnsubscribe(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbJsonService) EventUnsubscribe(request *rpc_tendermint.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
@@ -168,7 +173,8 @@ func (this *ErisDbJsonService) EventUnsubscribe(request *rpc_tendermint.RPCReque
 }
 
 // Check subscription event cache for new data.
-func (this *ErisDbJsonService) EventPoll(request *rpc_tendermint.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbJsonService) EventPoll(request *rpc_tendermint.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {

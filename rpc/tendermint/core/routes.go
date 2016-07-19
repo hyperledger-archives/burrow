@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	definitions "github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/definitions"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 	rpc "github.com/tendermint/go-rpc/server"
@@ -159,11 +159,11 @@ func (this *TendermintRoutes) ListNamesResult() (ctypes.ErisDBResult, error) {
 }
 
 func (this *TendermintRoutes) GenPrivAccountResult() (ctypes.ErisDBResult, error) {
-	// if r, err := this.tendermintPipe.GenPrivAccount(); err != nil {
-	// 	return nil, err
-	// } else {
-	// 	return r, nil
-	// }
+	//if r, err := this.tendermintPipe.GenPrivAccount(); err != nil {
+	//	return nil, err
+	//} else {
+	//	return r, nil
+	//}
 	return nil, fmt.Errorf("Unimplemented as poor practice to generate private account over unencrypted RPC")
 }
 

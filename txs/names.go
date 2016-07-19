@@ -1,6 +1,7 @@
 package txs
 
 import (
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"regexp"
 )
 
@@ -42,20 +43,8 @@ func NameCostPerBlock(baseCost int64) int64 {
 	return NameBlockCostMultiplier * NameByteCostMultiplier * baseCost
 }
 
-type NameRegEntry struct {
-	Name    string `json:"name"`    // registered name for the entry
-	Owner   []byte `json:"owner"`   // address that created the entry
-	Data    string `json:"data"`    // data to store under this name
-	Expires int    `json:"expires"` // block at which this entry expires
-}
-
-func (entry *NameRegEntry) Copy() *NameRegEntry {
-	entryCopy := *entry
-	return &entryCopy
-}
-
 // XXX: vestige of an older time
 type ResultListNames struct {
-	BlockHeight int             `json:"block_height"`
-	Names       []*NameRegEntry `json:"names"`
+	BlockHeight int                        `json:"block_height"`
+	Names       []*core_types.NameRegEntry `json:"names"`
 }

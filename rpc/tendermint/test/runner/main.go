@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	//fmt.Printf("%s", util.IsAddress("hello"))
 	fmt.Printf("%s", util.IsAddress("hello"), rpctest.Successor(2))
 	//defer os.Exit(0)
 }

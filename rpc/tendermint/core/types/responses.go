@@ -2,8 +2,9 @@ package core_types
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	txtypes "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
 
 	"github.com/tendermint/go-crypto"
@@ -81,8 +82,8 @@ type ResultDumpConsensusState struct {
 }
 
 type ResultListNames struct {
-	BlockHeight int                     `json:"block_height"`
-	Names       []*txtypes.NameRegEntry `json:"names"`
+	BlockHeight int                        `json:"block_height"`
+	Names       []*core_types.NameRegEntry `json:"names"`
 }
 
 type ResultGenPrivAccount struct {
@@ -99,19 +100,13 @@ type ResultBroadcastTx struct {
 	Log  string             `json:"log"`
 }
 
-type Receipt struct {
-	TxHash          []byte `json:"tx_hash"`
-	CreatesContract uint8  `json:"creates_contract"`
-	ContractAddr    []byte `json:"contract_addr"`
-}
-
 type ResultListUnconfirmedTxs struct {
-	N   int          `json:"n_txs"`
-	Txs []txtypes.Tx `json:"txs"`
+	N   int      `json:"n_txs"`
+	Txs []txs.Tx `json:"txs"`
 }
 
 type ResultGetName struct {
-	Entry *txtypes.NameRegEntry `json:"entry"`
+	Entry *core_types.NameRegEntry `json:"entry"`
 }
 
 type ResultGenesis struct {
@@ -119,7 +114,7 @@ type ResultGenesis struct {
 }
 
 type ResultSignTx struct {
-	Tx txtypes.Tx `json:"tx"`
+	Tx txs.Tx `json:"tx"`
 }
 
 type ResultEvent struct {

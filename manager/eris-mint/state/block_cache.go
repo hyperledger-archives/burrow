@@ -9,7 +9,7 @@ import (
 	"github.com/tendermint/go-merkle"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/txs"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
@@ -120,7 +120,7 @@ func (cache *BlockCache) SetStorage(addr Word256, key Word256, value Word256) {
 //-------------------------------------
 // BlockCache.names
 
-func (cache *BlockCache) GetNameRegEntry(name string) *txs.NameRegEntry {
+func (cache *BlockCache) GetNameRegEntry(name string) *core_types.NameRegEntry {
 	entry, removed, _ := cache.names[name].unpack()
 	if removed {
 		return nil
@@ -133,7 +133,7 @@ func (cache *BlockCache) GetNameRegEntry(name string) *txs.NameRegEntry {
 	}
 }
 
-func (cache *BlockCache) UpdateNameRegEntry(entry *txs.NameRegEntry) {
+func (cache *BlockCache) UpdateNameRegEntry(entry *core_types.NameRegEntry) {
 	name := entry.Name
 	cache.names[name] = nameInfo{entry, false, true}
 }
@@ -278,11 +278,11 @@ func (stjInfo storageInfo) unpack() (Word256, bool) {
 }
 
 type nameInfo struct {
-	name    *txs.NameRegEntry
+	name    *core_types.NameRegEntry
 	removed bool
 	dirty   bool
 }
 
-func (nInfo nameInfo) unpack() (*txs.NameRegEntry, bool, bool) {
+func (nInfo nameInfo) unpack() (*core_types.NameRegEntry, bool, bool) {
 	return nInfo.name, nInfo.removed, nInfo.dirty
 }

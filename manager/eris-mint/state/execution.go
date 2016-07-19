@@ -12,6 +12,7 @@ import (
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -473,7 +474,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := vm.NewVM(txCache, params, caller.Address, txs.TxID(_s.ChainID, tx))
+				vmach := vm.NewVM(txCache, params, caller.Address, txs.TxHash(_s.ChainID, tx))
 				vmach.SetFireable(evc)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
@@ -615,7 +616,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 			}
 			// entry does not exist, so create it
-			entry = &txs.NameRegEntry{
+			entry = &core_types.NameRegEntry{
 				Name:    tx.Name,
 				Owner:   tx.Input.Address,
 				Data:    tx.Data,

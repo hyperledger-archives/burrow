@@ -10,7 +10,7 @@ import (
 	acm "github.com/eris-ltd/eris-db/account"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	txs "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 
 	. "github.com/tendermint/go-common"
 	dbm "github.com/tendermint/go-db"
@@ -18,6 +18,7 @@ import (
 	"github.com/tendermint/go-merkle"
 	"github.com/tendermint/go-wire"
 
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -335,7 +336,7 @@ func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
 //-------------------------------------
 // State.nameReg
 
-func (s *State) GetNameRegEntry(name string) *txs.NameRegEntry {
+func (s *State) GetNameRegEntry(name string) *core_types.NameRegEntry {
 	_, valueBytes, _ := s.nameReg.Get([]byte(name))
 	if valueBytes == nil {
 		return nil
@@ -344,14 +345,14 @@ func (s *State) GetNameRegEntry(name string) *txs.NameRegEntry {
 	return DecodeNameRegEntry(valueBytes)
 }
 
-func DecodeNameRegEntry(entryBytes []byte) *txs.NameRegEntry {
+func DecodeNameRegEntry(entryBytes []byte) *core_types.NameRegEntry {
 	var n int
 	var err error
 	value := NameRegCodec.Decode(bytes.NewBuffer(entryBytes), &n, &err)
-	return value.(*txs.NameRegEntry)
+	return value.(*core_types.NameRegEntry)
 }
 
-func (s *State) UpdateNameRegEntry(entry *txs.NameRegEntry) bool {
+func (s *State) UpdateNameRegEntry(entry *core_types.NameRegEntry) bool {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
@@ -374,11 +375,11 @@ func (s *State) SetNameReg(nameReg merkle.Tree) {
 }
 
 func NameRegEncoder(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*txs.NameRegEntry), w, n, err)
+	wire.WriteBinary(o.(*core_types.NameRegEntry), w, n, err)
 }
 
 func NameRegDecoder(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&txs.NameRegEntry{}, r, txs.MaxDataLength, n, err)
+	return wire.ReadBinary(&core_types.NameRegEntry{}, r, txs.MaxDataLength, n, err)
 }
 
 var NameRegCodec = wire.Codec{

@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	"github.com/eris-ltd/eris-db/txs"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
@@ -68,7 +67,7 @@ func newNameReg(erisMint *ErisMint) *namereg {
 	return &namereg{erisMint, ff}
 }
 
-func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
+func (this *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
 	st := this.erisMint.GetState() // performs a copy
 	entry := st.GetNameRegEntry(key)
 	if entry == nil {
@@ -79,7 +78,7 @@ func (this *namereg) Entry(key string) (*txs.NameRegEntry, error) {
 
 func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
 	var blockHeight int
-	var names []*txs.NameRegEntry
+	var names []*core_types.NameRegEntry
 	state := this.erisMint.GetState()
 	blockHeight = state.LastBlockHeight
 	filter, err := this.filterFactory.NewFilter(filters)
@@ -97,8 +96,8 @@ func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultLis
 }
 
 type ResultListNames struct {
-	BlockHeight int                 `json:"block_height"`
-	Names       []*txs.NameRegEntry `json:"names"`
+	BlockHeight int                        `json:"block_height"`
+	Names       []*core_types.NameRegEntry `json:"names"`
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.
@@ -130,7 +129,7 @@ func (this *NameRegNameFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegNameFilter) Match(v interface{}) bool {
-	nre, ok := v.(*txs.NameRegEntry)
+	nre, ok := v.(*core_types.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -169,7 +168,7 @@ func (this *NameRegOwnerFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegOwnerFilter) Match(v interface{}) bool {
-	nre, ok := v.(*txs.NameRegEntry)
+	nre, ok := v.(*core_types.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -205,7 +204,7 @@ func (this *NameRegDataFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegDataFilter) Match(v interface{}) bool {
-	nre, ok := v.(*txs.NameRegEntry)
+	nre, ok := v.(*core_types.NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -236,7 +235,7 @@ func (this *NameRegExpiresFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegExpiresFilter) Match(v interface{}) bool {
-	nre, ok := v.(*txs.NameRegEntry)
+	nre, ok := v.(*core_types.NameRegEntry)
 	if !ok {
 		return false
 	}
