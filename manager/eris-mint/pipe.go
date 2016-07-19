@@ -159,8 +159,12 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 		}
 		// assert loaded genesis doc has the same chainId as the provided chainId
 		if genesisDoc.ChainID != chainId {
-			return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
-				genesisDoc.ChainID, chainId)
+			log.WithFields(log.Fields{
+				"chainId from loaded genesis": genesisDoc.ChainID,
+				"chainId from configuration":  chainId,
+			}).Warn("Conflicting chainIds")
+			// return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
+			// genesisDoc.ChainID, chainId)
 		}
 	}
 

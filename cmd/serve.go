@@ -18,7 +18,9 @@ package commands
 
 import (
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	cobra "github.com/spf13/cobra"
 
@@ -35,7 +37,8 @@ var ServeCmd = &cobra.Command{
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
 	Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file "server_config.toml" in the current working directory
-$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory`,
+$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory
+$ eris-db serve --chain-id <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
 		// NOTE [ben]: we can consider an `Explicit` flag that eliminates
@@ -45,7 +48,6 @@ $ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB
 				log.Fatalf("No directory provided and failed to get current working directory: %v", err)
 				os.Exit(1)
 			} else {
-
 				do.WorkDir = currentDirectory
 			}
 		}
@@ -62,10 +64,14 @@ func buildServeCommand() {
 }
 
 func addServeFlags() {
+	ServeCmd.PersistentFlags().StringVarP(&do.ChainId, "chain-id", "c",
+		defaultChainId(), "specify the chain id to use for assertion against the genesis file or the existing state. If omitted, and no id is set in $CHAIN_ID, then assert_chain_id is used from the configuration file.")
 	ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
 		defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
-	ServeCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "a",
+	ServeCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "",
 		defaultDataDir(), "specify the data directory.  If omitted and not set in $ERIS_DB_DATADIR, <working_directory>/data is taken.")
+	ServeCmd.PersistentFlags().BoolVarP(&do.DisableRpc, "disable-rpc", "",
+		defaultDisableRpc(), "indicate for the RPC to be disabled. If omitted the RPC is enabled by default, unless (deprecated) $ERISDB_API is set to false.")
 }
 
 //------------------------------------------------------------------------------
@@ -77,17 +83,19 @@ func addServeFlags() {
 func Serve(cmd *cobra.Command, args []string) {
 	// load configuration from a single location to avoid a wrong configuration
 	// file is loaded.
-	if err := do.ReadConfig(do.WorkDir, "server_config", "toml"); err != nil {
+	if err := do.ReadConfig(do.WorkDir, "config", "toml"); err != nil {
 		log.WithFields(log.Fields{
 			"directory": do.WorkDir,
-			"file":      "server_config.toml",
+			"file":      "config.toml",
 		}).Fatalf("Fatal error reading configuration")
 		os.Exit(1)
 	}
-	// load chain_id for assertion
-	if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
-		log.Fatalf("Failed to read non-empty string for ChainId from config.")
-		os.Exit(1)
+	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
+	if do.ChainId == "" {
+		if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
+			log.Fatalf("Failed to read non-empty string for ChainId from config.")
+			os.Exit(1)
+		}
 	}
 	// load the genesis file path
 	do.GenesisFile = path.Join(do.WorkDir,
@@ -129,33 +137,53 @@ func Serve(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to load core: %s", err)
 	}
 
-	serverConfig, err := core.LoadServerConfig(do)
-	if err != nil {
-		log.Fatalf("Failed to load server configuration: %s.", err)
-		os.Exit(1)
+	if !do.DisableRpc {
+		serverConfig, err := core.LoadServerConfig(do)
+		if err != nil {
+			log.Fatalf("Failed to load server configuration: %s.", err)
+			os.Exit(1)
+		}
+		serverProcess, err := newCore.NewGatewayV0(serverConfig)
+		if err != nil {
+			log.Fatalf("Failed to load servers: %s.", err)
+			os.Exit(1)
+		}
+		err = serverProcess.Start()
+		if err != nil {
+			log.Fatalf("Failed to start servers: %s.", err)
+			os.Exit(1)
+		}
+		_, err = newCore.NewGatewayTendermint(serverConfig)
+		if err != nil {
+			log.Fatalf("Failed to start Tendermint gateway")
+		}
+		<-serverProcess.StopEventChannel()
+	} else {
+		signals := make(chan os.Signal, 1)
+		done := make(chan bool, 1)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			signal := <-signals
+			// TODO: [ben] clean up core; in a manner consistent with enabled rpc
+			log.Fatalf("Received %s signal. Marmots out.", signal)
+			done <- true
+		}()
+		<-done
 	}
-	serverProcess, err := newCore.NewGatewayV0(serverConfig)
-	if err != nil {
-		log.Fatalf("Failed to load servers: %s.", err)
-		os.Exit(1)
-	}
-	err = serverProcess.Start()
-	if err != nil {
-		log.Fatalf("Failed to start servers: %s.", err)
-		os.Exit(1)
-	}
-	_, err = newCore.NewGatewayTendermint(serverConfig)
-	if err != nil {
-		log.Fatalf("Failed to start Tendermint gateway")
-	}
-	<-serverProcess.StopEventChannel()
 }
 
 //------------------------------------------------------------------------------
 // Defaults
 
+func defaultChainId() string {
+	// if CHAIN_ID environment variable is not set, keep do.ChainId empty to read
+	// assert_chain_id from configuration file
+	return setDefaultString("CHAIN_ID", "")
+}
+
 func defaultWorkDir() string {
 	// if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
+	// as do.WorkDir is set by the PreRun
 	return setDefaultString("ERIS_DB_WORKDIR", "")
 }
 
@@ -163,4 +191,12 @@ func defaultDataDir() string {
 	// As the default data directory depends on the default working directory,
 	// wait setting a default value, and initialise the data directory from serve()
 	return setDefaultString("ERIS_DB_DATADIR", "")
+}
+
+func defaultDisableRpc() bool {
+	// we currently observe environment variable ERISDB_API (true = enable)
+	// and default to enabling the RPC if it is not set.
+	// TODO: [ben] deprecate ERISDB_API across the stack for 0.12.1, and only disable
+	// the rpc through a command line flag --disable-rpc
+	return !setDefaultBool("ERISDB_API", true)
 }

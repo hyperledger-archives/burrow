@@ -47,6 +47,7 @@ type Do struct {
 	// AccountTypes []string
 	// Zip          bool
 	// Tarball      bool
+	DisableRpc bool
 	Config *viper.Viper
 	// Accounts     []*Account
 	// Result       string
@@ -60,6 +61,7 @@ func NowDo() *Do {
 	do.DataDir = ""
 	do.ChainId = ""
 	do.GenesisFile = ""
+	do.DisableRpc = false
 	do.Config = viper.New()
 	return do
 }
