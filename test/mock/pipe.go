@@ -92,6 +92,10 @@ func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
 	return nil
 }
 
+func (this *MockPipe) GetConsensusEngine() definitions.ConsensusEngine {
+	return nil
+}
+
 func (this *MockPipe) GetTendermintPipe() (definitions.TendermintPipe, error) {
 	return nil, fmt.Errorf("Tendermint pipe is not supported by mocked pipe.")
 }
@@ -191,7 +195,7 @@ type namereg struct {
 	testData *td.TestData
 }
 
-func (this *namereg) Entry(key string) (*types.NameRegEntry, error) {
+func (this *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
 	return this.testData.GetNameRegEntry.Output, nil
 }
 
@@ -246,15 +250,15 @@ func (this *transactor) CallCode(from, code, data []byte) (*core_types.Call, err
 	return this.testData.CallCode.Output, nil
 }
 
-func (this *transactor) BroadcastTx(tx types.Tx) (*core_types.Receipt, error) {
+func (this *transactor) BroadcastTx(tx types.Tx) (*types.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) UnconfirmedTxs() (*core_types.UnconfirmedTxs, error) {
+func (this *transactor) UnconfirmedTxs() (*types.UnconfirmedTxs, error) {
 	return this.testData.GetUnconfirmedTxs.Output, nil
 }
 
-func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*core_types.Receipt, error) {
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*types.Receipt, error) {
 	if address == nil || len(address) == 0 {
 		return this.testData.TransactCreate.Output, nil
 	}
@@ -265,15 +269,15 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	return nil, nil
 }
 
-func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*core_types.Receipt, error) {
+func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*core_types.Receipt, error) {
+func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*core_types.Receipt, error) {
+func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*types.Receipt, error) {
 	return this.testData.TransactNameReg.Output, nil
 }
 

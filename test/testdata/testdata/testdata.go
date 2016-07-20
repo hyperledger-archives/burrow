@@ -1,13 +1,12 @@
 package testdata
 
 import (
-
-	account    "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	event      "github.com/eris-ltd/eris-db/event"
-	rpc_v0     "github.com/eris-ltd/eris-db/rpc/v0"
-	stypes     "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	types      "github.com/eris-ltd/eris-db/txs"
+	account     "github.com/eris-ltd/eris-db/account"
+	core_types  "github.com/eris-ltd/eris-db/core/types"
+	event       "github.com/eris-ltd/eris-db/event"
+	rpc_v0      "github.com/eris-ltd/eris-db/rpc/v0"
+	stypes      "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	transaction "github.com/eris-ltd/eris-db/txs"
 
 	mintTypes "github.com/tendermint/tendermint/types"
 )
@@ -54,7 +53,7 @@ var testDataJson = `{
       ],
       "validators": [
         {
-          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
+          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
           "amount": 5000000000,
           "unbond_to": [
             {
@@ -604,16 +603,16 @@ type (
 
 	TransactData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *core_types.Receipt `json:"output"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	TransactCreateData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *core_types.Receipt `json:"output"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
-		Output *core_types.UnconfirmedTxs `json:"output"`
+		Output *transaction.UnconfirmedTxs `json:"output"`
 	}
 
 	CallCodeData struct {
@@ -638,12 +637,12 @@ type (
 
 	TransactNameRegData struct {
 		Input  *rpc_v0.TransactNameRegParam `json:"input"`
-		Output *core_types.Receipt        `json:"output"`
+		Output *transaction.Receipt        `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
 		Input  *rpc_v0.NameRegEntryParam `json:"input"`
-		Output *types.NameRegEntry     `json:"output"`
+		Output *core_types.NameRegEntry     `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
