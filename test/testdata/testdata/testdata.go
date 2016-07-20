@@ -1,7 +1,6 @@
 package testdata
 
 import (
-
 	account     "github.com/eris-ltd/eris-db/account"
 	core_types  "github.com/eris-ltd/eris-db/core/types"
 	event       "github.com/eris-ltd/eris-db/event"
@@ -54,7 +53,7 @@ var testDataJson = `{
       ],
       "validators": [
         {
-          "pub_key": "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906",
+          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
           "amount": 5000000000,
           "unbond_to": [
             {
