@@ -2,12 +2,12 @@ package testdata
 
 import (
 
-	account    "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	event      "github.com/eris-ltd/eris-db/event"
-	rpc_v0     "github.com/eris-ltd/eris-db/rpc/v0"
-	stypes     "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
-	types      "github.com/eris-ltd/eris-db/txs"
+	account     "github.com/eris-ltd/eris-db/account"
+	core_types  "github.com/eris-ltd/eris-db/core/types"
+	event       "github.com/eris-ltd/eris-db/event"
+	rpc_v0      "github.com/eris-ltd/eris-db/rpc/v0"
+	stypes      "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	transaction "github.com/eris-ltd/eris-db/txs"
 
 	mintTypes "github.com/tendermint/tendermint/types"
 )
@@ -604,16 +604,16 @@ type (
 
 	TransactData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *core_types.Receipt `json:"output"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	TransactCreateData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *core_types.Receipt `json:"output"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
-		Output *core_types.UnconfirmedTxs `json:"output"`
+		Output *transaction.UnconfirmedTxs `json:"output"`
 	}
 
 	CallCodeData struct {
@@ -638,12 +638,12 @@ type (
 
 	TransactNameRegData struct {
 		Input  *rpc_v0.TransactNameRegParam `json:"input"`
-		Output *core_types.Receipt        `json:"output"`
+		Output *transaction.Receipt        `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
 		Input  *rpc_v0.NameRegEntryParam `json:"input"`
-		Output *types.NameRegEntry     `json:"output"`
+		Output *core_types.NameRegEntry     `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {

@@ -252,7 +252,7 @@ func (this *MockSuite) TestGetPeer() {
 
 func (this *MockSuite) TestTransactCreate() {
 	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
-	ret := &core_types.Receipt{}
+	ret := &txs.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.TransactCreate.Output)
@@ -260,7 +260,7 @@ func (this *MockSuite) TestTransactCreate() {
 
 func (this *MockSuite) TestTransact() {
 	resp := this.postJson("/unsafe/txpool", this.testData.Transact.Input)
-	ret := &core_types.Receipt{}
+	ret := &txs.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.Transact.Output)
@@ -268,7 +268,7 @@ func (this *MockSuite) TestTransact() {
 
 func (this *MockSuite) TestTransactNameReg() {
 	resp := this.postJson("/unsafe/namereg/txpool", this.testData.TransactNameReg.Input)
-	ret := &core_types.Receipt{}
+	ret := &txs.Receipt{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.TransactNameReg.Output)
@@ -276,7 +276,7 @@ func (this *MockSuite) TestTransactNameReg() {
 
 func (this *MockSuite) TestGetUnconfirmedTxs() {
 	resp := this.get("/txpool")
-	ret := &core_types.UnconfirmedTxs{}
+	ret := &txs.UnconfirmedTxs{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
 	this.Equal(ret, this.testData.GetUnconfirmedTxs.Output)

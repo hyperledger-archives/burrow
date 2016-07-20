@@ -11,7 +11,6 @@ import (
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint"
 	server "github.com/eris-ltd/eris-db/server"
 )
 
@@ -80,21 +79,21 @@ func NewErisDbJsonService(codec rpc.Codec, pipe definitions.Pipe,
 func (this *ErisDbJsonService) Process(r *http.Request, w http.ResponseWriter) {
 
 	// Create new request object and unmarshal.
-	req := &rpc_tendermint.RPCRequest{}
+	req := &rpc.RPCRequest{}
 	decoder := json.NewDecoder(r.Body)
 	errU := decoder.Decode(req)
 
 	// Error when decoding.
 	if errU != nil {
 		this.writeError("Failed to parse request: "+errU.Error(), "",
-			rpc_tendermint.PARSE_ERROR, w)
+			rpc.PARSE_ERROR, w)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
 		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
-			rpc_tendermint.INVALID_REQUEST, w)
+			rpc.INVALID_REQUEST, w)
 		return
 	}
 
@@ -108,13 +107,13 @@ func (this *ErisDbJsonService) Process(r *http.Request, w http.ResponseWriter) {
 			this.writeResponse(req.Id, resp, w)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id, rpc_tendermint.METHOD_NOT_FOUND, w)
+		this.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, w)
 	}
 }
 
 // Helper for writing error responses.
 func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.ResponseWriter) {
-	response := rpc_tendermint.NewRPCErrorResponse(id, code, msg)
+	response := rpc.NewRPCErrorResponse(id, code, msg)
 	err := this.codec.Encode(response, w)
 	// If there's an error here all bets are off.
 	if err != nil {
@@ -127,11 +126,11 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 // Helper for writing responses.
 func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
 	log.Debug("Result: %v\n", result)
-	response := rpc_tendermint.NewRPCResponse(id, result)
+	response := rpc.NewRPCResponse(id, result)
 	err := this.codec.Encode(response, w)
 	log.Debug("Response: %v\n", response)
 	if err != nil {
-		this.writeError("Internal error: "+err.Error(), id, rpc_tendermint.INTERNAL_ERROR, w)
+		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
 		return
 	}
 	w.WriteHeader(200)
@@ -140,51 +139,51 @@ func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w ht
 // *************************************** Events ************************************
 
 // Subscribe to an event.
-func (this *ErisDbJsonService) EventSubscribe(request *rpc_tendermint.RPCRequest,
+func (this *ErisDbJsonService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
-		return nil, rpc_tendermint.INVALID_PARAMS, err
+		return nil, rpc.INVALID_PARAMS, err
 	}
 	eventId := param.EventId
 	subId, errC := this.eventSubs.Add(eventId)
 	if errC != nil {
-		return nil, rpc_tendermint.INTERNAL_ERROR, errC
+		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &event.EventSub{subId}, 0, nil
 }
 
 // Un-subscribe from an event.
-func (this *ErisDbJsonService) EventUnsubscribe(request *rpc_tendermint.RPCRequest,
+func (this *ErisDbJsonService) EventUnsubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
-		return nil, rpc_tendermint.INVALID_PARAMS, err
+		return nil, rpc.INVALID_PARAMS, err
 	}
 	subId := param.SubId
 
 	result, errC := this.pipe.Events().Unsubscribe(subId)
 	if errC != nil {
-		return nil, rpc_tendermint.INTERNAL_ERROR, errC
+		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &event.EventUnsub{result}, 0, nil
 }
 
 // Check subscription event cache for new data.
-func (this *ErisDbJsonService) EventPoll(request *rpc_tendermint.RPCRequest,
+func (this *ErisDbJsonService) EventPoll(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
-		return nil, rpc_tendermint.INVALID_PARAMS, err
+		return nil, rpc.INVALID_PARAMS, err
 	}
 	subId := param.SubId
 
 	result, errC := this.eventSubs.Poll(subId)
 	if errC != nil {
-		return nil, rpc_tendermint.INTERNAL_ERROR, errC
+		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &event.PollResponse{result}, 0, nil
 }
