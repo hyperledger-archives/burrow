@@ -103,6 +103,5 @@ type Transactor interface {
 	TransactNameReg(privKey []byte, name, data string, amount,
 		fee int64) (*txs.Receipt, error)
 	UnconfirmedTxs() (*txs.UnconfirmedTxs, error)
-	SignTx(tx txs.Tx,
-		privAccounts []*account.PrivAccount) (txs.Tx, error)
+	SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error)
 }

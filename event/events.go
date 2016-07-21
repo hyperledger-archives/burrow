@@ -39,7 +39,7 @@ type events struct {
 	eventSwitch *evts.EventSwitch
 }
 
-func newEvents(eventSwitch *evts.EventSwitch) *events {
+func NewEvents(eventSwitch *evts.EventSwitch) *events {
 	return &events{eventSwitch}
 }
 
