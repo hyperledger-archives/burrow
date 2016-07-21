@@ -54,4 +54,5 @@ deployment:
     branch: develop
     commands:
       - tests/build_tool.sh
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - docker push quay.io/eris/erisdb
