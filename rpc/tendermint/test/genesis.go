@@ -1,4 +1,4 @@
-package rpctest
+package test
 
 // priv keys generated deterministically eg rpc/tests/shared.go
 var defaultGenesis = `{

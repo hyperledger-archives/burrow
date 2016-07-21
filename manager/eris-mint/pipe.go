@@ -30,14 +30,14 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
-	account "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/account"
 	imath "github.com/eris-ltd/eris-db/common/math/integral"
-	config "github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/config"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/definitions"
 	edb_event "github.com/eris-ltd/eris-db/event"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	state "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
@@ -518,7 +518,6 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 		Data: responseCheckTx.Data,
 		Log:  responseCheckTx.Log,
 	}
-	fmt.Println("MARMOT resultBroadcastTx", resultBroadCastTx)
 	switch responseCheckTx.Code {
 	case tmsp_types.CodeType_OK:
 		return resultBroadCastTx, nil
