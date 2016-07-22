@@ -1,4 +1,4 @@
-package rpctest
+package test
 
 var defaultConfig = `# Copyright 2015, 2016 Eris Industries (UK) Ltd.
 # This file is part of Eris-RT

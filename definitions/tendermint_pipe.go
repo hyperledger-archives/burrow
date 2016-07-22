@@ -17,8 +17,8 @@
 package definitions
 
 import (
-	account "github.com/eris-ltd/eris-db/account"
-	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+	"github.com/eris-ltd/eris-db/account"
+	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -28,48 +28,45 @@ import (
 // collection of RPC routes for Eris-DB-1.0.0
 
 type TendermintPipe interface {
+	Pipe
+	// Events
+	// Subscribe attempts to subscribe the listener identified by listenerId to
+	// the event named event. The Event result is written to rpcResponseWriter
+	// which must be non-blocking
+	Subscribe(listenerId, event string,
+		rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error)
+	Unsubscribe(listenerId, event string) (*rpc_tm_types.ResultUnsubscribe, error)
+
 	// Net
-	Status() (*rpc_tendermint_types.ResultStatus, error)
-
-	NetInfo() (*rpc_tendermint_types.ResultNetInfo, error)
-
-	Genesis() (*rpc_tendermint_types.ResultGenesis, error)
+	Status() (*rpc_tm_types.ResultStatus, error)
+	NetInfo() (*rpc_tm_types.ResultNetInfo, error)
+	Genesis() (*rpc_tm_types.ResultGenesis, error)
 
 	// Accounts
-	GetAccount(address []byte) (*rpc_tendermint_types.ResultGetAccount,
-		error)
-
-	ListAccounts() (*rpc_tendermint_types.ResultListAccounts, error)
-
-	GetStorage(address, key []byte) (*rpc_tendermint_types.ResultGetStorage,
-		error)
-
-	DumpStorage(address []byte) (*rpc_tendermint_types.ResultDumpStorage,
-		error)
+	GetAccount(address []byte) (*rpc_tm_types.ResultGetAccount, error)
+	ListAccounts() (*rpc_tm_types.ResultListAccounts, error)
+	GetStorage(address, key []byte) (*rpc_tm_types.ResultGetStorage, error)
+	DumpStorage(address []byte) (*rpc_tm_types.ResultDumpStorage, error)
 
 	// Call
-	Call(fromAddress, toAddress, data []byte) (*rpc_tendermint_types.ResultCall,
-		error)
-
-	CallCode(fromAddress, code, data []byte) (*rpc_tendermint_types.ResultCall,
-		error)
+	Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall, error)
+	CallCode(fromAddress, code, data []byte) (*rpc_tm_types.ResultCall, error)
 
 	// TODO: [ben] deprecate as we should not allow unsafe behaviour
 	// where a user is allowed to send a private key over the wire,
 	// especially unencrypted.
 	SignTransaction(tx txs.Tx,
-		privAccounts []*account.PrivAccount) (*rpc_tendermint_types.ResultSignTx,
+		privAccounts []*account.PrivAccount) (*rpc_tm_types.ResultSignTx,
 		error)
 
 	// Name registry
-	GetName(name string) (*rpc_tendermint_types.ResultGetName, error)
-
-	ListNames() (*rpc_tendermint_types.ResultListNames, error)
+	GetName(name string) (*rpc_tm_types.ResultGetName, error)
+	ListNames() (*rpc_tm_types.ResultListNames, error)
 
 	// Memory pool
-	BroadcastTxAsync(transaction txs.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
-		error)
+	BroadcastTxAsync(transaction txs.Tx) (*rpc_tm_types.ResultBroadcastTx, error)
+	BroadcastTxSync(transaction txs.Tx) (*rpc_tm_types.ResultBroadcastTx, error)
 
-	BroadcastTxSync(transaction txs.Tx) (*rpc_tendermint_types.ResultBroadcastTx,
-		error)
+	// Blockchain
+	BlockchainInfo(minHeight, maxHeight, maxBlockLookback int) (*rpc_tm_types.ResultBlockchainInfo, error)
 }

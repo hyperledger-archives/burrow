@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/rpc/tendermint/test"
+	rpctest "github.com/eris-ltd/eris-db/rpc/tendermint/test"
 	"github.com/eris-ltd/eris-db/util"
 )
 

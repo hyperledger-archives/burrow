@@ -59,6 +59,12 @@ type ResultStatus struct {
 	LatestBlockTime   int64         `json:"latest_block_time"` // nano
 }
 
+type ResultSubscribe struct {
+}
+
+type ResultUnsubscribe struct {
+}
+
 type ResultNetInfo struct {
 	Listening bool     `json:"listening"`
 	Listeners []string `json:"listeners"`
@@ -145,6 +151,8 @@ const (
 	ResultTypeGenesis            = byte(0x11)
 	ResultTypeSignTx             = byte(0x12)
 	ResultTypeEvent              = byte(0x13) // so websockets can respond to rpc functions
+	ResultTypeSubscribe          = byte(0x14)
+	ResultTypeUnsubscribe        = byte(0x15)
 )
 
 type ErisDBResult interface {
@@ -173,4 +181,6 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&ResultGenesis{}, ResultTypeGenesis},
 	wire.ConcreteType{&ResultSignTx{}, ResultTypeSignTx},
 	wire.ConcreteType{&ResultEvent{}, ResultTypeEvent},
+	wire.ConcreteType{&ResultSubscribe{}, ResultTypeSubscribe},
+	wire.ConcreteType{&ResultUnsubscribe{}, ResultTypeUnsubscribe},
 )

@@ -80,7 +80,7 @@ func reap(es *EventSubscriptions) {
 }
 
 // Add a subscription and return the generated id. Note event dispatcher
-// has to call func which involves aquiring a mutex lock, so might be
+// has to call func which involves acquiring a mutex lock, so might be
 // a delay - though a conflict is practically impossible, and if it does
 // happen it's for an insignificant amount of time (the time it takes to
 // carry out EventCache.poll() ).
