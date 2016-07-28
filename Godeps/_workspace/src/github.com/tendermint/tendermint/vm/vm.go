@@ -734,7 +734,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 
-			newAccount := vm.appState.CreateAccount(callee)
+			newAccount := vm.appState.CreateAccount(caller)
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
 			ret, err_ := vm.Call(callee, newAccount, input, input, contractValue, gas)
