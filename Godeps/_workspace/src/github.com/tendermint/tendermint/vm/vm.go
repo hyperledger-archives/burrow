@@ -800,19 +800,16 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					}
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
 				} else {
+					// nil account means we're sending funds to a new account
 					if acc == nil {
-						// nil account means we're sending funds to a new account
 						if !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
 						acc = &Account{Address: addr}
-						vm.appState.UpdateAccount(acc)
-						// send funds to new account
-						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
-					} else {
-						// call standard contract
-						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 					}
+					// add account to the tx cache
+					vm.appState.UpdateAccount(acc)
+					ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 				}
 			}
 
