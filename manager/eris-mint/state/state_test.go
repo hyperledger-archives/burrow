@@ -493,7 +493,6 @@ var callerCode, _ = hex.DecodeString("60606040526000357c010000000000000000000000
 var sendData, _ = hex.DecodeString("3e58c58c")
 
 func TestContractSend(t *testing.T) {
-	//evm.SetDebug(true)
 	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address)
