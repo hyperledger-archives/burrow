@@ -513,7 +513,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			// and only deduct from the caller's balance.
 			inAcc.Balance -= value
 			if createContract {
-				inAcc.Sequence += 1
+				inAcc.Sequence += 1 // XXX ?!
 			}
 			blockCache.UpdateAccount(inAcc)
 		}

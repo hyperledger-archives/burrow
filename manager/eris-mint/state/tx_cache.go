@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
@@ -65,6 +67,8 @@ func (cache *TxCache) CreateAccount(creator *vm.Account) *vm.Account {
 	nonce := creator.Nonce
 	creator.Nonce += 1
 
+	fmt.Printf("CREATE ACCOUNT %X %d\n", creator.Address.Bytes(), creator.Nonce)
+
 	addr := LeftPadWord256(NewContractAddress(creator.Address.Postfix(20), int(nonce)))
 
 	// Create account from address.
@@ -120,16 +124,19 @@ func (cache *TxCache) SetStorage(addr Word256, key Word256, value Word256) {
 // These updates do not have to be in deterministic order,
 // the backend is responsible for ordering updates.
 func (cache *TxCache) Sync() {
+	fmt.Println("SYNC")
 
 	// Remove or update storage
 	for addrKey, value := range cache.storages {
 		addr, key := Tuple256Split(addrKey)
+		fmt.Printf("UPDATE STORAGE %X %X %X\n", addr, key, value)
 		cache.backend.SetStorage(addr, key, value)
 	}
 
 	// Remove or update accounts
 	for addr, accInfo := range cache.accounts {
 		acc, removed := accInfo.unpack()
+		fmt.Printf("UPDATE ACC %X; removed %v\n", addr, removed)
 		if removed {
 			cache.backend.RemoveAccount(addr.Postfix(20))
 		} else {

@@ -2,13 +2,17 @@ package state
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"testing"
 	//"time"
 
+	"github.com/tendermint/go-common"
 	"github.com/tendermint/tendermint/config/tendermint_test"
 	// tmtypes "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
+	//evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -380,6 +384,102 @@ func TestNameTxs(t *testing.T) {
 	if entry != nil {
 		t.Fatal("Expected removed entry to be nil")
 	}
+}
+
+// Test creating a contract, creating a contract from a contract,
+// and creating a contract from a contract called by another contract
+/*
+contract Factory {
+    address a;
+    function create() returns (address){
+        a = new PreFactory();
+        return a;
+    }
+}
+
+contract PreFactory{
+    address a;
+    function create(Factory c) returns (address) {
+    	a = c.create();
+    	return a;
+    }
+}
+*/
+
+var preFactoryCode, _ = hex.DecodeString("60606040526000357C0100000000000000000000000000000000000000000000000000000000900480639ED933181461003957610037565B005B61004F600480803590602001909190505061007B565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B60008173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1663EFC81A8C604051817C01000000000000000000000000000000000000000000000000000000000281526004018090506020604051808303816000876161DA5A03F1156100025750505060405180519060200150600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905061013C565B91905056")
+var factoryCode, _ = hex.DecodeString("60606040526000357C010000000000000000000000000000000000000000000000000000000090048063EFC81A8C146037576035565B005B60426004805050606E565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B6000604051610153806100E0833901809050604051809103906000F0600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905060DD565B90566060604052610141806100126000396000F360606040526000357C0100000000000000000000000000000000000000000000000000000000900480639ED933181461003957610037565B005B61004F600480803590602001909190505061007B565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B60008173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1663EFC81A8C604051817C01000000000000000000000000000000000000000000000000000000000281526004018090506020604051808303816000876161DA5A03F1156100025750505060405180519060200150600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905061013C565B91905056")
+var createData, _ = hex.DecodeString("9ed93318")
+
+func TestCreates(t *testing.T) {
+	//evm.SetDebug(true)
+	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
+
+	//val0 := state.GetValidatorInfo(privValidators[0].Address)
+	acc0 := state.GetAccount(privAccounts[0].PubKey.Address())
+	acc0PubKey := privAccounts[0].PubKey
+	acc1 := state.GetAccount(privAccounts[1].PubKey.Address())
+	acc2 := state.GetAccount(privAccounts[2].PubKey.Address())
+
+	state = state.Copy()
+	newAcc1 := state.GetAccount(acc1.Address)
+	newAcc1.Code = preFactoryCode
+	newAcc2 := state.GetAccount(acc2.Address)
+	newAcc2.Code = factoryCode
+
+	state.UpdateAccount(newAcc1)
+	state.UpdateAccount(newAcc2)
+
+	createData = append(createData, common.LeftPadBytes(acc2.Address, 32)...)
+
+	// call the pre-factory, triggering the factory to run a create
+	tx := &txs.CallTx{
+		Input: &txs.TxInput{
+			Address:  acc0.Address,
+			Amount:   1,
+			Sequence: acc0.Sequence + 1,
+			PubKey:   acc0PubKey,
+		},
+		Address:  acc1.Address,
+		GasLimit: 10000,
+		Data:     createData,
+	}
+
+	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
+	err := execTxWithState(state, tx, true)
+	if err != nil {
+		t.Errorf("Got error in executing call transaction, %v", err)
+	}
+
+	acc1 = state.GetAccount(acc1.Address)
+	storage := state.LoadStorage(acc1.StorageRoot)
+	_, v, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	fmt.Printf("%X\n", v)
+
+	acc0 = state.GetAccount(acc0.Address)
+	// call the pre-factory, triggering the factory to run a create
+	tx = &txs.CallTx{
+		Input: &txs.TxInput{
+			Address:  acc0.Address,
+			Amount:   1,
+			Sequence: acc0.Sequence + 1,
+			PubKey:   acc0PubKey,
+		},
+		Address:  acc1.Address,
+		GasLimit: 10000,
+		Data:     createData,
+	}
+
+	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
+	err = execTxWithState(state, tx, true)
+	if err != nil {
+		t.Errorf("Got error in executing call transaction, %v", err)
+	}
+
+	acc1 = state.GetAccount(acc1.Address)
+	storage = state.LoadStorage(acc1.StorageRoot)
+	_, v, _ = storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	fmt.Printf("%X\n", v)
+
 }
 
 // TODO: test overflows.
