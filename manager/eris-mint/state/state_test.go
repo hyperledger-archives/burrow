@@ -3,7 +3,6 @@ package state
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"testing"
 	//"time"
 
@@ -386,8 +385,7 @@ func TestNameTxs(t *testing.T) {
 	}
 }
 
-// Test creating a contract, creating a contract from a contract,
-// and creating a contract from a contract called by another contract
+// Test creating a contract from futher down the call stack
 /*
 contract Factory {
     address a;
@@ -406,6 +404,7 @@ contract PreFactory{
 }
 */
 
+// run-time byte code for each of the above
 var preFactoryCode, _ = hex.DecodeString("60606040526000357C0100000000000000000000000000000000000000000000000000000000900480639ED933181461003957610037565B005B61004F600480803590602001909190505061007B565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B60008173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1663EFC81A8C604051817C01000000000000000000000000000000000000000000000000000000000281526004018090506020604051808303816000876161DA5A03F1156100025750505060405180519060200150600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905061013C565B91905056")
 var factoryCode, _ = hex.DecodeString("60606040526000357C010000000000000000000000000000000000000000000000000000000090048063EFC81A8C146037576035565B005B60426004805050606E565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B6000604051610153806100E0833901809050604051809103906000F0600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905060DD565B90566060604052610141806100126000396000F360606040526000357C0100000000000000000000000000000000000000000000000000000000900480639ED933181461003957610037565B005B61004F600480803590602001909190505061007B565B604051808273FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16815260200191505060405180910390F35B60008173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1663EFC81A8C604051817C01000000000000000000000000000000000000000000000000000000000281526004018090506020604051808303816000876161DA5A03F1156100025750505060405180519060200150600060006101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF02191690830217905550600060009054906101000A900473FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF16905061013C565B91905056")
 var createData, _ = hex.DecodeString("9ed93318")
@@ -452,8 +451,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage := state.LoadStorage(acc1.StorageRoot)
-	_, v, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
-	fmt.Printf("%X\n", v)
+	_, firstCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
 
 	acc0 = state.GetAccount(acc0.Address)
 	// call the pre-factory, triggering the factory to run a create
@@ -477,9 +475,65 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage = state.LoadStorage(acc1.StorageRoot)
-	_, v, _ = storage.Get(common.LeftPadBytes([]byte{0}, 32))
-	fmt.Printf("%X\n", v)
+	_, secondCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
 
+	if bytes.Equal(firstCreatedAddress, secondCreatedAddress) {
+		t.Errorf("Multiple contracts created with the same address!")
+	}
+}
+
+/*
+contract Caller {
+    function send(address x){
+        x.send(msg.value);
+    }
+}
+*/
+var callerCode, _ = hex.DecodeString("60606040526000357c0100000000000000000000000000000000000000000000000000000000900480633e58c58c146037576035565b005b604b6004808035906020019091905050604d565b005b8073ffffffffffffffffffffffffffffffffffffffff16600034604051809050600060405180830381858888f19350505050505b5056")
+var sendData, _ = hex.DecodeString("3e58c58c")
+
+func TestContractSend(t *testing.T) {
+	//evm.SetDebug(true)
+	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
+
+	//val0 := state.GetValidatorInfo(privValidators[0].Address)
+	acc0 := state.GetAccount(privAccounts[0].PubKey.Address())
+	acc0PubKey := privAccounts[0].PubKey
+	acc1 := state.GetAccount(privAccounts[1].PubKey.Address())
+	acc2 := state.GetAccount(privAccounts[2].PubKey.Address())
+
+	state = state.Copy()
+	newAcc1 := state.GetAccount(acc1.Address)
+	newAcc1.Code = callerCode
+	state.UpdateAccount(newAcc1)
+
+	sendData = append(sendData, common.LeftPadBytes(acc2.Address, 32)...)
+	sendAmt := int64(10)
+	acc2Balance := acc2.Balance
+
+	// call the contract, triggering the send
+	tx := &txs.CallTx{
+		Input: &txs.TxInput{
+			Address:  acc0.Address,
+			Amount:   sendAmt,
+			Sequence: acc0.Sequence + 1,
+			PubKey:   acc0PubKey,
+		},
+		Address:  acc1.Address,
+		GasLimit: 1000,
+		Data:     sendData,
+	}
+
+	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
+	err := execTxWithState(state, tx, true)
+	if err != nil {
+		t.Errorf("Got error in executing call transaction, %v", err)
+	}
+
+	acc2 = state.GetAccount(acc2.Address)
+	if acc2.Balance != sendAmt+acc2Balance {
+		t.Errorf("Value transfer from contract failed! Got %d, expected %d", acc2.Balance, sendAmt+acc2Balance)
+	}
 }
 
 // TODO: test overflows.
