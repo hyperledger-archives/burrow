@@ -53,7 +53,7 @@ type Do struct {
 	// Result       string
 }
 
-func NowDo() *Do {
+func NewDo() *Do {
 	do := new(Do)
 	do.Debug = false
 	do.Verbose = false

@@ -17,10 +17,20 @@
 package commands
 
 import (
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/spf13/cobra13"
+
+	"github.com/eris-ltd/eris-logger"
+
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/version"
 )
 
-// Global Do struct
-var do *definitions.Do
+// Global flags for persistent flags
+var clientDo *definitions.ClientDo
 
 var ErisClientCmd = &cobra.Command{
 	Use:   "eris-client",
@@ -34,9 +44,9 @@ Complete documentation is available at https://docs.erisindustries.com
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
 		log.SetLevel(log.WarnLevel)
-		if do.Verbose {
+		if clientDo.Verbose {
 			log.SetLevel(log.InfoLevel)
-		} else if do.Debug {
+		} else if clientDo.Debug {
 			log.SetLevel(log.DebugLevel)
 		}
 	},
@@ -44,5 +54,66 @@ Complete documentation is available at https://docs.erisindustries.com
 }
 
 func Execute() {
+	InitErisClientInit()
+	AddGlobalFlags()
+	AddClientCommands()
+	ErisClientCmd.Execute()
+}
 
+func InitErisClientInit() {
+	// initialise an empty ClientDo struct for command execution
+	clientDo = definitions.NewClientDo()
+}
+
+func AddGlobalFlags() {
+	ErisClientCmd.PersistentFlags().BoolVarP(&clientDo.Verbose, "verbose", "v", defaultVerbose(), "verbose output; more output than no output flags; less output than debug level; default respects $ERIS_CLIENT_VERBOSE")
+	ErisClientCmd.PersistentFlags().BoolVarP(&clientDo.Debug, "debug", "d", defaultDebug(), "debug level output; the most output available for eris-client; if it is too chatty use verbose flag; default respects $ERIS_CLIENT_DEBUG")
+}
+
+func AddClientCommands() {
+	buildTransactionCommand()
+	ErisClientCmd.AddCommand(TransactionCmd)
+}
+
+//------------------------------------------------------------------------------
+// Defaults
+
+// defaultVerbose is set to false unless the ERIS_CLIENT_VERBOSE environment
+// variable is set to a parsable boolean.
+func defaultVerbose() bool {
+	return setDefaultBool("ERIS_CLIENT_VERBOSE", false)
+}
+
+// defaultDebug is set to false unless the ERIS_CLIENT_DEBUG environment
+// variable is set to a parsable boolean.
+func defaultDebug() bool {
+	return setDefaultBool("ERIS_CLIENT_DEBUG", false)
+}
+
+// setDefaultBool returns the provided default value if the environment variable
+// is not set or not parsable as a bool.
+func setDefaultBool(environmentVariable string, defaultValue bool) bool {
+	value := os.Getenv(environmentVariable)
+	if value != "" {
+		if parsedValue, err := strconv.ParseBool(value); err == nil {
+			return parsedValue
+		}
+	}
+	return defaultValue
+}
+
+func setDefaultString(envVar, def string) string {
+	env := os.Getenv(envVar)
+	if env != "" {
+		return env
+	}
+	return def
+}
+
+func setDefaultStringSlice(envVar string, def []string) []string {
+	env := os.Getenv(envVar)
+	if env != "" {
+		return strings.Split(env, ",")
+	}
+	return def
 }
