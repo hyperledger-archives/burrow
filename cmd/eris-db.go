@@ -34,8 +34,8 @@ var do *definitions.Do
 
 var ErisDbCmd = &cobra.Command{
 	Use:   "eris-db",
-	Short: "Eris-DB is the heart of the eris chain.",
-	Long: `Eris-DB is the heart of the eris chain.  Eris-DB combines
+	Short: "Eris-DB is the server side of the eris chain.",
+	Long: `Eris-DB is the server side of the eris chain.  Eris-DB combines
 a modular consensus engine and application manager to run a chain to suit
 your needs.
 
@@ -56,15 +56,15 @@ Complete documentation is available at https://docs.erisindustries.com
 }
 
 func Execute() {
-	InitErisDb()
+	InitErisDbCli()
 	AddGlobalFlags()
 	AddCommands()
 	ErisDbCmd.Execute()
 }
 
-func InitErisDb() {
-	// initialise an empty do struct for command execution
-	do = definitions.NowDo()
+func InitErisDbCli() {
+	// initialise an empty Do struct for command execution
+	do = definitions.NewDo()
 }
 
 func AddGlobalFlags() {
