@@ -16,36 +16,36 @@
 
 package definitions
 
-type ClientDo {
+type ClientDo struct {
 	// Persistent flags not reflected in the configuration files
 	// only set through command line flags or environment variables
 	Debug   bool // ERIS_DB_DEBUG
 	Verbose bool // ERIS_DB_VERBOSE
 
-	// Following parameters are global flags for eris-client
-	signAddrFlag string
-	nodeAddrFlag string
-	pubkeyFlag   string
-	addrFlag     string
-	chainidFlag  string
+	// Following parameters are global flags for eris-client tx
+	SignAddrFlag string
+	NodeAddrFlag string
+	PubkeyFlag   string
+	AddrFlag     string
+	ChainidFlag  string
 
 	// signFlag      bool // TODO: remove; unsafe signing without eris-keys
-	broadcastFlag bool
-	waitFlag      bool
+	BroadcastFlag bool
+	WaitFlag      bool
 
-	// Following parameters are specific for Transaction command
+	// Following parameters are vary for different Transaction subcommands
 	// some of these are strings rather than flags because the `core`
 	// functions have a pure string interface so they work nicely from http
-	amtFlag      string
-	nonceFlag    string
-	nameFlag     string
-	dataFlag     string
-	dataFileFlag string
-	toFlag       string
-	feeFlag      string
-	gasFlag      string
-	unbondtoFlag string
-	heightFlag   string
+	AmtFlag      string
+	NonceFlag    string
+	NameFlag     string
+	DataFlag     string
+	DataFileFlag string
+	ToFlag       string
+	FeeFlag      string
+	GasFlag      string
+	UnbondtoFlag string
+	HeightFlag   string
 }
 
 func NewClientDo() *ClientDo {
@@ -53,26 +53,26 @@ func NewClientDo() *ClientDo {
 	clientDo.Debug = false
 	clientDo.Verbose = false
 	
-	clientDo.signAddrFlag = ""
-	clientDo.nodeAddrFlag = ""
-	clientDo.pubkeyFlag = ""
-	clientDo.addrFlag = ""
-	clientDo.chainidFlag = ""
+	clientDo.SignAddrFlag = ""
+	clientDo.NodeAddrFlag = ""
+	clientDo.PubkeyFlag = ""
+	clientDo.AddrFlag = ""
+	clientDo.ChainidFlag = ""
 
-	clientDo.signFlag = false
-	clientDo.broadcastFlag = false
-	clientDo.waitFlag = false
+	// clientDo.signFlag = false
+	clientDo.BroadcastFlag = false
+	clientDo.WaitFlag = false
 
-	clientDo.amtFlag = ""
-	clientDo.nonceFlag = ""
-	clientDo.nameFlag = ""
-	clientDo.dataFlag = ""
-	clientDo.dataFileFlag = ""
-	clientDo.toFlag = ""
-	clientDo.feeFlag = ""
-	clientDo.gasFlag = ""
-	clientDo.unbondtoFlag = ""
-	clientDo.heightFlag = ""
+	clientDo.AmtFlag = ""
+	clientDo.NonceFlag = ""
+	clientDo.NameFlag = ""
+	clientDo.DataFlag = ""
+	clientDo.DataFileFlag = ""
+	clientDo.ToFlag = ""
+	clientDo.FeeFlag = ""
+	clientDo.GasFlag = ""
+	clientDo.UnbondtoFlag = ""
+	clientDo.HeightFlag = ""
 
 	return clientDo
 }

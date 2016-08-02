@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra13"
+	"github.com/spf13/cobra"
 
-	"github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"
