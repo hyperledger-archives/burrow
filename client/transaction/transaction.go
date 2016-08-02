@@ -17,19 +17,19 @@
 package transaction
 
 import (
-	"fmt"
-	"io/ioutil"
+	// "fmt"
+	// "io/ioutil"
 
-	"github.com/eris-ltd/eris-logger"
+	// "github.com/eris-ltd/eris-logger"
 
-	"github.com/eris-ltd/eris-db/client/core"
+	// // "github.com/eris-ltd/eris-db/client/core"
 	"github.com/eris-ltd/eris-db/definitions"
 )
 
-func transactionSend(do *definitions.ClientDo) {
-	transaction, err := core.Send(do.nodeAddrFlag, do.signAddrFlag,
-		do.pubkeyFlag, do.toFlag, do.amtFlag, do.nonceFlag)
-	if err != nil {
-		log.Fatalf("Failed on Send Transaction: %s", err)
-	}
+func Send(do *definitions.ClientDo) {
+	// transaction, err := core.Send(do.nodeAddrFlag, do.signAddrFlag,
+	// 	do.pubkeyFlag, do.toFlag, do.amtFlag, do.nonceFlag)
+	// if err != nil {
+	// 	log.Fatalf("Failed on Send Transaction: %s", err)
+	// }
 }
