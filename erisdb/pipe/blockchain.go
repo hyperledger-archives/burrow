@@ -107,7 +107,8 @@ func (this *blockchain) Blocks(fda []*FilterData) (*Blocks, error) {
 	if skumtFel != nil {
 		return nil, fmt.Errorf("Fel i förfrågan. Helskumt...: " + skumtFel.Error())
 	}
-	for h := maxHeight; h >= minHeight && maxHeight-h > BLOCK_MAX; h-- {
+
+	for h := maxHeight; h >= minHeight && maxHeight-h < BLOCK_MAX; h-- {
 		blockMeta := this.blockStore.LoadBlockMeta(h)
 		if filter.Match(blockMeta) {
 			blockMetas = append(blockMetas, blockMeta)
