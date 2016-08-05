@@ -20,16 +20,16 @@ import (
 	// "fmt"
 	// "io/ioutil"
 
-	// "github.com/eris-ltd/eris-logger"
+	log "github.com/eris-ltd/eris-logger"
 
-	// // "github.com/eris-ltd/eris-db/client/core"
+	"github.com/eris-ltd/eris-db/client/core"
 	"github.com/eris-ltd/eris-db/definitions"
 )
 
 func Send(do *definitions.ClientDo) {
-	// transaction, err := core.Send(do.nodeAddrFlag, do.signAddrFlag,
-	// 	do.pubkeyFlag, do.toFlag, do.amtFlag, do.nonceFlag)
-	// if err != nil {
-	// 	log.Fatalf("Failed on Send Transaction: %s", err)
-	// }
+	_, err := core.Send(do.NodeAddrFlag, do.SignAddrFlag,
+		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
+	if err != nil {
+		log.Fatalf("Failed on Send Transaction: %s", err)
+	}
 }
