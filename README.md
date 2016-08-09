@@ -18,9 +18,6 @@ Eris DB is Eris' blockchain client. It includes a permissions layer, an implemen
 
 ## Background
 
-// re-write => this is duplicate of below
-`eris-db` is Eris' blockchain-client. It consists of a [Tendermint](https://github.com/tenderming/tendermint) node wrapped by a simple server. The server allows requests to be made over HTTP - either using JSON-RPC 2.0 or a RESTlike web-api - and websocket (JSON-RPC 2.0). The web-APIs are documented in `api.md`. We also have javascript bindings for the RPC methods in [eris-db.js](https://github.com/eris-ltd/eris-db.js).
-//use this
 See the [eris-db documentation](https://erisindustries.com/components/erisdb/) for more information.
 
 ## Installation
