@@ -17,11 +17,7 @@ func TestWrapper(runner func() int) int {
 		panic(err)
 	}
 
-	saveNewPriv()
-
 	// start a node
-
-	fmt.Println()
 	ready := make(chan error)
 	go newNode(ready)
 	err = <-ready

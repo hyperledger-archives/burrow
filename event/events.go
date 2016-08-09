@@ -30,8 +30,16 @@ import (
 // that there is no need anymore for this poor wrapper.
 
 type EventEmitter interface {
-	Subscribe(subId, event string, callback func(evts.EventData)) (bool, error)
-	Unsubscribe(subId string) (bool, error)
+	Subscribe(subId, event string, callback func(evts.EventData)) error
+	Unsubscribe(subId string) error
+}
+
+func NewEvents(eventSwitch *evts.EventSwitch) *events {
+	return &events{eventSwitch}
+}
+
+func Multiplex(events ...EventEmitter) *multiplexedEvents {
+	return &multiplexedEvents{events}
 }
 
 // The events struct has methods for working with events.
@@ -39,20 +47,44 @@ type events struct {
 	eventSwitch *evts.EventSwitch
 }
 
-func NewEvents(eventSwitch *evts.EventSwitch) *events {
-	return &events{eventSwitch}
-}
-
 // Subscribe to an event.
-func (this *events) Subscribe(subId, event string, callback func(evts.EventData)) (bool, error) {
+func (this *events) Subscribe(subId, event string, callback func(evts.EventData)) error {
 	this.eventSwitch.AddListenerForEvent(subId, event, callback)
-	return true, nil
+	return nil
 }
 
 // Un-subscribe from an event.
-func (this *events) Unsubscribe(subId string) (bool, error) {
+func (this *events) Unsubscribe(subId string) error {
 	this.eventSwitch.RemoveListener(subId)
-	return true, nil
+	return nil
+}
+
+type multiplexedEvents struct {
+	eventEmitters []EventEmitter
+}
+
+// Subscribe to an event.
+func (multiEvents *multiplexedEvents) Subscribe(subId, event string, callback func(evts.EventData)) error {
+	for _, eventEmitter := range multiEvents.eventEmitters {
+		err := eventEmitter.Subscribe(subId, event, callback)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Un-subscribe from an event.
+func (multiEvents *multiplexedEvents) Unsubscribe(subId string) error {
+	for _, eventEmitter := range multiEvents.eventEmitters {
+		err := eventEmitter.Unsubscribe(subId)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // *********************************** Events ***********************************

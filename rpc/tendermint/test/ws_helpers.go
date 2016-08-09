@@ -17,6 +17,10 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
+const (
+	timeoutSeconds = 5
+)
+
 //--------------------------------------------------------------------------------
 // Utilities for testing the websocket service
 
@@ -81,7 +85,7 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string, dieOnTimeo
 	f()
 
 	// wait for an event or timeout
-	timeout := time.NewTimer(10 * time.Second)
+	timeout := time.NewTimer(timeoutSeconds * time.Second)
 	select {
 	case <-timeout.C:
 		if dieOnTimeout {

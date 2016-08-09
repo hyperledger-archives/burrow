@@ -22,6 +22,7 @@ import (
 	tendermint_types "github.com/tendermint/tendermint/types"
 	tmsp_types "github.com/tendermint/tmsp/types"
 
+	edb_event "github.com/eris-ltd/eris-db/event"
 	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 )
 
@@ -46,6 +47,10 @@ type ConsensusEngine interface {
 	// Memory pool
 	BroadcastTransaction(transaction []byte,
 		callback func(*tmsp_types.Response)) error
+
+	// Events
+	// For consensus events like NewBlock
+	Events() edb_event.EventEmitter
 }
 
 // type Communicator interface {

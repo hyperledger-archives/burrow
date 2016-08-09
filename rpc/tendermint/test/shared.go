@@ -75,6 +75,9 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 		return err
 	}
 
+	// Set up priv_validator.json before we start tendermint (otherwise it will
+	// create its own one.
+	saveNewPriv()
 	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig)
 	if err != nil {
 		return err
@@ -100,15 +103,21 @@ func makeUsers(n int) []*acm.PrivAccount {
 
 // create a new node and sleep forever
 func newNode(ready chan error) {
-	// Run the RPC server.
-	_, err := testCore.NewGatewayTendermint(config)
-	ready <- err
-
-	// Sleep forever
-	if err == nil {
-		//ch := make(chan struct{})
-		//<-ch
+	// TODO: we don't need to start a V0 gateway this was added for debugging, remove
+	serverProcess, err := testCore.NewGatewayV0(config)
+	if err != nil {
+		ready <- err
 	}
+
+	err = serverProcess.Start()
+	if err != nil {
+		ready <- err
+	}
+
+	// Run the RPC servers
+	_, err = testCore.NewGatewayTendermint(config)
+	ready <- err
+	<-serverProcess.StopEventChannel()
 }
 
 func saveNewPriv() {

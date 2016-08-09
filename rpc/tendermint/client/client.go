@@ -98,7 +98,6 @@ func BroadcastTx(client rpcclient.Client,
 	receiptBytes := res.(*rpc_types.ResultBroadcastTx).Data
 	receipt := txs.Receipt{}
 	err = wire.ReadBinaryBytes(receiptBytes, &receipt)
-	fmt.Printf("rec: %#v\n", receipt)
 	return receipt, err
 
 }

@@ -90,7 +90,7 @@ func (this *EventSubscriptions) Add(eventId string) (string, error) {
 		return "", errSID
 	}
 	cache := newEventCache()
-	_, errC := this.eventEmitter.Subscribe(subId, eventId,
+	errC := this.eventEmitter.Subscribe(subId, eventId,
 		func(evt evts.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
