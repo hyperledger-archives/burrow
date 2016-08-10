@@ -33,19 +33,6 @@ var TransactionCmd = &cobra.Command{
 	Long:  `eris-client tx formulates and signs a transaction to a chain.
 `,
 	Run:   func(cmd *cobra.Command, args []string) { cmd.Help() },
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// 
-		if !strings.HasPrefix(clientDo.NodeAddrFlag, "http://") {
-			clientDo.NodeAddrFlag = "http://" + clientDo.NodeAddrFlag
-		}
-		if !strings.HasSuffix(clientDo.NodeAddrFlag, "/") {
-			clientDo.NodeAddrFlag += "/"
-		}
-
-		if !strings.HasPrefix(clientDo.SignAddrFlag, "http://") {
-			clientDo.SignAddrFlag = "http://" + clientDo.SignAddrFlag
-		}
-	},
 }
 
 func buildTransactionCommand() {
@@ -62,7 +49,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			transaction.Send(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	sendCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	sendCmd.Flags().StringVarP(&clientDo.ToFlag, "to", "t", "", "specify an address to send to")
@@ -75,7 +62,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Name(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	nameCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	nameCmd.Flags().StringVarP(&clientDo.NameFlag, "name", "n", "", "specify a name")
@@ -91,7 +78,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Call(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	callCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	callCmd.Flags().StringVarP(&clientDo.ToFlag, "to", "t", "", "specify an address to send to")
@@ -107,7 +94,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Bond(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	bondCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	bondCmd.Flags().StringVarP(&clientDo.UnbondtoFlag, "to", "t", "", "specify an address to unbond to")
@@ -120,7 +107,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Unbond(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	unbondCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
 	unbondCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
@@ -133,7 +120,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Rebond(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	rebondCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
 	rebondCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
@@ -146,7 +133,7 @@ func buildTransactionCommand() {
 		Run:   func(cmd *cobra.Command, args []string) {
 			// transaction.Permsissions(clientDo)
 		},
-		PersistentPreRun: assertChainIdSet,
+		PreRun: assertParameters,
 	}
 	permissionsCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
 	permissionsCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
@@ -158,7 +145,7 @@ func addTransactionPersistentFlags() {
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.SignAddrFlag, "sign-addr", "", defaultKeyDaemonAddress(), "set eris-keys daemon address (default respects $ERIS_CLIENT_SIGN_ADDRESS)")
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the eris-db node rpc server address (default respects $ERIS_CLIENT_NODE_ADDRESS)")
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $ERIS_CLIENT_PUBLIC_KEY)")
-	TransactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (from which the public key can be fetch from eris-keys) (default respects $ERIS_CLIENT_ADDRESS)")
+	TransactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at eris-keys) (default respects $ERIS_CLIENT_ADDRESS)")
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.ChainidFlag, "chain-id", "", defaultChainId(), "specify the chainID (default respects $CHAIN_ID)")
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "nonce", "", "", "specify the nonce to use for the transaction (should equal the sender account's nonce + 1)")
 
@@ -175,11 +162,11 @@ func defaultChainId() string {
 }
 
 func defaultKeyDaemonAddress() string {
-	return setDefaultString("ERIS_CLIENT_SIGN_ADDRESS", "http://localhost:4767")
+	return setDefaultString("ERIS_CLIENT_SIGN_ADDRESS", "http://127.0.0.1:4767")
 }
 
 func defaultNodeRpcAddress() string {
-	return setDefaultString("ERIS_CLIENT_NODE_ADDRESS", "http://localhost:46657")
+	return setDefaultString("ERIS_CLIENT_NODE_ADDRESS", "http://127.0.0.1:46657")
 }
 
 func defaultPublicKey() string {
@@ -193,9 +180,25 @@ func defaultAddress() string {
 //------------------------------------------------------------------------------
 // Helper functions
 
-func assertChainIdSet(cmd *cobra.Command, args []string) {
+func assertParameters(cmd *cobra.Command, args []string) {
 	if clientDo.ChainidFlag == "" {
 		log.Fatalf(`Cannot run "eris-client tx" without chain id set in --chain-id or $CHAIN_ID.`)
 		os.Exit(1)
 	}
+	 
+	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") {
+		clientDo.NodeAddrFlag = "tcp://" + clientDo.NodeAddrFlag
+	}
+	if !strings.HasSuffix(clientDo.NodeAddrFlag, "/") {
+		clientDo.NodeAddrFlag += "/"
+	}
+
+	if !strings.HasPrefix(clientDo.SignAddrFlag, "http://") {
+		clientDo.SignAddrFlag = "http://" + clientDo.SignAddrFlag
+	}
+	log.WithFields(log.Fields{
+		"signing address": clientDo.SignAddrFlag,
+		"node address": clientDo.NodeAddrFlag,
+		"chain id": clientDo.ChainidFlag,
+		}).Debug("Asserted parameters")
 }

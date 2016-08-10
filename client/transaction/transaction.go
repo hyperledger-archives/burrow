@@ -27,9 +27,12 @@ import (
 )
 
 func Send(do *definitions.ClientDo) {
-	_, err := core.Send(do.NodeAddrFlag, do.SignAddrFlag,
+	sendTransaction, err := core.Send(do.NodeAddrFlag, do.SignAddrFlag,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
 	if err != nil {
 		log.Fatalf("Failed on Send Transaction: %s", err)
 	}
+	// unpackSignAndBroadcast(
+		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
+		do.SignAddrFlag, sendTransaction, true, do.BroadcastFlag, do.WaitFlag)//)
 }

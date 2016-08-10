@@ -30,12 +30,12 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-rpc/client"
 
-	// "github.com/eris-ltd/tendermint/account"
 	// ptypes "github.com/eris-ltd/permission/types"
 	// cclient "github.com/eris-ltd/tendermint/rpc/client"
 
 	log "github.com/eris-ltd/eris-logger"
 
+	"github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -312,32 +312,32 @@ func Pub(addr, rpcAddr string) (pubBytes []byte, err error) {
 	return hex.DecodeString(pubS)
 }
 
-// func Sign(signBytes, signAddr, signRPC string) (sig [64]byte, err error) {
-// 	args := map[string]string{
-// 		"msg":  signBytes,
-// 		"hash": signBytes, // backwards compatibility
-// 		"addr": signAddr,
-// 	}
-// 	sigS, err := RequestResponse(signRPC, "sign", args)
-// 	if err != nil {
-// 		return
-// 	}
-// 	sigBytes, err := hex.DecodeString(sigS)
-// 	if err != nil {
-// 		return
-// 	}
-// 	copy(sig[:], sigBytes)
-// 	return
-// }
+func Sign(signBytes, signAddr, signRPC string) (sig [64]byte, err error) {
+	args := map[string]string{
+		"msg":  signBytes,
+		"hash": signBytes, // backwards compatibility
+		"addr": signAddr,
+	}
+	sigS, err := RequestResponse(signRPC, "sign", args)
+	if err != nil {
+		return
+	}
+	sigBytes, err := hex.DecodeString(sigS)
+	if err != nil {
+		return
+	}
+	copy(sig[:], sigBytes)
+	return
+}
 
-// func Broadcast(tx types.Tx, broadcastRPC string) (*txs.Receipt, error) {
-// 	client := rpclient.NewClientJSONRPC(broadcastRPC)
-// 	rec, err := client.BroadcastTx(tx)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &rec.Receipt, nil
-// }
+func Broadcast(tx txs.Tx, broadcastRPC string) (*txs.Receipt, error) {
+	client := rpcclient.NewClientURI(broadcastRPC)
+	receipt, err := tendermint_client.BroadcastTx(client, tx)
+	if err != nil {
+		return nil, err
+	}
+	return &receipt, nil
+}
 
 //------------------------------------------------------------------------------------
 // utils for talking to the key server
@@ -354,9 +354,9 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 	}
 	endpoint := fmt.Sprintf("%s/%s", addr, method)
 	log.WithFields(log.Fields{
-		"endpoint": endpoint,
+		"key server endpoint": endpoint,
 		"request body": string(b),
-		}).Debugf("Sending request body")
+		}).Debugf("Sending request body to key server")
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return "", err
@@ -369,6 +369,11 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 	if errS != "" {
 		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
 	}
+	log.WithFields(log.Fields{
+		"endpoint": endpoint,
+		"request body": string(b),
+		"response": res,
+		}).Debugf("Received response from key server")
 	return res, nil
 }
 
@@ -396,114 +401,119 @@ func unpackResponse(resp *http.Response) (string, string, error) {
 	return r.Response, r.Error, nil
 }
 
-// //------------------------------------------------------------------------------------
-// // sign and broadcast convenience
+//------------------------------------------------------------------------------------
+// sign and broadcast convenience
 
-// // tx has either one input or we default to the first one (ie for send/bond)
-// // TODO: better support for multisig and bonding
-// func signTx(signAddr, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
-// 	signBytes := fmt.Sprintf("%X", crypto.SignBytes(chainID, tx_))
-// 	var inputAddr []byte
-// 	var sigED crypto.SignatureEd25519
-// 	switch tx := tx_.(type) {
-// 	case *types.SendTx:
-// 		inputAddr = tx.Inputs[0].Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = *s }(&sigED)
-// 	case *types.NameTx:
-// 		inputAddr = tx.Input.Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *types.CallTx:
-// 		inputAddr = tx.Input.Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *types.PermissionsTx:
-// 		inputAddr = tx.Input.Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *types.BondTx:
-// 		inputAddr = tx.Inputs[0].Address
-// 		defer func(s *crypto.SignatureEd25519) {
-// 			tx.Signature = *s
-// 			tx.Inputs[0].Signature = *s
-// 		}(&sigED)
-// 	case *types.UnbondTx:
-// 		inputAddr = tx.Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
-// 	case *types.RebondTx:
-// 		inputAddr = tx.Address
-// 		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
-// 	}
-// 	addrHex := fmt.Sprintf("%X", inputAddr)
-// 	sig, err := Sign(signBytes, addrHex, signAddr)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	sigED = crypto.SignatureEd25519(sig)
-// 	logger.Debugf("SIG: %X\n", sig)
-// 	return inputAddr, tx_, nil
-// }
+// tx has either one input or we default to the first one (ie for send/bond)
+// TODO: better support for multisig and bonding
+func signTx(signAddr, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
+	signBytes := fmt.Sprintf("%X", account.SignBytes(chainID, tx_))
+	var inputAddr []byte
+	var sigED crypto.SignatureEd25519
+	switch tx := tx_.(type) {
+	case *txs.SendTx:
+		inputAddr = tx.Inputs[0].Address
+		defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = *s }(&sigED)
+	case *txs.NameTx:
+		inputAddr = tx.Input.Address
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+	case *txs.CallTx:
+		inputAddr = tx.Input.Address
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+	case *txs.PermissionsTx:
+		inputAddr = tx.Input.Address
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+	case *txs.BondTx:
+		inputAddr = tx.Inputs[0].Address
+		defer func(s *crypto.SignatureEd25519) {
+			tx.Signature = *s
+			tx.Inputs[0].Signature = *s
+		}(&sigED)
+	case *txs.UnbondTx:
+		inputAddr = tx.Address
+		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
+	case *txs.RebondTx:
+		inputAddr = tx.Address
+		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
+	}
+	addrHex := fmt.Sprintf("%X", inputAddr)
+	sig, err := Sign(signBytes, addrHex, signAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	sigED = crypto.SignatureEd25519(sig)
+	log.WithFields(log.Fields{
+		"signature": sig, 
+		}).Debugf("SIG: %X\n", sig)
+	return inputAddr, tx_, nil
+}
 
-// type TxResult struct {
-// 	BlockHash []byte // all txs get in a block
-// 	Hash      []byte // all txs get a hash
+type TxResult struct {
+	BlockHash []byte // all txs get in a block
+	Hash      []byte // all txs get a hash
 
-// 	// only CallTx
-// 	Address   []byte // only for new contracts
-// 	Return    []byte
-// 	Exception string
+	// only CallTx
+	Address   []byte // only for new contracts
+	Return    []byte
+	Exception string
 
-// 	//TODO: make Broadcast() errors more responsive so we
-// 	// can differentiate mempool errors from other
-// }
+	//TODO: make Broadcast() errors more responsive so we
+	// can differentiate mempool errors from other
+}
 
-// func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx types.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
-// 	var inputAddr []byte
-// 	if sign {
-// 		inputAddr, tx, err = signTx(signAddr, chainID, tx)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 	}
+func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
+	// var inputAddr []byte
+	if sign {
+		_, tx, err = signTx(signAddr, chainID, tx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-// 	if broadcast {
-// 		if wait {
-// 			var ch chan Msg
-// 			ch, err = subscribeAndWait(tx, chainID, nodeAddr, inputAddr)
-// 			if err != nil {
-// 				return nil, err
-// 			} else {
-// 				defer func() {
-// 					if err != nil {
-// 						// if broadcast threw an error, just return
-// 						return
-// 					}
-// 					logger.Debugln("Waiting for tx to be committed ...")
-// 					msg := <-ch
-// 					if msg.Error != nil {
-// 						logger.Infof("Encountered error waiting for event: %v\n", msg.Error)
-// 						err = msg.Error
-// 					} else {
-// 						txResult.BlockHash = msg.BlockHash
-// 						txResult.Return = msg.Value
-// 						txResult.Exception = msg.Exception
-// 					}
-// 				}()
-// 			}
-// 		}
-// 		var receipt *txs.Receipt
-// 		receipt, err = client.Broadcast(tx, nodeAddr)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		txResult = &TxResult{
-// 			Hash: receipt.TxHash,
-// 		}
-// 		if tx_, ok := tx.(*types.CallTx); ok {
-// 			if len(tx_.Address) == 0 {
-// 				txResult.Address = types.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
-// 			}
-// 		}
-// 	}
-// 	return
-// }
+	if broadcast {
+		// if wait {
+		// 	var ch chan Msg
+		// 	ch, err = subscribeAndWait(tx, chainID, nodeAddr, inputAddr)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	} else {
+		// 		defer func() {
+		// 			if err != nil {
+		// 				// if broadcast threw an error, just return
+		// 				return
+		// 			}
+		// 			logger.Debugln("Waiting for tx to be committed ...")
+		// 			msg := <-ch
+		// 			if msg.Error != nil {
+		// 				logger.Infof("Encountered error waiting for event: %v\n", msg.Error)
+		// 				err = msg.Error
+		// 			} else {
+		// 				txResult.BlockHash = msg.BlockHash
+		// 				txResult.Return = msg.Value
+		// 				txResult.Exception = msg.Exception
+		// 			}
+		// 		}()
+		// 	}
+		// }
+		var receipt *txs.Receipt
+		receipt, err = Broadcast(tx, nodeAddr)
+		if err != nil {
+			return nil, err
+		}
+		txResult = &TxResult{
+			Hash: receipt.TxHash,
+		}
+		// NOTE: [ben] is this consistent with the Ethereum protocol?  It should seem
+		// reasonable to get this returned from the chain directly.  The returned benefit
+		// is that the we don't need to trust the chain node
+		if tx_, ok := tx.(*txs.CallTx); ok {
+			if len(tx_.Address) == 0 {
+				txResult.Address = txs.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
+			}
+		}
+	}
+	return
+}
 
 // //------------------------------------------------------------------------------------
 // // wait for events
@@ -646,7 +656,11 @@ func checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS string) (pub cry
 		}
 
 		// fetch nonce from node
-		client := rpcclient.NewClientJSONRPC(nodeAddr)
+		client := rpcclient.NewClientURI(nodeAddr)
+		log.WithFields(log.Fields{
+			"node address": nodeAddr,
+			"account address": fmt.Sprintf("%X", addrBytes),
+			}).Debug("Fetch nonce from node")
 		account, err2 := tendermint_client.GetAccount(client, addrBytes)
 		if err2 != nil {
 			err = fmt.Errorf("Error connecting to node (%s) to fetch nonce: %s", nodeAddr, err2.Error())
