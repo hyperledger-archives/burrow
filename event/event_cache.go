@@ -97,6 +97,8 @@ func (this *EventSubscriptions) Add(eventId string) (string, error) {
 			cache.events = append(cache.events, evt)
 		})
 	cache.subId = subId
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
 	this.subs[subId] = cache
 	if errC != nil {
 		return "", errC

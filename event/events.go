@@ -38,6 +38,9 @@ func NewEvents(eventSwitch *evts.EventSwitch) *events {
 	return &events{eventSwitch}
 }
 
+// Provides an EventEmitter that wraps many underlying EventEmitters as a
+// convenience for Subscribing and Unsubscribing on multiple EventEmitters at
+// once
 func Multiplex(events ...EventEmitter) *multiplexedEvents {
 	return &multiplexedEvents{events}
 }

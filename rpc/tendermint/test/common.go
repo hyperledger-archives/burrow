@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"github.com/eris-ltd/eris-db/test/fixtures"
 	"testing"
 )

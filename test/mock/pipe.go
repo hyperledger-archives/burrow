@@ -182,12 +182,12 @@ type eventer struct {
 	testData *td.TestData
 }
 
-func (this *eventer) Subscribe(subId, event string, callback func(evts.EventData)) (bool, error) {
-	return true, nil
+func (this *eventer) Subscribe(subId, event string, callback func(evts.EventData)) error {
+	return nil
 }
 
-func (this *eventer) Unsubscribe(subId string) (bool, error) {
-	return true, nil
+func (this *eventer) Unsubscribe(subId string) error {
+	return nil
 }
 
 // NameReg

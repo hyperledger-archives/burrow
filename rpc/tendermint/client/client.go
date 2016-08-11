@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
