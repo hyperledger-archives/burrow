@@ -112,7 +112,7 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 	callback := func(ret events.EventData) {
 		this.writeResponse(subId, ret, session)
 	}
-	_, errC := this.pipe.Events().Subscribe(subId, eventId, callback)
+	errC := this.pipe.Events().Subscribe(subId, eventId, callback)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -127,11 +127,11 @@ func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester
 	}
 	eventId := param.EventId
 
-	result, errC := this.pipe.Events().Unsubscribe(eventId)
+	errC := this.pipe.Events().Unsubscribe(eventId)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.EventUnsub{result}, 0, nil
+	return &event.EventUnsub{true}, 0, nil
 }
 
 func (this *ErisDbWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

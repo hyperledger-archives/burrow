@@ -120,7 +120,6 @@ func (cache *TxCache) SetStorage(addr Word256, key Word256, value Word256) {
 // These updates do not have to be in deterministic order,
 // the backend is responsible for ordering updates.
 func (cache *TxCache) Sync() {
-
 	// Remove or update storage
 	for addrKey, value := range cache.storages {
 		addr, key := Tuple256Split(addrKey)

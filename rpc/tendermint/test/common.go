@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"github.com/eris-ltd/eris-db/test/fixtures"
 	"testing"
 )
@@ -17,11 +16,7 @@ func TestWrapper(runner func() int) int {
 		panic(err)
 	}
 
-	saveNewPriv()
-
 	// start a node
-
-	fmt.Println()
 	ready := make(chan error)
 	go newNode(ready)
 	err = <-ready

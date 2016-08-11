@@ -44,9 +44,8 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 )
 
-type ErisMintPipe struct {
+type erisMintPipe struct {
 	erisMintState *state.State
-	eventSwitch   *go_events.EventSwitch
 	erisMint      *ErisMint
 	// Pipe implementations
 	accounts   *accounts
@@ -63,16 +62,16 @@ type ErisMintPipe struct {
 	genesisState *state.State
 }
 
-// NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
+// NOTE [ben] Compiler check to ensure erisMintPipe successfully implements
 // eris-db/definitions.Pipe
-var _ definitions.Pipe = (*ErisMintPipe)(nil)
+var _ definitions.Pipe = (*erisMintPipe)(nil)
 
-// NOTE [ben] Compiler check to ensure ErisMintPipe successfully implements
+// NOTE [ben] Compiler check to ensure erisMintPipe successfully implements
 // eris-db/definitions.erisTendermintPipe
-var _ definitions.TendermintPipe = (*ErisMintPipe)(nil)
+var _ definitions.TendermintPipe = (*erisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-	eventSwitch *go_events.EventSwitch) (*ErisMintPipe, error) {
+	eventSwitch *go_events.EventSwitch) (*erisMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
 		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
@@ -106,9 +105,8 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 	// consensus := newConsensus(erisdbApp)
 	// net := newNetwork(erisdbApp)
 
-	return &ErisMintPipe{
+	return &erisMintPipe{
 		erisMintState: startedState,
-		eventSwitch:   eventSwitch,
 		erisMint:      erisMint,
 		accounts:      accounts,
 		events:        events,
@@ -173,41 +171,41 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 }
 
 //------------------------------------------------------------------------------
-// Implement definitions.Pipe for ErisMintPipe
+// Implement definitions.Pipe for erisMintPipe
 
-func (pipe *ErisMintPipe) Accounts() definitions.Accounts {
+func (pipe *erisMintPipe) Accounts() definitions.Accounts {
 	return pipe.accounts
 }
 
-func (pipe *ErisMintPipe) Blockchain() definitions.Blockchain {
+func (pipe *erisMintPipe) Blockchain() definitions.Blockchain {
 	return pipe.blockchain
 }
 
-func (pipe *ErisMintPipe) Consensus() definitions.Consensus {
+func (pipe *erisMintPipe) Consensus() definitions.Consensus {
 	return pipe.consensus
 }
 
-func (pipe *ErisMintPipe) Events() edb_event.EventEmitter {
+func (pipe *erisMintPipe) Events() edb_event.EventEmitter {
 	return pipe.events
 }
 
-func (pipe *ErisMintPipe) NameReg() definitions.NameReg {
+func (pipe *erisMintPipe) NameReg() definitions.NameReg {
 	return pipe.namereg
 }
 
-func (pipe *ErisMintPipe) Net() definitions.Net {
+func (pipe *erisMintPipe) Net() definitions.Net {
 	return pipe.network
 }
 
-func (pipe *ErisMintPipe) Transactor() definitions.Transactor {
+func (pipe *erisMintPipe) Transactor() definitions.Transactor {
 	return pipe.transactor
 }
 
-func (pipe *ErisMintPipe) GetApplication() manager_types.Application {
+func (pipe *erisMintPipe) GetApplication() manager_types.Application {
 	return pipe.erisMint
 }
 
-func (pipe *ErisMintPipe) SetConsensusEngine(
+func (pipe *erisMintPipe) SetConsensusEngine(
 	consensus definitions.ConsensusEngine) error {
 	if pipe.consensusEngine == nil {
 		pipe.consensusEngine = consensus
@@ -217,22 +215,28 @@ func (pipe *ErisMintPipe) SetConsensusEngine(
 	return nil
 }
 
-func (pipe *ErisMintPipe) GetConsensusEngine() definitions.ConsensusEngine {
+func (pipe *erisMintPipe) GetConsensusEngine() definitions.ConsensusEngine {
 	return pipe.consensusEngine
 }
 
-func (pipe *ErisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
+func (pipe *erisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
 	error) {
 	return definitions.TendermintPipe(pipe), nil
 }
 
+func (pipe *erisMintPipe) consensusAndManagerEvents() edb_event.EventEmitter {
+	// NOTE: [Silas] We could initialise this lazily and use the cached instance,
+	// but for the time being that feels like a premature optimisation
+	return edb_event.Multiplex(pipe.events, pipe.consensusEngine.Events())
+}
+
 //------------------------------------------------------------------------------
-// Implement definitions.TendermintPipe for ErisMintPipe
-func (pipe *ErisMintPipe) Subscribe(listenerId, event string,
+// Implement definitions.TendermintPipe for erisMintPipe
+func (pipe *erisMintPipe) Subscribe(listenerId, event string,
 	rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error) {
 	log.WithFields(log.Fields{"listenerId": listenerId, "event": event}).
 		Info("Subscribing to event")
-	pipe.events.Subscribe(subscriptionId(listenerId, event), event,
+	pipe.consensusAndManagerEvents().Subscribe(subscriptionId(listenerId, event), event,
 		func(eventData go_events.EventData) {
 			result := rpc_tm_types.ErisDBResult(&rpc_tm_types.ResultEvent{event,
 				tm_types.TMEventData(eventData)})
@@ -242,11 +246,11 @@ func (pipe *ErisMintPipe) Subscribe(listenerId, event string,
 	return &rpc_tm_types.ResultSubscribe{}, nil
 }
 
-func (pipe *ErisMintPipe) Unsubscribe(listenerId,
+func (pipe *erisMintPipe) Unsubscribe(listenerId,
 	event string) (*rpc_tm_types.ResultUnsubscribe, error) {
 	log.WithFields(log.Fields{"listenerId": listenerId, "event": event}).
-			Info("Unsubsribing from event")
-	pipe.events.Unsubscribe(subscriptionId(listenerId, event))
+		Info("Unsubscribing from event")
+	pipe.consensusAndManagerEvents().Unsubscribe(subscriptionId(listenerId, event))
 	return &rpc_tm_types.ResultUnsubscribe{}, nil
 }
 
@@ -254,7 +258,7 @@ func subscriptionId(listenerId, event string) string {
 	return fmt.Sprintf("%s#%s", listenerId, event)
 }
 
-func (pipe *ErisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
+func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 	memoryDatabase := db.NewMemDB()
 	if pipe.genesisState == nil {
 		pipe.genesisState = state.MakeGenesisState(memoryDatabase, pipe.genesisDoc)
@@ -283,7 +287,7 @@ func (pipe *ErisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 		LatestBlockTime:   latestBlockTime}, nil
 }
 
-func (pipe *ErisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {
+func (pipe *erisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {
 	listening := pipe.consensusEngine.IsListening()
 	listeners := []string{}
 	for _, listener := range pipe.consensusEngine.Listeners() {
@@ -297,7 +301,7 @@ func (pipe *ErisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {
 	}, nil
 }
 
-func (pipe *ErisMintPipe) Genesis() (*rpc_tm_types.ResultGenesis, error) {
+func (pipe *erisMintPipe) Genesis() (*rpc_tm_types.ResultGenesis, error) {
 	return &rpc_tm_types.ResultGenesis{
 		// TODO: [ben] sharing pointer to unmutated GenesisDoc, but is not immutable
 		Genesis: pipe.genesisDoc,
@@ -305,7 +309,7 @@ func (pipe *ErisMintPipe) Genesis() (*rpc_tm_types.ResultGenesis, error) {
 }
 
 // Accounts
-func (pipe *ErisMintPipe) GetAccount(address []byte) (*rpc_tm_types.ResultGetAccount,
+func (pipe *erisMintPipe) GetAccount(address []byte) (*rpc_tm_types.ResultGetAccount,
 	error) {
 	cache := pipe.erisMint.GetCheckCache()
 	// cache := mempoolReactor.Mempool.GetCache()
@@ -317,7 +321,7 @@ func (pipe *ErisMintPipe) GetAccount(address []byte) (*rpc_tm_types.ResultGetAcc
 	return &rpc_tm_types.ResultGetAccount{account}, nil
 }
 
-func (pipe *ErisMintPipe) ListAccounts() (*rpc_tm_types.ResultListAccounts, error) {
+func (pipe *erisMintPipe) ListAccounts() (*rpc_tm_types.ResultListAccounts, error) {
 	var blockHeight int
 	var accounts []*account.Account
 	state := pipe.erisMint.GetState()
@@ -329,7 +333,7 @@ func (pipe *ErisMintPipe) ListAccounts() (*rpc_tm_types.ResultListAccounts, erro
 	return &rpc_tm_types.ResultListAccounts{blockHeight, accounts}, nil
 }
 
-func (pipe *ErisMintPipe) GetStorage(address, key []byte) (*rpc_tm_types.ResultGetStorage,
+func (pipe *erisMintPipe) GetStorage(address, key []byte) (*rpc_tm_types.ResultGetStorage,
 	error) {
 	state := pipe.erisMint.GetState()
 	// state := consensusState.GetState()
@@ -349,7 +353,7 @@ func (pipe *ErisMintPipe) GetStorage(address, key []byte) (*rpc_tm_types.ResultG
 	return &rpc_tm_types.ResultGetStorage{key, value}, nil
 }
 
-func (pipe *ErisMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDumpStorage,
+func (pipe *erisMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDumpStorage,
 	error) {
 	state := pipe.erisMint.GetState()
 	account := state.GetAccount(address)
@@ -368,7 +372,7 @@ func (pipe *ErisMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDumpS
 }
 
 // Call
-func (pipe *ErisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall,
+func (pipe *erisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall,
 	error) {
 	st := pipe.erisMint.GetState()
 	cache := state.NewBlockCache(st)
@@ -395,7 +399,7 @@ func (pipe *ErisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_typ
 	return &rpc_tm_types.ResultCall{Return: ret}, nil
 }
 
-func (pipe *ErisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_types.ResultCall,
+func (pipe *erisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_types.ResultCall,
 	error) {
 	st := pipe.erisMint.GetState()
 	cache := pipe.erisMint.GetCheckCache()
@@ -421,7 +425,7 @@ func (pipe *ErisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_type
 // TODO: [ben] deprecate as we should not allow unsafe behaviour
 // where a user is allowed to send a private key over the wire,
 // especially unencrypted.
-func (pipe *ErisMintPipe) SignTransaction(tx txs.Tx,
+func (pipe *erisMintPipe) SignTransaction(tx txs.Tx,
 	privAccounts []*account.PrivAccount) (*rpc_tm_types.ResultSignTx,
 	error) {
 
@@ -461,7 +465,7 @@ func (pipe *ErisMintPipe) SignTransaction(tx txs.Tx,
 }
 
 // Name registry
-func (pipe *ErisMintPipe) GetName(name string) (*rpc_tm_types.ResultGetName, error) {
+func (pipe *erisMintPipe) GetName(name string) (*rpc_tm_types.ResultGetName, error) {
 	currentState := pipe.erisMint.GetState()
 	entry := currentState.GetNameRegEntry(name)
 	if entry == nil {
@@ -470,7 +474,7 @@ func (pipe *ErisMintPipe) GetName(name string) (*rpc_tm_types.ResultGetName, err
 	return &rpc_tm_types.ResultGetName{entry}, nil
 }
 
-func (pipe *ErisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
+func (pipe *erisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
 	var blockHeight int
 	var names []*core_types.NameRegEntry
 	currentState := pipe.erisMint.GetState()
@@ -484,7 +488,7 @@ func (pipe *ErisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
 
 // Memory pool
 // NOTE: txs must be signed
-func (pipe *ErisMintPipe) BroadcastTxAsync(tx txs.Tx) (
+func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (
 	*rpc_tm_types.ResultBroadcastTx, error) {
 	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx), nil)
 	if err != nil {
@@ -493,7 +497,7 @@ func (pipe *ErisMintPipe) BroadcastTxAsync(tx txs.Tx) (
 	return &rpc_tm_types.ResultBroadcastTx{}, nil
 }
 
-func (pipe *ErisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx,
+func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx,
 	error) {
 	responseChannel := make(chan *tmsp_types.Response, 1)
 	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx),
@@ -539,7 +543,7 @@ func (pipe *ErisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 // from the top of the range of blocks.
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
-func (pipe *ErisMintPipe) BlockchainInfo(minHeight, maxHeight,
+func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 	maxBlockLookback int) (*rpc_tm_types.ResultBlockchainInfo, error) {
 
 	blockStore := pipe.blockchain.blockStore

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
@@ -98,7 +97,6 @@ func BroadcastTx(client rpcclient.Client,
 	receiptBytes := res.(*rpc_types.ResultBroadcastTx).Data
 	receipt := txs.Receipt{}
 	err = wire.ReadBinaryBytes(receiptBytes, &receipt)
-	fmt.Printf("rec: %#v\n", receipt)
 	return receipt, err
 
 }

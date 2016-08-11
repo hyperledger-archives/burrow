@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eris-ltd/eris-db/txs"
+	"sync"
+
 	"github.com/stretchr/testify/assert"
 	evts "github.com/tendermint/go-events"
 )
@@ -22,24 +23,33 @@ type mockSub struct {
 	sdChan   chan struct{}
 }
 
+type mockEventData struct {
+	subId   string
+	eventId string
+}
+
 // A mock event
 func newMockSub(subId, eventId string, f func(evts.EventData)) mockSub {
 	return mockSub{subId, eventId, f, false, make(chan struct{})}
 }
 
 type mockEventEmitter struct {
-	subs map[string]mockSub
+	subs  map[string]mockSub
+	mutex *sync.Mutex
 }
 
 func newMockEventEmitter() *mockEventEmitter {
-	return &mockEventEmitter{make(map[string]mockSub)}
+	return &mockEventEmitter{make(map[string]mockSub), &sync.Mutex{}}
 }
 
-func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evts.EventData)) (bool, error) {
+func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evts.EventData)) error {
 	if _, ok := this.subs[subId]; ok {
-		return false, nil
+		return nil
 	}
 	me := newMockSub(subId, eventId, callback)
+	this.mutex.Lock()
+	this.subs[subId] = me
+	this.mutex.Unlock()
 
 	go func() {
 		<-me.sdChan
@@ -48,24 +58,27 @@ func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evt
 	go func() {
 		for {
 			if !me.shutdown {
-				me.f(txs.EventDataNewBlock{})
+				me.f(mockEventData{subId, eventId})
 			} else {
+				this.mutex.Lock()
+				delete(this.subs, subId)
+				this.mutex.Unlock()
 				return
 			}
 			time.Sleep(mockInterval)
 		}
 	}()
-	return true, nil
+	return nil
 }
 
-func (this *mockEventEmitter) Unsubscribe(subId string) (bool, error) {
+func (this *mockEventEmitter) Unsubscribe(subId string) error {
 	sub, ok := this.subs[subId]
 	if !ok {
-		return false, nil
+		return nil
 	}
 	sub.shutdown = true
 	delete(this.subs, subId)
-	return true, nil
+	return nil
 }
 
 // Test that event subscriptions can be added manually and then automatically reaped.
@@ -156,7 +169,6 @@ func TestSubManualClose(t *testing.T) {
 		k++
 	}
 
-	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that were all closed down by unsubscribing.", NUM_SUBS)
 }
@@ -205,7 +217,6 @@ func TestSubFlooding(t *testing.T) {
 		k++
 	}
 
-	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that all received 1000 events each. They were all closed down by unsubscribing.", NUM_SUBS)
 }

@@ -735,6 +735,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 
 			newAccount := vm.appState.CreateAccount(callee)
+
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
 			ret, err_ := vm.Call(callee, newAccount, input, input, contractValue, gas)
@@ -800,19 +801,16 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					}
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
 				} else {
+					// nil account means we're sending funds to a new account
 					if acc == nil {
-						// nil account means we're sending funds to a new account
 						if !HasPermission(vm.appState, caller, ptypes.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
 						acc = &Account{Address: addr}
-						vm.appState.UpdateAccount(acc)
-						// send funds to new account
-						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
-					} else {
-						// call standard contract
-						ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 					}
+					// add account to the tx cache
+					vm.appState.UpdateAccount(acc)
+					ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
 				}
 			}
 
