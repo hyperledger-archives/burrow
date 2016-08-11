@@ -164,11 +164,11 @@ func (this *ErisDbJsonService) EventUnsubscribe(request *rpc.RPCRequest,
 	}
 	subId := param.SubId
 
-	result, errC := this.pipe.Events().Unsubscribe(subId)
+	errC := this.pipe.Events().Unsubscribe(subId)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.EventUnsub{result}, 0, nil
+	return &event.EventUnsub{true}, 0, nil
 }
 
 // Check subscription event cache for new data.

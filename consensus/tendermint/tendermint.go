@@ -32,6 +32,7 @@ import (
 	tendermint_types "github.com/tendermint/tendermint/types"
 	tmsp_types "github.com/tendermint/tmsp/types"
 
+	edb_event "github.com/eris-ltd/eris-db/event"
 	log "github.com/eris-ltd/eris-logger"
 
 	config "github.com/eris-ltd/eris-db/config"
@@ -196,6 +197,10 @@ func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
 		copyPublicValidatorKey = nil
 	}
 	return copyPublicValidatorKey
+}
+
+func (this *TendermintNode) Events() edb_event.EventEmitter {
+	return edb_event.NewEvents(this.tmintNode.EventSwitch())
 }
 
 func (this *TendermintNode) BroadcastTransaction(transaction []byte,
