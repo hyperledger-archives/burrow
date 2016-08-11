@@ -161,8 +161,6 @@ func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	log.Info("CheckTx", "tx", *tx)
-
 	// TODO: make errors tmsp aware
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {

@@ -3,8 +3,9 @@ package client
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 // A websocket client subscribes and unsubscribes to events

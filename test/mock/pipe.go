@@ -2,11 +2,11 @@ package mock
 
 import (
 	"fmt"
-	
-	account       "github.com/eris-ltd/eris-db/account"
-	core_types    "github.com/eris-ltd/eris-db/core/types"
-	definitions   "github.com/eris-ltd/eris-db/definitions"
-	event         "github.com/eris-ltd/eris-db/event"
+
+	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
 
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"

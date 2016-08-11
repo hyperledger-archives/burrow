@@ -1,11 +1,11 @@
 package testdata
 
 import (
-	account     "github.com/eris-ltd/eris-db/account"
-	core_types  "github.com/eris-ltd/eris-db/core/types"
-	event       "github.com/eris-ltd/eris-db/event"
-	rpc_v0      "github.com/eris-ltd/eris-db/rpc/v0"
-	stypes      "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	transaction "github.com/eris-ltd/eris-db/txs"
 
 	mintTypes "github.com/tendermint/tendermint/types"
@@ -512,22 +512,22 @@ type (
 
 	GetAccountData struct {
 		Input  *rpc_v0.AddressParam `json:"input"`
-		Output *account.Account         `json:"output"`
+		Output *account.Account     `json:"output"`
 	}
 
 	GetAccountsData struct {
-		Input  *rpc_v0.AccountsParam `json:"input"`
-		Output *core_types.AccountList   `json:"output"`
+		Input  *rpc_v0.AccountsParam   `json:"input"`
+		Output *core_types.AccountList `json:"output"`
 	}
 
 	GetStorageData struct {
 		Input  *rpc_v0.AddressParam `json:"input"`
-		Output *core_types.Storage      `json:"output"`
+		Output *core_types.Storage  `json:"output"`
 	}
 
 	GetStorageAtData struct {
-		Input  *rpc_v0.StorageAtParam `json:"input"`
-		Output *core_types.StorageItem    `json:"output"`
+		Input  *rpc_v0.StorageAtParam  `json:"input"`
+		Output *core_types.StorageItem `json:"output"`
 	}
 
 	GenPrivAccountData struct {
@@ -556,12 +556,12 @@ type (
 
 	GetBlockData struct {
 		Input  *rpc_v0.HeightParam `json:"input"`
-		Output *mintTypes.Block  `json:"output"`
+		Output *mintTypes.Block    `json:"output"`
 	}
 
 	GetBlocksData struct {
-		Input  *rpc_v0.BlocksParam  `json:"input"`
-		Output *core_types.Blocks `json:"output"`
+		Input  *rpc_v0.BlocksParam `json:"input"`
+		Output *core_types.Blocks  `json:"output"`
 	}
 
 	GetConsensusStateData struct {
@@ -597,18 +597,18 @@ type (
 	}
 
 	GetPeerData struct {
-		Input  *rpc_v0.PeerParam  `json:"input"`
-		Output *core_types.Peer `json:"output"`
+		Input  *rpc_v0.PeerParam `json:"input"`
+		Output *core_types.Peer  `json:"output"`
 	}
 
 	TransactData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *transaction.Receipt `json:"output"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	TransactCreateData struct {
 		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *transaction.Receipt `json:"output"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
@@ -617,36 +617,36 @@ type (
 
 	CallCodeData struct {
 		Input  *rpc_v0.CallCodeParam `json:"input"`
-		Output *core_types.Call    `json:"output"`
+		Output *core_types.Call      `json:"output"`
 	}
 
 	CallData struct {
-		Input  *rpc_v0.CallParam  `json:"input"`
-		Output *core_types.Call `json:"output"`
+		Input  *rpc_v0.CallParam `json:"input"`
+		Output *core_types.Call  `json:"output"`
 	}
 
 	EventSubscribeData struct {
-		Input  *rpc_v0.EventIdParam   `json:"input"`
-		Output *event.EventSub `json:"output"`
+		Input  *rpc_v0.EventIdParam `json:"input"`
+		Output *event.EventSub      `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
-		Input  *rpc_v0.SubIdParam       `json:"input"`
-		Output *event.EventUnsub `json:"output"`
+		Input  *rpc_v0.SubIdParam `json:"input"`
+		Output *event.EventUnsub  `json:"output"`
 	}
 
 	TransactNameRegData struct {
 		Input  *rpc_v0.TransactNameRegParam `json:"input"`
-		Output *transaction.Receipt        `json:"output"`
+		Output *transaction.Receipt         `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
 		Input  *rpc_v0.NameRegEntryParam `json:"input"`
-		Output *core_types.NameRegEntry     `json:"output"`
+		Output *core_types.NameRegEntry  `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *rpc_v0.FilterListParam       `json:"input"`
+		Input  *rpc_v0.FilterListParam     `json:"input"`
 		Output *core_types.ResultListNames `json:"output"`
 	}
 

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+
 	"gopkg.in/fatih/set.v0"
 )
 

@@ -1,8 +1,9 @@
 package txs
 
 import (
-	core_types "github.com/eris-ltd/eris-db/core/types"
 	"regexp"
+
+	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 var (
