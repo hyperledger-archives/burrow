@@ -150,7 +150,7 @@ func addTransactionPersistentFlags() {
 	TransactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "nonce", "", "", "specify the nonce to use for the transaction (should equal the sender account's nonce + 1)")
 
 	// TransactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the eris-keys daemon")
-	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", false, "broadcast the transaction to the blockchain")
+	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", true, "broadcast the transaction to the blockchain")
 	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.WaitFlag, "wait", "w", false, "wait for the transaction to be committed in a block")
 }
 
@@ -166,7 +166,7 @@ func defaultKeyDaemonAddress() string {
 }
 
 func defaultNodeRpcAddress() string {
-	return setDefaultString("ERIS_CLIENT_NODE_ADDRESS", "http://127.0.0.1:46657")
+	return setDefaultString("ERIS_CLIENT_NODE_ADDRESS", "tcp://127.0.0.1:46657")
 }
 
 func defaultPublicKey() string {
@@ -182,19 +182,22 @@ func defaultAddress() string {
 
 func assertParameters(cmd *cobra.Command, args []string) {
 	if clientDo.ChainidFlag == "" {
-		log.Fatalf(`Cannot run "eris-client tx" without chain id set in --chain-id or $CHAIN_ID.`)
+		log.Fatal(`Please provide a chain id either through the flag --chain-id or environment variable $CHAIN_ID.`)
 		os.Exit(1)
 	}
 	 
-	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") {
-		clientDo.NodeAddrFlag = "tcp://" + clientDo.NodeAddrFlag
-	}
-	if !strings.HasSuffix(clientDo.NodeAddrFlag, "/") {
-		clientDo.NodeAddrFlag += "/"
+	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") &&
+		!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
+		// TODO: [ben] go-rpc will deprecate reformatting; also it is bad practice to auto-correct for this;
+		log.Warn(`Please use fully formed listening address for the node, including the tcp:// or unix:// prefix.`)
 	}
 
 	if !strings.HasPrefix(clientDo.SignAddrFlag, "http://") {
+		// NOTE: [ben] we preserve the auto-correction here as it is a simple http request-response to the key server.
 		clientDo.SignAddrFlag = "http://" + clientDo.SignAddrFlag
+		log.WithFields(log.Fields{
+			"signing address": clientDo.SignAddrFlag,
+			}).Warn(`Please use fully formed listening address for the key server; adding http:// prefix`)
 	}
 	log.WithFields(log.Fields{
 		"signing address": clientDo.SignAddrFlag,

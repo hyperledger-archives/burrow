@@ -443,8 +443,10 @@ func signTx(signAddr, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
 	}
 	sigED = crypto.SignatureEd25519(sig)
 	log.WithFields(log.Fields{
-		"signature": sig, 
-		}).Debugf("SIG: %X\n", sig)
+		"transaction sign bytes": signBytes,
+		"account address": addrHex,
+		"signature": fmt.Sprintf("%X", sig), 
+		}).Debug("Signed transaction")
 	return inputAddr, tx_, nil
 }
 
