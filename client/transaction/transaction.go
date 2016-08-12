@@ -17,8 +17,9 @@
 package transaction
 
 import (
-	// "fmt"
+	"fmt"
 	// "io/ioutil"
+	"os"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -32,7 +33,33 @@ func Send(do *definitions.ClientDo) {
 	if err != nil {
 		log.Fatalf("Failed on Send Transaction: %s", err)
 	}
-	// unpackSignAndBroadcast(
+	unpackSignAndBroadcast(
 		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
-		do.SignAddrFlag, sendTransaction, true, do.BroadcastFlag, do.WaitFlag)//)
+		do.SignAddrFlag, sendTransaction, true, do.BroadcastFlag, do.WaitFlag))
+}
+
+//----------------------------------------------------------------------
+// Helper functions
+
+func unpackSignAndBroadcast(result *core.TxResult, err error) {
+	if err != nil {
+		log.Fatalf("Failed on signing (and broadcasting) transaction: %s", err)
+		os.Exit(1)
+	}
+	if result == nil {
+		// if we don't provide --sign or --broadcast
+		return
+	}
+	printResult := log.Fields {
+		"transaction hash": fmt.Sprintf("%X", result.Hash),
+	}
+	if result.Address != nil {
+		printResult["Contract Address"] = fmt.Sprintf("%X", result.Address)
+	}
+	if result.Return != nil {
+		printResult["Block Hash"] = fmt.Sprintf("%X", result.BlockHash)
+		printResult["Return Value"] = fmt.Sprintf("%X", result.Return)
+		printResult["Exception"] = fmt.Sprintf("%s", result.Exception)
+	}
+	log.WithFields(printResult).Warn("Result")
 }
