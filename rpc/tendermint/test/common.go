@@ -8,6 +8,7 @@ import (
 // Needs to be in a _test.go file to be picked up
 func TestWrapper(runner func() int) int {
 	ffs := fixtures.NewFileFixtures("Eris-DB")
+
 	defer ffs.RemoveAll()
 
 	err := initGlobalVariables(ffs)

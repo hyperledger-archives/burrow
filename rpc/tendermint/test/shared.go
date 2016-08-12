@@ -17,10 +17,11 @@ import (
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
 
+	"path"
+
 	"github.com/spf13/viper"
 	tm_common "github.com/tendermint/go-common"
 	"github.com/tendermint/tendermint/types"
-	"path"
 )
 
 // global variables for use across all tests

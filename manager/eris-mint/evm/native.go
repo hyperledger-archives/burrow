@@ -2,6 +2,7 @@ package vm
 
 import (
 	"crypto/sha256"
+
 	"golang.org/x/crypto/ripemd160"
 
 	. "github.com/tendermint/go-common"
