@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/viper"
 	tm_common "github.com/tendermint/go-common"
 	"github.com/tendermint/tendermint/types"
+	"fmt"
 )
 
 // global variables for use across all tests
@@ -228,6 +229,13 @@ func dumpStorage(t *testing.T, addr []byte) *rpc_types.ResultDumpStorage {
 
 func getStorage(t *testing.T, typ string, addr, key []byte) []byte {
 	client := clients[typ]
+	var res rpc_types.ErisDBResult
+	client.(*rpcclient.ClientJSONRPC).Call("list_accounts", []interface{}{}, &res)
+	fmt.Printf("MARMOT, list_accounts: %#v \n", res)
+	list := res.(*rpc_types.ResultListAccounts)
+	for _, account := range list.Accounts {
+		fmt.Printf("MARMOT: %#v\n", account.String())
+	}
 	resp, err := edbcli.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
