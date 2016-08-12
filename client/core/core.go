@@ -31,7 +31,6 @@ import (
 	"github.com/tendermint/go-rpc/client"
 
 	// ptypes "github.com/eris-ltd/permission/types"
-	// cclient "github.com/eris-ltd/tendermint/rpc/client"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -315,7 +314,7 @@ func Pub(addr, rpcAddr string) (pubBytes []byte, err error) {
 func Sign(signBytes, signAddr, signRPC string) (sig [64]byte, err error) {
 	args := map[string]string{
 		"msg":  signBytes,
-		"hash": signBytes, // backwards compatibility
+		"hash": signBytes, // TODO:[ben] backwards compatibility
 		"addr": signAddr,
 	}
 	sigS, err := RequestResponse(signRPC, "sign", args)
@@ -484,7 +483,9 @@ func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broad
 		// 				// if broadcast threw an error, just return
 		// 				return
 		// 			}
-		// 			logger.Debugln("Waiting for tx to be committed ...")
+		// 			log.WithFields(log.Fields{
+		// 				"",
+		// 				}).Debug("Waiting for tx to be committed")
 		// 			msg := <-ch
 		// 			if msg.Error != nil {
 		// 				logger.Infof("Encountered error waiting for event: %v\n", msg.Error)
@@ -506,8 +507,8 @@ func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broad
 			Hash: receipt.TxHash,
 		}
 		// NOTE: [ben] is this consistent with the Ethereum protocol?  It should seem
-		// reasonable to get this returned from the chain directly.  The returned benefit
-		// is that the we don't need to trust the chain node
+		// reasonable to get this returned from the chain directly.  Alternatively,
+		// the benefit is that the we don't need to trust the chain node
 		if tx_, ok := tx.(*txs.CallTx); ok {
 			if len(tx_.Address) == 0 {
 				txResult.Address = txs.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
@@ -517,28 +518,43 @@ func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broad
 	return
 }
 
-// //------------------------------------------------------------------------------------
-// // wait for events
+//------------------------------------------------------------------------------------
+// wait for events
 
-// type Msg struct {
-// 	BlockHash []byte
-// 	Value     []byte
-// 	Exception string
-// 	Error     error
-// }
+type Msg struct {
+	BlockHash []byte
+	Value     []byte
+	Exception string
+	Error     error
+}
 
-// func subscribeAndWait(tx types.Tx, chainID, nodeAddr string, inputAddr []byte) (chan Msg, error) {
+// func subscribeAndWait(tx txs.Tx, chainID, nodeAddr string, inputAddr []byte) (chan Msg, error) {
 // 	// subscribe to event and wait for tx to be committed
-// 	wsAddr := strings.TrimPrefix(nodeAddr, "http://")
-// 	wsAddr = "ws://" + wsAddr + "websocket"
-// 	logger.Debugf("Websocket Address %s\n", wsAddr)
-// 	wsClient := cclient.NewWSClient(wsAddr)
+// 	var wsAddr string
+// 	if strings.HasPrefix(nodeAddr, "http://") {
+// 		wsAddr = strings.TrimPrefix(nodeAddr, "http://")
+// 	}
+// 	if strings.HasPrefix(nodeAddr, "tcp://") {
+// 		wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
+// 	}
+// 	if strings.HasPrefix(nodeAddr, "unix://") {
+// 		log.WithFields(log.Fields{
+// 			"node address": nodeAddr, 
+// 			}).Warn("Unable to subscribe to websocket from unix socket.")
+// 		return nil, fmt.Errorf("Unable to subscribe to websocket from unix socket: %s", nodeAddr)
+// 	}
+// 	wsAddr = "ws://" + wsAddr
+// 	log.WithFields(log.Fields{
+// 		"websocket address": wsAddr,
+// 		"endpoint": "/websocket",
+// 		}).Debug("Subscribing to websocket address")
+// 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
 // 	wsClient.Start()
-// 	eid := types.EventStringAccInput(inputAddr)
+// 	eid := txs.EventStringAccInput(inputAddr)
 // 	if err := wsClient.Subscribe(eid); err != nil {
 // 		return nil, fmt.Errorf("Error subscribing to AccInput event: %v", err)
 // 	}
-// 	if err := wsClient.Subscribe(types.EventStringNewBlock()); err != nil {
+// 	if err := wsClient.Subscribe(txs.EventStringNewBlock()); err != nil {
 // 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 // 	}
 
@@ -551,9 +567,9 @@ func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broad
 // 		for {
 // 			result := <-wsClient.EventsCh
 // 			// if its a block, remember the block hash
-// 			blockData, ok := result.Data.(types.EventDataNewBlock)
+// 			blockData, ok := result.Data.(txs.EventDataNewBlock)
 // 			if ok {
-// 				logger.Infoln(blockData.Block)
+// 				log.Infoln(blockData.Block)
 // 				latestBlockHash = blockData.Block.Hash()
 // 				continue
 // 			}
@@ -653,16 +669,12 @@ func checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS string) (pub cry
 
 	if nonceS == "" {
 		if nodeAddr == "" {
-			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or MINTX_NODE_ADDR) to fetch the nonce from a node")
+			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or ERIS_CLIENT_NODE_ADDR) to fetch the nonce from a node")
 			return
 		}
 
 		// fetch nonce from node
 		client := rpcclient.NewClientURI(nodeAddr)
-		log.WithFields(log.Fields{
-			"node address": nodeAddr,
-			"account address": fmt.Sprintf("%X", addrBytes),
-			}).Debug("Fetch nonce from node")
 		account, err2 := tendermint_client.GetAccount(client, addrBytes)
 		if err2 != nil {
 			err = fmt.Errorf("Error connecting to node (%s) to fetch nonce: %s", nodeAddr, err2.Error())
@@ -673,6 +685,11 @@ func checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS string) (pub cry
 			return
 		}
 		nonce = int64(account.Sequence) + 1
+		log.WithFields(log.Fields{
+			"nonce": nonce,
+			"node address": nodeAddr,
+			"account address": fmt.Sprintf("%X", addrBytes),
+			}).Debug("Fetch nonce from node")
 	} else {
 		nonce, err = strconv.ParseInt(nonceS, 10, 64)
 		if err != nil {
