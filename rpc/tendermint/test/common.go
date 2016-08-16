@@ -32,7 +32,7 @@ func TestWrapper(runner func() int) int {
 func DebugMain() {
 	t := &testing.T{}
 	TestWrapper(func() int {
-		testBroadcastTx(t, "HTTP")
+		testNameReg(t, "JSONRPC")
 		return 0
 	})
 }

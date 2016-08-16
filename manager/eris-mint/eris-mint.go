@@ -138,8 +138,6 @@ func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	log.Info("AppendTx", "tx", *tx)
-
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))

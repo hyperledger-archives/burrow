@@ -102,9 +102,8 @@ func makeUsers(n int) []*acm.PrivAccount {
 	return accounts
 }
 
-// create a new node and sleep forever
 func newNode(ready chan error) {
-	// Run the RPC servers
+	// Run the 'tendermint' rpc server
 	_, err := testCore.NewGatewayTendermint(config)
 	ready <- err
 }

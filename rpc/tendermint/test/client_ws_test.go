@@ -28,10 +28,11 @@ func TestWSNewBlock(t *testing.T) {
 		unsubscribe(t, wsc, eid)
 		wsc.Stop()
 	}()
-	waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b interface{}) error {
-		fmt.Println("Check:", string(b.([]byte)))
-		return nil
-	})
+	waitForEvent(t, wsc, eid, true, func() {},
+		func(eid string, b interface{}) error {
+			fmt.Println("Check:", string(b.([]byte)))
+			return nil
+		})
 }
 
 // receive a few new block messages in a row, with increasing height

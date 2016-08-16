@@ -49,7 +49,8 @@ func unsubscribe(t *testing.T, wsc *client.WSClient, eventid string) {
 
 // wait for an event; do things that might trigger events, and check them when they are received
 // the check function takes an event id and the byte slice read off the ws
-func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string, dieOnTimeout bool, f func(), check func(string, interface{}) error) {
+func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
+	dieOnTimeout bool, f func(), check func(string, interface{}) error) {
 	// go routine to wait for webscoket msg
 	goodCh := make(chan interface{})
 	errCh := make(chan error)

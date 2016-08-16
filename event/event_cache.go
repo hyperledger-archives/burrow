@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	evts "github.com/tendermint/go-events"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 var (
@@ -91,7 +90,7 @@ func (this *EventSubscriptions) Add(eventId string) (string, error) {
 	}
 	cache := newEventCache()
 	errC := this.eventEmitter.Subscribe(subId, eventId,
-		func(evt evts.EventData) {
+		func(evt txs.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)

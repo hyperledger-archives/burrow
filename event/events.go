@@ -21,7 +21,11 @@ import (
 	"encoding/hex"
 	"strings"
 
-	evts "github.com/tendermint/go-events"
+	"fmt"
+
+	"github.com/eris-ltd/eris-db/txs"
+	go_events "github.com/tendermint/go-events"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 // TODO improve
@@ -29,12 +33,15 @@ import (
 // [ben] To improve this we will switch out go-events with eris-db/event so
 // that there is no need anymore for this poor wrapper.
 
+// Oh for a sum type
+type anyEventData interface{}
+
 type EventEmitter interface {
-	Subscribe(subId, event string, callback func(evts.EventData)) error
+	Subscribe(subId, event string, callback func(txs.EventData)) error
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch *evts.EventSwitch) *events {
+func NewEvents(eventSwitch *go_events.EventSwitch) *events {
 	return &events{eventSwitch}
 }
 
@@ -47,12 +54,21 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 
 // The events struct has methods for working with events.
 type events struct {
-	eventSwitch *evts.EventSwitch
+	eventSwitch *go_events.EventSwitch
 }
 
 // Subscribe to an event.
-func (this *events) Subscribe(subId, event string, callback func(evts.EventData)) error {
-	this.eventSwitch.AddListenerForEvent(subId, event, callback)
+func (this *events) Subscribe(subId, event string,
+	callback func(txs.EventData)) error {
+	cb := func(evt go_events.EventData) {
+		eventData, err := mapToOurEventData(evt)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to map go-events EventData to our EventData %v",
+				err))
+		}
+		callback(eventData)
+	}
+	this.eventSwitch.AddListenerForEvent(subId, event, cb)
 	return nil
 }
 
@@ -67,7 +83,8 @@ type multiplexedEvents struct {
 }
 
 // Subscribe to an event.
-func (multiEvents *multiplexedEvents) Subscribe(subId, event string, callback func(evts.EventData)) error {
+func (multiEvents *multiplexedEvents) Subscribe(subId, event string,
+	callback func(txs.EventData)) error {
 	for _, eventEmitter := range multiEvents.eventEmitters {
 		err := eventEmitter.Subscribe(subId, event, callback)
 		if err != nil {
@@ -118,5 +135,25 @@ func GenerateSubId() (string, error) {
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
+}
 
+func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
+	// While we depend on go-events in the way we do, we don't have much choice
+	// than to use a generic interface like anyEventData with a type switch.
+
+	switch eventData := eventData.(type) {
+	case txs.EventData:
+		return eventData, nil
+	case tm_types.EventDataNewBlock:
+		return txs.EventDataNewBlock{
+			Block: eventData.Block,
+		}, nil
+	case tm_types.EventDataNewBlockHeader:
+		return txs.EventDataNewBlockHeader{
+			Header: eventData.Header,
+		}, nil
+	default:
+		return nil, fmt.Errorf("EventData not recognised as known EventData: %v",
+			eventData)
+	}
 }
