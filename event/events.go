@@ -24,16 +24,18 @@ import (
 	"fmt"
 
 	"github.com/eris-ltd/eris-db/txs"
+	log "github.com/eris-ltd/eris-logger"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
-// TODO improve
-// TODO: [ben] yes please ^^^
-// [ben] To improve this we will switch out go-events with eris-db/event so
-// that there is no need anymore for this poor wrapper.
+// TODO: [Silas] this is a compatibility layer between our event types and
+// TODO: go-events. Our ultimate plan is to replace go-events with our own pub-sub
+// TODO: code that will better allow us to manage and multiplex events from different
+// TODO: subsystems
 
 // Oh for a sum type
+// We are using this as a marker interface for the
 type anyEventData interface{}
 
 type EventEmitter interface {
@@ -63,8 +65,9 @@ func (this *events) Subscribe(subId, event string,
 	cb := func(evt go_events.EventData) {
 		eventData, err := mapToOurEventData(evt)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to map go-events EventData to our EventData %v",
-				err))
+			log.WithError(err).
+				WithFields(log.Fields{"event": event}).
+				Error("Failed to map go-events EventData to our EventData")
 		}
 		callback(eventData)
 	}
@@ -138,9 +141,8 @@ func GenerateSubId() (string, error) {
 }
 
 func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
-	// While we depend on go-events in the way we do, we don't have much choice
-	// than to use a generic interface like anyEventData with a type switch.
-
+	// TODO: [Silas] avoid this with a better event pub-sub system of our own
+	// TODO: that maybe involves a registry of events
 	switch eventData := eventData.(type) {
 	case txs.EventData:
 		return eventData, nil
