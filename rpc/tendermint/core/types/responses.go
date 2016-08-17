@@ -124,8 +124,8 @@ type ResultSignTx struct {
 }
 
 type ResultEvent struct {
-	Event string            `json:"event"`
-	Data  types.TMEventData `json:"data"`
+	Event string        `json:"event"`
+	Data  txs.EventData `json:"data"`
 }
 
 //----------------------------------------

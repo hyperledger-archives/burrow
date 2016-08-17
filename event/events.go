@@ -21,20 +21,29 @@ import (
 	"encoding/hex"
 	"strings"
 
-	evts "github.com/tendermint/go-events"
+	"fmt"
+
+	"github.com/eris-ltd/eris-db/txs"
+	log "github.com/eris-ltd/eris-logger"
+	go_events "github.com/tendermint/go-events"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
-// TODO improve
-// TODO: [ben] yes please ^^^
-// [ben] To improve this we will switch out go-events with eris-db/event so
-// that there is no need anymore for this poor wrapper.
+// TODO: [Silas] this is a compatibility layer between our event types and
+// TODO: go-events. Our ultimate plan is to replace go-events with our own pub-sub
+// TODO: code that will better allow us to manage and multiplex events from different
+// TODO: subsystems
+
+// Oh for a sum type
+// We are using this as a marker interface for the
+type anyEventData interface{}
 
 type EventEmitter interface {
-	Subscribe(subId, event string, callback func(evts.EventData)) error
+	Subscribe(subId, event string, callback func(txs.EventData)) error
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch *evts.EventSwitch) *events {
+func NewEvents(eventSwitch *go_events.EventSwitch) *events {
 	return &events{eventSwitch}
 }
 
@@ -47,12 +56,22 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 
 // The events struct has methods for working with events.
 type events struct {
-	eventSwitch *evts.EventSwitch
+	eventSwitch *go_events.EventSwitch
 }
 
 // Subscribe to an event.
-func (this *events) Subscribe(subId, event string, callback func(evts.EventData)) error {
-	this.eventSwitch.AddListenerForEvent(subId, event, callback)
+func (this *events) Subscribe(subId, event string,
+	callback func(txs.EventData)) error {
+	cb := func(evt go_events.EventData) {
+		eventData, err := mapToOurEventData(evt)
+		if err != nil {
+			log.WithError(err).
+				WithFields(log.Fields{"event": event}).
+				Error("Failed to map go-events EventData to our EventData")
+		}
+		callback(eventData)
+	}
+	this.eventSwitch.AddListenerForEvent(subId, event, cb)
 	return nil
 }
 
@@ -67,7 +86,8 @@ type multiplexedEvents struct {
 }
 
 // Subscribe to an event.
-func (multiEvents *multiplexedEvents) Subscribe(subId, event string, callback func(evts.EventData)) error {
+func (multiEvents *multiplexedEvents) Subscribe(subId, event string,
+	callback func(txs.EventData)) error {
 	for _, eventEmitter := range multiEvents.eventEmitters {
 		err := eventEmitter.Subscribe(subId, event, callback)
 		if err != nil {
@@ -118,5 +138,24 @@ func GenerateSubId() (string, error) {
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
+}
 
+func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
+	// TODO: [Silas] avoid this with a better event pub-sub system of our own
+	// TODO: that maybe involves a registry of events
+	switch eventData := eventData.(type) {
+	case txs.EventData:
+		return eventData, nil
+	case tm_types.EventDataNewBlock:
+		return txs.EventDataNewBlock{
+			Block: eventData.Block,
+		}, nil
+	case tm_types.EventDataNewBlockHeader:
+		return txs.EventDataNewBlockHeader{
+			Header: eventData.Header,
+		}, nil
+	default:
+		return nil, fmt.Errorf("EventData not recognised as known EventData: %v",
+			eventData)
+	}
 }

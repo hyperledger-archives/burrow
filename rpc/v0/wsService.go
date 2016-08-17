@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tendermint/go-events"
-
 	log "github.com/eris-ltd/eris-logger"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	server "github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 // Used for ErisDb. Implements WebSocketService.
@@ -69,7 +68,8 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 }
 
 // Convenience method for writing error responses.
-func (this *ErisDbWsService) writeError(msg, id string, code int, session *server.WSSession) {
+func (this *ErisDbWsService) writeError(msg, id string, code int,
+	session *server.WSSession) {
 	response := rpc.NewRPCErrorResponse(id, code, msg)
 	bts, err := this.codec.EncodeBytes(response)
 	// If there's an error here all bets are off.
@@ -80,7 +80,8 @@ func (this *ErisDbWsService) writeError(msg, id string, code int, session *serve
 }
 
 // Convenience method for writing responses.
-func (this *ErisDbWsService) writeResponse(id string, result interface{}, session *server.WSSession) error {
+func (this *ErisDbWsService) writeResponse(id string, result interface{},
+	session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
 	log.Debug("RESPONSE: %v\n", response)
@@ -93,10 +94,12 @@ func (this *ErisDbWsService) writeResponse(id string, result interface{}, sessio
 
 // *************************************** Events ************************************
 
-func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	session, ok := requester.(*server.WSSession)
 	if !ok {
-		return 0, rpc.INTERNAL_ERROR, fmt.Errorf("Passing wrong object to websocket events")
+		return 0, rpc.INTERNAL_ERROR,
+			fmt.Errorf("Passing wrong object to websocket events")
 	}
 	param := &EventIdParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
@@ -109,7 +112,7 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest, requester i
 		return nil, rpc.INTERNAL_ERROR, errSID
 	}
 
-	callback := func(ret events.EventData) {
+	callback := func(ret txs.EventData) {
 		this.writeResponse(subId, ret, session)
 	}
 	errC := this.pipe.Events().Subscribe(subId, eventId, callback)

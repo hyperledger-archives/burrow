@@ -236,10 +236,11 @@ func (pipe *erisMintPipe) Subscribe(listenerId, event string,
 	rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error) {
 	log.WithFields(log.Fields{"listenerId": listenerId, "event": event}).
 		Info("Subscribing to event")
+
 	pipe.consensusAndManagerEvents().Subscribe(subscriptionId(listenerId, event), event,
-		func(eventData go_events.EventData) {
+		func(eventData txs.EventData) {
 			result := rpc_tm_types.ErisDBResult(&rpc_tm_types.ResultEvent{event,
-				tm_types.TMEventData(eventData)})
+				txs.EventData(eventData)})
 			// NOTE: EventSwitch callbacks must be nonblocking
 			rpcResponseWriter(result)
 		})

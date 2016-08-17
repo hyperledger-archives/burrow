@@ -7,7 +7,7 @@ import (
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 
-	"github.com/tendermint/tendermint/types" // Block
+	tm_types "github.com/tendermint/tendermint/types" // Block
 )
 
 // Functions to generate eventId strings
@@ -43,9 +43,11 @@ const (
 	EventDataTypeTx       = byte(0x03)
 	EventDataTypeCall     = byte(0x04)
 	EventDataTypeLog      = byte(0x05)
+	EventDataTypeNewBlockHeader = byte(0x06)
 
 	EventDataTypeRoundState = byte(0x11)
 	EventDataTypeVote       = byte(0x12)
+
 )
 
 type EventData interface {
@@ -54,6 +56,7 @@ type EventData interface {
 
 var _ = wire.RegisterInterface(
 	struct{ EventData }{},
+	wire.ConcreteType{EventDataNewBlockHeader{}, EventDataTypeNewBlockHeader},
 	wire.ConcreteType{EventDataNewBlock{}, EventDataTypeNewBlock},
 	// wire.ConcreteType{EventDataFork{}, EventDataTypeFork },
 	wire.ConcreteType{EventDataTx{}, EventDataTypeTx},
@@ -67,7 +70,11 @@ var _ = wire.RegisterInterface(
 // but some (an input to a call tx or a receive) are more exotic
 
 type EventDataNewBlock struct {
-	Block *types.Block `json:"block"`
+	Block *tm_types.Block `json:"block"`
+}
+
+type EventDataNewBlockHeader struct {
+	Header *tm_types.Header `json:"header"`
 }
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
@@ -107,27 +114,28 @@ type EventDataLog struct {
 type EventDataRoundState struct {
 	CurrentTime time.Time `json:"current_time"`
 
-	Height        int             `json:"height"`
-	Round         int             `json:"round"`
-	Step          string          `json:"step"`
-	StartTime     time.Time       `json:"start_time"`
-	CommitTime    time.Time       `json:"commit_time"`
-	Proposal      *types.Proposal `json:"proposal"`
-	ProposalBlock *types.Block    `json:"proposal_block"`
-	LockedRound   int             `json:"locked_round"`
-	LockedBlock   *types.Block    `json:"locked_block"`
-	POLRound      int             `json:"pol_round"`
+	Height        int                `json:"height"`
+	Round         int                `json:"round"`
+	Step          string             `json:"step"`
+	StartTime     time.Time          `json:"start_time"`
+	CommitTime    time.Time          `json:"commit_time"`
+	Proposal      *tm_types.Proposal `json:"proposal"`
+	ProposalBlock *tm_types.Block    `json:"proposal_block"`
+	LockedRound   int                `json:"locked_round"`
+	LockedBlock   *tm_types.Block    `json:"locked_block"`
+	POLRound      int                `json:"pol_round"`
 }
 
 type EventDataVote struct {
 	Index   int
 	Address []byte
-	Vote    *types.Vote
+	Vote    *tm_types.Vote
 }
 
-func (_ EventDataNewBlock) AssertIsEventData()   {}
-func (_ EventDataTx) AssertIsEventData()         {}
-func (_ EventDataCall) AssertIsEventData()       {}
-func (_ EventDataLog) AssertIsEventData()        {}
-func (_ EventDataRoundState) AssertIsEventData() {}
-func (_ EventDataVote) AssertIsEventData()       {}
+func (_ EventDataNewBlock) AssertIsEventData()       {}
+func (_ EventDataNewBlockHeader) AssertIsEventData() {}
+func (_ EventDataTx) AssertIsEventData()             {}
+func (_ EventDataCall) AssertIsEventData()           {}
+func (_ EventDataLog) AssertIsEventData()            {}
+func (_ EventDataRoundState) AssertIsEventData()     {}
+func (_ EventDataVote) AssertIsEventData()           {}

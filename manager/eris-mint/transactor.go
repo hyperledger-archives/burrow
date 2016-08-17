@@ -207,12 +207,13 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	}
 	wc := make(chan *txs.EventDataCall)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	this.eventEmitter.Subscribe(subId, txs.EventStringAccCall(addr), func(evt tEvents.EventData) {
-		event := evt.(txs.EventDataCall)
-		if bytes.Equal(event.TxID, rec.TxHash) {
-			wc <- &event
-		}
-	})
+	this.eventEmitter.Subscribe(subId, txs.EventStringAccCall(addr),
+		func(evt txs.EventData) {
+			event := evt.(txs.EventDataCall)
+			if bytes.Equal(event.TxID, rec.TxHash) {
+				wc <- &event
+			}
+		})
 
 	timer := time.NewTimer(300 * time.Second)
 	toChan := timer.C
