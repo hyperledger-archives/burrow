@@ -159,7 +159,7 @@ func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	// TODO: make errors tmsp aware
+	// TODO: map ExecTx errors to sensible TMSP error codes
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
