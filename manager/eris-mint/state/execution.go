@@ -279,6 +279,7 @@ func adjustByInputs(accounts map[string]*acm.Account, ins []*txs.TxInput) {
 			PanicSanity("adjustByInputs() expects sufficient funds")
 		}
 		acc.Balance -= in.Amount
+
 		acc.Sequence += 1
 	}
 }
@@ -413,6 +414,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		// Good!
 		value := tx.Input.Amount - tx.Fee
+
 		inAcc.Sequence += 1
 		inAcc.Balance -= tx.Fee
 		blockCache.UpdateAccount(inAcc)
