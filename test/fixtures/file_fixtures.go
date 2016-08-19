@@ -1,9 +1,10 @@
 package fixtures
 
 import (
-	"github.com/docker/docker/pkg/ioutils"
 	"os"
 	"path"
+
+	"github.com/docker/docker/pkg/ioutils"
 )
 
 // FileFixtures writes files to a temporary location for use in testing.
@@ -23,6 +24,12 @@ func NewFileFixtures(identifyingPrefix string) *FileFixtures {
 		tempDir: dir,
 		Error:   err,
 	}
+}
+
+// Returns the root temporary directory that this FileFixtures will populate and
+// clear on RemoveAll()
+func (ffs *FileFixtures) TempDir() string {
+	return ffs.tempDir
 }
 
 // Add a file relative to the FileFixtures tempDir using name for the relative

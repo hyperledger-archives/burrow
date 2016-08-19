@@ -17,10 +17,11 @@ import (
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
 
+	"path"
+
 	"github.com/spf13/viper"
 	tm_common "github.com/tendermint/go-common"
 	"github.com/tendermint/tendermint/types"
-	"path"
 )
 
 // global variables for use across all tests
@@ -101,23 +102,10 @@ func makeUsers(n int) []*acm.PrivAccount {
 	return accounts
 }
 
-// create a new node and sleep forever
 func newNode(ready chan error) {
-	// TODO: we don't need to start a V0 gateway this was added for debugging, remove
-	serverProcess, err := testCore.NewGatewayV0(config)
-	if err != nil {
-		ready <- err
-	}
-
-	err = serverProcess.Start()
-	if err != nil {
-		ready <- err
-	}
-
-	// Run the RPC servers
-	_, err = testCore.NewGatewayTendermint(config)
+	// Run the 'tendermint' rpc server
+	_, err := testCore.NewGatewayTendermint(config)
 	ready <- err
-	<-serverProcess.StopEventChannel()
 }
 
 func saveNewPriv() {

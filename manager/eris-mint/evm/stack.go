@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+
 	. "github.com/tendermint/go-common"
 )
 

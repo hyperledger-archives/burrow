@@ -28,10 +28,11 @@ func TestWSNewBlock(t *testing.T) {
 		unsubscribe(t, wsc, eid)
 		wsc.Stop()
 	}()
-	waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b interface{}) error {
-		fmt.Println("Check:", string(b.([]byte)))
-		return nil
-	})
+	waitForEvent(t, wsc, eid, true, func() {},
+		func(eid string, eventData txs.EventData) error {
+			fmt.Println("Check: ", eventData.(txs.EventDataNewBlock).Block)
+			return nil
+		})
 }
 
 // receive a few new block messages in a row, with increasing height
@@ -47,7 +48,26 @@ func TestWSBlockchainGrowth(t *testing.T) {
 		wsc.Stop()
 	}()
 	// listen for NewBlock, ensure height increases by 1
-	unmarshalValidateBlockchain(t, wsc, eid)
+	var initBlockN int
+	for i := 0; i < 2; i++ {
+		waitForEvent(t, wsc, eid, true, func() {},
+			func(eid string, eventData txs.EventData) error {
+				eventDataNewBlock, ok := eventData.(txs.EventDataNewBlock)
+				if !ok {
+					t.Fatalf("Was expecting EventDataNewBlock but got %v", eventData)
+				}
+				block := eventDataNewBlock.Block
+				if i == 0 {
+					initBlockN = block.Height
+				} else {
+					if block.Header.Height != initBlockN+i {
+						return fmt.Errorf("Expected block %d, got block %d", i, block.Header.Height)
+					}
+				}
+
+				return nil
+			})
+	}
 }
 
 // send a transaction and validate the events from listening for both sender and receiver
@@ -90,12 +110,12 @@ func TestWSDoubleFire(t *testing.T) {
 	waitForEvent(t, wsc, eid, true, func() {
 		tx := makeDefaultSendTxSigned(t, wsTyp, toAddr, amt)
 		broadcastTx(t, wsTyp, tx)
-	}, func(eid string, b interface{}) error {
+	}, func(eid string, b txs.EventData) error {
 		return nil
 	})
 	// but make sure we don't hear about it twice
 	waitForEvent(t, wsc, eid, false, func() {
-	}, func(eid string, b interface{}) error {
+	}, func(eid string, b txs.EventData) error {
 		return nil
 	})
 }
@@ -200,7 +220,7 @@ func TestWSCallCall(t *testing.T) {
 
 	// let the contract get created first
 	waitForEvent(t, wsc, eid1, true, func() {
-	}, func(eid string, b interface{}) error {
+	}, func(eid string, b txs.EventData) error {
 		return nil
 	})
 	// call it

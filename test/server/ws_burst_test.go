@@ -1,11 +1,12 @@
 package server
 
 import (
+	"testing"
+	"time"
+
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const CONNS uint16 = 100

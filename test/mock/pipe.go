@@ -2,17 +2,16 @@ package mock
 
 import (
 	"fmt"
-	
-	account       "github.com/eris-ltd/eris-db/account"
-	core_types    "github.com/eris-ltd/eris-db/core/types"
-	definitions   "github.com/eris-ltd/eris-db/definitions"
-	event         "github.com/eris-ltd/eris-db/event"
+
+	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	definitions "github.com/eris-ltd/eris-db/definitions"
+	event "github.com/eris-ltd/eris-db/event"
 
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
-	types "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 
-	evts "github.com/tendermint/go-events"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -182,7 +181,7 @@ type eventer struct {
 	testData *td.TestData
 }
 
-func (this *eventer) Subscribe(subId, event string, callback func(evts.EventData)) error {
+func (this *eventer) Subscribe(subId, event string, callback func(txs.EventData)) error {
 	return nil
 }
 
@@ -250,37 +249,37 @@ func (this *transactor) CallCode(from, code, data []byte) (*core_types.Call, err
 	return this.testData.CallCode.Output, nil
 }
 
-func (this *transactor) BroadcastTx(tx types.Tx) (*types.Receipt, error) {
+func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) UnconfirmedTxs() (*types.UnconfirmedTxs, error) {
+func (this *transactor) UnconfirmedTxs() (*txs.UnconfirmedTxs, error) {
 	return this.testData.GetUnconfirmedTxs.Output, nil
 }
 
-func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*types.Receipt, error) {
+func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*txs.Receipt, error) {
 	if address == nil || len(address) == 0 {
 		return this.testData.TransactCreate.Output, nil
 	}
 	return this.testData.Transact.Output, nil
 }
 
-func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*types.EventDataCall, error) {
+func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
 	return nil, nil
 }
 
-func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error) {
+func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error) {
+func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*types.Receipt, error) {
+func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*txs.Receipt, error) {
 	return this.testData.TransactNameReg.Output, nil
 }
 
-func (this *transactor) SignTx(tx types.Tx, privAccounts []*account.PrivAccount) (types.Tx, error) {
+func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error) {
 	return nil, nil
 }

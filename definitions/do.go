@@ -48,7 +48,7 @@ type Do struct {
 	// Zip          bool
 	// Tarball      bool
 	DisableRpc bool
-	Config *viper.Viper
+	Config     *viper.Viper
 	// Accounts     []*Account
 	// Result       string
 }

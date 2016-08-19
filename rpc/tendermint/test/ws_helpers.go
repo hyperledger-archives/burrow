@@ -8,7 +8,7 @@ import (
 	"time"
 
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	txtypes "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
 
 	"github.com/tendermint/go-events"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	timeoutSeconds = 5
+	timeoutSeconds = 2
 )
 
 //--------------------------------------------------------------------------------
@@ -49,9 +49,10 @@ func unsubscribe(t *testing.T, wsc *client.WSClient, eventid string) {
 
 // wait for an event; do things that might trigger events, and check them when they are received
 // the check function takes an event id and the byte slice read off the ws
-func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string, dieOnTimeout bool, f func(), check func(string, interface{}) error) {
+func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
+	dieOnTimeout bool, f func(), check func(string, txs.EventData) error) {
 	// go routine to wait for webscoket msg
-	goodCh := make(chan interface{})
+	goodCh := make(chan txs.EventData)
 	errCh := make(chan error)
 
 	// Read message
@@ -131,7 +132,7 @@ func unmarshalResponseNewBlock(b []byte) (*types.Block, error) {
 	return nil, nil
 }
 
-func unmarshalResponseNameReg(b []byte) (*txtypes.NameTx, error) {
+func unmarshalResponseNameReg(b []byte) (*txs.NameTx, error) {
 	// unmarshall and assert somethings
 	var response rpctypes.RPCResponse
 	var err error
@@ -143,48 +144,17 @@ func unmarshalResponseNameReg(b []byte) (*txtypes.NameTx, error) {
 		return nil, fmt.Errorf(response.Error)
 	}
 	_, val := UnmarshalEvent(*response.Result)
-	tx := txtypes.DecodeTx(val.(types.EventDataTx).Tx).(*txtypes.NameTx)
+	tx := txs.DecodeTx(val.(types.EventDataTx).Tx).(*txs.NameTx)
 	return tx, nil
 }
 
-func unmarshalValidateBlockchain(t *testing.T, wsc *client.WSClient, eid string) {
-	var initBlockN int
-	for i := 0; i < 2; i++ {
-		waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b interface{}) error {
-			block, err := unmarshalResponseNewBlock(b.([]byte))
-			if err != nil {
-				return err
-			}
-			if i == 0 {
-				initBlockN = block.Header.Height
-			} else {
-				if block.Header.Height != initBlockN+i {
-					return fmt.Errorf("Expected block %d, got block %d", i, block.Header.Height)
-				}
-			}
-
-			return nil
-		})
-	}
-}
-
-func unmarshalValidateSend(amt int64, toAddr []byte) func(string, interface{}) error {
-	return func(eid string, b interface{}) error {
-		// unmarshal and assert correctness
-		var response rpctypes.RPCResponse
-		var err error
-		wire.ReadJSON(&response, b.([]byte), &err)
-		if err != nil {
-			return err
+func unmarshalValidateSend(amt int64, toAddr []byte) func(string, txs.EventData) error {
+	return func(eid string, eventData txs.EventData) error {
+		var data = eventData.(txs.EventDataTx)
+		if data.Exception != "" {
+			return fmt.Errorf(data.Exception)
 		}
-		if response.Error != "" {
-			return fmt.Errorf(response.Error)
-		}
-		event, val := UnmarshalEvent(*response.Result)
-		if eid != event {
-			return fmt.Errorf("Eventid is not correct. Got %s, expected %s", event, eid)
-		}
-		tx := txtypes.DecodeTx(val.(types.EventDataTx).Tx).(*txtypes.SendTx)
+		tx := data.Tx.(*txs.SendTx)
 		if !bytes.Equal(tx.Inputs[0].Address, user[0].Address) {
 			return fmt.Errorf("Senders do not match up! Got %x, expected %x", tx.Inputs[0].Address, user[0].Address)
 		}
@@ -198,24 +168,13 @@ func unmarshalValidateSend(amt int64, toAddr []byte) func(string, interface{}) e
 	}
 }
 
-func unmarshalValidateTx(amt int64, returnCode []byte) func(string, interface{}) error {
-	return func(eid string, b interface{}) error {
-		// unmarshall and assert somethings
-		var response rpctypes.RPCResponse
-		var err error
-		wire.ReadJSON(&response, b.([]byte), &err)
-		if err != nil {
-			return err
-		}
-		if response.Error != "" {
-			return fmt.Errorf(response.Error)
-		}
-		_, val := UnmarshalEvent(*response.Result)
-		var data = val.(txtypes.EventDataTx)
+func unmarshalValidateTx(amt int64, returnCode []byte) func(string, txs.EventData) error {
+	return func(eid string, eventData txs.EventData) error {
+		var data = eventData.(txs.EventDataTx)
 		if data.Exception != "" {
 			return fmt.Errorf(data.Exception)
 		}
-		tx := data.Tx.(*txtypes.CallTx)
+		tx := data.Tx.(*txs.CallTx)
 		if !bytes.Equal(tx.Input.Address, user[0].Address) {
 			return fmt.Errorf("Senders do not match up! Got %x, expected %x",
 				tx.Input.Address, user[0].Address)
@@ -232,20 +191,9 @@ func unmarshalValidateTx(amt int64, returnCode []byte) func(string, interface{})
 	}
 }
 
-func unmarshalValidateCall(origin, returnCode []byte, txid *[]byte) func(string, interface{}) error {
-	return func(eid string, b interface{}) error {
-		// unmarshall and assert somethings
-		var response rpctypes.RPCResponse
-		var err error
-		wire.ReadJSON(&response, b.([]byte), &err)
-		if err != nil {
-			return err
-		}
-		if response.Error != "" {
-			return fmt.Errorf(response.Error)
-		}
-		_, val := UnmarshalEvent(*response.Result)
-		var data = val.(txtypes.EventDataCall)
+func unmarshalValidateCall(origin, returnCode []byte, txid *[]byte) func(string, txs.EventData) error {
+	return func(eid string, eventData txs.EventData) error {
+		var data = eventData.(txs.EventDataCall)
 		if data.Exception != "" {
 			return fmt.Errorf(data.Exception)
 		}

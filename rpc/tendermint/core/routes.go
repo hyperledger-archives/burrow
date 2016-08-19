@@ -55,6 +55,12 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 	event string) (ctypes.ErisDBResult, error) {
 	// NOTE: RPCResponses of subscribed events have id suffix "#event"
+	// TODO: we really ought to allow multiple subscriptions from the same client address
+	// to the same event. The code as it stands reflects the somewhat broken tendermint
+	// implementation. We can use GenerateSubId to randomize the subscriptions id
+	// and return it in the result. This would require clients to hang on to a
+	// subscription id if they wish to unsubscribe, but then again they can just
+	// drop their connection
 	result, err := tmRoutes.tendermintPipe.Subscribe(wsCtx.GetRemoteAddr(), event,
 		func(result ctypes.ErisDBResult) {
 			// NOTE: EventSwitch callbacks must be nonblocking

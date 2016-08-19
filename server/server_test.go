@@ -2,8 +2,9 @@ package server
 
 import (
 	//"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Unit tests for server components goes here. Full-on client-server tests

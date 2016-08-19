@@ -12,7 +12,9 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-var doNothing = func(eid string, b interface{}) error { return nil }
+func doNothing(eventId string, eventData txs.EventData) error {
+	return nil
+}
 
 func testStatus(t *testing.T, typ string) {
 	client := clients[typ]
@@ -30,7 +32,7 @@ func testStatus(t *testing.T, typ string) {
 func testGetAccount(t *testing.T, typ string) {
 	acc := getAccount(t, typ, user[0].Address)
 	if acc == nil {
-		t.Fatalf("Account was nil")
+		t.Fatal("Account was nil")
 	}
 	if bytes.Compare(acc.Address, user[0].Address) != 0 {
 		t.Fatalf("Failed to get correct account. Got %x, expected %x", acc.Address, user[0].Address)
@@ -192,9 +194,7 @@ func testNameReg(t *testing.T, typ string) {
 	tx := makeDefaultNameTx(t, typ, name, data, amt, fee)
 	broadcastTx(t, typ, tx)
 	// verify the name by both using the event and by checking get_name
-	waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b interface{}) error {
-		// TODO: unmarshal the response
-		_ = b // TODO
+	waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b txs.EventData) error {	// TODO: unmarshal thtxs.EventData		_ = b // TODO
 		tx, err := unmarshalResponseNameReg([]byte{})
 		if err != nil {
 			return err
