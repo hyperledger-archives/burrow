@@ -571,6 +571,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		if entry != nil {
 			var expired bool
+
 			// if the entry already exists, and hasn't expired, we must be owner
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner

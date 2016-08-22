@@ -10,7 +10,9 @@ import (
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
+	tm_types "github.com/tendermint/tendermint/types"
 
+	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/tendermint/go-events"
 	client "github.com/tendermint/go-rpc/client"
 	rpctypes "github.com/tendermint/go-rpc/types"
@@ -47,13 +49,76 @@ func unsubscribe(t *testing.T, wsc *client.WSClient, eventid string) {
 	}
 }
 
-// wait for an event; do things that might trigger events, and check them when they are received
-// the check function takes an event id and the byte slice read off the ws
+// broadcast transaction and wait for new block
+func broadcastTxAndWaitForBlock(t *testing.T, typ string, wsc *client.WSClient,
+	tx txs.Tx) (txs.Receipt, error) {
+	var rec txs.Receipt
+	var err error
+	initialHeight := -1
+	runThenWaitForBlock(t, wsc,
+		func(block *tm_types.Block) bool {
+			if initialHeight < 0 {
+				initialHeight = block.Height
+				return false
+			} else {
+				return block.Height > initialHeight
+			}
+		},
+		func() {
+			rec, err = edbcli.BroadcastTx(clients[typ], tx)
+			mempoolCount += 1
+		})
+	return rec, err
+}
+
+func waitNBlocks(t *testing.T, wsc *client.WSClient, n int) {
+	i := 0
+	runThenWaitForBlock(t, wsc,
+		func(block *tm_types.Block) bool {
+			i++
+			return i <= n
+		},
+		func() {})
+}
+
+func runThenWaitForBlock(t *testing.T, wsc *client.WSClient,
+	blockPredicate func(*tm_types.Block) bool, runner func()) {
+	subscribeAndWaitForNext(t, wsc, txs.EventStringNewBlock(),
+		runner,
+		func(event string, eventData txs.EventData) (bool, error) {
+			return blockPredicate(eventData.(txs.EventDataNewBlock).Block), nil
+		})
+}
+
+func subscribeAndWaitForNext(t *testing.T, wsc *client.WSClient, event string,
+	runner func(),
+	eventDataChecker func(string, txs.EventData) (bool, error)) {
+	subscribe(t, wsc, event)
+	waitForEvent(t,
+		wsc,
+		event,
+		runner,
+		eventDataChecker)
+	unsubscribe(t, wsc, event)
+}
+
+// waitForEvent executes runner that is expected to trigger events. It then
+// waits for any events on the supplies WSClient and checks the eventData with
+// the eventDataChecker which is a function that is passed the event name
+// and the EventData and returns the pair of stopWaiting, err. Where if
+// stopWaiting is true waitForEvent will return or if stopWaiting is false
+// waitForEvent will keep listening for new events. If an error is returned
+// waitForEvent will fail the test.
 func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
-	dieOnTimeout bool, f func(), check func(string, txs.EventData) error) {
-	// go routine to wait for webscoket msg
+	runner func(),
+	eventDataChecker func(string, txs.EventData) (bool, error)) waitForEventError {
+
+	// go routine to wait for websocket msg
 	goodCh := make(chan txs.EventData)
 	errCh := make(chan error)
+
+	// do stuff (transactions)
+	runner()
 
 	// Read message
 	go func() {
@@ -82,35 +147,38 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 		}
 	}()
 
-	// do stuff (transactions)
-	f()
-
 	// wait for an event or timeout
 	timeout := time.NewTimer(timeoutSeconds * time.Second)
-	select {
-	case <-timeout.C:
-		if dieOnTimeout {
-			wsc.Stop()
-			t.Fatalf("%s event was not received in time", eventid)
-		}
-		// else that's great, we didn't hear the event
-		// and we shouldn't have
-	case eventData := <-goodCh:
-		if dieOnTimeout {
-			// message was received and expected
+	for {
+		select {
+		case <-timeout.C:
+			return waitForEventError{timeout: true}
+		case eventData := <-goodCh:
 			// run the check
-			if err := check(eventid, eventData); err != nil {
+			stopWaiting, err := eventDataChecker(eventid, eventData)
+			if err != nil {
 				t.Fatal(err) // Show the stack trace.
 			}
-		} else {
-			wsc.Stop()
-			t.Fatalf("%s event was not expected", eventid)
+			if stopWaiting {
+				return waitForEventError{}
+			}
+		case err := <-errCh:
+			t.Fatal(err)
 		}
-	case err := <-errCh:
-		t.Fatal(err)
-		panic(err) // Show the stack trace.
-
 	}
+}
+
+type waitForEventError struct {
+	error
+	timeout bool
+}
+
+func (err waitForEventError) Timeout() bool {
+	return err.timeout
+}
+
+func acceptFirstBlock(_ *tm_types.Block) bool {
+	return true
 }
 
 //--------------------------------------------------------------------------------
@@ -148,68 +216,71 @@ func unmarshalResponseNameReg(b []byte) (*txs.NameTx, error) {
 	return tx, nil
 }
 
-func unmarshalValidateSend(amt int64, toAddr []byte) func(string, txs.EventData) error {
-	return func(eid string, eventData txs.EventData) error {
+func unmarshalValidateSend(amt int64,
+	toAddr []byte) func(string, txs.EventData) (bool, error) {
+	return func(eid string, eventData txs.EventData) (bool, error) {
 		var data = eventData.(txs.EventDataTx)
 		if data.Exception != "" {
-			return fmt.Errorf(data.Exception)
+			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.SendTx)
 		if !bytes.Equal(tx.Inputs[0].Address, user[0].Address) {
-			return fmt.Errorf("Senders do not match up! Got %x, expected %x", tx.Inputs[0].Address, user[0].Address)
+			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x", tx.Inputs[0].Address, user[0].Address)
 		}
 		if tx.Inputs[0].Amount != amt {
-			return fmt.Errorf("Amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
+			return true, fmt.Errorf("Amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
 		}
 		if !bytes.Equal(tx.Outputs[0].Address, toAddr) {
-			return fmt.Errorf("Receivers do not match up! Got %x, expected %x", tx.Outputs[0].Address, user[0].Address)
+			return true, fmt.Errorf("Receivers do not match up! Got %x, expected %x", tx.Outputs[0].Address, user[0].Address)
 		}
-		return nil
+		return true, nil
 	}
 }
 
-func unmarshalValidateTx(amt int64, returnCode []byte) func(string, txs.EventData) error {
-	return func(eid string, eventData txs.EventData) error {
+func unmarshalValidateTx(amt int64,
+	returnCode []byte) func(string, txs.EventData) (bool, error) {
+	return func(eid string, eventData txs.EventData) (bool, error) {
 		var data = eventData.(txs.EventDataTx)
 		if data.Exception != "" {
-			return fmt.Errorf(data.Exception)
+			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.CallTx)
 		if !bytes.Equal(tx.Input.Address, user[0].Address) {
-			return fmt.Errorf("Senders do not match up! Got %x, expected %x",
+			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x",
 				tx.Input.Address, user[0].Address)
 		}
 		if tx.Input.Amount != amt {
-			return fmt.Errorf("Amt does not match up! Got %d, expected %d",
+			return true, fmt.Errorf("Amt does not match up! Got %d, expected %d",
 				tx.Input.Amount, amt)
 		}
 		ret := data.Return
 		if !bytes.Equal(ret, returnCode) {
-			return fmt.Errorf("Tx did not return correctly. Got %x, expected %x", ret, returnCode)
+			return true, fmt.Errorf("Tx did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
-		return nil
+		return true, nil
 	}
 }
 
-func unmarshalValidateCall(origin, returnCode []byte, txid *[]byte) func(string, txs.EventData) error {
-	return func(eid string, eventData txs.EventData) error {
+func unmarshalValidateCall(origin,
+	returnCode []byte, txid *[]byte) func(string, txs.EventData) (bool, error) {
+	return func(eid string, eventData txs.EventData) (bool, error) {
 		var data = eventData.(txs.EventDataCall)
 		if data.Exception != "" {
-			return fmt.Errorf(data.Exception)
+			return true, fmt.Errorf(data.Exception)
 		}
 		if !bytes.Equal(data.Origin, origin) {
-			return fmt.Errorf("Origin does not match up! Got %x, expected %x",
+			return true, fmt.Errorf("Origin does not match up! Got %x, expected %x",
 				data.Origin, origin)
 		}
 		ret := data.Return
 		if !bytes.Equal(ret, returnCode) {
-			return fmt.Errorf("Call did not return correctly. Got %x, expected %x", ret, returnCode)
+			return true, fmt.Errorf("Call did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
 		if !bytes.Equal(data.TxID, *txid) {
-			return fmt.Errorf("TxIDs do not match up! Got %x, expected %x",
+			return true, fmt.Errorf("TxIDs do not match up! Got %x, expected %x",
 				data.TxID, *txid)
 		}
-		return nil
+		return true, nil
 	}
 }
 
