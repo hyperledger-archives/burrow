@@ -141,6 +141,7 @@ func performCall(client rpcclient.Client, method string,
 	return
 
 }
+
 func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{},
 	[]interface{}, error) {
 	if len(orderedKeyVals)%2 != 0 {
@@ -158,7 +159,7 @@ func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{},
 		}
 		val := orderedKeyVals[i+1]
 		paramsMap[key] = val
-		paramsSlice = append(paramsSlice, val)
+		paramsSlice[i/2] = val
 	}
 	return paramsMap, paramsSlice, nil
 }
