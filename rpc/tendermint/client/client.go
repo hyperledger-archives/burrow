@@ -1,6 +1,9 @@
 package client
 
 import (
+	"errors"
+	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
@@ -10,14 +13,7 @@ import (
 )
 
 func Status(client rpcclient.Client) (*rpc_types.ResultStatus, error) {
-	var res rpc_types.ErisDBResult //ResultStatus)
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("status", []interface{}{}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("status", map[string]interface{}{}, &res)
-	}
+	res, err := performCall(client, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -25,30 +21,16 @@ func Status(client rpcclient.Client) (*rpc_types.ResultStatus, error) {
 }
 
 func GenPrivAccount(client rpcclient.Client) (*acm.PrivAccount, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("unsafe/gen_priv_account", []interface{}{}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("unsafe/gen_priv_account", map[string]interface{}{}, &res)
-	}
+	res, err := performCall(client, "unsafe/gen_priv_account")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultGenPrivAccount).PrivAccount, nil
 }
 
-func GetAccount(client rpcclient.Client, addr []byte) (*acm.Account, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("get_account", []interface{}{addr}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("get_account", map[string]interface{}{"address": addr},
-			&res)
-	}
+func GetAccount(client rpcclient.Client, address []byte) (*acm.Account, error) {
+	res, err := performCall(client, "get_account",
+		"address", address)
 	if err != nil {
 		return nil, err
 	}
@@ -56,21 +38,10 @@ func GetAccount(client rpcclient.Client, addr []byte) (*acm.Account, error) {
 }
 
 func SignTx(client rpcclient.Client, tx txs.Tx,
-	privAccs []*acm.PrivAccount) (txs.Tx, error) {
-	wrapTx := struct {
-		txs.Tx `json:"unwrap"`
-	}{tx}
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("unsafe/sign_tx", []interface{}{wrapTx, privAccs}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("unsafe/sign_tx", map[string]interface{}{
-			"tx":           wrapTx,
-			"privAccounts": privAccs,
-		}, &res)
-	}
+	privAccounts []*acm.PrivAccount) (txs.Tx, error) {
+	res, err := performCall(client, "unsafe/sign_tx",
+		"tx", wrappedTx{tx},
+		"privAccounts", privAccounts)
 	if err != nil {
 		return nil, err
 	}
@@ -79,18 +50,8 @@ func SignTx(client rpcclient.Client, tx txs.Tx,
 
 func BroadcastTx(client rpcclient.Client,
 	tx txs.Tx) (txs.Receipt, error) {
-	wrapTx := struct {
-		txs.Tx `json:"unwrap"`
-	}{tx}
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("broadcast_tx", []interface{}{wrapTx}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("broadcast_tx", map[string]interface{}{"tx": wrapTx},
-			&res)
-	}
+	res, err := performCall(client, "broadcast_tx",
+		"tx", wrappedTx{tx})
 	if err != nil {
 		return txs.Receipt{}, err
 	}
@@ -102,55 +63,31 @@ func BroadcastTx(client rpcclient.Client,
 }
 
 func DumpStorage(client rpcclient.Client,
-	addr []byte) (*rpc_types.ResultDumpStorage, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("dump_storage", []interface{}{addr}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("dump_storage", map[string]interface{}{"address": addr},
-			&res)
-	}
+	address []byte) (*rpc_types.ResultDumpStorage, error) {
+	res, err := performCall(client, "dump_storage",
+		"address", address)
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultDumpStorage), err
 }
 
-func GetStorage(client rpcclient.Client, addr, key []byte) ([]byte, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("get_storage", []interface{}{addr, key}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("get_storage", map[string]interface{}{
-			"address": addr,
-			"key":     key,
-		}, &res)
-	}
+func GetStorage(client rpcclient.Client, address, key []byte) ([]byte, error) {
+	res, err := performCall(client, "get_storage",
+		"address", address,
+		"key", key)
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultGetStorage).Value, nil
 }
 
-func CallCode(client rpcclient.Client,
-	fromAddress, code, data []byte) (*rpc_types.ResultCall, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("call_code", []interface{}{fromAddress, code, data}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("call_code", map[string]interface{}{
-			"fromAddress": fromAddress,
-			"code":        code,
-			"data":        data,
-		}, &res)
-
-	}
+func CallCode(client rpcclient.Client, fromAddress, code,
+	data []byte) (*rpc_types.ResultCall, error) {
+	res, err := performCall(client, "call_code",
+		"fromAddress", fromAddress,
+		"code", code,
+		"data", data)
 	if err != nil {
 		return nil, err
 	}
@@ -159,19 +96,10 @@ func CallCode(client rpcclient.Client,
 
 func Call(client rpcclient.Client, fromAddress, toAddress,
 	data []byte) (*rpc_types.ResultCall, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("call", []interface{}{fromAddress, toAddress, data}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("call", map[string]interface{}{
-			"fromAddress": fromAddress,
-			"toAddress":   toAddress,
-			"data":        data,
-		}, &res)
-
-	}
+	res, err := performCall(client, "call",
+		"fromAddress", fromAddress,
+		"toAddress", toAddress,
+		"data", data)
 	if err != nil {
 		return nil, err
 	}
@@ -179,16 +107,62 @@ func Call(client rpcclient.Client, fromAddress, toAddress,
 }
 
 func GetName(client rpcclient.Client, name string) (*core_types.NameRegEntry, error) {
-	var res rpc_types.ErisDBResult
-	var err error
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call("get_name", []interface{}{name}, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call("get_name", map[string]interface{}{"name": name}, &res)
-	}
+	res, err := performCall(client, "get_name",
+		"name", name)
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultGetName).Entry, nil
+}
+
+func BlockchainInfo(client rpcclient.Client, minHeight,
+	maxHeight int) (*rpc_types.ResultBlockchainInfo, error) {
+	res, err := performCall(client, "blockchain",
+		"minHeight", minHeight,
+		"maxHeight", maxHeight)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultBlockchainInfo), err
+}
+
+func performCall(client rpcclient.Client, method string,
+	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
+	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
+	if err != nil {
+		return
+	}
+	switch cli := client.(type) {
+	case *rpcclient.ClientJSONRPC:
+		_, err = cli.Call(method, paramsSlice, &res)
+	case *rpcclient.ClientURI:
+		_, err = cli.Call(method, paramsMap, &res)
+	}
+	return
+
+}
+func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{},
+	[]interface{}, error) {
+	if len(orderedKeyVals)%2 != 0 {
+		return nil, nil, fmt.Errorf("mapAndValues requires a even length list of"+
+			" keys and values but got: %v (length %v)",
+			orderedKeyVals, len(orderedKeyVals))
+	}
+	paramsMap := make(map[string]interface{})
+	paramsSlice := make([]interface{}, len(orderedKeyVals)/2)
+	for i := 0; i < len(orderedKeyVals); i += 2 {
+		key, ok := orderedKeyVals[i].(string)
+		if !ok {
+			return nil, nil, errors.New("mapAndValues requires every even element" +
+				" of orderedKeyVals to be a string key")
+		}
+		val := orderedKeyVals[i+1]
+		paramsMap[key] = val
+		paramsSlice = append(paramsSlice, val)
+	}
+	return paramsMap, paramsSlice, nil
+}
+
+type wrappedTx struct {
+	txs.Tx `json:"unwrap"`
 }
