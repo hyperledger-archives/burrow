@@ -24,9 +24,9 @@ func TestWSConnect(t *testing.T) {
 func TestWSNewBlock(t *testing.T) {
 	wsc := newWSClient(t)
 	eid := txs.EventStringNewBlock()
-	subscribe(t, wsc, eid)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
-		unsubscribe(t, wsc, eid)
+		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	waitForEvent(t, wsc, eid, func() {},
@@ -43,9 +43,9 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	}
 	wsc := newWSClient(t)
 	eid := txs.EventStringNewBlock()
-	subscribe(t, wsc, eid)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
-		unsubscribe(t, wsc, eid)
+		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	// listen for NewBlock, ensure height increases by 1
@@ -80,11 +80,11 @@ func TestWSSend(t *testing.T) {
 	wsc := newWSClient(t)
 	eidInput := txs.EventStringAccInput(user[0].Address)
 	eidOutput := txs.EventStringAccOutput(toAddr)
-	subscribe(t, wsc, eidInput)
-	subscribe(t, wsc, eidOutput)
+	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
+	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
 	defer func() {
-		unsubscribe(t, wsc, eidInput)
-		unsubscribe(t, wsc, eidOutput)
+		unsubscribe(t, wsc, subIdInput)
+		unsubscribe(t, wsc, subIdOutput)
 		wsc.Stop()
 	}()
 	waitForEvent(t, wsc, eidInput, func() {
@@ -103,9 +103,9 @@ func TestWSDoubleFire(t *testing.T) {
 	}
 	wsc := newWSClient(t)
 	eid := txs.EventStringAccInput(user[0].Address)
-	subscribe(t, wsc, eid)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
-		unsubscribe(t, wsc, eid)
+		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	amt := int64(100)
@@ -134,9 +134,9 @@ func TestWSCallWait(t *testing.T) {
 	}
 	wsc := newWSClient(t)
 	eid1 := txs.EventStringAccInput(user[0].Address)
-	subscribe(t, wsc, eid1)
+	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
-		unsubscribe(t, wsc, eid1)
+		unsubscribe(t, wsc, subId1)
 		wsc.Stop()
 	}()
 	amt, gasLim, fee := int64(10000), int64(1000), int64(1000)
@@ -152,9 +152,9 @@ func TestWSCallWait(t *testing.T) {
 	// susbscribe to the new contract
 	amt = int64(10001)
 	eid2 := txs.EventStringAccOutput(contractAddr)
-	subscribe(t, wsc, eid2)
+	subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
 	defer func() {
-		unsubscribe(t, wsc, eid2)
+		unsubscribe(t, wsc, subId2)
 	}()
 	// get the return value from a call
 	data := []byte{0x1}
@@ -182,9 +182,9 @@ func TestWSCallNoWait(t *testing.T) {
 	// susbscribe to the new contract
 	amt = int64(10001)
 	eid := txs.EventStringAccOutput(contractAddr)
-	subscribe(t, wsc, eid)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
-		unsubscribe(t, wsc, eid)
+		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	// get the return value from a call
@@ -217,23 +217,28 @@ func TestWSCallCall(t *testing.T) {
 
 	// susbscribe to the new contracts
 	amt = int64(10001)
-	eid1 := txs.EventStringAccCall(contractAddr1)
-	subscribe(t, wsc, eid1)
+	eid := txs.EventStringAccCall(contractAddr1)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
-		unsubscribe(t, wsc, eid1)
+		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	// call contract2, which should call contract1, and wait for ev1
 
 	// let the contract get created first
-	waitForEvent(t, wsc, eid1, func() {
+	waitForEvent(t, wsc, eid, func() {
 	}, func(eid string, b txs.EventData) (bool, error) {
 		return true, nil
 	})
 	// call it
-	waitForEvent(t, wsc, eid1, func() {
+	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultCallTx(t, wsTyp, contractAddr2, nil, amt, gasLim, fee)
 		broadcastTx(t, wsTyp, tx)
 		*txid = txs.TxHash(chainID, tx)
 	}, unmarshalValidateCall(user[0].Address, returnVal, txid))
 }
+
+func TestSubscribe(t *testing.T) {
+	testSubscribe(t)
+}
+
