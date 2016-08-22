@@ -1,7 +1,9 @@
 package client
 
 import (
+	"errors"
 	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
@@ -126,34 +128,39 @@ func BlockchainInfo(client rpcclient.Client, minHeight,
 
 func performCall(client rpcclient.Client, method string,
 	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
-	paramsMap, paramsSlice := mapAndValues(paramKeyVals...)
+	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
+	if err != nil {
+		return
+	}
 	switch cli := client.(type) {
 	case *rpcclient.ClientJSONRPC:
 		_, err = cli.Call(method, paramsSlice, &res)
 	case *rpcclient.ClientURI:
 		_, err = cli.Call(method, paramsMap, &res)
 	}
-	return res, err
+	return
 
 }
-func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{}, []interface{}) {
+func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{},
+	[]interface{}, error) {
 	if len(orderedKeyVals)%2 != 0 {
-		panic(fmt.Sprintf("mapAndValues requires a even length list of keys and "+
-			"values but got: %v (length %v)",
-			orderedKeyVals, len(orderedKeyVals)))
+		return nil, nil, fmt.Errorf("mapAndValues requires a even length list of"+
+			" keys and values but got: %v (length %v)",
+			orderedKeyVals, len(orderedKeyVals))
 	}
 	paramsMap := make(map[string]interface{})
 	paramsSlice := make([]interface{}, len(orderedKeyVals)/2)
 	for i := 0; i < len(orderedKeyVals); i += 2 {
 		key, ok := orderedKeyVals[i].(string)
 		if !ok {
-			panic("mapAndValues requires every even element of orderedKeyVals to be a string key")
+			return nil, nil, errors.New("mapAndValues requires every even element" +
+				" of orderedKeyVals to be a string key")
 		}
 		val := orderedKeyVals[i+1]
 		paramsMap[key] = val
 		paramsSlice = append(paramsSlice, val)
 	}
-	return paramsMap, paramsSlice
+	return paramsMap, paramsSlice, nil
 }
 
 type wrappedTx struct {
