@@ -159,7 +159,7 @@ func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
 		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	// TODO: make errors tmsp aware
+	// TODO: map ExecTx errors to sensible TMSP error codes
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
 		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
@@ -185,14 +185,11 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// sync the AppendTx cache
 	app.cache.Sync()
 
-	// if there were any txs in the block,
-	// reset the check cache to the new height
-	if app.nTxs > 0 {
-		log.WithFields(log.Fields{
-			"txs": app.nTxs,
-		}).Info("Reset checkCache")
-		app.checkCache = sm.NewBlockCache(app.state)
-	}
+	// Refresh the checkCache with the latest commited state
+	log.WithFields(log.Fields{
+		"txs": app.nTxs,
+	}).Info("Reset checkCache")
+	app.checkCache = sm.NewBlockCache(app.state)
 	app.nTxs = 0
 
 	// save state to disk

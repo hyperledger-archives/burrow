@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/stretchr/testify/assert"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
 
@@ -28,10 +29,10 @@ func TestWSNewBlock(t *testing.T) {
 		unsubscribe(t, wsc, eid)
 		wsc.Stop()
 	}()
-	waitForEvent(t, wsc, eid, true, func() {},
-		func(eid string, eventData txs.EventData) error {
+	waitForEvent(t, wsc, eid, func() {},
+		func(eid string, eventData txs.EventData) (bool, error) {
 			fmt.Println("Check: ", eventData.(txs.EventDataNewBlock).Block)
-			return nil
+			return true, nil
 		})
 }
 
@@ -50,8 +51,8 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	// listen for NewBlock, ensure height increases by 1
 	var initBlockN int
 	for i := 0; i < 2; i++ {
-		waitForEvent(t, wsc, eid, true, func() {},
-			func(eid string, eventData txs.EventData) error {
+		waitForEvent(t, wsc, eid, func() {},
+			func(eid string, eventData txs.EventData) (bool, error) {
 				eventDataNewBlock, ok := eventData.(txs.EventDataNewBlock)
 				if !ok {
 					t.Fatalf("Was expecting EventDataNewBlock but got %v", eventData)
@@ -61,11 +62,12 @@ func TestWSBlockchainGrowth(t *testing.T) {
 					initBlockN = block.Height
 				} else {
 					if block.Header.Height != initBlockN+i {
-						return fmt.Errorf("Expected block %d, got block %d", i, block.Header.Height)
+						return true, fmt.Errorf("Expected block %d, got block %d", i,
+							block.Header.Height)
 					}
 				}
 
-				return nil
+				return true, nil
 			})
 	}
 }
@@ -85,11 +87,13 @@ func TestWSSend(t *testing.T) {
 		unsubscribe(t, wsc, eidOutput)
 		wsc.Stop()
 	}()
-	waitForEvent(t, wsc, eidInput, true, func() {
+	waitForEvent(t, wsc, eidInput, func() {
 		tx := makeDefaultSendTxSigned(t, wsTyp, toAddr, amt)
 		broadcastTx(t, wsTyp, tx)
 	}, unmarshalValidateSend(amt, toAddr))
-	waitForEvent(t, wsc, eidOutput, true, func() {}, unmarshalValidateSend(amt, toAddr))
+
+	waitForEvent(t, wsc, eidOutput, func() {},
+		unmarshalValidateSend(amt, toAddr))
 }
 
 // ensure events are only fired once for a given transaction
@@ -107,17 +111,20 @@ func TestWSDoubleFire(t *testing.T) {
 	amt := int64(100)
 	toAddr := user[1].Address
 	// broadcast the transaction, wait to hear about it
-	waitForEvent(t, wsc, eid, true, func() {
+	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultSendTxSigned(t, wsTyp, toAddr, amt)
 		broadcastTx(t, wsTyp, tx)
-	}, func(eid string, b txs.EventData) error {
-		return nil
+	}, func(eid string, b txs.EventData) (bool, error) {
+		return true, nil
 	})
 	// but make sure we don't hear about it twice
-	waitForEvent(t, wsc, eid, false, func() {
-	}, func(eid string, b txs.EventData) error {
-		return nil
-	})
+	err := waitForEvent(t, wsc, eid,
+		func() {},
+		func(eid string, b txs.EventData) (bool, error) {
+			return false, nil
+		})
+	assert.True(t, err.Timeout(), "We should have timed out waiting for second"+
+		" %v event", eid)
 }
 
 // create a contract, wait for the event, and send it a msg, validate the return
@@ -136,7 +143,7 @@ func TestWSCallWait(t *testing.T) {
 	code, returnCode, returnVal := simpleContract()
 	var contractAddr []byte
 	// wait for the contract to be created
-	waitForEvent(t, wsc, eid1, true, func() {
+	waitForEvent(t, wsc, eid1, func() {
 		tx := makeDefaultCallTx(t, wsTyp, nil, code, amt, gasLim, fee)
 		receipt := broadcastTx(t, wsTyp, tx)
 		contractAddr = receipt.ContractAddr
@@ -151,7 +158,7 @@ func TestWSCallWait(t *testing.T) {
 	}()
 	// get the return value from a call
 	data := []byte{0x1}
-	waitForEvent(t, wsc, eid2, true, func() {
+	waitForEvent(t, wsc, eid2, func() {
 		tx := makeDefaultCallTx(t, wsTyp, contractAddr, data, amt, gasLim, fee)
 		receipt := broadcastTx(t, wsTyp, tx)
 		contractAddr = receipt.ContractAddr
@@ -182,7 +189,7 @@ func TestWSCallNoWait(t *testing.T) {
 	}()
 	// get the return value from a call
 	data := []byte{0x1}
-	waitForEvent(t, wsc, eid, true, func() {
+	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultCallTx(t, wsTyp, contractAddr, data, amt, gasLim, fee)
 		broadcastTx(t, wsTyp, tx)
 	}, unmarshalValidateTx(amt, returnVal))
@@ -219,12 +226,12 @@ func TestWSCallCall(t *testing.T) {
 	// call contract2, which should call contract1, and wait for ev1
 
 	// let the contract get created first
-	waitForEvent(t, wsc, eid1, true, func() {
-	}, func(eid string, b txs.EventData) error {
-		return nil
+	waitForEvent(t, wsc, eid1, func() {
+	}, func(eid string, b txs.EventData) (bool, error) {
+		return true, nil
 	})
 	// call it
-	waitForEvent(t, wsc, eid1, true, func() {
+	waitForEvent(t, wsc, eid1, func() {
 		tx := makeDefaultCallTx(t, wsTyp, contractAddr2, nil, amt, gasLim, fee)
 		broadcastTx(t, wsTyp, tx)
 		*txid = txs.TxHash(chainID, tx)

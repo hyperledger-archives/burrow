@@ -547,12 +547,12 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 	maxBlockLookback int) (*rpc_tm_types.ResultBlockchainInfo, error) {
 
-	blockStore := pipe.blockchain.blockStore
+	height := pipe.consensusEngine.Height()
 
 	if maxHeight < 1 {
-		maxHeight = blockStore.Height()
+		maxHeight = height
 	} else {
-		maxHeight = imath.MinInt(blockStore.Height(), maxHeight)
+		maxHeight = imath.MinInt(height, maxHeight)
 	}
 	if minHeight < 1 {
 		minHeight = imath.MaxInt(1, maxHeight-maxBlockLookback)
@@ -560,9 +560,9 @@ func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 
 	blockMetas := []*tm_types.BlockMeta{}
 	for height := maxHeight; height >= minHeight; height-- {
-		blockMeta := blockStore.LoadBlockMeta(height)
+		blockMeta := pipe.consensusEngine.LoadBlockMeta(height)
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
-	return &rpc_tm_types.ResultBlockchainInfo{blockStore.Height(), blockMetas}, nil
+	return &rpc_tm_types.ResultBlockchainInfo{height, blockMetas}, nil
 }

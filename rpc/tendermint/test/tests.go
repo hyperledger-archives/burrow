@@ -8,13 +8,10 @@ import (
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/stretchr/testify/assert"
 	tm_common "github.com/tendermint/go-common"
 	"golang.org/x/crypto/ripemd160"
 )
-
-func doNothing(eventId string, eventData txs.EventData) error {
-	return nil
-}
 
 func testStatus(t *testing.T, typ string) {
 	client := clients[typ]
@@ -105,7 +102,7 @@ func testGetStorage(t *testing.T, typ string) {
 	}
 
 	// allow it to get mined
-	waitForEvent(t, wsc, eid, true, func() {}, doNothing)
+	waitForEvent(t, wsc, eid, func() {}, doNothing)
 	mempoolCount = 0
 
 	v := getStorage(t, typ, contractAddr, []byte{0x1})
@@ -165,7 +162,7 @@ func testCall(t *testing.T, typ string) {
 	}
 
 	// allow it to get mined
-	waitForEvent(t, wsc, eid, true, func() {}, doNothing)
+	waitForEvent(t, wsc, eid, func() {}, doNothing)
 	mempoolCount = 0
 
 	// run a call through the contract
@@ -175,7 +172,6 @@ func testCall(t *testing.T, typ string) {
 }
 
 func testNameReg(t *testing.T, typ string) {
-	client := clients[typ]
 	wsc := newWSClient(t)
 
 	txs.MinNameRegistrationPeriod = 1
@@ -183,86 +179,79 @@ func testNameReg(t *testing.T, typ string) {
 	// register a new name, check if its there
 	// since entries ought to be unique and these run against different clients, we append the typ
 	name := "ye_old_domain_name_" + typ
-	data := "if not now, when"
+	const data = "if not now, when"
 	fee := int64(1000)
 	numDesiredBlocks := int64(2)
 	amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 
-	eid := txs.EventStringNameReg(name)
-	subscribe(t, wsc, eid)
-
 	tx := makeDefaultNameTx(t, typ, name, data, amt, fee)
-	broadcastTx(t, typ, tx)
 	// verify the name by both using the event and by checking get_name
-	waitForEvent(t, wsc, eid, true, func() {}, func(eid string, b txs.EventData) error {	// TODO: unmarshal thtxs.EventData		_ = b // TODO
-		tx, err := unmarshalResponseNameReg([]byte{})
-		if err != nil {
-			return err
-		}
-		if tx.Name != name {
-			t.Fatal(fmt.Sprintf("Err on received event tx.Name: Got %s, expected %s", tx.Name, name))
-		}
-		if tx.Data != data {
-			t.Fatal(fmt.Sprintf("Err on received event tx.Data: Got %s, expected %s", tx.Data, data))
-		}
-		return nil
-	})
+	subscribeAndWaitForNext(t, wsc, txs.EventStringNameReg(name),
+		func() {
+			broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+		},
+		func(eid string, eventData txs.EventData) (bool, error) {
+			eventDataTx := asEventDataTx(t, eventData)
+			tx, ok := eventDataTx.Tx.(*txs.NameTx)
+			if !ok {
+				t.Fatalf("Could not convert %v to *NameTx", eventDataTx)
+			}
+			assert.Equal(t, name, tx.Name)
+			assert.Equal(t, data, tx.Data)
+			return true, nil
+		})
 	mempoolCount = 0
+
 	entry := getNameRegEntry(t, typ, name)
-	if entry.Data != data {
-		t.Fatal(fmt.Sprintf("Err on entry.Data: Got %s, expected %s", entry.Data, data))
-	}
-	if bytes.Compare(entry.Owner, user[0].Address) != 0 {
-		t.Fatal(fmt.Sprintf("Err on entry.Owner: Got %s, expected %s", entry.Owner, user[0].Address))
-	}
-
-	unsubscribe(t, wsc, eid)
-
-	// for the rest we just use new block event
-	// since we already tested the namereg event
-	eid = txs.EventStringNewBlock()
-	subscribe(t, wsc, eid)
-	defer func() {
-		unsubscribe(t, wsc, eid)
-		wsc.Stop()
-	}()
+	assert.Equal(t, data, entry.Data)
+	assert.Equal(t, user[0].Address, entry.Owner)
 
 	// update the data as the owner, make sure still there
-	numDesiredBlocks = int64(2)
-	data = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
-	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
-	tx = makeDefaultNameTx(t, typ, name, data, amt, fee)
-	broadcastTx(t, typ, tx)
-	// commit block
-	waitForEvent(t, wsc, eid, true, func() {}, doNothing)
+	numDesiredBlocks = int64(4)
+	const updatedData = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
+	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
+	tx = makeDefaultNameTx(t, typ, name, updatedData, amt, fee)
+	broadcastTxAndWaitForBlock(t, typ, wsc, tx)
 	mempoolCount = 0
 	entry = getNameRegEntry(t, typ, name)
-	if entry.Data != data {
-		t.Fatal(fmt.Sprintf("Err on entry.Data: Got %s, expected %s", entry.Data, data))
-	}
+
+	assert.Equal(t, updatedData, entry.Data)
 
 	// try to update as non owner, should fail
-	nonce := getNonce(t, typ, user[1].Address)
-	data2 := "this is not my beautiful house"
-	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee, nonce+1)
+	//waitBlocks(t, wsc, 4)
+	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, "never mind", amt, fee,
+		getNonce(t, typ, user[1].Address)+1)
 	tx.Sign(chainID, user[1])
-	_, err := edbcli.BroadcastTx(client, tx)
-	if err == nil {
-		t.Fatal("Expected error on NameTx")
-	}
 
-	// commit block
-	waitForEvent(t, wsc, eid, true, func() {}, doNothing)
+	_, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
 
-	// now the entry should be expired, so we can update as non owner
-	_, err = edbcli.BroadcastTx(client, tx)
-	waitForEvent(t, wsc, eid, true, func() {}, doNothing)
+	assert.Error(t, err, "Expected error when updating someone else's unexpired"+
+		" name registry entry")
+	//now the entry should be expired, so we can update as non owner
+	const data2 = "this is not my beautiful house"
+	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee,
+		getNonce(t, typ, user[1].Address)+1)
+	tx.Sign(chainID, user[1])
+	_, err = broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+	assert.NoError(t, err, "Should be able to update a previously expired name"+
+		" registry entry as a different address")
 	mempoolCount = 0
 	entry = getNameRegEntry(t, typ, name)
-	if entry.Data != data2 {
-		t.Fatal(fmt.Sprintf("Error on entry.Data: Got %s, expected %s", entry.Data, data2))
+	assert.Equal(t, data2, entry.Data)
+	assert.Equal(t, user[1].Address, entry.Owner)
+}
+
+// ------ Test Utils -------
+
+func asEventDataTx(t *testing.T, eventData txs.EventData) txs.EventDataTx {
+	eventDataTx, ok := eventData.(txs.EventDataTx)
+	if !ok {
+		t.Fatalf("Expected eventData to be EventDataTx was %v", eventData)
 	}
-	if bytes.Compare(entry.Owner, user[1].Address) != 0 {
-		t.Fatal(fmt.Sprintf("Err on entry.Owner: Got %s, expected %s", entry.Owner, user[1].Address))
-	}
+	return eventDataTx
+}
+
+func doNothing(eventId string, eventData txs.EventData) (bool, error) {
+	// And ask waitForEvent to stop waiting
+	return true, nil
 }
