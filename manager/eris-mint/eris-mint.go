@@ -185,14 +185,11 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// sync the AppendTx cache
 	app.cache.Sync()
 
-	// if there were any txs in the block,
-	// reset the check cache to the new height
-	if app.nTxs > 0 {
-		log.WithFields(log.Fields{
-			"txs": app.nTxs,
-		}).Info("Reset checkCache")
-		app.checkCache = sm.NewBlockCache(app.state)
-	}
+	// Refresh the checkCache with the latest commited state
+	log.WithFields(log.Fields{
+		"txs": app.nTxs,
+	}).Info("Reset checkCache")
+	app.checkCache = sm.NewBlockCache(app.state)
 	app.nTxs = 0
 
 	// save state to disk
