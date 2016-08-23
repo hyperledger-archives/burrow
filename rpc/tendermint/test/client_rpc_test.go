@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 package test
 
 import (
@@ -82,9 +85,7 @@ func TestJSONBroadcastTx(t *testing.T) {
 	testBroadcastTx(t, "JSONRPC")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testJSONGetStorage(t *testing.T) {
+func TestJSONGetStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
