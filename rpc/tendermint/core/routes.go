@@ -25,7 +25,7 @@ type TendermintRoutes struct {
 func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 	var routes = map[string]*rpc.RPCFunc{
 		"subscribe":               rpc.NewWSRPCFunc(tmRoutes.Subscribe, "event"),
-		"unsubscribe":             rpc.NewWSRPCFunc(tmRoutes.Unsubscribe, "event"),
+		"unsubscribe":             rpc.NewWSRPCFunc(tmRoutes.Unsubscribe, "subscriptionId"),
 		"status":                  rpc.NewRPCFunc(tmRoutes.StatusResult, ""),
 		"net_info":                rpc.NewRPCFunc(tmRoutes.NetInfoResult, ""),
 		"genesis":                 rpc.NewRPCFunc(tmRoutes.GenesisResult, ""),
@@ -61,8 +61,9 @@ func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 	// and return it in the result. This would require clients to hang on to a
 	// subscription id if they wish to unsubscribe, but then again they can just
 	// drop their connection
-	result, err := tmRoutes.tendermintPipe.Subscribe(wsCtx.GetRemoteAddr(), event,
+	result, err := tmRoutes.tendermintPipe.Subscribe(event,
 		func(result ctypes.ErisDBResult) {
+			wsCtx.GetRemoteAddr()
 			// NOTE: EventSwitch callbacks must be nonblocking
 			wsCtx.TryWriteRPCResponse(
 				rpctypes.NewRPCResponse(wsCtx.Request.ID+"#event", &result, ""))
@@ -75,9 +76,8 @@ func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 }
 
 func (tmRoutes *TendermintRoutes) Unsubscribe(wsCtx rpctypes.WSRPCContext,
-	event string) (ctypes.ErisDBResult, error) {
-	result, err := tmRoutes.tendermintPipe.Unsubscribe(wsCtx.GetRemoteAddr(),
-		event)
+	subscriptionId string) (ctypes.ErisDBResult, error) {
+	result, err := tmRoutes.tendermintPipe.Unsubscribe(subscriptionId)
 	if err != nil {
 		return nil, err
 	} else {

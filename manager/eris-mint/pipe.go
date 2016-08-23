@@ -232,31 +232,34 @@ func (pipe *erisMintPipe) consensusAndManagerEvents() edb_event.EventEmitter {
 
 //------------------------------------------------------------------------------
 // Implement definitions.TendermintPipe for erisMintPipe
-func (pipe *erisMintPipe) Subscribe(listenerId, event string,
+func (pipe *erisMintPipe) Subscribe(event string,
 	rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error) {
-	log.WithFields(log.Fields{"listenerId": listenerId, "event": event}).
+	subscriptionId, err := edb_event.GenerateSubId()
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{"event": event, "subscriptionId": subscriptionId}).
 		Info("Subscribing to event")
 
-	pipe.consensusAndManagerEvents().Subscribe(subscriptionId(listenerId, event), event,
+	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, event,
 		func(eventData txs.EventData) {
 			result := rpc_tm_types.ErisDBResult(&rpc_tm_types.ResultEvent{event,
 				txs.EventData(eventData)})
 			// NOTE: EventSwitch callbacks must be nonblocking
 			rpcResponseWriter(result)
 		})
-	return &rpc_tm_types.ResultSubscribe{}, nil
+	return &rpc_tm_types.ResultSubscribe{
+		SubscriptionId: subscriptionId,
+		Event: event,
+	}, nil
 }
 
-func (pipe *erisMintPipe) Unsubscribe(listenerId,
-	event string) (*rpc_tm_types.ResultUnsubscribe, error) {
-	log.WithFields(log.Fields{"listenerId": listenerId, "event": event}).
+func (pipe *erisMintPipe) Unsubscribe(subscriptionId string) (*rpc_tm_types.ResultUnsubscribe, error) {
+	log.WithFields(log.Fields{"subscriptionId": subscriptionId}).
 		Info("Unsubscribing from event")
-	pipe.consensusAndManagerEvents().Unsubscribe(subscriptionId(listenerId, event))
-	return &rpc_tm_types.ResultUnsubscribe{}, nil
-}
-
-func subscriptionId(listenerId, event string) string {
-	return fmt.Sprintf("%s#%s", listenerId, event)
+	pipe.consensusAndManagerEvents().Unsubscribe(subscriptionId)
+	return &rpc_tm_types.ResultUnsubscribe{SubscriptionId: subscriptionId}, nil
 }
 
 func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
