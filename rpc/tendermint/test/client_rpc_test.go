@@ -57,9 +57,7 @@ func testHTTPCallContract(t *testing.T) {
 	testCall(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPNameReg(t *testing.T) {
+func TestHTTPNameReg(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
