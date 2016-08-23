@@ -1,3 +1,6 @@
+// TODO: test has been disabled and needs to be re-enabled; tracked in issue
+// https://github.com/eris-ltd/eris-db/issues/238
+
 package event
 
 import (
