@@ -17,6 +17,10 @@
 package tendermint
 
 import (
+	"strconv"
+
+	tendermint_version "github.com/tendermint/tendermint/version"
+
 	version "github.com/eris-ltd/eris-db/version"
 )
 
@@ -24,14 +28,51 @@ const (
 	// Client identifier to advertise over the network
 	tendermintClientIdentifier = "tendermint"
 	// Major version component of the current release
-	tendermintVersionMajor = 0
+	tendermintVersionMajorConst uint8 = 0
 	// Minor version component of the current release
-	tendermintVersionMinor = 6
+	tendermintVersionMinorConst uint8 = 6
 	// Patch version component of the current release
-	tendermintVersionPatch = 0
+	tendermintVersionPatchConst uint8 = 0
 )
+
+var (
+	tendermintVersionMajor uint8
+	tendermintVersionMinor uint8
+	tendermintVersionPatch uint8
+)
+
+func init() {
+	// discard error because we test for this in Continuous Integration tests
+	tendermintVersionMajor, _ = getTendermintMajorVersionFromSource()
+	tendermintVersionMinor, _ = getTendermintMinorVersionFromSource()
+	tendermintVersionPatch, _ = getTendermintPatchVersionFromSource()
+}
 
 func GetTendermintVersion() *version.VersionIdentifier {
 	return version.New(tendermintClientIdentifier, tendermintVersionMajor,
 		tendermintVersionMinor, tendermintVersionPatch)
+}
+
+func getTendermintMajorVersionFromSource() (uint8, error) {
+	majorVersionUint, err := strconv.ParseUint(tendermint_version.Maj, 10, 8)
+	if err != nil {
+		return tendermintVersionMajorConst, err
+	}
+	return uint8(majorVersionUint), nil
+}
+
+func getTendermintMinorVersionFromSource() (uint8, error) {
+	minorVersionUint, err := strconv.ParseUint(tendermint_version.Min, 10, 8)
+	if err != nil {
+		return tendermintVersionMinorConst, err
+	}
+	return uint8(minorVersionUint), nil
+}
+
+func getTendermintPatchVersionFromSource() (uint8, error) {
+	patchVersionUint, err := strconv.ParseUint(tendermint_version.Fix, 10, 8)
+	if err != nil {
+		return tendermintVersionPatchConst, err
+	}
+	return uint8(patchVersionUint), nil
 }
