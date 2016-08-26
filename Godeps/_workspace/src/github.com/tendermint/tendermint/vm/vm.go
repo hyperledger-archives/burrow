@@ -771,7 +771,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				stack.Push(newAccount.Address)
 			}
 
-		case CALL, CALLCODE: // 0xF1, 0xF2
+		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
 			if !HasPermission(vm.appState, callee, ptypes.Call) {
 				return nil, ErrPermission{"call"}
 			}
