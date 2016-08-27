@@ -218,7 +218,7 @@ func TestWSCallCall(t *testing.T) {
 	receipt = broadcastTx(t, wsTyp, tx)
 	contractAddr2 := receipt.ContractAddr
 
-	// susbscribe to the new contracts
+	// subscribe to the new contracts
 	amt = int64(10001)
 	eid := txs.EventStringAccCall(contractAddr1)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
@@ -244,4 +244,3 @@ func TestWSCallCall(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	testSubscribe(t)
 }
-

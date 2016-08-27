@@ -67,3 +67,9 @@ func NewTendermintWebsocketServer(config *server.ServerConfig,
 		listeners: listeners,
 	}, nil
 }
+
+func (tmServer *TendermintWebsocketServer) Shutdown() {
+	for _, listener := range tmServer.listeners {
+		listener.Close()
+	}
+}

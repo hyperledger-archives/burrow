@@ -41,7 +41,11 @@ test:
     - cd $GOPATH_REPO && go install ./cmd/eris-db
   override:
     # We only wish to test our packages not vendored ones
+    - echo "Running unit tests..."
     - cd $GOPATH_REPO && glide novendor | xargs go test -v
+    - echo "Running integration tests..."
+    - cd $GOPATH_REPO && glide novendor | xargs go test -v -tags integration
+
 
 deployment:
   master:
