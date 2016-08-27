@@ -1,6 +1,3 @@
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-
 package event
 
 import (
@@ -30,6 +27,8 @@ type mockEventData struct {
 	subId   string
 	eventId string
 }
+
+func (eventData mockEventData) AssertIsEventData() { }
 
 // A mock event
 func newMockSub(subId, eventId string, f func(txs.EventData)) mockSub {
