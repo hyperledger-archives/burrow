@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/eris-ltd/eris-db/test/fixtures"
+	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	"testing"
 )
 
@@ -19,7 +20,14 @@ func TestWrapper(runner func() int) int {
 
 	// start a node
 	ready := make(chan error)
-	go newNode(ready)
+	server := make(chan *rpc_core.TendermintWebsocketServer)
+	defer func(){
+		// Shutdown -- make sure we don't hit a race on ffs.RemoveAll
+		tmServer := <-server
+		tmServer.Shutdown()
+	}()
+
+	go newNode(ready, server)
 	err = <-ready
 
 	if err != nil {

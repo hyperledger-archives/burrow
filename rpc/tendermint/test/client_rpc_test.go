@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 package test
 
 import (
@@ -15,42 +18,32 @@ func TestHTTPStatus(t *testing.T) {
 	testStatus(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPGetAccount(t *testing.T) {
+func TestHTTPGetAccount(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 	testGetAccount(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPBroadcastTx(t *testing.T) {
+func TestHTTPBroadcastTx(t *testing.T) {
 	testBroadcastTx(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPGetStorage(t *testing.T) {
+func TestHTTPGetStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 	testGetStorage(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPCallCode(t *testing.T) {
+func TestHTTPCallCode(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 	testCallCode(t, "HTTP")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testHTTPCallContract(t *testing.T) {
+func TestHTTPCallContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -82,9 +75,7 @@ func TestJSONBroadcastTx(t *testing.T) {
 	testBroadcastTx(t, "JSONRPC")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testJSONGetStorage(t *testing.T) {
+func TestJSONGetStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -98,9 +89,7 @@ func TestJSONCallCode(t *testing.T) {
 	testCallCode(t, "JSONRPC")
 }
 
-// TODO: test has been disabled and needs to be re-enabled; tracked in issue
-// https://github.com/eris-ltd/eris-db/issues/238
-func testJSONCallContract(t *testing.T) {
+func TestJSONCallContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}

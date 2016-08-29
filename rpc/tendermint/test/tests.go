@@ -91,22 +91,19 @@ func testGetStorage(t *testing.T, typ string) {
 
 	amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
 	code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
+	// Call with nil address will create a contract
 	tx := makeDefaultCallTx(t, typ, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, typ, tx)
-	if receipt.CreatesContract == 0 {
-		t.Fatal("This tx creates a contract")
+	receipt, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+	if err != nil {
+		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
-	if len(receipt.TxHash) == 0 {
-		t.Fatal("Failed to compute tx hash")
-	}
+	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+		" create a contract")
+	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
+		" transaction hash")
 	contractAddr := receipt.ContractAddr
-	if len(contractAddr) == 0 {
-		t.Fatal("Creates contract but resulting address is empty")
-	}
-
-	// allow it to get mined
-	waitForEvent(t, wsc, eid, func() {}, doNothing)
-	mempoolCount = 0
+	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
+		" created a contract but the contract address is empty")
 
 	v := getStorage(t, typ, contractAddr, []byte{0x1})
 	got := tm_common.LeftPadWord256(v)
@@ -151,22 +148,17 @@ func testCall(t *testing.T, typ string) {
 	amt, gasLim, fee := int64(6969), int64(1000), int64(1000)
 	code, _, _ := simpleContract()
 	tx := makeDefaultCallTx(t, typ, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, typ, tx)
-
-	if receipt.CreatesContract == 0 {
-		t.Fatal("This tx creates a contract")
+	receipt, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+	if err != nil {
+		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
-	if len(receipt.TxHash) == 0 {
-		t.Fatal("Failed to compute tx hash")
-	}
+	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+			" create a contract")
+	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
+			" transaction hash")
 	contractAddr := receipt.ContractAddr
-	if len(contractAddr) == 0 {
-		t.Fatal("Creates contract but resulting address is empty")
-	}
-
-	// allow it to get mined
-	waitForEvent(t, wsc, eid, func() {}, doNothing)
-	mempoolCount = 0
+	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
+			" created a contract but the contract address is empty")
 
 	// run a call through the contract
 	data := []byte{}
@@ -226,9 +218,12 @@ func testNameReg(t *testing.T, typ string) {
 	tx.Sign(chainID, user[1])
 
 	_, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
-
 	assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 		" name registry entry")
+
+	// Wait a couple of blocks to make sure name registration expires
+	waitNBlocks(t, wsc, 2)
+
 	//now the entry should be expired, so we can update as non owner
 	const data2 = "this is not my beautiful house"
 	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee,
@@ -308,4 +303,3 @@ Subscribe:
 		}
 	}
 }
-
