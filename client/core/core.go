@@ -104,20 +104,22 @@ func GetAccount(nodeAddr string, address []byte) (*account.Account, error) {
 	return tendermint_client.GetAccount(client, addrBytes)
 }
 
-// func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
-// 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+//func ListValidators() (*[]types.Validator, error) need to add this in too
 
-// 	fee, err := strconv.ParseInt(feeS, 10, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("fee is misformatted: %v", err)
-// 	}
+func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
+ 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+ 	if err != nil {
+ 		return nil, err
+ 	}
 
-// 	tx := types.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
-// 	return tx, nil
-// }
+ 	fee, err := strconv.ParseInt(feeS, 10, 64)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("fee is misformatted: %v", err)
+ 	}
+
+ 	tx := txs.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
+ 	return tx, nil
+}
 
 // type PermFunc struct {
 // 	Name string
