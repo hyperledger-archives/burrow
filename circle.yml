@@ -43,8 +43,11 @@ test:
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..."
     - cd $GOPATH_REPO && glide novendor | xargs go test -v
-    - echo "Running integration tests..."
+    - echo "Running sociable unit tests..."
     - cd $GOPATH_REPO && glide novendor | xargs go test -v -tags integration
+    - echo "Running integration tests..."
+    - "tests/circle_test.sh | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
+
 
 
 deployment:

@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
+// eris-db/client/core is intended to be imported by a client library
+// that builds on the eris-db blockchain node. 
+
 package core
 
 import (
