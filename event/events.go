@@ -134,7 +134,8 @@ func GenerateSubId() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Could not generate random bytes for a subscription" +
+				" id: %v", err)
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil

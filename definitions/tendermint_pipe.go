@@ -33,9 +33,9 @@ type TendermintPipe interface {
 	// Subscribe attempts to subscribe the listener identified by listenerId to
 	// the event named event. The Event result is written to rpcResponseWriter
 	// which must be non-blocking
-	Subscribe(listenerId, event string,
+	Subscribe(event string,
 		rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error)
-	Unsubscribe(listenerId, event string) (*rpc_tm_types.ResultUnsubscribe, error)
+	Unsubscribe(subscriptionId string) (*rpc_tm_types.ResultUnsubscribe, error)
 
 	// Net
 	Status() (*rpc_tm_types.ResultStatus, error)

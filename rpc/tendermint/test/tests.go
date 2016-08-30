@@ -6,9 +6,12 @@ import (
 	"testing"
 
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	core_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
-
 	"github.com/stretchr/testify/assert"
+
+	"time"
+
 	tm_common "github.com/tendermint/go-common"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -88,22 +91,19 @@ func testGetStorage(t *testing.T, typ string) {
 
 	amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
 	code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
+	// Call with nil address will create a contract
 	tx := makeDefaultCallTx(t, typ, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, typ, tx)
-	if receipt.CreatesContract == 0 {
-		t.Fatal("This tx creates a contract")
+	receipt, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+	if err != nil {
+		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
-	if len(receipt.TxHash) == 0 {
-		t.Fatal("Failed to compute tx hash")
-	}
+	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+		" create a contract")
+	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
+		" transaction hash")
 	contractAddr := receipt.ContractAddr
-	if len(contractAddr) == 0 {
-		t.Fatal("Creates contract but resulting address is empty")
-	}
-
-	// allow it to get mined
-	waitForEvent(t, wsc, eid, func() {}, doNothing)
-	mempoolCount = 0
+	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
+		" created a contract but the contract address is empty")
 
 	v := getStorage(t, typ, contractAddr, []byte{0x1})
 	got := tm_common.LeftPadWord256(v)
@@ -148,22 +148,17 @@ func testCall(t *testing.T, typ string) {
 	amt, gasLim, fee := int64(6969), int64(1000), int64(1000)
 	code, _, _ := simpleContract()
 	tx := makeDefaultCallTx(t, typ, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, typ, tx)
-
-	if receipt.CreatesContract == 0 {
-		t.Fatal("This tx creates a contract")
+	receipt, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
+	if err != nil {
+		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
-	if len(receipt.TxHash) == 0 {
-		t.Fatal("Failed to compute tx hash")
-	}
+	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+			" create a contract")
+	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
+			" transaction hash")
 	contractAddr := receipt.ContractAddr
-	if len(contractAddr) == 0 {
-		t.Fatal("Creates contract but resulting address is empty")
-	}
-
-	// allow it to get mined
-	waitForEvent(t, wsc, eid, func() {}, doNothing)
-	mempoolCount = 0
+	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
+			" created a contract but the contract address is empty")
 
 	// run a call through the contract
 	data := []byte{}
@@ -207,7 +202,7 @@ func testNameReg(t *testing.T, typ string) {
 	assert.Equal(t, user[0].Address, entry.Owner)
 
 	// update the data as the owner, make sure still there
-	numDesiredBlocks = int64(4)
+	numDesiredBlocks = int64(3)
 	const updatedData = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
 	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 	tx = makeDefaultNameTx(t, typ, name, updatedData, amt, fee)
@@ -218,15 +213,17 @@ func testNameReg(t *testing.T, typ string) {
 	assert.Equal(t, updatedData, entry.Data)
 
 	// try to update as non owner, should fail
-	//waitBlocks(t, wsc, 4)
 	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, "never mind", amt, fee,
 		getNonce(t, typ, user[1].Address)+1)
 	tx.Sign(chainID, user[1])
 
 	_, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
-
 	assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 		" name registry entry")
+
+	// Wait a couple of blocks to make sure name registration expires
+	waitNBlocks(t, wsc, 2)
+
 	//now the entry should be expired, so we can update as non owner
 	const data2 = "this is not my beautiful house"
 	tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee,
@@ -251,7 +248,58 @@ func asEventDataTx(t *testing.T, eventData txs.EventData) txs.EventDataTx {
 	return eventDataTx
 }
 
-func doNothing(eventId string, eventData txs.EventData) (bool, error) {
+func doNothing(_ string, _ txs.EventData) (bool, error) {
 	// And ask waitForEvent to stop waiting
 	return true, nil
+}
+
+func testSubscribe(t *testing.T) {
+	var subId string
+	wsc := newWSClient(t)
+	subscribe(t, wsc, txs.EventStringNewBlock())
+
+	timeout := time.NewTimer(timeoutSeconds * time.Second)
+Subscribe:
+	for {
+		select {
+		case <-timeout.C:
+			t.Fatal("Timed out waiting for subscription result")
+
+		case bs := <-wsc.ResultsCh:
+			resultSubscribe, ok := readResult(t, bs).(*core_types.ResultSubscribe)
+			if ok {
+				assert.Equal(t, txs.EventStringNewBlock(), resultSubscribe.Event)
+				subId = resultSubscribe.SubscriptionId
+				break Subscribe
+			}
+		}
+	}
+
+	seenBlock := false
+	timeout = time.NewTimer(timeoutSeconds * time.Second)
+	for {
+		select {
+		case <-timeout.C:
+			if !seenBlock {
+				t.Fatal("Timed out without seeing a NewBlock event")
+			}
+			return
+
+		case bs := <-wsc.ResultsCh:
+			resultEvent, ok := readResult(t, bs).(*core_types.ResultEvent)
+			if ok {
+				_, ok := resultEvent.Data.(txs.EventDataNewBlock)
+				if ok {
+					if seenBlock {
+						// There's a mild race here, but when we enter we've just seen a block
+						// so we should be able to unsubscribe before we see another block
+						t.Fatal("Continued to see NewBlock event after unsubscribing")
+					} else {
+						seenBlock = true
+						unsubscribe(t, wsc, subId)
+					}
+				}
+			}
+		}
+	}
 }

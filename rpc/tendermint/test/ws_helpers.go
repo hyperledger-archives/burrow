@@ -36,15 +36,35 @@ func newWSClient(t *testing.T) *client.WSClient {
 }
 
 // subscribe to an event
-func subscribe(t *testing.T, wsc *client.WSClient, eventid string) {
-	if err := wsc.Subscribe(eventid); err != nil {
+func subscribe(t *testing.T, wsc *client.WSClient, eventId string) {
+	if err := wsc.Subscribe(eventId); err != nil {
 		t.Fatal(err)
 	}
 }
 
+func subscribeAndGetSubscriptionId(t *testing.T, wsc *client.WSClient,
+	eventId string) string {
+	if err := wsc.Subscribe(eventId); err != nil {
+		t.Fatal(err)
+	}
+
+	timeout := time.NewTimer(timeoutSeconds * time.Second)
+	for {
+		select {
+		case <-timeout.C:
+			t.Fatal("Timeout waiting for subscription result")
+		case bs := <-wsc.ResultsCh:
+			resultSubscribe, ok := readResult(t, bs).(*ctypes.ResultSubscribe)
+			if ok {
+				return resultSubscribe.SubscriptionId
+			}
+		}
+	}
+}
+
 // unsubscribe from an event
-func unsubscribe(t *testing.T, wsc *client.WSClient, eventid string) {
-	if err := wsc.Unsubscribe(eventid); err != nil {
+func unsubscribe(t *testing.T, wsc *client.WSClient, subscriptionId string) {
+	if err := wsc.Unsubscribe(subscriptionId); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -93,13 +113,13 @@ func runThenWaitForBlock(t *testing.T, wsc *client.WSClient,
 func subscribeAndWaitForNext(t *testing.T, wsc *client.WSClient, event string,
 	runner func(),
 	eventDataChecker func(string, txs.EventData) (bool, error)) {
-	subscribe(t, wsc, event)
+	subId := subscribeAndGetSubscriptionId(t, wsc, event)
+	defer unsubscribe(t, wsc, subId)
 	waitForEvent(t,
 		wsc,
 		event,
 		runner,
 		eventDataChecker)
-	unsubscribe(t, wsc, event)
 }
 
 // waitForEvent executes runner that is expected to trigger events. It then
@@ -298,4 +318,14 @@ func UnmarshalEvent(b json.RawMessage) (string, events.EventData) {
 		// fmt.Errorf("Result is not type *ctypes.ResultEvent. Got %v", reflect.TypeOf(*result))
 	}
 	return event.Event, event.Data
+}
+
+func readResult(t *testing.T, bs []byte) ctypes.ErisDBResult {
+	var err error
+	result := new(ctypes.ErisDBResult)
+	wire.ReadJSONPtr(result, bs, &err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return *result
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/eris-ltd/eris-db/core"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/test/fixtures"
@@ -102,10 +103,12 @@ func makeUsers(n int) []*acm.PrivAccount {
 	return accounts
 }
 
-func newNode(ready chan error) {
+func newNode(ready chan error,
+	tmServer chan *rpc_core.TendermintWebsocketServer) {
 	// Run the 'tendermint' rpc server
-	_, err := testCore.NewGatewayTendermint(config)
+	server, err := testCore.NewGatewayTendermint(config)
 	ready <- err
+	tmServer <- server
 }
 
 func saveNewPriv() {

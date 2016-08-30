@@ -60,9 +60,12 @@ type ResultStatus struct {
 }
 
 type ResultSubscribe struct {
+	Event string `json:"event"`
+	SubscriptionId string `json:"subscription_id"`
 }
 
 type ResultUnsubscribe struct {
+	SubscriptionId string `json:"subscription_id"`
 }
 
 type ResultNetInfo struct {

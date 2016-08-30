@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	evts "github.com/tendermint/go-events"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMultiplexedEvents(t *testing.T) {
