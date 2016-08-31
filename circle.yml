@@ -33,7 +33,7 @@ test:
   override:
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..." && cd $REPO && glide novendor | xargs go test -tags integration
-    - echo "Running integration tests..." && "cd $REPO && ./tests/circle_test.sh | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
+    - echo "Running integration tests..." && $REPO/tests/circle_test.sh | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
 
 deployment:
   master:
