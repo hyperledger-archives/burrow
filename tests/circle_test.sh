@@ -11,6 +11,7 @@
 # docker installed locally
 # docker-machine installed locally
 # eris installed locally
+# jq installed locally
 
 # ----------------------------------------------------------
 # USAGE
@@ -56,7 +57,7 @@ echo
 # ----------------------------------------------------------
 # Run integration tests
 
-tests/test.sh
+tests/test_client.sh
 test_exit=$?
 
 # ----------------------------------------------------------

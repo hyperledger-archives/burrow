@@ -123,13 +123,13 @@ get_uuid() {
 
 test_build() {
   echo ""
-  echo "Building eris-cm in a docker container."
+  echo "Building eris-db in a docker container."
   set -e
   tests/build_tool.sh 1>/dev/null
   set +e
   if [ $? -ne 0 ]
   then
-    echo "Could not build eris-cm. Debug via by directly running [`pwd`/tests/build_tool.sh]"
+    echo "Could not build eris-db. Debug via by directly running [`pwd`/tests/build_tool.sh]"
     exit 1
   fi
   echo "Build complete."
@@ -147,72 +147,87 @@ test_setup(){
   echo "Setup complete"
 }
 
-check_test(){
-  # check chain is running
-  chain=( $(eris chains ls --quiet --running | grep $uuid) )
-  if [ ${#chain[@]} -ne 1 ]
+start_chain(){
+  echo
+  echo "starting new chain for client tests..."
+  if [ $? -ne 0 ]
   then
-    echo "chain does not appear to be running"
-    echo
-    ls -la $dir_to_use
     test_exit=1
     return 1
   fi
+  eris chains make $uuid --account-types=Participant:2,Validator:1
+  eris chains new $uuid --dir "$uuid"/"$uuid"_validator_000
+  if [ $? -ne 0 ]
+  then
+    test_exit=1
+    return 1
+  fi
+  sleep 3 # let 'er boot
 
-  # check results file exists
-  if [ ! -e "$chains_dir/$uuid/accounts.csv" ]
-  then
-    echo "accounts.csv not present"
-    ls -la $chains_dir/$uuid
-    pwd
-    ls -la $chains_dir
-    test_exit=1
-    return 1
-  fi
+  # set variables for chain
+  CHAIN_ID=$uuid
+  eris_client_ip=$(eris chains inspect $uuid NetworkSettings.IPAddress)
+  ERIS_CLIENT_NODE_ADDRESS="tcp://$(eris chains inspect $uuid NetworkSettings.IPAddress):46657"
+  ERIS_CLIENT_SIGN_ADDRESS="http://$(eris services inspect keys NetworkSettings.IPAddress):4767"
+  echo "node address: " $ERIS_CLIENT_NODE_ADDRESS
+  echo "keys address: " $ERIS_CLIENT_SIGN_ADDRESS
 
-  # check genesis.json
-  genOut=$(cat $dir_to_use/genesis.json | sed 's/[[:space:]]//g')
-  genIn=$(eris chains plop $uuid genesis | sed 's/[[:space:]]//g')
-  if [[ "$genOut" != "$genIn" ]]
-  then
-    test_exit=1
-    echo "genesis.json's do not match"
-    echo
-    echo "expected"
-    echo
-    echo -e "$genOut"
-    echo
-    echo "received"
-    echo
-    echo -e "$genIn"
-    echo
-    echo "difference"
-    echo
-    diff  <(echo "$genOut" ) <(echo "$genIn") | colordiff
-    return 1
-  fi
+  # set addresses from participants
+  participant_000_address=$(cat $chains_dir/accounts.json | jq '. | ."$uuid"_participant_000.address')
+  participant_001_address=$(cat $chains_dir/accounts.json | jq '. | ."$uuid"_participant_001.address')
+ }
 
-  # check priv_validator
-  privOut=$(cat $dir_to_use/priv_validator.json | tr '\n' ' ' | sed 's/[[:space:]]//g' | set 's/(,\"last_height\":[^0-9]+,\"last_round\":[^0-9]+,\"last_step\":[^0-9]+//g' )
-  privIn=$(eris data exec $uuid "cat /home/eris/.eris/chains/$uuid/priv_validator.json" | tr '\n' ' ' | sed 's/[[:space:]]//g' | set 's/(,\"last_height\":[^0-9]+,\"last_round\":[^0-9]+,\"last_step\":[^0-9]+//g' )
-  if [[ "$privOut" != "$privIn" ]]
+ stop_chain(){
+  echo
+  echo "stopping test chain for client tests..."
+  eris chains stop --force $uuid
+  if [ ! "$ci" = true ]
   then
-    test_exit=1
-    echo "priv_validator.json's do not match"
-    echo
-    echo "expected"
-    echo
-    echo -e "$privOut"
-    echo
-    echo "received"
-    echo
-    echo -e "$privIn"
-    echo
-    echo "difference"
-    echo
-    diff  <(echo "$privOut" ) <(echo "$privIn") | colordiff
+    eris chains rm --data $uuid
+  fi
+  rm -rf $HOME/.eris/scratch/data/$uuid
+  rm -rf $chains_dir/$uuid
+}
+
+perform_client_tests(){
+  uuid=$(get_uuid)
+  start_chain
+
+  echo
+  echo "simplest client send transaction test"
+  amount=1000
+  eris-client tx send --amt $amount -addr $participant_000_address --to $participant_001_address
+  sleep 2 # poll for resulting state - sleeping, rather than waiting for confirmation
+  sender_amt=$(curl "$eris_client_ip"/get_account?address=$participant_000_address | jq '. | .result[1].account.balance')
+  receiver_amt=$(curl "$eris_client_ip"/get_account?address=$participant_001_address | jq '. | .result[1].account.balance')
+  difference='expr $receiver_amt - $sender_amt'
+  if [[ "$difference" != "$amount" ]]
+  then
+  	echo "simple send transaction failed"
     return 1
   fi
+  echo
+  stop_chain
+}
+
+test_teardown(){
+  if [ "$ci" = false ]
+  then
+    echo
+    if [ "$was_running" -eq 0 ]
+    then
+      eris services stop -rx keys
+    fi
+    echo
+  fi
+  if [ "$test_exit" -eq 0 ]
+  then
+    echo "Tests complete! Tests are Green. :)"
+  else
+    echo "Tests complete. Tests are Red. :("
+  fi
+  cd $start
+  exit $test_exit
 }
 
 # ---------------------------------------------------------------------------
@@ -234,7 +249,7 @@ echo
 # Go ahead with client integration tests !
 
 echo "Running Client Tests..."
-# perform_client_tests
+perform_client_tests
 
 # ---------------------------------------------------------------------------
 # Cleaning up
