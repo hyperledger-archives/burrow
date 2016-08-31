@@ -25,8 +25,12 @@ test:
   pre:
     - go get github.com/Masterminds/glide
     - cd $REPO && glide install
-    # Install eris-db cmd for tests
-    - cd $REPO && go install ./cmd/eris-db
+    # Test the build target for eris-db
+    - echo "Build target eris-db..."
+    - cd $REPO && go install ./cmd/eris-db && eris-db --help
+    # Test the build target for eris-client
+    - echo "Build target eris-client..."
+    - cd $REPO && go install ./client/cmd/eris-client && echo eris-client --help
   override:
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..."
