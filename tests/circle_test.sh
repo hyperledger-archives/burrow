@@ -29,7 +29,7 @@ start=`pwd`
 # ----------------------------------------------------------
 # Get machine sorted
 
-echo "Setting up a Machine for eris-cm Testing"
+echo "Setting up a machine for eris-db integration testing"
 docker-machine create --driver amazonec2 $machine 1>/dev/null
 if [ "$?" -ne 0 ]
 then
