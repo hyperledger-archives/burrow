@@ -234,7 +234,7 @@ echo
 # Go ahead with client integration tests !
 
 echo "Running Client Tests..."
-perform_client_tests
+# perform_client_tests
 
 # ---------------------------------------------------------------------------
 # Cleaning up
