@@ -20,25 +20,20 @@ dependencies:
     - sudo curl -sSL -o /usr/local/bin/docker-machine https://github.com/docker/machine/releases/download/v$DOCKER_MACHINE_VERSION/docker-machine-linux-x86_64; sudo chmod 0755 /usr/local/bin/docker-machine
     - "go get github.com/eris-ltd/eris-cli/cmd/eris; cd ${GOPATH%%:*}/src/github.com/eris-ltd/eris-cli && git checkout origin/$ERIS_CLI_BRANCH && go install ./cmd/eris"
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    # jq and curl is a dependency for the integration framework
+    - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
 test:
   pre:
-    # jq is a dependency for the integration framework
-    - sudo apt-get install jq curl
-    - go get github.com/Masterminds/glide
     - cd $REPO && glide install
     # Test the build target for eris-db
-    - echo "Build target eris-db..."
-    - cd $REPO && go install ./cmd/eris-db && eris-db --help
+    - echo "Build target eris-db..." && cd $REPO && go install ./cmd/eris-db && eris-db --help
     # Test the build target for eris-client
-    - echo "Build target eris-client..."
-    - cd $REPO && go install ./client/cmd/eris-client && eris-client --help
+    - echo "Build target eris-client..." && cd $REPO && go install ./client/cmd/eris-client && eris-client --help
   override:
     # We only wish to test our packages not vendored ones
-    - echo "Running unit tests..."
-    - cd $REPO && glide novendor | xargs go test -tags integration
-    - echo "Running integration tests..."
-    - cd $REPO && "tests/circle_test.sh | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
+    - echo "Running unit tests..." && cd $REPO && glide novendor | xargs go test -tags integration
+    - echo "Running integration tests..." && "cd $REPO && ./tests/circle_test.sh | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
 
 deployment:
   master:
