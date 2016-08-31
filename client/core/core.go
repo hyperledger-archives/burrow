@@ -30,7 +30,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-rpc/client"
 
-	ptypes "github.com/eris-ltd/permission/types"
+	//ptypes "github.com/eris-ltd/permission/types"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -101,7 +101,7 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 
 func GetAccount(nodeAddr string, address []byte) (*account.Account, error) {
 	client := rpcclient.NewClientURI(nodeAddr)
-	return tendermint_client.GetAccount(client, addrBytes)
+	return tendermint_client.GetAccount(client, address)
 }
 
 //func ListValidators() (*[]types.Validator, error) need to add this in too
