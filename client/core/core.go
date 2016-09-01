@@ -72,35 +72,35 @@ func Send(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS string) (*txs.S
 	return tx, nil
 }
 
-// func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) (*txs.CallTx, error) {
-// 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) (*txs.CallTx, error) {
+	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+	if err != nil {
+		return nil, err
+	}
 
-// 	toAddrBytes, err := hex.DecodeString(toAddr)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("toAddr is bad hex: %v", err)
-// 	}
+	toAddrBytes, err := hex.DecodeString(toAddr)
+	if err != nil {
+		return nil, fmt.Errorf("toAddr is bad hex: %v", err)
+	}
 
-// 	fee, err := strconv.ParseInt(feeS, 10, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("fee is misformatted: %v", err)
-// 	}
+	fee, err := strconv.ParseInt(feeS, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("fee is misformatted: %v", err)
+	}
 
-// 	gas, err := strconv.ParseInt(gasS, 10, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("gas is misformatted: %v", err)
-// 	}
+	gas, err := strconv.ParseInt(gasS, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("gas is misformatted: %v", err)
+	}
 
-// 	dataBytes, err := hex.DecodeString(data)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("data is bad hex: %v", err)
-// 	}
+	dataBytes, err := hex.DecodeString(data)
+	if err != nil {
+		return nil, fmt.Errorf("data is bad hex: %v", err)
+	}
 
-// 	tx := types.NewCallTxWithNonce(pub, toAddrBytes, dataBytes, amt, gas, fee, int(nonce))
-// 	return tx, nil
-// }
+	tx := txs.NewCallTxWithNonce(pub, toAddrBytes, dataBytes, amt, gas, fee, int(nonce))
+	return tx, nil
+}
 
 // func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
 // 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)

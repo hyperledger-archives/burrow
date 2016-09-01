@@ -66,7 +66,7 @@ func buildTransactionCommand() {
 	}
 	nameCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	nameCmd.Flags().StringVarP(&clientDo.NameFlag, "name", "n", "", "specify a name")
-	nameCmd.Flags().StringVarP(&clientDo.DataFlag, "data", "d", "", "specify some data")
+	nameCmd.Flags().StringVarP(&clientDo.DataFlag, "data", "", "", "specify some data")
 	nameCmd.Flags().StringVarP(&clientDo.DataFileFlag, "data-file", "", "", "specify a file with some data")
 	nameCmd.Flags().StringVarP(&clientDo.FeeFlag, "fee", "f", "", "specify the fee to send")
 
@@ -76,13 +76,13 @@ func buildTransactionCommand() {
 		Short: "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Long:  "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Run:   func(cmd *cobra.Command, args []string) {
-			// transaction.Call(clientDo)
+			transaction.Call(clientDo)
 		},
 		PreRun: assertParameters,
 	}
 	callCmd.Flags().StringVarP(&clientDo.AmtFlag, "amt", "a", "", "specify an amount")
 	callCmd.Flags().StringVarP(&clientDo.ToFlag, "to", "t", "", "specify an address to send to")
-	callCmd.Flags().StringVarP(&clientDo.DataFlag, "data", "d", "", "specify some data")
+	callCmd.Flags().StringVarP(&clientDo.DataFlag, "data", "", "", "specify some data")
 	callCmd.Flags().StringVarP(&clientDo.FeeFlag, "fee", "f", "", "specify the fee to send")
 	callCmd.Flags().StringVarP(&clientDo.GasFlag, "gas", "g", "", "specify the gas limit for a CallTx")
 
