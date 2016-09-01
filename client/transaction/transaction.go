@@ -28,14 +28,36 @@ import (
 )
 
 func Send(do *definitions.ClientDo) {
+	// form the send transaction
 	sendTransaction, err := core.Send(do.NodeAddrFlag, do.SignAddrFlag,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
 	if err != nil {
-		log.Fatalf("Failed on Send Transaction: %s", err)
+		log.Fatalf("Failed on forming Send Transaction: %s", err)
+		return
 	}
+	// TODO: [ben] we carry over the sign bool, but always set it to true,
+	// as we move away from and deprecate the api that allows sending unsigned
+	// transactions and relying on (our) receiving node to sign it. 
 	unpackSignAndBroadcast(
 		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
 		do.SignAddrFlag, sendTransaction, true, do.BroadcastFlag, do.WaitFlag))
+}
+
+func Call(do *definitions.ClientDo) {
+	// form the call transaction
+	callTransaction, err := core.Call(do.NodeAddrFlag, do.SignAddrFlag,
+		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag,
+		do.GasFlag, do.FeeFlag, do.DataFlag)
+	if err != nil {
+		log.Fatalf("Failed on forming Call Transaction: %s", err)
+		return
+	}
+	// TODO: [ben] we carry over the sign bool, but always set it to true,
+	// as we move away from and deprecate the api that allows sending unsigned
+	// transactions and relying on (our) receiving node to sign it. 
+	unpackSignAndBroadcast(
+		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
+		do.SignAddrFlag, callTransaction, true, do.BroadcastFlag, do.WaitFlag))
 }
 
 //----------------------------------------------------------------------
