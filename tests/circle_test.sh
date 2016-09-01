@@ -27,34 +27,6 @@ ver=$(cat version/version.go | tail -n 1 | cut -d ' ' -f 4 | tr -d '"')
 start=`pwd`
 
 # ----------------------------------------------------------
-# Get machine sorted
-
-echo "Setting up a machine for eris-db integration testing"
-docker-machine create --driver amazonec2 $machine 1>/dev/null
-if [ "$?" -ne 0 ]
-then
-  echo "Failed to create The Machine for eris-db Testing"
-  exit 1
-fi
-docker-machine scp tests/docker.sh ${machine}:
-if [ "$?" -ne 0 ]
-then
-  echo "Failed to copy the 'docker.sh' script into the container"
-  exit 1
-fi
-docker-machine ssh $machine sudo env DOCKER_VERSION=$DOCKER_VERSION '$HOME/docker.sh'
-if [ "$?" -ne 0 ]
-then
-  echo "Failed to install Docker client into the container"
-  exit 1
-fi
-eval $(docker-machine env $machine)
-echo "Machine setup."
-echo
-docker version
-echo
-
-# ----------------------------------------------------------
 # Run integration tests
 
 tests/test_client.sh
@@ -66,6 +38,5 @@ test_exit=$?
 echo
 echo
 echo "Cleaning up"
-docker-machine rm --force $machine
 cd $start
 exit $test_exit

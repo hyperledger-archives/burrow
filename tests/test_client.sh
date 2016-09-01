@@ -95,7 +95,7 @@ early_exit(){
     return 0
   fi
 
-  echo "There was an error duing setup; keys were not properly imported. Exiting."
+  echo "There was an error during setup; keys were not properly imported. Exiting."
   if [ "$was_running" -eq 0 ]
   then
     if [ "$ci" = true ]
@@ -175,8 +175,8 @@ start_chain(){
 
   # set addresses from participants
   query1=". | ."$uuid"_participant_000.address"
-  participant_000_address=$(cat $chains_dir/$uuid/accounts.json | jq $query1)
-  participant_001_address=$(cat $chains_dir/$uuid/accounts.json | jq '. | ."$uuid"_participant_001.address')
+  participant_000_address=$(cat $chains_dir/$uuid/addresses.csv | grep "participant_000" | cut -d ',' -f 1)
+  participant_001_address=$(cat $chains_dir/$uuid/addresses.csv | grep "participant_000" | cut -d ',' -f 1)
   echo "participant0 address:" $participant_000_address
   echo "participant1 address:" $participant_001_address
  }
