@@ -34,7 +34,7 @@
 # ----------------------------------------------------------
 # USAGE
 
-# test.sh
+# test_client.sh
 
 # ----------------------------------------------------------
 # Set defaults
@@ -125,7 +125,7 @@ test_build() {
   echo ""
   echo "Building eris-db in a docker container."
   set -e
-  tests/build_tool.sh 1>/dev/null
+  # tests/build_tool.sh 1>/dev/null
   set +e
   if [ $? -ne 0 ]
   then
@@ -140,7 +140,7 @@ test_setup(){
   echo "Getting Setup"
   if [ "$ci" = true ]
   then
-    eris init --yes --pull-images=true --testing=true 1>/dev/null
+    eris init --yes --pull-images=ERIS_PULL_APPROVE --testing=true 1>/dev/null
   fi
 
   ensure_running keys
@@ -169,12 +169,16 @@ start_chain(){
   eris_client_ip=$(eris chains inspect $uuid NetworkSettings.IPAddress)
   ERIS_CLIENT_NODE_ADDRESS="tcp://$(eris chains inspect $uuid NetworkSettings.IPAddress):46657"
   ERIS_CLIENT_SIGN_ADDRESS="http://$(eris services inspect keys NetworkSettings.IPAddress):4767"
-  echo "node address: " $ERIS_CLIENT_NODE_ADDRESS
-  echo "keys address: " $ERIS_CLIENT_SIGN_ADDRESS
+  echo "chainid:" $CHAIN_ID
+  echo "node address:" $ERIS_CLIENT_NODE_ADDRESS
+  echo "keys address:" $ERIS_CLIENT_SIGN_ADDRESS
 
   # set addresses from participants
-  participant_000_address=$(cat $chains_dir/accounts.json | jq '. | ."$uuid"_participant_000.address')
-  participant_001_address=$(cat $chains_dir/accounts.json | jq '. | ."$uuid"_participant_001.address')
+  query1=". | ."$uuid"_participant_000.address"
+  participant_000_address=$(cat $chains_dir/$uuid/accounts.json | jq $query1)
+  participant_001_address=$(cat $chains_dir/$uuid/accounts.json | jq '. | ."$uuid"_participant_001.address')
+  echo "participant0 address:" $participant_000_address
+  echo "participant1 address:" $participant_001_address
  }
 
  stop_chain(){
@@ -196,8 +200,8 @@ perform_client_tests(){
   echo
   echo "simplest client send transaction test"
   amount=1000
-  eris-client tx send --amt $amount -addr $participant_000_address --to $participant_001_address
-  sleep 2 # poll for resulting state - sleeping, rather than waiting for confirmation
+  eris-client tx send --amt $amount --to $participant_001_address --addr $participant_000_address
+  sleep 5 # poll for resulting state - sleeping, rather than waiting for confirmation
   sender_amt=$(curl "$eris_client_ip"/get_account?address=$participant_000_address | jq '. | .result[1].account.balance')
   receiver_amt=$(curl "$eris_client_ip"/get_account?address=$participant_001_address | jq '. | .result[1].account.balance')
   difference='expr $receiver_amt - $sender_amt'
@@ -216,6 +220,7 @@ test_teardown(){
     echo
     if [ "$was_running" -eq 0 ]
     then
+      eris chains rm $uuid -xf
       eris services stop -rx keys
     fi
     echo
