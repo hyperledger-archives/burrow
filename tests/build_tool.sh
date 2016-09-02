@@ -40,8 +40,8 @@ cd $repo
 if [[ "$branch" = "master" ]]
 then
   docker build -t $image_base:latest $repo
-  docker tag -f $image_base:latest $image_base:$release_maj
-  docker tag -f $image_base:latest $image_base:$release_min
+  docker tag $image_base:latest $image_base:$release_maj
+  docker tag $image_base:latest $image_base:$release_min
 else
   docker build -t $image_base:$release_min $repo
 fi
