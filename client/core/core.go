@@ -103,9 +103,9 @@ func LatestBlockHeight(nodeAddr string) (string, error) {
 	client := rpcclient.NewClientURI(nodeAddr)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	return strconv.Itoa(res.LatestBlockHeight, 10), nil
+	return strconv.Itoa(res.LatestBlockHeight), nil
 }
 
 // func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
