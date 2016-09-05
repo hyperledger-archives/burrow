@@ -30,7 +30,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-rpc/client"
 
-	// ptypes "github.com/eris-ltd/permission/types"
+	//ptypes "github.com/eris-ltd/permission/types"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -99,20 +99,60 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 	return tx, nil
 }
 
-// func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
-// 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func SimulatedCall(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) ([]byte, int64, error) {
+	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+	if err != nil {
+		return nil, nil, err
+	}
 
-// 	fee, err := strconv.ParseInt(feeS, 10, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("fee is misformatted: %v", err)
-// 	}
+	toAddrBytes, err := hex.DecodeString(toAddr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("toAddr is bad hex: %v", err)
+	}
 
-// 	tx := types.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
-// 	return tx, nil
-// }
+	addrBytes, err := hex.DecodeString(addr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("addr is bad hex: %v", err)
+	}
+
+	fee, err := strconv.ParseInt(feeS, 10, 64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fee is misformatted: %v", err)
+	}
+
+	gas, err := strconv.ParseInt(gasS, 10, 64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gas is misformatted: %v", err)
+	}
+
+	dataBytes, err := hex.DecodeString(data)
+	if err != nil {
+		return nil, nil, fmt.Errorf("data is bad hex: %v", err)
+	}
+
+	client := rpcclient.NewClientURI(nodeAddr)
+	account, err2 := tendermint_client.GetAccount(client, addrBytes)
+	res, err := tendermint_client.Call(client, addrBytes, toAddrBytes, dataBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed simulated call: %v", err)
+	}
+	return res.Return, res.GasUsed, nil
+}
+
+func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
+ 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+
+ 	fee, err := strconv.ParseInt(feeS, 10, 64)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("fee is misformatted: %v", err)
+ 	}
+
+ 	tx := txs.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
+ 	return tx, nil
+}
 
 // type PermFunc struct {
 // 	Name string
