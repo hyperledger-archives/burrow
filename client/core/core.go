@@ -99,13 +99,13 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 	return tx, nil
 }
 
-func LatestBlockHeight(nodeAddr string) (int, error) {
+func LatestBlockHeight(nodeAddr string) (string, error) {
 	client := rpcclient.NewClientURI(nodeAddr)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
 		return 0, err
 	}
-	return res.LatestBlockHeight, nil
+	return strconv.Itoa(res.LatestBlockHeight), nil
 }
 
 // func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
