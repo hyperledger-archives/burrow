@@ -101,9 +101,9 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 
 func LatestBlockHeight(nodeAddr string) (int, error) {
 	client := rpcclient.NewClientURI(nodeAddr)
-	res, err := Status(client)
+	res, err := tendermint_client.Status(client)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	return res.LatestBlockHeight, nil
 }
