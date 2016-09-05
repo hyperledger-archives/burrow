@@ -100,41 +100,25 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 }
 
 func SimulatedCall(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) ([]byte, int64, error) {
-	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	toAddrBytes, err := hex.DecodeString(toAddr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("toAddr is bad hex: %v", err)
+		return nil, 0, fmt.Errorf("toAddr is bad hex: %v", err)
 	}
 
 	addrBytes, err := hex.DecodeString(addr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("addr is bad hex: %v", err)
-	}
-
-	fee, err := strconv.ParseInt(feeS, 10, 64)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fee is misformatted: %v", err)
-	}
-
-	gas, err := strconv.ParseInt(gasS, 10, 64)
-	if err != nil {
-		return nil, nil, fmt.Errorf("gas is misformatted: %v", err)
+		return nil, 0, fmt.Errorf("addr is bad hex: %v", err)
 	}
 
 	dataBytes, err := hex.DecodeString(data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("data is bad hex: %v", err)
+		return nil, 0, fmt.Errorf("data is bad hex: %v", err)
 	}
 
 	client := rpcclient.NewClientURI(nodeAddr)
-	account, err2 := tendermint_client.GetAccount(client, addrBytes)
 	res, err := tendermint_client.Call(client, addrBytes, toAddrBytes, dataBytes)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed simulated call: %v", err)
+		return nil, 0, fmt.Errorf("failed simulated call: %v", err)
 	}
 	return res.Return, res.GasUsed, nil
 }
