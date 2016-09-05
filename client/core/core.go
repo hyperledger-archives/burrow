@@ -114,6 +114,15 @@ func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data strin
  	return tx, nil
 }
 
+func LatestBlockHeight(nodeAddr string) (int, error) {
+	client := rpcclient.NewClientURI(nodeAddr)
+	res, err := Status(client)
+	if err != nil {
+		return nil, err
+	}
+	return res.LatestBlockHeight, nil
+}
+
 // type PermFunc struct {
 // 	Name string
 // 	Args string
