@@ -44,7 +44,7 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 		// TODO: hookup
 		"blockchain": rpc.NewRPCFunc(tmRoutes.BlockchainInfo, "minHeight,maxHeight"),
 		//	"get_block":               rpc.NewRPCFunc(GetBlock, "height"),
-		//"list_validators":         rpc.NewRPCFunc(ListValidators, ""),
+		// "list_validators":         rpc.NewRPCFunc(ListValidators, ""),
 		// "dump_consensus_state":    rpc.NewRPCFunc(DumpConsensusState, ""),
 		// "list_unconfirmed_txs":    rpc.NewRPCFunc(ListUnconfirmedTxs, ""),
 		// subscribe/unsubscribe are reserved for websocket events.
