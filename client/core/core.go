@@ -99,6 +99,15 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 	return tx, nil
 }
 
+func LatestBlockHeight(nodeAddr string) (int, error) {
+	client := rpcclient.NewClientURI(nodeAddr)
+	res, err := Status(client)
+	if err != nil {
+		return nil, err
+	}
+	return res.LatestBlockHeight, nil
+}
+
 // func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
 // 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
 // 	if err != nil {
