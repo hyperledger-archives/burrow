@@ -776,7 +776,16 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				return nil, ErrPermission{"call"}
 			}
 			gasLimit := stack.Pop64()
-			addr, value := stack.Pop(), stack.Pop64()
+			addr := stack.Pop()
+			// NOTE: for DELEGATECALL value is preserved from the original
+			// caller, as such it is not stored on stack for the address
+			// to be called; for CALL and CALLCODE value is stored on stack
+			// and needs to be overwritten from the given value.
+			// TODO: [ben] assert that malicious code cannot produce 
+			// new value.
+			if op != DELEGATECALL {
+				value = stack.Pop64()
+			} 
 			inOffset, inSize := stack.Pop64(), stack.Pop64()   // inputs
 			retOffset, retSize := stack.Pop64(), stack.Pop64() // outputs
 			dbg.Printf(" => %X\n", addr)
