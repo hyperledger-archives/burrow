@@ -147,6 +147,30 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas
 	return
 }
 
+// DelegateCall is executed by the DELEGATECALL opcode, introduced as off Ethereum Homestead.
+// The intent of delegate call is to run the code of the callee in the storage context of the caller;
+// while preserving the original caller to the previous callee.
+// Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
+func (vm *VM) DelegateCall(caller, callee *Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
+	
+	exception := new(string)
+	// fire the post call event (including exception if applicable)
+	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
+	
+	// DelegateCall does not transfer the value to the callee.
+
+	if len(code) > 0 {
+		vm.callDepth += 1
+		output, err = vm.call(caller, callee, code, input, value, gas)
+		vm.callDepth -= 1
+		if err != nil {
+			*exception = err.Error()
+		}
+	}
+
+	return
+}
+
 // Try to deduct gasToUse from gasLeft.  If ok return false, otherwise
 // set err and return true.
 func useGasNegative(gasLeft *int64, gasToUse int64, err *error) bool {
