@@ -99,20 +99,20 @@ func Call(nodeAddr, signAddr, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, da
 	return tx, nil
 }
 
-// func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
-// 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
+	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+	if err != nil {
+		return nil, err
+	}
 
-// 	fee, err := strconv.ParseInt(feeS, 10, 64)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("fee is misformatted: %v", err)
-// 	}
+	fee, err := strconv.ParseInt(feeS, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("fee is misformatted: %v", err)
+	}
 
-// 	tx := types.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
-// 	return tx, nil
-// }
+	tx := txs.NewNameTxWithNonce(pub, name, data, amt, fee, int(nonce))
+	return tx, nil
+}
 
 // type PermFunc struct {
 // 	Name string
