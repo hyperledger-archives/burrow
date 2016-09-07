@@ -152,11 +152,11 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
 func (vm *VM) DelegateCall(caller, callee *Account, code, input []byte, value int64, gas *int64) (output []byte, err error) {
-	
+
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
 	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
-	
+
 	// DelegateCall does not transfer the value to the callee.
 
 	if len(code) > 0 {
@@ -770,12 +770,20 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				stack.Push(newAccount.Address)
 			}
 
-		case CALL, CALLCODE: // 0xF1, 0xF2
+		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
 			if !HasPermission(vm.appState, callee, ptypes.Call) {
 				return nil, ErrPermission{"call"}
 			}
 			gasLimit := stack.Pop64()
-			addr, value := stack.Pop(), stack.Pop64()
+			addr := stack.Pop()
+			// NOTE: for DELEGATECALL value is preserved from the original
+			// caller, as such it is not stored on stack as an argument
+			// for DELEGATECALL and should not be popped.  Instead previous
+			// caller value is used.  for CALL and CALLCODE value is stored
+			// on stack and needs to be overwritten from the given value.
+			if op != DELEGATECALL {
+				value = stack.Pop64()
+			}
 			inOffset, inSize := stack.Pop64(), stack.Pop64()   // inputs
 			retOffset, retSize := stack.Pop64(), stack.Pop64() // outputs
 			dbg.Printf(" => %X\n", addr)
@@ -824,6 +832,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
+				} else if op == DELEGATECALL {
+					if acc == nil {
+						return nil, firstErr(err, ErrUnknownAddress)
+					}
+					ret, err = vm.DelegateCall(caller, callee, acc.Code, args, value, gas)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
