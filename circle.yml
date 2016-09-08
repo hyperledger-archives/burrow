@@ -37,3 +37,8 @@ deployment:
     commands:
       - DOCKER/build.sh
       - docker push quay.io/eris/erisdb
+  backwardssupport:
+    branch: release-0.11
+    commands:
+      - DOCKER/build.sh
+      - docker push quay.io/eris/erisdb
