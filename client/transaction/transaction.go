@@ -18,13 +18,13 @@ package transaction
 
 import (
 	"fmt"
-	// "io/ioutil"
 	"os"
 
 	log "github.com/eris-ltd/eris-logger"
 
 	"github.com/eris-ltd/eris-db/client/core"
 	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/keys"
 )
 
 func Send(do *definitions.ClientDo) {

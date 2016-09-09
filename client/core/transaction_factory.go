@@ -114,18 +114,18 @@ func Name(nodeAddr, signAddr, pubkey, addr, amtS, nonceS, feeS, name, data strin
 	return tx, nil
 }
 
-// type PermFunc struct {
-// 	Name string
-// 	Args string
-// }
+type PermFunc struct {
+	Name string
+	Args string
+}
 
-// var PermsFuncs = []PermFunc{
-// 	{"set_base", "address, permission flag, value"},
-// 	{"unset_base", "address, permission flag"},
-// 	{"set_global", "permission flag, value"},
-// 	{"add_role", "address, role"},
-// 	{"rm_role", "address, role"},
-// }
+var PermsFuncs = []PermFunc{
+	{"set_base", "address, permission flag, value"},
+	{"unset_base", "address, permission flag"},
+	{"set_global", "permission flag, value"},
+	{"add_role", "address, role"},
+	{"rm_role", "address, role"},
+}
 
 // func Permissions(nodeAddr, signAddr, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
 // 	pub, _, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addrS, "0", nonceS)
@@ -300,35 +300,6 @@ func coreNewAccount(nodeAddr, pubkey, chainID string) (*types.NewAccountTx, erro
 //------------------------------------------------------------------------------------
 // sign and broadcast
 
-func Pub(addr, rpcAddr string) (pubBytes []byte, err error) {
-	args := map[string]string{
-		"addr": addr,
-	}
-	pubS, err := RequestResponse(rpcAddr, "pub", args)
-	if err != nil {
-		return
-	}
-	return hex.DecodeString(pubS)
-}
-
-func Sign(signBytes, signAddr, signRPC string) (sig [64]byte, err error) {
-	args := map[string]string{
-		"msg":  signBytes,
-		"hash": signBytes, // TODO:[ben] backwards compatibility
-		"addr": signAddr,
-	}
-	sigS, err := RequestResponse(signRPC, "sign", args)
-	if err != nil {
-		return
-	}
-	sigBytes, err := hex.DecodeString(sigS)
-	if err != nil {
-		return
-	}
-	copy(sig[:], sigBytes)
-	return
-}
-
 func Broadcast(tx txs.Tx, broadcastRPC string) (*txs.Receipt, error) {
 	client := rpcclient.NewClientURI(broadcastRPC)
 	receipt, err := tendermint_client.BroadcastTx(client, tx)
@@ -341,64 +312,64 @@ func Broadcast(tx txs.Tx, broadcastRPC string) (*txs.Receipt, error) {
 //------------------------------------------------------------------------------------
 // utils for talking to the key server
 
-type HTTPResponse struct {
-	Response string
-	Error    string
-}
+// type HTTPResponse struct {
+// 	Response string
+// 	Error    string
+// }
 
-func RequestResponse(addr, method string, args map[string]string) (string, error) {
-	b, err := json.Marshal(args)
-	if err != nil {
-		return "", err
-	}
-	endpoint := fmt.Sprintf("%s/%s", addr, method)
-	log.WithFields(log.Fields{
-		"key server endpoint": endpoint,
-		"request body": string(b),
-		}).Debugf("Sending request body to key server")
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	res, errS, err := requestResponse(req)
-	if err != nil {
-		return "", fmt.Errorf("Error calling eris-keys at %s: %s", endpoint, err.Error())
-	}
-	if errS != "" {
-		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
-	}
-	log.WithFields(log.Fields{
-		"endpoint": endpoint,
-		"request body": string(b),
-		"response": res,
-		}).Debugf("Received response from key server")
-	return res, nil
-}
+// func RequestResponse(addr, method string, args map[string]string) (string, error) {
+// 	b, err := json.Marshal(args)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	endpoint := fmt.Sprintf("%s/%s", addr, method)
+// 	log.WithFields(log.Fields{
+// 		"key server endpoint": endpoint,
+// 		"request body": string(b),
+// 		}).Debugf("Sending request body to key server")
+// 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	req.Header.Add("Content-Type", "application/json")
+// 	res, errS, err := requestResponse(req)
+// 	if err != nil {
+// 		return "", fmt.Errorf("Error calling eris-keys at %s: %s", endpoint, err.Error())
+// 	}
+// 	if errS != "" {
+// 		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
+// 	}
+// 	log.WithFields(log.Fields{
+// 		"endpoint": endpoint,
+// 		"request body": string(b),
+// 		"response": res,
+// 		}).Debugf("Received response from key server")
+// 	return res, nil
+// }
 
-func requestResponse(req *http.Request) (string, string, error) {
-	client := new(http.Client)
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	if resp.StatusCode >= 400 {
-		return "", "", fmt.Errorf(resp.Status)
-	}
-	return unpackResponse(resp)
-}
+// func requestResponse(req *http.Request) (string, string, error) {
+// 	client := new(http.Client)
+// 	resp, err := client.Do(req)
+// 	if err != nil {
+// 		return "", "", err
+// 	}
+// 	if resp.StatusCode >= 400 {
+// 		return "", "", fmt.Errorf(resp.Status)
+// 	}
+// 	return unpackResponse(resp)
+// }
 
-func unpackResponse(resp *http.Response) (string, string, error) {
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", err
-	}
-	r := new(HTTPResponse)
-	if err := json.Unmarshal(b, r); err != nil {
-		return "", "", err
-	}
-	return r.Response, r.Error, nil
-}
+// func unpackResponse(resp *http.Response) (string, string, error) {
+// 	b, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return "", "", err
+// 	}
+// 	r := new(HTTPResponse)
+// 	if err := json.Unmarshal(b, r); err != nil {
+// 		return "", "", err
+// 	}
+// 	return r.Response, r.Error, nil
+// }
 
 //------------------------------------------------------------------------------------
 // sign and broadcast convenience
