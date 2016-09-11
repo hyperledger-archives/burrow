@@ -177,12 +177,25 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	} else {
 		addr = address
 	}
-	wc := make(chan *types.EventDataCall)
+
+	// We want non-blocking on the first event received (but buffer the value),
+	// after which we want to block (and then discard the value - see below)
+	wc := make(chan *types.EventDataCall, 1)
+
 	subId := fmt.Sprintf("%X", rec.TxHash)
 	this.eventEmitter.Subscribe(subId, types.EventStringAccCall(addr), func(evt types.EventData) {
 		event := evt.(types.EventDataCall)
 		if bytes.Equal(event.TxID, rec.TxHash) {
-			wc <- &event
+			//  Beware the contract of go-events subscribe is that we must not be
+			// blocking in an event callback when we try to unsubscribe!
+			// We work around this by using a non-blocking receive.
+			select {
+			// This is a non-blocking send, but since we are using a buffered
+			// channel of size 1 we will always grab our first event even if we
+			// haven't read from the channel at the time we receive the first event.
+			case wc <- &event:
+			default:
+			}
 		}
 	})
 
