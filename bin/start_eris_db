@@ -83,5 +83,5 @@ case $CMD in
 	;;
 esac
 
-echo "running eris-db serve --debug $CONFIG_OPTS $@"
-eris-db serve --debug $CONFIG_OPTS $@
+echo "running eris-db serve --debug $CONFIG_OPTS \"$@\""
+eris-db serve --debug $CONFIG_OPTS "$@"
