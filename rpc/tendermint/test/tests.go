@@ -202,7 +202,7 @@ func testNameReg(t *testing.T, typ string) {
 	assert.Equal(t, user[0].Address, entry.Owner)
 
 	// update the data as the owner, make sure still there
-	numDesiredBlocks = int64(3)
+	numDesiredBlocks = int64(5)
 	const updatedData = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
 	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 	tx = makeDefaultNameTx(t, typ, name, updatedData, amt, fee)
@@ -220,9 +220,11 @@ func testNameReg(t *testing.T, typ string) {
 	_, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
 	assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 		" name registry entry")
+	assert.Contains(t, err.Error(), "permission denied", "Error should be " +
+			"permission denied")
 
 	// Wait a couple of blocks to make sure name registration expires
-	waitNBlocks(t, wsc, 2)
+	waitNBlocks(t, wsc, 3)
 
 	//now the entry should be expired, so we can update as non owner
 	const data2 = "this is not my beautiful house"
@@ -309,7 +311,6 @@ func testBlockchainInfo(t *testing.T, typ string) {
 	wsc := newWSClient(t)
 	nBlocks := 4
 	waitNBlocks(t, wsc, nBlocks)
-	time.Sleep(time.Millisecond * 200)
 
 	resp, err := edbcli.BlockchainInfo(client, 0, 0)
 	if err != nil {
@@ -319,8 +320,8 @@ func testBlockchainInfo(t *testing.T, typ string) {
 	// NewBlock after saving a block
 	// see https://github.com/tendermint/tendermint/issues/273
 	//assert.Equal(t, 4, resp.LastHeight, "Last height should be 4 after waiting for first 4 blocks")
-	assert.Equal(t, nBlocks, len(resp.BlockMetas),
-		"Should see 4 BlockMetas after waiting for first 4 blocks")
+	assert.True(t, nBlocks <= len(resp.BlockMetas),
+		"Should see at least 4 BlockMetas after waiting for first 4 blocks")
 
 	lastBlockHash := resp.BlockMetas[nBlocks-1].Hash
 	for i := nBlocks - 2; i >= 0; i-- {
