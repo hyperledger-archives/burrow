@@ -96,7 +96,7 @@ func waitNBlocks(t *testing.T, wsc *client.WSClient, n int) {
 	runThenWaitForBlock(t, wsc,
 		func(block *tm_types.Block) bool {
 			i++
-			return i <= n
+			return i >= n
 		},
 		func() {})
 }
@@ -156,7 +156,6 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 				event, ok := (*result).(*ctypes.ResultEvent)
 				if ok && event.Event == eventid {
 					goodCh <- event.Data
-					break LOOP
 				}
 			case err := <-wsc.ErrorsCh:
 				errCh <- err
@@ -167,11 +166,10 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 		}
 	}()
 
-	// wait for an event or timeout
-	timeout := time.NewTimer(timeoutSeconds * time.Second)
 	for {
 		select {
-		case <-timeout.C:
+		// wait for an event or timeout
+		case <-time.After(timeoutSeconds * time.Second*3):
 			return waitForEventError{timeout: true}
 		case eventData := <-goodCh:
 			// run the check

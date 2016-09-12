@@ -153,12 +153,12 @@ func testCall(t *testing.T, typ string) {
 		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
 	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
-			" create a contract")
+		" create a contract")
 	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
-			" transaction hash")
+		" transaction hash")
 	contractAddr := receipt.ContractAddr
 	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
-			" created a contract but the contract address is empty")
+		" created a contract but the contract address is empty")
 
 	// run a call through the contract
 	data := []byte{}
@@ -302,4 +302,40 @@ Subscribe:
 			}
 		}
 	}
+}
+
+func testBlockchainInfo(t *testing.T, typ string) {
+	client := clients[typ]
+	wsc := newWSClient(t)
+	nBlocks := 4
+	waitNBlocks(t, wsc, nBlocks)
+	time.Sleep(time.Millisecond * 200)
+
+	resp, err := edbcli.BlockchainInfo(client, 0, 0)
+	if err != nil {
+		t.Fatalf("Failed to get blockchain info: %v", err)
+	}
+	//TODO: [Silas] reintroduce this when Tendermint changes logic to fire
+	// NewBlock after saving a block
+	// see https://github.com/tendermint/tendermint/issues/273
+	//assert.Equal(t, 4, resp.LastHeight, "Last height should be 4 after waiting for first 4 blocks")
+	assert.Equal(t, nBlocks, len(resp.BlockMetas),
+		"Should see 4 BlockMetas after waiting for first 4 blocks")
+
+	lastBlockHash := resp.BlockMetas[nBlocks-1].Hash
+	for i := nBlocks - 2; i >= 0; i-- {
+		assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockHash,
+			"Blockchain should be a hash tree!")
+		lastBlockHash = resp.BlockMetas[i].Hash
+	}
+
+	resp, err = edbcli.BlockchainInfo(client, 1, 2)
+	if err != nil {
+		t.Fatalf("Failed to get blockchain info: %v", err)
+	}
+
+	assert.Equal(t, 2, len(resp.BlockMetas),
+		"Should see 2 BlockMetas after extracting 2 blocks")
+
+	fmt.Printf("%v\n", resp)
 }
