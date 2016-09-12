@@ -42,9 +42,9 @@ test:
   override:
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..."
-    - cd $GOPATH_REPO && glide novendor | xargs go test -v
+    - cd $GOPATH_REPO && go test -v `glide novendor`
     - echo "Running integration tests..."
-    - cd $GOPATH_REPO && glide novendor | xargs go test -v -tags integration
+    - cd $GOPATH_REPO && go test -v -tags integration `glide novendor`
 
 
 deployment:
