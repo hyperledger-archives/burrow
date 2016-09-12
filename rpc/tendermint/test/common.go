@@ -1,13 +1,18 @@
+// +build integration
+
+// Space above here matters
 package test
 
 import (
 	"github.com/eris-ltd/eris-db/test/fixtures"
 	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	"testing"
+	"fmt"
 )
 
-// Needs to be in a _test.go file to be picked up
+// Needs to be referenced by a *_test.go file to be picked up
 func TestWrapper(runner func() int) int {
+	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/common.go)...")
 	ffs := fixtures.NewFileFixtures("Eris-DB")
 
 	defer ffs.RemoveAll()

@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 package main
 
 import (
