@@ -81,7 +81,12 @@ func broadcastTxAndWaitForBlock(t *testing.T, typ string, wsc *client.WSClient,
 				initialHeight = block.Height
 				return false
 			} else {
-				return block.Height > initialHeight
+				// TODO: [Silas] remove the + 1 here. It is a workaround for the fact
+				// that tendermint fires the NewBlock event before it has finalised its
+				// state updates, so we have to wait for the block after the block we
+				// want in order for the Tx to be genuinely final.
+				// This should be addressed by: https://github.com/tendermint/tendermint/pull/265
+				return block.Height > initialHeight + 1
 			}
 		},
 		func() {
@@ -96,7 +101,7 @@ func waitNBlocks(t *testing.T, wsc *client.WSClient, n int) {
 	runThenWaitForBlock(t, wsc,
 		func(block *tm_types.Block) bool {
 			i++
-			return i <= n
+			return i >= n
 		},
 		func() {})
 }
@@ -131,10 +136,11 @@ func subscribeAndWaitForNext(t *testing.T, wsc *client.WSClient, event string,
 // waitForEvent will fail the test.
 func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 	runner func(),
-	eventDataChecker func(string, txs.EventData) (bool, error)) waitForEventError {
+	eventDataChecker func(string, txs.EventData) (bool, error)) waitForEventResult {
 
 	// go routine to wait for websocket msg
-	goodCh := make(chan txs.EventData)
+	eventsCh := make(chan txs.EventData)
+	shutdownEventsCh := make(chan bool, 1)
 	errCh := make(chan error)
 
 	// do stuff (transactions)
@@ -146,6 +152,8 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 	LOOP:
 		for {
 			select {
+			case <-shutdownEventsCh:
+				break LOOP
 			case r := <-wsc.ResultsCh:
 				result := new(ctypes.ErisDBResult)
 				wire.ReadJSONPtr(result, r, &err)
@@ -155,8 +163,8 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 				}
 				event, ok := (*result).(*ctypes.ResultEvent)
 				if ok && event.Event == eventid {
-					goodCh <- event.Data
-					break LOOP
+					// Keep feeding events
+					eventsCh <- event.Data
 				}
 			case err := <-wsc.ErrorsCh:
 				errCh <- err
@@ -167,20 +175,22 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 		}
 	}()
 
-	// wait for an event or timeout
-	timeout := time.NewTimer(timeoutSeconds * time.Second)
+	// Don't block up WSClient
+	defer func() { shutdownEventsCh <- true }()
+
 	for {
 		select {
-		case <-timeout.C:
-			return waitForEventError{timeout: true}
-		case eventData := <-goodCh:
+		// wait for an event or timeout
+		case <-time.After(timeoutSeconds * time.Second):
+			return waitForEventResult{timeout: true}
+		case eventData := <-eventsCh:
 			// run the check
 			stopWaiting, err := eventDataChecker(eventid, eventData)
 			if err != nil {
 				t.Fatal(err) // Show the stack trace.
 			}
 			if stopWaiting {
-				return waitForEventError{}
+				return waitForEventResult{}
 			}
 		case err := <-errCh:
 			t.Fatal(err)
@@ -188,12 +198,12 @@ func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
 	}
 }
 
-type waitForEventError struct {
+type waitForEventResult struct {
 	error
 	timeout bool
 }
 
-func (err waitForEventError) Timeout() bool {
+func (err waitForEventResult) Timeout() bool {
 	return err.timeout
 }
 

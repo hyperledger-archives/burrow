@@ -23,7 +23,7 @@ import (
 )
 
 func TestCompatibleConsensus(t *testing.T) {
-	// TODO: [ben] expand by constructing and elemetary testing for each listed
+	// TODO: [ben] expand by constructing and elementary testing for each listed
 	// compatible consensus engine
 
 	for _, listedConsensus := range compatibleConsensus {

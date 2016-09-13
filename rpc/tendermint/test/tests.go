@@ -153,12 +153,12 @@ func testCall(t *testing.T, typ string) {
 		t.Fatalf("Problem broadcasting transaction: %v", err)
 	}
 	assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
-			" create a contract")
+		" create a contract")
 	assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
-			" transaction hash")
+		" transaction hash")
 	contractAddr := receipt.ContractAddr
 	assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
-			" created a contract but the contract address is empty")
+		" created a contract but the contract address is empty")
 
 	// run a call through the contract
 	data := []byte{}
@@ -202,7 +202,7 @@ func testNameReg(t *testing.T, typ string) {
 	assert.Equal(t, user[0].Address, entry.Owner)
 
 	// update the data as the owner, make sure still there
-	numDesiredBlocks = int64(3)
+	numDesiredBlocks = int64(5)
 	const updatedData = "these are amongst the things I wish to bestow upon the youth of generations come: a safe supply of honey, and a better money. For what else shall they need"
 	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 	tx = makeDefaultNameTx(t, typ, name, updatedData, amt, fee)
@@ -220,9 +220,11 @@ func testNameReg(t *testing.T, typ string) {
 	_, err := broadcastTxAndWaitForBlock(t, typ, wsc, tx)
 	assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 		" name registry entry")
+	assert.Contains(t, err.Error(), "permission denied", "Error should be " +
+			"permission denied")
 
 	// Wait a couple of blocks to make sure name registration expires
-	waitNBlocks(t, wsc, 2)
+	waitNBlocks(t, wsc, 3)
 
 	//now the entry should be expired, so we can update as non owner
 	const data2 = "this is not my beautiful house"
@@ -302,4 +304,39 @@ Subscribe:
 			}
 		}
 	}
+}
+
+func testBlockchainInfo(t *testing.T, typ string) {
+	client := clients[typ]
+	wsc := newWSClient(t)
+	nBlocks := 4
+	waitNBlocks(t, wsc, nBlocks)
+
+	resp, err := edbcli.BlockchainInfo(client, 0, 0)
+	if err != nil {
+		t.Fatalf("Failed to get blockchain info: %v", err)
+	}
+	//TODO: [Silas] reintroduce this when Tendermint changes logic to fire
+	// NewBlock after saving a block
+	// see https://github.com/tendermint/tendermint/issues/273
+	//assert.Equal(t, 4, resp.LastHeight, "Last height should be 4 after waiting for first 4 blocks")
+	assert.True(t, nBlocks <= len(resp.BlockMetas),
+		"Should see at least 4 BlockMetas after waiting for first 4 blocks")
+
+	lastBlockHash := resp.BlockMetas[nBlocks-1].Hash
+	for i := nBlocks - 2; i >= 0; i-- {
+		assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockHash,
+			"Blockchain should be a hash tree!")
+		lastBlockHash = resp.BlockMetas[i].Hash
+	}
+
+	resp, err = edbcli.BlockchainInfo(client, 1, 2)
+	if err != nil {
+		t.Fatalf("Failed to get blockchain info: %v", err)
+	}
+
+	assert.Equal(t, 2, len(resp.BlockMetas),
+		"Should see 2 BlockMetas after extracting 2 blocks")
+
+	fmt.Printf("%v\n", resp)
 }

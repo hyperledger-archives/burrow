@@ -57,6 +57,13 @@ func TestHTTPNameReg(t *testing.T) {
 	testNameReg(t, "HTTP")
 }
 
+func TestHTTPBlockchainInfo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	testBlockchainInfo(t, "HTTP")
+}
+
 //--------------------------------------------------------------------------------
 // Test the JSONRPC client
 
@@ -101,4 +108,11 @@ func TestJSONNameReg(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	testNameReg(t, "JSONRPC")
+}
+
+func TestJSONBlockchainInfo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	testBlockchainInfo(t, "JSONRPC")
 }
