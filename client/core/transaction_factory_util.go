@@ -147,9 +147,14 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		}
 	} else {
 		// grab the pubkey from eris-keys
-		pubKeyBytes, err = keyClient.PublicKey([]byte(addr))
-		if err != nil {
-			err = fmt.Errorf("failed to fetch pubkey for address (%X): %v", addr, err)
+		addressBytes, err2 := hex.DecodeString(addr)
+		if err2 != nil {
+			err = fmt.Errorf("Bad hex string for address (%s): %v", addr, err)
+			return
+		}
+		pubKeyBytes, err2 = keyClient.PublicKey(addressBytes)
+		if err2 != nil {
+			err = fmt.Errorf("Failed to fetch pubkey for address (%s): %v", addr, err)
 			return
 		}
 

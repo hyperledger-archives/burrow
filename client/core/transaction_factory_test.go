@@ -46,22 +46,22 @@ func TestTransactionFactorySend(t *testing.T) {
 	mockNodeClient := client.NewMockNodeClient()
 
 	// generate an ED25519 key and ripemd160 address
-	address := mockKeyClient.NewKey()
+	addressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
 	// As a result we will assert whether address generated above, is identical
 	// to address in generated transation.
-	publicKey := ""
+	publicKeyString := ""
 	// generate an additional address to send amount to
-	toAddress := mockKeyClient.NewKey()
+	toAddressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
 	// set an amount to transfer
 	amount := "1000"
 	// set nonce to unset
 	nonce := ""
 
-	_, err := Send(mockNodeClient, mockKeyClient, publicKey, fmt.Sprintf("%X", address),
-		fmt.Sprintf("%X", toAddress), amount, nonce)
+	_, err := Send(mockNodeClient, mockKeyClient, publicKeyString, addressString,
+		toAddressString, amount, nonce)
 	if err != nil {
 		t.Logf("Error: %s", err)
 		t.Fail()
