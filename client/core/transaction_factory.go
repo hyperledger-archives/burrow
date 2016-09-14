@@ -17,27 +17,18 @@
 package core
 
 import (
-	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strconv"
 	// "strings"
 	// "time"
 
-	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-rpc/client"
-
 	// ptypes "github.com/eris-ltd/permission/types"
 
-	log "github.com/eris-ltd/eris-logger"
+	// log "github.com/eris-ltd/eris-logger"
 
-	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
-	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -49,7 +40,7 @@ var (
 // core functions with string args.
 // validates strings and forms transaction
 
-func Send(nodeClient *client.NodeClient, keyClient *keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS string) (*txs.SendTx, error) {
+func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS string) (*txs.SendTx, error) {
 	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
 	if err != nil {
 		return nil, err
@@ -71,7 +62,7 @@ func Send(nodeClient *client.NodeClient, keyClient *keys.KeyClient, pubkey, addr
 	return tx, nil
 }
 
-func Call(nodeClient *client.NodeClient, keyClient *keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) (*txs.CallTx, error) {
+func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) (*txs.CallTx, error) {
 	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
 	if err != nil {
 		return nil, err
@@ -101,8 +92,8 @@ func Call(nodeClient *client.NodeClient, keyClient *keys.KeyClient, pubkey, addr
 	return tx, nil
 }
 
-func Name(nodeClient *client.NodeClient, keyClient *keys.KeyClient, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
-	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addr, amtS, nonceS)
+func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
+	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
 	if err != nil {
 		return nil, err
 	}
@@ -299,72 +290,6 @@ func coreNewAccount(nodeAddr, pubkey, chainID string) (*types.NewAccountTx, erro
 // 	}, nil
 // }
 
-
-
-//------------------------------------------------------------------------------------
-// utils for talking to the key server
-
-// type HTTPResponse struct {
-// 	Response string
-// 	Error    string
-// }
-
-// func RequestResponse(addr, method string, args map[string]string) (string, error) {
-// 	b, err := json.Marshal(args)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	endpoint := fmt.Sprintf("%s/%s", addr, method)
-// 	log.WithFields(log.Fields{
-// 		"key server endpoint": endpoint,
-// 		"request body": string(b),
-// 		}).Debugf("Sending request body to key server")
-// 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	req.Header.Add("Content-Type", "application/json")
-// 	res, errS, err := requestResponse(req)
-// 	if err != nil {
-// 		return "", fmt.Errorf("Error calling eris-keys at %s: %s", endpoint, err.Error())
-// 	}
-// 	if errS != "" {
-// 		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
-// 	}
-// 	log.WithFields(log.Fields{
-// 		"endpoint": endpoint,
-// 		"request body": string(b),
-// 		"response": res,
-// 		}).Debugf("Received response from key server")
-// 	return res, nil
-// }
-
-// func requestResponse(req *http.Request) (string, string, error) {
-// 	client := new(http.Client)
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return "", "", err
-// 	}
-// 	if resp.StatusCode >= 400 {
-// 		return "", "", fmt.Errorf(resp.Status)
-// 	}
-// 	return unpackResponse(resp)
-// }
-
-// func unpackResponse(resp *http.Response) (string, string, error) {
-// 	b, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return "", "", err
-// 	}
-// 	r := new(HTTPResponse)
-// 	if err := json.Unmarshal(b, r); err != nil {
-// 		return "", "", err
-// 	}
-// 	return r.Response, r.Error, nil
-// }
-
-
-
 type TxResult struct {
 	BlockHash []byte // all txs get in a block
 	Hash      []byte // all txs get a hash
@@ -378,13 +303,11 @@ type TxResult struct {
 	// can differentiate mempool errors from other
 }
 
-func Sign()
-
 // Preserve
-func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
+func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
 	// var inputAddr []byte
 	if sign {
-		_, tx, err = signTx(signAddr, chainID, tx)
+		_, tx, err = signTx(keyClient, chainID, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -418,7 +341,7 @@ func SignAndBroadcast(chainID, nodeAddr, signAddr string, tx txs.Tx, sign, broad
 		// 	}
 		// }
 		var receipt *txs.Receipt
-		receipt, err = Broadcast(tx, nodeAddr)
+		receipt, err = nodeClient.Broadcast(tx)
 		if err != nil {
 			return nil, err
 		}
@@ -535,8 +458,3 @@ type Msg struct {
 // 	}()
 // 	return resultChan, nil
 // }
-
-//------------------------------------------------------------------------------------
-// convenience function
-
-

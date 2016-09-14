@@ -28,7 +28,7 @@ import (
 //---------------------------------------------------------------------
 // Mock client for replacing signing done by eris-keys
 
-// NOTE [ben] Compiler check to ensure MockKeysClient successfully implements
+// NOTE [ben] Compiler check to ensure MockKeyClient successfully implements
 // eris-db/keys.KeyClient
 var _ KeyClient = (*MockKeyClient)(nil)
 
@@ -36,7 +36,13 @@ type MockKeyClient struct{
 	knownKeys map[string]*crypto.Key
 }
 
-func (mock *MockKeyCLient) NewKey() (address []byte) {
+func NewMockKeyClient() *MockKeyClient {
+	return &MockKeyClient{
+		knownKeys: make(map[string]*crypto.Key)
+	}
+}
+
+func (mock *MockKeyClient) NewKey() (address []byte) {
 	// Only tests ED25519 curve and ripemd160.
 	keyType := crypto.KeyType{ crypto.CurveTypeEd25519,
 		AddrTypeRipemd160 }
@@ -44,7 +50,7 @@ func (mock *MockKeyCLient) NewKey() (address []byte) {
 	
 }
 
-func (mock *MockKeyClient) Sign(signBytes, signAddress []byte) (signature []byte, err error) {
+func (mock *MockKeyClient) Sign(signString string, signAddress []byte) (signature []byte, err error) {
 	key := mock.knownKeys[string(signAddress)]
 	if key.PrivateKey == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
@@ -59,5 +65,3 @@ func (mock *MockKeyClient) PublicKey(address []byte) (publicKey []byte, err erro
 	}
 	return key.PubKey()
 }
-
-func (mock *MockKeyClient) 

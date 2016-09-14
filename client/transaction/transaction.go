@@ -31,8 +31,8 @@ import (
 func Send(do *definitions.ClientDo) {
 	// construct two clients to call out to keys server and
 	// blockchain node.
-	erisKeyClient := keys.ErisKeyClient.New(do.SignAddrFlag)
-	erisNodeClient := client.ErisClient.New(do.NodeAddrFlag)
+	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag)
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
 	// form the send transaction
 	sendTransaction, err := core.Send(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
@@ -44,15 +44,15 @@ func Send(do *definitions.ClientDo) {
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it. 
 	unpackSignAndBroadcast(
-		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
-		do.SignAddrFlag, sendTransaction, true, do.BroadcastFlag, do.WaitFlag))
+		core.SignAndBroadcast(do.ChainidFlag, erisNodeClient,
+		erisKeyClient, sendTransaction, true, do.BroadcastFlag, do.WaitFlag))
 }
 
 func Call(do *definitions.ClientDo) {
 	// construct two clients to call out to keys server and
 	// blockchain node.
-	erisKeyClient := keys.ErisKeyClient.New(do.SignAddrFlag)
-	erisNodeClient := client.ErisClient.New(do.NodeAddrFlag)
+	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag)
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
 	// form the call transaction
 	callTransaction, err := core.Call(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag,
@@ -65,8 +65,8 @@ func Call(do *definitions.ClientDo) {
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it. 
 	unpackSignAndBroadcast(
-		core.SignAndBroadcast(do.ChainidFlag, do.NodeAddrFlag,
-		do.SignAddrFlag, callTransaction, true, do.BroadcastFlag, do.WaitFlag))
+		core.SignAndBroadcast(do.ChainidFlag, erisNodeClient,
+		erisKeyClient, callTransaction, true, do.BroadcastFlag, do.WaitFlag))
 }
 
 //----------------------------------------------------------------------

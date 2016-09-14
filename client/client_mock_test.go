@@ -30,9 +30,16 @@ import (
 // eris-db/client.NodeClient 
 var _ NodeClient = (*ErisMockClient)(nil)
 
-type MockNodeClient {
-	accounts
+type MockNodeClient struct {
+	accounts map[string]*account.Account
 }
+
+func NewMockNodeClient() *MockNodeClient {
+	return &MockNodeClient{
+		accounts: make(map[string]*account.Account)
+	}
+}
+
 
 func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
 	// make zero transaction receipt
@@ -44,7 +51,7 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	return txReceipt, nil
 }
 
-func (mock *MockNodeClient) GetAccount(address []byte) (account *account.Account, error) {
+func (mock *MockNodeClient) GetAccount(address []byte) (*account.Account, error) {
 	// make zero account
 	var zero [32]byte
 	copyAddressBytes := make([]byte, len(address), len(address)) 
@@ -61,5 +68,6 @@ func (mock *MockNodeClient) GetAccount(address []byte) (account *account.Account
 }
 
 func (mock *MockNodeClient) MockAddAccount(account *account.Account) {
-
+	addressString := string(account.Address[:])
+	mock.accounts[addressString] := account.Copy()
 }

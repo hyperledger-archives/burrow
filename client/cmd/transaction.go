@@ -60,7 +60,7 @@ func buildTransactionCommand() {
 		Short: "eris-client tx name --amt <amt> --name <name> --data <data>",
 		Long:  "eris-client tx name --amt <amt> --name <name> --data <data>",
 		Run:   func(cmd *cobra.Command, args []string) {
-			transaction.Name(clientDo)
+			// transaction.Name(clientDo)
 		},
 		PreRun: assertParameters,
 	}

@@ -18,28 +18,27 @@ package keys
 
 import (
 	"encoding/hex"
-	"fmt"
 )
 
 type KeyClient interface{
 	// Sign needs to return the signature bytes for given message to sign
 	// and the address to sign it with.
-	Sign(signBytes, signAddress []byte) (signature []byte, err error)
+	Sign(signString string, signAddress []byte) (signature []byte, err error)
 	// PublicKey needs to return the public key associated with a given address
-	PublicKey(address []byte) (publicKey []byte, err error)
+	PublicKey(addressString string) (publicKey []byte, err error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisKeyClient successfully implements
 // eris-db/keys.KeyClient
 var _ KeyClient = (*ErisKeyClient)(nil)
 
-struct ErisKeyClient{
+type ErisKeyClient struct {
 	rpcString string
 }
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func New(rpcString string) *ErisKeyClient{
+func NewErisKeyClient(rpcString string) *ErisKeyClient{
 	return &ErisKeyClient{
 		rpcString: rpcString,
 	}
@@ -47,10 +46,10 @@ func New(rpcString string) *ErisKeyClient{
 
 // Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *ErisKeyClient) Sign(signBytes, signAddress []byte) (signature []byte, err error) {
+func (erisKeys *ErisKeyClient) Sign(signString string, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
-		"msg":  string(signBytes),
-		"hash": string(signBytes), // TODO:[ben] backwards compatibility
+		"msg":  signString,
+		"hash": signString, // TODO:[ben] backwards compatibility
 		"addr": string(signAddress),
 	}
 	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args)
@@ -67,9 +66,9 @@ func (erisKeys *ErisKeyClient) Sign(signBytes, signAddress []byte) (signature []
 
 // Eris-keys client PublicKey requests the public key associated with an address from
 // the eris-keys server.
-func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
+func (erisKeys *ErisKeyClient) PublicKey(addressString string) (publicKey []byte, err error) {
 	args := map[string]string{
-		"addr": address,
+		"addr": addressString,
 	}
 	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args)
 	if err != nil {
@@ -79,3 +78,4 @@ func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err 
 	// address
 	return hex.DecodeString(pubS)
 }
+

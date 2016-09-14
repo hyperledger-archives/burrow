@@ -17,6 +17,8 @@
 package client
 
 import (
+	"fmt"
+
 	"github.com/tendermint/go-rpc/client"
 
 	"github.com/eris-ltd/eris-db/account"
@@ -27,12 +29,12 @@ import (
 type NodeClient interface{
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
 
-	GetAccount(address []byte) (account account.Account, error)
+	GetAccount(address []byte) (*account.Account, error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisClient successfully implements
 // eris-db/client.Client
-var _ NodeClient = (*ErisClient)(nil)
+var _ NodeClient = (*ErisNodeClient)(nil)
 
 // Eris-Client is a simple struct exposing the client rpc methods 
 
@@ -42,8 +44,8 @@ type ErisNodeClient struct {
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func New(rpcString string) *ErisNodeClient{
-	return &ErisClient{
+func NewErisNodeClient(rpcString string) *ErisNodeClient{
+	return &ErisNodeClient{
 		broadcastRPC: rpcString,
 	}
 }
@@ -62,7 +64,7 @@ func (erisClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	return &receipt, nil
 }
 
-func (erisClient *ErisNodeClient) GetAccount(address []byte) (account account.Account, error) {
+func (erisClient *ErisNodeClient) GetAccount(address []byte) (*account.Account, error) {
 	// fetch nonce from node
 	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
@@ -72,12 +74,11 @@ func (erisClient *ErisNodeClient) GetAccount(address []byte) (account account.Ac
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", addrBytes, erisClient.broadcastRPC)
+		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisClient.broadcastRPC)
 		return nil, err
 	}
 
-	return account, nil
+	return account.Copy(), nil
 }
-
 
 

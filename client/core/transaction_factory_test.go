@@ -21,7 +21,7 @@ import (
 
 	"github.com/eris-ltd/eris-keys/crypto"
 
-	"github.com?eris-ltd/eris-db/client"
+	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
 )
 
@@ -34,7 +34,7 @@ func TestTransactionFactory(t *testing.T) {
 	t.Run("ExtractInputAddress from transaction", func (t *testing.T) {
 		t.Run("SendTransaction", testTransactionFactorySend)
 		// t.Run("NameTransaction", )
-		t.Run("CallTransaction", )
+		// t.Run("CallTransaction", )
 		// t.Run("PermissionTransaction", )
 		// t.Run("BondTransaction", )
 		// t.Run("UnbondTransaction", )
@@ -43,11 +43,28 @@ func TestTransactionFactory(t *testing.T) {
 }
 
 func testTransactionFactorySend(t *testing.T) {
-	mockKeyClient := new(keys.MockKeyClient)
-	mockNodeClient := new(client.MockNodeClient)
+	mockKeyClient := keys.NewMockKeyClient()
+	mockNodeClient := client.NewMockNodeClient()
 
-	key :=   
+	// generate an ED25519 key and ripemd160 address
+	address := mockKeyClient.NewKey()
+	// Public key can be queried from mockKeyClient.PublicKey(address)
+	// but here we let the transaction factory retrieve the public key
+	// which will then also overwrite the address we provide the function.
+	// As a result we will assert whether address generated above, is identical
+	// to address in generated transation.
+	publicKey := ""
+	// generate an additional address to send amount to
+	toAddress := mockKeyClient.NewKey()
+	// set an amount to transfer
+	amount := "1000"
+	// set nonce to unset
+	nonce := ""
 
-	Send(mockNodeClient, mockKeyClient, )
+	tx, err := Send(mockNodeClient, mockKeyClient, publicKey, string(address),
+		string(toAddress), amount, nonce)
+	if err != nil {
+		t.Fail()
+	}
 }
 
