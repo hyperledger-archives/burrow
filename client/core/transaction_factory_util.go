@@ -37,7 +37,7 @@ import (
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
 func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
-	signString := fmt.Sprintf("%X", acc.SignBytes(chainID, tx_))
+	signBytes := []byte(fmt.Sprintf("%X", acc.SignBytes(chainID, tx_)))
 	var inputAddr []byte
 	var sigED crypto.SignatureEd25519
 	switch tx := tx_.(type) {
@@ -66,18 +66,17 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 		inputAddr = tx.Address
 		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
 	}
-	sig, err := keyClient.Sign(signString, inputAddr)
+	sig, err := keyClient.Sign(signBytes, inputAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	// because this codebase has been written with a total neglect for the type
-	// system, this is an intermediate step before we clean out the full set of
-	// canonical bytes.
+	// TODO: [ben] temporarily address the type conflict here, to be cleaned up
+	// with full type restructuring
 	var sig64 [64]byte
 	copy(sig64[:], sig)
 	sigED = crypto.SignatureEd25519(sig64)
 	log.WithFields(log.Fields{
-		"transaction sign bytes": signString,
+		"transaction sign bytes": fmt.Sprintf("%X", signBytes),
 		"account address": fmt.Sprintf("%X", inputAddr),
 		"signature": fmt.Sprintf("%X", sig64), 
 		}).Debug("Signed transaction")
@@ -148,9 +147,9 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		}
 	} else {
 		// grab the pubkey from eris-keys
-		pubKeyBytes, err = keyClient.PublicKey(addr)
+		pubKeyBytes, err = keyClient.PublicKey([]byte(addr))
 		if err != nil {
-			err = fmt.Errorf("failed to fetch pubkey for address (%s): %v", addr, err)
+			err = fmt.Errorf("failed to fetch pubkey for address (%X): %v", addr, err)
 			return
 		}
 

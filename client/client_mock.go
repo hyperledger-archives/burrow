@@ -17,26 +17,24 @@
 package client
 
 import (
-	"fmt"
-
 	"github.com/tendermint/go-crypto"
 
-	"gthub.com/eris-ltd/eris-db/account"
+	acc "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/txs"
 
 )
 
 // NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
 // eris-db/client.NodeClient 
-var _ NodeClient = (*ErisMockClient)(nil)
+var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {
-	accounts map[string]*account.Account
+	accounts map[string]*acc.Account
 }
 
 func NewMockNodeClient() *MockNodeClient {
 	return &MockNodeClient{
-		accounts: make(map[string]*account.Account)
+		accounts: make(map[string]*acc.Account),
 	}
 }
 
@@ -46,28 +44,28 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	txReceipt := &txs.Receipt{
 		TxHash: make([]byte, 20, 20),
 		CreatesContract: 0,
-		ContractAddr: make([]byte, 20, 20)
+		ContractAddr: make([]byte, 20, 20),
 	}
 	return txReceipt, nil
 }
 
-func (mock *MockNodeClient) GetAccount(address []byte) (*account.Account, error) {
+func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	// make zero account
 	var zero [32]byte
 	copyAddressBytes := make([]byte, len(address), len(address)) 
 	copy(copyAddressBytes, address)
-	account := &account.Account{
+	account := &acc.Account{
 		Address: copyAddressBytes,
-		PubKey: crypto.PubKey(crypto.PubKeyEd28819(zero)),
+		PubKey: crypto.PubKey(crypto.PubKeyEd25519(zero)),
 		Sequence: 0,
 		Balance: 0,
-		Code: make([]byte, 0)
-		StorageRoot: make([]byte, 0]
+		Code: make([]byte, 0),
+		StorageRoot: make([]byte, 0),
 	}
 	return account, nil
 }
 
-func (mock *MockNodeClient) MockAddAccount(account *account.Account) {
+func (mock *MockNodeClient) MockAddAccount(account *acc.Account) {
 	addressString := string(account.Address[:])
-	mock.accounts[addressString] := account.Copy()
+	mock.accounts[addressString] = account.Copy()
 }

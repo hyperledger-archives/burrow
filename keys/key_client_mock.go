@@ -38,30 +38,38 @@ type MockKeyClient struct{
 
 func NewMockKeyClient() *MockKeyClient {
 	return &MockKeyClient{
-		knownKeys: make(map[string]*crypto.Key)
+		knownKeys: make(map[string]*crypto.Key),
 	}
 }
 
 func (mock *MockKeyClient) NewKey() (address []byte) {
 	// Only tests ED25519 curve and ripemd160.
 	keyType := crypto.KeyType{ crypto.CurveTypeEd25519,
-		AddrTypeRipemd160 }
-	key, err := crypto.NewKey()
-	
+		crypto.AddrTypeRipemd160 }
+	key, err := crypto.NewKey(keyType)
+	if err != nil {
+		panic(fmt.Sprintf("Mocked key client failed on key generation (%s): %s", keyType.String(), err))
+	}
+	pubk, _ := key.Pubkey()
+	fmt.Printf("generated key %X with address %X", pubk, key.Address)
+	mock.knownKeys[fmt.Sprintf("%X", key.Address)] = key
+	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signString string, signAddress []byte) (signature []byte, err error) {
-	key := mock.knownKeys[string(signAddress)]
-	if key.PrivateKey == nil {
+func (mock *MockKeyClient) Sign(signBytes []byte, signAddress []byte) (signature []byte, err error) {
+	fmt.Printf("on signing with address %X \n", signAddress)
+	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
+	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
 	}
 	return key.Sign(signBytes)
 }
 
 func (mock *MockKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
-	key := mock.knownKeys[string(signAddress)]
-	if key.PrivateKey == nil {
-		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
+	fmt.Printf("on retrieving public key for address %X \n", address)
+	key := mock.knownKeys[fmt.Sprintf("%X", address)]
+	if key == nil {
+		return nil, fmt.Errorf("Unknown address (%X)", address)
 	}
-	return key.PubKey()
+	return key.Pubkey()
 }

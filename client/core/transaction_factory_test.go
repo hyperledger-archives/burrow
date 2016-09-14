@@ -17,9 +17,8 @@
 package core
 
 import (
+	"fmt"
 	"testing"
-
-	"github.com/eris-ltd/eris-keys/crypto"
 
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
@@ -29,20 +28,20 @@ import (
 // modularise and restructure the components of the code.
 
 
-func TestTransactionFactory(t *testing.T) {
-	// test in parallel
-	t.Run("ExtractInputAddress from transaction", func (t *testing.T) {
-		t.Run("SendTransaction", testTransactionFactorySend)
-		// t.Run("NameTransaction", )
-		// t.Run("CallTransaction", )
-		// t.Run("PermissionTransaction", )
-		// t.Run("BondTransaction", )
-		// t.Run("UnbondTransaction", )
-		// t.Run("RebondTransaction", )
-	})
-}
+// func TestTransactionFactory(t *testing.T) {
+// 	// test in parallel
+// 	t.Run("ExtractInputAddress from transaction", func (t1 *testing.T) {
+// 		t1.Run("SendTransaction", testTransactionFactorySend)
+// 		// t.Run("NameTransaction", )
+// 		// t.Run("CallTransaction", )
+// 		// t.Run("PermissionTransaction", )
+// 		// t.Run("BondTransaction", )
+// 		// t.Run("UnbondTransaction", )
+// 		// t.Run("RebondTransaction", )
+// 	})
+// }
 
-func testTransactionFactorySend(t *testing.T) {
+func TestTransactionFactorySend(t *testing.T) {
 	mockKeyClient := keys.NewMockKeyClient()
 	mockNodeClient := client.NewMockNodeClient()
 
@@ -61,9 +60,10 @@ func testTransactionFactorySend(t *testing.T) {
 	// set nonce to unset
 	nonce := ""
 
-	tx, err := Send(mockNodeClient, mockKeyClient, publicKey, string(address),
-		string(toAddress), amount, nonce)
+	_, err := Send(mockNodeClient, mockKeyClient, publicKey, fmt.Sprintf("%X", address),
+		fmt.Sprintf("%X", toAddress), amount, nonce)
 	if err != nil {
+		t.Logf("Error: %s", err)
 		t.Fail()
 	}
 }

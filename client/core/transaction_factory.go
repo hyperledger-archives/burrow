@@ -50,6 +50,8 @@ func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("destination address must be given with --to flag")
 	}
 
+	fmt.Printf("from address: %s", addr)
+	fmt.Printf("to address: %s", toAddr)
 	toAddrBytes, err := hex.DecodeString(toAddr)
 	if err != nil {
 		return nil, fmt.Errorf("toAddr is bad hex: %v", err)
