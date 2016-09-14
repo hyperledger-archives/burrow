@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package keys
+package mock
 
 import (
 	"fmt"
@@ -23,6 +23,8 @@ import (
 	// the keys server to ensure the core components are 
 	// compatible with eris-db.
 	"github.com/eris-ltd/eris-keys/crypto"
+
+	. "github.com/eris-ltd/eris-db/keys"
 )
 
 //---------------------------------------------------------------------

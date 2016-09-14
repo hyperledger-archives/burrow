@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package client
+package mock
 
 import (
 	"github.com/tendermint/go-crypto"
 
 	acc "github.com/eris-ltd/eris-db/account"
+	. "github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/txs"
-
 )
 
 // NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
@@ -37,7 +37,6 @@ func NewMockNodeClient() *MockNodeClient {
 		accounts: make(map[string]*acc.Account),
 	}
 }
-
 
 func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
 	// make zero transaction receipt

@@ -20,13 +20,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/keys"
+	mockclient "github.com/eris-ltd/eris-db/client/mock"
+	mockkeys "github.com/eris-ltd/eris-db/keys/mock"
 )
-
-// Unit tests for client/core an idael showcase for the need to
-// modularise and restructure the components of the code.
-
 
 // func TestTransactionFactory(t *testing.T) {
 // 	// test in parallel
@@ -42,8 +38,8 @@ import (
 // }
 
 func TestTransactionFactorySend(t *testing.T) {
-	mockKeyClient := keys.NewMockKeyClient()
-	mockNodeClient := client.NewMockNodeClient()
+	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockNodeClient := mockclient.NewMockNodeClient()
 
 	// generate an ED25519 key and ripemd160 address
 	addressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
@@ -57,7 +53,7 @@ func TestTransactionFactorySend(t *testing.T) {
 	toAddressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
 	// set an amount to transfer
 	amount := "1000"
-	// set nonce to unset
+	// unset nonce so that we retrieve nonce from account
 	nonce := ""
 
 	_, err := Send(mockNodeClient, mockKeyClient, publicKeyString, addressString,

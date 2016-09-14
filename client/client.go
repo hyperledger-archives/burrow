@@ -33,7 +33,7 @@ type NodeClient interface{
 }
 
 // NOTE [ben] Compiler check to ensure ErisClient successfully implements
-// eris-db/client.Client
+// eris-db/client.NodeClient
 var _ NodeClient = (*ErisNodeClient)(nil)
 
 // Eris-Client is a simple struct exposing the client rpc methods 
