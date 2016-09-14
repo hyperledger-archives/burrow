@@ -22,14 +22,19 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
+	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/client/core"
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/keys"
 )
 
 func Send(do *definitions.ClientDo) {
+	// construct two clients to call out to keys server and
+	// blockchain node.
+	erisKeyClient := keys.ErisKeyClient.New(do.SignAddrFlag)
+	erisNodeClient := client.ErisClient.New(do.NodeAddrFlag)
 	// form the send transaction
-	sendTransaction, err := core.Send(do.NodeAddrFlag, do.SignAddrFlag,
+	sendTransaction, err := core.Send(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
 	if err != nil {
 		log.Fatalf("Failed on forming Send Transaction: %s", err)
@@ -44,8 +49,12 @@ func Send(do *definitions.ClientDo) {
 }
 
 func Call(do *definitions.ClientDo) {
+	// construct two clients to call out to keys server and
+	// blockchain node.
+	erisKeyClient := keys.ErisKeyClient.New(do.SignAddrFlag)
+	erisNodeClient := client.ErisClient.New(do.NodeAddrFlag)
 	// form the call transaction
-	callTransaction, err := core.Call(do.NodeAddrFlag, do.SignAddrFlag,
+	callTransaction, err := core.Call(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag,
 		do.GasFlag, do.FeeFlag, do.DataFlag)
 	if err != nil {

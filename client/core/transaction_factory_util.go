@@ -18,8 +18,9 @@ package core
 
 import (
 	
-	keys "github.com/eris-ltd/eris-db/keys"
-	txs "github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/client"
+	"github.com/eris-ltd/eris-db/keys"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 //------------------------------------------------------------------------------------
@@ -111,7 +112,7 @@ func readInputAddressFromTransaction(tx_ txs.Tx) (addressHex string) {
 	return addressHex 
 }
 
-func checkCommon(, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) (pub crypto.PubKey, amt int64, nonce int64, err error) {
+func checkCommon(nodeClient client.Client, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) (pub crypto.PubKey, amt int64, nonce int64, err error) {
 	if amtS == "" {
 		err = fmt.Errorf("input must specify an amount with the --amt flag")
 		return
@@ -135,7 +136,7 @@ func checkCommon(, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) 
 		}
 	} else {
 		// grab the pubkey from eris-keys
-		pubKeyBytes, err = Pub(addr, signAddr)
+		pubKeyBytes, err = keyClient.PublicKey(addr)
 		if err != nil {
 			err = fmt.Errorf("failed to fetch pubkey for address (%s): %v", addr, err)
 			return
@@ -159,26 +160,18 @@ func checkCommon(, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) 
 	addrBytes := pub.Address()
 
 	if nonceS == "" {
-		if nodeAddr == "" {
+		if nodeClient == nil {
 			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or ERIS_CLIENT_NODE_ADDR) to fetch the nonce from a node")
 			return
 		}
-
 		// fetch nonce from node
-		client := rpcclient.NewClientURI(nodeAddr)
-		account, err2 := tendermint_client.GetAccount(client, addrBytes)
-		if err2 != nil {
-			err = fmt.Errorf("Error connecting to node (%s) to fetch nonce: %s", nodeAddr, err2.Error())
-			return
-		}
-		if account == nil {
-			err = fmt.Errorf("unknown account %X", addrBytes)
+		account, err :=nodeClient.GetAccount(addrBytes)
+		if err != nil {
 			return
 		}
 		nonce = int64(account.Sequence) + 1
 		log.WithFields(log.Fields{
 			"nonce": nonce,
-			"node address": nodeAddr,
 			"account address": fmt.Sprintf("%X", addrBytes),
 			}).Debug("Fetch nonce from node")
 	} else {

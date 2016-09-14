@@ -19,25 +19,20 @@ package core
 import (
 	"testing"
 
+	"github.com/eris-ltd/eris-keys/crypto"
+
+	"github.com?eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
 )
 
 // Unit tests for client/core an idael showcase for the need to
 // modularise and restructure the components of the code.
 
-func TestCheckCommon(t *testing.T) {
 
-}
-
-func TestSendTransaction(t *testing.T) {
-
-}
-
-
-func TestUtilInputAddress(t *testing.T) {
+func TestTransactionFactory(t *testing.T) {
 	// test in parallel
 	t.Run("ExtractInputAddress from transaction", func (t *testing.T) {
-		t.Run("SendTransaction", )
+		t.Run("SendTransaction", testTransactionFactorySend)
 		// t.Run("NameTransaction", )
 		t.Run("CallTransaction", )
 		// t.Run("PermissionTransaction", )
@@ -47,21 +42,12 @@ func TestUtilInputAddress(t *testing.T) {
 	})
 }
 
-func testUtilInputAddressSendTx(t *testing.T) {
+func testTransactionFactorySend(t *testing.T) {
+	mockKeyClient := new(keys.MockKeyClient)
+	mockNodeClient := new(client.MockNodeClient)
 
+	key :=   
+
+	Send(mockNodeClient, mockKeyClient, )
 }
 
-//---------------------------------------------------------------------
-// Mock client for replacing signing done by eris-keys
-
-// NOTE [ben] Compiler check to ensure MockKeysClient successfully implements
-// eris-db/client.KeyClient
-var _ keys.KeyClient = (*MockKeyClient)(nil)
-
-type MockKeyClient struct{}
-
-func (mock *MockKeyClient) Sign(signBytes, signAddress []byte) (signature [64]byte, err error) {
-	return
-}
-
-func (mock *MockKeyClient) PublicKey(address []byte) (publicKey []byte, err error)

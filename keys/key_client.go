@@ -24,7 +24,7 @@ import (
 type KeyClient interface{
 	// Sign needs to return the signature bytes for given message to sign
 	// and the address to sign it with.
-	Sign(signBytes, signAddress []byte) (signature [64]byte, err error)
+	Sign(signBytes, signAddress []byte) (signature []byte, err error)
 	// PublicKey needs to return the public key associated with a given address
 	PublicKey(address []byte) (publicKey []byte, err error)
 }
@@ -39,15 +39,15 @@ struct ErisKeyClient{
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func (erisKeys *ErisKeyClient) New(rpcString string) ErisKeyClient{
-	return &ErisKeysServer{
+func New(rpcString string) *ErisKeyClient{
+	return &ErisKeyClient{
 		rpcString: rpcString,
 	}
 }
 
 // Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *ErisKeyClient) Sign(signBytes, signAddress []byte) (signature [64]byte, err error) {
+func (erisKeys *ErisKeyClient) Sign(signBytes, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
 		"msg":  string(signBytes),
 		"hash": string(signBytes), // TODO:[ben] backwards compatibility

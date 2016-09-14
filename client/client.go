@@ -19,21 +19,33 @@ package client
 import (
 	"github.com/tendermint/go-rpc/client"
 
+	"github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
-type Client interface{
+type NodeClient interface{
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
+
+	GetAccount(address []byte) (account account.Account, error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisClient successfully implements
 // eris-db/client.Client
-var _ Client = (*ErisClient)(nil)
+var _ NodeClient = (*ErisClient)(nil)
 
-// Eris-Client is 
-type ErisClient struct {
+// Eris-Client is a simple struct exposing the client rpc methods 
+
+type ErisNodeClient struct {
 	broadcastRPC string
+}
+
+// ErisKeyClient.New returns a new eris-keys client for provided rpc location
+// Eris-keys connects over http request-responses
+func New(rpcString string) *ErisNodeClient{
+	return &ErisClient{
+		broadcastRPC: rpcString,
+	}
 }
 
 //------------------------------------------------------------------------------------
@@ -41,7 +53,7 @@ type ErisClient struct {
 // NOTE: [ben] Eris Client first continues from tendermint rpc, but will have handshake to negotiate
 // protocol version for moving towards rpc/v1 
 
-func (erisClient *ErisClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
+func (erisClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
 	receipt, err := tendermint_client.BroadcastTx(client, tx)
 	if err != nil {
@@ -49,3 +61,23 @@ func (erisClient *ErisClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	}
 	return &receipt, nil
 }
+
+func (erisClient *ErisNodeClient) GetAccount(address []byte) (account account.Account, error) {
+	// fetch nonce from node
+	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
+	account, err := tendermint_client.GetAccount(client, address)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
+			erisClient.broadcastRPC, address, err.Error())
+		return nil, err
+	}
+	if account == nil {
+		err = fmt.Errorf("Unknown account %X at node (%s)", addrBytes, erisClient.broadcastRPC)
+		return nil, err
+	}
+
+	return account, nil
+}
+
+
+
