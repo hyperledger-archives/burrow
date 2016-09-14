@@ -63,4 +63,3 @@ func TestTransactionFactorySend(t *testing.T) {
 		t.Fail()
 	}
 }
-

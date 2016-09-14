@@ -17,8 +17,8 @@
 package core
 
 import (
-	"fmt"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 
 	log "github.com/eris-ltd/eris-logger"
@@ -77,13 +77,13 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 	sigED = crypto.SignatureEd25519(sig64)
 	log.WithFields(log.Fields{
 		"transaction sign bytes": fmt.Sprintf("%X", signBytes),
-		"account address": fmt.Sprintf("%X", inputAddr),
-		"signature": fmt.Sprintf("%X", sig64), 
-		}).Debug("Signed transaction")
+		"account address":        fmt.Sprintf("%X", inputAddr),
+		"signature":              fmt.Sprintf("%X", sig64),
+	}).Debug("Signed transaction")
 	return inputAddr, tx_, nil
 }
 
-// readInputAddressFromTransacIm not tion returns the hexadecimal string form of the 
+// readInputAddressFromTransacIm not tion returns the hexadecimal string form of the
 // func readInputAddressFromTransaction(tx_ txs.Tx) (addressHex string) {
 // 	// signBytes := fmt.Sprintf("%X", account.SignBytes(chainID, tx_))
 // 	var inputAddr []byte
@@ -120,7 +120,7 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 // 	// 	return nil, nil, err
 // 	// }
 // 	// sigED = crypto.SignatureEd25519(sig)
-// 	return addressHex 
+// 	return addressHex
 // }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) (pub crypto.PubKey, amt int64, nonce int64, err error) {
@@ -137,8 +137,8 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		if addr != "" {
 			log.WithFields(log.Fields{
 				"public key": pubkey,
-				"address": addr,
-				}).Info("you have specified both a pubkey and an address. the pubkey takes precedent")
+				"address":    addr,
+			}).Info("you have specified both a pubkey and an address. the pubkey takes precedent")
 		}
 		pubKeyBytes, err = hex.DecodeString(pubkey)
 		if err != nil {
@@ -187,9 +187,9 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		}
 		nonce = int64(account.Sequence) + 1
 		log.WithFields(log.Fields{
-			"nonce": nonce,
+			"nonce":           nonce,
 			"account address": fmt.Sprintf("%X", addrBytes),
-			}).Debug("Fetch nonce from node")
+		}).Debug("Fetch nonce from node")
 	} else {
 		nonce, err = strconv.ParseInt(nonceS, 10, 64)
 		if err != nil {

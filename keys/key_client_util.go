@@ -44,8 +44,8 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 	endpoint := fmt.Sprintf("%s/%s", addr, method)
 	log.WithFields(log.Fields{
 		"key server endpoint": endpoint,
-		"request body": string(b),
-		}).Debugf("Sending request body to key server")
+		"request body":        string(b),
+	}).Debugf("Sending request body to key server")
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return "", err
@@ -59,10 +59,10 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
 	}
 	log.WithFields(log.Fields{
-		"endpoint": endpoint,
+		"endpoint":     endpoint,
 		"request body": string(b),
-		"response": res,
-		}).Debugf("Received response from key server")
+		"response":     res,
+	}).Debugf("Received response from key server")
 	return res, nil
 }
 

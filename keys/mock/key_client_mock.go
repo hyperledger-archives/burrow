@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	// for the mock of key server we explicitly import
-	// the keys server to ensure the core components are 
+	// the keys server to ensure the core components are
 	// compatible with eris-db.
 	"github.com/eris-ltd/eris-keys/crypto"
 
@@ -34,7 +34,7 @@ import (
 // eris-db/keys.KeyClient
 var _ KeyClient = (*MockKeyClient)(nil)
 
-type MockKeyClient struct{
+type MockKeyClient struct {
 	knownKeys map[string]*crypto.Key
 }
 
@@ -46,8 +46,8 @@ func NewMockKeyClient() *MockKeyClient {
 
 func (mock *MockKeyClient) NewKey() (address []byte) {
 	// Only tests ED25519 curve and ripemd160.
-	keyType := crypto.KeyType{ crypto.CurveTypeEd25519,
-		crypto.AddrTypeRipemd160 }
+	keyType := crypto.KeyType{crypto.CurveTypeEd25519,
+		crypto.AddrTypeRipemd160}
 	key, err := crypto.NewKey(keyType)
 	if err != nil {
 		panic(fmt.Sprintf("Mocked key client failed on key generation (%s): %s", keyType.String(), err))

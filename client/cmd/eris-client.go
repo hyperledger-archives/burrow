@@ -35,7 +35,7 @@ var clientDo *definitions.ClientDo
 var ErisClientCmd = &cobra.Command{
 	Use:   "eris-client",
 	Short: "Eris-client interacts with a running Eris chain.",
-	Long:  `Eris-client interacts with a running Eris chain.
+	Long: `Eris-client interacts with a running Eris chain.
 
 Made with <3 by Eris Industries.
 

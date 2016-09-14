@@ -17,8 +17,8 @@
 package commands
 
 import (
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -30,9 +30,9 @@ import (
 var TransactionCmd = &cobra.Command{
 	Use:   "tx",
 	Short: "eris-client tx formulates and signs a transaction to a chain",
-	Long:  `eris-client tx formulates and signs a transaction to a chain.
+	Long: `eris-client tx formulates and signs a transaction to a chain.
 `,
-	Run:   func(cmd *cobra.Command, args []string) { cmd.Help() },
+	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
 func buildTransactionCommand() {
@@ -46,7 +46,7 @@ func buildTransactionCommand() {
 		Use:   "send",
 		Short: "eris-client tx send --amt <amt> --to <addr>",
 		Long:  "eris-client tx send --amt <amt> --to <addr>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			transaction.Send(clientDo)
 		},
 		PreRun: assertParameters,
@@ -59,7 +59,7 @@ func buildTransactionCommand() {
 		Use:   "name",
 		Short: "eris-client tx name --amt <amt> --name <name> --data <data>",
 		Long:  "eris-client tx name --amt <amt> --name <name> --data <data>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Name(clientDo)
 		},
 		PreRun: assertParameters,
@@ -75,7 +75,7 @@ func buildTransactionCommand() {
 		Use:   "call",
 		Short: "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Long:  "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			transaction.Call(clientDo)
 		},
 		PreRun: assertParameters,
@@ -91,7 +91,7 @@ func buildTransactionCommand() {
 		Use:   "bond",
 		Short: "eris-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
 		Long:  "eris-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Bond(clientDo)
 		},
 		PreRun: assertParameters,
@@ -104,7 +104,7 @@ func buildTransactionCommand() {
 		Use:   "unbond",
 		Short: "eris-client tx unbond --addr <address> --height <block_height>",
 		Long:  "eris-client tx unbond --addr <address> --height <block_height>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Unbond(clientDo)
 		},
 		PreRun: assertParameters,
@@ -117,7 +117,7 @@ func buildTransactionCommand() {
 		Use:   "rebond",
 		Short: "eris-client tx rebond --addr <address> --height <block_height>",
 		Long:  "eris-client tx rebond --addr <address> --height <block_height>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Rebond(clientDo)
 		},
 		PreRun: assertParameters,
@@ -130,7 +130,7 @@ func buildTransactionCommand() {
 		Use:   "permission",
 		Short: "eris-client tx perm <function name> <args ...>",
 		Long:  "eris-client tx perm <function name> <args ...>",
-		Run:   func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Permsissions(clientDo)
 		},
 		PreRun: assertParameters,
@@ -185,7 +185,7 @@ func assertParameters(cmd *cobra.Command, args []string) {
 		log.Fatal(`Please provide a chain id either through the flag --chain-id or environment variable $CHAIN_ID.`)
 		os.Exit(1)
 	}
-	 
+
 	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") &&
 		!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
 		// TODO: [ben] go-rpc will deprecate reformatting; also it is bad practice to auto-correct for this;
@@ -197,11 +197,11 @@ func assertParameters(cmd *cobra.Command, args []string) {
 		clientDo.SignAddrFlag = "http://" + clientDo.SignAddrFlag
 		log.WithFields(log.Fields{
 			"signing address": clientDo.SignAddrFlag,
-			}).Warn(`Please use fully formed listening address for the key server; adding http:// prefix`)
+		}).Warn(`Please use fully formed listening address for the key server; adding http:// prefix`)
 	}
 	log.WithFields(log.Fields{
 		"signing address": clientDo.SignAddrFlag,
-		"node address": clientDo.NodeAddrFlag,
-		"chain id": clientDo.ChainidFlag,
-		}).Debug("Asserted parameters")
+		"node address":    clientDo.NodeAddrFlag,
+		"chain id":        clientDo.ChainidFlag,
+	}).Debug("Asserted parameters")
 }

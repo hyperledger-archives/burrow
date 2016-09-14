@@ -381,7 +381,7 @@ type Msg struct {
 // 	}
 // 	if strings.HasPrefix(nodeAddr, "unix://") {
 // 		log.WithFields(log.Fields{
-// 			"node address": nodeAddr, 
+// 			"node address": nodeAddr,
 // 			}).Warn("Unable to subscribe to websocket from unix socket.")
 // 		return nil, fmt.Errorf("Unable to subscribe to websocket from unix socket: %s", nodeAddr)
 // 	}

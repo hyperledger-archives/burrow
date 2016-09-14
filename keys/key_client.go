@@ -20,7 +20,7 @@ import (
 	"encoding/hex"
 )
 
-type KeyClient interface{
+type KeyClient interface {
 	// Sign needs to return the signature bytes for given message to sign
 	// and the address to sign it with.
 	Sign(signBytes []byte, signAddress []byte) (signature []byte, err error)
@@ -38,7 +38,7 @@ type ErisKeyClient struct {
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisKeyClient(rpcString string) *ErisKeyClient{
+func NewErisKeyClient(rpcString string) *ErisKeyClient {
 	return &ErisKeyClient{
 		rpcString: rpcString,
 	}
@@ -74,8 +74,7 @@ func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err 
 	if err != nil {
 		return
 	}
-	// TODO: [ben] assert that received public key results in 
+	// TODO: [ben] assert that received public key results in
 	// address
 	return hex.DecodeString(pubS)
 }
-

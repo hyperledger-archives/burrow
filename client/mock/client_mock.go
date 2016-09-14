@@ -25,7 +25,7 @@ import (
 )
 
 // NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
-// eris-db/client.NodeClient 
+// eris-db/client.NodeClient
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {
@@ -41,9 +41,9 @@ func NewMockNodeClient() *MockNodeClient {
 func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
-		TxHash: make([]byte, 20, 20),
+		TxHash:          make([]byte, 20, 20),
 		CreatesContract: 0,
-		ContractAddr: make([]byte, 20, 20),
+		ContractAddr:    make([]byte, 20, 20),
 	}
 	return txReceipt, nil
 }
@@ -51,14 +51,14 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	// make zero account
 	var zero [32]byte
-	copyAddressBytes := make([]byte, len(address), len(address)) 
+	copyAddressBytes := make([]byte, len(address), len(address))
 	copy(copyAddressBytes, address)
 	account := &acc.Account{
-		Address: copyAddressBytes,
-		PubKey: crypto.PubKey(crypto.PubKeyEd25519(zero)),
-		Sequence: 0,
-		Balance: 0,
-		Code: make([]byte, 0),
+		Address:     copyAddressBytes,
+		PubKey:      crypto.PubKey(crypto.PubKeyEd25519(zero)),
+		Sequence:    0,
+		Balance:     0,
+		Code:        make([]byte, 0),
 		StorageRoot: make([]byte, 0),
 	}
 	return account, nil
