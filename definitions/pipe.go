@@ -25,9 +25,9 @@ package definitions
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 
 import (
-	tendermint_types "github.com/tendermint/tendermint/types"
-
 	account "github.com/eris-ltd/eris-db/account"
+	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
@@ -37,16 +37,20 @@ import (
 
 type Pipe interface {
 	Accounts() Accounts
-	Blockchain() Blockchain
-	Consensus() Consensus
+	Blockchain() blockchain_types.Blockchain
+	Consensus() consensus_types.Consensus
 	Events() event.EventEmitter
 	NameReg() NameReg
 	Net() Net
 	Transactor() Transactor
+	// Hash of Genesis state
+	GenesisHash() []byte
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
-	SetConsensusEngine(consensus ConsensusEngine) error
-	GetConsensusEngine() ConsensusEngine
+	SetConsensus(consensus consensus_types.Consensus) error
+	GetConsensus() consensus_types.Consensus
+	SetBlockchain(blockchain blockchain_types.Blockchain) error
+	GetBlockchain() blockchain_types.Blockchain
 	// Support for Tendermint RPC
 	GetTendermintPipe() (TendermintPipe, error)
 }
@@ -58,21 +62,6 @@ type Accounts interface {
 	Account(address []byte) (*account.Account, error)
 	Storage(address []byte) (*types.Storage, error)
 	StorageAt(address, key []byte) (*types.StorageItem, error)
-}
-
-type Blockchain interface {
-	Info() (*types.BlockchainInfo, error)
-	GenesisHash() ([]byte, error)
-	ChainId() (string, error)
-	LatestBlockHeight() (int, error)
-	LatestBlock() (*tendermint_types.Block, error)
-	Blocks([]*event.FilterData) (*types.Blocks, error)
-	Block(height int) (*tendermint_types.Block, error)
-}
-
-type Consensus interface {
-	State() (*types.ConsensusState, error)
-	Validators() (*types.ValidatorList, error)
 }
 
 type NameReg interface {

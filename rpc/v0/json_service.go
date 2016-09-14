@@ -64,7 +64,7 @@ func NewErisDbJsonService(codec rpc.Codec, pipe definitions.Pipe,
 	eventSubs *event.EventSubscriptions) server.HttpService {
 
 	tmhttps := &ErisDbJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
-	mtds := &ErisDbMethods{codec, pipe}
+	mtds := NewErisDbMethods(codec, pipe)
 
 	dhMap := mtds.getMethods()
 	// Events

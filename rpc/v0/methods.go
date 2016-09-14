@@ -1,8 +1,11 @@
 package rpc_v0
 
 import (
+	"github.com/eris-ltd/eris-db/blockchain"
+	pipes "github.com/eris-ltd/eris-db/core/pipes"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -50,54 +53,65 @@ const (
 
 // The rpc method handlers.
 type ErisDbMethods struct {
-	codec rpc.Codec
-	pipe  definitions.Pipe
+	codec         rpc.Codec
+	pipe          definitions.Pipe
+	filterFactory *event.FilterFactory
+}
+
+func NewErisDbMethods(codec rpc.Codec,
+	pipe definitions.Pipe) *ErisDbMethods {
+
+	return &ErisDbMethods{
+		codec:         codec,
+		pipe:          pipe,
+		filterFactory: blockchain.NewBlockchainFilterFactory(),
+	}
 }
 
 // Used to handle requests. interface{} param is a wildcard used for example with socket events.
 type RequestHandlerFunc func(*rpc.RPCRequest, interface{}) (interface{}, int, error)
 
 // Private. Create a method name -> method handler map.
-func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
+func (erisDbMethods *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap := make(map[string]RequestHandlerFunc)
 	// Accounts
-	dhMap[GET_ACCOUNTS] = this.Accounts
-	dhMap[GET_ACCOUNT] = this.Account
-	dhMap[GET_STORAGE] = this.AccountStorage
-	dhMap[GET_STORAGE_AT] = this.AccountStorageAt
-	dhMap[GEN_PRIV_ACCOUNT] = this.GenPrivAccount
-	dhMap[GEN_PRIV_ACCOUNT_FROM_KEY] = this.GenPrivAccountFromKey
+	dhMap[GET_ACCOUNTS] = erisDbMethods.Accounts
+	dhMap[GET_ACCOUNT] = erisDbMethods.Account
+	dhMap[GET_STORAGE] = erisDbMethods.AccountStorage
+	dhMap[GET_STORAGE_AT] = erisDbMethods.AccountStorageAt
+	dhMap[GEN_PRIV_ACCOUNT] = erisDbMethods.GenPrivAccount
+	dhMap[GEN_PRIV_ACCOUNT_FROM_KEY] = erisDbMethods.GenPrivAccountFromKey
 	// Blockchain
-	dhMap[GET_BLOCKCHAIN_INFO] = this.BlockchainInfo
-	dhMap[GET_GENESIS_HASH] = this.GenesisHash
-	dhMap[GET_LATEST_BLOCK_HEIGHT] = this.LatestBlockHeight
-	dhMap[GET_LATEST_BLOCK] = this.LatestBlock
-	dhMap[GET_BLOCKS] = this.Blocks
-	dhMap[GET_BLOCK] = this.Block
+	dhMap[GET_BLOCKCHAIN_INFO] = erisDbMethods.BlockchainInfo
+	dhMap[GET_GENESIS_HASH] = erisDbMethods.GenesisHash
+	dhMap[GET_LATEST_BLOCK_HEIGHT] = erisDbMethods.LatestBlockHeight
+	dhMap[GET_LATEST_BLOCK] = erisDbMethods.LatestBlock
+	dhMap[GET_BLOCKS] = erisDbMethods.Blocks
+	dhMap[GET_BLOCK] = erisDbMethods.Block
 	// Consensus
-	dhMap[GET_CONSENSUS_STATE] = this.ConsensusState
-	dhMap[GET_VALIDATORS] = this.Validators
+	dhMap[GET_CONSENSUS_STATE] = erisDbMethods.ConsensusState
+	dhMap[GET_VALIDATORS] = erisDbMethods.Validators
 	// Network
-	dhMap[GET_NETWORK_INFO] = this.NetworkInfo
-	dhMap[GET_CLIENT_VERSION] = this.ClientVersion
-	dhMap[GET_MONIKER] = this.Moniker
-	dhMap[GET_CHAIN_ID] = this.ChainId
-	dhMap[IS_LISTENING] = this.Listening
-	dhMap[GET_LISTENERS] = this.Listeners
-	dhMap[GET_PEERS] = this.Peers
-	dhMap[GET_PEER] = this.Peer
+	dhMap[GET_NETWORK_INFO] = erisDbMethods.NetworkInfo
+	dhMap[GET_CLIENT_VERSION] = erisDbMethods.ClientVersion
+	dhMap[GET_MONIKER] = erisDbMethods.Moniker
+	dhMap[GET_CHAIN_ID] = erisDbMethods.ChainId
+	dhMap[IS_LISTENING] = erisDbMethods.Listening
+	dhMap[GET_LISTENERS] = erisDbMethods.Listeners
+	dhMap[GET_PEERS] = erisDbMethods.Peers
+	dhMap[GET_PEER] = erisDbMethods.Peer
 	// Txs
-	dhMap[CALL] = this.Call
-	dhMap[CALL_CODE] = this.CallCode
-	dhMap[BROADCAST_TX] = this.BroadcastTx
-	dhMap[GET_UNCONFIRMED_TXS] = this.UnconfirmedTxs
-	dhMap[SIGN_TX] = this.SignTx
-	dhMap[TRANSACT] = this.Transact
-	dhMap[TRANSACT_AND_HOLD] = this.TransactAndHold
-	dhMap[TRANSACT_NAMEREG] = this.TransactNameReg
+	dhMap[CALL] = erisDbMethods.Call
+	dhMap[CALL_CODE] = erisDbMethods.CallCode
+	dhMap[BROADCAST_TX] = erisDbMethods.BroadcastTx
+	dhMap[GET_UNCONFIRMED_TXS] = erisDbMethods.UnconfirmedTxs
+	dhMap[SIGN_TX] = erisDbMethods.SignTx
+	dhMap[TRANSACT] = erisDbMethods.Transact
+	dhMap[TRANSACT_AND_HOLD] = erisDbMethods.TransactAndHold
+	dhMap[TRANSACT_NAMEREG] = erisDbMethods.TransactNameReg
 	// Namereg
-	dhMap[GET_NAMEREG_ENTRY] = this.NameRegEntry
-	dhMap[GET_NAMEREG_ENTRIES] = this.NameRegEntries
+	dhMap[GET_NAMEREG_ENTRY] = erisDbMethods.NameRegEntry
+	dhMap[GET_NAMEREG_ENTRIES] = erisDbMethods.NameRegEntries
 
 	return dhMap
 }
@@ -107,81 +121,81 @@ func (this *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 
 // *************************************** Accounts ***************************************
 
-func (this *ErisDbMethods) GenPrivAccount(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	pac, errC := this.pipe.Accounts().GenPrivAccount()
+func (erisDbMethods *ErisDbMethods) GenPrivAccount(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	pac, errC := erisDbMethods.pipe.Accounts().GenPrivAccount()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return pac, 0, nil
 }
 
-func (this *ErisDbMethods) GenPrivAccountFromKey(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) GenPrivAccountFromKey(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 
 	param := &PrivKeyParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 
 	privKey := param.PrivKey
-	pac, errC := this.pipe.Accounts().GenPrivAccountFromKey(privKey)
+	pac, errC := erisDbMethods.pipe.Accounts().GenPrivAccountFromKey(privKey)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return pac, 0, nil
 }
 
-func (this *ErisDbMethods) Account(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Account(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AddressParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
 	// TODO is address check?
-	account, errC := this.pipe.Accounts().Account(address)
+	account, errC := erisDbMethods.pipe.Accounts().Account(address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return account, 0, nil
 }
 
-func (this *ErisDbMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AccountsParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	list, errC := this.pipe.Accounts().Accounts(param.Filters)
+	list, errC := erisDbMethods.pipe.Accounts().Accounts(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return list, 0, nil
 }
 
-func (this *ErisDbMethods) AccountStorage(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) AccountStorage(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AddressParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	storage, errC := this.pipe.Accounts().Storage(address)
+	storage, errC := erisDbMethods.pipe.Accounts().Storage(address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return storage, 0, nil
 }
 
-func (this *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &StorageAtParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
 	key := param.Key
-	storageItem, errC := this.pipe.Accounts().StorageAt(address, key)
+	storageItem, errC := erisDbMethods.pipe.Accounts().StorageAt(address, key)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -190,150 +204,129 @@ func (this *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, requester i
 
 // *************************************** Blockchain ************************************
 
-func (this *ErisDbMethods) BlockchainInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	status, errC := this.pipe.Blockchain().Info()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
-	return status, 0, nil
+func (erisDbMethods *ErisDbMethods) BlockchainInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	return pipes.BlockchainInfo(erisDbMethods.pipe), 0, nil
 }
 
-func (this *ErisDbMethods) ChainId(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	chainId, errC := this.pipe.Blockchain().ChainId()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) ChainId(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	chainId := erisDbMethods.pipe.Blockchain().ChainId()
 	return &core_types.ChainId{chainId}, 0, nil
 }
 
-func (this *ErisDbMethods) GenesisHash(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	hash, errC := this.pipe.Blockchain().GenesisHash()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) GenesisHash(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	hash := erisDbMethods.pipe.GenesisHash()
 	return &core_types.GenesisHash{hash}, 0, nil
 }
 
-func (this *ErisDbMethods) LatestBlockHeight(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	height, errC := this.pipe.Blockchain().LatestBlockHeight()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) LatestBlockHeight(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	height := erisDbMethods.pipe.Blockchain().Height()
 	return &core_types.LatestBlockHeight{height}, 0, nil
 }
 
-func (this *ErisDbMethods) LatestBlock(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-
-	block, errC := this.pipe.Blockchain().LatestBlock()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) LatestBlock(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	latestHeight := erisDbMethods.pipe.Blockchain().Height()
+	block := erisDbMethods.pipe.Blockchain().Block(latestHeight)
 	return block, 0, nil
 }
 
-func (this *ErisDbMethods) Blocks(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Blocks(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &BlocksParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	blocks, errC := this.pipe.Blockchain().Blocks(param.Filters)
+	blocks, errC := blockchain.FilterBlocks(erisDbMethods.pipe.Blockchain(), erisDbMethods.filterFactory, param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return blocks, 0, nil
 }
 
-func (this *ErisDbMethods) Block(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Block(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &HeightParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	height := param.Height
-	block, errC := this.pipe.Blockchain().Block(height)
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	block := erisDbMethods.pipe.Blockchain().Block(height)
 	return block, 0, nil
 }
 
 // *************************************** Consensus ************************************
 
-func (this *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	state, errC := this.pipe.Consensus().State()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
+	// core_types.FromRoundState() will do it, but only if we have access to
+	// Tendermint's RonudState..
+	state := &core_types.ConsensusState{}
 	return state, 0, nil
 }
 
-func (this *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	validators, errC := this.pipe.Consensus().Validators()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
+	validators := &core_types.ValidatorList{}
 	return validators, 0, nil
 }
 
 // *************************************** Net ************************************
 
-func (this *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	info, errC := this.pipe.Net().Info()
+func (erisDbMethods *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	info, errC := erisDbMethods.pipe.Net().Info()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return info, 0, nil
 }
 
-func (this *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	version, errC := this.pipe.Net().ClientVersion()
+func (erisDbMethods *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	version, errC := erisDbMethods.pipe.Net().ClientVersion()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &core_types.ClientVersion{version}, 0, nil
 }
 
-func (this *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	moniker, errC := this.pipe.Net().Moniker()
+func (erisDbMethods *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	moniker, errC := erisDbMethods.pipe.Net().Moniker()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &core_types.Moniker{moniker}, 0, nil
 }
 
-func (this *ErisDbMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listening, errC := this.pipe.Net().Listening()
+func (erisDbMethods *ErisDbMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	listening, errC := erisDbMethods.pipe.Net().Listening()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &core_types.Listening{listening}, 0, nil
 }
 
-func (this *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listeners, errC := this.pipe.Net().Listeners()
+func (erisDbMethods *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	listeners, errC := erisDbMethods.pipe.Net().Listeners()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return &core_types.Listeners{listeners}, 0, nil
 }
 
-func (this *ErisDbMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	peers, errC := this.pipe.Net().Peers()
+func (erisDbMethods *ErisDbMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	peers, errC := erisDbMethods.pipe.Net().Peers()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return peers, 0, nil
 }
 
-func (this *ErisDbMethods) Peer(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Peer(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &PeerParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	peer, errC := this.pipe.Net().Peer(address)
+	peer, errC := erisDbMethods.pipe.Net().Peer(address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -342,107 +335,107 @@ func (this *ErisDbMethods) Peer(request *rpc.RPCRequest, requester interface{}) 
 
 // *************************************** Txs ************************************
 
-func (this *ErisDbMethods) Call(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Call(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &CallParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	from := param.From
 	to := param.Address
 	data := param.Data
-	call, errC := this.pipe.Transactor().Call(from, to, data)
+	call, errC := erisDbMethods.pipe.Transactor().Call(from, to, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return call, 0, nil
 }
 
-func (this *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &CallCodeParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	from := param.From
 	code := param.Code
 	data := param.Data
-	call, errC := this.pipe.Transactor().CallCode(from, code, data)
+	call, errC := erisDbMethods.pipe.Transactor().CallCode(from, code, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return call, 0, nil
 }
 
-func (this *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &txs.CallTx{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := this.pipe.Transactor().BroadcastTx(param)
+	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (this *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	receipt, errC := erisDbMethods.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (this *ErisDbMethods) TransactAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) TransactAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	ce, errC := this.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	ce, errC := erisDbMethods.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return ce, 0, nil
 }
 
-func (this *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactNameRegParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := this.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+	receipt, errC := erisDbMethods.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (this *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	txs, errC := this.pipe.Transactor().UnconfirmedTxs()
+func (erisDbMethods *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	txs, errC := erisDbMethods.pipe.Transactor().UnconfirmedTxs()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return txs, 0, nil
 }
 
-func (this *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SignTxParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	tx := param.Tx
 	pAccs := param.PrivAccounts
-	txRet, errC := this.pipe.Transactor().SignTx(tx, pAccs)
+	txRet, errC := erisDbMethods.pipe.Transactor().SignTx(tx, pAccs)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -451,28 +444,28 @@ func (this *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}
 
 // *************************************** Name Registry ***************************************
 
-func (this *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &NameRegEntryParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	name := param.Name
 	// TODO is address check?
-	entry, errC := this.pipe.NameReg().Entry(name)
+	entry, errC := erisDbMethods.pipe.NameReg().Entry(name)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return entry, 0, nil
 }
 
-func (this *ErisDbMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (erisDbMethods *ErisDbMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &FilterListParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	list, errC := this.pipe.NameReg().Entries(param.Filters)
+	list, errC := erisDbMethods.pipe.NameReg().Entries(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

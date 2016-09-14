@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/eris-ltd/eris-db/blockchain"
+	"github.com/eris-ltd/eris-db/core/pipes"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
@@ -21,465 +23,453 @@ import (
 // TODO more routers. Also, start looking into how better status codes
 // can be gotten.
 type RestServer struct {
-	codec     rpc.Codec
-	pipe      definitions.Pipe
-	eventSubs *event.EventSubscriptions
-	running   bool
+	codec         rpc.Codec
+	pipe          definitions.Pipe
+	eventSubs     *event.EventSubscriptions
+	filterFactory *event.FilterFactory
+	running       bool
 }
 
 // Create a new rest server.
 func NewRestServer(codec rpc.Codec, pipe definitions.Pipe,
 	eventSubs *event.EventSubscriptions) *RestServer {
-	return &RestServer{codec: codec, pipe: pipe, eventSubs: eventSubs}
+	return &RestServer{
+		codec:         codec,
+		pipe:          pipe,
+		eventSubs:     eventSubs,
+		filterFactory: blockchain.NewBlockchainFilterFactory(),
+	}
 }
 
 // Starting the server means registering all the handlers with the router.
-func (this *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
+func (restServer *RestServer) Start(config *server.ServerConfig, router *gin.Engine) {
 	// Accounts
-	router.GET("/accounts", parseSearchQuery, this.handleAccounts)
-	router.GET("/accounts/:address", addressParam, this.handleAccount)
-	router.GET("/accounts/:address/storage", addressParam, this.handleStorage)
-	router.GET("/accounts/:address/storage/:key", addressParam, keyParam, this.handleStorageAt)
+	router.GET("/accounts", parseSearchQuery, restServer.handleAccounts)
+	router.GET("/accounts/:address", addressParam, restServer.handleAccount)
+	router.GET("/accounts/:address/storage", addressParam, restServer.handleStorage)
+	router.GET("/accounts/:address/storage/:key", addressParam, keyParam, restServer.handleStorageAt)
 	// Blockchain
-	router.GET("/blockchain", this.handleBlockchainInfo)
-	router.GET("/blockchain/chain_id", this.handleChainId)
-	router.GET("/blockchain/genesis_hash", this.handleGenesisHash)
-	router.GET("/blockchain/latest_block_height", this.handleLatestBlockHeight)
-	router.GET("/blockchain/latest_block", this.handleLatestBlock)
-	router.GET("/blockchain/blocks", parseSearchQuery, this.handleBlocks)
-	router.GET("/blockchain/block/:height", heightParam, this.handleBlock)
+	router.GET("/blockchain", restServer.handleBlockchainInfo)
+	router.GET("/blockchain/chain_id", restServer.handleChainId)
+	router.GET("/blockchain/genesis_hash", restServer.handleGenesisHash)
+	router.GET("/blockchain/latest_block_height", restServer.handleLatestBlockHeight)
+	router.GET("/blockchain/latest_block", restServer.handleLatestBlock)
+	router.GET("/blockchain/blocks", parseSearchQuery, restServer.handleBlocks)
+	router.GET("/blockchain/block/:height", heightParam, restServer.handleBlock)
 	// Consensus
-	router.GET("/consensus", this.handleConsensusState)
-	router.GET("/consensus/validators", this.handleValidatorList)
+	router.GET("/consensus", restServer.handleConsensusState)
+	router.GET("/consensus/validators", restServer.handleValidatorList)
 	// Events
-	router.POST("/event_subs", this.handleEventSubscribe)
-	router.GET("/event_subs/:id", this.handleEventPoll)
-	router.DELETE("/event_subs/:id", this.handleEventUnsubscribe)
+	router.POST("/event_subs", restServer.handleEventSubscribe)
+	router.GET("/event_subs/:id", restServer.handleEventPoll)
+	router.DELETE("/event_subs/:id", restServer.handleEventUnsubscribe)
 	// NameReg
-	router.GET("/namereg", parseSearchQuery, this.handleNameRegEntries)
-	router.GET("/namereg/:key", nameParam, this.handleNameRegEntry)
+	router.GET("/namereg", parseSearchQuery, restServer.handleNameRegEntries)
+	router.GET("/namereg/:key", nameParam, restServer.handleNameRegEntry)
 	// Network
-	router.GET("/network", this.handleNetworkInfo)
-	router.GET("/network/client_version", this.handleClientVersion)
-	router.GET("/network/moniker", this.handleMoniker)
-	router.GET("/network/listening", this.handleListening)
-	router.GET("/network/listeners", this.handleListeners)
-	router.GET("/network/peers", this.handlePeers)
-	router.GET("/network/peers/:address", peerAddressParam, this.handlePeer)
+	router.GET("/network", restServer.handleNetworkInfo)
+	router.GET("/network/client_version", restServer.handleClientVersion)
+	router.GET("/network/moniker", restServer.handleMoniker)
+	router.GET("/network/listening", restServer.handleListening)
+	router.GET("/network/listeners", restServer.handleListeners)
+	router.GET("/network/peers", restServer.handlePeers)
+	router.GET("/network/peers/:address", peerAddressParam, restServer.handlePeer)
 	// Tx related (TODO get txs has still not been implemented)
-	router.POST("/txpool", this.handleBroadcastTx)
-	router.GET("/txpool", this.handleUnconfirmedTxs)
+	router.POST("/txpool", restServer.handleBroadcastTx)
+	router.GET("/txpool", restServer.handleUnconfirmedTxs)
 	// Code execution
-	router.POST("/calls", this.handleCall)
-	router.POST("/codecalls", this.handleCallCode)
+	router.POST("/calls", restServer.handleCall)
+	router.POST("/codecalls", restServer.handleCallCode)
 	// Unsafe
-	router.GET("/unsafe/pa_generator", this.handleGenPrivAcc)
-	router.POST("/unsafe/txpool", parseTxModifier, this.handleTransact)
-	router.POST("/unsafe/namereg/txpool", this.handleTransactNameReg)
-	router.POST("/unsafe/tx_signer", this.handleSignTx)
-	this.running = true
+	router.GET("/unsafe/pa_generator", restServer.handleGenPrivAcc)
+	router.POST("/unsafe/txpool", parseTxModifier, restServer.handleTransact)
+	router.POST("/unsafe/namereg/txpool", restServer.handleTransactNameReg)
+	router.POST("/unsafe/tx_signer", restServer.handleSignTx)
+	restServer.running = true
 }
 
 // Is the server currently running?
-func (this *RestServer) Running() bool {
-	return this.running
+func (restServer *RestServer) Running() bool {
+	return restServer.running
 }
 
 // Shut the server down. Does nothing.
-func (this *RestServer) ShutDown() {
-	this.running = false
+func (restServer *RestServer) ShutDown() {
+	restServer.running = false
 }
 
 // ********************************* Accounts *********************************
 
-func (this *RestServer) handleGenPrivAcc(c *gin.Context) {
+func (restServer *RestServer) handleGenPrivAcc(c *gin.Context) {
 	addr := &AddressParam{}
 
 	var acc interface{}
 	var err error
 	if addr.Address == nil || len(addr.Address) == 0 {
-		acc, err = this.pipe.Accounts().GenPrivAccount()
+		acc, err = restServer.pipe.Accounts().GenPrivAccount()
 	} else {
-		acc, err = this.pipe.Accounts().GenPrivAccountFromKey(addr.Address)
+		acc, err = restServer.pipe.Accounts().GenPrivAccountFromKey(addr.Address)
 	}
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(acc, c.Writer)
+	restServer.codec.Encode(acc, c.Writer)
 }
 
-func (this *RestServer) handleAccounts(c *gin.Context) {
+func (restServer *RestServer) handleAccounts(c *gin.Context) {
 	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
 		filters = fs.([]*event.FilterData)
 	}
-	accs, err := this.pipe.Accounts().Accounts(filters)
+	accs, err := restServer.pipe.Accounts().Accounts(filters)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(accs, c.Writer)
+	restServer.codec.Encode(accs, c.Writer)
 }
 
-func (this *RestServer) handleAccount(c *gin.Context) {
+func (restServer *RestServer) handleAccount(c *gin.Context) {
 	addr := c.MustGet("addrBts").([]byte)
-	acc, err := this.pipe.Accounts().Account(addr)
+	acc, err := restServer.pipe.Accounts().Account(addr)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(acc, c.Writer)
+	restServer.codec.Encode(acc, c.Writer)
 }
 
-func (this *RestServer) handleStorage(c *gin.Context) {
+func (restServer *RestServer) handleStorage(c *gin.Context) {
 	addr := c.MustGet("addrBts").([]byte)
-	s, err := this.pipe.Accounts().Storage(addr)
+	s, err := restServer.pipe.Accounts().Storage(addr)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(s, c.Writer)
+	restServer.codec.Encode(s, c.Writer)
 }
 
-func (this *RestServer) handleStorageAt(c *gin.Context) {
+func (restServer *RestServer) handleStorageAt(c *gin.Context) {
 	addr := c.MustGet("addrBts").([]byte)
 	key := c.MustGet("keyBts").([]byte)
-	sa, err := this.pipe.Accounts().StorageAt(addr, key)
+	sa, err := restServer.pipe.Accounts().StorageAt(addr, key)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(sa, c.Writer)
+	restServer.codec.Encode(sa, c.Writer)
 }
 
 // ********************************* Blockchain *********************************
 
-func (this *RestServer) handleBlockchainInfo(c *gin.Context) {
-	bci, err := this.pipe.Blockchain().Info()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleBlockchainInfo(c *gin.Context) {
+	bci := pipes.BlockchainInfo(restServer.pipe)
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(bci, c.Writer)
+	restServer.codec.Encode(bci, c.Writer)
 }
 
-func (this *RestServer) handleGenesisHash(c *gin.Context) {
-	gh, err := this.pipe.Blockchain().GenesisHash()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleGenesisHash(c *gin.Context) {
+	gh := restServer.pipe.GenesisHash()
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.GenesisHash{gh}, c.Writer)
+	restServer.codec.Encode(&core_types.GenesisHash{gh}, c.Writer)
 }
 
-func (this *RestServer) handleChainId(c *gin.Context) {
-	cId, err := this.pipe.Blockchain().ChainId()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleChainId(c *gin.Context) {
+	cId := restServer.pipe.Blockchain().ChainId()
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.ChainId{cId}, c.Writer)
+	restServer.codec.Encode(&core_types.ChainId{cId}, c.Writer)
 }
 
-func (this *RestServer) handleLatestBlockHeight(c *gin.Context) {
-	lbh, err := this.pipe.Blockchain().LatestBlockHeight()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleLatestBlockHeight(c *gin.Context) {
+	lbh := restServer.pipe.Blockchain().Height()
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.LatestBlockHeight{lbh}, c.Writer)
+	restServer.codec.Encode(&core_types.LatestBlockHeight{lbh}, c.Writer)
 }
 
-func (this *RestServer) handleLatestBlock(c *gin.Context) {
-	lb, err := this.pipe.Blockchain().LatestBlock()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleLatestBlock(c *gin.Context) {
+	latestHeight := restServer.pipe.Blockchain().Height()
+	lb := restServer.pipe.Blockchain().Block(latestHeight)
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(lb, c.Writer)
+	restServer.codec.Encode(lb, c.Writer)
 }
 
-func (this *RestServer) handleBlocks(c *gin.Context) {
+func (restServer *RestServer) handleBlocks(c *gin.Context) {
 	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
 		filters = fs.([]*event.FilterData)
 	}
 
-	blocks, err := this.pipe.Blockchain().Blocks(filters)
+	blocks, err := blockchain.FilterBlocks(restServer.pipe.Blockchain(),
+		restServer.filterFactory, filters)
+
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(blocks, c.Writer)
+	restServer.codec.Encode(blocks, c.Writer)
 }
 
-func (this *RestServer) handleBlock(c *gin.Context) {
+func (restServer *RestServer) handleBlock(c *gin.Context) {
 	height := c.MustGet("height").(int)
-	block, err := this.pipe.Blockchain().Block(height)
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	block := restServer.pipe.Blockchain().Block(height)
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(block, c.Writer)
+	restServer.codec.Encode(block, c.Writer)
 }
 
 // ********************************* Consensus *********************************
-func (this *RestServer) handleConsensusState(c *gin.Context) {
-
-	cs, err := this.pipe.Consensus().State()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleConsensusState(c *gin.Context) {
+	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
+	// core_types.FromRoundState() will do it, but only if we have access to
+	// Tendermint's RonudState..
+	cs := &core_types.ConsensusState{}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(cs, c.Writer)
+	restServer.codec.Encode(cs, c.Writer)
 }
 
-func (this *RestServer) handleValidatorList(c *gin.Context) {
-	vl, err := this.pipe.Consensus().Validators()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+func (restServer *RestServer) handleValidatorList(c *gin.Context) {
+	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
+	vl := &core_types.ValidatorList{}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(vl, c.Writer)
+	restServer.codec.Encode(vl, c.Writer)
 }
 
 // ********************************* Events *********************************
 
-func (this *RestServer) handleEventSubscribe(c *gin.Context) {
+func (restServer *RestServer) handleEventSubscribe(c *gin.Context) {
 	param := &EventIdParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	subId, err := this.eventSubs.Add(param.EventId)
+	subId, err := restServer.eventSubs.Add(param.EventId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&event.EventSub{subId}, c.Writer)
+	restServer.codec.Encode(&event.EventSub{subId}, c.Writer)
 }
 
-func (this *RestServer) handleEventPoll(c *gin.Context) {
+func (restServer *RestServer) handleEventPoll(c *gin.Context) {
 	subId := c.MustGet("id").(string)
-	data, err := this.eventSubs.Poll(subId)
+	data, err := restServer.eventSubs.Poll(subId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&event.PollResponse{data}, c.Writer)
+	restServer.codec.Encode(&event.PollResponse{data}, c.Writer)
 }
 
-func (this *RestServer) handleEventUnsubscribe(c *gin.Context) {
+func (restServer *RestServer) handleEventUnsubscribe(c *gin.Context) {
 	subId := c.MustGet("id").(string)
-	err := this.eventSubs.Remove(subId)
+	err := restServer.eventSubs.Remove(subId)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&event.EventUnsub{true}, c.Writer)
+	restServer.codec.Encode(&event.EventUnsub{true}, c.Writer)
 }
 
 // ********************************* NameReg *********************************
 
-func (this *RestServer) handleNameRegEntries(c *gin.Context) {
+func (restServer *RestServer) handleNameRegEntries(c *gin.Context) {
 	var filters []*event.FilterData
 	fs, exists := c.Get("filters")
 	if exists {
 		filters = fs.([]*event.FilterData)
 	}
-	entries, err := this.pipe.NameReg().Entries(filters)
+	entries, err := restServer.pipe.NameReg().Entries(filters)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(entries, c.Writer)
+	restServer.codec.Encode(entries, c.Writer)
 }
 
-func (this *RestServer) handleNameRegEntry(c *gin.Context) {
+func (restServer *RestServer) handleNameRegEntry(c *gin.Context) {
 	name := c.MustGet("name").(string)
-	entry, err := this.pipe.NameReg().Entry(name)
+	entry, err := restServer.pipe.NameReg().Entry(name)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(entry, c.Writer)
+	restServer.codec.Encode(entry, c.Writer)
 }
 
 // ********************************* Network *********************************
 
-func (this *RestServer) handleNetworkInfo(c *gin.Context) {
-	nInfo, err := this.pipe.Net().Info()
+func (restServer *RestServer) handleNetworkInfo(c *gin.Context) {
+	nInfo, err := restServer.pipe.Net().Info()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(nInfo, c.Writer)
+	restServer.codec.Encode(nInfo, c.Writer)
 }
 
-func (this *RestServer) handleClientVersion(c *gin.Context) {
-	version, err := this.pipe.Net().ClientVersion()
+func (restServer *RestServer) handleClientVersion(c *gin.Context) {
+	version, err := restServer.pipe.Net().ClientVersion()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.ClientVersion{version}, c.Writer)
+	restServer.codec.Encode(&core_types.ClientVersion{version}, c.Writer)
 }
 
-func (this *RestServer) handleMoniker(c *gin.Context) {
-	moniker, err := this.pipe.Net().Moniker()
+func (restServer *RestServer) handleMoniker(c *gin.Context) {
+	moniker, err := restServer.pipe.Net().Moniker()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.Moniker{moniker}, c.Writer)
+	restServer.codec.Encode(&core_types.Moniker{moniker}, c.Writer)
 }
 
-func (this *RestServer) handleListening(c *gin.Context) {
-	listening, err := this.pipe.Net().Listening()
+func (restServer *RestServer) handleListening(c *gin.Context) {
+	listening, err := restServer.pipe.Net().Listening()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.Listening{listening}, c.Writer)
+	restServer.codec.Encode(&core_types.Listening{listening}, c.Writer)
 }
 
-func (this *RestServer) handleListeners(c *gin.Context) {
-	listeners, err := this.pipe.Net().Listeners()
+func (restServer *RestServer) handleListeners(c *gin.Context) {
+	listeners, err := restServer.pipe.Net().Listeners()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(&core_types.Listeners{listeners}, c.Writer)
+	restServer.codec.Encode(&core_types.Listeners{listeners}, c.Writer)
 }
 
-func (this *RestServer) handlePeers(c *gin.Context) {
-	peers, err := this.pipe.Net().Peers()
+func (restServer *RestServer) handlePeers(c *gin.Context) {
+	peers, err := restServer.pipe.Net().Peers()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(peers, c.Writer)
+	restServer.codec.Encode(peers, c.Writer)
 }
 
-func (this *RestServer) handlePeer(c *gin.Context) {
+func (restServer *RestServer) handlePeer(c *gin.Context) {
 	address := c.MustGet("address").(string)
-	peer, err := this.pipe.Net().Peer(address)
+	peer, err := restServer.pipe.Net().Peer(address)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(peer, c.Writer)
+	restServer.codec.Encode(peer, c.Writer)
 }
 
 // ********************************* Transactions *********************************
 
-func (this *RestServer) handleBroadcastTx(c *gin.Context) {
+func (restServer *RestServer) handleBroadcastTx(c *gin.Context) {
 	param := &txs.CallTx{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().BroadcastTx(param)
+	receipt, err := restServer.pipe.Transactor().BroadcastTx(param)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(receipt, c.Writer)
+	restServer.codec.Encode(receipt, c.Writer)
 }
 
-func (this *RestServer) handleUnconfirmedTxs(c *gin.Context) {
+func (restServer *RestServer) handleUnconfirmedTxs(c *gin.Context) {
 
-	txs, err := this.pipe.Transactor().UnconfirmedTxs()
+	txs, err := restServer.pipe.Transactor().UnconfirmedTxs()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(txs, c.Writer)
+	restServer.codec.Encode(txs, c.Writer)
 }
 
-func (this *RestServer) handleCall(c *gin.Context) {
+func (restServer *RestServer) handleCall(c *gin.Context) {
 	param := &CallParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	call, err := this.pipe.Transactor().Call(param.From, param.Address, param.Data)
+	call, err := restServer.pipe.Transactor().Call(param.From, param.Address, param.Data)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(call, c.Writer)
+	restServer.codec.Encode(call, c.Writer)
 }
 
-func (this *RestServer) handleCallCode(c *gin.Context) {
+func (restServer *RestServer) handleCallCode(c *gin.Context) {
 	param := &CallCodeParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	call, err := this.pipe.Transactor().CallCode(param.From, param.Code, param.Data)
+	call, err := restServer.pipe.Transactor().CallCode(param.From, param.Code, param.Data)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(call, c.Writer)
+	restServer.codec.Encode(call, c.Writer)
 }
 
-func (this *RestServer) handleTransact(c *gin.Context) {
+func (restServer *RestServer) handleTransact(c *gin.Context) {
 
 	_, hold := c.Get("hold")
 
 	param := &TransactParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
 	if hold {
-		res, err := this.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+		res, err := restServer.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 		if err != nil {
 			c.AbortWithError(500, err)
 		}
 		c.Writer.WriteHeader(200)
-		this.codec.Encode(res, c.Writer)
+		restServer.codec.Encode(res, c.Writer)
 	} else {
-		receipt, err := this.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+		receipt, err := restServer.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 		if err != nil {
 			c.AbortWithError(500, err)
 		}
 		c.Writer.WriteHeader(200)
-		this.codec.Encode(receipt, c.Writer)
+		restServer.codec.Encode(receipt, c.Writer)
 	}
 }
 
-func (this *RestServer) handleTransactNameReg(c *gin.Context) {
+func (restServer *RestServer) handleTransactNameReg(c *gin.Context) {
 	param := &TransactNameRegParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	receipt, err := this.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+	receipt, err := restServer.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(receipt, c.Writer)
+	restServer.codec.Encode(receipt, c.Writer)
 }
 
-func (this *RestServer) handleSignTx(c *gin.Context) {
+func (restServer *RestServer) handleSignTx(c *gin.Context) {
 	param := &SignTxParam{}
-	errD := this.codec.Decode(param, c.Request.Body)
+	errD := restServer.codec.Decode(param, c.Request.Body)
 	if errD != nil {
 		c.AbortWithError(500, errD)
 	}
-	tx, err := this.pipe.Transactor().SignTx(param.Tx, param.PrivAccounts)
+	tx, err := restServer.pipe.Transactor().SignTx(param.Tx, param.PrivAccounts)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	this.codec.Encode(tx, c.Writer)
+	restServer.codec.Encode(tx, c.Writer)
 }
 
 // ********************************* Middleware *********************************
@@ -601,7 +591,7 @@ func toFilterData(field, stmt string) (*event.FilterData, *event.FilterData, err
 	}
 	// Simple routine based on string splitting. TODO add quoted range query.
 	if stmt[0] == '>' || stmt[0] == '<' || stmt[0] == '=' || stmt[0] == '!' {
-		// This means a normal operator. If one character then stop, otherwise
+		// restServer means a normal operator. If one character then stop, otherwise
 		// peek at next and check if it's a "=".
 
 		if len(stmt) == 1 {
@@ -614,7 +604,7 @@ func toFilterData(field, stmt string) (*event.FilterData, *event.FilterData, err
 	} else {
 		// Either we have a range query here or a malformed query.
 		rng := strings.Split(stmt, "..")
-		// This is for when there is no op, but the value is not empty.
+		// restServer is for when there is no op, but the value is not empty.
 		if len(rng) == 1 {
 			return &event.FilterData{field, "==", stmt}, nil, nil
 		}

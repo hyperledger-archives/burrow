@@ -24,7 +24,7 @@ type ErisDbWsService struct {
 func NewErisDbWsService(codec rpc.Codec,
 	pipe definitions.Pipe) server.WebSocketService {
 	tmwss := &ErisDbWsService{codec: codec, pipe: pipe}
-	mtds := &ErisDbMethods{codec, pipe}
+	mtds := NewErisDbMethods(codec, pipe)
 
 	dhMap := mtds.getMethods()
 	// Events

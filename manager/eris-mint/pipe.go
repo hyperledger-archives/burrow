@@ -31,8 +31,10 @@ import (
 	log "github.com/eris-ltd/eris-logger"
 
 	"github.com/eris-ltd/eris-db/account"
+	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	imath "github.com/eris-ltd/eris-db/common/math/integral"
 	"github.com/eris-ltd/eris-db/config"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/definitions"
 	edb_event "github.com/eris-ltd/eris-db/event"
@@ -49,14 +51,12 @@ type erisMintPipe struct {
 	erisMint      *ErisMint
 	// Pipe implementations
 	accounts   *accounts
-	blockchain *blockchain
-	consensus  *consensus
+	blockchain blockchain_types.Blockchain
+	consensus  consensus_types.Consensus
 	events     edb_event.EventEmitter
 	namereg    *namereg
 	network    *network
 	transactor *transactor
-	// Consensus interface
-	consensusEngine definitions.ConsensusEngine
 	// Genesis cache
 	genesisDoc   *state_types.GenesisDoc
 	genesisState *state.State
@@ -100,10 +100,6 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 	namereg := newNameReg(erisMint)
 	transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
 		events)
-	// TODO: make interface to tendermint core's rpc for these
-	// blockchain := newBlockchain(chainID, genDocFile, blockStore)
-	// consensus := newConsensus(erisdbApp)
-	// net := newNetwork(erisdbApp)
 
 	return &erisMintPipe{
 		erisMintState: startedState,
@@ -112,11 +108,15 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		events:        events,
 		namereg:       namereg,
 		transactor:    transactor,
-		network:       newNetwork(),
-		consensus:     nil,
 		// genesis cache
 		genesisDoc:   genesisDoc,
 		genesisState: nil,
+		// TODO: What network-level information do we need?
+		network:       newNetwork(),
+		// consensus and blockchain should both be loaded into the pipe by a higher
+		// authority - this is a sort of dependency injection pattern
+		consensus:     nil,
+		blockchain: nil,
 	}, nil
 }
 
@@ -177,11 +177,11 @@ func (pipe *erisMintPipe) Accounts() definitions.Accounts {
 	return pipe.accounts
 }
 
-func (pipe *erisMintPipe) Blockchain() definitions.Blockchain {
+func (pipe *erisMintPipe) Blockchain() blockchain_types.Blockchain {
 	return pipe.blockchain
 }
 
-func (pipe *erisMintPipe) Consensus() definitions.Consensus {
+func (pipe *erisMintPipe) Consensus() consensus_types.Consensus {
 	return pipe.consensus
 }
 
@@ -205,18 +205,32 @@ func (pipe *erisMintPipe) GetApplication() manager_types.Application {
 	return pipe.erisMint
 }
 
-func (pipe *erisMintPipe) SetConsensusEngine(
-	consensus definitions.ConsensusEngine) error {
-	if pipe.consensusEngine == nil {
-		pipe.consensusEngine = consensus
+func (pipe *erisMintPipe) SetBlockchain(
+	blockchain blockchain_types.Blockchain) error {
+	if pipe.blockchain == nil {
+		pipe.blockchain = blockchain
+	} else {
+		return fmt.Errorf("Failed to set Blockchain for pipe; already set")
+	}
+	return nil
+}
+
+func (pipe *erisMintPipe) GetBlockchain() blockchain_types.Blockchain {
+	return pipe.blockchain
+}
+
+func (pipe *erisMintPipe) SetConsensus(
+	consensus consensus_types.Consensus) error {
+	if pipe.consensus == nil {
+		pipe.consensus = consensus
 	} else {
 		return fmt.Errorf("Failed to set consensus engine for pipe; already set")
 	}
 	return nil
 }
 
-func (pipe *erisMintPipe) GetConsensusEngine() definitions.ConsensusEngine {
-	return pipe.consensusEngine
+func (pipe *erisMintPipe) GetConsensus() consensus_types.Consensus {
+	return pipe.consensus
 }
 
 func (pipe *erisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
@@ -227,7 +241,7 @@ func (pipe *erisMintPipe) GetTendermintPipe() (definitions.TendermintPipe,
 func (pipe *erisMintPipe) consensusAndManagerEvents() edb_event.EventEmitter {
 	// NOTE: [Silas] We could initialise this lazily and use the cached instance,
 	// but for the time being that feels like a premature optimisation
-	return edb_event.Multiplex(pipe.events, pipe.consensusEngine.Events())
+	return edb_event.Multiplex(pipe.events, pipe.consensus.Events())
 }
 
 //------------------------------------------------------------------------------
@@ -251,7 +265,7 @@ func (pipe *erisMintPipe) Subscribe(event string,
 		})
 	return &rpc_tm_types.ResultSubscribe{
 		SubscriptionId: subscriptionId,
-		Event: event,
+		Event:          event,
 	}, nil
 }
 
@@ -261,43 +275,49 @@ func (pipe *erisMintPipe) Unsubscribe(subscriptionId string) (*rpc_tm_types.Resu
 	pipe.consensusAndManagerEvents().Unsubscribe(subscriptionId)
 	return &rpc_tm_types.ResultUnsubscribe{SubscriptionId: subscriptionId}, nil
 }
-
-func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
-	memoryDatabase := db.NewMemDB()
+func (pipe *erisMintPipe) GenesisState() *state.State {
 	if pipe.genesisState == nil {
+		memoryDatabase := db.NewMemDB()
 		pipe.genesisState = state.MakeGenesisState(memoryDatabase, pipe.genesisDoc)
 	}
-	genesisHash := pipe.genesisState.Hash()
-	if pipe.consensusEngine == nil {
+	return pipe.genesisState
+}
+
+func (pipe *erisMintPipe) GenesisHash() []byte {
+	return pipe.GenesisState().Hash()
+}
+
+func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
+	if pipe.consensus == nil {
 		return nil, fmt.Errorf("Consensus Engine is not set in pipe.")
 	}
-	latestHeight := pipe.consensusEngine.Height()
+	latestHeight := pipe.blockchain.Height()
 	var (
 		latestBlockMeta *tm_types.BlockMeta
 		latestBlockHash []byte
 		latestBlockTime int64
 	)
 	if latestHeight != 0 {
-		latestBlockMeta = pipe.consensusEngine.LoadBlockMeta(latestHeight)
+		latestBlockMeta = pipe.blockchain.BlockMeta(latestHeight)
 		latestBlockHash = latestBlockMeta.Hash
 		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
 	}
 	return &rpc_tm_types.ResultStatus{
-		NodeInfo:          pipe.consensusEngine.NodeInfo(),
-		GenesisHash:       genesisHash,
-		PubKey:            pipe.consensusEngine.PublicValidatorKey(),
+		NodeInfo:          pipe.consensus.NodeInfo(),
+		GenesisHash:       pipe.GenesisHash(),
+		PubKey:            pipe.consensus.PublicValidatorKey(),
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime}, nil
 }
 
 func (pipe *erisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {
-	listening := pipe.consensusEngine.IsListening()
+	listening := pipe.consensus.IsListening()
 	listeners := []string{}
-	for _, listener := range pipe.consensusEngine.Listeners() {
+	for _, listener := range pipe.consensus.Listeners() {
 		listeners = append(listeners, listener.String())
 	}
-	peers := pipe.consensusEngine.Peers()
+	peers := pipe.consensus.Peers()
 	return &rpc_tm_types.ResultNetInfo{
 		Listening: listening,
 		Listeners: listeners,
@@ -494,7 +514,7 @@ func (pipe *erisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
 // NOTE: txs must be signed
 func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (
 	*rpc_tm_types.ResultBroadcastTx, error) {
-	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx), nil)
+	err := pipe.consensus.BroadcastTransaction(txs.EncodeTx(tx), nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error broadcasting txs: %v", err)
 	}
@@ -504,7 +524,7 @@ func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (
 func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx,
 	error) {
 	responseChannel := make(chan *tmsp_types.Response, 1)
-	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx),
+	err := pipe.consensus.BroadcastTransaction(txs.EncodeTx(tx),
 		func(res *tmsp_types.Response) {
 			responseChannel <- res
 		})
@@ -550,7 +570,7 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 	maxBlockLookback int) (*rpc_tm_types.ResultBlockchainInfo, error) {
 
-	latestHeight := pipe.consensusEngine.Height()
+	latestHeight := pipe.blockchain.Height()
 
 	if maxHeight < 1 {
 		maxHeight = latestHeight
@@ -563,7 +583,7 @@ func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 
 	blockMetas := []*tm_types.BlockMeta{}
 	for height := maxHeight; height >= minHeight; height-- {
-		blockMeta := pipe.consensusEngine.LoadBlockMeta(height)
+		blockMeta := pipe.blockchain.BlockMeta(height)
 		blockMetas = append(blockMetas, blockMeta)
 	}
 

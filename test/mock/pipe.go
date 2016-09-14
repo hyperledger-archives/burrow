@@ -86,12 +86,12 @@ func (this *MockPipe) GetApplication() manager_types.Application {
 	return nil
 }
 
-func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
+func (this *MockPipe) SetConsensusEngine(_ definitions.Consensus) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
 
-func (this *MockPipe) GetConsensusEngine() definitions.ConsensusEngine {
+func (this *MockPipe) GetConsensusEngine() definitions.Consensus {
 	return nil
 }
 
