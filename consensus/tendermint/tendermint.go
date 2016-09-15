@@ -50,7 +50,7 @@ type Tendermint struct {
 
 // Compiler checks to ensure Tendermint successfully implements
 // eris-db/definitions Consensus and Blockchain
-var _ consensus_types.Consensus = (*Tendermint)(nil)
+var _ consensus_types.ConsensusEngine = (*Tendermint)(nil)
 var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
 func NewTendermint(moduleConfig *config.ModuleConfig,

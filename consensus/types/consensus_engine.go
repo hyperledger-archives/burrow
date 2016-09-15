@@ -7,7 +7,7 @@ import (
 	tmsp_types "github.com/tendermint/tmsp/types"
 )
 
-type Consensus interface {
+type ConsensusEngine interface {
 	// Peer-2-Peer
 	IsListening() bool
 	Listeners() []p2p.Listener

@@ -38,7 +38,7 @@ import (
 type Pipe interface {
 	Accounts() Accounts
 	Blockchain() blockchain_types.Blockchain
-	Consensus() consensus_types.Consensus
+	Consensus() consensus_types.ConsensusEngine
 	Events() event.EventEmitter
 	NameReg() NameReg
 	Net() Net
@@ -47,8 +47,8 @@ type Pipe interface {
 	GenesisHash() []byte
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
-	SetConsensus(consensus consensus_types.Consensus) error
-	GetConsensus() consensus_types.Consensus
+	SetConsensusEngine(consensusEngine consensus_types.ConsensusEngine) error
+	GetConsensusEngine() consensus_types.ConsensusEngine
 	SetBlockchain(blockchain blockchain_types.Blockchain) error
 	GetBlockchain() blockchain_types.Blockchain
 	// Support for Tendermint RPC

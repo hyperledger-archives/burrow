@@ -58,7 +58,7 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 	}
 	log.Debug("Loaded pipe with application manager")
 	// pass the consensus engine into the pipe
-	if e := consensus.LoadConsensusInPipe(consensusConfig, pipe); e != nil {
+	if e := consensus.LoadConsensusEngineInPipe(consensusConfig, pipe); e != nil {
 		return nil, fmt.Errorf("Failed to load consensus engine in pipe: %v", e)
 	}
 	tendermintPipe, err := pipe.GetTendermintPipe()

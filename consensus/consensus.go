@@ -24,7 +24,7 @@ import (
 	definitions "github.com/eris-ltd/eris-db/definitions"
 )
 
-func LoadConsensusInPipe(moduleConfig *config.ModuleConfig,
+func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 	pipe definitions.Pipe) error {
 	switch moduleConfig.Name {
 	case "tendermint":
@@ -34,14 +34,14 @@ func LoadConsensusInPipe(moduleConfig *config.ModuleConfig,
 			return fmt.Errorf("Failed to load Tendermint node: %v", err)
 		}
 
-		err = pipe.SetConsensus(tendermint)
+		err = pipe.SetConsensusEngine(tendermint)
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint in pipe as "+
 				"ConsensusEngine: %v", err)
 		}
 
 		// For Tendermint we have a coupled Blockchain and ConsensusEngine
-		// implementation, so load it with Consensus
+		// implementation, so load it at the same time as ConsensusEngine
 		err = pipe.SetBlockchain(tendermint)
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint in pipe as "+

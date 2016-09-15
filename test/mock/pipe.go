@@ -22,21 +22,21 @@ import (
 
 // Base struct.
 type MockPipe struct {
-	testData   *td.TestData
-	accounts   definitions.Accounts
-	blockchain blockchain_types.Blockchain
-	consensus  consensus_types.Consensus
-	events     event.EventEmitter
-	namereg    definitions.NameReg
-	net        definitions.Net
-	transactor definitions.Transactor
+	testData        *td.TestData
+	accounts        definitions.Accounts
+	blockchain      blockchain_types.Blockchain
+	consensusEngine consensus_types.ConsensusEngine
+	events          event.EventEmitter
+	namereg         definitions.NameReg
+	net             definitions.Net
+	transactor      definitions.Transactor
 }
 
 // Create a new mock tendermint pipe.
 func NewMockPipe(td *td.TestData) definitions.Pipe {
 	accounts := &accounts{td}
 	blockchain := &blockchain{td}
-	consensus := &consensus{td}
+	consensusEngine := &consensusEngine{td}
 	eventer := &eventer{td}
 	namereg := &namereg{td}
 	net := &net{td}
@@ -45,7 +45,7 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 		td,
 		accounts,
 		blockchain,
-		consensus,
+		consensusEngine,
 		eventer,
 		namereg,
 		net,
@@ -66,8 +66,8 @@ func (this *MockPipe) Blockchain() blockchain_types.Blockchain {
 	return this.blockchain
 }
 
-func (this *MockPipe) Consensus() consensus_types.Consensus {
-	return this.consensus
+func (this *MockPipe) Consensus() consensus_types.ConsensusEngine {
+	return this.consensusEngine
 }
 
 func (this *MockPipe) Events() event.EventEmitter {
@@ -91,12 +91,12 @@ func (this *MockPipe) GetApplication() manager_types.Application {
 	return nil
 }
 
-func (this *MockPipe) SetConsensus(_ consensus_types.Consensus) error {
+func (this *MockPipe) SetConsensusEngine(_ consensus_types.ConsensusEngine) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
 
-func (this *MockPipe) GetConsensus() consensus_types.Consensus {
+func (this *MockPipe) GetConsensusEngine() consensus_types.ConsensusEngine {
 	return nil
 }
 
@@ -170,32 +170,32 @@ func (this *blockchain) BlockMeta(height int) *mintTypes.BlockMeta {
 }
 
 // Consensus
-type consensus struct {
+type consensusEngine struct {
 	testData *td.TestData
 }
 
-func (cons *consensus) BroadcastTransaction(transaction []byte,
+func (cons *consensusEngine) BroadcastTransaction(transaction []byte,
 	callback func(*tmsp_types.Response)) error {
 	return nil
 }
 
-func (cons *consensus) IsListening() bool {
+func (cons *consensusEngine) IsListening() bool {
 	return true
 }
 
-func (cons *consensus) Listeners() []p2p.Listener {
+func (cons *consensusEngine) Listeners() []p2p.Listener {
 	return make([]p2p.Listener, 0)
 }
 
-func (cons *consensus) NodeInfo() *p2p.NodeInfo {
+func (cons *consensusEngine) NodeInfo() *p2p.NodeInfo {
 	return &p2p.NodeInfo{}
 }
 
-func (cons *consensus) Peers() []consensus_types.Peer {
+func (cons *consensusEngine) Peers() []consensus_types.Peer {
 	return make([]consensus_types.Peer, 0)
 }
 
-func (cons *consensus) PublicValidatorKey() crypto.PubKey {
+func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
 	return crypto.PubKeyEd25519{
 		1,2,3,4,5,6,7,8,
 		1,2,3,4,5,6,7,8,
@@ -204,7 +204,7 @@ func (cons *consensus) PublicValidatorKey() crypto.PubKey {
 	}
 }
 
-func (cons *consensus) Events() event.EventEmitter {
+func (cons *consensusEngine) Events() event.EventEmitter {
 	return nil
 }
 
