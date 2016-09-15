@@ -1,6 +1,6 @@
 // +build !arm
 
-package arch
+package architecture
 
 import "math"
 

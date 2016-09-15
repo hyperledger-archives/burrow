@@ -7,10 +7,10 @@ import (
 
 	"sync"
 
-	"github.com/eris-ltd/eris-db/arch"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/util/architecture"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
 
@@ -48,8 +48,8 @@ func FilterBlocks(blockchain blockchain_types.Blockchain,
 	height := blockchain.Height()
 	if height == 0 {
 		return &core_types.Blocks{
-			MinHeight: 0,
-			MaxHeight: 0,
+			MinHeight:  0,
+			MaxHeight:  0,
 			BlockMetas: []*tendermint_types.BlockMeta{},
 		}, nil
 	}
@@ -87,7 +87,7 @@ func (blockHeightFilter *BlockHeightFilter) Configure(fd *event.FilterData) erro
 	if fd.Value == "min" {
 		val = 0
 	} else if fd.Value == "max" {
-		val = arch.MaxInt32
+		val = architecture.MaxInt32
 	} else {
 		tv, err := strconv.ParseInt(fd.Value, 10, 0)
 		if err != nil {
