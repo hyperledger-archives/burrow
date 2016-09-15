@@ -1,6 +1,7 @@
 package: github.com/eris-ltd/eris-db
 import:
 - package: github.com/eris-ltd/eris-logger
+- package: github.com/eris-ltd/eris-keys
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/tendermint/tendermint
