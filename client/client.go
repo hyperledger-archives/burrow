@@ -26,7 +26,7 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 )
 
-type NodeClient interface{
+type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
 
 	GetAccount(address []byte) (*account.Account, error)
@@ -36,7 +36,7 @@ type NodeClient interface{
 // eris-db/client.NodeClient
 var _ NodeClient = (*ErisNodeClient)(nil)
 
-// Eris-Client is a simple struct exposing the client rpc methods 
+// Eris-Client is a simple struct exposing the client rpc methods
 
 type ErisNodeClient struct {
 	broadcastRPC string
@@ -44,7 +44,7 @@ type ErisNodeClient struct {
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisNodeClient(rpcString string) *ErisNodeClient{
+func NewErisNodeClient(rpcString string) *ErisNodeClient {
 	return &ErisNodeClient{
 		broadcastRPC: rpcString,
 	}
@@ -53,7 +53,7 @@ func NewErisNodeClient(rpcString string) *ErisNodeClient{
 //------------------------------------------------------------------------------------
 // broadcast to blockchain node
 // NOTE: [ben] Eris Client first continues from tendermint rpc, but will have handshake to negotiate
-// protocol version for moving towards rpc/v1 
+// protocol version for moving towards rpc/v1
 
 func (erisClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
@@ -80,5 +80,3 @@ func (erisClient *ErisNodeClient) GetAccount(address []byte) (*account.Account, 
 
 	return account.Copy(), nil
 }
-
-

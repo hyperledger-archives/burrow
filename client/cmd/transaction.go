@@ -135,8 +135,6 @@ func buildTransactionCommand() {
 		},
 		PreRun: assertParameters,
 	}
-	permissionsCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
-	permissionsCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
 
 	TransactionCmd.AddCommand(sendCmd, nameCmd, callCmd, bondCmd, unbondCmd, rebondCmd, permissionsCmd)
 }

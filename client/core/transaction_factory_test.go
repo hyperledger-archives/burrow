@@ -30,7 +30,7 @@ func TestTransactionFactory(t *testing.T) {
 	testTransactionFactorySend(t, mockNodeClient, mockKeyClient)
 	testTransactionFactoryCall(t, mockNodeClient, mockKeyClient)
 	testTransactionFactoryName(t, mockNodeClient, mockKeyClient)
-	// t.Run("PermissionTransaction", )
+	testTransactionFactoryPermissions(t, mockNodeClient, mockKeyClient)
 	// t.Run("BondTransaction", )
 	// t.Run("UnbondTransaction", )
 	// t.Run("RebondTransaction", )
@@ -122,6 +122,31 @@ func testTransactionFactoryName(t *testing.T,
 		amountString, nonceString, feeString, nameString, dataString)
 	if err != nil {
 		t.Logf("Error in NameTx: %s", err)
+		t.Fail()
+	}
+	// TODO: test content of Transaction
+}
+
+func testTransactionFactoryPermissions(t *testing.T,
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+
+	// generate an ED25519 key and ripemd160 address
+	addressString := fmt.Sprintf("%X", keyClient.NewKey())
+	// Public key can be queried from mockKeyClient.PublicKey(address)
+	// but here we let the transaction factory retrieve the public key
+	// which will then also overwrite the address we provide the function.
+	// As a result we will assert whether address generated above, is identical
+	// to address in generated transation.
+	publicKeyString := ""
+	// generate an additional address to set permissions for
+	permAddressString := fmt.Sprintf("%X", keyClient.NewKey())
+	// unset nonce so that we retrieve nonce from account
+	nonceString := ""
+
+	_, err := Permissions(nodeClient, keyClient, publicKeyString, addressString,
+		nonceString, "set_base", []string{permAddressString, "root", "true"})
+	if err != nil {
+		t.Logf("Error in PermissionsTx: %s", err)
 		t.Fail()
 	}
 	// TODO: test content of Transaction

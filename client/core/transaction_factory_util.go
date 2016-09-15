@@ -28,6 +28,7 @@ import (
 	acc "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -83,45 +84,15 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 	return inputAddr, tx_, nil
 }
 
-// readInputAddressFromTransacIm not tion returns the hexadecimal string form of the
-// func readInputAddressFromTransaction(tx_ txs.Tx) (addressHex string) {
-// 	// signBytes := fmt.Sprintf("%X", account.SignBytes(chainID, tx_))
-// 	var inputAddr []byte
-// 	// var sigED crypto.SignatureEd25519
-// 	switch tx := tx_.(type) {
-// 	case *txs.SendTx:
-// 		inputAddr = tx.Inputs[0].Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = *s }(&sigED)
-// 	case *txs.NameTx:
-// 		inputAddr = tx.Input.Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *txs.CallTx:
-// 		inputAddr = tx.Input.Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *txs.PermissionsTx:
-// 		inputAddr = tx.Input.Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
-// 	case *txs.BondTx:
-// 		inputAddr = tx.Inputs[0].Address
-// 		// defer func(s *crypto.SignatureEd25519) {
-// 		// 	tx.Signature = *s
-// 		// 	tx.Inputs[0].Signature = *s
-// 		// }(&sigED)
-// 	case *txs.UnbondTx:
-// 		inputAddr = tx.Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
-// 	case *txs.RebondTx:
-// 		inputAddr = tx.Address
-// 		// defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
-// 	}
-// 	addressHex := fmt.Sprintf("%X", inputAddr)
-// 	// sig, err := Sign(signBytes, addrHex, signAddr)
-// 	// if err != nil {
-// 	// 	return nil, nil, err
-// 	// }
-// 	// sigED = crypto.SignatureEd25519(sig)
-// 	return addressHex
-// }
+func decodeAddressPermFlag(addrS, permFlagS string) (addr []byte, pFlag ptypes.PermFlag, err error) {
+	if addr, err = hex.DecodeString(addrS); err != nil {
+		return
+	}
+	if pFlag, err = ptypes.PermStringToFlag(permFlagS); err != nil {
+		return
+	}
+	return
+}
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) (pub crypto.PubKey, amt int64, nonce int64, err error) {
 	if amtS == "" {

@@ -23,7 +23,7 @@ import (
 	// "strings"
 	// "time"
 
-	// ptypes "github.com/eris-ltd/permission/types"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
 	// log "github.com/eris-ltd/eris-logger"
 
@@ -120,79 +120,69 @@ var PermsFuncs = []PermFunc{
 	{"rm_role", "address, role"},
 }
 
-// func Permissions(nodeAddr, signAddr, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
-// 	pub, _, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, addrS, "0", nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var args ptypes.PermArgs
-// 	switch permFunc {
-// 	case "set_base":
-// 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		if len(argsS) != 3 {
-// 			return nil, fmt.Errorf("set_base also takes a value (true or false)")
-// 		}
-// 		var value bool
-// 		if argsS[2] == "true" {
-// 			value = true
-// 		} else if argsS[2] == "false" {
-// 			value = false
-// 		} else {
-// 			return nil, fmt.Errorf("Unknown value %s", argsS[2])
-// 		}
-// 		args = &ptypes.SetBaseArgs{addr, pF, value}
-// 	case "unset_base":
-// 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		args = &ptypes.UnsetBaseArgs{addr, pF}
-// 	case "set_global":
-// 		pF, err := ptypes.PermStringToFlag(argsS[0])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		var value bool
-// 		if argsS[1] == "true" {
-// 			value = true
-// 		} else if argsS[1] == "false" {
-// 			value = false
-// 		} else {
-// 			return nil, fmt.Errorf("Unknown value %s", argsS[1])
-// 		}
-// 		args = &ptypes.SetGlobalArgs{pF, value}
-// 	case "add_role":
-// 		addr, err := hex.DecodeString(argsS[0])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		args = &ptypes.AddRoleArgs{addr, argsS[1]}
-// 	case "rm_role":
-// 		addr, err := hex.DecodeString(argsS[0])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		args = &ptypes.RmRoleArgs{addr, argsS[1]}
-// 	default:
-// 		return nil, fmt.Errorf("Invalid permission function for use in PermissionsTx: %s", permFunc)
-// 	}
-// 	// args := snativeArgs(
-// 	tx := types.NewPermissionsTxWithNonce(pub, args, int(nonce))
-// 	return tx, nil
-// }
-
-// func decodeAddressPermFlag(addrS, permFlagS string) (addr []byte, pFlag ptypes.PermFlag, err error) {
-// 	if addr, err = hex.DecodeString(addrS); err != nil {
-// 		return
-// 	}
-// 	if pFlag, err = ptypes.PermStringToFlag(permFlagS); err != nil {
-// 		return
-// 	}
-// 	return
-// }
+func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
+	pub, _, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", nonceS)
+	if err != nil {
+		return nil, err
+	}
+	var args ptypes.PermArgs
+	switch permFunc {
+	case "set_base":
+		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
+		if err != nil {
+			return nil, err
+		}
+		if len(argsS) != 3 {
+			return nil, fmt.Errorf("set_base also takes a value (true or false)")
+		}
+		var value bool
+		if argsS[2] == "true" {
+			value = true
+		} else if argsS[2] == "false" {
+			value = false
+		} else {
+			return nil, fmt.Errorf("Unknown value %s", argsS[2])
+		}
+		args = &ptypes.SetBaseArgs{addr, pF, value}
+	case "unset_base":
+		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
+		if err != nil {
+			return nil, err
+		}
+		args = &ptypes.UnsetBaseArgs{addr, pF}
+	case "set_global":
+		pF, err := ptypes.PermStringToFlag(argsS[0])
+		if err != nil {
+			return nil, err
+		}
+		var value bool
+		if argsS[1] == "true" {
+			value = true
+		} else if argsS[1] == "false" {
+			value = false
+		} else {
+			return nil, fmt.Errorf("Unknown value %s", argsS[1])
+		}
+		args = &ptypes.SetGlobalArgs{pF, value}
+	case "add_role":
+		addr, err := hex.DecodeString(argsS[0])
+		if err != nil {
+			return nil, err
+		}
+		args = &ptypes.AddRoleArgs{addr, argsS[1]}
+	case "rm_role":
+		addr, err := hex.DecodeString(argsS[0])
+		if err != nil {
+			return nil, err
+		}
+		args = &ptypes.RmRoleArgs{addr, argsS[1]}
+	default:
+		return nil, fmt.Errorf("Invalid permission function for use in PermissionsTx: %s", permFunc)
+	}
+	// args := snativeArgs(
+	tx := txs.NewPermissionsTxWithNonce(pub, args, int(nonce))
+	return tx, nil
+}
 
 // type NameGetter struct {
 // 	client cclient.Client
