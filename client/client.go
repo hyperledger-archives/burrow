@@ -92,4 +92,5 @@ func (erisClient *ErisNodeClient) Status() (*rpc_types.ResultStatus, error) {
 			erisClient.broadcastRPC, err.Error())
 		return nil, err
 	}
+	return res, nil
 }
