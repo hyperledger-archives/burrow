@@ -28,8 +28,8 @@ func TestTransactionFactory(t *testing.T) {
 	mockKeyClient := mockkeys.NewMockKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testTransactionFactorySend(t, mockNodeClient, mockKeyClient)
-	// t.Run("NameTransaction", )
 	testTransactionFactoryCall(t, mockNodeClient, mockKeyClient)
+	testTransactionFactoryName(t, mockNodeClient, mockKeyClient)
 	// t.Run("PermissionTransaction", )
 	// t.Run("BondTransaction", )
 	// t.Run("UnbondTransaction", )
@@ -80,7 +80,7 @@ func testTransactionFactoryCall(t *testing.T,
 	amountString := "1000"
 	// unset nonce so that we retrieve nonce from account
 	nonceString := ""
-	// set gas 
+	// set gas
 	gasString := "1000"
 	// set fee
 	feeString := "100"
@@ -91,6 +91,37 @@ func testTransactionFactoryCall(t *testing.T,
 		toAddressString, amountString, nonceString, gasString, feeString, dataString)
 	if err != nil {
 		t.Logf("Error in CallTx: %s", err)
+		t.Fail()
+	}
+	// TODO: test content of Transaction
+}
+
+func testTransactionFactoryName(t *testing.T,
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+
+	// generate an ED25519 key and ripemd160 address
+	addressString := fmt.Sprintf("%X", keyClient.NewKey())
+	// Public key can be queried from mockKeyClient.PublicKey(address)
+	// but here we let the transaction factory retrieve the public key
+	// which will then also overwrite the address we provide the function.
+	// As a result we will assert whether address generated above, is identical
+	// to address in generated transation.
+	publicKeyString := ""
+	// set an amount to transfer
+	amountString := "1000"
+	// unset nonce so that we retrieve nonce from account
+	nonceString := ""
+	// set fee
+	feeString := "100"
+	// set data
+	dataString := fmt.Sprintf("%X", "We are DOUG.")
+	// set name
+	nameString := fmt.Sprintf("%s", "DOUG")
+
+	_, err := Name(nodeClient, keyClient, publicKeyString, addressString,
+		amountString, nonceString, feeString, nameString, dataString)
+	if err != nil {
+		t.Logf("Error in NameTx: %s", err)
 		t.Fail()
 	}
 	// TODO: test content of Transaction
