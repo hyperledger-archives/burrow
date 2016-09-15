@@ -115,7 +115,7 @@ func (this *MockSuite) TestGetBlockchainInfo() {
 	ret := &core_types.BlockchainInfo{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetBlockchainInfo.Output)
+	this.Equal(this.testData.GetBlockchainInfo.Output, ret)
 }
 
 func (this *MockSuite) TestGetChainId() {
@@ -123,7 +123,7 @@ func (this *MockSuite) TestGetChainId() {
 	ret := &core_types.ChainId{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetChainId.Output)
+	this.Equal(this.testData.GetChainId.Output, ret)
 }
 
 func (this *MockSuite) TestGetGenesisHash() {
@@ -131,7 +131,7 @@ func (this *MockSuite) TestGetGenesisHash() {
 	ret := &core_types.GenesisHash{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetGenesisHash.Output)
+	this.Equal(this.testData.GetGenesisHash.Output, ret)
 }
 
 func (this *MockSuite) TestLatestBlockHeight() {
@@ -139,7 +139,7 @@ func (this *MockSuite) TestLatestBlockHeight() {
 	ret := &core_types.LatestBlockHeight{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetLatestBlockHeight.Output)
+	this.Equal(this.testData.GetLatestBlockHeight.Output, ret)
 }
 
 func (this *MockSuite) TestBlocks() {
@@ -147,27 +147,28 @@ func (this *MockSuite) TestBlocks() {
 	ret := &core_types.Blocks{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetBlocks.Output)
+	this.Equal(this.testData.GetBlocks.Output, ret)
 }
 
 // ********************************************* Consensus *********************************************
 
-func (this *MockSuite) TestGetConsensusState() {
-	resp := this.get("/consensus")
-	ret := &core_types.ConsensusState{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	ret.StartTime = ""
-	this.Equal(ret, this.testData.GetConsensusState.Output)
-}
-
-func (this *MockSuite) TestGetValidators() {
-	resp := this.get("/consensus/validators")
-	ret := &core_types.ValidatorList{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetValidators.Output)
-}
+// TODO: re-enable these when implemented
+//func (this *MockSuite) TestGetConsensusState() {
+//	resp := this.get("/consensus")
+//	ret := &core_types.ConsensusState{}
+//	errD := this.codec.Decode(ret, resp.Body)
+//	this.NoError(errD)
+//	ret.StartTime = ""
+//	this.Equal(this.testData.GetConsensusState.Output, ret)
+//}
+//
+//func (this *MockSuite) TestGetValidators() {
+//	resp := this.get("/consensus/validators")
+//	ret := &core_types.ValidatorList{}
+//	errD := this.codec.Decode(ret, resp.Body)
+//	this.NoError(errD)
+//	this.Equal(this.testData.GetValidators.Output, ret)
+//}
 
 // ********************************************* NameReg *********************************************
 
@@ -176,7 +177,7 @@ func (this *MockSuite) TestGetNameRegEntry() {
 	ret := &core_types.NameRegEntry{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetNameRegEntry.Output)
+	this.Equal(this.testData.GetNameRegEntry.Output, ret)
 }
 
 func (this *MockSuite) TestGetNameRegEntries() {
@@ -184,7 +185,7 @@ func (this *MockSuite) TestGetNameRegEntries() {
 	ret := &core_types.ResultListNames{}
 	errD := this.codec.Decode(ret, resp.Body)
 	this.NoError(errD)
-	this.Equal(ret, this.testData.GetNameRegEntries.Output)
+	this.Equal(this.testData.GetNameRegEntries.Output, ret)
 }
 
 // ********************************************* Network *********************************************

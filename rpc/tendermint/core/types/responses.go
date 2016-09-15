@@ -7,6 +7,7 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/tendermint/types"
 
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	"github.com/tendermint/go-rpc/types"
@@ -60,7 +61,7 @@ type ResultStatus struct {
 }
 
 type ResultSubscribe struct {
-	Event string `json:"event"`
+	Event          string `json:"event"`
 	SubscriptionId string `json:"subscription_id"`
 }
 
@@ -69,14 +70,9 @@ type ResultUnsubscribe struct {
 }
 
 type ResultNetInfo struct {
-	Listening bool     `json:"listening"`
-	Listeners []string `json:"listeners"`
-	Peers     []Peer   `json:"peers"`
-}
-
-type Peer struct {
-	p2p.NodeInfo `json:"node_info"`
-	IsOutbound   bool `json:"is_outbound"`
+	Listening bool                   `json:"listening"`
+	Listeners []string               `json:"listeners"`
+	Peers     []consensus_types.Peer `json:"peers"`
 }
 
 type ResultListValidators struct {

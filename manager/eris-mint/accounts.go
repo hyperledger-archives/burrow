@@ -228,3 +228,9 @@ func (this *AccountBalanceFilter) Match(v interface{}) bool {
 	}
 	return this.match(int64(acc.Balance), this.value)
 }
+
+// Function for matching accounts against filter data.
+func (this *accounts) matchBlock(block, fda []*event.FilterData) bool {
+	return false
+}
+

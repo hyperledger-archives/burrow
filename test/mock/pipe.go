@@ -8,30 +8,35 @@ import (
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
 
+	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
+	tmsp_types "github.com/tendermint/tmsp/types"
 )
 
 // Base struct.
 type MockPipe struct {
-	testData   *td.TestData
-	accounts   definitions.Accounts
-	blockchain definitions.Blockchain
-	consensus  definitions.Consensus
-	events     event.EventEmitter
-	namereg    definitions.NameReg
-	net        definitions.Net
-	transactor definitions.Transactor
+	testData        *td.TestData
+	accounts        definitions.Accounts
+	blockchain      blockchain_types.Blockchain
+	consensusEngine consensus_types.ConsensusEngine
+	events          event.EventEmitter
+	namereg         definitions.NameReg
+	net             definitions.Net
+	transactor      definitions.Transactor
 }
 
 // Create a new mock tendermint pipe.
 func NewMockPipe(td *td.TestData) definitions.Pipe {
 	accounts := &accounts{td}
 	blockchain := &blockchain{td}
-	consensus := &consensus{td}
+	consensusEngine := &consensusEngine{td}
 	eventer := &eventer{td}
 	namereg := &namereg{td}
 	net := &net{td}
@@ -40,7 +45,7 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 		td,
 		accounts,
 		blockchain,
-		consensus,
+		consensusEngine,
 		eventer,
 		namereg,
 		net,
@@ -57,12 +62,12 @@ func (this *MockPipe) Accounts() definitions.Accounts {
 	return this.accounts
 }
 
-func (this *MockPipe) Blockchain() definitions.Blockchain {
+func (this *MockPipe) Blockchain() blockchain_types.Blockchain {
 	return this.blockchain
 }
 
-func (this *MockPipe) Consensus() definitions.Consensus {
-	return this.consensus
+func (this *MockPipe) Consensus() consensus_types.ConsensusEngine {
+	return this.consensusEngine
 }
 
 func (this *MockPipe) Events() event.EventEmitter {
@@ -86,17 +91,30 @@ func (this *MockPipe) GetApplication() manager_types.Application {
 	return nil
 }
 
-func (this *MockPipe) SetConsensusEngine(_ definitions.ConsensusEngine) error {
+func (this *MockPipe) SetConsensusEngine(_ consensus_types.ConsensusEngine) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
 
-func (this *MockPipe) GetConsensusEngine() definitions.ConsensusEngine {
+func (this *MockPipe) GetConsensusEngine() consensus_types.ConsensusEngine {
+	return nil
+}
+
+func (this *MockPipe) SetBlockchain(_ blockchain_types.Blockchain) error {
+	// TODO: [ben] mock consensus engine
+	return nil
+}
+
+func (this *MockPipe) GetBlockchain() blockchain_types.Blockchain {
 	return nil
 }
 
 func (this *MockPipe) GetTendermintPipe() (definitions.TendermintPipe, error) {
 	return nil, fmt.Errorf("Tendermint pipe is not supported by mocked pipe.")
+}
+
+func (this *MockPipe) GenesisHash() []byte {
+	return this.testData.GetGenesisHash.Output.Hash
 }
 
 // Components
@@ -135,45 +153,59 @@ type blockchain struct {
 	testData *td.TestData
 }
 
-func (this *blockchain) Info() (*core_types.BlockchainInfo, error) {
-	return this.testData.GetBlockchainInfo.Output, nil
+func (this *blockchain) ChainId() string {
+	return this.testData.GetChainId.Output.ChainId
 }
 
-func (this *blockchain) ChainId() (string, error) {
-	return this.testData.GetChainId.Output.ChainId, nil
+func (this *blockchain) Height() int {
+	return this.testData.GetLatestBlockHeight.Output.Height
 }
 
-func (this *blockchain) GenesisHash() ([]byte, error) {
-	return this.testData.GetGenesisHash.Output.Hash, nil
+func (this *blockchain) Block(height int) *mintTypes.Block {
+	return this.testData.GetBlock.Output
 }
 
-func (this *blockchain) LatestBlockHeight() (int, error) {
-	return this.testData.GetLatestBlockHeight.Output.Height, nil
-}
-
-func (this *blockchain) LatestBlock() (*mintTypes.Block, error) {
-	return this.testData.GetLatestBlock.Output, nil
-}
-
-func (this *blockchain) Blocks([]*event.FilterData) (*core_types.Blocks, error) {
-	return this.testData.GetBlocks.Output, nil
-}
-
-func (this *blockchain) Block(height int) (*mintTypes.Block, error) {
-	return this.testData.GetBlock.Output, nil
+func (this *blockchain) BlockMeta(height int) *mintTypes.BlockMeta {
+	return &mintTypes.BlockMeta{}
 }
 
 // Consensus
-type consensus struct {
+type consensusEngine struct {
 	testData *td.TestData
 }
 
-func (this *consensus) State() (*core_types.ConsensusState, error) {
-	return this.testData.GetConsensusState.Output, nil
+func (cons *consensusEngine) BroadcastTransaction(transaction []byte,
+	callback func(*tmsp_types.Response)) error {
+	return nil
 }
 
-func (this *consensus) Validators() (*core_types.ValidatorList, error) {
-	return this.testData.GetValidators.Output, nil
+func (cons *consensusEngine) IsListening() bool {
+	return true
+}
+
+func (cons *consensusEngine) Listeners() []p2p.Listener {
+	return make([]p2p.Listener, 0)
+}
+
+func (cons *consensusEngine) NodeInfo() *p2p.NodeInfo {
+	return &p2p.NodeInfo{}
+}
+
+func (cons *consensusEngine) Peers() []consensus_types.Peer {
+	return make([]consensus_types.Peer, 0)
+}
+
+func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
+	return crypto.PubKeyEd25519{
+		1,2,3,4,5,6,7,8,
+		1,2,3,4,5,6,7,8,
+		1,2,3,4,5,6,7,8,
+		1,2,3,4,5,6,7,8,
+	}
+}
+
+func (cons *consensusEngine) Events() event.EventEmitter {
+	return nil
 }
 
 // Events

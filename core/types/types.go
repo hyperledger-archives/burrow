@@ -21,7 +21,7 @@ package types
 
 import (
 	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
-	csus "github.com/tendermint/tendermint/consensus"
+	tendermint_consensus "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/types"
 
 	account "github.com/eris-ltd/eris-db/account"
@@ -159,7 +159,7 @@ type (
 	}
 )
 
-func FromRoundState(rs *csus.RoundState) *ConsensusState {
+func FromRoundState(rs *tendermint_consensus.RoundState) *ConsensusState {
 	cs := &ConsensusState{
 		CommitTime: rs.CommitTime.String(),
 		Height:     rs.Height,

@@ -36,23 +36,25 @@ import (
 	log "github.com/eris-ltd/eris-logger"
 
 	config "github.com/eris-ltd/eris-db/config"
-	definitions "github.com/eris-ltd/eris-db/definitions"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	rpc_tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	// files  "github.com/eris-ltd/eris-db/files"
+	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 )
 
-type TendermintNode struct {
+type Tendermint struct {
 	tmintNode   *node.Node
 	tmintConfig *TendermintConfig
+	chainId     string
 }
 
-// NOTE [ben] Compiler check to ensure TendermintNode successfully implements
-// eris-db/definitions.Consensus
-var _ definitions.ConsensusEngine = (*TendermintNode)(nil)
+// Compiler checks to ensure Tendermint successfully implements
+// eris-db/definitions Consensus and Blockchain
+var _ consensus_types.ConsensusEngine = (*Tendermint)(nil)
+var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
-func NewTendermintNode(moduleConfig *config.ModuleConfig,
-	application manager_types.Application) (*TendermintNode, error) {
+func NewTendermint(moduleConfig *config.ModuleConfig,
+	application manager_types.Application) (*Tendermint, error) {
 	// re-assert proper configuration for module
 	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
 		return nil, fmt.Errorf("Version string %s did not match %s",
@@ -86,8 +88,9 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
 	// settings
 	tmintConfig.AssertTendermintConsistency(moduleConfig,
 		privateValidatorFilePath)
+	chainId := tmintConfig.GetString("chain_id")
 	log.WithFields(log.Fields{
-		"chainId":              tmintConfig.GetString("chain_id"),
+		"chainId":              chainId,
 		"genesisFile":          tmintConfig.GetString("genesis_file"),
 		"nodeLocalAddress":     tmintConfig.GetString("node_laddr"),
 		"moniker":              tmintConfig.GetString("moniker"),
@@ -136,38 +139,48 @@ func NewTendermintNode(moduleConfig *config.ModuleConfig,
 		}).Debug("Tendermint node called seeds")
 	}
 
-	return &TendermintNode{
+	return &Tendermint{
 		tmintNode:   newNode,
 		tmintConfig: tmintConfig,
+		chainId:     chainId,
 	}, nil
 }
 
 //------------------------------------------------------------------------------
-// ConsensusEngine implementation
+// Blockchain implementation
 
-func (this *TendermintNode) Height() int {
-	return this.tmintNode.BlockStore().Height()
+func (tendermint *Tendermint) Height() int {
+	return tendermint.tmintNode.BlockStore().Height()
 }
 
-func (this *TendermintNode) LoadBlockMeta(height int) *tendermint_types.BlockMeta {
-	return this.tmintNode.BlockStore().LoadBlockMeta(height)
+func (tendermint *Tendermint) BlockMeta(height int) *tendermint_types.BlockMeta {
+	return tendermint.tmintNode.BlockStore().LoadBlockMeta(height)
 }
 
-func (this *TendermintNode) IsListening() bool {
-	return this.tmintNode.Switch().IsListening()
+func (tendermint *Tendermint) Block(height int) *tendermint_types.Block {
+	return tendermint.tmintNode.BlockStore().LoadBlock(height)
 }
 
-func (this *TendermintNode) Listeners() []p2p.Listener {
+func (tendermint *Tendermint) ChainId() string {
+	return tendermint.chainId
+}
+
+// Consensus implementation
+func (tendermint *Tendermint) IsListening() bool {
+	return tendermint.tmintNode.Switch().IsListening()
+}
+
+func (tendermint *Tendermint) Listeners() []p2p.Listener {
 	var copyListeners []p2p.Listener
 	// copy slice of Listeners
-	copy(copyListeners[:], this.tmintNode.Switch().Listeners())
+	copy(copyListeners[:], tendermint.tmintNode.Switch().Listeners())
 	return copyListeners
 }
 
-func (this *TendermintNode) Peers() []rpc_tendermint_types.Peer {
-	peers := []rpc_tendermint_types.Peer{}
-	for _, peer := range this.tmintNode.Switch().Peers().List() {
-		peers = append(peers, rpc_tendermint_types.Peer{
+func (tendermint *Tendermint) Peers() []consensus_types.Peer {
+	peers := []consensus_types.Peer{}
+	for _, peer := range tendermint.tmintNode.Switch().Peers().List() {
+		peers = append(peers, consensus_types.Peer{
 			NodeInfo:   *peer.NodeInfo,
 			IsOutbound: peer.IsOutbound(),
 		})
@@ -175,18 +188,19 @@ func (this *TendermintNode) Peers() []rpc_tendermint_types.Peer {
 	return peers
 }
 
-func (this *TendermintNode) NodeInfo() *p2p.NodeInfo {
+func (tendermint *Tendermint) NodeInfo() *p2p.NodeInfo {
 	var copyNodeInfo = new(p2p.NodeInfo)
 	// call Switch().NodeInfo is not go-routine safe, so copy
-	*copyNodeInfo = *this.tmintNode.Switch().NodeInfo()
+	*copyNodeInfo = *tendermint.tmintNode.Switch().NodeInfo()
+	tendermint.tmintNode.ConsensusState().GetRoundState()
 	return copyNodeInfo
 }
 
-func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
+func (tendermint *Tendermint) PublicValidatorKey() crypto.PubKey {
 	// TODO: [ben] this is abetment, not yet a go-routine safe solution
 	var copyPublicValidatorKey crypto.PubKey
 	// crypto.PubKey is an interface so copy underlying struct
-	publicKey := this.tmintNode.PrivValidator().PubKey
+	publicKey := tendermint.tmintNode.PrivValidator().PubKey
 	switch publicKey.(type) {
 	case crypto.PubKeyEd25519:
 		// type crypto.PubKeyEd25519 is [32]byte
@@ -199,13 +213,13 @@ func (this *TendermintNode) PublicValidatorKey() crypto.PubKey {
 	return copyPublicValidatorKey
 }
 
-func (this *TendermintNode) Events() edb_event.EventEmitter {
-	return edb_event.NewEvents(this.tmintNode.EventSwitch())
+func (tendermint *Tendermint) Events() edb_event.EventEmitter {
+	return edb_event.NewEvents(tendermint.tmintNode.EventSwitch())
 }
 
-func (this *TendermintNode) BroadcastTransaction(transaction []byte,
+func (tendermint *Tendermint) BroadcastTransaction(transaction []byte,
 	callback func(*tmsp_types.Response)) error {
-	return this.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
+	return tendermint.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
 }
 
 //------------------------------------------------------------------------------
