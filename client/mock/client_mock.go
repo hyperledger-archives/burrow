@@ -19,6 +19,8 @@ package mock
 import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
+	
+	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	. "github.com/eris-ltd/eris-db/client"
