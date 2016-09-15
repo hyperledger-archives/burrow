@@ -24,25 +24,23 @@ import (
 	mockkeys "github.com/eris-ltd/eris-db/keys/mock"
 )
 
-// func TestTransactionFactory(t *testing.T) {
-// 	// test in parallel
-// 	t.Run("ExtractInputAddress from transaction", func (t1 *testing.T) {
-// 		t1.Run("SendTransaction", testTransactionFactorySend)
-// 		// t.Run("NameTransaction", )
-// 		// t.Run("CallTransaction", )
-// 		// t.Run("PermissionTransaction", )
-// 		// t.Run("BondTransaction", )
-// 		// t.Run("UnbondTransaction", )
-// 		// t.Run("RebondTransaction", )
-// 	})
-// }
-
-func TestTransactionFactorySend(t *testing.T) {
+func TestTransactionFactory(t *testing.T) {
 	mockKeyClient := mockkeys.NewMockKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
+	testTransactionFactorySend(t, mockNodeClient, mockKeyClient)
+	// t.Run("NameTransaction", )
+	testTransactionFactoryCall(t, mockNodeClient, mockKeyClient)
+	// t.Run("PermissionTransaction", )
+	// t.Run("BondTransaction", )
+	// t.Run("UnbondTransaction", )
+	// t.Run("RebondTransaction", )
+}
+
+func testTransactionFactorySend(t *testing.T,
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
-	addressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
+	addressString := fmt.Sprintf("%X", keyClient.NewKey())
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
@@ -50,16 +48,50 @@ func TestTransactionFactorySend(t *testing.T) {
 	// to address in generated transation.
 	publicKeyString := ""
 	// generate an additional address to send amount to
-	toAddressString := fmt.Sprintf("%X", mockKeyClient.NewKey())
+	toAddressString := fmt.Sprintf("%X", keyClient.NewKey())
 	// set an amount to transfer
-	amount := "1000"
+	amountString := "1000"
 	// unset nonce so that we retrieve nonce from account
-	nonce := ""
+	nonceString := ""
 
-	_, err := Send(mockNodeClient, mockKeyClient, publicKeyString, addressString,
-		toAddressString, amount, nonce)
+	_, err := Send(nodeClient, keyClient, publicKeyString, addressString,
+		toAddressString, amountString, nonceString)
 	if err != nil {
-		t.Logf("Error: %s", err)
+		t.Logf("Error in SendTx: %s", err)
 		t.Fail()
 	}
+	// TODO: test content of Transaction
+}
+
+func testTransactionFactoryCall(t *testing.T,
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+
+	// generate an ED25519 key and ripemd160 address
+	addressString := fmt.Sprintf("%X", keyClient.NewKey())
+	// Public key can be queried from mockKeyClient.PublicKey(address)
+	// but here we let the transaction factory retrieve the public key
+	// which will then also overwrite the address we provide the function.
+	// As a result we will assert whether address generated above, is identical
+	// to address in generated transation.
+	publicKeyString := ""
+	// generate an additional address to send amount to
+	toAddressString := fmt.Sprintf("%X", keyClient.NewKey())
+	// set an amount to transfer
+	amountString := "1000"
+	// unset nonce so that we retrieve nonce from account
+	nonceString := ""
+	// set gas 
+	gasString := "1000"
+	// set fee
+	feeString := "100"
+	// set data
+	dataString := fmt.Sprintf("%X", "We are DOUG.")
+
+	_, err := Call(nodeClient, keyClient, publicKeyString, addressString,
+		toAddressString, amountString, nonceString, gasString, feeString, dataString)
+	if err != nil {
+		t.Logf("Error in CallTx: %s", err)
+		t.Fail()
+	}
+	// TODO: test content of Transaction
 }
