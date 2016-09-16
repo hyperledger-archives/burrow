@@ -14,7 +14,7 @@ import (
 	"github.com/tendermint/go-wire"
 
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/tendermint/types" // votes for dupeout ..
+	tendermint_types "github.com/tendermint/tendermint/types" // votes for dupeout ..
 )
 
 var (
@@ -341,8 +341,8 @@ func (tx *RebondTx) String() string {
 
 type DupeoutTx struct {
 	Address []byte     `json:"address"`
-	VoteA   types.Vote `json:"vote_a"`
-	VoteB   types.Vote `json:"vote_b"`
+	VoteA   tendermint_types.Vote `json:"vote_a"`
+	VoteB   tendermint_types.Vote `json:"vote_b"`
 }
 
 func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -379,12 +379,6 @@ func (tx *PermissionsTx) String() string {
 
 func TxHash(chainID string, tx Tx) []byte {
 	signBytes := acm.SignBytes(chainID, tx)
-	return wire.BinaryRipemd160(signBytes)
-}
-
-// [Silas] Leaving this implementation here for when we transition
-func TxHashFuture(chainID string, tx Tx) []byte {
-	signBytes := acm.SignBytes(chainID, tx)
 	hasher := ripemd160.New()
 	hasher.Write(signBytes)
 	// Calling Sum(nil) just gives us the digest with nothing prefixed
@@ -393,34 +387,28 @@ func TxHashFuture(chainID string, tx Tx) []byte {
 
 //-----------------------------------------------------------------------------
 
-func EncodeTx(tx Tx) []byte {
-	wrapTx := struct {
-		Tx Tx `json:"unwrap"`
-	}{tx}
-	return wire.BinaryBytes(wrapTx)
+func EncodeTx(tx Tx) ([]byte, error) {
+	var n int
+	var err error
+	buf := new(bytes.Buffer)
+	wire.WriteBinary(struct{ Tx }{tx}, buf, &n, &err)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
-//func EncodeTx(tx txs.Tx) []byte {
-//	buf := new(bytes.Buffer)
-//	var n int
-//	var err error
-//	wire.WriteBinary(struct{ types.Tx }{tx}, buf, &n, &err)
-//	if err != nil {
-//		return err
-//	}
-//}
-
 // panic on err
-func DecodeTx(txBytes []byte) Tx {
+func DecodeTx(txBytes []byte) (Tx, error) {
 	var n int
 	var err error
 	tx := new(Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return *tx
+	return *tx, nil
 }
 
 func GenerateReceipt(chainId string, tx Tx) Receipt {
