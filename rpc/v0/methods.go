@@ -256,17 +256,11 @@ func (erisDbMethods *ErisDbMethods) Block(request *rpc.RPCRequest, requester int
 // *************************************** Consensus ************************************
 
 func (erisDbMethods *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	// core_types.FromRoundState() will do it, but only if we have access to
-	// Tendermint's RonudState..
-	state := &core_types.ConsensusState{}
-	return state, 0, nil
+	return erisDbMethods.pipe.Consensus().ConsensusState(), 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	validators := &core_types.ValidatorList{}
-	return validators, 0, nil
+	return erisDbMethods.pipe.Consensus().ListValidators(), 0, nil
 }
 
 // *************************************** Net ************************************

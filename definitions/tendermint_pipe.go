@@ -69,4 +69,10 @@ type TendermintPipe interface {
 
 	// Blockchain
 	BlockchainInfo(minHeight, maxHeight, maxBlockLookback int) (*rpc_tm_types.ResultBlockchainInfo, error)
+	ListUnconfirmedTxs(maxTxs int) (*rpc_tm_types.ResultListUnconfirmedTxs, error)
+	GetBlock(height int) (*rpc_tm_types.ResultGetBlock, error)
+
+	// Consensus
+	ListValidators() (*rpc_tm_types.ResultListValidators, error)
+	DumpConsensusState() (*rpc_tm_types.ResultDumpConsensusState, error)
 }

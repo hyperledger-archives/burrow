@@ -2,16 +2,22 @@ package testdata
 
 import (
 	account "github.com/eris-ltd/eris-db/account"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	transaction "github.com/eris-ltd/eris-db/txs"
-
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 
-var testDataJson = `{
+// TODO: [Silas] This would really be much better as a composite literal in go
+// where the compiler/type system/IDE would make it easier to maintain
+// not entirely straightforward to convert it, but shouldn't be that hard either
+// with recursive use of fmt.Printf("%#v", subStruct) on the decoded in-memory
+// object
+var testDataJson = `
+{
   "chain_data": {
     "priv_validator": {
       "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
@@ -53,7 +59,10 @@ var testDataJson = `{
       ],
       "validators": [
         {
-          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
+          "pub_key": [
+            1,
+            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
+          ],
           "amount": 5000000000,
           "unbond_to": [
             {
@@ -92,20 +101,20 @@ var testDataJson = `{
     "output": {
       "accounts": [
         {
-	      "address": "0000000000000000000000000000000000000000",
-	      "pub_key": null,
-	      "sequence": 0,
-	      "balance": 1337,
-	      "code": "",
-	      "storage_root": "",
-	      "permissions": {
-	        "base": {
-	          "perms": 2302,
-	          "set": 16383
-	        },
-	        "roles": []
-	      }
-	    },
+          "address": "0000000000000000000000000000000000000000",
+          "pub_key": null,
+          "sequence": 0,
+          "balance": 1337,
+          "code": "",
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 2302,
+              "set": 16383
+            },
+            "roles": []
+          }
+        },
         {
           "address": "0000000000000000000000000000000000000002",
           "pub_key": null,
@@ -243,7 +252,9 @@ var testDataJson = `{
     "output": {}
   },
   "GetBlock": {
-    "input": {"height": 0},
+    "input": {
+      "height": 0
+    },
     "output": null
   },
   "GetBlocks": {
@@ -264,15 +275,23 @@ var testDataJson = `{
       "start_time": "",
       "commit_time": "0001-01-01 00:00:00 +0000 UTC",
       "validators": [
-        {
-          "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
-          "bond_height": 0,
-          "unbond_height": 0,
-          "last_commit_height": 0,
-          "voting_power": 5000000000,
-          "accum": 0
-        }
+        [
+          1,
+          {
+            "validator": {
+              "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
+              "pub_key": [
+                1,
+                "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
+              ],
+              "bond_height": 0,
+              "unbond_height": 0,
+              "last_commit_height": 0,
+              "voting_power": 5000000000,
+              "accum": 0
+            }
+          }
+        ]
       ],
       "proposal": null
     }
@@ -283,7 +302,10 @@ var testDataJson = `{
       "bonded_validators": [
         {
           "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [1, "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"],
+          "pub_key": [
+            1,
+            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
+          ],
           "bond_height": 0,
           "unbond_height": 0,
           "last_commit_height": 0,
@@ -327,7 +349,9 @@ var testDataJson = `{
     "output": []
   },
   "GetPeer": {
-    "input": {"address": "127.0.0.1:30000"},
+    "input": {
+      "address": "127.0.0.1:30000"
+    },
     "output": {
       "is_outbound": false,
       "node_info": null
@@ -420,7 +444,11 @@ var testDataJson = `{
     }
   },
   "Call": {
-    "input": {"address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3", "from": "DEADBEEF", "data": ""},
+    "input": {
+      "address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3",
+      "from": "DEADBEEF",
+      "data": ""
+    },
     "output": {
       "return": "6000357c01000000000000000000000000000000000000000000000000000000009004806337f428411461004557806340c10f191461005a578063d0679d341461006e57005b610050600435610244565b8060005260206000f35b610068600435602435610082565b60006000f35b61007c600435602435610123565b60006000f35b600060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614156100dd576100e2565b61011f565b80600160005060008473ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828282505401925050819055505b5050565b80600160005060003373ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600050541061015e57610163565b610240565b80600160005060003373ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008282825054039250508190555080600160005060008473ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828282505401925050819055507f93eb3c629eb575edaf0252e4f9fc0c5ccada50496f8c1d32f0f93a65a8257eb560003373ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1681526020018281526020016000a15b5050565b6000600160005060008373ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060005054905061027d565b91905056",
       "gas_used": 0
@@ -484,7 +512,8 @@ var testDataJson = `{
       "name": "testKey",
       "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
       "data": "testData",
-      "expires": 250 }
+      "expires": 250
+    }
   },
   "GetNameRegEntries": {
     "input": {
@@ -492,15 +521,18 @@ var testDataJson = `{
     },
     "output": {
       "block_height": 1,
-      "names":[ {
-        "name": "testKey",
-        "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
-        "data": "testData",
-        "expires": 250
-      } ]
+      "names": [
+        {
+          "name": "testKey",
+          "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
+          "data": "testData",
+          "expires": 250
+        }
+      ]
     }
   }
-}`
+}
+`
 
 var serverDuration uint = 100
 
@@ -565,7 +597,7 @@ type (
 	}
 
 	GetConsensusStateData struct {
-		Output *core_types.ConsensusState `json:"output"`
+		Output *consensus_types.ConsensusState `json:"output"`
 	}
 
 	GetValidatorsData struct {

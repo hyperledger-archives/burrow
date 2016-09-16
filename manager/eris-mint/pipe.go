@@ -47,8 +47,8 @@ import (
 )
 
 type erisMintPipe struct {
-	erisMintState   *state.State
-	erisMint        *ErisMint
+	erisMintState *state.State
+	erisMint      *ErisMint
 	// Pipe implementations
 	accounts        *accounts
 	blockchain      blockchain_types.Blockchain
@@ -58,8 +58,8 @@ type erisMintPipe struct {
 	network         *network
 	transactor      *transactor
 	// Genesis cache
-	genesisDoc      *state_types.GenesisDoc
-	genesisState    *state.State
+	genesisDoc   *state_types.GenesisDoc
+	genesisState *state.State
 }
 
 // NOTE [ben] Compiler check to ensure erisMintPipe successfully implements
@@ -112,11 +112,11 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		genesisDoc:   genesisDoc,
 		genesisState: nil,
 		// TODO: What network-level information do we need?
-		network:       newNetwork(),
+		network: newNetwork(),
 		// consensus and blockchain should both be loaded into the pipe by a higher
 		// authority - this is a sort of dependency injection pattern
-		consensusEngine:     nil,
-		blockchain: nil,
+		consensusEngine: nil,
+		blockchain:      nil,
 	}, nil
 }
 
@@ -522,26 +522,34 @@ func (pipe *erisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
 	return &rpc_tm_types.ResultListNames{blockHeight, names}, nil
 }
 
-// Memory pool
-// NOTE: txs must be signed
-func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (
-	*rpc_tm_types.ResultBroadcastTx, error) {
-	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx), nil)
+func (pipe *erisMintPipe) broadcastTx(tx txs.Tx,
+	callback func(res *tmsp_types.Response)) (*rpc_tm_types.ResultBroadcastTx, error) {
+
+	txBytes, err := txs.EncodeTx(tx)
 	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting txs: %v", err)
+		return nil, fmt.Errorf("Error encoding transaction: %v", err)
+	}
+	err = pipe.consensusEngine.BroadcastTransaction(txBytes, callback)
+	if err != nil {
+		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
 	return &rpc_tm_types.ResultBroadcastTx{}, nil
 }
 
-func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx,
-	error) {
+// Memory pool
+// NOTE: txs must be signed
+func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx, error) {
+	return pipe.broadcastTx(tx, nil)
+}
+
+func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx, error) {
 	responseChannel := make(chan *tmsp_types.Response, 1)
-	err := pipe.consensusEngine.BroadcastTransaction(txs.EncodeTx(tx),
+	_, err := pipe.broadcastTx(tx,
 		func(res *tmsp_types.Response) {
 			responseChannel <- res
 		})
 	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting txs: %v", err)
+		return nil, err
 	}
 	// NOTE: [ben] This Response is set in /consensus/tendermint/local_client.go
 	// a call to Application, here implemented by ErisMint, over local callback,
@@ -574,6 +582,18 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 	}
 }
 
+func (pipe *erisMintPipe) ListUnconfirmedTxs(maxTxs int) (*rpc_tm_types.ResultListUnconfirmedTxs, error) {
+	// Get all transactions for now
+	transactions, err := pipe.consensusEngine.ListUnconfirmedTxs(maxTxs)
+	if err != nil {
+		return nil, err
+	}
+	return &rpc_tm_types.ResultListUnconfirmedTxs{
+		N:   len(transactions),
+		Txs: transactions,
+	}, nil
+}
+
 // Returns the current blockchain height and metadata for a range of blocks
 // between minHeight and maxHeight. Only returns maxBlockLookback block metadata
 // from the top of the range of blocks.
@@ -599,5 +619,34 @@ func (pipe *erisMintPipe) BlockchainInfo(minHeight, maxHeight,
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
-	return &rpc_tm_types.ResultBlockchainInfo{latestHeight, blockMetas}, nil
+	return &rpc_tm_types.ResultBlockchainInfo{
+		LastHeight: latestHeight,
+		BlockMetas: blockMetas,
+	}, nil
+}
+
+func (pipe *erisMintPipe) GetBlock(height int) (*rpc_tm_types.ResultGetBlock, error) {
+	return &rpc_tm_types.ResultGetBlock{
+		Block:     pipe.blockchain.Block(height),
+		BlockMeta: pipe.blockchain.BlockMeta(height),
+	}, nil
+}
+
+func (pipe *erisMintPipe) ListValidators() (*rpc_tm_types.ResultListValidators, error) {
+	validators := pipe.consensusEngine.ListValidators()
+	consensusState := pipe.consensusEngine.ConsensusState()
+	// TODO: when we reintroduce support for bonding and unbonding update this
+	// to reflect the mutable bonding state
+	return &rpc_tm_types.ResultListValidators{
+		BlockHeight: consensusState.Height,
+		BondedValidators: validators,
+		UnbondingValidators: nil,
+	}, nil
+}
+
+func (pipe *erisMintPipe) DumpConsensusState() (*rpc_tm_types.ResultDumpConsensusState, error) {
+	return &rpc_tm_types.ResultDumpConsensusState{
+		ConsensusState: pipe.consensusEngine.ConsensusState(),
+		PeerConsensusStates: pipe.consensusEngine.PeerConsensusStates(),
+	}, nil
 }

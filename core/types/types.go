@@ -21,14 +21,12 @@ package types
 
 import (
 	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
-	tendermint_consensus "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/types"
 
 	account "github.com/eris-ltd/eris-db/account"
 )
 
 type (
-
 	// *********************************** Address ***********************************
 
 	// Accounts
@@ -80,17 +78,6 @@ type (
 	}
 
 	// *********************************** Consensus ***********************************
-
-	// ConsensusState
-	ConsensusState struct {
-		Height     int                `json:"height"`
-		Round      int                `json:"round"`
-		Step       uint8              `json:"step"`
-		StartTime  string             `json:"start_time"`
-		CommitTime string             `json:"commit_time"`
-		Validators []*types.Validator `json:"validators"`
-		Proposal   *types.Proposal    `json:"proposal"`
-	}
 
 	// Validators
 	ValidatorList struct {
@@ -158,19 +145,6 @@ type (
 		// TODO ...
 	}
 )
-
-func FromRoundState(rs *tendermint_consensus.RoundState) *ConsensusState {
-	cs := &ConsensusState{
-		CommitTime: rs.CommitTime.String(),
-		Height:     rs.Height,
-		Proposal:   rs.Proposal,
-		Round:      rs.Round,
-		StartTime:  rs.StartTime.String(),
-		Step:       uint8(rs.Step),
-		Validators: rs.Validators.Validators,
-	}
-	return cs
-}
 
 //------------------------------------------------------------------------------
 // copied in from NameReg

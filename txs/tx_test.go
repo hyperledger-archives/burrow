@@ -6,9 +6,9 @@ import (
 	acm "github.com/eris-ltd/eris-db/account"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
+	"github.com/stretchr/testify/assert"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
-	//"github.com/tendermint/tendermint/types"
 )
 
 var chainID = "myChainID"
@@ -175,6 +175,30 @@ func TestPermissionsTxSignable(t *testing.T) {
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
+}
+
+func TestEncodeTxDecodeTx(t *testing.T) {
+	inputAddress := []byte{1, 2, 3, 4, 5}
+	outputAddress := []byte{5, 4, 3, 2, 1}
+	amount := int64(2)
+	sequence := 1
+	tx := &SendTx{
+		Inputs: []*TxInput{{
+			Address:  inputAddress,
+			Amount:   amount,
+			Sequence: sequence,
+		}},
+		Outputs: []*TxOutput{{
+			Address: outputAddress,
+			Amount:  amount,
+		}},
+	}
+	txBytes, err := EncodeTx(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txOut, err := DecodeTx(txBytes)
+	assert.Equal(t, tx, txOut)
 }
 
 /*
