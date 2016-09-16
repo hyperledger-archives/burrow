@@ -208,6 +208,23 @@ func (cons *consensusEngine) Events() event.EventEmitter {
 	return nil
 }
 
+func (cons *consensusEngine) ListUnconfirmedTxs(maxTxs int) ([]txs.Tx, error) {
+	return nil, nil
+
+}
+
+func (cons *consensusEngine) ListValidators() []consensus_types.Validator {
+	return nil
+}
+
+func (cons *consensusEngine) ConsensusState() *consensus_types.ConsensusState {
+	return &consensus_types.ConsensusState{}
+}
+
+func (cons *consensusEngine) PeerConsensusStates() map[string]string {
+	return map[string]string{}
+}
+
 // Events
 type eventer struct {
 	testData *td.TestData

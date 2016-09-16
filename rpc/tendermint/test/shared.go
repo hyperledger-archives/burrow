@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"hash/fnv"
 	"strconv"
 	"testing"
 
@@ -34,8 +35,10 @@ var (
 	websocketAddr     string
 	websocketEndpoint string
 
-	user    = makeUsers(5) // make keys
-	clients map[string]rpcclient.Client
+	user          = makeUsers(5) // make keys
+	jsonRpcClient rpcclient.Client
+	httpClient    rpcclient.Client
+	clients       map[string]rpcclient.Client
 
 	testCore *core.Core
 )
@@ -85,9 +88,12 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 		return err
 	}
 
+	jsonRpcClient = rpcclient.NewClientJSONRPC(rpcAddr)
+	httpClient = rpcclient.NewClientURI(rpcAddr)
+
 	clients = map[string]rpcclient.Client{
-		"JSONRPC": rpcclient.NewClientURI(rpcAddr),
-		"HTTP":    rpcclient.NewClientJSONRPC(rpcAddr),
+		"JSONRPC": jsonRpcClient,
+		"HTTP":    httpClient,
 	}
 	return nil
 }
@@ -125,34 +131,34 @@ func saveNewPriv() {
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, typ string, addr []byte,
+func makeDefaultSendTx(t *testing.T, client rpcclient.Client, addr []byte,
 	amt int64) *txs.SendTx {
-	nonce := getNonce(t, typ, user[0].Address)
+	nonce := getNonce(t, client, user[0].Address)
 	tx := txs.NewSendTx()
 	tx.AddInputWithNonce(user[0].PubKey, amt, nonce+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, typ string, addr []byte,
+func makeDefaultSendTxSigned(t *testing.T, client rpcclient.Client, addr []byte,
 	amt int64) *txs.SendTx {
-	tx := makeDefaultSendTx(t, typ, addr, amt)
+	tx := makeDefaultSendTx(t, client, addr, amt)
 	tx.SignInput(chainID, 0, user[0])
 	return tx
 }
 
-func makeDefaultCallTx(t *testing.T, typ string, addr, code []byte, amt, gasLim,
+func makeDefaultCallTx(t *testing.T, client rpcclient.Client, addr, code []byte, amt, gasLim,
 	fee int64) *txs.CallTx {
-	nonce := getNonce(t, typ, user[0].Address)
+	nonce := getNonce(t, client, user[0].Address)
 	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee,
 		nonce+1)
 	tx.Sign(chainID, user[0])
 	return tx
 }
 
-func makeDefaultNameTx(t *testing.T, typ string, name, value string, amt,
+func makeDefaultNameTx(t *testing.T, client rpcclient.Client, name, value string, amt,
 	fee int64) *txs.NameTx {
-	nonce := getNonce(t, typ, user[0].Address)
+	nonce := getNonce(t, client, user[0].Address)
 	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce+1)
 	tx.Sign(chainID, user[0])
 	return tx
@@ -162,8 +168,7 @@ func makeDefaultNameTx(t *testing.T, typ string, name, value string, amt,
 // rpc call wrappers (fail on err)
 
 // get an account's nonce
-func getNonce(t *testing.T, typ string, addr []byte) int {
-	client := clients[typ]
+func getNonce(t *testing.T, client rpcclient.Client, addr []byte) int {
 	ac, err := edbcli.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -175,8 +180,7 @@ func getNonce(t *testing.T, typ string, addr []byte) int {
 }
 
 // get the account
-func getAccount(t *testing.T, typ string, addr []byte) *acm.Account {
-	client := clients[typ]
+func getAccount(t *testing.T, client rpcclient.Client, addr []byte) *acm.Account {
 	ac, err := edbcli.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -185,9 +189,8 @@ func getAccount(t *testing.T, typ string, addr []byte) *acm.Account {
 }
 
 // sign transaction
-func signTx(t *testing.T, typ string, tx txs.Tx,
+func signTx(t *testing.T, client rpcclient.Client, tx txs.Tx,
 	privAcc *acm.PrivAccount) txs.Tx {
-	client := clients[typ]
 	signedTx, err := edbcli.SignTx(client, tx, []*acm.PrivAccount{privAcc})
 	if err != nil {
 		t.Fatal(err)
@@ -196,8 +199,7 @@ func signTx(t *testing.T, typ string, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, typ string, tx txs.Tx) txs.Receipt {
-	client := clients[typ]
+func broadcastTx(t *testing.T, client rpcclient.Client, tx txs.Tx) txs.Receipt {
 	rec, err := edbcli.BroadcastTx(client, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -216,8 +218,7 @@ func dumpStorage(t *testing.T, addr []byte) *rpc_types.ResultDumpStorage {
 	return resp
 }
 
-func getStorage(t *testing.T, typ string, addr, key []byte) []byte {
-	client := clients[typ]
+func getStorage(t *testing.T, client rpcclient.Client, addr, key []byte) []byte {
 	resp, err := edbcli.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
@@ -252,8 +253,7 @@ func callContract(t *testing.T, client rpcclient.Client, fromAddress, toAddress,
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, typ string, name string) *core_types.NameRegEntry {
-	client := clients[typ]
+func getNameRegEntry(t *testing.T, client rpcclient.Client, name string) *core_types.NameRegEntry {
 	entry, err := edbcli.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)
@@ -261,28 +261,20 @@ func getNameRegEntry(t *testing.T, typ string, name string) *core_types.NameRegE
 	return entry
 }
 
+// Returns a positive int64 hash of text (consumers want int64 instead of uint64)
+func hashString(text string) int64 {
+	hasher := fnv.New64()
+	hasher.Write([]byte(text))
+	value := int64(hasher.Sum64())
+	// Flip the sign if we wrapped
+	if value < 0 {
+		return -value
+	}
+	return value
+}
+
 //--------------------------------------------------------------------------------
 // utility verification function
-
-func checkTx(t *testing.T, fromAddr []byte, priv *acm.PrivAccount,
-	tx *txs.SendTx) {
-	if bytes.Compare(tx.Inputs[0].Address, fromAddr) != 0 {
-		t.Fatal("Tx input addresses don't match!")
-	}
-
-	signBytes := acm.SignBytes(chainID, tx)
-	in := tx.Inputs[0] //(*types.SendTx).Inputs[0]
-
-	if err := in.ValidateBasic(); err != nil {
-		t.Fatal(err)
-	}
-	// Check signatures
-	// acc := getAccount(t, byteAddr)
-	// NOTE: using the acc here instead of the in fails; it is nil.
-	if !in.PubKey.VerifyBytes(signBytes, in.Signature) {
-		t.Fatal(txs.ErrTxInvalidSignature)
-	}
-}
 
 // simple contract returns 5 + 6 = 0xb
 func simpleContract() ([]byte, []byte, []byte) {

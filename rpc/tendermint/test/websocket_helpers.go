@@ -2,20 +2,16 @@ package test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
-	"github.com/tendermint/tendermint/types"
 	tm_types "github.com/tendermint/tendermint/types"
 
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
-	"github.com/tendermint/go-events"
-	client "github.com/tendermint/go-rpc/client"
-	rpctypes "github.com/tendermint/go-rpc/types"
+	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )
 
@@ -27,8 +23,8 @@ const (
 // Utilities for testing the websocket service
 
 // create a new connection
-func newWSClient(t *testing.T) *client.WSClient {
-	wsc := client.NewWSClient(websocketAddr, websocketEndpoint)
+func newWSClient(t *testing.T) *rpcclient.WSClient {
+	wsc := rpcclient.NewWSClient(websocketAddr, websocketEndpoint)
 	if _, err := wsc.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -36,13 +32,13 @@ func newWSClient(t *testing.T) *client.WSClient {
 }
 
 // subscribe to an event
-func subscribe(t *testing.T, wsc *client.WSClient, eventId string) {
+func subscribe(t *testing.T, wsc *rpcclient.WSClient, eventId string) {
 	if err := wsc.Subscribe(eventId); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func subscribeAndGetSubscriptionId(t *testing.T, wsc *client.WSClient,
+func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 	eventId string) string {
 	if err := wsc.Subscribe(eventId); err != nil {
 		t.Fatal(err)
@@ -63,14 +59,14 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *client.WSClient,
 }
 
 // unsubscribe from an event
-func unsubscribe(t *testing.T, wsc *client.WSClient, subscriptionId string) {
+func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
 	if err := wsc.Unsubscribe(subscriptionId); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWaitForBlock(t *testing.T, typ string, wsc *client.WSClient,
+func broadcastTxAndWaitForBlock(t *testing.T, client rpcclient.Client, wsc *rpcclient.WSClient,
 	tx txs.Tx) (txs.Receipt, error) {
 	var rec txs.Receipt
 	var err error
@@ -86,17 +82,17 @@ func broadcastTxAndWaitForBlock(t *testing.T, typ string, wsc *client.WSClient,
 				// state updates, so we have to wait for the block after the block we
 				// want in order for the Tx to be genuinely final.
 				// This should be addressed by: https://github.com/tendermint/tendermint/pull/265
-				return block.Height > initialHeight + 1
+				return block.Height > initialHeight+1
 			}
 		},
 		func() {
-			rec, err = edbcli.BroadcastTx(clients[typ], tx)
+			rec, err = edbcli.BroadcastTx(client, tx)
 			mempoolCount += 1
 		})
 	return rec, err
 }
 
-func waitNBlocks(t *testing.T, wsc *client.WSClient, n int) {
+func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
 	i := 0
 	runThenWaitForBlock(t, wsc,
 		func(block *tm_types.Block) bool {
@@ -106,7 +102,7 @@ func waitNBlocks(t *testing.T, wsc *client.WSClient, n int) {
 		func() {})
 }
 
-func runThenWaitForBlock(t *testing.T, wsc *client.WSClient,
+func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient,
 	blockPredicate func(*tm_types.Block) bool, runner func()) {
 	subscribeAndWaitForNext(t, wsc, txs.EventStringNewBlock(),
 		runner,
@@ -115,7 +111,7 @@ func runThenWaitForBlock(t *testing.T, wsc *client.WSClient,
 		})
 }
 
-func subscribeAndWaitForNext(t *testing.T, wsc *client.WSClient, event string,
+func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string,
 	runner func(),
 	eventDataChecker func(string, txs.EventData) (bool, error)) {
 	subId := subscribeAndGetSubscriptionId(t, wsc, event)
@@ -134,7 +130,7 @@ func subscribeAndWaitForNext(t *testing.T, wsc *client.WSClient, event string,
 // stopWaiting is true waitForEvent will return or if stopWaiting is false
 // waitForEvent will keep listening for new events. If an error is returned
 // waitForEvent will fail the test.
-func waitForEvent(t *testing.T, wsc *client.WSClient, eventid string,
+func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventid string,
 	runner func(),
 	eventDataChecker func(string, txs.EventData) (bool, error)) waitForEventResult {
 
@@ -207,44 +203,7 @@ func (err waitForEventResult) Timeout() bool {
 	return err.timeout
 }
 
-func acceptFirstBlock(_ *tm_types.Block) bool {
-	return true
-}
-
 //--------------------------------------------------------------------------------
-
-func unmarshalResponseNewBlock(b []byte) (*types.Block, error) {
-	// unmarshall and assert somethings
-	var response rpctypes.RPCResponse
-	var err error
-	wire.ReadJSON(&response, b, &err)
-	if err != nil {
-		return nil, err
-	}
-	if response.Error != "" {
-		return nil, fmt.Errorf(response.Error)
-	}
-	// TODO
-	//block := response.Result.(*ctypes.ResultEvent).Data.(types.EventDataNewBlock).Block
-	// return block, nil
-	return nil, nil
-}
-
-func unmarshalResponseNameReg(b []byte) (*txs.NameTx, error) {
-	// unmarshall and assert somethings
-	var response rpctypes.RPCResponse
-	var err error
-	wire.ReadJSON(&response, b, &err)
-	if err != nil {
-		return nil, err
-	}
-	if response.Error != "" {
-		return nil, fmt.Errorf(response.Error)
-	}
-	_, val := UnmarshalEvent(*response.Result)
-	tx := txs.DecodeTx(val.(types.EventDataTx).Tx).(*txs.NameTx)
-	return tx, nil
-}
 
 func unmarshalValidateSend(amt int64,
 	toAddr []byte) func(string, txs.EventData) (bool, error) {
@@ -312,22 +271,6 @@ func unmarshalValidateCall(origin,
 		}
 		return true, nil
 	}
-}
-
-// Unmarshal a json event
-func UnmarshalEvent(b json.RawMessage) (string, events.EventData) {
-	var err error
-	result := new(ctypes.ErisDBResult)
-	wire.ReadJSONPtr(result, b, &err)
-	if err != nil {
-		panic(err)
-	}
-	event, ok := (*result).(*ctypes.ResultEvent)
-	if !ok {
-		return "", nil // TODO: handle non-event messages (ie. return from subscribe/unsubscribe)
-		// fmt.Errorf("Result is not type *ctypes.ResultEvent. Got %v", reflect.TypeOf(*result))
-	}
-	return event.Event, event.Data
 }
 
 func readResult(t *testing.T, bs []byte) ctypes.ErisDBResult {

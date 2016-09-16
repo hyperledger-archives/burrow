@@ -137,6 +137,9 @@ func performCall(client rpcclient.Client, method string,
 		_, err = cli.Call(method, paramsSlice, &res)
 	case *rpcclient.ClientURI:
 		_, err = cli.Call(method, paramsMap, &res)
+	default:
+		panic(fmt.Errorf("peformCall called against an unknown rpcclient.Client %v",
+			cli))
 	}
 	return
 
