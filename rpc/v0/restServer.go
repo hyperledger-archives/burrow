@@ -221,17 +221,13 @@ func (restServer *RestServer) handleBlock(c *gin.Context) {
 
 // ********************************* Consensus *********************************
 func (restServer *RestServer) handleConsensusState(c *gin.Context) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	// core_types.FromRoundState() will do it, but only if we have access to
-	// Tendermint's RonudState..
-	cs := &core_types.ConsensusState{}
+	cs := restServer.pipe.Consensus().ConsensusState()
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(cs, c.Writer)
 }
 
 func (restServer *RestServer) handleValidatorList(c *gin.Context) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	vl := &core_types.ValidatorList{}
+	vl := restServer.pipe.Consensus().ListValidators()
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(vl, c.Writer)
 }

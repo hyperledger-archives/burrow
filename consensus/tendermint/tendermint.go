@@ -27,6 +27,7 @@ import (
 
 	crypto "github.com/tendermint/go-crypto"
 	p2p "github.com/tendermint/go-p2p"
+	tendermint_consensus "github.com/tendermint/tendermint/consensus"
 	node "github.com/tendermint/tendermint/node"
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
@@ -40,6 +41,8 @@ import (
 	// files  "github.com/eris-ltd/eris-db/files"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	"github.com/eris-ltd/eris-db/txs"
+	"github.com/tendermint/go-wire"
 )
 
 type Tendermint struct {
@@ -220,6 +223,44 @@ func (tendermint *Tendermint) Events() edb_event.EventEmitter {
 func (tendermint *Tendermint) BroadcastTransaction(transaction []byte,
 	callback func(*tmsp_types.Response)) error {
 	return tendermint.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
+}
+
+func (tendermint *Tendermint) ListUnconfirmedTxs(
+	maxTxs int) ([]txs.Tx, error) {
+	tendermintTxs := tendermint.tmintNode.MempoolReactor().Mempool.Reap(maxTxs)
+	transactions := make([]txs.Tx, len(tendermintTxs))
+	for i, txBytes := range tendermintTxs {
+		tx, err := txs.DecodeTx(txBytes)
+		if err != nil {
+			return nil, err
+		}
+		transactions[i] = tx
+	}
+	return transactions, nil
+}
+
+func (tendermint *Tendermint) ListValidators() []consensus_types.Validator {
+	return consensus_types.FromTendermintValidators(tendermint.tmintNode.
+		ConsensusState().Validators.Validators)
+}
+
+func (tendermint *Tendermint) ConsensusState() *consensus_types.ConsensusState {
+	return consensus_types.FromRoundState(tendermint.tmintNode.ConsensusState().
+			GetRoundState())
+}
+
+func (tendermint *Tendermint) PeerConsensusStates() map[string]string {
+	peers := tendermint.tmintNode.Switch().Peers().List()
+	peerConsensusStates := make(map[string]string,
+		len(peers))
+	for _, peer := range peers {
+		peerState := peer.Data.Get(tendermint_types.PeerStateKey).(*tendermint_consensus.PeerState)
+		peerRoundState := peerState.GetRoundState()
+		// TODO: implement a proper mapping, this is a nasty way of marshalling
+		// to JSON
+		peerConsensusStates[peer.Key] = string(wire.JSONBytes(peerRoundState))
+	}
+	return peerConsensusStates
 }
 
 //------------------------------------------------------------------------------
