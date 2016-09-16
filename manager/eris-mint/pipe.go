@@ -395,7 +395,10 @@ func (pipe *erisMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDumpS
 	return &rpc_tm_types.ResultDumpStorage{storageRoot, storageItems}, nil
 }
 
-// Call
+// Call 
+// NOTE: this function is used from 46657 and has sibling on 1337
+// in transactor.go
+// TODO: [ben] resolve incompatibilities in byte representation for 0.12.0 release
 func (pipe *erisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall,
 	error) {
 	st := pipe.erisMint.GetState()
@@ -404,23 +407,30 @@ func (pipe *erisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_typ
 	if outAcc == nil {
 		return nil, fmt.Errorf("Account %x does not exist", toAddress)
 	}
+	if fromAddress == nil {
+		fromAddress = []byte{}
+	}
 	callee := toVMAccount(outAcc)
 	caller := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
+	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   tm_common.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    st.GetGasLimit(),
+		GasLimit:    gasLimit,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := st.GetGasLimit()
+	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
-	return &rpc_tm_types.ResultCall{Return: ret}, nil
+	gasUsed := gasLimit - gas
+	// here return bytes are not hex encoded; on the sibling function
+	// they are
+	return &rpc_tm_types.ResultCall{Return: ret, GasUsed: gasUsed}, nil
 }
 
 func (pipe *erisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_types.ResultCall,
@@ -430,20 +440,22 @@ func (pipe *erisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_type
 	callee := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
 	caller := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
+	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   tm_common.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    st.GetGasLimit(),
+		GasLimit:    gasLimit,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := st.GetGasLimit()
+	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
-	return &rpc_tm_types.ResultCall{Return: ret}, nil
+	gasUsed := gasLimit - gas
+	return &rpc_tm_types.ResultCall{Return: ret, GasUsed: gasUsed}, nil
 }
 
 // TODO: [ben] deprecate as we should not allow unsafe behaviour

@@ -21,21 +21,20 @@ import (
 
 	"github.com/tendermint/go-rpc/client"
 
-	"github.com/eris-ltd/eris-db/account"
+	acc "github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
-	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
 type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
 
-	GetAccount(address []byte) (*account.Account, error)
-
-	Status() (*rpc_types.ResultStatus, error)
+	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
+		BlockHeight int, LatestBlockTime int64, err error)
+	GetAccount(address []byte) (*acc.Account, error)
 }
 
-// NOTE [ben] Compiler check to ensure ErisClient successfully implements
+// NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
 // eris-db/client.NodeClient
 var _ NodeClient = (*ErisNodeClient)(nil)
 
@@ -58,8 +57,8 @@ func NewErisNodeClient(rpcString string) *ErisNodeClient {
 // NOTE: [ben] Eris Client first continues from tendermint rpc, but will have handshake to negotiate
 // protocol version for moving towards rpc/v1
 
-func (erisClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
-	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
+func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
 	receipt, err := tendermint_client.BroadcastTx(client, tx)
 	if err != nil {
 		return nil, err
@@ -67,30 +66,36 @@ func (erisClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	return &receipt, nil
 }
 
-func (erisClient *ErisNodeClient) GetAccount(address []byte) (*account.Account, error) {
-	// fetch nonce from node
-	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
+//------------------------------------------------------------------------------------
+// RPC requests other than transaction related
+
+// GetAccount returns a copy of the account
+func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
-			erisClient.broadcastRPC, address, err.Error())
+			erisNodeClient.broadcastRPC, address, err.Error())
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisClient.broadcastRPC)
+		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisNodeClient.broadcastRPC)
 		return nil, err
 	}
 
 	return account.Copy(), nil
 }
 
-func (erisClient *ErisNodeClient) Status() (*rpc_types.ResultStatus, error) {
+// Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
+// the block height and the latest block time.
+func (erisClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
+		BlockHeight int, LatestBlockTime int64, err error) {
 	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get status: %s",
 			erisClient.broadcastRPC, err.Error())
-		return nil, err
+		return nil, nil, nil, 0, 0, err
 	}
-	return res, nil
+	return res.GenesisHash, res.PubKey.Bytes(), res.LatestBlockHash, res.LatestBlockHeight,	res.LatestBlockTime, nil
 }

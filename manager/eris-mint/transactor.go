@@ -59,10 +59,14 @@ func newTransactor(chainID string, eventSwitch tEvents.Fireable,
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
+// NOTE: this function is used from 1337 and has sibling on 46657
+// in pipe.go
+// TODO: [ben] resolve incompatibilities in byte representation for 0.12.0 release
 func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 	*core_types.Call, error) {
 
-	cache := this.erisMint.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
+	st := this.erisMint.GetState()
+	cache := state.NewBlockCache(st) // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
 		return nil, fmt.Errorf("Account %X does not exist", toAddress)
@@ -73,22 +77,25 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 	callee := toVMAccount(outAcc)
 	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
-	st := this.erisMint.GetState() // for block height, time
+	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    10000000,
+		GasLimit:    gasLimit,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
 	vmach.SetFireable(this.eventSwitch)
-	gas := int64(1000000000)
+	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
-	return &core_types.Call{Return: hex.EncodeToString(ret)}, nil
+	gasUsed := gasLimit - gas
+	// here return bytes are hex encoded; on the sibling function
+	// they are not
+	return &core_types.Call{Return: hex.EncodeToString(ret), GasUsed: gasUsed}, nil
 }
 
 // Run the given code on an isolated and unpersisted state
@@ -103,20 +110,24 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	st := this.erisMint.GetState() // for block height, time
+	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
 		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
-		GasLimit:    10000000,
+		GasLimit:    gasLimit,
 	}
 
 	vmach := vm.NewVM(txCache, params, caller.Address, nil)
-	gas := int64(1000000000)
+	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
-	return &core_types.Call{Return: hex.EncodeToString(ret)}, nil
+	gasUsed := gasLimit - gas
+	// here return bytes are hex encoded; on the sibling function
+	// they are not
+	return &core_types.Call{Return: hex.EncodeToString(ret), GasUsed: gasUsed}, nil
 }
 
 // Broadcast a transaction.
