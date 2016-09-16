@@ -23,6 +23,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -30,6 +31,8 @@ type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
 
 	GetAccount(address []byte) (*account.Account, error)
+
+	Status() (*rpc_types.ResultStatus, error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisClient successfully implements
@@ -79,4 +82,15 @@ func (erisClient *ErisNodeClient) GetAccount(address []byte) (*account.Account, 
 	}
 
 	return account.Copy(), nil
+}
+
+func (erisClient *ErisNodeClient) Status() (*rpc_types.ResultStatus, error) {
+	client := rpcclient.NewClientURI(erisClient.broadcastRPC)
+	res, err := tendermint_client.Status(client)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get status: %s",
+			erisClient.broadcastRPC, err.Error())
+		return nil, err
+	}
+	return res, nil
 }
