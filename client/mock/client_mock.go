@@ -18,9 +18,6 @@ package mock
 
 import (
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-p2p"
-
-	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	. "github.com/eris-ltd/eris-db/client"
@@ -72,29 +69,19 @@ func (mock *MockNodeClient) MockAddAccount(account *acc.Account) {
 	mock.accounts[addressString] = account.Copy()
 }
 
-func (mock *MockNodeClient) Status() (*rpc_types.ResultStatus, error) {
+func (mock *MockNodeClient) Status() (ChainId []byte,
+	ValidatorPublicKey []byte, LatestBlockHash []byte,
+	BlockHeight int, LatestBlockTime int64, err error) {
 	// make zero account
 	var zero [32]byte
 	ed25519 := crypto.PubKeyEd25519(zero)
 	pub := crypto.PubKey(ed25519)
 
-	// create a status
-	nodeInfo := &p2p.NodeInfo{
-		PubKey:     ed25519,
-		Moniker:    "Mock",
-		Network:    "MockNet",
-		RemoteAddr: "127.0.0.1",
-		ListenAddr: "127.0.0.1",
-		Version:    "0.12.0",
-		Other:      []string{},
-	}
-
-	return &rpc_types.ResultStatus{
-		NodeInfo:          nodeInfo,
-		GenesisHash:       nil,
-		PubKey:            pub,
-		LatestBlockHash:   nil,
-		LatestBlockHeight: 1,
-		LatestBlockTime:   1,
-	}, nil
+	// fill return values
+	ChainId = make([]byte, 64)
+	LatestBlockHash = make([]byte, 64)
+	ValidatorPublicKey = pub.Bytes()
+	BlockHeight = 0
+	LatestBlockTime = 0
+	return
 }
