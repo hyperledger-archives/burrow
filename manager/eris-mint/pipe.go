@@ -181,10 +181,6 @@ func (pipe *erisMintPipe) Blockchain() blockchain_types.Blockchain {
 	return pipe.blockchain
 }
 
-func (pipe *erisMintPipe) Consensus() consensus_types.ConsensusEngine {
-	return pipe.consensusEngine
-}
-
 func (pipe *erisMintPipe) Events() edb_event.EventEmitter {
 	return pipe.events
 }
@@ -395,7 +391,7 @@ func (pipe *erisMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDumpS
 	return &rpc_tm_types.ResultDumpStorage{storageRoot, storageItems}, nil
 }
 
-// Call 
+// Call
 // NOTE: this function is used from 46657 and has sibling on 1337
 // in transactor.go
 // TODO: [ben] resolve incompatibilities in byte representation for 0.12.0 release
@@ -638,15 +634,15 @@ func (pipe *erisMintPipe) ListValidators() (*rpc_tm_types.ResultListValidators, 
 	// TODO: when we reintroduce support for bonding and unbonding update this
 	// to reflect the mutable bonding state
 	return &rpc_tm_types.ResultListValidators{
-		BlockHeight: consensusState.Height,
-		BondedValidators: validators,
+		BlockHeight:         consensusState.Height,
+		BondedValidators:    validators,
 		UnbondingValidators: nil,
 	}, nil
 }
 
 func (pipe *erisMintPipe) DumpConsensusState() (*rpc_tm_types.ResultDumpConsensusState, error) {
 	return &rpc_tm_types.ResultDumpConsensusState{
-		ConsensusState: pipe.consensusEngine.ConsensusState(),
+		ConsensusState:      pipe.consensusEngine.ConsensusState(),
 		PeerConsensusStates: pipe.consensusEngine.PeerConsensusStates(),
 	}, nil
 }

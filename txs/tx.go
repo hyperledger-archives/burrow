@@ -340,7 +340,7 @@ func (tx *RebondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type DupeoutTx struct {
-	Address []byte     `json:"address"`
+	Address []byte                `json:"address"`
 	VoteA   tendermint_types.Vote `json:"vote_a"`
 	VoteB   tendermint_types.Vote `json:"vote_b"`
 }

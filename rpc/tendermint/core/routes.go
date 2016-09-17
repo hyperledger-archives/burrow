@@ -213,7 +213,7 @@ func (tmRoutes *TendermintRoutes) BlockchainInfo(minHeight,
 
 func (tmRoutes *TendermintRoutes) ListUnconfirmedTxs() (ctypes.ErisDBResult, error) {
 	// Get all Txs for now
-	r, err := tmRoutes.tendermintPipe.ListUnconfirmedTxs(0)
+	r, err := tmRoutes.tendermintPipe.ListUnconfirmedTxs(-1)
 	if err != nil {
 		return nil, err
 	} else {

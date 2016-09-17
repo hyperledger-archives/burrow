@@ -21,6 +21,7 @@ const (
 
 //--------------------------------------------------------------------------------
 // Utilities for testing the websocket service
+type blockPredicate func(block *tm_types.Block) bool
 
 // create a new connection
 func newWSClient(t *testing.T) *rpcclient.WSClient {
@@ -70,26 +71,29 @@ func broadcastTxAndWaitForBlock(t *testing.T, client rpcclient.Client, wsc *rpcc
 	tx txs.Tx) (txs.Receipt, error) {
 	var rec txs.Receipt
 	var err error
-	initialHeight := -1
-	runThenWaitForBlock(t, wsc,
-		func(block *tm_types.Block) bool {
-			if initialHeight < 0 {
-				initialHeight = block.Height
-				return false
-			} else {
-				// TODO: [Silas] remove the + 1 here. It is a workaround for the fact
-				// that tendermint fires the NewBlock event before it has finalised its
-				// state updates, so we have to wait for the block after the block we
-				// want in order for the Tx to be genuinely final.
-				// This should be addressed by: https://github.com/tendermint/tendermint/pull/265
-				return block.Height > initialHeight+1
-			}
-		},
+	runThenWaitForBlock(t, wsc, nextBlockPredicateFn(),
 		func() {
 			rec, err = edbcli.BroadcastTx(client, tx)
 			mempoolCount += 1
 		})
 	return rec, err
+}
+
+func nextBlockPredicateFn() blockPredicate {
+	initialHeight := -1
+	return func(block *tm_types.Block) bool {
+		if initialHeight <= 0 {
+			initialHeight = block.Height
+			return false
+		} else {
+			// TODO: [Silas] remove the + 1 here. It is a workaround for the fact
+			// that tendermint fires the NewBlock event before it has finalised its
+			// state updates, so we have to wait for the block after the block we
+			// want in order for the Tx to be genuinely final.
+			// This should be addressed by: https://github.com/tendermint/tendermint/pull/265
+			return block.Height > initialHeight+1
+		}
+	}
 }
 
 func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
@@ -103,11 +107,11 @@ func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
 }
 
 func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient,
-	blockPredicate func(*tm_types.Block) bool, runner func()) {
+	predicate blockPredicate, runner func()) {
 	subscribeAndWaitForNext(t, wsc, txs.EventStringNewBlock(),
 		runner,
 		func(event string, eventData txs.EventData) (bool, error) {
-			return blockPredicate(eventData.(txs.EventDataNewBlock).Block), nil
+			return predicate(eventData.(txs.EventDataNewBlock).Block), nil
 		})
 }
 
