@@ -1,50 +1,39 @@
 machine:
   environment:
+    GOPATH: $HOME/.go_workspace
+    REPO: ${GOPATH}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+    DOCKER_VERSION: 1.9.1
+    DOCKER_MACHINE_VERSION: 0.6.0
+    ERIS_CLI_BRANCH: develop
     GO15VENDOREXPERIMENT: 1
-    # We want to work from GOPATH src
-    GOPATH_REPO: ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-    HOME_REPO: ${HOME}/${CIRCLE_PROJECT_REPONAME}
   post:
-    - mkdir -p $GOPATH_REPO
-    # Will overwrite anything from cache, note trailing slash on source matters
-    - rsync -a --delete $HOME_REPO/ $GOPATH_REPO
-    - rm -rf $HOME_REPO
-    # Let our build_dir point a go src location
-    - ln -s $GOPATH_REPO $HOME_REPO
     - git config --global user.email "billings@erisindustries.com"
     - git config --global user.name "Billings the Bot"
+    - rm -rf ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
+    - mkdir -p ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
+    - cp -r ${HOME}/${CIRCLE_PROJECT_REPONAME} ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/.
 
 dependencies:
-  pre:
-    - mkdir -p ~/cache
-    # Fill cache of overrides
-    - test -e ~/cache/docker || curl -L -o ~/cache/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.9.0-circleci'
-    # leaving here in case we wish to override go version
-    # - test -e ~/cache/go || curl https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz | tar xzC ~/cache
-    # - sudo rm -rf /usr/local/go
-    # - sudo cp -r ~/cache/go /usr/local/go
-    # Override host docker
-    - sudo cp ~/cache/docker /usr/bin/docker
-    - sudo chmod +x /usr/bin/docker
-    # Override host go
+  override:
+    - sudo curl -L -o /usr/bin/docker http://s3-external-1.amazonaws.com/circle-downloads/docker-$DOCKER_VERSION-circleci; sudo chmod 0775 /usr/bin/docker; sudo usermod -a -G docker $USER; true
     - sudo service docker start
+    # - sudo curl -sSL -o /usr/local/bin/docker-machine https://github.com/docker/machine/releases/download/v$DOCKER_MACHINE_VERSION/docker-machine-linux-x86_64; sudo chmod 0755 /usr/local/bin/docker-machine
+    # - "go get github.com/eris-ltd/eris-cli/cmd/eris; cd ${GOPATH%%:*}/src/github.com/eris-ltd/eris-cli && git checkout origin/$ERIS_CLI_BRANCH && go install ./cmd/eris"
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
-  cache_directories:
-    - ~/cache
+    # jq and curl is a dependency for the integration framework
+    - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
 test:
   pre:
-    - go get github.com/stretchr/testify
-    - go get github.com/Masterminds/glide
-    - cd $GOPATH_REPO && glide install
-    # Install erisdb cmd for tests
-    - cd $GOPATH_REPO && go install ./cmd/eris-db
+    - cd $REPO && glide install
+    # Test the build target for eris-db
+    - echo "Build target eris-db..." && cd $REPO && go install ./cmd/eris-db && eris-db --help
+    # Test the build target for eris-client
+    - echo "Build target eris-client..." && cd $REPO && go install ./client/cmd/eris-client && eris-client --help
   override:
     # We only wish to test our packages not vendored ones
-    - echo "Running unit tests..."
-    - cd $GOPATH_REPO && go test -v `glide novendor`
-    - echo "Running integration tests..."
-    - cd $GOPATH_REPO && go test -v -tags integration `glide novendor`
+    - echo "Running unit tests..." && cd $REPO && glide novendor | xargs go test -tags integration
+    # - echo "Running integration tests..." && cd $REPO && "tests/circle_test.sh" # | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
 
 
 deployment:
