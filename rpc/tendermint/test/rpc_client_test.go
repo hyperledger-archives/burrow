@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
+	"time"
+
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +29,6 @@ import (
 func testWithAllClients(t *testing.T,
 	testFunction func(*testing.T, string, rpcclient.Client)) {
 	for clientName, client := range clients {
-		fmt.Printf("\x1b[47m\x1b[31mMARMOT DEBUG: Loop \x1b[0m\n")
 		testFunction(t, clientName, client)
 	}
 }
@@ -55,7 +56,7 @@ func TestBroadcastTx(t *testing.T) {
 		toAddr := user[1].Address
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
 		//receipt := broadcastTx(t, client, tx)
-		receipt, err := broadcastTxAndWaitForBlock(t, client,wsc, tx)
+		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +94,8 @@ func TestGetAccount(t *testing.T) {
 			t.Fatal("Account was nil")
 		}
 		if bytes.Compare(acc.Address, user[0].Address) != 0 {
-			t.Fatalf("Failed to get correct account. Got %x, expected %x", acc.Address, user[0].Address)
+			t.Fatalf("Failed to get correct account. Got %x, expected %x", acc.Address,
+				user[0].Address)
 		}
 	})
 }
@@ -318,6 +320,46 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	wsc := newWSClient(t)
+	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
+		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
+		// Call with nil address will create a contract
+		tx := makeDefaultCallTx(t, client, []byte{}, code, amt, gasLim, fee)
+
+		txChan := make(chan []txs.Tx)
+		go func() {
+			for {
+				resp, err := edbcli.ListUnconfirmedTxs(client)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp.N > 0 {
+					txChan <- resp.Txs
+				}
+			}
+		}()
+
+		// We want to catch the Tx in mempool before it gets reaped by tendermint
+		// consensus. We should be able to do this almost always if we broadcast our
+		// transaction immediately after a block has been committed. There is about
+		// 1 second between blocks, and we will have the lock on Reap
+		// So we wait for a block here
+		waitNBlocks(t, wsc, 1)
+		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
+			broadcastTx(t, client, tx)
+			select {
+			case <-time.After(time.Second * timeoutSeconds):
+				t.Fatal("Timeout out waiting for unconfirmed transactions to appear")
+			case transactions := <-txChan:
+				assert.Len(t, transactions, 1,
+					"There should only be a single transaction in the mempool during "+
+						"this test (previous txs should have made it into a block)")
+				assert.Contains(t, transactions, tx,
+					"Transaction should be returned by ListUnconfirmedTxs")
+			}
+		})
+	})
 }
 
 func asEventDataTx(t *testing.T, eventData txs.EventData) txs.EventDataTx {

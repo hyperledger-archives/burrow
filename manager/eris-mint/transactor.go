@@ -151,12 +151,6 @@ func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	return &txs.Receipt{txHash, createsContract, contractAddr}, nil
 }
 
-// Get all unconfirmed txs.
-func (this *transactor) UnconfirmedTxs() (*txs.UnconfirmedTxs, error) {
-	// TODO-RPC
-	return &txs.UnconfirmedTxs{}, nil
-}
-
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
 	fee int64) (*txs.Receipt, error) {

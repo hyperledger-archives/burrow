@@ -181,7 +181,7 @@ func TestEncodeTxDecodeTx(t *testing.T) {
 	inputAddress := []byte{1, 2, 3, 4, 5}
 	outputAddress := []byte{5, 4, 3, 2, 1}
 	amount := int64(2)
-	sequence := 1
+	sequence := 3
 	tx := &SendTx{
 		Inputs: []*TxInput{{
 			Address:  inputAddress,

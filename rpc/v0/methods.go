@@ -256,11 +256,11 @@ func (erisDbMethods *ErisDbMethods) Block(request *rpc.RPCRequest, requester int
 // *************************************** Consensus ************************************
 
 func (erisDbMethods *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return erisDbMethods.pipe.Consensus().ConsensusState(), 0, nil
+	return erisDbMethods.pipe.GetConsensusEngine().ConsensusState(), 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return erisDbMethods.pipe.Consensus().ListValidators(), 0, nil
+	return erisDbMethods.pipe.GetConsensusEngine().ListValidators(), 0, nil
 }
 
 // *************************************** Net ************************************
@@ -414,11 +414,11 @@ func (erisDbMethods *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, req
 }
 
 func (erisDbMethods *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	txs, errC := erisDbMethods.pipe.Transactor().UnconfirmedTxs()
+	trans, errC := erisDbMethods.pipe.GetConsensusEngine().ListUnconfirmedTxs(-1)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return txs, 0, nil
+	return txs.UnconfirmedTxs{trans}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

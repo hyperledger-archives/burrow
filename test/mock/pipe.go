@@ -39,7 +39,7 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 	consensusEngine := &consensusEngine{td}
 	eventer := &eventer{td}
 	namereg := &namereg{td}
-	net := &net{td}
+	net := &network{td}
 	transactor := &transactor{td}
 	return &MockPipe{
 		td,
@@ -58,63 +58,59 @@ func NewDefaultMockPipe() definitions.Pipe {
 	return NewMockPipe(td.LoadTestData())
 }
 
-func (this *MockPipe) Accounts() definitions.Accounts {
-	return this.accounts
+func (pipe *MockPipe) Accounts() definitions.Accounts {
+	return pipe.accounts
 }
 
-func (this *MockPipe) Blockchain() blockchain_types.Blockchain {
-	return this.blockchain
+func (pipe *MockPipe) Blockchain() blockchain_types.Blockchain {
+	return pipe.blockchain
 }
 
-func (this *MockPipe) Consensus() consensus_types.ConsensusEngine {
-	return this.consensusEngine
+func (pipe *MockPipe) Events() event.EventEmitter {
+	return pipe.events
 }
 
-func (this *MockPipe) Events() event.EventEmitter {
-	return this.events
+func (pipe *MockPipe) NameReg() definitions.NameReg {
+	return pipe.namereg
 }
 
-func (this *MockPipe) NameReg() definitions.NameReg {
-	return this.namereg
+func (pipe *MockPipe) Net() definitions.Net {
+	return pipe.net
 }
 
-func (this *MockPipe) Net() definitions.Net {
-	return this.net
+func (pipe *MockPipe) Transactor() definitions.Transactor {
+	return pipe.transactor
 }
 
-func (this *MockPipe) Transactor() definitions.Transactor {
-	return this.transactor
-}
-
-func (this *MockPipe) GetApplication() manager_types.Application {
+func (pipe *MockPipe) GetApplication() manager_types.Application {
 	// TODO: [ben] mock application
 	return nil
 }
 
-func (this *MockPipe) SetConsensusEngine(_ consensus_types.ConsensusEngine) error {
+func (pipe *MockPipe) SetConsensusEngine(_ consensus_types.ConsensusEngine) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
 
-func (this *MockPipe) GetConsensusEngine() consensus_types.ConsensusEngine {
-	return nil
+func (pipe *MockPipe) GetConsensusEngine() consensus_types.ConsensusEngine {
+	return pipe.consensusEngine
 }
 
-func (this *MockPipe) SetBlockchain(_ blockchain_types.Blockchain) error {
+func (pipe *MockPipe) SetBlockchain(_ blockchain_types.Blockchain) error {
 	// TODO: [ben] mock consensus engine
 	return nil
 }
 
-func (this *MockPipe) GetBlockchain() blockchain_types.Blockchain {
+func (pipe *MockPipe) GetBlockchain() blockchain_types.Blockchain {
 	return nil
 }
 
-func (this *MockPipe) GetTendermintPipe() (definitions.TendermintPipe, error) {
+func (pipe *MockPipe) GetTendermintPipe() (definitions.TendermintPipe, error) {
 	return nil, fmt.Errorf("Tendermint pipe is not supported by mocked pipe.")
 }
 
-func (this *MockPipe) GenesisHash() []byte {
-	return this.testData.GetGenesisHash.Output.Hash
+func (pipe *MockPipe) GenesisHash() []byte {
+	return pipe.testData.GetGenesisHash.Output.Hash
 }
 
 // Components
@@ -124,28 +120,28 @@ type accounts struct {
 	testData *td.TestData
 }
 
-func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	return this.testData.GenPrivAccount.Output, nil
+func (acc *accounts) GenPrivAccount() (*account.PrivAccount, error) {
+	return acc.testData.GenPrivAccount.Output, nil
 }
 
-func (this *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, error) {
-	return this.testData.GenPrivAccount.Output, nil
+func (acc *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, error) {
+	return acc.testData.GenPrivAccount.Output, nil
 }
 
-func (this *accounts) Accounts([]*event.FilterData) (*core_types.AccountList, error) {
-	return this.testData.GetAccounts.Output, nil
+func (acc *accounts) Accounts([]*event.FilterData) (*core_types.AccountList, error) {
+	return acc.testData.GetAccounts.Output, nil
 }
 
-func (this *accounts) Account(address []byte) (*account.Account, error) {
-	return this.testData.GetAccount.Output, nil
+func (acc *accounts) Account(address []byte) (*account.Account, error) {
+	return acc.testData.GetAccount.Output, nil
 }
 
-func (this *accounts) Storage(address []byte) (*core_types.Storage, error) {
-	return this.testData.GetStorage.Output, nil
+func (acc *accounts) Storage(address []byte) (*core_types.Storage, error) {
+	return acc.testData.GetStorage.Output, nil
 }
 
-func (this *accounts) StorageAt(address, key []byte) (*core_types.StorageItem, error) {
-	return this.testData.GetStorageAt.Output, nil
+func (acc *accounts) StorageAt(address, key []byte) (*core_types.StorageItem, error) {
+	return acc.testData.GetStorageAt.Output, nil
 }
 
 // Blockchain
@@ -209,8 +205,7 @@ func (cons *consensusEngine) Events() event.EventEmitter {
 }
 
 func (cons *consensusEngine) ListUnconfirmedTxs(maxTxs int) ([]txs.Tx, error) {
-	return nil, nil
-
+	return cons.testData.GetUnconfirmedTxs.Output.Txs, nil
 }
 
 func (cons *consensusEngine) ListValidators() []consensus_types.Validator {
@@ -230,11 +225,11 @@ type eventer struct {
 	testData *td.TestData
 }
 
-func (this *eventer) Subscribe(subId, event string, callback func(txs.EventData)) error {
+func (evntr *eventer) Subscribe(subId, event string, callback func(txs.EventData)) error {
 	return nil
 }
 
-func (this *eventer) Unsubscribe(subId string) error {
+func (evntr *eventer) Unsubscribe(subId string) error {
 	return nil
 }
 
@@ -243,45 +238,45 @@ type namereg struct {
 	testData *td.TestData
 }
 
-func (this *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
-	return this.testData.GetNameRegEntry.Output, nil
+func (nmreg *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
+	return nmreg.testData.GetNameRegEntry.Output, nil
 }
 
-func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
-	return this.testData.GetNameRegEntries.Output, nil
+func (nmreg *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
+	return nmreg.testData.GetNameRegEntries.Output, nil
 }
 
 // Net
-type net struct {
+type network struct {
 	testData *td.TestData
 }
 
-func (this *net) Info() (*core_types.NetworkInfo, error) {
-	return this.testData.GetNetworkInfo.Output, nil
+func (net *network) Info() (*core_types.NetworkInfo, error) {
+	return net.testData.GetNetworkInfo.Output, nil
 }
 
-func (this *net) ClientVersion() (string, error) {
-	return this.testData.GetClientVersion.Output.ClientVersion, nil
+func (net *network) ClientVersion() (string, error) {
+	return net.testData.GetClientVersion.Output.ClientVersion, nil
 }
 
-func (this *net) Moniker() (string, error) {
-	return this.testData.GetMoniker.Output.Moniker, nil
+func (net *network) Moniker() (string, error) {
+	return net.testData.GetMoniker.Output.Moniker, nil
 }
 
-func (this *net) Listening() (bool, error) {
-	return this.testData.IsListening.Output.Listening, nil
+func (net *network) Listening() (bool, error) {
+	return net.testData.IsListening.Output.Listening, nil
 }
 
-func (this *net) Listeners() ([]string, error) {
-	return this.testData.GetListeners.Output.Listeners, nil
+func (net *network) Listeners() ([]string, error) {
+	return net.testData.GetListeners.Output.Listeners, nil
 }
 
-func (this *net) Peers() ([]*core_types.Peer, error) {
-	return this.testData.GetPeers.Output, nil
+func (net *network) Peers() ([]*core_types.Peer, error) {
+	return net.testData.GetPeers.Output, nil
 }
 
-func (this *net) Peer(address string) (*core_types.Peer, error) {
-	// return this.testData.GetPeer.Output, nil
+func (net *network) Peer(address string) (*core_types.Peer, error) {
+	// return net.testData.GetPeer.Output, nil
 	return nil, nil
 }
 
@@ -290,45 +285,41 @@ type transactor struct {
 	testData *td.TestData
 }
 
-func (this *transactor) Call(fromAddress, toAddress, data []byte) (*core_types.Call, error) {
-	return this.testData.Call.Output, nil
+func (trans *transactor) Call(fromAddress, toAddress, data []byte) (*core_types.Call, error) {
+	return trans.testData.Call.Output, nil
 }
 
-func (this *transactor) CallCode(from, code, data []byte) (*core_types.Call, error) {
-	return this.testData.CallCode.Output, nil
+func (trans *transactor) CallCode(from, code, data []byte) (*core_types.Call, error) {
+	return trans.testData.CallCode.Output, nil
 }
 
-func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) UnconfirmedTxs() (*txs.UnconfirmedTxs, error) {
-	return this.testData.GetUnconfirmedTxs.Output, nil
-}
-
-func (this *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*txs.Receipt, error) {
+func (trans *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*txs.Receipt, error) {
 	if address == nil || len(address) == 0 {
-		return this.testData.TransactCreate.Output, nil
+		return trans.testData.TransactCreate.Output, nil
 	}
-	return this.testData.Transact.Output, nil
+	return trans.testData.Transact.Output, nil
 }
 
-func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
+func (trans *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
 	return nil, nil
 }
 
-func (this *transactor) Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (this *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*txs.Receipt, error) {
-	return this.testData.TransactNameReg.Output, nil
+func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*txs.Receipt, error) {
+	return trans.testData.TransactNameReg.Output, nil
 }
 
-func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error) {
+func (trans *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error) {
 	return nil, nil
 }

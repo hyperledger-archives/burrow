@@ -126,6 +126,14 @@ func BlockchainInfo(client rpcclient.Client, minHeight,
 	return res.(*rpc_types.ResultBlockchainInfo), err
 }
 
+func ListUnconfirmedTxs(client rpcclient.Client) (*rpc_types.ResultListUnconfirmedTxs, error) {
+	res, err := performCall(client, "list_unconfirmed_txs")
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultListUnconfirmedTxs), err
+}
+
 func performCall(client rpcclient.Client, method string,
 	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
 	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
