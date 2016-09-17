@@ -85,3 +85,18 @@ func (mock *MockNodeClient) Status() (ChainId []byte,
 	LatestBlockTime = 0
 	return
 }
+
+
+// QueryContract executes the contract code at address with the given data
+func (mock *MockNodeClient) QueryContract(address, data []byte) (ret []byte, gasUsed int64, err error) {
+	// return zero
+	ret = make([]byte, 0)
+	return ret, 0, nil
+}
+
+// QueryContractCode executes the contract code at address with the given data but with provided code
+func (mock *MockNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
+	// return zero
+	ret = make([]byte, 0)
+	return ret, 0, nil
+}

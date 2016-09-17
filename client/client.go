@@ -32,6 +32,8 @@ type NodeClient interface {
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
 	GetAccount(address []byte) (*acc.Account, error)
+	QueryContract(address, data []byte) (ret []byte, gasUsed int64, err error)
+	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
