@@ -71,23 +71,6 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 //------------------------------------------------------------------------------------
 // RPC requests other than transaction related
 
-// GetAccount returns a copy of the account
-func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
-	account, err := tendermint_client.GetAccount(client, address)
-	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
-			erisNodeClient.broadcastRPC, address, err.Error())
-		return nil, err
-	}
-	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisNodeClient.broadcastRPC)
-		return nil, err
-	}
-
-	return account.Copy(), nil
-}
-
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
 func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
@@ -135,5 +118,44 @@ func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []by
 		return nil, int64(0), err
 	}
 	return callResult.Return, callResult.GasUsed, nil
+}
+
+// GetAccount returns a copy of the account
+func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	account, err := tendermint_client.GetAccount(client, address)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
+			erisNodeClient.broadcastRPC, address, err.Error())
+		return nil, err
+	}
+	if account == nil {
+		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisNodeClient.broadcastRPC)
+		return nil, err
+	}
+
+	return account.Copy(), nil
+}
+
+// DumpStorage
+func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storageRoot []byte)
+
+
+//--------------------------------------------------------------------------------------------
+// Name registry
+
+func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data []byte, expirationBlock int, err error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	entryResult, err := tendermint_client.GetName(client, name)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
+			erisNodeClient.broadcastRPC, name)
+		return nil, nil, 0, err
+	}
+	// unwrap return results
+	owner = *entryResult.Owner
+	data = []byte(entryResult.Data)
+	expirationBlock = entryResult.Expires
+	return
 }
 

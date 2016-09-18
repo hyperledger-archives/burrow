@@ -184,30 +184,6 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	return tx, nil
 }
 
-// type NameGetter struct {
-// 	client cclient.Client
-// }
-
-// func (n NameGetter) GetNameRegEntry(name string) *txs.NameRegEntry {
-// 	entry, err := n.client.GetName(name)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return entry.Entry
-// }
-
-/*
-func coreNewAccount(nodeAddr, pubkey, chainID string) (*types.NewAccountTx, error) {
-	pub, _, _, err := checkCommon(nodeAddr, pubkey, "", "0", "0")
-	if err != nil {
-		return nil, err
-	}
-
-	client := cclient.NewClient(nodeAddr, "HTTP")
-	return types.NewNewAccountTx(NameGetter{client}, pub, chainID)
-}
-*/
-
 // func Bond(nodeAddr, signAddr, pubkey, unbondAddr, amtS, nonceS string) (*txs.BondTx, error) {
 // 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, nonceS)
 // 	if err != nil {
