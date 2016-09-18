@@ -272,8 +272,8 @@ var testDataJson = `
       "height": 1,
       "round": 0,
       "step": 1,
-      "start_time": "",
-      "commit_time": "0001-01-01 00:00:00 +0000 UTC",
+      "start_time": "2016-09-18T10:03:55.100Z",
+      "commit_time": "2016-09-18T10:04:00.100Z",
       "validators": [
         [
           1,

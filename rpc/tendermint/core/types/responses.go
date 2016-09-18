@@ -1,4 +1,4 @@
-package core_types
+package types
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
@@ -83,7 +83,12 @@ type ResultListValidators struct {
 
 type ResultDumpConsensusState struct {
 	ConsensusState      *consensus_types.ConsensusState `json:"consensus_state"`
-	PeerConsensusStates map[string]string              `json:"peer_consensus_states"`
+	PeerConsensusStates []*ResultPeerConsensusState      `json:"peer_consensus_states"`
+}
+
+type ResultPeerConsensusState struct {
+	PeerKey            string `json:"peer_key"`
+	PeerConsensusState string `json:"peer_consensus_state"`
 }
 
 type ResultListNames struct {
@@ -152,6 +157,7 @@ const (
 	ResultTypeEvent              = byte(0x13) // so websockets can respond to rpc functions
 	ResultTypeSubscribe          = byte(0x14)
 	ResultTypeUnsubscribe        = byte(0x15)
+	ResultTypePeerConsensusState = byte(0x16)
 )
 
 type ErisDBResult interface {
@@ -170,6 +176,7 @@ func ConcreteTypes() []wire.ConcreteType {
 		{&ResultNetInfo{}, ResultTypeNetInfo},
 		{&ResultListValidators{}, ResultTypeListValidators},
 		{&ResultDumpConsensusState{}, ResultTypeDumpConsensusState},
+		{&ResultDumpConsensusState{}, ResultTypePeerConsensusState},
 		{&ResultListNames{}, ResultTypeListNames},
 		{&ResultGenPrivAccount{}, ResultTypeGenPrivAccount},
 		{&ResultGetAccount{}, ResultTypeGetAccount},

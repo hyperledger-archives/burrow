@@ -40,8 +40,8 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 		"broadcast_tx":            rpc.NewRPCFunc(tmRoutes.BroadcastTxResult, "tx"),
 		"blockchain":              rpc.NewRPCFunc(tmRoutes.BlockchainInfo, "minHeight,maxHeight"),
 		"get_block":               rpc.NewRPCFunc(tmRoutes.GetBlock, "height"),
-		"list_validators":         rpc.NewRPCFunc(tmRoutes.ListValidators, ""),
 		"list_unconfirmed_txs":    rpc.NewRPCFunc(tmRoutes.ListUnconfirmedTxs, ""),
+		"list_validators":         rpc.NewRPCFunc(tmRoutes.ListValidators, ""),
 		"dump_consensus_state":    rpc.NewRPCFunc(tmRoutes.DumpConsensusState, ""),
 		"unsafe/gen_priv_account": rpc.NewRPCFunc(tmRoutes.GenPrivAccountResult, ""),
 		"unsafe/sign_tx":          rpc.NewRPCFunc(tmRoutes.SignTxResult, "tx,privAccounts"),
@@ -237,10 +237,6 @@ func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.ErisDBResult, error) 
 	}
 }
 func (tmRoutes *TendermintRoutes) DumpConsensusState() (ctypes.ErisDBResult, error) {
-	r, err := tmRoutes.tendermintPipe.DumpConsensusState()
-	if err != nil {
-		return nil, err
-	} else {
-		return r, nil
-	}
+	return tmRoutes.tendermintPipe.DumpConsensusState()
 }
+
