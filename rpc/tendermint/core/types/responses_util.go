@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package core_types
+package types
 
 import (
 	"github.com/eris-ltd/eris-db/core/types"
