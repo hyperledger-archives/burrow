@@ -7,25 +7,26 @@ import (
 	"fmt"
 	"testing"
 
+	"time"
+
+	core_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
-
-var wsTyp = "JSONRPC"
 
 //--------------------------------------------------------------------------------
 // Test the websocket service
 
 // make a simple connection to the server
 func TestWSConnect(t *testing.T) {
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	wsc.Stop()
 }
 
 // receive a new block message
 func TestWSNewBlock(t *testing.T) {
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringNewBlock()
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -44,7 +45,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringNewBlock()
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -77,10 +78,9 @@ func TestWSBlockchainGrowth(t *testing.T) {
 
 // send a transaction and validate the events from listening for both sender and receiver
 func TestWSSend(t *testing.T) {
+	wsc := newWSClient()
 	toAddr := user[1].Address
 	amt := int64(100)
-
-	wsc := newWSClient(t)
 	eidInput := txs.EventStringAccInput(user[0].Address)
 	eidOutput := txs.EventStringAccOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
@@ -91,8 +91,8 @@ func TestWSSend(t *testing.T) {
 		wsc.Stop()
 	}()
 	waitForEvent(t, wsc, eidInput, func() {
-		tx := makeDefaultSendTxSigned(t, wsTyp, toAddr, amt)
-		broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
+		broadcastTx(t, jsonRpcClient, tx)
 	}, unmarshalValidateSend(amt, toAddr))
 
 	waitForEvent(t, wsc, eidOutput, func() {},
@@ -104,7 +104,7 @@ func TestWSDoubleFire(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringAccInput(user[0].Address)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -115,8 +115,8 @@ func TestWSDoubleFire(t *testing.T) {
 	toAddr := user[1].Address
 	// broadcast the transaction, wait to hear about it
 	waitForEvent(t, wsc, eid, func() {
-		tx := makeDefaultSendTxSigned(t, wsTyp, toAddr, amt)
-		broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
+		broadcastTx(t, jsonRpcClient, tx)
 	}, func(eid string, b txs.EventData) (bool, error) {
 		return true, nil
 	})
@@ -135,7 +135,7 @@ func TestWSCallWait(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid1 := txs.EventStringAccInput(user[0].Address)
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
@@ -147,8 +147,8 @@ func TestWSCallWait(t *testing.T) {
 	var contractAddr []byte
 	// wait for the contract to be created
 	waitForEvent(t, wsc, eid1, func() {
-		tx := makeDefaultCallTx(t, wsTyp, nil, code, amt, gasLim, fee)
-		receipt := broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+		receipt := broadcastTx(t, jsonRpcClient, tx)
 		contractAddr = receipt.ContractAddr
 	}, unmarshalValidateTx(amt, returnCode))
 
@@ -162,8 +162,8 @@ func TestWSCallWait(t *testing.T) {
 	// get the return value from a call
 	data := []byte{0x1}
 	waitForEvent(t, wsc, eid2, func() {
-		tx := makeDefaultCallTx(t, wsTyp, contractAddr, data, amt, gasLim, fee)
-		receipt := broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultCallTx(t, jsonRpcClient, contractAddr, data, amt, gasLim, fee)
+		receipt := broadcastTx(t, jsonRpcClient, tx)
 		contractAddr = receipt.ContractAddr
 	}, unmarshalValidateTx(amt, returnVal))
 }
@@ -174,12 +174,12 @@ func TestWSCallNoWait(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	amt, gasLim, fee := int64(10000), int64(1000), int64(1000)
 	code, _, returnVal := simpleContract()
 
-	tx := makeDefaultCallTx(t, wsTyp, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, wsTyp, tx)
+	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt := broadcastTx(t, jsonRpcClient, tx)
 	contractAddr := receipt.ContractAddr
 
 	// susbscribe to the new contract
@@ -193,8 +193,8 @@ func TestWSCallNoWait(t *testing.T) {
 	// get the return value from a call
 	data := []byte{0x1}
 	waitForEvent(t, wsc, eid, func() {
-		tx := makeDefaultCallTx(t, wsTyp, contractAddr, data, amt, gasLim, fee)
-		broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultCallTx(t, jsonRpcClient, contractAddr, data, amt, gasLim, fee)
+		broadcastTx(t, jsonRpcClient, tx)
 	}, unmarshalValidateTx(amt, returnVal))
 }
 
@@ -203,19 +203,19 @@ func TestWSCallCall(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	amt, gasLim, fee := int64(10000), int64(1000), int64(1000)
 	code, _, returnVal := simpleContract()
 	txid := new([]byte)
 
 	// deploy the two contracts
-	tx := makeDefaultCallTx(t, wsTyp, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, wsTyp, tx)
+	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt := broadcastTx(t, jsonRpcClient, tx)
 	contractAddr1 := receipt.ContractAddr
 
 	code, _, _ = simpleCallContract(contractAddr1)
-	tx = makeDefaultCallTx(t, wsTyp, nil, code, amt, gasLim, fee)
-	receipt = broadcastTx(t, wsTyp, tx)
+	tx = makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt = broadcastTx(t, jsonRpcClient, tx)
 	contractAddr2 := receipt.ContractAddr
 
 	// subscribe to the new contracts
@@ -235,12 +235,59 @@ func TestWSCallCall(t *testing.T) {
 	})
 	// call it
 	waitForEvent(t, wsc, eid, func() {
-		tx := makeDefaultCallTx(t, wsTyp, contractAddr2, nil, amt, gasLim, fee)
-		broadcastTx(t, wsTyp, tx)
+		tx := makeDefaultCallTx(t, jsonRpcClient, contractAddr2, nil, amt, gasLim, fee)
+		broadcastTx(t, jsonRpcClient, tx)
 		*txid = txs.TxHash(chainID, tx)
 	}, unmarshalValidateCall(user[0].Address, returnVal, txid))
 }
 
 func TestSubscribe(t *testing.T) {
-	testSubscribe(t)
+	wsc := newWSClient()
+	var subId string
+	subscribe(t, wsc, txs.EventStringNewBlock())
+
+	timeout := time.NewTimer(timeoutSeconds * time.Second)
+Subscribe:
+	for {
+		select {
+		case <-timeout.C:
+			t.Fatal("Timed out waiting for subscription result")
+
+		case bs := <-wsc.ResultsCh:
+			resultSubscribe, ok := readResult(t, bs).(*core_types.ResultSubscribe)
+			if ok {
+				assert.Equal(t, txs.EventStringNewBlock(), resultSubscribe.Event)
+				subId = resultSubscribe.SubscriptionId
+				break Subscribe
+			}
+		}
+	}
+
+	seenBlock := false
+	timeout = time.NewTimer(timeoutSeconds * time.Second)
+	for {
+		select {
+		case <-timeout.C:
+			if !seenBlock {
+				t.Fatal("Timed out without seeing a NewBlock event")
+			}
+			return
+
+		case bs := <-wsc.ResultsCh:
+			resultEvent, ok := readResult(t, bs).(*core_types.ResultEvent)
+			if ok {
+				_, ok := resultEvent.Data.(txs.EventDataNewBlock)
+				if ok {
+					if seenBlock {
+						// There's a mild race here, but when we enter we've just seen a block
+						// so we should be able to unsubscribe before we see another block
+						t.Fatal("Continued to see NewBlock event after unsubscribing")
+					} else {
+						seenBlock = true
+						unsubscribe(t, wsc, subId)
+					}
+				}
+			}
+		}
+	}
 }

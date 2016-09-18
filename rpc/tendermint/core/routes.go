@@ -38,15 +38,13 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 		"get_name":                rpc.NewRPCFunc(tmRoutes.GetNameResult, "name"),
 		"list_names":              rpc.NewRPCFunc(tmRoutes.ListNamesResult, ""),
 		"broadcast_tx":            rpc.NewRPCFunc(tmRoutes.BroadcastTxResult, "tx"),
+		"blockchain":              rpc.NewRPCFunc(tmRoutes.BlockchainInfo, "minHeight,maxHeight"),
+		"get_block":               rpc.NewRPCFunc(tmRoutes.GetBlock, "height"),
+		"list_unconfirmed_txs":    rpc.NewRPCFunc(tmRoutes.ListUnconfirmedTxs, ""),
+		"list_validators":         rpc.NewRPCFunc(tmRoutes.ListValidators, ""),
+		"dump_consensus_state":    rpc.NewRPCFunc(tmRoutes.DumpConsensusState, ""),
 		"unsafe/gen_priv_account": rpc.NewRPCFunc(tmRoutes.GenPrivAccountResult, ""),
 		"unsafe/sign_tx":          rpc.NewRPCFunc(tmRoutes.SignTxResult, "tx,privAccounts"),
-
-		// TODO: hookup
-		"blockchain": rpc.NewRPCFunc(tmRoutes.BlockchainInfo, "minHeight,maxHeight"),
-		//	"get_block":               rpc.NewRPCFunc(GetBlock, "height"),
-		// "list_validators":         rpc.NewRPCFunc(ListValidators, ""),
-		// "dump_consensus_state":    rpc.NewRPCFunc(DumpConsensusState, ""),
-		// "list_unconfirmed_txs":    rpc.NewRPCFunc(ListUnconfirmedTxs, ""),
 		// TODO: [Silas] do we also carry forward "consensus_state" as in v0?
 	}
 	return routes
@@ -211,5 +209,34 @@ func (tmRoutes *TendermintRoutes) BlockchainInfo(minHeight,
 	} else {
 		return r, nil
 	}
-
 }
+
+func (tmRoutes *TendermintRoutes) ListUnconfirmedTxs() (ctypes.ErisDBResult, error) {
+	// Get all Txs for now
+	r, err := tmRoutes.tendermintPipe.ListUnconfirmedTxs(-1)
+	if err != nil {
+		return nil, err
+	} else {
+		return r, nil
+	}
+}
+func (tmRoutes *TendermintRoutes) GetBlock(height int) (ctypes.ErisDBResult, error) {
+	r, err := tmRoutes.tendermintPipe.GetBlock(height)
+	if err != nil {
+		return nil, err
+	} else {
+		return r, nil
+	}
+}
+func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.ErisDBResult, error) {
+	r, err := tmRoutes.tendermintPipe.ListValidators()
+	if err != nil {
+		return nil, err
+	} else {
+		return r, nil
+	}
+}
+func (tmRoutes *TendermintRoutes) DumpConsensusState() (ctypes.ErisDBResult, error) {
+	return tmRoutes.tendermintPipe.DumpConsensusState()
+}
+

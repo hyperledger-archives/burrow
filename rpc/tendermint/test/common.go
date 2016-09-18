@@ -4,10 +4,10 @@
 package test
 
 import (
-	"github.com/eris-ltd/eris-db/test/fixtures"
-	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
-	"testing"
 	"fmt"
+
+	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
+	"github.com/eris-ltd/eris-db/test/fixtures"
 )
 
 // Needs to be referenced by a *_test.go file to be picked up
@@ -26,7 +26,7 @@ func TestWrapper(runner func() int) int {
 	// start a node
 	ready := make(chan error)
 	server := make(chan *rpc_core.TendermintWebsocketServer)
-	defer func(){
+	defer func() {
 		// Shutdown -- make sure we don't hit a race on ffs.RemoveAll
 		tmServer := <-server
 		tmServer.Shutdown()
@@ -48,9 +48,9 @@ func TestWrapper(runner func() int) int {
 // inconsequential, so feel free to insert your own code if you want to use it
 // as an application entry point for delve debugging.
 func DebugMain() {
-	t := &testing.T{}
+	//t := &testing.T{}
 	TestWrapper(func() int {
-		testNameReg(t, "JSONRPC")
+		//testNameReg(t, "JSONRPC")
 		return 0
 	})
 }

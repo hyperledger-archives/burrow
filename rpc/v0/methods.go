@@ -256,17 +256,11 @@ func (erisDbMethods *ErisDbMethods) Block(request *rpc.RPCRequest, requester int
 // *************************************** Consensus ************************************
 
 func (erisDbMethods *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	// core_types.FromRoundState() will do it, but only if we have access to
-	// Tendermint's RonudState..
-	state := &core_types.ConsensusState{}
-	return state, 0, nil
+	return erisDbMethods.pipe.GetConsensusEngine().ConsensusState(), 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	validators := &core_types.ValidatorList{}
-	return validators, 0, nil
+	return erisDbMethods.pipe.GetConsensusEngine().ListValidators(), 0, nil
 }
 
 // *************************************** Net ************************************
@@ -420,11 +414,11 @@ func (erisDbMethods *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, req
 }
 
 func (erisDbMethods *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	txs, errC := erisDbMethods.pipe.Transactor().UnconfirmedTxs()
+	trans, errC := erisDbMethods.pipe.GetConsensusEngine().ListUnconfirmedTxs(-1)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return txs, 0, nil
+	return txs.UnconfirmedTxs{trans}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

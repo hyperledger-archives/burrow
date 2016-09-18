@@ -1,11 +1,11 @@
-package core_types
+package types
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/eris-ltd/eris-db/txs"
-	"github.com/tendermint/tendermint/types"
+	tendermint_types "github.com/tendermint/tendermint/types"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	"github.com/tendermint/go-crypto"
@@ -42,13 +42,13 @@ type StorageItem struct {
 }
 
 type ResultBlockchainInfo struct {
-	LastHeight int                `json:"last_height"`
-	BlockMetas []*types.BlockMeta `json:"block_metas"`
+	LastHeight int                           `json:"last_height"`
+	BlockMetas []*tendermint_types.BlockMeta `json:"block_metas"`
 }
 
 type ResultGetBlock struct {
-	BlockMeta *types.BlockMeta `json:"block_meta"`
-	Block     *types.Block     `json:"block"`
+	BlockMeta *tendermint_types.BlockMeta `json:"block_meta"`
+	Block     *tendermint_types.Block     `json:"block"`
 }
 
 type ResultStatus struct {
@@ -76,14 +76,19 @@ type ResultNetInfo struct {
 }
 
 type ResultListValidators struct {
-	BlockHeight         int                `json:"block_height"`
-	BondedValidators    []*types.Validator `json:"bonded_validators"`
-	UnbondingValidators []*types.Validator `json:"unbonding_validators"`
+	BlockHeight         int                         `json:"block_height"`
+	BondedValidators    []consensus_types.Validator `json:"bonded_validators"`
+	UnbondingValidators []consensus_types.Validator `json:"unbonding_validators"`
 }
 
 type ResultDumpConsensusState struct {
-	RoundState      string   `json:"round_state"`
-	PeerRoundStates []string `json:"peer_round_states"`
+	ConsensusState      *consensus_types.ConsensusState `json:"consensus_state"`
+	PeerConsensusStates []*ResultPeerConsensusState      `json:"peer_consensus_states"`
+}
+
+type ResultPeerConsensusState struct {
+	PeerKey            string `json:"peer_key"`
+	PeerConsensusState string `json:"peer_consensus_state"`
 }
 
 type ResultListNames struct {
@@ -152,34 +157,38 @@ const (
 	ResultTypeEvent              = byte(0x13) // so websockets can respond to rpc functions
 	ResultTypeSubscribe          = byte(0x14)
 	ResultTypeUnsubscribe        = byte(0x15)
+	ResultTypePeerConsensusState = byte(0x16)
 )
 
 type ErisDBResult interface {
 	rpctypes.Result
 }
 
-// for wire.readReflect
-var _ = wire.RegisterInterface(
-	struct{ ErisDBResult }{},
-	wire.ConcreteType{&ResultGetStorage{}, ResultTypeGetStorage},
-	wire.ConcreteType{&ResultCall{}, ResultTypeCall},
-	wire.ConcreteType{&ResultListAccounts{}, ResultTypeListAccounts},
-	wire.ConcreteType{&ResultDumpStorage{}, ResultTypeDumpStorage},
-	wire.ConcreteType{&ResultBlockchainInfo{}, ResultTypeBlockchainInfo},
-	wire.ConcreteType{&ResultGetBlock{}, ResultTypeGetBlock},
-	wire.ConcreteType{&ResultStatus{}, ResultTypeStatus},
-	wire.ConcreteType{&ResultNetInfo{}, ResultTypeNetInfo},
-	wire.ConcreteType{&ResultListValidators{}, ResultTypeListValidators},
-	wire.ConcreteType{&ResultDumpConsensusState{}, ResultTypeDumpConsensusState},
-	wire.ConcreteType{&ResultListNames{}, ResultTypeListNames},
-	wire.ConcreteType{&ResultGenPrivAccount{}, ResultTypeGenPrivAccount},
-	wire.ConcreteType{&ResultGetAccount{}, ResultTypeGetAccount},
-	wire.ConcreteType{&ResultBroadcastTx{}, ResultTypeBroadcastTx},
-	wire.ConcreteType{&ResultListUnconfirmedTxs{}, ResultTypeListUnconfirmedTxs},
-	wire.ConcreteType{&ResultGetName{}, ResultTypeGetName},
-	wire.ConcreteType{&ResultGenesis{}, ResultTypeGenesis},
-	wire.ConcreteType{&ResultSignTx{}, ResultTypeSignTx},
-	wire.ConcreteType{&ResultEvent{}, ResultTypeEvent},
-	wire.ConcreteType{&ResultSubscribe{}, ResultTypeSubscribe},
-	wire.ConcreteType{&ResultUnsubscribe{}, ResultTypeUnsubscribe},
-)
+func ConcreteTypes() []wire.ConcreteType {
+	return []wire.ConcreteType{
+		{&ResultGetStorage{}, ResultTypeGetStorage},
+		{&ResultCall{}, ResultTypeCall},
+		{&ResultListAccounts{}, ResultTypeListAccounts},
+		{&ResultDumpStorage{}, ResultTypeDumpStorage},
+		{&ResultBlockchainInfo{}, ResultTypeBlockchainInfo},
+		{&ResultGetBlock{}, ResultTypeGetBlock},
+		{&ResultStatus{}, ResultTypeStatus},
+		{&ResultNetInfo{}, ResultTypeNetInfo},
+		{&ResultListValidators{}, ResultTypeListValidators},
+		{&ResultDumpConsensusState{}, ResultTypeDumpConsensusState},
+		{&ResultDumpConsensusState{}, ResultTypePeerConsensusState},
+		{&ResultListNames{}, ResultTypeListNames},
+		{&ResultGenPrivAccount{}, ResultTypeGenPrivAccount},
+		{&ResultGetAccount{}, ResultTypeGetAccount},
+		{&ResultBroadcastTx{}, ResultTypeBroadcastTx},
+		{&ResultListUnconfirmedTxs{}, ResultTypeListUnconfirmedTxs},
+		{&ResultGetName{}, ResultTypeGetName},
+		{&ResultGenesis{}, ResultTypeGenesis},
+		{&ResultSignTx{}, ResultTypeSignTx},
+		{&ResultEvent{}, ResultTypeEvent},
+		{&ResultSubscribe{}, ResultTypeSubscribe},
+		{&ResultUnsubscribe{}, ResultTypeUnsubscribe},
+	}
+}
+
+var _ = wire.RegisterInterface(struct{ ErisDBResult }{}, ConcreteTypes()...)

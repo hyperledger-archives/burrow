@@ -124,8 +124,7 @@ func (app *ErisMint) SetOption(key string, value string) (log string) {
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
-
+func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
 	app.nTxs += 1
 
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
@@ -149,7 +148,7 @@ func (app *ErisMint) AppendTx(txBytes []byte) (res tmsp.Result) {
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) CheckTx(txBytes []byte) (res tmsp.Result) {
+func (app *ErisMint) CheckTx(txBytes []byte) tmsp.Result {
 	var n int
 	var err error
 	tx := new(txs.Tx)

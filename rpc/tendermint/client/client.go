@@ -126,6 +126,39 @@ func BlockchainInfo(client rpcclient.Client, minHeight,
 	return res.(*rpc_types.ResultBlockchainInfo), err
 }
 
+func GetBlock(client rpcclient.Client, height int) (*rpc_types.ResultGetBlock, error) {
+	res, err := performCall(client, "get_block",
+		"height", height)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultGetBlock), err
+}
+
+func ListUnconfirmedTxs(client rpcclient.Client) (*rpc_types.ResultListUnconfirmedTxs, error) {
+	res, err := performCall(client, "list_unconfirmed_txs")
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultListUnconfirmedTxs), err
+}
+
+func ListValidators(client rpcclient.Client) (*rpc_types.ResultListValidators, error) {
+	res, err := performCall(client, "list_validators")
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultListValidators), err
+}
+
+func DumpConsensusState(client rpcclient.Client) (*rpc_types.ResultDumpConsensusState, error) {
+	res, err := performCall(client, "dump_consensus_state")
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultDumpConsensusState), err
+}
+
 func performCall(client rpcclient.Client, method string,
 	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
 	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
@@ -137,6 +170,9 @@ func performCall(client rpcclient.Client, method string,
 		_, err = cli.Call(method, paramsSlice, &res)
 	case *rpcclient.ClientURI:
 		_, err = cli.Call(method, paramsMap, &res)
+	default:
+		panic(fmt.Errorf("peformCall called against an unknown rpcclient.Client %v",
+			cli))
 	}
 	return
 

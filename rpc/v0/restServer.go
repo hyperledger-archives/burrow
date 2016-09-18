@@ -221,17 +221,13 @@ func (restServer *RestServer) handleBlock(c *gin.Context) {
 
 // ********************************* Consensus *********************************
 func (restServer *RestServer) handleConsensusState(c *gin.Context) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	// core_types.FromRoundState() will do it, but only if we have access to
-	// Tendermint's RonudState..
-	cs := &core_types.ConsensusState{}
+	cs := restServer.pipe.GetConsensusEngine().ConsensusState()
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(cs, c.Writer)
 }
 
 func (restServer *RestServer) handleValidatorList(c *gin.Context) {
-	// TODO: [Silas] erisDbMethods has not implemented this since the refactor
-	vl := &core_types.ValidatorList{}
+	vl := restServer.pipe.GetConsensusEngine().ListValidators()
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(vl, c.Writer)
 }
@@ -381,13 +377,12 @@ func (restServer *RestServer) handleBroadcastTx(c *gin.Context) {
 }
 
 func (restServer *RestServer) handleUnconfirmedTxs(c *gin.Context) {
-
-	txs, err := restServer.pipe.Transactor().UnconfirmedTxs()
+	trans, err := restServer.pipe.GetConsensusEngine().ListUnconfirmedTxs(-1)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
 	c.Writer.WriteHeader(200)
-	restServer.codec.Encode(txs, c.Writer)
+	restServer.codec.Encode(txs.UnconfirmedTxs{trans}, c.Writer)
 }
 
 func (restServer *RestServer) handleCall(c *gin.Context) {

@@ -38,7 +38,6 @@ import (
 type Pipe interface {
 	Accounts() Accounts
 	Blockchain() blockchain_types.Blockchain
-	Consensus() consensus_types.ConsensusEngine
 	Events() event.EventEmitter
 	NameReg() NameReg
 	Net() Net
@@ -91,6 +90,5 @@ type Transactor interface {
 		fee int64) (*txs.EventDataCall, error)
 	TransactNameReg(privKey []byte, name, data string, amount,
 		fee int64) (*txs.Receipt, error)
-	UnconfirmedTxs() (*txs.UnconfirmedTxs, error)
 	SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error)
 }
