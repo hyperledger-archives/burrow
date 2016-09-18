@@ -140,16 +140,19 @@ func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, 
 }
 
 // DumpStorage returns the full storage for an account.
-func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (*core_types.Storage) {
+func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
 	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
 	resultStorage, err := tendermint_client.DumpStorage(client, address)
 	if err != nil {
-
+		err = fmt.Errorf("Error connecting to node (%s) to get storage for account (%X): %s",
+			erisNodeClient.broadcastRPC, address, err.Error())
+		return nil, err
 	}
 	// UnwrapResultDumpStorage is an inefficient full deep copy,
 	// to transform the type to /core/types.Storage
 	// TODO: removing go-wire and go-rpc allows us to collapse these types
-	return tendermint_types.UnwrapResultDumpStorage(resultStorage)
+	storage = tendermint_types.UnwrapResultDumpStorage(resultStorage)
+	return
 }
 
 //--------------------------------------------------------------------------------------------
