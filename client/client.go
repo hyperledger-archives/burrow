@@ -23,7 +23,9 @@ import (
 
 	acc "github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 type NodeClient interface {
@@ -137,9 +139,18 @@ func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, 
 	return account.Copy(), nil
 }
 
-// DumpStorage
-func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storageRoot []byte)
+// DumpStorage returns the full storage for an account.
+func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (*core_types.Storage) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	resultStorage, err := tendermint_client.DumpStorage(client, address)
+	if err != nil {
 
+	}
+	// UnwrapResultDumpStorage is an inefficient full deep copy,
+	// to transform the type to /core/types.Storage
+	// TODO: removing go-wire and go-rpc allows us to collapse these types
+	return tendermint_types.UnwrapResultDumpStorage(resultStorage)
+}
 
 //--------------------------------------------------------------------------------------------
 // Name registry
@@ -153,9 +164,12 @@ func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data [
 		return nil, nil, 0, err
 	}
 	// unwrap return results
-	owner = *entryResult.Owner
+	owner = make([]byte, len(entryResult.Owner))
+	copy(owner, entryResult.Owner) 
 	data = []byte(entryResult.Data)
 	expirationBlock = entryResult.Expires
 	return
 }
+
+
 
