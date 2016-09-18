@@ -20,13 +20,13 @@ import (
 
 // make a simple connection to the server
 func TestWSConnect(t *testing.T) {
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	wsc.Stop()
 }
 
 // receive a new block message
 func TestWSNewBlock(t *testing.T) {
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringNewBlock()
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -45,7 +45,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringNewBlock()
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -78,10 +78,9 @@ func TestWSBlockchainGrowth(t *testing.T) {
 
 // send a transaction and validate the events from listening for both sender and receiver
 func TestWSSend(t *testing.T) {
+	wsc := newWSClient()
 	toAddr := user[1].Address
 	amt := int64(100)
-
-	wsc := newWSClient(t)
 	eidInput := txs.EventStringAccInput(user[0].Address)
 	eidOutput := txs.EventStringAccOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
@@ -105,7 +104,7 @@ func TestWSDoubleFire(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid := txs.EventStringAccInput(user[0].Address)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
@@ -136,7 +135,7 @@ func TestWSCallWait(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	eid1 := txs.EventStringAccInput(user[0].Address)
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
@@ -175,7 +174,7 @@ func TestWSCallNoWait(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	amt, gasLim, fee := int64(10000), int64(1000), int64(1000)
 	code, _, returnVal := simpleContract()
 
@@ -204,7 +203,7 @@ func TestWSCallCall(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	amt, gasLim, fee := int64(10000), int64(1000), int64(1000)
 	code, _, returnVal := simpleContract()
 	txid := new([]byte)
@@ -243,8 +242,8 @@ func TestWSCallCall(t *testing.T) {
 }
 
 func TestSubscribe(t *testing.T) {
+	wsc := newWSClient()
 	var subId string
-	wsc := newWSClient(t)
 	subscribe(t, wsc, txs.EventStringNewBlock())
 
 	timeout := time.NewTimer(timeoutSeconds * time.Second)

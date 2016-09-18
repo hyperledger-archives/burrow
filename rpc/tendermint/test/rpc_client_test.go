@@ -12,6 +12,7 @@ import (
 
 	"time"
 
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
@@ -37,9 +38,7 @@ func testWithAllClients(t *testing.T,
 func TestStatus(t *testing.T) {
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
 		resp, err := edbcli.Status(client)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		fmt.Println(resp)
 		if resp.NodeInfo.Network != chainID {
 			t.Fatal(fmt.Errorf("ChainID mismatch: got %s expected %s",
@@ -49,7 +48,7 @@ func TestStatus(t *testing.T) {
 }
 
 func TestBroadcastTx(t *testing.T) {
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
@@ -57,9 +56,7 @@ func TestBroadcastTx(t *testing.T) {
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
 		//receipt := broadcastTx(t, client, tx)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		if receipt.CreatesContract > 0 {
 			t.Fatal("This tx does not create a contract")
 		}
@@ -70,9 +67,7 @@ func TestBroadcastTx(t *testing.T) {
 		buf := new(bytes.Buffer)
 		hasher := ripemd160.New()
 		tx.WriteSignBytes(chainID, buf, n, errp)
-		if *errp != nil {
-			t.Fatal(*errp)
-		}
+		assert.NoError(t, *errp)
 		txSignBytes := buf.Bytes()
 		hasher.Write(txSignBytes)
 		txHashExpected := hasher.Sum(nil)
@@ -104,8 +99,8 @@ func TestGetStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		wsc := newWSClient(t)
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
@@ -118,9 +113,7 @@ func TestGetStorage(t *testing.T) {
 		// Call with nil address will create a contract
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
-		if err != nil {
-			t.Fatalf("Problem broadcasting transaction: %v", err)
-		}
+		assert.NoError(t, err)
 		assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
 			" create a contract")
 		assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
@@ -166,8 +159,8 @@ func TestCallContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		wsc := newWSClient(t)
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
@@ -180,6 +173,7 @@ func TestCallContract(t *testing.T) {
 		code, _, _ := simpleContract()
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		assert.NoError(t, err)
 		if err != nil {
 			t.Fatalf("Problem broadcasting transaction: %v", err)
 		}
@@ -202,8 +196,8 @@ func TestNameReg(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		wsc := newWSClient(t)
 
 		txs.MinNameRegistrationPeriod = 1
 
@@ -283,8 +277,8 @@ func TestNameReg(t *testing.T) {
 }
 
 func TestBlockchainInfo(t *testing.T) {
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		wsc := newWSClient(t)
 		nBlocks := 4
 		waitNBlocks(t, wsc, nBlocks)
 
@@ -307,10 +301,7 @@ func TestBlockchainInfo(t *testing.T) {
 		}
 
 		resp, err = edbcli.BlockchainInfo(client, 1, 2)
-		if err != nil {
-			t.Fatalf("Failed to get blockchain info: %v", err)
-		}
-
+		assert.NoError(t, err)
 		assert.Equal(t, 2, len(resp.BlockMetas),
 			"Should see 2 BlockMetas after extracting 2 blocks")
 	})
@@ -320,25 +311,13 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient(t)
+	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
 		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
 		tx := makeDefaultCallTx(t, client, []byte{}, code, amt, gasLim, fee)
-
 		txChan := make(chan []txs.Tx)
-		go func() {
-			for {
-				resp, err := edbcli.ListUnconfirmedTxs(client)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if resp.N > 0 {
-					txChan <- resp.Txs
-				}
-			}
-		}()
 
 		// We want to catch the Tx in mempool before it gets reaped by tendermint
 		// consensus. We should be able to do this almost always if we broadcast our
@@ -346,6 +325,17 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		// 1 second between blocks, and we will have the lock on Reap
 		// So we wait for a block here
 		waitNBlocks(t, wsc, 1)
+
+		go func() {
+			for {
+				resp, err := edbcli.ListUnconfirmedTxs(client)
+				assert.NoError(t, err)
+				if resp.N > 0 {
+					txChan <- resp.Txs
+				}
+			}
+		}()
+
 		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
 			broadcastTx(t, client, tx)
 			select {
@@ -359,6 +349,47 @@ func TestListUnconfirmedTxs(t *testing.T) {
 					"Transaction should be returned by ListUnconfirmedTxs")
 			}
 		})
+	})
+}
+
+func TestGetBlock(t *testing.T) {
+	wsc := newWSClient()
+	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+		waitNBlocks(t, wsc, 3)
+		resp, err := edbcli.GetBlock(client, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, resp.Block.Height)
+		assert.Equal(t, 2, resp.BlockMeta.Header.Height)
+	})
+}
+
+func TestListValidators(t *testing.T) {
+	wsc := newWSClient()
+	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+		waitNBlocks(t, wsc, 3)
+		resp, err := edbcli.ListValidators(client)
+		assert.NoError(t, err)
+		assert.Len(t, resp.BondedValidators, 1)
+		validator := resp.BondedValidators[0].(*consensus_types.TendermintValidator)
+		assert.Equal(t, genesisDoc.Validators[0].PubKey, validator.PubKey)
+	})
+}
+
+func TestDumpConsensusState(t *testing.T) {
+	wsc := newWSClient()
+	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+		waitNBlocks(t, wsc, 3)
+		resp, err := edbcli.DumpConsensusState(client)
+		assert.NoError(t, err)
+		startTime := resp.ConsensusState.StartTime
+		// TODO: uncomment lines involving commitTime when
+		// https://github.com/tendermint/tendermint/issues/277 is fixed in Tendermint
+		//commitTime := resp.ConsensusState.CommitTime
+		assert.NotZero(t, startTime)
+		//assert.NotZero(t, commitTime)
+		//assert.True(t, commitTime.Unix() > startTime.Unix(),
+		//	"Commit time %v should be later than start time %v", commitTime, startTime)
+		assert.Equal(t, uint8(1), resp.ConsensusState.Step)
 	})
 }
 

@@ -641,8 +641,17 @@ func (pipe *erisMintPipe) ListValidators() (*rpc_tm_types.ResultListValidators, 
 }
 
 func (pipe *erisMintPipe) DumpConsensusState() (*rpc_tm_types.ResultDumpConsensusState, error) {
-	return &rpc_tm_types.ResultDumpConsensusState{
+	statesMap := pipe.consensusEngine.PeerConsensusStates()
+	peerStates := make([]*rpc_tm_types.ResultPeerConsensusState, len(statesMap))
+	for key, peerState := range statesMap {
+		peerStates = append(peerStates, &rpc_tm_types.ResultPeerConsensusState{
+			PeerKey:            key,
+			PeerConsensusState: peerState,
+		})
+	}
+	dump := rpc_tm_types.ResultDumpConsensusState{
 		ConsensusState:      pipe.consensusEngine.ConsensusState(),
-		PeerConsensusStates: pipe.consensusEngine.PeerConsensusStates(),
-	}, nil
+		PeerConsensusStates: peerStates,
+	}
+	return &dump, nil
 }

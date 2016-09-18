@@ -24,10 +24,10 @@ const (
 type blockPredicate func(block *tm_types.Block) bool
 
 // create a new connection
-func newWSClient(t *testing.T) *rpcclient.WSClient {
+func newWSClient() *rpcclient.WSClient {
 	wsc := rpcclient.NewWSClient(websocketAddr, websocketEndpoint)
 	if _, err := wsc.Start(); err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	return wsc
 }
