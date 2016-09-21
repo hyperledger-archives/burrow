@@ -34,7 +34,7 @@ type NodeClient interface {
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
 	GetAccount(address []byte) (*acc.Account, error)
-	QueryContract(address, data []byte) (ret []byte, gasUsed int64, err error)
+	QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error)
 	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
 }
 
@@ -93,16 +93,13 @@ func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicK
 }
 
 // QueryContract executes the contract code at address with the given data
-func (erisNodeClient *ErisNodeClient) QueryContract(address, data []byte) (ret []byte, gasUsed int64, err error) {
+// NOTE: there is no check on the caller; 
+func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
 	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
-	var callerAddress = make([]byte, len(address))
-	var calleeAddress = make([]byte, len(address))
-	copy(callerAddress, address)
-	copy(calleeAddress, address)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
 		err = fmt.Errorf("Error connnecting to node (%s) to query contract at (%X) with data (%X)",
-			erisNodeClient.broadcastRPC, address, data, err.Error())
+			erisNodeClient.broadcastRPC, calleeAddress, data, err.Error())
 		return nil, int64(0), err
 	}
 	return callResult.Return, callResult.GasUsed, nil
