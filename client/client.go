@@ -23,7 +23,9 @@ import (
 
 	acc "github.com/eris-ltd/eris-db/account"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 type NodeClient interface {
@@ -70,23 +72,6 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 
 //------------------------------------------------------------------------------------
 // RPC requests other than transaction related
-
-// GetAccount returns a copy of the account
-func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
-	account, err := tendermint_client.GetAccount(client, address)
-	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
-			erisNodeClient.broadcastRPC, address, err.Error())
-		return nil, err
-	}
-	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisNodeClient.broadcastRPC)
-		return nil, err
-	}
-
-	return account.Copy(), nil
-}
 
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
@@ -136,4 +121,58 @@ func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []by
 	}
 	return callResult.Return, callResult.GasUsed, nil
 }
+
+// GetAccount returns a copy of the account
+func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	account, err := tendermint_client.GetAccount(client, address)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
+			erisNodeClient.broadcastRPC, address, err.Error())
+		return nil, err
+	}
+	if account == nil {
+		err = fmt.Errorf("Unknown account %X at node (%s)", address, erisNodeClient.broadcastRPC)
+		return nil, err
+	}
+
+	return account.Copy(), nil
+}
+
+// DumpStorage returns the full storage for an account.
+func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	resultStorage, err := tendermint_client.DumpStorage(client, address)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get storage for account (%X): %s",
+			erisNodeClient.broadcastRPC, address, err.Error())
+		return nil, err
+	}
+	// UnwrapResultDumpStorage is an inefficient full deep copy,
+	// to transform the type to /core/types.Storage
+	// TODO: removing go-wire and go-rpc allows us to collapse these types
+	storage = tendermint_types.UnwrapResultDumpStorage(resultStorage)
+	return
+}
+
+//--------------------------------------------------------------------------------------------
+// Name registry
+
+func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data []byte, expirationBlock int, err error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	entryResult, err := tendermint_client.GetName(client, name)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
+			erisNodeClient.broadcastRPC, name)
+		return nil, nil, 0, err
+	}
+	// unwrap return results
+	owner = make([]byte, len(entryResult.Owner))
+	copy(owner, entryResult.Owner) 
+	data = []byte(entryResult.Data)
+	expirationBlock = entryResult.Expires
+	return
+}
+
+
 
