@@ -184,58 +184,61 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	return tx, nil
 }
 
-// func Bond(nodeAddr, signAddr, pubkey, unbondAddr, amtS, nonceS string) (*txs.BondTx, error) {
-// 	pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, nonceS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var pubKey crypto.PubKeyEd25519
-// 	var unbondAddrBytes []byte
+func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbondAddr, amtS, nonceS string) (*txs.BondTx, error) {
+	return nil, fmt.Errorf("Bond Transaction formation to be implemented on 0.12.0")
+	// pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, nonceS)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// var pubKey crypto.PubKeyEd25519
+	// var unbondAddrBytes []byte
 
-// 	if unbondAddr == "" {
-// 		pkb, _ := hex.DecodeString(pubkey)
-// 		copy(pubKey[:], pkb)
-// 		unbondAddrBytes = pubKey.Address()
-// 	} else {
-// 		unbondAddrBytes, err = hex.DecodeString(unbondAddr)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("unbondAddr is bad hex: %v", err)
-// 		}
+	// if unbondAddr == "" {
+	// 	pkb, _ := hex.DecodeString(pubkey)
+	// 	copy(pubKey[:], pkb)
+	// 	unbondAddrBytes = pubKey.Address()
+	// } else {
+	// 	unbondAddrBytes, err = hex.DecodeString(unbondAddr)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("unbondAddr is bad hex: %v", err)
+	// 	}
 
-// 	}
+	// }
 
-// 	tx, err := types.NewBondTx(pub)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	tx.AddInputWithNonce(pub, amt, int(nonce))
-// 	tx.AddOutput(unbondAddrBytes, amt)
+	// tx, err := types.NewBondTx(pub)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// tx.AddInputWithNonce(pub, amt, int(nonce))
+	// tx.AddOutput(unbondAddrBytes, amt)
 
-// 	return tx, nil
-// }
+	// return tx, nil
+}
 
-// func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
-// 	if addrS == "" {
-// 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
-// 	}
+func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
+	return nil, fmt.Errorf("Unbond Transaction formation to be implemented on 0.12.0")
+	// if addrS == "" {
+	// 	return nil, fmt.Errorf("Validator address must be given with --addr flag")
+	// }
 
-// 	addrBytes, err := hex.DecodeString(addrS)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("addr is bad hex: %v", err)
-// 	}
+	// addrBytes, err := hex.DecodeString(addrS)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("addr is bad hex: %v", err)
+	// }
 
-// 	height, err := strconv.ParseInt(heightS, 10, 32)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("height is misformatted: %v", err)
-// 	}
+	// height, err := strconv.ParseInt(heightS, 10, 32)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("height is misformatted: %v", err)
+	// }
 
-// 	return &types.UnbondTx{
-// 		Address: addrBytes,
-// 		Height:  int(height),
-// 	}, nil
-// }
+	// return &types.UnbondTx{
+	// 	Address: addrBytes,
+	// 	Height:  int(height),
+	// }, nil
+}
 
-// func Rebond(addrS, heightS string) (*txs.RebondTx, error) {
+func Rebond(addrS, heightS string) (*txs.RebondTx, error) {
+	return nil, fmt.Errorf("Rebond Transaction formation to be implemented on 0.12.0")
 // 	if addrS == "" {
 // 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
 // 	}
@@ -254,7 +257,7 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 // 		Address: addrBytes,
 // 		Height:  int(height),
 // 	}, nil
-// }
+}
 
 type TxResult struct {
 	BlockHash []byte // all txs get in a block
