@@ -18,7 +18,7 @@ type Validator interface {
 // Anticipating moving to our own definition of Validator, or at least
 // augmenting Tendermint's.
 type TendermintValidator struct {
-	tmintValidator *tendermint_types.Validator `json:"validator"`
+	*tendermint_types.Validator `json:"validator"`
 }
 
 var _ Validator = (*TendermintValidator)(nil)
@@ -28,7 +28,7 @@ func (tendermintValidator *TendermintValidator) AssertIsValidator() {
 }
 
 func (tendermintValidator *TendermintValidator) Address() []byte {
-	return tendermintValidator.tmintValidator.Address
+	return tendermintValidator.Address()
 }
 
 //-------------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ func FromTendermintValidators(tmValidators []*tendermint_types.Validator) []Vali
 	for i, tmValidator := range tmValidators {
 		// This embedding could be replaced by a mapping once if we want to describe
 		// a more general notion of validator
-		validators[i] = &TendermintValidator{tmintValidator: tmValidator}
+		validators[i] = &TendermintValidator{tmValidator}
 	}
 	return validators
 }
