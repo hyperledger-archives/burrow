@@ -240,7 +240,7 @@ func (tendermint *Tendermint) ListUnconfirmedTxs(
 }
 
 func (tendermint *Tendermint) ListValidators() []consensus_types.Validator {
-	return consensus_types.FromTendermintValidators(tendermint.tmintNode.
+	return FromTendermintValidators(tendermint.tmintNode.
 		ConsensusState().Validators.Validators)
 }
 

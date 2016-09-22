@@ -19,6 +19,8 @@ package mock
 import (
 	"github.com/tendermint/go-crypto"
 
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	acc "github.com/eris-ltd/eris-db/account"
 	. "github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/txs"
@@ -99,4 +101,17 @@ func (mock *MockNodeClient) QueryContractCode(address, code, data []byte) (ret [
 	// return zero
 	ret = make([]byte, 0)
 	return ret, 0, nil
+}
+
+
+func (mock *MockNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
+	return nil, nil
+}
+
+func (mock *MockNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
+	return nil, "", 0, nil
+}
+
+func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error){
+	return 0, nil, nil, nil
 }

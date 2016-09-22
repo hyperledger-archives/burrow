@@ -22,6 +22,7 @@ import (
 	"github.com/tendermint/go-rpc/client"
 
 	acc "github.com/eris-ltd/eris-db/account"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -36,6 +37,10 @@ type NodeClient interface {
 	GetAccount(address []byte) (*acc.Account, error)
 	QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error)
 	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
+
+	DumpStorage(address []byte) (storage *core_types.Storage, err error) 
+	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
+	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
 }
 
 // NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
@@ -155,21 +160,37 @@ func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core
 //--------------------------------------------------------------------------------------------
 // Name registry
 
-func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data []byte, expirationBlock int, err error) {
+func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
 	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
 	entryResult, err := tendermint_client.GetName(client, name)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
 			erisNodeClient.broadcastRPC, name)
-		return nil, nil, 0, err
+		return nil, "", 0, err
 	}
 	// unwrap return results
 	owner = make([]byte, len(entryResult.Owner))
 	copy(owner, entryResult.Owner) 
-	data = []byte(entryResult.Data)
+	data = entryResult.Data
 	expirationBlock = entryResult.Expires
 	return
 }
 
+//--------------------------------------------------------------------------------------------
 
+func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
+	bondedValidators []consensus_types.Validator, unbondingValidators []consensus_types.Validator, err error) {
+	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	validatorsResult, err := tendermint_client.ListValidators(client)
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get validators",
+			erisNodeClient.broadcastRPC)
+		return 0, nil, nil, err
+	}
+	// unwrap return results
+	blockHeight = validatorsResult.BlockHeight
+	bondedValidators = validatorsResult.BondedValidators
+	unbondingValidators = validatorsResult.UnbondingValidators
+	return 
+}
 
