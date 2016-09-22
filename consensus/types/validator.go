@@ -12,26 +12,34 @@ var _ = wire.RegisterInterface(
 
 type Validator interface {
 	AssertIsValidator()
+	Address() []byte
 }
 
 // Anticipating moving to our own definition of Validator, or at least
 // augmenting Tendermint's.
 type TendermintValidator struct {
-	*tendermint_types.Validator `json:"validator"`
-}
-
-func (validator *TendermintValidator) AssertIsValidator() {
-
+	tmintValidator *tendermint_types.Validator `json:"validator"`
 }
 
 var _ Validator = (*TendermintValidator)(nil)
+
+func (tendermintValidator *TendermintValidator) AssertIsValidator() {
+
+}
+
+func (tendermintValidator *TendermintValidator) Address() []byte {
+	return tendermintValidator.tmintValidator.Address
+}
+
+//-------------------------------------------------------------------------------------
+// Helper function for TendermintValidator
 
 func FromTendermintValidators(tmValidators []*tendermint_types.Validator) []Validator {
 	validators := make([]Validator, len(tmValidators))
 	for i, tmValidator := range tmValidators {
 		// This embedding could be replaced by a mapping once if we want to describe
 		// a more general notion of validator
-		validators[i] = &TendermintValidator{tmValidator}
+		validators[i] = &TendermintValidator{tmintValidator: tmValidator}
 	}
 	return validators
 }
