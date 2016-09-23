@@ -132,7 +132,7 @@ type (
 
 	// used in Peers and BlockchainInfo
 	Peer struct {
-		nodeInfo   *p2p.NodeInfo `json:"node_info"`
+		NodeInfo   *p2p.NodeInfo `json:"node_info"`
 		IsOutbound bool          `json:"is_outbound"`
 	}
 

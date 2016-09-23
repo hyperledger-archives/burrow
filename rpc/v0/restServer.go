@@ -297,7 +297,7 @@ func (restServer *RestServer) handleNameRegEntry(c *gin.Context) {
 // ********************************* Network *********************************
 
 func (restServer *RestServer) handleNetworkInfo(c *gin.Context) {
-	nInfo, err := restServer.pipe.Net().Info()
+	nInfo, err := pipes.NetInfo(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -306,7 +306,7 @@ func (restServer *RestServer) handleNetworkInfo(c *gin.Context) {
 }
 
 func (restServer *RestServer) handleClientVersion(c *gin.Context) {
-	version, err := restServer.pipe.Net().ClientVersion()
+	version, err := pipes.ClientVersion(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -315,7 +315,7 @@ func (restServer *RestServer) handleClientVersion(c *gin.Context) {
 }
 
 func (restServer *RestServer) handleMoniker(c *gin.Context) {
-	moniker, err := restServer.pipe.Net().Moniker()
+	moniker, err := pipes.Moniker(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -324,7 +324,7 @@ func (restServer *RestServer) handleMoniker(c *gin.Context) {
 }
 
 func (restServer *RestServer) handleListening(c *gin.Context) {
-	listening, err := restServer.pipe.Net().Listening()
+	listening, err := pipes.Listening(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -333,7 +333,7 @@ func (restServer *RestServer) handleListening(c *gin.Context) {
 }
 
 func (restServer *RestServer) handleListeners(c *gin.Context) {
-	listeners, err := restServer.pipe.Net().Listeners()
+	listeners, err := pipes.Listeners(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -342,7 +342,7 @@ func (restServer *RestServer) handleListeners(c *gin.Context) {
 }
 
 func (restServer *RestServer) handlePeers(c *gin.Context) {
-	peers, err := restServer.pipe.Net().Peers()
+	peers, err := pipes.Peers(restServer.pipe)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -352,7 +352,7 @@ func (restServer *RestServer) handlePeers(c *gin.Context) {
 
 func (restServer *RestServer) handlePeer(c *gin.Context) {
 	address := c.MustGet("address").(string)
-	peer, err := restServer.pipe.Net().Peer(address)
+	peer, err := pipes.Peer(restServer.pipe, address)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

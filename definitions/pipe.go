@@ -40,7 +40,6 @@ type Pipe interface {
 	Blockchain() blockchain_types.Blockchain
 	Events() event.EventEmitter
 	NameReg() NameReg
-	Net() Net
 	Transactor() Transactor
 	// Hash of Genesis state
 	GenesisHash() []byte
@@ -66,16 +65,6 @@ type Accounts interface {
 type NameReg interface {
 	Entry(key string) (*core_types.NameRegEntry, error)
 	Entries([]*event.FilterData) (*types.ResultListNames, error)
-}
-
-type Net interface {
-	Info() (*types.NetworkInfo, error)
-	ClientVersion() (string, error)
-	Moniker() (string, error)
-	Listening() (bool, error)
-	Listeners() ([]string, error)
-	Peers() ([]*types.Peer, error)
-	Peer(string) (*types.Peer, error)
 }
 
 type Transactor interface {

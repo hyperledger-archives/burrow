@@ -266,7 +266,7 @@ func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requeste
 // *************************************** Net ************************************
 
 func (erisDbMethods *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	info, errC := erisDbMethods.pipe.Net().Info()
+	info, errC := pipes.NetInfo(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -274,7 +274,7 @@ func (erisDbMethods *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, request
 }
 
 func (erisDbMethods *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	version, errC := erisDbMethods.pipe.Net().ClientVersion()
+	version, errC := pipes.ClientVersion(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -282,7 +282,7 @@ func (erisDbMethods *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, reque
 }
 
 func (erisDbMethods *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	moniker, errC := erisDbMethods.pipe.Net().Moniker()
+	moniker, errC := pipes.Moniker(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -290,7 +290,7 @@ func (erisDbMethods *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester i
 }
 
 func (erisDbMethods *ErisDbMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listening, errC := erisDbMethods.pipe.Net().Listening()
+	listening, errC := pipes.Listening(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -298,7 +298,7 @@ func (erisDbMethods *ErisDbMethods) Listening(request *rpc.RPCRequest, requester
 }
 
 func (erisDbMethods *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listeners, errC := erisDbMethods.pipe.Net().Listeners()
+	listeners, errC := pipes.Listeners(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -306,7 +306,7 @@ func (erisDbMethods *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester
 }
 
 func (erisDbMethods *ErisDbMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	peers, errC := erisDbMethods.pipe.Net().Peers()
+	peers, errC := pipes.Peers(erisDbMethods.pipe)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -320,7 +320,7 @@ func (erisDbMethods *ErisDbMethods) Peer(request *rpc.RPCRequest, requester inte
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	peer, errC := erisDbMethods.pipe.Net().Peer(address)
+	peer, errC := pipes.Peer(erisDbMethods.pipe, address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
