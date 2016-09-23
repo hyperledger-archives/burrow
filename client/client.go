@@ -81,7 +81,7 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
 func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get status: %s",
