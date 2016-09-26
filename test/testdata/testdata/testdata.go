@@ -7,6 +7,7 @@ import (
 	event "github.com/eris-ltd/eris-db/event"
 	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	transaction "github.com/eris-ltd/eris-db/txs"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
@@ -605,7 +606,7 @@ type (
 	}
 
 	GetNetworkInfoData struct {
-		Output *core_types.NetworkInfo `json:"output"`
+		Output *shared.NetworkInfo `json:"output"`
 	}
 
 	GetClientVersionData struct {
@@ -625,12 +626,12 @@ type (
 	}
 
 	GetPeersData struct {
-		Output []*core_types.Peer `json:"output"`
+		Output []*consensus_types.Peer `json:"output"`
 	}
 
 	GetPeerData struct {
-		Input  *rpc_v0.PeerParam `json:"input"`
-		Output *core_types.Peer  `json:"output"`
+		Input  *rpc_v0.PeerParam     `json:"input"`
+		Output *consensus_types.Peer `json:"output"`
 	}
 
 	TransactData struct {

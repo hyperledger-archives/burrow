@@ -28,7 +28,6 @@ type MockPipe struct {
 	consensusEngine consensus_types.ConsensusEngine
 	events          event.EventEmitter
 	namereg         definitions.NameReg
-	net             definitions.Net
 	transactor      definitions.Transactor
 }
 
@@ -39,7 +38,6 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 	consensusEngine := &consensusEngine{td}
 	eventer := &eventer{td}
 	namereg := &namereg{td}
-	net := &network{td}
 	transactor := &transactor{td}
 	return &MockPipe{
 		td,
@@ -48,7 +46,6 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 		consensusEngine,
 		eventer,
 		namereg,
-		net,
 		transactor,
 	}
 }
@@ -72,10 +69,6 @@ func (pipe *MockPipe) Events() event.EventEmitter {
 
 func (pipe *MockPipe) NameReg() definitions.NameReg {
 	return pipe.namereg
-}
-
-func (pipe *MockPipe) Net() definitions.Net {
-	return pipe.net
 }
 
 func (pipe *MockPipe) Transactor() definitions.Transactor {
@@ -176,27 +169,36 @@ func (cons *consensusEngine) BroadcastTransaction(transaction []byte,
 }
 
 func (cons *consensusEngine) IsListening() bool {
-	return true
+	return cons.testData.IsListening.Output.Listening
 }
 
 func (cons *consensusEngine) Listeners() []p2p.Listener {
-	return make([]p2p.Listener, 0)
+	p2pListeners := make([]p2p.Listener, 0)
+
+	for _, name := range cons.testData.GetListeners.Output.Listeners {
+		p2pListeners = append(p2pListeners, p2p.NewDefaultListener("tcp", name, true))
+	}
+
+	return p2pListeners
 }
 
 func (cons *consensusEngine) NodeInfo() *p2p.NodeInfo {
-	return &p2p.NodeInfo{}
+	return &p2p.NodeInfo{
+		Version: cons.testData.GetNetworkInfo.Output.ClientVersion,
+		Moniker: cons.testData.GetNetworkInfo.Output.Moniker,
+	}
 }
 
-func (cons *consensusEngine) Peers() []consensus_types.Peer {
-	return make([]consensus_types.Peer, 0)
+func (cons *consensusEngine) Peers() []*consensus_types.Peer {
+	return cons.testData.GetPeers.Output
 }
 
 func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
 	return crypto.PubKeyEd25519{
-		1,2,3,4,5,6,7,8,
-		1,2,3,4,5,6,7,8,
-		1,2,3,4,5,6,7,8,
-		1,2,3,4,5,6,7,8,
+		1, 2, 3, 4, 5, 6, 7, 8,
+		1, 2, 3, 4, 5, 6, 7, 8,
+		1, 2, 3, 4, 5, 6, 7, 8,
+		1, 2, 3, 4, 5, 6, 7, 8,
 	}
 }
 
@@ -244,40 +246,6 @@ func (nmreg *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
 
 func (nmreg *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
 	return nmreg.testData.GetNameRegEntries.Output, nil
-}
-
-// Net
-type network struct {
-	testData *td.TestData
-}
-
-func (net *network) Info() (*core_types.NetworkInfo, error) {
-	return net.testData.GetNetworkInfo.Output, nil
-}
-
-func (net *network) ClientVersion() (string, error) {
-	return net.testData.GetClientVersion.Output.ClientVersion, nil
-}
-
-func (net *network) Moniker() (string, error) {
-	return net.testData.GetMoniker.Output.Moniker, nil
-}
-
-func (net *network) Listening() (bool, error) {
-	return net.testData.IsListening.Output.Listening, nil
-}
-
-func (net *network) Listeners() ([]string, error) {
-	return net.testData.GetListeners.Output.Listeners, nil
-}
-
-func (net *network) Peers() ([]*core_types.Peer, error) {
-	return net.testData.GetPeers.Output, nil
-}
-
-func (net *network) Peer(address string) (*core_types.Peer, error) {
-	// return net.testData.GetPeer.Output, nil
-	return nil, nil
 }
 
 // Txs

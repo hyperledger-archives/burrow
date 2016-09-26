@@ -70,9 +70,9 @@ type ResultUnsubscribe struct {
 }
 
 type ResultNetInfo struct {
-	Listening bool                   `json:"listening"`
-	Listeners []string               `json:"listeners"`
-	Peers     []consensus_types.Peer `json:"peers"`
+	Listening bool                    `json:"listening"`
+	Listeners []string                `json:"listeners"`
+	Peers     []*consensus_types.Peer `json:"peers"`
 }
 
 type ResultListValidators struct {
@@ -83,7 +83,7 @@ type ResultListValidators struct {
 
 type ResultDumpConsensusState struct {
 	ConsensusState      *consensus_types.ConsensusState `json:"consensus_state"`
-	PeerConsensusStates []*ResultPeerConsensusState      `json:"peer_consensus_states"`
+	PeerConsensusStates []*ResultPeerConsensusState     `json:"peer_consensus_states"`
 }
 
 type ResultPeerConsensusState struct {

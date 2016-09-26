@@ -16,84 +16,69 @@
 
 // Net is part of the pipe for ErisMint and provides the implementation
 // for the pipe to call into the ErisMint application
-package pipes
+package shared
 
 import (
-	core_types "github.com/eris-ltd/eris-db/core/types"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	"github.com/eris-ltd/eris-db/definitions"
 )
 
 //-----------------------------------------------------------------------------
 
 // Get the complete pipe info.
-func NetInfo(pipe definitions.Pipe) (*core_types.NetworkInfo, error) {
+func NetInfo(pipe definitions.Pipe) *NetworkInfo {
 	thisNode := pipe.GetConsensusEngine().NodeInfo()
 	listeners := []string{}
 	for _, listener := range pipe.GetConsensusEngine().Listeners() {
 		listeners = append(listeners, listener.String())
 	}
-	peers := make([]*core_types.Peer, 0)
-	for _, peer := range pipe.GetConsensusEngine().Peers() {
-		p := &core_types.Peer{
-			NodeInfo:   &peer.NodeInfo,
-			IsOutbound: peer.IsOutbound,
-		}
-		peers = append(peers, p)
-	}
-	return &core_types.NetworkInfo{
+	return &NetworkInfo{
 		ClientVersion: thisNode.Version,
 		Moniker:       thisNode.Moniker,
 		Listening:     pipe.GetConsensusEngine().IsListening(),
 		Listeners:     listeners,
-		Peers:         peers,
-	}, nil
+		Peers:         pipe.GetConsensusEngine().Peers(),
+	}
 }
 
 // Get the client version
-func ClientVersion(pipe definitions.Pipe) (string, error) {
-	return pipe.GetConsensusEngine().NodeInfo().Version, nil
+func ClientVersion(pipe definitions.Pipe) string {
+	return pipe.GetConsensusEngine().NodeInfo().Version
 }
 
 // Get the moniker
-func Moniker(pipe definitions.Pipe) (string, error) {
-	return pipe.GetConsensusEngine().NodeInfo().Moniker, nil
+func Moniker(pipe definitions.Pipe) string {
+	return pipe.GetConsensusEngine().NodeInfo().Moniker
 }
 
 // Is the network currently listening for connections.
-func Listening(pipe definitions.Pipe) (bool, error) {
-	return pipe.GetConsensusEngine().IsListening(), nil
+func Listening(pipe definitions.Pipe) bool {
+	return pipe.GetConsensusEngine().IsListening()
 }
 
 // Is the network currently listening for connections.
-func Listeners(pipe definitions.Pipe) ([]string, error) {
+func Listeners(pipe definitions.Pipe) []string {
 	listeners := []string{}
 	for _, listener := range pipe.GetConsensusEngine().Listeners() {
 		listeners = append(listeners, listener.String())
 	}
-	return listeners, nil
+	return listeners
 }
 
-// Get a list of all peers.
-func Peers(pipe definitions.Pipe) ([]*core_types.Peer, error) {
-	peers := make([]*core_types.Peer, 0)
+func Peer(pipe definitions.Pipe, address string) *consensus_types.Peer {
 	for _, peer := range pipe.GetConsensusEngine().Peers() {
-		p := &core_types.Peer{
-			NodeInfo:   &peer.NodeInfo,
-			IsOutbound: peer.IsOutbound,
+		if peer.NodeInfo.RemoteAddr == address {
+			return peer
 		}
-		peers = append(peers, p)
 	}
-	return peers, nil
+	return nil
 }
 
-func  Peer(pipe definitions.Pipe, address string) (*core_types.Peer, error) {
-	for _, peer := range pipe.GetConsensusEngine().Peers() {
-		if peer.RemoteAddr == address {
-			return &core_types.Peer{
-				NodeInfo: &peer.NodeInfo,
-				IsOutbound: peer.IsOutbound,
-			}, nil
-		}
-	}
-	return nil, nil
+// NetworkInfo
+type NetworkInfo struct {
+	ClientVersion string                  `json:"client_version"`
+	Moniker       string                  `json:"moniker"`
+	Listening     bool                    `json:"listening"`
+	Listeners     []string                `json:"listeners"`
+	Peers         []*consensus_types.Peer `json:"peers"`
 }
