@@ -80,7 +80,7 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
-func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
+func (erisNodeClient *ErisNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
@@ -88,8 +88,9 @@ func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicK
 			erisNodeClient.broadcastRPC, err.Error())
 		return nil, nil, nil, int(0), int64(0), err
 	}
+
 	// unwrap return results
-	ChainId = res.GenesisHash
+	GenesisHash = res.GenesisHash
 	ValidatorPublicKey = res.PubKey.Bytes()
 	LatestBlockHash = res.LatestBlockHash
 	LatestBlockHeight = res.LatestBlockHeight
@@ -97,10 +98,26 @@ func (erisNodeClient *ErisNodeClient) Status() (ChainId []byte, ValidatorPublicK
 	return
 }
 
+func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, GenesisHash []byte, err error) {
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
+	chainIdResult, err := tendermint_client.ChainId()
+	if err != nil {
+		err = fmt.Errorf("Error connecting to node (%s) to get chain id: %s",
+			erisNodeClient.broadcastRPC, err.Error())
+		return "", "", nil, err
+	}
+	// unwrap results
+	ChainName = chainIdResult.ChainName
+	ChainId = chainIdResult.ChainId
+	GenesisHash = make([]byte, len(chainIdResult.GenesisHash))
+	copy(GenesisHash[:], chainIdResult.GenesisHash)
+	return 
+}
+
 // QueryContract executes the contract code at address with the given data
 // NOTE: there is no check on the caller; 
 func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
 		err = fmt.Errorf("Error connnecting to node (%s) to query contract at (%X) with data (%X)",
@@ -112,7 +129,7 @@ func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
 func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	// TODO: [ben] Call and CallCode have an inconsistent signature; it makes sense for both to only
 	// have a single address that is the contract to query.
 	callResult, err := tendermint_client.CallCode(client, address, code, data)
@@ -126,7 +143,7 @@ func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []by
 
 // GetAccount returns a copy of the account
 func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
@@ -143,7 +160,7 @@ func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, 
 
 // DumpStorage returns the full storage for an account.
 func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	resultStorage, err := tendermint_client.DumpStorage(client, address)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get storage for account (%X): %s",
@@ -161,7 +178,7 @@ func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core
 // Name registry
 
 func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	entryResult, err := tendermint_client.GetName(client, name)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
@@ -180,7 +197,7 @@ func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data s
 
 func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
 	bondedValidators []consensus_types.Validator, unbondingValidators []consensus_types.Validator, err error) {
-	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
+	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get validators",

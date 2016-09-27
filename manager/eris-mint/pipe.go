@@ -285,7 +285,7 @@ func (pipe *erisMintPipe) GenesisHash() []byte {
 
 func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 	if pipe.consensusEngine == nil {
-		return nil, fmt.Errorf("Consensus Engine is not set in pipe.")
+		return nil, fmt.Errorf("Consensus Engine not initialised in Erismint pipe.")
 	}
 	latestHeight := pipe.blockchain.Height()
 	var (
@@ -305,6 +305,19 @@ func (pipe *erisMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime}, nil
+}
+
+func (pipe *erisMintPipe) ChainId() (*rpc_tm_types.ResultChainId, error) {
+	if pipe.blockchain == nil {
+		return nil, fmt.Errorf("Blockchain not initialised in Erismint pipe.")
+	}
+	chainId := pipe.blockchain().ChainId()
+
+	return &rpc_tm_types.ResultChainId{
+		ChainName:   chainId, // MARMOT: copy ChainId for ChainName as a placehodlder
+		ChainId:     chainId,
+		GenesisHash: pipe.GenesisHash(),
+	}
 }
 
 func (pipe *erisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {

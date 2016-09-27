@@ -280,6 +280,11 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		if err != nil {
 			return nil, err
 		}
+		log.WithFields(log.Fields{
+			"transaction sign bytes": fmt.Sprintf("%X", signBytes),
+			"account address":        fmt.Sprintf("%X", inputAddr),
+			"signature":              fmt.Sprintf("%X", sig64),
+		}).Debug("Signed transaction")
 	}
 
 	if broadcast {

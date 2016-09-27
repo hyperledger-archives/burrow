@@ -17,6 +17,8 @@
 package methods
 
 import (
+	"fmt"
+
 	log "github.com/eris-ltd/eris-logger"
 
 	"github.com/eris-ltd/eris-db/client"
@@ -26,15 +28,15 @@ import (
 func Status(do *definitions.ClientDo)  {
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
 	chainId, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
-	if err == nil {
+	if err != nil {
 		log.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 		return
 	} 
 	log.WithFields(log.Fields{
 		"chain": do.NodeAddrFlag,
-		"chainid": string(chainId),
-		"validator public key": string(validatorPublicKey),
-		"latest block hash": string(latestBlockHash),
+		"chainid": fmt.Sprintf("%X", chainId),
+		"validator public key": fmt.Sprintf("%X", validatorPublicKey),
+		"latest block hash": fmt.Sprintf("%X", latestBlockHash),
 		"latest block height": latestBlockHeight,
 		"latest block time": latestBlockTime,
 	}).Info("status")
