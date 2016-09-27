@@ -41,6 +41,7 @@ type TendermintPipe interface {
 	Status() (*rpc_tm_types.ResultStatus, error)
 	NetInfo() (*rpc_tm_types.ResultNetInfo, error)
 	Genesis() (*rpc_tm_types.ResultGenesis, error)
+	ChainId() (*rpc_tm_types.ResultChainId, error)
 
 	// Accounts
 	GetAccount(address []byte) (*rpc_tm_types.ResultGetAccount, error)

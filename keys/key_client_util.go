@@ -45,7 +45,7 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 	log.WithFields(log.Fields{
 		"key server endpoint": endpoint,
 		"request body":        string(b),
-	}).Debugf("Sending request body to key server")
+	}).Debugf("Eris-client: Sending request body to key server")
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return "", err

@@ -60,6 +60,12 @@ type ResultStatus struct {
 	LatestBlockTime   int64         `json:"latest_block_time"` // nano
 }
 
+type ResultChainId struct {
+	ChainName   string `json:"chain_name"`
+	ChainId     string `json:"chain_id"`
+	GenesisHash []byte `json:"genesis_hash"`
+}
+
 type ResultSubscribe struct {
 	Event          string `json:"event"`
 	SubscriptionId string `json:"subscription_id"`
@@ -158,6 +164,7 @@ const (
 	ResultTypeSubscribe          = byte(0x14)
 	ResultTypeUnsubscribe        = byte(0x15)
 	ResultTypePeerConsensusState = byte(0x16)
+	ResultTypeChainId            = byte(0x17)
 )
 
 type ErisDBResult interface {
@@ -188,6 +195,7 @@ func ConcreteTypes() []wire.ConcreteType {
 		{&ResultEvent{}, ResultTypeEvent},
 		{&ResultSubscribe{}, ResultTypeSubscribe},
 		{&ResultUnsubscribe{}, ResultTypeUnsubscribe},
+		{&ResultChainId{}, ResultTypeChainId},
 	}
 }
 

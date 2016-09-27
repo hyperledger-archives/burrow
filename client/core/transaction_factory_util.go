@@ -76,11 +76,6 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 	var sig64 [64]byte
 	copy(sig64[:], sig)
 	sigED = crypto.SignatureEd25519(sig64)
-	log.WithFields(log.Fields{
-		"transaction sign bytes": fmt.Sprintf("%X", signBytes),
-		"account address":        fmt.Sprintf("%X", inputAddr),
-		"signature":              fmt.Sprintf("%X", sig64),
-	}).Debug("Signed transaction")
 	return inputAddr, tx_, nil
 }
 

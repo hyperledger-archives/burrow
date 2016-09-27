@@ -29,6 +29,7 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 		"status":                  rpc.NewRPCFunc(tmRoutes.StatusResult, ""),
 		"net_info":                rpc.NewRPCFunc(tmRoutes.NetInfoResult, ""),
 		"genesis":                 rpc.NewRPCFunc(tmRoutes.GenesisResult, ""),
+		"chain_id":                rpc.NewRPCFunc(tmRoutes.ChainIdResult, ""),
 		"get_account":             rpc.NewRPCFunc(tmRoutes.GetAccountResult, "address"),
 		"get_storage":             rpc.NewRPCFunc(tmRoutes.GetStorageResult, "address,key"),
 		"call":                    rpc.NewRPCFunc(tmRoutes.CallResult, "fromAddress,toAddress,data"),
@@ -101,6 +102,14 @@ func (tmRoutes *TendermintRoutes) NetInfoResult() (ctypes.ErisDBResult, error) {
 
 func (tmRoutes *TendermintRoutes) GenesisResult() (ctypes.ErisDBResult, error) {
 	if r, err := tmRoutes.tendermintPipe.Genesis(); err != nil {
+		return nil, err
+	} else {
+		return r, nil
+	}
+}
+
+func (tmRoutes *TendermintRoutes) ChainIdResult() (ctypes.ErisDBResult, error) {
+	if r, err := tmRoutes.tendermintPipe.ChainId(); err != nil {
 		return nil, err
 	} else {
 		return r, nil

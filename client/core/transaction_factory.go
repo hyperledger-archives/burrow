@@ -22,11 +22,11 @@ import (
 	"strconv"
 	// "strings"
 	// "time"
+	log "github.com/eris-ltd/eris-logger"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	// log "github.com/eris-ltd/eris-logger"
-
+	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
 	"github.com/eris-ltd/eris-db/txs"
@@ -280,6 +280,9 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		if err != nil {
 			return nil, err
 		}
+		log.WithFields(log.Fields{
+			"transaction": string(account.SignBytes(chainID, tx)),
+		}).Debug("Signed transaction")
 	}
 
 	if broadcast {

@@ -20,6 +20,15 @@ func Status(client rpcclient.Client) (*rpc_types.ResultStatus, error) {
 	return res.(*rpc_types.ResultStatus), nil
 }
 
+func ChainId(client rpcclient.Client) (*rpc_types.ResultChainId, error) {
+	res, err := performCall(client, "chain_id")
+	if err != nil {
+		return nil, err
+	}
+	return res.(*rpc_types.ResultChainId), nil
+}
+
+
 func GenPrivAccount(client rpcclient.Client) (*acm.PrivAccount, error) {
 	res, err := performCall(client, "unsafe/gen_priv_account")
 	if err != nil {
