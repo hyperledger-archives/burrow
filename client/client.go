@@ -186,8 +186,7 @@ func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data s
 		return nil, "", 0, err
 	}
 	// unwrap return results
-	owner = make([]byte, len(entryResult.Owner))
-	copy(owner, entryResult.Owner) 
+	owner = entryResult.Owner
 	data = entryResult.Data
 	expirationBlock = entryResult.Expires
 	return
