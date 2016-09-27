@@ -62,7 +62,7 @@ type ResultStatus struct {
 
 type ResultChainId struct {
 	ChainName   string `json:"chain_name"`
-	ChainID     string `json:"chain_id"`
+	ChainId     string `json:"chain_id"`
 	GenesisHash []byte `json:"genesis_hash"`
 }
 

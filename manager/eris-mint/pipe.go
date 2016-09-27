@@ -311,13 +311,13 @@ func (pipe *erisMintPipe) ChainId() (*rpc_tm_types.ResultChainId, error) {
 	if pipe.blockchain == nil {
 		return nil, fmt.Errorf("Blockchain not initialised in Erismint pipe.")
 	}
-	chainId := pipe.blockchain().ChainId()
+	chainId := pipe.blockchain.ChainId()
 
 	return &rpc_tm_types.ResultChainId{
 		ChainName:   chainId, // MARMOT: copy ChainId for ChainName as a placehodlder
 		ChainId:     chainId,
 		GenesisHash: pipe.GenesisHash(),
-	}
+	}, nil
 }
 
 func (pipe *erisMintPipe) NetInfo() (*rpc_tm_types.ResultNetInfo, error) {

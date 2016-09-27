@@ -27,14 +27,24 @@ import (
 
 func Status(do *definitions.ClientDo)  {
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
-	chainId, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
+	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
 	if err != nil {
 		log.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 		return
-	} 
+	}
+
+	chainName, chainId, genesisHashfromChainId, err := erisNodeClient.ChainId()
+	if err != nil {
+		log.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"chain": do.NodeAddrFlag,
-		"chainid": fmt.Sprintf("%X", chainId),
+		"genesisHash": fmt.Sprintf("%X", genesisHash),
+		"chainName": chainName,
+		"chainId": chainId,
+		"genesisHash from chainId":fmt.Sprintf("%X", genesisHashfromChainId),
 		"validator public key": fmt.Sprintf("%X", validatorPublicKey),
 		"latest block hash": fmt.Sprintf("%X", latestBlockHash),
 		"latest block height": latestBlockHeight,

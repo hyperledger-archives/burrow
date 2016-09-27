@@ -100,7 +100,7 @@ func (erisNodeClient *ErisNodeClient) Status() (GenesisHash []byte, ValidatorPub
 
 func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, GenesisHash []byte, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
-	chainIdResult, err := tendermint_client.ChainId()
+	chainIdResult, err := tendermint_client.ChainId(client)
 	if err != nil {
 		err = fmt.Errorf("Error connecting to node (%s) to get chain id: %s",
 			erisNodeClient.broadcastRPC, err.Error())

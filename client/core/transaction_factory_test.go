@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	// "github.com/stretchr/testify/assert"
+
 	mockclient "github.com/eris-ltd/eris-db/client/mock"
 	mockkeys "github.com/eris-ltd/eris-db/keys/mock"
 )
@@ -60,6 +62,7 @@ func testTransactionFactorySend(t *testing.T,
 		t.Logf("Error in SendTx: %s", err)
 		t.Fail()
 	}
+	// assert.NotEqual(t, txSend)
 	// TODO: test content of Transaction
 }
 
