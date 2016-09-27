@@ -55,7 +55,6 @@ type erisMintPipe struct {
 	consensusEngine consensus_types.ConsensusEngine
 	events          edb_event.EventEmitter
 	namereg         *namereg
-	network         *network
 	transactor      *transactor
 	// Genesis cache
 	genesisDoc   *state_types.GenesisDoc
@@ -111,8 +110,6 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		// genesis cache
 		genesisDoc:   genesisDoc,
 		genesisState: nil,
-		// TODO: What network-level information do we need?
-		network: newNetwork(),
 		// consensus and blockchain should both be loaded into the pipe by a higher
 		// authority - this is a sort of dependency injection pattern
 		consensusEngine: nil,
@@ -187,10 +184,6 @@ func (pipe *erisMintPipe) Events() edb_event.EventEmitter {
 
 func (pipe *erisMintPipe) NameReg() definitions.NameReg {
 	return pipe.namereg
-}
-
-func (pipe *erisMintPipe) Net() definitions.Net {
-	return pipe.network
 }
 
 func (pipe *erisMintPipe) Transactor() definitions.Transactor {

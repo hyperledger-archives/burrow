@@ -13,7 +13,7 @@ type ConsensusEngine interface {
 	IsListening() bool
 	Listeners() []p2p.Listener
 	NodeInfo() *p2p.NodeInfo
-	Peers() []Peer
+	Peers() []*Peer
 
 	// Private Validator
 	PublicValidatorKey() crypto.PubKey

@@ -2,11 +2,11 @@ package rpc_v0
 
 import (
 	"github.com/eris-ltd/eris-db/blockchain"
-	pipes "github.com/eris-ltd/eris-db/core/pipes"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -205,7 +205,7 @@ func (erisDbMethods *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, re
 // *************************************** Blockchain ************************************
 
 func (erisDbMethods *ErisDbMethods) BlockchainInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return pipes.BlockchainInfo(erisDbMethods.pipe), 0, nil
+	return shared.BlockchainInfo(erisDbMethods.pipe), 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) ChainId(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
@@ -266,50 +266,32 @@ func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requeste
 // *************************************** Net ************************************
 
 func (erisDbMethods *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	info, errC := erisDbMethods.pipe.Net().Info()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	info := shared.NetInfo(erisDbMethods.pipe)
 	return info, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	version, errC := erisDbMethods.pipe.Net().ClientVersion()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	version := shared.ClientVersion(erisDbMethods.pipe)
 	return &core_types.ClientVersion{version}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	moniker, errC := erisDbMethods.pipe.Net().Moniker()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	moniker := shared.Moniker(erisDbMethods.pipe)
 	return &core_types.Moniker{moniker}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listening, errC := erisDbMethods.pipe.Net().Listening()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	listening := shared.Listening(erisDbMethods.pipe)
 	return &core_types.Listening{listening}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listeners, errC := erisDbMethods.pipe.Net().Listeners()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	listeners := shared.Listeners(erisDbMethods.pipe)
 	return &core_types.Listeners{listeners}, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	peers, errC := erisDbMethods.pipe.Net().Peers()
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	peers := erisDbMethods.pipe.GetConsensusEngine().Peers()
 	return peers, 0, nil
 }
 
@@ -320,10 +302,7 @@ func (erisDbMethods *ErisDbMethods) Peer(request *rpc.RPCRequest, requester inte
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	peer, errC := erisDbMethods.pipe.Net().Peer(address)
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
+	peer := shared.Peer(erisDbMethods.pipe, address)
 	return peer, 0, nil
 }
 

@@ -20,7 +20,7 @@
 package types
 
 import (
-	"github.com/tendermint/go-p2p" // NodeInfo (drop this!)
+	// NodeInfo (drop this!)
 	"github.com/tendermint/tendermint/types"
 
 	account "github.com/eris-ltd/eris-db/account"
@@ -105,15 +105,6 @@ type (
 
 	// *********************************** Network ***********************************
 
-	// NetworkInfo
-	NetworkInfo struct {
-		ClientVersion string   `json:"client_version"`
-		Moniker       string   `json:"moniker"`
-		Listening     bool     `json:"listening"`
-		Listeners     []string `json:"listeners"`
-		Peers         []*Peer  `json:"peers"`
-	}
-
 	ClientVersion struct {
 		ClientVersion string `json:"client_version"`
 	}
@@ -128,12 +119,6 @@ type (
 
 	Listeners struct {
 		Listeners []string `json:"listeners"`
-	}
-
-	// used in Peers and BlockchainInfo
-	Peer struct {
-		nodeInfo   *p2p.NodeInfo `json:"node_info"`
-		IsOutbound bool          `json:"is_outbound"`
 	}
 
 	// *********************************** Transactions ***********************************

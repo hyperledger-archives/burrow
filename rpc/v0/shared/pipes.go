@@ -1,4 +1,4 @@
-package pipes
+package shared
 
 // Shared extension methods for Pipe and its derivatives
 

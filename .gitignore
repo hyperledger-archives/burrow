@@ -2,3 +2,5 @@
 vendor
 # Temporary / cached
 *.swp
+debug
+.idea

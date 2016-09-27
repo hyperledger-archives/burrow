@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/eris-ltd/eris-db/blockchain"
-	"github.com/eris-ltd/eris-db/core/pipes"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/util"
@@ -165,7 +165,7 @@ func (restServer *RestServer) handleStorageAt(c *gin.Context) {
 // ********************************* Blockchain *********************************
 
 func (restServer *RestServer) handleBlockchainInfo(c *gin.Context) {
-	bci := pipes.BlockchainInfo(restServer.pipe)
+	bci := shared.BlockchainInfo(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(bci, c.Writer)
 }
@@ -297,65 +297,44 @@ func (restServer *RestServer) handleNameRegEntry(c *gin.Context) {
 // ********************************* Network *********************************
 
 func (restServer *RestServer) handleNetworkInfo(c *gin.Context) {
-	nInfo, err := restServer.pipe.Net().Info()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	nInfo := shared.NetInfo(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(nInfo, c.Writer)
 }
 
 func (restServer *RestServer) handleClientVersion(c *gin.Context) {
-	version, err := restServer.pipe.Net().ClientVersion()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	version := shared.ClientVersion(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(&core_types.ClientVersion{version}, c.Writer)
 }
 
 func (restServer *RestServer) handleMoniker(c *gin.Context) {
-	moniker, err := restServer.pipe.Net().Moniker()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	moniker := shared.Moniker(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(&core_types.Moniker{moniker}, c.Writer)
 }
 
 func (restServer *RestServer) handleListening(c *gin.Context) {
-	listening, err := restServer.pipe.Net().Listening()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	listening := shared.Listening(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(&core_types.Listening{listening}, c.Writer)
 }
 
 func (restServer *RestServer) handleListeners(c *gin.Context) {
-	listeners, err := restServer.pipe.Net().Listeners()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	listeners := shared.Listeners(restServer.pipe)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(&core_types.Listeners{listeners}, c.Writer)
 }
 
 func (restServer *RestServer) handlePeers(c *gin.Context) {
-	peers, err := restServer.pipe.Net().Peers()
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	peers := restServer.pipe.GetConsensusEngine().Peers()
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(peers, c.Writer)
 }
 
 func (restServer *RestServer) handlePeer(c *gin.Context) {
 	address := c.MustGet("address").(string)
-	peer, err := restServer.pipe.Net().Peer(address)
-	if err != nil {
-		c.AbortWithError(500, err)
-	}
+	peer := shared.Peer(restServer.pipe, address)
 	c.Writer.WriteHeader(200)
 	restServer.codec.Encode(peer, c.Writer)
 }

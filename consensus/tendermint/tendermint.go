@@ -180,11 +180,12 @@ func (tendermint *Tendermint) Listeners() []p2p.Listener {
 	return copyListeners
 }
 
-func (tendermint *Tendermint) Peers() []consensus_types.Peer {
-	peers := []consensus_types.Peer{}
-	for _, peer := range tendermint.tmintNode.Switch().Peers().List() {
-		peers = append(peers, consensus_types.Peer{
-			NodeInfo:   *peer.NodeInfo,
+func (tendermint *Tendermint) Peers() []*consensus_types.Peer {
+	p2pPeers := tendermint.tmintNode.Switch().Peers().List()
+	peers := make([]*consensus_types.Peer, 0)
+	for _, peer := range p2pPeers {
+		peers = append(peers, &consensus_types.Peer{
+			NodeInfo:   peer.NodeInfo,
 			IsOutbound: peer.IsOutbound(),
 		})
 	}
