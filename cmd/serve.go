@@ -26,9 +26,20 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
+	"fmt"
+
 	core "github.com/eris-ltd/eris-db/core"
 	util "github.com/eris-ltd/eris-db/util"
 )
+
+const (
+	DefaultConfigBasename = "config"
+	DefaultConfigType     = "toml"
+)
+
+var DefaultConfigFilename = fmt.Sprintf("%s.%s",
+	DefaultConfigBasename,
+	DefaultConfigType)
 
 var ServeCmd = &cobra.Command{
 	Use:   "serve",
@@ -36,9 +47,10 @@ var ServeCmd = &cobra.Command{
 	Long: `Eris-DB serve starts an eris-db node with client API enabled by default.
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
-	Example: `$ eris-db serve -- will start the Eris-DB node based on the configuration file "server_config.toml" in the current working directory
-$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "server_config.toml" in the provided working directory
+	Example: fmt.Sprintf(`$ eris-db serve -- will start the Eris-DB node based on the configuration file "%s" in the current working directory
+$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "%s" in the provided working directory
 $ eris-db serve --chain-id <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
+		DefaultConfigFilename, DefaultConfigFilename),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
 		// NOTE [ben]: we can consider an `Explicit` flag that eliminates
@@ -83,10 +95,11 @@ func addServeFlags() {
 func Serve(cmd *cobra.Command, args []string) {
 	// load configuration from a single location to avoid a wrong configuration
 	// file is loaded.
-	if err := do.ReadConfig(do.WorkDir, "config", "toml"); err != nil {
+	err := do.ReadConfig(do.WorkDir, DefaultConfigBasename, DefaultConfigType)
+	if err != nil {
 		log.WithFields(log.Fields{
 			"directory": do.WorkDir,
-			"file":      "config.toml",
+			"file":      DefaultConfigFilename,
 		}).Fatalf("Fatal error reading configuration")
 		os.Exit(1)
 	}

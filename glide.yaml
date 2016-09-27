@@ -16,4 +16,4 @@ import:
 - package: gopkg.in/fatih/set.v0
 - package: gopkg.in/tylerb/graceful.v1
 - package: golang.org/x/net/http2
-  version: master
+- package: github.com/eris-ltd/common
