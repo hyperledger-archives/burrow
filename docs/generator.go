@@ -14,7 +14,7 @@ import (
 )
 
 // Repository maintainers should customize the next two lines.
-var Description = "Blockchain Client"                                         // should match the docs site name
+var Description = "Blockchain Client"                                       // should match the docs site name
 var RenderDir = fmt.Sprintf("./docs/documentation/db/%s/", version.VERSION) // should be the "shortversion..."
 
 // The below variables should be updated only if necessary.
@@ -78,9 +78,10 @@ func RenderFiles(cmdRaw *cobra.Command, tmpl *template.Template) error {
 
 func main() {
 	// Repository maintainers should populate the top level command object.
-	// pm := commands.EPMCmd
-	// commands.InitEPM()
-	// commands.AddGlobalFlags()
+	erisDbCommand := commands.ErisDbCmd
+	commands.InitErisDbCli()
+	commands.AddCommands()
+	commands.AddGlobalFlags()
 
 	// Make the proper directory.
 	var err error
@@ -108,7 +109,7 @@ func main() {
 	}
 
 	// Render the templates.
-	if err = RenderFiles(commands.ErisDbCmd, tmpl); err != nil {
+	if err = RenderFiles(erisDbCommand, tmpl); err != nil {
 		panic(err)
 	}
 }
