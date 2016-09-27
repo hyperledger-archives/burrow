@@ -11,6 +11,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/cobra"
+	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
 )
 
 // Repository maintainers should customize the next two lines.
@@ -83,6 +84,11 @@ func main() {
 	commands.AddCommands()
 	commands.AddGlobalFlags()
 
+	erisClientCommand := clientCommands.ErisClientCmd
+	clientCommands.InitErisClientInit()
+	clientCommands.AddClientCommands()
+	clientCommands.AddGlobalFlags()
+
 	// Make the proper directory.
 	var err error
 	if _, err = os.Stat(RenderDir); os.IsNotExist(err) {
@@ -110,6 +116,10 @@ func main() {
 
 	// Render the templates.
 	if err = RenderFiles(erisDbCommand, tmpl); err != nil {
+		panic(err)
+	}
+
+	if err = RenderFiles(erisClientCommand, tmpl); err != nil {
 		panic(err)
 	}
 }
