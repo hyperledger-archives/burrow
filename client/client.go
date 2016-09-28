@@ -17,7 +17,9 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/tendermint/go-rpc/client"
 
@@ -31,6 +33,7 @@ import (
 
 type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
+	DeriveWebsocketClient() (nodeWsClient *NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
@@ -41,6 +44,14 @@ type NodeClient interface {
 	DumpStorage(address []byte) (storage *core_types.Storage, err error) 
 	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
+}
+
+type NodeWebsocketClient interface {
+	Subscribe(eventId string) error
+	Unsubscribe(eventId string) error
+
+	Wait(eventId string) (chan Confirmation, error)
+	Close()
 }
 
 // NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
@@ -73,6 +84,34 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 		return nil, err
 	}
 	return &receipt, nil
+}
+
+func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *NodeWebSocketClient, err error) {
+	var wsAddr string
+	nodeAddr := erisNodeClient.broadcastRPC
+	if strings.HasPrefix(nodeAddr, "http://") {
+		wsAddr = strings.TrimPrefix(nodeAddr, "http://")
+	}
+	if strings.HasPrefix(nodeAddr, "tcp://") {
+		wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
+	}
+	if strings.HasPrefix(nodeAddr, "unix://") {
+		log.WithFields(log.Fields{
+			"node address": nodeAddr,
+		}).Error("Unable to subscribe to websocket from unix socket.")
+		return nil, fmt.Errorf("Unable to construct websocket from unix socket: %s", nodeAddr)
+	}
+	wsAddr = "ws://" + wsAddr
+	log.WithFields(log.Fields{
+		"websocket address": wsAddr,
+		"endpoint": "/websocket",
+	}).Debug("Subscribing to websocket address")
+	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
+	// NOTE: Failure to start is reported over an error channel
+	wsClient.Start()
+	return &ErisNodeWebsocketClient{
+		tendermintWebsocket: wsClient,
+	}, nil
 }
 
 //------------------------------------------------------------------------------------

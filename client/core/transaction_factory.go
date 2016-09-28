@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	// "strings"
-	// "time"
+	"time"
 	log "github.com/eris-ltd/eris-logger"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
@@ -329,6 +329,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 			}
 		}
 	}
+	time.Sleep(2*time.Second)
 	return
 }
 
