@@ -2,7 +2,7 @@
 
 ### for eris-db version 0.11.x
 
-Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](TODO) library.
+Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](/docs/documentation/db.js/) library.
 
 ## TOC
 
@@ -78,9 +78,9 @@ Request:
 
 ```
 {
-	jsonrpc: "2.0", 
-	method: "erisdb.getAccount", 
-	params: {address: "37236DF251AB70022B1DA351F08A20FB52443E37"}, 
+	jsonrpc: "2.0",
+	method: "erisdb.getAccount",
+	params: {address: "37236DF251AB70022B1DA351F08A20FB52443E37"},
 	id="25"
 }
 ```
@@ -107,10 +107,10 @@ The REST-like API provides the typical endpoint structure i.e. endpoints are nam
 ##Common objects and formatting
 
 This section contains some common objects and explanations of how they work.
-  
+
 ###Numbers and strings
 
-Numbers are always numbers, and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays. 
+Numbers are always numbers, and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays.
 
 Hex strings are never prefixed.
 
@@ -267,18 +267,18 @@ Tendermint events can be subscribed to regardless of what connection type is use
 - [EventSubscribe](#event-subscribe) is used to subscribe to a given event, using an event-id string as argument. The response will contain a `subscription ID`, which can be used to close down the subscription later, or poll for new events if using HTTP. More on event-ids below.
 - [EventUnsubscribe](#event-unsubscribe) is used to unsubscribe to an event. It requires you to pass the `subscription ID` as an argument.
 - [EventPoll](#event-poll) is used to get all the events that has accumulated since the last time the subscription was polled. It takes the `subscription ID` as a parameter. NOTE: This only works over HTTP. Websocket connections will automatically receive events as they happen. They are sent as regular JSON-RPC 2.0 responses with the `subscriber ID` as response id.
- 
+
 There is another slight difference between polling and websocket, and that is the data you receive. If using sockets, it will always be one event at a time, whereas polling will give you an array of events.
 
 ### Event types
 
-These are the type of events you can subscribe to. 
+These are the type of events you can subscribe to.
 
-The "Account" events are triggered when someone transacts with the given account, and can be used to keep track of account activity. 
+The "Account" events are triggered when someone transacts with the given account, and can be used to keep track of account activity.
 
-NewBlock and Fork happens when a new block is committed or a fork happens, respectively. 
+NewBlock and Fork happens when a new block is committed or a fork happens, respectively.
 
-The other events are directly related to consensus. You can find out more about the Tendermint consensus system in the Tendermint [white paper](http://tendermint.com/docs/tendermint.pdf). There is also information in the consensus [sources](https://github.com/tendermint/tendermint/blob/master/consensus/state.go), although a normal user would not be concerned with the consensus mechanisms, but would mostly just listen to account- and perhaps block-events. 
+The other events are directly related to consensus. You can find out more about the Tendermint consensus system in the Tendermint [white paper](http://tendermint.com/docs/tendermint.pdf). There is also information in the consensus [sources](https://github.com/tendermint/tendermint/blob/master/consensus/state.go), although a normal user would not be concerned with the consensus mechanisms, but would mostly just listen to account- and perhaps block-events.
 
 #### Account Input
 
@@ -314,9 +314,9 @@ Event object:
 
 #### Account Call
 
-This notifies you when an account is the target of a call. This event is emitted when `CallTx`s (transactions) that target the given account has been finalized. It is possible to listen to this event when creating new contracts as well; it will fire when the transaction is committed (or not, in which case the 'exception' field will explain why it failed). 
+This notifies you when an account is the target of a call. This event is emitted when `CallTx`s (transactions) that target the given account has been finalized. It is possible to listen to this event when creating new contracts as well; it will fire when the transaction is committed (or not, in which case the 'exception' field will explain why it failed).
 
-**NOTE: The naming here is a bit unfortunate. Ethereum uses 'transaction' for (state-changing) transactions to a contract account, and 'call' for read-only calls like is used for accessor functions and such. Tendermint on the other hand, which uses many types of transactions uses 'CallTx' for a transaction made to a contract account, since it calls the code in that contract, and refers to these simply as 'calls'. Read-only calls is normally referred to as 'simulated calls'.** 
+**NOTE: The naming here is a bit unfortunate. Ethereum uses 'transaction' for (state-changing) transactions to a contract account, and 'call' for read-only calls like is used for accessor functions and such. Tendermint on the other hand, which uses many types of transactions uses 'CallTx' for a transaction made to a contract account, since it calls the code in that contract, and refers to these simply as 'calls'. Read-only calls is normally referred to as 'simulated calls'.**
 
 Event ID: `Acc/<address>/Call`
 
@@ -470,7 +470,7 @@ See the [TransactNameReg](#transact-name-reg) method for more info about adding 
 <a name="methods"></a>
 ##Methods
 
-###Accounts 
+###Accounts
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetAccounts](#get-accounts) | erisdb.getAccounts | GET | `/accounts` |
@@ -560,12 +560,12 @@ In the case of **REST-like HTTP** GET requests, the params (and query) is provid
 **Unsafe** is methods that require a private key to be sent either to or from the client, and should therefore be used only during development/testing, or with extreme care. They may be phased out entirely.
 
 <a name="accounts"></a>
-###Accounts 
+###Accounts
 
 ***
 
 <a name="get-accounts"></a>
-####GetAccounts 
+####GetAccounts
 
 Get accounts will return a list of accounts. If no filtering is used, it will return all existing accounts.
 
@@ -617,7 +617,7 @@ Get an account by its address.
 
 #####HTTP
 
-Method: GET 
+Method: GET
 
 Endpoint: `/accounts/:address`
 
@@ -661,15 +661,15 @@ There are two types of objects used to represent accounts, one is public account
 ***
 
 <a name="get-storage"></a>
-####GetStorage 
+####GetStorage
 
-Get the complete storage of a contract account. Non-contract accounts has no storage. 
+Get the complete storage of a contract account. Non-contract accounts has no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
 #####HTTP
 
-Method: GET 
+Method: GET
 
 Endpoint: `/accounts/:address/storage`
 
@@ -705,7 +705,7 @@ See `GetStorageAt` below for more info on the `StorageItem` object.
 <a name="get-storage-at"></a>
 ####GetStorageAt
 
-Get a particular entry in the storage of a contract account. Non-contract accounts has no storage. 
+Get a particular entry in the storage of a contract account. Non-contract accounts has no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
@@ -751,7 +751,7 @@ Both `key` and `value` are hex strings.
 <a name="get-blockchain-info"></a>
 ####GetBlockchainInfo
 
-Get the current state of the blockchain. This includes things like chain-id and latest block height. There are individual getters for all fields as well. 
+Get the current state of the blockchain. This includes things like chain-id and latest block height. There are individual getters for all fields as well.
 
 #####HTTP
 
@@ -772,7 +772,7 @@ Parameter: -
 	chain_id:            <string>
 	genesis_hash:        <string>
 	latest_block:        <BlockMeta>
-	latest_block_height: <number> 
+	latest_block_height: <number>
 }
 ```
 
@@ -836,7 +836,7 @@ Parameter: -
 
 ```
 {
-	genesis_hash:        <string> 
+	genesis_hash:        <string>
 }
 ```
 
@@ -863,7 +863,7 @@ Parameter: -
 
 ```
 {
-	latest_block_height: <number> 
+	latest_block_height: <number>
 }
 ```
 
@@ -872,7 +872,7 @@ Parameter: -
 <a name="get-latest-block"></a>
 ####GetLatestBlock
 
-Gets the block that was added to the chain most recently. 
+Gets the block that was added to the chain most recently.
 
 #####HTTP
 
@@ -890,20 +890,20 @@ Parameter: -
 
 ```
 {
-	latest_block:        <BlockMeta> 
+	latest_block:        <BlockMeta>
 }
 ```
 
 #####Additional info
 
-See [GetBlock](#get-block) for more info on the `BlockMeta` type. 
+See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 
 ***
 
 <a name="get-blocks"></a>
 ####GetBlocks
 
-Get a series of blocks from the chain. 
+Get a series of blocks from the chain.
 
 #####HTTP
 
@@ -915,7 +915,7 @@ Endpoint: `/blockchain/blocks`
 
 Method: `erisdb.getBlocks`
 
-Parameter: 
+Parameter:
 
 ```
 {
@@ -974,14 +974,14 @@ See the section on [Filters](#queries-filters) for info on the `FilterData` obje
 
 `min_height` and `max_height` is the two actual values used for min and max height when fetching the blocks. The reason they are included is because the heights might have been modified, like for example when the blockchain height is lower then the max height provided in the query.
 
-See [GetBlock](#get-block) for more info on the `BlockMeta` type. 
+See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 
 ***
 
 <a name="get-block"></a>
 ####GetBlock
 
-Get the block at the given height. 
+Get the block at the given height.
 
 #####HTTP
 
@@ -997,7 +997,7 @@ Parameter:
 
 ```
 {
-	height: <number> 
+	height: <number>
 }
 ```
 
@@ -1005,7 +1005,7 @@ Parameter:
 
 ```
 {
-	
+
 	header: {
 		chain_id:        <string>
 		height:          <number>
@@ -1044,7 +1044,7 @@ The `Commit` object:
 
 TODO
 
-See [The transaction types](#the-transaction-types) for more info on the `Tx` types. 
+See [The transaction types](#the-transaction-types) for more info on the `Tx` types.
 
 ***
 
@@ -1056,7 +1056,7 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 <a name="get-consensus-state"></a>
 ####GetConsensusState
 
-Get the current consensus state. 
+Get the current consensus state.
 
 #####HTTP
 
@@ -1107,7 +1107,7 @@ See the GetValidators method right below for info about the `Validator` object.
 <a name="get-validators"></a>
 ####GetValidators
 
-Get the validators. 
+Get the validators.
 
 #####HTTP
 
@@ -1159,7 +1159,7 @@ TODO
 <a name="event-subscribe"></a>
 ####EventSubscribe
 
-Subscribe to a given type of event.  
+Subscribe to a given type of event.
 
 #####HTTP
 
@@ -1173,7 +1173,7 @@ Body: See JSON-RPC parameter.
 
 Method: `erisdb.eventSubscribe`
 
-Parameter: 
+Parameter:
 
 ```
 {
@@ -1198,7 +1198,7 @@ For more information about events and the event system, see the [Event system](#
 <a name="event-unsubscribe"></a>
 ####EventUnubscribe
 
-Unsubscribe to an event type.  
+Unsubscribe to an event type.
 
 #####HTTP
 
@@ -1317,7 +1317,7 @@ Get a namereg entry by its key.
 
 #####HTTP
 
-Method: GET 
+Method: GET
 
 Endpoint: `/namereg/:name`
 
@@ -1547,7 +1547,7 @@ Endpoint: `/network/peer/:address`
 
 Method: `erisdb.getPeer`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1579,16 +1579,16 @@ TODO
 ***
 
 <a name="transactions"></a>
-###Transactions 
+###Transactions
 
 ***
 
 <a name="broadcast-tx"></a>
-####BroadcastTx 
+####BroadcastTx
 
 Broadcast a given (signed) transaction to the node. It will be added to the tx pool if there are no issues, and if it is accepted by all validators it will eventually be committed to a block.
 
-WARNING: BroadcastTx will not be useful until we add a client-side signing solution. 
+WARNING: BroadcastTx will not be useful until we add a client-side signing solution.
 
 #####HTTP
 
@@ -1606,7 +1606,7 @@ Body:
 
 Method: `erisdb.BroadcastTx`
 
-Parameters: 
+Parameters:
 
 ```
 <Tx>
@@ -1630,7 +1630,7 @@ Parameters:
 
 If a contract was created, then `contract_addr` will contain the address. NOTE: This is no guarantee that the contract will actually be commited to the chain. This response is returned upon broadcasting, not when the transaction has been committed to a block.
 
-See [The transaction types](#the-transaction-types) for more info on the `Tx` types. 
+See [The transaction types](#the-transaction-types) for more info on the `Tx` types.
 
 ***
 
@@ -1662,19 +1662,19 @@ Parameters: -
 
 #####Additional info
 
-See [The transaction types](#the-transaction-types) for more info on the `Tx` types. 
+See [The transaction types](#the-transaction-types) for more info on the `Tx` types.
 
 ***
 
 <a name="calls"></a>
-###Code execution (calls) 
+###Code execution (calls)
 
 ***
 
 <a name="call"></a>
 ####Call
 
-Call a given (contract) account to execute its code with the given in-data. 
+Call a given (contract) account to execute its code with the given in-data.
 
 #####HTTP
 
@@ -1688,7 +1688,7 @@ Body: See JSON-RPC parameter.
 
 Method: `erisdb.call`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1729,7 +1729,7 @@ Body: See JSON-RPC parameter.
 
 Method: `erisdb.callCode`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1750,12 +1750,12 @@ Parameters:
 #####Additional info
 
 `code` is a hex-string representation of compiled contract code.
-`data` is a string of data formatted in accordance with the [contract ABI](TODO).
+`data` is a string of data formatted in accordance with the [contract ABI](/docs/documentation/contracts.js/).
 
 ***
 
 <a name="unsafe"></a>
-###Unsafe 
+###Unsafe
 
 These methods are unsafe because they require that a private key is either transmitted or received. They are supposed to be used only in development.
 
@@ -1783,7 +1783,7 @@ Body: See JSON-RPC parameters.
 
 Method: `erisdb.transact`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1811,7 +1811,7 @@ The same as with BroadcastTx:
 
 #####Additional info
 
-See [The transaction types](#the-transaction-types) for more info on the `CallTx` type. 
+See [The transaction types](#the-transaction-types) for more info on the `CallTx` type.
 
 If you want to hold the tx, use `/unsafe/txpool?hold=true`. See `TransactAndHold` below.
 
@@ -1826,7 +1826,7 @@ Convenience method for sending a transaction and holding until it's been committ
 * Use the other parameters to create a `CallTx` object.
 * Sign the transaction.
 * Broadcast the transaction.
-* Wait until the transaction is fully processed. 
+* Wait until the transaction is fully processed.
 
 When holding, the request will eventually timeout if the transaction is not processed nor produce an error. The response will then be an error that includes the transaction hash (which can be used for further investigation).
 
@@ -1844,7 +1844,7 @@ Body: See JSON-RPC parameters.
 
 Method: `erisdb.transactAndHold`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1878,7 +1878,7 @@ private key is the hex string only.
 
 #####Additional info
 
-See [The transaction types](#the-transaction-types) for more info on the `CallTx` type. 
+See [The transaction types](#the-transaction-types) for more info on the `CallTx` type.
 
 If you don't want to hold the tx, either use `/unsafe/txpool?hold=false` or omit the query entirely. See `Transact` for the regular version.
 
@@ -1906,7 +1906,7 @@ Body: See JSON-RPC parameters.
 
 Method: `erisdb.transactNameReg`
 
-Parameters: 
+Parameters:
 
 ```
 {
@@ -1932,7 +1932,7 @@ The same as with BroadcastTx:
 
 #####Additional info
 
-See [The transaction types](#the-transaction-types) for more info on the `NameTx` type. 
+See [The transaction types](#the-transaction-types) for more info on the `NameTx` type.
 
 ***
 
@@ -1985,7 +1985,7 @@ Filter:
 {
     field: <string>
     op:    <string>
-    value: <string> 
+    value: <string>
 }
 ```
 
@@ -2002,7 +2002,7 @@ We want an account filter that only includes accounts that has code in them (i.e
 {
     field: "code"
     op: "!="
-    value: "" 
+    value: ""
 }
 ```
 
@@ -2036,7 +2036,7 @@ We want an account filter that only includes accounts with a balance higher then
 
 The field `code` is supported by accounts. It allows for the `==` and `!=` operators. The value `""` means the empty hex string.
 
-If we wanted only non-contract accounts then we would have used the same object but changed it to `op: "=="`. 
+If we wanted only non-contract accounts then we would have used the same object but changed it to `op: "=="`.
 
 ###HTTP Queries
 
@@ -2047,13 +2047,13 @@ The structure of a normal query is: `q=field:[op]value+field2:[op2]value2+ ... `
 - `field` is the field name.
 - `:` is the field:relation separator.
 - `op` is the relational operator, `>, <, >=, <=, ==, !=`.
-- `value` is the value to compare against, e.g. `balance:>=5` or `language:==golang`. 
+- `value` is the value to compare against, e.g. `balance:>=5` or `language:==golang`.
 
 There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are number-strings. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive; if it is put on the left-hand side it is the minimum value, and on the right-hand side it means the maximum value. Let `height` be an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
 
 NOTE: URL encoding applies as usual. Omitting it here for clarity.
 
-`op` will default to (`==`) if left out, meaning `balance:5` is the same as `balance:==5` 
+`op` will default to (`==`) if left out, meaning `balance:5` is the same as `balance:==5`
 
 `value` may be left out if the field accepts the empty string as input. This means if `code` is a supported string type,  `code:==` would check if the code field is empty. We could also use the inferred `==` meaning this would be equivalent: `code:`.  The system may be extended so that the empty string is automatically converted to the null-type of the underlying field, no matter what that type is. If balance is a number then `balance:` would be the same as `balance:==0` (and `balance:0`).
 

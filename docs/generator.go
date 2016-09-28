@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"text/template"
@@ -9,9 +10,9 @@ import (
 	"github.com/eris-ltd/common/go/docs"
 	commands "github.com/eris-ltd/eris-db/cmd"
 
+	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
 	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/cobra"
-	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
 )
 
 // Repository maintainers should customize the next two lines.
@@ -77,6 +78,40 @@ func RenderFiles(cmdRaw *cobra.Command, tmpl *template.Template) error {
 	return nil
 }
 
+func AddClientToDB(dbCmd, clientCmd *cobra.Command) error {
+	// formulate the filenames properly
+	dbFile := docs.GenerateFileName(RenderDir, dbCmd.CommandPath())
+	clFile := docs.GenerateFileName(RenderDir, clientCmd.CommandPath())
+
+	// get the manual additions sorted
+	dbAdditions := []byte(fmt.Sprintf("\n# Related Commands\n\n* [%s](%s)", "Eris Client", docs.GenerateURLFromFileName(clFile)))
+	clAdditions := []byte(fmt.Sprintf("\n# Related Commands\n\n* [%s](%s)", "Eris DB", docs.GenerateURLFromFileName(dbFile)))
+
+	// read and write the db file
+	dbTxt, err := ioutil.ReadFile(dbFile)
+	if err != nil {
+		return err
+	}
+	dbTxt = append(dbTxt, dbAdditions...)
+	err = ioutil.WriteFile(dbFile, dbTxt, 0644)
+	if err != nil {
+		return err
+	}
+
+	// read and write the client file
+	clTxt, err := ioutil.ReadFile(clFile)
+	if err != nil {
+		return err
+	}
+	clTxt = append(clTxt, clAdditions...)
+	err = ioutil.WriteFile(clFile, clTxt, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	// Repository maintainers should populate the top level command object.
 	erisDbCommand := commands.ErisDbCmd
@@ -87,7 +122,6 @@ func main() {
 	erisClientCommand := clientCommands.ErisClientCmd
 	clientCommands.InitErisClientInit()
 	clientCommands.AddClientCommands()
-	clientCommands.AddGlobalFlags()
 
 	// Make the proper directory.
 	var err error
@@ -120,6 +154,10 @@ func main() {
 	}
 
 	if err = RenderFiles(erisClientCommand, tmpl); err != nil {
+		panic(err)
+	}
+
+	if err = AddClientToDB(erisDbCommand, erisClientCommand); err != nil {
 		panic(err)
 	}
 }
