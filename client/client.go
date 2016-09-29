@@ -86,7 +86,7 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 	return &receipt, nil
 }
 
-func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *NodeWebSocketClient, err error) {
+func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *NodeWebsocketClient, err error) {
 	var wsAddr string
 	nodeAddr := erisNodeClient.broadcastRPC
 	if strings.HasPrefix(nodeAddr, "http://") {
@@ -107,11 +107,13 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *Nod
 		"endpoint": "/websocket",
 	}).Debug("Subscribing to websocket address")
 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
-	// NOTE: Failure to start is reported over an error channel
-	wsClient.Start()
-	return &ErisNodeWebsocketClient{
+	if _, err = wsClient.Start(); err != nil {
+		return nil, err
+	}
+	derivedErisNodeWebsocketClient := &ErisNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
-	}, nil
+	}
+	return (*NodeWebsocketClient)(derivedErisNodeWebsocketClient), nil
 }
 
 //------------------------------------------------------------------------------------
