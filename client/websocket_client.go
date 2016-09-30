@@ -17,7 +17,7 @@
 package client
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 
 	"github.com/tendermint/go-rpc/client"
@@ -25,13 +25,13 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
-	"github.com/eris-ltd/eris-bd/txs"
+	"github.com/eris-ltd/eris-db/txs"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 )
 
-type Confirmation {
+type Confirmation struct {
 	BlockHash []byte
-	Event     *txs.EventData
+	Event     txs.EventData
 	Exception error
 }
 
@@ -61,7 +61,9 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 	// Setup the confirmation channel to be returned
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
-
+	var inputAddr []byte
+	var chainId string
+	var tx txs.Tx
 	eid := txs.EventStringAccInput(inputAddr)
 
 	// Read the incoming events
@@ -70,7 +72,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 		for {
 			resultBytes := <- erisNodeWebsocketClient.tendermintWebsocket.ResultsCh
 			result := new(ctypes.ErisDBResult)
-			if wire.readJSONPtr(result, r, &err); err != nil {
+			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
 				// keep calm and carry on
 				log.Errorf("eris-client - Failed to unmarshal json bytes for websocket event: %s", err)
 				continue
@@ -86,7 +88,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 			blockData, ok := event.Data.(txs.EventDataNewBlock)
 			if ok {
 				latestBlockHash = blockData.Block.Hash()
-				log.WithFields(log.Field{
+				log.WithFields(log.Fields{
 					"new block": blockData.Block,
 					"latest hash": latestBlockHash,
 				}).Debug("Registered new block")
@@ -99,22 +101,42 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 			}
 
 			if event.Event != eid {
-				log.Warnf("Received unsolicited event! Got %s, expected %s\n", result.Event, eid)
+				log.Warnf("Received unsolicited event! Got %s, expected %s\n", event.Event, eid)
 				continue
 			}
 
-			data, ok := result.Data.(txs.EventDataTx)
+			data, ok := event.Data.(txs.EventDataTx)
 			if !ok {
 				// We are on the lookout for EventDataTx
 				confirmationChannel <- Confirmation{
 					BlockHash: latestBlockHash,
-					Event: nil // or result.Data ?
-					Exception: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx")
+					Event: nil,
+					Exception: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx"),
 				}
+				return
 			}
-		}
-	}
 
+			if !bytes.Equal(txs.TxHash(chainId, data.Tx), txs.TxHash(chainId, tx)) {
+				log.WithFields(log.Fields{
+					// TODO: consider re-implementing TxID again, or other more clear debug
+					"received transaction event": txs.TxHash(chainId, data.Tx),
+				}).Debug("Received different event")
+				continue
+			}
+
+			if data.Exception != "" {
+				confirmationChannel <- Confirmation{
+					BlockHash: latestBlockHash,
+					Event: &data,
+					Exception: fmt.Errorf("Transaction confirmed with exception:", data.Exception),
+				}
+				return
+			}
+
+		}
+	}()
+	// TODO: continue here
+	return nil, nil
 }
 
 func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Close() {
@@ -126,11 +148,12 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Close() {
 func (erisNodeWebsocketClient *ErisNodeWebsocketClient) assertNoErrors() error {
 	if erisNodeWebsocketClient.tendermintWebsocket != nil {
 		select {
-		case err := <-erisNodeWebsocketClient.tendermintWebsocket.ErrorCh:
+		case err := <-erisNodeWebsocketClient.tendermintWebsocket.ErrorsCh:
 			return err
 		default:
 			return nil
+		}
 	} else {
-		return fmt.Errorf("Eris-client")
+		return fmt.Errorf("Eris-client has no websocket initialised.")
 	}
 }

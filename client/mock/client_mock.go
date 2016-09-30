@@ -50,6 +50,11 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	return txReceipt, nil
 }
 
+func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
+	return nil, nil
+}
+
+
 func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	// make zero account
 	var zero [32]byte

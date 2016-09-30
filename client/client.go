@@ -17,11 +17,12 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/tendermint/go-rpc/client"
+
+	log "github.com/eris-ltd/eris-logger"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
@@ -33,7 +34,7 @@ import (
 
 type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
-	DeriveWebsocketClient() (nodeWsClient *NodeWebsocketClient, err error)
+	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
@@ -50,7 +51,7 @@ type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
 
-	Wait(eventId string) (chan Confirmation, error)
+	WaitForConfirmation(eventid string) (chan Confirmation, error)
 	Close()
 }
 
@@ -86,8 +87,9 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 	return &receipt, nil
 }
 
-func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *NodeWebsocketClient, err error) {
+func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
 	var wsAddr string
+	// TODO: clean up this inherited mess on dealing with the address prefixes.
 	nodeAddr := erisNodeClient.broadcastRPC
 	if strings.HasPrefix(nodeAddr, "http://") {
 		wsAddr = strings.TrimPrefix(nodeAddr, "http://")
@@ -113,7 +115,7 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient *Nod
 	derivedErisNodeWebsocketClient := &ErisNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
 	}
-	return (*NodeWebsocketClient)(derivedErisNodeWebsocketClient), nil
+	return derivedErisNodeWebsocketClient, nil
 }
 
 //------------------------------------------------------------------------------------
