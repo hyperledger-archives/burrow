@@ -41,7 +41,7 @@ your needs.
 
 Made with <3 by Eris Industries.
 
-Complete documentation is available at https://docs.erisindustries.com
+Complete documentation is available at https://monax.io/docs/documentation
 ` + "\nVERSION:\n " + version.VERSION,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
