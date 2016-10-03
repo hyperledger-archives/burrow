@@ -17,6 +17,7 @@
 package mock
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	// for the mock of key server we explicitly import
@@ -56,10 +57,14 @@ func (mock *MockKeyClient) NewKey() (address []byte) {
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signBytes []byte, signAddress []byte) (signature []byte, err error) {
+func (mock *MockKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
 	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
 	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
+	}
+	signBytes, err := hex.DecodeString(signBytesString)
+	if err != nil {
+		return nil, fmt.Errorf("Sign bytes string is invalid hex string: %s", err.Error())
 	}
 	return key.Sign(signBytes)
 }

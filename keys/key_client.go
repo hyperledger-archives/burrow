@@ -17,13 +17,14 @@
 package keys
 
 import (
+	"fmt"
 	"encoding/hex"
 )
 
 type KeyClient interface {
 	// Sign needs to return the signature bytes for given message to sign
 	// and the address to sign it with.
-	Sign(signBytes []byte, signAddress []byte) (signature []byte, err error)
+	Sign(signBytesString string, signAddress []byte) (signature []byte, err error)
 	// PublicKey needs to return the public key associated with a given address
 	PublicKey(address []byte) (publicKey []byte, err error)
 }
@@ -46,11 +47,11 @@ func NewErisKeyClient(rpcString string) *ErisKeyClient {
 
 // Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *ErisKeyClient) Sign(signBytes []byte, signAddress []byte) (signature []byte, err error) {
+func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
-		"msg":  string(signBytes),
-		"hash": string(signBytes), // TODO:[ben] backwards compatibility
-		"addr": string(signAddress),
+		"msg":  signBytesString,
+		"hash": signBytesString, // TODO:[ben] backwards compatibility
+		"addr": fmt.Sprintf("%X", signAddress),
 	}
 	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args)
 	if err != nil {
@@ -60,8 +61,7 @@ func (erisKeys *ErisKeyClient) Sign(signBytes []byte, signAddress []byte) (signa
 	if err != nil {
 		return
 	}
-	copy(signature[:], sigBytes)
-	return
+	return sigBytes, err
 }
 
 // Eris-keys client PublicKey requests the public key associated with an address from

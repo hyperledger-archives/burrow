@@ -38,7 +38,7 @@ import (
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
 func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
-	signBytes := []byte(fmt.Sprintf("%X", acc.SignBytes(chainID, tx_)))
+	signBytesString := fmt.Sprintf("%X", acc.SignBytes(chainID, tx_))
 	var inputAddr []byte
 	var sigED crypto.SignatureEd25519
 	switch tx := tx_.(type) {
@@ -67,7 +67,7 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 		inputAddr = tx.Address
 		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
 	}
-	sig, err := keyClient.Sign(signBytes, inputAddr)
+	sig, err := keyClient.Sign(signBytesString, inputAddr)
 	if err != nil {
 		return nil, nil, err
 	}
