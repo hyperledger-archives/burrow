@@ -19,6 +19,7 @@ package client
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
@@ -29,10 +30,15 @@ import (
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 )
 
+const (
+	MaxCommitWaitTimeSeconds = 10
+)
+
 type Confirmation struct {
 	BlockHash []byte
 	Event     txs.EventData
 	Exception error
+	Error     error
 }
 
 // NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
@@ -58,6 +64,12 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Unsubscribe(subscription
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
 func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(eventid string) (chan Confirmation, error) {
+	// check no errors are reported on the websocket 
+	if err := erisNodeWebsocketClient.assertNoErrors(); err != nil {
+		return nil, err
+	}
+
+
 	// Setup the confirmation channel to be returned
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
@@ -112,6 +124,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 					BlockHash: latestBlockHash,
 					Event: nil,
 					Exception: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx"),
+					Error: nil,
 				}
 				return
 			}
@@ -129,14 +142,38 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(even
 					BlockHash: latestBlockHash,
 					Event: &data,
 					Exception: fmt.Errorf("Transaction confirmed with exception:", data.Exception),
+					Error: nil,
 				}
 				return
 			}
-
+			
+			// success, return the full event and blockhash and exit go-routine
+			confirmationChannel <- Confirmation{
+				BlockHash: latestBlockHash,
+				Event: &data,
+				Exception: nil,
+				Error: nil,
+			}
+			return
 		}
+
 	}()
-	// TODO: continue here
-	return nil, nil
+
+	// TODO: [ben] this is a draft implementation as resources on time.After can not be
+	// recovered before the timeout.  Close-down timeout at success properly.
+	timeout := time.After(time.Duration(MaxCommitWaitTimeSeconds) * time.Second)
+
+	go func() {
+		<- timeout
+		confirmationChannel <- Confirmation{
+			BlockHash: nil,
+			Event: nil,
+			Exception: nil,
+			Error: fmt.Errorf("timed out waiting for event"),
+		}
+		return
+	}()
+	return confirmationChannel, nil
 }
 
 func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Close() {
