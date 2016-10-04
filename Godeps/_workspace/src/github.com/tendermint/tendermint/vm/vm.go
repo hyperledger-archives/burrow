@@ -194,7 +194,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 	)
 
 	for {
-
 		// Use BaseOp gas.
 		if useGasNegative(gas, GasBaseOp, &err) {
 			return nil, err
@@ -906,7 +905,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 		}
 
 		pc++
-
 	}
 }
 
