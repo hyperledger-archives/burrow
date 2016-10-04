@@ -20,8 +20,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-	// "strings"
-	"time"
+
 	log "github.com/eris-ltd/eris-logger"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
@@ -274,9 +273,9 @@ type TxResult struct {
 
 // Preserve
 func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
-	// var inputAddr []byte
+	var inputAddr []byte
 	if sign {
-		_, tx, err = signTx(keyClient, chainID, tx)
+		inputAddr, tx, err = signTx(keyClient, chainID, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -286,32 +285,41 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 	}
 
 	if broadcast {
-		// if wait {
-		// 	var ch chan Msg
-		// 	ch, err = subscribeAndWait(tx, chainID, nodeAddr, inputAddr)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	} else {
-		// 		defer func() {
-		// 			if err != nil {
-		// 				// if broadcast threw an error, just return
-		// 				return
-		// 			}
-		// 			log.WithFields(log.Fields{
-		// 				"",
-		// 				}).Debug("Waiting for tx to be committed")
-		// 			msg := <-ch
-		// 			if msg.Error != nil {
-		// 				logger.Infof("Encountered error waiting for event: %v\n", msg.Error)
-		// 				err = msg.Error
-		// 			} else {
-		// 				txResult.BlockHash = msg.BlockHash
-		// 				txResult.Return = msg.Value
-		// 				txResult.Exception = msg.Exception
-		// 			}
-		// 		}()
-		// 	}
-		// }
+		if wait {
+			wsClient, err := nodeClient.DeriveWebsocketClient()
+			if err != nil {
+				return nil, err
+			}
+			var confirmationChannel chan client.Confirmation
+			confirmationChannel, err = wsClient.WaitForConfirmation(tx, chainID, inputAddr)
+			if err != nil {
+				return nil, err
+			} else {
+				defer func() {
+					if err != nil {
+						// if broadcast threw an error, just return
+						return
+					}
+					log.Debug("Waiting for transaction to be confirmed.")
+					confirmation := <- confirmationChannel
+					if confirmation.Error != nil {
+						log.Errorf("Encountered error waiting for event: %s\n", confirmation.Error)
+						err = confirmation.Error
+						return
+					} 
+					eventDataTx, ok := confirmation.Event.(txs.EventDataTx)
+					if !ok {
+						log.Errorf("Received wrong event type.")
+						err = fmt.Errorf("Received wrong event type.")
+						return
+					}
+					txResult.BlockHash = confirmation.BlockHash
+					txResult.Return = eventDataTx.Return
+					txResult.Exception = confirmation.Exception.Error()
+				}()
+			}
+		}
+
 		var receipt *txs.Receipt
 		receipt, err = nodeClient.Broadcast(tx)
 		if err != nil {
@@ -329,21 +337,20 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 			}
 		}
 	}
-	time.Sleep(2*time.Second)
 	return
 }
 
 //------------------------------------------------------------------------------------
 // wait for events
 
-type Msg struct {
-	BlockHash []byte
-	Value     []byte
-	Exception string
-	Error     error
-}
+// type Msg struct {
+// 	BlockHash []byte
+// 	Value     []byte
+// 	Exception string
+// 	Error     error
+// }
 
-// func subscribeAndWait(tx txs.Tx, chainID, nodeAddr string, inputAddr []byte) (chan Msg, error) {
+// func subscribeAndWait(tx txs.Tx, chainID string, nodeAddr string, inputAddr []byte) (chan Msg, error) {
 // 	// subscribe to event and wait for tx to be committed
 // 	var wsAddr string
 // 	if strings.HasPrefix(nodeAddr, "http://") {

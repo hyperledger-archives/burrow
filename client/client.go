@@ -51,7 +51,7 @@ type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
 
-	WaitForConfirmation(eventid string) (chan Confirmation, error)
+	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error)
 	Close()
 }
 

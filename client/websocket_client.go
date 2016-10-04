@@ -63,19 +63,16 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Unsubscribe(subscription
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(eventid string) (chan Confirmation, error) {
+func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
 	// check no errors are reported on the websocket 
 	if err := erisNodeWebsocketClient.assertNoErrors(); err != nil {
 		return nil, err
 	}
 
-
 	// Setup the confirmation channel to be returned
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
-	var inputAddr []byte
-	var chainId string
-	var tx txs.Tx
+
 	eid := txs.EventStringAccInput(inputAddr)
 
 	// Read the incoming events
