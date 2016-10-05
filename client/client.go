@@ -18,7 +18,7 @@ package client
 
 import (
 	"fmt"
-	"strings"
+	// "strings"
 
 	"github.com/tendermint/go-rpc/client"
 
@@ -91,19 +91,20 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient Node
 	var wsAddr string
 	// TODO: clean up this inherited mess on dealing with the address prefixes.
 	nodeAddr := erisNodeClient.broadcastRPC
-	if strings.HasPrefix(nodeAddr, "http://") {
-		wsAddr = strings.TrimPrefix(nodeAddr, "http://")
-	}
-	if strings.HasPrefix(nodeAddr, "tcp://") {
-		wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
-	}
-	if strings.HasPrefix(nodeAddr, "unix://") {
-		log.WithFields(log.Fields{
-			"node address": nodeAddr,
-		}).Error("Unable to subscribe to websocket from unix socket.")
-		return nil, fmt.Errorf("Unable to construct websocket from unix socket: %s", nodeAddr)
-	}
-	wsAddr = "ws://" + wsAddr
+	// if strings.HasPrefix(nodeAddr, "http://") {
+	// 	wsAddr = strings.TrimPrefix(nodeAddr, "http://")
+	// }
+	// if strings.HasPrefix(nodeAddr, "tcp://") {
+	// 	wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
+	// }
+	// if strings.HasPrefix(nodeAddr, "unix://") {
+	// 	log.WithFields(log.Fields{
+	// 		"node address": nodeAddr,
+	// 	}).Error("Unable to subscribe to websocket from unix socket.")
+	// 	return nil, fmt.Errorf("Unable to construct websocket from unix socket: %s", nodeAddr)
+	// }
+	// wsAddr = "ws://" + wsAddr
+	wsAddr = nodeAddr
 	log.WithFields(log.Fields{
 		"websocket address": wsAddr,
 		"endpoint": "/websocket",
