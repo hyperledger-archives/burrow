@@ -11,12 +11,13 @@ import (
 	// tmtypes "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	//evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/txs"
+	evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 )
 
 func init() {
 	tendermint_test.ResetConfig("state_test")
+	evm.SetDebug(true)
 }
 
 func execTxWithState(state *State, tx txs.Tx, runCall bool) error {
@@ -463,7 +464,7 @@ func TestCreates(t *testing.T) {
 			PubKey:   acc0PubKey,
 		},
 		Address:  acc1.Address,
-		GasLimit: 10000,
+		GasLimit: 100000,
 		Data:     createData,
 	}
 
