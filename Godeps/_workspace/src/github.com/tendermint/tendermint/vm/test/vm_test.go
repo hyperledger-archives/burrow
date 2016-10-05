@@ -15,6 +15,7 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/permission/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/opcodes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -207,20 +208,20 @@ func TestDelegateCallGas(t *testing.T) {
 
 	// Do a simple operation using 1 gas unit
 	calleeAccount, calleeAddress := makeAccountWithCode(appState, "callee",
-		bytecode(PUSH1, calleeReturnValue, return1()))
+		Bytecode(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
 	// different amounts of gas. The value we sandwich in the middle is the amount
 	// we subtract from the available gas (that the caller has available), so:
-	// code := bytecode(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
+	// code := Bytecode(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
 	// gives us the code to make the call
-	callerCodePrefix := bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
+	callerCodePrefix := Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
 		PUSH1, inOff, PUSH20, calleeAddress, PUSH1)
-	callerCodeSuffix := bytecode(GAS, SUB, DELEGATECALL, returnWord())
+	callerCodeSuffix := Bytecode(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
 	callerAccount, _ := makeAccountWithCode(appState, "caller",
-		bytecode(callerCodePrefix,
+		Bytecode(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
 			callerCodeSuffix))
@@ -231,7 +232,7 @@ func TestDelegateCallGas(t *testing.T) {
 	assert.NoError(t, err, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
 
-	callerAccount.Code = bytecode(callerCodePrefix,
+	callerAccount.Code = Bytecode(callerCodePrefix,
 		// Shouldn't be enough gas to make call
 		costBetweenGasAndDelegateCall-1,
 		callerCodeSuffix)
@@ -245,12 +246,12 @@ func TestDelegateCallGas(t *testing.T) {
 // Store the top element of the stack (which is a 32-byte word) in memory
 // and return it. Useful for a simple return value.
 func return1() []byte {
-	return bytecode(PUSH1, 0, MSTORE, returnWord())
+	return Bytecode(PUSH1, 0, MSTORE, returnWord())
 }
 
 func returnWord() []byte {
 	// PUSH1 => return size, PUSH1 => return offset, RETURN
-	return bytecode(PUSH1, 32, PUSH1, 0, RETURN)
+	return Bytecode(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
 func makeAccountWithCode(appState AppState, name string,
@@ -328,24 +329,24 @@ func callContractCode(addr []byte) []byte {
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
 	// this is the code we want to run (send funds to an account and return)
-	return bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	return Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 }
 
 func TestBytecode(t *testing.T) {
 	assert.Equal(t,
-		bytecode(1, 2, 3, 4, 5, 6),
-		bytecode(1, 2, 3, bytecode(4, 5, 6)))
+		Bytecode(1, 2, 3, 4, 5, 6),
+		Bytecode(1, 2, 3, Bytecode(4, 5, 6)))
 	assert.Equal(t,
-		bytecode(1, 2, 3, 4, 5, 6, 7, 8),
-		bytecode(1, 2, 3, bytecode(4, bytecode(5), 6), 7, 8))
+		Bytecode(1, 2, 3, 4, 5, 6, 7, 8),
+		Bytecode(1, 2, 3, Bytecode(4, Bytecode(5), 6), 7, 8))
 	assert.Equal(t,
-		bytecode(PUSH1, 2),
-		bytecode(byte(PUSH1), 0x02))
+		Bytecode(PUSH1, 2),
+		Bytecode(byte(PUSH1), 0x02))
 	assert.Equal(t,
 		[]byte{},
-		bytecode(bytecode(bytecode())))
+		Bytecode(Bytecode(Bytecode())))
 
 	contractAccount := &Account{Address: Int64ToWord256(102)}
 	addr := contractAccount.Address.Postfix(20)
@@ -353,7 +354,7 @@ func TestBytecode(t *testing.T) {
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
-	contractCodeBytecode := bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	contractCodeBytecode := Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 	contractCode := []byte{0x60, retSize, 0x60, retOff, 0x60, inSize, 0x60, inOff, 0x60, value, 0x73}
@@ -365,62 +366,5 @@ func TestBytecode(t *testing.T) {
 func TestConcat(t *testing.T) {
 	assert.Equal(t,
 		[]byte{0x01, 0x02, 0x03, 0x04},
-		concat([]byte{0x01, 0x02}, []byte{0x03, 0x04}))
+		Concat([]byte{0x01, 0x02}, []byte{0x03, 0x04}))
 }
-
-// Convenience function to allow us to mix bytes, ints, and OpCodes that
-// represent bytes in an EVM assembly code to make assembly more readable.
-// Also allows us to splice together assembly
-// fragments because any []byte arguments are flattened in the result.
-func bytecode(bytelikes ...interface{}) []byte {
-	bytes := make([]byte, len(bytelikes))
-	for i, bytelike := range bytelikes {
-		switch b := bytelike.(type) {
-		case byte:
-			bytes[i] = b
-		case OpCode:
-			bytes[i] = byte(b)
-		case int:
-			bytes[i] = byte(b)
-			if int(bytes[i]) != b {
-				panic(fmt.Sprintf("The int %v does not fit inside a byte", b))
-			}
-		case int64:
-			bytes[i] = byte(b)
-			if int64(bytes[i]) != b {
-				panic(fmt.Sprintf("The int64 %v does not fit inside a byte", b))
-			}
-		case []byte:
-			// splice
-			return concat(bytes[:i], b, bytecode(bytelikes[i+1:]...))
-		default:
-			panic("Only byte-like codes (and []byte sequences) can be used to form bytecode")
-		}
-	}
-	return bytes
-}
-
-func concat(bss ...[]byte) []byte {
-	offset := 0
-	for _, bs := range bss {
-		offset += len(bs)
-	}
-	bytes := make([]byte, offset)
-	offset = 0
-	for _, bs := range bss {
-		for i, b := range bs {
-			bytes[offset+i] = b
-		}
-		offset += len(bs)
-	}
-	return bytes
-}
-
-/*
-	// infinite loop
-	code := []byte{0x5B, 0x60, 0x00, 0x56}
-	// mstore
-	code := []byte{0x60, 0x00, 0x60, 0x20}
-	// mstore, mload
-	code := []byte{0x60, 0x01, 0x60, 0x20, 0x52, 0x60, 0x20, 0x51}
-*/

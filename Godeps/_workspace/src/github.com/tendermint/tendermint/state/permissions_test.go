@@ -16,6 +16,7 @@ import (
 	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
 	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
 	vm "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm"
+	. "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/vm/opcodes"
 )
 
 /*
@@ -1242,17 +1243,17 @@ func snativeRoleTestInputTx(name string, user *acm.PrivAccount, role string) (sn
 func callContractCode(contractAddr []byte) []byte {
 	// calldatacopy into mem and use as input to call
 	memOff, inputOff := byte(0x0), byte(0x0)
-	contractCode := []byte{0x36, 0x60, inputOff, 0x60, memOff, 0x37}
-
-	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x1)
 	inOff := byte(0x0)
 	retOff, retSize := byte(0x0), byte(0x20)
+
 	// this is the code we want to run (call a contract and return)
-	contractCode = append(contractCode, []byte{0x60, retSize, 0x60, retOff, 0x36, 0x60, inOff, 0x60, value, 0x73}...)
-	contractCode = append(contractCode, contractAddr...)
-	contractCode = append(contractCode, []byte{0x61, gas1, gas2, 0xf1, 0x60, 0x20, 0x60, 0x0, 0xf3}...)
-	return contractCode
+	return Bytecode(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
+		CALLDATACOPY, PUSH1, retSize, PUSH1, retOff, CALLDATASIZE, PUSH1, inOff,
+		PUSH1, value, PUSH20, contractAddr,
+		// Zeno loves us - call with half of the available gas each time we CALL
+		PUSH1, 2, GAS, DIV, CALL,
+		PUSH1, 32, PUSH1, 0, RETURN)
 }
 
 // convenience function for contract that is a factory for the code that comes as call data
