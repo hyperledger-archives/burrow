@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -17,7 +18,7 @@ var (
 	ErrUnknownAddress      = errors.New("Unknown address")
 	ErrInsufficientBalance = errors.New("Insufficient balance")
 	ErrInvalidJumpDest     = errors.New("Invalid jump dest")
-	ErrInsufficientGas     = errors.New("Insuffient gas")
+	ErrInsufficientGas     = errors.New("Insufficient gas")
 	ErrMemoryOutOfBounds   = errors.New("Memory out of bounds")
 	ErrCodeOutOfBounds     = errors.New("Code out of bounds")
 	ErrInputOutOfBounds    = errors.New("Input out of bounds")
@@ -194,7 +195,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 	)
 
 	for {
-
 		// Use BaseOp gas.
 		if useGasNegative(gas, GasBaseOp, &err) {
 			return nil, err
@@ -816,7 +816,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					exception = err.Error()
 				}
 				// NOTE: these fire call events and not particular events for eg name reg or permissions
-				vm.fireCallEvent(&exception, &ret, callee, &Account{Address: addr}, args, value, gas)
+				vm.fireCallEvent(&exception, &ret, callee, &Account{Address: addr}, args, value, &gasLimit)
 			} else {
 				// EVM contract
 				if useGasNegative(gas, GasGetAccount, &err) {
@@ -831,12 +831,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					if acc == nil {
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
-					ret, err = vm.Call(callee, callee, acc.Code, args, value, gas)
+					ret, err = vm.Call(callee, callee, acc.Code, args, value, &gasLimit)
 				} else if op == DELEGATECALL {
 					if acc == nil {
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
-					ret, err = vm.DelegateCall(caller, callee, acc.Code, args, value, gas)
+					ret, err = vm.DelegateCall(caller, callee, acc.Code, args, value, &gasLimit)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
@@ -847,7 +847,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					}
 					// add account to the tx cache
 					vm.appState.UpdateAccount(acc)
-					ret, err = vm.Call(callee, acc, acc.Code, args, value, gas)
+					ret, err = vm.Call(callee, acc, acc.Code, args, value, &gasLimit)
 				}
 			}
 
@@ -906,7 +906,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 		}
 
 		pc++
-
 	}
 }
 
