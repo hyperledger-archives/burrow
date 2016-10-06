@@ -306,16 +306,21 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 						log.Errorf("Encountered error waiting for event: %s\n", confirmation.Error)
 						err = confirmation.Error
 						return
-					} 
-					eventDataTx, ok := confirmation.Event.(txs.EventDataTx)
+					}
+					if confirmation.Exception != nil {
+						log.Errorf("Encountered Exception from chain w: %s\n", confirmation.Error)
+						err = confirmation.Exception
+						return
+					}
+					txResult.BlockHash = confirmation.BlockHash
+					txResult.Exception = ""
+					eventDataTx, ok := confirmation.Event.(*txs.EventDataTx)
 					if !ok {
 						log.Errorf("Received wrong event type.")
 						err = fmt.Errorf("Received wrong event type.")
 						return
 					}
-					txResult.BlockHash = confirmation.BlockHash
 					txResult.Return = eventDataTx.Return
-					txResult.Exception = confirmation.Exception.Error()
 				}()
 			}
 		}

@@ -74,7 +74,12 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 	var latestBlockHash []byte
 
 	eid := txs.EventStringAccInput(inputAddr)
-
+	if err := erisNodeWebsocketClient.tendermintWebsocket.Subscribe(eid); err != nil {
+		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
+	}
+	if err := erisNodeWebsocketClient.tendermintWebsocket.Subscribe(txs.EventStringNewBlock()); err != nil {
+		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
+	}
 	// Read the incoming events
 	go func() {
 		var err error
@@ -83,14 +88,24 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 			result := new(ctypes.ErisDBResult)
 			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
 				// keep calm and carry on
-				log.Errorf("eris-client - Failed to unmarshal json bytes for websocket event: %s", err)
+				log.Errorf("[eris-client] Failed to unmarshal json bytes for websocket event: %s", err)
+				continue
+			}
+
+			subscription, ok := (*result).(*ctypes.ResultSubscribe)
+			if ok {
+				// Received confirmation of subscription to event streams
+				// TODO: collect subscription IDs, push into channel and on completion
+				// unsubscribe
+				log.Infof("[eris-client] recceived confirmation for event (%s) with subscription id (%s).",
+					subscription.Event, subscription.SubscriptionId)
 				continue
 			}
 			
 			event, ok := (*result).(*ctypes.ResultEvent)
 			if !ok {
 				// keep calm and carry on
-				log.Error("eris-client - Failed to cast to ResultEvent for websocket event")
+				log.Errorf("[eris-client] Failed to cast to ResultEvent for websocket event: %s", *result)
 				continue
 			}
 			
@@ -106,11 +121,12 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 			
 			// we don't accept events unless they came after a new block (ie. in)
 			if latestBlockHash == nil {
+				log.Infof("[eris-client] no first block has been registered, so ignoring event: %s", event.Event)
 				continue
 			}
 
 			if event.Event != eid {
-				log.Warnf("Received unsolicited event! Got %s, expected %s\n", event.Event, eid)
+				log.Warnf("[eris-client] received unsolicited event! Got %s, expected %s\n", event.Event, eid)
 				continue
 			}
 
@@ -143,7 +159,6 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 				}
 				return
 			}
-			
 			// success, return the full event and blockhash and exit go-routine
 			confirmationChannel <- Confirmation{
 				BlockHash: latestBlockHash,
