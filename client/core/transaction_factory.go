@@ -238,24 +238,24 @@ func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
 
 func Rebond(addrS, heightS string) (*txs.RebondTx, error) {
 	return nil, fmt.Errorf("Rebond Transaction formation to be implemented on 0.12.0")
-// 	if addrS == "" {
-// 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
-// 	}
+	// 	if addrS == "" {
+	// 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
+	// 	}
 
-// 	addrBytes, err := hex.DecodeString(addrS)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("addr is bad hex: %v", err)
-// 	}
+	// 	addrBytes, err := hex.DecodeString(addrS)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("addr is bad hex: %v", err)
+	// 	}
 
-// 	height, err := strconv.ParseInt(heightS, 10, 32)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("height is misformatted: %v", err)
-// 	}
+	// 	height, err := strconv.ParseInt(heightS, 10, 32)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("height is misformatted: %v", err)
+	// 	}
 
-// 	return &types.RebondTx{
-// 		Address: addrBytes,
-// 		Height:  int(height),
-// 	}, nil
+	// 	return &types.RebondTx{
+	// 		Address: addrBytes,
+	// 		Height:  int(height),
+	// 	}, nil
 }
 
 type TxResult struct {
@@ -344,102 +344,3 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 	}
 	return
 }
-
-//------------------------------------------------------------------------------------
-// wait for events
-
-// type Msg struct {
-// 	BlockHash []byte
-// 	Value     []byte
-// 	Exception string
-// 	Error     error
-// }
-
-// func subscribeAndWait(tx txs.Tx, chainID string, nodeAddr string, inputAddr []byte) (chan Msg, error) {
-// 	// subscribe to event and wait for tx to be committed
-// 	var wsAddr string
-// 	if strings.HasPrefix(nodeAddr, "http://") {
-// 		wsAddr = strings.TrimPrefix(nodeAddr, "http://")
-// 	}
-// 	if strings.HasPrefix(nodeAddr, "tcp://") {
-// 		wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
-// 	}
-// 	if strings.HasPrefix(nodeAddr, "unix://") {
-// 		log.WithFields(log.Fields{
-// 			"node address": nodeAddr,
-// 			}).Warn("Unable to subscribe to websocket from unix socket.")
-// 		return nil, fmt.Errorf("Unable to subscribe to websocket from unix socket: %s", nodeAddr)
-// 	}
-// 	wsAddr = "ws://" + wsAddr
-// 	log.WithFields(log.Fields{
-// 		"websocket address": wsAddr,
-// 		"endpoint": "/websocket",
-// 		}).Debug("Subscribing to websocket address")
-// 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
-// 	wsClient.Start()
-// 	eid := txs.EventStringAccInput(inputAddr)
-// 	if err := wsClient.Subscribe(eid); err != nil {
-// 		return nil, fmt.Errorf("Error subscribing to AccInput event: %v", err)
-// 	}
-// 	if err := wsClient.Subscribe(txs.EventStringNewBlock()); err != nil {
-// 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
-// 	}
-
-// 	resultChan := make(chan Msg, 1)
-
-// 	var latestBlockHash []byte
-
-// 	// Read message
-// 	go func() {
-// 		for {
-// 			result := <-wsClient.EventsCh
-// 			// if its a block, remember the block hash
-// 			blockData, ok := result.Data.(txs.EventDataNewBlock)
-// 			if ok {
-// 				log.Infoln(blockData.Block)
-// 				latestBlockHash = blockData.Block.Hash()
-// 				continue
-// 			}
-
-// 			// we don't accept events unless they came after a new block (ie. in)
-// 			if latestBlockHash == nil {
-// 				continue
-// 			}
-
-// 			if result.Event != eid {
-// 				logger.Debugf("received unsolicited event! Got %s, expected %s\n", result.Event, eid)
-// 				continue
-// 			}
-
-// 			data, ok := result.Data.(types.EventDataTx)
-// 			if !ok {
-// 				resultChan <- Msg{Error: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx")}
-// 				return
-// 			}
-
-// 			if !bytes.Equal(types.TxID(chainID, data.Tx), types.TxID(chainID, tx)) {
-// 				logger.Debugf("Received event for same input from another transaction: %X\n", types.TxID(chainID, data.Tx))
-// 				continue
-// 			}
-
-// 			if data.Exception != "" {
-// 				resultChan <- Msg{BlockHash: latestBlockHash, Value: data.Return, Exception: data.Exception}
-// 				return
-// 			}
-
-// 			// GOOD!
-// 			resultChan <- Msg{BlockHash: latestBlockHash, Value: data.Return}
-// 			return
-// 		}
-// 	}()
-
-// 	// txs should take no more than 10 seconds
-// 	timeoutTicker := time.Tick(time.Duration(MaxCommitWaitTimeSeconds) * time.Second)
-
-// 	go func() {
-// 		<-timeoutTicker
-// 		resultChan <- Msg{Error: fmt.Errorf("timed out waiting for event")}
-// 		return
-// 	}()
-// 	return resultChan, nil
-// }
