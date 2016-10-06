@@ -149,7 +149,7 @@ func addTransactionPersistentFlags() {
 
 	// TransactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the eris-keys daemon")
 	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", true, "broadcast the transaction to the blockchain")
-	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.WaitFlag, "wait", "w", false, "wait for the transaction to be committed in a block")
+	TransactionCmd.PersistentFlags().BoolVarP(&clientDo.WaitFlag, "wait", "w", true, "wait for the transaction to be committed in a block")
 }
 
 //------------------------------------------------------------------------------

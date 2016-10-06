@@ -18,19 +18,23 @@ package client
 
 import (
 	"fmt"
+	// "strings"
 
 	"github.com/tendermint/go-rpc/client"
 
+	log "github.com/eris-ltd/eris-logger"
+
 	acc "github.com/eris-ltd/eris-db/account"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
-	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 type NodeClient interface {
 	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
+	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
@@ -38,9 +42,17 @@ type NodeClient interface {
 	QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error)
 	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
 
-	DumpStorage(address []byte) (storage *core_types.Storage, err error) 
+	DumpStorage(address []byte) (storage *core_types.Storage, err error)
 	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
+}
+
+type NodeWebsocketClient interface {
+	Subscribe(eventId string) error
+	Unsubscribe(eventId string) error
+
+	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error)
+	Close()
 }
 
 // NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
@@ -73,6 +85,38 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 		return nil, err
 	}
 	return &receipt, nil
+}
+
+func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
+	var wsAddr string
+	// TODO: clean up this inherited mess on dealing with the address prefixes.
+	nodeAddr := erisNodeClient.broadcastRPC
+	// if strings.HasPrefix(nodeAddr, "http://") {
+	// 	wsAddr = strings.TrimPrefix(nodeAddr, "http://")
+	// }
+	// if strings.HasPrefix(nodeAddr, "tcp://") {
+	// 	wsAddr = strings.TrimPrefix(nodeAddr, "tcp://")
+	// }
+	// if strings.HasPrefix(nodeAddr, "unix://") {
+	// 	log.WithFields(log.Fields{
+	// 		"node address": nodeAddr,
+	// 	}).Error("Unable to subscribe to websocket from unix socket.")
+	// 	return nil, fmt.Errorf("Unable to construct websocket from unix socket: %s", nodeAddr)
+	// }
+	// wsAddr = "ws://" + wsAddr
+	wsAddr = nodeAddr
+	log.WithFields(log.Fields{
+		"websocket address": wsAddr,
+		"endpoint":          "/websocket",
+	}).Debug("Subscribing to websocket address")
+	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
+	if _, err = wsClient.Start(); err != nil {
+		return nil, err
+	}
+	derivedErisNodeWebsocketClient := &ErisNodeWebsocketClient{
+		tendermintWebsocket: wsClient,
+	}
+	return derivedErisNodeWebsocketClient, nil
 }
 
 //------------------------------------------------------------------------------------
@@ -111,11 +155,11 @@ func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, Gene
 	ChainId = chainIdResult.ChainId
 	GenesisHash = make([]byte, len(chainIdResult.GenesisHash))
 	copy(GenesisHash[:], chainIdResult.GenesisHash)
-	return 
+	return
 }
 
 // QueryContract executes the contract code at address with the given data
-// NOTE: there is no check on the caller; 
+// NOTE: there is no check on the caller;
 func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
@@ -207,6 +251,5 @@ func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
 	blockHeight = validatorsResult.BlockHeight
 	bondedValidators = validatorsResult.BondedValidators
 	unbondingValidators = validatorsResult.UnbondingValidators
-	return 
+	return
 }
-

@@ -23,8 +23,8 @@ import (
 )
 
 var StatusCmd = &cobra.Command{
-	Use:    "status",
-	Short:  "eris-client status returns the current status from a chain.",
+	Use:   "status",
+	Short: "eris-client status returns the current status from a chain.",
 	Long: `eris-client status returns the current status from a chain.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -33,7 +33,7 @@ var StatusCmd = &cobra.Command{
 }
 
 func buildStatusCommand() {
-	addStatusPersistentFlags()	
+	addStatusPersistentFlags()
 }
 
 func addStatusPersistentFlags() {

@@ -25,7 +25,7 @@ import (
 	"github.com/eris-ltd/eris-db/definitions"
 )
 
-func Status(do *definitions.ClientDo)  {
+func Status(do *definitions.ClientDo) {
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
 	if err != nil {
@@ -40,14 +40,14 @@ func Status(do *definitions.ClientDo)  {
 	}
 
 	log.WithFields(log.Fields{
-		"chain": do.NodeAddrFlag,
-		"genesisHash": fmt.Sprintf("%X", genesisHash),
-		"chainName": chainName,
-		"chainId": chainId,
-		"genesisHash from chainId":fmt.Sprintf("%X", genesisHashfromChainId),
-		"validator public key": fmt.Sprintf("%X", validatorPublicKey),
-		"latest block hash": fmt.Sprintf("%X", latestBlockHash),
-		"latest block height": latestBlockHeight,
-		"latest block time": latestBlockTime,
+		"chain":                    do.NodeAddrFlag,
+		"genesisHash":              fmt.Sprintf("%X", genesisHash),
+		"chainName":                chainName,
+		"chainId":                  chainId,
+		"genesisHash from chainId": fmt.Sprintf("%X", genesisHashfromChainId),
+		"validator public key":     fmt.Sprintf("%X", validatorPublicKey),
+		"latest block hash":        fmt.Sprintf("%X", latestBlockHash),
+		"latest block height":      latestBlockHeight,
+		"latest block time":        latestBlockTime,
 	}).Info("status")
 }

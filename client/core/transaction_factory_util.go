@@ -120,10 +120,9 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		}
 		pubKeyBytes, err2 = keyClient.PublicKey(addressBytes)
 		if err2 != nil {
-			err = fmt.Errorf("Failed to fetch pubkey for address (%s): %v", addr, err)
+			err = fmt.Errorf("Failed to fetch pubkey for address (%s): %v", addr, err2)
 			return
 		}
-
 	}
 
 	if len(pubKeyBytes) == 0 {

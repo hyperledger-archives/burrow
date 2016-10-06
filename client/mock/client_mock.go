@@ -19,10 +19,10 @@ package mock
 import (
 	"github.com/tendermint/go-crypto"
 
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
 	acc "github.com/eris-ltd/eris-db/account"
 	. "github.com/eris-ltd/eris-db/client"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -48,6 +48,10 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 		ContractAddr:    make([]byte, 20, 20),
 	}
 	return txReceipt, nil
+}
+
+func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
+	return nil, nil
 }
 
 func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
@@ -88,7 +92,6 @@ func (mock *MockNodeClient) Status() (ChainId []byte,
 	return
 }
 
-
 // QueryContract executes the contract code at address with the given data
 func (mock *MockNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
 	// return zero
@@ -103,7 +106,6 @@ func (mock *MockNodeClient) QueryContractCode(address, code, data []byte) (ret [
 	return ret, 0, nil
 }
 
-
 func (mock *MockNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
 	return nil, nil
 }
@@ -112,6 +114,6 @@ func (mock *MockNodeClient) GetName(name string) (owner []byte, data string, exp
 	return nil, "", 0, nil
 }
 
-func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error){
+func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error) {
 	return 0, nil, nil, nil
 }

@@ -68,7 +68,7 @@ func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) 
 // the eris-keys server.
 func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
 	args := map[string]string{
-		"addr": string(address),
+		"addr": fmt.Sprintf("%X", address),
 	}
 	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args)
 	if err != nil {
