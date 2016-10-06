@@ -252,6 +252,97 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	return ret, rErr
 }
 
+func (this *transactor) Send(privKey, toAddress []byte,
+	amount int64) (*txs.Receipt, error) {
+	var toAddr []byte
+	if len(toAddress) == 0 {
+		toAddr = nil
+	} else if len(toAddress) != 20 {
+		return nil, fmt.Errorf("To-address is not of the right length: %d\n",
+			len(toAddress))
+	} else {
+		toAddr = toAddress
+	}
+
+	if len(privKey) != 64 {
+		return nil, fmt.Errorf("Private key is not of the right length: %d\n",
+			len(privKey))
+	}
+
+	pk := &[64]byte{}
+	copy(pk[:], privKey)
+	this.txMtx.Lock()
+	defer this.txMtx.Unlock()
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	cache := this.erisMint.GetState()
+	acc := cache.GetAccount(pa.Address)
+	var sequence int
+	if acc == nil {
+		sequence = 1
+	} else {
+		sequence = acc.Sequence + 1
+	}
+
+	tx := txs.NewSendTx()
+
+	txInput := &txs.TxInput{
+		Address:  pa.Address,
+		Amount:   amount,
+		Sequence: sequence,
+		PubKey:   pa.PubKey,
+	}
+
+	tx.Inputs = append(tx.Inputs, txInput)
+
+	txOutput := &txs.TxOutput{toAddr, amount}
+
+	tx.Outputs = append(tx.Outputs, txOutput)
+
+	// Got ourselves a tx.
+	txS, errS := this.SignTx(tx, []*account.PrivAccount{pa})
+	if errS != nil {
+		return nil, errS
+	}
+	return this.BroadcastTx(txS)
+}
+
+func (this *transactor) SendAndHold(privKey, toAddress []byte,
+	amount int64) (*txs.Receipt, error) {
+	rec, tErr := this.Send(privKey, toAddress, amount)
+	if tErr != nil {
+		return nil, tErr
+	}
+
+	wc := make(chan *txs.SendTx)
+	subId := fmt.Sprintf("%X", rec.TxHash)
+
+	this.eventEmitter.Subscribe(subId, txs.EventStringAccOutput(toAddress),
+		func(evt txs.EventData) {
+			event := evt.(txs.EventDataTx)
+			tx := event.Tx.(*txs.SendTx)
+			wc <- tx
+		})
+
+	timer := time.NewTimer(300 * time.Second)
+	toChan := timer.C
+
+	var rErr error
+
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+
+	select {
+	case <-toChan:
+		rErr = fmt.Errorf("Transaction timed out. Hash: " + subId)
+	case e := <-wc:
+		if bytes.Equal(e.Inputs[0].Address, pa.Address) && e.Inputs[0].Amount == amount {
+			timer.Stop()
+			this.eventEmitter.Unsubscribe(subId)
+			return rec, rErr
+		}
+	}
+	return nil, rErr
+}
+
 func (this *transactor) TransactNameReg(privKey []byte, name, data string,
 	amount, fee int64) (*txs.Receipt, error) {
 
