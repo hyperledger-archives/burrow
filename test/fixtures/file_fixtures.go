@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/docker/docker/pkg/ioutils"
+	"io/ioutil"
 )
 
 // FileFixtures writes files to a temporary location for use in testing.
@@ -19,7 +19,7 @@ type FileFixtures struct {
 // temporary root directory that is fixed when allocate() is called on the
 // FileFixtures struct.
 func NewFileFixtures(identifyingPrefix string) *FileFixtures {
-	dir, err := ioutils.TempDir("", identifyingPrefix)
+	dir, err := ioutil.TempDir("", identifyingPrefix)
 	return &FileFixtures{
 		tempDir: dir,
 		Error:   err,

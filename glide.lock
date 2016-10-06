@@ -25,16 +25,6 @@ imports:
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
-- name: github.com/docker/docker
-  version: 097d1a2b6186dcf1df8ae6135470871aca309a31
-  subpackages:
-  - pkg/ioutils
-  - pkg/term
-  - pkg/longpath
-  - pkg/system
-  - pkg/term/windows
-- name: github.com/docker/go-units
-  version: f2d77a61e3c169b43402a0a1e84f06daf29b8190
 - name: github.com/eris-ltd/eris-keys
   version: 114ebc77443db9a153692233294e48bc7e184215
 - name: github.com/eris-ltd/eris-logger
