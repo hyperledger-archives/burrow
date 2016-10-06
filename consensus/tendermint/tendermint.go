@@ -111,6 +111,16 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 		path.Join(moduleConfig.RootDir,
 			moduleConfig.Config.GetString("private_validator_file")))
 
+	// TODO: [Silas] we want to something better than this like not not have it in
+	// the config at all, but for now I think it's much safer to make sure we are
+	// not running the tendermint RPC as it could lead to unexpected behaviour,
+	// not least if we accidentally try to run it on the same address as our own
+	if tmintConfig.GetString("rpc_laddr") != "" {
+		log.Warnf("Force disabling Tendermint's native RPC, which had been set to " +
+				"run on '%s' in the Tendermint config.", tmintConfig.GetString("rpc_laddr"))
+		tmintConfig.Set("rpc_laddr", "")
+	}
+	
 	newNode := node.NewNode(tmintConfig, privateValidator, func(_, _ string,
 		hash []byte) proxy.AppConn {
 		return NewLocalClient(new(sync.Mutex), application)

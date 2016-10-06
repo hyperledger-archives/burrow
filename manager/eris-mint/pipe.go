@@ -87,26 +87,20 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 	// start the application
 	erisMint := NewErisMint(startedState, eventSwitch)
 
-	// NOTE: [ben] Set Host opens an RPC pipe to Tendermint;  this is a remnant
-	// of the old Eris-DB / Tendermint and should be considered as an in-process
-	// call when possible
-	tendermintHost := moduleConfig.Config.GetString("tendermint_host")
-	erisMint.SetHostAddress(tendermintHost)
-
 	// initialise the components of the pipe
 	events := edb_event.NewEvents(eventSwitch)
 	accounts := newAccounts(erisMint)
 	namereg := newNameReg(erisMint)
-	transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
-		events)
 
-	return &erisMintPipe{
+	pipe := &erisMintPipe{
 		erisMintState: startedState,
 		erisMint:      erisMint,
 		accounts:      accounts,
 		events:        events,
 		namereg:       namereg,
-		transactor:    transactor,
+		// We need to set transactor later since we are introducing a mutual dependency
+		// NOTE: this will be cleaned up when the RPC is unified
+		transactor: nil,
 		// genesis cache
 		genesisDoc:   genesisDoc,
 		genesisState: nil,
@@ -114,7 +108,26 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		// authority - this is a sort of dependency injection pattern
 		consensusEngine: nil,
 		blockchain:      nil,
-	}, nil
+	}
+
+	// NOTE: [Silas]
+	// This is something of a loopback, but seems like a nicer option than
+	// transactor calling the Tendermint native RPC (as it was before),
+	// or indeed calling this RPC over the wire given that we have direct access.
+	//
+	// We could just hand transactor a copy of Pipe, but doing it this way seems
+	// like a reasonably minimal and flexible way of providing transactor with the
+	// broadcast function it needs, without making it explicitly
+	// aware of/depend on Pipe.
+	transactor := newTransactor(moduleConfig.ChainId, eventSwitch, erisMint,
+		events,
+		func(tx txs.Tx) error {
+			_, err := pipe.BroadcastTxSync(tx)
+			return err
+		})
+
+	pipe.transactor = transactor
+	return pipe, nil
 }
 
 //------------------------------------------------------------------------------

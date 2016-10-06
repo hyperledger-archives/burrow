@@ -73,7 +73,7 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("db_backend", "leveldb")
 	tmintConfig.SetDefault("db_dir", dataDir)
 	tmintConfig.SetDefault("log_level", "info")
-	tmintConfig.SetDefault("rpc_laddr", "0.0.0.0:46657")
+	tmintConfig.SetDefault("rpc_laddr", "")
 	tmintConfig.SetDefault("prof_laddr", "")
 	tmintConfig.SetDefault("revision_file", path.Join(workDir, "revision"))
 	tmintConfig.SetDefault("cswal", path.Join(dataDir, "cswal"))
@@ -103,6 +103,7 @@ func (tmintConfig *TendermintConfig) AssertTendermintConsistency(
 	tmintConfig.Set("genesis_file", consensusConfig.GenesisFile)
 	// private validator file
 	tmintConfig.Set("priv_validator_file", privateValidatorFilePath)
+
 }
 
 // implement interface github.com/tendermint/go-config/config.Config

@@ -38,23 +38,25 @@ import (
 )
 
 type transactor struct {
-	chainID      string
-	eventSwitch  tEvents.Fireable
-	erisMint     *ErisMint
-	eventEmitter event.EventEmitter
-	txMtx        *sync.Mutex
+	chainID       string
+	eventSwitch   tEvents.Fireable
+	erisMint      *ErisMint
+	eventEmitter  event.EventEmitter
+	txMtx         *sync.Mutex
+	txBroadcaster func(tx txs.Tx) error
 }
 
 func newTransactor(chainID string, eventSwitch tEvents.Fireable,
-	erisMint *ErisMint, eventEmitter event.EventEmitter) *transactor {
-	txs := &transactor{
+	erisMint *ErisMint, eventEmitter event.EventEmitter,
+	txBroadcaster func(tx txs.Tx) error) *transactor {
+	return &transactor{
 		chainID,
 		eventSwitch,
 		erisMint,
 		eventEmitter,
 		&sync.Mutex{},
+		txBroadcaster,
 	}
-	return txs
 }
 
 // Run a contract's code on an isolated and unpersisted state
@@ -132,8 +134,8 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 
 // Broadcast a transaction.
 func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+	err := this.txBroadcaster(tx)
 
-	err := this.erisMint.BroadcastTx(tx)
 	if err != nil {
 		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
 	}
