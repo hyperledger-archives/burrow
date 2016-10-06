@@ -26,10 +26,10 @@ import (
 
 	acc "github.com/eris-ltd/eris-db/account"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
-	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 type NodeClient interface {
@@ -42,7 +42,7 @@ type NodeClient interface {
 	QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error)
 	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
 
-	DumpStorage(address []byte) (storage *core_types.Storage, err error) 
+	DumpStorage(address []byte) (storage *core_types.Storage, err error)
 	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
 }
@@ -107,7 +107,7 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient Node
 	wsAddr = nodeAddr
 	log.WithFields(log.Fields{
 		"websocket address": wsAddr,
-		"endpoint": "/websocket",
+		"endpoint":          "/websocket",
 	}).Debug("Subscribing to websocket address")
 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
 	if _, err = wsClient.Start(); err != nil {
@@ -155,11 +155,11 @@ func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, Gene
 	ChainId = chainIdResult.ChainId
 	GenesisHash = make([]byte, len(chainIdResult.GenesisHash))
 	copy(GenesisHash[:], chainIdResult.GenesisHash)
-	return 
+	return
 }
 
 // QueryContract executes the contract code at address with the given data
-// NOTE: there is no check on the caller; 
+// NOTE: there is no check on the caller;
 func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
@@ -251,6 +251,5 @@ func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
 	blockHeight = validatorsResult.BlockHeight
 	bondedValidators = validatorsResult.BondedValidators
 	unbondingValidators = validatorsResult.UnbondingValidators
-	return 
+	return
 }
-

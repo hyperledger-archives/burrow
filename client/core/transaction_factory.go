@@ -301,7 +301,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 						return
 					}
 					log.Debug("Waiting for transaction to be confirmed.")
-					confirmation := <- confirmationChannel
+					confirmation := <-confirmationChannel
 					if confirmation.Error != nil {
 						log.Errorf("Encountered error waiting for event: %s\n", confirmation.Error)
 						err = confirmation.Error

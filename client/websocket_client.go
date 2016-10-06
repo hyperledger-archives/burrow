@@ -26,8 +26,8 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
-	"github.com/eris-ltd/eris-db/txs"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 const (
@@ -64,7 +64,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Unsubscribe(subscription
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
 func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
-	// check no errors are reported on the websocket 
+	// check no errors are reported on the websocket
 	if err := erisNodeWebsocketClient.assertNoErrors(); err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 	go func() {
 		var err error
 		for {
-			resultBytes := <- erisNodeWebsocketClient.tendermintWebsocket.ResultsCh
+			resultBytes := <-erisNodeWebsocketClient.tendermintWebsocket.ResultsCh
 			result := new(ctypes.ErisDBResult)
 			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
 				// keep calm and carry on
@@ -101,24 +101,24 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 					subscription.Event, subscription.SubscriptionId)
 				continue
 			}
-			
+
 			event, ok := (*result).(*ctypes.ResultEvent)
 			if !ok {
 				// keep calm and carry on
-				log.Errorf("[eris-client] Failed to cast to ResultEvent for websocket event: %s", *result)
+				log.Warnf("[eris-client] Failed to cast to ResultEvent for websocket event: %s", *result)
 				continue
 			}
-			
+
 			blockData, ok := event.Data.(txs.EventDataNewBlock)
 			if ok {
 				latestBlockHash = blockData.Block.Hash()
 				log.WithFields(log.Fields{
-					"new block": blockData.Block,
+					"new block":   blockData.Block,
 					"latest hash": latestBlockHash,
 				}).Debug("Registered new block")
 				continue
 			}
-			
+
 			// we don't accept events unless they came after a new block (ie. in)
 			if latestBlockHash == nil {
 				log.Infof("[eris-client] no first block has been registered, so ignoring event: %s", event.Event)
@@ -135,9 +135,9 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 				// We are on the lookout for EventDataTx
 				confirmationChannel <- Confirmation{
 					BlockHash: latestBlockHash,
-					Event: nil,
+					Event:     nil,
 					Exception: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx"),
-					Error: nil,
+					Error:     nil,
 				}
 				return
 			}
@@ -153,18 +153,18 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 			if data.Exception != "" {
 				confirmationChannel <- Confirmation{
 					BlockHash: latestBlockHash,
-					Event: &data,
+					Event:     &data,
 					Exception: fmt.Errorf("Transaction confirmed with exception:", data.Exception),
-					Error: nil,
+					Error:     nil,
 				}
 				return
 			}
 			// success, return the full event and blockhash and exit go-routine
 			confirmationChannel <- Confirmation{
 				BlockHash: latestBlockHash,
-				Event: &data,
+				Event:     &data,
 				Exception: nil,
-				Error: nil,
+				Error:     nil,
 			}
 			return
 		}
@@ -176,12 +176,12 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 	timeout := time.After(time.Duration(MaxCommitWaitTimeSeconds) * time.Second)
 
 	go func() {
-		<- timeout
+		<-timeout
 		confirmationChannel <- Confirmation{
 			BlockHash: nil,
-			Event: nil,
+			Event:     nil,
 			Exception: nil,
-			Error: fmt.Errorf("timed out waiting for event"),
+			Error:     fmt.Errorf("timed out waiting for event"),
 		}
 		return
 	}()
