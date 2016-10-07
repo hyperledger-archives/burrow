@@ -101,10 +101,10 @@ genesis_file = "genesis.json"
   read_buffer_size = 4096
   write_buffer_size = 4096
 
-	[servers.tendermint]
-	# Multiple listeners can be separated with a comma
-	rpc_local_address = "0.0.0.0:46657"
-	endpoint = "/websocket"
+  [servers.tendermint]
+  # Multiple listeners can be separated with a comma
+  rpc_local_address = "0.0.0.0:46657"
+  endpoint = "/websocket"
 
   [servers.logging]
   console_log_level = "info"
@@ -172,9 +172,9 @@ private_validator_file = "priv_validator.json"
   # node local address
   node_laddr = "0.0.0.0:46656"
   # rpc local address
-	# NOTE: value is ignored when run in-process as RPC is
-	# handled by [servers.tendermint]
-  rpc_laddr = "0.0.0.0:46657"
+  # NOTE: value is ignored when run in-process as RPC is
+  # handled by [servers.tendermint]
+  rpc_laddr = ""
   # proxy application address - used for tmsp connections,
   # and this port should not be exposed for in-process Tendermint
   proxy_app = "tcp://127.0.0.1:46658"
@@ -239,6 +239,3 @@ private_validator_file = "priv_validator.json"
 # Database backend to use for ErisMint state database.
 # Supported `leveldb` and `memdb`.
 db_backend = "leveldb"
-# tendermint host address needs to correspond to tendermints configuration
-# of the rpc local address
-tendermint_host = "0.0.0.0:46657"

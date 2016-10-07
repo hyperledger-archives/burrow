@@ -173,7 +173,7 @@ private_validator_file = "priv_validator.json"
   # rpc local address
 	# NOTE: value is ignored when run in-process as RPC is
 	# handled by [servers.tendermint]
-  rpc_laddr = "0.0.0.0:36657"
+  rpc_laddr = ""
   # proxy application address - used for tmsp connections,
   # and this port should not be exposed for in-process Tendermint
   proxy_app = "tcp://127.0.0.1:46658"
@@ -217,6 +217,4 @@ private_validator_file = "priv_validator.json"
 [erismint]
 # Database backend to use for ErisMint state database.
 db_backend = "leveldb"
-# tendermint host address needs to correspond to tendermints configuration
-# of the rpc local address
-tendermint_host = "0.0.0.0:36657"`
+`

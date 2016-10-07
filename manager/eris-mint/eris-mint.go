@@ -18,14 +18,11 @@ package erismint
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"sync"
 
 	tendermint_events "github.com/tendermint/go-events"
-	rpcclient "github.com/tendermint/go-rpc/client"
 	wire "github.com/tendermint/go-wire"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmsp "github.com/tendermint/tmsp/types"
 
 	log "github.com/eris-ltd/eris-logger"
@@ -50,10 +47,6 @@ type ErisMint struct {
 	evc  *tendermint_events.EventCache
 	evsw *tendermint_events.EventSwitch
 
-	// client to the tendermint core rpc
-	client *rpcclient.ClientURI
-	host   string // tendermint core endpoint
-
 	nTxs int // count txs in a block
 }
 
@@ -76,31 +69,6 @@ func (app *ErisMint) GetState() *sm.State {
 // be handled by the client, or a separate wallet-like nonce tracker thats not part of the app
 func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
-}
-
-func (app *ErisMint) SetHostAddress(host string) {
-	app.host = host
-	app.client = rpcclient.NewClientURI(host) //fmt.Sprintf("http://%s", host))
-}
-
-// Broadcast a tx to the tendermint core
-// NOTE: this assumes we know the address of core
-func (app *ErisMint) BroadcastTx(tx txs.Tx) error {
-	buf := new(bytes.Buffer)
-	var n int
-	var err error
-	wire.WriteBinary(struct{ txs.Tx }{tx}, buf, &n, &err)
-	if err != nil {
-		return err
-	}
-
-	params := map[string]interface{}{
-		"tx": hex.EncodeToString(buf.Bytes()),
-	}
-
-	var result ctypes.TMResult
-	_, err = app.client.Call("broadcast_tx_sync", params, &result)
-	return err
 }
 
 func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch) *ErisMint {

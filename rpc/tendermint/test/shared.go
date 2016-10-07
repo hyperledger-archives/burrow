@@ -64,9 +64,8 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	}
 
 	chainID = testConfig.GetString("chain.assert_chain_id")
-	rpcAddr := testConfig.GetString("erismint.tendermint_host")
+	rpcAddr := config.Tendermint.RpcLocalAddress
 	websocketAddr = rpcAddr
-	config.Tendermint.RpcLocalAddress = rpcAddr
 	websocketEndpoint = "/websocket"
 
 	consensusConfig, err := core.LoadModuleConfig(testConfig, rootWorkDir,
