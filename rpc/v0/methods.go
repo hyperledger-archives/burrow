@@ -43,6 +43,8 @@ const (
 	SIGN_TX                   = SERVICE_NAME + ".signTx"
 	TRANSACT                  = SERVICE_NAME + ".transact"
 	TRANSACT_AND_HOLD         = SERVICE_NAME + ".transactAndHold"
+	SEND                      = SERVICE_NAME + ".send"
+	SEND_AND_HOLD             = SERVICE_NAME + ".sendAndHold"
 	TRANSACT_NAMEREG          = SERVICE_NAME + ".transactNameReg"
 	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
 	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
@@ -108,6 +110,8 @@ func (erisDbMethods *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap[SIGN_TX] = erisDbMethods.SignTx
 	dhMap[TRANSACT] = erisDbMethods.Transact
 	dhMap[TRANSACT_AND_HOLD] = erisDbMethods.TransactAndHold
+	dhMap[SEND] = erisDbMethods.Send
+	dhMap[SEND_AND_HOLD] = erisDbMethods.SendAndHold
 	dhMap[TRANSACT_NAMEREG] = erisDbMethods.TransactNameReg
 	// Namereg
 	dhMap[GET_NAMEREG_ENTRY] = erisDbMethods.NameRegEntry
@@ -377,6 +381,32 @@ func (erisDbMethods *ErisDbMethods) TransactAndHold(request *rpc.RPCRequest, req
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return ce, 0, nil
+}
+
+func (this *ErisDbMethods) Send(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &SendParam{}
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	receipt, errC := this.pipe.Transactor().Send(param.PrivKey, param.ToAddress, param.Amount)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return receipt, 0, nil
+}
+
+func (this *ErisDbMethods) SendAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &SendParam{}
+	err := this.codec.DecodeBytes(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	rec, errC := this.pipe.Transactor().SendAndHold(param.PrivKey, param.ToAddress, param.Amount)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return rec, 0, nil
 }
 
 func (erisDbMethods *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
