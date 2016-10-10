@@ -43,10 +43,6 @@ docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 # Cleanup
 rm $REPO/$TARGET
 rm $REPO/eris-client
-if [ "$CI" ]
-then
-  docker rmi $IMAGE:build
-fi
 
 # Extra Tags
 if [[ "$branch" = "master" ]]
