@@ -1,0 +1,27 @@
+FROM quay.io/eris/base:alpine
+MAINTAINER Monax <support@monax.io>
+
+ENV TARGET eris-db
+
+# runtime customization start here
+ADD ./eris-client $INSTALL_BASE
+COPY ./bin/start_eris_db $INSTALL_BASE/erisdb-wrapper
+# runtime customization end here
+
+# Get the binary from the artifact in pwd
+ADD ./$TARGET $INSTALL_BASE
+RUN chmod +x --recursive $INSTALL_BASE
+
+# Finalize
+RUN chown --recursive $USER:$USER /home/$USER
+VOLUME $ERIS
+WORKDIR $ERIS
+USER $USER
+
+# runtime customization start here
+# Expose ports for 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc
+EXPOSE 1337
+EXPOSE 46656
+EXPOSE 46657
+
+CMD [ "eris-db", "serve" ]
