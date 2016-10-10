@@ -2,9 +2,9 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the build script for eris-db. It will build the
-# tool into docker containers in a reliable and predicatable
-# manner.
+# This is the build script for the eris stack. It will
+# build the tool into docker containers in a reliable and
+# predicatable manner.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
@@ -17,34 +17,45 @@
 # build_tool.sh
 
 # ----------------------------------------------------------
-# Set defaults
-set -e
-start=`pwd`
-if [ "$CIRCLE_BRANCH" ]
-then
-  repo=`pwd`
-else
-  base=github.com/eris-ltd/eris-db
-  repo=$GOPATH/src/$base
-fi
-branch=${CIRCLE_BRANCH:=master}
-branch=${branch/-/_}
 
-release_min=$(cat $repo/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
+TARGET=eris-db
+IMAGE=quay.io/eris/db
+
+set -e
+
+if [ "$JENKINS_URL" ] || [ "$CIRCLE_BRANCH" ]
+then
+  REPO=`pwd`
+  CI="true"
+else
+  REPO=$GOPATH/src/github.com/eris-ltd/$TARGET
+fi
+
+release_min=$(cat $REPO/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 release_maj=$(echo $release_min | cut -d . -f 1-2)
 
-image_base=quay.io/eris/erisdb
+# Build
+docker build -t $IMAGE:build $REPO
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/$TARGET
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO/eris-client
+docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 
-cd $repo
+# Cleanup
+rm $REPO/$TARGET
+rm $REPO/eris-client
+if [ "$CI" ]
+then
+  docker rmi $IMAGE:build
+fi
 
+# Extra Tags
 if [[ "$branch" = "master" ]]
 then
-  docker build -t $image_base:latest $repo
-  docker tag $image_base:latest $image_base:$release_maj
-  docker tag $image_base:latest $image_base:$release_min
-else
-  docker build -t $image_base:$release_min $repo
+  docker tag -f $IMAGE:$release_min $IMAGE:$release_maj
+  docker tag -f $IMAGE:$release_min $IMAGE:latest
 fi
-test_exit=$?
-cd $start
-exit $test_exit
+
+if [ "$CIRCLE_BRANCH" ]
+then
+  docker tag -f $IMAGE:$release_min $IMAGE:latest
+fi
