@@ -5,7 +5,7 @@
 | Master | [![Circle CI](https://circleci.com/gh/eris-ltd/eris-db/tree/master.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop) |
 
-Eris DB is Eris' blockchain client. It includes a permissions layer, an implementation of the Ethereum Virtual Machine, and uses Tendermint Consensus. Most functionality is provided by `eris chains`, exposed through [eris-cli](https://github.com/eris-ltd/eris-cli), the entry point for the Eris Platform. 
+Eris DB is Eris' blockchain client. It includes a permissions layer, an implementation of the Ethereum Virtual Machine, and uses Tendermint Consensus. Most functionality is provided by `eris chains`, exposed through [eris-cli](https://monax.io/docs/documentation/cli), the entry point for the Eris Platform.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ See the [eris-db documentation](https://monax.io/docs/documentation/db/) for mor
 
 ## Installation
 
-`eris-db` is intended to be used by the `eris chains` command via [eris-cli](https://github.com/eris-ltd/eris-cli). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management. 
+`eris-db` is intended to be used by the `eris chains` command via [eris-cli](https://monax.io/docs/documentation/cli/latest/eris_chains). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
 
 ### For Developers
 
@@ -33,12 +33,12 @@ See the [eris-db documentation](https://monax.io/docs/documentation/db/) for mor
 
 To run `eris-db`, just type `$ eris-db serve --work-dir <path to chain directory>`
 
-This will start the node using the provided folder as working dir. If the path is omitted it defaults to `~/.erisdb` 
+This will start the node using the provided folder as working dir. If the path is omitted it defaults to `~/.erisdb`
 
 
 ## Usage
 
-Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/eris-ltd/eris-db.js), but it is possible to connect directly via HTTP or websocket. The JSON-RPC and web-api reference can be found [here](docs/api.md)
+Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://monax.io/docs/documentation/db.js/), but it is possible to connect directly via HTTP or websocket. The JSON-RPC and web-api reference can be found [here](https://monax.io/docs/documentation/db/0.12.0-rc3/specifications/api/)
 
 ## Configuration
 
