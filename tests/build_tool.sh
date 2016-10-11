@@ -41,7 +41,7 @@ docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO
 docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 
 # Cleanup
-rm $REPO/$TARGET
+rm $REPO/"$TARGET"_build_artifact
 rm $REPO/eris-client
 
 # Extra Tags
