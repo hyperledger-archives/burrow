@@ -17,8 +17,8 @@
 package keys
 
 import (
-	"fmt"
 	"encoding/hex"
+	"fmt"
 )
 
 type KeyClient interface {

@@ -24,22 +24,22 @@ import (
 // and expose /core/types instead.  This is largely an artefact to be removed once
 // go-wire and go-rpc are deprecated.
 // This is not an efficient code, especially given Storage can be big.
-func UnwrapResultDumpStorage(result *ResultDumpStorage) (*types.Storage) {
+func UnwrapResultDumpStorage(result *ResultDumpStorage) *types.Storage {
 	storageRoot := make([]byte, len(result.StorageRoot))
 	copy(storageRoot, result.StorageRoot)
 	storageItems := make([]types.StorageItem, len(result.StorageItems))
 	for i, item := range result.StorageItems {
 		key := make([]byte, len(item.Key))
 		value := make([]byte, len(item.Value))
-		copy(key,  item.Key)
+		copy(key, item.Key)
 		copy(value, item.Value)
 		storageItems[i] = types.StorageItem{
-			Key: key,
+			Key:   key,
 			Value: value,
 		}
 	}
 	return &types.Storage{
-		StorageRoot: storageRoot,
+		StorageRoot:  storageRoot,
 		StorageItems: storageItems,
 	}
 }

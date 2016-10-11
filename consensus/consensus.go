@@ -50,4 +50,3 @@ func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 	}
 	return nil
 }
-
