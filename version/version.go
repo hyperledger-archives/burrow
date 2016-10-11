@@ -129,4 +129,4 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 
 // IMPORTANT: Eris-DB version must be on the last line of this file for
 // the deployment script tests/build_tool.sh to pick up the right label.
-const VERSION = "0.12.0-RC3"
+const VERSION = "0.12.0-rc3"
