@@ -4,12 +4,12 @@ MAINTAINER Monax <support@monax.io>
 ENV TARGET eris-db
 
 # runtime customization start here
-ADD ./eris-client $INSTALL_BASE
+COPY ./eris-client $INSTALL_BASE/eris-client
 COPY ./bin/start_eris_db $INSTALL_BASE/erisdb-wrapper
 # runtime customization end here
 
 # Get the binary from the artifact in pwd
-ADD ./$TARGET $INSTALL_BASE
+COPY ./"$TARGET"_build_artifact $INSTALL_BASE/$TARGET
 RUN chmod +x --recursive $INSTALL_BASE
 
 # Finalize
