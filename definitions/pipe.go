@@ -77,7 +77,7 @@ type Transactor interface {
 		fee int64) (*txs.Receipt, error)
 	TransactAndHold(privKey, address, data []byte, gasLimit,
 		fee int64) (*txs.EventDataCall, error)
-  Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error)
+	Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error)
 	SendAndHold(privKey, toAddress []byte, amount int64) (*txs.Receipt, error)
 	TransactNameReg(privKey []byte, name, data string, amount,
 		fee int64) (*txs.Receipt, error)

@@ -2,9 +2,9 @@ package event
 
 import (
 	"fmt"
+	"github.com/eris-ltd/eris-db/txs"
 	"sync"
 	"time"
-	"github.com/eris-ltd/eris-db/txs"
 )
 
 var (

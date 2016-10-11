@@ -1,8 +1,8 @@
 package client
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestMapsAndValues(t *testing.T) {
@@ -10,7 +10,7 @@ func TestMapsAndValues(t *testing.T) {
 		Baz int
 	}
 	dict, vals, err := mapAndValues("Foo", aStruct{5},
-	"Bar", "Nibbles")
+		"Bar", "Nibbles")
 	assert.Equal(t, map[string]interface{}{
 		"Foo": aStruct{5},
 		"Bar": "Nibbles",

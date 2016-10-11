@@ -27,10 +27,10 @@ func TestMinorVersionTendermintEqual(t *testing.T) {
 	// assert explicitly on major and minor version number
 	assert.Equal(t, tendermintVersionMajorConst, tendermintVersionMajor,
 		fmt.Sprintf("Major version number for Tendermint consensus is not %v as expected: %v",
-		tendermintVersionMajorConst, tendermintVersionMajor))
+			tendermintVersionMajorConst, tendermintVersionMajor))
 	assert.Equal(t, tendermintVersionMinorConst, tendermintVersionMinor,
 		fmt.Sprintf("Minor version number for Tendermint consensus is not %v as expected: %v",
-		tendermintVersionMinorConst, tendermintVersionMinor))
+			tendermintVersionMinorConst, tendermintVersionMinor))
 	// assert patch number can not regress
 	if tendermintVersionPatchConst > tendermintVersionPatch {
 		t.Errorf("Patch version has regressed for Tendermint consensus: expected minimally %v, got %v",

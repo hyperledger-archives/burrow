@@ -11,8 +11,8 @@ import (
 	// tmtypes "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/txs"
 	evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 func init() {

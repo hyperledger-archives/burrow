@@ -18,9 +18,9 @@ func BlockchainInfo(pipe definitions.Pipe) *core_types.BlockchainInfo {
 	}
 
 	return &core_types.BlockchainInfo{
-		ChainId: pipe.Blockchain().ChainId(),
-		GenesisHash: pipe.GenesisHash(),
+		ChainId:           pipe.Blockchain().ChainId(),
+		GenesisHash:       pipe.GenesisHash(),
 		LatestBlockHeight: latestHeight,
-		LatestBlock: latestBlockMeta,
+		LatestBlock:       latestBlockMeta,
 	}
 }

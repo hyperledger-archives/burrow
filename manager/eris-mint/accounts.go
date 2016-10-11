@@ -233,4 +233,3 @@ func (this *AccountBalanceFilter) Match(v interface{}) bool {
 func (this *accounts) matchBlock(block, fda []*event.FilterData) bool {
 	return false
 }
-

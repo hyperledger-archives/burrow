@@ -38,16 +38,15 @@ func EventStringVote() string             { return fmt.Sprintf("Vote") }
 //----------------------------------------
 
 const (
-	EventDataTypeNewBlock = byte(0x01)
-	EventDataTypeFork     = byte(0x02)
-	EventDataTypeTx       = byte(0x03)
-	EventDataTypeCall     = byte(0x04)
-	EventDataTypeLog      = byte(0x05)
+	EventDataTypeNewBlock       = byte(0x01)
+	EventDataTypeFork           = byte(0x02)
+	EventDataTypeTx             = byte(0x03)
+	EventDataTypeCall           = byte(0x04)
+	EventDataTypeLog            = byte(0x05)
 	EventDataTypeNewBlockHeader = byte(0x06)
 
 	EventDataTypeRoundState = byte(0x11)
 	EventDataTypeVote       = byte(0x12)
-
 )
 
 type EventData interface {

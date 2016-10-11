@@ -28,7 +28,7 @@ type mockEventData struct {
 	eventId string
 }
 
-func (eventData mockEventData) AssertIsEventData() { }
+func (eventData mockEventData) AssertIsEventData() {}
 
 // A mock event
 func newMockSub(subId, eventId string, f func(txs.EventData)) mockSub {

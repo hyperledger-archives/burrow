@@ -52,7 +52,7 @@ func NewClientDo() *ClientDo {
 	clientDo := new(ClientDo)
 	clientDo.Debug = false
 	clientDo.Verbose = false
-	
+
 	clientDo.SignAddrFlag = ""
 	clientDo.NodeAddrFlag = ""
 	clientDo.PubkeyFlag = ""

@@ -248,4 +248,3 @@ func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.ErisDBResult, error) 
 func (tmRoutes *TendermintRoutes) DumpConsensusState() (ctypes.ErisDBResult, error) {
 	return tmRoutes.tendermintPipe.DumpConsensusState()
 }
-

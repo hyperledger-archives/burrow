@@ -116,11 +116,11 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	// not running the tendermint RPC as it could lead to unexpected behaviour,
 	// not least if we accidentally try to run it on the same address as our own
 	if tmintConfig.GetString("rpc_laddr") != "" {
-		log.Warnf("Force disabling Tendermint's native RPC, which had been set to " +
-				"run on '%s' in the Tendermint config.", tmintConfig.GetString("rpc_laddr"))
+		log.Warnf("Force disabling Tendermint's native RPC, which had been set to "+
+			"run on '%s' in the Tendermint config.", tmintConfig.GetString("rpc_laddr"))
 		tmintConfig.Set("rpc_laddr", "")
 	}
-	
+
 	newNode := node.NewNode(tmintConfig, privateValidator, func(_, _ string,
 		hash []byte) proxy.AppConn {
 		return NewLocalClient(new(sync.Mutex), application)
@@ -257,7 +257,7 @@ func (tendermint *Tendermint) ListValidators() []consensus_types.Validator {
 
 func (tendermint *Tendermint) ConsensusState() *consensus_types.ConsensusState {
 	return consensus_types.FromRoundState(tendermint.tmintNode.ConsensusState().
-			GetRoundState())
+		GetRoundState())
 }
 
 func (tendermint *Tendermint) PeerConsensusStates() map[string]string {
