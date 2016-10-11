@@ -1,13 +1,13 @@
 # Eris-DB changelog
 
 ## 0.12.0-RC3
-This release marks a separation of Eris-DB (the blockchain node of the
- Eris platform) from our consensus engine Tendermint. This involved 
- significant refactoring of almost all parts of the code, but provides
- a solid foundation to build against using future iterations of 
- Tendermint as well as advanced permissioned smart contract execution.
- 
- Many changes are under the hood but here are the main externally 
+This release marks the start of Eris-DB as the full permissioned blockchain node
+ of the Eris platform with the Tendermint permissioned consensus engine.
+ This involved significant refactoring of almost all parts of the code,
+ but provides a solid foundation to build the next generation of advanced
+ permissioned smart contract blockchains.
+
+ Many changes are under the hood but here are the main externally
  visible changes:
 
 - Features and improvements
@@ -17,16 +17,22 @@ This release marks a separation of Eris-DB (the blockchain node of the
   - Docker image size reduced
   - Introduction of eris-client companion library for interacting with
   eris:db
-  - Improved configuration handling using Viper
-  - Allow multiple event subscriptions from same host under rpv/tendermint
- 
+  - Improved single configuration file for all components written by eris-cm
+  - Allow multiple event subscriptions from same host under rpc/tendermint
+
+
 - Tool changes  
   - Use glide instead of godeps for dependencies
-  
-- Testing
-  - Separation of integration for RPC and unit tests
 
-- Bugfixes
+
+- Testing
+  - integration tests over simulated RPC calls
+  - significantly improved unit tests
+  - the ethereum virtual machine and the consensus engine are now top-level
+  components and are exposed to continuous integration tests
+
+
+- Bugfixes (incomplete list)
   - [EVM] Fix calculation of child CALL gaslimit (allowing solidity library calls to work properly)
   - [RPC/v0] Fix blocking event subscription in transactAndHold (preventing return in Javascript libraries)
   - [Blockchain] Fix getBlocks to respect block height cap
