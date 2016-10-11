@@ -71,7 +71,7 @@ func FilterBlocks(blockchain blockchain_types.Blockchain,
 	if skumtFel != nil {
 		return nil, fmt.Errorf("Fel i förfrågan. Helskumt...: " + skumtFel.Error())
 	}
-	for h := maxHeight; h >= minHeight && maxHeight-h < BLOCK_MAX; h-- {
+	for h := maxHeight; h >= minHeight && maxHeight-h <= BLOCK_MAX; h-- {
 		blockMeta := blockchain.BlockMeta(h)
 		if filter.Match(blockMeta) {
 			blockMetas = append(blockMetas, blockMeta)
