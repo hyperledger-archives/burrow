@@ -38,12 +38,11 @@ This will start the node using the provided folder as working dir. If the path i
 
 ## Usage
 
-Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://monax.io/docs/documentation/db.js/), but it is possible to connect directly via HTTP or websocket. The JSON-RPC and web-api reference can be found [here](https://monax.io/docs/documentation/db/0.12.0-rc3/specifications/api/)
+Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://monax.io/docs/documentation/db.js/), but it is possible to connect directly via HTTP or websocket. The JSON-RPC and web-api reference can be found [here](https://monax.io/docs/documentation/db/latest/specifications/api/).
 
 ## Configuration
 
-See commented template config at [server_config.toml](server_config.toml)
-
+See commented template config at [server_config.toml](server_config.toml). This will be written as part of the `eris chains make` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_make/) and can be edited prior to the `eris chains start` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_start/).
 
 ## Contribute
 
