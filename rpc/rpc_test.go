@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // ...

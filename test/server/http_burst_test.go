@@ -2,10 +2,11 @@ package server
 
 import (
 	// "fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -14,7 +15,8 @@ const (
 
 // Send a burst of GET messages to the server.
 func TestHttpFlooding(t *testing.T) {
-	serveProcess := NewServeScumbag()
+	serveProcess, err := NewServeScumbag()
+	assert.NoError(t, err, "Error creating new Server")
 	errSS := serveProcess.Start()
 	assert.NoError(t, errSS, "Scumbag-ed!")
 	t.Logf("Flooding http requests.")

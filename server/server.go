@@ -3,12 +3,13 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	cors "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tommy351/gin-cors"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/gopkg.in/tylerb/graceful.v1"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	cors "github.com/tommy351/gin-cors"
+	"gopkg.in/tylerb/graceful.v1"
 )
 
 var (
@@ -183,19 +184,20 @@ func (this *ServeProcess) StopEventChannel() <-chan struct{} {
 }
 
 // Creates a new serve process.
-func NewServeProcess(config *ServerConfig, servers ...Server) *ServeProcess {
-	var cfg *ServerConfig
+func NewServeProcess(config *ServerConfig, servers ...Server) (*ServeProcess,
+	error) {
+	var scfg ServerConfig
 	if config == nil {
-		cfg = DefaultServerConfig()
+		return nil, fmt.Errorf("Nil passed as server configuration")
 	} else {
-		cfg = config
+		scfg = *config
 	}
 	stopChan := make(chan struct{}, 1)
 	stoppedChan := make(chan struct{}, 1)
 	startListeners := make([]chan struct{}, 0)
 	stopListeners := make([]chan struct{}, 0)
-	sp := &ServeProcess{cfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
-	return sp
+	sp := &ServeProcess{&scfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
+	return sp, nil
 }
 
 // Used to enable log15 logging instead of the default Gin logging.

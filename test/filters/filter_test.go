@@ -2,10 +2,11 @@ package filters
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
-	. "github.com/eris-ltd/eris-db/erisdb/pipe"
 	"sync"
 	"testing"
+
+	event "github.com/eris-ltd/eris-db/event"
+	"github.com/stretchr/testify/suite"
 )
 
 const OBJECTS = 100
@@ -23,12 +24,12 @@ type IntegerFilter struct {
 	match func(int64, int64) bool
 }
 
-func (this *IntegerFilter) Configure(fd *FilterData) error {
-	val, err := ParseNumberValue(fd.Value)
+func (this *IntegerFilter) Configure(fd *event.FilterData) error {
+	val, err := event.ParseNumberValue(fd.Value)
 	if err != nil {
 		return err
 	}
-	match, err2 := GetRangeFilter(fd.Op, "integer")
+	match, err2 := event.GetRangeFilter(fd.Op, "integer")
 	if err2 != nil {
 		return err2
 	}
@@ -54,8 +55,8 @@ type StringFilter struct {
 	match func(string, string) bool
 }
 
-func (this *StringFilter) Configure(fd *FilterData) error {
-	match, err := GetStringFilter(fd.Op, "string")
+func (this *StringFilter) Configure(fd *event.FilterData) error {
+	match, err := event.GetStringFilter(fd.Op, "string")
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,7 @@ func (this *StringFilter) Match(v interface{}) bool {
 type FilterSuite struct {
 	suite.Suite
 	objects       []FilterableObject
-	filterFactory *FilterFactory
+	filterFactory *event.FilterFactory
 }
 
 func (this *FilterSuite) SetupSuite() {
@@ -87,7 +88,7 @@ func (this *FilterSuite) SetupSuite() {
 		objects[i] = FilterableObject{i, fmt.Sprintf("string%d", i)}
 	}
 
-	ff := NewFilterFactory()
+	ff := event.NewFilterFactory()
 
 	ff.RegisterFilterPool("integer", &sync.Pool{
 		New: func() interface{} {
@@ -112,8 +113,8 @@ func (this *FilterSuite) TearDownSuite() {
 // ********************************************* Tests *********************************************
 
 func (this *FilterSuite) Test_FilterIntegersEquals() {
-	fd := &FilterData{"integer", "==", "5"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", "==", "5"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -126,8 +127,8 @@ func (this *FilterSuite) Test_FilterIntegersEquals() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersLT() {
-	fd := &FilterData{"integer", "<", "5"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", "<", "5"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -139,8 +140,8 @@ func (this *FilterSuite) Test_FilterIntegersLT() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersLTEQ() {
-	fd := &FilterData{"integer", "<=", "10"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", "<=", "10"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -152,8 +153,8 @@ func (this *FilterSuite) Test_FilterIntegersLTEQ() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersGT() {
-	fd := &FilterData{"integer", ">", "50"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", ">", "50"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -165,9 +166,9 @@ func (this *FilterSuite) Test_FilterIntegersGT() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersRange() {
-	fd0 := &FilterData{"integer", ">", "5"}
-	fd1 := &FilterData{"integer", "<", "38"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd0, fd1})
+	fd0 := &event.FilterData{"integer", ">", "5"}
+	fd1 := &event.FilterData{"integer", "<", "38"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd0, fd1})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -179,8 +180,8 @@ func (this *FilterSuite) Test_FilterIntegersRange() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersGTEQ() {
-	fd := &FilterData{"integer", ">=", "77"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", ">=", "77"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -192,8 +193,8 @@ func (this *FilterSuite) Test_FilterIntegersGTEQ() {
 }
 
 func (this *FilterSuite) Test_FilterIntegersNEQ() {
-	fd := &FilterData{"integer", "!=", "50"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"integer", "!=", "50"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -208,8 +209,8 @@ func (this *FilterSuite) Test_FilterIntegersNEQ() {
 }
 
 func (this *FilterSuite) Test_FilterStringEquals() {
-	fd := &FilterData{"string", "==", "string7"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"string", "==", "string7"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 	for _, o := range this.objects {
@@ -221,8 +222,8 @@ func (this *FilterSuite) Test_FilterStringEquals() {
 }
 
 func (this *FilterSuite) Test_FilterStringNEQ() {
-	fd := &FilterData{"string", "!=", "string50"}
-	filter, err := this.filterFactory.NewFilter([]*FilterData{fd})
+	fd := &event.FilterData{"string", "!=", "string50"}
+	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
 	this.NoError(err)
 	arr := []FilterableObject{}
 

@@ -4,22 +4,26 @@ package mock
 import (
 	"bytes"
 	"encoding/hex"
-	// edb "github.com/eris-ltd/erisdb/erisdb"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/suite"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/server"
-	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"net/http"
 	"os"
 	"runtime"
 	"testing"
+
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+
+	account "github.com/eris-ltd/eris-db/account"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
+	rpc "github.com/eris-ltd/eris-db/rpc"
+	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	server "github.com/eris-ltd/eris-db/server"
+	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
+	"github.com/eris-ltd/eris-db/txs"
+
+	"github.com/eris-ltd/eris-db/rpc/v0/shared"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/log15"
 )
 
 func init() {
@@ -40,278 +44,279 @@ type MockSuite struct {
 	testData     *td.TestData
 }
 
-func (this *MockSuite) SetupSuite() {
+func (mockSuite *MockSuite) SetupSuite() {
 	gin.SetMode(gin.ReleaseMode)
 	// Load the supporting objects.
 	testData := td.LoadTestData()
 	pipe := NewMockPipe(testData)
-	codec := &edb.TCodec{}
-	evtSubs := edb.NewEventSubscriptions(pipe.Events())
+	codec := &rpc_v0.TCodec{}
+	evtSubs := event.NewEventSubscriptions(pipe.Events())
 	// The server
-	restServer := edb.NewRestServer(codec, pipe, evtSubs)
+	restServer := rpc_v0.NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc := server.NewServeProcess(sConf, restServer)
+	proc, _ := server.NewServeProcess(sConf, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)
 	}
-	this.serveProcess = proc
-	this.codec = edb.NewTCodec()
-	this.testData = testData
-	this.sUrl = "http://localhost:31402"
+	mockSuite.serveProcess = proc
+	mockSuite.codec = rpc_v0.NewTCodec()
+	mockSuite.testData = testData
+	mockSuite.sUrl = "http://localhost:31402"
 }
 
-func (this *MockSuite) TearDownSuite() {
-	sec := this.serveProcess.StopEventChannel()
-	this.serveProcess.Stop(0)
+func (mockSuite *MockSuite) TearDownSuite() {
+	sec := mockSuite.serveProcess.StopEventChannel()
+	mockSuite.serveProcess.Stop(0)
 	<-sec
 }
 
 // ********************************************* Accounts *********************************************
 
-func (this *MockSuite) TestGetAccounts() {
-	resp := this.get("/accounts")
-	ret := &ep.AccountList{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetAccounts.Output)
+func (mockSuite *MockSuite) TestGetAccounts() {
+	resp := mockSuite.get("/accounts")
+	ret := &core_types.AccountList{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetAccounts.Output, ret)
 }
 
-func (this *MockSuite) TestGetAccount() {
-	addr := hex.EncodeToString(this.testData.GetAccount.Input.Address)
-	resp := this.get("/accounts/" + addr)
+func (mockSuite *MockSuite) TestGetAccount() {
+	addr := hex.EncodeToString(mockSuite.testData.GetAccount.Input.Address)
+	resp := mockSuite.get("/accounts/" + addr)
 	ret := &account.Account{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetAccount.Output)
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetAccount.Output, ret)
 }
 
-func (this *MockSuite) TestGetStorage() {
-	addr := hex.EncodeToString(this.testData.GetStorage.Input.Address)
-	resp := this.get("/accounts/" + addr + "/storage")
-	ret := &ep.Storage{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetStorage.Output)
+func (mockSuite *MockSuite) TestGetStorage() {
+	addr := hex.EncodeToString(mockSuite.testData.GetStorage.Input.Address)
+	resp := mockSuite.get("/accounts/" + addr + "/storage")
+	ret := &core_types.Storage{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetStorage.Output, ret)
 }
 
-func (this *MockSuite) TestGetStorageAt() {
-	addr := hex.EncodeToString(this.testData.GetStorageAt.Input.Address)
-	key := hex.EncodeToString(this.testData.GetStorageAt.Input.Key)
-	resp := this.get("/accounts/" + addr + "/storage/" + key)
-	ret := &ep.StorageItem{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetStorageAt.Output)
+func (mockSuite *MockSuite) TestGetStorageAt() {
+	addr := hex.EncodeToString(mockSuite.testData.GetStorageAt.Input.Address)
+	key := hex.EncodeToString(mockSuite.testData.GetStorageAt.Input.Key)
+	resp := mockSuite.get("/accounts/" + addr + "/storage/" + key)
+	ret := &core_types.StorageItem{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetStorageAt.Output, ret)
 }
 
 // ********************************************* Blockchain *********************************************
 
-func (this *MockSuite) TestGetBlockchainInfo() {
-	resp := this.get("/blockchain")
-	ret := &ep.BlockchainInfo{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetBlockchainInfo.Output)
+func (mockSuite *MockSuite) TestGetBlockchainInfo() {
+	resp := mockSuite.get("/blockchain")
+	ret := &core_types.BlockchainInfo{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetBlockchainInfo.Output, ret)
 }
 
-func (this *MockSuite) TestGetChainId() {
-	resp := this.get("/blockchain/chain_id")
-	ret := &ep.ChainId{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetChainId.Output)
+func (mockSuite *MockSuite) TestGetChainId() {
+	resp := mockSuite.get("/blockchain/chain_id")
+	ret := &core_types.ChainId{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetChainId.Output, ret)
 }
 
-func (this *MockSuite) TestGetGenesisHash() {
-	resp := this.get("/blockchain/genesis_hash")
-	ret := &ep.GenesisHash{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetGenesisHash.Output)
+func (mockSuite *MockSuite) TestGetGenesisHash() {
+	resp := mockSuite.get("/blockchain/genesis_hash")
+	ret := &core_types.GenesisHash{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetGenesisHash.Output, ret)
 }
 
-func (this *MockSuite) TestLatestBlockHeight() {
-	resp := this.get("/blockchain/latest_block_height")
-	ret := &ep.LatestBlockHeight{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetLatestBlockHeight.Output)
+func (mockSuite *MockSuite) TestLatestBlockHeight() {
+	resp := mockSuite.get("/blockchain/latest_block_height")
+	ret := &core_types.LatestBlockHeight{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetLatestBlockHeight.Output, ret)
 }
 
-func (this *MockSuite) TestBlocks() {
-	resp := this.get("/blockchain/blocks")
-	ret := &ep.Blocks{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetBlocks.Output)
+func (mockSuite *MockSuite) TestBlocks() {
+	resp := mockSuite.get("/blockchain/blocks")
+	ret := &core_types.Blocks{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetBlocks.Output, ret)
 }
 
 // ********************************************* Consensus *********************************************
 
-func (this *MockSuite) TestGetConsensusState() {
-	resp := this.get("/consensus")
-	ret := &ep.ConsensusState{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	ret.StartTime = ""
-	this.Equal(ret, this.testData.GetConsensusState.Output)
-}
-
-func (this *MockSuite) TestGetValidators() {
-	resp := this.get("/consensus/validators")
-	ret := &ep.ValidatorList{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetValidators.Output)
-}
+// TODO: re-enable these when implemented
+//func (mockSuite *MockSuite) TestGetConsensusState() {
+//	resp := mockSuite.get("/consensus")
+//	ret := &core_types.ConsensusState{}
+//	errD := mockSuite.codec.Decode(ret, resp.Body)
+//	mockSuite.NoError(errD)
+//	ret.StartTime = ""
+//	mockSuite.Equal(mockSuite.testData.GetConsensusState.Output, ret)
+//}
+//
+//func (mockSuite *MockSuite) TestGetValidators() {
+//	resp := mockSuite.get("/consensus/validators")
+//	ret := &core_types.ValidatorList{}
+//	errD := mockSuite.codec.Decode(ret, resp.Body)
+//	mockSuite.NoError(errD)
+//	mockSuite.Equal(mockSuite.testData.GetValidators.Output, ret)
+//}
 
 // ********************************************* NameReg *********************************************
 
-func (this *MockSuite) TestGetNameRegEntry() {
-	resp := this.get("/namereg/" + this.testData.GetNameRegEntry.Input.Name)
-	ret := &types.NameRegEntry{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetNameRegEntry.Output)
+func (mockSuite *MockSuite) TestGetNameRegEntry() {
+	resp := mockSuite.get("/namereg/" + mockSuite.testData.GetNameRegEntry.Input.Name)
+	ret := &core_types.NameRegEntry{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetNameRegEntry.Output, ret)
 }
 
-func (this *MockSuite) TestGetNameRegEntries() {
-	resp := this.get("/namereg")
-	ret := &ctypes.ResultListNames{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetNameRegEntries.Output)
+func (mockSuite *MockSuite) TestGetNameRegEntries() {
+	resp := mockSuite.get("/namereg")
+	ret := &core_types.ResultListNames{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetNameRegEntries.Output, ret)
 }
 
 // ********************************************* Network *********************************************
 
-func (this *MockSuite) TestGetNetworkInfo() {
-	resp := this.get("/network")
-	ret := &ep.NetworkInfo{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetNetworkInfo.Output)
+func (mockSuite *MockSuite) TestGetNetworkInfo() {
+	resp := mockSuite.get("/network")
+	ret := &shared.NetworkInfo{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetNetworkInfo.Output, ret)
 }
 
-func (this *MockSuite) TestGetClientVersion() {
-	resp := this.get("/network/client_version")
-	ret := &ep.ClientVersion{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetClientVersion.Output)
+func (mockSuite *MockSuite) TestGetClientVersion() {
+	resp := mockSuite.get("/network/client_version")
+	ret := &core_types.ClientVersion{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetClientVersion.Output, ret)
 }
 
-func (this *MockSuite) TestGetMoniker() {
-	resp := this.get("/network/moniker")
-	ret := &ep.Moniker{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetMoniker.Output)
+func (mockSuite *MockSuite) TestGetMoniker() {
+	resp := mockSuite.get("/network/moniker")
+	ret := &core_types.Moniker{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetMoniker.Output, ret)
 }
 
-func (this *MockSuite) TestIsListening() {
-	resp := this.get("/network/listening")
-	ret := &ep.Listening{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.IsListening.Output)
+func (mockSuite *MockSuite) TestIsListening() {
+	resp := mockSuite.get("/network/listening")
+	ret := &core_types.Listening{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.IsListening.Output, ret)
 }
 
-func (this *MockSuite) TestGetListeners() {
-	resp := this.get("/network/listeners")
-	ret := &ep.Listeners{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetListeners.Output)
+func (mockSuite *MockSuite) TestGetListeners() {
+	resp := mockSuite.get("/network/listeners")
+	ret := &core_types.Listeners{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetListeners.Output, ret)
 }
 
-func (this *MockSuite) TestGetPeers() {
-	resp := this.get("/network/peers")
-	ret := []*ep.Peer{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetPeers.Output)
+func (mockSuite *MockSuite) TestGetPeers() {
+	resp := mockSuite.get("/network/peers")
+	ret := []*consensus_types.Peer{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetPeers.Output, ret)
 }
 
 /*
-func (this *MockSuite) TestGetPeer() {
-	addr := this.testData.GetPeer.Input.Address
-	resp := this.get("/network/peer/" + addr)
-	ret := []*ep.Peer{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetPeers.Output)
+func (mockSuite *MockSuite) TestGetPeer() {
+	addr := mockSuite.testData.GetPeer.Input.Address
+	resp := mockSuite.get("/network/peer/" + addr)
+	ret := []*core_types.Peer{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetPeers.Output)
 }
 */
 
 // ********************************************* Transactions *********************************************
 
-func (this *MockSuite) TestTransactCreate() {
-	resp := this.postJson("/unsafe/txpool", this.testData.TransactCreate.Input)
-	ret := &ep.Receipt{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.TransactCreate.Output)
+func (mockSuite *MockSuite) TestTransactCreate() {
+	resp := mockSuite.postJson("/unsafe/txpool", mockSuite.testData.TransactCreate.Input)
+	ret := &txs.Receipt{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.TransactCreate.Output, ret)
 }
 
-func (this *MockSuite) TestTransact() {
-	resp := this.postJson("/unsafe/txpool", this.testData.Transact.Input)
-	ret := &ep.Receipt{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.Transact.Output)
+func (mockSuite *MockSuite) TestTransact() {
+	resp := mockSuite.postJson("/unsafe/txpool", mockSuite.testData.Transact.Input)
+	ret := &txs.Receipt{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.Transact.Output, ret)
 }
 
-func (this *MockSuite) TestTransactNameReg() {
-	resp := this.postJson("/unsafe/namereg/txpool", this.testData.TransactNameReg.Input)
-	ret := &ep.Receipt{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.TransactNameReg.Output)
+func (mockSuite *MockSuite) TestTransactNameReg() {
+	resp := mockSuite.postJson("/unsafe/namereg/txpool", mockSuite.testData.TransactNameReg.Input)
+	ret := &txs.Receipt{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.TransactNameReg.Output, ret)
 }
 
-func (this *MockSuite) TestGetUnconfirmedTxs() {
-	resp := this.get("/txpool")
-	ret := &ep.UnconfirmedTxs{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.GetUnconfirmedTxs.Output)
+func (mockSuite *MockSuite) TestGetUnconfirmedTxs() {
+	resp := mockSuite.get("/txpool")
+	ret := &txs.UnconfirmedTxs{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.GetUnconfirmedTxs.Output, ret)
 }
 
-func (this *MockSuite) TestCallCode() {
-	resp := this.postJson("/codecalls", this.testData.CallCode.Input)
-	ret := &ep.Call{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.CallCode.Output)
+func (mockSuite *MockSuite) TestCallCode() {
+	resp := mockSuite.postJson("/codecalls", mockSuite.testData.CallCode.Input)
+	ret := &core_types.Call{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.CallCode.Output, ret)
 }
 
-func (this *MockSuite) TestCall() {
-	resp := this.postJson("/calls", this.testData.Call.Input)
-	ret := &ep.Call{}
-	errD := this.codec.Decode(ret, resp.Body)
-	this.NoError(errD)
-	this.Equal(ret, this.testData.CallCode.Output)
+func (mockSuite *MockSuite) TestCall() {
+	resp := mockSuite.postJson("/calls", mockSuite.testData.Call.Input)
+	ret := &core_types.Call{}
+	errD := mockSuite.codec.Decode(ret, resp.Body)
+	mockSuite.NoError(errD)
+	mockSuite.Equal(mockSuite.testData.CallCode.Output, ret)
 }
 
 // ********************************************* Utilities *********************************************
 
-func (this *MockSuite) get(endpoint string) *http.Response {
-	resp, errG := http.Get(this.sUrl + endpoint)
-	this.NoError(errG)
-	this.Equal(200, resp.StatusCode)
+func (mockSuite *MockSuite) get(endpoint string) *http.Response {
+	resp, errG := http.Get(mockSuite.sUrl + endpoint)
+	mockSuite.NoError(errG)
+	mockSuite.Equal(200, resp.StatusCode)
 	return resp
 }
 
-func (this *MockSuite) postJson(endpoint string, v interface{}) *http.Response {
-	bts, errE := this.codec.EncodeBytes(v)
-	this.NoError(errE)
-	resp, errP := http.Post(this.sUrl+endpoint, "application/json", bytes.NewBuffer(bts))
-	this.NoError(errP)
-	this.Equal(200, resp.StatusCode)
+func (mockSuite *MockSuite) postJson(endpoint string, v interface{}) *http.Response {
+	bts, errE := mockSuite.codec.EncodeBytes(v)
+	mockSuite.NoError(errE)
+	resp, errP := http.Post(mockSuite.sUrl+endpoint, "application/json", bytes.NewBuffer(bts))
+	mockSuite.NoError(errP)
+	mockSuite.Equal(200, resp.StatusCode)
 	return resp
 }
 

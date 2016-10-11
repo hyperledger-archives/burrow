@@ -9,4 +9,4 @@ git fetch origin $BRANCH
 git checkout $BRANCH
 go install ./cmd/erisdb
 
-erisdb $TMROOT # should be exposed by docker file
+erisdb $CHAIN_DIR # should be exposed by docker file

@@ -1,15 +1,24 @@
 package testdata
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/account"
-	ctypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/rpc/core/types"
-	stypes "github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/state/types"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/tendermint/types"
-	edb "github.com/eris-ltd/eris-db/erisdb"
-	ep "github.com/eris-ltd/eris-db/erisdb/pipe"
+	account "github.com/eris-ltd/eris-db/account"
+	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	event "github.com/eris-ltd/eris-db/event"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	"github.com/eris-ltd/eris-db/rpc/v0/shared"
+	transaction "github.com/eris-ltd/eris-db/txs"
+	mintTypes "github.com/tendermint/tendermint/types"
 )
 
-var testDataJson = `{
+// TODO: [Silas] This would really be much better as a composite literal in go
+// where the compiler/type system/IDE would make it easier to maintain
+// not entirely straightforward to convert it, but shouldn't be that hard either
+// with recursive use of fmt.Printf("%#v", subStruct) on the decoded in-memory
+// object
+var testDataJson = `
+{
   "chain_data": {
     "priv_validator": {
       "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
@@ -93,22 +102,20 @@ var testDataJson = `{
     "output": {
       "accounts": [
         {
-	      "address": "0000000000000000000000000000000000000000",
-	      "pub_key": null,
-	      "sequence": 0,
-	      "balance": 1337,
-	      "code": "",
-	      "storage_root": "",
-	      "permissions": {
-	        "base": {
-	          "perms": 2302,
-	          "set": 16383
-	        },
-	        "roles": [
-	          
-	        ]
-	      }
-	    },
+          "address": "0000000000000000000000000000000000000000",
+          "pub_key": null,
+          "sequence": 0,
+          "balance": 1337,
+          "code": "",
+          "storage_root": "",
+          "permissions": {
+            "base": {
+              "perms": 2302,
+              "set": 16383
+            },
+            "roles": []
+          }
+        },
         {
           "address": "0000000000000000000000000000000000000002",
           "pub_key": null,
@@ -246,7 +253,9 @@ var testDataJson = `{
     "output": {}
   },
   "GetBlock": {
-    "input": {"height": 0},
+    "input": {
+      "height": 0
+    },
     "output": null
   },
   "GetBlocks": {
@@ -264,21 +273,26 @@ var testDataJson = `{
       "height": 1,
       "round": 0,
       "step": 1,
-      "start_time": "",
-      "commit_time": "0001-01-01 00:00:00 +0000 UTC",
+      "start_time": "2016-09-18T10:03:55.100Z",
+      "commit_time": "2016-09-18T10:04:00.100Z",
       "validators": [
-        {
-          "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
-          "pub_key": [
-            1,
-            "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
-          ],
-          "bond_height": 0,
-          "unbond_height": 0,
-          "last_commit_height": 0,
-          "voting_power": 5000000000,
-          "accum": 0
-        }
+        [
+          1,
+          {
+            "validator": {
+              "address": "37236DF251AB70022B1DA351F08A20FB52443E37",
+              "pub_key": [
+                1,
+                "CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"
+              ],
+              "bond_height": 0,
+              "unbond_height": 0,
+              "last_commit_height": 0,
+              "voting_power": 5000000000,
+              "accum": 0
+            }
+          }
+        ]
       ],
       "proposal": null
     }
@@ -336,7 +350,9 @@ var testDataJson = `{
     "output": []
   },
   "GetPeer": {
-    "input": {"address": "127.0.0.1:30000"},
+    "input": {
+      "address": "127.0.0.1:30000"
+    },
     "output": {
       "is_outbound": false,
       "node_info": null
@@ -429,7 +445,11 @@ var testDataJson = `{
     }
   },
   "Call": {
-    "input": {"address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3", "from": "DEADBEEF", "data": ""},
+    "input": {
+      "address": "9FC1ECFCAE2A554D4D1A000D0D80F748E66359E3",
+      "from": "DEADBEEF",
+      "data": ""
+    },
     "output": {
       "return": "6000357c01000000000000000000000000000000000000000000000000000000009004806337f428411461004557806340c10f191461005a578063d0679d341461006e57005b610050600435610244565b8060005260206000f35b610068600435602435610082565b60006000f35b61007c600435602435610123565b60006000f35b600060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614156100dd576100e2565b61011f565b80600160005060008473ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828282505401925050819055505b5050565b80600160005060003373ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600050541061015e57610163565b610240565b80600160005060003373ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008282825054039250508190555080600160005060008473ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828282505401925050819055507f93eb3c629eb575edaf0252e4f9fc0c5ccada50496f8c1d32f0f93a65a8257eb560003373ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1681526020018281526020016000a15b5050565b6000600160005060008373ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060005054905061027d565b91905056",
       "gas_used": 0
@@ -493,50 +513,54 @@ var testDataJson = `{
       "name": "testKey",
       "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
       "data": "testData",
-      "expires": 250 }
+      "expires": 250
+    }
   },
   "GetNameRegEntries": {
     "input": {
       "filters": []
     },
-    "output": [11, {
+    "output": {
       "block_height": 1,
-      "names":[ {
-        "name": "testKey",
-        "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
-        "data": "testData",
-        "expires": 250
-      } ]
-    }]
+      "names": [
+        {
+          "name": "testKey",
+          "owner": "37236DF251AB70022B1DA351F08A20FB52443E37",
+          "data": "testData",
+          "expires": 250
+        }
+      ]
+    }
   }
-}`
+}
+`
 
 var serverDuration uint = 100
 
 type (
 	ChainData struct {
-		PrivValidator *types.PrivValidator `json:"priv_validator"`
-		Genesis       *stypes.GenesisDoc   `json:"genesis"`
+		PrivValidator *mintTypes.PrivValidator `json:"priv_validator"`
+		Genesis       *stypes.GenesisDoc       `json:"genesis"`
 	}
 
 	GetAccountData struct {
-		Input  *edb.AddressParam `json:"input"`
-		Output *account.Account  `json:"output"`
+		Input  *rpc_v0.AddressParam `json:"input"`
+		Output *account.Account     `json:"output"`
 	}
 
 	GetAccountsData struct {
-		Input  *edb.AccountsParam `json:"input"`
-		Output *ep.AccountList    `json:"output"`
+		Input  *rpc_v0.AccountsParam   `json:"input"`
+		Output *core_types.AccountList `json:"output"`
 	}
 
 	GetStorageData struct {
-		Input  *edb.AddressParam `json:"input"`
-		Output *ep.Storage       `json:"output"`
+		Input  *rpc_v0.AddressParam `json:"input"`
+		Output *core_types.Storage  `json:"output"`
 	}
 
 	GetStorageAtData struct {
-		Input  *edb.StorageAtParam `json:"input"`
-		Output *ep.StorageItem     `json:"output"`
+		Input  *rpc_v0.StorageAtParam  `json:"input"`
+		Output *core_types.StorageItem `json:"output"`
 	}
 
 	GenPrivAccountData struct {
@@ -544,125 +568,125 @@ type (
 	}
 
 	GetBlockchainInfoData struct {
-		Output *ep.BlockchainInfo `json:"output"`
+		Output *core_types.BlockchainInfo `json:"output"`
 	}
 
 	GetChainIdData struct {
-		Output *ep.ChainId `json:"output"`
+		Output *core_types.ChainId `json:"output"`
 	}
 
 	GetGenesisHashData struct {
-		Output *ep.GenesisHash `json:"output"`
+		Output *core_types.GenesisHash `json:"output"`
 	}
 
 	GetLatestBlockHeightData struct {
-		Output *ep.LatestBlockHeight `json:"output"`
+		Output *core_types.LatestBlockHeight `json:"output"`
 	}
 
 	GetLatestBlockData struct {
-		Output *types.Block `json:"output"`
+		Output *mintTypes.Block `json:"output"`
 	}
 
 	GetBlockData struct {
-		Input  *edb.HeightParam `json:"input"`
-		Output *types.Block     `json:"output"`
+		Input  *rpc_v0.HeightParam `json:"input"`
+		Output *mintTypes.Block    `json:"output"`
 	}
 
 	GetBlocksData struct {
-		Input  *edb.BlocksParam `json:"input"`
-		Output *ep.Blocks       `json:"output"`
+		Input  *rpc_v0.BlocksParam `json:"input"`
+		Output *core_types.Blocks  `json:"output"`
 	}
 
 	GetConsensusStateData struct {
-		Output *ep.ConsensusState `json:"output"`
+		Output *consensus_types.ConsensusState `json:"output"`
 	}
 
 	GetValidatorsData struct {
-		Output *ep.ValidatorList `json:"output"`
+		Output *core_types.ValidatorList `json:"output"`
 	}
 
 	GetNetworkInfoData struct {
-		Output *ep.NetworkInfo `json:"output"`
+		Output *shared.NetworkInfo `json:"output"`
 	}
 
 	GetClientVersionData struct {
-		Output *ep.ClientVersion `json:"output"`
+		Output *core_types.ClientVersion `json:"output"`
 	}
 
 	GetMonikerData struct {
-		Output *ep.Moniker `json:"output"`
+		Output *core_types.Moniker `json:"output"`
 	}
 
 	IsListeningData struct {
-		Output *ep.Listening `json:"output"`
+		Output *core_types.Listening `json:"output"`
 	}
 
 	GetListenersData struct {
-		Output *ep.Listeners `json:"output"`
+		Output *core_types.Listeners `json:"output"`
 	}
 
 	GetPeersData struct {
-		Output []*ep.Peer `json:"output"`
+		Output []*consensus_types.Peer `json:"output"`
 	}
 
 	GetPeerData struct {
-		Input  *edb.PeerParam `json:"input"`
-		Output *ep.Peer       `json:"output"`
+		Input  *rpc_v0.PeerParam     `json:"input"`
+		Output *consensus_types.Peer `json:"output"`
 	}
 
 	TransactData struct {
-		Input  *edb.TransactParam `json:"input"`
-		Output *ep.Receipt        `json:"output"`
+		Input  *rpc_v0.TransactParam `json:"input"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	TransactCreateData struct {
-		Input  *edb.TransactParam `json:"input"`
-		Output *ep.Receipt        `json:"output"`
+		Input  *rpc_v0.TransactParam `json:"input"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
-		Output *ep.UnconfirmedTxs `json:"output"`
+		Output *transaction.UnconfirmedTxs `json:"output"`
 	}
 
 	CallCodeData struct {
-		Input  *edb.CallCodeParam `json:"input"`
-		Output *ep.Call           `json:"output"`
+		Input  *rpc_v0.CallCodeParam `json:"input"`
+		Output *core_types.Call      `json:"output"`
 	}
 
 	CallData struct {
-		Input  *edb.CallParam `json:"input"`
-		Output *ep.Call       `json:"output"`
+		Input  *rpc_v0.CallParam `json:"input"`
+		Output *core_types.Call  `json:"output"`
 	}
 
 	EventSubscribeData struct {
-		Input  *edb.EventIdParam `json:"input"`
-		Output *ep.EventSub      `json:"output"`
+		Input  *rpc_v0.EventIdParam `json:"input"`
+		Output *event.EventSub      `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
-		Input  *edb.SubIdParam `json:"input"`
-		Output *ep.EventUnsub  `json:"output"`
+		Input  *rpc_v0.SubIdParam `json:"input"`
+		Output *event.EventUnsub  `json:"output"`
 	}
 
 	TransactNameRegData struct {
-		Input  *edb.TransactNameRegParam `json:"input"`
-		Output *ep.Receipt               `json:"output"`
+		Input  *rpc_v0.TransactNameRegParam `json:"input"`
+		Output *transaction.Receipt         `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
-		Input  *edb.NameRegEntryParam `json:"input"`
-		Output *types.NameRegEntry    `json:"output"`
+		Input  *rpc_v0.NameRegEntryParam `json:"input"`
+		Output *core_types.NameRegEntry  `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *edb.FilterListParam    `json:"input"`
-		Output *ctypes.ResultListNames `json:"output"`
+		Input  *rpc_v0.FilterListParam     `json:"input"`
+		Output *core_types.ResultListNames `json:"output"`
 	}
 
 	/*
 		EventPollData struct {
-			Input  *edb.SubIdParam  `json:"input"`
-			Output *ep.PollResponse `json:"output"`
+			Input  *rpc_v0.SubIdParam  `json:"input"`
+			Output *event.PollResponse `json:"output"`
 		}
 	*/
 
@@ -704,10 +728,9 @@ type (
 )
 
 func LoadTestData() *TestData {
-	codec := edb.NewTCodec()
+	codec := rpc_v0.NewTCodec()
 	testData := &TestData{}
-	err := codec.DecodeBytes(testData, []byte(testDataJson))
-	if err != nil {
+	if err := codec.DecodeBytes(testData, []byte(testDataJson)); err != nil {
 		panic(err)
 	}
 	return testData

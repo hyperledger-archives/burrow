@@ -1,10 +1,17 @@
 // Websocket client implementation. This will be used in tests.
 package client
 
+// NOTE: this websocket client acts on rpc/v0,
+// uses github.com/gorilla/websocket
+// and will be deprecated after 0.12
+// It is recommended to use the interfaces NodeClient
+// and NodeWebsocketClient.
+
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gorilla/websocket"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 // A websocket client subscribes and unsubscribes to events

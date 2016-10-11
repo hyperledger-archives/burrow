@@ -2,10 +2,11 @@ package files
 
 import (
 	"bytes"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var tempFolder = os.TempDir()

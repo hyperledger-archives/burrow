@@ -2,19 +2,20 @@ package testdata
 
 import (
 	"fmt"
-	"github.com/eris-ltd/eris-db/files"
-	"github.com/eris-ltd/eris-db/server"
 	"os"
 	"path"
 
-	. "github.com/tendermint/tendermint/common"
-	stypes "github.com/tendermint/tendermint/state/types"
+	"github.com/eris-ltd/eris-db/files"
+	"github.com/eris-ltd/eris-db/server"
+
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	. "github.com/tendermint/go-common"
+	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/wire"
 )
 
 const TendermintConfigDefault = `# This is a TOML config file.
-# For more information, see https://github.com/toml-lang/toml
+# For more information, see https:/github.com/toml-lang/toml
 
 moniker = "__MONIKER__"
 seeds = ""

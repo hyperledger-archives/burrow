@@ -1,0 +1,19 @@
+package: github.com/eris-ltd/eris-db
+import:
+- package: github.com/eris-ltd/eris-logger
+- package: github.com/eris-ltd/eris-keys
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
+- package: github.com/tendermint/tendermint
+- package: github.com/gin-gonic/gin
+- package: github.com/gorilla/websocket
+- package: github.com/naoina/toml
+- package: github.com/stretchr/testify
+- package: github.com/tommy351/gin-cors
+- package: golang.org/x/crypto
+  subpackages:
+  - ripemd160
+- package: gopkg.in/fatih/set.v0
+- package: gopkg.in/tylerb/graceful.v1
+- package: golang.org/x/net/http2
+- package: github.com/eris-ltd/common

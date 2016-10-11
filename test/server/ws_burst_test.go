@@ -1,14 +1,15 @@
 package server
 
 import (
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/stretchr/testify/assert"
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/server"
 	"testing"
 	"time"
+
+	"github.com/eris-ltd/eris-db/client"
+	"github.com/eris-ltd/eris-db/server"
+	"github.com/stretchr/testify/assert"
 )
 
-const CONNS = 100
+const CONNS uint16 = 100
 const MESSAGES = 1000
 
 // To keep track of new websocket sessions on the server.
@@ -52,7 +53,8 @@ func TestWsFlooding(t *testing.T) {
 
 	sc.Run(oChan, cChan)
 
-	serveProcess := NewServeScumSocket(wsServer)
+	serveProcess, err := NewServeScumSocket(wsServer)
+	assert.NoError(t, err, "Failed to serve new websocket.")
 	errServe := serveProcess.Start()
 	assert.NoError(t, errServe, "ScumSocketed!")
 	t.Logf("Flooding...")
@@ -64,18 +66,18 @@ func TestWsFlooding(t *testing.T) {
 	assert.NoError(t, errRun, "ScumSocketed!")
 	assert.NoError(t, errStop, "ScumSocketed!")
 	o, c, a := sc.Report()
-	assert.Equal(t, o, CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
-	assert.Equal(t, c, CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
-	assert.Equal(t, a, 0, "Server registered '%d' conns still active after shutting down.", a)
+	assert.Equal(t, uint16(o), CONNS, "Server registered '%d' opened conns out of '%d'", o, CONNS)
+	assert.Equal(t, uint16(c), CONNS, "Server registered '%d' closed conns out of '%d'", c, CONNS)
+	assert.Equal(t, uint16(a), uint16(0), "Server registered '%d' conns still active after shutting down.", a)
 }
 
 func runWs() error {
 	doneChan := make(chan bool)
 	errChan := make(chan error)
-	for i := 0; i < CONNS; i++ {
+	for i := uint16(0); i < CONNS; i++ {
 		go wsClient(doneChan, errChan)
 	}
-	runners := 0
+	runners := uint16(0)
 	for runners < CONNS {
 		select {
 		case _ = <-doneChan:

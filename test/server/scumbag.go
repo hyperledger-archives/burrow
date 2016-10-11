@@ -2,12 +2,13 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/gin-gonic/gin"
-	"github.com/eris-ltd/eris-db/Godeps/_workspace/src/github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/server"
 	"os"
 	"runtime"
+
+	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/server"
+	"github.com/gin-gonic/gin"
+	"github.com/tendermint/log15"
 )
 
 func init() {
@@ -50,18 +51,19 @@ func (this *ScumSocketService) Process(data []byte, session *server.WSSession) {
 	session.Write(bts)
 }
 
-func NewScumsocketServer(maxConnections uint) *server.WebSocketServer {
+func NewScumsocketServer(maxConnections uint16) *server.WebSocketServer {
 	sss := &ScumSocketService{}
 	return server.NewWebSocketServer(maxConnections, sss)
 }
 
-func NewServeScumbag() *server.ServeProcess {
+func NewServeScumbag() (*server.ServeProcess, error) {
 	cfg := server.DefaultServerConfig()
 	cfg.Bind.Port = uint16(31400)
 	return server.NewServeProcess(cfg, NewScumbagServer())
 }
 
-func NewServeScumSocket(wsServer *server.WebSocketServer) *server.ServeProcess {
+func NewServeScumSocket(wsServer *server.WebSocketServer) (*server.ServeProcess,
+	error) {
 	cfg := server.DefaultServerConfig()
 	cfg.WebSocket.WebSocketEndpoint = "/scumsocket"
 	cfg.Bind.Port = uint16(31401)
