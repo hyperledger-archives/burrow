@@ -21,6 +21,9 @@ import (
 	// "strings"
 
 	"github.com/tendermint/go-rpc/client"
+	// Note [ben]: this is included to silence the logger from tendermint/go-rpc/client
+	// see func init()
+	tendermint_log "github.com/tendermint/log15"
 
 	log "github.com/eris-ltd/eris-logger"
 
@@ -71,6 +74,13 @@ func NewErisNodeClient(rpcString string) *ErisNodeClient {
 	return &ErisNodeClient{
 		broadcastRPC: rpcString,
 	}
+}
+
+// Note [Ben]: This is a hack to silence Tendermint logger from tendermint/go-rpc
+// it needs to be initialised before go-rpc, hence it's placement here.
+func init() {
+	h := tendermint_log.LvlFilterHandler(tendermint_log.LvlWarn, tendermint_log.StdoutHandler)
+    tendermint_log.Root().SetHandler(h)
 }
 
 //------------------------------------------------------------------------------------
