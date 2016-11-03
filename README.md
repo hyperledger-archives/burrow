@@ -49,7 +49,7 @@ Once the server has started, it will begin syncing up with the network. At that 
 
 ## Configuration
 
-See commented template config at [server_config.toml](server_config.toml). This will be written as part of the `eris chains make` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_make/) and can be edited prior to the `eris chains start` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_start/).
+A commented template config will be written as part of the `eris chains make` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_make/) and can be edited prior to the `eris chains start` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_start/).
 
 ## Contribute
 
