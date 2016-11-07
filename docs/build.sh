@@ -28,7 +28,7 @@ cd $repo
 rm -rf $docs_name
 go run ./docs/generator.go
 
-if [[ "$1" == "master" ]]
+if [[ "$1" == "release" ]]
 then
   mkdir -p $docs_name/$slim_name/latest
   rsync -av $docs_name/$slim_name/$release_min/ $docs_name/$slim_name/latest/
