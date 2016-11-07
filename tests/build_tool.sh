@@ -45,7 +45,7 @@ rm $REPO/"$TARGET"_build_artifact
 rm $REPO/eris-client
 
 # Extra Tags
-if [[ "$branch" = "master" ]]
+if [[ "$branch" = "release" ]]
 then
   docker tag -f $IMAGE:$release_min $IMAGE:$release_maj
   docker tag -f $IMAGE:$release_min $IMAGE:latest
