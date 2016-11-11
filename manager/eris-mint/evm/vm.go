@@ -156,7 +156,9 @@ func (vm *VM) DelegateCall(caller, callee *Account, code, input []byte, value in
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
+	// NOTE: [ben] hotfix for issue 371;
+	// introduce event EventStringAccDelegateCall Acc/%X/DelegateCall
+	// defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
 
 	// DelegateCall does not transfer the value to the callee.
 
