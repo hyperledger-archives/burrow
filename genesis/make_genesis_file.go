@@ -12,14 +12,17 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/eris-ltd/common/go/common"
-	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/types"
-	//"github.com/spf13/cobra"
+	"github.com/eris-ltd/common/go/common"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	wire "github.com/tendermint/go-wire"
 
+	// TODO
+	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/types"
+
+	// TODO
 	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/account"
-	ptypes "github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/permission/types"
-	stypes "github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/state/types"
+	//"github.com/eris-ltd/eris-db/account"
 )
 
 //------------------------------------------------------------------------------------
@@ -105,7 +108,7 @@ func genesisFromPrivValBytes(chainID string, privJSON []byte) *stypes.GenesisDoc
 	var err error
 	privVal := wire.ReadJSON(&types.PrivValidator{}, privJSON, &err).(*types.PrivValidator)
 	if err != nil {
-		Exit(fmt.Errorf("Error reading PrivValidator on stdin: %v\n", err))
+		common.Exit(fmt.Errorf("Error reading PrivValidator on stdin: %v\n", err))
 	}
 	pubKey := privVal.PubKey
 	amt := int64(1) << 50
@@ -166,7 +169,7 @@ func pubKeyStringsToPubKeys(pubkeys []string) []account.PubKeyEd25519 {
 	for i, k := range pubkeys {
 		pubBytes, err := hex.DecodeString(k)
 		if err != nil {
-			Exit(fmt.Errorf("Pubkey (%s) is invalid hex: %v", k, err))
+			common.Exit(fmt.Errorf("Pubkey (%s) is invalid hex: %v", k, err))
 		}
 		copy(pubKeys[i][:], pubBytes)
 	}
@@ -188,7 +191,7 @@ func parseCsv(filePath string) (pubKeys []account.PubKeyEd25519, amts []int64, n
 
 	csvFile, err := os.Open(filePath)
 	if err != nil {
-		Exit(fmt.Errorf("Couldn't open file: %s: %v", filePath, err))
+		common.Exit(fmt.Errorf("Couldn't open file: %s: %v", filePath, err))
 	}
 	defer csvFile.Close()
 
@@ -196,7 +199,7 @@ func parseCsv(filePath string) (pubKeys []account.PubKeyEd25519, amts []int64, n
 	//r.FieldsPerRecord = # of records expected
 	params, err := r.ReadAll()
 	if err != nil {
-		Exit(fmt.Errorf("Couldn't read file: %v", err))
+		common.Exit(fmt.Errorf("Couldn't read file: %v", err))
 
 	}
 
@@ -218,7 +221,7 @@ func parseCsv(filePath string) (pubKeys []account.PubKeyEd25519, amts []int64, n
 	for i, perm := range permsS {
 		pflag, err := strconv.Atoi(perm)
 		if err != nil {
-			Exit(fmt.Errorf("Permissions must be an integer"))
+			common.Exit(fmt.Errorf("Permissions must be an integer"))
 		}
 		perms[i] = ptypes.PermFlag(pflag)
 	}
@@ -226,7 +229,7 @@ func parseCsv(filePath string) (pubKeys []account.PubKeyEd25519, amts []int64, n
 	for i, setbit := range setbitS {
 		setbitsFlag, err := strconv.Atoi(setbit)
 		if err != nil {
-			Exit(fmt.Errorf("SetBits must be an integer"))
+			common.Exit(fmt.Errorf("SetBits must be an integer"))
 		}
 		setbits[i] = ptypes.PermFlag(setbitsFlag)
 	}
@@ -253,13 +256,13 @@ func readStdinTimeout() []byte {
 	ch := make(chan []byte, 1)
 	go func() {
 		privJSON, err := ioutil.ReadAll(os.Stdin)
-		IfExit(err)
+		common.IfExit(err)
 		ch <- privJSON
 	}()
 	ticker := time.Tick(time.Second * stdinTimeoutSeconds)
 	select {
 	case <-ticker:
-		Exit(fmt.Errorf("Please pass a priv_validator.json on stdin, or specify either a pubkey with --pub or csv file with --csv"))
+		common.Exit(fmt.Errorf("Please pass a priv_validator.json on stdin, or specify either a pubkey with --pub or csv file with --csv"))
 	case privJSON := <-ch:
 		return privJSON
 	}
