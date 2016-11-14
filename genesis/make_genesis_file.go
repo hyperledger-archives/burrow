@@ -20,24 +20,23 @@ import (
 //------------------------------------------------------------------------------------
 // core functions
 
-func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) ([]byte, error) {
+func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) error {
 	var genDoc *stypes.GenesisDoc
-	var err error
 
 	// TODO [eb] eliminate reading priv_val ... [zr] where?
 	if accountsPathCSV == "" || validatorsPathCSV == "" {
-		return []byte{}, fmt.Errorf("both accounts.csv and validators.csv is required")
+		return fmt.Errorf("both accounts.csv and validators.csv is required")
 
 	}
 
 	pubkeys, amts, names, perms, setbits, err := parseCsv(validatorsPathCSV)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pubkeysA, amtsA, namesA, permsA, setbitsA, err := parseCsv(accountsPathCSV)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	genDoc = newGenDoc(chainID, len(pubkeys), len(pubkeysA))
@@ -51,14 +50,15 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) ([]byte, 
 	buf, buf2, n := new(bytes.Buffer), new(bytes.Buffer), new(int)
 	wire.WriteJSON(genDoc, buf, n, &err)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := json.Indent(buf2, buf.Bytes(), "", "\t"); err != nil {
-		return nil, err
+		return err
 	}
-	genesisBytes := buf2.Bytes()
+	genesisString := buf2.String()
+	fmt.Println(genesisString)
 
-	return genesisBytes, nil
+	return nil
 }
 
 //-----------------------------------------------------------------------------
