@@ -6,6 +6,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO refactor these vars into a struct?
+var (
+	//DirFlag string
+	//AddrsFlag  string
+	AccountsPathFlag   string
+	ValidatorsPathFlag string
+	//CsvPathFlag        string
+	//PubkeyFlag         string
+	//RootFlag           string
+	//NoValAccountsFlag  bool
+)
+
 var GenesisGenCmd = &cobra.Command{
 	Use:   "genesis",
 	Short: "eris-client genesis creates a genesis.json with known inputs",
@@ -13,32 +25,16 @@ var GenesisGenCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 
-		genesis.GenerateKnown("thisIsChainID", "", "114234767676")
+		genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
 
 	},
 }
 
 func buildGenesisGenCommand() {
-	//addTransactionPersistentFlags()
+	addGenesisPersistentFlags()
 }
 
-var (
-	DirFlag string
-	//AddrsFlag  string
-	CsvPathFlag       string
-	PubkeyFlag        string
-	RootFlag          string
-	NoValAccountsFlag bool
-)
-
-//var knownCmd = &cobra.Command{
-//	Use:   "known",
-//	Short: "mintgen known <chain_id> [flags] ",
-//	Long:  "Create a genesis.json with --pub <pub_1> <pub_2> <pub_N> or with --csv <path_to_file>, or pass a priv_validator.json on stdin. Two csv file names can be passed (comma separated) to distinguish validators and accounts.",
-//	//Run:   cliKnown,
-//}
-//
-//
-//knownCmd.Flags().StringVarP(&PubkeyFlag, "pub", "", "", "pubkeys to include when generating genesis.json. flag is req'd")
-//knownCmd.Flags().StringVarP(&CsvPathFlag, "csv", "", "", "path to .csv with the following params: (pubkey, starting balance, name, permissions, setbit")
-//
+func addGenesisPersistentFlags() {
+	GenesisGenCmd.Flags().StringVarP(&AccountsPathFlag, "accounts", "", "", "path to accounts.csv with the following params: (pubkey, starting balance, name, permissions, setbit")
+	GenesisGenCmd.Flags().StringVarP(&ValidatorsPathFlag, "validators", "", "", "path to validators.csv with the following params: (pubkey, starting balance, name, permissions, setbit")
+}
