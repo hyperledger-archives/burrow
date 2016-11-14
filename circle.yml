@@ -38,7 +38,7 @@ test:
 
 deployment:
   release-0.12:
-    branch: release
+    branch: release-0.12
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - tests/build_tool.sh
