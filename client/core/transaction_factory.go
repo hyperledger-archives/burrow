@@ -308,7 +308,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 						return
 					}
 					if confirmation.Exception != nil {
-						log.Errorf("Encountered Exception from chain w: %s\n", confirmation.Error)
+						log.Errorf("Encountered Exception from chain: %s\n", confirmation.Exception)
 						err = confirmation.Exception
 						return
 					}
