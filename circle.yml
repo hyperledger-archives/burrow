@@ -53,3 +53,11 @@ deployment:
       - "docker rmi quay.io/eris/db:latest && docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
       - docker push quay.io/eris/db
       - docs/build.sh
+  galactica:
+    branch: galactica
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - tests/build_tool.sh
+      - "docker rmi quay.io/eris/db:latest && docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
+      - docker push quay.io/eris/db
+      - docs/build.sh

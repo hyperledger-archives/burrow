@@ -34,7 +34,7 @@ const (
 	// Minor version component of the current release
 	erisVersionMinor = 12
 	// Patch version component of the current release
-	erisVersionPatch = 1
+	erisVersionPatch = 100
 )
 
 var erisVersion *VersionIdentifier
@@ -129,4 +129,4 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 
 // IMPORTANT: Eris-DB version must be on the last line of this file for
 // the deployment script tests/build_tool.sh to pick up the right label.
-const VERSION = "0.12.1"
+const VERSION = "0.12.100"
