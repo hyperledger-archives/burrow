@@ -112,6 +112,11 @@ func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
 
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
+
+	// MARMOT:
+	fmt.Println("\n\n MARMOT APPEND\n\n")
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
+
 	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
@@ -133,6 +138,10 @@ func (app *ErisMint) CheckTx(txBytes []byte) tmsp.Result {
 	}
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
+
+	// MARMOT:
+	fmt.Println("\n\n MARMOT CHECK\n\n")
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
 	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
@@ -165,7 +174,11 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	return tmsp.NewResultOK(app.state.Hash(), "Success")
+	// MARMOT:
+	appHash := app.state.Hash()
+	fmt.Printf("\n\n MARMOT COMMIT: %X\n\n", appHash)
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
+	return tmsp.NewResultOK(appHash, "Success")
 }
 
 func (app *ErisMint) Query(query []byte) (res tmsp.Result) {

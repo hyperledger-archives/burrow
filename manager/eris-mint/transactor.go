@@ -68,7 +68,7 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 	*core_types.Call, error) {
 
 	st := this.erisMint.GetState()
-	cache := state.NewBlockCache(st) // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
+	cache := this.erisMint.GetCheckCache()
 	outAcc := cache.GetAccount(toAddress)
 	if outAcc == nil {
 		return nil, fmt.Errorf("Account %X does not exist", toAddress)
