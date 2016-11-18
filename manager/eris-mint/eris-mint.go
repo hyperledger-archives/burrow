@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"sync"
+	"time"
 
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
@@ -174,6 +175,10 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
+	// MARMOT:
+	// set internal time as two seconds per block
+	app.state.LastBlockTime = app.state.LastBlockTime.Add(time.Duration(2) * time.Second)
+	fmt.Printf("\n\nMARMOT TIME: %s\n\n", app.state.LastBlockTime)
 	// MARMOT:
 	appHash := app.state.Hash()
 	fmt.Printf("\n\n MARMOT COMMIT: %X\n\n", appHash)
