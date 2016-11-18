@@ -413,7 +413,10 @@ func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	}
 
 	if genDoc.GenesisTime.IsZero() {
-		genDoc.GenesisTime = time.Now()
+		// MARMOT: really?
+		// set time to 11/18/2016 @ 4:09am (UTC)
+		genDoc.GenesisTime = time.Unix(1479442162, 0)
+		// genDoc.GenesisTime = time.Now()
 	}
 
 	// Make accounts state tree

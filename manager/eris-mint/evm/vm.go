@@ -52,9 +52,9 @@ func SetDebug(d bool) {
 }
 
 func (d Debug) Printf(s string, a ...interface{}) {
-	if d {
+	// if d {
 		fmt.Printf(s, a...)
-	}
+	// }
 }
 
 type VM struct {

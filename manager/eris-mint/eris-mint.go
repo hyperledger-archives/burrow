@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"sync"
+	"time"
 
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
@@ -112,6 +113,11 @@ func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
 
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
+
+	// MARMOT:
+	fmt.Println("\n\n MARMOT APPEND\n\n")
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
+
 	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
@@ -133,6 +139,10 @@ func (app *ErisMint) CheckTx(txBytes []byte) tmsp.Result {
 	}
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
+
+	// MARMOT:
+	fmt.Println("\n\n MARMOT CHECK\n\n")
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
 	return tmsp.NewResultOK(receiptBytes, "Success")
 }
 
@@ -165,7 +175,15 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	return tmsp.NewResultOK(app.state.Hash(), "Success")
+	// MARMOT:
+	// set internal time as two seconds per block
+	app.state.LastBlockTime = app.state.LastBlockTime.Add(time.Duration(2) * time.Second)
+	fmt.Printf("\n\nMARMOT TIME: %s\n\n", app.state.LastBlockTime)
+	// MARMOT:
+	appHash := app.state.Hash()
+	fmt.Printf("\n\n MARMOT COMMIT: %X\n\n", appHash)
+	// return tmsp.NewResultOK(app.state.Hash(), "Success")
+	return tmsp.NewResultOK(appHash, "Success")
 }
 
 func (app *ErisMint) Query(query []byte) (res tmsp.Result) {
