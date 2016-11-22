@@ -73,6 +73,9 @@ func AddClientCommands() {
 	buildTransactionCommand()
 	ErisClientCmd.AddCommand(TransactionCmd)
 
+	buildGenesisGenCommand()
+	ErisClientCmd.AddCommand(GenesisGenCmd)
+
 	buildStatusCommand()
 	ErisClientCmd.AddCommand(StatusCmd)
 }
