@@ -51,6 +51,10 @@ vet:
 .PHONY: build
 build:	build_db build_client build_keys
 
+# build all targets in github.com/eris-ltd/eris-db with checks for race conditions
+.PHONY: build_race
+build_race:	build_race_db build_race_client build_race_keys
+
 # build eris-db
 .PHONY: build_db
 build_db:
@@ -64,4 +68,19 @@ build_client:
 # build eris-keys
 .PHONY: build_keys
 build_keys:
+	@echo "Marmots need to complete moving repository eris-keys into eris-db."
+
+# build eris-db with checks for race conditions
+.PHONY: build_race_db
+build_race_db:
+	go build -race -o ${BUILD_DIR}/eris-db ./cmd/eris-db
+
+# build eris-client with checks for race conditions
+.PHONY: build_race_client
+build_race_client:
+	go build -race -o ${BUILD_DIR}/eris-client ./client/cmd/eris-client
+
+# build eris-keys with checks for race conditions
+.PHONY: build_race_keys
+build_race_keys:
 	@echo "Marmots need to complete moving repository eris-keys into eris-db."
