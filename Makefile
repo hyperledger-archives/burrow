@@ -6,6 +6,7 @@ GOFILES_NOVENDOR := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 PACKAGES_NOVENDOR := $(shell go list github.com/eris-ltd/eris-db/... | grep -v /vendor/)
 VERSION_MIN := $(shell cat ./version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 VERSION_MAJ := $(shell echo ${VERSION_MIN} | cut -d . -f 1-2)
+COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
 BUILD_DIR?=target
 
 .PHONY: greet
@@ -58,12 +59,12 @@ build_race:	build_race_db build_race_client build_race_keys
 # build eris-db
 .PHONY: build_db
 build_db:
-	go build -o ${BUILD_DIR}/eris-db ./cmd/eris-db
+	go build -o ${BUILD_DIR}/eris-db-${COMMIT_SHA} ./cmd/eris-db
 
 # build eris-client
 .PHONY: build_client
 build_client:
-	go build -o ${BUILD_DIR}/eris-client ./client/cmd/eris-client
+	go build -o ${BUILD_DIR}/eris-client-${COMMIT_SHA} ./client/cmd/eris-client
 
 # build eris-keys
 .PHONY: build_keys
@@ -73,12 +74,12 @@ build_keys:
 # build eris-db with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
-	go build -race -o ${BUILD_DIR}/eris-db ./cmd/eris-db
+	go build -race -o ${BUILD_DIR}/eris-db-${COMMIT_SHA} ./cmd/eris-db
 
 # build eris-client with checks for race conditions
 .PHONY: build_race_client
 build_race_client:
-	go build -race -o ${BUILD_DIR}/eris-client ./client/cmd/eris-client
+	go build -race -o ${BUILD_DIR}/eris-client-${COMMIT_SHA} ./client/cmd/eris-client
 
 # build eris-keys with checks for race conditions
 .PHONY: build_race_keys
