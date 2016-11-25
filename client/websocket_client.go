@@ -97,7 +97,7 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 				// Received confirmation of subscription to event streams
 				// TODO: collect subscription IDs, push into channel and on completion
 				// unsubscribe
-				log.Infof("[eris-client] recceived confirmation for event (%s) with subscription id (%s).",
+				log.Infof("[eris-client] received confirmation for event (%s) with subscription id (%s).",
 					subscription.Event, subscription.SubscriptionId)
 				continue
 			}
