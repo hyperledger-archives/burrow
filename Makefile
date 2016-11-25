@@ -6,6 +6,7 @@ GOFILES_NOVENDOR := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 PACKAGES_NOVENDOR := $(shell go list github.com/eris-ltd/eris-db/... | grep -v /vendor/)
 VERSION_MIN := $(shell cat ./version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 VERSION_MAJ := $(shell echo ${VERSION_MIN} | cut -d . -f 1-2)
+BUILD_DIR?=target
 
 .PHONY: greet
 greet:
@@ -43,3 +44,24 @@ lint:
 vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
+
+### Building code
+
+# build all targets in github.com/eris-ltd/eris-db
+.PHONY: build
+build:	build_db build_client build_keys
+
+# build eris-db
+.PHONY: build_db
+build_db:
+	go build -o ${BUILD_DIR}/eris-db ./cmd/eris-db
+
+# build eris-client
+.PHONY: build_client
+build_client:
+	go build -o ${BUILD_DIR}/eris-client ./client/cmd/eris-client
+
+# build eris-keys
+.PHONY: build_keys
+build_keys:
+	@echo "Marmots need to complete moving repository eris-keys into eris-db."
