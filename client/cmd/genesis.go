@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/eris-ltd/eris-db/genesis"
 
 	"github.com/spf13/cobra"
@@ -25,8 +27,11 @@ var GenesisGenCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 
-		genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
-
+		genesisFile, err := genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(genesisFile) // may want to save somewhere instead
 	},
 }
 
