@@ -1,4 +1,4 @@
-# Contributing to `eris-cli`:
+# Contributing to `eris-db`:
 Forked from Docker's [contributing guidelines](https://github.com/docker/docker/blob/master/CONTRIBUTING.md)
 
 ## Bug Reporting
@@ -52,82 +52,7 @@ We use LGTM (Looks Good To Me) in commands on the code review to indicate accept
 
 ## Errors and Log Messages Style
 
-The below guidelines are more observations of how things are done now rather than strict rules to follow. These are collections of facts to make your code look better and better fit the project. Again, as with coding guidelines, please apply your best judgement.
-
-#### Errors
-
-* Error messages should be short and concise, not containing the `\n`, `\t`, `=>`, or other formatting characters, and not ending with a period or a colon. 
-* Ideally, it should fit one line and be less than 80 characters long. 
-* If you really need to make it multi-line, use back tick quotes or Go text templates.
-* Prefer the present tense to the past tense or the subjunctive mood.
-* Multiple sentences within the same error are separated with a dot and a space.
-
-  ```
-  fmt.Errorf("I don't know that service. Please retry with a known service")
-  ```
-* Returned error messages from top level functions (the ones invoked via [Cobra](https://github.com/spf13/cobra/cobra) package and from the `cmd` subdirectory) should start with a capital letter, state the nature of the problem, and, if necessary, include the lower level error (separated from the main message via a colon and a space). The message should be stated from the point of view of the software user and don't include names of functions, packages, or terms which are not found somewhere in the tutorials:
-
-  ```
-  return fmt.Errorf("I cannot find that service. Please check the service name you sent me")
-  return fmt.Errorf("Could not add ssh.exe to PATH: %v", err)
-  ```
-* Returned error messages from package level or utility functions which in turn be used by the top level functions should start with a small letter and, if necessary, include the lower level error (separated from the main message via a colon and a space) or use prefabricated errors. The message should be stated from the point of view of the package or library user (Eris developer):
-
-  ```
-  return fmt.Errorf("there is no chain checked out")
-  return fmt.Errorf("cannot migrate directories: %v", err)
-  
-  var ErrNoSuchVolume = errors.New("no such volume")
-  return ErrNoSuchVolume
-  ```
-* Returned errors from the Docker Client library ([github.com/fsouza/go-dockerclient](https://github.com/fsouza/go-dockerclient)) should wrap that error with the `util.DockerError` function to remove the word "API" and HTTP status code from the error message:
-
-  ```
-  return util.DockerError(err)
-  return DockerError(DockerClient.StartContainer(name, nil))
-  ```
-
-* Errors that are printed to the console (that is not returned) should use the `logrus.Error` function.
-
-#### Log Messages
-
-* Log messages should be complete sentences (not standalone nouns or names), not containing the `\n`, `\t`, or other formatting characters, and not ending with a period or a colon. 
-* Ideally, the message should fit one line and be less than 80 characters long.
-* Use `Info` log level for optional messages software users somehow might benefit from (`--verbose` flag).
-* Use `Debug` log level for optional messages targeted at developers only (`--debug` flag).
-* Prefer dropping articles from log messages (magazine heading style) to make them shorter
-  
-  ```
-  log.Debug("Getting connection details from environment")
-  ```
-* Multiple sentences on the same line are separated with a dot and a space:
-
-   ```
-   log.Info("Chain not currently running. Skipping")
-   ```
-* Names of functions should not be present in the log message, but the log message should be unique within the code base or at least easily distinguishable (greppable) for easier debugging
-* If you need to log useful data along with the message, use tags (the `WithField` thing):
-
-   ```
-   log.WithFields(log.Fields{
-      "from": do.Name,
-      "to":   do.NewName,
-   }).Info("Renaming action")
-
-   log.WithFields(log.Fields{
-      "=>":        servName,
-      "existing#": containerExist,
-      "running#":  containerRun,
-   }).Info("Checking number of containers for")
-   ```
-Both tag name and its description should preferably be lowercase (multiple words separated by spaces). 
-* If you need to log just a noun without any statement, use an empty log message:
-
-   ```
-   log.WithField("drop", dropped).Debug()
-   ```
-* The `=>` tag prefix is (generally) for names (containers, chains, servers, data, etc.), which never have the tag `name`.
-* `logrus` package always ends a log message with an `\n` character, so there's no need to invoke `log.Infoln` or `log.Infof("\n")` or similar.
+TODO
 
 ## Coding Style
 
