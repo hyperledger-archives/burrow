@@ -9,10 +9,13 @@ import (
 	"path"
 	"testing"
 
-	ptypes "github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/permission/types"
-	stypes "github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/state/types"
-	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/types"
+	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	// XXX
+	//"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/eris-ltd/tendermint/types"
 )
+
+var DirFlag string
 
 func MakeGenesisDocFromFile(genDocFile string) *stypes.GenesisDoc {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
@@ -21,80 +24,6 @@ func MakeGenesisDocFromFile(genDocFile string) *stypes.GenesisDoc {
 		os.Exit(1)
 	}
 	return stypes.GenesisDocFromJSON(jsonBlob)
-}
-
-func testCoreRandom(N int) error {
-	chainID := "test_chainID"
-
-	genBytes, privVals, err := coreRandom(N, chainID, "", "", "", false)
-	if err != nil {
-		return err
-	}
-
-	if len(privVals) != N {
-		return fmt.Errorf("len(privVals) != N")
-	}
-
-	// make sure each validator is in the genesis and all genesi are the same
-	for i, v := range privVals {
-		dirFlag := DirFlag
-		if N > 1 {
-			dirFlag = path.Join(DirFlag, fmt.Sprintf("%s_%d", chainID, i))
-		}
-
-		b, err := ioutil.ReadFile(path.Join(dirFlag, "genesis.json"))
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(b, genBytes) {
-			return fmt.Errorf("written genesis.json different from returned by coreRandom")
-		}
-
-		gDoc := MakeGenesisDocFromFile(path.Join(dirFlag, "genesis.json"))
-
-		if len(gDoc.Validators) != N {
-			return fmt.Errorf("Expected %d validators. Got %d", N, len(gDoc.Validators))
-		}
-
-		privVal := types.LoadPrivValidator(path.Join(dirFlag, "priv_validator.json"))
-		if !bytes.Equal(privVal.Address, v.Address) {
-			return fmt.Errorf("priv_validator file contents different than result of coreRandom")
-		}
-		var found bool
-		for _, val := range gDoc.Validators {
-			if bytes.Equal(val.UnbondTo[0].Address, privVal.Address) {
-				found = true
-			}
-		}
-		if !found {
-			return fmt.Errorf("failed to find validator %d:%X in genesis.json", i, v.Address)
-		}
-	}
-	return nil
-}
-
-func TestRandom(t *testing.T) {
-	// make temp dir
-	dir, err := ioutil.TempDir(os.TempDir(), "mintgen-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	DirFlag = dir
-	defer func() {
-		// cleanup
-		os.RemoveAll(DirFlag)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	if err = testCoreRandom(1); err != nil {
-		return
-	}
-	if err = testCoreRandom(3); err != nil {
-		return
-	}
 }
 
 type GenDoc struct {
@@ -126,7 +55,7 @@ func csv1String() string {
 	for i, pub := range csv1.pubkeys {
 		buf.WriteString(fmt.Sprintf("%s,%d,%s,%d,%d\n", pub, csv1.amts[i], csv1.names[i], csv1.perms[i], csv1.setbits[i]))
 	}
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 func csv2String() string {
@@ -134,7 +63,7 @@ func csv2String() string {
 	for _, pub := range csv2.pubkeys {
 		buf.WriteString(fmt.Sprintf("%s,\n", pub))
 	}
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 func testKnownCSV(csvFile string, csv GenDoc) error {
