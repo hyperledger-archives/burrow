@@ -46,7 +46,20 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
-### Building code
+### Dependency amanagement for github.com/eris-ltd/eris-db
+
+# erase vendor wipes the full vendor directory
+.PHONY: erase_vendor
+erase_vendor:
+	rm -rf vendor/
+
+# install vendor uses glide to install vendored dependencies
+.PHONY: install_vendor
+install_vendor:
+	go get github.com/Masterminds/glide
+	glide install
+
+### Building github.com/eris-ltd/eris-db
 
 # build all targets in github.com/eris-ltd/eris-db
 .PHONY: build
