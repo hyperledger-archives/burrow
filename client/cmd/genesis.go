@@ -10,23 +10,17 @@ import (
 
 // TODO refactor these vars into a struct?
 var (
-	//DirFlag string
-	//AddrsFlag  string
 	AccountsPathFlag   string
 	ValidatorsPathFlag string
-	//CsvPathFlag        string
-	//PubkeyFlag         string
-	//RootFlag           string
-	//NoValAccountsFlag  bool
 )
 
 var GenesisGenCmd = &cobra.Command{
-	Use:   "genesis",
-	Short: "eris-client genesis creates a genesis.json with known inputs",
-	Long:  "eris-client genesis creates a genesis.json with known inputs",
+	Use:   "make-genesis",
+	Short: "eris-client make-genesis creates a genesis.json with known inputs",
+	Long:  "eris-client make-genesis creates a genesis.json with known inputs",
 
 	Run: func(cmd *cobra.Command, args []string) {
-
+		// TODO refactor to not panic
 		genesisFile, err := genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
 		if err != nil {
 			panic(err)
