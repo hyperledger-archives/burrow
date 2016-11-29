@@ -140,3 +140,4 @@ build_docker_db: check
 .PHONY: test_docker_db
 test_docker_db: check
 	docker build -t ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} ${REPO}
+	docker run ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} glide nv | xargs go test
