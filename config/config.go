@@ -174,3 +174,14 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 
 	return buffer.Bytes(), nil
 }
+
+func GetExampleConfigFileBytes() ([]byte, error) {
+	return GetConfigurationFileBytes(
+		"simplechain",
+		"delectable_marmot",
+		"192.168.168.255",
+		"db:latest",
+		true,
+		"46657",
+		"eris-db")
+}

@@ -17,19 +17,18 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
 	"syscall"
 
-	cobra "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 
-	log "github.com/eris-ltd/eris-logger"
-
-	"fmt"
-
-	core "github.com/eris-ltd/eris-db/core"
-	util "github.com/eris-ltd/eris-db/util"
+	"github.com/eris-ltd/eris-db/core"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/util"
 )
 
 const (
@@ -41,148 +40,152 @@ var DefaultConfigFilename = fmt.Sprintf("%s.%s",
 	DefaultConfigBasename,
 	DefaultConfigType)
 
-var ServeCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Eris-DB serve starts an eris-db node with client API enabled by default.",
-	Long: `Eris-DB serve starts an eris-db node with client API enabled by default.
+// build the serve subcommand
+func buildServeCommand(do *definitions.Do) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Eris-DB serve starts an eris-db node with client API enabled by default.",
+		Long: `Eris-DB serve starts an eris-db node with client API enabled by default.
 The Eris-DB node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
-	Example: fmt.Sprintf(`$ eris-db serve -- will start the Eris-DB node based on the configuration file "%s" in the current working directory
+		Example: fmt.Sprintf(`$ eris-db serve -- will start the Eris-DB node based on the configuration file "%s" in the current working directory
 $ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "%s" in the provided working directory
 $ eris-db serve --chain-id <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
-		DefaultConfigFilename, DefaultConfigFilename),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
-		// NOTE [ben]: we can consider an `Explicit` flag that eliminates
-		// the use of any assumptions while starting Eris-DB
-		if do.WorkDir == "" {
-			if currentDirectory, err := os.Getwd(); err != nil {
-				log.Fatalf("No directory provided and failed to get current working directory: %v", err)
-				os.Exit(1)
-			} else {
-				do.WorkDir = currentDirectory
+			DefaultConfigFilename, DefaultConfigFilename),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
+			// NOTE [ben]: we can consider an `Explicit` flag that eliminates
+			// the use of any assumptions while starting Eris-DB
+			if do.WorkDir == "" {
+				if currentDirectory, err := os.Getwd(); err != nil {
+					panic(fmt.Sprintf("No directory provided and failed to get current "+
+						"working directory: %v", err))
+					os.Exit(1)
+				} else {
+					do.WorkDir = currentDirectory
+				}
 			}
-		}
-		if !util.IsDir(do.WorkDir) {
-			log.Fatalf("Provided working directory %s is not a directory", do.WorkDir)
-		}
-	},
-	Run: Serve,
+			if !util.IsDir(do.WorkDir) {
+				panic(fmt.Sprintf("Provided working directory %s is not a directory",
+					do.WorkDir))
+				os.Exit(1)
+			}
+		},
+		Run: ServeRunner(do),
+	}
+	addServeFlags(do, cmd)
+	return cmd
 }
 
-// build the serve subcommand
-func buildServeCommand() {
-	addServeFlags()
-}
-
-func addServeFlags() {
-	ServeCmd.PersistentFlags().StringVarP(&do.ChainId, "chain-id", "c",
+func addServeFlags(do *definitions.Do, serveCmd *cobra.Command) {
+	serveCmd.PersistentFlags().StringVarP(&do.ChainId, "chain-id", "c",
 		defaultChainId(), "specify the chain id to use for assertion against the genesis file or the existing state. If omitted, and no id is set in $CHAIN_ID, then assert_chain_id is used from the configuration file.")
-	ServeCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
+	serveCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
 		defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
-	ServeCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "",
+	serveCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "",
 		defaultDataDir(), "specify the data directory.  If omitted and not set in $ERIS_DB_DATADIR, <working_directory>/data is taken.")
-	ServeCmd.PersistentFlags().BoolVarP(&do.DisableRpc, "disable-rpc", "",
+	serveCmd.PersistentFlags().BoolVarP(&do.DisableRpc, "disable-rpc", "",
 		defaultDisableRpc(), "indicate for the RPC to be disabled. If omitted the RPC is enabled by default, unless (deprecated) $ERISDB_API is set to false.")
 }
 
 //------------------------------------------------------------------------------
 // functions
-
-// serve() prepares the environment and sets up the core for Eris_DB to run.
-// After the setup succeeds, serve() starts the core and halts for core to
-// terminate.
-func Serve(cmd *cobra.Command, args []string) {
-	// load configuration from a single location to avoid a wrong configuration
-	// file is loaded.
-	err := do.ReadConfig(do.WorkDir, DefaultConfigBasename, DefaultConfigType)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"directory": do.WorkDir,
-			"file":      DefaultConfigFilename,
-		}).Fatalf("Fatal error reading configuration")
-		os.Exit(1)
-	}
-	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
-	if do.ChainId == "" {
-		if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
-			log.Fatalf("Failed to read non-empty string for ChainId from config.")
-			os.Exit(1)
-		}
-	}
+func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	// load the genesis file path
 	do.GenesisFile = path.Join(do.WorkDir,
 		do.Config.GetString("chain.genesis_file"))
+
 	if do.Config.GetString("chain.genesis_file") == "" {
-		log.Fatalf("Failed to read non-empty string for genesis file from config.")
-		os.Exit(1)
+		return nil, fmt.Errorf("The config value chain.genesis_file is empty, " +
+				"but should be set to the location of the genesis.json file.")
 	}
 	// Ensure data directory is set and accessible
 	if err := do.InitialiseDataDirectory(); err != nil {
-		log.Fatalf("Failed to initialise data directory (%s): %v", do.DataDir, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("Failed to initialise data directory (%s): %v", do.DataDir, err)
 	}
-	log.WithFields(log.Fields{
-		"chainId":          do.ChainId,
-		"workingDirectory": do.WorkDir,
-		"dataDirectory":    do.DataDir,
-		"genesisFile":      do.GenesisFile,
-	}).Info("Eris-DB serve configuring")
+
+	loggerConfig, err := core.LoadLoggingConfig(do)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load logging config: %s", err)
+	}
+
+	logger := logging.NewLogger(*loggerConfig)
+	cmdLogger := logger.With("command", "serve")
+	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
+
+	if do.ChainId == "" {
+		if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
+			return nil, fmt.Errorf("The config chain.assert_chain_id is empty, " +
+					"but should be set to the chain_id of the chain we are trying to run.")
+		}
+	}
+
+	cmdLogger.Info("chainId", do.ChainId,
+		"workingDirectory", do.WorkDir,
+		"dataDirectory", do.DataDir,
+		"genesisFile", do.GenesisFile,
+		logging.MessageKey, "Loading configuration for serve command")
 
 	consensusConfig, err := core.LoadConsensusModuleConfig(do)
 	if err != nil {
-		log.Fatalf("Failed to load consensus module configuration: %s.", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("Failed to load consensus module configuration: %s.", err)
 	}
 
 	managerConfig, err := core.LoadApplicationManagerModuleConfig(do)
 	if err != nil {
-		log.Fatalf("Failed to load application manager module configuration: %s.", err)
-		os.Exit(1)
-	}
-	log.WithFields(log.Fields{
-		"consensusModule":    consensusConfig.Version,
-		"applicationManager": managerConfig.Version,
-	}).Debug("Modules configured")
-
-	newCore, err := core.NewCore(do.ChainId, consensusConfig, managerConfig)
-	if err != nil {
-		log.Fatalf("Failed to load core: %s", err)
+		return nil, fmt.Errorf("Failed to load application manager module configuration: %s.", err)
 	}
 
-	if !do.DisableRpc {
-		serverConfig, err := core.LoadServerConfig(do)
+	cmdLogger.Info("consensusModule", consensusConfig.Version,
+		"applicationManager", managerConfig.Version,
+		logging.MessageKey, "Modules configured")
+
+	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
+}
+
+// ServeRunner() returns a command runner that prepares the environment and sets
+// up the core for Eris-DB to run. After the setup succeeds, it starts the core
+// and waits for the core to terminate.
+func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
+	return func(cmd *cobra.Command, args []string) {
+		// load configuration from a single location to avoid a wrong configuration
+		// file is loaded.
+		err := do.ReadConfig(do.WorkDir, DefaultConfigBasename, DefaultConfigType)
 		if err != nil {
-			log.Fatalf("Failed to load server configuration: %s.", err)
-			os.Exit(1)
+			util.Fatalf("Fatal error reading configuration from %s/%s", do.WorkDir,
+				DefaultConfigFilename)
 		}
 
-		serverProcess, err := newCore.NewGatewayV0(serverConfig)
+		newCore, err := NewCoreFromDo(do)
+
 		if err != nil {
-			log.Fatalf("Failed to load servers: %s.", err)
-			os.Exit(1)
+			util.Fatalf("Failed to load core: %s", err)
 		}
-		err = serverProcess.Start()
-		if err != nil {
-			log.Fatalf("Failed to start servers: %s.", err)
-			os.Exit(1)
+
+		if !do.DisableRpc {
+			serverConfig, err := core.LoadServerConfig(do)
+			if err != nil {
+				util.Fatalf("Failed to load server configuration: %s.", err)
+			}
+
+			serverProcess, err := newCore.NewGatewayV0(serverConfig)
+			if err != nil {
+				util.Fatalf("Failed to load servers: %s.", err)
+			}
+			err = serverProcess.Start()
+			if err != nil {
+				util.Fatalf("Failed to start servers: %s.", err)
+			}
+			_, err = newCore.NewGatewayTendermint(serverConfig)
+			if err != nil {
+				util.Fatalf("Failed to start Tendermint gateway")
+			}
+			<-serverProcess.StopEventChannel()
+		} else {
+			signals := make(chan os.Signal, 1)
+			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+			fmt.Fprintf(os.Stderr, "Received %s signal. Marmots out.", <-signals)
 		}
-		_, err = newCore.NewGatewayTendermint(serverConfig)
-		if err != nil {
-			log.Fatalf("Failed to start Tendermint gateway")
-		}
-		<-serverProcess.StopEventChannel()
-	} else {
-		signals := make(chan os.Signal, 1)
-		done := make(chan bool, 1)
-		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			signal := <-signals
-			// TODO: [ben] clean up core; in a manner consistent with enabled rpc
-			log.Fatalf("Received %s signal. Marmots out.", signal)
-			done <- true
-		}()
-		<-done
 	}
 }
 

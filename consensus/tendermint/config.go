@@ -23,10 +23,10 @@ import (
 	"path"
 	"time"
 
-	viper "github.com/spf13/viper"
+	"github.com/spf13/viper"
 	tendermintConfig "github.com/tendermint/go-config"
 
-	config "github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements
@@ -147,7 +147,8 @@ func (tmintConfig *TendermintConfig) GetMapString(key string) map[string]string 
 func (tmintConfig *TendermintConfig) GetConfig(key string) tendermintConfig.Config {
 	// TODO: [ben] log out a warning as this indicates a potentially breaking code
 	// change from Tendermints side
-	if !tmintConfig.subTree.IsSet(key) {
+	subTree, _ := config.ViperSubConfig(tmintConfig.subTree, key)
+	if subTree == nil {
 		return &TendermintConfig{
 			subTree: viper.New(),
 		}
