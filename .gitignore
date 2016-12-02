@@ -1,5 +1,9 @@
 # do not vendor in dependencies
 vendor
+
+# build target
+target
+
 # Temporary / cached
 *.swp
 debug
