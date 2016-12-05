@@ -1,19 +1,63 @@
 package: github.com/eris-ltd/eris-db
 import:
-- package: github.com/eris-ltd/eris-logger
+- package: github.com/eris-ltd/common
+  subpackages:
+  - go/docs
 - package: github.com/eris-ltd/eris-keys
+  version: ~0.12.0-rc3
+  subpackages:
+  - crypto
+- package: github.com/eris-ltd/eris-logger
+- package: github.com/gin-gonic/gin
+  version: ~1.1.4
+- package: github.com/gorilla/websocket
+  version: ~1.0.0
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
+- package: github.com/tendermint/ed25519
+- package: github.com/tendermint/go-common
+- package: github.com/tendermint/go-config
+- package: github.com/tendermint/go-crypto
+- package: github.com/tendermint/go-db
+- package: github.com/tendermint/go-events
+- package: github.com/tendermint/go-logger
+- package: github.com/tendermint/go-merkle
+- package: github.com/tendermint/go-p2p
+- package: github.com/tendermint/go-rpc
+  subpackages:
+  - client
+  - server
+  - types
+- package: github.com/tendermint/go-wire
+- package: github.com/tendermint/log15
+  version: ~2.7.0
 - package: github.com/tendermint/tendermint
-- package: github.com/gin-gonic/gin
-- package: github.com/gorilla/websocket
-- package: github.com/naoina/toml
-- package: github.com/stretchr/testify
+  version: ~0.7.3
+  subpackages:
+  - consensus
+  - node
+  - proxy
+  - types
+  - version
+- package: github.com/tendermint/tmsp
+  subpackages:
+  - client
+  - types
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
   subpackages:
   - ripemd160
 - package: gopkg.in/fatih/set.v0
+  version: ~0.1.0
 - package: gopkg.in/tylerb/graceful.v1
-- package: golang.org/x/net/http2
-- package: github.com/eris-ltd/common
+  version: ~1.2.13
+testImport:
+- package: github.com/eris-ltd/eris-cm
+  version: ~0.12.0-rc3
+  subpackages:
+  - configuration
+- package: github.com/stretchr/testify
+  version: ~1.1.4
+  subpackages:
+  - assert
+  - suite
