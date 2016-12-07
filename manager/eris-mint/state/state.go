@@ -12,7 +12,6 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/tendermint/go-common"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
 	"github.com/tendermint/go-merkle"
@@ -20,6 +19,7 @@ import (
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/tendermint/tendermint/types"
+	"github.com/eris-ltd/eris-db/util"
 )
 
 var (
@@ -77,7 +77,7 @@ func LoadState(db dbm.DB) *State {
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
 			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-			Exit(Fmt("Data has been corrupted or its spec has changed: %v\n", *err))
+			util.Fatalf("Data has been corrupted or its spec has changed: %v\n", *err)
 		}
 		// TODO: ensure that buf is completely read.
 	}
@@ -101,7 +101,10 @@ func (s *State) Save() {
 	//wire.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
 	wire.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
 	if *err != nil {
-		PanicCrisis(*err)
+		// TODO: [Silas] Do something better than this, really serialising ought to
+		// be error-free
+		util.Fatalf("Could not serialise state in order to save the state, " +
+				"cannot continue, error: %s", *err)
 	}
 	s.DB.Set(stateKey, buf.Bytes())
 }
@@ -401,7 +404,7 @@ func (s *State) SetFireable(evc events.Fireable) {
 func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
-		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+		util.Fatalf("Couldn't read GenesisDoc file: %v", err)
 	}
 	genDoc := GenesisDocFromJSON(jsonBlob)
 	return genDoc, MakeGenesisState(db, genDoc)
@@ -409,7 +412,7 @@ func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State
 
 func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
 	if len(genDoc.Validators) == 0 {
-		Exit(Fmt("The genesis file has no validators"))
+		util.Fatalf("The genesis file has no validators")
 	}
 
 	if genDoc.GenesisTime.IsZero() {
