@@ -66,8 +66,8 @@ func (cl *ChannelLogger) DrainChannelToLogger(logger kitlog.Logger) {
 
 // Wraps an underlying Logger baseLogger to provide a Logger that is
 // is non-blocking on calls to Log.
-func NonBlockingLogger(baseLogger kitlog.Logger) *ChannelLogger {
+func NonBlockingLogger(logger kitlog.Logger) *ChannelLogger {
 	cl := newChannelLogger()
-	go cl.DrainChannelToLogger(baseLogger)
+	go cl.DrainChannelToLogger(logger)
 	return cl
 }

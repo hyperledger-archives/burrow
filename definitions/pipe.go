@@ -33,6 +33,7 @@ import (
 	event "github.com/eris-ltd/eris-db/event"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 type Pipe interface {
@@ -43,6 +44,7 @@ type Pipe interface {
 	Transactor() Transactor
 	// Hash of Genesis state
 	GenesisHash() []byte
+	Logger() loggers.InfoTraceLogger
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
 	SetConsensusEngine(consensusEngine consensus_types.ConsensusEngine) error

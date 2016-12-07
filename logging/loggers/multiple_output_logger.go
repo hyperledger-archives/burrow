@@ -6,6 +6,8 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 )
 
+// This represents an 'AND' type logger. When logged to it will log to each of
+// the loggers in the slice.
 type MultipleOutputLogger []kitlog.Logger
 
 var _ kitlog.Logger = MultipleOutputLogger(nil)

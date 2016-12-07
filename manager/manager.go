@@ -21,12 +21,13 @@ import (
 
 	events "github.com/tendermint/go-events"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	config "github.com/eris-ltd/eris-db/config"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	// types       "github.com/eris-ltd/eris-db/manager/types"
+
+	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -35,18 +36,18 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-	evsw *events.EventSwitch, consensusMinorVersion string) (definitions.Pipe,
+	evsw *events.EventSwitch, logger loggers.InfoTraceLogger,
+	consensusMinorVersion string) (definitions.Pipe,
 	error) {
 	switch moduleConfig.Name {
 	case "erismint":
 		if err := erismint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{
-			"compatibleConsensus": consensusMinorVersion,
-			"erisMintVersion":     erismint.GetErisMintVersion().GetVersionString(),
-		}).Debug("Loading ErisMint")
-		return erismint.NewErisMintPipe(moduleConfig, evsw)
+		logger.Info("compatibleConsensus", consensusMinorVersion,
+			"erisMintVersion", erismint.GetErisMintVersion().GetVersionString(),
+			structure.MessageKey, "Loading ErisMint")
+		return erismint.NewErisMintPipe(moduleConfig, evsw, logger)
 	}
 	return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
 }

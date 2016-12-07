@@ -225,4 +225,12 @@ imports:
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: github.com/go-stack/stack
   version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
+- name: github.com/Sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- name: github.com/inconshreveable/log15
+  version: 46a701a619de90c65a78c04d1a58bf02585e9701
+  subpackages:
+  - term
+- name: github.com/eris-ltd/eris-logger
+  version: ea48a395d6ecc0eccc67a26da9fc7a6106fabb84
 devImports: []

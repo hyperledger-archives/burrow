@@ -28,13 +28,12 @@ func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 	pipe definitions.Pipe) error {
 	switch moduleConfig.Name {
 	case "tendermint":
-		tendermint, err := tendermint.NewTendermint(moduleConfig,
-			pipe.GetApplication())
+		tmint, err := tendermint.NewTendermint(moduleConfig, pipe.GetApplication())
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint node: %v", err)
 		}
 
-		err = pipe.SetConsensusEngine(tendermint)
+		err = pipe.SetConsensusEngine(tmint)
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint in pipe as "+
 				"ConsensusEngine: %v", err)
@@ -42,7 +41,7 @@ func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 
 		// For Tendermint we have a coupled Blockchain and ConsensusEngine
 		// implementation, so load it at the same time as ConsensusEngine
-		err = pipe.SetBlockchain(tendermint)
+		err = pipe.SetBlockchain(tmint)
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint in pipe as "+
 				"Blockchain: %v", err)

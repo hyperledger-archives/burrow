@@ -27,7 +27,8 @@ import (
 
 	"github.com/eris-ltd/eris-db/core"
 	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	"github.com/eris-ltd/eris-db/util"
 )
 
@@ -97,7 +98,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 
 	if do.Config.GetString("chain.genesis_file") == "" {
 		return nil, fmt.Errorf("The config value chain.genesis_file is empty, " +
-				"but should be set to the location of the genesis.json file.")
+			"but should be set to the location of the genesis.json file.")
 	}
 	// Ensure data directory is set and accessible
 	if err := do.InitialiseDataDirectory(); err != nil {
@@ -109,14 +110,20 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to load logging config: %s", err)
 	}
 
-	logger := logging.NewLogger(*loggerConfig)
+	// Create a root logger to pass through to dependencies
+	logger := lifecycle.NewLoggerFromConfig(*loggerConfig)
+	// Capture all logging from tendermint/tendermint and tendermint/go-*
+	// dependencies
+	lifecycle.CaptureTendermintLog15Output(logger)
+
 	cmdLogger := logger.With("command", "serve")
+
 	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
 
 	if do.ChainId == "" {
 		if do.ChainId = do.Config.GetString("chain.assert_chain_id"); do.ChainId == "" {
 			return nil, fmt.Errorf("The config chain.assert_chain_id is empty, " +
-					"but should be set to the chain_id of the chain we are trying to run.")
+				"but should be set to the chain_id of the chain we are trying to run.")
 		}
 	}
 
@@ -124,7 +131,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		"workingDirectory", do.WorkDir,
 		"dataDirectory", do.DataDir,
 		"genesisFile", do.GenesisFile,
-		logging.MessageKey, "Loading configuration for serve command")
+		structure.MessageKey, "Loading configuration for serve command")
 
 	consensusConfig, err := core.LoadConsensusModuleConfig(do)
 	if err != nil {
@@ -138,7 +145,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 
 	cmdLogger.Info("consensusModule", consensusConfig.Version,
 		"applicationManager", managerConfig.Version,
-		logging.MessageKey, "Modules configured")
+		structure.MessageKey, "Modules configured")
 
 	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
 }
@@ -167,7 +174,6 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 			if err != nil {
 				util.Fatalf("Failed to load server configuration: %s.", err)
 			}
-
 			serverProcess, err := newCore.NewGatewayV0(serverConfig)
 			if err != nil {
 				util.Fatalf("Failed to load servers: %s.", err)

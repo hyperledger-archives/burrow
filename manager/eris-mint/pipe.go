@@ -28,8 +28,6 @@ import (
 	tm_types "github.com/tendermint/tendermint/types"
 	tmsp_types "github.com/tendermint/tmsp/types"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/eris-ltd/eris-db/account"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	imath "github.com/eris-ltd/eris-db/common/math/integral"
@@ -38,12 +36,15 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/definitions"
 	edb_event "github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	log "github.com/eris-ltd/eris-logger"
 )
 
 type erisMintPipe struct {
@@ -59,6 +60,7 @@ type erisMintPipe struct {
 	// Genesis cache
 	genesisDoc   *state_types.GenesisDoc
 	genesisState *state.State
+	logger       loggers.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure erisMintPipe successfully implements
@@ -70,7 +72,8 @@ var _ definitions.Pipe = (*erisMintPipe)(nil)
 var _ definitions.TendermintPipe = (*erisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-	eventSwitch *go_events.EventSwitch) (*erisMintPipe, error) {
+	eventSwitch *go_events.EventSwitch,
+	logger loggers.InfoTraceLogger) (*erisMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
 		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
@@ -79,11 +82,11 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		return nil, fmt.Errorf("Failed to start state: %v", err)
 	}
 	// assert ChainId matches genesis ChainId
-	log.WithFields(log.Fields{
-		"chainId":         startedState.ChainID,
-		"lastBlockHeight": startedState.LastBlockHeight,
-		"lastBlockHash":   startedState.LastBlockHash,
-	}).Debug("Loaded state")
+	logger.Info(
+		"chainId", startedState.ChainID,
+		"lastBlockHeight", startedState.LastBlockHeight,
+		"lastBlockHash", startedState.LastBlockHash,
+		structure.MessageKey, "Loaded state")
 	// start the application
 	erisMint := NewErisMint(startedState, eventSwitch)
 
@@ -108,6 +111,7 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 		// authority - this is a sort of dependency injection pattern
 		consensusEngine: nil,
 		blockchain:      nil,
+		logger:          logger,
 	}
 
 	// NOTE: [Silas]
@@ -182,6 +186,10 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for erisMintPipe
+
+func (pipe *erisMintPipe) Logger() loggers.InfoTraceLogger {
+	return pipe.logger
+}
 
 func (pipe *erisMintPipe) Accounts() definitions.Accounts {
 	return pipe.accounts
