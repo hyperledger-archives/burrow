@@ -8,7 +8,7 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 
@@ -153,9 +153,9 @@ func (s *State) ComputeBlockStateHash(block *types.Block) error {
 }
 */
 
-func (s *State) GetGenesisDoc() (*GenesisDoc, error) {
-	var genesisDoc *GenesisDoc
-	loadedGenesisDocBytes := s.DB.Get(GenDocKey)
+func (s *State) GetGenesisDoc() (*genesis.GenesisDoc, error) {
+	var genesisDoc *genesis.GenesisDoc
+	loadedGenesisDocBytes := s.DB.Get(genesis.GenDocKey)
 	err := new(error)
 	wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
 	if *err != nil {
@@ -398,16 +398,16 @@ func (s *State) SetFireable(evc events.Fireable) {
 //-----------------------------------------------------------------------------
 // Genesis
 
-func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
+func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*genesis.GenesisDoc, *State) {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
 		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
 	}
-	genDoc := GenesisDocFromJSON(jsonBlob)
+	genDoc := genesis.GenesisDocFromJSON(jsonBlob)
 	return genDoc, MakeGenesisState(db, genDoc)
 }
 
-func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
+func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	if len(genDoc.Validators) == 0 {
 		Exit(Fmt("The genesis file has no validators"))
 	}

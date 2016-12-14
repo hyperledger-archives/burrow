@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/eris-ltd/common/go/common"
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
 	"github.com/tendermint/go-crypto"
@@ -21,12 +20,11 @@ import (
 // core functions
 
 func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, error) {
-	var genDoc *stypes.GenesisDoc
+	var genDoc *GenesisDoc
 
 	// TODO [eb] eliminate reading priv_val ... [zr] where?
 	if accountsPathCSV == "" || validatorsPathCSV == "" {
 		return "", fmt.Errorf("both accounts.csv and validators.csv is required")
-
 	}
 
 	pubkeys, amts, names, perms, setbits, err := parseCsv(validatorsPathCSV)
@@ -62,19 +60,19 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 //-----------------------------------------------------------------------------
 // gendoc convenience functions
 
-func newGenDoc(chainID string, nVal, nAcc int) *stypes.GenesisDoc {
-	genDoc := stypes.GenesisDoc{
+func newGenDoc(chainID string, nVal, nAcc int) *GenesisDoc {
+	genDoc := GenesisDoc{
 		ChainID: chainID,
 		// GenesisTime: time.Now(),
 	}
-	genDoc.Accounts = make([]stypes.GenesisAccount, nAcc)
-	genDoc.Validators = make([]stypes.GenesisValidator, nVal)
+	genDoc.Accounts = make([]GenesisAccount, nAcc)
+	genDoc.Validators = make([]GenesisValidator, nVal)
 	return &genDoc
 }
 
-func genDocAddAccount(genDoc *stypes.GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string, perm, setbit ptypes.PermFlag, index int) {
+func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string, perm, setbit ptypes.PermFlag, index int) {
 	addr := pubKey.Address()
-	acc := stypes.GenesisAccount{
+	acc := GenesisAccount{
 		Address: addr,
 		Amount:  amt,
 		Name:    name,
@@ -92,13 +90,13 @@ func genDocAddAccount(genDoc *stypes.GenesisDoc, pubKey crypto.PubKeyEd25519, am
 	}
 }
 
-func genDocAddValidator(genDoc *stypes.GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string, perm, setbit ptypes.PermFlag, index int) {
+func genDocAddValidator(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string, perm, setbit ptypes.PermFlag, index int) {
 	addr := pubKey.Address()
-	genDoc.Validators[index] = stypes.GenesisValidator{
+	genDoc.Validators[index] = GenesisValidator{
 		PubKey: pubKey,
 		Amount: amt,
 		Name:   name,
-		UnbondTo: []stypes.BasicAccount{
+		UnbondTo: []BasicAccount{
 			{
 				Address: addr,
 				Amount:  amt,

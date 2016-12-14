@@ -53,7 +53,7 @@ A commented template config will be written as part of the `eris chains make` [p
 
 ## Contribute
 
-See the [eris platform contributing file here](https://github.com/eris-ltd/coding/blob/master/github/CONTRIBUTING.md).
+See the [CONTRIBUTING.md](.github/CONTRIBUTING.md) for more details.
 
 ## License
 
