@@ -1,6 +1,5 @@
 package: github.com/eris-ltd/eris-db
 import:
-- package: github.com/eris-ltd/eris-logger
 - package: github.com/eris-ltd/eris-keys
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
@@ -15,5 +14,18 @@ import:
   - ripemd160
 - package: gopkg.in/fatih/set.v0
 - package: gopkg.in/tylerb/graceful.v1
-- package: golang.org/x/net/http2
+- package: golang.org/x/net
+  subpackages:
+  - http2
 - package: github.com/eris-ltd/common
+- package: github.com/go-kit/kit
+  version: ^0.3.0
+- package: github.com/eapache/channels
+  version: ~1.1.0
+- package: github.com/go-logfmt/logfmt
+  version: ^0.3.0
+- package: github.com/go-stack/stack
+  version: ^1.5.2
+- package: github.com/inconshreveable/log15
+- package: github.com/Sirupsen/logrus
+  version: ^0.11.0

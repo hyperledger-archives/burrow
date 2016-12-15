@@ -21,16 +21,11 @@ import (
 	"strconv"
 	"strings"
 
-	cobra "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 
-	log "github.com/eris-ltd/eris-logger"
-
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	version "github.com/eris-ltd/eris-db/version"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/version"
 )
-
-// Global Do struct
-var do *definitions.Do
 
 var ErisDbCmd = &cobra.Command{
 	Use:   "eris-db",
@@ -43,38 +38,26 @@ Made with <3 by Eris Industries.
 
 Complete documentation is available at https://monax.io/docs/documentation
 ` + "\nVERSION:\n " + version.VERSION,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-
-		log.SetLevel(log.WarnLevel)
-		if do.Verbose {
-			log.SetLevel(log.InfoLevel)
-		} else if do.Debug {
-			log.SetLevel(log.DebugLevel)
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
 func Execute() {
-	InitErisDbCli()
-	AddGlobalFlags()
-	AddCommands()
+	do := definitions.NewDo()
+	AddGlobalFlags(do)
+	AddCommands(do)
 	ErisDbCmd.Execute()
 }
 
-func InitErisDbCli() {
-	// initialise an empty Do struct for command execution
-	do = definitions.NewDo()
+func AddGlobalFlags(do *definitions.Do) {
+	ErisDbCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v",
+		defaultVerbose(),
+		"verbose output; more output than no output flags; less output than debug level; default respects $ERIS_DB_VERBOSE")
+	ErisDbCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", defaultDebug(),
+		"debug level output; the most output available for eris-db; if it is too chatty use verbose flag; default respects $ERIS_DB_DEBUG")
 }
 
-func AddGlobalFlags() {
-	ErisDbCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v", defaultVerbose(), "verbose output; more output than no output flags; less output than debug level; default respects $ERIS_DB_VERBOSE")
-	ErisDbCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", defaultDebug(), "debug level output; the most output available for eris-db; if it is too chatty use verbose flag; default respects $ERIS_DB_DEBUG")
-}
-
-func AddCommands() {
-	buildServeCommand()
-	ErisDbCmd.AddCommand(ServeCmd)
+func AddCommands(do *definitions.Do) {
+	ErisDbCmd.AddCommand(buildServeCommand(do))
 }
 
 //------------------------------------------------------------------------------

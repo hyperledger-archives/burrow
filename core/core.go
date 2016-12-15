@@ -32,6 +32,8 @@ import (
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	server "github.com/eris-ltd/eris-db/server"
 )
@@ -44,14 +46,16 @@ type Core struct {
 	tendermintPipe definitions.TendermintPipe
 }
 
-func NewCore(chainId string, consensusConfig *config.ModuleConfig,
-	managerConfig *config.ModuleConfig) (*Core, error) {
+func NewCore(chainId string,
+	consensusConfig *config.ModuleConfig,
+	managerConfig *config.ModuleConfig,
+	logger loggers.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with eris-db/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 
 	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
 		consensusConfig.Version)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
@@ -65,12 +69,6 @@ func NewCore(chainId string, consensusConfig *config.ModuleConfig,
 	if err != nil {
 		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
 			managerConfig.Version))
-		return &Core{
-			chainId:        chainId,
-			evsw:           evsw,
-			pipe:           pipe,
-			tendermintPipe: nil,
-		}, nil
 	}
 	return &Core{
 		chainId:        chainId,
