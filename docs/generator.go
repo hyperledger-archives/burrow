@@ -11,9 +11,9 @@ import (
 	commands "github.com/eris-ltd/eris-db/cmd"
 
 	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
+	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/cobra"
-	"github.com/eris-ltd/eris-db/definitions"
 )
 
 // Repository maintainers should customize the next two lines.

@@ -17,7 +17,6 @@ func NewLogrusLogger(logger logrus.Logger) *logrusLogger {
 	}
 }
 
-func (ll *logrusLogger) Log(keyvals... interface{}) error {
+func (ll *logrusLogger) Log(keyvals ...interface{}) error {
 	return nil
 }
-

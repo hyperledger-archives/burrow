@@ -80,7 +80,7 @@ func NewErisNodeClient(rpcString string) *ErisNodeClient {
 // it needs to be initialised before go-rpc, hence it's placement here.
 func init() {
 	h := tendermint_log.LvlFilterHandler(tendermint_log.LvlWarn, tendermint_log.StdoutHandler)
-    tendermint_log.Root().SetHandler(h)
+	tendermint_log.Root().SetHandler(h)
 }
 
 //------------------------------------------------------------------------------------

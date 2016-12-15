@@ -23,14 +23,14 @@ func TestCopyPrepend(t *testing.T) {
 }
 
 func TestConcat(t *testing.T) {
-	assert.Equal(t, Slice(1,2,3,4,5), Concat(Slice(1,2,3,4,5)))
-	assert.Equal(t, Slice(1,2,3,4,5), Concat(Slice(1,2,3),Slice(4,5)))
-	assert.Equal(t, Slice(1,2,3,4,5), Concat(Slice(1),Slice(2,3),Slice(4,5)))
+	assert.Equal(t, Slice(1, 2, 3, 4, 5), Concat(Slice(1, 2, 3, 4, 5)))
+	assert.Equal(t, Slice(1, 2, 3, 4, 5), Concat(Slice(1, 2, 3), Slice(4, 5)))
+	assert.Equal(t, Slice(1, 2, 3, 4, 5), Concat(Slice(1), Slice(2, 3), Slice(4, 5)))
 	assert.Equal(t, EmptySlice(), Concat(nil))
 	assert.Equal(t, Slice(1), Concat(nil, Slice(), Slice(1)))
 	assert.Equal(t, Slice(1), Concat(Slice(1), Slice(), nil))
 }
 
 func TestDelete(t *testing.T) {
-	assert.Equal(t, Slice(1,2,4,5), Delete(Slice(1,2,3,4,5), 2, 1))
+	assert.Equal(t, Slice(1, 2, 4, 5), Delete(Slice(1, 2, 3, 4, 5), 2, 1))
 }
