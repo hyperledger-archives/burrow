@@ -19,13 +19,13 @@ var _ kitlog.Logger = MultipleChannelLogger(nil)
 func (mcl MultipleChannelLogger) Log(keyvals ...interface{}) error {
 	channel := structure.Value(keyvals, structure.ChannelKey)
 	if channel == nil {
-		return fmt.Errorf("MultipleChannelLogger could not select channel because" +
-				" '%s' was not set in log message", structure.ChannelKey)
+		return fmt.Errorf("MultipleChannelLogger could not select channel because"+
+			" '%s' was not set in log message", structure.ChannelKey)
 	}
 	channelName, ok := channel.(string)
 	if !ok {
-		return fmt.Errorf("MultipleChannelLogger could not select channel because" +
-				" channel was set to non-string value %v", channel)
+		return fmt.Errorf("MultipleChannelLogger could not select channel because"+
+			" channel was set to non-string value %v", channel)
 	}
 	logger := mcl[channelName]
 	if logger == nil {

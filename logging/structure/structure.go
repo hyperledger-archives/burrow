@@ -8,7 +8,7 @@ const (
 	// Key for call site for log invocation
 	CallerKey = "caller"
 	// Key for String name for level
-	LevelKey   = "level"
+	LevelKey = "level"
 	// Key to switch on for channel in a multiple channel logging context
 	ChannelKey = "channel"
 	// Key for string message

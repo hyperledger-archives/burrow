@@ -74,7 +74,7 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	tendermintConfigViper, err := config.ViperSubConfig(moduleConfig.Config, "configuration")
 	if tendermintConfigViper == nil {
 		return nil,
-				fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
+			fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
 	}
 	// wrap a copy of the viper config in a tendermint/go-config interface
 	tmintConfig := GetTendermintConfig(tendermintConfigViper)
