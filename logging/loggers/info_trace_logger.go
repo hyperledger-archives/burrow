@@ -66,15 +66,16 @@ var _ InfoTraceLogger = (*infoTraceLogger)(nil)
 var _ kitlog.Logger = (InfoTraceLogger)(nil)
 
 func NewInfoTraceLogger(infoLogger, traceLogger kitlog.Logger) InfoTraceLogger {
-	// We will never halt progress a log emitter. If log output takes too long
-	// will start dropping log lines by using a ring buffer.
+	// We will never halt the progress of a log emitter. If log output takes too
+	// long will start dropping log lines by using a ring buffer.
 	// We also guard against any concurrency bugs in underlying loggers by feeding
 	// them from a single channel
-	logger := kitlog.NewContext(NonBlockingLogger(MultipleChannelLogger(
-		map[string]kitlog.Logger{
-			InfoChannelName:  infoLogger,
-			TraceChannelName: traceLogger,
-		})))
+	logger := kitlog.NewContext(NonBlockingLogger(VectorValuedLogger(
+		MultipleChannelLogger(
+			map[string]kitlog.Logger{
+				InfoChannelName:  infoLogger,
+				TraceChannelName: traceLogger,
+			}))))
 	return &infoTraceLogger{
 		infoLogger: logger.With(
 			structure.ChannelKey, InfoChannelName,

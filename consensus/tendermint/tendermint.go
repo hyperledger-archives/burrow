@@ -41,6 +41,7 @@ import (
 	// files  "github.com/eris-ltd/eris-db/files"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/go-wire"
 )
@@ -57,7 +58,8 @@ var _ consensus_types.ConsensusEngine = (*Tendermint)(nil)
 var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
 func NewTendermint(moduleConfig *config.ModuleConfig,
-	application manager_types.Application) (*Tendermint, error) {
+	application manager_types.Application,
+	logger loggers.InfoTraceLogger) (*Tendermint, error) {
 	// re-assert proper configuration for module
 	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
 		return nil, fmt.Errorf("Version string %s did not match %s",
@@ -74,7 +76,7 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	tendermintConfigViper, err := config.ViperSubConfig(moduleConfig.Config, "configuration")
 	if tendermintConfigViper == nil {
 		return nil,
-				fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
+			fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
 	}
 	// wrap a copy of the viper config in a tendermint/go-config interface
 	tmintConfig := GetTendermintConfig(tendermintConfigViper)

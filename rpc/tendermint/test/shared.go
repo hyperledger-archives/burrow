@@ -88,6 +88,8 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	// To spill tendermint logs on the floor:
 	// lifecycle.CaptureTendermintLog15Output(loggers.NewNoopInfoTraceLogger())
 	lifecycle.CaptureTendermintLog15Output(logger)
+	lifecycle.CaptureStdlibLogOutput(logger)
+
 	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig,
 		logger)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/inconshreveable/log15/stack"
 	kitlog "github.com/go-kit/kit/log"
 )
 
@@ -24,4 +25,8 @@ var defaultTimestampUTCValuer kitlog.Valuer = func() interface{} {
 func WithMetadata(infoTraceLogger loggers.InfoTraceLogger) loggers.InfoTraceLogger {
 	return infoTraceLogger.With(structure.TimeKey, defaultTimestampUTCValuer,
 		structure.CallerKey, kitlog.Caller(infoTraceLoggerCallDepth))
+}
+
+func CallersValuer() kitlog.Valuer {
+	return func() interface{} { return stack.Callers() }
 }
