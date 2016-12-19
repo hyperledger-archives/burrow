@@ -21,6 +21,7 @@ import (
 
 	"path"
 
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/spf13/viper"
 	tm_common "github.com/tendermint/go-common"
@@ -83,7 +84,12 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	// Set up priv_validator.json before we start tendermint (otherwise it will
 	// create its own one.
 	saveNewPriv()
-	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig)
+	logger := lifecycle.NewStdErrLogger()
+	// To spill tendermint logs on the floor:
+	// lifecycle.CaptureTendermintLog15Output(loggers.NewNoopInfoTraceLogger())
+	lifecycle.CaptureTendermintLog15Output(logger)
+	testCore, err = core.NewCore("testCore", consensusConfig, managerConfig,
+		logger)
 	if err != nil {
 		return err
 	}
