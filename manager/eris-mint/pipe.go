@@ -40,7 +40,7 @@ import (
 	"github.com/eris-ltd/eris-db/logging/structure"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -58,7 +58,7 @@ type erisMintPipe struct {
 	namereg         *namereg
 	transactor      *transactor
 	// Genesis cache
-	genesisDoc   *state_types.GenesisDoc
+	genesisDoc   *genesis.GenesisDoc
 	genesisState *state.State
 	logger       loggers.InfoTraceLogger
 }
@@ -143,7 +143,7 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 // If no state can be loaded, the JSON genesis file will be loaded into the
 // state database as the zero state.
 func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
-	*state_types.GenesisDoc, error) {
+	*genesis.GenesisDoc, error) {
 	// avoid Tendermints PanicSanity and return a clean error
 	if backend != db.DBBackendMemDB &&
 		backend != db.DBBackendLevelDB {
@@ -153,18 +153,18 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 
 	stateDB := db.NewDB("erismint", backend, dataDir)
 	newState := state.LoadState(stateDB)
-	var genesisDoc *state_types.GenesisDoc
+	var genesisDoc *genesis.GenesisDoc
 	if newState == nil {
 		genesisDoc, newState = state.MakeGenesisStateFromFile(stateDB, genesisFile)
 		newState.Save()
 		buf, n, err := new(bytes.Buffer), new(int), new(error)
 		wire.WriteJSON(genesisDoc, buf, n, err)
-		stateDB.Set(state_types.GenDocKey, buf.Bytes())
+		stateDB.Set(genesis.GenDocKey, buf.Bytes())
 		if *err != nil {
 			return nil, nil, fmt.Errorf("Unable to write genesisDoc to db: %v", err)
 		}
 	} else {
-		loadedGenesisDocBytes := stateDB.Get(state_types.GenDocKey)
+		loadedGenesisDocBytes := stateDB.Get(genesis.GenDocKey)
 		err := new(error)
 		wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
 		if *err != nil {
