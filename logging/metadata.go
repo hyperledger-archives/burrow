@@ -5,8 +5,8 @@ import (
 
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
-	"github.com/eris-ltd/mint-client/Godeps/_workspace/src/github.com/inconshreveable/log15/stack"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-stack/stack"
 )
 
 const (
