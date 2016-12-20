@@ -5,7 +5,7 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 )
 
-// Treat duplicate keys
+// Treat duplicate key-values as consecutive entries in a vector-valued lookup
 type vectorValuedLogger struct {
 	logger kitlog.Logger
 }
@@ -13,15 +13,7 @@ type vectorValuedLogger struct {
 var _ kitlog.Logger = &vectorValuedLogger{}
 
 func (vvl *vectorValuedLogger) Log(keyvals ...interface{}) error {
-	keys, vals := structure.KeyValuesVector(keyvals)
-	kvs := make([]interface{}, len(keys)*2)
-	for i := 0; i < len(keys); i++ {
-		kv := i * 2
-		key := keys[i]
-		kvs[kv] = key
-		kvs[kv+1] = vals[key]
-	}
-	return vvl.logger.Log(kvs...)
+	return vvl.logger.Log(structure.Vectorise(keyvals)...)
 }
 
 func VectorValuedLogger(logger kitlog.Logger) *vectorValuedLogger {

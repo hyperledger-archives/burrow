@@ -33,7 +33,7 @@ type InfoTraceLogger interface {
 	// understand or debug the system. Any handled errors or warnings should be
 	// sent to the Info channel (where you may wish to tag them with a suitable
 	// key-value pair to categorise them as such).
-	Info(keyvals ...interface{})
+	Info(keyvals ...interface{}) error
 
 	// Send an log message to the Trace channel, formed of a sequence of key-value
 	// pairs. Trace messages can be used for any state change in the system that
@@ -41,7 +41,7 @@ type InfoTraceLogger interface {
 	// the system or trying to understand the system in detail. If the messages
 	// are very point-like and contain little structure, consider using a metric
 	// instead.
-	Trace(keyvals ...interface{})
+	Trace(keyvals ...interface{}) error
 
 	// A logging context (see go-kit log's Context). Takes a sequence key values
 	// via With or WithPrefix and ensures future calls to log will have those
@@ -107,13 +107,13 @@ func (l *infoTraceLogger) WithPrefix(keyvals ...interface{}) InfoTraceLogger {
 	}
 }
 
-func (l *infoTraceLogger) Info(keyvals ...interface{}) {
+func (l *infoTraceLogger) Info(keyvals ...interface{}) error {
 	// We send Info and Trace log lines down the same pipe to keep them ordered
-	l.infoLogger.Log(keyvals...)
+	return l.infoLogger.Log(keyvals...)
 }
 
-func (l *infoTraceLogger) Trace(keyvals ...interface{}) {
-	l.traceLogger.Log(keyvals...)
+func (l *infoTraceLogger) Trace(keyvals ...interface{}) error {
+	return l.traceLogger.Log(keyvals...)
 }
 
 // If logged to as a plain kitlog logger presume the message is for Trace

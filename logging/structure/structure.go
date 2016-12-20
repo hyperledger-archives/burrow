@@ -13,7 +13,7 @@ const (
 	CallerKey = "caller"
 	// Level name (string)
 	LevelKey = "level"
-	// Channel name in a multiple channel logging context
+	// Channel name in a vector channel logging context
 	ChannelKey = "channel"
 	// Log message (string)
 	MessageKey = "message"
@@ -58,40 +58,54 @@ func ValuesAndContext(keyvals []interface{},
 	return vals, context
 }
 
-type vector []interface{}
-
-func newVector(vals... interface{}) vector {
-	return vals
+// Stateful index that tracks the location of a possible vector value
+type vectorValueindex struct {
+	// Location of the value belonging to a key in output slice
+	valueIndex int
+	// Whether or not the value is currently a vector
+	vector     bool
 }
 
-func (v vector) Slice() []interface{} {
-	return v
-}
-
-// Returns the unique keys in keyvals and a map of values where values of
-// repeated keys are merged into a slice of those values in the order which they
-// appeared
-func KeyValuesVector(keyvals []interface{}) ([]interface{}, map[interface{}]interface{}) {
-	keys := []interface{}{}
-	vals := make(map[interface{}]interface{}, len(keyvals)/2)
+// 'Vectorises' values associated with repeated string keys member by collapsing many values into a single vector value.
+// The result is a copy of keyvals where the first occurrence of each matching key and its first value are replaced by
+// that key and all of its values in a single slice.
+func Vectorise(keyvals []interface{}, vectorKeys ...string) []interface{} {
+	outputKeyvals := make([]interface{}, 0, len(keyvals))
+	// Track the location and vector status of the values in the output
+	valueIndices := make(map[string]*vectorValueindex, len(vectorKeys))
+	elided := 0
 	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
 		key := keyvals[i]
 		val := keyvals[i+1]
-		switch oldVal := vals[key].(type) {
-		case nil:
-			keys = append(keys, key)
-			vals[key] = val
-		case vector:
-			// if this is, in fact, only the second time we have seen key and the
-			// first time it had a value of []interface{} then here we are doing the
-			// wrong thing by appending val. We will end up with
-			// Slice(..., val) rather than Slice(Slice(...), val)
-			vals[key] = vector(append(oldVal, val))
-		default:
-			vals[key] = newVector(oldVal, val)
+
+		// Only attempt to vectorise string keys
+		if k, ok := key.(string); ok {
+			if valueIndices[k] == nil {
+				// Record that this key has been seen once
+				valueIndices[k] = &vectorValueindex{
+					valueIndex: i + 1 - elided,
+				}
+				// Copy the key-value to output with the single value
+				outputKeyvals = append(outputKeyvals, key, val)
+			} else {
+				// We have seen this key before
+				vi := valueIndices[k]
+				if !vi.vector {
+					// This must be the only second occurrence of the key so now vectorise the value
+					outputKeyvals[vi.valueIndex] = []interface{}{outputKeyvals[vi.valueIndex]}
+					vi.vector = true
+				}
+				// Grow the vector value
+				outputKeyvals[vi.valueIndex] = append(outputKeyvals[vi.valueIndex].([]interface{}), val)
+				// We are now running two more elements behind the input keyvals because we have absorbed this key-value pair
+				elided += 2
+			}
+		} else {
+			// Just copy the key-value to the output for non-string keys
+			outputKeyvals = append(outputKeyvals, key, val)
 		}
 	}
-	return keys, vals
+	return outputKeyvals
 }
 
 // Return a single value corresponding to key in keyvals

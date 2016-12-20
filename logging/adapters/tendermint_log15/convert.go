@@ -27,7 +27,7 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 		Lvl:  Log15LvlFromString(level),
 		Msg:  message,
 		Call: call,
-		Ctx:  append(ctx, structure.CallerKey, call),
+		Ctx:  ctx,
 		KeyNames: log15.RecordKeyNames{
 			Time: structure.TimeKey,
 			Msg:  structure.MessageKey,

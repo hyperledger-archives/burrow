@@ -24,9 +24,10 @@ var defaultTimestampUTCValuer kitlog.Valuer = func() interface{} {
 
 func WithMetadata(infoTraceLogger loggers.InfoTraceLogger) loggers.InfoTraceLogger {
 	return infoTraceLogger.With(structure.TimeKey, defaultTimestampUTCValuer,
-		structure.CallerKey, kitlog.Caller(infoTraceLoggerCallDepth))
+		structure.CallerKey, kitlog.Caller(infoTraceLoggerCallDepth),
+		"trace", TraceValuer())
 }
 
-func CallersValuer() kitlog.Valuer {
-	return func() interface{} { return stack.Callers() }
+func TraceValuer() kitlog.Valuer {
+	return func() interface{} { return stack.Trace() }
 }

@@ -31,13 +31,10 @@ func TraceMsg(logger loggers.InfoTraceLogger, message string, keyvals ...interfa
 	Msg(kitlog.LoggerFunc(logger.Trace), message, keyvals...)
 }
 
-func WithScope(logger loggers.InfoTraceLogger, scopes... string) loggers.InfoTraceLogger {
-	return logger.With()
-}
-
 // Record a structured log line with a message
 func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
-	return logger.Log(slice.CopyPrepend(keyvals, structure.MessageKey, message))
+	prepended := slice.CopyPrepend(keyvals, structure.MessageKey, message)
+	return logger.Log(prepended...)
 }
 
 // Record a structured log line with a message and conventional keys

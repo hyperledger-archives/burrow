@@ -14,13 +14,23 @@ func TestValuesAndContext(t *testing.T) {
 	assert.Equal(t, Slice("dog", 2, "fork", 5), ctx)
 }
 
-func TestKeyValuesToMap(t *testing.T) {
-	kvs := Slice("scope", "lawnmower",
+func TestVectorise(t *testing.T) {
+	kvs := Slice(
+		"scope", "lawnmower",
+		"hub", "budub",
 		"occupation", "fish brewer",
 		"scope", "hose pipe",
-		"scope", "rake")
-	assert.Equal(t, map[interface{}]interface{}{
-		"occupation": "fish brewer",
-		"scope":     Slice("lawnmower", "hose pipe", "rake")},
-		KeyValuesToMap(kvs))
+		"flub", "dub",
+		"scope", "rake",
+		"flub", "brub",
+	)
+
+	kvsVector := Vectorise(kvs, "occupation", "scope")
+	assert.Equal(t, Slice(
+		"scope", Slice("lawnmower", "hose pipe", "rake"),
+		"hub", "budub",
+		"occupation", "fish brewer",
+		"flub", Slice("dub", "brub"),
+	),
+		kvsVector)
 }
