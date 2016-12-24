@@ -12,6 +12,8 @@ import (
 	"github.com/eris-ltd/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 	tmLog15 "github.com/tendermint/log15"
+	"github.com/streadway/simpleuuid"
+	"time"
 )
 
 func NewLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
@@ -28,7 +30,13 @@ func NewStdErrLogger() loggers.InfoTraceLogger {
 
 func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 	infoTraceLogger := loggers.NewInfoTraceLogger(infoLogger, traceLogger)
-	return logging.WithMetadata(infoTraceLogger)
+	// Create a random ID based on start time
+	uuid, _ := simpleuuid.NewTime(time.Now())
+	var runId string
+	if uuid != nil {
+		runId = uuid.String()
+	}
+	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId))
 }
 
 func CaptureTendermintLog15Output(infoTraceLogger loggers.InfoTraceLogger) {
