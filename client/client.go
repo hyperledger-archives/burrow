@@ -25,7 +25,7 @@ import (
 	// see func init()
 	tendermint_log "github.com/tendermint/log15"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"

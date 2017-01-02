@@ -23,8 +23,8 @@ import (
 
 	"fmt"
 
+	"github.com/eris-ltd/eris-cli/log"
 	"github.com/eris-ltd/eris-db/txs"
-	log "github.com/eris-ltd/eris-logger"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )

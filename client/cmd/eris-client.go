@@ -23,7 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"

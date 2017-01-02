@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"

@@ -25,7 +25,7 @@ import (
 	wire "github.com/tendermint/go-wire"
 	tmsp "github.com/tendermint/tmsp/types"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"

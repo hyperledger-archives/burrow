@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/event"

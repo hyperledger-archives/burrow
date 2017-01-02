@@ -231,6 +231,4 @@ imports:
   version: 46a701a619de90c65a78c04d1a58bf02585e9701
   subpackages:
   - term
-- name: github.com/eris-ltd/eris-logger
-  version: ea48a395d6ecc0eccc67a26da9fc7a6106fabb84
 devImports: []

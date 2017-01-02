@@ -33,8 +33,8 @@ import (
 	tendermint_types "github.com/tendermint/tendermint/types"
 	tmsp_types "github.com/tendermint/tmsp/types"
 
+	"github.com/eris-ltd/eris-cli/log"
 	edb_event "github.com/eris-ltd/eris-db/event"
-	log "github.com/eris-ltd/eris-logger"
 
 	config "github.com/eris-ltd/eris-db/config"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
@@ -74,7 +74,7 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	tendermintConfigViper, err := config.ViperSubConfig(moduleConfig.Config, "configuration")
 	if tendermintConfigViper == nil {
 		return nil,
-				fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
+			fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
 	}
 	// wrap a copy of the viper config in a tendermint/go-config interface
 	tmintConfig := GetTendermintConfig(tendermintConfigViper)

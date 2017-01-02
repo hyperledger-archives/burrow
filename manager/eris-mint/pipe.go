@@ -28,6 +28,7 @@ import (
 	tm_types "github.com/tendermint/tendermint/types"
 	tmsp_types "github.com/tendermint/tmsp/types"
 
+	"github.com/eris-ltd/eris-cli/log"
 	"github.com/eris-ltd/eris-db/account"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	imath "github.com/eris-ltd/eris-db/common/math/integral"
@@ -36,15 +37,14 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/definitions"
 	edb_event "github.com/eris-ltd/eris-db/event"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	genesis "github.com/eris-ltd/eris-db/genesis"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
-	log "github.com/eris-ltd/eris-logger"
 )
 
 type erisMintPipe struct {

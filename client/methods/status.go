@@ -19,7 +19,7 @@ package methods
 import (
 	"fmt"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/definitions"

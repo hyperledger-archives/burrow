@@ -22,7 +22,7 @@ import (
 	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	config "github.com/eris-ltd/eris-db/config"
 	consensus "github.com/eris-ltd/eris-db/consensus"

@@ -24,7 +24,7 @@ import (
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"

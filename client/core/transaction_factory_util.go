@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strconv"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-cli/log"
 
 	"github.com/tendermint/go-crypto"
 
