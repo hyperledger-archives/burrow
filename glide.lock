@@ -233,4 +233,6 @@ imports:
   - term
 - name: github.com/eris-ltd/eris-logger
   version: ea48a395d6ecc0eccc67a26da9fc7a6106fabb84
+- name: github.com/streadway/simpleuuid
+  version: 6617b501e485b77e61b98cd533aefff9e258b5a7
 devImports: []

@@ -115,6 +115,8 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)
+	// And from stdlib go log
+	lifecycle.CaptureStdlibLogOutput(logger)
 
 	cmdLogger := logger.With("command", "serve")
 

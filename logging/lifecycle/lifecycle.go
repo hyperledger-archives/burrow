@@ -6,11 +6,14 @@ import (
 	"os"
 
 	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/adapters/stdlib"
 	tmLog15adapter "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 	tmLog15 "github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/streadway/simpleuuid"
+	"time"
 )
 
 func NewLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
@@ -27,11 +30,22 @@ func NewStdErrLogger() loggers.InfoTraceLogger {
 
 func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 	infoTraceLogger := loggers.NewInfoTraceLogger(infoLogger, traceLogger)
-	return logging.WithMetadata(infoTraceLogger)
+	// Create a random ID based on start time
+	uuid, _ := simpleuuid.NewTime(time.Now())
+	var runId string
+	if uuid != nil {
+		runId = uuid.String()
+	}
+	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId))
 }
 
 func CaptureTendermintLog15Output(infoTraceLogger loggers.InfoTraceLogger) {
 	tmLog15.Root().SetHandler(
 		tmLog15adapter.InfoTraceLoggerAsLog15Handler(infoTraceLogger.
-			With(structure.ComponentKey, "tendermint")))
+			With(structure.ComponentKey, "tendermint_log15")))
+}
+
+func CaptureStdlibLogOutput(infoTraceLogger loggers.InfoTraceLogger) {
+	stdlib.CaptureRootLogger(infoTraceLogger.
+		With(structure.ComponentKey, "stdlib_log"))
 }

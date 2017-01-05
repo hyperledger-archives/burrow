@@ -58,7 +58,34 @@ func Delete(slice []interface{}, i int, n int) []interface{} {
 	return append(slice[:i], slice[i+n:]...)
 }
 
-//
+// Delete an element at a specific index and return the contracted list
 func DeleteAt(slice []interface{}, i int) []interface{} {
 	return Delete(slice, i, 1)
+}
+
+// Flatten a slice by a list by splicing any elements of the list that are
+// themselves lists into the slice elements to the list in place of slice itself
+func Flatten(slice []interface{}) []interface{} {
+	return DeepFlatten(slice, 1)
+}
+
+// Recursively flattens a list by splicing any sub-lists into their parent until
+// depth is reached. If a negative number is passed for depth then it continues
+// until no elements of the returned list are lists
+func DeepFlatten(slice []interface{}, depth int) []interface{} {
+	if depth == 0 {
+		return slice
+	}
+	returnSlice := []interface{}{}
+
+	for _, element := range slice {
+		if s, ok := element.([]interface{}); ok {
+			returnSlice = append(returnSlice, DeepFlatten(s, depth-1)...)
+		} else {
+			returnSlice = append(returnSlice, element)
+		}
+
+	}
+
+	return returnSlice
 }
