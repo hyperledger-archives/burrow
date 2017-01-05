@@ -39,7 +39,7 @@ var ErisDbCmd = &cobra.Command{
 a modular consensus engine and application manager to run a chain to suit
 your needs.
 
-Made with <3 by Eris Industries.
+Made with <3 by Monax Industries.
 
 Complete documentation is available at https://monax.io/docs/documentation
 ` + "\nVERSION:\n " + version.VERSION,
