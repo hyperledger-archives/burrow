@@ -5,7 +5,7 @@ import (
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	transaction "github.com/eris-ltd/eris-db/txs"
@@ -540,7 +540,7 @@ var serverDuration uint = 100
 type (
 	ChainData struct {
 		PrivValidator *mintTypes.PrivValidator `json:"priv_validator"`
-		Genesis       *stypes.GenesisDoc       `json:"genesis"`
+		Genesis       *genesis.GenesisDoc       `json:"genesis"`
 	}
 
 	GetAccountData struct {
