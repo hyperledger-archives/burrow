@@ -16,7 +16,15 @@ import (
 	"time"
 )
 
-func NewLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
+// Obtain a default eris-client logger from config
+func NewClientLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
+	infoLogger := kitlog.NewLogfmtLogger(os.Stderr)
+	traceLogger := kitlog.NewLogfmtLogger(os.Stderr)
+	return logging.WithMetadata(loggers.NewInfoTraceLogger(infoLogger, traceLogger))
+}
+
+// Obtain a default eris-server (eris-db serve ...) logger
+func NewServerLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
 	infoLogger := kitlog.NewLogfmtLogger(os.Stderr)
 	traceLogger := kitlog.NewLogfmtLogger(os.Stderr)
 	return logging.WithMetadata(loggers.NewInfoTraceLogger(infoLogger, traceLogger))

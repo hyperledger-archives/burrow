@@ -27,8 +27,8 @@ import (
 
 	"github.com/eris-ltd/eris-db/core"
 	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/lifecycle"
-	"github.com/eris-ltd/eris-db/logging/structure"
 	"github.com/eris-ltd/eris-db/util"
 )
 
@@ -111,14 +111,12 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	}
 
 	// Create a root logger to pass through to dependencies
-	logger := lifecycle.NewLoggerFromConfig(*loggerConfig)
+	logger := logging.WithScope(lifecycle.NewServerLoggerFromConfig(*loggerConfig), "Serve")
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)
 	// And from stdlib go log
 	lifecycle.CaptureStdlibLogOutput(logger)
-
-	cmdLogger := logger.With("command", "serve")
 
 	// if do.ChainId is not yet set, load chain_id for assertion from configuration file
 
@@ -129,11 +127,11 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		}
 	}
 
-	cmdLogger.Info("chainId", do.ChainId,
+	logging.Msg(logger, "Loading configuration for serve command",
+		"chainId", do.ChainId,
 		"workingDirectory", do.WorkDir,
 		"dataDirectory", do.DataDir,
-		"genesisFile", do.GenesisFile,
-		structure.MessageKey, "Loading configuration for serve command")
+		"genesisFile", do.GenesisFile)
 
 	consensusConfig, err := core.LoadConsensusModuleConfig(do)
 	if err != nil {
@@ -145,9 +143,9 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to load application manager module configuration: %s.", err)
 	}
 
-	cmdLogger.Info("consensusModule", consensusConfig.Version,
-		"applicationManager", managerConfig.Version,
-		structure.MessageKey, "Modules configured")
+	logging.Msg(logger, "Modules configured",
+		"consensusModule", consensusConfig.Version,
+		"applicationManager", managerConfig.Version)
 
 	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
 }

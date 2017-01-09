@@ -31,11 +31,21 @@ func TraceMsg(logger loggers.InfoTraceLogger, message string, keyvals ...interfa
 	Msg(kitlog.LoggerFunc(logger.Trace), message, keyvals...)
 }
 
+// Establish or extend the scope of this logger by appending scopeName to the Scope vector.
+// Like With the logging scope is append only but can be used to provide parenthetical scopes by hanging on to the
+// parent scope and using once the scope has been exited. The scope mechanism does is agnostic to the type of scope
+// so can be used to identify certain segments of the call stack, a lexical scope, or any other nested scope.
+func WithScope(logger loggers.InfoTraceLogger, scopeName string) loggers.InfoTraceLogger {
+	// InfoTraceLogger will collapse successive (ScopeKey, scopeName) pairs into a vector in the order which they appear
+	return logger.With(structure.ScopeKey, scopeName)
+}
+
 // Record a structured log line with a message
 func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
 	prepended := slice.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }
+
 
 // Record a structured log line with a message and conventional keys
 func MsgVals(logger kitlog.Logger, message string, vals ...interface{}) error {

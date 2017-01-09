@@ -25,8 +25,8 @@ import (
 	wire "github.com/tendermint/go-wire"
 	tmsp "github.com/tendermint/tmsp/types"
 
-	log "github.com/eris-ltd/eris-logger"
-
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -47,7 +47,8 @@ type ErisMint struct {
 	evc  *tendermint_events.EventCache
 	evsw *tendermint_events.EventSwitch
 
-	nTxs int // count txs in a block
+	nTxs   int // count txs in a block
+	logger loggers.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure ErisMint successfully implements
@@ -71,13 +72,14 @@ func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch) *ErisMint {
+func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *ErisMint {
 	return &ErisMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
 		checkCache: sm.NewBlockCache(s),
 		evc:        tendermint_events.NewEventCache(evsw),
 		evsw:       evsw,
+		logger:     logging.WithScope(logger, "ErisMint"),
 	}
 }
 
@@ -145,18 +147,17 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	defer app.mtx.Unlock()
 
 	app.state.LastBlockHeight += 1
-	log.WithFields(log.Fields{
-		"blockheight": app.state.LastBlockHeight,
-	}).Info("Commit block")
+	logging.InfoMsg(app.logger, "Committing block",
+		"last_block_height", app.state.LastBlockHeight)
 
 	// sync the AppendTx cache
 	app.cache.Sync()
 
 	// Refresh the checkCache with the latest commited state
-	log.WithFields(log.Fields{
-		"txs": app.nTxs,
-	}).Info("Reset checkCache")
+	logging.InfoMsg(app.logger, "Resetting checkCache",
+		"txs", app.nTxs)
 	app.checkCache = sm.NewBlockCache(app.state)
+
 	app.nTxs = 0
 
 	// save state to disk

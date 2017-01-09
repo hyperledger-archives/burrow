@@ -26,8 +26,8 @@ import (
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	// types       "github.com/eris-ltd/eris-db/manager/types"
 
+	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/logging/structure"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -44,9 +44,9 @@ func NewApplicationPipe(moduleConfig *config.ModuleConfig,
 		if err := erismint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
 			return nil, err
 		}
-		logger.Info("compatibleConsensus", consensusMinorVersion,
-			"erisMintVersion", erismint.GetErisMintVersion().GetVersionString(),
-			structure.MessageKey, "Loading ErisMint")
+		logging.InfoMsg(logger, "Loading ErisMint",
+			"compatibleConsensus", consensusMinorVersion,
+			"erisMintVersion", erismint.GetErisMintVersion().GetVersionString())
 		return erismint.NewErisMintPipe(moduleConfig, evsw, logger)
 	}
 	return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
