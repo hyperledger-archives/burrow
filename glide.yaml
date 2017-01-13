@@ -1,19 +1,65 @@
 package: github.com/eris-ltd/eris-db
 import:
-- package: github.com/eris-ltd/eris-logger
+- package: github.com/eris-ltd/common
 - package: github.com/eris-ltd/eris-keys
+  version: ~0.12.0-rc3
+- package: github.com/eris-ltd/eris-logger
+- package: github.com/gin-gonic/gin
+  version: ~1.1.4
+- package: github.com/gorilla/websocket
+  version: ~1.0.0
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
+
+- package: github.com/tendermint/ed25519
+  version: 1f52c6f8b8a5c7908aff4497c186af344b428925
+- package: github.com/tendermint/flowcontrol
+  version: 84d9671090430e8ec80e35b339907e0579b999eb
+- package: github.com/tendermint/go-clist
+  version: 3baa390bbaf7634251c42ad69a8682e7e3990552
+- package: github.com/tendermint/go-common
+  version: 47e06734f6ee488cc2e61550a38642025e1d4227
+- package: github.com/tendermint/go-config
+  version: e64b424499acd0eb9856b88e10c0dff41628c0d6
+- package: github.com/tendermint/go-crypto
+  version: 4b11d62bdb324027ea01554e5767b71174680ba0
+- package: github.com/tendermint/go-db
+  version: 31fdd21c7eaeed53e0ea7ca597fb1e960e2988a5
+- package: github.com/tendermint/go-events
+  version: 1652dc8b3f7780079aa98c3ce20a83ee90b9758b
+- package: github.com/tendermint/go-logger
+  version: cefb3a45c0bf3c493a04e9bcd9b1540528be59f2
+- package: github.com/tendermint/go-merkle
+  version: 05042c6ab9cad51d12e4cecf717ae68e3b1409a8
+- package: github.com/tendermint/go-p2p
+  version: 1eb390680d33299ba0e3334490eca587efd18414
+- package: github.com/tendermint/go-rpc
+  version: 855255d73eecd25097288be70f3fb208a5817d80
+- package: github.com/tendermint/go-wire
+  version: 3b0adbc86ed8425eaed98516165b6788d9f4de7a
+- package: github.com/tendermint/log15
+  version: 9545b249b3aacafa97f79e0838b02b274adc6f5f
+- package: github.com/tendermint/tmsp
+  version: 5d3eb0328a615ba55b580ce871033e605aa8b97d
+
 - package: github.com/tendermint/tendermint
-- package: github.com/gin-gonic/gin
-- package: github.com/gorilla/websocket
-- package: github.com/naoina/toml
-- package: github.com/stretchr/testify
+  version: 0.7.3
+- package: github.com/tendermint/log15
+  version: 9545b249b3aacafa97f79e0838b02b274adc6f5f
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
-  subpackages:
-  - ripemd160
 - package: gopkg.in/fatih/set.v0
+  version: ~0.1.0
 - package: gopkg.in/tylerb/graceful.v1
-- package: golang.org/x/net/http2
-- package: github.com/eris-ltd/common
+  version: ~1.2.13
+- package: golang.org/x/net
+  version: cfe3c2a7525b50c3d707256e371c90938cfef98a
+- package: google.golang.org/grpc
+  version: 28707e14b1d2b2f5da81474dea2790d71e526987
+- package: github.com/golang/protobuf
+  version: master
+testImport:
+- package: github.com/eris-ltd/eris-cm
+  version: ~0.12.0-rc3
+- package: github.com/stretchr/testify
+  version: ~1.1.4
