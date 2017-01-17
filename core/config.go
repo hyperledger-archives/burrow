@@ -114,12 +114,16 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	return serverConfig, err
 }
 
-func LoadLoggingConfig(do *definitions.Do) (*logging.LoggingConfig, error) {
+func LoadLoggingConfigFromDo(do *definitions.Do) (*logging.LoggingConfig, error) {
 	//subConfig, err := SubConfig(conf, "logging")
 	loggingConfig := &logging.LoggingConfig{}
 	return loggingConfig, nil
 }
 
+func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*logging.LoggingConfig, error) {
+	loggingConfig := &logging.LoggingConfig{}
+	return loggingConfig, nil
+}
 //------------------------------------------------------------------------------
 // Helper functions
 

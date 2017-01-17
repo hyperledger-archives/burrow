@@ -31,10 +31,6 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 )
 
-var (
-	MaxCommitWaitTimeSeconds = 20
-)
-
 //------------------------------------------------------------------------------------
 // core functions with string args.
 // validates strings and forms transaction

@@ -105,13 +105,13 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to initialise data directory (%s): %v", do.DataDir, err)
 	}
 
-	loggerConfig, err := core.LoadLoggingConfig(do)
+	loggerConfig, err := core.LoadLoggingConfigFromDo(do)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load logging config: %s", err)
 	}
 
 	// Create a root logger to pass through to dependencies
-	logger := logging.WithScope(lifecycle.NewServerLoggerFromConfig(*loggerConfig), "Serve")
+	logger := logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(*loggerConfig), "Serve")
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)

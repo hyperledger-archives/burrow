@@ -26,11 +26,13 @@ import (
 	"github.com/eris-ltd/eris-db/client/core"
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/keys"
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
 )
 
 func Send(do *definitions.ClientDo) {
 	// construct two clients to call out to keys server and
 	// blockchain node.
+	lifecycle.NewLoggerFromLoggingConfig()
 	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag)
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
 	// form the send transaction
@@ -93,4 +95,12 @@ func unpackSignAndBroadcast(result *core.TxResult, err error) {
 		printResult["Exception"] = fmt.Sprintf("%s", result.Exception)
 	}
 	log.WithFields(printResult).Warn("Result")
+}
+
+func loggerFromClientDo(){
+
+	loggerConfig, err := core.LoadLoggingConfigFromDo(do)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load logging config: %s", err)
+	}
 }
