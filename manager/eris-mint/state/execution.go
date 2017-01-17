@@ -203,6 +203,12 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, out
 	return accounts, nil
 }
 
+// Since all ethereum accounts implicitly exist we sometimes lazily create an Account object to represent them
+// only when needed. Sometimes we need to create an unknown Account knowing only its address (which is expected to
+// be a deterministic hash of its associated public key) and not its public key. When we eventually receive a
+// transaction acting on behalf of that account we will be given a public key that we can check matches the address.
+// If it does then we will associate the public key with the stub account already registered in the system once and
+// for all time.
 func checkInputPubKey(acc *acm.Account, in *txs.TxInput) error {
 	if acc.PubKey == nil {
 		if in.PubKey == nil {
