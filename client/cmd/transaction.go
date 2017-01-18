@@ -24,9 +24,8 @@ import (
 
 	log "github.com/eris-ltd/eris-logger"
 
-	"github.com/eris-ltd/eris-db/client/transaction"
+	"github.com/eris-ltd/eris-db/client/methods"
 )
-
 
 func buildTransactionCommand() *cobra.Command {
 	// Transaction command has subcommands send, name, call, bond,
@@ -47,7 +46,7 @@ func buildTransactionCommand() *cobra.Command {
 		Short: "eris-client tx send --amt <amt> --to <addr>",
 		Long:  "eris-client tx send --amt <amt> --to <addr>",
 		Run: func(cmd *cobra.Command, args []string) {
-			transaction.Send(clientDo)
+			methods.Send(clientDo)
 		},
 		PreRun: assertParameters,
 	}
@@ -76,7 +75,7 @@ func buildTransactionCommand() *cobra.Command {
 		Short: "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Long:  "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Run: func(cmd *cobra.Command, args []string) {
-			transaction.Call(clientDo)
+			methods.Call(clientDo)
 		},
 		PreRun: assertParameters,
 	}

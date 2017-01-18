@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package rpc
 
 import (
 	"fmt"
@@ -26,19 +26,19 @@ import (
 	mockkeys "github.com/eris-ltd/eris-db/keys/mock"
 )
 
-func TestTransactionFactory(t *testing.T) {
+func Test(t *testing.T) {
 	mockKeyClient := mockkeys.NewMockKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
-	testTransactionFactorySend(t, mockNodeClient, mockKeyClient)
-	testTransactionFactoryCall(t, mockNodeClient, mockKeyClient)
-	testTransactionFactoryName(t, mockNodeClient, mockKeyClient)
-	testTransactionFactoryPermissions(t, mockNodeClient, mockKeyClient)
+	testSend(t, mockNodeClient, mockKeyClient)
+	testCall(t, mockNodeClient, mockKeyClient)
+	testName(t, mockNodeClient, mockKeyClient)
+	testPermissions(t, mockNodeClient, mockKeyClient)
 	// t.Run("BondTransaction", )
 	// t.Run("UnbondTransaction", )
 	// t.Run("RebondTransaction", )
 }
 
-func testTransactionFactorySend(t *testing.T,
+func testSend(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
@@ -66,7 +66,7 @@ func testTransactionFactorySend(t *testing.T,
 	// TODO: test content of Transaction
 }
 
-func testTransactionFactoryCall(t *testing.T,
+func testCall(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
@@ -99,7 +99,7 @@ func testTransactionFactoryCall(t *testing.T,
 	// TODO: test content of Transaction
 }
 
-func testTransactionFactoryName(t *testing.T,
+func testName(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
@@ -130,7 +130,7 @@ func testTransactionFactoryName(t *testing.T,
 	// TODO: test content of Transaction
 }
 
-func testTransactionFactoryPermissions(t *testing.T,
+func testPermissions(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
