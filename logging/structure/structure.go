@@ -70,8 +70,6 @@ type vectorValueindex struct {
 // The result is a copy of keyvals where the first occurrence of each matching key and its first value are replaced by
 // that key and all of its values in a single slice.
 func Vectorise(keyvals []interface{}, vectorKeys ...string) []interface{} {
-	// We rely on working against a single backing array, so we use a capacity that is the maximum possible size of the
-	// slice after vectorising (in the case there are no duplicate keys and this is a no-op)
 	outputKeyvals := make([]interface{}, 0, len(keyvals))
 	// Track the location and vector status of the values in the output
 	valueIndices := make(map[string]*vectorValueindex, len(vectorKeys))

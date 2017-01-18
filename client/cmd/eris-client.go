@@ -23,6 +23,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	log "github.com/eris-ltd/eris-logger"
+
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"
 )
@@ -39,6 +41,14 @@ Made with <3 by Eris Industries.
 
 Complete documentation is available at https://monax.io/docs/documentation
 ` + "\nVERSION:\n " + version.VERSION,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.SetLevel(log.WarnLevel)
+		if clientDo.Verbose {
+			log.SetLevel(log.InfoLevel)
+		} else if clientDo.Debug {
+			log.SetLevel(log.DebugLevel)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
