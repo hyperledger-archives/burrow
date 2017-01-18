@@ -70,7 +70,7 @@ func reap(es *EventSubscriptions) {
 	defer es.mtx.Unlock()
 	for id, sub := range es.subs {
 		if time.Since(sub.ts) > reaperThreshold {
-			// Seems like Go is ok with evts..
+			// Seems like Go is ok with this..
 			delete(es.subs, id)
 			es.eventEmitter.Unsubscribe(id)
 		}
@@ -116,7 +116,7 @@ func (this *EventSubscriptions) Poll(subId string) ([]interface{}, error) {
 func (this *EventSubscriptions) Remove(subId string) error {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
-	// TODO Check evts.
+	// TODO Check this.
 	_, ok := this.subs[subId]
 	if !ok {
 		return fmt.Errorf("Subscription not active. ID: " + subId)

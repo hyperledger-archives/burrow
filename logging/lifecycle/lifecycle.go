@@ -1,7 +1,6 @@
 package lifecycle
 
 // No package in ./logging/... should depend on lifecycle
-
 import (
 	"os"
 
@@ -16,8 +15,11 @@ import (
 	"time"
 )
 
+// Lifecycle provides a canonical source for eris loggers. Components should use the functions here
+// to set up their root logger and capture any other logging output.
+
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {
+func NewLoggerFromLoggingConfig(LoggingConfig *logging.LoggingConfig) loggers.InfoTraceLogger {
 	infoLogger := kitlog.NewLogfmtLogger(os.Stderr)
 	traceLogger := kitlog.NewLogfmtLogger(os.Stderr)
 	return logging.WithMetadata(loggers.NewInfoTraceLogger(infoLogger, traceLogger))
@@ -29,8 +31,12 @@ func NewStdErrLogger() loggers.InfoTraceLogger {
 	return NewLogger(logger, logger)
 }
 
+// Provided a standard eris logger that outputs to the supplied underlying info and trace
+// loggers
 func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
-	infoTraceLogger := loggers.NewInfoTraceLogger(infoLogger, traceLogger)
+	infoTraceLogger := loggers.NewInfoTraceLogger(
+		loggers.ErisFormatLogger(infoLogger),
+		loggers.ErisFormatLogger(traceLogger))
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
@@ -43,10 +49,10 @@ func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 func CaptureTendermintLog15Output(infoTraceLogger loggers.InfoTraceLogger) {
 	tmLog15.Root().SetHandler(
 		tmLog15adapter.InfoTraceLoggerAsLog15Handler(infoTraceLogger.
-			With(structure.ComponentKey, "tendermint_log15")))
+			With(structure.CapturedLoggingSourceKey, "tendermint_log15")))
 }
 
 func CaptureStdlibLogOutput(infoTraceLogger loggers.InfoTraceLogger) {
 	stdlib.CaptureRootLogger(infoTraceLogger.
-		With(structure.ComponentKey, "stdlib_log"))
+		With(structure.CapturedLoggingSourceKey, "stdlib_log"))
 }

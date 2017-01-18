@@ -19,35 +19,35 @@ package methods
 import (
 	"fmt"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/util"
 )
 
 func Status(do *definitions.ClientDo) {
-	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
+	logger, err := loggerFromClientDo(do, "Status")
+	if err != nil {
+		util.Fatalf("Could not generate logging config from ClientDo: %s", err)
+	}
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
 	if err != nil {
-		log.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
-		return
+		util.Fatalf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
 	chainName, chainId, genesisHashfromChainId, err := erisNodeClient.ChainId()
 	if err != nil {
-		log.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
-		return
+		util.Fatalf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
-	log.WithFields(log.Fields{
-		"chain":                    do.NodeAddrFlag,
-		"genesisHash":              fmt.Sprintf("%X", genesisHash),
-		"chainName":                chainName,
-		"chainId":                  chainId,
-		"genesisHash from chainId": fmt.Sprintf("%X", genesisHashfromChainId),
-		"validator public key":     fmt.Sprintf("%X", validatorPublicKey),
-		"latest block hash":        fmt.Sprintf("%X", latestBlockHash),
-		"latest block height":      latestBlockHeight,
-		"latest block time":        latestBlockTime,
-	}).Info("status")
+	logger.Info("chain", do.NodeAddrFlag,
+		"genesisHash", fmt.Sprintf("%X", genesisHash),
+		"chainName", chainName,
+		"chainId", chainId,
+		"genesisHash from chainId", fmt.Sprintf("%X", genesisHashfromChainId),
+		"validator public key", fmt.Sprintf("%X", validatorPublicKey),
+		"latest block hash", fmt.Sprintf("%X", latestBlockHash),
+		"latest block height", latestBlockHeight,
+		"latest block time", latestBlockTime,
+	)
 }

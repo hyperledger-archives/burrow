@@ -30,13 +30,13 @@ import (
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
-// TODO: [Silas] evts is a compatibility layer between our event types and
+// TODO: [Silas] this is a compatibility layer between our event types and
 // TODO: go-events. Our ultimate plan is to replace go-events with our own pub-sub
 // TODO: code that will better allow us to manage and multiplex events from different
 // TODO: subsystems
 
 // Oh for a sum type
-// We are using evts as a marker interface for the
+// We are using this as a marker interface for the
 type anyEventData interface{}
 
 type EventEmitter interface {
@@ -144,7 +144,7 @@ func GenerateSubId() (string, error) {
 }
 
 func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
-	// TODO: [Silas] avoid evts with a better event pub-sub system of our own
+	// TODO: [Silas] avoid this with a better event pub-sub system of our own
 	// TODO: that maybe involves a registry of events
 	switch eventData := eventData.(type) {
 	case txs.EventData:

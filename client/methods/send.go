@@ -17,30 +17,32 @@
 package methods
 
 import (
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/client/rpc"
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/keys"
+	"github.com/eris-ltd/eris-db/util"
 )
 
 func Send(do *definitions.ClientDo) {
 	// construct two clients to call out to keys server and
 	// blockchain node.
-	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag)
-	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
+	logger, err := loggerFromClientDo(do, "Send")
+	if err != nil {
+		util.Fatalf("Could not generate logging config from ClientDo: %s", err)
+	}
+	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag, logger)
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
 	// form the send transaction
 	sendTransaction, err := rpc.Send(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag)
 	if err != nil {
-		log.Fatalf("Failed on forming Send Transaction: %s", err)
-		return
+		util.Fatalf("Failed on forming Send Transaction: %s", err)
 	}
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
-	unpackSignAndBroadcast(
-		rpc.SignAndBroadcast(do.ChainidFlag, erisNodeClient,
-			erisKeyClient, sendTransaction, true, do.BroadcastFlag, do.WaitFlag))
+	txResult, err := rpc.SignAndBroadcast(do.ChainidFlag, erisNodeClient, erisKeyClient,
+		sendTransaction, true, do.BroadcastFlag, do.WaitFlag)
+	unpackSignAndBroadcast(txResult, err, logger)
 }

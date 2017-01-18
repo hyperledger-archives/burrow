@@ -131,7 +131,7 @@ func TestSubReaping(t *testing.T) {
 // Test that event subscriptions can be added and removed manually.
 func TestSubManualClose(t *testing.T) {
 	NUM_SUBS := 100
-	// Keep the reaper out of evts.
+	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
 
@@ -178,7 +178,7 @@ func TestSubManualClose(t *testing.T) {
 // Test that the system doesn't fail under high pressure.
 func TestSubFlooding(t *testing.T) {
 	NUM_SUBS := 100
-	// Keep the reaper out of evts.
+	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
 	// Crank it up. Now pressure is 10 times higher on each sub.
