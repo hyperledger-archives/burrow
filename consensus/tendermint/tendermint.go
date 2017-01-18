@@ -34,13 +34,13 @@ import (
 	tmsp_types "github.com/tendermint/tmsp/types"
 
 	edb_event "github.com/eris-ltd/eris-db/event"
-	log "github.com/eris-ltd/eris-logger"
 
 	config "github.com/eris-ltd/eris-db/config"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	// files  "github.com/eris-ltd/eris-db/files"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/go-wire"
@@ -50,6 +50,7 @@ type Tendermint struct {
 	tmintNode   *node.Node
 	tmintConfig *TendermintConfig
 	chainId     string
+	logger      loggers.InfoTraceLogger
 }
 
 // Compiler checks to ensure Tendermint successfully implements
@@ -94,18 +95,19 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	tmintConfig.AssertTendermintConsistency(moduleConfig,
 		privateValidatorFilePath)
 	chainId := tmintConfig.GetString("chain_id")
-	log.WithFields(log.Fields{
-		"chainId":              chainId,
-		"genesisFile":          tmintConfig.GetString("genesis_file"),
-		"nodeLocalAddress":     tmintConfig.GetString("node_laddr"),
-		"moniker":              tmintConfig.GetString("moniker"),
-		"seeds":                tmintConfig.GetString("seeds"),
-		"fastSync":             tmintConfig.GetBool("fast_sync"),
-		"rpcLocalAddress":      tmintConfig.GetString("rpc_laddr"),
-		"databaseDirectory":    tmintConfig.GetString("db_dir"),
-		"privateValidatorFile": tmintConfig.GetString("priv_validator_file"),
-		"privValFile":          moduleConfig.Config.GetString("private_validator_file"),
-	}).Debug("Loaded Tendermint sub-configuration")
+
+	logging.TraceMsg(logger, "Loaded Tendermint sub-configuration",
+		"chainId", chainId,
+		"genesisFile", tmintConfig.GetString("genesis_file"),
+		"nodeLocalAddress", tmintConfig.GetString("node_laddr"),
+		"moniker", tmintConfig.GetString("moniker"),
+		"seeds", tmintConfig.GetString("seeds"),
+		"fastSync", tmintConfig.GetBool("fast_sync"),
+		"rpcLocalAddress", tmintConfig.GetString("rpc_laddr"),
+		"databaseDirectory", tmintConfig.GetString("db_dir"),
+		"privateValidatorFile", tmintConfig.GetString("priv_validator_file"),
+		"privValFile", moduleConfig.Config.GetString("private_validator_file"))
+
 	// TODO: [ben] do not "or Generate Validator keys", rather fail directly
 	// TODO: [ben] implement the signer for Private validator over eris-keys
 	// TODO: [ben] copy from rootDir to tendermint workingDir;
@@ -118,8 +120,8 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	// not running the tendermint RPC as it could lead to unexpected behaviour,
 	// not least if we accidentally try to run it on the same address as our own
 	if tmintConfig.GetString("rpc_laddr") != "" {
-		log.Warnf("Force disabling Tendermint's native RPC, which had been set to "+
-			"run on '%s' in the Tendermint config.", tmintConfig.GetString("rpc_laddr"))
+		logging.InfoMsg(logger, "Force disabling Tendermint's native RPC",
+			"provided_rpc_laddr", tmintConfig.GetString("rpc_laddr"))
 		tmintConfig.Set("rpc_laddr", "")
 	}
 
@@ -138,26 +140,25 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 		newNode.Stop()
 		return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
 	}
-	log.WithFields(log.Fields{
-		"nodeAddress":       tmintConfig.GetString("node_laddr"),
-		"transportProtocol": "tcp",
-		"upnp":              !tmintConfig.GetBool("skip_upnp"),
-		"moniker":           tmintConfig.GetString("moniker"),
-	}).Info("Tendermint consensus node started")
+	logging.InfoMsg(logger, "Tendermint consensus node started",
+		"nodeAddress", tmintConfig.GetString("node_laddr"),
+		"transportProtocol", "tcp",
+		"upnp", !tmintConfig.GetBool("skip_upnp"),
+		"moniker", tmintConfig.GetString("moniker"))
 
 	// If seedNode is provided by config, dial out.
 	if tmintConfig.GetString("seeds") != "" {
 		seeds := strings.Split(tmintConfig.GetString("seeds"), ",")
 		newNode.DialSeeds(seeds)
-		log.WithFields(log.Fields{
-			"seeds": seeds,
-		}).Debug("Tendermint node called seeds")
+		logging.TraceMsg(logger, "Tendermint node called seeds",
+			"seeds", seeds)
 	}
 
 	return &Tendermint{
 		tmintNode:   newNode,
 		tmintConfig: tmintConfig,
 		chainId:     chainId,
+		logger:      logger,
 	}, nil
 }
 
@@ -230,7 +231,7 @@ func (tendermint *Tendermint) PublicValidatorKey() crypto.PubKey {
 }
 
 func (tendermint *Tendermint) Events() edb_event.EventEmitter {
-	return edb_event.NewEvents(tendermint.tmintNode.EventSwitch())
+	return edb_event.NewEvents(tendermint.tmintNode.EventSwitch(), tendermint.logger)
 }
 
 func (tendermint *Tendermint) BroadcastTransaction(transaction []byte,

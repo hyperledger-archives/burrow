@@ -52,6 +52,7 @@ func NewCore(chainId string,
 	// start new event switch, TODO: [ben] replace with eris-db/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
+	logger = logging.WithScope(logger, "Core")
 
 	// start a new application pipe that will load an application manager
 	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
