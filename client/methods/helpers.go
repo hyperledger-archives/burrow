@@ -23,13 +23,9 @@ import (
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/util"
 )
 
-func unpackSignAndBroadcast(result *rpc.TxResult, err error, logger loggers.InfoTraceLogger) {
-	if err != nil {
-		util.Fatalf("Failed on signing (and broadcasting) transaction: %s", err)
-	}
+func unpackSignAndBroadcast(result *rpc.TxResult, logger loggers.InfoTraceLogger) {
 	if result == nil {
 		// if we don't provide --sign or --broadcast
 		return

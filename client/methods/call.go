@@ -17,19 +17,20 @@
 package methods
 
 import (
+	"fmt"
+
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/client/rpc"
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/keys"
-	"github.com/eris-ltd/eris-db/util"
 )
 
-func Call(do *definitions.ClientDo) {
+func Call(do *definitions.ClientDo) error {
 	// construct two clients to call out to keys server and
 	// blockchain node.
 	logger, err := loggerFromClientDo(do, "Call")
 	if err != nil {
-		util.Fatalf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
 	}
 	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag, logger)
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
@@ -38,12 +39,17 @@ func Call(do *definitions.ClientDo) {
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag,
 		do.GasFlag, do.FeeFlag, do.DataFlag)
 	if err != nil {
-		util.Fatalf("Failed on forming Call Transaction: %s", err)
+		return fmt.Errorf("Failed on forming Call Transaction: %s", err)
 	}
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
 	txResult, err := rpc.SignAndBroadcast(do.ChainidFlag, erisNodeClient, erisKeyClient,
 		callTransaction, true, do.BroadcastFlag, do.WaitFlag)
-	unpackSignAndBroadcast(txResult, err, logger)
+
+	if err != nil {
+		return fmt.Errorf("Failed on signing (and broadcasting) transaction: %s", err)
+	}
+	unpackSignAndBroadcast(txResult, logger)
+	return nil
 }

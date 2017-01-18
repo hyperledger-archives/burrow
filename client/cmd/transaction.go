@@ -17,7 +17,7 @@
 package commands
 
 import (
-"strings"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -31,9 +31,8 @@ func buildTransactionCommand() *cobra.Command {
 	transactionCmd := &cobra.Command{
 		Use:   "tx",
 		Short: "eris-client tx formulates and signs a transaction to a chain",
-		Long: `eris-client tx formulates and signs a transaction to a chain.
-`,
-		Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
+		Long:  "eris-client tx formulates and signs a transaction to a chain.",
+		Run:   func(cmd *cobra.Command, args []string) { cmd.Help() },
 	}
 
 	addTransactionPersistentFlags(transactionCmd)
@@ -44,7 +43,10 @@ func buildTransactionCommand() *cobra.Command {
 		Short: "eris-client tx send --amt <amt> --to <addr>",
 		Long:  "eris-client tx send --amt <amt> --to <addr>",
 		Run: func(cmd *cobra.Command, args []string) {
-			methods.Send(clientDo)
+			err := methods.Send(clientDo)
+			if err != nil {
+				util.Fatalf("Could not complete send: %s", err)
+			}
 		},
 		PreRun: assertParameters,
 	}
@@ -73,7 +75,10 @@ func buildTransactionCommand() *cobra.Command {
 		Short: "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Long:  "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Run: func(cmd *cobra.Command, args []string) {
-			methods.Call(clientDo)
+			err := methods.Call(clientDo)
+			if err != nil {
+				util.Fatalf("Could not complete call: %s", err)
+			}
 		},
 		PreRun: assertParameters,
 	}
@@ -182,7 +187,7 @@ func assertParameters(cmd *cobra.Command, args []string) {
 	}
 
 	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") &&
-			!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
+		!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
 		// TODO: [ben] go-rpc will deprecate reformatting; also it is bad practice to auto-correct for this;
 		// TODO: [Silas] I've made this fatal, but I'm inclined to define the default as tcp:// and normalise as with http
 		// below

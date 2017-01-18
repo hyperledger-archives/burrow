@@ -20,17 +20,20 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/eris-ltd/eris-db/client/methods"
+	"github.com/eris-ltd/eris-db/util"
 )
 
-
-func buildStatusCommand() *cobra.Command{
+func buildStatusCommand() *cobra.Command {
 	statusCmd := &cobra.Command{
 		Use:   "status",
 		Short: "eris-client status returns the current status from a chain.",
 		Long: `eris-client status returns the current status from a chain.
 `,
 		Run: func(cmd *cobra.Command, args []string) {
-			methods.Status(clientDo)
+			err := methods.Status(clientDo)
+			if err != nil {
+				util.Fatalf("Could not get status: %s", err)
+			}
 		},
 	}
 	statusCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the eris-db node rpc server address (default respects $ERIS_CLIENT_NODE_ADDRESS)")
@@ -45,4 +48,3 @@ func buildStatusCommand() *cobra.Command{
 
 	return statusCmd
 }
-

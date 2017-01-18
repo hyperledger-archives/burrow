@@ -21,23 +21,22 @@ import (
 
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/util"
 )
 
-func Status(do *definitions.ClientDo) {
+func Status(do *definitions.ClientDo) error {
 	logger, err := loggerFromClientDo(do, "Status")
 	if err != nil {
-		util.Fatalf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
 	}
 	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
 	if err != nil {
-		util.Fatalf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
+		return fmt.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
 	chainName, chainId, genesisHashfromChainId, err := erisNodeClient.ChainId()
 	if err != nil {
-		util.Fatalf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
+		return fmt.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
 	logger.Info("chain", do.NodeAddrFlag,
@@ -50,4 +49,5 @@ func Status(do *definitions.ClientDo) {
 		"latest block height", latestBlockHeight,
 		"latest block time", latestBlockTime,
 	)
+	return nil
 }

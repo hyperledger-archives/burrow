@@ -4,15 +4,17 @@ package lifecycle
 import (
 	"os"
 
+	"time"
+
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/adapters/stdlib"
 	tmLog15adapter "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
+
 	kitlog "github.com/go-kit/kit/log"
-	tmLog15 "github.com/tendermint/log15"
 	"github.com/streadway/simpleuuid"
-	"time"
+	tmLog15 "github.com/tendermint/log15"
 )
 
 // Lifecycle provides a canonical source for eris loggers. Components should use the functions here
