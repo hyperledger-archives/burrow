@@ -23,20 +23,19 @@ import (
 
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/txs"
+	log "github.com/eris-ltd/eris-logger"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
-// TODO: [Silas] evts is a compatibility layer between our event types and
+// TODO: [Silas] this is a compatibility layer between our event types and
 // TODO: go-events. Our ultimate plan is to replace go-events with our own pub-sub
 // TODO: code that will better allow us to manage and multiplex events from different
 // TODO: subsystems
 
 // Oh for a sum type
-// We are using evts as a marker interface for the
+// We are using this as a marker interface for the
 type anyEventData interface{}
 
 type EventEmitter interface {
@@ -44,8 +43,8 @@ type EventEmitter interface {
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch *go_events.EventSwitch, logger loggers.InfoTraceLogger) *events {
-	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+func NewEvents(eventSwitch *go_events.EventSwitch) *events {
+	return &events{eventSwitch}
 }
 
 // Provides an EventEmitter that wraps many underlying EventEmitters as a
@@ -58,28 +57,27 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 // The events struct has methods for working with events.
 type events struct {
 	eventSwitch *go_events.EventSwitch
-	logger      loggers.InfoTraceLogger
 }
 
 // Subscribe to an event.
-func (evts *events) Subscribe(subId, event string,
+func (this *events) Subscribe(subId, event string,
 	callback func(txs.EventData)) error {
 	cb := func(evt go_events.EventData) {
 		eventData, err := mapToOurEventData(evt)
 		if err != nil {
-			logging.InfoMsg(evts.logger, "Failed to map go-events EventData to our EventData",
-				"error", err,
-				"event", event)
+			log.WithError(err).
+				WithFields(log.Fields{"event": event}).
+				Error("Failed to map go-events EventData to our EventData")
 		}
 		callback(eventData)
 	}
-	evts.eventSwitch.AddListenerForEvent(subId, event, cb)
+	this.eventSwitch.AddListenerForEvent(subId, event, cb)
 	return nil
 }
 
 // Un-subscribe from an event.
-func (evts *events) Unsubscribe(subId string) error {
-	evts.eventSwitch.RemoveListener(subId)
+func (this *events) Unsubscribe(subId string) error {
+	this.eventSwitch.RemoveListener(subId)
 	return nil
 }
 
@@ -144,7 +142,7 @@ func GenerateSubId() (string, error) {
 }
 
 func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
-	// TODO: [Silas] avoid evts with a better event pub-sub system of our own
+	// TODO: [Silas] avoid this with a better event pub-sub system of our own
 	// TODO: that maybe involves a registry of events
 	switch eventData := eventData.(type) {
 	case txs.EventData:

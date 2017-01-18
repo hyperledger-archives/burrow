@@ -36,14 +36,15 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/definitions"
 	edb_event "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	log "github.com/eris-ltd/eris-logger"
 )
 
 type erisMintPipe struct {
@@ -80,17 +81,17 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start state: %v", err)
 	}
-	logger = logging.WithScope(logger, "ErisMintPipe")
 	// assert ChainId matches genesis ChainId
-	logging.InfoMsg(logger, "Loaded state",
+	logger.Info(
 		"chainId", startedState.ChainID,
 		"lastBlockHeight", startedState.LastBlockHeight,
-		"lastBlockHash", startedState.LastBlockHash)
+		"lastBlockHash", startedState.LastBlockHash,
+		structure.MessageKey, "Loaded state")
 	// start the application
-	erisMint := NewErisMint(startedState, eventSwitch, logger)
+	erisMint := NewErisMint(startedState, eventSwitch)
 
 	// initialise the components of the pipe
-	events := edb_event.NewEvents(eventSwitch, logger)
+	events := edb_event.NewEvents(eventSwitch)
 	accounts := newAccounts(erisMint)
 	namereg := newNameReg(erisMint)
 
@@ -171,8 +172,12 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 		}
 		// assert loaded genesis doc has the same chainId as the provided chainId
 		if genesisDoc.ChainID != chainId {
-			return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match"+
-				" configuration chainId (%s).", genesisDoc.ChainID, chainId)
+			log.WithFields(log.Fields{
+				"chainId from loaded genesis": genesisDoc.ChainID,
+				"chainId from configuration":  chainId,
+			}).Warn("Conflicting chainIds")
+			// return nil, nil, fmt.Errorf("ChainId (%s) loaded from genesis document in existing database does not match configuration chainId (%s).",
+			// genesisDoc.ChainID, chainId)
 		}
 	}
 
@@ -256,9 +261,11 @@ func (pipe *erisMintPipe) Subscribe(event string,
 	subscriptionId, err := edb_event.GenerateSubId()
 	if err != nil {
 		return nil, err
-		logging.InfoMsg(pipe.logger, "Subscribing to event",
-			"event", event, "subscriptionId", subscriptionId)
 	}
+
+	log.WithFields(log.Fields{"event": event, "subscriptionId": subscriptionId}).
+		Info("Subscribing to event")
+
 	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, event,
 		func(eventData txs.EventData) {
 			result := rpc_tm_types.ErisDBResult(&rpc_tm_types.ResultEvent{event,
@@ -273,8 +280,8 @@ func (pipe *erisMintPipe) Subscribe(event string,
 }
 
 func (pipe *erisMintPipe) Unsubscribe(subscriptionId string) (*rpc_tm_types.ResultUnsubscribe, error) {
-	logging.InfoMsg(pipe.logger, "Unsubscribing from event",
-		"subscriptionId", subscriptionId)
+	log.WithFields(log.Fields{"subscriptionId": subscriptionId}).
+		Info("Unsubscribing from event")
 	pipe.consensusAndManagerEvents().Unsubscribe(subscriptionId)
 	return &rpc_tm_types.ResultUnsubscribe{SubscriptionId: subscriptionId}, nil
 }
@@ -352,8 +359,13 @@ func (pipe *erisMintPipe) Genesis() (*rpc_tm_types.ResultGenesis, error) {
 func (pipe *erisMintPipe) GetAccount(address []byte) (*rpc_tm_types.ResultGetAccount,
 	error) {
 	cache := pipe.erisMint.GetCheckCache()
+	// cache := mempoolReactor.Mempool.GetCache()
 	account := cache.GetAccount(address)
-	return &rpc_tm_types.ResultGetAccount{Account: account}, nil
+	if account == nil {
+		log.Warn("Nil Account")
+		return &rpc_tm_types.ResultGetAccount{nil}, nil
+	}
+	return &rpc_tm_types.ResultGetAccount{account}, nil
 }
 
 func (pipe *erisMintPipe) ListAccounts() (*rpc_tm_types.ResultListAccounts, error) {
@@ -585,11 +597,10 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 	case tmsp_types.CodeType_InternalError:
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
 	default:
-		logging.InfoMsg(pipe.logger, "Unknown error returned from Tendermint CheckTx on BroadcastTxSync",
-			"application", GetErisMintVersion().GetVersionString(),
-			"TMSP_code_type", responseCheckTx.Code,
-			"TMSP_log", responseCheckTx.Log,
-		)
+		log.WithFields(log.Fields{
+			"application":    GetErisMintVersion().GetVersionString(),
+			"TMSP_code_type": responseCheckTx.Code,
+		}).Warn("Unknown error returned from Tendermint CheckTx on BroadcastTxSync")
 		return resultBroadCastTx, fmt.Errorf("Unknown error returned: " + responseCheckTx.Log)
 	}
 }
