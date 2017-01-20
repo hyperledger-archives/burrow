@@ -22,9 +22,7 @@ import (
 
 // Obtain a logger from a LoggingConfig
 func NewLoggerFromLoggingConfig(LoggingConfig *logging.LoggingConfig) loggers.InfoTraceLogger {
-	infoLogger := kitlog.NewLogfmtLogger(os.Stderr)
-	traceLogger := kitlog.NewLogfmtLogger(os.Stderr)
-	return logging.WithMetadata(loggers.NewInfoTraceLogger(infoLogger, traceLogger))
+	return NewStdErrLogger()
 }
 
 func NewStdErrLogger() loggers.InfoTraceLogger {

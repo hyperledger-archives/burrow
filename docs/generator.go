@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/eris-ltd/common/go/docs"
+	docs "github.com/eris-ltd/eris-db/docs/generator"
 	commands "github.com/eris-ltd/eris-db/cmd"
 
 	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
