@@ -17,7 +17,7 @@
 package methods
 
 import (
-	log "github.com/eris-ltd/eris-logger"
+	"fmt"
 
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/client/rpc"
@@ -25,23 +25,31 @@ import (
 	"github.com/eris-ltd/eris-db/keys"
 )
 
-func Call(do *definitions.ClientDo) {
+func Call(do *definitions.ClientDo) error {
 	// construct two clients to call out to keys server and
 	// blockchain node.
-	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag)
-	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
+	logger, err := loggerFromClientDo(do, "Call")
+	if err != nil {
+		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+	}
+	erisKeyClient := keys.NewErisKeyClient(do.SignAddrFlag, logger)
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
 	// form the call transaction
 	callTransaction, err := rpc.Call(erisNodeClient, erisKeyClient,
 		do.PubkeyFlag, do.AddrFlag, do.ToFlag, do.AmtFlag, do.NonceFlag,
 		do.GasFlag, do.FeeFlag, do.DataFlag)
 	if err != nil {
-		log.Fatalf("Failed on forming Call Transaction: %s", err)
-		return
+		return fmt.Errorf("Failed on forming Call Transaction: %s", err)
 	}
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
-	unpackSignAndBroadcast(
-		rpc.SignAndBroadcast(do.ChainidFlag, erisNodeClient,
-			erisKeyClient, callTransaction, true, do.BroadcastFlag, do.WaitFlag))
+	txResult, err := rpc.SignAndBroadcast(do.ChainidFlag, erisNodeClient, erisKeyClient,
+		callTransaction, true, do.BroadcastFlag, do.WaitFlag)
+
+	if err != nil {
+		return fmt.Errorf("Failed on signing (and broadcasting) transaction: %s", err)
+	}
+	unpackSignAndBroadcast(txResult, logger)
+	return nil
 }

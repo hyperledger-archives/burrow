@@ -17,33 +17,40 @@
 package methods
 
 import (
-	"fmt"
-	"os"
-
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/eris-ltd/eris-db/client/rpc"
+	"github.com/eris-ltd/eris-db/core"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
-func unpackSignAndBroadcast(result *rpc.TxResult, err error) {
-	if err != nil {
-		log.Fatalf("Failed on signing (and broadcasting) transaction: %s", err)
-		os.Exit(1)
-	}
+func unpackSignAndBroadcast(result *rpc.TxResult, logger loggers.InfoTraceLogger) {
 	if result == nil {
 		// if we don't provide --sign or --broadcast
 		return
 	}
-	printResult := log.Fields{
-		"transaction hash": fmt.Sprintf("%X", result.Hash),
-	}
+
+	logger = logger.With("transaction hash", result.Hash)
+
 	if result.Address != nil {
-		printResult["Contract Address"] = fmt.Sprintf("%X", result.Address)
+		logger = logger.With("Contract Address", result.Address)
 	}
+
 	if result.Return != nil {
-		printResult["Block Hash"] = fmt.Sprintf("%X", result.BlockHash)
-		printResult["Return Value"] = fmt.Sprintf("%X", result.Return)
-		printResult["Exception"] = fmt.Sprintf("%s", result.Exception)
+		logger = logger.With("Block Hash", result.BlockHash,
+			"Return Value", result.Return,
+			"Exception", result.Exception,
+		)
 	}
-	log.WithFields(printResult).Warn("Result")
+
+	logging.InfoMsg(logger, "SignAndBroadcast result")
+}
+
+func loggerFromClientDo(do *definitions.ClientDo, scope string) (loggers.InfoTraceLogger, error) {
+	lc, err := core.LoadLoggingConfigFromClientDo(do)
+	if err != nil {
+		return nil, err
+	}
+	return logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(lc), scope), nil
 }

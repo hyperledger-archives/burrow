@@ -111,7 +111,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	}
 
 	// Create a root logger to pass through to dependencies
-	logger := logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(*loggerConfig), "Serve")
+	logger := logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(loggerConfig), "Serve")
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)

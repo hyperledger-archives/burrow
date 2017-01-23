@@ -17,7 +17,6 @@ import:
 - package: golang.org/x/net
   subpackages:
   - http2
-- package: github.com/eris-ltd/common
 - package: github.com/go-kit/kit
   version: ^0.3.0
 - package: github.com/eapache/channels

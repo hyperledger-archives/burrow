@@ -19,6 +19,8 @@ package keys
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging"
 )
 
 type KeyClient interface {
@@ -29,31 +31,33 @@ type KeyClient interface {
 	PublicKey(address []byte) (publicKey []byte, err error)
 }
 
-// NOTE [ben] Compiler check to ensure ErisKeyClient successfully implements
+// NOTE [ben] Compiler check to ensure erisKeyClient successfully implements
 // eris-db/keys.KeyClient
-var _ KeyClient = (*ErisKeyClient)(nil)
+var _ KeyClient = (*erisKeyClient)(nil)
 
-type ErisKeyClient struct {
+type erisKeyClient struct {
 	rpcString string
+	logger loggers.InfoTraceLogger
 }
 
-// ErisKeyClient.New returns a new eris-keys client for provided rpc location
+// erisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisKeyClient(rpcString string) *ErisKeyClient {
-	return &ErisKeyClient{
+func NewErisKeyClient(rpcString string, logger loggers.InfoTraceLogger) *erisKeyClient {
+	return &erisKeyClient{
 		rpcString: rpcString,
+		logger: logging.WithScope(logger, "ErisKeysClient"),
 	}
 }
 
 // Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
+func (erisKeys *erisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
 		"msg":  signBytesString,
 		"hash": signBytesString, // TODO:[ben] backwards compatibility
 		"addr": fmt.Sprintf("%X", signAddress),
 	}
-	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args)
+	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args, erisKeys.logger)
 	if err != nil {
 		return
 	}
@@ -66,11 +70,11 @@ func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) 
 
 // Eris-keys client PublicKey requests the public key associated with an address from
 // the eris-keys server.
-func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
+func (erisKeys *erisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
 	args := map[string]string{
 		"addr": fmt.Sprintf("%X", address),
 	}
-	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args)
+	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args, erisKeys.logger)
 	if err != nil {
 		return
 	}

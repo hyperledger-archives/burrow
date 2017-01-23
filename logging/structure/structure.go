@@ -17,6 +17,8 @@ const (
 	ChannelKey = "channel"
 	// Log message (string)
 	MessageKey = "message"
+	// Captured logging source (like tendermint_log15, stdlib_log)
+	CapturedLoggingSourceKey = "captured_logging_source"
 	// Top-level component (choose one) name
 	ComponentKey = "component"
 	// Vector-valued scope
@@ -130,4 +132,15 @@ func KeyFromValue(val interface{}) string {
 	default:
 		return reflect.TypeOf(val).Name()
 	}
+}
+
+// Maps key values pairs with a function (key, value) -> (new key, new value)
+func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (interface{}, interface{})) []interface{} {
+	mappedKeyvals := make([]interface{}, len(keyvals))
+	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
+		key := keyvals[i]
+		val := keyvals[i+1]
+		mappedKeyvals[i], mappedKeyvals[i+1]= fn(key, val)
+	}
+	return mappedKeyvals
 }
