@@ -361,7 +361,7 @@ func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester 
 func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	// Accept all transaction types as parameter for broadcast.
 	param := new(txs.Tx)
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := erisDbMethods.codec.DecodeBytesPtr(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
