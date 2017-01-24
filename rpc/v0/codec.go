@@ -64,3 +64,11 @@ func (this *TCodec) DecodeBytes(v interface{}, bts []byte) error {
 	wire.ReadJSON(v, bts, &err)
 	return err
 }
+
+// Decode from a byte array pointer.
+func (this *TCodec) DecodeBytesPtr(v interface{}, bts []byte) error {
+       var err error
+       wire.ReadJSONPtr(v, bts, &err)
+       return err
+}
+

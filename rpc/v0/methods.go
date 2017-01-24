@@ -345,12 +345,12 @@ func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester 
 }
 
 func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &txs.CallTx{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	param := new(txs.Tx)
+	err := erisDbMethods.codec.DecodeBytesPtr(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(param)
+	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(*param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
