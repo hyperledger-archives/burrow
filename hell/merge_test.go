@@ -1,11 +1,12 @@
 package hell
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"strings"
+
+	"github.com/Masterminds/glide/cfg"
+	"github.com/stretchr/testify/assert"
 )
 
 const baseLockYml = `imports:
@@ -52,11 +53,20 @@ testImports: []
 `
 
 func TestMergeGlideLockFiles(t *testing.T) {
-	lockYml, err := MergeGlideLockFiles(([]byte)(baseLockYml), ([]byte)(overrideLockYml))
+	baseLockFile, err := cfg.LockfileFromYaml(([]byte)(baseLockYml))
+	assert.NoError(t, err, "Lockfile should parse")
+
+	overrideLockFile, err := cfg.LockfileFromYaml(([]byte)(overrideLockYml))
+	assert.NoError(t, err, "Lockfile should parse")
+
+	mergedLockFile, err := MergeGlideLockFiles(baseLockFile, overrideLockFile)
 	assert.NoError(t, err, "Lockfiles should merge")
-	ymlLines := strings.Split(string(lockYml), "\n")
+
+	mergedYmlBytes, err := mergedLockFile.Marshal()
+	assert.NoError(t, err, "Lockfile should marshal")
+
+	ymlLines := strings.Split(string(mergedYmlBytes), "\n")
 	// Drop the updated and hash lines
 	actualYml := strings.Join(ymlLines[2:], "\n")
-	fmt.Println(actualYml)
 	assert.Equal(t, expectedLockYml, actualYml)
 }
