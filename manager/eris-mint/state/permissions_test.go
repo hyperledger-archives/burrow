@@ -9,8 +9,8 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	genesis "github.com/eris-ltd/eris-db/genesis"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 

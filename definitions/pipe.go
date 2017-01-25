@@ -31,9 +31,9 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 type Pipe interface {

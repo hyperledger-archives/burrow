@@ -8,9 +8,9 @@ import (
 	"github.com/eris-ltd/eris-db/logging"
 	tmLog15adapter "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 	tmLog15 "github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/logging/structure"
 )
 
 func NewLoggerFromConfig(LoggingConfig logging.LoggingConfig) loggers.InfoTraceLogger {

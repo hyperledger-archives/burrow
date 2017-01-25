@@ -21,8 +21,8 @@ import (
 
 	"path"
 
-	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	genesis "github.com/eris-ltd/eris-db/genesis"
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	"github.com/spf13/viper"
 	tm_common "github.com/tendermint/go-common"
 	"github.com/tendermint/tendermint/types"
