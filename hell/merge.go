@@ -1,4 +1,4 @@
-package main
+package hell
 
 import (
 	"crypto/sha256"
@@ -11,16 +11,7 @@ import (
 
 // Merges two glide lock files together, letting dependencies from 'base' be overwritten
 // by those from 'override'. Returns the resultant glide lock file bytes
-func MergeGlideLockFiles(baseGlideLockFileBytes, overrideGlideLockFileBytes []byte) ([]byte, error) {
-	baseLockFile, err := cfg.LockfileFromYaml(baseGlideLockFileBytes)
-	if err != nil {
-		return nil, err
-	}
-	overrideLockFile, err := cfg.LockfileFromYaml(overrideGlideLockFileBytes)
-	if err != nil {
-		return nil, err
-	}
-
+func MergeGlideLockFiles(baseLockFile, overrideLockFile *cfg.Lockfile) (*cfg.Lockfile, error) {
 	imports := make(map[string]*cfg.Lock, len(baseLockFile.Imports))
 	devImports := make(map[string]*cfg.Lock, len(baseLockFile.DevImports))
 	// Copy the base dependencies into a map
@@ -51,15 +42,10 @@ func MergeGlideLockFiles(baseGlideLockFileBytes, overrideGlideLockFileBytes []by
 	}
 
 	hasher := sha256.New()
-	hasher.Write(baseGlideLockFileBytes)
-	hasher.Write(overrideGlideLockFileBytes)
+	hasher.Write(([]byte)(baseLockFile.Hash))
+	hasher.Write(([]byte)(overrideLockFile.Hash))
 
-	lockFile, err := cfg.NewLockfile(deps, devDeps, fmt.Sprintf("%x", hasher.Sum(nil)))
-	if err != nil {
-		return nil, err
-	}
-
-	return lockFile.Marshal()
+	return cfg.NewLockfile(deps, devDeps, fmt.Sprintf("%x", hasher.Sum(nil)))
 }
 
 func mergeLocks(baseLock, overrideLock *cfg.Lock) *cfg.Lock {
