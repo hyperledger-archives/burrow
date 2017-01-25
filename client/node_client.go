@@ -30,6 +30,7 @@ import (
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	tmLog15 "github.com/tendermint/log15"
 )
 
 type NodeClient interface {
@@ -77,6 +78,13 @@ func NewErisNodeClient(rpcString string, logger loggers.InfoTraceLogger) *erisNo
 	}
 }
 
+// Note [Ben]: This is a hack to silence Tendermint logger from tendermint/go-rpc
+// it needs to be initialised before go-rpc, hence it's placement here.
+func init() {
+	h := tmLog15.LvlFilterHandler(tmLog15.LvlWarn, tmLog15.StdoutHandler)
+	tmLog15.Root().SetHandler(h)
+}
+
 //------------------------------------------------------------------------------------
 // broadcast to blockchain node
 // NOTE: [ben] Eris Client first continues from tendermint rpc, but will have handshake to negotiate
@@ -119,7 +127,7 @@ func (erisNodeClient *erisNodeClient) DeriveWebsocketClient() (nodeWsClient Node
 	}
 	derivedErisNodeWebsocketClient := &erisNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
-		logger: logging.WithScope(erisNodeClient.logger, "ErisNodeWebsocketClient"),
+		logger:              logging.WithScope(erisNodeClient.logger, "ErisNodeWebsocketClient"),
 	}
 	return derivedErisNodeWebsocketClient, nil
 }
