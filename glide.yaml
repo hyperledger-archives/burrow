@@ -29,3 +29,5 @@ import:
 - package: github.com/Sirupsen/logrus
   version: ^0.11.0
 - package: github.com/streadway/simpleuuid
+- package: github.com/Masterminds/glide
+  version: ~0.12.3

@@ -228,4 +228,6 @@ imports:
   - term
 - name: github.com/streadway/simpleuuid
   version: 6617b501e485b77e61b98cd533aefff9e258b5a7
+- name: github.com/Masterminds/glide
+  version: 84607742b10f492430762d038e954236bbaf23f7
 devImports: []
