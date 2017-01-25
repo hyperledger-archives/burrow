@@ -540,7 +540,7 @@ var serverDuration uint = 100
 type (
 	ChainData struct {
 		PrivValidator *mintTypes.PrivValidator `json:"priv_validator"`
-		Genesis       *genesis.GenesisDoc       `json:"genesis"`
+		Genesis       *genesis.GenesisDoc      `json:"genesis"`
 	}
 
 	GetAccountData struct {

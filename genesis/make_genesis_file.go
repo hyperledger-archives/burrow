@@ -1,31 +1,30 @@
-// Copyright 2015-2017 Monax Industries (UK) Ltd.
-// This file is part of the Eris platform (Eris)
+// Copyright 2015-2017 Monax Industries Limited.
+// This file is part of the Monax platform (Monax)
 
-// Eris is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Monax is free software: you can use, redistribute it and/or modify
+// it only under the terms of the GNU General Public License, version
+// 3, as published by the Free Software Foundation.
 
-// Eris is distributed WITHOUT ANY WARRANTY pursuant to
+// Monax is distributed WITHOUT ANY WARRANTY pursuant to
 // the terms of the Gnu General Public Licence, version 3, including
 // (but not limited to) Clause 15 thereof. See the text of the
 // GNU General Public License, version 3 for full terms.
 
-// You should have received a copy of the GNU General Public License
-// along with Eris.  If not, see <http://www.gnu.org/licenses/>.
+// You should have received a copy of the GNU General Public License,
+// version 3, with Monax.  If not, see <http://www.gnu.org/licenses/>.
 
 package genesis
 
 import (
 	"bytes"
-	"encoding/csv"
+	// "encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
+	// "os"
+	// "strconv"
 
-	"github.com/eris-ltd/common/go/common"
+	// "github.com/eris-ltd/common/go/common"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
 	"github.com/tendermint/go-crypto"
@@ -147,5 +146,3 @@ func ifExistsElse(list []string, index int, defaultValue string) string {
 	}
 	return defaultValue
 }
-
-

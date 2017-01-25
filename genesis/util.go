@@ -1,28 +1,35 @@
-// Copyright 2015-2017 Monax Industries (UK) Ltd.
-// This file is part of the Eris platform (Eris)
+// Copyright 2015-2017 Monax Industries Limited.
+// This file is part of the Monax platform (Monax)
 
-// Eris is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Monax is free software: you can use, redistribute it and/or modify
+// it only under the terms of the GNU General Public License, version
+// 3, as published by the Free Software Foundation.
 
-// Eris is distributed WITHOUT ANY WARRANTY pursuant to
+// Monax is distributed WITHOUT ANY WARRANTY pursuant to
 // the terms of the Gnu General Public Licence, version 3, including
 // (but not limited to) Clause 15 thereof. See the text of the
 // GNU General Public License, version 3 for full terms.
 
-// You should have received a copy of the GNU General Public License
-// along with Eris.  If not, see <http://www.gnu.org/licenses/>.
+// You should have received a copy of the GNU General Public License,
+// version 3, with Monax.  If not, see <http://www.gnu.org/licenses/>.
 
 package genesis
 
 import (
-	"bytes"
+	"encoding/csv"
+	"fmt"
+	"os"
+
+	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
 
 // parseCsvIntoValidators is a helper function to read a csv file in the following format:
 // >> pubkey, starting balance, name, permissions, setbit
 // and returns the records as a slice of GenesisValidator
+func parseCsvIntoValidators(filePath string) ([]ValidatorAccount, error) {
+
+	params, err := readCsv(filePath)
+}
 
 // parseCsvIntoAccounts is a helper function to read a csv file in the following format:
 // >> pubkey, starting balance, name, permissions, setbit
@@ -30,19 +37,6 @@ import (
 // func parseCsvIntoAccounts(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, names []string, perms, setbits []ptypes.PermFlag, err error) {
 func parseCsvIntoAccounts(filePath string) ([]GenesisAccount, error) {
 
-	csvFile, err := os.Open(filePath)
-	if err != nil {
-		common.Exit(fmt.Errorf("Couldn't open file: %s: %v", filePath, err))
-	}
-	defer csvFile.Close()
-
-	r := csv.NewReader(csvFile)
-	//r.FieldsPerRecord = # of records expected
-	params, err := r.ReadAll()
-	if err != nil {
-		common.Exit(fmt.Errorf("Couldn't read file: %v", err))
-
-	}
 
 	pubkeys := make([]string, len(params))
 	amtS := make([]string, len(params))
@@ -91,4 +85,42 @@ func parseCsvIntoAccounts(filePath string) ([]GenesisAccount, error) {
 	}
 
 	return pubKeys, amts, names, perms, setbits, nil
+}
+
+// readGenesisAccountsRecord takes a slice of strings of the format:
+// 
+func readGenesisAccountsRecord([]string) (GenesisAccount, error) {
+
+
+	address := publicKey.Address()
+	genesisAccount := GenesisAccount{
+		Address: address,
+		Amount:  amount,
+		Name:    name,
+		Permissions: &ptypes.AccountPermissions{
+			Base: ptypes.BasePermissions{
+				Perms:  permissions,
+				SetBit: setbit,
+			}
+		}
+	}
+	return genesisAccount, nil
+}
+
+
+// readCsv is a helper function to load the Csv file
+func readCsv(filePath string) ([][]string, GenesisError) {
+	csvFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, GenesisError{fmt.Errorf("Couldn't open file %s: %v", filePath, err)}
+	}
+	defer csvFile.Close()
+
+	r := csv.NewReader(csvFile)
+	//r.FieldsPerRecord = # of records expected
+	params, err := r.ReadAll()
+	if err != nil {
+		return nil, GenesisError{fmt.Errorf("Couldn't read file: %v", err)}
+	}
+	return params, nil
 }
