@@ -9,8 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/eris-ltd/common/go/common"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	"github.com/eris-ltd/eris-db/util"
 
 	"github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
@@ -137,7 +137,7 @@ func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, na
 
 	csvFile, err := os.Open(filePath)
 	if err != nil {
-		common.Exit(fmt.Errorf("Couldn't open file: %s: %v", filePath, err))
+		util.Fatalf("Couldn't open file: %s: %v", filePath, err)
 	}
 	defer csvFile.Close()
 
@@ -145,7 +145,7 @@ func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, na
 	//r.FieldsPerRecord = # of records expected
 	params, err := r.ReadAll()
 	if err != nil {
-		common.Exit(fmt.Errorf("Couldn't read file: %v", err))
+		util.Fatalf("Couldn't read file: %v", err)
 
 	}
 
@@ -167,7 +167,7 @@ func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, na
 	for i, perm := range permsS {
 		pflag, err := strconv.Atoi(perm)
 		if err != nil {
-			common.Exit(fmt.Errorf("Permissions must be an integer"))
+			util.Fatalf("Permissions (%v) must be an integer", perm)
 		}
 		perms[i] = ptypes.PermFlag(pflag)
 	}
@@ -175,7 +175,7 @@ func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, na
 	for i, setbit := range setbitS {
 		setbitsFlag, err := strconv.Atoi(setbit)
 		if err != nil {
-			common.Exit(fmt.Errorf("SetBits must be an integer"))
+			util.Fatalf("SetBits (%v) must be an integer", setbit)
 		}
 		setbits[i] = ptypes.PermFlag(setbitsFlag)
 	}
