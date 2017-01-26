@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+go run ./util/hell/cmd/hell/main.go "$@"
