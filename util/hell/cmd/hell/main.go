@@ -74,37 +74,52 @@ func main() {
 			}
 			rootPackage, _ := util.NormalizeName(args[0])
 			// Add dependency to glide
-			action.Get(args, repo.NewInstaller(), false, true, false, !interactive, false)
+			installer := repo.NewInstaller()
+			action.Get(args, installer, false, true, false, !interactive, false)
 			// Now hunt down the repo cache
 			dep := action.EnsureConfig().Imports.Get(rootPackage)
+
 			key, err := cache.Key(dep.Remote())
 			if err != nil {
 				msg.Die("%s requires a single argument of the remote dependency\n", cmd.Name())
 			}
 			cacheDir := filepath.Join(cache.Location(), "src", key)
-
+			repos, err := dep.GetRepo(cacheDir)
+			if err != nil {
+				msg.Die("Could not get repo: %s", err)
+			}
+			version, err := repos.Version()
+			if err != nil {
+				msg.Die("Could not get version: %s", err)
+			}
+			dep.Pin = version
+			lockPath := filepath.Join(".", path.LockFile)
+			baseLockFile, err := cfg.ReadLockFile(lockPath)
+			if err != nil {
+				msg.Die("Could not read base lock file: %s", err)
+			}
+			overrideLockFile := &cfg.Lockfile{}
 			if path.HasLock(cacheDir) {
-				msg.Info("Found dependency lock file, merging into project lock file")
-				lockPath := filepath.Join(".", path.LockFile)
-				baseLockFile, err := cfg.ReadLockFile(lockPath)
-				if err != nil {
-					msg.Die("Could not read base lock file: %s", err)
-				}
-				overrideLockFile, err := cfg.ReadLockFile(filepath.Join(cacheDir, path.LockFile))
+				msg.Info("Found dependency lock file so merging into project lock file")
+				overrideLockFile, err = cfg.ReadLockFile(filepath.Join(cacheDir, path.LockFile))
 				if err != nil {
 					msg.Die("Could not read dependency lock file: %s", err)
 				}
-				mergedLockFile, err := hell.MergeGlideLockFiles(baseLockFile, overrideLockFile)
-				if err != nil {
-					msg.Die("Could not merge lock files: %s\n", err)
-				}
-				err = mergedLockFile.WriteFile(lockPath)
-				if err != nil {
-					msg.Die("Could not write merged lock file: %s", err)
-				}
-			} else {
-				msg.Info("Did not find dependency lock file, so nothing merged intoo project lock file")
 			}
+			// Add the package to glide lock too!
+			overrideLockFile.Imports = append(overrideLockFile.Imports, cfg.LockFromDependency(dep))
+
+			mergedLockFile, err := hell.MergeGlideLockFiles(baseLockFile, overrideLockFile)
+			fmt.Printf("%#v\n", mergedLockFile.Imports)
+			if err != nil {
+				msg.Die("Could not merge lock files: %s\n", err)
+			}
+			err = mergedLockFile.WriteFile(lockPath)
+			if err != nil {
+				msg.Die("Could not write merged lock file: %s", err)
+			}
+
+			action.Install(installer, false)
 		},
 	}
 
