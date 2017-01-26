@@ -62,6 +62,10 @@ func AddGlobalFlags() {
 func AddClientCommands() {
 	ErisClientCmd.AddCommand(buildTransactionCommand())
 	ErisClientCmd.AddCommand(buildStatusCommand())
+
+	buildGenesisGenCommand()
+	ErisClientCmd.AddCommand(GenesisGenCmd)
+
 }
 
 //------------------------------------------------------------------------------
