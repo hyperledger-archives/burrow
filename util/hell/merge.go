@@ -3,7 +3,6 @@ package hell
 import (
 	"crypto/sha256"
 	"fmt"
-
 	"sort"
 
 	"github.com/Masterminds/glide/cfg"

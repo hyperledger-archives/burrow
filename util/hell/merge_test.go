@@ -1,9 +1,8 @@
 package hell
 
 import (
-	"testing"
-
 	"strings"
+	"testing"
 
 	"github.com/Masterminds/glide/cfg"
 	"github.com/stretchr/testify/assert"

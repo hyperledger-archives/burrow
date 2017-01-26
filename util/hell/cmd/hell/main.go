@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-
 	"path/filepath"
+
+	"github.com/eris-ltd/eris-db/util/hell"
 
 	"github.com/Masterminds/glide/action"
 	"github.com/Masterminds/glide/cache"
@@ -13,7 +14,6 @@ import (
 	"github.com/Masterminds/glide/path"
 	"github.com/Masterminds/glide/repo"
 	"github.com/Masterminds/glide/util"
-	"github.com/eris-ltd/eris-db/util/hell"
 	"github.com/spf13/cobra"
 )
 
