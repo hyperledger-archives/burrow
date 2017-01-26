@@ -7,13 +7,13 @@ import (
 	"strings"
 	"text/template"
 
-	docs "github.com/eris-ltd/eris-db/docs/generator"
 	commands "github.com/eris-ltd/eris-db/cmd"
+	docs "github.com/eris-ltd/eris-db/docs/generator"
 
 	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
+	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/cobra"
-	"github.com/eris-ltd/eris-db/definitions"
 )
 
 // Repository maintainers should customize the next two lines.

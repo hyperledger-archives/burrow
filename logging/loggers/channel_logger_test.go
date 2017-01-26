@@ -3,8 +3,9 @@ package loggers
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"fmt"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestChannelLogger(t *testing.T) {
@@ -27,6 +28,6 @@ func TestChannelLogger(t *testing.T) {
 
 func TestBlether(t *testing.T) {
 	var bs []byte
-	ext := append(bs, )
+	ext := append(bs)
 	fmt.Println(ext)
 }

@@ -3,18 +3,18 @@ package main
 import (
 	"fmt"
 	"os"
-
 	"path/filepath"
 
+	"github.com/eris-ltd/eris-db/util/hell"
+
+	"github.com/Masterminds/glide/action"
 	"github.com/Masterminds/glide/cache"
 	"github.com/Masterminds/glide/cfg"
 	"github.com/Masterminds/glide/msg"
 	"github.com/Masterminds/glide/path"
-	"github.com/Masterminds/glide/util"
-	"github.com/eris-ltd/eris-db/util/hell"
-	"github.com/spf13/cobra"
-	"github.com/Masterminds/glide/action"
 	"github.com/Masterminds/glide/repo"
+	"github.com/Masterminds/glide/util"
+	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -74,7 +74,7 @@ func main() {
 			}
 			rootPackage, _ := util.NormalizeName(args[0])
 			// Add dependency to glide
-			action.Get(args, repo.NewInstaller() , false, true, false, !interactive, false)
+			action.Get(args, repo.NewInstaller(), false, true, false, !interactive, false)
 			// Now hunt down the repo cache
 			dep := action.EnsureConfig().Imports.Get(rootPackage)
 			key, err := cache.Key(dep.Remote())

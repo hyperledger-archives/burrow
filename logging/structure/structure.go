@@ -65,7 +65,7 @@ type vectorValueindex struct {
 	// Location of the value belonging to a key in output slice
 	valueIndex int
 	// Whether or not the value is currently a vector
-	vector     bool
+	vector bool
 }
 
 // 'Vectorises' values associated with repeated string keys member by collapsing many values into a single vector value.
@@ -140,7 +140,7 @@ func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (inte
 	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
 		key := keyvals[i]
 		val := keyvals[i+1]
-		mappedKeyvals[i], mappedKeyvals[i+1]= fn(key, val)
+		mappedKeyvals[i], mappedKeyvals[i+1] = fn(key, val)
 	}
 	return mappedKeyvals
 }
