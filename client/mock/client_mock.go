@@ -23,8 +23,8 @@ import (
 	. "github.com/eris-ltd/eris-db/client"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/txs"
 )
 
 // NOTE [ben] Compiler check to ensure ErisMockClient successfully implements

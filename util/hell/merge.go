@@ -26,7 +26,7 @@ func MergeGlideLockFiles(baseLockFile, overrideLockFile *cfg.Lockfile) (*cfg.Loc
 		imports[lock.Name] = mergeLocks(imports[lock.Name], lock)
 	}
 	for _, lock := range overrideLockFile.DevImports {
-		devImports[lock.Name] =  mergeLocks(imports[lock.Name], lock)
+		devImports[lock.Name] = mergeLocks(imports[lock.Name], lock)
 	}
 
 	deps := make([]*cfg.Dependency, 0, len(imports))

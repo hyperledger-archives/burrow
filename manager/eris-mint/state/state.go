@@ -18,8 +18,8 @@ import (
 	"github.com/tendermint/go-wire"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/tendermint/tendermint/types"
 	"github.com/eris-ltd/eris-db/util"
+	"github.com/tendermint/tendermint/types"
 )
 
 var (
@@ -103,8 +103,8 @@ func (s *State) Save() {
 	if *err != nil {
 		// TODO: [Silas] Do something better than this, really serialising ought to
 		// be error-free
-		util.Fatalf("Could not serialise state in order to save the state, " +
-				"cannot continue, error: %s", *err)
+		util.Fatalf("Could not serialise state in order to save the state, "+
+			"cannot continue, error: %s", *err)
 	}
 	s.DB.Set(stateKey, buf.Bytes())
 }

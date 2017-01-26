@@ -9,7 +9,7 @@ import (
 )
 
 func Capture(stdLibLogger log.Logger,
-logger loggers.InfoTraceLogger) io.Writer {
+	logger loggers.InfoTraceLogger) io.Writer {
 	adapter := newAdapter(logger)
 	stdLibLogger.SetOutput(adapter)
 	return adapter
