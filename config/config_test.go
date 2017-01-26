@@ -17,13 +17,21 @@
 package config
 
 import (
+	"bytes"
 	"testing"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestConfigurationFileBytes(t *testing.T) {
-	// TODO: [ben] parse written bytes for comparison with expected parameters
-	if _, err := GetConfigurationFileBytes("simplechain", "marmot", "noseeds", "db:latest",
-		true, "", "eris-db"); err != nil {
-		t.Errorf("Error writing configuration file bytes: %s", err)
-	}
+// Since the logic for generating configuration files (in eris-cm) is split from
+// the logic for consuming them
+func TestGeneratedConfigIsUsable(t *testing.T) {
+	bs, err := GetExampleConfigFileBytes()
+	assert.NoError(t, err, "Should be able to create example config")
+	buf := bytes.NewBuffer(bs)
+	conf := viper.New()
+	viper.SetConfigType("toml")
+	err = conf.ReadConfig(buf)
+	assert.NoError(t, err, "Should be able to read example config into Viper")
 }

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
@@ -36,7 +34,6 @@ func NewErisDbWsService(codec rpc.Codec,
 
 // Process a request.
 func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
-	log.Debug("REQUEST: %s\n", string(msg))
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
@@ -84,7 +81,6 @@ func (this *ErisDbWsService) writeResponse(id string, result interface{},
 	session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
-	log.Debug("RESPONSE: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
 		return err

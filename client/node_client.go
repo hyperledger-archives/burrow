@@ -21,18 +21,16 @@ import (
 	// "strings"
 
 	"github.com/tendermint/go-rpc/client"
-	// Note [ben]: this is included to silence the logger from tendermint/go-rpc/client
-	// see func init()
-	tendermint_log "github.com/tendermint/log15"
-
-	log "github.com/eris-ltd/eris-logger"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	tmLog15 "github.com/tendermint/log15"
 )
 
 type NodeClient interface {
@@ -48,6 +46,9 @@ type NodeClient interface {
 	DumpStorage(address []byte) (storage *core_types.Storage, err error)
 	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
+
+	// Logging context for this NodeClient
+	Logger() loggers.InfoTraceLogger
 }
 
 type NodeWebsocketClient interface {
@@ -58,29 +59,30 @@ type NodeWebsocketClient interface {
 	Close()
 }
 
-// NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
+// NOTE [ben] Compiler check to ensure erisNodeClient successfully implements
 // eris-db/client.NodeClient
-var _ NodeClient = (*ErisNodeClient)(nil)
+var _ NodeClient = (*erisNodeClient)(nil)
 
 // Eris-Client is a simple struct exposing the client rpc methods
-
-type ErisNodeClient struct {
+type erisNodeClient struct {
 	broadcastRPC string
+	logger       loggers.InfoTraceLogger
 }
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisNodeClient(rpcString string) *ErisNodeClient {
-	return &ErisNodeClient{
+func NewErisNodeClient(rpcString string, logger loggers.InfoTraceLogger) *erisNodeClient {
+	return &erisNodeClient{
 		broadcastRPC: rpcString,
+		logger:       logging.WithScope(logger, "ErisNodeClient"),
 	}
 }
 
 // Note [Ben]: This is a hack to silence Tendermint logger from tendermint/go-rpc
 // it needs to be initialised before go-rpc, hence it's placement here.
 func init() {
-	h := tendermint_log.LvlFilterHandler(tendermint_log.LvlWarn, tendermint_log.StdoutHandler)
-    tendermint_log.Root().SetHandler(h)
+	h := tmLog15.LvlFilterHandler(tmLog15.LvlWarn, tmLog15.StdoutHandler)
+	tmLog15.Root().SetHandler(h)
 }
 
 //------------------------------------------------------------------------------------
@@ -88,7 +90,7 @@ func init() {
 // NOTE: [ben] Eris Client first continues from tendermint rpc, but will have handshake to negotiate
 // protocol version for moving towards rpc/v1
 
-func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
+func (erisNodeClient *erisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
 	client := rpcclient.NewClientURI(erisNodeClient.broadcastRPC)
 	receipt, err := tendermint_client.BroadcastTx(client, tx)
 	if err != nil {
@@ -97,7 +99,7 @@ func (erisNodeClient *ErisNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error)
 	return &receipt, nil
 }
 
-func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
+func (erisNodeClient *erisNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
 	var wsAddr string
 	// TODO: clean up this inherited mess on dealing with the address prefixes.
 	nodeAddr := erisNodeClient.broadcastRPC
@@ -115,16 +117,17 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient Node
 	// }
 	// wsAddr = "ws://" + wsAddr
 	wsAddr = nodeAddr
-	log.WithFields(log.Fields{
-		"websocket address": wsAddr,
-		"endpoint":          "/websocket",
-	}).Debug("Subscribing to websocket address")
+	logging.TraceMsg(erisNodeClient.logger, "Subscribing to websocket address",
+		"websocket address", wsAddr,
+		"endpoint", "/websocket",
+	)
 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
 	if _, err = wsClient.Start(); err != nil {
 		return nil, err
 	}
-	derivedErisNodeWebsocketClient := &ErisNodeWebsocketClient{
+	derivedErisNodeWebsocketClient := &erisNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
+		logger:              logging.WithScope(erisNodeClient.logger, "ErisNodeWebsocketClient"),
 	}
 	return derivedErisNodeWebsocketClient, nil
 }
@@ -134,7 +137,7 @@ func (erisNodeClient *ErisNodeClient) DeriveWebsocketClient() (nodeWsClient Node
 
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
-func (erisNodeClient *ErisNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
+func (erisNodeClient *erisNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
@@ -152,7 +155,7 @@ func (erisNodeClient *ErisNodeClient) Status() (GenesisHash []byte, ValidatorPub
 	return
 }
 
-func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, GenesisHash []byte, err error) {
+func (erisNodeClient *erisNodeClient) ChainId() (ChainName, ChainId string, GenesisHash []byte, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	chainIdResult, err := tendermint_client.ChainId(client)
 	if err != nil {
@@ -170,7 +173,7 @@ func (erisNodeClient *ErisNodeClient) ChainId() (ChainName, ChainId string, Gene
 
 // QueryContract executes the contract code at address with the given data
 // NOTE: there is no check on the caller;
-func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
+func (erisNodeClient *erisNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
@@ -182,7 +185,7 @@ func (erisNodeClient *ErisNodeClient) QueryContract(callerAddress, calleeAddress
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
+func (erisNodeClient *erisNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	// TODO: [ben] Call and CallCode have an inconsistent signature; it makes sense for both to only
 	// have a single address that is the contract to query.
@@ -196,7 +199,7 @@ func (erisNodeClient *ErisNodeClient) QueryContractCode(address, code, data []by
 }
 
 // GetAccount returns a copy of the account
-func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+func (erisNodeClient *erisNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
@@ -213,7 +216,7 @@ func (erisNodeClient *ErisNodeClient) GetAccount(address []byte) (*acc.Account, 
 }
 
 // DumpStorage returns the full storage for an account.
-func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
+func (erisNodeClient *erisNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	resultStorage, err := tendermint_client.DumpStorage(client, address)
 	if err != nil {
@@ -231,7 +234,7 @@ func (erisNodeClient *ErisNodeClient) DumpStorage(address []byte) (storage *core
 //--------------------------------------------------------------------------------------------
 // Name registry
 
-func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
+func (erisNodeClient *erisNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	entryResult, err := tendermint_client.GetName(client, name)
 	if err != nil {
@@ -248,7 +251,7 @@ func (erisNodeClient *ErisNodeClient) GetName(name string) (owner []byte, data s
 
 //--------------------------------------------------------------------------------------------
 
-func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
+func (erisNodeClient *erisNodeClient) ListValidators() (blockHeight int,
 	bondedValidators []consensus_types.Validator, unbondingValidators []consensus_types.Validator, err error) {
 	client := rpcclient.NewClientJSONRPC(erisNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
@@ -262,4 +265,8 @@ func (erisNodeClient *ErisNodeClient) ListValidators() (blockHeight int,
 	bondedValidators = validatorsResult.BondedValidators
 	unbondingValidators = validatorsResult.UnbondingValidators
 	return
+}
+
+func (erisNodeClient *erisNodeClient) Logger() loggers.InfoTraceLogger {
+	return erisNodeClient.logger
 }

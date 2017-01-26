@@ -24,6 +24,7 @@ import (
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 // NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
@@ -116,4 +117,8 @@ func (mock *MockNodeClient) GetName(name string) (owner []byte, data string, exp
 
 func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error) {
 	return 0, nil, nil, nil
+}
+
+func (mock *MockNodeClient) Logger() loggers.InfoTraceLogger {
+	return loggers.NewNoopInfoTraceLogger()
 }
