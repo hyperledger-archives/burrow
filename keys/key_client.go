@@ -19,8 +19,9 @@ package keys
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+
 	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 type KeyClient interface {
@@ -37,7 +38,7 @@ var _ KeyClient = (*erisKeyClient)(nil)
 
 type erisKeyClient struct {
 	rpcString string
-	logger loggers.InfoTraceLogger
+	logger    loggers.InfoTraceLogger
 }
 
 // erisKeyClient.New returns a new eris-keys client for provided rpc location
@@ -45,7 +46,7 @@ type erisKeyClient struct {
 func NewErisKeyClient(rpcString string, logger loggers.InfoTraceLogger) *erisKeyClient {
 	return &erisKeyClient{
 		rpcString: rpcString,
-		logger: logging.WithScope(logger, "ErisKeysClient"),
+		logger:    logging.WithScope(logger, "ErisKeysClient"),
 	}
 }
 

@@ -29,7 +29,7 @@ func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 	switch moduleConfig.Name {
 	case "tendermint":
 		tmint, err := tendermint.NewTendermint(moduleConfig, pipe.GetApplication(),
-		pipe.Logger().With())
+			pipe.Logger().With())
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint node: %v", err)
 		}

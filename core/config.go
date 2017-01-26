@@ -124,6 +124,7 @@ func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*logging.LoggingCo
 	loggingConfig := &logging.LoggingConfig{}
 	return loggingConfig, nil
 }
+
 //------------------------------------------------------------------------------
 // Helper functions
 

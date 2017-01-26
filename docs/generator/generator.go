@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -148,7 +148,7 @@ func GenerateEntries(dir, render_dir, description string) ([]*Entry, error) {
 	return entries, nil
 }
 
-func CollectEntries(dir string) ([]string) {
+func CollectEntries(dir string) []string {
 	var newFiles []string
 
 	files, err := filepath.Glob(dir + "/*")
@@ -179,8 +179,8 @@ func GenerateEntry(file, dir, render_dir, description string) (*Entry, error) {
 	var err error
 
 	this_entry := &Entry{
-		FileName: GenerateFileNameFromGlob(render_dir, file),
-		Title: GenerateTitleFromFileName(filepath.Base(file)),
+		FileName:    GenerateFileNameFromGlob(render_dir, file),
+		Title:       GenerateTitleFromFileName(filepath.Base(file)),
 		Description: description,
 	}
 
@@ -254,7 +254,7 @@ func GenerateEntriesTemplate(txt []byte) (*template.Template, error) {
 			panic(err)
 		}
 
-		return ("```bash\n" +  string(lines) + "```")
+		return ("```bash\n" + string(lines) + "```")
 	}
 
 	insert_file := func(file string) string {
@@ -283,14 +283,14 @@ func GenerateEntriesTemplate(txt []byte) (*template.Template, error) {
 	}
 
 	funcMap := template.FuncMap{
-		"title":       strings.Title,
-		"replace":     strings.Replace,
-		"chomp":       strings.TrimSpace,
-		"handle_file": handle_file,
-		"handle_link": handle_link,
+		"title":             strings.Title,
+		"replace":           strings.Replace,
+		"chomp":             strings.TrimSpace,
+		"handle_file":       handle_file,
+		"handle_link":       handle_link,
 		"insert_definition": insert_definition,
 		"insert_bash_lines": insert_bash_lines,
-		"insert_file": insert_file,
+		"insert_file":       insert_file,
 	}
 
 	var templateText = `{{- $name := .Title -}}` + FrontMatter + `

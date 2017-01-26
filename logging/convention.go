@@ -46,7 +46,6 @@ func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
 	return logger.Log(prepended...)
 }
 
-
 // Record a structured log line with a message and conventional keys
 func MsgVals(logger kitlog.Logger, message string, vals ...interface{}) error {
 	keyvals := make([]interface{}, len(vals)*2)
