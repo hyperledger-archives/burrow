@@ -27,6 +27,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
