@@ -23,8 +23,6 @@ import (
 
 	"github.com/eris-ltd/eris-db/client/methods"
 	"github.com/eris-ltd/eris-db/util"
-
-	"github.com/eris-ltd/eris-db/client/transaction"
 )
 
 func buildTransactionCommand() *cobra.Command {
