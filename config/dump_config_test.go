@@ -4,9 +4,10 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // This is a little convenience for getting a config file dump. Just run:
