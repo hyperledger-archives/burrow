@@ -17,8 +17,8 @@ package logging
 import (
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/eris-ltd/eris-db/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
 )
@@ -36,12 +36,12 @@ var defaultTimestampUTCValuer kitlog.Valuer = func() interface{} {
 	return time.Now()
 }
 
-func WithMetadata(infoTraceLogger loggers.InfoTraceLogger) loggers.InfoTraceLogger {
+func WithMetadata(infoTraceLogger types.InfoTraceLogger) types.InfoTraceLogger {
 	return infoTraceLogger.With(structure.TimeKey, defaultTimestampUTCValuer,
 		structure.CallerKey, kitlog.Caller(infoTraceLoggerCallDepth),
-		"trace", TraceValuer())
+		structure.TraceKey, TraceValuer())
 }
 
 func TraceValuer() kitlog.Valuer {
-	return func() interface{} { return stack.Trace() }
+	return func() interface{} { return stack.Trace().TrimBelow(stack.Caller(infoTraceLoggerCallDepth - 1)) }
 }

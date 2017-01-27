@@ -35,7 +35,7 @@ import (
 	edb_event "github.com/eris-ltd/eris-db/event"
 	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
@@ -57,7 +57,7 @@ type erisMintPipe struct {
 	// Genesis cache
 	genesisDoc   *genesis.GenesisDoc
 	genesisState *state.State
-	logger       loggers.InfoTraceLogger
+	logger       logging_types.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure erisMintPipe successfully implements
@@ -70,7 +70,7 @@ var _ definitions.TendermintPipe = (*erisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 	eventSwitch go_events.EventSwitch,
-	logger loggers.InfoTraceLogger) (*erisMintPipe, error) {
+	logger logging_types.InfoTraceLogger) (*erisMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
 		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
@@ -180,7 +180,7 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for erisMintPipe
 
-func (pipe *erisMintPipe) Logger() loggers.InfoTraceLogger {
+func (pipe *erisMintPipe) Logger() logging_types.InfoTraceLogger {
 	return pipe.logger
 }
 

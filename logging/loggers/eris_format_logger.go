@@ -34,6 +34,9 @@ type erisFormatLogger struct {
 var _ kitlog.Logger = &erisFormatLogger{}
 
 func (efl *erisFormatLogger) Log(keyvals ...interface{}) error {
+	if efl.logger == nil {
+		return nil
+	}
 	return efl.logger.Log(structure.MapKeyValues(keyvals, erisFormatKeyValueMapper)...)
 }
 

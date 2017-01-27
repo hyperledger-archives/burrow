@@ -14,21 +14,19 @@
 
 package structure
 
-import (
-	"reflect"
-
-	. "github.com/eris-ltd/eris-db/util/slice"
-)
+import . "github.com/eris-ltd/eris-db/util/slice"
 
 const (
 	// Log time (time.Time)
 	TimeKey = "time"
 	// Call site for log invocation (go-stack.Call)
 	CallerKey = "caller"
+	// Trace for log call
+	TraceKey = "trace"
 	// Level name (string)
 	LevelKey = "level"
 	// Channel name in a vector channel logging context
-	ChannelKey = "channel"
+	ChannelKey = "log_channel"
 	// Log message (string)
 	MessageKey = "message"
 	// Captured logging source (like tendermint_log15, stdlib_log)
@@ -134,18 +132,6 @@ func Value(keyvals []interface{}, key interface{}) interface{} {
 		}
 	}
 	return nil
-}
-
-// Obtain a canonical key from a value. Useful for structured logging where the
-// type of value alone may be sufficient to determine its key. Providing this
-// function centralises any convention over type names
-func KeyFromValue(val interface{}) string {
-	switch val.(type) {
-	case string:
-		return "text"
-	default:
-		return reflect.TypeOf(val).Name()
-	}
 }
 
 // Maps key values pairs with a function (key, value) -> (new key, new value)

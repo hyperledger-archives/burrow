@@ -24,7 +24,7 @@ import (
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -46,7 +46,7 @@ type NodeClient interface {
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
 
 	// Logging context for this NodeClient
-	Logger() loggers.InfoTraceLogger
+	Logger() logging_types.InfoTraceLogger
 }
 
 type NodeWebsocketClient interface {
@@ -64,12 +64,12 @@ var _ NodeClient = (*erisNodeClient)(nil)
 // Eris-Client is a simple struct exposing the client rpc methods
 type erisNodeClient struct {
 	broadcastRPC string
-	logger       loggers.InfoTraceLogger
+	logger       logging_types.InfoTraceLogger
 }
 
 // ErisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisNodeClient(rpcString string, logger loggers.InfoTraceLogger) *erisNodeClient {
+func NewErisNodeClient(rpcString string, logger logging_types.InfoTraceLogger) *erisNodeClient {
 	return &erisNodeClient{
 		broadcastRPC: rpcString,
 		logger:       logging.WithScope(logger, "ErisNodeClient"),
@@ -265,6 +265,6 @@ func (erisNodeClient *erisNodeClient) ListValidators() (blockHeight int,
 	return
 }
 
-func (erisNodeClient *erisNodeClient) Logger() loggers.InfoTraceLogger {
+func (erisNodeClient *erisNodeClient) Logger() logging_types.InfoTraceLogger {
 	return erisNodeClient.logger
 }

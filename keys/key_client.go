@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 type KeyClient interface {
@@ -36,12 +36,12 @@ var _ KeyClient = (*erisKeyClient)(nil)
 
 type erisKeyClient struct {
 	rpcString string
-	logger    loggers.InfoTraceLogger
+	logger    logging_types.InfoTraceLogger
 }
 
 // erisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisKeyClient(rpcString string, logger loggers.InfoTraceLogger) *erisKeyClient {
+func NewErisKeyClient(rpcString string, logger logging_types.InfoTraceLogger) *erisKeyClient {
 	return &erisKeyClient{
 		rpcString: rpcString,
 		logger:    logging.WithScope(logger, "ErisKeysClient"),

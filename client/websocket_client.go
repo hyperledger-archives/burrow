@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -46,7 +46,7 @@ var _ NodeWebsocketClient = (*erisNodeWebsocketClient)(nil)
 type erisNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
-	logger              loggers.InfoTraceLogger
+	logger              logging_types.InfoTraceLogger
 }
 
 // Subscribe to an eventid

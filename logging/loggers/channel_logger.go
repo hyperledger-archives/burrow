@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	LoggingRingBufferCap channels.BufferCap = 100
+	DefaultLoggingRingBufferCap channels.BufferCap = 100
 )
 
 type ChannelLogger struct {
@@ -34,9 +34,9 @@ var _ kitlog.Logger = (*ChannelLogger)(nil)
 // We would like calls to Log to never block so we use a channel implementation
 // that is non-blocking on writes and is able to be so by using a finite ring
 // buffer.
-func newChannelLogger() *ChannelLogger {
+func NewChannelLogger(loggingRingBufferCap channels.BufferCap) *ChannelLogger {
 	return &ChannelLogger{
-		ch: channels.NewRingChannel(LoggingRingBufferCap),
+		ch: channels.NewRingChannel(loggingRingBufferCap),
 	}
 }
 
@@ -81,7 +81,7 @@ func (cl *ChannelLogger) DrainChannelToLogger(logger kitlog.Logger) {
 // Wraps an underlying Logger baseLogger to provide a Logger that is
 // is non-blocking on calls to Log.
 func NonBlockingLogger(logger kitlog.Logger) *ChannelLogger {
-	cl := newChannelLogger()
+	cl := NewChannelLogger(DefaultLoggingRingBufferCap)
 	go cl.DrainChannelToLogger(logger)
 	return cl
 }

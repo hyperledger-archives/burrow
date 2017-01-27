@@ -1,3 +1,4 @@
+package tendermint_log15
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package adapters
-
 import (
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/tendermint/log15"
 )
 
 type infoTraceLoggerAsLog15Handler struct {
-	logger loggers.InfoTraceLogger
+	logger types.InfoTraceLogger
 }
 
 var _ log15.Handler = (*infoTraceLoggerAsLog15Handler)(nil)
@@ -54,7 +53,7 @@ func Log15HandlerAsKitLogger(handler log15.Handler) kitlog.Logger {
 	}
 }
 
-func InfoTraceLoggerAsLog15Handler(logger loggers.InfoTraceLogger) log15.Handler {
+func InfoTraceLoggerAsLog15Handler(logger types.InfoTraceLogger) log15.Handler {
 	return &infoTraceLoggerAsLog15Handler{
 		logger: logger,
 	}

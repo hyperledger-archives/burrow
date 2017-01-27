@@ -22,6 +22,7 @@ import (
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
 
@@ -117,6 +118,6 @@ func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators,
 	return 0, nil, nil, nil
 }
 
-func (mock *MockNodeClient) Logger() loggers.InfoTraceLogger {
+func (mock *MockNodeClient) Logger() logging_types.InfoTraceLogger {
 	return loggers.NewNoopInfoTraceLogger()
 }

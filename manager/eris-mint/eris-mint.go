@@ -25,8 +25,8 @@ import (
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
@@ -48,7 +48,7 @@ type ErisMint struct {
 	evsw tendermint_events.EventSwitch
 
 	nTxs   int // count txs in a block
-	logger loggers.InfoTraceLogger
+	logger logging_types.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure ErisMint successfully implements
@@ -72,7 +72,8 @@ func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewErisMint(s *sm.State, evsw tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *ErisMint {
+func NewErisMint(s *sm.State, evsw tendermint_events.EventSwitch,
+		logger logging_types.InfoTraceLogger) *ErisMint {
 	return &ErisMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),

@@ -22,7 +22,7 @@ import (
 	"net/http"
 
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 )
 
 // Eris-Keys server connects over http request-response structures
@@ -32,7 +32,7 @@ type HTTPResponse struct {
 	Error    string
 }
 
-func RequestResponse(addr, method string, args map[string]string, logger loggers.InfoTraceLogger) (string, error) {
+func RequestResponse(addr, method string, args map[string]string, logger logging_types.InfoTraceLogger) (string, error) {
 	body, err := json.Marshal(args)
 	if err != nil {
 		return "", err

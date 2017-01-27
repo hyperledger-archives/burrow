@@ -30,7 +30,7 @@ import (
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
 
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	"github.com/eris-ltd/eris-db/server"
 )
@@ -46,7 +46,7 @@ type Core struct {
 func NewCore(chainId string,
 	consensusConfig *config.ModuleConfig,
 	managerConfig *config.ModuleConfig,
-	logger loggers.InfoTraceLogger) (*Core, error) {
+	logger logging_types.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with eris-db/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()

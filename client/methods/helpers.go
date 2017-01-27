@@ -20,10 +20,10 @@ import (
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/lifecycle"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 )
 
-func unpackSignAndBroadcast(result *rpc.TxResult, logger loggers.InfoTraceLogger) {
+func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTraceLogger) {
 	if result == nil {
 		// if we don't provide --sign or --broadcast
 		return
@@ -45,10 +45,14 @@ func unpackSignAndBroadcast(result *rpc.TxResult, logger loggers.InfoTraceLogger
 	logging.InfoMsg(logger, "SignAndBroadcast result")
 }
 
-func loggerFromClientDo(do *definitions.ClientDo, scope string) (loggers.InfoTraceLogger, error) {
+func loggerFromClientDo(do *definitions.ClientDo, scope string) (logging_types.InfoTraceLogger, error) {
 	lc, err := core.LoadLoggingConfigFromClientDo(do)
 	if err != nil {
 		return nil, err
 	}
-	return logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(lc), scope), nil
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(lc)
+	if err != nil {
+		return nil, err
+	}
+	return logging.WithScope(logger, scope), nil
 }

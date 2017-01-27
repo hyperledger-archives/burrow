@@ -23,9 +23,12 @@ import (
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/adapters/stdlib"
 	tmLog15adapter "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
+	"github.com/eris-ltd/eris-db/logging/config"
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
 
+	lctypes "github.com/eris-ltd/eris-db/logging/config/types"
+	"github.com/eris-ltd/eris-db/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
@@ -35,22 +38,39 @@ import (
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(LoggingConfig *logging.LoggingConfig) loggers.InfoTraceLogger {
-	return NewStdErrLogger()
+func NewLoggerFromLoggingConfig(loggingConfig *lctypes.LoggingConfig) (types.InfoTraceLogger, error) {
+	if loggingConfig == nil {
+		return NewStdErrLogger(), nil
+	}
+	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersLoggingConfig(loggingConfig)
+	if err != nil {
+		return nil, err
+	}
+	return NewLogger(infoOnlyLogger, infoAndTraceLogger), nil
 }
 
-func NewStdErrLogger() loggers.InfoTraceLogger {
-	logger := tmLog15adapter.Log15HandlerAsKitLogger(
-		tmLog15.StreamHandler(os.Stderr, tmLog15.TerminalFormat()))
-	return NewLogger(logger, logger)
+// Hot swap logging config by replacing output loggers of passed InfoTraceLogger with those built from loggingConfig
+func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger, loggingConfig *lctypes.LoggingConfig) error {
+	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersLoggingConfig(loggingConfig)
+	if err != nil {
+		return err
+	}
+	logger.SwapInfoOnlyOutput(infoOnlyLogger)
+	logger.SwapInfoAndTraceOutput(infoAndTraceLogger)
+	return nil
+}
+
+func NewStdErrLogger() types.InfoTraceLogger {
+	logger := loggers.NewStreamLogger(os.Stderr)
+	return NewLogger(nil, logger)
 }
 
 // Provided a standard eris logger that outputs to the supplied underlying info and trace
 // loggers
-func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
+func NewLogger(infoOnlyLogger, infoAndTraceLogger kitlog.Logger) types.InfoTraceLogger {
 	infoTraceLogger := loggers.NewInfoTraceLogger(
-		loggers.ErisFormatLogger(infoLogger),
-		loggers.ErisFormatLogger(traceLogger))
+		loggers.ErisFormatLogger(infoOnlyLogger),
+		loggers.ErisFormatLogger(infoAndTraceLogger))
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
@@ -60,13 +80,27 @@ func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId))
 }
 
-func CaptureTendermintLog15Output(infoTraceLogger loggers.InfoTraceLogger) {
+func CaptureTendermintLog15Output(infoTraceLogger types.InfoTraceLogger) {
 	tmLog15.Root().SetHandler(
 		tmLog15adapter.InfoTraceLoggerAsLog15Handler(infoTraceLogger.
 			With(structure.CapturedLoggingSourceKey, "tendermint_log15")))
 }
 
-func CaptureStdlibLogOutput(infoTraceLogger loggers.InfoTraceLogger) {
+func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 	stdlib.CaptureRootLogger(infoTraceLogger.
 		With(structure.CapturedLoggingSourceKey, "stdlib_log"))
+}
+
+// Helpers
+
+func infoTraceLoggersLoggingConfig(loggingConfig *lctypes.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
+	infoOnlyLogger, err := config.BuildLoggerFromSinkConfig(loggingConfig.InfoSink)
+	if err != nil {
+		return nil, nil, err
+	}
+	infoAndTraceLogger, err := config.BuildLoggerFromSinkConfig(loggingConfig.InfoAndTraceSink)
+	if err != nil {
+		return nil, nil, err
+	}
+	return infoOnlyLogger, infoAndTraceLogger, nil
 }

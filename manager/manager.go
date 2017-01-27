@@ -21,11 +21,11 @@ import (
 
 	config "github.com/eris-ltd/eris-db/config"
 	definitions "github.com/eris-ltd/eris-db/definitions"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
 	// types       "github.com/eris-ltd/eris-db/manager/types"
 
 	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -34,7 +34,7 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-	evsw events.EventSwitch, logger loggers.InfoTraceLogger,
+	evsw events.EventSwitch, logger logging_types.InfoTraceLogger,
 	consensusMinorVersion string) (definitions.Pipe,
 	error) {
 	switch moduleConfig.Name {
