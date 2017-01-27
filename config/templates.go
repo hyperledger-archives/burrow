@@ -300,7 +300,7 @@ const sectionErisMint = `
 ################################################################################
 ##
 ## Eris-Mint
-## version 0.12.0
+## version 0.16.0
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

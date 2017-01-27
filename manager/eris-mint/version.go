@@ -28,7 +28,7 @@ const (
 	// Major version component of the current release
 	erisMintVersionMajor = 0
 	// Minor version component of the current release
-	erisMintVersionMinor = 12
+	erisMintVersionMinor = 16
 	// Patch version component of the current release
 	erisMintVersionPatch = 0
 )
