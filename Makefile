@@ -112,7 +112,7 @@ build_race_keys:
 # test eris-db
 .PHONY: test
 test: build
-	@go test ${PACKAGES_NOVENDOR}
+	@go test ${PACKAGES_NOVENDOR} -tags integration
 
 # test eris-db with checks for race conditions
 .PHONY: test_race
