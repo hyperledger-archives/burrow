@@ -26,7 +26,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 // Eris-Keys server connects over http request-response structures
@@ -36,17 +37,17 @@ type HTTPResponse struct {
 	Error    string
 }
 
-func RequestResponse(addr, method string, args map[string]string) (string, error) {
-	b, err := json.Marshal(args)
+func RequestResponse(addr, method string, args map[string]string, logger loggers.InfoTraceLogger) (string, error) {
+	body, err := json.Marshal(args)
 	if err != nil {
 		return "", err
 	}
 	endpoint := fmt.Sprintf("%s/%s", addr, method)
-	log.WithFields(log.Fields{
-		"key server endpoint": endpoint,
-		"request body":        string(b),
-	}).Debugf("Eris-client: Sending request body to key server")
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(b))
+	logging.TraceMsg(logger, "Sending request to key server",
+		"key_server_endpoint", endpoint,
+		"request_body", string(body),
+	)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return "", err
 	}
@@ -58,11 +59,11 @@ func RequestResponse(addr, method string, args map[string]string) (string, error
 	if errS != "" {
 		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
 	}
-	log.WithFields(log.Fields{
-		"endpoint":     endpoint,
-		"request body": string(b),
-		"response":     res,
-	}).Debugf("Received response from key server")
+	logging.TraceMsg(logger, "Received response from key server",
+		"endpoint", endpoint,
+		"request body", string(body),
+		"response", res,
+	)
 	return res, nil
 }
 

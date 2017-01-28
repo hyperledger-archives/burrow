@@ -1,8 +1,9 @@
 package client
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMapsAndValues(t *testing.T) {
@@ -30,5 +31,4 @@ func TestMapsAndValues(t *testing.T) {
 
 	_, _, err = mapAndValues("Foo", 4, 4, "Bar")
 	assert.Error(t, err, "Should be an error to provide non-string keys")
-
 }

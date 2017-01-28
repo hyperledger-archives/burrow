@@ -7,10 +7,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/eris-ltd/common/go/docs"
 	commands "github.com/eris-ltd/eris-db/cmd"
+	docs "github.com/eris-ltd/eris-db/docs/generator"
 
 	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
+	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/cobra"
 )
@@ -115,9 +116,9 @@ func AddClientToDB(dbCmd, clientCmd *cobra.Command) error {
 func main() {
 	// Repository maintainers should populate the top level command object.
 	erisDbCommand := commands.ErisDbCmd
-	commands.InitErisDbCli()
-	commands.AddCommands()
-	commands.AddGlobalFlags()
+	do := definitions.NewDo()
+	commands.AddGlobalFlags(do)
+	commands.AddCommands(do)
 
 	erisClientCommand := clientCommands.ErisClientCmd
 	clientCommands.InitErisClientInit()

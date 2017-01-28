@@ -14,25 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package rpc
 
 import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
 	"github.com/eris-ltd/eris-db/txs"
-)
-
-var (
-	MaxCommitWaitTimeSeconds = 20
 )
 
 //------------------------------------------------------------------------------------
@@ -272,16 +265,14 @@ type TxResult struct {
 }
 
 // Preserve
-func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign, broadcast, wait bool) (txResult *TxResult, err error) {
+func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign,
+	broadcast, wait bool) (txResult *TxResult, err error) {
 	var inputAddr []byte
 	if sign {
 		inputAddr, tx, err = signTx(keyClient, chainID, tx)
 		if err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{
-			"transaction": string(account.SignBytes(chainID, tx)),
-		}).Debug("Signed transaction")
 	}
 
 	if broadcast {
@@ -300,23 +291,19 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 						// if broadcast threw an error, just return
 						return
 					}
-					log.Debug("Waiting for transaction to be confirmed.")
 					confirmation := <-confirmationChannel
 					if confirmation.Error != nil {
-						log.Errorf("Encountered error waiting for event: %s\n", confirmation.Error)
-						err = confirmation.Error
+						err = fmt.Errorf("Encountered error waiting for event: %s", confirmation.Error)
 						return
 					}
 					if confirmation.Exception != nil {
-						log.Errorf("Encountered Exception from chain: %s\n", confirmation.Exception)
-						err = confirmation.Exception
+						err = fmt.Errorf("Encountered Exception from chain: %s", confirmation.Exception)
 						return
 					}
 					txResult.BlockHash = confirmation.BlockHash
 					txResult.Exception = ""
 					eventDataTx, ok := confirmation.Event.(*txs.EventDataTx)
 					if !ok {
-						log.Errorf("Received wrong event type.")
 						err = fmt.Errorf("Received wrong event type.")
 						return
 					}

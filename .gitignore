@@ -8,3 +8,4 @@ target
 *.swp
 debug
 .idea
+.vscode
