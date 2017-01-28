@@ -67,6 +67,12 @@ install_vendor:
 	go get github.com/Masterminds/glide
 	glide install
 
+# hell runs utility tool hell to selectively update glide dependencies
+.PHONY: hell
+hell:
+	go build -o ${REPO}/target/hell ./util/hell/cmd/hell/main.go
+	./target/hell $(filter-out $@,$(MAKECMDGOALS))
+
 ### Building github.com/eris-ltd/eris-db
 
 # build all targets in github.com/eris-ltd/eris-db
