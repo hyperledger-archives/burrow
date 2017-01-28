@@ -61,7 +61,7 @@ genesis_file = "genesis.json"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 12
+  minor_version = 16
   # relative path to application manager root folder
   relative_root = "erismint"
 
