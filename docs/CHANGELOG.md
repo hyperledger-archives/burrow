@@ -1,4 +1,20 @@
 # Eris-DB changelog
+## 0.16.0
+This is a consolidation release that fixes various bugs and improves elements
+of the architecture across the Eris Platform to support a quicker release 
+cadence.
+
+- Features and improvements
+  - Logging system overhauled based on the central logging interface of go-kit log. Configuration lacking in this release but should be in 0.16.1. Allows powerful routing, filtering, and output options for better operations and increasing the observability of an eris blockchain. More to follow.
+  - Genesis making is improved and moved into eris-db.
+  - Config templating is moved into eris-db for better synchronisation of server config between the consumer of it (eris-db) and the producers of it (eris cli and other tools).
+  - Some documentation updates in code and in specs.
+  - Makefile added to capture conventions around building and testing and replicate them across different environments such as continuous integration systems.
+
+- Bugfixes
+  - [RPC/v0] #464 fix divergence from JSON-RPC spec
+  - [CI] #366 correction to circle ci script
+  - [eris-client] #378 more descriptive error message
 
 ## 0.12.0-RC3
 This release marks the start of Eris-DB as the full permissioned blockchain node
