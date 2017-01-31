@@ -3,15 +3,14 @@ package config
 import (
 	"testing"
 
-	"github.com/eris-ltd/eris-db/logging/config/types"
 	. "github.com/eris-ltd/eris-db/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildKeyValuesPredicateMatchAll(t *testing.T) {
-	conf := []*types.KeyValuePredicateConfig{
+	conf := []*KeyValuePredicateConfig{
 		{
-			KeyRegex: "Foo",
+			KeyRegex:   "Foo",
 			ValueRegex: "bar",
 		},
 	}
@@ -21,7 +20,7 @@ func TestBuildKeyValuesPredicateMatchAll(t *testing.T) {
 }
 
 func TestBuildKeyValuesPredicateMatchAny(t *testing.T) {
-	conf := []*types.KeyValuePredicateConfig{
+	conf := []*KeyValuePredicateConfig{
 		{
 			KeyRegex:   "Bosh",
 			ValueRegex: "Bish",
@@ -32,17 +31,38 @@ func TestBuildKeyValuesPredicateMatchAny(t *testing.T) {
 	assert.True(t, kvp(Slice("Foo", "bar", "Bosh", "Bish")))
 }
 
-func TestBuildFilterPredicate(t *testing.T) {
-	fc := &types.FilterConfig{
-		Include: []*types.KeyValuePredicateConfig{
-			{
-				KeyRegex: "^Foo$",
-			},
-		},
-		Exclude: []*types.KeyValuePredicateConfig{
+func TestExcludeAllFilterPredicate(t *testing.T) {
+	fc := &FilterConfig{
+		FilterMode: ExcludeWhenAllMatch,
+		Predicates: []*KeyValuePredicateConfig{
 			{
 				KeyRegex:   "Bosh",
 				ValueRegex: "Bish",
+			},
+			{
+				KeyRegex:   "Bosh",
+				ValueRegex: "Bash",
+			},
+		},
+	}
+	fp, err := BuildFilterPredicate(fc)
+	assert.NoError(t, err)
+	assert.False(t, fp(Slice("Bosh", "Bash", "Shoes", 42)))
+	assert.True(t, fp(Slice("Bosh", "Bash", "Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
+	assert.False(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+
+}
+func TestExcludeAnyFilterPredicate(t *testing.T) {
+	fc := &FilterConfig{
+		FilterMode: ExcludeWhenAnyMatches,
+		Predicates: []*KeyValuePredicateConfig{
+			{
+				KeyRegex:   "Bosh",
+				ValueRegex: "Bish",
+			},
+			{
+				KeyRegex:   "Bosh",
+				ValueRegex: "Bash",
 			},
 		},
 	}
@@ -50,5 +70,50 @@ func TestBuildFilterPredicate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 42)))
 	assert.True(t, fp(Slice("Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
+	assert.True(t, fp(Slice("Food", 0.2, "Shoes", 42, "Bosh", "Bish")))
+
+}
+
+func TestIncludeAllFilterPredicate(t *testing.T) {
+	fc := &FilterConfig{
+		FilterMode: IncludeWhenAllMatch,
+		Predicates: []*KeyValuePredicateConfig{
+			{
+				KeyRegex:   "Bosh",
+				ValueRegex: "Bish",
+			},
+			{
+				KeyRegex:   "Planks",
+				ValueRegex: "^0.2$",
+			},
+		},
+	}
+	fp, err := BuildFilterPredicate(fc)
+	assert.NoError(t, err)
+	assert.True(t, fp(Slice("Foo", "bar", "Shoes", 42)))
+	// Don't filter, it has all the required key values
+	assert.False(t, fp(Slice("Foo", "bar", "Planks", 0.2, "Shoes", 42, "Bosh", "Bish")))
 	assert.True(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+}
+
+func TestIncludeAnyFilterPredicate(t *testing.T) {
+	fc := &FilterConfig{
+		FilterMode: IncludeWhenAnyMatches,
+		Predicates: []*KeyValuePredicateConfig{
+			{
+				KeyRegex:   "Bosh",
+				ValueRegex: "Bish",
+			},
+			{
+				KeyRegex:   "^Shoes$",
+				ValueRegex: "42",
+			},
+		},
+	}
+	fp, err := BuildFilterPredicate(fc)
+	assert.NoError(t, err)
+	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 3427)))
+	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
+	assert.False(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+
 }

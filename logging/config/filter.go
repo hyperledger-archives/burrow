@@ -2,33 +2,26 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"regexp"
 
-	"github.com/eapache/channels"
 	"github.com/eris-ltd/eris-db/common/math/integral"
-	"github.com/eris-ltd/eris-db/logging/config/types"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	kitlog "github.com/go-kit/kit/log"
 )
 
-func BuildFilterPredicate(filterConfig *types.FilterConfig) (func([]interface{}) bool, error) {
-	includePredicate, err := BuildKeyValuesPredicate(filterConfig.Include, true)
+func BuildFilterPredicate(filterConfig *FilterConfig) (func([]interface{}) bool, error) {
+	predicate, err := BuildKeyValuesPredicate(filterConfig.Predicates,
+		filterConfig.FilterMode.MatchAll())
 	if err != nil {
 		return nil, err
 	}
-	excludePredicate, err := BuildKeyValuesPredicate(filterConfig.Exclude, false)
-	if err != nil {
-		return nil, err
-	}
+	include := filterConfig.FilterMode.Include()
 	return func(keyvals []interface{}) bool {
-		// When do we want to exclude a log line
-		return !includePredicate(keyvals) || excludePredicate(keyvals)
+		// XOR the predicate with include. If include is true then negate the match.
+		return predicate(keyvals) != include
 	}, nil
 }
 
-func BuildKeyValuesPredicate(kvpConfigs []*types.KeyValuePredicateConfig,
+func BuildKeyValuesPredicate(kvpConfigs []*KeyValuePredicateConfig,
 	matchAll bool) (func([]interface{}) bool, error) {
 	length := len(kvpConfigs)
 	keyRegexes := make([]*regexp.Regexp, length)

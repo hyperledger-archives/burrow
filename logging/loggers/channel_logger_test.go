@@ -39,3 +39,21 @@ func TestChannelLogger(t *testing.T) {
 	assert.Nil(t, cl.ReadLogLine(), "Since we have drained the buffer there "+
 		"should be no more log lines.")
 }
+
+func TestChannelLogger_Reset(t *testing.T) {
+	loggingRingBufferCap := channels.BufferCap(5)
+	cl := NewChannelLogger(loggingRingBufferCap)
+	for i := 0; i < int(loggingRingBufferCap); i++ {
+		cl.Log("log line", i)
+	}
+	cl.Reset()
+	for i := 0; i < int(loggingRingBufferCap); i++ {
+		cl.Log("log line", i)
+	}
+	for i := 0; i < int(loggingRingBufferCap); i++ {
+		ll := cl.WaitReadLogLine()
+		assert.Equal(t, i, ll[1])
+	}
+	assert.Nil(t, cl.ReadLogLine(), "Since we have drained the buffer there "+
+			"should be no more log lines.")
+}

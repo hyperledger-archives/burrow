@@ -26,7 +26,7 @@ import (
 	"github.com/eris-ltd/eris-db/config"
 	"github.com/eris-ltd/eris-db/consensus"
 	"github.com/eris-ltd/eris-db/definitions"
-	lctypes "github.com/eris-ltd/eris-db/logging/config/types"
+	lconfig "github.com/eris-ltd/eris-db/logging/config"
 	"github.com/eris-ltd/eris-db/manager"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/util"
@@ -113,14 +113,14 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	return serverConfig, err
 }
 
-func LoadLoggingConfigFromDo(do *definitions.Do) (*lctypes.LoggingConfig, error) {
+func LoadLoggingConfigFromDo(do *definitions.Do) (*lconfig.LoggingConfig, error) {
 	//subConfig, err := SubConfig(conf, "logging")
-	loggingConfig := &lctypes.LoggingConfig{}
+	loggingConfig := &lconfig.LoggingConfig{}
 	return loggingConfig, nil
 }
 
-func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*lctypes.LoggingConfig, error) {
-	loggingConfig := &lctypes.LoggingConfig{}
+func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*lconfig.LoggingConfig, error) {
+	loggingConfig := &lconfig.LoggingConfig{}
 	return loggingConfig, nil
 }
 

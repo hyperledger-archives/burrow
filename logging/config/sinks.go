@@ -4,21 +4,226 @@ import (
 	"fmt"
 	"os"
 
-	"regexp"
-
 	"github.com/eapache/channels"
-	"github.com/eris-ltd/eris-db/common/math/integral"
-	"github.com/eris-ltd/eris-db/logging/config/types"
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	kitlog "github.com/go-kit/kit/log"
 )
 
-func BuildLoggerFromRootSinkConfig(sinkConfig *types.SinkConfig) (kitlog.Logger, map[string]*loggers.ChannelLogger, error) {
-	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.ChannelLogger))
+type source string
+type outputType string
+type transformType string
+type filterMode string
+
+const (
+	// OutputType
+	NoOutput outputType = ""
+	Graylog  outputType = "Graylog"
+	Syslog   outputType = "Syslog"
+	File     outputType = "File"
+	Stdout   outputType = "Stdout"
+	Stderr   outputType = "Stderr"
+
+	// TransformType
+	NoTransform transformType = ""
+	// Filter log lines
+	Filter transformType = "Filter"
+	// Remove key-val pairs from each log line
+	Prune   transformType = "Prune"
+	Capture transformType = "Capture"
+	Label   transformType = "Label"
+
+	IncludeWhenAllMatch   filterMode = "IncludeWhenAllMatch"
+	IncludeWhenAnyMatches filterMode = "IncludeWhenAnyMatches"
+	ExcludeWhenAllMatch   filterMode = "ExcludeWhenAllMatch"
+	ExcludeWhenAnyMatches filterMode = "ExcludeWhenAnyMatches"
+)
+
+// Only include log lines matching the filter so negate the predicate in filter
+func (mode filterMode) Include() bool {
+	switch mode {
+	case IncludeWhenAllMatch, IncludeWhenAnyMatches:
+		return true
+	default:
+		return false
+	}
 }
 
-func BuildLoggerFromSinkConfig(sinkConfig *types.SinkConfig,
-	captures map[string]*loggers.ChannelLogger) (kitlog.Logger, map[string]*loggers.ChannelLogger, error) {
+// The predicate should only evaluate true if all the key value predicates match
+func (mode filterMode) MatchAll() bool {
+	switch mode {
+	case IncludeWhenAllMatch, ExcludeWhenAllMatch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Exclude log lines that match the predicate
+func (mode filterMode) Exclude() bool {
+	return !mode.Include()
+}
+
+// The predicate should evaluate true if at least one of the key value predicates matches
+func (mode filterMode) MatchAny() bool {
+	return !mode.MatchAny()
+}
+
+// Sink configuration types
+type (
+	// Outputs
+	GraylogConfig struct {
+	}
+
+	SyslogConfig struct {
+	}
+
+	FileConfig struct {
+		Path string
+	}
+
+	OutputConfig struct {
+		OutputType outputType
+		*GraylogConfig
+		*FileConfig
+		*SyslogConfig
+	}
+
+	// Transforms
+	LabelConfig struct {
+		Labels map[string]string
+		Prefix bool
+	}
+
+	CaptureConfig struct {
+		Name        string
+		BufferCap   int
+		Passthrough bool
+	}
+
+	// Generates true if KeyRegex matches a log line key and ValueRegex matches that key's value.
+	// If ValueRegex is empty then returns true if any key matches
+	// If KeyRegex is empty then returns true if any value matches
+	KeyValuePredicateConfig struct {
+		KeyRegex   string
+		ValueRegex string
+	}
+
+	// Filter types
+
+	FilterConfig struct {
+		FilterMode filterMode
+		// Predicates to match a log line against using FilterMode
+		Predicates []*KeyValuePredicateConfig
+	}
+
+	TransformConfig struct {
+		TransformType transformType
+		*LabelConfig
+		*CaptureConfig
+		*FilterConfig
+	}
+
+	// Sink
+	// A Sink describes a logger that logs to zero or one output and logs to zero or more child sinks.
+	// before transmitting its log it applies zero or one transforms to the stream of log lines.
+	// by chaining together many Sinks arbitrary transforms to and multi
+	SinkConfig struct {
+		Transform *TransformConfig
+		Sinks     []*SinkConfig
+		Output    *OutputConfig
+	}
+
+	LoggingConfig struct {
+		InfoSink         *SinkConfig
+		InfoAndTraceSink *SinkConfig
+	}
+)
+
+// Builders
+
+func Sink() *SinkConfig {
+	return &SinkConfig{}
+}
+
+func (sinkConfig *SinkConfig) AddSinks(sinks ...*SinkConfig) *SinkConfig {
+	sinkConfig.Sinks = append(sinkConfig.Sinks, sinks...)
+	return sinkConfig
+}
+
+func (sinkConfig *SinkConfig) SetTransform(transform *TransformConfig) *SinkConfig {
+	sinkConfig.Transform = transform
+	return sinkConfig
+}
+
+func (sinkConfig *SinkConfig) SetOutput(output *OutputConfig) *SinkConfig {
+	sinkConfig.Output = output
+	return sinkConfig
+}
+
+func StdoutOutput() *OutputConfig {
+	return &OutputConfig{
+		OutputType: Stdout,
+	}
+}
+func StderrOutput() *OutputConfig {
+	return &OutputConfig{
+		OutputType: Stderr,
+	}
+}
+
+func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformConfig {
+	return &TransformConfig{
+		TransformType: Capture,
+		CaptureConfig: &CaptureConfig{
+			Name:      name,
+			BufferCap: bufferCap,
+			Passthrough: passthrough,
+		},
+	}
+}
+
+func LabelTransform(prefix bool, labelKeyvals ...string) *TransformConfig {
+	length := len(labelKeyvals) / 2
+	labels := make(map[string]string, length)
+	for i := 0; i < 2*length; i += 2 {
+		labels[labelKeyvals[i]] = labelKeyvals[i+1]
+	}
+	return &TransformConfig{
+		TransformType: Label,
+		LabelConfig: &LabelConfig{
+			Prefix: prefix,
+			Labels: labels,
+		},
+	}
+}
+
+func FilterTransform(fmode filterMode, keyvalueRegexes ...string) *TransformConfig {
+	length := len(keyvalueRegexes) / 2
+	predicates := make([]*KeyValuePredicateConfig, length)
+	for i := 0; i < length; i++ {
+		kv := i * 2
+		predicates[i] = &KeyValuePredicateConfig{
+			KeyRegex:   keyvalueRegexes[kv],
+			ValueRegex: keyvalueRegexes[kv+1],
+		}
+	}
+	return &TransformConfig{
+		TransformType: Filter,
+		FilterConfig: &FilterConfig{
+			FilterMode: fmode,
+			Predicates: predicates,
+		},
+	}
+}
+
+func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
+}
+
+// Logger formation
+
+func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
+	captures map[string]*loggers.CaptureLogger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
 	if sinkConfig == nil {
 		return kitlog.NewNopLogger(), captures, nil
 	}
@@ -32,7 +237,7 @@ func BuildLoggerFromSinkConfig(sinkConfig *types.SinkConfig,
 		outputLoggers[i] = l
 	}
 
-	if sinkConfig.Output != nil && sinkConfig.Output.OutputType != types.NoOutput {
+	if sinkConfig.Output != nil && sinkConfig.Output.OutputType != NoOutput {
 		l, err := BuildOutputLogger(sinkConfig.Output)
 		if err != nil {
 			return nil, captures, err
@@ -42,35 +247,37 @@ func BuildLoggerFromSinkConfig(sinkConfig *types.SinkConfig,
 
 	outputLogger := loggers.NewMultipleOutputLogger(outputLoggers...)
 
-	if sinkConfig.Transform != nil && sinkConfig.Transform.TransformType != types.NoTransform {
+	if sinkConfig.Transform != nil && sinkConfig.Transform.TransformType != NoTransform {
 		return BuildTransformLogger(sinkConfig.Transform, captures, outputLogger)
 	}
 	return outputLogger, captures, nil
 }
 
-func BuildOutputLogger(outputConfig *types.OutputConfig) (kitlog.Logger, error) {
+func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	switch outputConfig.OutputType {
-	case types.NoOutput:
+	case NoOutput:
 		return kitlog.NewNopLogger(), nil
-	//case types.Graylog:
-	//case types.Syslog:
-	case types.Stdout:
+	//case Graylog:
+	//case Syslog:
+	case Stdout:
 		return loggers.NewStreamLogger(os.Stdout), nil
-	case types.Stderr:
+	case Stderr:
 		return loggers.NewStreamLogger(os.Stderr), nil
-	case types.File:
+	case File:
 		return loggers.NewFileLogger(outputConfig.FileConfig.Path)
 	default:
-		return nil, fmt.Errorf("Could not build logger for output: '%s'", outputConfig.OutputType)
+		return nil, fmt.Errorf("Could not build logger for output: '%s'",
+			outputConfig.OutputType)
 	}
 }
 
-func BuildTransformLogger(transformConfig *types.TransformConfig, captures map[string]*loggers.ChannelLogger,
-	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.ChannelLogger, error) {
+func BuildTransformLogger(transformConfig *TransformConfig,
+	captures map[string]*loggers.CaptureLogger,
+	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
 	switch transformConfig.TransformType {
-	case types.NoTransform:
+	case NoTransform:
 		return outputLogger, captures, nil
-	case types.Label:
+	case Label:
 		keyvals := make([]interface{}, 0, len(transformConfig.Labels)*2)
 		for k, v := range transformConfig.LabelConfig.Labels {
 			keyvals = append(keyvals, k, v)
@@ -80,18 +287,22 @@ func BuildTransformLogger(transformConfig *types.TransformConfig, captures map[s
 		} else {
 			return kitlog.NewContext(outputLogger).With(keyvals...), captures, nil
 		}
-	case types.Capture:
+	case Capture:
 		name := transformConfig.CaptureConfig.Name
 		if _, ok := captures[name]; ok {
 			return nil, captures, fmt.Errorf("Could not register new logging capture since name '%s' already "+
 				"registered", name)
 		}
-		// Create a buffered channel logger to capture logs from upstream
-		cl := loggers.NewChannelLogger(channels.BufferCap(transformConfig.CaptureConfig.BufferCap))
-		captures[name] = cl
-		// Return a logger that tees intput logs to this ChannelLogger and the passed in output logger
-		return loggers.NewMultipleOutputLogger(cl, outputLogger), captures, nil
-	case types.Filter:
+		// Create a capture logger according to configuration (it may tee the output)
+		// or capture it to be flushed later
+		captureLogger := loggers.NewCaptureLogger(outputLogger,
+			channels.BufferCap(transformConfig.CaptureConfig.BufferCap),
+			transformConfig.CaptureConfig.Passthrough)
+		// Register the capture
+		captures[name] = captureLogger
+		// Pass it upstream to be logged to
+		return captureLogger, captures, nil
+	case Filter:
 		predicate, err := BuildFilterPredicate(transformConfig.FilterConfig)
 		if err != nil {
 			return nil, captures, fmt.Errorf("Could not build filter predicate: '%s'", err)

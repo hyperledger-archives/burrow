@@ -16,8 +16,8 @@ package loggers
 
 import (
 	"github.com/eris-ltd/eris-db/logging/structure"
-	kitlog "github.com/go-kit/kit/log"
 	"github.com/eris-ltd/eris-db/logging/types"
+	kitlog "github.com/go-kit/kit/log"
 )
 
 type infoTraceLogger struct {
@@ -36,17 +36,17 @@ var _ kitlog.Logger = (types.InfoTraceLogger)(nil)
 func NewInfoTraceLogger(infoOnlyLogger, infoAndTraceLogger kitlog.Logger) types.InfoTraceLogger {
 	// We will never halt the progress of a log emitter. If log output takes too
 	// long will start dropping log lines by using a ring buffer.
-	var infoOnlyOutputLogger, infoTraceOutputLogger kitlog.SwapLogger
+	var infoOnlyOutputLogger, infoAndTraceOutputLogger kitlog.SwapLogger
 	infoOnlyOutputLogger.Swap(infoOnlyLogger)
-	infoTraceOutputLogger.Swap(infoAndTraceLogger)
-	return &infoTraceLogger {
-		infoOnlyOutputLogger: &infoOnlyOutputLogger,
-		infoAndTraceOutputLogger: &infoTraceOutputLogger,
-		infoOnly: wrapLogger(&infoOnlyOutputLogger).With(
+	infoAndTraceOutputLogger.Swap(infoAndTraceLogger)
+	return &infoTraceLogger{
+		infoOnlyOutputLogger:     &infoOnlyOutputLogger,
+		infoAndTraceOutputLogger: &infoAndTraceOutputLogger,
+		infoOnly: wrapOutputLogger(&infoOnlyOutputLogger).With(
 			structure.ChannelKey, types.InfoChannelName,
 			structure.LevelKey, types.InfoLevelName,
 		),
-		infoAndTrace: wrapLogger(&infoTraceOutputLogger).With(
+		infoAndTrace: wrapOutputLogger(&infoAndTraceOutputLogger).With(
 			structure.ChannelKey, types.TraceChannelName,
 			structure.LevelKey, types.TraceLevelName,
 		),
@@ -59,14 +59,14 @@ func NewNoopInfoTraceLogger() types.InfoTraceLogger {
 
 func (l *infoTraceLogger) With(keyvals ...interface{}) types.InfoTraceLogger {
 	return &infoTraceLogger{
-		infoOnly:      l.infoOnly.With(keyvals...),
+		infoOnly:     l.infoOnly.With(keyvals...),
 		infoAndTrace: l.infoAndTrace.With(keyvals...),
 	}
 }
 
 func (l *infoTraceLogger) WithPrefix(keyvals ...interface{}) types.InfoTraceLogger {
 	return &infoTraceLogger{
-		infoOnly:      l.infoOnly.WithPrefix(keyvals...),
+		infoOnly:     l.infoOnly.WithPrefix(keyvals...),
 		infoAndTrace: l.infoAndTrace.WithPrefix(keyvals...),
 	}
 }
@@ -102,6 +102,9 @@ func (l *infoTraceLogger) Log(keyvals ...interface{}) error {
 	return nil
 }
 
-func wrapLogger(logger kitlog.Logger) *kitlog.Context {
-	return kitlog.NewContext(NonBlockingLogger(VectorValuedLogger(logger)))
+// Wrap the output loggers with a a set of standard transforms, a non-blocking
+// ChannelLogger and an outer context
+func wrapOutputLogger(outputLogger kitlog.Logger) *kitlog.Context {
+	return kitlog.NewContext(NonBlockingLogger(ErisFormatLogger(
+		VectorValuedLogger(outputLogger))))
 }

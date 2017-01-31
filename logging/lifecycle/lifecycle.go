@@ -27,7 +27,6 @@ import (
 	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/logging/structure"
 
-	lctypes "github.com/eris-ltd/eris-db/logging/config/types"
 	"github.com/eris-ltd/eris-db/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/streadway/simpleuuid"
@@ -38,7 +37,7 @@ import (
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(loggingConfig *lctypes.LoggingConfig) (types.InfoTraceLogger, error) {
+func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.InfoTraceLogger, error) {
 	if loggingConfig == nil {
 		return NewStdErrLogger(), nil
 	}
@@ -49,8 +48,10 @@ func NewLoggerFromLoggingConfig(loggingConfig *lctypes.LoggingConfig) (types.Inf
 	return NewLogger(infoOnlyLogger, infoAndTraceLogger), nil
 }
 
-// Hot swap logging config by replacing output loggers of passed InfoTraceLogger with those built from loggingConfig
-func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger, loggingConfig *lctypes.LoggingConfig) error {
+// Hot swap logging config by replacing output loggers of passed InfoTraceLogger
+// with those built from loggingConfig
+func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
+	loggingConfig *config.LoggingConfig) error {
 	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersLoggingConfig(loggingConfig)
 	if err != nil {
 		return err
@@ -65,12 +66,10 @@ func NewStdErrLogger() types.InfoTraceLogger {
 	return NewLogger(nil, logger)
 }
 
-// Provided a standard eris logger that outputs to the supplied underlying info and trace
-// loggers
+// Provided a standard eris logger that outputs to the supplied underlying info
+// and trace loggers
 func NewLogger(infoOnlyLogger, infoAndTraceLogger kitlog.Logger) types.InfoTraceLogger {
-	infoTraceLogger := loggers.NewInfoTraceLogger(
-		loggers.ErisFormatLogger(infoOnlyLogger),
-		loggers.ErisFormatLogger(infoAndTraceLogger))
+	infoTraceLogger := loggers.NewInfoTraceLogger(infoOnlyLogger, infoAndTraceLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
@@ -92,13 +91,12 @@ func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 }
 
 // Helpers
-
-func infoTraceLoggersLoggingConfig(loggingConfig *lctypes.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
-	infoOnlyLogger, err := config.BuildLoggerFromSinkConfig(loggingConfig.InfoSink)
+func infoTraceLoggersLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
+	infoOnlyLogger, _, err := loggingConfig.InfoSink.BuildLogger()
 	if err != nil {
 		return nil, nil, err
 	}
-	infoAndTraceLogger, err := config.BuildLoggerFromSinkConfig(loggingConfig.InfoAndTraceSink)
+	infoAndTraceLogger, _, err := loggingConfig.InfoAndTraceSink.BuildLogger()
 	if err != nil {
 		return nil, nil, err
 	}
