@@ -6,6 +6,7 @@ package test
 import (
 	"fmt"
 
+	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	"github.com/eris-ltd/eris-db/test/fixtures"
 )
@@ -17,6 +18,7 @@ func TestWrapper(runner func() int) int {
 
 	defer ffs.RemoveAll()
 
+	vm.SetDebug(true)
 	err := initGlobalVariables(ffs)
 
 	if err != nil {

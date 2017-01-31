@@ -14,20 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package rpc
 
 import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/tendermint/go-crypto"
 
 	acc "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/keys"
+	"github.com/eris-ltd/eris-db/logging"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -101,10 +100,10 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return
 	} else if pubkey != "" {
 		if addr != "" {
-			log.WithFields(log.Fields{
-				"public key": pubkey,
-				"address":    addr,
-			}).Info("you have specified both a pubkey and an address. the pubkey takes precedent")
+			logging.InfoMsg(nodeClient.Logger(), "Both a public key and an address have been specified. The public key takes precedent.",
+				"public_key", pubkey,
+				"address", addr,
+			)
 		}
 		pubKeyBytes, err = hex.DecodeString(pubkey)
 		if err != nil {
@@ -151,10 +150,10 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return pub, amt, nonce, err2
 		}
 		nonce = int64(account.Sequence) + 1
-		log.WithFields(log.Fields{
-			"nonce":           nonce,
-			"account address": fmt.Sprintf("%X", addrBytes),
-		}).Debug("Fetch nonce from node")
+		logging.TraceMsg(nodeClient.Logger(), "Fetch nonce from node",
+			"nonce", nonce,
+			"account address", addrBytes,
+		)
 	} else {
 		nonce, err = strconv.ParseInt(nonceS, 10, 64)
 		if err != nil {

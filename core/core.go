@@ -22,18 +22,19 @@ import (
 	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	log "github.com/eris-ltd/eris-logger"
-
-	config "github.com/eris-ltd/eris-db/config"
-	consensus "github.com/eris-ltd/eris-db/consensus"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
-	manager "github.com/eris-ltd/eris-db/manager"
+	"github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/consensus"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/manager"
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
-	server "github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/server"
 )
 
 // Core is the high-level structure
@@ -44,33 +45,30 @@ type Core struct {
 	tendermintPipe definitions.TendermintPipe
 }
 
-func NewCore(chainId string, consensusConfig *config.ModuleConfig,
-	managerConfig *config.ModuleConfig) (*Core, error) {
+func NewCore(chainId string,
+	consensusConfig *config.ModuleConfig,
+	managerConfig *config.ModuleConfig,
+	logger loggers.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with eris-db/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
+	logger = logging.WithScope(logger, "Core")
 
 	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
 		consensusConfig.Version)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
 	}
-	log.Debug("Loaded pipe with application manager")
+	logging.TraceMsg(logger, "Loaded pipe with application manager")
 	// pass the consensus engine into the pipe
 	if e := consensus.LoadConsensusEngineInPipe(consensusConfig, pipe); e != nil {
 		return nil, fmt.Errorf("Failed to load consensus engine in pipe: %v", e)
 	}
 	tendermintPipe, err := pipe.GetTendermintPipe()
 	if err != nil {
-		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
-			managerConfig.Version))
-		return &Core{
-			chainId:        chainId,
-			evsw:           evsw,
-			pipe:           pipe,
-			tendermintPipe: nil,
-		}, nil
+		logging.TraceMsg(logger, "Tendermint gateway not supported by manager",
+			"manager-version", managerConfig.Version)
 	}
 	return &Core{
 		chainId:        chainId,

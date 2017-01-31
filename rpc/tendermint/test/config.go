@@ -61,7 +61,7 @@ genesis_file = "genesis.json"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 12
+  minor_version = 16
   # relative path to application manager root folder
   relative_root = "erismint"
 
@@ -207,7 +207,7 @@ private_validator_file = "priv_validator.json"
 ################################################################################
 ##
 ## Eris-Mint
-## version 0.12.0
+## version 0.16.0
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding
