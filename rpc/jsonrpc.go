@@ -40,7 +40,9 @@ type (
 
 	// RPCResponse MUST follow the JSON-RPC specification for Response object
 	// reference: http://www.jsonrpc.org/specification#response_object
-	RPCResponse interface{}
+	RPCResponse interface {
+		AssertIsRPCResponse() bool
+	}
 
 	// RPCResultResponse MUST NOT contain the error member if no error occurred
 	RPCResultResponse struct {
@@ -81,4 +83,16 @@ func NewRPCErrorResponse(id string, code int, message string) RPCResponse {
 		Id:      id,
 		JSONRPC: "2.0",
 	})
+}
+
+// AssertIsRPCResponse implements a marker method for RPCResultResponse
+// to implement the interface RPCResponse
+func (rpcResultResponse *RPCResultResponse) AssertIsRPCResponse() bool {
+	return true
+}
+
+// AssertIsRPCResponse implements a marker method for RPCErrorResponse
+// to implement the interface RPCResponse
+func (rpcErrorResponse *RPCErrorResponse) AssertIsRPCResponse() bool {
+	return true
 }
