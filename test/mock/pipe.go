@@ -14,6 +14,7 @@ import (
 	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
@@ -29,24 +30,20 @@ type MockPipe struct {
 	events          event.EventEmitter
 	namereg         definitions.NameReg
 	transactor      definitions.Transactor
+	logger          loggers.InfoTraceLogger
 }
 
 // Create a new mock tendermint pipe.
 func NewMockPipe(td *td.TestData) definitions.Pipe {
-	accounts := &accounts{td}
-	blockchain := &blockchain{td}
-	consensusEngine := &consensusEngine{td}
-	eventer := &eventer{td}
-	namereg := &namereg{td}
-	transactor := &transactor{td}
 	return &MockPipe{
-		td,
-		accounts,
-		blockchain,
-		consensusEngine,
-		eventer,
-		namereg,
-		transactor,
+		testData:        td,
+		accounts:        &accounts{td},
+		blockchain:      &blockchain{td},
+		consensusEngine: &consensusEngine{td},
+		events:          &eventer{td},
+		namereg:         &namereg{td},
+		transactor:      &transactor{td},
+		logger:          loggers.NewNoopInfoTraceLogger(),
 	}
 }
 
@@ -73,6 +70,10 @@ func (pipe *MockPipe) NameReg() definitions.NameReg {
 
 func (pipe *MockPipe) Transactor() definitions.Transactor {
 	return pipe.transactor
+}
+
+func (pipe *MockPipe) Logger() loggers.InfoTraceLogger {
+	return pipe.logger
 }
 
 func (pipe *MockPipe) GetApplication() manager_types.Application {

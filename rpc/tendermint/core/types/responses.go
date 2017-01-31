@@ -3,7 +3,7 @@ package types
 import (
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
@@ -126,7 +126,7 @@ type ResultGetName struct {
 }
 
 type ResultGenesis struct {
-	Genesis *stypes.GenesisDoc `json:"genesis"`
+	Genesis *genesis.GenesisDoc `json:"genesis"`
 }
 
 type ResultSignTx struct {

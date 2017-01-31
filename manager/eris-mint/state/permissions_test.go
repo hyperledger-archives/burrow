@@ -9,8 +9,8 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 
@@ -111,30 +111,30 @@ var (
 	PermsAllFalse = ptypes.ZeroAccountPermissions
 )
 
-func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) GenesisDoc {
-	genAccounts := []GenesisAccount{}
+func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
+	genAccounts := []genesis.GenesisAccount{}
 	for _, u := range user[:5] {
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
-		genAccounts = append(genAccounts, GenesisAccount{
+		genAccounts = append(genAccounts, genesis.GenesisAccount{
 			Address:     u.Address,
 			Amount:      1000000,
 			Permissions: &accountPermCopy,
 		})
 	}
 
-	return GenesisDoc{
+	return genesis.GenesisDoc{
 		GenesisTime: time.Now(),
 		ChainID:     chainID,
-		Params: &GenesisParams{
+		Params: &genesis.GenesisParams{
 			GlobalPermissions: &globalPerm,
 		},
 		Accounts: genAccounts,
-		Validators: []GenesisValidator{
-			GenesisValidator{
+		Validators: []genesis.GenesisValidator{
+			genesis.GenesisValidator{
 				PubKey: user[0].PubKey.(crypto.PubKeyEd25519),
 				Amount: 10,
-				UnbondTo: []BasicAccount{
-					BasicAccount{
+				UnbondTo: []genesis.BasicAccount{
+					genesis.BasicAccount{
 						Address: user[0].Address,
 					},
 				},

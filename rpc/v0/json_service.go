@@ -6,8 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
@@ -125,10 +123,8 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 
 // Helper for writing responses.
 func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
-	log.Debug("Result: %v\n", result)
 	response := rpc.NewRPCResponse(id, result)
 	err := this.codec.Encode(response, w)
-	log.Debug("Response: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
 		return

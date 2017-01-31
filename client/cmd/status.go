@@ -20,24 +20,23 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/eris-ltd/eris-db/client/methods"
+	"github.com/eris-ltd/eris-db/util"
 )
 
-var StatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "eris-client status returns the current status from a chain.",
-	Long: `eris-client status returns the current status from a chain.
+func buildStatusCommand() *cobra.Command {
+	statusCmd := &cobra.Command{
+		Use:   "status",
+		Short: "eris-client status returns the current status from a chain.",
+		Long: `eris-client status returns the current status from a chain.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
-		methods.Status(clientDo)
-	},
-}
-
-func buildStatusCommand() {
-	addStatusPersistentFlags()
-}
-
-func addStatusPersistentFlags() {
-	StatusCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the eris-db node rpc server address (default respects $ERIS_CLIENT_NODE_ADDRESS)")
+		Run: func(cmd *cobra.Command, args []string) {
+			err := methods.Status(clientDo)
+			if err != nil {
+				util.Fatalf("Could not get status: %s", err)
+			}
+		},
+	}
+	statusCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the eris-db node rpc server address (default respects $ERIS_CLIENT_NODE_ADDRESS)")
 	// TransactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $ERIS_CLIENT_PUBLIC_KEY)")
 	// TransactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at eris-keys) (default respects $ERIS_CLIENT_ADDRESS)")
 	// TransactionCmd.PersistentFlags().StringVarP(&clientDo.ChainidFlag, "chain-id", "", defaultChainId(), "specify the chainID (default respects $CHAIN_ID)")
@@ -46,4 +45,6 @@ func addStatusPersistentFlags() {
 	// // TransactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the eris-keys daemon")
 	// TransactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", true, "broadcast the transaction to the blockchain")
 	// TransactionCmd.PersistentFlags().BoolVarP(&clientDo.WaitFlag, "wait", "w", false, "wait for the transaction to be committed in a block")
+
+	return statusCmd
 }
