@@ -34,7 +34,7 @@ const (
 	// Minor version component of the current release
 	erisVersionMinor = 16
 	// Patch version component of the current release
-	erisVersionPatch = 0
+	erisVersionPatch = 1
 )
 
 var erisVersion *VersionIdentifier
