@@ -114,13 +114,12 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 }
 
 func LoadLoggingConfigFromDo(do *definitions.Do) (*lconfig.LoggingConfig, error) {
-	//subConfig, err := SubConfig(conf, "logging")
-	loggingConfig := &lconfig.LoggingConfig{}
-	return loggingConfig, nil
+	loggingConfigMap := do.Config.GetStringMap("logging")
+	return lconfig.LoggingConfigFromMap(loggingConfigMap)
 }
 
 func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*lconfig.LoggingConfig, error) {
-	loggingConfig := &lconfig.LoggingConfig{}
+	loggingConfig := lconfig.DefaultClientLoggingConfig()
 	return loggingConfig, nil
 }
 

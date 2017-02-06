@@ -41,7 +41,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.Info
 	if loggingConfig == nil {
 		return NewStdErrLogger(), nil
 	}
-	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersLoggingConfig(loggingConfig)
+	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.Info
 // with those built from loggingConfig
 func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 	loggingConfig *config.LoggingConfig) error {
-	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersLoggingConfig(loggingConfig)
+	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 }
 
 func NewStdErrLogger() types.InfoTraceLogger {
-	logger := loggers.NewStreamLogger(os.Stderr)
+	logger := loggers.NewStreamLogger(os.Stderr, "terminal")
 	return NewLogger(nil, logger)
 }
 
@@ -91,7 +91,7 @@ func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 }
 
 // Helpers
-func infoTraceLoggersLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
+func infoTraceLoggersFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
 	infoOnlyLogger, _, err := loggingConfig.InfoSink.BuildLogger()
 	if err != nil {
 		return nil, nil, err

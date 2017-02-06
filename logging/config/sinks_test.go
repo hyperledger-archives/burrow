@@ -78,7 +78,18 @@ func TestFilterSinks(t *testing.T) {
 	logger.Log(ll[0]...)
 	assert.Equal(t, ll, included.BufferLogger().FlushLogLines())
 	assert.Equal(t, ll, excluded.BufferLogger().FlushLogLines())
+}
 
+func TestSyslogOutput(t *testing.T) {
+	_, _, err := Sink().SetOutput(RemoteSyslogOutput("Foo",
+		"tcp://logging.example.com:6514")).BuildLogger()
+	assert.Error(t, err)
+	assert.Equal(t, "dial tcp: lookup logging.example.com: no such host",
+		err.Error())
+
+	logger, _, err := Sink().SetOutput(SyslogOutput("Foo")).BuildLogger()
+	assert.NoError(t, err)
+	logger.Log("LogTo", "Syslog")
 }
 
 // Takes a variadic argument of log lines as a list of key value pairs delimited

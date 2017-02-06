@@ -86,7 +86,7 @@ imports:
 - name: github.com/mattn/go-isatty
   version: 30a891c33c7cde7b02a981314b4228ec99380cca
 - name: github.com/mitchellh/mapstructure
-  version: d2dd0262208475919e1a362f675cfc0e7c10e905
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/naoina/toml
   version: 751171607256bb66e64c9f0220c00662420c38e9
 - name: github.com/pmezard/go-difflib

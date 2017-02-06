@@ -66,8 +66,6 @@ func (this *ServeProcess) Start() error {
 
 	config := this.config
 
-	InitLogger(config)
-
 	ch := NewCORSMiddleware(config.CORS)
 	router.Use(gin.Recovery(), logHandler, contentTypeMW, ch)
 

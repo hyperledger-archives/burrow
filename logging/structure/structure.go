@@ -46,6 +46,7 @@ const (
 // the unmatched remainder keyvals as context as a slice of key-values.
 func ValuesAndContext(keyvals []interface{},
 	keys ...interface{}) (map[interface{}]interface{}, []interface{}) {
+
 	vals := make(map[interface{}]interface{}, len(keys))
 	context := make([]interface{}, len(keyvals))
 	copy(context, keyvals)
@@ -70,6 +71,21 @@ func ValuesAndContext(keyvals []interface{},
 		}
 	}
 	return vals, context
+}
+
+// Drops all key value pairs where the key is in keys
+func RemoveKeys(keyvals []interface{}, keys ...interface{}) []interface{} {
+	keyvalsWithoutKeys := make([]interface{}, 0, len(keyvals))
+NEXT_KEYVAL:
+	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
+		for _, key := range keys {
+			if keyvals[i] == key {
+				continue NEXT_KEYVAL
+			}
+		}
+		keyvalsWithoutKeys = append(keyvalsWithoutKeys, keyvals[i], keyvals[i+1])
+	}
+	return keyvalsWithoutKeys
 }
 
 // Stateful index that tracks the location of a possible vector value

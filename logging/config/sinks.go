@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"net/url"
+
 	"github.com/eapache/channels"
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/eris-ltd/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 )
 
@@ -17,25 +20,29 @@ type filterMode string
 const (
 	// OutputType
 	NoOutput outputType = ""
-	Graylog  outputType = "Graylog"
-	Syslog   outputType = "Syslog"
-	File     outputType = "File"
-	Stdout   outputType = "Stdout"
-	Stderr   outputType = "Stderr"
+	Graylog  outputType = "graylog"
+	Syslog   outputType = "syslog"
+	File     outputType = "file"
+	Stdout   outputType = "stdout"
+	Stderr   outputType = "stderr"
 
 	// TransformType
 	NoTransform transformType = ""
 	// Filter log lines
-	Filter transformType = "Filter"
+	Filter transformType = "filter"
 	// Remove key-val pairs from each log line
-	Prune   transformType = "Prune"
-	Capture transformType = "Capture"
-	Label   transformType = "Label"
+	Prune transformType = "prune"
+	// Add key value pairs to each log linel
+	Label   transformType = "label"
+	Capture transformType = "capture"
+	// TODO [Silas]: add 'flush on exit' transform which flushes the buffer of
+	// CaptureLogger to its OutputLogger a non-passthrough capture when an exit
+	// signal is detected or some other exceptional thing happens
 
-	IncludeWhenAllMatch   filterMode = "IncludeWhenAllMatch"
-	IncludeWhenAnyMatches filterMode = "IncludeWhenAnyMatches"
-	ExcludeWhenAllMatch   filterMode = "ExcludeWhenAllMatch"
-	ExcludeWhenAnyMatches filterMode = "ExcludeWhenAnyMatches"
+	IncludeWhenAllMatch   filterMode = "include_when_all_match"
+	IncludeWhenAnyMatches filterMode = "include_when_any_matches"
+	ExcludeWhenAllMatch   filterMode = "exclude_when_all_match"
+	ExcludeWhenAnyMatches filterMode = "exclude_when_any_matches"
 )
 
 // Only include log lines matching the filter so negate the predicate in filter
@@ -75,14 +82,17 @@ type (
 	}
 
 	SyslogConfig struct {
+		Url string `toml:"url"`
+		Tag string `toml:"tag"`
 	}
 
 	FileConfig struct {
-		Path string
+		Path string `toml:"path"`
 	}
 
 	OutputConfig struct {
-		OutputType outputType
+		OutputType outputType `toml:"output_type"`
+		Format     string     `toml:"format,omitempty"`
 		*GraylogConfig
 		*FileConfig
 		*SyslogConfig
@@ -90,35 +100,39 @@ type (
 
 	// Transforms
 	LabelConfig struct {
-		Labels map[string]string
-		Prefix bool
+		Labels map[string]string `toml:"labels"`
+		Prefix bool              `toml:"prefix"`
+	}
+
+	PruneConfig struct {
+		Keys []string `toml:"keys"`
 	}
 
 	CaptureConfig struct {
-		Name        string
-		BufferCap   int
-		Passthrough bool
+		Name        string `toml:"name"`
+		BufferCap   int    `toml:"buffer_cap"`
+		Passthrough bool   `toml:"passthrough"`
 	}
 
 	// Generates true if KeyRegex matches a log line key and ValueRegex matches that key's value.
 	// If ValueRegex is empty then returns true if any key matches
 	// If KeyRegex is empty then returns true if any value matches
 	KeyValuePredicateConfig struct {
-		KeyRegex   string
-		ValueRegex string
+		KeyRegex   string `toml:"key_regex"`
+		ValueRegex string `toml:"value_regex"`
 	}
 
 	// Filter types
-
 	FilterConfig struct {
-		FilterMode filterMode
+		FilterMode filterMode `toml:"filter_mode"`
 		// Predicates to match a log line against using FilterMode
-		Predicates []*KeyValuePredicateConfig
+		Predicates []*KeyValuePredicateConfig `toml:"predicates"`
 	}
 
 	TransformConfig struct {
-		TransformType transformType
+		TransformType transformType `toml:"transform_type"`
 		*LabelConfig
+		*PruneConfig
 		*CaptureConfig
 		*FilterConfig
 	}
@@ -128,19 +142,13 @@ type (
 	// before transmitting its log it applies zero or one transforms to the stream of log lines.
 	// by chaining together many Sinks arbitrary transforms to and multi
 	SinkConfig struct {
-		Transform *TransformConfig
-		Sinks     []*SinkConfig
-		Output    *OutputConfig
-	}
-
-	LoggingConfig struct {
-		InfoSink         *SinkConfig
-		InfoAndTraceSink *SinkConfig
+		Transform *TransformConfig `toml:"transform"`
+		Sinks     []*SinkConfig    `toml:"sinks"`
+		Output    *OutputConfig    `toml:"output"`
 	}
 )
 
 // Builders
-
 func Sink() *SinkConfig {
 	return &SinkConfig{}
 }
@@ -165,9 +173,33 @@ func StdoutOutput() *OutputConfig {
 		OutputType: Stdout,
 	}
 }
+
 func StderrOutput() *OutputConfig {
 	return &OutputConfig{
 		OutputType: Stderr,
+	}
+}
+
+func SyslogOutput(tag string) *OutputConfig {
+	return RemoteSyslogOutput(tag, "")
+}
+
+func FileOutput(path string) *OutputConfig {
+	return &OutputConfig{
+		OutputType: File,
+		FileConfig: &FileConfig{
+			Path: path,
+		},
+	}
+}
+
+func RemoteSyslogOutput(tag, remoteUrl string) *OutputConfig {
+	return &OutputConfig{
+		OutputType: Syslog,
+		SyslogConfig: &SyslogConfig{
+			Url: remoteUrl,
+			Tag: tag,
+		},
 	}
 }
 
@@ -175,8 +207,8 @@ func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformCo
 	return &TransformConfig{
 		TransformType: Capture,
 		CaptureConfig: &CaptureConfig{
-			Name:      name,
-			BufferCap: bufferCap,
+			Name:        name,
+			BufferCap:   bufferCap,
 			Passthrough: passthrough,
 		},
 	}
@@ -216,11 +248,11 @@ func FilterTransform(fmode filterMode, keyvalueRegexes ...string) *TransformConf
 	}
 }
 
+// Logger formation
+
 func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
 	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
 }
-
-// Logger formation
 
 func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	captures map[string]*loggers.CaptureLogger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
@@ -258,13 +290,26 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	case NoOutput:
 		return kitlog.NewNopLogger(), nil
 	//case Graylog:
-	//case Syslog:
+	case Syslog:
+		urlString := outputConfig.SyslogConfig.Url
+		if urlString != "" {
+			remoteUrl, err := url.Parse(urlString)
+			if err != nil {
+				return nil, fmt.Errorf("Error parsing remote syslog URL: %s, "+
+					"error: %s",
+					urlString, err)
+			}
+			return loggers.NewRemoteSyslogLogger(remoteUrl,
+				outputConfig.SyslogConfig.Tag, outputConfig.Format)
+		}
+		return loggers.NewSyslogLogger(outputConfig.SyslogConfig.Tag,
+			outputConfig.Format)
 	case Stdout:
-		return loggers.NewStreamLogger(os.Stdout), nil
+		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format), nil
 	case Stderr:
-		return loggers.NewStreamLogger(os.Stderr), nil
+		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format), nil
 	case File:
-		return loggers.NewFileLogger(outputConfig.FileConfig.Path)
+		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
 	default:
 		return nil, fmt.Errorf("Could not build logger for output: '%s'",
 			outputConfig.OutputType)
@@ -287,6 +332,12 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 		} else {
 			return kitlog.NewContext(outputLogger).With(keyvals...), captures, nil
 		}
+	case Prune:
+		return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+			return outputLogger.Log(structure.RemoveKeys(keyvals,
+				transformConfig.PruneConfig.Keys))
+		}), captures, nil
+
 	case Capture:
 		name := transformConfig.CaptureConfig.Name
 		if _, ok := captures[name]; ok {

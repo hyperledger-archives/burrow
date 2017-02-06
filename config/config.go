@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+	lconfig "github.com/eris-ltd/eris-db/logging/config"
 )
 
 type ConfigServiceGeneral struct {
@@ -169,6 +170,9 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 
 	// write static section erismint
 	buffer.WriteString(sectionErisMint)
+
+	buffer.WriteString(sectionLoggingHeader)
+	buffer.WriteString(lconfig.DefaultNodeLoggingConfig().RootTOMLString())
 
 	return buffer.Bytes(), nil
 }
