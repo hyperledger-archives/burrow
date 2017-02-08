@@ -570,8 +570,8 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				if _, ok := registeredNativeContracts[addr]; !ok {
 					return nil, firstErr(err, ErrUnknownAddress)
 				}
-				stack.Push64(int64(1))
-				dbg.Printf(" => Hit native contract\n")
+				stack.Push64(int64(One256))
+				dbg.Printf(" => Hit native contract\n\n")
 			} else {
 				code := acc.Code
 				l := int64(len(code))
