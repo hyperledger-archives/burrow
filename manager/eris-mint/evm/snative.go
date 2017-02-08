@@ -62,6 +62,10 @@ var PermsMap = map[string]SNativeFuncDescription{
 	"28fd0194": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
 }
 
+func getFuncIdentifiersFromSignature(string) string {
+
+}
+
 func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	if len(args) < 4 {
 		return nil, fmt.Errorf("permissionsContract expects at least a 4-byte function identifier")
