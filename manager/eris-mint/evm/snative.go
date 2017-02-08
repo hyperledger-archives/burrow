@@ -15,7 +15,6 @@ var PermissionsContract = "permissions_contract"
 
 func registerSNativeContracts() {
 	registeredNativeContracts[LeftPadWord256([]byte(PermissionsContract))] = permissionsContract
-
 	/*
 		// we could expose these but we moved permission and args checks into the permissionsContract
 		// so calling them would be unsafe ...
@@ -53,13 +52,13 @@ contract Permissions {
 
 // function identifiers from the solidity abi
 var PermsMap = map[string]SNativeFuncDescription{
-	"e8145855": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
-	"180d26f2": SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
-	"3a3fcc59": SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
-	"3fbf7da5": SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
-	"9ea53314": SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
-	"bb37737a": SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
-	"28fd0194": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
+	"ac4ab3fb": SNativeFuncDescription{"hasRole", 2, ptypes.HasRole, hasRole},
+	"e5de9d9a": SNativeFuncDescription{"unsetBase", 2, ptypes.UnsetBase, unsetBase},
+	"9725bba2": SNativeFuncDescription{"setGlobal", 2, ptypes.SetGlobal, setGlobal},
+	"a73f7f8a": SNativeFuncDescription{"addRole", 2, ptypes.AddRole, addRole},
+	"54aac26e": SNativeFuncDescription{"setBase", 3, ptypes.SetBase, setBase},
+	"6710fd27": SNativeFuncDescription{"hasBase", 2, ptypes.HasBase, hasBase},
+	"4e48b214": SNativeFuncDescription{"rmRole", 2, ptypes.RmRole, rmRole},
 }
 
 func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -92,7 +91,7 @@ func permissionsContract(appState AppState, caller *Account, args []byte, gas *i
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
 
-func has_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func hasBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -107,7 +106,7 @@ func has_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func set_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func setBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum, perm := returnThreeArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -126,7 +125,7 @@ func set_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return perm.Bytes(), nil
 }
 
-func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -144,7 +143,7 @@ func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	return permNum.Bytes(), nil
 }
 
-func set_global(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	permNum, perm := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
 	if vmAcc == nil {
@@ -163,7 +162,7 @@ func set_global(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	return perm.Bytes(), nil
 }
 
-func has_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func hasRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -175,7 +174,7 @@ func has_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func add_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func addRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -188,7 +187,7 @@ func add_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func rm_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func rmRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {

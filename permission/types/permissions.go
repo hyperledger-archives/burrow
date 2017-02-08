@@ -218,19 +218,19 @@ func PermStringToFlag(perm string) (pf PermFlag, err error) {
 		pf = Bond
 	case "name":
 		pf = Name
-	case "has_base":
+	case "hasBase":
 		pf = HasBase
-	case "set_base":
+	case "setBase":
 		pf = SetBase
-	case "unset_base":
+	case "unsetBase":
 		pf = UnsetBase
-	case "set_global":
+	case "setGlobal":
 		pf = SetGlobal
-	case "has_role":
+	case "hasRole":
 		pf = HasRole
-	case "add_role":
+	case "addRole":
 		pf = AddRole
-	case "rm_role":
+	case "rmRole":
 		pf = RmRole
 	default:
 		err = fmt.Errorf("Unknown permission %s", perm)
