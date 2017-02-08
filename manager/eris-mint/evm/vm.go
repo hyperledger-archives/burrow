@@ -567,13 +567,17 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
-				return nil, firstErr(err, ErrUnknownAddress)
+				if _, ok := registeredNativeContracts[addr]; !ok {
+					return nil, firstErr(err, ErrUnknownAddress)
+				}
+				stack.Push64(int64(1))
+				dbg.Printf(" => Hit native contract\n")
+			} else {
+				code := acc.Code
+				l := int64(len(code))
+				stack.Push64(l)
+				dbg.Printf(" => %d\n", l)
 			}
-			code := acc.Code
-			l := int64(len(code))
-			stack.Push64(l)
-			dbg.Printf(" => %d\n", l)
-
 		case EXTCODECOPY: // 0x3C
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
