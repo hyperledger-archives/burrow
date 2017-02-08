@@ -66,7 +66,7 @@ var PermsMap = map[string]SNativeFuncDescription{
 
 func getFuncIdentifiersFromSignature(signature string) string {
 	identifier := sha3.Sha3([]byte(signature))
-	return string(identifier[:4])
+	return hex.EncodeToString(identifier[:4])
 }
 
 func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
