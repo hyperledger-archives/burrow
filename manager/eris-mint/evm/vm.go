@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	//"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -489,6 +490,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
+				fmt.Println("ERROR IN BALANCE!")
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			balance := acc.Balance
@@ -562,18 +564,24 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case EXTCODESIZE: // 0x3B
 			addr := stack.Pop()
+
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
-				return nil, firstErr(err, ErrUnknownAddress)
+				if _, ok := registeredNativeContracts[addr]; !ok {
+					fmt.Println("ERROR IN EXTCODESIZE!")
+					return nil, firstErr(err, ErrUnknownAddress)
+				}
+				stack.Push64(int64(1))
+				dbg.Printf(" => Hit native contract\n")
+			} else {
+				code := acc.Code
+				l := int64(len(code))
+				stack.Push64(l)
+				dbg.Printf(" => %d\n", l)
 			}
-			code := acc.Code
-			l := int64(len(code))
-			stack.Push64(l)
-			dbg.Printf(" => %d\n", l)
-
 		case EXTCODECOPY: // 0x3C
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
@@ -581,6 +589,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
+				fmt.Println("ERROR IN EXTCODECOPY!")
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			code := acc.Code
@@ -831,11 +840,13 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				// ethereum actually cares
 				if op == CALLCODE {
 					if acc == nil {
+						fmt.Println("ERROR IN CALLCODE!")
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
 					ret, err = vm.Call(callee, callee, acc.Code, args, value, &gasLimit)
 				} else if op == DELEGATECALL {
 					if acc == nil {
+						fmt.Println("ERROR IN DELEGATECALL!")
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
 					ret, err = vm.DelegateCall(caller, callee, acc.Code, args, value, &gasLimit)
@@ -890,6 +901,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			// TODO: create account if doesn't exist (no reason not to)
 			receiver := vm.appState.GetAccount(addr)
 			if receiver == nil {
+				fmt.Println("ERROR IN SUICIDE!")
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			balance := callee.Balance
