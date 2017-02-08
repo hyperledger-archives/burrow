@@ -43,10 +43,10 @@ type SNativeFuncDescription struct {
 
 /* The solidity interface used to generate the abi function ids below
 contract Permissions {
-	function has_base(address addr, int permFlag) constant returns (bool value) {}
-	function set_base(address addr, int permFlag, bool value) constant returns (bool val) {}
-	function unset_base(address addr, int permFlag) constant returns (int pf) {}
-	function set_global(address addr, int permFlag, bool value) constant returns (int pf) {}
+	function has_base(address addr, uint64 permFlag) constant returns (bool value) {}
+	function set_base(address addr, uint64 permFlag, bool value) constant returns (bool val) {}
+	function unset_base(address addr, uint64 permFlag) constant returns (uint64 pf) {}
+	function set_global(uint64 permFlag, bool value) constant returns (uint64 pf) {}
 	function has_role(address addr, string role) constant returns (bool val) {}
 	function add_role(address addr, string role) constant returns (bool added) {}
 	function rm_role(address addr, string role) constant returns (bool removed) {}
@@ -56,11 +56,11 @@ contract Permissions {
 // function identifiers from the solidity abi
 var PermsMap = map[string]SNativeFuncDescription{
 	getFuncIdentifiersFromSignature("has_role(address,bytes32)"):    SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
-	getFuncIdentifiersFromSignature("unset_base(address,int256)"):   SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
-	getFuncIdentifiersFromSignature("set_global(int256,bool)"):      SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
+	getFuncIdentifiersFromSignature("unset_base(address,uint64)"):   SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
+	getFuncIdentifiersFromSignature("set_global(uint64,bool)"):      SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
 	getFuncIdentifiersFromSignature("add_role(address,bytes32)"):    SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
-	getFuncIdentifiersFromSignature("set_base(address,int256,bool"): SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
-	getFuncIdentifiersFromSignature("has_base(address,int256)"):     SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
+	getFuncIdentifiersFromSignature("set_base(address,uint64,bool"): SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
+	getFuncIdentifiersFromSignature("has_base(address,uint64)"):     SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
 	getFuncIdentifiersFromSignature("rm_role(address,bytes32)"):     SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
 }
 
