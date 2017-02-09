@@ -209,6 +209,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 		switch op {
 
 		case ADD: // 0x01
+			fmt.Println("HIT ADD")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -218,6 +219,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %v + %v = %v (%X)\n", xb, yb, sum, res)
 
 		case MUL: // 0x02
+			fmt.Println("HIT MUL")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -227,6 +229,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %v * %v = %v (%X)\n", xb, yb, prod, res)
 
 		case SUB: // 0x03
+			fmt.Println("HIT SUB")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -236,6 +239,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %v - %v = %v (%X)\n", xb, yb, diff, res)
 
 		case DIV: // 0x04
+			fmt.Println("HIT DIV")
 			x, y := stack.Pop(), stack.Pop()
 			if y.IsZero() {
 				stack.Push(Zero256)
@@ -250,6 +254,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case SDIV: // 0x05
+			fmt.Println("HIT SDIV")
 			x, y := stack.Pop(), stack.Pop()
 			if y.IsZero() {
 				stack.Push(Zero256)
@@ -264,6 +269,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case MOD: // 0x06
+			fmt.Println("HIT MOD")
 			x, y := stack.Pop(), stack.Pop()
 			if y.IsZero() {
 				stack.Push(Zero256)
@@ -278,6 +284,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case SMOD: // 0x07
+			fmt.Println("HIT SMOD")
 			x, y := stack.Pop(), stack.Pop()
 			if y.IsZero() {
 				stack.Push(Zero256)
@@ -292,6 +299,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case ADDMOD: // 0x08
+			fmt.Println("HIT ADDMOD")
 			x, y, z := stack.Pop(), stack.Pop(), stack.Pop()
 			if z.IsZero() {
 				stack.Push(Zero256)
@@ -309,6 +317,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case MULMOD: // 0x09
+			fmt.Println("HIT MULMOD")
 			x, y, z := stack.Pop(), stack.Pop(), stack.Pop()
 			if z.IsZero() {
 				stack.Push(Zero256)
@@ -326,6 +335,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case EXP: // 0x0A
+			fmt.Println("HIT EXP")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -335,6 +345,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %v ** %v = %v (%X)\n", xb, yb, pow, res)
 
 		case SIGNEXTEND: // 0x0B
+			fmt.Println("HIT SIGNEXTEND")
 			back := stack.Pop()
 			backb := new(big.Int).SetBytes(back[:])
 			if backb.Cmp(big.NewInt(31)) < 0 {
@@ -354,6 +365,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case LT: // 0x10
+			fmt.Println("HIT LT")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -366,6 +378,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case GT: // 0x11
+			fmt.Println("HIT GT")
 			x, y := stack.Pop(), stack.Pop()
 			xb := new(big.Int).SetBytes(x[:])
 			yb := new(big.Int).SetBytes(y[:])
@@ -378,6 +391,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case SLT: // 0x12
+			fmt.Println("HIT SLT")
 			x, y := stack.Pop(), stack.Pop()
 			xb := S256(new(big.Int).SetBytes(x[:]))
 			yb := S256(new(big.Int).SetBytes(y[:]))
@@ -390,6 +404,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case SGT: // 0x13
+			fmt.Println("HIT SGT")
 			x, y := stack.Pop(), stack.Pop()
 			xb := S256(new(big.Int).SetBytes(x[:]))
 			yb := S256(new(big.Int).SetBytes(y[:]))
@@ -402,6 +417,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case EQ: // 0x14
+			fmt.Println("HIT EQ")
 			x, y := stack.Pop(), stack.Pop()
 			if bytes.Equal(x[:], y[:]) {
 				stack.Push64(1)
@@ -412,6 +428,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case ISZERO: // 0x15
+			fmt.Println("HIT ISZERO")
 			x := stack.Pop()
 			if x.IsZero() {
 				stack.Push64(1)
@@ -422,6 +439,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case AND: // 0x16
+			fmt.Println("HIT AND")
 			x, y := stack.Pop(), stack.Pop()
 			z := [32]byte{}
 			for i := 0; i < 32; i++ {
@@ -431,6 +449,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %X & %X = %X\n", x, y, z)
 
 		case OR: // 0x17
+			fmt.Println("HIT OR")
 			x, y := stack.Pop(), stack.Pop()
 			z := [32]byte{}
 			for i := 0; i < 32; i++ {
@@ -440,6 +459,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %X | %X = %X\n", x, y, z)
 
 		case XOR: // 0x18
+			fmt.Println("HIT XOR")
 			x, y := stack.Pop(), stack.Pop()
 			z := [32]byte{}
 			for i := 0; i < 32; i++ {
@@ -449,6 +469,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" %X ^ %X = %X\n", x, y, z)
 
 		case NOT: // 0x19
+			fmt.Println("HIT NOT")
 			x := stack.Pop()
 			z := [32]byte{}
 			for i := 0; i < 32; i++ {
@@ -458,6 +479,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" !%X = %X\n", x, z)
 
 		case BYTE: // 0x1A
+			fmt.Println("HIT BYTE")
 			idx, val := stack.Pop64(), stack.Pop()
 			res := byte(0)
 			if idx < 32 {
@@ -467,6 +489,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X\n", res)
 
 		case SHA3: // 0x20
+			fmt.Println("HIT SHA3")
 			if useGasNegative(gas, GasSha3, &err) {
 				return nil, err
 			}
@@ -480,10 +503,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => (%v) %X\n", size, data)
 
 		case ADDRESS: // 0x30
+			fmt.Println("HIT ADDRESS")
 			stack.Push(callee.Address)
 			dbg.Printf(" => %X\n", callee.Address)
 
 		case BALANCE: // 0x31
+			fmt.Println("HIT BALANCE")
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
@@ -497,18 +522,22 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => %v (%X)\n", balance, addr)
 
 		case ORIGIN: // 0x32
+			fmt.Println("HIT ORIGIN")
 			stack.Push(vm.origin)
 			dbg.Printf(" => %X\n", vm.origin)
 
 		case CALLER: // 0x33
+			fmt.Println("HIT CALLER")
 			stack.Push(caller.Address)
 			dbg.Printf(" => %X\n", caller.Address)
 
 		case CALLVALUE: // 0x34
+			fmt.Println("HIT CALLVALUE")
 			stack.Push64(value)
 			dbg.Printf(" => %v\n", value)
 
 		case CALLDATALOAD: // 0x35
+			fmt.Println("HIT CALLDATALOAD")
 			offset := stack.Pop64()
 			data, ok := subslice(input, offset, 32)
 			if !ok {
@@ -519,10 +548,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X\n", res)
 
 		case CALLDATASIZE: // 0x36
+			fmt.Println("HIT CALLDATASIZE")
 			stack.Push64(int64(len(input)))
 			dbg.Printf(" => %d\n", len(input))
 
 		case CALLDATACOPY: // 0x37
+			fmt.Println("HIT CALLDATACOPY")
 			memOff := stack.Pop64()
 			inputOff := stack.Pop64()
 			length := stack.Pop64()
@@ -538,11 +569,13 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
+			fmt.Println("HIT CODESIZE")
 			l := int64(len(code))
 			stack.Push64(l)
 			dbg.Printf(" => %d\n", l)
 
 		case CODECOPY: // 0x39
+			fmt.Println("HIT CODECOPY")
 			memOff := stack.Pop64()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
@@ -562,6 +595,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => %X (GASPRICE IS DEPRECATED)\n")
 
 		case EXTCODESIZE: // 0x3B
+			fmt.Println("HIT EXTCODESIZE")
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
@@ -580,6 +614,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				dbg.Printf(" => %d\n", l)
 			}
 		case EXTCODECOPY: // 0x3C
+			fmt.Println("HIT EXTCODECOPY")
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
@@ -616,24 +651,29 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X (NOT SUPPORTED)\n", stack.Peek().Bytes())
 
 		case TIMESTAMP: // 0x42
+			fmt.Println("HIT TIMESTAMP")
 			time := vm.params.BlockTime
 			stack.Push64(int64(time))
 			dbg.Printf(" => 0x%X\n", time)
 
 		case BLOCKHEIGHT: // 0x43
+			fmt.Println("HIT BLOCKHEIGHT")
 			number := int64(vm.params.BlockHeight)
 			stack.Push64(number)
 			dbg.Printf(" => 0x%X\n", number)
 
 		case GASLIMIT: // 0x45
+			fmt.Println("HIT GASLIMIT")
 			stack.Push64(vm.params.GasLimit)
 			dbg.Printf(" => %v\n", vm.params.GasLimit)
 
 		case POP: // 0x50
+			fmt.Println("HIT POP")
 			popped := stack.Pop()
 			dbg.Printf(" => 0x%X\n", popped)
 
 		case MLOAD: // 0x51
+			fmt.Println("HIT MLOAD")
 			offset := stack.Pop64()
 			data, ok := subslice(memory, offset, 32)
 			if !ok {
@@ -643,6 +683,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X\n", data)
 
 		case MSTORE: // 0x52
+			fmt.Println("HIT MSTORE")
 			offset, data := stack.Pop64(), stack.Pop()
 			dest, ok := subslice(memory, offset, 32)
 			if !ok {
@@ -652,6 +693,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => 0x%X\n", data)
 
 		case MSTORE8: // 0x53
+			fmt.Println("HIT MSTORE8")
 			offset, val := stack.Pop64(), byte(stack.Pop64()&0xFF)
 			if len(memory) <= int(offset) {
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
@@ -660,28 +702,45 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => [%v] 0x%X\n", offset, val)
 
 		case SLOAD: // 0x54
+			fmt.Println("HIT SLOAD")
 			loc := stack.Pop()
 			data := vm.appState.GetStorage(callee.Address, loc)
 			stack.Push(data)
 			dbg.Printf(" {0x%X : 0x%X}\n", loc, data)
 
 		case SSTORE: // 0x55
+			fmt.Println("HIT SSTORE")
 			loc, data := stack.Pop(), stack.Pop()
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
 			}
 			vm.appState.SetStorage(callee.Address, loc, data)
 			dbg.Printf(" {0x%X : 0x%X}\n", loc, data)
+			/*
+
+			   func jump(code []byte, to int64, pc *int64) (err error) {
+			   	dest := codeGetOp(code, to)
+			   	if dest != JUMPDEST {
+			   		dbg.Printf(" ~> %v invalid jump dest %v\n", to, dest)
+			   		return ErrInvalidJumpDest
+			   	}
+			   	dbg.Printf(" ~> %v\n", to)
+			   	*pc = to
+			   	return nil
+			   }
+			*/
 
 		case JUMP: // 0x56
+			fmt.Println("HIT JUMP")
 			if err = jump(code, stack.Pop64(), &pc); err != nil {
 				return nil, err
 			}
 			continue
 
 		case JUMPI: // 0x57
+			fmt.Println("HIT JUMPI")
 			pos, cond := stack.Pop64(), stack.Pop()
-			if !cond.IsZero() {
+			if cond.Compare(Uint64ToWord256(1)) >= 0 {
 				if err = jump(code, pos, &pc); err != nil {
 					return nil, err
 				}
@@ -690,20 +749,25 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" ~> false\n")
 
 		case PC: // 0x58
+			fmt.Println("HIT PC")
 			stack.Push64(pc)
 
 		case MSIZE: // 0x59
+			fmt.Println("HIT MSIZE")
 			stack.Push64(int64(len(memory)))
 
 		case GAS: // 0x5A
+			fmt.Println("HIT GAS")
 			stack.Push64(*gas)
 			dbg.Printf(" => %X\n", *gas)
 
 		case JUMPDEST: // 0x5B
+			fmt.Println("HIT JUMPDEST")
 			dbg.Printf("\n")
 			// Do nothing
 
 		case PUSH1, PUSH2, PUSH3, PUSH4, PUSH5, PUSH6, PUSH7, PUSH8, PUSH9, PUSH10, PUSH11, PUSH12, PUSH13, PUSH14, PUSH15, PUSH16, PUSH17, PUSH18, PUSH19, PUSH20, PUSH21, PUSH22, PUSH23, PUSH24, PUSH25, PUSH26, PUSH27, PUSH28, PUSH29, PUSH30, PUSH31, PUSH32:
+			fmt.Println("HIT PUSHES")
 			a := int64(op - PUSH1 + 1)
 			codeSegment, ok := subslice(code, pc+1, a)
 			if !ok {
@@ -716,17 +780,20 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			//stack.Print(10)
 
 		case DUP1, DUP2, DUP3, DUP4, DUP5, DUP6, DUP7, DUP8, DUP9, DUP10, DUP11, DUP12, DUP13, DUP14, DUP15, DUP16:
+			fmt.Println("HIT DUPS")
 			n := int(op - DUP1 + 1)
 			stack.Dup(n)
 			dbg.Printf(" => [%d] 0x%X\n", n, stack.Peek().Bytes())
 
 		case SWAP1, SWAP2, SWAP3, SWAP4, SWAP5, SWAP6, SWAP7, SWAP8, SWAP9, SWAP10, SWAP11, SWAP12, SWAP13, SWAP14, SWAP15, SWAP16:
+			fmt.Println("HIT SWAPS")
 			n := int(op - SWAP1 + 2)
 			stack.Swap(n)
 			dbg.Printf(" => [%d] %X\n", n, stack.Peek())
 			//stack.Print(10)
 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
+			fmt.Println("HIT LOGS")
 			n := int(op - LOG0)
 			topics := make([]Word256, n)
 			offset, size := stack.Pop64(), stack.Pop64()
@@ -752,6 +819,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
+			fmt.Println("HIT CREATE")
 			if !HasPermission(vm.appState, callee, ptypes.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
@@ -782,6 +850,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
+			fmt.Println("HIT CALL/CALLCODE/DELEGATECALL")
 			if !HasPermission(vm.appState, callee, ptypes.Call) {
 				return nil, ErrPermission{"call"}
 			}
@@ -881,6 +950,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf("resume %X (%v)\n", callee.Address, gas)
 
 		case RETURN: // 0xF3
+			fmt.Println("HIT RETURN")
 			offset, size := stack.Pop64(), stack.Pop64()
 			ret, ok := subslice(memory, offset, size)
 			if !ok {
@@ -891,6 +961,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			return output, nil
 
 		case SUICIDE: // 0xFF
+			fmt.Println("HIT SUICIDE")
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
