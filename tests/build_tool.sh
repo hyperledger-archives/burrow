@@ -51,4 +51,4 @@ fi
 # Cleanup
 rm $REPO/"$TARGET"_build_artifact
 rm $REPO/eris-client
-docker rmi $IMAGE:build
+docker rmi -f $IMAGE:build
