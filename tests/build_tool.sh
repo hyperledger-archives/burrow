@@ -40,18 +40,14 @@ docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/"$T
 docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO/eris-client
 docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 
+# If provided, tag the image with the label provided
+if [ "$1" ]
+then
+  docker tag $IMAGE:$release_min $IMAGE:$1
+  docker rmi $IMAGE:$release_min
+fi
+
 # Cleanup
 rm $REPO/"$TARGET"_build_artifact
 rm $REPO/eris-client
-
-# Extra Tags
-if [[ "$branch" = "release" ]]
-then
-  docker tag -f $IMAGE:$release_min $IMAGE:$release_maj
-  docker tag -f $IMAGE:$release_min $IMAGE:latest
-fi
-
-if [ "$CIRCLE_BRANCH" ]
-then
-  docker tag -f $IMAGE:$release_min $IMAGE:latest
-fi
+docker rmi $IMAGE:build
