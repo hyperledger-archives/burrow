@@ -49,6 +49,6 @@ then
 fi
 
 # Cleanup
-rm $REPO/"$TARGET"_build_artifact
-rm $REPO/eris-client
+rm $REPO/target/docker/eris-db.dockerartefact
+rm $REPO/target/docker/eris-client.dockerartefact
 docker rmi -f $IMAGE:build
