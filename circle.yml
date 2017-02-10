@@ -44,7 +44,15 @@ deployment:
       - tests/build_tool.sh
       - "docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
       - docker push quay.io/eris/db
-      - docs/build.sh release
+      - docs/build.sh
+  release-0.16:
+    branch: release-0.16
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - tests/build_tool.sh
+      - "docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
+      - docker push quay.io/eris/db
+      - docs/build.sh
   master:
     branch: master
     commands:
@@ -52,4 +60,4 @@ deployment:
       - tests/build_tool.sh
       - "docker rmi quay.io/eris/db:latest && docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
       - docker push quay.io/eris/db
-      - docs/build.sh
+      - docs/build.sh release
