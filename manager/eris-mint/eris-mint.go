@@ -168,13 +168,13 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	// MARMOT:
-	// set internal time as two seconds per block
+	// TODO: [ben] over the tendermint 0.6 TMSP interface we have 
+	// no access to the block header implemented;
+	// On Tendermint v0.8 load the blockheader into the application
+	// state and remove the fixed 2-"seconds" per block internal clock.
+	// NOTE: set internal time as two seconds per block
 	app.state.LastBlockTime = app.state.LastBlockTime.Add(time.Duration(2) * time.Second)
-	fmt.Printf("\n\nMARMOT TIME: %s\n\n", app.state.LastBlockTime)
-	// MARMOT:
 	appHash := app.state.Hash()
-	fmt.Printf("\n\nMARMOT COMMIT: %X\n\n", appHash)
 	// return tmsp.NewResultOK(app.state.Hash(), "Success")
 	return tmsp.NewResultOK(appHash, "Success")
 }

@@ -416,10 +416,12 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	}
 
 	if genDoc.GenesisTime.IsZero() {
-		// MARMOT: really?
-		// set time to 11/18/2016 @ 4:09am (UTC)
+		// NOTE: [ben] change GenesisTime to requirement on v0.17
+		// GenesisTime needs to be deterministic across the chain
+		// and should be required in the genesis file;
+		// the requirement is not yet enforced when lacking set
+		// time to 11/18/2016 @ 4:09am (UTC)
 		genDoc.GenesisTime = time.Unix(1479442162, 0)
-		// genDoc.GenesisTime = time.Now()
 	}
 
 	// Make accounts state tree
