@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/util"
@@ -17,9 +18,25 @@ import (
 )
 
 //------------------------------------------------------------------------------------
-// core functions
+// interface functions that are consumed by monax tooling
+// TODO: [ben] these interfaces will be deprecated from v0.17
 
 func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, error) {
+	return generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV,
+		// set the timestamp for the genesis
+		time.Now())
+}
+
+//------------------------------------------------------------------------------------
+// core functions that provide functionality for monax tooling in v0.16
+
+// GenerateKnownWithTime takes chainId, an accounts and validators CSV filepath
+// and a timestamp to generate the string of `genesis.json`
+// NOTE: [ben] is introduced as technical debt to preserve the signature
+// of GenerateKnown but in order to introduce the timestamp gradually
+// This will be deprecated in v0.17
+func generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV string,
+	genesisTime time.Time) (string, error) {
 	var genDoc *GenesisDoc
 
 	// TODO [eb] eliminate reading priv_val ... [zr] where?
@@ -37,7 +54,7 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 		return "", err
 	}
 
-	genDoc = newGenDoc(chainID, len(pubkeys), len(pubkeysA))
+	genDoc = newGenDoc(chainID, genesisTime, len(pubkeys), len(pubkeysA))
 	for i, pk := range pubkeys {
 		genDocAddValidator(genDoc, pk, amts[i], names[i], perms[i], setbits[i], i)
 	}
@@ -60,10 +77,10 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 //-----------------------------------------------------------------------------
 // gendoc convenience functions
 
-func newGenDoc(chainID string, nVal, nAcc int) *GenesisDoc {
+func newGenDoc(chainID string, genesisTime time.Time, nVal, nAcc int) *GenesisDoc {
 	genDoc := GenesisDoc{
-		ChainID: chainID,
-		// GenesisTime: time.Now(),
+		ChainID:     chainID,
+		GenesisTime: genesisTime,
 	}
 	genDoc.Accounts = make([]GenesisAccount, nAcc)
 	genDoc.Validators = make([]GenesisValidator, nVal)
