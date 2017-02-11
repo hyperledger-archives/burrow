@@ -15,18 +15,19 @@ import (
 )
 
 var (
-	ErrUnknownAddress      = errors.New("Unknown address")
-	ErrInsufficientBalance = errors.New("Insufficient balance")
-	ErrInvalidJumpDest     = errors.New("Invalid jump dest")
-	ErrInsufficientGas     = errors.New("Insufficient gas")
-	ErrMemoryOutOfBounds   = errors.New("Memory out of bounds")
-	ErrCodeOutOfBounds     = errors.New("Code out of bounds")
-	ErrInputOutOfBounds    = errors.New("Input out of bounds")
-	ErrCallStackOverflow   = errors.New("Call stack overflow")
-	ErrCallStackUnderflow  = errors.New("Call stack underflow")
-	ErrDataStackOverflow   = errors.New("Data stack overflow")
-	ErrDataStackUnderflow  = errors.New("Data stack underflow")
-	ErrInvalidContract     = errors.New("Invalid contract")
+	ErrUnknownAddress         = errors.New("Unknown address")
+	ErrInsufficientBalance    = errors.New("Insufficient balance")
+	ErrInvalidJumpDest        = errors.New("Invalid jump dest")
+	ErrInsufficientGas        = errors.New("Insufficient gas")
+	ErrMemoryOutOfBounds      = errors.New("Memory out of bounds")
+	ErrCodeOutOfBounds        = errors.New("Code out of bounds")
+	ErrInputOutOfBounds       = errors.New("Input out of bounds")
+	ErrCallStackOverflow      = errors.New("Call stack overflow")
+	ErrCallStackUnderflow     = errors.New("Call stack underflow")
+	ErrDataStackOverflow      = errors.New("Data stack overflow")
+	ErrDataStackUnderflow     = errors.New("Data stack underflow")
+	ErrInvalidContract        = errors.New("Invalid contract")
+	ErrNativeContractCodeCopy = errors.New("Tried to copy native contract code")
 )
 
 type ErrPermission struct {
@@ -156,7 +157,9 @@ func (vm *VM) DelegateCall(caller, callee *Account, code, input []byte, value in
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
+	// NOTE: [ben] hotfix for issue 371;
+	// introduce event EventStringAccDelegateCall Acc/%X/DelegateCall
+	// defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
 
 	// DelegateCall does not transfer the value to the callee.
 
@@ -565,13 +568,17 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
-				return nil, firstErr(err, ErrUnknownAddress)
+				if _, ok := registeredNativeContracts[addr]; !ok {
+					return nil, firstErr(err, ErrUnknownAddress)
+				}
+				dbg.Printf(" => returning code size of 1 to indicated existence of native contract at %X\n", addr)
+				stack.Push(One256)
+			} else {
+				code := acc.Code
+				l := int64(len(code))
+				stack.Push64(l)
+				dbg.Printf(" => %d\n", l)
 			}
-			code := acc.Code
-			l := int64(len(code))
-			stack.Push64(l)
-			dbg.Printf(" => %d\n", l)
-
 		case EXTCODECOPY: // 0x3C
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
@@ -579,6 +586,10 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
+				if _, ok := registeredNativeContracts[addr]; ok {
+					dbg.Printf(" => attempted to copy native contract at %X but this is not supported\n", addr)
+					return nil, firstErr(err, ErrNativeContractCodeCopy)
+				}
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			code := acc.Code

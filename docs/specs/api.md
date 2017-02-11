@@ -1159,7 +1159,7 @@ TODO
 <a name="event-subscribe"></a>
 ####EventSubscribe
 
-Subscribe to a given type of event.
+Subscribe to a given type of event. The event is identified by the `event_id` (see [Event types](#event-types). The response provides a subscription identifier `sub_id` which tracks your client and can be used to [unsubscribe](#eventunsubscribe).
 
 #####HTTP
 
@@ -1196,9 +1196,9 @@ For more information about events and the event system, see the [Event system](#
 ***
 
 <a name="event-unsubscribe"></a>
-####EventUnubscribe
+####EventUnsubscribe
 
-Unsubscribe to an event type.
+Unsubscribe to an event by supplying the subscription identifier `sub_id` you obtained from a previous call to [subscribe](#eventsubscribe).
 
 #####HTTP
 
@@ -1210,7 +1210,12 @@ Endpoint: `/event_subs/:id`
 
 Method: `erisdb.eventUnsubscribe`
 
-Parameter: -
+Parameter:
+```
+{
+	sub_id: <string>
+}
+```
 
 #####Return value
 
