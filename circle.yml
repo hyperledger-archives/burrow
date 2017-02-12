@@ -55,6 +55,13 @@ deployment:
       - docker push quay.io/eris/db
       # push the updated documentation
       - docs/build.sh
+  develop:
+    branch: develop
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      # build docker image and tag the image with the version
+      - tests/build_tool.sh
+      - docker push quay.io/eris/db
   master:
     branch: master
     commands:
@@ -77,6 +84,3 @@ deployment:
       - docker push quay.io/eris/db
       # push the updated documentation
       - docs/build.sh
-
-
-
