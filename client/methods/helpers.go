@@ -54,5 +54,8 @@ func loggerFromClientDo(do *definitions.ClientDo, scope string) (logging_types.I
 	if err != nil {
 		return nil, err
 	}
-	return logging.WithScope(logger, scope), nil
+	logger = logging.WithScope(logger, scope)
+	lifecycle.CaptureStdlibLogOutput(logger)
+	lifecycle.CaptureTendermintLog15Output(logger)
+	return logger, nil
 }
