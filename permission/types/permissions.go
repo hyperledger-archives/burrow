@@ -3,14 +3,14 @@ package types
 import (
 	"fmt"
 
-	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/word256"
 )
 
 //------------------------------------------------------------------------------------------------
 
 var (
-	GlobalPermissionsAddress    = Zero256[:20]
-	GlobalPermissionsAddress256 = Zero256
+	GlobalPermissionsAddress    = word256.Zero256[:20]
+	GlobalPermissionsAddress256 = word256.Zero256
 )
 
 // A particular permission
@@ -125,7 +125,7 @@ type AccountPermissions struct {
 
 // Returns true if the role is found
 func (aP *AccountPermissions) HasRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {
 			return true
@@ -136,7 +136,7 @@ func (aP *AccountPermissions) HasRole(role string) bool {
 
 // Returns true if the role is added, and false if it already exists
 func (aP *AccountPermissions) AddRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {
 			return false
@@ -148,7 +148,7 @@ func (aP *AccountPermissions) AddRole(role string) bool {
 
 // Returns true if the role is removed, and false if it is not found
 func (aP *AccountPermissions) RmRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for i, r := range aP.Roles {
 		if r == role {
 			post := []string{}
