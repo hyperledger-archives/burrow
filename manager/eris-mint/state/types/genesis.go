@@ -1,10 +1,12 @@
 package types
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/eris-ltd/eris-db/common/sanity"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/tendermint/go-common"
+
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -55,7 +57,7 @@ func GenesisDocFromJSON(jsonBlob []byte) (genState *GenesisDoc) {
 	var err error
 	wire.ReadJSONPtr(&genState, jsonBlob, &err)
 	if err != nil {
-		Exit(Fmt("Couldn't read GenesisDoc: %v", err))
+		sanity.PanicCrisis(fmt.Sprintf("Couldn't read GenesisDoc: %v", err))
 	}
 	return
 }

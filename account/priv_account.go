@@ -21,8 +21,11 @@
 package account
 
 import (
+	"fmt"
+
+	"github.com/eris-ltd/eris-db/common/sanity"
+
 	"github.com/tendermint/ed25519"
-	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -49,7 +52,7 @@ func (pA *PrivAccount) Sign(chainID string, o Signable) crypto.Signature {
 }
 
 func (pA *PrivAccount) String() string {
-	return Fmt("PrivAccount{%X}", pA.Address)
+	return fmt.Sprintf("PrivAccount{%X}", pA.Address)
 }
 
 //----------------------------------------
@@ -90,7 +93,7 @@ func GenPrivAccountFromSecret(secret string) *PrivAccount {
 
 func GenPrivAccountFromPrivKeyBytes(privKeyBytes []byte) *PrivAccount {
 	if len(privKeyBytes) != 64 {
-		PanicSanity(Fmt("Expected 64 bytes but got %v", len(privKeyBytes)))
+		sanity.PanicSanity(fmt.Sprintf("Expected 64 bytes but got %v", len(privKeyBytes)))
 	}
 	var privKeyArray [64]byte
 	copy(privKeyArray[:], privKeyBytes)

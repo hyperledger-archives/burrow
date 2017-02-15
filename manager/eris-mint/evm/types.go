@@ -1,8 +1,10 @@
 package vm
 
 import (
+	"fmt"
+
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
 )
 
 const (
@@ -23,7 +25,7 @@ func (acc *Account) String() string {
 	if acc == nil {
 		return "nil-VMAccount"
 	}
-	return Fmt("VMAccount{%X B:%v C:%X N:%v}",
+	return fmt.Sprintf("VMAccount{%X B:%v C:%X N:%v}",
 		acc.Address, acc.Balance, acc.Code, acc.Nonce)
 }
 

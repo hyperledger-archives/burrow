@@ -3,28 +3,26 @@ package test
 import (
 	"bytes"
 	"hash/fnv"
+	"path"
 	"strconv"
 	"testing"
 
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/core"
 	core_types "github.com/eris-ltd/eris-db/core/types"
+	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
 	rpc_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/test/fixtures"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
 
-	"github.com/tendermint/go-crypto"
-	rpcclient "github.com/tendermint/go-rpc/client"
-
-	"path"
-
-	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
 	"github.com/spf13/viper"
-	tm_common "github.com/tendermint/go-common"
+	"github.com/tendermint/go-crypto"
+	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -242,7 +240,7 @@ func callCode(t *testing.T, client rpcclient.Client, fromAddress, code, data,
 	}
 	ret := resp.Return
 	// NOTE: we don't flip memory when it comes out of RETURN (?!)
-	if bytes.Compare(ret, tm_common.LeftPadWord256(expected).Bytes()) != 0 {
+	if bytes.Compare(ret, word256.LeftPadWord256(expected).Bytes()) != 0 {
 		t.Fatalf("Conflicting return value. Got %x, expected %x", ret, expected)
 	}
 }
@@ -255,7 +253,7 @@ func callContract(t *testing.T, client rpcclient.Client, fromAddress, toAddress,
 	}
 	ret := resp.Return
 	// NOTE: we don't flip memory when it comes out of RETURN (?!)
-	if bytes.Compare(ret, tm_common.LeftPadWord256(expected).Bytes()) != 0 {
+	if bytes.Compare(ret, word256.LeftPadWord256(expected).Bytes()) != 0 {
 		t.Fatalf("Conflicting return value. Got %x, expected %x", ret, expected)
 	}
 }
@@ -294,14 +292,14 @@ func simpleContract() ([]byte, []byte, []byte) {
 	// push code to the stack
 	//code := append([]byte{byte(0x60 + lenCode - 1)}, RightPadWord256(contractCode).Bytes()...)
 	code := append([]byte{0x7f},
-		tm_common.RightPadWord256(contractCode).Bytes()...)
+		word256.RightPadWord256(contractCode).Bytes()...)
 	// store it in memory
 	code = append(code, []byte{0x60, 0x0, 0x52}...)
 	// return whats in memory
 	//code = append(code, []byte{0x60, byte(32 - lenCode), 0x60, byte(lenCode), 0xf3}...)
 	code = append(code, []byte{0x60, byte(lenCode), 0x60, 0x0, 0xf3}...)
 	// return init code, contract code, expected return
-	return code, contractCode, tm_common.LeftPadBytes([]byte{0xb}, 32)
+	return code, contractCode, word256.LeftPadBytes([]byte{0xb}, 32)
 }
 
 // simple call contract calls another contract
@@ -329,5 +327,5 @@ func simpleCallContract(addr []byte) ([]byte, []byte, []byte) {
 	code = append(code, []byte{0x60, byte(lenCode), 0x60, 0x0, 0xf3}...)
 	code = append(code, contractCode...)
 	// return init code, contract code, expected return
-	return code, contractCode, tm_common.LeftPadBytes([]byte{0xb}, 32)
+	return code, contractCode, word256.LeftPadBytes([]byte{0xb}, 32)
 }

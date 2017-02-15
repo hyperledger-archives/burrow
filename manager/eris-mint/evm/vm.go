@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/eris-ltd/eris-db/common/math/integral"
+	"github.com/eris-ltd/eris-db/common/sanity"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
+
 	"github.com/tendermint/go-events"
 )
 
@@ -94,7 +97,7 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if appState == nil {
-			log.Warn(Fmt("\n\n***** Unknown permission %b! ********\n\n", perm))
+			log.Warn(fmt.Sprintf("\n\n***** Unknown permission %b! ********\n\n", perm))
 			return false
 		}
 		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
@@ -141,7 +144,7 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas
 			err := transfer(callee, caller, value)
 			if err != nil {
 				// data has been corrupted in ram
-				PanicCrisis("Could not return value to caller")
+				sanity.PanicCrisis("Could not return value to caller")
 			}
 		}
 	}
@@ -940,7 +943,7 @@ func copyslice(src []byte) (dest []byte) {
 }
 
 func rightMostBytes(data []byte, n int) []byte {
-	size := MinInt(len(data), n)
+	size := integral.MinInt(len(data), n)
 	offset := len(data) - size
 	return data[offset:]
 }

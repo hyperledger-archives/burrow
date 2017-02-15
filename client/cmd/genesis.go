@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/eris-ltd/eris-db/common/sanity"
 	"github.com/eris-ltd/eris-db/genesis"
 
 	"github.com/spf13/cobra"
@@ -23,7 +24,7 @@ var GenesisGenCmd = &cobra.Command{
 		// TODO refactor to not panic
 		genesisFile, err := genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
 		if err != nil {
-			panic(err)
+			sanity.PanicSanity(err)
 		}
 		fmt.Println(genesisFile) // may want to save somewhere instead
 	},

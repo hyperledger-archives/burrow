@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-wire"
+	. "github.com/eris-ltd/eris-db/word256"
 
+	"github.com/tendermint/go-wire"
 	tm_types "github.com/tendermint/tendermint/types" // Block
 )
 
