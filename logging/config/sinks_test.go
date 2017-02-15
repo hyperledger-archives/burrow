@@ -80,18 +80,21 @@ func TestFilterSinks(t *testing.T) {
 	assert.Equal(t, ll, excluded.BufferLogger().FlushLogLines())
 }
 
-func TestSyslogOutput(t *testing.T) {
-	_, _, err := Sink().SetOutput(RemoteSyslogOutput("Foo",
-		"tcp://logging.example.com:6514")).BuildLogger()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no such host")
+func TestPruneTransform(t *testing.T) {
+	sinkConfig := Sink().
+		SetTransform(PruneTransform("Trace")).
+		AddSinks(Sink().
+			SetTransform(CaptureTransform("cap", 100, false)))
 
-	logger, _, err := Sink().SetOutput(SyslogOutput("Foo")).BuildLogger()
-	if err != nil {
-		assert.Contains(t, err.Error(), "syslog delivery error")
-	} else {
-		logger.Log("LogTo", "Syslog")
-	}
+	logger, captures, err := sinkConfig.BuildLogger()
+	assert.NoError(t, err)
+	logger.Log("msg", "Hello with a trace",
+		"Trace", []string{"logger:32, state:23"})
+	logger.Log("msg", "Goodbye with a trace",
+		"Trace", []string{"logger:32, state:14"})
+	assert.Equal(t, logLines("msg", "Hello with a trace", "",
+		"msg", "Goodbye with a trace"),
+		captures["cap"].FlushLogLines())
 }
 
 // Takes a variadic argument of log lines as a list of key value pairs delimited

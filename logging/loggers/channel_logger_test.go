@@ -19,6 +19,7 @@ import (
 
 	"github.com/eapache/channels"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 func TestChannelLogger(t *testing.T) {
@@ -55,5 +56,20 @@ func TestChannelLogger_Reset(t *testing.T) {
 		assert.Equal(t, i, ll[1])
 	}
 	assert.Nil(t, cl.ReadLogLine(), "Since we have drained the buffer there "+
-			"should be no more log lines.")
+		"should be no more log lines.")
+}
+
+func TestNonBlockingLogger(t *testing.T) {
+	tl := newTestLogger()
+	nbl := NonBlockingLogger(tl)
+	nbl.Log("Foo", "Bar")
+	nbl.Log("Baz", "Bur")
+	nbl.Log("Badger", "Romeo")
+	time.Sleep(time.Second)
+
+	lls, err := tl.logLines(3)
+	assert.NoError(t, err)
+	assert.Equal(t, logLines("Foo", "Bar", "",
+		"Baz", "Bur", "",
+		"Badger", "Romeo"), lls)
 }

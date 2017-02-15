@@ -95,17 +95,18 @@ func readLogLine(logLine interface{}, ok bool) []interface{} {
 //
 // Exits if the channel is closed.
 func (cl *ChannelLogger) DrainForever(logger kitlog.Logger) {
-	logLine := cl.WaitReadLogLine()
 	// logLine could be nil if channel was closed while waiting for next line
-	if logLine != nil {
+	for logLine := cl.WaitReadLogLine(); logLine != nil; logLine = cl.WaitReadLogLine() {
 		logger.Log(logLine...)
 	}
 }
 
 // Drains everything that is available at the time of calling
 func (cl *ChannelLogger) Flush(logger kitlog.Logger) {
-	bufferSize := cl.ch.Len()
-	for i := 0; i < bufferSize; i++ {
+	// Grab the buffer at the here rather than within loop condition so that we
+	// do not drain the buffer forever
+	bufferLength := cl.BufferLength()
+	for i := 0; i < bufferLength; i++ {
 		logLine := cl.WaitReadLogLine()
 		if logLine != nil {
 			logger.Log(logLine...)
@@ -117,13 +118,12 @@ func (cl *ChannelLogger) Flush(logger kitlog.Logger) {
 // for at least one line
 func (cl *ChannelLogger) FlushLogLines() [][]interface{} {
 	logLines := make([][]interface{}, 0, cl.ch.Len())
-	cl.Flush(kitlog.LoggerFunc(func(keyvals... interface{}) error {
+	cl.Flush(kitlog.LoggerFunc(func(keyvals ...interface{}) error {
 		logLines = append(logLines, keyvals)
 		return nil
 	}))
 	return logLines
 }
-
 
 // Close the existing channel halting goroutines that are draining the channel
 // and create a new channel to buffer into. Should not cause any log lines
@@ -136,25 +136,10 @@ func (cl *ChannelLogger) Reset() {
 	cl.RWMutex.Unlock()
 }
 
-func (cl *ChannelLogger) WaitLogLines() [][]interface{} {
-	logLines := make([][]interface{}, 0, cl.ch.Len())
-	// Wait for first line
-	logLines = append(logLines,cl.WaitReadLogLine())
-	cl.Flush(kitlog.LoggerFunc(func(keyvals... interface{}) error {
-		logLines = append(logLines, keyvals)
-		return nil
-	}))
-	return logLines
-}
-
-// Wraps an underlying Logger baseLogger to provide a Logger that is
-// is non-blocking on calls to Log.
-func NonBlockingLogger(logger kitlog.Logger) *ChannelLogger {
+// Returns a Logger that wraps the outputLogger passed and does not block on
+// calls to Log.
+func NonBlockingLogger(outputLogger kitlog.Logger) *ChannelLogger {
 	cl := NewChannelLogger(DefaultLoggingRingBufferCap)
-	go cl.DrainForever(logger)
+	go cl.DrainForever(outputLogger)
 	return cl
-}
-
-func lessThanCap(i int, cap channels.BufferCap) bool {
-	return cap == channels.Infinity || i < int(cap)
 }

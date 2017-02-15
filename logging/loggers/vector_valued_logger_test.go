@@ -25,7 +25,8 @@ func TestVectorValuedLogger(t *testing.T) {
 	logger := newTestLogger()
 	vvl := VectorValuedLogger(logger)
 	vvl.Log("foo", "bar", "seen", 1, "seen", 3, "seen", 2)
-
+	lls, err := logger.logLines(1)
+	assert.NoError(t, err)
 	assert.Equal(t, Slice("foo", "bar", "seen", Slice(1, 3, 2)),
-		logger.logLines()[0])
+		lls[0])
 }

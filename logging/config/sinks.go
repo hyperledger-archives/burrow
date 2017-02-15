@@ -12,6 +12,9 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 )
 
+// This file contains definitions for a configurable output graph for the
+// logging system.
+
 type source string
 type outputType string
 type transformType string
@@ -32,7 +35,7 @@ const (
 	Filter transformType = "filter"
 	// Remove key-val pairs from each log line
 	Prune transformType = "prune"
-	// Add key value pairs to each log linel
+	// Add key value pairs to each log line
 	Label   transformType = "label"
 	Capture transformType = "capture"
 	// TODO [Silas]: add 'flush on exit' transform which flushes the buffer of
@@ -229,6 +232,15 @@ func LabelTransform(prefix bool, labelKeyvals ...string) *TransformConfig {
 	}
 }
 
+func PruneTransform(keys ...string) *TransformConfig {
+	return &TransformConfig{
+		TransformType: Prune,
+		PruneConfig: &PruneConfig{
+			Keys: keys,
+		},
+	}
+}
+
 func FilterTransform(fmode filterMode, keyvalueRegexes ...string) *TransformConfig {
 	length := len(keyvalueRegexes) / 2
 	predicates := make([]*KeyValuePredicateConfig, length)
@@ -249,7 +261,6 @@ func FilterTransform(fmode filterMode, keyvalueRegexes ...string) *TransformConf
 }
 
 // Logger formation
-
 func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
 	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
 }
@@ -261,6 +272,8 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	}
 	numSinks := len(sinkConfig.Sinks)
 	outputLoggers := make([]kitlog.Logger, numSinks, numSinks+1)
+	// We need a depth-first post-order over the output loggers so we'll keep
+	// recurring into children sinks we reach a terminal sink (with no children)
 	for i, sc := range sinkConfig.Sinks {
 		l, captures, err := BuildLoggerFromSinkConfig(sc, captures)
 		if err != nil {
@@ -269,6 +282,7 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 		outputLoggers[i] = l
 	}
 
+	// Grab the outputs after we have terminated any children sinks above
 	if sinkConfig.Output != nil && sinkConfig.Output.OutputType != NoOutput {
 		l, err := BuildOutputLogger(sinkConfig.Output)
 		if err != nil {
@@ -333,9 +347,12 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 			return kitlog.NewContext(outputLogger).With(keyvals...), captures, nil
 		}
 	case Prune:
+		keys := make([]interface{}, len(transformConfig.PruneConfig.Keys))
+		for i, k := range transformConfig.PruneConfig.Keys {
+			keys[i] = k
+		}
 		return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-			return outputLogger.Log(structure.RemoveKeys(keyvals,
-				transformConfig.PruneConfig.Keys))
+			return outputLogger.Log(structure.RemoveKeys(keyvals, keys...)...)
 		}), captures, nil
 
 	case Capture:

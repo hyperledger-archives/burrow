@@ -299,7 +299,8 @@ const sectionLoggingHeader = `
 ##
 ## Log messages are sent to one of two 'channels': info or trace
 ##
-## They are delivered on two independent streams: 'info' or 'info and trace'
+## They are delivered on two independent streams: 'info' or 'info and trace'.
+## Each of these streams has a root
 ##
 ################################################################################
 

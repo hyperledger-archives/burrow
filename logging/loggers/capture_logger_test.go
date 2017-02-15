@@ -17,8 +17,8 @@ func TestFlushCaptureLogger(t *testing.T) {
 
 	// Flush the ones we bufferred
 	cl.Flush()
-	ll := outputLogger.logLines()
-	assert.Equal(t, buffered, len(ll))
+	_, err := outputLogger.logLines(buffered)
+	assert.NoError(t, err)
 }
 
 func TestTeeCaptureLogger(t *testing.T) {
@@ -29,8 +29,8 @@ func TestTeeCaptureLogger(t *testing.T) {
 		cl.Log("Foo", "Bar", "Index", i)
 	}
 	// Check passthrough to output
-	ll := outputLogger.logLines()
-	assert.Equal(t, buffered, len(ll))
+	ll, err := outputLogger.logLines(buffered)
+	assert.NoError(t, err)
 	assert.Equal(t, ll, cl.BufferLogger().FlushLogLines())
 
 	cl.SetPassthrough(false)
@@ -41,5 +41,9 @@ func TestTeeCaptureLogger(t *testing.T) {
 	assert.True(t, outputLogger.empty())
 
 	cl.Flush()
-	assert.Equal(t, 100, len(outputLogger.logLines()))
+	_, err = outputLogger.logLines(100)
+	assert.NoError(t, err)
+	_, err = outputLogger.logLines(1)
+	// Expect timeout
+	assert.Error(t, err)
 }
