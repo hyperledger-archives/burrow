@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/eris-ltd/eris-db/common/sanity"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/word256"
 )
@@ -42,10 +43,10 @@ type SNativeFuncDescription struct {
 
 /* The solidity interface used to generate the abi function ids below
 contract Permissions {
-	function has_base(address addr, int permFlag) constant returns (bool value) {}
-	function set_base(address addr, int permFlag, bool value) constant returns (bool val) {}
-	function unset_base(address addr, int permFlag) constant returns (int pf) {}
-	function set_global(address addr, int permFlag, bool value) constant returns (int pf) {}
+	function has_base(address addr, uint64 permFlag) constant returns (bool value) {}
+	function set_base(address addr, uint64 permFlag, bool value) constant returns (bool val) {}
+	function unset_base(address addr, uint64 permFlag) constant returns (uint64 pf) {}
+	function set_global(uint64 permFlag, bool value) constant returns (uint64 pf) {}
 	function has_role(address addr, string role) constant returns (bool val) {}
 	function add_role(address addr, string role) constant returns (bool added) {}
 	function rm_role(address addr, string role) constant returns (bool removed) {}
@@ -54,13 +55,18 @@ contract Permissions {
 
 // function identifiers from the solidity abi
 var PermsMap = map[string]SNativeFuncDescription{
-	"e8145855": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
-	"180d26f2": SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
-	"3a3fcc59": SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
-	"3fbf7da5": SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
-	"9ea53314": SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
-	"bb37737a": SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
-	"28fd0194": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
+	getFuncIdentifiersFromSignature("has_role(address,bytes32)"):    SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
+	getFuncIdentifiersFromSignature("unset_base(address,uint64)"):   SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
+	getFuncIdentifiersFromSignature("set_global(uint64,bool)"):      SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
+	getFuncIdentifiersFromSignature("add_role(address,bytes32)"):    SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
+	getFuncIdentifiersFromSignature("set_base(address,uint64,bool"): SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
+	getFuncIdentifiersFromSignature("has_base(address,uint64)"):     SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
+	getFuncIdentifiersFromSignature("rm_role(address,bytes32)"):     SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
+}
+
+func getFuncIdentifiersFromSignature(signature string) string {
+	identifier := sha3.Sha3([]byte(signature))
+	return hex.EncodeToString(identifier[:4])
 }
 
 func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
