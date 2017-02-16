@@ -3,7 +3,9 @@ package vm
 import (
 	"fmt"
 
-	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/common/math/integral"
+	"github.com/eris-ltd/eris-db/common/sanity"
+	. "github.com/eris-ltd/eris-db/word256"
 )
 
 // Not goroutine safe
@@ -51,7 +53,7 @@ func (st *Stack) Push(d Word256) {
 // currently only called after Sha3
 func (st *Stack) PushBytes(bz []byte) {
 	if len(bz) != 32 {
-		PanicSanity("Invalid bytes size: expected 32")
+		sanity.PanicSanity("Invalid bytes size: expected 32")
 	}
 	st.Push(LeftPadWord256(bz))
 }
@@ -115,7 +117,7 @@ func (st *Stack) Peek() Word256 {
 func (st *Stack) Print(n int) {
 	fmt.Println("### stack ###")
 	if st.ptr > 0 {
-		nn := MinInt(n, st.ptr)
+		nn := integral.MinInt(n, st.ptr)
 		for j, i := 0, st.ptr-1; i > st.ptr-1-nn; i-- {
 			fmt.Printf("%-3d  %X\n", j, st.data[i])
 			j += 1

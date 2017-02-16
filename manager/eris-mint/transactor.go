@@ -25,16 +25,16 @@ import (
 	"sync"
 	"time"
 
-	cmn "github.com/tendermint/go-common"
-	"github.com/tendermint/go-crypto"
-	tEvents "github.com/tendermint/go-events"
-
 	"github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
+	"github.com/tendermint/go-crypto"
+	tEvents "github.com/tendermint/go-events"
 )
 
 type transactor struct {
@@ -77,12 +77,12 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 		fromAddress = []byte{}
 	}
 	callee := toVMAccount(outAcc)
-	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}
@@ -108,14 +108,14 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 		fromAddress = []byte{}
 	}
 	cache := this.erisMint.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
-	callee := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
-	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
+	callee := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	st := this.erisMint.GetState() // for block height, time
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}
@@ -424,7 +424,7 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 // No idea what this does.
 func toVMAccount(acc *account.Account) *vm.Account {
 	return &vm.Account{
-		Address: cmn.LeftPadWord256(acc.Address),
+		Address: word256.LeftPadWord256(acc.Address),
 		Balance: acc.Balance,
 		Code:    acc.Code,
 		Nonce:   int64(acc.Sequence),

@@ -11,15 +11,14 @@ import (
 	acm "github.com/eris-ltd/eris-db/account"
 	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
+	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
+	. "github.com/eris-ltd/eris-db/word256"
 
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
-	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
-
 	"github.com/tendermint/tendermint/config/tendermint_test"
 )
 
@@ -1210,7 +1209,7 @@ func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.Pe
 	data = append(permNameToFuncID(name), data...)
 	var err error
 	if pF, err = ptypes.PermStringToFlag(name); err != nil {
-		panic(Fmt("failed to convert perm string (%s) to flag", name))
+		panic(fmt.Sprintf("failed to convert perm string (%s) to flag", name))
 	}
 	return
 }
@@ -1237,7 +1236,7 @@ func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (
 
 	var err error
 	if pF, err = ptypes.PermStringToFlag(name); err != nil {
-		panic(Fmt("failed to convert perm string (%s) to flag", name))
+		panic(fmt.Sprintf("failed to convert perm string (%s) to flag", name))
 	}
 	return
 }

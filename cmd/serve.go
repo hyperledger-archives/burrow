@@ -23,13 +23,13 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/spf13/cobra"
-
 	"github.com/eris-ltd/eris-db/core"
 	"github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/lifecycle"
 	"github.com/eris-ltd/eris-db/util"
+
+	"github.com/spf13/cobra"
 )
 
 const (

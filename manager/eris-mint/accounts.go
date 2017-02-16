@@ -24,12 +24,11 @@ import (
 	"fmt"
 	"sync"
 
-	tendermint_common "github.com/tendermint/go-common"
-
 	account "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
+	word256 "github.com/eris-ltd/eris-db/word256"
 )
 
 // NOTE [ben] Compiler check to ensure Accounts successfully implements
@@ -119,7 +118,7 @@ func (this *accounts) StorageAt(address, key []byte) (*core_types.StorageItem,
 	storageRoot := account.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
-	_, value, _ := storageTree.Get(tendermint_common.LeftPadWord256(key).Bytes())
+	_, value, _ := storageTree.Get(word256.LeftPadWord256(key).Bytes())
 	if value == nil {
 		return &core_types.StorageItem{key, []byte{}}, nil
 	}

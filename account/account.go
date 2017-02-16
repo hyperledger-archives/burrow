@@ -25,8 +25,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/eris-ltd/eris-db/common/sanity"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/tendermint/go-common"
+
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -42,7 +43,7 @@ func SignBytes(chainID string, o Signable) []byte {
 	buf, n, err := new(bytes.Buffer), new(int), new(error)
 	o.WriteSignBytes(chainID, buf, n, err)
 	if *err != nil {
-		PanicCrisis(err)
+		sanity.PanicCrisis(err)
 	}
 
 	return buf.Bytes()

@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"testing"
-	//"time"
-
-	"github.com/tendermint/go-common"
-	"github.com/tendermint/tendermint/config/tendermint_test"
-	// tmtypes "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
+	"github.com/tendermint/tendermint/config/tendermint_test"
 )
 
 func init() {
@@ -429,7 +427,7 @@ func TestCreates(t *testing.T) {
 	state.UpdateAccount(newAcc1)
 	state.UpdateAccount(newAcc2)
 
-	createData = append(createData, common.LeftPadBytes(acc2.Address, 32)...)
+	createData = append(createData, word256.LeftPadBytes(acc2.Address, 32)...)
 
 	// call the pre-factory, triggering the factory to run a create
 	tx := &txs.CallTx{
@@ -452,7 +450,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage := state.LoadStorage(acc1.StorageRoot)
-	_, firstCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	_, firstCreatedAddress, _ := storage.Get(word256.LeftPadBytes([]byte{0}, 32))
 
 	acc0 = state.GetAccount(acc0.Address)
 	// call the pre-factory, triggering the factory to run a create
@@ -476,7 +474,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage = state.LoadStorage(acc1.StorageRoot)
-	_, secondCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	_, secondCreatedAddress, _ := storage.Get(word256.LeftPadBytes([]byte{0}, 32))
 
 	if bytes.Equal(firstCreatedAddress, secondCreatedAddress) {
 		t.Errorf("Multiple contracts created with the same address!")
@@ -507,7 +505,7 @@ func TestContractSend(t *testing.T) {
 	newAcc1.Code = callerCode
 	state.UpdateAccount(newAcc1)
 
-	sendData = append(sendData, common.LeftPadBytes(acc2.Address, 32)...)
+	sendData = append(sendData, word256.LeftPadBytes(acc2.Address, 32)...)
 	sendAmt := int64(10)
 	acc2Balance := acc2.Balance
 

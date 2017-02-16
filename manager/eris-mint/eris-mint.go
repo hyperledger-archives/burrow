@@ -168,7 +168,7 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	// TODO: [ben] over the tendermint 0.6 TMSP interface we have 
+	// TODO: [ben] over the tendermint 0.6 TMSP interface we have
 	// no access to the block header implemented;
 	// On Tendermint v0.8 load the blockheader into the application
 	// state and remove the fixed 2-"seconds" per block internal clock.

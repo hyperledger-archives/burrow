@@ -6,17 +6,16 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"testing"
-
 	"golang.org/x/crypto/ripemd160"
-
+	"testing"
 	"time"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
 	"github.com/stretchr/testify/assert"
-	tm_common "github.com/tendermint/go-common"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
@@ -123,8 +122,8 @@ func TestGetStorage(t *testing.T) {
 			" created a contract but the contract address is empty")
 
 		v := getStorage(t, client, contractAddr, []byte{0x1})
-		got := tm_common.LeftPadWord256(v)
-		expected := tm_common.LeftPadWord256([]byte{0x5})
+		got := word256.LeftPadWord256(v)
+		expected := word256.LeftPadWord256([]byte{0x5})
 		if got.Compare(expected) != 0 {
 			t.Fatalf("Wrong storage value. Got %x, expected %x", got.Bytes(),
 				expected.Bytes())
@@ -148,8 +147,8 @@ func TestCallCode(t *testing.T) {
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
 			0x20, 0x60, 0x0, 0xf3}
-		data = append(tm_common.LeftPadWord256([]byte{0x5}).Bytes(),
-			tm_common.LeftPadWord256([]byte{0x6}).Bytes()...)
+		data = append(word256.LeftPadWord256([]byte{0x5}).Bytes(),
+			word256.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
 		callCode(t, client, user[0].PubKey.Address(), code, data, expected)
 	})

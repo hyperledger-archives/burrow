@@ -1,12 +1,15 @@
 package state
 
 import (
+	"fmt"
+
 	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/common/sanity"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/txs"
+	. "github.com/eris-ltd/eris-db/word256"
 
-	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
 )
 
@@ -44,7 +47,7 @@ func (cache *TxCache) UpdateAccount(acc *vm.Account) {
 	addr := acc.Address
 	_, removed := cache.accounts[addr].unpack()
 	if removed {
-		PanicSanity("UpdateAccount on a removed account")
+		sanity.PanicSanity("UpdateAccount on a removed account")
 	}
 	cache.accounts[addr] = vmAccountInfo{acc, false}
 }
@@ -53,7 +56,7 @@ func (cache *TxCache) RemoveAccount(acc *vm.Account) {
 	addr := acc.Address
 	_, removed := cache.accounts[addr].unpack()
 	if removed {
-		PanicSanity("RemoveAccount on a removed account")
+		sanity.PanicSanity("RemoveAccount on a removed account")
 	}
 	cache.accounts[addr] = vmAccountInfo{acc, true}
 }
@@ -85,7 +88,7 @@ func (cache *TxCache) CreateAccount(creator *vm.Account) *vm.Account {
 		return account
 	} else {
 		// either we've messed up nonce handling, or sha3 is broken
-		PanicSanity(Fmt("Could not create account, address already exists: %X", addr))
+		sanity.PanicSanity(fmt.Sprintf("Could not create account, address already exists: %X", addr))
 		return nil
 	}
 }
@@ -109,7 +112,7 @@ func (cache *TxCache) GetStorage(addr Word256, key Word256) Word256 {
 func (cache *TxCache) SetStorage(addr Word256, key Word256, value Word256) {
 	_, removed := cache.accounts[addr].unpack()
 	if removed {
-		PanicSanity("SetStorage() on a removed account")
+		sanity.PanicSanity("SetStorage() on a removed account")
 	}
 	cache.storages[Tuple256{addr, key}] = value
 }

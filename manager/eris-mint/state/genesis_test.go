@@ -9,10 +9,10 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/common/random"
 	genesis "github.com/eris-ltd/eris-db/genesis"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	. "github.com/tendermint/go-common"
 	tdb "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"
 )
@@ -108,12 +108,12 @@ func RandAccount(randBalance bool, minBalance int64) (*acm.Account, *acm.PrivAcc
 	acc := &acm.Account{
 		Address:     privAccount.PubKey.Address(),
 		PubKey:      privAccount.PubKey,
-		Sequence:    RandInt(),
+		Sequence:    random.RandInt(),
 		Balance:     minBalance,
 		Permissions: perms,
 	}
 	if randBalance {
-		acc.Balance += int64(RandUint32())
+		acc.Balance += int64(random.RandUint32())
 	}
 	return acc, privAccount
 }

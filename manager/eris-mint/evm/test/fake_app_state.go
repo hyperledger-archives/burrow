@@ -1,9 +1,11 @@
 package vm
 
 import (
+	"fmt"
+
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
 )
 
 type FakeAppState struct {
@@ -23,7 +25,7 @@ func (fas *FakeAppState) UpdateAccount(account *Account) {
 func (fas *FakeAppState) RemoveAccount(account *Account) {
 	_, ok := fas.accounts[account.Address.String()]
 	if !ok {
-		panic(Fmt("Invalid account addr: %X", account.Address))
+		panic(fmt.Sprintf("Invalid account addr: %X", account.Address))
 	} else {
 		// Remove account
 		delete(fas.accounts, account.Address.String())
@@ -41,14 +43,14 @@ func (fas *FakeAppState) CreateAccount(creator *Account) *Account {
 			Nonce:   0,
 		}
 	} else {
-		panic(Fmt("Invalid account addr: %X", addr))
+		panic(fmt.Sprintf("Invalid account addr: %X", addr))
 	}
 }
 
 func (fas *FakeAppState) GetStorage(addr Word256, key Word256) Word256 {
 	_, ok := fas.accounts[addr.String()]
 	if !ok {
-		panic(Fmt("Invalid account addr: %X", addr))
+		panic(fmt.Sprintf("Invalid account addr: %X", addr))
 	}
 
 	value, ok := fas.storage[addr.String()+key.String()]
@@ -62,7 +64,7 @@ func (fas *FakeAppState) GetStorage(addr Word256, key Word256) Word256 {
 func (fas *FakeAppState) SetStorage(addr Word256, key Word256, value Word256) {
 	_, ok := fas.accounts[addr.String()]
 	if !ok {
-		panic(Fmt("Invalid account addr: %X", addr))
+		panic(fmt.Sprintf("Invalid account addr: %X", addr))
 	}
 
 	fas.storage[addr.String()+key.String()] = value

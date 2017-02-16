@@ -14,8 +14,8 @@ import (
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
+	. "github.com/eris-ltd/eris-db/word256"
 	"github.com/stretchr/testify/assert"
-	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-events"
 )
 

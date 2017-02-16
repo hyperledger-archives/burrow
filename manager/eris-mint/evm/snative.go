@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/eris-ltd/eris-db/common/sanity"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
 )
 
 //------------------------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ func set_global(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	permNum, perm := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
 	if vmAcc == nil {
-		PanicSanity("cant find the global permissions account")
+		sanity.PanicSanity("cant find the global permissions account")
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
