@@ -1,104 +1,344 @@
 package vm
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/eris-ltd/eris-db/common/sanity"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/word256"
+
+	"bytes"
+	"strings"
 )
 
 //------------------------------------------------------------------------------------------------
 // Registered SNative contracts
 
-var PermissionsContract = "permissions_contract"
+type SNativeContractDescription struct {
+	Comment   string
+	Name      string
+	functions map[FuncID]SNativeFuncDescription
+}
+
+type SNativeFuncDescription struct {
+	Comment  string
+	Name     string
+	Args     []SolidityArg
+	Return   SolidityReturn
+	PermFlag ptypes.PermFlag
+	F        NativeContract
+}
+
+type SolidityType string
+
+type SolidityArg struct {
+	Name string
+	Type SolidityType
+}
+
+type SolidityReturn struct {
+	Name string
+	Type SolidityType
+}
+
+const (
+	// We don't need to be exhaustive here, just make what we used strongly typed
+	SolidityAddress SolidityType = "address"
+	SolidityInt     SolidityType = "int"
+	SolidityUint64  SolidityType = "uint64"
+	SolidityBytes32 SolidityType = "bytes32"
+	SolidityString  SolidityType = "string"
+	SolidityBool    SolidityType = "bool"
+)
 
 func registerSNativeContracts() {
-	registeredNativeContracts[LeftPadWord256([]byte(PermissionsContract))] = permissionsContract
+	for _, contract := range SNativeContracts() {
+		registeredNativeContracts[contract.Address()] = contract.Dispatch
+	}
+}
 
-	/*
-		// we could expose these but we moved permission and args checks into the permissionsContract
-		// so calling them would be unsafe ...
-		registeredNativeContracts[LeftPadWord256([]byte("has_base"))] = has_base
-		registeredNativeContracts[LeftPadWord256([]byte("set_base"))] = set_base
-		registeredNativeContracts[LeftPadWord256([]byte("unset_base"))] = unset_base
-		registeredNativeContracts[LeftPadWord256([]byte("set_global"))] = set_global
-		registeredNativeContracts[LeftPadWord256([]byte("has_role"))] = has_role
-		registeredNativeContracts[LeftPadWord256([]byte("add_role"))] = add_role
-		registeredNativeContracts[LeftPadWord256([]byte("rm_role"))] = rm_role
-	*/
+// Returns a map of all SNative contracts defined indexed by name
+func SNativeContracts() map[string]SNativeContractDescription {
+	contracts := []SNativeContractDescription{
+		NewSNativeContract(`
+		* Interface for managing Secure Native authorizations.
+		* @dev This Solidity interface describes the functions exposed by the SNative permissions layer in the Monax blockchain (ErisDB).
+		`,
+			"permissions_contract",
+			SNativeFuncDescription{`
+			* @notice Adds a role to an account
+			* @param _account account
+			* @param _role role
+			* @return result whether role was added
+			`,
+				"add_role",
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
+					arg("_role", SolidityBytes32),
+				},
+				ret("result", SolidityBool),
+				ptypes.AddRole,
+				add_role},
+
+			SNativeFuncDescription{`
+			* @notice Indicates whether an account has a role
+			* @param _account account
+			* @param _role role
+			* @return result whether account has role
+			`,
+				"has_role",
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
+					arg("_role", SolidityBytes32),
+				},
+				ret("result", SolidityBool),
+				ptypes.HasRole,
+				has_role},
+
+			SNativeFuncDescription{`
+			* @notice Removes a role from an account
+			* @param _account account
+			* @param _role role
+			* @return result whether role was removed
+			`,
+				"rm_role",
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
+					arg("_role", SolidityBytes32),
+				},
+				ret("result", SolidityBool),
+				ptypes.RmRole,
+				rm_role},
+
+			SNativeFuncDescription{`
+			* @notice Sets a base authorization for an account
+			* @param _account account
+			* @param _authorization base authorization
+			* @param _value value of base authorization
+			* @return result value passed in
+			`,
+				"set_base",
+				[]SolidityArg{arg("_account", SolidityAddress),
+					arg("_authorization", SolidityInt),
+					arg("_value", SolidityInt)},
+				ret("result", SolidityBool),
+				ptypes.SetBase,
+				set_base},
+
+			SNativeFuncDescription{`
+			* @notice Indicates whether an account has a base authorization
+			* @param _account account
+			* @param _authorization base authorization
+			* @return result whether account has base authorization set
+			`,
+				"has_base",
+				[]SolidityArg{arg("_account", SolidityAddress),
+					arg("_authorization", SolidityInt)},
+				ret("result", SolidityBool),
+				ptypes.HasBase,
+				has_base},
+
+			SNativeFuncDescription{`
+			* @notice Sets a base authorization for an account to the global (default) value of the base authorization
+      * @param _account account
+      * @param _authorization base authorization
+      * @return authorization base authorization passed in
+      `,
+				"unset_base",
+				[]SolidityArg{arg("_account", SolidityAddress),
+					arg("_authorization", SolidityInt)},
+				ret("authorization", SolidityInt),
+				ptypes.UnsetBase,
+				unset_base},
+
+			SNativeFuncDescription{`
+			* @notice Sets global (default) value for a base authorization
+			* @param _account account
+			* @param _authorization base authorization
+			* @param _value value of base authorization
+			* @return authorization base authorization passed in
+			`,
+				"set_global",
+				[]SolidityArg{arg("_account", SolidityAddress),
+					arg("_authorization", SolidityInt),
+					arg("_value", SolidityInt)},
+				ret("authorization", SolidityInt),
+				ptypes.SetGlobal,
+				set_global},
+		),
+	}
+
+	contractMap := make(map[string]SNativeContractDescription, len(contracts))
+	for _, contract := range contracts {
+		contractMap[contract.Name] = contract
+	}
+	return contractMap
 }
 
 //-----------------------------------------------------------------------------
 // snative are native contracts that can access and modify an account's permissions
 
-type SNativeFuncDescription struct {
-	Name     string
-	NArgs    int
-	PermFlag ptypes.PermFlag
-	F        NativeContract
-}
-
-/* The solidity interface used to generate the abi function ids below
-contract Permissions {
-	function has_base(address addr, uint64 permFlag) constant returns (bool value) {}
-	function set_base(address addr, uint64 permFlag, bool value) constant returns (bool val) {}
-	function unset_base(address addr, uint64 permFlag) constant returns (uint64 pf) {}
-	function set_global(uint64 permFlag, bool value) constant returns (uint64 pf) {}
-	function has_role(address addr, string role) constant returns (bool val) {}
-	function add_role(address addr, string role) constant returns (bool added) {}
-	function rm_role(address addr, string role) constant returns (bool removed) {}
-}
-*/
-
-// function identifiers from the solidity abi
-var PermsMap = map[string]SNativeFuncDescription{
-	getFuncIdentifiersFromSignature("has_role(address,bytes32)"):    SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
-	getFuncIdentifiersFromSignature("unset_base(address,uint64)"):   SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
-	getFuncIdentifiersFromSignature("set_global(uint64,bool)"):      SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
-	getFuncIdentifiersFromSignature("add_role(address,bytes32)"):    SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
-	getFuncIdentifiersFromSignature("set_base(address,uint64,bool"): SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
-	getFuncIdentifiersFromSignature("has_base(address,uint64)"):     SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
-	getFuncIdentifiersFromSignature("rm_role(address,bytes32)"):     SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
-}
-
-func getFuncIdentifiersFromSignature(signature string) string {
-	identifier := sha3.Sha3([]byte(signature))
-	return hex.EncodeToString(identifier[:4])
-}
-
-func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	if len(args) < 4 {
-		return nil, fmt.Errorf("permissionsContract expects at least a 4-byte function identifier")
+func NewSNativeContract(comment, name string, functions ...SNativeFuncDescription) SNativeContractDescription {
+	fs := make(map[FuncID]SNativeFuncDescription, len(functions))
+	for _, f := range functions {
+		fid := f.ID()
+		otherF, ok := fs[fid]
+		if ok {
+			panic(fmt.Errorf("Function with ID %x already defined: %s", fid,
+				otherF))
+		}
+		fs[fid] = f
 	}
+	return SNativeContractDescription{
+		Comment:   comment,
+		Name:      name,
+		functions: fs,
+	}
+}
 
-	// map solidity abi function id to snative
-	funcIDbytes := args[:4]
-	args = args[4:]
-	funcID := hex.EncodeToString(funcIDbytes)
-	d, ok := PermsMap[funcID]
+func (contract *SNativeContractDescription) Address() Word256 {
+	return LeftPadWord256([]byte(contract.Name))
+}
+
+func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFuncDescription, error) {
+	f, ok := contract.functions[id]
 	if !ok {
-		return nil, fmt.Errorf("unknown permissionsContract funcID %s", funcID)
+		return nil,
+			fmt.Errorf("Unknown SNative function with ID %x", id)
 	}
+	return &f, nil
+}
+
+func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativeFuncDescription, error) {
+	for _, f := range contract.functions {
+		if f.Name == name {
+			return &f, nil
+		}
+	}
+	return nil, fmt.Errorf("Unknown SNative function with name %s", name)
+}
+
+func (contract *SNativeContractDescription) Functions() []SNativeFuncDescription {
+	fs := make([]SNativeFuncDescription, 0, len(contract.functions))
+	for _, f := range contract.functions {
+		fs = append(fs, f)
+	}
+	return fs
+}
+
+func (contract *SNativeContractDescription) Dispatch(appState AppState,
+	caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	if len(args) < 4 {
+		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
+			"identifier but arguments are only %s bytes long", len(args))
+	}
+
+	function, err := contract.FunctionByID(firstFourBytes(args))
+	if err != nil {
+		return nil, err
+	}
+
+	remainingArgs := args[4:]
 
 	// check if we have permission to call this function
-	if !HasPermission(appState, caller, d.PermFlag) {
-		return nil, ErrInvalidPermission{caller.Address, d.Name}
+	if !HasPermission(appState, caller, function.PermFlag) {
+		return nil, ErrInvalidPermission{caller.Address, function.Name}
 	}
 
 	// ensure there are enough arguments
-	if len(args) != d.NArgs*32 {
-		return nil, fmt.Errorf("%s() takes %d arguments", d.Name)
+	if len(remainingArgs) != function.NArgs()*32 {
+		return nil, fmt.Errorf("%s() takes %d arguments", function.Name,
+			function.NArgs())
 	}
 
 	// call the function
-	return d.F(appState, caller, args, gas)
+	return function.F(appState, caller, remainingArgs, gas)
 }
 
-// TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
+func (contract *SNativeContractDescription) SolidityComment() string {
+	return solidityComment(contract.Comment)
+}
 
+// Generate solidity code for this SNative contract
+func (contract *SNativeContractDescription) Solidity() (string, error) {
+	buf := new(bytes.Buffer)
+	err := snativeContractTemplate.Execute(buf, contract)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+//
+// SNative functions
+//
+func (function *SNativeFuncDescription) Signature() string {
+	argTypes := make([]string, len(function.Args))
+	for i, arg := range function.Args {
+		argTypes[i] = string(arg.Type)
+	}
+	return fmt.Sprintf("%s(%s)", function.Name,
+		strings.Join(argTypes, ","))
+}
+
+func (function *SNativeFuncDescription) ID() FuncID {
+	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
+}
+
+func (function *SNativeFuncDescription) NArgs() int {
+	return len(function.Args)
+}
+
+func (function *SNativeFuncDescription) SolidityArgList() string {
+	argList := make([]string, len(function.Args))
+	for i, arg := range function.Args {
+		argList[i] = fmt.Sprintf("%s %s", arg.Type, arg.Name)
+	}
+	return strings.Join(argList, ", ")
+}
+
+func (function *SNativeFuncDescription) SolidityComment() string {
+	return solidityComment(function.Comment)
+}
+
+func (function *SNativeFuncDescription) Solidity() (string, error) {
+	buf := new(bytes.Buffer)
+	err := snativeFuncTemplate.Execute(buf, function)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func solidityComment(comment string) string {
+	commentLines := make([]string, 0, 5)
+	for _, line := range strings.Split(comment, "\n") {
+		trimLine := strings.TrimLeft(line, " \t\n")
+		if trimLine != "" {
+			commentLines = append(commentLines, trimLine)
+		}
+	}
+	return strings.Join(commentLines, "\n")
+}
+
+func arg(name string, solidityType SolidityType) SolidityArg {
+	return SolidityArg{
+		Name: name,
+		Type: solidityType,
+	}
+}
+
+func ret(name string, solidityType SolidityType) SolidityReturn {
+	return SolidityReturn{
+		Name: name,
+		Type: solidityType,
+	}
+}
+
+// Permission function defintions
+
+// TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
 func has_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
@@ -248,4 +488,10 @@ func byteFromBool(b bool) byte {
 		return 0x1
 	}
 	return 0x0
+}
+
+func firstFourBytes(byteSlice []byte) [4]byte {
+	var bs [4]byte
+	copy(bs[:], byteSlice[:4])
+	return bs
 }

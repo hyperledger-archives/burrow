@@ -40,6 +40,8 @@ func registerNativeContracts() {
 
 type NativeContract func(appState AppState, caller *Account, input []byte, gas *int64) (output []byte, err error)
 
+type FuncID [4]byte
+
 /* Removed due to C dependency
 func ecrecoverFunc(appState AppState, caller *Account, input []byte, gas *int64) (output []byte, err error) {
 	// Deduct gas

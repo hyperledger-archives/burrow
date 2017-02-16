@@ -2,7 +2,6 @@ package state
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"testing"
@@ -29,6 +28,7 @@ func init() {
 var (
 	dbBackend = "memdb"
 	dbDir     = ""
+	permissionsContract = vm.SNativeContracts()["permissions_contract"]
 )
 
 /*
@@ -1182,18 +1182,17 @@ func boolToWord256(v bool) Word256 {
 	return LeftPadWord256([]byte{vint})
 }
 
-func permNameToFuncID(s string) []byte {
-	for k, v := range vm.PermsMap {
-		if s == v.Name {
-			b, _ := hex.DecodeString(k)
-			return b
-		}
+func permNameToFuncID(name string) []byte {
+  function, err := permissionsContract.FunctionByName(name)
+	if err != nil {
+		panic("didn't find snative function signature!")
 	}
-	panic("didn't find snative function signature!")
+	id := function.ID()
+	return id[:]
 }
 
 func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = LeftPadWord256([]byte(vm.PermissionsContract)).Postfix(20)
+	addr = permissionsContract.Address().Postfix(20)
 	switch name {
 	case "has_base", "unset_base":
 		data = LeftPadBytes(user.Address, 32)
@@ -1229,7 +1228,7 @@ func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.Perm
 }
 
 func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = LeftPadWord256([]byte(vm.PermissionsContract)).Postfix(20)
+	addr = permissionsContract.Address().Postfix(20)
 	data = LeftPadBytes(user.Address, 32)
 	data = append(data, RightPadBytes([]byte(role), 32)...)
 	data = append(permNameToFuncID(name), data...)
