@@ -41,6 +41,7 @@ type Core struct {
 	evsw           events.EventSwitch
 	pipe           definitions.Pipe
 	tendermintPipe definitions.TendermintPipe
+	logger         logging_types.InfoTraceLogger
 }
 
 func NewCore(chainId string,
@@ -73,6 +74,7 @@ func NewCore(chainId string,
 		evsw:           evsw,
 		pipe:           pipe,
 		tendermintPipe: tendermintPipe,
+		logger: logger,
 	}, nil
 }
 
@@ -99,9 +101,9 @@ func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProces
 	jsonServer := rpc_v0.NewJsonRpcServer(tmjs)
 	restServer := rpc_v0.NewRestServer(codec, core.pipe, eventSubscriptions)
 	wsServer := server.NewWebSocketServer(config.WebSocket.MaxWebSocketSessions,
-		tmwss)
+		tmwss, core.logger)
 	// Create a server process.
-	proc, err := server.NewServeProcess(config, jsonServer, restServer, wsServer)
+	proc, err := server.NewServeProcess(config, core.logger, jsonServer, restServer, wsServer)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load gateway: %v", err)
 	}

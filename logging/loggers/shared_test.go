@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	kitlog "github.com/go-kit/kit/log"
 )
 
 const logLineTimeout time.Duration = time.Second
@@ -50,7 +50,7 @@ func newTestLogger() *testLogger {
 func makeTestLogger(err error) *testLogger {
 	cl := NewChannelLogger(100)
 	logLineCh := make(chan ([]interface{}))
-	go cl.DrainForever(log.LoggerFunc(func(keyvals ...interface{}) error {
+	go cl.DrainForever(kitlog.LoggerFunc(func(keyvals ...interface{}) error {
 		logLineCh <- keyvals
 		return nil
 	}))

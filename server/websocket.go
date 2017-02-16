@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/eris-ltd/eris-db/logging"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -56,6 +58,7 @@ type WebSocketServer struct {
 	sessionManager *SessionManager
 	config         *ServerConfig
 	allOrigins     bool
+	logger         logging_types.InfoTraceLogger
 }
 
 // Create a new server.
@@ -63,69 +66,72 @@ type WebSocketServer struct {
 // NOTE: This is not the total number of connections allowed - only those that are
 // upgraded to websockets. Requesting a websocket connection will fail with a 503 if
 // the server is at capacity.
-func NewWebSocketServer(maxSessions uint16, service WebSocketService) *WebSocketServer {
+func NewWebSocketServer(maxSessions uint16, service WebSocketService,
+	logger logging_types.InfoTraceLogger) *WebSocketServer {
 	return &WebSocketServer{
 		maxSessions:    maxSessions,
-		sessionManager: NewSessionManager(maxSessions, service),
+		sessionManager: NewSessionManager(maxSessions, service, logger),
+		logger:         logging.WithScope(logger, "WebSocketServer"),
 	}
 }
 
 // Start the server. Adds the handler to the router and sets everything up.
-func (this *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
+func (wsServer *WebSocketServer) Start(config *ServerConfig, router *gin.Engine) {
 
-	this.config = config
+	wsServer.config = config
 
-	this.upgrader = websocket.Upgrader{
+	wsServer.upgrader = websocket.Upgrader{
 		ReadBufferSize: int(config.WebSocket.ReadBufferSize),
 		// TODO Will this be enough for massive "get blockchain" requests?
 		WriteBufferSize: int(config.WebSocket.WriteBufferSize),
 	}
-	this.upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	router.GET(config.WebSocket.WebSocketEndpoint, this.handleFunc)
-	this.running = true
+	wsServer.upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	router.GET(config.WebSocket.WebSocketEndpoint, wsServer.handleFunc)
+	wsServer.running = true
 }
 
 // Is the server currently running.
-func (this *WebSocketServer) Running() bool {
-	return this.running
+func (wsServer *WebSocketServer) Running() bool {
+	return wsServer.running
 }
 
 // Shut the server down.
-func (this *WebSocketServer) ShutDown() {
-	this.sessionManager.Shutdown()
-	this.running = false
+func (wsServer *WebSocketServer) ShutDown() {
+	wsServer.sessionManager.Shutdown()
+	wsServer.running = false
 }
 
 // Get the session-manager.
-func (this *WebSocketServer) SessionManager() *SessionManager {
-	return this.sessionManager
+func (wsServer *WebSocketServer) SessionManager() *SessionManager {
+	return wsServer.sessionManager
 }
 
 // Handler for websocket requests.
-func (this *WebSocketServer) handleFunc(c *gin.Context) {
+func (wsServer *WebSocketServer) handleFunc(c *gin.Context) {
 	r := c.Request
 	w := c.Writer
 	// Upgrade to websocket.
-	wsConn, uErr := this.upgrader.Upgrade(w, r, nil)
+	wsConn, uErr := wsServer.upgrader.Upgrade(w, r, nil)
 
 	if uErr != nil {
-		uErrStr := "Failed to upgrade to websocket connection: " + uErr.Error()
-		http.Error(w, uErrStr, 400)
-		log.Info(uErrStr)
+		errMsg := "Failed to upgrade to websocket connection"
+		http.Error(w, fmt.Sprintf("%s: %s", errMsg, uErr.Error()), 400)
+		logging.InfoMsg(wsServer.logger, errMsg, "error", uErr)
 		return
 	}
 
-	session, cErr := this.sessionManager.createSession(wsConn)
+	session, cErr := wsServer.sessionManager.createSession(wsConn)
 
 	if cErr != nil {
-		cErrStr := "Failed to establish websocket connection: " + cErr.Error()
-		http.Error(w, cErrStr, 503)
-		log.Info(cErrStr)
+		errMsg := "Failed to establish websocket connection"
+		http.Error(w, fmt.Sprintf("%s: %s", errMsg, cErr.Error()), 503)
+		logging.InfoMsg(wsServer.logger, errMsg, "error", cErr)
 		return
 	}
 
 	// Start the connection.
-	log.Info("New websocket connection.", "sessionId", session.id)
+	logging.InfoMsg(wsServer.logger, "New websocket connection",
+		"session_id", session.id)
 	session.Open()
 }
 
@@ -148,57 +154,59 @@ type WSSession struct {
 	service        WebSocketService
 	opened         bool
 	closed         bool
+	logger         logging_types.InfoTraceLogger
 }
 
 // Write a text message to the client.
-func (this *WSSession) Write(msg []byte) error {
-	if this.closed {
-		log.Warn("Attempting to write to closed session.", "sessionId", this.id)
+func (wsSession *WSSession) Write(msg []byte) error {
+	if wsSession.closed {
+		logging.InfoMsg(wsSession.logger, "Attempting to write to closed session.")
 		return fmt.Errorf("Session is closed")
 	}
-	this.writeChan <- msg
+	wsSession.writeChan <- msg
 	return nil
 }
 
 // Private. Helper for writing control messages.
-func (this *WSSession) write(mt int, payload []byte) error {
-	this.wsConn.SetWriteDeadline(time.Now().Add(writeWait))
-	return this.wsConn.WriteMessage(mt, payload)
+func (wsSession *WSSession) write(mt int, payload []byte) error {
+	wsSession.wsConn.SetWriteDeadline(time.Now().Add(writeWait))
+	return wsSession.wsConn.WriteMessage(mt, payload)
 }
 
 // Get the session id number.
-func (this *WSSession) Id() uint {
-	return this.id
+func (wsSession *WSSession) Id() uint {
+	return wsSession.id
 }
 
 // Starts the read and write pumps. Blocks on the former.
 // Notifies all the observers.
-func (this *WSSession) Open() {
-	this.opened = true
-	this.sessionManager.notifyOpened(this)
-	go this.writePump()
-	this.readPump()
+func (wsSession *WSSession) Open() {
+	wsSession.opened = true
+	wsSession.sessionManager.notifyOpened(wsSession)
+	go wsSession.writePump()
+	wsSession.readPump()
 }
 
 // Closes the net connection and cleans up. Notifies all the observers.
-func (this *WSSession) Close() {
-	if !this.closed {
-		this.closed = true
-		this.wsConn.Close()
-		this.sessionManager.removeSession(this.id)
-		log.Info("Closing websocket connection.", "sessionId", this.id, "remaining", len(this.sessionManager.activeSessions))
-		this.sessionManager.notifyClosed(this)
+func (wsSession *WSSession) Close() {
+	if !wsSession.closed {
+		wsSession.closed = true
+		wsSession.wsConn.Close()
+		wsSession.sessionManager.removeSession(wsSession.id)
+		logging.InfoMsg(wsSession.logger, "Closing websocket connection.",
+			"remaining_active_sessions", len(wsSession.sessionManager.activeSessions))
+		wsSession.sessionManager.notifyClosed(wsSession)
 	}
 }
 
 // Has the session been opened?
-func (this *WSSession) Opened() bool {
-	return this.opened
+func (wsSession *WSSession) Opened() bool {
+	return wsSession.opened
 }
 
 // Has the session been closed?
-func (this *WSSession) Closed() bool {
-	return this.closed
+func (wsSession *WSSession) Closed() bool {
+	return wsSession.closed
 }
 
 // Pump debugging
@@ -210,7 +218,7 @@ var wpm *sync.Mutex = &sync.Mutex{}
 */
 
 // Read loop. Will terminate on a failed read.
-func (this *WSSession) readPump() {
+func (wsSession *WSSession) readPump() {
 	/*
 		rpm.Lock()
 		rp++
@@ -223,38 +231,40 @@ func (this *WSSession) readPump() {
 			rpm.Unlock()
 			}()
 	*/
-	this.wsConn.SetReadLimit(maxMessageSize)
+	wsSession.wsConn.SetReadLimit(maxMessageSize)
 	// this.wsConn.SetReadDeadline(time.Now().Add(pongWait))
 	// this.wsConn.SetPongHandler(func(string) error { this.wsConn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
 		// Read
-		msgType, msg, err := this.wsConn.ReadMessage()
+		msgType, msg, err := wsSession.wsConn.ReadMessage()
 
 		// Read error.
 		if err != nil {
 			// Socket could have been gracefully closed, so not really an error.
-			log.Info("Socket closed. Removing.", "error", err.Error())
-			this.writeCloseChan <- struct{}{}
+			logging.InfoMsg(wsSession.logger,
+				"Socket closed. Removing.", "error", err)
+			wsSession.writeCloseChan <- struct{}{}
 			return
 		}
 
 		if msgType != websocket.TextMessage {
-			log.Info("Receiving non text-message from client, closing.")
-			this.writeCloseChan <- struct{}{}
+			logging.InfoMsg(wsSession.logger,
+				"Receiving non text-message from client, closing.")
+			wsSession.writeCloseChan <- struct{}{}
 			return
 		}
 
 		go func() {
 			// Process the request.
-			this.service.Process(msg, this)
+			wsSession.service.Process(msg, wsSession)
 		}()
 	}
 }
 
 // Writes messages coming in on the write channel. Will terminate on failed writes,
 // if pings are not responded to, or if a message comes in on the write close channel.
-func (this *WSSession) writePump() {
+func (wsSession *WSSession) writePump() {
 	/*
 		wpm.Lock()
 		wp++
@@ -271,23 +281,24 @@ func (this *WSSession) writePump() {
 
 	defer func() {
 		// ticker.Stop()
-		this.Close()
+		wsSession.Close()
 	}()
 
 	// Write loop. Blocks while waiting for data to come in over a channel.
 	for {
 		select {
 		// Write request.
-		case msg := <-this.writeChan:
+		case msg := <-wsSession.writeChan:
 
 			// Write the bytes to the socket.
-			err := this.wsConn.WriteMessage(websocket.TextMessage, msg)
+			err := wsSession.wsConn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				// Could be due to the socket being closed so not really an error.
-				log.Info("Writing to socket failed. Closing.")
+				logging.InfoMsg(wsSession.logger,
+					"Writing to socket failed. Closing.")
 				return
 			}
-		case <-this.writeCloseChan:
+		case <-wsSession.writeCloseChan:
 			return
 			// Ticker run out. Time for another ping message.
 			/*
@@ -311,10 +322,12 @@ type SessionManager struct {
 	service         WebSocketService
 	openEventChans  []chan *WSSession
 	closeEventChans []chan *WSSession
+	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new WebsocketManager.
-func NewSessionManager(maxSessions uint16, wss WebSocketService) *SessionManager {
+func NewSessionManager(maxSessions uint16, wss WebSocketService,
+	logger logging_types.InfoTraceLogger) *SessionManager {
 	return &SessionManager{
 		maxSessions:     maxSessions,
 		activeSessions:  make(map[uint]*WSSession),
@@ -323,24 +336,25 @@ func NewSessionManager(maxSessions uint16, wss WebSocketService) *SessionManager
 		service:         wss,
 		openEventChans:  []chan *WSSession{},
 		closeEventChans: []chan *WSSession{},
+		logger:          logging.WithScope(logger, "SessionManager"),
 	}
 }
 
 // TODO
-func (this *SessionManager) Shutdown() {
-	this.activeSessions = nil
+func (sessionManager *SessionManager) Shutdown() {
+	sessionManager.activeSessions = nil
 }
 
 // Add a listener to session open events.
-func (this *SessionManager) SessionOpenEventChannel() <-chan *WSSession {
+func (sessionManager *SessionManager) SessionOpenEventChannel() <-chan *WSSession {
 	lChan := make(chan *WSSession, 1)
-	this.openEventChans = append(this.openEventChans, lChan)
+	sessionManager.openEventChans = append(sessionManager.openEventChans, lChan)
 	return lChan
 }
 
 // Remove a listener from session open events.
-func (this *SessionManager) RemoveSessionOpenEventChannel(lChan chan *WSSession) bool {
-	ec := this.openEventChans
+func (sessionManager *SessionManager) RemoveSessionOpenEventChannel(lChan chan *WSSession) bool {
+	ec := sessionManager.openEventChans
 	if len(ec) == 0 {
 		return false
 	}
@@ -354,15 +368,15 @@ func (this *SessionManager) RemoveSessionOpenEventChannel(lChan chan *WSSession)
 }
 
 // Add a listener to session close events
-func (this *SessionManager) SessionCloseEventChannel() <-chan *WSSession {
+func (sessionManager *SessionManager) SessionCloseEventChannel() <-chan *WSSession {
 	lChan := make(chan *WSSession, 1)
-	this.closeEventChans = append(this.closeEventChans, lChan)
+	sessionManager.closeEventChans = append(sessionManager.closeEventChans, lChan)
 	return lChan
 }
 
 // Remove a listener from session close events.
-func (this *SessionManager) RemoveSessionCloseEventChannel(lChan chan *WSSession) bool {
-	ec := this.closeEventChans
+func (sessionManager *SessionManager) RemoveSessionCloseEventChannel(lChan chan *WSSession) bool {
+	ec := sessionManager.closeEventChans
 	if len(ec) == 0 {
 		return false
 	}
@@ -376,55 +390,57 @@ func (this *SessionManager) RemoveSessionCloseEventChannel(lChan chan *WSSession
 }
 
 // Used to notify all observers that a new session was opened.
-func (this *SessionManager) notifyOpened(session *WSSession) {
-	for _, lChan := range this.openEventChans {
+func (sessionManager *SessionManager) notifyOpened(session *WSSession) {
+	for _, lChan := range sessionManager.openEventChans {
 		lChan <- session
 	}
 }
 
 // Used to notify all observers that a new session was closed.
-func (this *SessionManager) notifyClosed(session *WSSession) {
-	for _, lChan := range this.closeEventChans {
+func (sessionManager *SessionManager) notifyClosed(session *WSSession) {
+	for _, lChan := range sessionManager.closeEventChans {
 		lChan <- session
 	}
 }
 
 // Creates a new session and adds it to the manager.
-func (this *SessionManager) createSession(wsConn *websocket.Conn) (*WSSession, error) {
+func (sessionManager *SessionManager) createSession(wsConn *websocket.Conn) (*WSSession, error) {
 	// Check that the capacity hasn't been exceeded.
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
-	if this.atCapacity() {
+	sessionManager.mtx.Lock()
+	defer sessionManager.mtx.Unlock()
+	if sessionManager.atCapacity() {
 		return nil, fmt.Errorf("Already at capacity")
 	}
 
 	// Create and start
-	newId, _ := this.idPool.GetId()
+	newId, _ := sessionManager.idPool.GetId()
 	conn := &WSSession{
-		sessionManager: this,
+		sessionManager: sessionManager,
 		id:             newId,
 		wsConn:         wsConn,
 		writeChan:      make(chan []byte, maxMessageSize),
 		writeCloseChan: make(chan struct{}),
-		service:        this.service,
+		service:        sessionManager.service,
+		logger: logging.WithScope(sessionManager.logger, "WSSession").
+			With("session_id", newId),
 	}
-	this.activeSessions[conn.id] = conn
+	sessionManager.activeSessions[conn.id] = conn
 	return conn, nil
 }
 
 // Remove a session from the list.
-func (this *SessionManager) removeSession(id uint) {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+func (sessionManager *SessionManager) removeSession(id uint) {
+	sessionManager.mtx.Lock()
+	defer sessionManager.mtx.Unlock()
 	// Check that it exists.
-	_, ok := this.activeSessions[id]
+	_, ok := sessionManager.activeSessions[id]
 	if ok {
-		delete(this.activeSessions, id)
-		this.idPool.ReleaseId(id)
+		delete(sessionManager.activeSessions, id)
+		sessionManager.idPool.ReleaseId(id)
 	}
 }
 
 // True if the number of active connections is at the maximum.
-func (this *SessionManager) atCapacity() bool {
-	return len(this.activeSessions) >= int(this.maxSessions)
+func (sessionManager *SessionManager) atCapacity() bool {
+	return len(sessionManager.activeSessions) >= int(sessionManager.maxSessions)
 }

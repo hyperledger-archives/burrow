@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eris-ltd/eris-db/logging"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/gin-gonic/gin"
 	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
@@ -57,17 +59,18 @@ type ServeProcess struct {
 	startListenChans []chan struct{}
 	stopListenChans  []chan struct{}
 	srv              *graceful.Server
+	logger           logging_types.InfoTraceLogger
 }
 
 // Initializes all the servers and starts listening for connections.
-func (this *ServeProcess) Start() error {
+func (serveProcess *ServeProcess) Start() error {
 
 	router := gin.New()
 
-	config := this.config
+	config := serveProcess.config
 
 	ch := NewCORSMiddleware(config.CORS)
-	router.Use(gin.Recovery(), logHandler, contentTypeMW, ch)
+	router.Use(gin.Recovery(), logHandler(serveProcess.logger), contentTypeMW, ch)
 
 	address := config.Bind.Address
 	port := config.Bind.Port
@@ -84,7 +87,7 @@ func (this *ServeProcess) Start() error {
 	}
 
 	// Start the servers/handlers.
-	for _, s := range this.servers {
+	for _, s := range serveProcess.servers {
 		s.Start(config, router)
 	}
 
@@ -117,15 +120,18 @@ func (this *ServeProcess) Start() error {
 	} else {
 		lst = l
 	}
-	this.srv = srv
-	log.Info("Server started.")
-	for _, c := range this.startListenChans {
+	serveProcess.srv = srv
+	logging.InfoMsg(serveProcess.logger, "Server started.",
+		"chain_id", serveProcess.config.ChainId,
+		"address", serveProcess.config.Bind.Address,
+		"port", serveProcess.config.Bind.Port)
+	for _, c := range serveProcess.startListenChans {
 		c <- struct{}{}
 	}
 	// Start the serve routine.
 	go func() {
-		this.srv.Serve(lst)
-		for _, s := range this.servers {
+		serveProcess.srv.Serve(lst)
+		for _, s := range serveProcess.servers {
 			s.ShutDown()
 		}
 	}()
@@ -133,16 +139,16 @@ func (this *ServeProcess) Start() error {
 	// on the graceful Server. This happens when someone
 	// calls 'Stop' on the process.
 	go func() {
-		<-this.stopChan
-		log.Info("Close signal sent to server.")
-		this.srv.Stop(killTime)
+		<-serveProcess.stopChan
+		logging.InfoMsg(serveProcess.logger, "Close signal sent to server.")
+		serveProcess.srv.Stop(killTime)
 	}()
 	// Listen to the servers stop event. It is triggered when
 	// the server has been fully shut down.
 	go func() {
-		<-this.srv.StopChan()
-		log.Info("Server stop event fired. Good bye.")
-		for _, c := range this.stopListenChans {
+		<-serveProcess.srv.StopChan()
+		logging.InfoMsg(serveProcess.logger, "Server stop event fired. Good bye.")
+		for _, c := range serveProcess.stopListenChans {
 			c <- struct{}{}
 		}
 	}()
@@ -152,8 +158,8 @@ func (this *ServeProcess) Start() error {
 // Stop will release the port, process any remaining requests
 // up until the timeout duration is passed, at which point it
 // will abort them and shut down.
-func (this *ServeProcess) Stop(timeout time.Duration) error {
-	for _, s := range this.servers {
+func (serveProcess *ServeProcess) Stop(timeout time.Duration) error {
+	for _, s := range serveProcess.servers {
 		s.ShutDown()
 	}
 	toChan := make(chan struct{})
@@ -164,8 +170,8 @@ func (this *ServeProcess) Stop(timeout time.Duration) error {
 		}()
 	}
 
-	lChan := this.StopEventChannel()
-	this.stopChan <- struct{}{}
+	lChan := serveProcess.StopEventChannel()
+	serveProcess.stopChan <- struct{}{}
 	select {
 	case <-lChan:
 		return nil
@@ -178,9 +184,9 @@ func (this *ServeProcess) Stop(timeout time.Duration) error {
 // is fired after the Start() function is called, and after
 // the server has started listening for incoming connections.
 // An error here .
-func (this *ServeProcess) StartEventChannel() <-chan struct{} {
+func (serveProcess *ServeProcess) StartEventChannel() <-chan struct{} {
 	lChan := make(chan struct{}, 1)
-	this.startListenChans = append(this.startListenChans, lChan)
+	serveProcess.startListenChans = append(serveProcess.startListenChans, lChan)
 	return lChan
 }
 
@@ -189,15 +195,15 @@ func (this *ServeProcess) StartEventChannel() <-chan struct{} {
 // timeout has passed. When the timeout has passed it will wait
 // for confirmation from the http.Server, which normally takes
 // a very short time (milliseconds).
-func (this *ServeProcess) StopEventChannel() <-chan struct{} {
+func (serveProcess *ServeProcess) StopEventChannel() <-chan struct{} {
 	lChan := make(chan struct{}, 1)
-	this.stopListenChans = append(this.stopListenChans, lChan)
+	serveProcess.stopListenChans = append(serveProcess.stopListenChans, lChan)
 	return lChan
 }
 
 // Creates a new serve process.
-func NewServeProcess(config *ServerConfig, servers ...Server) (*ServeProcess,
-	error) {
+func NewServeProcess(config *ServerConfig, logger logging_types.InfoTraceLogger,
+	servers ...Server) (*ServeProcess, error) {
 	var scfg ServerConfig
 	if config == nil {
 		return nil, fmt.Errorf("Nil passed as server configuration")
@@ -208,26 +214,41 @@ func NewServeProcess(config *ServerConfig, servers ...Server) (*ServeProcess,
 	stoppedChan := make(chan struct{}, 1)
 	startListeners := make([]chan struct{}, 0)
 	stopListeners := make([]chan struct{}, 0)
-	sp := &ServeProcess{&scfg, servers, stopChan, stoppedChan, startListeners, stopListeners, nil}
+	sp := &ServeProcess{
+		config:           &scfg,
+		servers:          servers,
+		stopChan:         stopChan,
+		stoppedChan:      stoppedChan,
+		startListenChans: startListeners,
+		stopListenChans:  stopListeners,
+		srv:              nil,
+		logger:           logging.WithScope(logger, "ServeProcess"),
+	}
 	return sp, nil
 }
 
 // Used to enable log15 logging instead of the default Gin logging.
 // This is done mainly because we at Eris uses log15 in other components.
-func logHandler(c *gin.Context) {
+func logHandler(logger logging_types.InfoTraceLogger) gin.HandlerFunc {
+	logger = logging.WithScope(logger, "ginLogHandler")
+	return func(c *gin.Context) {
 
-	path := c.Request.URL.Path
+		path := c.Request.URL.Path
 
-	// Process request
-	c.Next()
+		// Process request
+		c.Next()
 
-	clientIP := c.ClientIP()
-	method := c.Request.Method
-	statusCode := c.Writer.Status()
-	comment := c.Errors.String()
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		statusCode := c.Writer.Status()
+		comment := c.Errors.String()
 
-	log.Info("[GIN] HTTP: "+clientIP, "Code", statusCode, "Method", method, "path", path, "error", comment)
-
+		logger.Info("client_ip", clientIP,
+			"status_code", statusCode,
+			"method", method,
+			"path", path,
+			"error", comment)
+	}
 }
 
 func NewCORSMiddleware(options CORS) gin.HandlerFunc {

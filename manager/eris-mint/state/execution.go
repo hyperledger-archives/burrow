@@ -22,6 +22,7 @@ import (
 	acm "github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/common/sanity"
 	core_types "github.com/eris-ltd/eris-db/core/types"
+	logging_types "github.com/eris-ltd/eris-db/logging/types"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
 	"github.com/eris-ltd/eris-db/txs"
@@ -316,7 +317,8 @@ func adjustByOutputs(accounts map[string]*acm.Account, outs []*txs.TxOutput) {
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable) (err error) {
+func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable,
+		logger logging_types.InfoTraceLogger) (err error) {
 
 	// TODO: do something with fees
 	fees := int64(0)
@@ -515,7 +517,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		CALL_COMPLETE: // err may or may not be nil.
 
-			// Create a receipt from the ret and whether errored.
+		// Create a receipt from the ret and whether errored.
 			log.Notice("VM call complete", "caller", caller, "callee", callee, "return", ret, "err", err)
 
 			// Fire Events for sender and receiver
@@ -665,182 +667,182 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		return nil
 
-		// Consensus related Txs inactivated for now
-		// TODO!
-		/*
-			case *txs.BondTx:
-						valInfo := blockCache.State().GetValidatorInfo(tx.PubKey.Address())
-						if valInfo != nil {
-							// TODO: In the future, check that the validator wasn't destroyed,
-							// add funds, merge UnbondTo outputs, and unbond validator.
-							return errors.New("Adding coins to existing validators not yet supported")
-						}
+	// Consensus related Txs inactivated for now
+	// TODO!
+	/*
+		case *txs.BondTx:
+					valInfo := blockCache.State().GetValidatorInfo(tx.PubKey.Address())
+					if valInfo != nil {
+						// TODO: In the future, check that the validator wasn't destroyed,
+						// add funds, merge UnbondTo outputs, and unbond validator.
+						return errors.New("Adding coins to existing validators not yet supported")
+					}
 
-						accounts, err := getInputs(blockCache, tx.Inputs)
-						if err != nil {
-							return err
-						}
+					accounts, err := getInputs(blockCache, tx.Inputs)
+					if err != nil {
+						return err
+					}
 
-						// add outputs to accounts map
-						// if any outputs don't exist, all inputs must have CreateAccount perm
-						// though outputs aren't created until unbonding/release time
-						canCreate := hasCreateAccountPermission(blockCache, accounts)
-						for _, out := range tx.UnbondTo {
-							acc := blockCache.GetAccount(out.Address)
-							if acc == nil && !canCreate {
-								return fmt.Errorf("At least one input does not have permission to create accounts")
-							}
+					// add outputs to accounts map
+					// if any outputs don't exist, all inputs must have CreateAccount perm
+					// though outputs aren't created until unbonding/release time
+					canCreate := hasCreateAccountPermission(blockCache, accounts)
+					for _, out := range tx.UnbondTo {
+						acc := blockCache.GetAccount(out.Address)
+						if acc == nil && !canCreate {
+							return fmt.Errorf("At least one input does not have permission to create accounts")
 						}
+					}
 
-						bondAcc := blockCache.GetAccount(tx.PubKey.Address())
-						if !hasBondPermission(blockCache, bondAcc) {
-							return fmt.Errorf("The bonder does not have permission to bond")
-						}
+					bondAcc := blockCache.GetAccount(tx.PubKey.Address())
+					if !hasBondPermission(blockCache, bondAcc) {
+						return fmt.Errorf("The bonder does not have permission to bond")
+					}
 
-						if !hasBondOrSendPermission(blockCache, accounts) {
-							return fmt.Errorf("At least one input lacks permission to bond")
-						}
+					if !hasBondOrSendPermission(blockCache, accounts) {
+						return fmt.Errorf("At least one input lacks permission to bond")
+					}
 
-						signBytes := acm.SignBytes(_s.ChainID, tx)
-						inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
-						if err != nil {
-							return err
-						}
-						if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
-						outTotal, err := validateOutputs(tx.UnbondTo)
-						if err != nil {
-							return err
-						}
-						if outTotal > inTotal {
-							return txs.ErrTxInsufficientFunds
-						}
-						fee := inTotal - outTotal
-						fees += fee
+					signBytes := acm.SignBytes(_s.ChainID, tx)
+					inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
+					if err != nil {
+						return err
+					}
+					if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						return txs.ErrTxInvalidSignature
+					}
+					outTotal, err := validateOutputs(tx.UnbondTo)
+					if err != nil {
+						return err
+					}
+					if outTotal > inTotal {
+						return txs.ErrTxInsufficientFunds
+					}
+					fee := inTotal - outTotal
+					fees += fee
 
-						// Good! Adjust accounts
-						adjustByInputs(accounts, tx.Inputs)
-						for _, acc := range accounts {
-							blockCache.UpdateAccount(acc)
-						}
-						// Add ValidatorInfo
-						_s.SetValidatorInfo(&txs.ValidatorInfo{
-							Address:         tx.PubKey.Address(),
-							PubKey:          tx.PubKey,
-							UnbondTo:        tx.UnbondTo,
-							FirstBondHeight: _s.LastBlockHeight + 1,
-							FirstBondAmount: outTotal,
-						})
-						// Add Validator
-						added := _s.BondedValidators.Add(&txs.Validator{
-							Address:     tx.PubKey.Address(),
-							PubKey:      tx.PubKey,
-							BondHeight:  _s.LastBlockHeight + 1,
-							VotingPower: outTotal,
-							Accum:       0,
-						})
-						if !added {
-							PanicCrisis("Failed to add validator")
-						}
-						if evc != nil {
-							// TODO: fire for all inputs
-							evc.FireEvent(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+					// Good! Adjust accounts
+					adjustByInputs(accounts, tx.Inputs)
+					for _, acc := range accounts {
+						blockCache.UpdateAccount(acc)
+					}
+					// Add ValidatorInfo
+					_s.SetValidatorInfo(&txs.ValidatorInfo{
+						Address:         tx.PubKey.Address(),
+						PubKey:          tx.PubKey,
+						UnbondTo:        tx.UnbondTo,
+						FirstBondHeight: _s.LastBlockHeight + 1,
+						FirstBondAmount: outTotal,
+					})
+					// Add Validator
+					added := _s.BondedValidators.Add(&txs.Validator{
+						Address:     tx.PubKey.Address(),
+						PubKey:      tx.PubKey,
+						BondHeight:  _s.LastBlockHeight + 1,
+						VotingPower: outTotal,
+						Accum:       0,
+					})
+					if !added {
+						PanicCrisis("Failed to add validator")
+					}
+					if evc != nil {
+						// TODO: fire for all inputs
+						evc.FireEvent(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
+					}
+					return nil
 
-					case *txs.UnbondTx:
-						// The validator must be active
-						_, val := _s.BondedValidators.GetByAddress(tx.Address)
-						if val == nil {
-							return txs.ErrTxInvalidAddress
-						}
+				case *txs.UnbondTx:
+					// The validator must be active
+					_, val := _s.BondedValidators.GetByAddress(tx.Address)
+					if val == nil {
+						return txs.ErrTxInvalidAddress
+					}
 
-						// Verify the signature
-						signBytes := acm.SignBytes(_s.ChainID, tx)
-						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
+					// Verify the signature
+					signBytes := acm.SignBytes(_s.ChainID, tx)
+					if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						return txs.ErrTxInvalidSignature
+					}
 
-						// tx.Height must be greater than val.LastCommitHeight
-						if tx.Height <= val.LastCommitHeight {
-							return errors.New("Invalid unbond height")
-						}
+					// tx.Height must be greater than val.LastCommitHeight
+					if tx.Height <= val.LastCommitHeight {
+						return errors.New("Invalid unbond height")
+					}
 
-						// Good!
-						_s.unbondValidator(val)
-						if evc != nil {
-							evc.FireEvent(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+					// Good!
+					_s.unbondValidator(val)
+					if evc != nil {
+						evc.FireEvent(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
+					}
+					return nil
 
-					case *txs.RebondTx:
-						// The validator must be inactive
-						_, val := _s.UnbondingValidators.GetByAddress(tx.Address)
-						if val == nil {
-							return txs.ErrTxInvalidAddress
-						}
+				case *txs.RebondTx:
+					// The validator must be inactive
+					_, val := _s.UnbondingValidators.GetByAddress(tx.Address)
+					if val == nil {
+						return txs.ErrTxInvalidAddress
+					}
 
-						// Verify the signature
-						signBytes := acm.SignBytes(_s.ChainID, tx)
-						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
+					// Verify the signature
+					signBytes := acm.SignBytes(_s.ChainID, tx)
+					if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						return txs.ErrTxInvalidSignature
+					}
 
-						// tx.Height must be in a suitable range
-						minRebondHeight := _s.LastBlockHeight - (validatorTimeoutBlocks / 2)
-						maxRebondHeight := _s.LastBlockHeight + 2
-						if !((minRebondHeight <= tx.Height) && (tx.Height <= maxRebondHeight)) {
-							return errors.New(Fmt("Rebond height not in range.  Expected %v <= %v <= %v",
-								minRebondHeight, tx.Height, maxRebondHeight))
-						}
+					// tx.Height must be in a suitable range
+					minRebondHeight := _s.LastBlockHeight - (validatorTimeoutBlocks / 2)
+					maxRebondHeight := _s.LastBlockHeight + 2
+					if !((minRebondHeight <= tx.Height) && (tx.Height <= maxRebondHeight)) {
+						return errors.New(Fmt("Rebond height not in range.  Expected %v <= %v <= %v",
+							minRebondHeight, tx.Height, maxRebondHeight))
+					}
 
-						// Good!
-						_s.rebondValidator(val)
-						if evc != nil {
-							evc.FireEvent(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+					// Good!
+					_s.rebondValidator(val)
+					if evc != nil {
+						evc.FireEvent(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
+					}
+					return nil
 
-					case *txs.DupeoutTx:
-						// Verify the signatures
-						_, accused := _s.BondedValidators.GetByAddress(tx.Address)
+				case *txs.DupeoutTx:
+					// Verify the signatures
+					_, accused := _s.BondedValidators.GetByAddress(tx.Address)
+					if accused == nil {
+						_, accused = _s.UnbondingValidators.GetByAddress(tx.Address)
 						if accused == nil {
-							_, accused = _s.UnbondingValidators.GetByAddress(tx.Address)
-							if accused == nil {
-								return txs.ErrTxInvalidAddress
-							}
+							return txs.ErrTxInvalidAddress
 						}
-						voteASignBytes := acm.SignBytes(_s.ChainID, &tx.VoteA)
-						voteBSignBytes := acm.SignBytes(_s.ChainID, &tx.VoteB)
-						if !accused.PubKey.VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
-							!accused.PubKey.VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
+					}
+					voteASignBytes := acm.SignBytes(_s.ChainID, &tx.VoteA)
+					voteBSignBytes := acm.SignBytes(_s.ChainID, &tx.VoteB)
+					if !accused.PubKey.VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
+						!accused.PubKey.VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
+						return txs.ErrTxInvalidSignature
+					}
 
-						// Verify equivocation
-						// TODO: in the future, just require one vote from a previous height that
-						// doesn't exist on this chain.
-						if tx.VoteA.Height != tx.VoteB.Height {
-							return errors.New("DupeoutTx heights don't match")
-						}
-						if tx.VoteA.Round != tx.VoteB.Round {
-							return errors.New("DupeoutTx rounds don't match")
-						}
-						if tx.VoteA.Type != tx.VoteB.Type {
-							return errors.New("DupeoutTx types don't match")
-						}
-						if bytes.Equal(tx.VoteA.BlockHash, tx.VoteB.BlockHash) {
-							return errors.New("DupeoutTx blockhashes shouldn't match")
-						}
+					// Verify equivocation
+					// TODO: in the future, just require one vote from a previous height that
+					// doesn't exist on this chain.
+					if tx.VoteA.Height != tx.VoteB.Height {
+						return errors.New("DupeoutTx heights don't match")
+					}
+					if tx.VoteA.Round != tx.VoteB.Round {
+						return errors.New("DupeoutTx rounds don't match")
+					}
+					if tx.VoteA.Type != tx.VoteB.Type {
+						return errors.New("DupeoutTx types don't match")
+					}
+					if bytes.Equal(tx.VoteA.BlockHash, tx.VoteB.BlockHash) {
+						return errors.New("DupeoutTx blockhashes shouldn't match")
+					}
 
-						// Good! (Bad validator!)
-						_s.destroyValidator(accused)
-						if evc != nil {
-							evc.FireEvent(txs.EventStringDupeout(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
-		*/
+					// Good! (Bad validator!)
+					_s.destroyValidator(accused)
+					if evc != nil {
+						evc.FireEvent(txs.EventStringDupeout(), txs.EventDataTx{tx, nil, ""})
+					}
+					return nil
+	*/
 
 	case *txs.PermissionsTx:
 		var inAcc *acm.Account
