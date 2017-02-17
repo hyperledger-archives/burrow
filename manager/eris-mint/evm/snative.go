@@ -201,7 +201,7 @@ func NewSNativeContract(comment, name string, functions ...SNativeFuncDescriptio
 
 func (contract *SNativeContractDescription) Dispatch(appState AppState,
 		caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	if len(args) < 4 {
+	if len(args) < FuncIDLength {
 		return Zero256.Bytes(), fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 				"identifier but arguments are only %s bytes long", len(args))
 	}
@@ -211,7 +211,7 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 		return Zero256.Bytes(), err
 	}
 
-	remainingArgs := args[4:]
+	remainingArgs := args[FuncIDLength:]
 
 	// check if we have permission to call this function
 	if !HasPermission(appState, caller, function.PermFlag) {
@@ -219,7 +219,7 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	}
 
 	// ensure there are enough arguments
-	if len(remainingArgs) != function.NArgs()*32 {
+	if len(remainingArgs) != function.NArgs()*Word256Length {
 		return Zero256.Bytes(), fmt.Errorf("%s() takes %d arguments", function.Name,
 			function.NArgs())
 	}

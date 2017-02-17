@@ -30,7 +30,8 @@ var (
 	One256  = Word256{1}
 )
 
-type Word256 [32]byte
+const Word256Length = 32
+type Word256 [Word256Length]byte
 
 func (w Word256) String() string        { return string(w[:]) }
 func (w Word256) TrimmedString() string { return TrimmedString(w.Bytes()) }
