@@ -121,7 +121,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
 			* @return result value passed in
 			`,
 				"set_base",
-				[]SolidityArg{arg("_account", SolidityAddress),
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
 					arg("_authorization", permFlagType),
 					arg("_value", permFlagType)},
 				ret("result", SolidityBool),
@@ -135,7 +136,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
 			* @return result whether account has base authorization set
 			`,
 				"has_base",
-				[]SolidityArg{arg("_account", SolidityAddress),
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
 					arg("_authorization", permFlagType)},
 				ret("result", SolidityBool),
 				ptypes.HasBase,
@@ -148,7 +150,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
       * @return authorization base authorization passed in
       `,
 				"unset_base",
-				[]SolidityArg{arg("_account", SolidityAddress),
+				[]SolidityArg{
+					arg("_account", SolidityAddress),
 					arg("_authorization", permFlagType)},
 				ret("authorization", permFlagType),
 				ptypes.UnsetBase,
@@ -156,13 +159,12 @@ func SNativeContracts() map[string]SNativeContractDescription {
 
 			SNativeFuncDescription{`
 			* @notice Sets global (default) value for a base authorization
-			* @param _account account
 			* @param _authorization base authorization
 			* @param _value value of base authorization
 			* @return authorization base authorization passed in
 			`,
 				"set_global",
-				[]SolidityArg{arg("_account", SolidityAddress),
+				[]SolidityArg{
 					arg("_authorization", permFlagType),
 					arg("_value", permFlagType)},
 				ret("authorization", permFlagType),
@@ -199,11 +201,14 @@ func NewSNativeContract(comment, name string, functions ...SNativeFuncDescriptio
 	}
 }
 
+// This function is designed to be called from the EVM once a SNative contract
+// has been selected. It is also placed in a registry by registerSNativeContracts
+// So it can be looked up by SNative address
 func (contract *SNativeContractDescription) Dispatch(appState AppState,
-		caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	if len(args) < FuncIDLength {
 		return Zero256.Bytes(), fmt.Errorf("SNatives dispatch requires a 4-byte function "+
-				"identifier but arguments are only %s bytes long", len(args))
+			"identifier but arguments are only %s bytes long", len(args))
 	}
 
 	function, err := contract.FunctionByID(firstFourBytes(args))
@@ -227,7 +232,6 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	// call the function
 	return function.F(appState, caller, remainingArgs, gas)
 }
-
 
 func (contract *SNativeContractDescription) Address() Word256 {
 	return LeftPadWord256([]byte(contract.Name))

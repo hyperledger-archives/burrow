@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	. "github.com/eris-ltd/eris-db/word256"
 )
