@@ -57,6 +57,8 @@ func TestSNativeFuncTemplate(t *testing.T) {
 	fmt.Println(solidity)
 }
 
+// This test checks that we can generate the SNative contract interface and
+// prints it to stdout
 func TestSNativeContractTemplate(t *testing.T) {
 	contract := SNativeContracts()["permissions_contract"]
 	solidity, err := contract.Solidity()

@@ -60,6 +60,8 @@ func registerSNativeContracts() {
 
 // Returns a map of all SNative contracts defined indexed by name
 func SNativeContracts() map[string]SNativeContractDescription {
+	permFlagType := SolidityUint64
+	roleType := SolidityBytes32
 	contracts := []SNativeContractDescription{
 		NewSNativeContract(`
 		* Interface for managing Secure Native authorizations.
@@ -75,7 +77,7 @@ func SNativeContracts() map[string]SNativeContractDescription {
 				"add_role",
 				[]SolidityArg{
 					arg("_account", SolidityAddress),
-					arg("_role", SolidityBytes32),
+					arg("_role", roleType),
 				},
 				ret("result", SolidityBool),
 				ptypes.AddRole,
@@ -90,7 +92,7 @@ func SNativeContracts() map[string]SNativeContractDescription {
 				"has_role",
 				[]SolidityArg{
 					arg("_account", SolidityAddress),
-					arg("_role", SolidityBytes32),
+					arg("_role", roleType),
 				},
 				ret("result", SolidityBool),
 				ptypes.HasRole,
@@ -105,7 +107,7 @@ func SNativeContracts() map[string]SNativeContractDescription {
 				"rm_role",
 				[]SolidityArg{
 					arg("_account", SolidityAddress),
-					arg("_role", SolidityBytes32),
+					arg("_role", roleType),
 				},
 				ret("result", SolidityBool),
 				ptypes.RmRole,
@@ -120,8 +122,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
 			`,
 				"set_base",
 				[]SolidityArg{arg("_account", SolidityAddress),
-					arg("_authorization", SolidityInt),
-					arg("_value", SolidityInt)},
+					arg("_authorization", permFlagType),
+					arg("_value", permFlagType)},
 				ret("result", SolidityBool),
 				ptypes.SetBase,
 				set_base},
@@ -134,7 +136,7 @@ func SNativeContracts() map[string]SNativeContractDescription {
 			`,
 				"has_base",
 				[]SolidityArg{arg("_account", SolidityAddress),
-					arg("_authorization", SolidityInt)},
+					arg("_authorization", permFlagType)},
 				ret("result", SolidityBool),
 				ptypes.HasBase,
 				has_base},
@@ -147,8 +149,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
       `,
 				"unset_base",
 				[]SolidityArg{arg("_account", SolidityAddress),
-					arg("_authorization", SolidityInt)},
-				ret("authorization", SolidityInt),
+					arg("_authorization", permFlagType)},
+				ret("authorization", permFlagType),
 				ptypes.UnsetBase,
 				unset_base},
 
@@ -161,9 +163,9 @@ func SNativeContracts() map[string]SNativeContractDescription {
 			`,
 				"set_global",
 				[]SolidityArg{arg("_account", SolidityAddress),
-					arg("_authorization", SolidityInt),
-					arg("_value", SolidityInt)},
-				ret("authorization", SolidityInt),
+					arg("_authorization", permFlagType),
+					arg("_value", permFlagType)},
+				ret("authorization", permFlagType),
 				ptypes.SetGlobal,
 				set_global},
 		),
@@ -197,6 +199,36 @@ func NewSNativeContract(comment, name string, functions ...SNativeFuncDescriptio
 	}
 }
 
+func (contract *SNativeContractDescription) Dispatch(appState AppState,
+		caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	if len(args) < 4 {
+		return Zero256.Bytes(), fmt.Errorf("SNatives dispatch requires a 4-byte function "+
+				"identifier but arguments are only %s bytes long", len(args))
+	}
+
+	function, err := contract.FunctionByID(firstFourBytes(args))
+	if err != nil {
+		return Zero256.Bytes(), err
+	}
+
+	remainingArgs := args[4:]
+
+	// check if we have permission to call this function
+	if !HasPermission(appState, caller, function.PermFlag) {
+		return Zero256.Bytes(), ErrInvalidPermission{caller.Address, function.Name}
+	}
+
+	// ensure there are enough arguments
+	if len(remainingArgs) != function.NArgs()*32 {
+		return Zero256.Bytes(), fmt.Errorf("%s() takes %d arguments", function.Name,
+			function.NArgs())
+	}
+
+	// call the function
+	return function.F(appState, caller, remainingArgs, gas)
+}
+
+
 func (contract *SNativeContractDescription) Address() Word256 {
 	return LeftPadWord256([]byte(contract.Name))
 }
@@ -225,35 +257,6 @@ func (contract *SNativeContractDescription) Functions() []SNativeFuncDescription
 		fs = append(fs, f)
 	}
 	return fs
-}
-
-func (contract *SNativeContractDescription) Dispatch(appState AppState,
-	caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	if len(args) < 4 {
-		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
-			"identifier but arguments are only %s bytes long", len(args))
-	}
-
-	function, err := contract.FunctionByID(firstFourBytes(args))
-	if err != nil {
-		return nil, err
-	}
-
-	remainingArgs := args[4:]
-
-	// check if we have permission to call this function
-	if !HasPermission(appState, caller, function.PermFlag) {
-		return nil, ErrInvalidPermission{caller.Address, function.Name}
-	}
-
-	// ensure there are enough arguments
-	if len(remainingArgs) != function.NArgs()*32 {
-		return nil, fmt.Errorf("%s() takes %d arguments", function.Name,
-			function.NArgs())
-	}
-
-	// call the function
-	return function.F(appState, caller, remainingArgs, gas)
 }
 
 func (contract *SNativeContractDescription) SolidityComment() string {
