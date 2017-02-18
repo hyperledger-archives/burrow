@@ -37,6 +37,19 @@ type GenesisValidator struct {
 	UnbondTo []BasicAccount `json:"unbond_to"`
 }
 
+// GenesisPrivateValidator marshals the state of the private
+// validator for the purpose of Genesis creation; and hence
+// is defined in genesis and not under consensus, where
+// PrivateValidator (currently inherited from Tendermint) is.
+type GenesisPrivateValidator struct {
+	Address    []byte         `json:"address"`
+	PubKey     crypto.PubKey  `json:"pub_key"`
+	PrivKey    crypto.PrivKey `json:"priv_key"`
+	LastHeight int64          `json:"last_height"`
+	LastRound  int64          `json:"last_round"`
+	LastStep   int64          `json:"last_step"`
+}
+
 type GenesisParams struct {
 	GlobalPermissions *ptypes.AccountPermissions `json:"global_permissions"`
 }
