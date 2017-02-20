@@ -24,12 +24,12 @@ import (
 	wire "github.com/tendermint/go-wire"
 )
 
-// MakeGenesisDocFromAccounts takes a chainName and a slice of GenesisAccount,
-// and a slice of GenesisValidator to construct a GenesisDoc, or returns an error on
+// MakeGenesisDocFromAccounts takes a chainName and a slice of pointers to GenesisAccount,
+// and a slice of pointers to GenesisValidator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
-func MakeGenesisDocFromAccounts(chainName string, accounts []*GenesisAccount, validators []*GenesisValidator) (
-	GenesisDoc, error) {
+func MakeGenesisDocFromAccounts(chainName string, accounts []*GenesisAccount,
+	validators []*GenesisValidator) (GenesisDoc, error) {
 
 	// TODO: assert valid accounts and validators
 	// TODO: [ben] expose setting global permissions
@@ -37,18 +37,28 @@ func MakeGenesisDocFromAccounts(chainName string, accounts []*GenesisAccount, va
 	genesisParameters := &GenesisParams{
 		GlobalPermissions: &globalPermissions,
 	}
-	// copy slices of validators and accounts
+	// copy slice of pointers to accounts into slice of accounts
 	accountsCopy := make([]GenesisAccount, len(accounts))
-	copy(accountsCopy, accounts)
-
+	for _, genesisAccount := range accounts {
+		accountsCopy = append(accountsCopy, genesisAccount.Clone())
+	}
+	// copy slice of pointers to validators into slice of validators
+	validatorsCopy := make([]GenesisValidator, len(validators))
+	for _, genesisValidator := range validators {
+		genesisValidatorCopy, err := genesisValidator.Clone()
+		if err != nil {
+			return GenesisDoc{}, err
+		}
+		validatorsCopy = append(validatorsCopy, genesisValidatorCopy)
+	}
 	genesisDoc := GenesisDoc{
 		GenesisTime: time.Now(),
 		// TODO: this needs to be corrected for ChainName, and ChainId
 		// is the derived hash from the GenesisDoc serialised bytes
 		ChainID:    chainName,
 		Params:     genesisParameters,
-		Accounts:   accounts,
-		Validators: validators,
+		Accounts:   accountsCopy,
+		Validators: validatorsCopy,
 	}
 	return genesisDoc, nil
 }
@@ -59,9 +69,9 @@ func MakeGenesisDocFromAccounts(chainName string, accounts []*GenesisAccount, va
 func GetGenesisFileBytes(genesisDoc *GenesisDoc) ([]byte, error) {
 
 	// TODO: write JSON in canonical order
-
-	buffer, n, err := new(bytes.Buffer), new(int), new(error)
-	// write JSON with go-wire type-bytes (for public keys); deprecate
+	var err error
+	buffer, n := new(bytes.Buffer), new(int)
+	// write JSON with go-wire type-bytes (for public keys)
 	wire.WriteJSON(genesisDoc, buffer, n, &err)
 	if err != nil {
 		return nil, err

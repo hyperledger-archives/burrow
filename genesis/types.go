@@ -21,6 +21,7 @@ import (
 	"time"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
+
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -121,17 +122,24 @@ func (genesisAccount *GenesisAccount) Clone() GenesisAccount {
 // GenesisValidator methods
 
 // Clone clones the genesis validator
-func (genesisValidator *GenesisValidator) Clone() GenesisValidator {
-	// clone the public key
-	
-	// clone the account permissions
-	accountPermissionsClone := genesisAccount.Permissions.Clone()
-	return GenesisAccount{
-		Address:     addressClone,
-		Amount:      genesisAccount.amount,
-		Name:        genesisAccount.Name,
-		Permissions: &accountPermissionsClone,
+func (genesisValidator *GenesisValidator) Clone() (GenesisValidator, error) {
+	// clone the public key by writing and reading over go-wire serialisation
+	// TODO! write unit test to see whether this is correct
+	publicKeyClone, err := crypto.PubKeyFromBytes(genesisValidator.PubKey.Bytes())
+	if err != nil {
+		return GenesisValidator{}, err
 	}
+	// clone the addresses to unbond to
+	unbondToClone := make([]BasicAccount, len(genesisValidator.UnbondTo))
+	for _, basicAccount := range genesisValidator.UnbondTo {
+		unbondToClone = append(unbondToClone, basicAccount.Clone())
+	}
+	return GenesisValidator{
+		PubKey:   publicKeyClone,
+		Amount:   genesisValidator.Amount,
+		Name:     genesisValidator.Name,
+		UnbondTo: unbondToClone,
+	}, nil
 }
 
 //------------------------------------------------------------
@@ -142,8 +150,8 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 	// clone the address
 	addressClone := make([]byte, len(basicAccount.Address))
 	copy(addressClone, basicAccount.Address)
-	return GenesisAccount{
-		Address:     addressClone,
-		Amount:      basicAccount.Amount,
+	return BasicAccount{
+		Address: addressClone,
+		Amount:  basicAccount.Amount,
 	}
 }
