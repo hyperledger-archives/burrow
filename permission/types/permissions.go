@@ -112,6 +112,12 @@ func (p *BasePermissions) IsSet(ty PermFlag) bool {
 	return p.SetBit&ty > 0
 }
 
+// Returns the Perms PermFlag masked with SetBit bit field to give the resultant
+// permissions enabled by this BasePermissions
+func (p *BasePermissions) ResultantPerms() PermFlag {
+	return p.Perms & p.SetBit
+}
+
 func (p BasePermissions) String() string {
 	return fmt.Sprintf("Base: %b; Set: %b", p.Perms, p.SetBit)
 }

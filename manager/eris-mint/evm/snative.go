@@ -8,8 +8,8 @@ import (
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/word256"
 
-	"bytes"
 	"strings"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 )
 
 //------------------------------------------------------------------------------------------------
@@ -18,39 +18,17 @@ import (
 type SNativeContractDescription struct {
 	Comment   string
 	Name      string
-	functions map[FuncID]SNativeFuncDescription
+	functions map[FuncID]*SNativeFunctionDescription
 }
 
-type SNativeFuncDescription struct {
+type SNativeFunctionDescription struct {
 	Comment  string
 	Name     string
-	Args     []SolidityArg
-	Return   SolidityReturn
+	Args     []abi.Arg
+	Return   abi.Return
 	PermFlag ptypes.PermFlag
 	F        NativeContract
 }
-
-type SolidityType string
-
-type SolidityArg struct {
-	Name string
-	Type SolidityType
-}
-
-type SolidityReturn struct {
-	Name string
-	Type SolidityType
-}
-
-const (
-	// We don't need to be exhaustive here, just make what we used strongly typed
-	SolidityAddress SolidityType = "address"
-	SolidityInt     SolidityType = "int"
-	SolidityUint64  SolidityType = "uint64"
-	SolidityBytes32 SolidityType = "bytes32"
-	SolidityString  SolidityType = "string"
-	SolidityBool    SolidityType = "bool"
-)
 
 func registerSNativeContracts() {
 	for _, contract := range SNativeContracts() {
@@ -59,121 +37,122 @@ func registerSNativeContracts() {
 }
 
 // Returns a map of all SNative contracts defined indexed by name
-func SNativeContracts() map[string]SNativeContractDescription {
-	permFlagType := SolidityUint64
-	roleType := SolidityBytes32
-	contracts := []SNativeContractDescription{
+func SNativeContracts() map[string]*SNativeContractDescription {
+	permFlagType := abi.Uint64
+	roleType := abi.Bytes32
+	contracts := []*SNativeContractDescription{
 		NewSNativeContract(`
 		* Interface for managing Secure Native authorizations.
-		* @dev This Solidity interface describes the functions exposed by the SNative permissions layer in the Monax blockchain (ErisDB).
+		* @dev This interface describes the functions exposed by the SNative permissions layer in the Monax blockchain (ErisDB).
 		`,
 			"permissions_contract",
-			SNativeFuncDescription{`
+			&SNativeFunctionDescription{`
 			* @notice Adds a role to an account
-			* @param _account account
-			* @param _role role
+			* @param _account account address
+			* @param _role role name
 			* @return result whether role was added
 			`,
 				"add_role",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
+				[]abi.Arg{
+					arg("_account", abi.Address),
 					arg("_role", roleType),
 				},
-				ret("result", SolidityBool),
+				ret("result", abi.Bool),
 				ptypes.AddRole,
 				add_role},
 
-			SNativeFuncDescription{`
+			&SNativeFunctionDescription{`
 			* @notice Indicates whether an account has a role
-			* @param _account account
-			* @param _role role
+			* @param _account account address
+			* @param _role role name
 			* @return result whether account has role
 			`,
 				"has_role",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
+				[]abi.Arg{
+					arg("_account", abi.Address),
 					arg("_role", roleType),
 				},
-				ret("result", SolidityBool),
+				ret("result", abi.Bool),
 				ptypes.HasRole,
 				has_role},
 
-			SNativeFuncDescription{`
+			&SNativeFunctionDescription{`
 			* @notice Removes a role from an account
-			* @param _account account
-			* @param _role role
+			* @param _account account address
+			* @param _role role name
 			* @return result whether role was removed
 			`,
 				"rm_role",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
+				[]abi.Arg{
+					arg("_account", abi.Address),
 					arg("_role", roleType),
 				},
-				ret("result", SolidityBool),
+				ret("result", abi.Bool),
 				ptypes.RmRole,
 				rm_role},
 
-			SNativeFuncDescription{`
-			* @notice Sets a base authorization for an account
-			* @param _account account
-			* @param _authorization base authorization
-			* @param _value value of base authorization
-			* @return result value passed in
+			&SNativeFunctionDescription{`
+			* @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
+			* @param _account account address
+			* @param _permission the base permissions flags to set for the account
+			* @param _set whether to set or unset the permissions flags at the account level
+			* @return result the resultant permissions flags on the account after the call
 			`,
 				"set_base",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
-					arg("_authorization", permFlagType),
-					arg("_value", permFlagType)},
-				ret("result", SolidityBool),
+				[]abi.Arg{
+					arg("_account", abi.Address),
+					arg("_permission", permFlagType),
+					arg("_set", abi.Bool),
+				},
+				ret("result", permFlagType),
 				ptypes.SetBase,
 				set_base},
 
-			SNativeFuncDescription{`
-			* @notice Indicates whether an account has a base authorization
-			* @param _account account
-			* @param _authorization base authorization
-			* @return result whether account has base authorization set
+			&SNativeFunctionDescription{`
+			* @notice Indicates whether an account has a subset of permissions set
+			* @param _account account address
+			* @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
+			* @return result whether account has the passed permissions flags set
 			`,
 				"has_base",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
-					arg("_authorization", permFlagType)},
-				ret("result", SolidityBool),
+				[]abi.Arg{
+					arg("_account", abi.Address),
+					arg("_permission", permFlagType)},
+				ret("result", permFlagType),
 				ptypes.HasBase,
 				has_base},
 
-			SNativeFuncDescription{`
-			* @notice Sets a base authorization for an account to the global (default) value of the base authorization
-      * @param _account account
-      * @param _authorization base authorization
-      * @return authorization base authorization passed in
+			&SNativeFunctionDescription{`
+			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
+      * @param _account account address
+      * @param _permission the permissions flags to unset for the account
+			* @return result the resultant permissions flags on the account after the call
       `,
 				"unset_base",
-				[]SolidityArg{
-					arg("_account", SolidityAddress),
-					arg("_authorization", permFlagType)},
-				ret("authorization", permFlagType),
+				[]abi.Arg{
+					arg("_account", abi.Address),
+					arg("_permission", permFlagType)},
+				ret("result", permFlagType),
 				ptypes.UnsetBase,
 				unset_base},
 
-			SNativeFuncDescription{`
-			* @notice Sets global (default) value for a base authorization
-			* @param _authorization base authorization
-			* @param _value value of base authorization
-			* @return authorization base authorization passed in
+			&SNativeFunctionDescription{`
+			* @notice Sets the global (default) permissions flags for the entire chain
+			* @param _permission the permissions flags to set
+			* @param _set whether to set (or unset) the permissions flags
+			* @return result the resultant permissions flags on the account after the call
 			`,
 				"set_global",
-				[]SolidityArg{
-					arg("_authorization", permFlagType),
-					arg("_value", permFlagType)},
-				ret("authorization", permFlagType),
+				[]abi.Arg{
+					arg("_permission", permFlagType),
+					arg("_set", abi.Bool)},
+				ret("result", permFlagType),
 				ptypes.SetGlobal,
 				set_global},
 		),
 	}
 
-	contractMap := make(map[string]SNativeContractDescription, len(contracts))
+	contractMap := make(map[string]*SNativeContractDescription, len(contracts))
 	for _, contract := range contracts {
 		contractMap[contract.Name] = contract
 	}
@@ -183,8 +162,8 @@ func SNativeContracts() map[string]SNativeContractDescription {
 //-----------------------------------------------------------------------------
 // snative are native contracts that can access and modify an account's permissions
 
-func NewSNativeContract(comment, name string, functions ...SNativeFuncDescription) SNativeContractDescription {
-	fs := make(map[FuncID]SNativeFuncDescription, len(functions))
+func NewSNativeContract(comment, name string, functions ...*SNativeFunctionDescription) *SNativeContractDescription {
+	fs := make(map[FuncID]*SNativeFunctionDescription, len(functions))
 	for _, f := range functions {
 		fid := f.ID()
 		otherF, ok := fs[fid]
@@ -194,7 +173,7 @@ func NewSNativeContract(comment, name string, functions ...SNativeFuncDescriptio
 		}
 		fs[fid] = f
 	}
-	return SNativeContractDescription{
+	return &SNativeContractDescription{
 		Comment:   comment,
 		Name:      name,
 		functions: fs,
@@ -207,25 +186,25 @@ func NewSNativeContract(comment, name string, functions ...SNativeFuncDescriptio
 func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	if len(args) < FuncIDLength {
-		return Zero256.Bytes(), fmt.Errorf("SNatives dispatch requires a 4-byte function "+
+		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 			"identifier but arguments are only %s bytes long", len(args))
 	}
 
 	function, err := contract.FunctionByID(firstFourBytes(args))
 	if err != nil {
-		return Zero256.Bytes(), err
+		return nil, err
 	}
 
 	remainingArgs := args[FuncIDLength:]
 
 	// check if we have permission to call this function
 	if !HasPermission(appState, caller, function.PermFlag) {
-		return Zero256.Bytes(), ErrInvalidPermission{caller.Address, function.Name}
+		return nil, ErrInvalidPermission{caller.Address, function.Name}
 	}
 
 	// ensure there are enough arguments
 	if len(remainingArgs) != function.NArgs()*Word256Length {
-		return Zero256.Bytes(), fmt.Errorf("%s() takes %d arguments", function.Name,
+		return nil, fmt.Errorf("%s() takes %d arguments", function.Name,
 			function.NArgs())
 	}
 
@@ -233,54 +212,42 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	return function.F(appState, caller, remainingArgs, gas)
 }
 
+// We define the address of an SNative contact as the simplest possible hash of
+// its canonical name
 func (contract *SNativeContractDescription) Address() Word256 {
 	return LeftPadWord256([]byte(contract.Name))
 }
 
-func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFuncDescription, error) {
+func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFunctionDescription, error) {
 	f, ok := contract.functions[id]
 	if !ok {
 		return nil,
 			fmt.Errorf("Unknown SNative function with ID %x", id)
 	}
-	return &f, nil
+	return f, nil
 }
 
-func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativeFuncDescription, error) {
+func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativeFunctionDescription, error) {
 	for _, f := range contract.functions {
 		if f.Name == name {
-			return &f, nil
+			return f, nil
 		}
 	}
 	return nil, fmt.Errorf("Unknown SNative function with name %s", name)
 }
 
-func (contract *SNativeContractDescription) Functions() []SNativeFuncDescription {
-	fs := make([]SNativeFuncDescription, 0, len(contract.functions))
+func (contract *SNativeContractDescription) Functions() []*SNativeFunctionDescription {
+	fs := make([]*SNativeFunctionDescription, 0, len(contract.functions))
 	for _, f := range contract.functions {
 		fs = append(fs, f)
 	}
 	return fs
 }
 
-func (contract *SNativeContractDescription) SolidityComment() string {
-	return solidityComment(contract.Comment)
-}
-
-// Generate solidity code for this SNative contract
-func (contract *SNativeContractDescription) Solidity() (string, error) {
-	buf := new(bytes.Buffer)
-	err := snativeContractTemplate.Execute(buf, contract)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
 //
 // SNative functions
 //
-func (function *SNativeFuncDescription) Signature() string {
+func (function *SNativeFunctionDescription) Signature() string {
 	argTypes := make([]string, len(function.Args))
 	for i, arg := range function.Args {
 		argTypes[i] = string(arg.Type)
@@ -289,57 +256,25 @@ func (function *SNativeFuncDescription) Signature() string {
 		strings.Join(argTypes, ","))
 }
 
-func (function *SNativeFuncDescription) ID() FuncID {
+func (function *SNativeFunctionDescription) ID() FuncID {
 	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
 }
 
-func (function *SNativeFuncDescription) NArgs() int {
+func (function *SNativeFunctionDescription) NArgs() int {
 	return len(function.Args)
 }
 
-func (function *SNativeFuncDescription) SolidityArgList() string {
-	argList := make([]string, len(function.Args))
-	for i, arg := range function.Args {
-		argList[i] = fmt.Sprintf("%s %s", arg.Type, arg.Name)
-	}
-	return strings.Join(argList, ", ")
-}
-
-func (function *SNativeFuncDescription) SolidityComment() string {
-	return solidityComment(function.Comment)
-}
-
-func (function *SNativeFuncDescription) Solidity() (string, error) {
-	buf := new(bytes.Buffer)
-	err := snativeFuncTemplate.Execute(buf, function)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-func solidityComment(comment string) string {
-	commentLines := make([]string, 0, 5)
-	for _, line := range strings.Split(comment, "\n") {
-		trimLine := strings.TrimLeft(line, " \t\n")
-		if trimLine != "" {
-			commentLines = append(commentLines, trimLine)
-		}
-	}
-	return strings.Join(commentLines, "\n")
-}
-
-func arg(name string, solidityType SolidityType) SolidityArg {
-	return SolidityArg{
+func arg(name string, abiType abi.Type) abi.Arg {
+	return abi.Arg{
 		Name: name,
-		Type: solidityType,
+		Type: abiType,
 	}
 }
 
-func ret(name string, solidityType SolidityType) SolidityReturn {
-	return SolidityReturn{
+func ret(name string, abiType abi.Type) abi.Return {
+	return abi.Return{
 		Name: name,
-		Type: solidityType,
+		Type: abiType,
 	}
 }
 
@@ -362,7 +297,7 @@ func has_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 }
 
 func set_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	addr, permNum, perm := returnThreeArgs(args)
+	addr, permNum, permVal := returnThreeArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
 		return nil, fmt.Errorf("Unknown account %X", addr)
@@ -371,13 +306,13 @@ func set_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permV := !perm.IsZero()
+	permV := !permVal.IsZero()
 	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
-	return perm.Bytes(), nil
+	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
 func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -395,11 +330,11 @@ func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
-	return permNum.Bytes(), nil
+	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
 func set_global(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	permNum, perm := returnTwoArgs(args)
+	permNum, permVal := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
 	if vmAcc == nil {
 		sanity.PanicSanity("cant find the global permissions account")
@@ -408,13 +343,13 @@ func set_global(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permV := !perm.IsZero()
+	permV := !permVal.IsZero()
 	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
-	return perm.Bytes(), nil
+	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
 func has_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -473,6 +408,10 @@ func ValidPermN(n ptypes.PermFlag) bool {
 		return false
 	}
 	return true
+}
+
+func resultantPermBytes(basePerms ptypes.BasePermissions) []byte {
+	return Uint64ToWord256(uint64(basePerms.ResultantPerms())).Bytes()
 }
 
 // CONTRACT: length has already been checked

@@ -6,7 +6,6 @@ import (
 
 	. "github.com/eris-ltd/eris-db/word256"
 	"github.com/stretchr/testify/assert"
-	"fmt"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 )
@@ -20,8 +19,8 @@ Functions
 744f5998 has_base(address,uint64)
 e8145855 has_role(address,bytes32)
 28fd0194 rm_role(address,bytes32)
-3f0ebb30 set_base(address,uint64,uint64)
-d54a562d set_global(uint64,uint64)
+c2174d8f set_base(address,uint64,bool)
+85f1522b set_global(uint64,bool)
 73448c99 unset_base(address,uint64)
 
 */
@@ -41,11 +40,11 @@ func TestPermissionsContractSignatures(t *testing.T) {
 	assertFunctionIDSignature(t, contract, "28fd0194",
 		"rm_role(address,bytes32)")
 
-	assertFunctionIDSignature(t, contract, "3f0ebb30",
-		"set_base(address,uint64,uint64)")
+	assertFunctionIDSignature(t, contract, "c2174d8f",
+		"set_base(address,uint64,bool)")
 
-	assertFunctionIDSignature(t, contract, "d54a562d",
-		"set_global(uint64,uint64)")
+	assertFunctionIDSignature(t, contract, "85f1522b",
+		"set_global(uint64,bool)")
 
 	assertFunctionIDSignature(t, contract, "73448c99",
 		"unset_base(address,uint64)")
@@ -83,30 +82,10 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1},32))
 }
 
-func TestSNativeFuncTemplate(t *testing.T) {
-	contract := SNativeContracts()["permissions_contract"]
-	function, err := contract.FunctionByName("rm_role")
-	if err != nil {
-		t.Fatal("Couldn't get function")
-	}
-	solidity, err := function.Solidity()
-	assert.NoError(t, err)
-	fmt.Println(solidity)
-}
-
-// This test checks that we can generate the SNative contract interface and
-// prints it to stdout
-func TestSNativeContractTemplate(t *testing.T) {
-	contract := SNativeContracts()["permissions_contract"]
-	solidity, err := contract.Solidity()
-	assert.NoError(t, err)
-	fmt.Println(solidity)
-}
-
 //
 // Helpers
 //
-func assertFunctionIDSignature(t *testing.T, contract SNativeContractDescription,
+func assertFunctionIDSignature(t *testing.T, contract *SNativeContractDescription,
 	funcIDHex string, expectedSignature string) {
 	function, err := contract.FunctionByID(funcIDFromHex(t, funcIDHex))
 	assert.NoError(t, err,

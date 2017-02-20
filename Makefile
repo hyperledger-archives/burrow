@@ -76,7 +76,7 @@ hell:
 # Dumps Solidity interface contracts for SNatives
 .PHONY: snatives
 snatives:
-	@go run ./util/snatives/main.go
+	@go run ./util/snatives/cmd/main.go
 
 ### Building github.com/eris-ltd/eris-db
 
