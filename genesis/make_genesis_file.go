@@ -28,6 +28,25 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 }
 
 //------------------------------------------------------------------------------------
+// interface functions that are consumed by monax tooling
+
+func GenerateGenesisFileBytes(chainName string, genesisAccounts []*GenesisAccount,
+	genesisValidators []*GenesisValidator) ([]byte, error) {
+	genesisDoc, err := MakeGenesisDocFromAccounts(chainName, genesisAccounts, genesisValidators)
+
+	buf, buf2, n := new(bytes.Buffer), new(bytes.Buffer), new(int)
+	wire.WriteJSON(genesisDoc, buf, n, &err)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Indent(buf2, buf.Bytes(), "", "\t"); err != nil {
+		return nil, err
+	}
+
+	return buf2.Bytes(), nil
+}
+
+//------------------------------------------------------------------------------------
 // core functions that provide functionality for monax tooling in v0.16
 
 // GenerateKnownWithTime takes chainId, an accounts and validators CSV filepath
