@@ -115,7 +115,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param _account account address
 			* @param _permission the base permissions flags to set for the account
 			* @param _set whether to set or unset the permissions flags at the account level
-			* @return result the resultant permissions flags on the account after the call
+			* @return result the effective permissions flags on the account after the call
 			`,
 				"setBase",
 				[]abi.Arg{
@@ -131,7 +131,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
       * @param _account account address
       * @param _permission the permissions flags to unset for the account
-			* @return result the resultant permissions flags on the account after the call
+			* @return result the effective permissions flags on the account after the call
       `,
 				"unsetBase",
 				[]abi.Arg{
@@ -159,7 +159,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Sets the global (default) permissions flags for the entire chain
 			* @param _permission the permissions flags to set
 			* @param _set whether to set (or unset) the permissions flags
-			* @return result the resultant permissions flags on the account after the call
+			* @return result the global permissions flags after the call
 			`,
 				"setGlobal",
 				[]abi.Arg{
@@ -338,7 +338,7 @@ func setBase(appState AppState, caller *Account, args []byte, gas *int64) (outpu
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
-	return resultantPermBytes(vmAcc.Permissions.Base), nil
+	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
 func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -356,7 +356,7 @@ func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (out
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
-	return resultantPermBytes(vmAcc.Permissions.Base), nil
+	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
 func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -375,7 +375,7 @@ func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (out
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
-	return resultantPermBytes(vmAcc.Permissions.Base), nil
+	return permBytes(vmAcc.Permissions.Base.ResultantPerms()), nil
 }
 
 func hasRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
@@ -436,8 +436,24 @@ func ValidPermN(n ptypes.PermFlag) bool {
 	return true
 }
 
-func resultantPermBytes(basePerms ptypes.BasePermissions) []byte {
-	return Uint64ToWord256(uint64(basePerms.ResultantPerms())).Bytes()
+// Get the global BasePermissions
+func globalPerms(appState AppState) ptypes.BasePermissions {
+	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
+	if vmAcc == nil {
+		sanity.PanicSanity("cant find the global permissions account")
+	}
+	return vmAcc.Permissions.Base
+}
+
+// Compute the effective permissions from an Account's BasePermissions by
+// taking the bitwise or with the global BasePermissions resultant permissions
+func effectivePermBytes(basePerms ptypes.BasePermissions,
+	globalPerms ptypes.BasePermissions) []byte {
+	return permBytes(basePerms.ResultantPerms() | globalPerms.ResultantPerms())
+}
+
+func permBytes(basePerms ptypes.PermFlag) []byte {
+	return Uint64ToWord256(uint64(basePerms)).Bytes()
 }
 
 // CONTRACT: length has already been checked
