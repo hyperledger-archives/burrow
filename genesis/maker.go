@@ -23,6 +23,11 @@ import (
 	"github.com/tendermint/go-crypto"
 )
 
+const (
+	PublicKeyEd25519ByteLength   int = 32
+	PublicKeySecp256k1ByteLength int = 64
+)
+
 // NewGenesisAccount returns a new GenesisAccount
 func NewGenesisAccount(address []byte, amount int64, name string,
 	permissions *ptypes.AccountPermissions) *GenesisAccount {
@@ -41,21 +46,21 @@ func NewGenesisValidator(amount int64, name string, unbondToAddress []byte,
 	switch keyType {
 	case "ed25519":
 		// TODO: [ben] functionality and checks need to be inherit in the type
-		if len(publicKeyBytes) != 32 {
+		if len(publicKeyBytes) != PublicKeyEd25519ByteLength {
 			return nil, fmt.Errorf("Invalid length provided for ed25519 public key (len %v)",
 				len(publicKeyBytes))
 		}
 		// ed25519 has type byte 0x01
-		typedPublicKeyBytes = make([]byte, 33)
+		typedPublicKeyBytes = make([]byte, PublicKeyEd25519ByteLength+1)
 		// prepend type byte to public key
 		typedPublicKeyBytes = append([]byte{crypto.PubKeyTypeEd25519}, publicKeyBytes...)
 	case "secp256k1":
-		if len(publicKeyBytes) != 64 {
+		if len(publicKeyBytes) != PublicKeySecp256k1ByteLength {
 			return nil, fmt.Errorf("Invalid length provided for secp256k1 public key (len %v)",
 				len(publicKeyBytes))
 		}
 		// secp256k1 has type byte 0x02
-		typedPublicKeyBytes = make([]byte, 65)
+		typedPublicKeyBytes = make([]byte, PublicKeySecp256k1ByteLength+1)
 		// prepend type byte to public key
 		typedPublicKeyBytes = append([]byte{crypto.PubKeyTypeSecp256k1}, publicKeyBytes...)
 	default:
