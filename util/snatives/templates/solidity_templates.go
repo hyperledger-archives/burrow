@@ -11,6 +11,7 @@ import (
 
 const contractTemplateText = `/**
 [[.Comment]]
+* @dev These functions can be accessed as if this contract were deployed at the address [[.Address]]
 */
 contract [[.Name]] {[[range .Functions]]
 [[.SolidityIndent 1]]
@@ -31,13 +32,13 @@ var functionTemplate *template.Template
 func init() {
 	var err error
 	functionTemplate, err = template.New("SolidityFunctionTemplate").
-			Delims("[[", "]]").
+		Delims("[[", "]]").
 		Parse(functionTemplateText)
 	if err != nil {
 		panic(fmt.Errorf("Couldn't parse SNative function template: %s", err))
 	}
 	contractTemplate, err = template.New("SolidityContractTemplate").
-			Delims("[[", "]]").
+		Delims("[[", "]]").
 		Parse(contractTemplateText)
 	if err != nil {
 		panic(fmt.Errorf("Couldn't parse SNative contract template: %s", err))
@@ -55,6 +56,11 @@ type solidityFunction struct {
 // Create a templated solidityContract from an SNative contract description
 func NewSolidityContract(contract *vm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{contract}
+}
+
+func (contract *solidityContract) Address() string {
+	return fmt.Sprintf("0x%x",
+		contract.SNativeContractDescription.Address().Postfix(20))
 }
 
 // Generate Solidity code for this SNative contract

@@ -9,12 +9,21 @@ import (
 
 // Dump SNative contracts
 func main() {
-	for _, contract := range vm.SNativeContracts() {
+	contracts := vm.SNativeContracts()
+	// Index of next contract
+	i := 1
+	for _, contract := range contracts {
 		solidity, err := templates.NewSolidityContract(contract).Solidity()
 		if err != nil {
 			fmt.Printf("Error generating solidity for contract %s: %s\n",
 				contract.Name, err)
 		}
 		fmt.Println(solidity)
+		if i < len(contracts) {
+			// Two new lines between contracts as per Solidity style guide
+			// (the template gives us 1 trailing new line)
+			fmt.Println()
+		}
+		i++
 	}
 }
