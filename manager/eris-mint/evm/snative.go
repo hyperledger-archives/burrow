@@ -9,25 +9,44 @@ import (
 	. "github.com/eris-ltd/eris-db/word256"
 
 	"strings"
+
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 )
 
-//------------------------------------------------------------------------------------------------
-// Registered SNative contracts
+//
+// SNative (from 'secure natives') are native (go) contracts that are dispatched
+// based on account permissions and can access and modify an account's permissions
+//
 
+// Metadata for SNative contract. Acts as a call target from the EVM. Can be
+// used to generate bindings in a smart contract languages.
 type SNativeContractDescription struct {
-	Comment   string
-	Name      string
-	functions map[FuncID]*SNativeFunctionDescription
+	// Comment describing purpose of SNative contract and reason for assembling
+	// the particular functions
+	Comment string
+	// Name of the SNative contract
+	Name          string
+	functionsByID map[FuncID]*SNativeFunctionDescription
+	functions     []*SNativeFunctionDescription
 }
 
+// Metadata for SNative functions. Act as call targets for the EVM when
+// collected into an SNativeContractDescription. Can be used to generate
+// bindings in a smart contract languages.
 type SNativeFunctionDescription struct {
-	Comment  string
-	Name     string
-	Args     []abi.Arg
-	Return   abi.Return
+	// Comment describing function's purpose, parameters, and return value
+	Comment string
+	// Function name (used to form signature)
+	Name string
+	// Function arguments (used to form signature)
+	Args []abi.Arg
+	// Function return value
+	Return abi.Return
+	// Permissions required to call function
 	PermFlag ptypes.PermFlag
-	F        NativeContract
+	// Native function to which calls will be dispatched when a containing
+	// contract is called with a FuncID matching this NativeContract
+	F NativeContract
 }
 
 func registerSNativeContracts() {
@@ -45,36 +64,21 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 		* Interface for managing Secure Native authorizations.
 		* @dev This interface describes the functions exposed by the SNative permissions layer in the Monax blockchain (ErisDB).
 		`,
-			"permissions_contract",
+			"Permissions",
 			&SNativeFunctionDescription{`
 			* @notice Adds a role to an account
 			* @param _account account address
 			* @param _role role name
 			* @return result whether role was added
 			`,
-				"add_role",
+				"addRole",
 				[]abi.Arg{
 					arg("_account", abi.Address),
 					arg("_role", roleType),
 				},
 				ret("result", abi.Bool),
 				ptypes.AddRole,
-				add_role},
-
-			&SNativeFunctionDescription{`
-			* @notice Indicates whether an account has a role
-			* @param _account account address
-			* @param _role role name
-			* @return result whether account has role
-			`,
-				"has_role",
-				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_role", roleType),
-				},
-				ret("result", abi.Bool),
-				ptypes.HasRole,
-				has_role},
+				addRole},
 
 			&SNativeFunctionDescription{`
 			* @notice Removes a role from an account
@@ -82,14 +86,29 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param _role role name
 			* @return result whether role was removed
 			`,
-				"rm_role",
+				"removeRole",
 				[]abi.Arg{
 					arg("_account", abi.Address),
 					arg("_role", roleType),
 				},
 				ret("result", abi.Bool),
 				ptypes.RmRole,
-				rm_role},
+				removeRole},
+
+			&SNativeFunctionDescription{`
+			* @notice Indicates whether an account has a role
+			* @param _account account address
+			* @param _role role name
+			* @return result whether account has role
+			`,
+				"hasRole",
+				[]abi.Arg{
+					arg("_account", abi.Address),
+					arg("_role", roleType),
+				},
+				ret("result", abi.Bool),
+				ptypes.HasRole,
+				hasRole},
 
 			&SNativeFunctionDescription{`
 			* @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
@@ -98,7 +117,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param _set whether to set or unset the permissions flags at the account level
 			* @return result the resultant permissions flags on the account after the call
 			`,
-				"set_base",
+				"setBase",
 				[]abi.Arg{
 					arg("_account", abi.Address),
 					arg("_permission", permFlagType),
@@ -106,21 +125,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 				},
 				ret("result", permFlagType),
 				ptypes.SetBase,
-				set_base},
-
-			&SNativeFunctionDescription{`
-			* @notice Indicates whether an account has a subset of permissions set
-			* @param _account account address
-			* @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
-			* @return result whether account has the passed permissions flags set
-			`,
-				"has_base",
-				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_permission", permFlagType)},
-				ret("result", permFlagType),
-				ptypes.HasBase,
-				has_base},
+				setBase},
 
 			&SNativeFunctionDescription{`
 			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
@@ -128,13 +133,27 @@ func SNativeContracts() map[string]*SNativeContractDescription {
       * @param _permission the permissions flags to unset for the account
 			* @return result the resultant permissions flags on the account after the call
       `,
-				"unset_base",
+				"unsetBase",
 				[]abi.Arg{
 					arg("_account", abi.Address),
 					arg("_permission", permFlagType)},
 				ret("result", permFlagType),
 				ptypes.UnsetBase,
-				unset_base},
+				unsetBase},
+
+			&SNativeFunctionDescription{`
+			* @notice Indicates whether an account has a subset of permissions set
+			* @param _account account address
+			* @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
+			* @return result whether account has the passed permissions flags set
+			`,
+				"hasBase",
+				[]abi.Arg{
+					arg("_account", abi.Address),
+					arg("_permission", permFlagType)},
+				ret("result", permFlagType),
+				ptypes.HasBase,
+				hasBase},
 
 			&SNativeFunctionDescription{`
 			* @notice Sets the global (default) permissions flags for the entire chain
@@ -142,13 +161,13 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param _set whether to set (or unset) the permissions flags
 			* @return result the resultant permissions flags on the account after the call
 			`,
-				"set_global",
+				"setGlobal",
 				[]abi.Arg{
 					arg("_permission", permFlagType),
 					arg("_set", abi.Bool)},
 				ret("result", permFlagType),
 				ptypes.SetGlobal,
-				set_global},
+				setGlobal},
 		),
 	}
 
@@ -159,24 +178,26 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 	return contractMap
 }
 
-//-----------------------------------------------------------------------------
-// snative are native contracts that can access and modify an account's permissions
+// Create a new SNative contract description object by passing a comment, name
+// and a list of member functions descriptions
+func NewSNativeContract(comment, name string,
+	functions ...*SNativeFunctionDescription) *SNativeContractDescription {
 
-func NewSNativeContract(comment, name string, functions ...*SNativeFunctionDescription) *SNativeContractDescription {
-	fs := make(map[FuncID]*SNativeFunctionDescription, len(functions))
+	functionsByID := make(map[FuncID]*SNativeFunctionDescription, len(functions))
 	for _, f := range functions {
 		fid := f.ID()
-		otherF, ok := fs[fid]
+		otherF, ok := functionsByID[fid]
 		if ok {
 			panic(fmt.Errorf("Function with ID %x already defined: %s", fid,
 				otherF))
 		}
-		fs[fid] = f
+		functionsByID[fid] = f
 	}
 	return &SNativeContractDescription{
-		Comment:   comment,
-		Name:      name,
-		functions: fs,
+		Comment:       comment,
+		Name:          name,
+		functionsByID: functionsByID,
+		functions:     functions,
 	}
 }
 
@@ -218,8 +239,9 @@ func (contract *SNativeContractDescription) Address() Word256 {
 	return LeftPadWord256([]byte(contract.Name))
 }
 
+// Get function by calling identifier FuncID
 func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFunctionDescription, error) {
-	f, ok := contract.functions[id]
+	f, ok := contract.functionsByID[id]
 	if !ok {
 		return nil,
 			fmt.Errorf("Unknown SNative function with ID %x", id)
@@ -227,6 +249,7 @@ func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFun
 	return f, nil
 }
 
+// Get function by name
 func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativeFunctionDescription, error) {
 	for _, f := range contract.functions {
 		if f.Name == name {
@@ -236,17 +259,18 @@ func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativ
 	return nil, fmt.Errorf("Unknown SNative function with name %s", name)
 }
 
+// Get functions in order of declaration
 func (contract *SNativeContractDescription) Functions() []*SNativeFunctionDescription {
-	fs := make([]*SNativeFunctionDescription, 0, len(contract.functions))
-	for _, f := range contract.functions {
-		fs = append(fs, f)
-	}
-	return fs
+	functions := make([]*SNativeFunctionDescription, len(contract.functions))
+	copy(functions, contract.functions)
+	return functions
 }
 
 //
 // SNative functions
 //
+
+// Get function signature
 func (function *SNativeFunctionDescription) Signature() string {
 	argTypes := make([]string, len(function.Args))
 	for i, arg := range function.Args {
@@ -256,10 +280,12 @@ func (function *SNativeFunctionDescription) Signature() string {
 		strings.Join(argTypes, ","))
 }
 
+// Get function calling identifier FuncID
 func (function *SNativeFunctionDescription) ID() FuncID {
 	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
 }
 
+// Get number of function arguments
 func (function *SNativeFunctionDescription) NArgs() int {
 	return len(function.Args)
 }
@@ -281,7 +307,7 @@ func ret(name string, abiType abi.Type) abi.Return {
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
-func has_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func hasBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -296,7 +322,7 @@ func has_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func set_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func setBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum, permVal := returnThreeArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -315,7 +341,7 @@ func set_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
-func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -333,7 +359,7 @@ func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
-func set_global(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	permNum, permVal := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
 	if vmAcc == nil {
@@ -352,7 +378,7 @@ func set_global(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	return resultantPermBytes(vmAcc.Permissions.Base), nil
 }
 
-func has_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func hasRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -364,7 +390,7 @@ func has_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func add_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func addRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -377,7 +403,7 @@ func add_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func rm_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func removeRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {

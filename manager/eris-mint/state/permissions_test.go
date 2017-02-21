@@ -28,7 +28,7 @@ func init() {
 var (
 	dbBackend = "memdb"
 	dbDir     = ""
-	permissionsContract = vm.SNativeContracts()["permissions_contract"]
+	permissionsContract = vm.SNativeContracts()["Permissions"]
 )
 
 /*
@@ -885,7 +885,7 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### HasBase")
 	// HasBase
-	snativeAddress, pF, data := snativePermTestInputCALL("has_base", user[3], ptypes.Bond, false)
+	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
@@ -897,10 +897,10 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### SetBase")
 	// SetBase
-	snativeAddress, pF, data = snativePermTestInputCALL("set_base", user[3], ptypes.Bond, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("setBase", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("has_base", user[3], ptypes.Bond, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.Bond, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret) {
@@ -908,9 +908,9 @@ func TestSNativeCALL(t *testing.T) {
 		}
 		return nil
 	})
-	snativeAddress, pF, data = snativePermTestInputCALL("set_base", user[3], ptypes.CreateContract, true)
+	snativeAddress, pF, data = snativePermTestInputCALL("setBase", user[3], ptypes.CreateContract, true)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -921,10 +921,10 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
-	snativeAddress, pF, data = snativePermTestInputCALL("unset_base", user[3], ptypes.CreateContract, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("unsetBase", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -934,10 +934,10 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
-	snativeAddress, pF, data = snativePermTestInputCALL("set_global", user[3], ptypes.CreateContract, true)
+	snativeAddress, pF, data = snativePermTestInputCALL("setGlobal", user[3], ptypes.CreateContract, true)
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("has_base", user[3], ptypes.CreateContract, false)
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -948,7 +948,7 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### HasRole")
 	// HasRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("has_role", user[3], "bumble")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "bumble")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
@@ -959,17 +959,17 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### AddRole")
 	// AddRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
-	snativeAddress, pF, data = snativeRoleTestInputCALL("add_role", user[3], "chuck")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("addRole", user[3], "chuck")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -979,10 +979,10 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### RmRole")
 	// RmRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("rm_role", user[3], "chuck")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", user[3], "chuck")
 	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativeRoleTestInputCALL("has_role", user[3], "chuck")
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
 	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -1006,14 +1006,14 @@ func TestSNativeTx(t *testing.T) {
 
 	fmt.Println("\n#### SetBase")
 	// SetBase
-	snativeArgs := snativePermTestInputTx("set_base", user[3], ptypes.Bond, false)
+	snativeArgs := snativePermTestInputTx("setBase", user[3], ptypes.Bond, false)
 	testSNativeTxExpectFail(t, blockCache, snativeArgs)
 	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
 	acc := blockCache.GetAccount(user[3].Address)
 	if v, _ := acc.Permissions.Base.Get(ptypes.Bond); v {
 		t.Fatal("expected permission to be set false")
 	}
-	snativeArgs = snativePermTestInputTx("set_base", user[3], ptypes.CreateContract, true)
+	snativeArgs = snativePermTestInputTx("setBase", user[3], ptypes.CreateContract, true)
 	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
 	acc = blockCache.GetAccount(user[3].Address)
 	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); !v {
@@ -1022,7 +1022,7 @@ func TestSNativeTx(t *testing.T) {
 
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
-	snativeArgs = snativePermTestInputTx("unset_base", user[3], ptypes.CreateContract, false)
+	snativeArgs = snativePermTestInputTx("unsetBase", user[3], ptypes.CreateContract, false)
 	testSNativeTxExpectFail(t, blockCache, snativeArgs)
 	testSNativeTxExpectPass(t, blockCache, ptypes.UnsetBase, snativeArgs)
 	acc = blockCache.GetAccount(user[3].Address)
@@ -1032,7 +1032,7 @@ func TestSNativeTx(t *testing.T) {
 
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
-	snativeArgs = snativePermTestInputTx("set_global", user[3], ptypes.CreateContract, true)
+	snativeArgs = snativePermTestInputTx("setGlobal", user[3], ptypes.CreateContract, true)
 	testSNativeTxExpectFail(t, blockCache, snativeArgs)
 	testSNativeTxExpectPass(t, blockCache, ptypes.SetGlobal, snativeArgs)
 	acc = blockCache.GetAccount(ptypes.GlobalPermissionsAddress)
@@ -1042,7 +1042,7 @@ func TestSNativeTx(t *testing.T) {
 
 	fmt.Println("\n#### AddRole")
 	// AddRole
-	snativeArgs = snativeRoleTestInputTx("add_role", user[3], "chuck")
+	snativeArgs = snativeRoleTestInputTx("addRole", user[3], "chuck")
 	testSNativeTxExpectFail(t, blockCache, snativeArgs)
 	testSNativeTxExpectPass(t, blockCache, ptypes.AddRole, snativeArgs)
 	acc = blockCache.GetAccount(user[3].Address)
@@ -1052,7 +1052,7 @@ func TestSNativeTx(t *testing.T) {
 
 	fmt.Println("\n#### RmRole")
 	// RmRole
-	snativeArgs = snativeRoleTestInputTx("rm_role", user[3], "chuck")
+	snativeArgs = snativeRoleTestInputTx("removeRole", user[3], "chuck")
 	testSNativeTxExpectFail(t, blockCache, snativeArgs)
 	testSNativeTxExpectPass(t, blockCache, ptypes.RmRole, snativeArgs)
 	acc = blockCache.GetAccount(user[3].Address)
@@ -1194,14 +1194,14 @@ func permNameToFuncID(name string) []byte {
 func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address().Postfix(20)
 	switch name {
-	case "has_base", "unset_base":
+	case "hasBase", "unsetBase":
 		data = LeftPadBytes(user.Address, 32)
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
-	case "set_base":
+	case "setBase":
 		data = LeftPadBytes(user.Address, 32)
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
 		data = append(data, boolToWord256(val).Bytes()...)
-	case "set_global":
+	case "setGlobal":
 		data = Uint64ToWord256(uint64(perm)).Bytes()
 		data = append(data, boolToWord256(val).Bytes()...)
 	}
@@ -1215,13 +1215,13 @@ func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.Pe
 
 func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (snativeArgs ptypes.PermArgs) {
 	switch name {
-	case "has_base":
+	case "hasBase":
 		snativeArgs = &ptypes.HasBaseArgs{user.Address, perm}
-	case "unset_base":
+	case "unsetBase":
 		snativeArgs = &ptypes.UnsetBaseArgs{user.Address, perm}
-	case "set_base":
+	case "setBase":
 		snativeArgs = &ptypes.SetBaseArgs{user.Address, perm, val}
-	case "set_global":
+	case "setGlobal":
 		snativeArgs = &ptypes.SetGlobalArgs{perm, val}
 	}
 	return
@@ -1242,11 +1242,11 @@ func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (
 
 func snativeRoleTestInputTx(name string, user *acm.PrivAccount, role string) (snativeArgs ptypes.PermArgs) {
 	switch name {
-	case "has_role":
+	case "hasRole":
 		snativeArgs = &ptypes.HasRoleArgs{user.Address, role}
-	case "add_role":
+	case "addRole":
 		snativeArgs = &ptypes.AddRoleArgs{user.Address, role}
-	case "rm_role":
+	case "removeRole":
 		snativeArgs = &ptypes.RmRoleArgs{user.Address, role}
 	}
 	return

@@ -147,7 +147,7 @@ func testPermissions(t *testing.T,
 	nonceString := ""
 
 	_, err := Permissions(nodeClient, keyClient, publicKeyString, addressString,
-		nonceString, "set_base", []string{permAddressString, "root", "true"})
+		nonceString, "setBase", []string{permAddressString, "root", "true"})
 	if err != nil {
 		t.Logf("Error in PermissionsTx: %s", err)
 		t.Fail()

@@ -21,7 +21,9 @@ const functionTemplateText = `/**
 */
 function [[.Name]]([[.ArgList]]) constant returns ([[.Return.Type]] [[.Return.Name]]);`
 
-const indentString = "\t"
+// Solidity style guide recommends 4 spaces per indentation level
+// (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
+const indentString = "    "
 
 var contractTemplate *template.Template
 var functionTemplate *template.Template
