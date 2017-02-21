@@ -110,7 +110,6 @@ func main() {
 			overrideLockFile.Imports = append(overrideLockFile.Imports, cfg.LockFromDependency(dep))
 
 			mergedLockFile, err := hell.MergeGlideLockFiles(baseLockFile, overrideLockFile)
-			fmt.Printf("%#v\n", mergedLockFile.Imports)
 			if err != nil {
 				msg.Die("Could not merge lock files: %s\n", err)
 			}

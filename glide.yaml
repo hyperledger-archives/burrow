@@ -3,11 +3,12 @@ import:
 - package: github.com/eris-ltd/eris-keys
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
-- package: github.com/tendermint/tendermint
 - package: github.com/gin-gonic/gin
 - package: github.com/gorilla/websocket
 - package: github.com/naoina/toml
 - package: github.com/stretchr/testify
+- package: github.com/tendermint/tendermint
+  version: ~0.8.0
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
   subpackages:
