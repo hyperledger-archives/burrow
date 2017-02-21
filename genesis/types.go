@@ -130,19 +130,13 @@ func (genesisValidator *GenesisValidator) Clone() (GenesisValidator, error) {
 		return GenesisValidator{}, fmt.Errorf("Invalid GenesisValidator %s with nil public key.",
 			genesisValidator.Name)
 	}
-	// clone the public key by writing and reading over go-wire serialisation
-	// TODO! write unit test to see whether this is correct
-	publicKeyClone, err := crypto.PubKeyFromBytes(genesisValidator.PubKey.Bytes())
-	if err != nil {
-		return GenesisValidator{}, err
-	}
 	// clone the addresses to unbond to
 	unbondToClone := make([]BasicAccount, len(genesisValidator.UnbondTo))
 	for i, basicAccount := range genesisValidator.UnbondTo {
 		unbondToClone[i] = basicAccount.Clone()
 	}
 	return GenesisValidator{
-		PubKey:   publicKeyClone,
+		PubKey:   genesisValidator.PubKey,
 		Amount:   genesisValidator.Amount,
 		Name:     genesisValidator.Name,
 		UnbondTo: unbondToClone,
