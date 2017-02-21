@@ -58,12 +58,12 @@ type GenesisValidator struct {
 // is defined in genesis and not under consensus, where
 // PrivateValidator (currently inherited from Tendermint) is.
 type GenesisPrivateValidator struct {
-	Address    []byte         `json:"address"`
-	PubKey     crypto.PubKey  `json:"pub_key"`
-	PrivKey    crypto.PrivKey `json:"priv_key"`
-	LastHeight int64          `json:"last_height"`
-	LastRound  int64          `json:"last_round"`
-	LastStep   int64          `json:"last_step"`
+	Address    string        `json:"address"`
+	PubKey     []interface{} `json:"pub_key"`
+	PrivKey    []interface{} `json:"priv_key"`
+	LastHeight int64         `json:"last_height"`
+	LastRound  int64         `json:"last_round"`
+	LastStep   int64         `json:"last_step"`
 }
 
 type GenesisParams struct {
@@ -123,6 +123,13 @@ func (genesisAccount *GenesisAccount) Clone() GenesisAccount {
 
 // Clone clones the genesis validator
 func (genesisValidator *GenesisValidator) Clone() (GenesisValidator, error) {
+	if genesisValidator == nil {
+		return GenesisValidator{}, fmt.Errorf("Cannot clone nil GenesisValidator.")
+	}
+	if genesisValidator.PubKey == nil {
+		return GenesisValidator{}, fmt.Errorf("Invalid GenesisValidator %s with nil public key.",
+			genesisValidator.Name)
+	}
 	// clone the public key by writing and reading over go-wire serialisation
 	// TODO! write unit test to see whether this is correct
 	publicKeyClone, err := crypto.PubKeyFromBytes(genesisValidator.PubKey.Bytes())
@@ -131,8 +138,8 @@ func (genesisValidator *GenesisValidator) Clone() (GenesisValidator, error) {
 	}
 	// clone the addresses to unbond to
 	unbondToClone := make([]BasicAccount, len(genesisValidator.UnbondTo))
-	for _, basicAccount := range genesisValidator.UnbondTo {
-		unbondToClone = append(unbondToClone, basicAccount.Clone())
+	for i, basicAccount := range genesisValidator.UnbondTo {
+		unbondToClone[i] = basicAccount.Clone()
 	}
 	return GenesisValidator{
 		PubKey:   publicKeyClone,

@@ -39,17 +39,17 @@ func MakeGenesisDocFromAccounts(chainName string, accounts []*GenesisAccount,
 	}
 	// copy slice of pointers to accounts into slice of accounts
 	accountsCopy := make([]GenesisAccount, len(accounts))
-	for _, genesisAccount := range accounts {
-		accountsCopy = append(accountsCopy, genesisAccount.Clone())
+	for i, genesisAccount := range accounts {
+		accountsCopy[i] = genesisAccount.Clone()
 	}
 	// copy slice of pointers to validators into slice of validators
 	validatorsCopy := make([]GenesisValidator, len(validators))
-	for _, genesisValidator := range validators {
+	for i, genesisValidator := range validators {
 		genesisValidatorCopy, err := genesisValidator.Clone()
 		if err != nil {
 			return GenesisDoc{}, err
 		}
-		validatorsCopy = append(validatorsCopy, genesisValidatorCopy)
+		validatorsCopy[i] = genesisValidatorCopy
 	}
 	genesisDoc := GenesisDoc{
 		GenesisTime: time.Now(),
