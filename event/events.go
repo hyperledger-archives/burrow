@@ -44,7 +44,7 @@ type EventEmitter interface {
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch *go_events.EventSwitch, logger loggers.InfoTraceLogger) *events {
+func NewEvents(eventSwitch go_events.EventSwitch, logger loggers.InfoTraceLogger) *events {
 	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
 }
 
@@ -57,7 +57,7 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 
 // The events struct has methods for working with events.
 type events struct {
-	eventSwitch *go_events.EventSwitch
+	eventSwitch go_events.EventSwitch
 	logger      loggers.InfoTraceLogger
 }
 

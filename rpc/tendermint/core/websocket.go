@@ -35,7 +35,7 @@ type TendermintWebsocketServer struct {
 }
 
 func NewTendermintWebsocketServer(config *server.ServerConfig,
-	tendermintPipe definitions.TendermintPipe, evsw *events.EventSwitch) (
+	tendermintPipe definitions.TendermintPipe, evsw events.EventSwitch) (
 	*TendermintWebsocketServer, error) {
 
 	if tendermintPipe == nil {

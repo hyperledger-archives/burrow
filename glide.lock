@@ -195,8 +195,6 @@ imports:
   - state
   - types
   - version
-- name: github.com/tendermint/tmsp
-  version: f41bc5f11969e22b357d94b4247403fd62d40445
 - name: github.com/tommy351/gin-cors
   version: dc91dec6313ae4db53481bf3b29cf6b94bf80357
 - name: golang.org/x/crypto

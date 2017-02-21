@@ -17,10 +17,10 @@
 package types
 
 import (
-	// TODO: [ben] this is currently only used for tmsp result type; but should
-	// be removed as tmsp dependencies shouldn't feature in the application
+	// TODO: [ben] this is currently only used for abci result type; but should
+	// be removed as abci dependencies shouldn't feature in the application
 	// manager
-	tmsp_types "github.com/tendermint/tmsp/types"
+	abci_types "github.com/tendermint/abci/types"
 )
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken
@@ -32,16 +32,16 @@ type Application interface {
 
 	// Info returns application information as a string
 	// NOTE: [ben] likely to move
-	Info() (info string)
+	Info() (info abci_types.ResponseInfo)
 
 	// Set application option (e.g. mode=mempool, mode=consensus)
 	// NOTE: [ben] taken from tendermint, but it is unclear what the use is,
-	// specifically, when will tendermint call this over tmsp ?
+	// specifically, when will tendermint call this over abci ?
 	SetOption(key string, value string) (log string)
 
 	// Append transaction applies a transaction to the state regardless of
 	// whether the transaction is valid or not.
-	// Currently AppendTx is taken from tmsp, and returns a result.
+	// Currently AppendTx is taken from abci, and returns a result.
 	// This will be altered, as AppendTransaction needs to more strongly reflect
 	// the theoretical logic:
 	//   Append(StateN, Transaction) = StateN+1
@@ -51,18 +51,18 @@ type Application interface {
 	// TODO: implementation notes:
 	// 1. at this point the transaction should already be strongly typed
 	// 2.
-	AppendTx(tx []byte) tmsp_types.Result
+	DeliverTx(tx []byte) abci_types.Result
 
 	// Check Transaction validates a transaction before being allowed into the
 	// consensus' engine memory pool.  This is the original defintion and
-	// intention as taken from tmsp, but should be remapped to the more
+	// intention as taken from abci, but should be remapped to the more
 	// general concept of basic, cheap verification;
 	// Check Transaction does not alter the state, but does require an immutable
 	// copy of the state. In particular there is no consensus on ordering yet.
 	// TODO: implementation notes:
 	// 1. at this point the transaction should already be strongly typed
 	// 2.
-	CheckTx(tx []byte) tmsp_types.Result
+	CheckTx(tx []byte) abci_types.Result
 
 	// Commit returns the root hash of the current application state
 	// NOTE: [ben] Because the concept of the block has been erased here
@@ -70,14 +70,14 @@ type Application interface {
 	// the opposit the principle of explicit stateless functions.
 	// This will be amended when we introduce the concept of (streaming)
 	// blocks in the pipe.
-	Commit() tmsp_types.Result
+	Commit() abci_types.Result
 
 	// Query for state.  This query request is not passed over the p2p network
 	// and is called from Tendermint rpc directly up to the application.
 	// NOTE: [ben] Eris-DB will give preference to queries from the local client
 	// directly over the Eris-DB rpc.
 	// We will support this for Tendermint compatibility.
-	Query(query []byte) tmsp_types.Result
+	Query(query []byte) abci_types.Result
 }
 
 // Tendermint has a separate interface for reintroduction of blocks
@@ -85,7 +85,7 @@ type BlockchainAware interface {
 
 	// Initialise the blockchain
 	// validators: genesis validators from tendermint core
-	InitChain(validators []*tmsp_types.Validator)
+	InitChain(validators []*abci_types.Validator)
 
 	// Signals the beginning of a block;
 	// NOTE: [ben] currently not supported by tendermint
@@ -95,5 +95,5 @@ type BlockchainAware interface {
 	// validators: changed validators from app to Tendermint
 	// NOTE: [ben] currently not supported by tendermint
 	// not yet well defined what the change set contains.
-	EndBlock(height uint64) (validators []*tmsp_types.Validator)
+	EndBlock(height uint64) (validators []*abci_types.Validator)
 }

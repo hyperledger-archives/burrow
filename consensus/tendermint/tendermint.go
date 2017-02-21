@@ -23,15 +23,14 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"sync"
 
+	abci_types "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
 	p2p "github.com/tendermint/go-p2p"
 	tendermint_consensus "github.com/tendermint/tendermint/consensus"
 	node "github.com/tendermint/tendermint/node"
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
-	tmsp_types "github.com/tendermint/tmsp/types"
 
 	edb_event "github.com/eris-ltd/eris-db/event"
 
@@ -125,10 +124,8 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 		tmintConfig.Set("rpc_laddr", "")
 	}
 
-	newNode := node.NewNode(tmintConfig, privateValidator, func(_, _ string,
-		hash []byte) proxy.AppConn {
-		return NewLocalClient(new(sync.Mutex), application)
-	})
+	newNode := node.NewNode(tmintConfig, privateValidator,
+		proxy.NewLocalClientCreator(application))
 
 	listener := p2p.NewDefaultListener("tcp", tmintConfig.GetString("node_laddr"),
 		tmintConfig.GetBool("skip_upnp"))
@@ -235,7 +232,7 @@ func (tendermint *Tendermint) Events() edb_event.EventEmitter {
 }
 
 func (tendermint *Tendermint) BroadcastTransaction(transaction []byte,
-	callback func(*tmsp_types.Response)) error {
+	callback func(*abci_types.Response)) error {
 	return tendermint.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
 }
 

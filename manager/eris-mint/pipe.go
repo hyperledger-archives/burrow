@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"fmt"
 
+	abci_types "github.com/tendermint/abci/types"
 	tm_common "github.com/tendermint/go-common"
 	crypto "github.com/tendermint/go-crypto"
 	db "github.com/tendermint/go-db"
 	go_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
 	tm_types "github.com/tendermint/tendermint/types"
-	tmsp_types "github.com/tendermint/tmsp/types"
 
 	"github.com/eris-ltd/eris-db/account"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
@@ -71,7 +71,7 @@ var _ definitions.Pipe = (*erisMintPipe)(nil)
 var _ definitions.TendermintPipe = (*erisMintPipe)(nil)
 
 func NewErisMintPipe(moduleConfig *config.ModuleConfig,
-	eventSwitch *go_events.EventSwitch,
+	eventSwitch go_events.EventSwitch,
 	logger loggers.InfoTraceLogger) (*erisMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
@@ -144,8 +144,8 @@ func NewErisMintPipe(moduleConfig *config.ModuleConfig,
 func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 	*genesis.GenesisDoc, error) {
 	// avoid Tendermints PanicSanity and return a clean error
-	if backend != db.DBBackendMemDB &&
-		backend != db.DBBackendLevelDB {
+	if backend != db.MemDBBackendStr &&
+		backend != db.LevelDBBackendStr {
 		return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
 			backend, GetErisMintVersion)
 	}
@@ -534,7 +534,7 @@ func (pipe *erisMintPipe) ListNames() (*rpc_tm_types.ResultListNames, error) {
 }
 
 func (pipe *erisMintPipe) broadcastTx(tx txs.Tx,
-	callback func(res *tmsp_types.Response)) (*rpc_tm_types.ResultBroadcastTx, error) {
+	callback func(res *abci_types.Response)) (*rpc_tm_types.ResultBroadcastTx, error) {
 
 	txBytes, err := txs.EncodeTx(tx)
 	if err != nil {
@@ -554,9 +554,9 @@ func (pipe *erisMintPipe) BroadcastTxAsync(tx txs.Tx) (*rpc_tm_types.ResultBroad
 }
 
 func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadcastTx, error) {
-	responseChannel := make(chan *tmsp_types.Response, 1)
+	responseChannel := make(chan *abci_types.Response, 1)
 	_, err := pipe.broadcastTx(tx,
-		func(res *tmsp_types.Response) {
+		func(res *abci_types.Response) {
 			responseChannel <- res
 		})
 	if err != nil {
@@ -564,7 +564,7 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 	}
 	// NOTE: [ben] This Response is set in /consensus/tendermint/local_client.go
 	// a call to Application, here implemented by ErisMint, over local callback,
-	// or TMSP RPC call.  Hence the result is determined by ErisMint/erismint.go
+	// or abci RPC call.  Hence the result is determined by ErisMint/erismint.go
 	// CheckTx() Result (Result converted to ReqRes into Response returned here)
 	// NOTE: [ben] BroadcastTx just calls CheckTx in Tendermint (oddly... [Silas])
 	response := <-responseChannel
@@ -578,17 +578,17 @@ func (pipe *erisMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroadc
 		Log:  responseCheckTx.Log,
 	}
 	switch responseCheckTx.Code {
-	case tmsp_types.CodeType_OK:
+	case abci_types.CodeType_OK:
 		return resultBroadCastTx, nil
-	case tmsp_types.CodeType_EncodingError:
+	case abci_types.CodeType_EncodingError:
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
-	case tmsp_types.CodeType_InternalError:
+	case abci_types.CodeType_InternalError:
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
 	default:
 		logging.InfoMsg(pipe.logger, "Unknown error returned from Tendermint CheckTx on BroadcastTxSync",
 			"application", GetErisMintVersion().GetVersionString(),
-			"TMSP_code_type", responseCheckTx.Code,
-			"TMSP_log", responseCheckTx.Log,
+			"abci_code_type", responseCheckTx.Code,
+			"abci_log", responseCheckTx.Log,
 		)
 		return resultBroadCastTx, fmt.Errorf("Unknown error returned: " + responseCheckTx.Log)
 	}
