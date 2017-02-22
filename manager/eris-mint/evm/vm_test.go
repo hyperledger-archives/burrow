@@ -10,7 +10,6 @@ import (
 
 	"errors"
 
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"

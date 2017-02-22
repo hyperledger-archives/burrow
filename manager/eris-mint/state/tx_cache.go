@@ -19,6 +19,8 @@ type TxCache struct {
 	storages map[Tuple256]Word256
 }
 
+var _ vm.AppState = &TxCache{}
+
 func NewTxCache(backend *BlockCache) *TxCache {
 	return &TxCache{
 		backend:  backend,

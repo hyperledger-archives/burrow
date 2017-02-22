@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockInterval = 10 * time.Millisecond
+var mockInterval = 40 * time.Millisecond
 
 type mockSub struct {
 	subId    string

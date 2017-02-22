@@ -99,19 +99,6 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 	return tx, nil
 }
 
-type PermFunc struct {
-	Name string
-	Args string
-}
-
-var PermsFuncs = []PermFunc{
-	{"set_base", "address, permission flag, value"},
-	{"unset_base", "address, permission flag"},
-	{"set_global", "permission flag, value"},
-	{"add_role", "address, role"},
-	{"rm_role", "address, role"},
-}
-
 func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
 	pub, _, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", nonceS)
 	if err != nil {
@@ -119,13 +106,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	}
 	var args ptypes.PermArgs
 	switch permFunc {
-	case "set_base":
+	case "setBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
 		if err != nil {
 			return nil, err
 		}
 		if len(argsS) != 3 {
-			return nil, fmt.Errorf("set_base also takes a value (true or false)")
+			return nil, fmt.Errorf("setBase also takes a value (true or false)")
 		}
 		var value bool
 		if argsS[2] == "true" {
@@ -136,13 +123,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return nil, fmt.Errorf("Unknown value %s", argsS[2])
 		}
 		args = &ptypes.SetBaseArgs{addr, pF, value}
-	case "unset_base":
+	case "unsetBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
 		if err != nil {
 			return nil, err
 		}
 		args = &ptypes.UnsetBaseArgs{addr, pF}
-	case "set_global":
+	case "setGlobal":
 		pF, err := ptypes.PermStringToFlag(argsS[0])
 		if err != nil {
 			return nil, err
@@ -156,13 +143,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return nil, fmt.Errorf("Unknown value %s", argsS[1])
 		}
 		args = &ptypes.SetGlobalArgs{pF, value}
-	case "add_role":
+	case "addRole":
 		addr, err := hex.DecodeString(argsS[0])
 		if err != nil {
 			return nil, err
 		}
 		args = &ptypes.AddRoleArgs{addr, argsS[1]}
-	case "rm_role":
+	case "removeRole":
 		addr, err := hex.DecodeString(argsS[0])
 		if err != nil {
 			return nil, err
