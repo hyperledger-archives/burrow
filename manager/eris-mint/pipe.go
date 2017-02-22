@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package erismint
 
@@ -21,7 +19,6 @@ import (
 	"fmt"
 
 	abci_types "github.com/tendermint/abci/types"
-	tm_common "github.com/tendermint/go-common"
 	crypto "github.com/tendermint/go-crypto"
 	db "github.com/tendermint/go-db"
 	go_events "github.com/tendermint/go-events"
@@ -44,6 +41,7 @@ import (
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	rpc_tm_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
 )
 
 type erisMintPipe struct {
@@ -380,7 +378,7 @@ func (pipe *erisMintPipe) GetStorage(address, key []byte) (*rpc_tm_types.ResultG
 	storageTree := state.LoadStorage(storageRoot)
 
 	_, value, exists := storageTree.Get(
-		tm_common.LeftPadWord256(key).Bytes())
+		word256.LeftPadWord256(key).Bytes())
 	if !exists {
 		// value == nil {
 		return &rpc_tm_types.ResultGetStorage{key, nil}, nil
@@ -422,12 +420,12 @@ func (pipe *erisMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_typ
 		fromAddress = []byte{}
 	}
 	callee := toVMAccount(outAcc)
-	caller := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   tm_common.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}
@@ -448,13 +446,13 @@ func (pipe *erisMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_type
 	error) {
 	st := pipe.erisMint.GetState()
 	cache := pipe.erisMint.GetCheckCache()
-	callee := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
-	caller := &vm.Account{Address: tm_common.LeftPadWord256(fromAddress)}
+	callee := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   tm_common.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}

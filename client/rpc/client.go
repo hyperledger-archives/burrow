@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package rpc
 
@@ -99,19 +97,6 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 	return tx, nil
 }
 
-type PermFunc struct {
-	Name string
-	Args string
-}
-
-var PermsFuncs = []PermFunc{
-	{"set_base", "address, permission flag, value"},
-	{"unset_base", "address, permission flag"},
-	{"set_global", "permission flag, value"},
-	{"add_role", "address, role"},
-	{"rm_role", "address, role"},
-}
-
 func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
 	pub, _, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", nonceS)
 	if err != nil {
@@ -119,13 +104,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	}
 	var args ptypes.PermArgs
 	switch permFunc {
-	case "set_base":
+	case "setBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
 		if err != nil {
 			return nil, err
 		}
 		if len(argsS) != 3 {
-			return nil, fmt.Errorf("set_base also takes a value (true or false)")
+			return nil, fmt.Errorf("setBase also takes a value (true or false)")
 		}
 		var value bool
 		if argsS[2] == "true" {
@@ -136,13 +121,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return nil, fmt.Errorf("Unknown value %s", argsS[2])
 		}
 		args = &ptypes.SetBaseArgs{addr, pF, value}
-	case "unset_base":
+	case "unsetBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
 		if err != nil {
 			return nil, err
 		}
 		args = &ptypes.UnsetBaseArgs{addr, pF}
-	case "set_global":
+	case "setGlobal":
 		pF, err := ptypes.PermStringToFlag(argsS[0])
 		if err != nil {
 			return nil, err
@@ -156,13 +141,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return nil, fmt.Errorf("Unknown value %s", argsS[1])
 		}
 		args = &ptypes.SetGlobalArgs{pF, value}
-	case "add_role":
+	case "addRole":
 		addr, err := hex.DecodeString(argsS[0])
 		if err != nil {
 			return nil, err
 		}
 		args = &ptypes.AddRoleArgs{addr, argsS[1]}
-	case "rm_role":
+	case "removeRole":
 		addr, err := hex.DecodeString(argsS[0])
 		if err != nil {
 			return nil, err

@@ -1,22 +1,35 @@
 // +build integration
 
 // Space above here matters
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
 import (
 	"bytes"
 	"fmt"
-	"testing"
-
 	"golang.org/x/crypto/ripemd160"
-
+	"testing"
 	"time"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
 	"github.com/stretchr/testify/assert"
-	tm_common "github.com/tendermint/go-common"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
@@ -123,8 +136,8 @@ func TestGetStorage(t *testing.T) {
 			" created a contract but the contract address is empty")
 
 		v := getStorage(t, client, contractAddr, []byte{0x1})
-		got := tm_common.LeftPadWord256(v)
-		expected := tm_common.LeftPadWord256([]byte{0x5})
+		got := word256.LeftPadWord256(v)
+		expected := word256.LeftPadWord256([]byte{0x5})
 		if got.Compare(expected) != 0 {
 			t.Fatalf("Wrong storage value. Got %x, expected %x", got.Bytes(),
 				expected.Bytes())
@@ -148,8 +161,8 @@ func TestCallCode(t *testing.T) {
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
 			0x20, 0x60, 0x0, 0xf3}
-		data = append(tm_common.LeftPadWord256([]byte{0x5}).Bytes(),
-			tm_common.LeftPadWord256([]byte{0x6}).Bytes()...)
+		data = append(word256.LeftPadWord256([]byte{0x5}).Bytes(),
+			word256.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
 		callCode(t, client, user[0].PubKey.Address(), code, data, expected)
 	})

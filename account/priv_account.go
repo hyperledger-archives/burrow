@@ -1,28 +1,29 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+package account
 
 // TODO: [ben] Account and PrivateAccount need to become a pure interface
 // and then move the implementation to the manager types.
 // Eg, Geth has its accounts, different from ErisMint
 
-package account
-
 import (
+	"fmt"
+
+	"github.com/eris-ltd/eris-db/common/sanity"
+
 	"github.com/tendermint/ed25519"
-	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -49,7 +50,7 @@ func (pA *PrivAccount) Sign(chainID string, o Signable) crypto.Signature {
 }
 
 func (pA *PrivAccount) String() string {
-	return Fmt("PrivAccount{%X}", pA.Address)
+	return fmt.Sprintf("PrivAccount{%X}", pA.Address)
 }
 
 //----------------------------------------
@@ -90,7 +91,7 @@ func GenPrivAccountFromSecret(secret string) *PrivAccount {
 
 func GenPrivAccountFromPrivKeyBytes(privKeyBytes []byte) *PrivAccount {
 	if len(privKeyBytes) != 64 {
-		PanicSanity(Fmt("Expected 64 bytes but got %v", len(privKeyBytes)))
+		sanity.PanicSanity(fmt.Sprintf("Expected 64 bytes but got %v", len(privKeyBytes)))
 	}
 	var privKeyArray [64]byte
 	copy(privKeyArray[:], privKeyBytes)

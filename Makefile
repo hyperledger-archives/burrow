@@ -73,6 +73,11 @@ hell:
 	go build -o ${REPO}/target/hell ./util/hell/cmd/hell/main.go
 	./target/hell $(filter-out $@,$(MAKECMDGOALS))
 
+# Dumps Solidity interface contracts for SNatives
+.PHONY: snatives
+snatives:
+	@go run ./util/snatives/cmd/main.go
+
 ### Building github.com/eris-ltd/eris-db
 
 # build all targets in github.com/eris-ltd/eris-db
