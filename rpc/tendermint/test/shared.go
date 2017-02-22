@@ -19,7 +19,7 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/eris-ltd/eris-db/word256"
 
-	state_types "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
@@ -33,7 +33,7 @@ var (
 	mempoolCount      = 0
 	chainID           string
 	websocketAddr     string
-	genesisDoc        *state_types.GenesisDoc
+	genesisDoc        *genesis.GenesisDoc
 	websocketEndpoint string
 	user              = makeUsers(5) // make keys
 	jsonRpcClient     rpcclient.Client
@@ -48,7 +48,7 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	rootWorkDir = ffs.AddDir("rootWorkDir")
 	rootDataDir := ffs.AddDir("rootDataDir")
 	genesisFile := ffs.AddFile("rootWorkDir/genesis.json", defaultGenesis)
-	genesisDoc = state_types.GenesisDocFromJSON([]byte(defaultGenesis))
+	genesisDoc = genesis.GenesisDocFromJSON([]byte(defaultGenesis))
 
 	if ffs.Error != nil {
 		return ffs.Error

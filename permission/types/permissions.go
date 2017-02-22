@@ -168,6 +168,21 @@ func (aP *AccountPermissions) RmRole(role string) bool {
 	return false
 }
 
+// Clone clones the account permissions
+func (accountPermissions *AccountPermissions) Clone() AccountPermissions {
+	// clone base permissions
+	basePermissionsClone := accountPermissions.Base
+	// clone roles []string
+	rolesClone := make([]string, len(accountPermissions.Roles))
+	// strings are immutable so copy suffices
+	copy(rolesClone, accountPermissions.Roles)
+
+	return AccountPermissions{
+		Base:  basePermissionsClone,
+		Roles: rolesClone,
+	}
+}
+
 //--------------------------------------------------------------------------------
 // string utilities
 

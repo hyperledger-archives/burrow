@@ -31,7 +31,7 @@ var g1 = fmt.Sprintf(`
         {
             "address": "%X",
             "amount": %d,
-	    "name": "%s",
+	    	"name": "%s",
             "permissions": {
 		    "base": {
 			    "perms": %d,
