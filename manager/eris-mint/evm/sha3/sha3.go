@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+package sha3
+
 // Package sha3 implements the SHA3 hash algorithm (formerly called Keccak) chosen by NIST in 2012.
 // This file provides a SHA3 implementation which implements the standard hash.Hash interface.
 // Writing input data, including padding, and reading output data are computed in this file.
@@ -9,7 +11,6 @@
 // This is a consequence of the hash interface in which a buffer of bytes is passed in.
 // The internals of the Keccak-f function are computed in keccakf.go.
 // For the detailed specification, refer to the Keccak web site (http://keccak.noekeon.org/).
-package sha3
 
 import (
 	"encoding/binary"
