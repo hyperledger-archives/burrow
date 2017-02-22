@@ -58,4 +58,4 @@ See the [CONTRIBUTING.md](.github/CONTRIBUTING.md) for more details.
 
 ## License
 
-[GPL-3](license.md)
+[Apache 2.0](license.md)
