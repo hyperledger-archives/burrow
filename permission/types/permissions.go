@@ -112,6 +112,12 @@ func (p *BasePermissions) IsSet(ty PermFlag) bool {
 	return p.SetBit&ty > 0
 }
 
+// Returns the Perms PermFlag masked with SetBit bit field to give the resultant
+// permissions enabled by this BasePermissions
+func (p *BasePermissions) ResultantPerms() PermFlag {
+	return p.Perms & p.SetBit
+}
+
 func (p BasePermissions) String() string {
 	return fmt.Sprintf("Base: %b; Set: %b", p.Perms, p.SetBit)
 }
@@ -183,19 +189,19 @@ func PermFlagToString(pf PermFlag) (perm string) {
 	case Name:
 		perm = "name"
 	case HasBase:
-		perm = "has_base"
+		perm = "hasBase"
 	case SetBase:
-		perm = "set_base"
+		perm = "setBase"
 	case UnsetBase:
-		perm = "unset_base"
+		perm = "unsetBase"
 	case SetGlobal:
-		perm = "set_global"
+		perm = "setGlobal"
 	case HasRole:
-		perm = "has_role"
+		perm = "hasRole"
 	case AddRole:
-		perm = "add_role"
+		perm = "addRole"
 	case RmRole:
-		perm = "rm_role"
+		perm = "removeRole"
 	default:
 		perm = "#-UNKNOWN-#"
 	}
@@ -218,19 +224,19 @@ func PermStringToFlag(perm string) (pf PermFlag, err error) {
 		pf = Bond
 	case "name":
 		pf = Name
-	case "has_base":
+	case "hasBase":
 		pf = HasBase
-	case "set_base":
+	case "setBase":
 		pf = SetBase
-	case "unset_base":
+	case "unsetBase":
 		pf = UnsetBase
-	case "set_global":
+	case "setGlobal":
 		pf = SetGlobal
-	case "has_role":
+	case "hasRole":
 		pf = HasRole
-	case "add_role":
+	case "addRole":
 		pf = AddRole
-	case "rm_role":
+	case "removeRole":
 		pf = RmRole
 	default:
 		err = fmt.Errorf("Unknown permission %s", perm)
