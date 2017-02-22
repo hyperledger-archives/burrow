@@ -1,17 +1,16 @@
-// Copyright 2015-2017 Monax Industries Limited.
-// This file is part of the Monax platform (Monax)
-
-// Monax is free software: you can use, redistribute it and/or modify
-// it only under the terms of the GNU General Public License, version
-// 3, as published by the Free Software Foundation.
-
-// Monax is distributed WITHOUT ANY WARRANTY pursuant to
-// the terms of the Gnu General Public Licence, version 3, including
-// (but not limited to) Clause 15 thereof. See the text of the
-// GNU General Public License, version 3 for full terms.
-
-// You should have received a copy of the GNU General Public License,
-// version 3, with Monax.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package types
 
