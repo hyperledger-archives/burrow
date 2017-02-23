@@ -51,6 +51,11 @@ func GetTendermintConfig(loadedConfig *viper.Viper) *TendermintConfig {
 //------------------------------------------------------------------------------
 // Tendermint defaults
 
+//
+// Contract
+//
+
+
 func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	dataDir, rootDir string) {
 
@@ -64,6 +69,8 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("fast_sync", true)
 	tmintConfig.SetDefault("skip_upnp", false)
 	tmintConfig.SetDefault("addrbook_file", path.Join(rootDir, "addrbook.json"))
+	tmintConfig.SetDefault("addrbook_strict", true) // disable to allow connections locally
+	tmintConfig.SetDefault("pex_reactor", false)    // enable for peer exchange
 	tmintConfig.SetDefault("priv_validator_file", path.Join(rootDir, "priv_validator.json"))
 	tmintConfig.SetDefault("db_backend", "leveldb")
 	tmintConfig.SetDefault("db_dir", dataDir)
@@ -71,10 +78,12 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("rpc_laddr", "")
 	tmintConfig.SetDefault("prof_laddr", "")
 	tmintConfig.SetDefault("revision_file", path.Join(workDir, "revision"))
-	tmintConfig.SetDefault("cswal", path.Join(dataDir, "cswal"))
-	tmintConfig.SetDefault("cswal_light", false)
+	tmintConfig.SetDefault("cs_wal_dir", path.Join(dataDir,"cs.wal"))
+	tmintConfig.SetDefault("cs_wal_light", false)
+	tmintConfig.SetDefault("filter_peers", false)
 
-	tmintConfig.SetDefault("block_size", 10000)
+	tmintConfig.SetDefault("block_size", 10000)      // max number of txs
+	tmintConfig.SetDefault("block_part_size", 65536) // part size 64K
 	tmintConfig.SetDefault("disable_data_hash", false)
 	tmintConfig.SetDefault("timeout_propose", 3000)
 	tmintConfig.SetDefault("timeout_propose_delta", 500)
@@ -83,9 +92,12 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("timeout_precommit", 1000)
 	tmintConfig.SetDefault("timeout_precommit_delta", 500)
 	tmintConfig.SetDefault("timeout_commit", 1000)
+	// make progress asap (no `timeout_commit`) on full precommit votes
+	tmintConfig.SetDefault("skip_timeout_commit", false)
 	tmintConfig.SetDefault("mempool_recheck", true)
 	tmintConfig.SetDefault("mempool_recheck_empty", true)
 	tmintConfig.SetDefault("mempool_broadcast", true)
+	tmintConfig.SetDefault("mempool_wal_dir", path.Join(dataDir, "mempool.wal"))
 }
 
 //------------------------------------------------------------------------------
