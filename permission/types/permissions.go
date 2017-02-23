@@ -16,6 +16,7 @@ package types
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/eris-ltd/eris-db/word256"
 )
@@ -238,7 +239,7 @@ func PermFlagToString(pf PermFlag) (perm string) {
 }
 
 func PermStringToFlag(perm string) (pf PermFlag, err error) {
-	switch perm {
+	switch strings.ToLower(perm) {
 	case "root":
 		pf = Root
 	case "send":
@@ -253,19 +254,19 @@ func PermStringToFlag(perm string) (pf PermFlag, err error) {
 		pf = Bond
 	case "name":
 		pf = Name
-	case "hasBase":
+	case "hasbase", "has_base":
 		pf = HasBase
-	case "setBase":
+	case "setbase", "set_base":
 		pf = SetBase
-	case "unsetBase":
+	case "unsetbase", "unset_base":
 		pf = UnsetBase
-	case "setGlobal":
+	case "setglobal", "set_global":
 		pf = SetGlobal
-	case "hasRole":
+	case "hasrole", "has_role":
 		pf = HasRole
-	case "addRole":
+	case "addrole", "add_role":
 		pf = AddRole
-	case "removeRole":
+	case "removerole", "rm_role":
 		pf = RmRole
 	default:
 		err = fmt.Errorf("Unknown permission %s", perm)
