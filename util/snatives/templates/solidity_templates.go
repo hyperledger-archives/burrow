@@ -25,7 +25,9 @@ import (
 
 const contractTemplateText = `/**
 [[.Comment]]
-* @dev These functions can be accessed as if this contract were deployed at the address [[.Address]]
+* @dev These functions can be accessed as if this contract were deployed at the address [[.Address]].
+* @dev For readability you may wish to define the following constant to refer to the SNative contract:
+* @dev address constant [[.Name]]ContractAddress = [[.Address]]
 */
 contract [[.Name]] {[[range .Functions]]
 [[.SolidityIndent 1]]
@@ -34,7 +36,7 @@ contract [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) constant returns ([[.Return.Type]] [[.Return.Name]]);`
+function [[.Name]]([[.ArgList]]) constant returns ([[.Return.TypeName]] [[.Return.Name]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -74,7 +76,7 @@ func NewSolidityContract(contract *vm.SNativeContractDescription) *solidityContr
 
 func (contract *solidityContract) Address() string {
 	return fmt.Sprintf("0x%x",
-		contract.SNativeContractDescription.Address().Postfix(20))
+		contract.SNativeContractDescription.Address())
 }
 
 // Generate Solidity code for this SNative contract
@@ -104,7 +106,7 @@ func NewSolidityFunction(function *vm.SNativeFunctionDescription) *solidityFunct
 func (function *solidityFunction) ArgList() string {
 	argList := make([]string, len(function.Args))
 	for i, arg := range function.Args {
-		argList[i] = fmt.Sprintf("%s %s", arg.Type, arg.Name)
+		argList[i] = fmt.Sprintf("%s %s", arg.TypeName, arg.Name)
 	}
 	return strings.Join(argList, ", ")
 }
