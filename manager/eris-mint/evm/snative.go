@@ -187,6 +187,12 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 
 	contractMap := make(map[string]*SNativeContractDescription, len(contracts))
 	for _, contract := range contracts {
+		if _, ok := contractMap[contract.Name]; ok {
+			// If this happens we have a pseudo compile time error that will be caught
+			// on native.go init()
+			panic(fmt.Errorf("Duplicate contract with name %s defined. " +
+					"Contract names must be unique.", contract.Name))
+		}
 		contractMap[contract.Name] = contract
 	}
 	return contractMap
