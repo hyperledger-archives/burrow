@@ -1206,7 +1206,7 @@ func permNameToFuncID(name string) []byte {
 }
 
 func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = permissionsContract.Address().Postfix(20)
+	addr = permissionsContract.AddressBytes()
 	switch name {
 	case "hasBase", "unsetBase":
 		data = LeftPadBytes(user.Address, 32)
@@ -1242,7 +1242,7 @@ func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.Perm
 }
 
 func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = permissionsContract.Address().Postfix(20)
+	addr = permissionsContract.AddressBytes()
 	data = LeftPadBytes(user.Address, 32)
 	data = append(data, RightPadBytes([]byte(role), 32)...)
 	data = append(permNameToFuncID(name), data...)
