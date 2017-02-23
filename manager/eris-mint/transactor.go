@@ -1,21 +1,17 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
-
-// Transactor is part of the pipe for ErisMint and provides the implementation
-// for the pipe to call into the ErisMint application
 package erismint
 
 import (
@@ -25,18 +21,20 @@ import (
 	"sync"
 	"time"
 
-	cmn "github.com/tendermint/go-common"
-	"github.com/tendermint/go-crypto"
-	tEvents "github.com/tendermint/go-events"
-
 	"github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
+	"github.com/tendermint/go-crypto"
+	tEvents "github.com/tendermint/go-events"
 )
 
+// Transactor is part of the pipe for ErisMint and provides the implementation
+// for the pipe to call into the ErisMint application
 type transactor struct {
 	chainID       string
 	eventSwitch   tEvents.Fireable
@@ -77,12 +75,12 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 		fromAddress = []byte{}
 	}
 	callee := toVMAccount(outAcc)
-	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}
@@ -108,14 +106,14 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 		fromAddress = []byte{}
 	}
 	cache := this.erisMint.GetCheckCache() // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
-	callee := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
-	caller := &vm.Account{Address: cmn.LeftPadWord256(fromAddress)}
+	callee := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
+	caller := &vm.Account{Address: word256.LeftPadWord256(fromAddress)}
 	txCache := state.NewTxCache(cache)
 	st := this.erisMint.GetState() // for block height, time
 	gasLimit := st.GetGasLimit()
 	params := vm.Params{
 		BlockHeight: int64(st.LastBlockHeight),
-		BlockHash:   cmn.LeftPadWord256(st.LastBlockHash),
+		BlockHash:   word256.LeftPadWord256(st.LastBlockHash),
 		BlockTime:   st.LastBlockTime.Unix(),
 		GasLimit:    gasLimit,
 	}
@@ -424,7 +422,7 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 // No idea what this does.
 func toVMAccount(acc *account.Account) *vm.Account {
 	return &vm.Account{
-		Address: cmn.LeftPadWord256(acc.Address),
+		Address: word256.LeftPadWord256(acc.Address),
 		Balance: acc.Balance,
 		Code:    acc.Code,
 		Nonce:   int64(acc.Sequence),

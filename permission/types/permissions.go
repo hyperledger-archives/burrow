@@ -1,16 +1,31 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package types
 
 import (
 	"fmt"
+	"strings"
 
-	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/word256"
 )
 
 //------------------------------------------------------------------------------------------------
 
 var (
-	GlobalPermissionsAddress    = Zero256[:20]
-	GlobalPermissionsAddress256 = Zero256
+	GlobalPermissionsAddress    = word256.Zero256[:20]
+	GlobalPermissionsAddress256 = word256.Zero256
 )
 
 // A particular permission
@@ -112,6 +127,12 @@ func (p *BasePermissions) IsSet(ty PermFlag) bool {
 	return p.SetBit&ty > 0
 }
 
+// Returns the Perms PermFlag masked with SetBit bit field to give the resultant
+// permissions enabled by this BasePermissions
+func (p *BasePermissions) ResultantPerms() PermFlag {
+	return p.Perms & p.SetBit
+}
+
 func (p BasePermissions) String() string {
 	return fmt.Sprintf("Base: %b; Set: %b", p.Perms, p.SetBit)
 }
@@ -125,7 +146,7 @@ type AccountPermissions struct {
 
 // Returns true if the role is found
 func (aP *AccountPermissions) HasRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {
 			return true
@@ -136,7 +157,7 @@ func (aP *AccountPermissions) HasRole(role string) bool {
 
 // Returns true if the role is added, and false if it already exists
 func (aP *AccountPermissions) AddRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {
 			return false
@@ -148,7 +169,7 @@ func (aP *AccountPermissions) AddRole(role string) bool {
 
 // Returns true if the role is removed, and false if it is not found
 func (aP *AccountPermissions) RmRole(role string) bool {
-	role = string(RightPadBytes([]byte(role), 32))
+	role = string(word256.RightPadBytes([]byte(role), 32))
 	for i, r := range aP.Roles {
 		if r == role {
 			post := []string{}
@@ -160,6 +181,21 @@ func (aP *AccountPermissions) RmRole(role string) bool {
 		}
 	}
 	return false
+}
+
+// Clone clones the account permissions
+func (accountPermissions *AccountPermissions) Clone() AccountPermissions {
+	// clone base permissions
+	basePermissionsClone := accountPermissions.Base
+	// clone roles []string
+	rolesClone := make([]string, len(accountPermissions.Roles))
+	// strings are immutable so copy suffices
+	copy(rolesClone, accountPermissions.Roles)
+
+	return AccountPermissions{
+		Base:  basePermissionsClone,
+		Roles: rolesClone,
+	}
 }
 
 //--------------------------------------------------------------------------------
@@ -183,54 +219,56 @@ func PermFlagToString(pf PermFlag) (perm string) {
 	case Name:
 		perm = "name"
 	case HasBase:
-		perm = "has_base"
+		perm = "hasBase"
 	case SetBase:
-		perm = "set_base"
+		perm = "setBase"
 	case UnsetBase:
-		perm = "unset_base"
+		perm = "unsetBase"
 	case SetGlobal:
-		perm = "set_global"
+		perm = "setGlobal"
 	case HasRole:
-		perm = "has_role"
+		perm = "hasRole"
 	case AddRole:
-		perm = "add_role"
+		perm = "addRole"
 	case RmRole:
-		perm = "rm_role"
+		perm = "removeRole"
 	default:
 		perm = "#-UNKNOWN-#"
 	}
 	return
 }
 
+// PermStringToFlag maps camel- and snake case strings to the
+// the corresponding permission flag.
 func PermStringToFlag(perm string) (pf PermFlag, err error) {
-	switch perm {
+	switch strings.ToLower(perm) {
 	case "root":
 		pf = Root
 	case "send":
 		pf = Send
 	case "call":
 		pf = Call
-	case "create_contract":
+	case "createcontract", "create_contract":
 		pf = CreateContract
-	case "create_account":
+	case "createaccount", "create_account":
 		pf = CreateAccount
 	case "bond":
 		pf = Bond
 	case "name":
 		pf = Name
-	case "has_base":
+	case "hasbase", "has_base":
 		pf = HasBase
-	case "set_base":
+	case "setbase", "set_base":
 		pf = SetBase
-	case "unset_base":
+	case "unsetbase", "unset_base":
 		pf = UnsetBase
-	case "set_global":
+	case "setglobal", "set_global":
 		pf = SetGlobal
-	case "has_role":
+	case "hasrole", "has_role":
 		pf = HasRole
-	case "add_role":
+	case "addrole", "add_role":
 		pf = AddRole
-	case "rm_role":
+	case "removerole", "rmrole", "rm_role":
 		pf = RmRole
 	default:
 		err = fmt.Errorf("Unknown permission %s", perm)

@@ -1,18 +1,30 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
 	"bytes"
 	"encoding/hex"
 	"testing"
-	//"time"
-
-	"github.com/tendermint/go-common"
-	"github.com/tendermint/tendermint/config/tendermint_test"
-	// tmtypes "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	"github.com/eris-ltd/eris-db/txs"
+	"github.com/eris-ltd/eris-db/word256"
+
+	"github.com/tendermint/tendermint/config/tendermint_test"
 )
 
 func init() {
@@ -429,7 +441,7 @@ func TestCreates(t *testing.T) {
 	state.UpdateAccount(newAcc1)
 	state.UpdateAccount(newAcc2)
 
-	createData = append(createData, common.LeftPadBytes(acc2.Address, 32)...)
+	createData = append(createData, word256.LeftPadBytes(acc2.Address, 32)...)
 
 	// call the pre-factory, triggering the factory to run a create
 	tx := &txs.CallTx{
@@ -452,7 +464,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage := state.LoadStorage(acc1.StorageRoot)
-	_, firstCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	_, firstCreatedAddress, _ := storage.Get(word256.LeftPadBytes([]byte{0}, 32))
 
 	acc0 = state.GetAccount(acc0.Address)
 	// call the pre-factory, triggering the factory to run a create
@@ -476,7 +488,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = state.GetAccount(acc1.Address)
 	storage = state.LoadStorage(acc1.StorageRoot)
-	_, secondCreatedAddress, _ := storage.Get(common.LeftPadBytes([]byte{0}, 32))
+	_, secondCreatedAddress, _ := storage.Get(word256.LeftPadBytes([]byte{0}, 32))
 
 	if bytes.Equal(firstCreatedAddress, secondCreatedAddress) {
 		t.Errorf("Multiple contracts created with the same address!")
@@ -507,7 +519,7 @@ func TestContractSend(t *testing.T) {
 	newAcc1.Code = callerCode
 	state.UpdateAccount(newAcc1)
 
-	sendData = append(sendData, common.LeftPadBytes(acc2.Address, 32)...)
+	sendData = append(sendData, word256.LeftPadBytes(acc2.Address, 32)...)
 	sendAmt := int64(10)
 	acc2Balance := acc2.Balance
 
