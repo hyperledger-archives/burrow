@@ -25,7 +25,10 @@ import (
 
 const contractTemplateText = `/**
 [[.Comment]]
-* @dev These functions can be accessed as if this contract were deployed at the address [[.Address]]
+* @dev These functions can be accessed as if this contract were deployed at a special address ([[.Address]]).
+* @dev This special address is defined as the last 20 bytes of the sha3 hash of the the contract name.
+* @dev To instantiate the contract use:
+* @dev [[.Name]] [[.InstanceName]] = [[.Name]](address(sha3("[[.Name]]")));
 */
 contract [[.Name]] {[[range .Functions]]
 [[.SolidityIndent 1]]
@@ -34,7 +37,7 @@ contract [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) constant returns ([[.Return.Type]] [[.Return.Name]]);`
+function [[.Name]]([[.ArgList]]) constant returns ([[.Return.TypeName]] [[.Return.Name]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -67,14 +70,33 @@ type solidityFunction struct {
 	*vm.SNativeFunctionDescription
 }
 
+//
+// Contract
+//
+
 // Create a templated solidityContract from an SNative contract description
 func NewSolidityContract(contract *vm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{contract}
 }
 
+func (contract *solidityContract) Comment() string {
+	return comment(contract.SNativeContractDescription.Comment)
+}
+
+// Get a version of the contract name to be used for an instance of the contract
+func (contract *solidityContract) InstanceName() string {
+	// Hopefully the contract name is UpperCamelCase. If it's not, oh well, this
+	// is meant to be illustrative rather than cast iron compilable
+	instanceName := strings.ToLower(contract.Name[:1]) + contract.Name[1:]
+	if instanceName == contract.Name {
+		return "contractInstance"
+	}
+	return instanceName
+}
+
 func (contract *solidityContract) Address() string {
 	return fmt.Sprintf("0x%x",
-		contract.SNativeContractDescription.Address().Postfix(20))
+		contract.SNativeContractDescription.Address())
 }
 
 // Generate Solidity code for this SNative contract
@@ -96,6 +118,10 @@ func (contract *solidityContract) Functions() []*solidityFunction {
 	return solidityFunctions
 }
 
+//
+// Function
+//
+
 // Create a templated solidityFunction from an SNative function description
 func NewSolidityFunction(function *vm.SNativeFunctionDescription) *solidityFunction {
 	return &solidityFunction{function}
@@ -104,7 +130,7 @@ func NewSolidityFunction(function *vm.SNativeFunctionDescription) *solidityFunct
 func (function *solidityFunction) ArgList() string {
 	argList := make([]string, len(function.Args))
 	for i, arg := range function.Args {
-		argList[i] = fmt.Sprintf("%s %s", arg.Type, arg.Name)
+		argList[i] = fmt.Sprintf("%s %s", arg.TypeName, arg.Name)
 	}
 	return strings.Join(argList, ", ")
 }
@@ -131,9 +157,11 @@ func (function *solidityFunction) solidity(indentLevel uint) (string, error) {
 	return buf.String(), nil
 }
 
-func (contract *solidityContract) Comment() string {
-	return comment(contract.SNativeContractDescription.Comment)
-}
+
+//
+// Contract
+//
+
 
 func comment(comment string) string {
 	commentLines := make([]string, 0, 5)
