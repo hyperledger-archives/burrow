@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package genesis
 
 import (
@@ -8,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/util"
@@ -17,9 +32,44 @@ import (
 )
 
 //------------------------------------------------------------------------------------
-// core functions
+// interface functions that are consumed by monax tooling
+// TODO: [ben] these interfaces will be deprecated from v0.17
 
 func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, error) {
+	return generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV,
+		// set the timestamp for the genesis
+		time.Now())
+}
+
+//------------------------------------------------------------------------------------
+// interface functions that are consumed by monax tooling
+
+func GenerateGenesisFileBytes(chainName string, genesisAccounts []*GenesisAccount,
+	genesisValidators []*GenesisValidator) ([]byte, error) {
+	genesisDoc, err := MakeGenesisDocFromAccounts(chainName, genesisAccounts, genesisValidators)
+
+	buf, buf2, n := new(bytes.Buffer), new(bytes.Buffer), new(int)
+	wire.WriteJSON(genesisDoc, buf, n, &err)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Indent(buf2, buf.Bytes(), "", "\t"); err != nil {
+		return nil, err
+	}
+
+	return buf2.Bytes(), nil
+}
+
+//------------------------------------------------------------------------------------
+// core functions that provide functionality for monax tooling in v0.16
+
+// GenerateKnownWithTime takes chainId, an accounts and validators CSV filepath
+// and a timestamp to generate the string of `genesis.json`
+// NOTE: [ben] is introduced as technical debt to preserve the signature
+// of GenerateKnown but in order to introduce the timestamp gradually
+// This will be deprecated in v0.17
+func generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV string,
+	genesisTime time.Time) (string, error) {
 	var genDoc *GenesisDoc
 
 	// TODO [eb] eliminate reading priv_val ... [zr] where?
@@ -37,7 +87,7 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 		return "", err
 	}
 
-	genDoc = newGenDoc(chainID, len(pubkeys), len(pubkeysA))
+	genDoc = newGenDoc(chainID, genesisTime, len(pubkeys), len(pubkeysA))
 	for i, pk := range pubkeys {
 		genDocAddValidator(genDoc, pk, amts[i], names[i], perms[i], setbits[i], i)
 	}
@@ -60,10 +110,10 @@ func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, 
 //-----------------------------------------------------------------------------
 // gendoc convenience functions
 
-func newGenDoc(chainID string, nVal, nAcc int) *GenesisDoc {
+func newGenDoc(chainID string, genesisTime time.Time, nVal, nAcc int) *GenesisDoc {
 	genDoc := GenesisDoc{
-		ChainID: chainID,
-		// GenesisTime: time.Now(),
+		ChainID:     chainID,
+		GenesisTime: genesisTime,
 	}
 	genDoc.Accounts = make([]GenesisAccount, nAcc)
 	genDoc.Validators = make([]GenesisValidator, nVal)
