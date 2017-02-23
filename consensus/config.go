@@ -17,7 +17,6 @@ package consensus
 import (
 	// noops      "github.com/eris-ltd/eris-db/consensus/noops"
 	tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
-	tmsp "github.com/eris-ltd/eris-db/consensus/tmsp"
 )
 
 //------------------------------------------------------------------------------
@@ -29,8 +28,6 @@ func AssertValidConsensusModule(name, minorVersionString string) bool {
 		// noops should not have any external interfaces that can change
 		// over iterations
 		return true
-	case "tmsp":
-		return minorVersionString == tmsp.GetTmspVersion().GetMinorVersionString()
 	case "tendermint":
 		return minorVersionString == tendermint.GetTendermintVersion().GetMinorVersionString()
 	case "bigchaindb":

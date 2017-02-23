@@ -32,7 +32,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
-	tmsp_types "github.com/tendermint/tmsp/types"
+	abci_types "github.com/tendermint/abci/types"
 )
 
 // Base struct.
@@ -179,7 +179,7 @@ type consensusEngine struct {
 }
 
 func (cons *consensusEngine) BroadcastTransaction(transaction []byte,
-	callback func(*tmsp_types.Response)) error {
+	callback func(*abci_types.Response)) error {
 	return nil
 }
 

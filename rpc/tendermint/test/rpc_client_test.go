@@ -1,4 +1,3 @@
-// +build integration
 
 // Space above here matters
 // Copyright 2017 Monax Industries Limited
@@ -308,7 +307,7 @@ func TestBlockchainInfo(t *testing.T) {
 
 		lastBlockHash := resp.BlockMetas[nBlocks-1].Hash
 		for i := nBlocks - 2; i >= 0; i-- {
-			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockHash,
+			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastCommitHash,
 				"Blockchain should be a hash tree!")
 			lastBlockHash = resp.BlockMetas[i].Hash
 		}

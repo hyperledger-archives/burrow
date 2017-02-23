@@ -38,7 +38,7 @@ import (
 // Core is the high-level structure
 type Core struct {
 	chainId        string
-	evsw           *events.EventSwitch
+	evsw           events.EventSwitch
 	pipe           definitions.Pipe
 	tendermintPipe definitions.TendermintPipe
 }
