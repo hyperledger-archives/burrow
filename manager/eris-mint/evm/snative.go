@@ -247,11 +247,12 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	return function.F(appState, caller, remainingArgs, gas)
 }
 
-// We define the address of an SNative contact as the first 20 bytes of the sha3
+// We define the address of an SNative contact as the last 20 bytes of the sha3
 // hash of its name
 func (contract *SNativeContractDescription) Address() abi.Address {
 	var address abi.Address
-	copy(address[:], sha3.Sha3([]byte(contract.Name))[:abi.AddressLength])
+	hash := sha3.Sha3([]byte(contract.Name))
+	copy(address[:], hash[len(hash)-abi.AddressLength:])
 	return address
 }
 

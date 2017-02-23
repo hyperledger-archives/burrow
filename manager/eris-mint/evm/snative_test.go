@@ -97,7 +97,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 func TestSNativeContractDescription_Address(t *testing.T) {
 	contract := NewSNativeContract("A comment",
 		"CoolButVeryLongNamedContractOfDoom")
-	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[:20], contract.AddressBytes())
+	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[12:], contract.AddressBytes())
 }
 
 //
