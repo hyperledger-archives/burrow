@@ -238,6 +238,8 @@ func PermFlagToString(pf PermFlag) (perm string) {
 	return
 }
 
+// PermStringToFlag maps camel- and snake case strings to the
+// the corresponding permission flag.
 func PermStringToFlag(perm string) (pf PermFlag, err error) {
 	switch strings.ToLower(perm) {
 	case "root":
@@ -246,9 +248,9 @@ func PermStringToFlag(perm string) (pf PermFlag, err error) {
 		pf = Send
 	case "call":
 		pf = Call
-	case "create_contract":
+	case "createcontract", "create_contract":
 		pf = CreateContract
-	case "create_account":
+	case "createaccount", "create_account":
 		pf = CreateAccount
 	case "bond":
 		pf = Bond
@@ -266,7 +268,7 @@ func PermStringToFlag(perm string) (pf PermFlag, err error) {
 		pf = HasRole
 	case "addrole", "add_role":
 		pf = AddRole
-	case "removerole", "rm_role":
+	case "removerole", "rmrole", "rm_role":
 		pf = RmRole
 	default:
 		err = fmt.Errorf("Unknown permission %s", perm)
