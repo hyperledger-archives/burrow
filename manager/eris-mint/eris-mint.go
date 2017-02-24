@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
+	abci "github.com/tendermint/abci/types"
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
-	abci "github.com/tendermint/abci/types"
 
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"

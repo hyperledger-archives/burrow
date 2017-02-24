@@ -17,9 +17,9 @@ package types
 import (
 	"github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/txs"
+	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
-	abci_types "github.com/tendermint/abci/types"
 )
 
 type ConsensusEngine interface {

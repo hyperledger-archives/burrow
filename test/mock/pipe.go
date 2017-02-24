@@ -29,10 +29,10 @@ import (
 	"github.com/eris-ltd/eris-db/txs"
 
 	"github.com/eris-ltd/eris-db/logging/loggers"
+	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
-	abci_types "github.com/tendermint/abci/types"
 )
 
 // Base struct.

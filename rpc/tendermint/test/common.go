@@ -1,4 +1,3 @@
-
 // Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
