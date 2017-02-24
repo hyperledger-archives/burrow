@@ -292,6 +292,8 @@ func TestNameReg(t *testing.T) {
 func TestBlockchainInfo(t *testing.T) {
 	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+		// wait a mimimal number of blocks to ensure that the later query for block
+		// headers has a non-trivial length
 		nBlocks := 4
 		waitNBlocks(t, wsc, nBlocks)
 
@@ -299,20 +301,25 @@ func TestBlockchainInfo(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}
-		//TODO: [Silas] reintroduce this when Tendermint changes logic to fire
-		// NewBlock after saving a block
-		// see https://github.com/tendermint/tendermint/issues/273
-		//assert.Equal(t, 4, resp.LastHeight, "Last height should be 4 after waiting for first 4 blocks")
+		lastBlockHeight := resp.LastHeight
+		nMetaBlocks := len(resp.BlockMetas)
+		assert.True(t, nMetaBlocks <= lastBlockHeight,
+			"Logically number of block metas should be equal or less than block height.")
 		assert.True(t, nBlocks <= len(resp.BlockMetas),
-			"Should see at least 4 BlockMetas after waiting for first 4 blocks")
-
-		lastBlockHash := resp.BlockMetas[nBlocks-1].Hash
-		for i := nBlocks - 2; i >= 0; i-- {
-			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastCommitHash,
+			"Should see at least 4 BlockMetas after waiting for 4 blocks")
+		// For the maximum number (default to 20) of retrieved block headers,
+		// check that they correctly chain to each other.
+		lastBlockHash := resp.BlockMetas[nMetaBlocks-1].Hash
+		for i := nMetaBlocks - 2; i >= 0; i-- {
+			// the blockhash in header of height h should be identical to the hash
+			// in the LastBlockID of the header of block height h+1.
+			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockID.Hash,
 				"Blockchain should be a hash tree!")
 			lastBlockHash = resp.BlockMetas[i].Hash
 		}
 
+		// Now retrieve only two blockheaders (h=1, and h=2) and check that we got
+		// two results.
 		resp, err = edbcli.BlockchainInfo(client, 1, 2)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(resp.BlockMetas),
