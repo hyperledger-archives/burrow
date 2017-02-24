@@ -157,11 +157,9 @@ func (function *solidityFunction) solidity(indentLevel uint) (string, error) {
 	return buf.String(), nil
 }
 
-
 //
-// Contract
+// Utility
 //
-
 
 func comment(comment string) string {
 	commentLines := make([]string, 0, 5)

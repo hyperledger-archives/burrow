@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
+	abci "github.com/tendermint/abci/types"
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
-	tmsp "github.com/tendermint/tmsp/types"
 
 	"github.com/eris-ltd/eris-db/logging"
 	"github.com/eris-ltd/eris-db/logging/loggers"
@@ -45,7 +45,7 @@ type ErisMint struct {
 	checkCache *sm.BlockCache // for CheckTx (eg. so we get nonces right)
 
 	evc  *tendermint_events.EventCache
-	evsw *tendermint_events.EventSwitch
+	evsw tendermint_events.EventSwitch
 
 	nTxs   int // count txs in a block
 	logger loggers.InfoTraceLogger
@@ -55,9 +55,9 @@ type ErisMint struct {
 // eris-db/manager/types.Application
 var _ manager_types.Application = (*ErisMint)(nil)
 
-// NOTE: [ben] also automatically implements tmsp.Application,
+// NOTE: [ben] also automatically implements abci.Application,
 // undesired but unharmful
-// var _ tmsp.Application = (*ErisMint)(nil)
+// var _ abci.Application = (*ErisMint)(nil)
 
 func (app *ErisMint) GetState() *sm.State {
 	app.mtx.Lock()
@@ -72,7 +72,7 @@ func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *ErisMint {
+func NewErisMint(s *sm.State, evsw tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *ErisMint {
 	return &ErisMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
@@ -84,8 +84,8 @@ func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch, logger logger
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) Info() (info string) {
-	return "ErisDB"
+func (app *ErisMint) Info() (info abci.ResponseInfo) {
+	return abci.ResponseInfo{}
 }
 
 // Implements manager/types.Application
@@ -94,7 +94,7 @@ func (app *ErisMint) SetOption(key string, value string) (log string) {
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
+func (app *ErisMint) DeliverTx(txBytes []byte) abci.Result {
 	app.nTxs += 1
 
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
@@ -104,45 +104,45 @@ func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
+		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
+		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
-	return tmsp.NewResultOK(receiptBytes, "Success")
+	return abci.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) CheckTx(txBytes []byte) tmsp.Result {
+func (app *ErisMint) CheckTx(txBytes []byte) abci.Result {
 	var n int
 	var err error
 	tx := new(txs.Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
+		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	// TODO: map ExecTx errors to sensible TMSP error codes
+	// TODO: map ExecTx errors to sensible abci error codes
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
+		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
-	return tmsp.NewResultOK(receiptBytes, "Success")
+	return abci.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application
 // Commit the state (called at end of block)
 // NOTE: CheckTx/AppendTx must not run concurrently with Commit -
 //  the mempool should run during AppendTxs, but lock for Commit and Update
-func (app *ErisMint) Commit() (res tmsp.Result) {
+func (app *ErisMint) Commit() (res abci.Result) {
 	app.mtx.Lock() // the lock protects app.state
 	defer app.mtx.Unlock()
 
@@ -173,10 +173,9 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// NOTE: set internal time as two seconds per block
 	app.state.LastBlockTime = app.state.LastBlockTime.Add(time.Duration(2) * time.Second)
 	appHash := app.state.Hash()
-	// return tmsp.NewResultOK(app.state.Hash(), "Success")
-	return tmsp.NewResultOK(appHash, "Success")
+	return abci.NewResultOK(appHash, "Success")
 }
 
-func (app *ErisMint) Query(query []byte) (res tmsp.Result) {
-	return tmsp.NewResultOK(nil, "Success")
+func (app *ErisMint) Query(query []byte) (res abci.Result) {
+	return abci.NewResultOK(nil, "Success")
 }

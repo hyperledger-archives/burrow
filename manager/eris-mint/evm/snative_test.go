@@ -20,12 +20,12 @@ import (
 
 	"strings"
 
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/word256"
 	"github.com/stretchr/testify/assert"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 )
 
 // Compiling the Permissions solidity contract at

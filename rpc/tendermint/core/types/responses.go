@@ -22,11 +22,11 @@ import (
 	tendermint_types "github.com/tendermint/tendermint/types"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	"github.com/tendermint/go-rpc/types"
 	"github.com/tendermint/go-wire"
-	tmsptypes "github.com/tendermint/tmsp/types"
 )
 
 type ResultGetStorage struct {
@@ -125,7 +125,7 @@ type ResultGetAccount struct {
 }
 
 type ResultBroadcastTx struct {
-	Code tmsptypes.CodeType `json:"code"`
+	Code abcitypes.CodeType `json:"code"`
 	Data []byte             `json:"data"`
 	Log  string             `json:"log"`
 }
