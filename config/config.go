@@ -96,7 +96,7 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	chainConsensusModule := &ConfigChainModule{
 		Name:               "tendermint",
 		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(6),
+		MinorVersion:       uint8(8),
 		ModuleRelativeRoot: "tendermint",
 	}
 	chainApplicationManagerModule := &ConfigChainModule{
