@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testdata
+package rpc_v0
 
 import (
 	account "github.com/eris-ltd/eris-db/account"
@@ -20,7 +20,6 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	genesis "github.com/eris-ltd/eris-db/genesis"
-	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	transaction "github.com/eris-ltd/eris-db/txs"
 	mintTypes "github.com/tendermint/tendermint/types"
@@ -558,22 +557,22 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  *rpc_v0.AddressParam `json:"input"`
-		Output *account.Account     `json:"output"`
+		Input  *AddressParam    `json:"input"`
+		Output *account.Account `json:"output"`
 	}
 
 	GetAccountsData struct {
-		Input  *rpc_v0.AccountsParam   `json:"input"`
+		Input  *AccountsParam          `json:"input"`
 		Output *core_types.AccountList `json:"output"`
 	}
 
 	GetStorageData struct {
-		Input  *rpc_v0.AddressParam `json:"input"`
-		Output *core_types.Storage  `json:"output"`
+		Input  *AddressParam       `json:"input"`
+		Output *core_types.Storage `json:"output"`
 	}
 
 	GetStorageAtData struct {
-		Input  *rpc_v0.StorageAtParam  `json:"input"`
+		Input  *StorageAtParam         `json:"input"`
 		Output *core_types.StorageItem `json:"output"`
 	}
 
@@ -602,13 +601,13 @@ type (
 	}
 
 	GetBlockData struct {
-		Input  *rpc_v0.HeightParam `json:"input"`
-		Output *mintTypes.Block    `json:"output"`
+		Input  *HeightParam     `json:"input"`
+		Output *mintTypes.Block `json:"output"`
 	}
 
 	GetBlocksData struct {
-		Input  *rpc_v0.BlocksParam `json:"input"`
-		Output *core_types.Blocks  `json:"output"`
+		Input  *BlocksParam       `json:"input"`
+		Output *core_types.Blocks `json:"output"`
 	}
 
 	GetConsensusStateData struct {
@@ -644,18 +643,18 @@ type (
 	}
 
 	GetPeerData struct {
-		Input  *rpc_v0.PeerParam     `json:"input"`
+		Input  *PeerParam            `json:"input"`
 		Output *consensus_types.Peer `json:"output"`
 	}
 
 	TransactData struct {
-		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *transaction.Receipt  `json:"output"`
+		Input  *TransactParam       `json:"input"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	TransactCreateData struct {
-		Input  *rpc_v0.TransactParam `json:"input"`
-		Output *transaction.Receipt  `json:"output"`
+		Input  *TransactParam       `json:"input"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
@@ -663,43 +662,43 @@ type (
 	}
 
 	CallCodeData struct {
-		Input  *rpc_v0.CallCodeParam `json:"input"`
-		Output *core_types.Call      `json:"output"`
+		Input  *CallCodeParam   `json:"input"`
+		Output *core_types.Call `json:"output"`
 	}
 
 	CallData struct {
-		Input  *rpc_v0.CallParam `json:"input"`
-		Output *core_types.Call  `json:"output"`
+		Input  *CallParam       `json:"input"`
+		Output *core_types.Call `json:"output"`
 	}
 
 	EventSubscribeData struct {
-		Input  *rpc_v0.EventIdParam `json:"input"`
-		Output *event.EventSub      `json:"output"`
+		Input  *EventIdParam   `json:"input"`
+		Output *event.EventSub `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
-		Input  *rpc_v0.SubIdParam `json:"input"`
-		Output *event.EventUnsub  `json:"output"`
+		Input  *SubIdParam       `json:"input"`
+		Output *event.EventUnsub `json:"output"`
 	}
 
 	TransactNameRegData struct {
-		Input  *rpc_v0.TransactNameRegParam `json:"input"`
-		Output *transaction.Receipt         `json:"output"`
+		Input  *TransactNameRegParam `json:"input"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
-		Input  *rpc_v0.NameRegEntryParam `json:"input"`
-		Output *core_types.NameRegEntry  `json:"output"`
+		Input  *NameRegEntryParam       `json:"input"`
+		Output *core_types.NameRegEntry `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *rpc_v0.FilterListParam     `json:"input"`
+		Input  *FilterListParam            `json:"input"`
 		Output *core_types.ResultListNames `json:"output"`
 	}
 
 	/*
 		EventPollData struct {
-			Input  *rpc_v0.SubIdParam  `json:"input"`
+			Input  *SubIdParam  `json:"input"`
 			Output *event.PollResponse `json:"output"`
 		}
 	*/
@@ -742,7 +741,7 @@ type (
 )
 
 func LoadTestData() *TestData {
-	codec := rpc_v0.NewTCodec()
+	codec := NewTCodec()
 	testData := &TestData{}
 	if err := codec.DecodeBytes(testData, []byte(testDataJson)); err != nil {
 		panic(err)

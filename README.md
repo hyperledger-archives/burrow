@@ -1,11 +1,11 @@
-# Eris DB
+# Eris-DB
 
 |[![GoDoc](https://godoc.org/github.com/eris-db?status.png)](https://godoc.org/github.com/eris-ltd/eris-db) | Linux |
 |---|-------|
 | Master | [![Circle CI](https://circleci.com/gh/eris-ltd/eris-db/tree/master.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop) |
 
-Eris DB is Eris' blockchain client. It includes a permissions layer, an implementation of the Ethereum Virtual Machine, and uses Tendermint Consensus. Most functionality is provided by `eris chains`, exposed through [eris-cli](https://monax.io/docs/documentation/cli), the entry point for the Eris Platform.
+Eris-db is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. Eris-db provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `eris chains`, exposed through [eris](https://monax.io/docs/documentation/cli), the entry point for the Eris Platform.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ See the [eris-db documentation](https://monax.io/docs/documentation/db/) for mor
 
 ## Installation
 
-`eris-db` is intended to be used by the `eris chains` command via [eris-cli](https://monax.io/docs/documentation/cli/latest/eris_chains). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
+`eris-db` is intended to be used by the `eris chains` command via [eris](https://monax.io/docs/documentation/cli/latest/eris_chains). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
 
 ### For Developers
 Dependency management for eris-db is managed with [glide](github.com/Masterminds/glide), and you can build eris-db from source by following
@@ -32,9 +32,13 @@ Dependency management for eris-db is managed with [glide](github.com/Masterminds
 3. and execute following commands in a terminal:
 ```
 go get github.com/Masterminds/glide
+
 go get -d github.com/eris-ltd/eris-db
+
 REPO=$($GOPATH/src/github.com/eris-ltd/eris-db)
+
 cd $REPO && glide install
+
 cd $REPO/cmd/eris-db && go install
 ```
 
