@@ -180,29 +180,12 @@ const separatorModules = `
 
 `
 
-// TODO: [ben] make configurable
-const sectionabci = `
-################################################################################
-##
-## Tendermint Socket Protocol (abci)
-## version 0.6.0
-##
-## abci expects a tendermint consensus process to run and connect to Eris-DB
-##
-################################################################################
-
-[abci]
-# listener address for accepting tendermint socket protocol connections
-listener = "tcp://0.0.0.0:46658"
-
-`
-
 // TODO: [ben] minimal fields have been made configurable; expand where needed
 const sectionTendermint = `
 ################################################################################
 ##
 ## Tendermint
-## version 0.6
+## version 0.8
 ##
 ## in-process execution of Tendermint consensus engine
 ##
