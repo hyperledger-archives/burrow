@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mock
+package rpc_v0
 
 // Basic imports
 import (
@@ -29,9 +29,7 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
 	rpc "github.com/eris-ltd/eris-db/rpc"
-	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	server "github.com/eris-ltd/eris-db/server"
-	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/eris-ltd/eris-db/txs"
 
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
@@ -55,18 +53,18 @@ type MockSuite struct {
 	serveProcess *server.ServeProcess
 	codec        rpc.Codec
 	sUrl         string
-	testData     *td.TestData
+	testData     *TestData
 }
 
 func (mockSuite *MockSuite) SetupSuite() {
 	gin.SetMode(gin.ReleaseMode)
 	// Load the supporting objects.
-	testData := td.LoadTestData()
+	testData := LoadTestData()
 	pipe := NewMockPipe(testData)
-	codec := &rpc_v0.TCodec{}
+	codec := &TCodec{}
 	evtSubs := event.NewEventSubscriptions(pipe.Events())
 	// The server
-	restServer := rpc_v0.NewRestServer(codec, pipe, evtSubs)
+	restServer := NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
@@ -76,7 +74,7 @@ func (mockSuite *MockSuite) SetupSuite() {
 		panic(err)
 	}
 	mockSuite.serveProcess = proc
-	mockSuite.codec = rpc_v0.NewTCodec()
+	mockSuite.codec = NewTCodec()
 	mockSuite.testData = testData
 	mockSuite.sUrl = "http://localhost:31402"
 }

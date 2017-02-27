@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mock
+package rpc_v0
 
 import (
 	"fmt"
@@ -25,7 +25,6 @@ import (
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	td "github.com/eris-ltd/eris-db/test/testdata/testdata"
 	"github.com/eris-ltd/eris-db/txs"
 
 	"github.com/eris-ltd/eris-db/logging/loggers"
@@ -37,7 +36,7 @@ import (
 
 // Base struct.
 type MockPipe struct {
-	testData        *td.TestData
+	testData        *TestData
 	accounts        definitions.Accounts
 	blockchain      blockchain_types.Blockchain
 	consensusEngine consensus_types.ConsensusEngine
@@ -48,11 +47,11 @@ type MockPipe struct {
 }
 
 // Create a new mock tendermint pipe.
-func NewMockPipe(td *td.TestData) definitions.Pipe {
+func NewMockPipe(td *TestData) definitions.Pipe {
 	return &MockPipe{
 		testData:        td,
 		accounts:        &accounts{td},
-		blockchain:      &blockchain{td},
+		blockchain:      &mockBlockchain{td},
 		consensusEngine: &consensusEngine{td},
 		events:          &eventer{td},
 		namereg:         &namereg{td},
@@ -63,7 +62,7 @@ func NewMockPipe(td *td.TestData) definitions.Pipe {
 
 // Create a mock pipe with default mock data.
 func NewDefaultMockPipe() definitions.Pipe {
-	return NewMockPipe(td.LoadTestData())
+	return NewMockPipe(LoadTestData())
 }
 
 func (pipe *MockPipe) Accounts() definitions.Accounts {
@@ -125,7 +124,7 @@ func (pipe *MockPipe) GenesisHash() []byte {
 
 // Accounts
 type accounts struct {
-	testData *td.TestData
+	testData *TestData
 }
 
 func (acc *accounts) GenPrivAccount() (*account.PrivAccount, error) {
@@ -153,29 +152,29 @@ func (acc *accounts) StorageAt(address, key []byte) (*core_types.StorageItem, er
 }
 
 // Blockchain
-type blockchain struct {
-	testData *td.TestData
+type mockBlockchain struct {
+	testData *TestData
 }
 
-func (this *blockchain) ChainId() string {
+func (this *mockBlockchain) ChainId() string {
 	return this.testData.GetChainId.Output.ChainId
 }
 
-func (this *blockchain) Height() int {
+func (this *mockBlockchain) Height() int {
 	return this.testData.GetLatestBlockHeight.Output.Height
 }
 
-func (this *blockchain) Block(height int) *mintTypes.Block {
+func (this *mockBlockchain) Block(height int) *mintTypes.Block {
 	return this.testData.GetBlock.Output
 }
 
-func (this *blockchain) BlockMeta(height int) *mintTypes.BlockMeta {
+func (this *mockBlockchain) BlockMeta(height int) *mintTypes.BlockMeta {
 	return &mintTypes.BlockMeta{}
 }
 
 // Consensus
 type consensusEngine struct {
-	testData *td.TestData
+	testData *TestData
 }
 
 func (cons *consensusEngine) BroadcastTransaction(transaction []byte,
@@ -239,7 +238,7 @@ func (cons *consensusEngine) PeerConsensusStates() map[string]string {
 
 // Events
 type eventer struct {
-	testData *td.TestData
+	testData *TestData
 }
 
 func (evntr *eventer) Subscribe(subId, event string, callback func(txs.EventData)) error {
@@ -252,7 +251,7 @@ func (evntr *eventer) Unsubscribe(subId string) error {
 
 // NameReg
 type namereg struct {
-	testData *td.TestData
+	testData *TestData
 }
 
 func (nmreg *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
@@ -265,7 +264,7 @@ func (nmreg *namereg) Entries(filters []*event.FilterData) (*core_types.ResultLi
 
 // Txs
 type transactor struct {
-	testData *td.TestData
+	testData *TestData
 }
 
 func (trans *transactor) Call(fromAddress, toAddress, data []byte) (*core_types.Call, error) {

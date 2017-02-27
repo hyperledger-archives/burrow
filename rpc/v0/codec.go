@@ -45,6 +45,8 @@ func (this *TCodec) EncodeBytes(v interface{}) ([]byte, error) {
 	return wire.JSONBytes(v), nil
 }
 
+// TODO: [ben] implement EncodeBytesPtr ?
+
 // Decode from an io.Reader.
 func (this *TCodec) Decode(v interface{}, r io.Reader) error {
 	bts, errR := ioutil.ReadAll(r)
@@ -60,5 +62,12 @@ func (this *TCodec) Decode(v interface{}, r io.Reader) error {
 func (this *TCodec) DecodeBytes(v interface{}, bts []byte) error {
 	var err error
 	wire.ReadJSON(v, bts, &err)
+	return err
+}
+
+// Decode from a byte array pointer.
+func (this *TCodec) DecodeBytesPtr(v interface{}, bts []byte) error {
+	var err error
+	wire.ReadJSONPtr(v, bts, &err)
 	return err
 }
