@@ -38,7 +38,7 @@ var defaultConfig = `# Copyright 2017 Monax Industries Limited
 assert_chain_id = "MyChainId"
 # semantic major and minor version
 major_version = 0
-minor_version = 12
+minor_version = 17
 # genesis file, relative path is to eris-db working directory
 genesis_file = "genesis.json"
 
@@ -73,7 +73,7 @@ genesis_file = "genesis.json"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 16
+  minor_version = 17
   # relative path to application manager root folder
   relative_root = "erismint"
 
@@ -217,7 +217,7 @@ private_validator_file = "priv_validator.json"
 ################################################################################
 ##
 ## Eris-Mint
-## version 0.16.0
+## version 0.17.0
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

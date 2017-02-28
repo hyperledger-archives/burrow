@@ -90,7 +90,7 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	erisdbChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
 		ErisdbMajorVersion:  uint8(0),
-		ErisdbMinorVersion:  uint8(16),
+		ErisdbMinorVersion:  uint8(17),
 		GenesisRelativePath: "genesis.json",
 	}
 	chainConsensusModule := &ConfigChainModule{
@@ -102,7 +102,7 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	chainApplicationManagerModule := &ConfigChainModule{
 		Name:               "erismint",
 		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(16),
+		MinorVersion:       uint8(17),
 		ModuleRelativeRoot: "erismint",
 	}
 	tendermintModule := &ConfigTendermint{
