@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package core
 
@@ -22,55 +20,53 @@ import (
 	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	log "github.com/eris-ltd/eris-logger"
-
-	config "github.com/eris-ltd/eris-db/config"
-	consensus "github.com/eris-ltd/eris-db/consensus"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
-	manager "github.com/eris-ltd/eris-db/manager"
+	"github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/consensus"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/manager"
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
 	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
-	server "github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/server"
 )
 
 // Core is the high-level structure
 type Core struct {
 	chainId        string
-	evsw           *events.EventSwitch
+	evsw           events.EventSwitch
 	pipe           definitions.Pipe
 	tendermintPipe definitions.TendermintPipe
 }
 
-func NewCore(chainId string, consensusConfig *config.ModuleConfig,
-	managerConfig *config.ModuleConfig) (*Core, error) {
+func NewCore(chainId string,
+	consensusConfig *config.ModuleConfig,
+	managerConfig *config.ModuleConfig,
+	logger loggers.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with eris-db/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
+	logger = logging.WithScope(logger, "Core")
 
 	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw,
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
 		consensusConfig.Version)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
 	}
-	log.Debug("Loaded pipe with application manager")
+	logging.TraceMsg(logger, "Loaded pipe with application manager")
 	// pass the consensus engine into the pipe
 	if e := consensus.LoadConsensusEngineInPipe(consensusConfig, pipe); e != nil {
 		return nil, fmt.Errorf("Failed to load consensus engine in pipe: %v", e)
 	}
 	tendermintPipe, err := pipe.GetTendermintPipe()
 	if err != nil {
-		log.Warn(fmt.Sprintf("Tendermint gateway not supported by %s",
-			managerConfig.Version))
-		return &Core{
-			chainId:        chainId,
-			evsw:           evsw,
-			pipe:           pipe,
-			tendermintPipe: nil,
-		}, nil
+		logging.TraceMsg(logger, "Tendermint gateway not supported by manager",
+			"manager-version", managerConfig.Version)
 	}
 	return &Core{
 		chainId:        chainId,

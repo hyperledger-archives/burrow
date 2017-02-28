@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package client
 
@@ -24,8 +22,8 @@ import (
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	log "github.com/eris-ltd/eris-logger"
-
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -41,29 +39,30 @@ type Confirmation struct {
 	Error     error
 }
 
-// NOTE [ben] Compiler check to ensure ErisNodeClient successfully implements
+// NOTE [ben] Compiler check to ensure erisNodeClient successfully implements
 // eris-db/client.NodeClient
-var _ NodeWebsocketClient = (*ErisNodeWebsocketClient)(nil)
+var _ NodeWebsocketClient = (*erisNodeWebsocketClient)(nil)
 
-type ErisNodeWebsocketClient struct {
+type erisNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
+	logger              loggers.InfoTraceLogger
 }
 
 // Subscribe to an eventid
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Subscribe(eventid string) error {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Subscribe(eventid string) error {
 	// TODO we can in the background listen to the subscription id and remember it to ease unsubscribing later.
 	return erisNodeWebsocketClient.tendermintWebsocket.Subscribe(eventid)
 }
 
 // Unsubscribe from an eventid
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
 	return erisNodeWebsocketClient.tendermintWebsocket.Unsubscribe(subscriptionId)
 }
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
 	// check no errors are reported on the websocket
 	if err := erisNodeWebsocketClient.assertNoErrors(); err != nil {
 		return nil, err
@@ -88,7 +87,8 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 			result := new(ctypes.ErisDBResult)
 			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
 				// keep calm and carry on
-				log.Errorf("[eris-client] Failed to unmarshal json bytes for websocket event: %s", err)
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Failed to unmarshal json bytes for websocket event",
+					"error", err)
 				continue
 			}
 
@@ -97,36 +97,41 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 				// Received confirmation of subscription to event streams
 				// TODO: collect subscription IDs, push into channel and on completion
 				// unsubscribe
-				log.Infof("[eris-client] recceived confirmation for event (%s) with subscription id (%s).",
-					subscription.Event, subscription.SubscriptionId)
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received confirmation for event",
+					"event", subscription.Event,
+					"subscription_id", subscription.SubscriptionId)
 				continue
 			}
 
 			event, ok := (*result).(*ctypes.ResultEvent)
 			if !ok {
 				// keep calm and carry on
-				log.Warnf("[eris-client] Failed to cast to ResultEvent for websocket event: %s", *result)
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Failed to cast to ResultEvent for websocket event",
+					"event", event.Event)
 				continue
 			}
 
 			blockData, ok := event.Data.(txs.EventDataNewBlock)
 			if ok {
 				latestBlockHash = blockData.Block.Hash()
-				log.WithFields(log.Fields{
-					"new block":   blockData.Block,
-					"latest hash": latestBlockHash,
-				}).Debug("Registered new block")
+				logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
+					"block", blockData.Block,
+					"latest_block_hash", latestBlockHash,
+				)
 				continue
 			}
 
 			// we don't accept events unless they came after a new block (ie. in)
 			if latestBlockHash == nil {
-				log.Infof("[eris-client] no first block has been registered, so ignoring event: %s", event.Event)
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
+					"event", event.Event)
 				continue
 			}
 
 			if event.Event != eid {
-				log.Warnf("[eris-client] received unsolicited event! Got %s, expected %s\n", event.Event, eid)
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received unsolicited event",
+					"event_received", event.Event,
+					"event_expected", eid)
 				continue
 			}
 
@@ -143,10 +148,9 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 			}
 
 			if !bytes.Equal(txs.TxHash(chainId, data.Tx), txs.TxHash(chainId, tx)) {
-				log.WithFields(log.Fields{
+				logging.TraceMsg(erisNodeWebsocketClient.logger, "Received different event",
 					// TODO: consider re-implementing TxID again, or other more clear debug
-					"received transaction event": txs.TxHash(chainId, data.Tx),
-				}).Debug("Received different event")
+					"received transaction event", txs.TxHash(chainId, data.Tx))
 				continue
 			}
 
@@ -188,13 +192,13 @@ func (erisNodeWebsocketClient *ErisNodeWebsocketClient) WaitForConfirmation(tx t
 	return confirmationChannel, nil
 }
 
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) Close() {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Close() {
 	if erisNodeWebsocketClient.tendermintWebsocket != nil {
 		erisNodeWebsocketClient.tendermintWebsocket.Stop()
 	}
 }
 
-func (erisNodeWebsocketClient *ErisNodeWebsocketClient) assertNoErrors() error {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) assertNoErrors() error {
 	if erisNodeWebsocketClient.tendermintWebsocket != nil {
 		select {
 		case err := <-erisNodeWebsocketClient.tendermintWebsocket.ErrorsCh:

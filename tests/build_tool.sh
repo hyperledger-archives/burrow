@@ -35,9 +35,10 @@ release_min=$(cat $REPO/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d 
 release_maj=$(echo $release_min | cut -d . -f 1-2)
 
 # Build
+mkdir -p $REPO/target/docker
 docker build -t $IMAGE:build $REPO
-docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/"$TARGET"_build_artifact
-docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO/eris-client
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/target/docker/eris-db.dockerartefact
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO/target/docker/eris-client.dockerartefact
 docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 
 # If provided, tag the image with the label provided
@@ -48,6 +49,6 @@ then
 fi
 
 # Cleanup
-rm $REPO/"$TARGET"_build_artifact
-rm $REPO/eris-client
+rm $REPO/target/docker/eris-db.dockerartefact
+rm $REPO/target/docker/eris-client.dockerartefact
 docker rmi -f $IMAGE:build

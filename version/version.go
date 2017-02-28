@@ -1,23 +1,21 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+package version
 
 // version provides the current Eris-DB version and a VersionIdentifier
 // for the modules to identify their version with.
-
-package version
 
 import (
 	"fmt"
@@ -32,9 +30,9 @@ const (
 	// Major version component of the current release
 	erisVersionMajor = 0
 	// Minor version component of the current release
-	erisVersionMinor = 12
+	erisVersionMinor = 16
 	// Patch version component of the current release
-	erisVersionPatch = 1
+	erisVersionPatch = 0
 )
 
 var erisVersion *VersionIdentifier
@@ -129,4 +127,4 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 
 // IMPORTANT: Eris-DB version must be on the last line of this file for
 // the deployment script tests/build_tool.sh to pick up the right label.
-const VERSION = "0.12.1"
+const VERSION = "0.16.0"

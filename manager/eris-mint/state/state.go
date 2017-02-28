@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
@@ -8,17 +22,17 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
 
-	. "github.com/tendermint/go-common"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
 	"github.com/tendermint/go-merkle"
 	"github.com/tendermint/go-wire"
 
 	core_types "github.com/eris-ltd/eris-db/core/types"
+	"github.com/eris-ltd/eris-db/util"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -77,7 +91,7 @@ func LoadState(db dbm.DB) *State {
 		s.nameReg.Load(nameRegHash)
 		if *err != nil {
 			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-			Exit(Fmt("Data has been corrupted or its spec has changed: %v\n", *err))
+			util.Fatalf("Data has been corrupted or its spec has changed: %v\n", *err)
 		}
 		// TODO: ensure that buf is completely read.
 	}
@@ -101,7 +115,10 @@ func (s *State) Save() {
 	//wire.WriteByteSlice(s.validatorInfos.Hash(), buf, n, err)
 	wire.WriteByteSlice(s.nameReg.Hash(), buf, n, err)
 	if *err != nil {
-		PanicCrisis(*err)
+		// TODO: [Silas] Do something better than this, really serialising ought to
+		// be error-free
+		util.Fatalf("Could not serialise state in order to save the state, "+
+			"cannot continue, error: %s", *err)
 	}
 	s.DB.Set(stateKey, buf.Bytes())
 }
@@ -153,9 +170,9 @@ func (s *State) ComputeBlockStateHash(block *types.Block) error {
 }
 */
 
-func (s *State) GetGenesisDoc() (*GenesisDoc, error) {
-	var genesisDoc *GenesisDoc
-	loadedGenesisDocBytes := s.DB.Get(GenDocKey)
+func (s *State) GetGenesisDoc() (*genesis.GenesisDoc, error) {
+	var genesisDoc *genesis.GenesisDoc
+	loadedGenesisDocBytes := s.DB.Get(genesis.GenDocKey)
 	err := new(error)
 	wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
 	if *err != nil {
@@ -398,25 +415,27 @@ func (s *State) SetFireable(evc events.Fireable) {
 //-----------------------------------------------------------------------------
 // Genesis
 
-func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*GenesisDoc, *State) {
+func MakeGenesisStateFromFile(db dbm.DB, genDocFile string) (*genesis.GenesisDoc, *State) {
 	jsonBlob, err := ioutil.ReadFile(genDocFile)
 	if err != nil {
-		Exit(Fmt("Couldn't read GenesisDoc file: %v", err))
+		util.Fatalf("Couldn't read GenesisDoc file: %v", err)
 	}
-	genDoc := GenesisDocFromJSON(jsonBlob)
+	genDoc := genesis.GenesisDocFromJSON(jsonBlob)
 	return genDoc, MakeGenesisState(db, genDoc)
 }
 
-func MakeGenesisState(db dbm.DB, genDoc *GenesisDoc) *State {
+func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	if len(genDoc.Validators) == 0 {
-		Exit(Fmt("The genesis file has no validators"))
+		util.Fatalf("The genesis file has no validators")
 	}
 
 	if genDoc.GenesisTime.IsZero() {
-		// MARMOT: really?
-		// set time to 11/18/2016 @ 4:09am (UTC)
+		// NOTE: [ben] change GenesisTime to requirement on v0.17
+		// GenesisTime needs to be deterministic across the chain
+		// and should be required in the genesis file;
+		// the requirement is not yet enforced when lacking set
+		// time to 11/18/2016 @ 4:09am (UTC)
 		genDoc.GenesisTime = time.Unix(1479442162, 0)
-		// genDoc.GenesisTime = time.Now()
 	}
 
 	// Make accounts state tree

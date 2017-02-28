@@ -1,22 +1,21 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
+// Copyright 2017 Monax Industries Limited
 //
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // config.go keeps explicit structures on the runtime configuration of
 // Eris-DB and all modules.  It loads these from the Viper configuration
 // loaded in `definitions.Do`
+
 package core
 
 import (
@@ -24,13 +23,14 @@ import (
 	"os"
 	"path"
 
-	config "github.com/eris-ltd/eris-db/config"
-	consensus "github.com/eris-ltd/eris-db/consensus"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	manager "github.com/eris-ltd/eris-db/manager"
-	server "github.com/eris-ltd/eris-db/server"
-	util "github.com/eris-ltd/eris-db/util"
-	version "github.com/eris-ltd/eris-db/version"
+	"github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/consensus"
+	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/manager"
+	"github.com/eris-ltd/eris-db/server"
+	"github.com/eris-ltd/eris-db/util"
+	"github.com/eris-ltd/eris-db/version"
 	"github.com/spf13/viper"
 )
 
@@ -75,17 +75,14 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 			fmt.Errorf("Failed to create module data directory %s.", dataDir)
 	}
 	// load configuration subtree for module
-	// TODO: [ben] Viper internally panics if `moduleName` contains an unallowed
-	// character (eg, a dash).  Either this needs to be wrapped in a go-routine
-	// and recovered from or a PR to viper is needed to address this bug.
 	if !conf.IsSet(moduleName) {
 		return nil, fmt.Errorf("Failed to read configuration section for %s",
 			moduleName)
 	}
-	subConfig := conf.Sub(moduleName)
+	subConfig, err := config.ViperSubConfig(conf, moduleName)
 	if subConfig == nil {
-		return nil,
-			fmt.Errorf("Failed to read configuration section for %s.", moduleName)
+		return nil, fmt.Errorf("Failed to read configuration section for %s: %s",
+			moduleName, err)
 	}
 
 	return &config.ModuleConfig{
@@ -104,17 +101,27 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 // LoadServerModuleConfig wraps specifically for the servers run by core
 func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	// load configuration subtree for servers
-	if !do.Config.IsSet("servers") {
-		return nil, fmt.Errorf("Failed to read configuration section for servers")
-	}
-	subConfig := do.Config.Sub("servers")
-	if subConfig == nil {
-		return nil,
-			fmt.Errorf("Failed to read configuration section for servers")
+	subConfig, err := config.ViperSubConfig(do.Config, "servers")
+	if err != nil {
+		return nil, err
 	}
 	serverConfig, err := server.ReadServerConfig(subConfig)
+	if err != nil {
+		return nil, err
+	}
 	serverConfig.ChainId = do.ChainId
 	return serverConfig, err
+}
+
+func LoadLoggingConfigFromDo(do *definitions.Do) (*logging.LoggingConfig, error) {
+	//subConfig, err := SubConfig(conf, "logging")
+	loggingConfig := &logging.LoggingConfig{}
+	return loggingConfig, nil
+}
+
+func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*logging.LoggingConfig, error) {
+	loggingConfig := &logging.LoggingConfig{}
+	return loggingConfig, nil
 }
 
 //------------------------------------------------------------------------------

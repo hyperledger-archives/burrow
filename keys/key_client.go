@@ -1,24 +1,25 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package keys
 
 import (
 	"encoding/hex"
 	"fmt"
+
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 )
 
 type KeyClient interface {
@@ -29,31 +30,33 @@ type KeyClient interface {
 	PublicKey(address []byte) (publicKey []byte, err error)
 }
 
-// NOTE [ben] Compiler check to ensure ErisKeyClient successfully implements
+// NOTE [ben] Compiler check to ensure erisKeyClient successfully implements
 // eris-db/keys.KeyClient
-var _ KeyClient = (*ErisKeyClient)(nil)
+var _ KeyClient = (*erisKeyClient)(nil)
 
-type ErisKeyClient struct {
+type erisKeyClient struct {
 	rpcString string
+	logger    loggers.InfoTraceLogger
 }
 
-// ErisKeyClient.New returns a new eris-keys client for provided rpc location
+// erisKeyClient.New returns a new eris-keys client for provided rpc location
 // Eris-keys connects over http request-responses
-func NewErisKeyClient(rpcString string) *ErisKeyClient {
-	return &ErisKeyClient{
+func NewErisKeyClient(rpcString string, logger loggers.InfoTraceLogger) *erisKeyClient {
+	return &erisKeyClient{
 		rpcString: rpcString,
+		logger:    logging.WithScope(logger, "ErisKeysClient"),
 	}
 }
 
 // Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
+func (erisKeys *erisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
 		"msg":  signBytesString,
 		"hash": signBytesString, // TODO:[ben] backwards compatibility
 		"addr": fmt.Sprintf("%X", signAddress),
 	}
-	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args)
+	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args, erisKeys.logger)
 	if err != nil {
 		return
 	}
@@ -66,11 +69,11 @@ func (erisKeys *ErisKeyClient) Sign(signBytesString string, signAddress []byte) 
 
 // Eris-keys client PublicKey requests the public key associated with an address from
 // the eris-keys server.
-func (erisKeys *ErisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
+func (erisKeys *erisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
 	args := map[string]string{
 		"addr": fmt.Sprintf("%X", address),
 	}
-	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args)
+	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args, erisKeys.logger)
 	if err != nil {
 		return
 	}

@@ -1,18 +1,32 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package types
 
 import (
 	acm "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	"github.com/eris-ltd/eris-db/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
 	"github.com/tendermint/go-rpc/types"
 	"github.com/tendermint/go-wire"
-	tmsptypes "github.com/tendermint/tmsp/types"
 )
 
 type ResultGetStorage struct {
@@ -111,7 +125,7 @@ type ResultGetAccount struct {
 }
 
 type ResultBroadcastTx struct {
-	Code tmsptypes.CodeType `json:"code"`
+	Code abcitypes.CodeType `json:"code"`
 	Data []byte             `json:"data"`
 	Log  string             `json:"log"`
 }
@@ -126,7 +140,7 @@ type ResultGetName struct {
 }
 
 type ResultGenesis struct {
-	Genesis *stypes.GenesisDoc `json:"genesis"`
+	Genesis *genesis.GenesisDoc `json:"genesis"`
 }
 
 type ResultSignTx struct {

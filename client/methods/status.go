@@ -1,53 +1,51 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package methods
 
 import (
 	"fmt"
 
-	log "github.com/eris-ltd/eris-logger"
-
 	"github.com/eris-ltd/eris-db/client"
 	"github.com/eris-ltd/eris-db/definitions"
 )
 
-func Status(do *definitions.ClientDo) {
-	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag)
+func Status(do *definitions.ClientDo) error {
+	logger, err := loggerFromClientDo(do, "Status")
+	if err != nil {
+		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+	}
+	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
 	if err != nil {
-		log.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
-		return
+		return fmt.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
 	chainName, chainId, genesisHashfromChainId, err := erisNodeClient.ChainId()
 	if err != nil {
-		log.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
-		return
+		return fmt.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
-	log.WithFields(log.Fields{
-		"chain":                    do.NodeAddrFlag,
-		"genesisHash":              fmt.Sprintf("%X", genesisHash),
-		"chainName":                chainName,
-		"chainId":                  chainId,
-		"genesisHash from chainId": fmt.Sprintf("%X", genesisHashfromChainId),
-		"validator public key":     fmt.Sprintf("%X", validatorPublicKey),
-		"latest block hash":        fmt.Sprintf("%X", latestBlockHash),
-		"latest block height":      latestBlockHeight,
-		"latest block time":        latestBlockTime,
-	}).Info("status")
+	logger.Info("chain", do.NodeAddrFlag,
+		"genesisHash", fmt.Sprintf("%X", genesisHash),
+		"chainName", chainName,
+		"chainId", chainId,
+		"genesisHash from chainId", fmt.Sprintf("%X", genesisHashfromChainId),
+		"validator public key", fmt.Sprintf("%X", validatorPublicKey),
+		"latest block hash", fmt.Sprintf("%X", latestBlockHash),
+		"latest block height", latestBlockHeight,
+		"latest block time", latestBlockTime,
+	)
+	return nil
 }

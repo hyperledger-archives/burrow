@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rpc_v0
 
 import (
@@ -5,8 +19,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	log "github.com/eris-ltd/eris-logger"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
@@ -125,10 +137,8 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 
 // Helper for writing responses.
 func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
-	log.Debug("Result: %v\n", result)
 	response := rpc.NewRPCResponse(id, result)
 	err := this.codec.Encode(response, w)
-	log.Debug("Response: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
 		return

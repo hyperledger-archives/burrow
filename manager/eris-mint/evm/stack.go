@@ -1,9 +1,25 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package vm
 
 import (
 	"fmt"
 
-	. "github.com/tendermint/go-common"
+	"github.com/eris-ltd/eris-db/common/math/integral"
+	"github.com/eris-ltd/eris-db/common/sanity"
+	. "github.com/eris-ltd/eris-db/word256"
 )
 
 // Not goroutine safe
@@ -51,7 +67,7 @@ func (st *Stack) Push(d Word256) {
 // currently only called after Sha3
 func (st *Stack) PushBytes(bz []byte) {
 	if len(bz) != 32 {
-		PanicSanity("Invalid bytes size: expected 32")
+		sanity.PanicSanity("Invalid bytes size: expected 32")
 	}
 	st.Push(LeftPadWord256(bz))
 }
@@ -115,7 +131,7 @@ func (st *Stack) Peek() Word256 {
 func (st *Stack) Print(n int) {
 	fmt.Println("### stack ###")
 	if st.ptr > 0 {
-		nn := MinInt(n, st.ptr)
+		nn := integral.MinInt(n, st.ptr)
 		for j, i := 0, st.ptr-1; i > st.ptr-1-nn; i-- {
 			fmt.Printf("%-3d  %X\n", j, st.data[i])
 			j += 1

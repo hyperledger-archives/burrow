@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package definitions
 
@@ -31,6 +29,7 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -43,6 +42,7 @@ type Pipe interface {
 	Transactor() Transactor
 	// Hash of Genesis state
 	GenesisHash() []byte
+	Logger() loggers.InfoTraceLogger
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
 	SetConsensusEngine(consensusEngine consensus_types.ConsensusEngine) error

@@ -1,20 +1,32 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
-var defaultConfig = `# Copyright 2015, 2016 Eris Industries (UK) Ltd.
-# This file is part of Eris-RT
+var defaultConfig = `# Copyright 2017 Monax Industries Limited
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# Eris-RT is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Eris-RT is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License..
 
 # This is a TOML configuration for Eris-DB chains
 
@@ -40,12 +52,12 @@ genesis_file = "genesis.json"
   [chain.consensus]
   # consensus defines the module to use for consensus and
   # this will define the peer-to-peer consensus network;
-  # accepted values are "noops", "tmsp", "tendermint"
+  # accepted values are "noops", "abci", "tendermint"
   name = "tendermint"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 6
+  minor_version = 8
   # relative path to consensus' module root folder
   relative_root = "tendermint"
 
@@ -61,7 +73,7 @@ genesis_file = "genesis.json"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 12
+  minor_version = 16
   # relative path to application manager root folder
   relative_root = "erismint"
 
@@ -123,21 +135,19 @@ genesis_file = "genesis.json"
 
 ################################################################################
 ##
-## Tendermint Socket Protocol (TMSP)
-## version 0.6.0
+## Tendermint Socket Protocol (abci)
 ##
-## TMSP expects a tendermint consensus process to run and connect to Eris-DB
+## abci expects a tendermint consensus process to run and connect to Eris-DB
 ##
 ################################################################################
 
-[tmsp]
+[abci]
 # listener address for accepting tendermint socket protocol connections
 listener = "tcp://0.0.0.0:46658"
 
 ################################################################################
-##
+##yeah we had partial support for that with TMSP
 ## Tendermint
-## version 0.6.0
 ##
 ## in-process execution of Tendermint consensus engine
 ##
@@ -174,7 +184,7 @@ private_validator_file = "priv_validator.json"
 	# NOTE: value is ignored when run in-process as RPC is
 	# handled by [servers.tendermint]
   rpc_laddr = ""
-  # proxy application address - used for tmsp connections,
+  # proxy application address - used for abci connections,
   # and this port should not be exposed for in-process Tendermint
   proxy_app = "tcp://127.0.0.1:46658"
 
@@ -207,7 +217,7 @@ private_validator_file = "priv_validator.json"
 ################################################################################
 ##
 ## Eris-Mint
-## version 0.12.0
+## version 0.16.0
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

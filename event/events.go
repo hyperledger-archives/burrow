@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package event
 
@@ -23,8 +21,9 @@ import (
 
 	"fmt"
 
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/txs"
-	log "github.com/eris-ltd/eris-logger"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )
@@ -43,8 +42,8 @@ type EventEmitter interface {
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch *go_events.EventSwitch) *events {
-	return &events{eventSwitch}
+func NewEvents(eventSwitch go_events.EventSwitch, logger loggers.InfoTraceLogger) *events {
+	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
 }
 
 // Provides an EventEmitter that wraps many underlying EventEmitters as a
@@ -56,28 +55,29 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 
 // The events struct has methods for working with events.
 type events struct {
-	eventSwitch *go_events.EventSwitch
+	eventSwitch go_events.EventSwitch
+	logger      loggers.InfoTraceLogger
 }
 
 // Subscribe to an event.
-func (this *events) Subscribe(subId, event string,
+func (evts *events) Subscribe(subId, event string,
 	callback func(txs.EventData)) error {
 	cb := func(evt go_events.EventData) {
 		eventData, err := mapToOurEventData(evt)
 		if err != nil {
-			log.WithError(err).
-				WithFields(log.Fields{"event": event}).
-				Error("Failed to map go-events EventData to our EventData")
+			logging.InfoMsg(evts.logger, "Failed to map go-events EventData to our EventData",
+				"error", err,
+				"event", event)
 		}
 		callback(eventData)
 	}
-	this.eventSwitch.AddListenerForEvent(subId, event, cb)
+	evts.eventSwitch.AddListenerForEvent(subId, event, cb)
 	return nil
 }
 
 // Un-subscribe from an event.
-func (this *events) Unsubscribe(subId string) error {
-	this.eventSwitch.RemoveListener(subId)
+func (evts *events) Unsubscribe(subId string) error {
+	evts.eventSwitch.RemoveListener(subId)
 	return nil
 }
 

@@ -1,18 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package erismint
 
@@ -22,11 +20,12 @@ import (
 	"sync"
 	"time"
 
+	abci "github.com/tendermint/abci/types"
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
-	tmsp "github.com/tendermint/tmsp/types"
 
-	log "github.com/eris-ltd/eris-logger"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 
 	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
@@ -46,18 +45,19 @@ type ErisMint struct {
 	checkCache *sm.BlockCache // for CheckTx (eg. so we get nonces right)
 
 	evc  *tendermint_events.EventCache
-	evsw *tendermint_events.EventSwitch
+	evsw tendermint_events.EventSwitch
 
-	nTxs int // count txs in a block
+	nTxs   int // count txs in a block
+	logger loggers.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure ErisMint successfully implements
 // eris-db/manager/types.Application
 var _ manager_types.Application = (*ErisMint)(nil)
 
-// NOTE: [ben] also automatically implements tmsp.Application,
+// NOTE: [ben] also automatically implements abci.Application,
 // undesired but unharmful
-// var _ tmsp.Application = (*ErisMint)(nil)
+// var _ abci.Application = (*ErisMint)(nil)
 
 func (app *ErisMint) GetState() *sm.State {
 	app.mtx.Lock()
@@ -72,19 +72,20 @@ func (app *ErisMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewErisMint(s *sm.State, evsw *tendermint_events.EventSwitch) *ErisMint {
+func NewErisMint(s *sm.State, evsw tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *ErisMint {
 	return &ErisMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
 		checkCache: sm.NewBlockCache(s),
 		evc:        tendermint_events.NewEventCache(evsw),
 		evsw:       evsw,
+		logger:     logging.WithScope(logger, "ErisMint"),
 	}
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) Info() (info string) {
-	return "ErisDB"
+func (app *ErisMint) Info() (info abci.ResponseInfo) {
+	return abci.ResponseInfo{}
 }
 
 // Implements manager/types.Application
@@ -93,7 +94,7 @@ func (app *ErisMint) SetOption(key string, value string) (log string) {
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
+func (app *ErisMint) DeliverTx(txBytes []byte) abci.Result {
 	app.nTxs += 1
 
 	// XXX: if we had tx ids we could cache the decoded txs on CheckTx
@@ -103,61 +104,60 @@ func (app *ErisMint) AppendTx(txBytes []byte) tmsp.Result {
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
+		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
 	err = sm.ExecTx(app.cache, *tx, true, app.evc)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
+		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
-	return tmsp.NewResultOK(receiptBytes, "Success")
+	return abci.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application
-func (app *ErisMint) CheckTx(txBytes []byte) tmsp.Result {
+func (app *ErisMint) CheckTx(txBytes []byte) abci.Result {
 	var n int
 	var err error
 	tx := new(txs.Tx)
 	buf := bytes.NewBuffer(txBytes)
 	wire.ReadBinaryPtr(tx, buf, len(txBytes), &n, &err)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
+		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	// TODO: map ExecTx errors to sensible TMSP error codes
+	// TODO: map ExecTx errors to sensible abci error codes
 	err = sm.ExecTx(app.checkCache, *tx, false, nil)
 	if err != nil {
-		return tmsp.NewError(tmsp.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
+		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
 	receipt := txs.GenerateReceipt(app.state.ChainID, *tx)
 	receiptBytes := wire.BinaryBytes(receipt)
-	return tmsp.NewResultOK(receiptBytes, "Success")
+	return abci.NewResultOK(receiptBytes, "Success")
 }
 
 // Implements manager/types.Application
 // Commit the state (called at end of block)
 // NOTE: CheckTx/AppendTx must not run concurrently with Commit -
 //  the mempool should run during AppendTxs, but lock for Commit and Update
-func (app *ErisMint) Commit() (res tmsp.Result) {
+func (app *ErisMint) Commit() (res abci.Result) {
 	app.mtx.Lock() // the lock protects app.state
 	defer app.mtx.Unlock()
 
 	app.state.LastBlockHeight += 1
-	log.WithFields(log.Fields{
-		"blockheight": app.state.LastBlockHeight,
-	}).Info("Commit block")
+	logging.InfoMsg(app.logger, "Committing block",
+		"last_block_height", app.state.LastBlockHeight)
 
 	// sync the AppendTx cache
 	app.cache.Sync()
 
 	// Refresh the checkCache with the latest commited state
-	log.WithFields(log.Fields{
-		"txs": app.nTxs,
-	}).Info("Reset checkCache")
+	logging.InfoMsg(app.logger, "Resetting checkCache",
+		"txs", app.nTxs)
 	app.checkCache = sm.NewBlockCache(app.state)
+
 	app.nTxs = 0
 
 	// save state to disk
@@ -166,17 +166,16 @@ func (app *ErisMint) Commit() (res tmsp.Result) {
 	// flush events to listeners (XXX: note issue with blocking)
 	app.evc.Flush()
 
-	// MARMOT:
-	// set internal time as two seconds per block
+	// TODO: [ben] over the tendermint 0.6 TMSP interface we have
+	// no access to the block header implemented;
+	// On Tendermint v0.8 load the blockheader into the application
+	// state and remove the fixed 2-"seconds" per block internal clock.
+	// NOTE: set internal time as two seconds per block
 	app.state.LastBlockTime = app.state.LastBlockTime.Add(time.Duration(2) * time.Second)
-	fmt.Printf("\n\nMARMOT TIME: %s\n\n", app.state.LastBlockTime)
-	// MARMOT:
 	appHash := app.state.Hash()
-	fmt.Printf("\n\nMARMOT COMMIT: %X\n\n", appHash)
-	// return tmsp.NewResultOK(app.state.Hash(), "Success")
-	return tmsp.NewResultOK(appHash, "Success")
+	return abci.NewResultOK(appHash, "Success")
 }
 
-func (app *ErisMint) Query(query []byte) (res tmsp.Result) {
-	return tmsp.NewResultOK(nil, "Success")
+func (app *ErisMint) Query(query []byte) (res abci.Result) {
+	return abci.NewResultOK(nil, "Success")
 }

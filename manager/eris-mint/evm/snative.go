@@ -1,98 +1,347 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package vm
 
 import (
-	"encoding/hex"
 	"fmt"
 
+	"github.com/eris-ltd/eris-db/common/sanity"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
+
+	"strings"
+
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 )
 
-//------------------------------------------------------------------------------------------------
-// Registered SNative contracts
+//
+// SNative (from 'secure natives') are native (go) contracts that are dispatched
+// based on account permissions and can access and modify an account's permissions
+//
 
-var PermissionsContract = "permissions_contract"
+// Metadata for SNative contract. Acts as a call target from the EVM. Can be
+// used to generate bindings in a smart contract languages.
+type SNativeContractDescription struct {
+	// Comment describing purpose of SNative contract and reason for assembling
+	// the particular functions
+	Comment string
+	// Name of the SNative contract
+	Name          string
+	functionsByID map[abi.FunctionSelector]*SNativeFunctionDescription
+	functions     []*SNativeFunctionDescription
+}
+
+// Metadata for SNative functions. Act as call targets for the EVM when
+// collected into an SNativeContractDescription. Can be used to generate
+// bindings in a smart contract languages.
+type SNativeFunctionDescription struct {
+	// Comment describing function's purpose, parameters, and return value
+	Comment string
+	// Function name (used to form signature)
+	Name string
+	// Function arguments (used to form signature)
+	Args []abi.Arg
+	// Function return value
+	Return abi.Return
+	// Permissions required to call function
+	PermFlag ptypes.PermFlag
+	// Native function to which calls will be dispatched when a containing
+	// contract is called with a FunctionSelector matching this NativeContract
+	F NativeContract
+}
 
 func registerSNativeContracts() {
-	registeredNativeContracts[LeftPadWord256([]byte(PermissionsContract))] = permissionsContract
-
-	/*
-		// we could expose these but we moved permission and args checks into the permissionsContract
-		// so calling them would be unsafe ...
-		registeredNativeContracts[LeftPadWord256([]byte("has_base"))] = has_base
-		registeredNativeContracts[LeftPadWord256([]byte("set_base"))] = set_base
-		registeredNativeContracts[LeftPadWord256([]byte("unset_base"))] = unset_base
-		registeredNativeContracts[LeftPadWord256([]byte("set_global"))] = set_global
-		registeredNativeContracts[LeftPadWord256([]byte("has_role"))] = has_role
-		registeredNativeContracts[LeftPadWord256([]byte("add_role"))] = add_role
-		registeredNativeContracts[LeftPadWord256([]byte("rm_role"))] = rm_role
-	*/
+	for _, contract := range SNativeContracts() {
+		registeredNativeContracts[contract.AddressWord256()] = contract.Dispatch
+	}
 }
 
-//-----------------------------------------------------------------------------
-// snative are native contracts that can access and modify an account's permissions
+// Returns a map of all SNative contracts defined indexed by name
+func SNativeContracts() map[string]*SNativeContractDescription {
+	permFlagTypeName := abi.Uint64TypeName
+	roleTypeName := abi.Bytes32TypeName
+	contracts := []*SNativeContractDescription{
+		NewSNativeContract(`
+		* Interface for managing Secure Native authorizations.
+		* @dev This interface describes the functions exposed by the SNative permissions layer in the Monax blockchain (ErisDB).
+		`,
+			"Permissions",
+			&SNativeFunctionDescription{`
+			* @notice Adds a role to an account
+			* @param _account account address
+			* @param _role role name
+			* @return result whether role was added
+			`,
+				"addRole",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
+				},
+				ret("result", abi.BoolTypeName),
+				ptypes.AddRole,
+				addRole},
 
-type SNativeFuncDescription struct {
-	Name     string
-	NArgs    int
-	PermFlag ptypes.PermFlag
-	F        NativeContract
-}
+			&SNativeFunctionDescription{`
+			* @notice Removes a role from an account
+			* @param _account account address
+			* @param _role role name
+			* @return result whether role was removed
+			`,
+				"removeRole",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
+				},
+				ret("result", abi.BoolTypeName),
+				ptypes.RmRole,
+				removeRole},
 
-/* The solidity interface used to generate the abi function ids below
-contract Permissions {
-	function has_base(address addr, int permFlag) constant returns (bool value) {}
-	function set_base(address addr, int permFlag, bool value) constant returns (bool val) {}
-	function unset_base(address addr, int permFlag) constant returns (int pf) {}
-	function set_global(address addr, int permFlag, bool value) constant returns (int pf) {}
-	function has_role(address addr, string role) constant returns (bool val) {}
-	function add_role(address addr, string role) constant returns (bool added) {}
-	function rm_role(address addr, string role) constant returns (bool removed) {}
-}
-*/
+			&SNativeFunctionDescription{`
+			* @notice Indicates whether an account has a role
+			* @param _account account address
+			* @param _role role name
+			* @return result whether account has role
+			`,
+				"hasRole",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
+				},
+				ret("result", abi.BoolTypeName),
+				ptypes.HasRole,
+				hasRole},
 
-// function identifiers from the solidity abi
-var PermsMap = map[string]SNativeFuncDescription{
-	"e8145855": SNativeFuncDescription{"has_role", 2, ptypes.HasRole, has_role},
-	"180d26f2": SNativeFuncDescription{"unset_base", 2, ptypes.UnsetBase, unset_base},
-	"3a3fcc59": SNativeFuncDescription{"set_global", 2, ptypes.SetGlobal, set_global},
-	"3fbf7da5": SNativeFuncDescription{"add_role", 2, ptypes.AddRole, add_role},
-	"9ea53314": SNativeFuncDescription{"set_base", 3, ptypes.SetBase, set_base},
-	"bb37737a": SNativeFuncDescription{"has_base", 2, ptypes.HasBase, has_base},
-	"28fd0194": SNativeFuncDescription{"rm_role", 2, ptypes.RmRole, rm_role},
-}
+			&SNativeFunctionDescription{`
+			* @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
+			* @param _account account address
+			* @param _permission the base permissions flags to set for the account
+			* @param _set whether to set or unset the permissions flags at the account level
+			* @return result the effective permissions flags on the account after the call
+			`,
+				"setBase",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName),
+					arg("_set", abi.BoolTypeName),
+				},
+				ret("result", permFlagTypeName),
+				ptypes.SetBase,
+				setBase},
 
-func permissionsContract(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	if len(args) < 4 {
-		return nil, fmt.Errorf("permissionsContract expects at least a 4-byte function identifier")
+			&SNativeFunctionDescription{`
+			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
+      * @param _account account address
+      * @param _permission the permissions flags to unset for the account
+			* @return result the effective permissions flags on the account after the call
+      `,
+				"unsetBase",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName)},
+				ret("result", permFlagTypeName),
+				ptypes.UnsetBase,
+				unsetBase},
+
+			&SNativeFunctionDescription{`
+			* @notice Indicates whether an account has a subset of permissions set
+			* @param _account account address
+			* @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
+			* @return result whether account has the passed permissions flags set
+			`,
+				"hasBase",
+				[]abi.Arg{
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName)},
+				ret("result", permFlagTypeName),
+				ptypes.HasBase,
+				hasBase},
+
+			&SNativeFunctionDescription{`
+			* @notice Sets the global (default) permissions flags for the entire chain
+			* @param _permission the permissions flags to set
+			* @param _set whether to set (or unset) the permissions flags
+			* @return result the global permissions flags after the call
+			`,
+				"setGlobal",
+				[]abi.Arg{
+					arg("_permission", permFlagTypeName),
+					arg("_set", abi.BoolTypeName)},
+				ret("result", permFlagTypeName),
+				ptypes.SetGlobal,
+				setGlobal},
+		),
 	}
 
-	// map solidity abi function id to snative
-	funcIDbytes := args[:4]
-	args = args[4:]
-	funcID := hex.EncodeToString(funcIDbytes)
-	d, ok := PermsMap[funcID]
-	if !ok {
-		return nil, fmt.Errorf("unknown permissionsContract funcID %s", funcID)
+	contractMap := make(map[string]*SNativeContractDescription, len(contracts))
+	for _, contract := range contracts {
+		if _, ok := contractMap[contract.Name]; ok {
+			// If this happens we have a pseudo compile time error that will be caught
+			// on native.go init()
+			panic(fmt.Errorf("Duplicate contract with name %s defined. "+
+				"Contract names must be unique.", contract.Name))
+		}
+		contractMap[contract.Name] = contract
 	}
+	return contractMap
+}
+
+// Create a new SNative contract description object by passing a comment, name
+// and a list of member functions descriptions
+func NewSNativeContract(comment, name string,
+	functions ...*SNativeFunctionDescription) *SNativeContractDescription {
+
+	functionsByID := make(map[abi.FunctionSelector]*SNativeFunctionDescription, len(functions))
+	for _, f := range functions {
+		fid := f.ID()
+		otherF, ok := functionsByID[fid]
+		if ok {
+			panic(fmt.Errorf("Function with ID %x already defined: %s", fid,
+				otherF))
+		}
+		functionsByID[fid] = f
+	}
+	return &SNativeContractDescription{
+		Comment:       comment,
+		Name:          name,
+		functionsByID: functionsByID,
+		functions:     functions,
+	}
+}
+
+// This function is designed to be called from the EVM once a SNative contract
+// has been selected. It is also placed in a registry by registerSNativeContracts
+// So it can be looked up by SNative address
+func (contract *SNativeContractDescription) Dispatch(appState AppState,
+	caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	if len(args) < abi.FunctionSelectorLength {
+		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
+			"identifier but arguments are only %s bytes long", len(args))
+	}
+
+	function, err := contract.FunctionByID(firstFourBytes(args))
+	if err != nil {
+		return nil, err
+	}
+
+	remainingArgs := args[abi.FunctionSelectorLength:]
 
 	// check if we have permission to call this function
-	if !HasPermission(appState, caller, d.PermFlag) {
-		return nil, ErrInvalidPermission{caller.Address, d.Name}
+	if !HasPermission(appState, caller, function.PermFlag) {
+		return nil, ErrInvalidPermission{caller.Address, function.Name}
 	}
 
 	// ensure there are enough arguments
-	if len(args) != d.NArgs*32 {
-		return nil, fmt.Errorf("%s() takes %d arguments", d.Name)
+	if len(remainingArgs) != function.NArgs()*Word256Length {
+		return nil, fmt.Errorf("%s() takes %d arguments", function.Name,
+			function.NArgs())
 	}
 
 	// call the function
-	return d.F(appState, caller, args, gas)
+	return function.F(appState, caller, remainingArgs, gas)
 }
 
-// TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
+// We define the address of an SNative contact as the last 20 bytes of the sha3
+// hash of its name
+func (contract *SNativeContractDescription) Address() abi.Address {
+	var address abi.Address
+	hash := sha3.Sha3([]byte(contract.Name))
+	copy(address[:], hash[len(hash)-abi.AddressLength:])
+	return address
+}
 
-func has_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+// Get address as a byte slice
+func (contract *SNativeContractDescription) AddressBytes() []byte {
+	address := contract.Address()
+	return address[:]
+}
+
+// Get address as a left-padded Word256
+func (contract *SNativeContractDescription) AddressWord256() Word256 {
+	return LeftPadWord256(contract.AddressBytes())
+}
+
+// Get function by calling identifier FunctionSelector
+func (contract *SNativeContractDescription) FunctionByID(id abi.FunctionSelector) (*SNativeFunctionDescription, error) {
+	f, ok := contract.functionsByID[id]
+	if !ok {
+		return nil,
+			fmt.Errorf("Unknown SNative function with ID %x", id)
+	}
+	return f, nil
+}
+
+// Get function by name
+func (contract *SNativeContractDescription) FunctionByName(name string) (*SNativeFunctionDescription, error) {
+	for _, f := range contract.functions {
+		if f.Name == name {
+			return f, nil
+		}
+	}
+	return nil, fmt.Errorf("Unknown SNative function with name %s", name)
+}
+
+// Get functions in order of declaration
+func (contract *SNativeContractDescription) Functions() []*SNativeFunctionDescription {
+	functions := make([]*SNativeFunctionDescription, len(contract.functions))
+	copy(functions, contract.functions)
+	return functions
+}
+
+//
+// SNative functions
+//
+
+// Get function signature
+func (function *SNativeFunctionDescription) Signature() string {
+	argTypeNames := make([]string, len(function.Args))
+	for i, arg := range function.Args {
+		argTypeNames[i] = string(arg.TypeName)
+	}
+	return fmt.Sprintf("%s(%s)", function.Name,
+		strings.Join(argTypeNames, ","))
+}
+
+// Get function calling identifier FunctionSelector
+func (function *SNativeFunctionDescription) ID() abi.FunctionSelector {
+	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
+}
+
+// Get number of function arguments
+func (function *SNativeFunctionDescription) NArgs() int {
+	return len(function.Args)
+}
+
+func arg(name string, abiTypeName abi.TypeName) abi.Arg {
+	return abi.Arg{
+		Name:     name,
+		TypeName: abiTypeName,
+	}
+}
+
+func ret(name string, abiTypeName abi.TypeName) abi.Return {
+	return abi.Return{
+		Name:     name,
+		TypeName: abiTypeName,
+	}
+}
+
+// Permission function defintions
+
+// TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
+func hasBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -107,8 +356,8 @@ func has_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func set_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	addr, permNum, perm := returnThreeArgs(args)
+func setBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	addr, permNum, permVal := returnThreeArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
 		return nil, fmt.Errorf("Unknown account %X", addr)
@@ -117,16 +366,16 @@ func set_base(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permV := !perm.IsZero()
+	permV := !permVal.IsZero()
 	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
-	return perm.Bytes(), nil
+	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
-func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -141,29 +390,29 @@ func unset_base(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
-	return permNum.Bytes(), nil
+	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
-func set_global(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	permNum, perm := returnTwoArgs(args)
+func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+	permNum, permVal := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
 	if vmAcc == nil {
-		PanicSanity("cant find the global permissions account")
+		sanity.PanicSanity("cant find the global permissions account")
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permV := !perm.IsZero()
+	permV := !permVal.IsZero()
 	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
 	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
-	return perm.Bytes(), nil
+	return permBytes(vmAcc.Permissions.Base.ResultantPerms()), nil
 }
 
-func has_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func hasRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -175,7 +424,7 @@ func has_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func add_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func addRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -188,7 +437,7 @@ func add_role(appState AppState, caller *Account, args []byte, gas *int64) (outp
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func rm_role(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
+func removeRole(appState AppState, caller *Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
 	vmAcc := appState.GetAccount(addr)
 	if vmAcc == nil {
@@ -221,6 +470,26 @@ func ValidPermN(n ptypes.PermFlag) bool {
 	return true
 }
 
+// Get the global BasePermissions
+func globalPerms(appState AppState) ptypes.BasePermissions {
+	vmAcc := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
+	if vmAcc == nil {
+		sanity.PanicSanity("cant find the global permissions account")
+	}
+	return vmAcc.Permissions.Base
+}
+
+// Compute the effective permissions from an Account's BasePermissions by
+// taking the bitwise or with the global BasePermissions resultant permissions
+func effectivePermBytes(basePerms ptypes.BasePermissions,
+	globalPerms ptypes.BasePermissions) []byte {
+	return permBytes(basePerms.ResultantPerms() | globalPerms.ResultantPerms())
+}
+
+func permBytes(basePerms ptypes.PermFlag) []byte {
+	return Uint64ToWord256(uint64(basePerms)).Bytes()
+}
+
 // CONTRACT: length has already been checked
 func returnTwoArgs(args []byte) (a Word256, b Word256) {
 	copy(a[:], args[:32])
@@ -241,4 +510,10 @@ func byteFromBool(b bool) byte {
 		return 0x1
 	}
 	return 0x0
+}
+
+func firstFourBytes(byteSlice []byte) [4]byte {
+	var bs [4]byte
+	copy(bs[:], byteSlice[:4])
+	return bs
 }

@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
@@ -9,10 +23,10 @@ import (
 	"time"
 
 	acm "github.com/eris-ltd/eris-db/account"
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	"github.com/eris-ltd/eris-db/common/random"
+	genesis "github.com/eris-ltd/eris-db/genesis"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 
-	. "github.com/tendermint/go-common"
 	tdb "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"
 )
@@ -31,7 +45,7 @@ var g1 = fmt.Sprintf(`
         {
             "address": "%X",
             "amount": %d,
-	    "name": "%s",
+	    	"name": "%s",
             "permissions": {
 		    "base": {
 			    "perms": %d,
@@ -60,7 +74,7 @@ var g1 = fmt.Sprintf(`
 `, chain_id, addr1, amt1, accName, perms, setbit, roles1[0], roles1[1])
 
 func TestGenesisReadable(t *testing.T) {
-	genDoc := GenesisDocFromJSON([]byte(g1))
+	genDoc := genesis.GenesisDocFromJSON([]byte(g1))
 	if genDoc.ChainID != chain_id {
 		t.Fatalf("Incorrect chain id. Got %d, expected %d\n", genDoc.ChainID, chain_id)
 	}
@@ -82,7 +96,7 @@ func TestGenesisReadable(t *testing.T) {
 }
 
 func TestGenesisMakeState(t *testing.T) {
-	genDoc := GenesisDocFromJSON([]byte(g1))
+	genDoc := genesis.GenesisDocFromJSON([]byte(g1))
 	db := tdb.NewMemDB()
 	st := MakeGenesisState(db, genDoc)
 	acc := st.GetAccount(addr1)
@@ -108,37 +122,37 @@ func RandAccount(randBalance bool, minBalance int64) (*acm.Account, *acm.PrivAcc
 	acc := &acm.Account{
 		Address:     privAccount.PubKey.Address(),
 		PubKey:      privAccount.PubKey,
-		Sequence:    RandInt(),
+		Sequence:    random.RandInt(),
 		Balance:     minBalance,
 		Permissions: perms,
 	}
 	if randBalance {
-		acc.Balance += int64(RandUint32())
+		acc.Balance += int64(random.RandUint32())
 	}
 	return acc, privAccount
 }
 
-func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*GenesisDoc, []*acm.PrivAccount, []*types.PrivValidator) {
-	accounts := make([]GenesisAccount, numAccounts)
+func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool, minBonded int64) (*genesis.GenesisDoc, []*acm.PrivAccount, []*types.PrivValidator) {
+	accounts := make([]genesis.GenesisAccount, numAccounts)
 	privAccounts := make([]*acm.PrivAccount, numAccounts)
 	defaultPerms := ptypes.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := RandAccount(randBalance, minBalance)
-		accounts[i] = GenesisAccount{
+		accounts[i] = genesis.GenesisAccount{
 			Address:     account.Address,
 			Amount:      account.Balance,
 			Permissions: &defaultPerms, // This will get copied into each state.Account.
 		}
 		privAccounts[i] = privAccount
 	}
-	validators := make([]GenesisValidator, numValidators)
+	validators := make([]genesis.GenesisValidator, numValidators)
 	privValidators := make([]*types.PrivValidator, numValidators)
 	for i := 0; i < numValidators; i++ {
 		valInfo, privVal := types.RandValidator(randBonded, minBonded)
-		validators[i] = GenesisValidator{
+		validators[i] = genesis.GenesisValidator{
 			PubKey: valInfo.PubKey,
 			Amount: valInfo.VotingPower,
-			UnbondTo: []BasicAccount{
+			UnbondTo: []genesis.BasicAccount{
 				{
 					Address: valInfo.PubKey.Address(),
 					Amount:  valInfo.VotingPower,
@@ -148,7 +162,7 @@ func RandGenesisDoc(numAccounts int, randBalance bool, minBalance int64, numVali
 		privValidators[i] = privVal
 	}
 	sort.Sort(types.PrivValidatorsByAddress(privValidators))
-	return &GenesisDoc{
+	return &genesis.GenesisDoc{
 		GenesisTime: time.Now(),
 		ChainID:     "tendermint_test",
 		Accounts:    accounts,

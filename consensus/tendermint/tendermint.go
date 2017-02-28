@@ -1,21 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
-
-// version provides the current Eris-DB version and a VersionIdentifier
-// for the modules to identify their version with.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package tendermint
 
@@ -23,24 +18,24 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"sync"
 
+	abci_types "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
 	p2p "github.com/tendermint/go-p2p"
 	tendermint_consensus "github.com/tendermint/tendermint/consensus"
 	node "github.com/tendermint/tendermint/node"
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
-	tmsp_types "github.com/tendermint/tmsp/types"
 
 	edb_event "github.com/eris-ltd/eris-db/event"
-	log "github.com/eris-ltd/eris-logger"
 
 	config "github.com/eris-ltd/eris-db/config"
 	manager_types "github.com/eris-ltd/eris-db/manager/types"
 	// files  "github.com/eris-ltd/eris-db/files"
 	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	"github.com/eris-ltd/eris-db/logging"
+	"github.com/eris-ltd/eris-db/logging/loggers"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/tendermint/go-wire"
 )
@@ -49,6 +44,7 @@ type Tendermint struct {
 	tmintNode   *node.Node
 	tmintConfig *TendermintConfig
 	chainId     string
+	logger      loggers.InfoTraceLogger
 }
 
 // Compiler checks to ensure Tendermint successfully implements
@@ -57,7 +53,8 @@ var _ consensus_types.ConsensusEngine = (*Tendermint)(nil)
 var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
 func NewTendermint(moduleConfig *config.ModuleConfig,
-	application manager_types.Application) (*Tendermint, error) {
+	application manager_types.Application,
+	logger loggers.InfoTraceLogger) (*Tendermint, error) {
 	// re-assert proper configuration for module
 	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
 		return nil, fmt.Errorf("Version string %s did not match %s",
@@ -71,10 +68,10 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	if !moduleConfig.Config.IsSet("configuration") {
 		return nil, fmt.Errorf("Failed to extract Tendermint configuration subtree.")
 	}
-	tendermintConfigViper := moduleConfig.Config.Sub("configuration")
+	tendermintConfigViper, err := config.ViperSubConfig(moduleConfig.Config, "configuration")
 	if tendermintConfigViper == nil {
 		return nil,
-			fmt.Errorf("Failed to extract Tendermint configuration subtree.")
+			fmt.Errorf("Failed to extract Tendermint configuration subtree: %s", err)
 	}
 	// wrap a copy of the viper config in a tendermint/go-config interface
 	tmintConfig := GetTendermintConfig(tendermintConfigViper)
@@ -92,18 +89,19 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	tmintConfig.AssertTendermintConsistency(moduleConfig,
 		privateValidatorFilePath)
 	chainId := tmintConfig.GetString("chain_id")
-	log.WithFields(log.Fields{
-		"chainId":              chainId,
-		"genesisFile":          tmintConfig.GetString("genesis_file"),
-		"nodeLocalAddress":     tmintConfig.GetString("node_laddr"),
-		"moniker":              tmintConfig.GetString("moniker"),
-		"seeds":                tmintConfig.GetString("seeds"),
-		"fastSync":             tmintConfig.GetBool("fast_sync"),
-		"rpcLocalAddress":      tmintConfig.GetString("rpc_laddr"),
-		"databaseDirectory":    tmintConfig.GetString("db_dir"),
-		"privateValidatorFile": tmintConfig.GetString("priv_validator_file"),
-		"privValFile":          moduleConfig.Config.GetString("private_validator_file"),
-	}).Debug("Loaded Tendermint sub-configuration")
+
+	logging.TraceMsg(logger, "Loaded Tendermint sub-configuration",
+		"chainId", chainId,
+		"genesisFile", tmintConfig.GetString("genesis_file"),
+		"nodeLocalAddress", tmintConfig.GetString("node_laddr"),
+		"moniker", tmintConfig.GetString("moniker"),
+		"seeds", tmintConfig.GetString("seeds"),
+		"fastSync", tmintConfig.GetBool("fast_sync"),
+		"rpcLocalAddress", tmintConfig.GetString("rpc_laddr"),
+		"databaseDirectory", tmintConfig.GetString("db_dir"),
+		"privateValidatorFile", tmintConfig.GetString("priv_validator_file"),
+		"privValFile", moduleConfig.Config.GetString("private_validator_file"))
+
 	// TODO: [ben] do not "or Generate Validator keys", rather fail directly
 	// TODO: [ben] implement the signer for Private validator over eris-keys
 	// TODO: [ben] copy from rootDir to tendermint workingDir;
@@ -116,15 +114,13 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	// not running the tendermint RPC as it could lead to unexpected behaviour,
 	// not least if we accidentally try to run it on the same address as our own
 	if tmintConfig.GetString("rpc_laddr") != "" {
-		log.Warnf("Force disabling Tendermint's native RPC, which had been set to "+
-			"run on '%s' in the Tendermint config.", tmintConfig.GetString("rpc_laddr"))
+		logging.InfoMsg(logger, "Force disabling Tendermint's native RPC",
+			"provided_rpc_laddr", tmintConfig.GetString("rpc_laddr"))
 		tmintConfig.Set("rpc_laddr", "")
 	}
 
-	newNode := node.NewNode(tmintConfig, privateValidator, func(_, _ string,
-		hash []byte) proxy.AppConn {
-		return NewLocalClient(new(sync.Mutex), application)
-	})
+	newNode := node.NewNode(tmintConfig, privateValidator,
+		proxy.NewLocalClientCreator(application))
 
 	listener := p2p.NewDefaultListener("tcp", tmintConfig.GetString("node_laddr"),
 		tmintConfig.GetBool("skip_upnp"))
@@ -136,26 +132,25 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 		newNode.Stop()
 		return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
 	}
-	log.WithFields(log.Fields{
-		"nodeAddress":       tmintConfig.GetString("node_laddr"),
-		"transportProtocol": "tcp",
-		"upnp":              !tmintConfig.GetBool("skip_upnp"),
-		"moniker":           tmintConfig.GetString("moniker"),
-	}).Info("Tendermint consensus node started")
+	logging.InfoMsg(logger, "Tendermint consensus node started",
+		"nodeAddress", tmintConfig.GetString("node_laddr"),
+		"transportProtocol", "tcp",
+		"upnp", !tmintConfig.GetBool("skip_upnp"),
+		"moniker", tmintConfig.GetString("moniker"))
 
 	// If seedNode is provided by config, dial out.
 	if tmintConfig.GetString("seeds") != "" {
 		seeds := strings.Split(tmintConfig.GetString("seeds"), ",")
 		newNode.DialSeeds(seeds)
-		log.WithFields(log.Fields{
-			"seeds": seeds,
-		}).Debug("Tendermint node called seeds")
+		logging.TraceMsg(logger, "Tendermint node called seeds",
+			"seeds", seeds)
 	}
 
 	return &Tendermint{
 		tmintNode:   newNode,
 		tmintConfig: tmintConfig,
 		chainId:     chainId,
+		logger:      logger,
 	}, nil
 }
 
@@ -228,11 +223,11 @@ func (tendermint *Tendermint) PublicValidatorKey() crypto.PubKey {
 }
 
 func (tendermint *Tendermint) Events() edb_event.EventEmitter {
-	return edb_event.NewEvents(tendermint.tmintNode.EventSwitch())
+	return edb_event.NewEvents(tendermint.tmintNode.EventSwitch(), tendermint.logger)
 }
 
 func (tendermint *Tendermint) BroadcastTransaction(transaction []byte,
-	callback func(*tmsp_types.Response)) error {
+	callback func(*abci_types.Response)) error {
 	return tendermint.tmintNode.MempoolReactor().BroadcastTx(transaction, callback)
 }
 

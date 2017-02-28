@@ -1,15 +1,31 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 
-	. "github.com/tendermint/go-common"
+	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/common/sanity"
+	core_types "github.com/eris-ltd/eris-db/core/types"
+	. "github.com/eris-ltd/eris-db/word256"
+
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-merkle"
-
-	acm "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
@@ -61,7 +77,7 @@ func (cache *BlockCache) UpdateAccount(acc *acm.Account) {
 	addr := acc.Address
 	_, storage, removed, _ := cache.accounts[string(addr)].unpack()
 	if removed {
-		PanicSanity("UpdateAccount on a removed account")
+		sanity.PanicSanity("UpdateAccount on a removed account")
 	}
 	cache.accounts[string(addr)] = accountInfo{acc, storage, false, true}
 }
@@ -69,7 +85,7 @@ func (cache *BlockCache) UpdateAccount(acc *acm.Account) {
 func (cache *BlockCache) RemoveAccount(addr []byte) {
 	_, _, removed, _ := cache.accounts[string(addr)].unpack()
 	if removed {
-		PanicSanity("RemoveAccount on a removed account")
+		sanity.PanicSanity("RemoveAccount on a removed account")
 	}
 	cache.accounts[string(addr)] = accountInfo{nil, nil, true, false}
 }
@@ -88,7 +104,7 @@ func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
 	// Get or load storage
 	acc, storage, removed, dirty := cache.accounts[string(addr.Postfix(20))].unpack()
 	if removed {
-		PanicSanity("GetStorage() on removed account")
+		sanity.PanicSanity("GetStorage() on removed account")
 	}
 	if acc != nil && storage == nil {
 		storage = makeStorage(cache.db, acc.StorageRoot)
@@ -111,7 +127,7 @@ func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
 func (cache *BlockCache) SetStorage(addr Word256, key Word256, value Word256) {
 	_, _, removed, _ := cache.accounts[string(addr.Postfix(20))].unpack()
 	if removed {
-		PanicSanity("SetStorage() on a removed account")
+		sanity.PanicSanity("SetStorage() on a removed account")
 	}
 	cache.storages[Tuple256{addr, key}] = storageInfo{value, true}
 }
@@ -141,7 +157,7 @@ func (cache *BlockCache) UpdateNameRegEntry(entry *core_types.NameRegEntry) {
 func (cache *BlockCache) RemoveNameRegEntry(name string) {
 	_, removed, _ := cache.names[name].unpack()
 	if removed {
-		PanicSanity("RemoveNameRegEntry on a removed entry")
+		sanity.PanicSanity("RemoveNameRegEntry on a removed entry")
 	}
 	cache.names[name] = nameInfo{nil, true, false}
 }
@@ -208,7 +224,7 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveAccount([]byte(addrStr))
 			if !removed {
-				PanicCrisis(Fmt("Could not remove account to be removed: %X", acc.Address))
+				sanity.PanicCrisis(fmt.Sprintf("Could not remove account to be removed: %X", acc.Address))
 			}
 		} else {
 			if acc == nil {
@@ -241,7 +257,7 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveNameRegEntry(nameStr)
 			if !removed {
-				PanicCrisis(Fmt("Could not remove namereg entry to be removed: %s", nameStr))
+				sanity.PanicCrisis(fmt.Sprintf("Could not remove namereg entry to be removed: %s", nameStr))
 			}
 		} else {
 			if entry == nil {

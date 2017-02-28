@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rpc_v0
 
 import (
@@ -345,12 +359,13 @@ func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester 
 }
 
 func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &txs.CallTx{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	// Accept all transaction types as parameter for broadcast.
+	param := new(txs.Tx)
+	err := erisDbMethods.codec.DecodeBytesPtr(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(param)
+	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(*param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

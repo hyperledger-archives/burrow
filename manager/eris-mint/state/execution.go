@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
@@ -5,15 +19,15 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-events"
-
 	acm "github.com/eris-ltd/eris-db/account"
+	"github.com/eris-ltd/eris-db/common/sanity"
+	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
 	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
-
-	core_types "github.com/eris-ltd/eris-db/core/types"
 	"github.com/eris-ltd/eris-db/txs"
+	. "github.com/eris-ltd/eris-db/word256"
+
+	"github.com/tendermint/go-events"
 )
 
 // ExecBlock stuff is now taken care of by the consensus engine.
@@ -203,6 +217,12 @@ func getOrMakeOutputs(state AccountGetter, accounts map[string]*acm.Account, out
 	return accounts, nil
 }
 
+// Since all ethereum accounts implicitly exist we sometimes lazily create an Account object to represent them
+// only when needed. Sometimes we need to create an unknown Account knowing only its address (which is expected to
+// be a deterministic hash of its associated public key) and not its public key. When we eventually receive a
+// transaction acting on behalf of that account we will be given a public key that we can check matches the address.
+// If it does then we will associate the public key with the stub account already registered in the system once and
+// for all time.
 func checkInputPubKey(acc *acm.Account, in *txs.TxInput) error {
 	if acc.PubKey == nil {
 		if in.PubKey == nil {
@@ -222,7 +242,7 @@ func validateInputs(accounts map[string]*acm.Account, signBytes []byte, ins []*t
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
-			PanicSanity("validateInputs() expects account in accounts")
+			sanity.PanicSanity("validateInputs() expects account in accounts")
 		}
 		err = validateInput(acc, signBytes, in)
 		if err != nil {
@@ -273,10 +293,10 @@ func adjustByInputs(accounts map[string]*acm.Account, ins []*txs.TxInput) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
-			PanicSanity("adjustByInputs() expects account in accounts")
+			sanity.PanicSanity("adjustByInputs() expects account in accounts")
 		}
 		if acc.Balance < in.Amount {
-			PanicSanity("adjustByInputs() expects sufficient funds")
+			sanity.PanicSanity("adjustByInputs() expects sufficient funds")
 		}
 		acc.Balance -= in.Amount
 
@@ -288,7 +308,7 @@ func adjustByOutputs(accounts map[string]*acm.Account, outs []*txs.TxOutput) {
 	for _, out := range outs {
 		acc := accounts[string(out.Address)]
 		if acc == nil {
-			PanicSanity("adjustByOutputs() expects account in accounts")
+			sanity.PanicSanity("adjustByOutputs() expects account in accounts")
 		}
 		acc.Balance += out.Amount
 	}
@@ -362,7 +382,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
-			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Can't find in account %X", tx.Input.Address))
 			return txs.ErrTxInvalidAddress
 		}
 
@@ -379,24 +399,24 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			log.Info(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Can't find pubkey for %X", tx.Input.Address))
 			return err
 		}
 		signBytes := acm.SignBytes(_s.ChainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			log.Info(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			log.Info(fmt.Sprintf("validateInput failed on %X: %v", tx.Input.Address, err))
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Sender did not send enough to cover the fee %X", tx.Input.Address))
 			return txs.ErrTxInsufficientFunds
 		}
 
 		if !createContract {
 			// Validate output
 			if len(tx.Address) != 20 {
-				log.Info(Fmt("Destination address is not 20 bytes %X", tx.Address))
+				log.Info(fmt.Sprintf("Destination address is not 20 bytes %X", tx.Address))
 				return txs.ErrTxInvalidAddress
 			}
 			// check if its a native contract
@@ -410,7 +430,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			outAcc = blockCache.GetAccount(tx.Address)
 		}
 
-		log.Info(Fmt("Out account: %v", outAcc))
+		log.Info(fmt.Sprintf("Out account: %v", outAcc))
 
 		// Good!
 		value := tx.Input.Amount - tx.Fee
@@ -448,10 +468,10 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				// you have to wait a block to avoid a re-ordering attack
 				// that will take your fees
 				if outAcc == nil {
-					log.Info(Fmt("%X tries to call %X but it does not exist.",
+					log.Info(fmt.Sprintf("%X tries to call %X but it does not exist.",
 						inAcc.Address, tx.Address))
 				} else {
-					log.Info(Fmt("%X tries to call %X but code is blank.",
+					log.Info(fmt.Sprintf("%X tries to call %X but code is blank.",
 						inAcc.Address, tx.Address))
 				}
 				err = txs.ErrTxInvalidAddress
@@ -462,14 +482,14 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			if createContract {
 				// We already checked for permission
 				callee = txCache.CreateAccount(caller)
-				log.Info(Fmt("Created new contract %X", callee.Address))
+				log.Info(fmt.Sprintf("Created new contract %X", callee.Address))
 				code = tx.Data
 			} else {
 				callee = toVMAccount(outAcc)
-				log.Info(Fmt("Calling contract %X with code %X", callee.Address, callee.Code))
+				log.Info(fmt.Sprintf("Calling contract %X with code %X", callee.Address, callee.Code))
 				code = callee.Code
 			}
-			log.Info(Fmt("Code for this contract: %X", code))
+			log.Info(fmt.Sprintf("Code for this contract: %X", code))
 
 			// Run VM call and sync txCache to blockCache.
 			{ // Capture scope for goto.
@@ -482,7 +502,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-					log.Info(Fmt("Error on execution: %v", err))
+					log.Info(fmt.Sprintf("Error on execution: %v", err))
 					goto CALL_COMPLETE
 				}
 
@@ -528,7 +548,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
-			log.Info(Fmt("Can't find in account %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Can't find in account %X", tx.Input.Address))
 			return txs.ErrTxInvalidAddress
 		}
 		// check permission
@@ -537,18 +557,18 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 		}
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			log.Info(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Can't find pubkey for %X", tx.Input.Address))
 			return err
 		}
 		signBytes := acm.SignBytes(_s.ChainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			log.Info(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			log.Info(fmt.Sprintf("validateInput failed on %X: %v", tx.Input.Address, err))
 			return err
 		}
 		// fee is in addition to the amount which is used to determine the TTL
 		if tx.Input.Amount < tx.Fee {
-			log.Info(Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			log.Info(fmt.Sprintf("Sender did not send enough to cover the fee %X", tx.Input.Address))
 			return txs.ErrTxInsufficientFunds
 		}
 
@@ -576,7 +596,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner
 				if bytes.Compare(entry.Owner, tx.Input.Address) != 0 {
-					log.Info(Fmt("Sender %X is trying to update a name (%s) for which he is not owner", tx.Input.Address, tx.Name))
+					log.Info(fmt.Sprintf("Sender %X is trying to update a name (%s) for which he is not owner", tx.Input.Address, tx.Name))
 					return txs.ErrTxPermissionDenied
 				}
 			} else {
@@ -594,7 +614,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				// and changing the data
 				if expired {
 					if expiresIn < txs.MinNameRegistrationPeriod {
-						return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+						return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
@@ -606,7 +626,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 					credit := oldCredit + value
 					expiresIn = int(credit / costPerBlock)
 					if expiresIn < txs.MinNameRegistrationPeriod {
-						return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+						return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					log.Info("Updated namereg entry", "name", entry.Name, "expiresIn", expiresIn, "oldCredit", oldCredit, "value", value, "credit", credit)
@@ -616,7 +636,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			}
 		} else {
 			if expiresIn < txs.MinNameRegistrationPeriod {
-				return errors.New(Fmt("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+				return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
 			}
 			// entry does not exist, so create it
 			entry = &core_types.NameRegEntry{
@@ -828,7 +848,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 		// Validate input
 		inAcc = blockCache.GetAccount(tx.Input.Address)
 		if inAcc == nil {
-			log.Debug(Fmt("Can't find in account %X", tx.Input.Address))
+			log.Debug(fmt.Sprintf("Can't find in account %X", tx.Input.Address))
 			return txs.ErrTxInvalidAddress
 		}
 
@@ -840,13 +860,13 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			log.Debug(Fmt("Can't find pubkey for %X", tx.Input.Address))
+			log.Debug(fmt.Sprintf("Can't find pubkey for %X", tx.Input.Address))
 			return err
 		}
 		signBytes := acm.SignBytes(_s.ChainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			log.Debug(Fmt("validateInput failed on %X: %v", tx.Input.Address, err))
+			log.Debug(fmt.Sprintf("validateInput failed on %X: %v", tx.Input.Address, err))
 			return err
 		}
 
@@ -871,7 +891,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			err = permAcc.Permissions.Base.Unset(args.Permission)
 		case *ptypes.SetGlobalArgs:
 			if permAcc = blockCache.GetAccount(ptypes.GlobalPermissionsAddress); permAcc == nil {
-				PanicSanity("can't find global permissions account")
+				sanity.PanicSanity("can't find global permissions account")
 			}
 			err = permAcc.Permissions.Base.Set(args.Permission, args.Value)
 		case *ptypes.HasRoleArgs:
@@ -891,7 +911,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				return fmt.Errorf("Role (%s) does not exist for account %X", args.Role, args.Address)
 			}
 		default:
-			PanicSanity(Fmt("invalid permission function: %s", ptypes.PermFlagToString(permFlag)))
+			sanity.PanicSanity(fmt.Sprintf("invalid permission function: %s", ptypes.PermFlagToString(permFlag)))
 		}
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
@@ -916,7 +936,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 
 	default:
 		// binary decoding should not let this happen
-		PanicSanity("Unknown Tx type")
+		sanity.PanicSanity("Unknown Tx type")
 		return nil
 	}
 }
@@ -926,7 +946,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 // Get permission on an account or fall back to global value
 func HasPermission(state AccountGetter, acc *acm.Account, perm ptypes.PermFlag) bool {
 	if perm > ptypes.AllPermFlags {
-		PanicSanity("Checking an unknown permission in state should never happen")
+		sanity.PanicSanity("Checking an unknown permission in state should never happen")
 	}
 
 	if acc == nil {
@@ -939,14 +959,14 @@ func HasPermission(state AccountGetter, acc *acm.Account, perm ptypes.PermFlag) 
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if state == nil {
-			PanicSanity("All known global permissions should be set!")
+			sanity.PanicSanity("All known global permissions should be set!")
 		}
 		log.Info("Permission for account is not set. Querying GlobalPermissionsAddress", "perm", permString)
 		return HasPermission(nil, state.GetAccount(ptypes.GlobalPermissionsAddress), perm)
 	} else if v {
-		log.Info("Account has permission", "address", Fmt("%X", acc.Address), "perm", permString)
+		log.Info("Account has permission", "address", fmt.Sprintf("%X", acc.Address), "perm", permString)
 	} else {
-		log.Info("Account does not have permission", "address", Fmt("%X", acc.Address), "perm", permString)
+		log.Info("Account does not have permission", "address", fmt.Sprintf("%X", acc.Address), "perm", permString)
 	}
 	return v
 }
@@ -1005,5 +1025,5 @@ type InvalidTxError struct {
 }
 
 func (txErr InvalidTxError) Error() string {
-	return Fmt("Invalid tx: [%v] reason: [%v]", txErr.Tx, txErr.Reason)
+	return fmt.Sprintf("Invalid tx: [%v] reason: [%v]", txErr.Tx, txErr.Reason)
 }

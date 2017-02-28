@@ -1,21 +1,16 @@
-// Copyright 2015, 2016 Eris Industries (UK) Ltd.
-// This file is part of Eris-RT
-
-// Eris-RT is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Eris-RT is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Eris-RT.  If not, see <http://www.gnu.org/licenses/>.
-
-// version provides the current Eris-DB version and a VersionIdentifier
-// for the modules to identify their version with.
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package tendermint
 
@@ -23,10 +18,10 @@ import (
 	"path"
 	"time"
 
-	viper "github.com/spf13/viper"
+	"github.com/spf13/viper"
 	tendermintConfig "github.com/tendermint/go-config"
 
-	config "github.com/eris-ltd/eris-db/config"
+	"github.com/eris-ltd/eris-db/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements
@@ -56,6 +51,10 @@ func GetTendermintConfig(loadedConfig *viper.Viper) *TendermintConfig {
 //------------------------------------------------------------------------------
 // Tendermint defaults
 
+//
+// Contract
+//
+
 func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	dataDir, rootDir string) {
 
@@ -69,6 +68,8 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("fast_sync", true)
 	tmintConfig.SetDefault("skip_upnp", false)
 	tmintConfig.SetDefault("addrbook_file", path.Join(rootDir, "addrbook.json"))
+	tmintConfig.SetDefault("addrbook_strict", true) // disable to allow connections locally
+	tmintConfig.SetDefault("pex_reactor", false)    // enable for peer exchange
 	tmintConfig.SetDefault("priv_validator_file", path.Join(rootDir, "priv_validator.json"))
 	tmintConfig.SetDefault("db_backend", "leveldb")
 	tmintConfig.SetDefault("db_dir", dataDir)
@@ -76,10 +77,12 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("rpc_laddr", "")
 	tmintConfig.SetDefault("prof_laddr", "")
 	tmintConfig.SetDefault("revision_file", path.Join(workDir, "revision"))
-	tmintConfig.SetDefault("cswal", path.Join(dataDir, "cswal"))
-	tmintConfig.SetDefault("cswal_light", false)
+	tmintConfig.SetDefault("cs_wal_dir", path.Join(dataDir, "cs.wal"))
+	tmintConfig.SetDefault("cs_wal_light", false)
+	tmintConfig.SetDefault("filter_peers", false)
 
-	tmintConfig.SetDefault("block_size", 10000)
+	tmintConfig.SetDefault("block_size", 10000)      // max number of txs
+	tmintConfig.SetDefault("block_part_size", 65536) // part size 64K
 	tmintConfig.SetDefault("disable_data_hash", false)
 	tmintConfig.SetDefault("timeout_propose", 3000)
 	tmintConfig.SetDefault("timeout_propose_delta", 500)
@@ -88,9 +91,12 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("timeout_precommit", 1000)
 	tmintConfig.SetDefault("timeout_precommit_delta", 500)
 	tmintConfig.SetDefault("timeout_commit", 1000)
+	// make progress asap (no `timeout_commit`) on full precommit votes
+	tmintConfig.SetDefault("skip_timeout_commit", false)
 	tmintConfig.SetDefault("mempool_recheck", true)
 	tmintConfig.SetDefault("mempool_recheck_empty", true)
 	tmintConfig.SetDefault("mempool_broadcast", true)
+	tmintConfig.SetDefault("mempool_wal_dir", path.Join(dataDir, "mempool.wal"))
 }
 
 //------------------------------------------------------------------------------
@@ -147,7 +153,8 @@ func (tmintConfig *TendermintConfig) GetMapString(key string) map[string]string 
 func (tmintConfig *TendermintConfig) GetConfig(key string) tendermintConfig.Config {
 	// TODO: [ben] log out a warning as this indicates a potentially breaking code
 	// change from Tendermints side
-	if !tmintConfig.subTree.IsSet(key) {
+	subTree, _ := config.ViperSubConfig(tmintConfig.subTree, key)
+	if subTree == nil {
 		return &TendermintConfig{
 			subTree: viper.New(),
 		}

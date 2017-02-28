@@ -1,10 +1,22 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rpc_v0
 
 import (
 	"encoding/json"
 	"fmt"
-
-	log "github.com/eris-ltd/eris-logger"
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/event"
@@ -36,7 +48,6 @@ func NewErisDbWsService(codec rpc.Codec,
 
 // Process a request.
 func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
-	log.Debug("REQUEST: %s\n", string(msg))
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
@@ -84,7 +95,6 @@ func (this *ErisDbWsService) writeResponse(id string, result interface{},
 	session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
-	log.Debug("RESPONSE: %v\n", response)
 	if err != nil {
 		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
 		return err

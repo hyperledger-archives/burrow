@@ -1,3 +1,17 @@
+// Copyright 2017 Monax Industries Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package vm
 
 import (
@@ -6,27 +20,31 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/eris-ltd/eris-db/common/math/integral"
+	"github.com/eris-ltd/eris-db/common/sanity"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/tendermint/go-common"
+	. "github.com/eris-ltd/eris-db/word256"
+
 	"github.com/tendermint/go-events"
 )
 
 var (
-	ErrUnknownAddress      = errors.New("Unknown address")
-	ErrInsufficientBalance = errors.New("Insufficient balance")
-	ErrInvalidJumpDest     = errors.New("Invalid jump dest")
-	ErrInsufficientGas     = errors.New("Insufficient gas")
-	ErrMemoryOutOfBounds   = errors.New("Memory out of bounds")
-	ErrCodeOutOfBounds     = errors.New("Code out of bounds")
-	ErrInputOutOfBounds    = errors.New("Input out of bounds")
-	ErrCallStackOverflow   = errors.New("Call stack overflow")
-	ErrCallStackUnderflow  = errors.New("Call stack underflow")
-	ErrDataStackOverflow   = errors.New("Data stack overflow")
-	ErrDataStackUnderflow  = errors.New("Data stack underflow")
-	ErrInvalidContract     = errors.New("Invalid contract")
+	ErrUnknownAddress         = errors.New("Unknown address")
+	ErrInsufficientBalance    = errors.New("Insufficient balance")
+	ErrInvalidJumpDest        = errors.New("Invalid jump dest")
+	ErrInsufficientGas        = errors.New("Insufficient gas")
+	ErrMemoryOutOfBounds      = errors.New("Memory out of bounds")
+	ErrCodeOutOfBounds        = errors.New("Code out of bounds")
+	ErrInputOutOfBounds       = errors.New("Input out of bounds")
+	ErrCallStackOverflow      = errors.New("Call stack overflow")
+	ErrCallStackUnderflow     = errors.New("Call stack underflow")
+	ErrDataStackOverflow      = errors.New("Data stack overflow")
+	ErrDataStackUnderflow     = errors.New("Data stack underflow")
+	ErrInvalidContract        = errors.New("Invalid contract")
+	ErrNativeContractCodeCopy = errors.New("Tried to copy native contract code")
 )
 
 type ErrPermission struct {
@@ -93,7 +111,7 @@ func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if appState == nil {
-			log.Warn(Fmt("\n\n***** Unknown permission %b! ********\n\n", perm))
+			log.Warn(fmt.Sprintf("\n\n***** Unknown permission %b! ********\n\n", perm))
 			return false
 		}
 		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
@@ -140,7 +158,7 @@ func (vm *VM) Call(caller, callee *Account, code, input []byte, value int64, gas
 			err := transfer(callee, caller, value)
 			if err != nil {
 				// data has been corrupted in ram
-				PanicCrisis("Could not return value to caller")
+				sanity.PanicCrisis("Could not return value to caller")
 			}
 		}
 	}
@@ -567,13 +585,17 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
-				return nil, firstErr(err, ErrUnknownAddress)
+				if _, ok := registeredNativeContracts[addr]; !ok {
+					return nil, firstErr(err, ErrUnknownAddress)
+				}
+				dbg.Printf(" => returning code size of 1 to indicated existence of native contract at %X\n", addr)
+				stack.Push(One256)
+			} else {
+				code := acc.Code
+				l := int64(len(code))
+				stack.Push64(l)
+				dbg.Printf(" => %d\n", l)
 			}
-			code := acc.Code
-			l := int64(len(code))
-			stack.Push64(l)
-			dbg.Printf(" => %d\n", l)
-
 		case EXTCODECOPY: // 0x3C
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
@@ -581,6 +603,10 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			acc := vm.appState.GetAccount(addr)
 			if acc == nil {
+				if _, ok := registeredNativeContracts[addr]; ok {
+					dbg.Printf(" => attempted to copy native contract at %X but this is not supported\n", addr)
+					return nil, firstErr(err, ErrNativeContractCodeCopy)
+				}
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			code := acc.Code
@@ -931,7 +957,7 @@ func copyslice(src []byte) (dest []byte) {
 }
 
 func rightMostBytes(data []byte, n int) []byte {
-	size := MinInt(len(data), n)
+	size := integral.MinInt(len(data), n)
 	offset := len(data) - size
 	return data[offset:]
 }
