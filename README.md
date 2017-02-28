@@ -34,9 +34,9 @@ Eris-db has been architected with a longer term vision on security and data priv
 - **Cryptographically Secured Consensus:** proof-of-stake Tendermint protocol achieves consensus over a known set of validators where every block is closed with cryptographic signatures from a majority of validators only.  No unknown variables come into play while reaching consensus on the network (as is the case for proof-of-work consensus). This guarantees that all actions on the network are fully cryptographically verified and traceable.
 - **Remote Signing:** transactions can be signed by elliptic curve cryptographic algorithms, either ed25519/sha512 or secp256k1/sha256 are currently supported. Eris-db connects to a remote signing solution to generate key pairs and request signatures. Eris-keys is a placeholder for a reverse proxy into your secure signing solution. This has always been the case for transaction formulation and work continues to enable remote signing for the validator block signatures too.
 - **Secure Signing:** Monax is a legal engineering company; we partner with expert companies to natively support secure signing solutions going forward.
-- **Multi-chain Universe (Step 1 of 3):** from the start the eris platform has been conceived for orchestrating many chains, as exemplified by the command “eris chains make” or by that transactions are only valid on the intended chain. Separating state into different chains is only the first of three steps towards privacy on smart contract chains.
+- **Multi-chain Universe (Step 1 of 3):** from the start the eris platform has been conceived for orchestrating many chains, as exemplified by the command “eris chains make” or by that transactions are only valid on the intended chain. Separating state into different chains is only the first of three steps towards privacy on smart contract chains (see future work below).
 
-See the [eris-db documentation](https://monax.io/docs/documentation/db/) for more information, and see below for a scope of future work.
+See the [eris-db documentation](https://monax.io/docs/documentation/db/) for more information.
 
 ## Installation
 
@@ -77,26 +77,12 @@ You can find us on:
 - [the Marmot Den (slack)](http://slack.monax.io)
 - [here on Github](http://github.com/eris-ltd/eris-db/issues)
 - [support.monax.io](http://support.monax.io)
+- read the [Contributor file](.github/CONTRIBUTING.md)
 
+## Future work
+
+Some burrows marmots have already started digging to build the enterprise ecosystem applications of the future are listed in [docs/proposals](./docs/PROPOSALS.md).  Marmots live in groups we welcome your help on these or other improvement proposals. Please help us by joining the conversation on what features matter to you.
 
 ## License
 
 [Apache 2.0](license.md)
-
-## Future work
-
-Some burrows marmots have already started digging to build the enterprise ecosystem applications of the future are listed below.  Marmots live in groups we welcome your help on these or other improvement proposals.
-
-#### Security, Identity and Privacy
-
-- **(Q2) Advanced security framework:** Functionality preceding Monax’s Nightsky (see multi-chain universe continuation below) to enable global encryption of transactions, genesis files and account storage at rest.
-- **(Q2) Identity Management and Whitelisting:** write protection is inherent to the permissioning scheme but read protection will be enabled by integrating certificates for restricting connectivity access to the peer-to-peer network for validators, verifiers or light clients.  This is in addition to normal VPN and firewall solutions and a precursor of Monax’s Nightsky, which restricts read-access through selective decryption.
-- **(Q3) Multi-chain Universe (Step 2 of 3):** The second step towards enabling the multi-chain universe is well-underway with the Tendermint Cosmos proposal for interblockchain communication.  
-- **(Q3) Multi-chain Universe (Step 3 of 3):** The third and final step is the Monax’s Nightsky proposal for inherent encryption of transactions and allowing only partial reconstruction of the smart contract application state for verifiers or light clients (for mobile or IoT devices). Together Cosmos and Nightsky allow smart contracts to orchestrate where information flows and who has the ability to decypher what part of the data.
-
-#### Scalability and Governance
-
-- **(Q2) Read-cache Optimisation and Queryability:** subjectively pipe the application state and event logs to a data warehousing solution.  Building upon the read-cache the SQLsol prototype can be integrated as an SQL-opinionated transformation layer of smart contract events and  data into a relational database.
-- **(Q2) Chain life-cycle management:** the tooling is the starting point for chain life-cycle management and will be extended with exporting snapshots of chain state.  These snapshots can be used to administratively start a new network with an updated version of eris-db software as cold upgrade.  In a second phase the Cosmos proposal is ideally suited to run a new version of the node software in parallel to existing chain and the validators of the network can atomically cast their vote of approval through the Cosmos hub to dynamically move the voting power over to the updated chain (hot upgrade) until a full vote of confidence is achieved.  It is important to note that chain life-cycle management is complementary to and will support smart contract life-cycle management, known to some as DOUG, our marmot mascot.
-- **(Q3) Sharding and scalability framework:** interblockchain communication through the exchange of proofs leverages the peer-to-peer network - rather than oracles - to distribute the load across parallel chains and removes oracle-bridges as potential bottlenecks and security risks.
-- **(Q3) Light-client and ABI integration:** a significant usability upgrade of smart contract chains will be achieved through the ability for the ABI definition of the deployed smart contracts to be verifiably linked to the smart contract accounts. The introduction of the EIP-141 will enable the injection of an ABI fingerprint into smart contract code such that a light client, eris-worker can dynamically expose the smart contract functionality through API calls. As an aside it is worth noting that the tendermint consensus protocol provides a distinctive advantage for light-clients as the last block signed by a majority of validators is unambiguously the current state;
