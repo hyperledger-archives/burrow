@@ -83,7 +83,7 @@ const separatorChainConsensus = `
 const sectionChainConsensus = `  [chain.consensus]
   # consensus defines the module to use for consensus and
   # this will define the peer-to-peer consensus network;
-  # accepted values are ("noops", "tmsp",) "tendermint"
+  # accepted values are ("noops", "abci",) "tendermint"
   name = "{{.Name}}"
   # version is the major and minor semantic version;
   # the version will be asserted on
@@ -180,29 +180,12 @@ const separatorModules = `
 
 `
 
-// TODO: [ben] make configurable
-const sectionTmsp = `
-################################################################################
-##
-## Tendermint Socket Protocol (TMSP)
-## version 0.6.0
-##
-## TMSP expects a tendermint consensus process to run and connect to Eris-DB
-##
-################################################################################
-
-[tmsp]
-# listener address for accepting tendermint socket protocol connections
-listener = "tcp://0.0.0.0:46658"
-
-`
-
 // TODO: [ben] minimal fields have been made configurable; expand where needed
 const sectionTendermint = `
 ################################################################################
 ##
 ## Tendermint
-## version 0.6
+## version 0.8
 ##
 ## in-process execution of Tendermint consensus engine
 ##
@@ -241,7 +224,7 @@ private_validator_file = "priv_validator.json"
 	# NOTE: value is ignored when run in-process as RPC is
 	# handled by [servers.tendermint]
   rpc_laddr = "0.0.0.0:46657"
-  # proxy application address - used for tmsp connections,
+  # proxy application address - used for abci connections,
   # and this port should not be exposed for in-process Tendermint
   proxy_app = "tcp://127.0.0.1:46658"
 

@@ -20,7 +20,9 @@ import (
 
 	"strings"
 
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
 	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
+	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
 	ptypes "github.com/eris-ltd/eris-db/permission/types"
 	. "github.com/eris-ltd/eris-db/word256"
 	"github.com/stretchr/testify/assert"
@@ -92,6 +94,12 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }
 
+func TestSNativeContractDescription_Address(t *testing.T) {
+	contract := NewSNativeContract("A comment",
+		"CoolButVeryLongNamedContractOfDoom")
+	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[12:], contract.AddressBytes())
+}
+
 //
 // Helpers
 //
@@ -105,11 +113,11 @@ func assertFunctionIDSignature(t *testing.T, contract *SNativeContractDescriptio
 	}
 }
 
-func funcIDFromHex(t *testing.T, hexString string) FuncID {
+func funcIDFromHex(t *testing.T, hexString string) abi.FunctionSelector {
 	bs, err := hex.DecodeString(hexString)
 	assert.NoError(t, err, "Could not decode hex string '%s'", hexString)
 	if len(bs) != 4 {
-		t.Fatalf("FuncID must be 4 bytes but '%s' is %v bytes", hexString,
+		t.Fatalf("FunctionSelector must be 4 bytes but '%s' is %v bytes", hexString,
 			len(bs))
 	}
 	return firstFourBytes(bs)

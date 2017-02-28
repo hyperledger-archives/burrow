@@ -18,24 +18,36 @@ package abi
 // (application binary interface) here: https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
 // We make a start of representing them here
 
-type Type string
+// We use TypeName rather than Type to reserve 'Type' for a possible future
+// ABI type the can hold an ABI-native type mapping
+type TypeName string
 
 type Arg struct {
-	Name string
-	Type Type
+	Name     string
+	TypeName TypeName
 }
 
 type Return struct {
-	Name string
-	Type Type
+	Name     string
+	TypeName TypeName
 }
 
 const (
 	// We don't need to be exhaustive here, just make what we used strongly typed
-	Address Type = "address"
-	Int     Type = "int"
-	Uint64  Type = "uint64"
-	Bytes32 Type = "bytes32"
-	String  Type = "string"
-	Bool    Type = "bool"
+	AddressTypeName TypeName = "address"
+	IntTypeName     TypeName = "int"
+	Uint64TypeName  TypeName = "uint64"
+	Bytes32TypeName TypeName = "bytes32"
+	StringTypeName  TypeName = "string"
+	BoolTypeName    TypeName = "bool"
+)
+
+const (
+	FunctionSelectorLength = 4
+	AddressLength          = 20
+)
+
+type (
+	Address          [AddressLength]byte
+	FunctionSelector [FunctionSelectorLength]byte
 )

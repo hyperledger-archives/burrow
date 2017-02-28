@@ -17,9 +17,9 @@ package types
 import (
 	"github.com/eris-ltd/eris-db/event"
 	"github.com/eris-ltd/eris-db/txs"
+	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
-	tmsp_types "github.com/tendermint/tmsp/types"
 )
 
 type ConsensusEngine interface {
@@ -34,7 +34,7 @@ type ConsensusEngine interface {
 
 	// Memory pool
 	BroadcastTransaction(transaction []byte,
-		callback func(*tmsp_types.Response)) error
+		callback func(*abci_types.Response)) error
 
 	// Events
 	// For consensus events like NewBlock

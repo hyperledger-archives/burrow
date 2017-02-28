@@ -28,7 +28,7 @@ const (
 	// Major version component of the current release
 	tendermintVersionMajorConst uint8 = 0
 	// Minor version component of the current release
-	tendermintVersionMinorConst uint8 = 6
+	tendermintVersionMinorConst uint8 = 8
 	// Patch version component of the current release
 	tendermintVersionPatchConst uint8 = 0
 )

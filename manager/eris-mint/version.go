@@ -34,8 +34,7 @@ const (
 // Define the compatible consensus engines this application manager
 // is compatible and has been tested with.
 var compatibleConsensus = [...]string{
-	"tendermint-0.6",
-	// "tmsp-0.6",
+	"tendermint-0.8",
 }
 
 func GetErisMintVersion() *version.VersionIdentifier {

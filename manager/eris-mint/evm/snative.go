@@ -40,7 +40,7 @@ type SNativeContractDescription struct {
 	Comment string
 	// Name of the SNative contract
 	Name          string
-	functionsByID map[FuncID]*SNativeFunctionDescription
+	functionsByID map[abi.FunctionSelector]*SNativeFunctionDescription
 	functions     []*SNativeFunctionDescription
 }
 
@@ -59,20 +59,20 @@ type SNativeFunctionDescription struct {
 	// Permissions required to call function
 	PermFlag ptypes.PermFlag
 	// Native function to which calls will be dispatched when a containing
-	// contract is called with a FuncID matching this NativeContract
+	// contract is called with a FunctionSelector matching this NativeContract
 	F NativeContract
 }
 
 func registerSNativeContracts() {
 	for _, contract := range SNativeContracts() {
-		registeredNativeContracts[contract.Address()] = contract.Dispatch
+		registeredNativeContracts[contract.AddressWord256()] = contract.Dispatch
 	}
 }
 
 // Returns a map of all SNative contracts defined indexed by name
 func SNativeContracts() map[string]*SNativeContractDescription {
-	permFlagType := abi.Uint64
-	roleType := abi.Bytes32
+	permFlagTypeName := abi.Uint64TypeName
+	roleTypeName := abi.Bytes32TypeName
 	contracts := []*SNativeContractDescription{
 		NewSNativeContract(`
 		* Interface for managing Secure Native authorizations.
@@ -87,10 +87,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"addRole",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_role", roleType),
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
 				},
-				ret("result", abi.Bool),
+				ret("result", abi.BoolTypeName),
 				ptypes.AddRole,
 				addRole},
 
@@ -102,10 +102,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"removeRole",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_role", roleType),
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
 				},
-				ret("result", abi.Bool),
+				ret("result", abi.BoolTypeName),
 				ptypes.RmRole,
 				removeRole},
 
@@ -117,10 +117,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"hasRole",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_role", roleType),
+					arg("_account", abi.AddressTypeName),
+					arg("_role", roleTypeName),
 				},
-				ret("result", abi.Bool),
+				ret("result", abi.BoolTypeName),
 				ptypes.HasRole,
 				hasRole},
 
@@ -133,11 +133,11 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"setBase",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_permission", permFlagType),
-					arg("_set", abi.Bool),
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName),
+					arg("_set", abi.BoolTypeName),
 				},
-				ret("result", permFlagType),
+				ret("result", permFlagTypeName),
 				ptypes.SetBase,
 				setBase},
 
@@ -149,9 +149,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
       `,
 				"unsetBase",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_permission", permFlagType)},
-				ret("result", permFlagType),
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName)},
+				ret("result", permFlagTypeName),
 				ptypes.UnsetBase,
 				unsetBase},
 
@@ -163,9 +163,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"hasBase",
 				[]abi.Arg{
-					arg("_account", abi.Address),
-					arg("_permission", permFlagType)},
-				ret("result", permFlagType),
+					arg("_account", abi.AddressTypeName),
+					arg("_permission", permFlagTypeName)},
+				ret("result", permFlagTypeName),
 				ptypes.HasBase,
 				hasBase},
 
@@ -177,9 +177,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"setGlobal",
 				[]abi.Arg{
-					arg("_permission", permFlagType),
-					arg("_set", abi.Bool)},
-				ret("result", permFlagType),
+					arg("_permission", permFlagTypeName),
+					arg("_set", abi.BoolTypeName)},
+				ret("result", permFlagTypeName),
 				ptypes.SetGlobal,
 				setGlobal},
 		),
@@ -187,6 +187,12 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 
 	contractMap := make(map[string]*SNativeContractDescription, len(contracts))
 	for _, contract := range contracts {
+		if _, ok := contractMap[contract.Name]; ok {
+			// If this happens we have a pseudo compile time error that will be caught
+			// on native.go init()
+			panic(fmt.Errorf("Duplicate contract with name %s defined. "+
+				"Contract names must be unique.", contract.Name))
+		}
 		contractMap[contract.Name] = contract
 	}
 	return contractMap
@@ -197,7 +203,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 func NewSNativeContract(comment, name string,
 	functions ...*SNativeFunctionDescription) *SNativeContractDescription {
 
-	functionsByID := make(map[FuncID]*SNativeFunctionDescription, len(functions))
+	functionsByID := make(map[abi.FunctionSelector]*SNativeFunctionDescription, len(functions))
 	for _, f := range functions {
 		fid := f.ID()
 		otherF, ok := functionsByID[fid]
@@ -220,7 +226,7 @@ func NewSNativeContract(comment, name string,
 // So it can be looked up by SNative address
 func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	caller *Account, args []byte, gas *int64) (output []byte, err error) {
-	if len(args) < FuncIDLength {
+	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 			"identifier but arguments are only %s bytes long", len(args))
 	}
@@ -230,7 +236,7 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 		return nil, err
 	}
 
-	remainingArgs := args[FuncIDLength:]
+	remainingArgs := args[abi.FunctionSelectorLength:]
 
 	// check if we have permission to call this function
 	if !HasPermission(appState, caller, function.PermFlag) {
@@ -247,14 +253,28 @@ func (contract *SNativeContractDescription) Dispatch(appState AppState,
 	return function.F(appState, caller, remainingArgs, gas)
 }
 
-// We define the address of an SNative contact as the simplest possible hash of
-// its canonical name
-func (contract *SNativeContractDescription) Address() Word256 {
-	return LeftPadWord256([]byte(contract.Name))
+// We define the address of an SNative contact as the last 20 bytes of the sha3
+// hash of its name
+func (contract *SNativeContractDescription) Address() abi.Address {
+	var address abi.Address
+	hash := sha3.Sha3([]byte(contract.Name))
+	copy(address[:], hash[len(hash)-abi.AddressLength:])
+	return address
 }
 
-// Get function by calling identifier FuncID
-func (contract *SNativeContractDescription) FunctionByID(id FuncID) (*SNativeFunctionDescription, error) {
+// Get address as a byte slice
+func (contract *SNativeContractDescription) AddressBytes() []byte {
+	address := contract.Address()
+	return address[:]
+}
+
+// Get address as a left-padded Word256
+func (contract *SNativeContractDescription) AddressWord256() Word256 {
+	return LeftPadWord256(contract.AddressBytes())
+}
+
+// Get function by calling identifier FunctionSelector
+func (contract *SNativeContractDescription) FunctionByID(id abi.FunctionSelector) (*SNativeFunctionDescription, error) {
 	f, ok := contract.functionsByID[id]
 	if !ok {
 		return nil,
@@ -286,16 +306,16 @@ func (contract *SNativeContractDescription) Functions() []*SNativeFunctionDescri
 
 // Get function signature
 func (function *SNativeFunctionDescription) Signature() string {
-	argTypes := make([]string, len(function.Args))
+	argTypeNames := make([]string, len(function.Args))
 	for i, arg := range function.Args {
-		argTypes[i] = string(arg.Type)
+		argTypeNames[i] = string(arg.TypeName)
 	}
 	return fmt.Sprintf("%s(%s)", function.Name,
-		strings.Join(argTypes, ","))
+		strings.Join(argTypeNames, ","))
 }
 
-// Get function calling identifier FuncID
-func (function *SNativeFunctionDescription) ID() FuncID {
+// Get function calling identifier FunctionSelector
+func (function *SNativeFunctionDescription) ID() abi.FunctionSelector {
 	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
 }
 
@@ -304,17 +324,17 @@ func (function *SNativeFunctionDescription) NArgs() int {
 	return len(function.Args)
 }
 
-func arg(name string, abiType abi.Type) abi.Arg {
+func arg(name string, abiTypeName abi.TypeName) abi.Arg {
 	return abi.Arg{
-		Name: name,
-		Type: abiType,
+		Name:     name,
+		TypeName: abiTypeName,
 	}
 }
 
-func ret(name string, abiType abi.Type) abi.Return {
+func ret(name string, abiTypeName abi.TypeName) abi.Return {
 	return abi.Return{
-		Name: name,
-		Type: abiType,
+		Name:     name,
+		TypeName: abiTypeName,
 	}
 }
 

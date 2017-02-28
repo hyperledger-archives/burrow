@@ -52,12 +52,12 @@ genesis_file = "genesis.json"
   [chain.consensus]
   # consensus defines the module to use for consensus and
   # this will define the peer-to-peer consensus network;
-  # accepted values are "noops", "tmsp", "tendermint"
+  # accepted values are "noops", "abci", "tendermint"
   name = "tendermint"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 6
+  minor_version = 8
   # relative path to consensus' module root folder
   relative_root = "tendermint"
 
@@ -135,21 +135,19 @@ genesis_file = "genesis.json"
 
 ################################################################################
 ##
-## Tendermint Socket Protocol (TMSP)
-## version 0.6.0
+## Tendermint Socket Protocol (abci)
 ##
-## TMSP expects a tendermint consensus process to run and connect to Eris-DB
+## abci expects a tendermint consensus process to run and connect to Eris-DB
 ##
 ################################################################################
 
-[tmsp]
+[abci]
 # listener address for accepting tendermint socket protocol connections
 listener = "tcp://0.0.0.0:46658"
 
 ################################################################################
-##
+##yeah we had partial support for that with TMSP
 ## Tendermint
-## version 0.6.0
 ##
 ## in-process execution of Tendermint consensus engine
 ##
@@ -186,7 +184,7 @@ private_validator_file = "priv_validator.json"
 	# NOTE: value is ignored when run in-process as RPC is
 	# handled by [servers.tendermint]
   rpc_laddr = ""
-  # proxy application address - used for tmsp connections,
+  # proxy application address - used for abci connections,
   # and this port should not be exposed for in-process Tendermint
   proxy_app = "tcp://127.0.0.1:46658"
 
