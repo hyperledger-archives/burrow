@@ -26,7 +26,6 @@ import (
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
@@ -37,7 +36,7 @@ import (
 // TODO more routers. Also, start looking into how better status codes
 // can be gotten.
 type RestServer struct {
-	codec         rpc.Codec
+	codec         Codec
 	pipe          definitions.Pipe
 	eventSubs     *event.EventSubscriptions
 	filterFactory *event.FilterFactory
@@ -45,7 +44,7 @@ type RestServer struct {
 }
 
 // Create a new rest server.
-func NewRestServer(codec rpc.Codec, pipe definitions.Pipe,
+func NewRestServer(codec Codec, pipe definitions.Pipe,
 	eventSubs *event.EventSubscriptions) *RestServer {
 	return &RestServer{
 		codec:         codec,

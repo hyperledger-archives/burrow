@@ -15,7 +15,6 @@
 package v0
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/eris-ltd/eris-db/account"
@@ -35,10 +34,12 @@ func TestBroadcastTx(t *testing.T) {
 	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
-	fmt.Println(string(jsonBytes))
 	request := NewRPCRequest("TestBroadcastTx", "BroacastTx", jsonBytes)
-	_, _, err := methods.BroadcastTx(request, "TestBroadcastTx")
+	result, _, err := methods.BroadcastTx(request, "TestBroadcastTx")
 	assert.NoError(t, err)
+	receipt, ok := result.(*txs.Receipt)
+	assert.True(t, ok, "Should get Receipt pointer")
+	assert.Equal(t, txs.TxHash(testData.GetChainId.Output.ChainId, tx), receipt.TxHash)
 }
 
 // Allows us to get the type byte included but then omit the outer struct and

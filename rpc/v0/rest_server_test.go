@@ -28,7 +28,6 @@ import (
 	account "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 
@@ -51,7 +50,7 @@ type MockSuite struct {
 	suite.Suite
 	baseDir      string
 	serveProcess *server.ServeProcess
-	codec        rpc.Codec
+	codec        Codec
 	sUrl         string
 	testData     *TestData
 }

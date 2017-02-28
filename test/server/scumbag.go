@@ -19,10 +19,10 @@ import (
 	"os"
 	"runtime"
 
-	rpc "github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
+	"github.com/eris-ltd/eris-db/rpc/v0"
 )
 
 func init() {
@@ -60,7 +60,7 @@ func (this *ScumbagServer) ShutDown() {
 type ScumSocketService struct{}
 
 func (this *ScumSocketService) Process(data []byte, session *server.WSSession) {
-	resp := rpc.NewRPCResponse("1", "Scumbag")
+	resp := v0.NewRPCResponse("1", "Scumbag")
 	bts, _ := json.Marshal(resp)
 	session.Write(bts)
 }

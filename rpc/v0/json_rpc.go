@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc
+package v0
 
 import (
 	"encoding/json"
+	"io"
 )
 
 // JSON-RPC 2.0 error codes.
 const (
-	PARSE_ERROR      = -32700
 	INVALID_REQUEST  = -32600
+	PARSE_ERROR      = -32700
 	METHOD_NOT_FOUND = -32601
 	INVALID_PARAMS   = -32602
 	INTERNAL_ERROR   = -32603
@@ -64,7 +65,25 @@ type (
 		// Note: Data is currently unused, and the data member may be omitted
 		// Data  interface{} `json:"data"`
 	}
+
+	Codec interface {
+		EncodeBytes(interface{}) ([]byte, error)
+		Encode(interface{}, io.Writer) error
+		DecodeBytes(interface{}, []byte) error
+		Decode(interface{}, io.Reader) error
+	}
 )
+
+// Create a new RPC request. This is the generic struct that is passed to RPC
+// methods
+func NewRPCRequest(id string, method string, params json.RawMessage) *RPCRequest {
+	return &RPCRequest{
+		JSONRPC: "2.0",
+		Id:      id,
+		Method:  method,
+		Params:  params,
+	}
+}
 
 // NewRPCResponse creates a new response object from a result
 func NewRPCResponse(id string, res interface{}) RPCResponse {
