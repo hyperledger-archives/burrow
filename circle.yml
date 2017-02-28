@@ -84,3 +84,6 @@ deployment:
       - docker push quay.io/eris/db
       # push the updated documentation
       - docs/build.sh
+
+
+
