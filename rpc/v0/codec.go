@@ -18,9 +18,10 @@ import (
 	"io"
 	"io/ioutil"
 
-
-	wire "github.com/tendermint/go-wire"
 	"reflect"
+
+	"github.com/eris-ltd/eris-db/rpc"
+	wire "github.com/tendermint/go-wire"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.
@@ -28,7 +29,7 @@ type TCodec struct {
 }
 
 // Get a new codec.
-func NewTCodec() Codec {
+func NewTCodec() rpc.Codec {
 	return &TCodec{}
 }
 

@@ -557,22 +557,22 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  *AddressParam `json:"input"`
-		Output *account.Account     `json:"output"`
+		Input  *AddressParam    `json:"input"`
+		Output *account.Account `json:"output"`
 	}
 
 	GetAccountsData struct {
-		Input  *AccountsParam   `json:"input"`
+		Input  *AccountsParam          `json:"input"`
 		Output *core_types.AccountList `json:"output"`
 	}
 
 	GetStorageData struct {
-		Input  *AddressParam `json:"input"`
-		Output *core_types.Storage  `json:"output"`
+		Input  *AddressParam       `json:"input"`
+		Output *core_types.Storage `json:"output"`
 	}
 
 	GetStorageAtData struct {
-		Input  *StorageAtParam  `json:"input"`
+		Input  *StorageAtParam         `json:"input"`
 		Output *core_types.StorageItem `json:"output"`
 	}
 
@@ -601,13 +601,13 @@ type (
 	}
 
 	GetBlockData struct {
-		Input  *HeightParam `json:"input"`
-		Output *mintTypes.Block    `json:"output"`
+		Input  *HeightParam     `json:"input"`
+		Output *mintTypes.Block `json:"output"`
 	}
 
 	GetBlocksData struct {
-		Input  *BlocksParam `json:"input"`
-		Output *core_types.Blocks  `json:"output"`
+		Input  *BlocksParam       `json:"input"`
+		Output *core_types.Blocks `json:"output"`
 	}
 
 	GetConsensusStateData struct {
@@ -643,18 +643,18 @@ type (
 	}
 
 	GetPeerData struct {
-		Input  *PeerParam     `json:"input"`
+		Input  *PeerParam            `json:"input"`
 		Output *consensus_types.Peer `json:"output"`
 	}
 
 	TransactData struct {
-		Input  *TransactParam `json:"input"`
-		Output *transaction.Receipt  `json:"output"`
+		Input  *TransactParam       `json:"input"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	TransactCreateData struct {
-		Input  *TransactParam `json:"input"`
-		Output *transaction.Receipt  `json:"output"`
+		Input  *TransactParam       `json:"input"`
+		Output *transaction.Receipt `json:"output"`
 	}
 
 	GetUnconfirmedTxsData struct {
@@ -662,37 +662,37 @@ type (
 	}
 
 	CallCodeData struct {
-		Input  *CallCodeParam `json:"input"`
-		Output *core_types.Call      `json:"output"`
+		Input  *CallCodeParam   `json:"input"`
+		Output *core_types.Call `json:"output"`
 	}
 
 	CallData struct {
-		Input  *CallParam `json:"input"`
-		Output *core_types.Call  `json:"output"`
+		Input  *CallParam       `json:"input"`
+		Output *core_types.Call `json:"output"`
 	}
 
 	EventSubscribeData struct {
-		Input  *EventIdParam `json:"input"`
-		Output *event.EventSub      `json:"output"`
+		Input  *EventIdParam   `json:"input"`
+		Output *event.EventSub `json:"output"`
 	}
 
 	EventUnsubscribeData struct {
-		Input  *SubIdParam `json:"input"`
-		Output *event.EventUnsub  `json:"output"`
+		Input  *SubIdParam       `json:"input"`
+		Output *event.EventUnsub `json:"output"`
 	}
 
 	TransactNameRegData struct {
 		Input  *TransactNameRegParam `json:"input"`
-		Output *transaction.Receipt         `json:"output"`
+		Output *transaction.Receipt  `json:"output"`
 	}
 
 	GetNameRegEntryData struct {
-		Input  *NameRegEntryParam `json:"input"`
-		Output *core_types.NameRegEntry  `json:"output"`
+		Input  *NameRegEntryParam       `json:"input"`
+		Output *core_types.NameRegEntry `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *FilterListParam     `json:"input"`
+		Input  *FilterListParam            `json:"input"`
 		Output *core_types.ResultListNames `json:"output"`
 	}
 

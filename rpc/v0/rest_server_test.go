@@ -31,6 +31,7 @@ import (
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -50,7 +51,7 @@ type MockSuite struct {
 	suite.Suite
 	baseDir      string
 	serveProcess *server.ServeProcess
-	codec        Codec
+	codec        rpc.Codec
 	sUrl         string
 	testData     *TestData
 }

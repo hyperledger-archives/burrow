@@ -20,6 +20,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +61,7 @@ func TestCallTxJsonFormatCodec(t *testing.T) {
 	param := new(txs.Tx)
 
 	// Create new request object and unmarshal.
-	request := &RPCRequest{}
+	request := &rpc.RPCRequest{}
 	assert.NoError(t, json.Unmarshal(testBroadcastCallTxJsonRequest, request),
 		"Provided JSON test data does not unmarshal to rpc.RPCRequest object.")
 	assert.NoError(t, codec.DecodeBytes(param, request.Params),

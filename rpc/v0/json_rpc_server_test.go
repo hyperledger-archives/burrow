@@ -19,6 +19,7 @@ import (
 
 	"github.com/eris-ltd/eris-db/account"
 	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
@@ -34,7 +35,7 @@ func TestBroadcastTx(t *testing.T) {
 	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
-	request := NewRPCRequest("TestBroadcastTx", "BroacastTx", jsonBytes)
+	request := rpc.NewRPCRequest("TestBroadcastTx", "BroacastTx", jsonBytes)
 	result, _, err := methods.BroadcastTx(request, "TestBroadcastTx")
 	assert.NoError(t, err)
 	receipt, ok := result.(*txs.Receipt)

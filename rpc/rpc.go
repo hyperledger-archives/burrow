@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v0
+package rpc
 
 import (
 	"encoding/json"
@@ -21,8 +21,8 @@ import (
 
 // JSON-RPC 2.0 error codes.
 const (
-	INVALID_REQUEST  = -32600
 	PARSE_ERROR      = -32700
+	INVALID_REQUEST  = -32600
 	METHOD_NOT_FOUND = -32601
 	INVALID_PARAMS   = -32602
 	INTERNAL_ERROR   = -32603
