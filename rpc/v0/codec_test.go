@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,7 +64,7 @@ func TestCallTxJsonFormatCodec(t *testing.T) {
 	request := &rpc.RPCRequest{}
 	assert.NoError(t, json.Unmarshal(testBroadcastCallTxJsonRequest, request),
 		"Provided JSON test data does not unmarshal to rpc.RPCRequest object.")
-	assert.NoError(t, codec.DecodeBytesPtr(param, request.Params),
+	assert.NoError(t, codec.DecodeBytes(param, request.Params),
 		"RPC codec failed to decode params as transaction type.")
 	_, ok := (*param).(*txs.CallTx)
 	assert.True(t, ok, "Type byte 0x02 should unmarshal into CallTx.")

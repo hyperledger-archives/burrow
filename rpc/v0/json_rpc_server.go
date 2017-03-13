@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ import (
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	event "github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc"
 	server "github.com/eris-ltd/eris-db/server"
 )
 

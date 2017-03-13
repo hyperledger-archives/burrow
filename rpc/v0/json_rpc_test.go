@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc
+package v0
 
 import (
 	"testing"
 
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,12 +25,12 @@ import (
 func TestNewJsonRpcResponse(t *testing.T) {
 	id := "testId"
 	data := "a string"
-	resp := RPCResponse(&RPCResultResponse{
+	resp := rpc.RPCResponse(&rpc.RPCResultResponse{
 		Result:  data,
 		Id:      id,
 		JSONRPC: "2.0",
 	})
-	respGen := NewRPCResponse(id, data)
+	respGen := rpc.NewRPCResponse(id, data)
 	assert.Equal(t, respGen, resp)
 }
 
@@ -38,11 +39,11 @@ func TestNewJsonRpcErrorResponse(t *testing.T) {
 	id := "testId"
 	code := 100
 	message := "the error"
-	resp := RPCResponse(&RPCErrorResponse{
-		Error:   &RPCError{code, message},
+	resp := rpc.RPCResponse(&rpc.RPCErrorResponse{
+		Error:   &rpc.RPCError{code, message},
 		Id:      id,
 		JSONRPC: "2.0",
 	})
-	respGen := NewRPCErrorResponse(id, code, message)
+	respGen := rpc.NewRPCErrorResponse(id, code, message)
 	assert.Equal(t, respGen, resp)
 }

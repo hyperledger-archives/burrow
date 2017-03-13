@@ -20,9 +20,10 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ripemd160"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ripemd160"
 
 	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
 	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 // Basic imports
 import (
@@ -28,10 +28,10 @@ import (
 	account "github.com/eris-ltd/eris-db/account"
 	core_types "github.com/eris-ltd/eris-db/core/types"
 	event "github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 
+	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/eris-ltd/eris-db/rpc/v0/shared"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"

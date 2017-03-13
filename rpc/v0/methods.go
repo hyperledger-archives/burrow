@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"github.com/eris-ltd/eris-db/blockchain"
@@ -359,13 +359,12 @@ func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester 
 }
 
 func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	// Accept all transaction types as parameter for broadcast.
-	param := new(txs.Tx)
-	err := erisDbMethods.codec.DecodeBytesPtr(param, request.Params)
+	tx := new(txs.Tx)
+	err := erisDbMethods.codec.DecodeBytes(tx, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(*param)
+	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(*tx)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

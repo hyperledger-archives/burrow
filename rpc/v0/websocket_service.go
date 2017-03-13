@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ import (
 
 	definitions "github.com/eris-ltd/eris-db/definitions"
 	"github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
+	"github.com/eris-ltd/eris-db/rpc"
 	server "github.com/eris-ltd/eris-db/server"
 	"github.com/eris-ltd/eris-db/txs"
 )
@@ -54,13 +54,15 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 
 	// Error when unmarshaling.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg), "", rpc.PARSE_ERROR, session)
+		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg),
+			"", rpc.PARSE_ERROR, session)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id, rpc.INVALID_REQUEST, session)
+		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
+			rpc.INVALID_REQUEST, session)
 		return
 	}
 
@@ -74,7 +76,8 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 			this.writeResponse(req.Id, resp, session)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, session)
+		this.writeError("Method not found: "+mName, req.Id,
+			rpc.METHOD_NOT_FOUND, session)
 	}
 }
 
@@ -132,7 +135,8 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest,
 	return &event.EventSub{subId}, 0, nil
 }
 
-func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
@@ -147,6 +151,7 @@ func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester
 	return &event.EventUnsub{true}, 0, nil
 }
 
-func (this *ErisDbWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *ErisDbWsService) EventPoll(request *rpc.RPCRequest,
+	requester interface{}) (interface{}, int, error) {
 	return nil, rpc.INTERNAL_ERROR, fmt.Errorf("Cannot poll with websockets")
 }
