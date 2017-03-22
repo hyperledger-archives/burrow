@@ -35,7 +35,7 @@ var ErisClientCmd = &cobra.Command{
 
 Made with <3 by Monax Industries.
 
-Complete documentation is available at https://monax.io/docs/documentation
+Complete documentation is available at https://monax.io/docs
 ` + "\nVERSION:\n " + version.VERSION,
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }

@@ -5,7 +5,7 @@
 | Master | [![Circle CI](https://circleci.com/gh/eris-ltd/eris-db/tree/master.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop.svg?style=svg)](https://circleci.com/gh/eris-ltd/eris-db/tree/develop) |
 
-Eris-db is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. Eris-db provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `eris chains`, exposed through [eris](https://monax.io/docs/documentation/cli), the entry point for the Eris Platform.
+Eris-db is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. Eris-db provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `eris chains`, exposed through [eris](https://monax.io/docs), the entry point for the Eris Platform.
 
 ## Table of Contents
 
@@ -36,11 +36,9 @@ Eris-db has been architected with a longer term vision on security and data priv
 - **Secure Signing:** Monax is a legal engineering company; we partner with expert companies to natively support secure signing solutions going forward.
 - **Multi-chain Universe (Step 1 of 3):** from the start the eris platform has been conceived for orchestrating many chains, as exemplified by the command “eris chains make” or by that transactions are only valid on the intended chain. Separating state into different chains is only the first of three steps towards privacy on smart contract chains (see future work below).
 
-See the [eris-db documentation](https://monax.io/docs/documentation/db/) for more information.
-
 ## Installation
 
-`eris-db` is intended to be used by the `eris chains` command via [eris](https://monax.io/docs/documentation/cli/latest/eris_chains). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
+`eris-db` is intended to be used by the `eris chains` command via [eris](https://monax.io/docs). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
 
 ### For Developers
 Dependency management for eris-db is managed with [glide](github.com/Masterminds/glide), and you can build eris-db from source by following
@@ -63,11 +61,11 @@ For a Vagrant file see [eris-vagrant](https://github.com/eris-ltd/eris-vagrant) 
 
 ## Usage
 
-Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://monax.io/docs/documentation/db.js/), but it is possible to connect directly via HTTP or websocket. The JSON-RPC and web-api reference can be found [here](https://monax.io/docs/documentation/db/latest/specifications/api/).
+Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/monax/eris-db.js), but it is possible to connect directly via HTTP or websocket.
 
 ## Configuration
 
-A commented template config will be written as part of the `eris chains make` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_make/) and can be edited prior to the `eris chains start` [process](https://monax.io/docs/documentation/cli/latest/eris_chains_start/).
+A commented template config will be written as part of the `eris chains make` [process](https://monax.io/docs/getting-started) and can be edited prior to the `eris chains start` [process](https://monax.io/docs/getting-started).
 
 ## Contribute
 

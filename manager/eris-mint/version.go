@@ -28,7 +28,7 @@ const (
 	// Minor version component of the current release
 	erisMintVersionMinor = 16
 	// Patch version component of the current release
-	erisMintVersionPatch = 0
+	erisMintVersionPatch = 1
 )
 
 // Define the compatible consensus engines this application manager
