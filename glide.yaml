@@ -1,6 +1,6 @@
-package: github.com/eris-ltd/eris-db
+package: github.com/monax/eris-db
 import:
-- package: github.com/eris-ltd/eris-keys
+- package: github.com/monax/eris-keys
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/gin-gonic/gin

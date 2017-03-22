@@ -23,8 +23,8 @@ import (
 	events "github.com/tendermint/go-events"
 	rpcserver "github.com/tendermint/go-rpc/server"
 
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	server "github.com/eris-ltd/eris-db/server"
+	definitions "github.com/monax/eris-db/definitions"
+	server "github.com/monax/eris-db/server"
 )
 
 type TendermintWebsocketServer struct {

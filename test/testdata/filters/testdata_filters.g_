@@ -1,9 +1,9 @@
 package filters
 
 import (
-	core_types "github.com/eris-ltd/eris-db/core/types"
+	core_types "github.com/monax/eris-db/core/types"
 
-	stypes "github.com/eris-ltd/eris-db/manager/eris-mint/state/types"
+	stypes "github.com/monax/eris-db/manager/eris-mint/state/types"
 	"github.com/tendermint/tendermint/types"
 )
 

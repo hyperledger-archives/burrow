@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"time"
 
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	"github.com/eris-ltd/eris-db/util"
+	ptypes "github.com/monax/eris-db/permission/types"
+	"github.com/monax/eris-db/util"
 
 	"github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"

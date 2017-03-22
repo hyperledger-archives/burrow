@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/monax/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 )

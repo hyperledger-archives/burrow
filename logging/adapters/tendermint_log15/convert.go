@@ -17,9 +17,9 @@ package adapters
 import (
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/logging/structure"
-	. "github.com/eris-ltd/eris-db/util/slice"
+	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging/structure"
+	. "github.com/monax/eris-db/util/slice"
 	"github.com/go-stack/stack"
 	"github.com/tendermint/log15"
 )
