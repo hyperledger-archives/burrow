@@ -21,7 +21,7 @@ import (
 	// for the mock of key server we explicitly import
 	// the keys server to ensure the core components are
 	// compatible with eris-db.
-	"github.com/monax/eris-keys/crypto"
+	"github.com/monax/keys/crypto"
 
 	. "github.com/monax/eris-db/keys"
 )

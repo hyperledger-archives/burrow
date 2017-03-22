@@ -29,7 +29,7 @@ imports:
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/ebuchman/fail-test
   version: c1eddaa09da2b4017351245b0d43234955276798
-- name: github.com/monax/eris-keys
+- name: github.com/monax/keys
   version: 114ebc77443db9a153692233294e48bc7e184215
 - name: github.com/fsnotify/fsnotify
   version: 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
