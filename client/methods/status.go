@@ -17,8 +17,8 @@ package methods
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/definitions"
+	"github.com/monax/eris-db/client"
+	"github.com/monax/eris-db/definitions"
 )
 
 func Status(do *definitions.ClientDo) error {

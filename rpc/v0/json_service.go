@@ -20,10 +20,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
-	rpc "github.com/eris-ltd/eris-db/rpc"
-	server "github.com/eris-ltd/eris-db/server"
+	definitions "github.com/monax/eris-db/definitions"
+	event "github.com/monax/eris-db/event"
+	rpc "github.com/monax/eris-db/rpc"
+	server "github.com/monax/eris-db/server"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server

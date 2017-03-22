@@ -18,7 +18,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging/loggers"
 	kitlog "github.com/go-kit/kit/log"
 )
 

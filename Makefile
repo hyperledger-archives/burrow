@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/eris-ltd/eris-db/... | grep -v /vendor/)
+PACKAGES_NOVENDOR := $(shell go list github.com/monax/eris-db/... | grep -v /vendor/)
 VERSION := $(shell cat ${REPO}/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
@@ -54,7 +54,7 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
-### Dependency management for github.com/eris-ltd/eris-db
+### Dependency management for github.com/monax/eris-db
 
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
@@ -78,13 +78,13 @@ hell:
 snatives:
 	@go run ./util/snatives/cmd/main.go
 
-### Building github.com/eris-ltd/eris-db
+### Building github.com/monax/eris-db
 
-# build all targets in github.com/eris-ltd/eris-db
+# build all targets in github.com/monax/eris-db
 .PHONY: build
 build:	check build_db build_client build_keys
 
-# build all targets in github.com/eris-ltd/eris-db with checks for race conditions
+# build all targets in github.com/monax/eris-db with checks for race conditions
 .PHONY: build_race
 build_race:	check build_race_db build_race_client build_race_keys
 
@@ -118,7 +118,7 @@ build_race_client:
 build_race_keys:
 	@echo "Marmots need to complete moving repository eris-keys into eris-db."
 
-### Testing github.com/eris-ltd/eris-db
+### Testing github.com/monax/eris-db
 
 # test eris-db
 .PHONY: test
@@ -130,7 +130,7 @@ test: build
 test_race: build_race
 	@go test -race ${PACKAGES_NOVENDOR}
 
-### Build docker images for github.com/eris-ltd/eris-db
+### Build docker images for github.com/monax/eris-db
 
 # build docker image for eris-db
 .PHONY: build_docker_db
@@ -145,7 +145,7 @@ build_docker_db: check
 	@rm ${REPO}/target/docker/eris-client.dockerartefact
 	docker rmi ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA}
 
-### Test docker images for github.com/eris-ltd/eris-db
+### Test docker images for github.com/monax/eris-db
 
 # test docker image for eris-db
 .PHONY: test_docker_db

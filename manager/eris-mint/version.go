@@ -17,7 +17,7 @@ package erismint
 import (
 	"fmt"
 
-	version "github.com/eris-ltd/eris-db/version"
+	version "github.com/monax/eris-db/version"
 )
 
 const (

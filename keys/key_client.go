@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
 )
 
 type KeyClient interface {

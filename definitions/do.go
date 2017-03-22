@@ -20,7 +20,7 @@ import (
 
 	viper "github.com/spf13/viper"
 
-	util "github.com/eris-ltd/eris-db/util"
+	util "github.com/monax/eris-db/util"
 )
 
 type Do struct {
