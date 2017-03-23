@@ -31,6 +31,8 @@ imports:
   version: c1eddaa09da2b4017351245b0d43234955276798
 - name: github.com/monax/keys
   version: monax-not-eris
+- package: github.com/monax/eris
+  version: rename-to-monax
 - name: github.com/fsnotify/fsnotify
   version: 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
 - name: github.com/gin-gonic/gin

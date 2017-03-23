@@ -2,6 +2,8 @@ package: github.com/monax/eris-db
 import:
 - package: github.com/monax/keys
   version: monax-not-eris
+- package: github.com/monax/eris
+  version: rename-to-monax
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/gin-gonic/gin
