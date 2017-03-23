@@ -15,13 +15,13 @@
 package rpc_v0
 
 import (
-	"github.com/eris-ltd/eris-db/blockchain"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/rpc/v0/shared"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/blockchain"
+	core_types "github.com/monax/eris-db/core/types"
+	definitions "github.com/monax/eris-db/definitions"
+	"github.com/monax/eris-db/event"
+	"github.com/monax/eris-db/rpc"
+	"github.com/monax/eris-db/rpc/v0/shared"
+	"github.com/monax/eris-db/txs"
 )
 
 // TODO use the method name definition file.

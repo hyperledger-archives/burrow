@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	event "github.com/eris-ltd/eris-db/event"
+	event "github.com/monax/eris-db/event"
 	"github.com/stretchr/testify/suite"
 )
 

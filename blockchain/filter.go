@@ -21,10 +21,10 @@ import (
 
 	"sync"
 
-	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/util/architecture"
+	blockchain_types "github.com/monax/eris-db/blockchain/types"
+	core_types "github.com/monax/eris-db/core/types"
+	"github.com/monax/eris-db/event"
+	"github.com/monax/eris-db/util/architecture"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
 

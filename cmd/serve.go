@@ -21,11 +21,11 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/eris-ltd/eris-db/core"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/lifecycle"
-	"github.com/eris-ltd/eris-db/util"
+	"github.com/monax/eris-db/core"
+	"github.com/monax/eris-db/definitions"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/lifecycle"
+	"github.com/monax/eris-db/util"
 
 	"github.com/spf13/cobra"
 )

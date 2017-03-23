@@ -17,8 +17,8 @@ package txs
 import (
 	"testing"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	acm "github.com/monax/eris-db/account"
+	ptypes "github.com/monax/eris-db/permission/types"
 
 	"github.com/stretchr/testify/assert"
 	. "github.com/tendermint/go-common"

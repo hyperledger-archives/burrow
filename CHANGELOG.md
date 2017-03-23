@@ -5,28 +5,28 @@ of the architecture across the Eris Platform to support a quicker release
 cadence.
 
 #### Features and improvements (among others)
-- [pull-510](https://github.com/eris-ltd/eris-db/pull/510) upgrade consensus engine to Tendermint v0.8.0
-- [pull-507](https://github.com/eris-ltd/eris-db/pull/507) use sha3 for snative addresses for future-proofing
-- [pull-506](https://github.com/eris-ltd/eris-db/pull/506) alignment and consolidation for genesis and config between tooling and chains
-- [pull-504](https://github.com/eris-ltd/eris-db/pull/504) relicense eris-db to Apache 2.0
-- [pull-500](https://github.com/eris-ltd/eris-db/pull/500) introduce more strongly types secure native contracts
-- [pull-499](https://github.com/eris-ltd/eris-db/pull/499) introduce word256 and remove dependency on tendermint/go-common
-- [pull-493](https://github.com/eris-ltd/eris-db/pull/493) re-introduce GenesisTime in GenesisDoc
+- [pull-510](https://github.com/monax/eris-db/pull/510) upgrade consensus engine to Tendermint v0.8.0
+- [pull-507](https://github.com/monax/eris-db/pull/507) use sha3 for snative addresses for future-proofing
+- [pull-506](https://github.com/monax/eris-db/pull/506) alignment and consolidation for genesis and config between tooling and chains
+- [pull-504](https://github.com/monax/eris-db/pull/504) relicense eris-db to Apache 2.0
+- [pull-500](https://github.com/monax/eris-db/pull/500) introduce more strongly types secure native contracts
+- [pull-499](https://github.com/monax/eris-db/pull/499) introduce word256 and remove dependency on tendermint/go-common
+- [pull-493](https://github.com/monax/eris-db/pull/493) re-introduce GenesisTime in GenesisDoc
 
 - Logging system overhauled based on the central logging interface of go-kit log. Configuration lacking in this release but should be in 0.16.1. Allows powerful routing, filtering, and output options for better operations and increasing the observability of an eris blockchain. More to follow.
 - Genesis making is improved and moved into eris-db.
 - Config templating is moved into eris-db for better synchronisation of server config between the consumer of it (eris-db) and the producers of it (eris cli and other tools).
 - Some documentation updates in code and in specs.
-- [pull-462](https://github.com/eris-ltd/eris-db/pull/499) Makefile added to capture conventions around building and testing and replicate them across different environments such as continuous integration systems.
+- [pull-462](https://github.com/monax/eris-db/pull/499) Makefile added to capture conventions around building and testing and replicate them across different environments such as continuous integration systems.
 
 #### Bugfixes (among others)
-- [pull-516](https://github.com/eris-ltd/eris-db/pull/516) Organize and add unit tests for rpc/v0
-- [pull-453](https://github.com/eris-ltd/eris-db/pull/453) Fix deserialisation for BroadcastTx on rpc/v0
-- [pull-476](https://github.com/eris-ltd/eris-db/pull/476) patch EXTCODESIZE for native contracts as solc ^v0.4 performs a safety check for non-zero contract code
-- [pull-468](https://github.com/eris-ltd/eris-db/pull/468) correct specifications for params on unsubscribe on rpc/tendermint
-- [pull-465](https://github.com/eris-ltd/eris-db/pull/465) fix divergence from JSON-RPC spec for Response object
-- [pull-366](https://github.com/eris-ltd/eris-db/pull/366) correction to circle ci script
-- [pull-379](https://github.com/eris-ltd/eris-db/pull/379) more descriptive error message for eris-client
+- [pull-516](https://github.com/monax/eris-db/pull/516) Organize and add unit tests for rpc/v0
+- [pull-453](https://github.com/monax/eris-db/pull/453) Fix deserialisation for BroadcastTx on rpc/v0
+- [pull-476](https://github.com/monax/eris-db/pull/476) patch EXTCODESIZE for native contracts as solc ^v0.4 performs a safety check for non-zero contract code
+- [pull-468](https://github.com/monax/eris-db/pull/468) correct specifications for params on unsubscribe on rpc/tendermint
+- [pull-465](https://github.com/monax/eris-db/pull/465) fix divergence from JSON-RPC spec for Response object
+- [pull-366](https://github.com/monax/eris-db/pull/366) correction to circle ci script
+- [pull-379](https://github.com/monax/eris-db/pull/379) more descriptive error message for eris-client
 
 ## v0.12.0
 This release marks the start of Eris-DB as the full permissioned blockchain node

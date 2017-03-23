@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/common/random"
-	genesis "github.com/eris-ltd/eris-db/genesis"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	acm "github.com/monax/eris-db/account"
+	"github.com/monax/eris-db/common/random"
+	genesis "github.com/monax/eris-db/genesis"
+	ptypes "github.com/monax/eris-db/permission/types"
 
 	tdb "github.com/tendermint/go-db"
 	"github.com/tendermint/tendermint/types"

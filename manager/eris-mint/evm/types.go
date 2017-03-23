@@ -17,8 +17,8 @@ package vm
 import (
 	"fmt"
 
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/eris-ltd/eris-db/word256"
+	ptypes "github.com/monax/eris-db/permission/types"
+	. "github.com/monax/eris-db/word256"
 )
 
 const (
