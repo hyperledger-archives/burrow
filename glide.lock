@@ -30,7 +30,7 @@ imports:
 - name: github.com/ebuchman/fail-test
   version: c1eddaa09da2b4017351245b0d43234955276798
 - name: github.com/monax/keys
-  version: 20bcdcd10c90ed71e8d0f59595c49ed87d30f4cb
+  version: monax-not-eris
 - name: github.com/fsnotify/fsnotify
   version: 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
 - name: github.com/gin-gonic/gin
