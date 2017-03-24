@@ -19,11 +19,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	. "github.com/monax/eris-db/keys"
+
 	// NOTE: prior to building out /crypto, use
 	// tendermint/go-crypto for the mock client
 	"github.com/tendermint/ed25519"
-
-	. "github.com/monax/eris-db/keys"
+	"golang.org/x/crypto/ripemd160"
 )
 
 //---------------------------------------------------------------------
@@ -36,23 +37,31 @@ type MockKey struct {
 	PublicKey  []byte
 }
 
-func newMockKey() *MockKey {
+func newMockKey() (*MockKey, error) {
 	key := &MockKey{
-		Address:    make([]byte, 20),
-		PrivateKey: new([ed25519.PrivateKeySize]byte),
-		Publickey:  make([]byte, ed25519.PublicKeySize),
+		Address:   make([]byte, 20),
+		PublicKey: make([]byte, ed25519.PublicKeySize),
 	}
 	// this is a mock key, so the entropy of the source is purely
 	// for testing
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
 	copy(key.PrivateKey[:], privateKey[:])
-	copy(key.Publickey[:], publicKey[:])
-	return key
+	copy(key.PublicKey[:], publicKey[:])
+
+	// prepend 0x01 for ed25519 public key
+	typedPublicKeyBytes := append([]byte{0x01}, key.PublicKey...)
+	hasher := ripemd160.New()
+	hasher.Write(typedPublicKeyBytes)
+	key.Address = hasher.Sum(nil)
+	return key, nil
 }
 
 func (mockKey *MockKey) Sign(message []byte) ([]byte, error) {
 	signatureBytes := make([]byte, ed25519.SignatureSize)
-	signature = ed25519.Sign(&mockKey.PrivateKey, message)
+	signature := ed25519.Sign(&mockKey.PrivateKey, message)
 	copy(signatureBytes[:], signature[:])
 	return signatureBytes, nil
 }
