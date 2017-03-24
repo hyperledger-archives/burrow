@@ -20,8 +20,8 @@ import (
 
 	// "github.com/stretchr/testify/assert"
 
-	mockclient "github.com/eris-ltd/eris-db/client/mock"
-	mockkeys "github.com/eris-ltd/eris-db/keys/mock"
+	mockclient "github.com/monax/eris-db/client/mock"
+	mockkeys "github.com/monax/eris-db/keys/mock"
 )
 
 func Test(t *testing.T) {

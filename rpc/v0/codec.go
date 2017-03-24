@@ -20,7 +20,8 @@ import (
 
 	"reflect"
 
-	"github.com/eris-ltd/eris-db/rpc"
+	rpc "github.com/monax/eris-db/rpc"
+
 	wire "github.com/tendermint/go-wire"
 )
 

@@ -42,7 +42,7 @@
 # Where are the Things?
 
 name=eris-db
-base=github.com/eris-ltd/$name
+base=github.com/monax/$name
 repo=`pwd`
 if [ "$CIRCLE_BRANCH" ]
 then

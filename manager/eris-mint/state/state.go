@@ -21,18 +21,18 @@ import (
 	"io/ioutil"
 	"time"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	genesis "github.com/eris-ltd/eris-db/genesis"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	"github.com/eris-ltd/eris-db/txs"
+	acm "github.com/monax/eris-db/account"
+	genesis "github.com/monax/eris-db/genesis"
+	ptypes "github.com/monax/eris-db/permission/types"
+	"github.com/monax/eris-db/txs"
 
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
 	"github.com/tendermint/go-merkle"
 	"github.com/tendermint/go-wire"
 
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/util"
+	core_types "github.com/monax/eris-db/core/types"
+	"github.com/monax/eris-db/util"
 	"github.com/tendermint/tendermint/types"
 )
 

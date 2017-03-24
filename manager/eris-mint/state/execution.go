@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/common/sanity"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	ptypes "github.com/eris-ltd/eris-db/permission/types" // for GlobalPermissionAddress ...
-	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/eris-ltd/eris-db/word256"
+	acm "github.com/monax/eris-db/account"
+	"github.com/monax/eris-db/common/sanity"
+	core_types "github.com/monax/eris-db/core/types"
+	"github.com/monax/eris-db/manager/eris-mint/evm"
+	ptypes "github.com/monax/eris-db/permission/types" // for GlobalPermissionAddress ...
+	"github.com/monax/eris-db/txs"
+	. "github.com/monax/eris-db/word256"
 
 	"github.com/tendermint/go-events"
 )

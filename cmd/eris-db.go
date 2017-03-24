@@ -21,8 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/version"
+	"github.com/monax/eris-db/definitions"
+	"github.com/monax/eris-db/version"
 )
 
 var ErisDbCmd = &cobra.Command{
@@ -34,7 +34,7 @@ your needs.
 
 Made with <3 by Monax Industries.
 
-Complete documentation is available at https://monax.io/docs/documentation
+Complete documentation is available at https://monax.io/docs
 ` + "\nVERSION:\n " + version.VERSION,
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }

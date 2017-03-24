@@ -17,8 +17,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/common/sanity"
-	"github.com/eris-ltd/eris-db/genesis"
+	"github.com/monax/eris-db/common/sanity"
+	"github.com/monax/eris-db/genesis"
 
 	"github.com/spf13/cobra"
 )

@@ -17,10 +17,11 @@ package v0
 import (
 	"testing"
 
-	"github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/account"
+	"github.com/monax/eris-db/manager/eris-mint/evm/opcodes"
+	"github.com/monax/eris-db/rpc"
+	"github.com/monax/eris-db/txs"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
 )

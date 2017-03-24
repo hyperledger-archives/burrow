@@ -15,9 +15,9 @@
 package v0
 
 import (
-	"github.com/eris-ltd/eris-db/account"
-	event "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/account"
+	event "github.com/monax/eris-db/event"
+	"github.com/monax/eris-db/txs"
 )
 
 type (

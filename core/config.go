@@ -23,14 +23,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/eris-ltd/eris-db/config"
-	"github.com/eris-ltd/eris-db/consensus"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/manager"
-	"github.com/eris-ltd/eris-db/server"
-	"github.com/eris-ltd/eris-db/util"
-	"github.com/eris-ltd/eris-db/version"
+	"github.com/monax/eris-db/config"
+	"github.com/monax/eris-db/consensus"
+	"github.com/monax/eris-db/definitions"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/manager"
+	"github.com/monax/eris-db/server"
+	"github.com/monax/eris-db/util"
+	"github.com/monax/eris-db/version"
 	"github.com/spf13/viper"
 )
 

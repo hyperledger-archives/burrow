@@ -17,8 +17,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
-	. "github.com/eris-ltd/eris-db/word256"
+	"github.com/monax/eris-db/manager/eris-mint/evm/sha3"
+	. "github.com/monax/eris-db/word256"
 )
 
 type FakeAppState struct {

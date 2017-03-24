@@ -3,8 +3,8 @@
 
 BRANCH="fixes"
 
-go get -d github.com/eris-ltd/eris-db
-cd $GOPATH/src/github.com/eris-ltd/eris-db
+go get -d github.com/monax/eris-db
+cd $GOPATH/src/github.com/monax/eris-db
 git fetch origin $BRANCH
 git checkout $BRANCH
 go install ./cmd/erisdb

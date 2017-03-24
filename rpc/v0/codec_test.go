@@ -18,9 +18,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/rpc"
+	"github.com/monax/eris-db/txs"
 
-	"github.com/eris-ltd/eris-db/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
