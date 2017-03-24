@@ -2,7 +2,7 @@
 
 ### for eris-db version 0.11.x
 
-Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](/docs/documentation/db.js/) library.
+Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](https://github.com/monax/eris-db.js) library.
 
 ## TOC
 
@@ -1755,7 +1755,7 @@ Parameters:
 #####Additional info
 
 `code` is a hex-string representation of compiled contract code.
-`data` is a string of data formatted in accordance with the [contract ABI](/docs/documentation/contracts.js/).
+`data` is a string of data formatted in accordance with the [contract ABI](https://github.com/monax/eris-contracts.js).
 
 ***
 

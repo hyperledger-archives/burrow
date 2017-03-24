@@ -22,7 +22,7 @@ import (
 	// NodeInfo (drop this!)
 	"github.com/tendermint/tendermint/types"
 
-	account "github.com/eris-ltd/eris-db/account"
+	account "github.com/monax/eris-db/account"
 )
 
 type (

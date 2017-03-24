@@ -21,7 +21,7 @@ package account
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/common/sanity"
+	"github.com/monax/eris-db/common/sanity"
 
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-crypto"

@@ -17,8 +17,8 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/eris-ltd/eris-db/client/methods"
-	"github.com/eris-ltd/eris-db/util"
+	"github.com/monax/eris-db/client/methods"
+	"github.com/monax/eris-db/util"
 )
 
 func buildStatusCommand() *cobra.Command {

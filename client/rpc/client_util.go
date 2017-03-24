@@ -21,12 +21,12 @@ import (
 
 	"github.com/tendermint/go-crypto"
 
-	acc "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/keys"
-	"github.com/eris-ltd/eris-db/logging"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	"github.com/eris-ltd/eris-db/txs"
+	acc "github.com/monax/eris-db/account"
+	"github.com/monax/eris-db/client"
+	"github.com/monax/eris-db/keys"
+	"github.com/monax/eris-db/logging"
+	ptypes "github.com/monax/eris-db/permission/types"
+	"github.com/monax/eris-db/txs"
 )
 
 //------------------------------------------------------------------------------------

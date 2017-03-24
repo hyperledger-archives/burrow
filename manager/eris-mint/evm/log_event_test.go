@@ -19,9 +19,9 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
-	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/eris-ltd/eris-db/word256"
+	. "github.com/monax/eris-db/manager/eris-mint/evm/opcodes"
+	"github.com/monax/eris-db/txs"
+	. "github.com/monax/eris-db/word256"
 	"github.com/tendermint/go-events"
 )
 
