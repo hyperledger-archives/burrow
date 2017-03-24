@@ -15,10 +15,10 @@
 package logging
 
 import (
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/monax/eris-db/logging/loggers"
 	"github.com/monax/eris-db/logging/structure"
 	"github.com/monax/eris-db/util/slice"
-	kitlog "github.com/go-kit/kit/log"
 )
 
 // Helper functions for InfoTraceLoggers, sort of extension methods to loggers

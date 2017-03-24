@@ -19,9 +19,9 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/gin-gonic/gin"
 	rpc "github.com/monax/eris-db/rpc"
 	"github.com/monax/eris-db/server"
-	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
 )
 

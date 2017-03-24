@@ -15,8 +15,8 @@
 package loggers
 
 import (
-	"github.com/monax/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/eris-db/logging/structure"
 )
 
 // Treat duplicate key-values as consecutive entries in a vector-valued lookup

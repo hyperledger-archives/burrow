@@ -17,8 +17,8 @@ package loggers
 import (
 	"fmt"
 
-	"github.com/monax/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/eris-db/logging/structure"
 )
 
 // This represents a 'SELECT ONE' type logger. When logged to it will search

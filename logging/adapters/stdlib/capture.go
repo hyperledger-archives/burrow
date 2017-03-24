@@ -18,8 +18,8 @@ import (
 	"io"
 	"log"
 
-	"github.com/monax/eris-db/logging/loggers"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/eris-db/logging/loggers"
 )
 
 func Capture(stdLibLogger log.Logger,

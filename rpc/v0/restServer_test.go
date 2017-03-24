@@ -32,8 +32,8 @@ import (
 	server "github.com/monax/eris-db/server"
 	"github.com/monax/eris-db/txs"
 
-	"github.com/monax/eris-db/rpc/v0/shared"
 	"github.com/gin-gonic/gin"
+	"github.com/monax/eris-db/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"
 )

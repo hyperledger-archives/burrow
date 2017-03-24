@@ -17,10 +17,10 @@ package adapters
 import (
 	"time"
 
+	"github.com/go-stack/stack"
 	"github.com/monax/eris-db/logging/loggers"
 	"github.com/monax/eris-db/logging/structure"
 	. "github.com/monax/eris-db/util/slice"
-	"github.com/go-stack/stack"
 	"github.com/tendermint/log15"
 )
 
