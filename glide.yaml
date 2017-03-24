@@ -1,6 +1,5 @@
-package: github.com/eris-ltd/eris-db
+package: github.com/monax/eris-db
 import:
-- package: github.com/eris-ltd/eris-keys
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/gin-gonic/gin
@@ -9,6 +8,7 @@ import:
 - package: github.com/stretchr/testify
 - package: github.com/tendermint/tendermint
   version: ~0.8.0
+- package: github.com/tendermint/ed25519
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
   subpackages:

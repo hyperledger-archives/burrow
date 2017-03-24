@@ -22,10 +22,10 @@ import (
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
+	ctypes "github.com/monax/eris-db/rpc/tendermint/core/types"
+	"github.com/monax/eris-db/txs"
 )
 
 const (

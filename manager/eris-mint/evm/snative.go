@@ -17,14 +17,14 @@ package vm
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/common/sanity"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	. "github.com/eris-ltd/eris-db/word256"
+	"github.com/monax/eris-db/common/sanity"
+	"github.com/monax/eris-db/manager/eris-mint/evm/sha3"
+	ptypes "github.com/monax/eris-db/permission/types"
+	. "github.com/monax/eris-db/word256"
 
 	"strings"
 
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/abi"
+	"github.com/monax/eris-db/manager/eris-mint/evm/abi"
 )
 
 //

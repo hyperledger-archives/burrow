@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
 )
 
 // Eris-Keys server connects over http request-response structures

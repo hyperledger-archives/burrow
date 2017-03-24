@@ -20,19 +20,19 @@ import (
 	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	"github.com/eris-ltd/eris-db/config"
-	"github.com/eris-ltd/eris-db/consensus"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/manager"
+	"github.com/monax/eris-db/config"
+	"github.com/monax/eris-db/consensus"
+	"github.com/monax/eris-db/definitions"
+	"github.com/monax/eris-db/event"
+	"github.com/monax/eris-db/manager"
 	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
-	rpc_v0 "github.com/eris-ltd/eris-db/rpc/v0"
+	rpc_v0 "github.com/monax/eris-db/rpc/v0"
 	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	rpc_tendermint "github.com/eris-ltd/eris-db/rpc/tendermint/core"
-	"github.com/eris-ltd/eris-db/server"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
+	rpc_tendermint "github.com/monax/eris-db/rpc/tendermint/core"
+	"github.com/monax/eris-db/server"
 )
 
 // Core is the high-level structure

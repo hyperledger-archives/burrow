@@ -23,15 +23,15 @@ package definitions
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 
 import (
-	account "github.com/eris-ltd/eris-db/account"
-	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	types "github.com/eris-ltd/eris-db/core/types"
-	event "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	"github.com/eris-ltd/eris-db/txs"
+	account "github.com/monax/eris-db/account"
+	blockchain_types "github.com/monax/eris-db/blockchain/types"
+	consensus_types "github.com/monax/eris-db/consensus/types"
+	core_types "github.com/monax/eris-db/core/types"
+	types "github.com/monax/eris-db/core/types"
+	event "github.com/monax/eris-db/event"
+	"github.com/monax/eris-db/logging/loggers"
+	manager_types "github.com/monax/eris-db/manager/types"
+	"github.com/monax/eris-db/txs"
 )
 
 type Pipe interface {
