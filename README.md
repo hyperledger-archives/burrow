@@ -83,4 +83,4 @@ Some burrows marmots have already started digging to build the enterprise ecosys
 
 ## License
 
-[Apache 2.0](license.md)
+[Apache 2.0](LICENSE.md)
