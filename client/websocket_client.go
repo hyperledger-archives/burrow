@@ -111,15 +111,20 @@ func (erisNodeWebsocketClient *erisNodeWebsocketClient) WaitForConfirmation(tx t
 				continue
 			}
 
-			blockData, ok := event.Data.(txs.EventDataNewBlock)
-			if ok {
-				latestBlockHash = blockData.Block.Hash()
-				logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
-					"block", blockData.Block,
-					"latest_block_hash", latestBlockHash,
-				)
-				continue
-			}
+			// NOTE: [ben] hotfix on 0.16.1 because NewBlock events looks to arrive late
+			// both in tests; so we now miss events;  This check is safely removed because
+			// for CallTx on checking the transaction the EVM is not run and no false positive event
+			// is sent; neither is this check a good check for that.
+
+			// blockData, ok := event.Data.(txs.EventDataNewBlock)
+			// if ok {
+			// 	latestBlockHash = blockData.Block.Hash()
+			// 	logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
+			// 		"block", blockData.Block,
+			// 		"latest_block_hash", latestBlockHash,
+			// 	)
+			// 	continue
+			// }
 
 			// we don't accept events unless they came after a new block (ie. in)
 			if latestBlockHash == nil {
