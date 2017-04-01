@@ -111,27 +111,27 @@ func (erisNodeWebsocketClient *erisNodeWebsocketClient) WaitForConfirmation(tx t
 				continue
 			}
 
-			// NOTE: [ben] hotfix on 0.16.1 because NewBlock events looks to arrive late
-			// both in tests; so we now miss events;  This check is safely removed because
-			// for CallTx on checking the transaction the EVM is not run and no false positive event
-			// is sent; neither is this check a good check for that.
-
-			// blockData, ok := event.Data.(txs.EventDataNewBlock)
-			// if ok {
-			// 	latestBlockHash = blockData.Block.Hash()
-			// 	logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
-			// 		"block", blockData.Block,
-			// 		"latest_block_hash", latestBlockHash,
-			// 	)
-			// 	continue
-			// }
-
-			// we don't accept events unless they came after a new block (ie. in)
-			if latestBlockHash == nil {
-				logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
-					"event", event.Event)
+			blockData, ok := event.Data.(txs.EventDataNewBlock)
+			if ok {
+				latestBlockHash = blockData.Block.Hash()
+				logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
+					"block", blockData.Block,
+					"latest_block_hash", latestBlockHash,
+				)
 				continue
 			}
+
+			// NOTE: [ben] hotfix on 0.16.1 because NewBlock events to arrive seemingly late
+			// we now miss events because of this redundant check;  This check is safely removed
+			// because for CallTx on checking the transaction is not run in the EVM and no false
+			// positive event can be sent; neither is this check a good check for that.
+
+			// we don't accept events unless they came after a new block (ie. in)
+			// if latestBlockHash == nil {
+			// 	logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
+			// 		"event", event.Event)
+			// 	continue
+			// }
 
 			if event.Event != eid {
 				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received unsolicited event",
