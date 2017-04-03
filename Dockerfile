@@ -5,8 +5,6 @@ MAINTAINER Monax <support@monax.io>
 ENV TARGET eris-db
 ENV REPO $GOPATH/src/github.com/monax/$TARGET
 
-ADD ./glide.yaml $REPO/
-ADD ./glide.lock $REPO/
 WORKDIR $REPO
 RUN glide install
 
