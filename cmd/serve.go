@@ -26,6 +26,7 @@ import (
 	"github.com/monax/eris-db/logging"
 	"github.com/monax/eris-db/logging/lifecycle"
 	"github.com/monax/eris-db/util"
+	vm "github.com/monax/eris-db/manager/eris-mint/evm"
 
 	"github.com/spf13/cobra"
 )
@@ -160,6 +161,8 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 			util.Fatalf("Fatal error reading configuration from %s/%s", do.WorkDir,
 				DefaultConfigFilename)
 		}
+
+		vm.SetDebug(do.Debug)
 
 		newCore, err := NewCoreFromDo(do)
 
