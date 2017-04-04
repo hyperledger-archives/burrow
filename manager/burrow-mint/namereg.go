@@ -30,7 +30,7 @@ import (
 // for the pipe to call into the BurrowMint application
 
 type namereg struct {
-	burrowMint      *BurrowMint
+	burrowMint    *BurrowMint
 	filterFactory *event.FilterFactory
 }
 

@@ -92,9 +92,9 @@ func NewBurrowMintPipe(moduleConfig *config.ModuleConfig,
 	pipe := &burrowMintPipe{
 		burrowMintState: startedState,
 		burrowMint:      burrowMint,
-		accounts:      accounts,
-		events:        events,
-		namereg:       namereg,
+		accounts:        accounts,
+		events:          events,
+		namereg:         namereg,
 		// We need to set transactor later since we are introducing a mutual dependency
 		// NOTE: this will be cleaned up when the RPC is unified
 		transactor: nil,
@@ -257,7 +257,7 @@ func (pipe *burrowMintPipe) Subscribe(event string,
 	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, event,
 		func(eventData txs.EventData) {
 			result := rpc_tm_types.BurrowResult(&rpc_tm_types.ResultEvent{event,
-																																		txs.EventData(eventData)})
+				txs.EventData(eventData)})
 			// NOTE: EventSwitch callbacks must be nonblocking
 			rpcResponseWriter(result)
 		})

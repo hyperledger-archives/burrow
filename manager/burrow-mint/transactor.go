@@ -38,7 +38,7 @@ import (
 type transactor struct {
 	chainID       string
 	eventSwitch   tEvents.Fireable
-	burrowMint      *BurrowMint
+	burrowMint    *BurrowMint
 	eventEmitter  event.EventEmitter
 	txMtx         *sync.Mutex
 	txBroadcaster func(tx txs.Tx) error

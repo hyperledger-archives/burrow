@@ -36,7 +36,7 @@ var _ definitions.Accounts = (*accounts)(nil)
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
-	burrowMint      *BurrowMint
+	burrowMint    *BurrowMint
 	filterFactory *event.FilterFactory
 }
 

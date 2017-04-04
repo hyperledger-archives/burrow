@@ -25,8 +25,8 @@ import (
 	"github.com/monax/burrow/definitions"
 	"github.com/monax/burrow/logging"
 	"github.com/monax/burrow/logging/lifecycle"
-	"github.com/monax/burrow/util"
 	vm "github.com/monax/burrow/manager/burrow-mint/evm"
+	"github.com/monax/burrow/util"
 
 	"github.com/spf13/cobra"
 )
