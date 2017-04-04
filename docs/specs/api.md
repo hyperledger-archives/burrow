@@ -1,8 +1,8 @@
-# Eris DB web APIs (draft)
+# Burrow web APIs (draft)
 
-### for eris-db version 0.11.x
+### for burrow version 0.11.x
 
-Eris DB allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [erisdb-js](https://github.com/monax/eris-db.js) library.
+Burrow allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [burrow-js](https://github.com/monax/burrow.js) library.
 
 ## TOC
 
@@ -23,7 +23,7 @@ The only data format supported is JSON. All post requests needs to use `Content-
 <a name="json-rpc"></a>
 ## JSON RPC 2.0
 
-The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `erisdb`.
+The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `burrow`.
 
 It does not yet support notifications or batched requests.
 
@@ -79,7 +79,7 @@ Request:
 ```
 {
 	jsonrpc: "2.0",
-	method: "erisdb.getAccount",
+	method: "burrow.getAccount",
 	params: {address: "37236DF251AB70022B1DA351F08A20FB52443E37"},
 	id="25"
 }
@@ -473,73 +473,73 @@ See the [TransactNameReg](#transact-name-reg) method for more info about adding 
 ###Accounts
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [GetAccounts](#get-accounts) | erisdb.getAccounts | GET | `/accounts` |
-| [GetAccount](#get-account) | erisdb.getAccount | GET | `/accounts/:address` |
-| [GetStorage](#get-storage) | erisdb.getStorage | GET | `/accounts/:address/storage` |
-| [GetStorageAt](#get-storage-at) | erisdb.getStorageAt | GET | `/accounts/:address/storage/:key` |
+| [GetAccounts](#get-accounts) | burrow.getAccounts | GET | `/accounts` |
+| [GetAccount](#get-account) | burrow.getAccount | GET | `/accounts/:address` |
+| [GetStorage](#get-storage) | burrow.getStorage | GET | `/accounts/:address/storage` |
+| [GetStorageAt](#get-storage-at) | burrow.getStorageAt | GET | `/accounts/:address/storage/:key` |
 
 ###Blockchain
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [GetBlockchainInfo](#get-blockchain-info) | erisdb.getBlockchainInfo | GET | `/blockchain` |
-| [GetChainId](#get-chain-id) | erisdb.getChainId | GET | `/blockchain/chain_id` |
-| [GetGenesisHash](#get-genesis-hash) | erisdb.getGenesisHash | GET | `/blockchain/genesis_hash` |
-| [GetLatestBlockHeight](#get-latest-block-height) | erisdb.getLatestBlockHeight | GET | `/blockchain/latest_block/height` |
-| [GetLatestBlock](#get-latest-block) | erisdb.getLatestBlock | GET | `/blockchain/latest_block` |
-| [GetBlocks](#get-blocks) | erisdb.getBlocks | GET | `/blockchain/blocks` |
-| [GetBlock](#get-block) | erisdb.getBlock | GET | `/blockchain/blocks/:height` |
+| [GetBlockchainInfo](#get-blockchain-info) | burrow.getBlockchainInfo | GET | `/blockchain` |
+| [GetChainId](#get-chain-id) | burrow.getChainId | GET | `/blockchain/chain_id` |
+| [GetGenesisHash](#get-genesis-hash) | burrow.getGenesisHash | GET | `/blockchain/genesis_hash` |
+| [GetLatestBlockHeight](#get-latest-block-height) | burrow.getLatestBlockHeight | GET | `/blockchain/latest_block/height` |
+| [GetLatestBlock](#get-latest-block) | burrow.getLatestBlock | GET | `/blockchain/latest_block` |
+| [GetBlocks](#get-blocks) | burrow.getBlocks | GET | `/blockchain/blocks` |
+| [GetBlock](#get-block) | burrow.getBlock | GET | `/blockchain/blocks/:height` |
 
 ###Consensus
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [GetConsensusState](#get-consensus-state) | erisdb.getConsensusState | GET | `/consensus` |
-| [GetValidators](#get-validators) | erisdb.getValidators | GET | `/consensus/validators` |
+| [GetConsensusState](#get-consensus-state) | burrow.getConsensusState | GET | `/consensus` |
+| [GetValidators](#get-validators) | burrow.getValidators | GET | `/consensus/validators` |
 
 ###Events
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [EventSubscribe](#event-subscribe) | erisdb.eventSubscribe | POST | `/event_subs` |
-| [EventUnsubscribe](#event-unsubscribe) | erisdb.eventUnsubscribe | DELETE | `/event_subs/:id` |
-| [EventPoll](#event-poll) | erisdb.eventPoll | GET | `/event_subs/:id` |
+| [EventSubscribe](#event-subscribe) | burrow.eventSubscribe | POST | `/event_subs` |
+| [EventUnsubscribe](#event-unsubscribe) | burrow.eventUnsubscribe | DELETE | `/event_subs/:id` |
+| [EventPoll](#event-poll) | burrow.eventPoll | GET | `/event_subs/:id` |
 
 ###Name-registry
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [GetNameRegEntry](#get-namereg-entry) | erisdb.getNameRegEntry | GET | `/namereg/:key` |
-| [GetNameRegEntries](#get-namereg-entries) | erisdb.getNameRegEntries | GET | `/namereg` |
+| [GetNameRegEntry](#get-namereg-entry) | burrow.getNameRegEntry | GET | `/namereg/:key` |
+| [GetNameRegEntries](#get-namereg-entries) | burrow.getNameRegEntries | GET | `/namereg` |
 
 ###Network
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [GetNetworkInfo](#get-network-info) | erisdb.getNetworkInfo | GET | `/network` |
-| [GetClientVersion](#get-client-version) | erisdb.getClientVersion | GET | `/network/client_version` |
-| [GetMoniker](#get-moniker) | erisdb.getMoniker | GET | `/network/moniker` |
-| [IsListening](#is-listening) | erisdb.isListening | GET | `/network/listening` |
-| [GetListeners](#get-listeners) | erisdb.getListeners | GET | `/network/listeners` |
-| [GetPeers](#get-peers) | erisdb.getPeers | GET | `/network/peers` |
-| [GetPeer](#get-peer) | erisdb.getPeer | GET | `/network/peer/:address` |
+| [GetNetworkInfo](#get-network-info) | burrow.getNetworkInfo | GET | `/network` |
+| [GetClientVersion](#get-client-version) | burrow.getClientVersion | GET | `/network/client_version` |
+| [GetMoniker](#get-moniker) | burrow.getMoniker | GET | `/network/moniker` |
+| [IsListening](#is-listening) | burrow.isListening | GET | `/network/listening` |
+| [GetListeners](#get-listeners) | burrow.getListeners | GET | `/network/listeners` |
+| [GetPeers](#get-peers) | burrow.getPeers | GET | `/network/peers` |
+| [GetPeer](#get-peer) | burrow.getPeer | GET | `/network/peer/:address` |
 
 NOTE: Get peer is not fully implemented.
 
 ###Transactions
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [BroadcastTx](#broadcast-tx) | erisdb.broadcastTx | POST | `/txpool` |
-| [GetUnconfirmedTxs](#get-unconfirmed-txs) | erisdb.getUnconfirmedTxs | GET | `/txpool` |
+| [BroadcastTx](#broadcast-tx) | burrow.broadcastTx | POST | `/txpool` |
+| [GetUnconfirmedTxs](#get-unconfirmed-txs) | burrow.getUnconfirmedTxs | GET | `/txpool` |
 
 ###Code execution
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [Call](#call) | erisdb.call | POST | `/calls` |
-| [CallCode](#call-code) | erisdb.callCode | POST | `/codecalls` |
+| [Call](#call) | burrow.call | POST | `/calls` |
+| [CallCode](#call-code) | burrow.callCode | POST | `/codecalls` |
 
 ####Unsafe
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
-| [Transact](#transact) | erisdb.transact | POST | `/unsafe/txpool` |
-| [Transact](#transact-and-hold) | erisdb.transactAndHold | POST | `/unsafe/txpool?hold=true` |
-| [TransactNameReg](#transact-name-reg) | erisdb.transactNameReg | POST | `/unsafe/namereg/txpool` |
-| [GenPrivAccount](#gen-priv-account) | erisdb.genPrivAccount | GET | `/unsafe/pa_generator` |
+| [Transact](#transact) | burrow.transact | POST | `/unsafe/txpool` |
+| [Transact](#transact-and-hold) | burrow.transactAndHold | POST | `/unsafe/txpool?hold=true` |
+| [TransactNameReg](#transact-name-reg) | burrow.transactNameReg | POST | `/unsafe/namereg/txpool` |
+| [GenPrivAccount](#gen-priv-account) | burrow.genPrivAccount | GET | `/unsafe/pa_generator` |
 
 Here are the catagories.
 
@@ -577,7 +577,7 @@ Endpoint: `/accounts`
 
 #####JSON-RPC
 
-Method: `erisdb.getAccounts`
+Method: `burrow.getAccounts`
 
 Parameter:
 
@@ -626,7 +626,7 @@ Params: The public `address` as a hex string.
 
 #####JSON-RPC
 
-Method: `erisdb.getAccount`
+Method: `burrow.getAccount`
 
 Parameter:
 
@@ -678,7 +678,7 @@ Params: The public `address` as a hex string.
 
 #####JSON-RPC
 
-Method: `erisdb.getStorage`
+Method: `burrow.getStorage`
 
 Parameter:
 
@@ -719,7 +719,7 @@ Params: The public `address` as a hex string, and the `key` as a hex string.
 
 #####JSON-RPC
 
-Method: `erisdb.getStorageAt`
+Method: `burrow.getStorageAt`
 
 Parameter:
 
@@ -761,7 +761,7 @@ Endpoint: `/blockchain`
 
 #####JSON-RPC
 
-Method: `erisdb.getBlockchainInfo`
+Method: `burrow.getBlockchainInfo`
 
 Parameter: -
 
@@ -802,7 +802,7 @@ Endpoint: `/blockchain/chain_id`
 
 #####JSON-RPC
 
-Method: `erisdb.getChainId`
+Method: `burrow.getChainId`
 
 Parameter: -
 
@@ -828,7 +828,7 @@ Endpoint: `/blockchain/genesis_hash`
 
 #####JSON-RPC
 
-Method: `erisdb.getGenesisHash`
+Method: `burrow.getGenesisHash`
 
 Parameter: -
 
@@ -855,7 +855,7 @@ Endpoint: `/blockchain/latest_block/height`
 
 #####JSON-RPC
 
-Method: `erisdb.getLatestBlockHeight`
+Method: `burrow.getLatestBlockHeight`
 
 Parameter: -
 
@@ -882,7 +882,7 @@ Endpoint: `/blockchain/latest_block`
 
 #####JSON-RPC
 
-Method: `erisdb.getLatestBlock`
+Method: `burrow.getLatestBlock`
 
 Parameter: -
 
@@ -913,7 +913,7 @@ Endpoint: `/blockchain/blocks`
 
 #####JSON-RPC
 
-Method: `erisdb.getBlocks`
+Method: `burrow.getBlocks`
 
 Parameter:
 
@@ -991,7 +991,7 @@ Endpoint: `/blockchain/block/:number`
 
 #####JSON-RPC
 
-Method: `erisdb.getBlock`
+Method: `burrow.getBlock`
 
 Parameter:
 
@@ -1066,7 +1066,7 @@ Endpoint: `/consensus`
 
 #####JSON-RPC
 
-Method: `erisdb.getConsensusState`
+Method: `burrow.getConsensusState`
 
 Parameter: -
 
@@ -1117,7 +1117,7 @@ Endpoint: `/consensus/validators`
 
 #####JSON-RPC
 
-Method: `erisdb.getValidators`
+Method: `burrow.getValidators`
 
 Parameter: -
 
@@ -1171,7 +1171,7 @@ Body: See JSON-RPC parameter.
 
 #####JSON-RPC
 
-Method: `erisdb.eventSubscribe`
+Method: `burrow.eventSubscribe`
 
 Parameter:
 
@@ -1208,7 +1208,7 @@ Endpoint: `/event_subs/:id`
 
 #####JSON-RPC
 
-Method: `erisdb.eventUnsubscribe`
+Method: `burrow.eventUnsubscribe`
 
 Parameter:
 ```
@@ -1244,7 +1244,7 @@ Endpoint: `/event_subs/:id`
 
 #####JSON-RPC
 
-Method: `erisdb.eventPoll`
+Method: `burrow.eventPoll`
 
 #####Return value
 
@@ -1277,7 +1277,7 @@ Endpoint: `/namereg`
 
 #####JSON-RPC
 
-Method: `erisdb.getNameRegEntries`
+Method: `burrow.getNameRegEntries`
 
 Parameter:
 
@@ -1331,7 +1331,7 @@ Params: The key (a string)
 
 #####JSON-RPC
 
-Method: `erisdb.getNameRegEntry`
+Method: `burrow.getNameRegEntry`
 
 Parameter:
 
@@ -1372,7 +1372,7 @@ Endpoint: `/network`
 
 #####JSON-RPC
 
-Method: `erisdb.getNetworkInfo`
+Method: `burrow.getNetworkInfo`
 
 Parameters: -
 
@@ -1413,7 +1413,7 @@ Endpoint: `/network/client_version`
 
 #####JSON-RPC
 
-Method: `erisdb.getClientVersion`
+Method: `burrow.getClientVersion`
 
 Parameters: -
 
@@ -1440,7 +1440,7 @@ Endpoint: `/network/moniker`
 
 #####JSON-RPC
 
-Method: `erisdb.getMoniker`
+Method: `burrow.getMoniker`
 
 Parameters: -
 
@@ -1467,7 +1467,7 @@ Endpoint: `/network/listening`
 
 #####JSON-RPC
 
-Method: `erisdb.isListening`
+Method: `burrow.isListening`
 
 Parameters: -
 
@@ -1494,7 +1494,7 @@ Endpoint: `/network/listeners`
 
 #####JSON-RPC
 
-Method: `erisdb.getListeners`
+Method: `burrow.getListeners`
 
 Parameters: -
 
@@ -1521,7 +1521,7 @@ Endpoint: `/network/peers`
 
 #####JSON-RPC
 
-Method: `erisdb.getPeers`
+Method: `burrow.getPeers`
 
 Parameters: -
 
@@ -1550,7 +1550,7 @@ Endpoint: `/network/peer/:address`
 
 #####JSON-RPC
 
-Method: `erisdb.getPeer`
+Method: `burrow.getPeer`
 
 Parameters:
 
@@ -1609,7 +1609,7 @@ Body:
 
 #####JSON-RPC
 
-Method: `erisdb.BroadcastTx`
+Method: `burrow.BroadcastTx`
 
 Parameters:
 
@@ -1652,7 +1652,7 @@ Endpoint: `/txpool`
 
 #####JSON-RPC
 
-Method: `erisdb.getUnconfirmedTxs`
+Method: `burrow.getUnconfirmedTxs`
 
 Parameters: -
 
@@ -1691,7 +1691,7 @@ Body: See JSON-RPC parameter.
 
 #####JSON-RPC
 
-Method: `erisdb.call`
+Method: `burrow.call`
 
 Parameters:
 
@@ -1732,7 +1732,7 @@ Body: See JSON-RPC parameter.
 
 #####JSON-RPC
 
-Method: `erisdb.callCode`
+Method: `burrow.callCode`
 
 Parameters:
 
@@ -1786,7 +1786,7 @@ Body: See JSON-RPC parameters.
 
 #####JSON-RPC
 
-Method: `erisdb.transact`
+Method: `burrow.transact`
 
 Parameters:
 
@@ -1847,7 +1847,7 @@ Body: See JSON-RPC parameters.
 
 #####JSON-RPC
 
-Method: `erisdb.transactAndHold`
+Method: `burrow.transactAndHold`
 
 Parameters:
 
@@ -1909,7 +1909,7 @@ Body: See JSON-RPC parameters.
 
 #####JSON-RPC
 
-Method: `erisdb.transactNameReg`
+Method: `burrow.transactNameReg`
 
 Parameters:
 
@@ -1953,7 +1953,7 @@ Method: POST
 Endpoint: `/unsafe/pa_generator`
 #####JSON-RPC
 
-Method: `erisdb.genPrivAccount`
+Method: `burrow.genPrivAccount`
 
 Parameters: -
 

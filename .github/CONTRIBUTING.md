@@ -1,4 +1,4 @@
-# Contributing to `eris-db`:
+# Contributing to `burrow`:
 Forked from Docker's [contributing guidelines](https://github.com/docker/docker/blob/master/CONTRIBUTING.md)
 
 ## Developer Certificate of Origin

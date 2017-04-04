@@ -17,8 +17,8 @@ package methods
 import (
 	"fmt"
 
-	"github.com/monax/eris-db/client"
-	"github.com/monax/eris-db/definitions"
+	"github.com/monax/burrow/client"
+	"github.com/monax/burrow/definitions"
 )
 
 func Status(do *definitions.ClientDo) error {
@@ -26,13 +26,13 @@ func Status(do *definitions.ClientDo) error {
 	if err != nil {
 		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
 	}
-	erisNodeClient := client.NewErisNodeClient(do.NodeAddrFlag, logger)
-	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := erisNodeClient.Status()
+	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)
+	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := burrowNodeClient.Status()
 	if err != nil {
 		return fmt.Errorf("Error requesting status from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
-	chainName, chainId, genesisHashfromChainId, err := erisNodeClient.ChainId()
+	chainName, chainId, genesisHashfromChainId, err := burrowNodeClient.ChainId()
 	if err != nil {
 		return fmt.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}

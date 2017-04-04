@@ -20,7 +20,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/monax/eris-db/manager/eris-mint/evm"
+	"github.com/monax/burrow/manager/burrow-mint/evm"
 )
 
 const contractTemplateText = `/**

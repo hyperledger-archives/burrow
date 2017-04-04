@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/monax/eris-db/... | grep -v /vendor/)
+PACKAGES_NOVENDOR := $(shell go list github.com/monax/burrow/... | grep -v /vendor/)
 VERSION := $(shell cat ${REPO}/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
@@ -19,7 +19,7 @@ DOCKER_NAMESPACE := quay.io/eris
 
 .PHONY: greet
 greet:
-	@echo "Hi! I'm the marmot that will help you with eris-db v${VERSION}"
+	@echo "Hi! I'm the marmot that will help you with burrow v${VERSION}"
 
 ### Formatting, linting and vetting
 
@@ -54,7 +54,7 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
-### Dependency management for github.com/monax/eris-db
+### Dependency management for github.com/monax/burrow
 
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
@@ -78,76 +78,66 @@ hell:
 snatives:
 	@go run ./util/snatives/cmd/main.go
 
-### Building github.com/monax/eris-db
+### Building github.com/monax/burrow
 
-# build all targets in github.com/monax/eris-db
+# build all targets in github.com/monax/burrow
 .PHONY: build
 build:	check build_db build_client build_keys
 
-# build all targets in github.com/monax/eris-db with checks for race conditions
+# build all targets in github.com/monax/burrow with checks for race conditions
 .PHONY: build_race
 build_race:	check build_race_db build_race_client build_race_keys
 
-# build eris-db
+# build burrow
 .PHONY: build_db
 build_db:
-	go build -o ${REPO}/target/eris-db-${COMMIT_SHA} ./cmd/eris-db
+	go build -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
 
-# build eris-client
+# build burrow-client
 .PHONY: build_client
 build_client:
-	go build -o ${REPO}/target/eris-client-${COMMIT_SHA} ./client/cmd/eris-client
+	go build -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
 
-# build eris-keys
-.PHONY: build_keys
-build_keys:
-	@echo "Marmots need to complete moving repository eris-keys into eris-db."
-
-# build eris-db with checks for race conditions
+# build burrow with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
-	go build -race -o ${REPO}/target/eris-db-${COMMIT_SHA} ./cmd/eris-db
+	go build -race -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
 
-# build eris-client with checks for race conditions
+# build burrow-client with checks for race conditions
 .PHONY: build_race_client
 build_race_client:
-	go build -race -o ${REPO}/target/eris-client-${COMMIT_SHA} ./client/cmd/eris-client
+	go build -race -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
 
-# build eris-keys with checks for race conditions
-.PHONY: build_race_keys
-build_race_keys:
-	@echo "Marmots need to complete moving repository eris-keys into eris-db."
+### Testing github.com/monax/burrow
 
-### Testing github.com/monax/eris-db
-
-# test eris-db
+# test burrow
 .PHONY: test
 test: build
 	@go test ${PACKAGES_NOVENDOR} -tags integration
 
-# test eris-db with checks for race conditions
+# test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
 	@go test -race ${PACKAGES_NOVENDOR}
 
-### Build docker images for github.com/monax/eris-db
+### Build docker images for github.com/monax/burrow
 
-# build docker image for eris-db
+# build docker image for burrow
 .PHONY: build_docker_db
 build_docker_db: check
 	@mkdir -p ${REPO}/target/docker
 	docker build -t ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} ${REPO}
-	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/eris-db > ${REPO}/target/docker/eris-db.dockerartefact
-	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/eris-client > ${REPO}/target/docker/eris-client.dockerartefact
+	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/burrow > ${REPO}/target/docker/burrow.dockerartefact
+	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/burrow-client > ${REPO}/target/docker/burrow-client.dockerartefact
 	docker build -t ${DOCKER_NAMESPACE}/db:${VERSION} -f Dockerfile.deploy ${REPO}
 
-	@rm ${REPO}/target/docker/eris-db.dockerartefact
-	@rm ${REPO}/target/docker/eris-client.dockerartefact
+	@rm ${REPO}/target/docker/burrow.dockerartefact
+	@rm ${REPO}/target/docker/burrow-client.dockerartefact
 	docker rmi ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA}
 
-### Test docker images for github.com/monax/eris-db
+### Test docker images for github.com/monax/burrow
 
-# test docker image for eris-db
+# test docker image for burrow
 .PHONY: test_docker_db
 test_docker_db: check
 	docker build -t ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} ${REPO}

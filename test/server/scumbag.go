@@ -20,8 +20,8 @@ import (
 	"runtime"
 
 	"github.com/gin-gonic/gin"
-	rpc "github.com/monax/eris-db/rpc"
-	"github.com/monax/eris-db/server"
+	rpc "github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/server"
 	"github.com/tendermint/log15"
 )
 

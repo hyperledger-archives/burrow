@@ -17,7 +17,7 @@ package txs
 import (
 	"regexp"
 
-	core_types "github.com/monax/eris-db/core/types"
+	core_types "github.com/monax/burrow/core/types"
 )
 
 var (

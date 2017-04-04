@@ -17,8 +17,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/monax/eris-db/manager/eris-mint/evm"
-	"github.com/monax/eris-db/util/snatives/templates"
+	"github.com/monax/burrow/manager/burrow-mint/evm"
+	"github.com/monax/burrow/util/snatives/templates"
 )
 
 // Dump SNative contracts

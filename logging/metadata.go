@@ -19,8 +19,8 @@ import (
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
-	"github.com/monax/eris-db/logging/loggers"
-	"github.com/monax/eris-db/logging/structure"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/logging/structure"
 )
 
 const (

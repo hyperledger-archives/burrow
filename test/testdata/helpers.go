@@ -19,10 +19,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/monax/eris-db/files"
-	"github.com/monax/eris-db/server"
+	"github.com/monax/burrow/files"
+	"github.com/monax/burrow/server"
 
-	stypes "github.com/monax/eris-db/manager/eris-mint/state/types"
+	stypes "github.com/monax/burrow/manager/burrow-mint/state/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/types"

@@ -15,9 +15,9 @@
 package rpc_v0
 
 import (
-	"github.com/monax/eris-db/account"
-	event "github.com/monax/eris-db/event"
-	"github.com/monax/eris-db/txs"
+	"github.com/monax/burrow/account"
+	event "github.com/monax/burrow/event"
+	"github.com/monax/burrow/txs"
 )
 
 type (

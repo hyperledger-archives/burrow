@@ -17,22 +17,22 @@ package core
 import (
 	"fmt"
 
-	// TODO: [ben] swap out go-events with eris-db/event (currently unused)
+	// TODO: [ben] swap out go-events with burrow/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	"github.com/monax/eris-db/config"
-	"github.com/monax/eris-db/consensus"
-	"github.com/monax/eris-db/definitions"
-	"github.com/monax/eris-db/event"
-	"github.com/monax/eris-db/manager"
-	// rpc_v0 is carried over from Eris-DBv0.11 and before on port 1337
-	rpc_v0 "github.com/monax/eris-db/rpc/v0"
-	// rpc_tendermint is carried over from Eris-DBv0.11 and before on port 46657
+	"github.com/monax/burrow/config"
+	"github.com/monax/burrow/consensus"
+	"github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/event"
+	"github.com/monax/burrow/manager"
+	// rpc_v0 is carried over from burrowv0.11 and before on port 1337
+	rpc_v0 "github.com/monax/burrow/rpc/v0"
+	// rpc_tendermint is carried over from burrowv0.11 and before on port 46657
 
-	"github.com/monax/eris-db/logging"
-	"github.com/monax/eris-db/logging/loggers"
-	rpc_tendermint "github.com/monax/eris-db/rpc/tendermint/core"
-	"github.com/monax/eris-db/server"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/loggers"
+	rpc_tendermint "github.com/monax/burrow/rpc/tendermint/core"
+	"github.com/monax/burrow/server"
 )
 
 // Core is the high-level structure
@@ -47,7 +47,7 @@ func NewCore(chainId string,
 	consensusConfig *config.ModuleConfig,
 	managerConfig *config.ModuleConfig,
 	logger loggers.InfoTraceLogger) (*Core, error) {
-	// start new event switch, TODO: [ben] replace with eris-db/event
+	// start new event switch, TODO: [ben] replace with burrow/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 	logger = logging.WithScope(logger, "Core")
@@ -86,15 +86,15 @@ func NewCore(chainId string,
 //------------------------------------------------------------------------------
 // Server functions
 // NOTE: [ben] in phase 0 we exactly take over the full server architecture
-// from Eris-DB and Tendermint; This is a draft and will be overhauled.
+// from burrow and Tendermint; This is a draft and will be overhauled.
 
 func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProcess,
 	error) {
 	codec := &rpc_v0.TCodec{}
 	eventSubscriptions := event.NewEventSubscriptions(core.pipe.Events())
 	// The services.
-	tmwss := rpc_v0.NewErisDbWsService(codec, core.pipe)
-	tmjs := rpc_v0.NewErisDbJsonService(codec, core.pipe, eventSubscriptions)
+	tmwss := rpc_v0.NewBurrowWsService(codec, core.pipe)
+	tmjs := rpc_v0.NewBurrowJsonService(codec, core.pipe, eventSubscriptions)
 	// The servers.
 	jsonServer := rpc_v0.NewJsonRpcServer(tmjs)
 	restServer := rpc_v0.NewRestServer(codec, core.pipe, eventSubscriptions)
