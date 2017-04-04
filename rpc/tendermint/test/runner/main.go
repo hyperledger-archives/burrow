@@ -20,8 +20,8 @@ package main
 import (
 	"fmt"
 
-	rpctest "github.com/eris-ltd/eris-db/rpc/tendermint/test"
-	"github.com/eris-ltd/eris-db/util"
+	rpctest "github.com/monax/eris-db/rpc/tendermint/test"
+	"github.com/monax/eris-db/util"
 )
 
 func main() {

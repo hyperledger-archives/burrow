@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
+	sm "github.com/monax/eris-db/manager/eris-mint/state"
 
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	event "github.com/eris-ltd/eris-db/event"
+	core_types "github.com/monax/eris-db/core/types"
+	event "github.com/monax/eris-db/event"
 )
 
 // NameReg is part of the pipe for ErisMint and provides the implementation

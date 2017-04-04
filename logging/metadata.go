@@ -17,10 +17,10 @@ package logging
 import (
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
+	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging/structure"
 )
 
 const (

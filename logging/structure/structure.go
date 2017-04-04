@@ -17,7 +17,7 @@ package structure
 import (
 	"reflect"
 
-	. "github.com/eris-ltd/eris-db/util/slice"
+	. "github.com/monax/eris-db/util/slice"
 )
 
 const (

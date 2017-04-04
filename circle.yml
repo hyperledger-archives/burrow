@@ -7,7 +7,7 @@ machine:
     ERIS_CLI_BRANCH: develop
     GO15VENDOREXPERIMENT: 1
   post:
-    - git config --global user.email "billings@erisindustries.com"
+    - git config --global user.email "billings@monax.io"
     - git config --global user.name "Billings the Bot"
     - rm -rf ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
     - mkdir -p ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
@@ -18,7 +18,7 @@ dependencies:
     - sudo curl -L -o /usr/bin/docker http://s3-external-1.amazonaws.com/circle-downloads/docker-$DOCKER_VERSION-circleci; sudo chmod 0775 /usr/bin/docker; sudo usermod -a -G docker $USER; true
     - sudo service docker start
     # - sudo curl -sSL -o /usr/local/bin/docker-machine https://github.com/docker/machine/releases/download/v$DOCKER_MACHINE_VERSION/docker-machine-linux-x86_64; sudo chmod 0755 /usr/local/bin/docker-machine
-    # - "go get github.com/eris-ltd/eris-cli/cmd/eris; cd ${GOPATH%%:*}/src/github.com/eris-ltd/eris-cli && git checkout origin/$ERIS_CLI_BRANCH && go install ./cmd/eris"
+    # - "go get github.com/monax/eris/cmd/eris; cd ${GOPATH%%:*}/src/github.com/monax/eris && git checkout origin/$ERIS_CLI_BRANCH && go install ./cmd/eris"
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
     # jq and curl is a dependency for the integration framework
     - sudo apt-get install jq curl && go get github.com/Masterminds/glide
@@ -44,8 +44,6 @@ deployment:
       # build docker image and tag the image with the version
       - tests/build_tool.sh
       - docker push quay.io/eris/db
-      # push the updated documentation
-      - docs/build.sh
   release-0.16:
     branch: release-0.16
     commands:
@@ -53,8 +51,6 @@ deployment:
       # build docker image and tag the image with the version
       - tests/build_tool.sh
       - docker push quay.io/eris/db
-      # push the updated documentation
-      - docs/build.sh
   develop:
     branch: develop
     commands:
@@ -71,8 +67,6 @@ deployment:
       # tag to allow for hotfixes
       - tests/build_tool.sh latest
       - docker push quay.io/eris/db
-      # push the updated documentation and replace latest
-      - docs/build.sh latest
   tagged-releases:
     tag: /v[0-9]+(\.[0-9]+)*/
     commands:
@@ -82,8 +76,3 @@ deployment:
       # considered immutable.
       - tests/build_tool.sh
       - docker push quay.io/eris/db
-      # push the updated documentation
-      - docs/build.sh
-
-
-

@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"sort"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/common/sanity"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	. "github.com/eris-ltd/eris-db/word256"
+	acm "github.com/monax/eris-db/account"
+	"github.com/monax/eris-db/common/sanity"
+	core_types "github.com/monax/eris-db/core/types"
+	. "github.com/monax/eris-db/word256"
 
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-merkle"

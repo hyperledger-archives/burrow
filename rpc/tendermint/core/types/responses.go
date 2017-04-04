@@ -15,13 +15,13 @@
 package types
 
 import (
-	acm "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	genesis "github.com/eris-ltd/eris-db/genesis"
-	"github.com/eris-ltd/eris-db/txs"
+	acm "github.com/monax/eris-db/account"
+	core_types "github.com/monax/eris-db/core/types"
+	genesis "github.com/monax/eris-db/genesis"
+	"github.com/monax/eris-db/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
+	consensus_types "github.com/monax/eris-db/consensus/types"
 	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

@@ -27,16 +27,16 @@ import (
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	edb_event "github.com/eris-ltd/eris-db/event"
+	edb_event "github.com/monax/eris-db/event"
 
-	config "github.com/eris-ltd/eris-db/config"
-	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	// files  "github.com/eris-ltd/eris-db/files"
-	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/txs"
+	config "github.com/monax/eris-db/config"
+	manager_types "github.com/monax/eris-db/manager/types"
+	// files  "github.com/monax/eris-db/files"
+	blockchain_types "github.com/monax/eris-db/blockchain/types"
+	consensus_types "github.com/monax/eris-db/consensus/types"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/eris-db/txs"
 	"github.com/tendermint/go-wire"
 )
 

@@ -20,11 +20,11 @@ import (
 
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/adapters/stdlib"
-	tmLog15adapter "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/adapters/stdlib"
+	tmLog15adapter "github.com/monax/eris-db/logging/adapters/tendermint_log15"
+	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/eris-db/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/streadway/simpleuuid"

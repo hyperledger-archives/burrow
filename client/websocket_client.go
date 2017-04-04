@@ -22,10 +22,10 @@ import (
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
+	ctypes "github.com/monax/eris-db/rpc/tendermint/core/types"
+	"github.com/monax/eris-db/txs"
 )
 
 const (
@@ -121,12 +121,17 @@ func (erisNodeWebsocketClient *erisNodeWebsocketClient) WaitForConfirmation(tx t
 				continue
 			}
 
+			// NOTE: [ben] hotfix on 0.16.1 because NewBlock events to arrive seemingly late
+			// we now miss events because of this redundant check;  This check is safely removed
+			// because for CallTx on checking the transaction is not run in the EVM and no false
+			// positive event can be sent; neither is this check a good check for that.
+
 			// we don't accept events unless they came after a new block (ie. in)
-			if latestBlockHash == nil {
-				logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
-					"event", event.Event)
-				continue
-			}
+			// if latestBlockHash == nil {
+			// 	logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
+			// 		"event", event.Event)
+			// 	continue
+			// }
 
 			if event.Event != eid {
 				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received unsolicited event",

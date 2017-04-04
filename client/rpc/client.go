@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strconv"
 
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	ptypes "github.com/monax/eris-db/permission/types"
 
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/keys"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/eris-db/client"
+	"github.com/monax/eris-db/keys"
+	"github.com/monax/eris-db/txs"
 )
 
 //------------------------------------------------------------------------------------

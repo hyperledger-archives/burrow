@@ -17,8 +17,8 @@ package shared
 // Shared extension methods for Pipe and its derivatives
 
 import (
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/definitions"
+	core_types "github.com/monax/eris-db/core/types"
+	"github.com/monax/eris-db/definitions"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
 
