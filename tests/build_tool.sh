@@ -23,7 +23,7 @@ IMAGE=quay.io/eris/db
 
 set -e
 
-if [ "$JENKINS_URL" ] || [ "$CIRCLE_BRANCH" ]
+if [ "$JENKINS_URL" ] || [ "$CIRCLE_BRANCH" ] || [ "$CIRCLE_TAG" ]
 then
   REPO=`pwd`
   CI="true"
