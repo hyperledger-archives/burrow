@@ -1755,7 +1755,7 @@ Parameters:
 #####Additional info
 
 `code` is a hex-string representation of compiled contract code.
-`data` is a string of data formatted in accordance with the [contract ABI](https://github.com/monax/eris-contracts.js).
+`data` is a string of data formatted in accordance with the [contract ABI](https://github.com/monax/legacy-contracts.js)
 
 ***
 

@@ -1,7 +1,7 @@
 # burrow changelog
 ## v0.16.0
 This is a consolidation release that fixes various bugs and improves elements
-of the architecture across the Burrow Platform to support a quicker release
+of the architecture across the Monax Platform to support a quicker release
 cadence.
 
 #### Features and improvements (among others)
@@ -13,7 +13,7 @@ cadence.
 - [pull-499](https://github.com/monax/burrow/pull/499) introduce word256 and remove dependency on tendermint/go-common
 - [pull-493](https://github.com/monax/burrow/pull/493) re-introduce GenesisTime in GenesisDoc
 
-- Logging system overhauled based on the central logging interface of go-kit log. Configuration lacking in this release but should be in 0.16.1. Allows powerful routing, filtering, and output options for better operations and increasing the observability of an burrow blockchain. More to follow.
+- Logging system overhauled based on the central logging interface of go-kit log. Configuration lacking in this release but should be in 0.16.1. Allows powerful routing, filtering, and output options for better operations and increasing the observability of a burrow blockchain. More to follow.
 - Genesis making is improved and moved into burrow.
 - Config templating is moved into burrow for better synchronisation of server config between the consumer of it (burrow) and the producers of it (cli and other tools).
 - Some documentation updates in code and in specs.
@@ -30,7 +30,7 @@ cadence.
 
 ## v0.12.0
 This release marks the start of burrow as the full permissioned blockchain node
- of the Burrow Platform with the Tendermint permissioned consensus engine.
+ of the Monax Platform with the Tendermint permissioned consensus engine.
  This involved significant refactoring of almost all parts of the code,
  but provides a solid foundation to build the next generation of advanced
  permissioned smart contract blockchains.

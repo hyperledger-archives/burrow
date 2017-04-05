@@ -2,9 +2,9 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the build script for the eris stack. It will
+# This is the build script for the Monax stack. It will
 # build the tool into docker containers in a reliable and
-# predicatable manner.
+# predictable manner.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
@@ -19,7 +19,7 @@
 # ----------------------------------------------------------
 
 TARGET=burrow
-IMAGE=quay.io/eris/db
+IMAGE=quay.io/monax/db
 
 set -e
 

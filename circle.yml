@@ -19,7 +19,7 @@ dependencies:
     - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
     - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
-test:
+test
   pre:
     - cd $REPO && glide install
     # Test the build target for burrow
@@ -39,21 +39,21 @@ deployment:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   release-0.16:
     branch: release-0.16
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   develop:
     branch: develop
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   master:
     branch: master
     commands:
@@ -62,7 +62,7 @@ deployment:
       # builds on master are considered immutable so we do not push the version
       # tag to allow for hotfixes
       - tests/build_tool.sh latest
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   tagged-releases:
     tag: /v[0-9]+(\.[0-9]+)*/
     commands:
@@ -71,4 +71,4 @@ deployment:
       # once the commit is tagged the docker image for this version tag is
       # considered immutable.
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db

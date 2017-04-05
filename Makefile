@@ -14,7 +14,7 @@ VERSION := $(shell cat ${REPO}/version/version.go | tail -n 1 | cut -d \  -f 4 |
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
 
-DOCKER_NAMESPACE := quay.io/eris
+DOCKER_NAMESPACE := quay.io/monax
 
 
 .PHONY: greet
@@ -82,7 +82,7 @@ snatives:
 
 # build all targets in github.com/monax/burrow
 .PHONY: build
-build:	check build_db build_client build_keys
+build:	check build_db build_client
 
 # build all targets in github.com/monax/burrow with checks for race conditions
 .PHONY: build_race

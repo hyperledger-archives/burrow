@@ -44,8 +44,8 @@ var DefaultConfigFilename = fmt.Sprintf("%s.%s",
 func buildServeCommand(do *definitions.Do) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "serve",
-		Short: "burrow serve starts an burrow node with client API enabled by default.",
-		Long: `burrow serve starts an burrow node with client API enabled by default.
+		Short: "burrow serve starts a burrow node with client API enabled by default.",
+		Long: `burrow serve starts a burrow node with client API enabled by default.
 The burrow node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
 		Example: fmt.Sprintf(`$ burrow serve -- will start the burrow node based on the configuration file "%s" in the current working directory
