@@ -20,18 +20,18 @@ import (
 
 	"time"
 
-	"github.com/monax/eris-db/logging"
-	"github.com/monax/eris-db/logging/adapters/stdlib"
-	tmLog15adapter "github.com/monax/eris-db/logging/adapters/tendermint_log15"
-	"github.com/monax/eris-db/logging/loggers"
-	"github.com/monax/eris-db/logging/structure"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/adapters/stdlib"
+	tmLog15adapter "github.com/monax/burrow/logging/adapters/tendermint_log15"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
 )
 
-// Lifecycle provides a canonical source for eris loggers. Components should use the functions here
+// Lifecycle provides a canonical source for burrow loggers. Components should use the functions here
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
@@ -45,12 +45,12 @@ func NewStdErrLogger() loggers.InfoTraceLogger {
 	return NewLogger(logger, logger)
 }
 
-// Provided a standard eris logger that outputs to the supplied underlying info and trace
+// Provided a standard burrow logger that outputs to the supplied underlying info and trace
 // loggers
 func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 	infoTraceLogger := loggers.NewInfoTraceLogger(
-		loggers.ErisFormatLogger(infoLogger),
-		loggers.ErisFormatLogger(traceLogger))
+		loggers.MonaxFormatLogger(infoLogger),
+		loggers.MonaxFormatLogger(traceLogger))
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string

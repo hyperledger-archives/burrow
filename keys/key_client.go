@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/monax/eris-db/logging"
-	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/loggers"
 )
 
 type KeyClient interface {
@@ -30,33 +30,33 @@ type KeyClient interface {
 	PublicKey(address []byte) (publicKey []byte, err error)
 }
 
-// NOTE [ben] Compiler check to ensure erisKeyClient successfully implements
-// eris-db/keys.KeyClient
-var _ KeyClient = (*erisKeyClient)(nil)
+// NOTE [ben] Compiler check to ensure monaxKeyClient successfully implements
+// burrow/keys.KeyClient
+var _ KeyClient = (*monaxKeyClient)(nil)
 
-type erisKeyClient struct {
+type monaxKeyClient struct {
 	rpcString string
 	logger    loggers.InfoTraceLogger
 }
 
-// erisKeyClient.New returns a new eris-keys client for provided rpc location
-// Eris-keys connects over http request-responses
-func NewErisKeyClient(rpcString string, logger loggers.InfoTraceLogger) *erisKeyClient {
-	return &erisKeyClient{
+// monaxKeyClient.New returns a new monax-keys client for provided rpc location
+// Monax-keys connects over http request-responses
+func NewBurrowKeyClient(rpcString string, logger loggers.InfoTraceLogger) *monaxKeyClient {
+	return &monaxKeyClient{
 		rpcString: rpcString,
-		logger:    logging.WithScope(logger, "ErisKeysClient"),
+		logger:    logging.WithScope(logger, "BurrowKeyClient"),
 	}
 }
 
-// Eris-keys client Sign requests the signature from ErisKeysClient over rpc for the given
+// Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (erisKeys *erisKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
+func (monaxKeys *monaxKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
 	args := map[string]string{
 		"msg":  signBytesString,
 		"hash": signBytesString, // TODO:[ben] backwards compatibility
 		"addr": fmt.Sprintf("%X", signAddress),
 	}
-	sigS, err := RequestResponse(erisKeys.rpcString, "sign", args, erisKeys.logger)
+	sigS, err := RequestResponse(monaxKeys.rpcString, "sign", args, monaxKeys.logger)
 	if err != nil {
 		return
 	}
@@ -67,13 +67,13 @@ func (erisKeys *erisKeyClient) Sign(signBytesString string, signAddress []byte) 
 	return sigBytes, err
 }
 
-// Eris-keys client PublicKey requests the public key associated with an address from
-// the eris-keys server.
-func (erisKeys *erisKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
+// Monax-keys client PublicKey requests the public key associated with an address from
+// the monax-keys server.
+func (monaxKeys *monaxKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
 	args := map[string]string{
 		"addr": fmt.Sprintf("%X", address),
 	}
-	pubS, err := RequestResponse(erisKeys.rpcString, "pub", args, erisKeys.logger)
+	pubS, err := RequestResponse(monaxKeys.rpcString, "pub", args, monaxKeys.logger)
 	if err != nil {
 		return
 	}

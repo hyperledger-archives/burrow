@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/viper"
 	tendermintConfig "github.com/tendermint/go-config"
 
-	"github.com/monax/eris-db/config"
+	"github.com/monax/burrow/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements
@@ -31,9 +31,9 @@ var _ tendermintConfig.Config = (*TendermintConfig)(nil)
 // Tendermint has a self-rolled configuration type defined
 // in tendermint/go-config but over an interface type, which is implemented
 // by default in tendermint/tendermint/config/tendermint.go
-// However, for Eris-DB purposes we can choose different rules for how to load
+// However, for burrow purposes we can choose different rules for how to load
 // the tendermint configuration and set the defaults.  Hence we re-implement
-// go-config.Config on a viper subtree of the loaded Eris-DB configuration file.
+// go-config.Config on a viper subtree of the loaded burrow configuration file.
 type TendermintConfig struct {
 	subTree *viper.Viper
 }

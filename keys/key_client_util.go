@@ -21,11 +21,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/monax/eris-db/logging"
-	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/loggers"
 )
 
-// Eris-Keys server connects over http request-response structures
+// Monax-Keys server connects over http request-response structures
 
 type HTTPResponse struct {
 	Response string
@@ -49,10 +49,10 @@ func RequestResponse(addr, method string, args map[string]string, logger loggers
 	req.Header.Add("Content-Type", "application/json")
 	res, errS, err := requestResponse(req)
 	if err != nil {
-		return "", fmt.Errorf("Error calling eris-keys at %s: %s", endpoint, err.Error())
+		return "", fmt.Errorf("Error calling monax-keys at %s: %s", endpoint, err.Error())
 	}
 	if errS != "" {
-		return "", fmt.Errorf("Error (string) calling eris-keys at %s: %s", endpoint, errS)
+		return "", fmt.Errorf("Error (string) calling monax-keys at %s: %s", endpoint, errS)
 	}
 	logging.TraceMsg(logger, "Received response from key server",
 		"endpoint", endpoint,

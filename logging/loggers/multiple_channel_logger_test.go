@@ -20,7 +20,7 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/eris-db/logging/structure"
+	"github.com/monax/burrow/logging/structure"
 	"github.com/stretchr/testify/assert"
 )
 

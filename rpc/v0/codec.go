@@ -20,7 +20,7 @@ import (
 
 	wire "github.com/tendermint/go-wire"
 
-	rpc "github.com/monax/eris-db/rpc"
+	rpc "github.com/monax/burrow/rpc"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.

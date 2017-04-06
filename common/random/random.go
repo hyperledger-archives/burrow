@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/monax/eris-db/common/sanity"
+	"github.com/monax/burrow/common/sanity"
 )
 
 const (

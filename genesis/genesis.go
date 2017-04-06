@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"time"
 
-	ptypes "github.com/monax/eris-db/permission/types"
+	ptypes "github.com/monax/burrow/permission/types"
 	wire "github.com/tendermint/go-wire"
 )
 

@@ -15,15 +15,15 @@
 package definitions
 
 import (
-	"github.com/monax/eris-db/account"
-	rpc_tm_types "github.com/monax/eris-db/rpc/tendermint/core/types"
-	"github.com/monax/eris-db/txs"
+	"github.com/monax/burrow/account"
+	rpc_tm_types "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 )
 
 // NOTE: [ben] TendermintPipe is the additional pipe to carry over
-// the RPC exposed by old Tendermint on port `46657` (eris-db-0.11.4 and before)
+// the RPC exposed by old Tendermint on port `46657` (burrow-0.11.4 and before)
 // This TendermintPipe interface should be deprecated and work towards a generic
-// collection of RPC routes for Eris-DB-1.0.0
+// collection of RPC routes for burrow-1.0.0
 
 type TendermintPipe interface {
 	Pipe
@@ -32,7 +32,7 @@ type TendermintPipe interface {
 	// the event named event. The Event result is written to rpcResponseWriter
 	// which must be non-blocking
 	Subscribe(event string,
-		rpcResponseWriter func(result rpc_tm_types.ErisDBResult)) (*rpc_tm_types.ResultSubscribe, error)
+		rpcResponseWriter func(result rpc_tm_types.BurrowResult)) (*rpc_tm_types.ResultSubscribe, error)
 	Unsubscribe(subscriptionId string) (*rpc_tm_types.ResultUnsubscribe, error)
 
 	// Net

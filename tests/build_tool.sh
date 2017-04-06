@@ -2,9 +2,9 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the build script for the eris stack. It will
+# This is the build script for the Monax stack. It will
 # build the tool into docker containers in a reliable and
-# predicatable manner.
+# predictable manner.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
@@ -18,8 +18,8 @@
 
 # ----------------------------------------------------------
 
-TARGET=eris-db
-IMAGE=quay.io/eris/db
+TARGET=burrow
+IMAGE=quay.io/monax/db
 
 set -e
 
@@ -37,8 +37,8 @@ release_maj=$(echo $release_min | cut -d . -f 1-2)
 # Build
 mkdir -p $REPO/target/docker
 docker build -t $IMAGE:build $REPO
-docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/target/docker/eris-db.dockerartefact
-docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/eris-client > $REPO/target/docker/eris-client.dockerartefact
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/$TARGET > $REPO/target/docker/burrow.dockerartefact
+docker run --rm --entrypoint cat $IMAGE:build /usr/local/bin/burrow-client > $REPO/target/docker/burrow-client.dockerartefact
 docker build -t $IMAGE:$release_min -f Dockerfile.deploy $REPO
 
 # If provided, tag the image with the label provided
@@ -49,6 +49,6 @@ then
 fi
 
 # Cleanup
-rm $REPO/target/docker/eris-db.dockerartefact
-rm $REPO/target/docker/eris-client.dockerartefact
+rm $REPO/target/docker/burrow.dockerartefact
+rm $REPO/target/docker/burrow-client.dockerartefact
 docker rmi -f $IMAGE:build

@@ -14,7 +14,7 @@
 
 package version
 
-// version provides the current Eris-DB version and a VersionIdentifier
+// version provides the current burrow version and a VersionIdentifier
 // for the modules to identify their version with.
 
 import (
@@ -26,24 +26,23 @@ import (
 // the version number.
 const (
 	// Client identifier to advertise over the network
-	erisClientIdentifier = "eris-db"
+	clientIdentifier = "burrow"
 	// Major version component of the current release
-	erisVersionMajor = 0
+	versionMajor = 0
 	// Minor version component of the current release
-	erisVersionMinor = 16
+	versionMinor = 16
 	// Patch version component of the current release
-	erisVersionPatch = 2
+	versionPatch = 2
 )
 
-var erisVersion *VersionIdentifier
+var version *VersionIdentifier
 
 func init() {
-	erisVersion = New(erisClientIdentifier, erisVersionMajor,
-		erisVersionMinor, erisVersionPatch)
+	version = New(clientIdentifier, versionMajor, versionMinor, versionPatch)
 }
 
 //------------------------------------------------------------------------------
-// versioning globally for Eris-DB and scoped for modules
+// versioning globally for burrow and scoped for modules
 
 type VersionIdentifier struct {
 	clientIdentifier string
@@ -61,10 +60,10 @@ func New(client string, major, minor, patch uint8) *VersionIdentifier {
 	return v
 }
 
-// GetVersionString returns `client-major.minor.patch` for Eris-DB
+// GetVersionString returns `client-major.minor.patch` for burrow
 // without a receiver, or for the version called on.
 // MakeVersionString builds the same version string with provided parameters.
-func GetVersionString() string { return erisVersion.GetVersionString() }
+func GetVersionString() string { return version.GetVersionString() }
 func (v *VersionIdentifier) GetVersionString() string {
 	return fmt.Sprintf("%s-%d.%d.%d", v.clientIdentifier, v.versionMajor,
 		v.versionMinor, v.versionPatch)
@@ -79,11 +78,11 @@ func MakeVersionString(client string, major, minor, patch int) string {
 	return fmt.Sprintf("%s-%d.%d.%d", client, major, minor, patch)
 }
 
-// GetMinorVersionString returns `client-major.minor` for Eris-DB
+// GetMinorVersionString returns `client-major.minor` for burrow
 // without a receiver, or for the version called on.
 // MakeMinorVersionString builds the same version string with
 // provided parameters.
-func GetMinorVersionString() string { return erisVersion.GetVersionString() }
+func GetMinorVersionString() string { return version.GetVersionString() }
 func (v *VersionIdentifier) GetMinorVersionString() string {
 	return fmt.Sprintf("%s-%d.%d", v.clientIdentifier, v.versionMajor,
 		v.versionMinor)
@@ -96,9 +95,9 @@ func MakeMinorVersionString(client string, major, minor, patch int) string {
 }
 
 // GetVersion returns a tuple of client, major, minor, and patch as types,
-// either for Eris-DB without a receiver or the called version structure.
+// either for burrow without a receiver or the called version structure.
 func GetVersion() (client string, major, minor, patch uint8) {
-	return erisVersion.GetVersion()
+	return version.GetVersion()
 }
 func (version *VersionIdentifier) GetVersion() (
 	client string, major, minor, patch uint8) {
@@ -112,7 +111,7 @@ func (version *VersionIdentifier) GetVersion() (
 // MatchesMinorVersion matches the client identifier, major and minor version
 // number of the reference version identifier to be equal with the receivers.
 func MatchesMinorVersion(referenceVersion *VersionIdentifier) bool {
-	return erisVersion.MatchesMinorVersion(referenceVersion)
+	return version.MatchesMinorVersion(referenceVersion)
 }
 func (version *VersionIdentifier) MatchesMinorVersion(
 	referenceVersion *VersionIdentifier) bool {
@@ -125,6 +124,6 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 //------------------------------------------------------------------------------
 // Version number for tests/build_tool.sh
 
-// IMPORTANT: Eris-DB version must be on the last line of this file for
+// IMPORTANT: burrow version must be on the last line of this file for
 // the deployment script tests/build_tool.sh to pick up the right label.
 const VERSION = "0.16.2"

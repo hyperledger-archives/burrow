@@ -9,15 +9,15 @@ set -e
 CHAIN_NAME=$(echo $CHAIN_NAME | tr -d '\n')
 CHAIN_NODE_NUMBER=$(echo $CHAIN_NODE_NUMBER | tr -d '\n')
 CHAIN_SEEDS=$(echo $CHAIN_SEEDS | tr -d '\n')
-ERIS=${ERIS:-$HOME/.eris}
-ERIS=$(echo $ERIS | tr -d '\n')
+MONAX_PATH=${MONAX_PATH:-$HOME/.monax}
+MONAX_PATH=$(echo $MONAX_PATH | tr -d '\n')
 KEY_ADDRESS=$(echo $KEY_ADDRESS | tr -d '\n')
 KEY_PUBLIC=$(echo $KEY_PUBLIC | tr -d '\n')
 KEY_PRIVATE=$(echo $KEY_PRIVATE | tr -d '\n')
 ORG_NAME=$(echo $ORG_NAME | tr -d '\n')
 
 # Normal var setting
-CHAIN_DIR=$ERIS/chains/$CHAIN_NAME
+CHAIN_DIR=$MONAX_PATH/chains/$CHAIN_NAME
 CHAIN_ID=${CHAIN_ID:-$CHAIN_NAME}
 CHAIN_API_PORT=${CHAIN_API_PORT:-1337}
 CHAIN_PEER_PORT=${CHAIN_PEER_PORT:-46656}
@@ -73,10 +73,10 @@ genesis_file = "genesis.json"
   minor_version = 6
   relative_root = "tendermint"
   [chain.manager]
-  name = "erismint"
+  name = "burrowmint"
   major_version = 0
   minor_version = 12
-  relative_root = "erismint"
+  relative_root = "burrowmint"
 [servers]
   [servers.bind]
   address = ""
@@ -128,7 +128,7 @@ private_validator_file = "priv_validator.json"
     fuzz_prob_drop_rw = 0.2
     fuzz_prob_drop_conn = 0.00
     fuzz_prob_sleep = 0.00
-[erismint]
+[burrowmint]
 db_backend = "leveldb"
 tendermint_host = "0.0.0.0:$CHAIN_RPC_PORT"
 EOF
@@ -177,8 +177,8 @@ main() {
   echo "Writing genesis file."
   write_genesis_file
 
-  sleep 2 # hack to let the cluster provision echo "Starting eris-db"
-  eris-db serve
+  sleep 2 # hack to let the cluster provision echo "Starting burrow"
+  burrow serve
 }
 
 main $@

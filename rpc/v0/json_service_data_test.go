@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/monax/eris-db/rpc"
-	"github.com/monax/eris-db/txs"
+	"github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/txs"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +28,7 @@ var testBroadcastCallTxJsonRequest = []byte(`
 {
   "id": "57EC1D39-7B3D-4F96-B286-8FC128177AFC4",
   "jsonrpc": "2.0",
-  "method": "erisdb.broadcastTx",
+  "method": "burrow.broadcastTx",
   "params": [
     2,
     {

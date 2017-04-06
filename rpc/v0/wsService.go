@@ -18,25 +18,25 @@ import (
 	"encoding/json"
 	"fmt"
 
-	definitions "github.com/monax/eris-db/definitions"
-	"github.com/monax/eris-db/event"
-	rpc "github.com/monax/eris-db/rpc"
-	server "github.com/monax/eris-db/server"
-	"github.com/monax/eris-db/txs"
+	definitions "github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/event"
+	rpc "github.com/monax/burrow/rpc"
+	server "github.com/monax/burrow/server"
+	"github.com/monax/burrow/txs"
 )
 
-// Used for ErisDb. Implements WebSocketService.
-type ErisDbWsService struct {
+// Used for Burrow. Implements WebSocketService.
+type BurrowWsService struct {
 	codec           rpc.Codec
 	pipe            definitions.Pipe
 	defaultHandlers map[string]RequestHandlerFunc
 }
 
 // Create a new websocket service.
-func NewErisDbWsService(codec rpc.Codec,
+func NewBurrowWsService(codec rpc.Codec,
 	pipe definitions.Pipe) server.WebSocketService {
-	tmwss := &ErisDbWsService{codec: codec, pipe: pipe}
-	mtds := NewErisDbMethods(codec, pipe)
+	tmwss := &BurrowWsService{codec: codec, pipe: pipe}
+	mtds := NewBurrowMethods(codec, pipe)
 
 	dhMap := mtds.getMethods()
 	// Events
@@ -47,7 +47,7 @@ func NewErisDbWsService(codec rpc.Codec,
 }
 
 // Process a request.
-func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
+func (this *BurrowWsService) Process(msg []byte, session *server.WSSession) {
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
@@ -79,7 +79,7 @@ func (this *ErisDbWsService) Process(msg []byte, session *server.WSSession) {
 }
 
 // Convenience method for writing error responses.
-func (this *ErisDbWsService) writeError(msg, id string, code int,
+func (this *BurrowWsService) writeError(msg, id string, code int,
 	session *server.WSSession) {
 	response := rpc.NewRPCErrorResponse(id, code, msg)
 	bts, err := this.codec.EncodeBytes(response)
@@ -91,7 +91,7 @@ func (this *ErisDbWsService) writeError(msg, id string, code int,
 }
 
 // Convenience method for writing responses.
-func (this *ErisDbWsService) writeResponse(id string, result interface{},
+func (this *BurrowWsService) writeResponse(id string, result interface{},
 	session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
 	bts, err := this.codec.EncodeBytes(response)
@@ -104,7 +104,7 @@ func (this *ErisDbWsService) writeResponse(id string, result interface{},
 
 // *************************************** Events ************************************
 
-func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest,
+func (this *BurrowWsService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	session, ok := requester.(*server.WSSession)
 	if !ok {
@@ -132,7 +132,7 @@ func (this *ErisDbWsService) EventSubscribe(request *rpc.RPCRequest,
 	return &event.EventSub{subId}, 0, nil
 }
 
-func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *BurrowWsService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
@@ -147,6 +147,6 @@ func (this *ErisDbWsService) EventUnsubscribe(request *rpc.RPCRequest, requester
 	return &event.EventUnsub{true}, 0, nil
 }
 
-func (this *ErisDbWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *BurrowWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	return nil, rpc.INTERNAL_ERROR, fmt.Errorf("Cannot poll with websockets")
 }

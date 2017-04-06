@@ -15,12 +15,12 @@
 package shared
 
 import (
-	consensus_types "github.com/monax/eris-db/consensus/types"
-	"github.com/monax/eris-db/definitions"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	"github.com/monax/burrow/definitions"
 )
 
-// Net is part of the pipe for ErisMint and provides the implementation
-// for the pipe to call into the ErisMint application
+// Net is part of the pipe for BurrowMint and provides the implementation
+// for the pipe to call into the BurrowMint application
 
 //-----------------------------------------------------------------------------
 

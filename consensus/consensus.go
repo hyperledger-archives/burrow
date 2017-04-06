@@ -17,9 +17,9 @@ package consensus
 import (
 	"fmt"
 
-	config "github.com/monax/eris-db/config"
-	tendermint "github.com/monax/eris-db/consensus/tendermint"
-	definitions "github.com/monax/eris-db/definitions"
+	config "github.com/monax/burrow/config"
+	tendermint "github.com/monax/burrow/consensus/tendermint"
+	definitions "github.com/monax/burrow/definitions"
 )
 
 func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
