@@ -16,10 +16,10 @@ dependencies:
   override:
     - sudo curl -L -o /usr/bin/docker http://s3-external-1.amazonaws.com/circle-downloads/docker-$DOCKER_VERSION-circleci; sudo chmod 0775 /usr/bin/docker; sudo usermod -a -G docker $USER; true
     - sudo service docker start
-    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
+    - sudo apt-get update && sudo apt-get install -y libgmp3-dev
     - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
-test
+test:
   pre:
     - cd $REPO && glide install
     # Test the build target for burrow
@@ -30,7 +30,6 @@ test
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..." && cd $REPO && glide novendor | xargs go test -tags integration
     # - echo "Running integration tests..." && cd $REPO && "tests/circle_test.sh" # | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
-
 
 deployment:
   release-0.12:
