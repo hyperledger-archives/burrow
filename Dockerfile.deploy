@@ -1,4 +1,4 @@
-FROM quay.io/monax/base
+FROM quay.io/monax/base:0.16
 MAINTAINER Monax <support@monax.io>
 
 ENV TARGET burrow
