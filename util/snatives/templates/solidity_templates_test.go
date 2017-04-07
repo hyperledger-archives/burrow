@@ -16,7 +16,7 @@ package templates
 
 import (
 	"fmt"
-	"github.com/monax/eris-db/manager/eris-mint/evm"
+	"github.com/monax/burrow/manager/burrow-mint/evm"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

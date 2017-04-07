@@ -28,7 +28,7 @@ var defaultConfig = `# Copyright 2017 Monax Industries Limited
 # See the License for the specific language governing permissions and
 # limitations under the License..
 
-# This is a TOML configuration for Eris-DB chains
+# This is a TOML configuration for burrow chains
 
 [chain]
 
@@ -39,7 +39,7 @@ assert_chain_id = "MyChainId"
 # semantic major and minor version
 major_version = 0
 minor_version = 17
-# genesis file, relative path is to eris-db working directory
+# genesis file, relative path is to burrow working directory
 genesis_file = "genesis.json"
 
 
@@ -69,13 +69,13 @@ genesis_file = "genesis.json"
 
   [chain.manager]
   # application manager name defines the module to use for handling
-  name = "erismint"
+  name = "burrowmint"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
   minor_version = 17
   # relative path to application manager root folder
-  relative_root = "erismint"
+  relative_root = "burrowmint"
 
 ################################################################################
 ################################################################################
@@ -137,7 +137,7 @@ genesis_file = "genesis.json"
 ##
 ## Tendermint Socket Protocol (abci)
 ##
-## abci expects a tendermint consensus process to run and connect to Eris-DB
+## abci expects a tendermint consensus process to run and connect to burrow
 ##
 ################################################################################
 
@@ -157,14 +157,14 @@ listener = "tcp://0.0.0.0:46658"
 # private validator file is used by tendermint to keep the status
 # of the private validator, but also (currently) holds the private key
 # for the private vaildator to sign with.  This private key needs to be moved
-# out and directly managed by eris-keys
+# out and directly managed by monax-keys
 # This file needs to be in the root directory
 private_validator_file = "priv_validator.json"
 
   # Tendermint requires additional configuration parameters.
-  # Eris-DB's tendermint consensus module will load [tendermint.configuration]
+  # burrow's tendermint consensus module will load [tendermint.configuration]
   # as the configuration for Tendermint.
-  # Eris-DB will respect the configurations set in this file where applicable,
+  # burrow will respect the configurations set in this file where applicable,
   # but reserves the option to override or block conflicting settings.
   [tendermint.configuration]
   # moniker is the name of the node on the tendermint p2p network
@@ -216,7 +216,7 @@ private_validator_file = "priv_validator.json"
 
 ################################################################################
 ##
-## Eris-Mint
+## burrow-mint
 ## version 0.17.0
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
@@ -224,7 +224,7 @@ private_validator_file = "priv_validator.json"
 ##
 ################################################################################
 
-[erismint]
-# Database backend to use for ErisMint state database.
+[burrowmint]
+# Database backend to use for BurrowMint state database.
 db_backend = "leveldb"
 `

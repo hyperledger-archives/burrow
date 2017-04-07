@@ -15,18 +15,18 @@
 package v0
 
 import (
-	"github.com/monax/eris-db/blockchain"
-	core_types "github.com/monax/eris-db/core/types"
-	definitions "github.com/monax/eris-db/definitions"
-	"github.com/monax/eris-db/event"
-	"github.com/monax/eris-db/rpc"
-	"github.com/monax/eris-db/rpc/v0/shared"
-	"github.com/monax/eris-db/txs"
+	"github.com/monax/burrow/blockchain"
+	core_types "github.com/monax/burrow/core/types"
+	definitions "github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/event"
+	"github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/rpc/v0/shared"
+	"github.com/monax/burrow/txs"
 )
 
 // TODO use the method name definition file.
 const (
-	SERVICE_NAME = "erisdb"
+	SERVICE_NAME = "burrow"
 
 	GET_ACCOUNTS              = SERVICE_NAME + ".getAccounts" // Accounts
 	GET_ACCOUNT               = SERVICE_NAME + ".getAccount"
@@ -68,16 +68,16 @@ const (
 )
 
 // The rpc method handlers.
-type ErisDbMethods struct {
+type BurrowMethods struct {
 	codec         rpc.Codec
 	pipe          definitions.Pipe
 	filterFactory *event.FilterFactory
 }
 
-func NewErisDbMethods(codec rpc.Codec,
-	pipe definitions.Pipe) *ErisDbMethods {
+func NewBurrowMethods(codec rpc.Codec,
+	pipe definitions.Pipe) *BurrowMethods {
 
-	return &ErisDbMethods{
+	return &BurrowMethods{
 		codec:         codec,
 		pipe:          pipe,
 		filterFactory: blockchain.NewBlockchainFilterFactory(),
@@ -88,48 +88,48 @@ func NewErisDbMethods(codec rpc.Codec,
 type RequestHandlerFunc func(*rpc.RPCRequest, interface{}) (interface{}, int, error)
 
 // Private. Create a method name -> method handler map.
-func (erisDbMethods *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
+func (burrowMethods *BurrowMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap := make(map[string]RequestHandlerFunc)
 	// Accounts
-	dhMap[GET_ACCOUNTS] = erisDbMethods.Accounts
-	dhMap[GET_ACCOUNT] = erisDbMethods.Account
-	dhMap[GET_STORAGE] = erisDbMethods.AccountStorage
-	dhMap[GET_STORAGE_AT] = erisDbMethods.AccountStorageAt
-	dhMap[GEN_PRIV_ACCOUNT] = erisDbMethods.GenPrivAccount
-	dhMap[GEN_PRIV_ACCOUNT_FROM_KEY] = erisDbMethods.GenPrivAccountFromKey
+	dhMap[GET_ACCOUNTS] = burrowMethods.Accounts
+	dhMap[GET_ACCOUNT] = burrowMethods.Account
+	dhMap[GET_STORAGE] = burrowMethods.AccountStorage
+	dhMap[GET_STORAGE_AT] = burrowMethods.AccountStorageAt
+	dhMap[GEN_PRIV_ACCOUNT] = burrowMethods.GenPrivAccount
+	dhMap[GEN_PRIV_ACCOUNT_FROM_KEY] = burrowMethods.GenPrivAccountFromKey
 	// Blockchain
-	dhMap[GET_BLOCKCHAIN_INFO] = erisDbMethods.BlockchainInfo
-	dhMap[GET_GENESIS_HASH] = erisDbMethods.GenesisHash
-	dhMap[GET_LATEST_BLOCK_HEIGHT] = erisDbMethods.LatestBlockHeight
-	dhMap[GET_LATEST_BLOCK] = erisDbMethods.LatestBlock
-	dhMap[GET_BLOCKS] = erisDbMethods.Blocks
-	dhMap[GET_BLOCK] = erisDbMethods.Block
+	dhMap[GET_BLOCKCHAIN_INFO] = burrowMethods.BlockchainInfo
+	dhMap[GET_GENESIS_HASH] = burrowMethods.GenesisHash
+	dhMap[GET_LATEST_BLOCK_HEIGHT] = burrowMethods.LatestBlockHeight
+	dhMap[GET_LATEST_BLOCK] = burrowMethods.LatestBlock
+	dhMap[GET_BLOCKS] = burrowMethods.Blocks
+	dhMap[GET_BLOCK] = burrowMethods.Block
 	// Consensus
-	dhMap[GET_CONSENSUS_STATE] = erisDbMethods.ConsensusState
-	dhMap[GET_VALIDATORS] = erisDbMethods.Validators
+	dhMap[GET_CONSENSUS_STATE] = burrowMethods.ConsensusState
+	dhMap[GET_VALIDATORS] = burrowMethods.Validators
 	// Network
-	dhMap[GET_NETWORK_INFO] = erisDbMethods.NetworkInfo
-	dhMap[GET_CLIENT_VERSION] = erisDbMethods.ClientVersion
-	dhMap[GET_MONIKER] = erisDbMethods.Moniker
-	dhMap[GET_CHAIN_ID] = erisDbMethods.ChainId
-	dhMap[IS_LISTENING] = erisDbMethods.Listening
-	dhMap[GET_LISTENERS] = erisDbMethods.Listeners
-	dhMap[GET_PEERS] = erisDbMethods.Peers
-	dhMap[GET_PEER] = erisDbMethods.Peer
+	dhMap[GET_NETWORK_INFO] = burrowMethods.NetworkInfo
+	dhMap[GET_CLIENT_VERSION] = burrowMethods.ClientVersion
+	dhMap[GET_MONIKER] = burrowMethods.Moniker
+	dhMap[GET_CHAIN_ID] = burrowMethods.ChainId
+	dhMap[IS_LISTENING] = burrowMethods.Listening
+	dhMap[GET_LISTENERS] = burrowMethods.Listeners
+	dhMap[GET_PEERS] = burrowMethods.Peers
+	dhMap[GET_PEER] = burrowMethods.Peer
 	// Txs
-	dhMap[CALL] = erisDbMethods.Call
-	dhMap[CALL_CODE] = erisDbMethods.CallCode
-	dhMap[BROADCAST_TX] = erisDbMethods.BroadcastTx
-	dhMap[GET_UNCONFIRMED_TXS] = erisDbMethods.UnconfirmedTxs
-	dhMap[SIGN_TX] = erisDbMethods.SignTx
-	dhMap[TRANSACT] = erisDbMethods.Transact
-	dhMap[TRANSACT_AND_HOLD] = erisDbMethods.TransactAndHold
-	dhMap[SEND] = erisDbMethods.Send
-	dhMap[SEND_AND_HOLD] = erisDbMethods.SendAndHold
-	dhMap[TRANSACT_NAMEREG] = erisDbMethods.TransactNameReg
+	dhMap[CALL] = burrowMethods.Call
+	dhMap[CALL_CODE] = burrowMethods.CallCode
+	dhMap[BROADCAST_TX] = burrowMethods.BroadcastTx
+	dhMap[GET_UNCONFIRMED_TXS] = burrowMethods.UnconfirmedTxs
+	dhMap[SIGN_TX] = burrowMethods.SignTx
+	dhMap[TRANSACT] = burrowMethods.Transact
+	dhMap[TRANSACT_AND_HOLD] = burrowMethods.TransactAndHold
+	dhMap[SEND] = burrowMethods.Send
+	dhMap[SEND_AND_HOLD] = burrowMethods.SendAndHold
+	dhMap[TRANSACT_NAMEREG] = burrowMethods.TransactNameReg
 	// Namereg
-	dhMap[GET_NAMEREG_ENTRY] = erisDbMethods.NameRegEntry
-	dhMap[GET_NAMEREG_ENTRIES] = erisDbMethods.NameRegEntries
+	dhMap[GET_NAMEREG_ENTRY] = burrowMethods.NameRegEntry
+	dhMap[GET_NAMEREG_ENTRIES] = burrowMethods.NameRegEntries
 
 	return dhMap
 }
@@ -139,81 +139,81 @@ func (erisDbMethods *ErisDbMethods) getMethods() map[string]RequestHandlerFunc {
 
 // *************************************** Accounts ***************************************
 
-func (erisDbMethods *ErisDbMethods) GenPrivAccount(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	pac, errC := erisDbMethods.pipe.Accounts().GenPrivAccount()
+func (burrowMethods *BurrowMethods) GenPrivAccount(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	pac, errC := burrowMethods.pipe.Accounts().GenPrivAccount()
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return pac, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) GenPrivAccountFromKey(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) GenPrivAccountFromKey(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 
 	param := &PrivKeyParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 
 	privKey := param.PrivKey
-	pac, errC := erisDbMethods.pipe.Accounts().GenPrivAccountFromKey(privKey)
+	pac, errC := burrowMethods.pipe.Accounts().GenPrivAccountFromKey(privKey)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return pac, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Account(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Account(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AddressParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
 	// TODO is address check?
-	account, errC := erisDbMethods.pipe.Accounts().Account(address)
+	account, errC := burrowMethods.pipe.Accounts().Account(address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return account, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Accounts(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AccountsParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	list, errC := erisDbMethods.pipe.Accounts().Accounts(param.Filters)
+	list, errC := burrowMethods.pipe.Accounts().Accounts(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return list, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) AccountStorage(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) AccountStorage(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &AddressParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	storage, errC := erisDbMethods.pipe.Accounts().Storage(address)
+	storage, errC := burrowMethods.pipe.Accounts().Storage(address)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return storage, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) AccountStorageAt(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &StorageAtParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
 	key := param.Key
-	storageItem, errC := erisDbMethods.pipe.Accounts().StorageAt(address, key)
+	storageItem, errC := burrowMethods.pipe.Accounts().StorageAt(address, key)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -222,182 +222,183 @@ func (erisDbMethods *ErisDbMethods) AccountStorageAt(request *rpc.RPCRequest, re
 
 // *************************************** Blockchain ************************************
 
-func (erisDbMethods *ErisDbMethods) BlockchainInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return shared.BlockchainInfo(erisDbMethods.pipe), 0, nil
+func (burrowMethods *BurrowMethods) BlockchainInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	return shared.BlockchainInfo(burrowMethods.pipe), 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) ChainId(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	chainId := erisDbMethods.pipe.Blockchain().ChainId()
+func (burrowMethods *BurrowMethods) ChainId(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	chainId := burrowMethods.pipe.Blockchain().ChainId()
 	return &core_types.ChainId{chainId}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) GenesisHash(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	hash := erisDbMethods.pipe.GenesisHash()
+func (burrowMethods *BurrowMethods) GenesisHash(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	hash := burrowMethods.pipe.GenesisHash()
 	return &core_types.GenesisHash{hash}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) LatestBlockHeight(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	height := erisDbMethods.pipe.Blockchain().Height()
+func (burrowMethods *BurrowMethods) LatestBlockHeight(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	height := burrowMethods.pipe.Blockchain().Height()
 	return &core_types.LatestBlockHeight{height}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) LatestBlock(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	latestHeight := erisDbMethods.pipe.Blockchain().Height()
-	block := erisDbMethods.pipe.Blockchain().Block(latestHeight)
+func (burrowMethods *BurrowMethods) LatestBlock(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	latestHeight := burrowMethods.pipe.Blockchain().Height()
+	block := burrowMethods.pipe.Blockchain().Block(latestHeight)
 	return block, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Blocks(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Blocks(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &BlocksParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	blocks, errC := blockchain.FilterBlocks(erisDbMethods.pipe.Blockchain(), erisDbMethods.filterFactory, param.Filters)
+	blocks, errC := blockchain.FilterBlocks(burrowMethods.pipe.Blockchain(), burrowMethods.filterFactory, param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return blocks, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Block(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Block(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &HeightParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	height := param.Height
-	block := erisDbMethods.pipe.Blockchain().Block(height)
+	block := burrowMethods.pipe.Blockchain().Block(height)
 	return block, 0, nil
 }
 
 // *************************************** Consensus ************************************
 
-func (erisDbMethods *ErisDbMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return erisDbMethods.pipe.GetConsensusEngine().ConsensusState(), 0, nil
+func (burrowMethods *BurrowMethods) ConsensusState(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	return burrowMethods.pipe.GetConsensusEngine().ConsensusState(), 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	return erisDbMethods.pipe.GetConsensusEngine().ListValidators(), 0, nil
+func (burrowMethods *BurrowMethods) Validators(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	return burrowMethods.pipe.GetConsensusEngine().ListValidators(), 0, nil
 }
 
 // *************************************** Net ************************************
 
-func (erisDbMethods *ErisDbMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	info := shared.NetInfo(erisDbMethods.pipe)
+func (burrowMethods *BurrowMethods) NetworkInfo(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	info := shared.NetInfo(burrowMethods.pipe)
 	return info, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	version := shared.ClientVersion(erisDbMethods.pipe)
+func (burrowMethods *BurrowMethods) ClientVersion(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	version := shared.ClientVersion(burrowMethods.pipe)
 	return &core_types.ClientVersion{version}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	moniker := shared.Moniker(erisDbMethods.pipe)
+func (burrowMethods *BurrowMethods) Moniker(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	moniker := shared.Moniker(burrowMethods.pipe)
 	return &core_types.Moniker{moniker}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listening := shared.Listening(erisDbMethods.pipe)
+func (burrowMethods *BurrowMethods) Listening(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	listening := shared.Listening(burrowMethods.pipe)
 	return &core_types.Listening{listening}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	listeners := shared.Listeners(erisDbMethods.pipe)
+func (burrowMethods *BurrowMethods) Listeners(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	listeners := shared.Listeners(burrowMethods.pipe)
 	return &core_types.Listeners{listeners}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	peers := erisDbMethods.pipe.GetConsensusEngine().Peers()
+func (burrowMethods *BurrowMethods) Peers(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	peers := burrowMethods.pipe.GetConsensusEngine().Peers()
 	return peers, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Peer(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Peer(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &PeerParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	address := param.Address
-	peer := shared.Peer(erisDbMethods.pipe, address)
+	peer := shared.Peer(burrowMethods.pipe, address)
 	return peer, 0, nil
 }
 
 // *************************************** Txs ************************************
 
-func (erisDbMethods *ErisDbMethods) Call(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Call(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &CallParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	from := param.From
 	to := param.Address
 	data := param.Data
-	call, errC := erisDbMethods.pipe.Transactor().Call(from, to, data)
+	call, errC := burrowMethods.pipe.Transactor().Call(from, to, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return call, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) CallCode(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) CallCode(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &CallCodeParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	from := param.From
 	code := param.Code
 	data := param.Data
-	call, errC := erisDbMethods.pipe.Transactor().CallCode(from, code, data)
+	call, errC := burrowMethods.pipe.Transactor().CallCode(from, code, data)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return call, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	tx := new(txs.Tx)
-	err := erisDbMethods.codec.DecodeBytes(tx, request.Params)
+func (burrowMethods *BurrowMethods) BroadcastTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	// Accept all transaction types as parameter for broadcast.
+	param := new(txs.Tx)
+	err := burrowMethods.codec.DecodeBytesPtr(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().BroadcastTx(*tx)
+	receipt, errC := burrowMethods.pipe.Transactor().BroadcastTx(*param)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) Transact(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) Transact(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	receipt, errC := burrowMethods.pipe.Transactor().Transact(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) TransactAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) TransactAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	ce, errC := erisDbMethods.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
+	ce, errC := burrowMethods.pipe.Transactor().TransactAndHold(param.PrivKey, param.Address, param.Data, param.GasLimit, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return ce, 0, nil
 }
 
-func (this *ErisDbMethods) Send(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *BurrowMethods) Send(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SendParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
@@ -410,7 +411,7 @@ func (this *ErisDbMethods) Send(request *rpc.RPCRequest, requester interface{}) 
 	return receipt, 0, nil
 }
 
-func (this *ErisDbMethods) SendAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (this *BurrowMethods) SendAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SendParam{}
 	err := this.codec.DecodeBytes(param, request.Params)
 	if err != nil {
@@ -423,36 +424,36 @@ func (this *ErisDbMethods) SendAndHold(request *rpc.RPCRequest, requester interf
 	return rec, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) TransactNameReg(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &TransactNameRegParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	receipt, errC := erisDbMethods.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+	receipt, errC := burrowMethods.pipe.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	trans, errC := erisDbMethods.pipe.GetConsensusEngine().ListUnconfirmedTxs(-1)
+func (burrowMethods *BurrowMethods) UnconfirmedTxs(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	trans, errC := burrowMethods.pipe.GetConsensusEngine().ListUnconfirmedTxs(-1)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return txs.UnconfirmedTxs{trans}, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) SignTx(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SignTxParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	tx := param.Tx
 	pAccs := param.PrivAccounts
-	txRet, errC := erisDbMethods.pipe.Transactor().SignTx(tx, pAccs)
+	txRet, errC := burrowMethods.pipe.Transactor().SignTx(tx, pAccs)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
@@ -461,28 +462,28 @@ func (erisDbMethods *ErisDbMethods) SignTx(request *rpc.RPCRequest, requester in
 
 // *************************************** Name Registry ***************************************
 
-func (erisDbMethods *ErisDbMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) NameRegEntry(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &NameRegEntryParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	name := param.Name
 	// TODO is address check?
-	entry, errC := erisDbMethods.pipe.NameReg().Entry(name)
+	entry, errC := burrowMethods.pipe.NameReg().Entry(name)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return entry, 0, nil
 }
 
-func (erisDbMethods *ErisDbMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (burrowMethods *BurrowMethods) NameRegEntries(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &FilterListParam{}
-	err := erisDbMethods.codec.DecodeBytes(param, request.Params)
+	err := burrowMethods.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	list, errC := erisDbMethods.pipe.NameReg().Entries(param.Filters)
+	list, errC := burrowMethods.pipe.NameReg().Entries(param.Filters)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}

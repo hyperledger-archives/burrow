@@ -1,0 +1,64 @@
+# Node 000 - Deployment
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: your-app-ecosystem-chain-000
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: your-app-ecosystem
+        tier: chain
+        node_number: "000"
+        chain_name: your-app
+        vendor: monax
+    spec:
+      containers:
+      - name: your-app-ecosystem-chain-000
+        image: "your-app-ecosystem-chain:latest"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CHAIN_NAME
+          value: your-chain
+        - name: CHAIN_NODE_NUMBER
+          value: "000"
+        - name: CHAIN_SEEDS
+          value: "your-app-chain-000:46656,your-app-chain-001:46656,your-app-chain-002:46656,your-app-chain-003:46656"
+        - name: CHAIN_API_PORT
+          value: "1337"
+        - name: CHAIN_PEER_PORT
+          value: "46656"
+        - name: CHAIN_RPC_PORT
+          value: "46657"
+        - name: CHAIN_LOG_LEVEL
+          value: notice
+        - name: CHAIN_GENESIS
+          valueFrom:
+            configMapKeyRef:
+              name: your-app-ecosystem-chain-genesis
+              key: chain-genesis
+        - name: KEY_ADDRESS
+          valueFrom:
+            secretKeyRef:
+              name: your-app-ecosystem-chain-000-keys
+              key: address
+        - name: KEY_PUBLIC
+          valueFrom:
+            secretKeyRef:
+              name: your-app-ecosystem-chain-000-keys
+              key: public-key
+        - name: KEY_PRIVATE
+          valueFrom:
+            secretKeyRef:
+              name: your-app-ecosystem-chain-000-keys
+              key: private-key
+        - name: ORGANIZATION_NAME
+          value: allianz
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 1337
+      restartPolicy: Always
+

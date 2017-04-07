@@ -30,4 +30,4 @@ The `WebSocketServer` is a template for servers that use websocket connections r
 
 The config assumes that there is a default HTTP and Websocket server for RPC, and some other fields. See the main README.md for details.
 
-While the system is generic (i.e. it does not care what a `Server` is or does), the configuration file is not. The reason is that the server is written specifically for eris-db, and I do not want to manage generic config files (or perhaps even one per server).
+While the system is generic (i.e. it does not care what a `Server` is or does), the configuration file is not. The reason is that the server is written specifically for burrow, and I do not want to manage generic config files (or perhaps even one per server).

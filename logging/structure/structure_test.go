@@ -17,7 +17,7 @@ package structure
 import (
 	"testing"
 
-	. "github.com/monax/eris-db/util/slice"
+	. "github.com/monax/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 

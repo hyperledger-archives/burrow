@@ -19,8 +19,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/monax/eris-db/client/methods"
-	"github.com/monax/eris-db/util"
+	"github.com/monax/burrow/client/methods"
+	"github.com/monax/burrow/util"
 )
 
 func buildTransactionCommand() *cobra.Command {
@@ -28,8 +28,8 @@ func buildTransactionCommand() *cobra.Command {
 	// unbond, rebond, permissions. Dupeout transaction is not accessible through the command line.
 	transactionCmd := &cobra.Command{
 		Use:   "tx",
-		Short: "eris-client tx formulates and signs a transaction to a chain",
-		Long:  "eris-client tx formulates and signs a transaction to a chain.",
+		Short: "burrow-client tx formulates and signs a transaction to a chain",
+		Long:  "burrow-client tx formulates and signs a transaction to a chain.",
 		Run:   func(cmd *cobra.Command, args []string) { cmd.Help() },
 	}
 
@@ -38,8 +38,8 @@ func buildTransactionCommand() *cobra.Command {
 	// SendTx
 	sendCmd := &cobra.Command{
 		Use:   "send",
-		Short: "eris-client tx send --amt <amt> --to <addr>",
-		Long:  "eris-client tx send --amt <amt> --to <addr>",
+		Short: "burrow-client tx send --amt <amt> --to <addr>",
+		Long:  "burrow-client tx send --amt <amt> --to <addr>",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := methods.Send(clientDo)
 			if err != nil {
@@ -54,8 +54,8 @@ func buildTransactionCommand() *cobra.Command {
 	// NameTx
 	nameCmd := &cobra.Command{
 		Use:   "name",
-		Short: "eris-client tx name --amt <amt> --name <name> --data <data>",
-		Long:  "eris-client tx name --amt <amt> --name <name> --data <data>",
+		Short: "burrow-client tx name --amt <amt> --name <name> --data <data>",
+		Long:  "burrow-client tx name --amt <amt> --name <name> --data <data>",
 		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Name(clientDo)
 		},
@@ -70,8 +70,8 @@ func buildTransactionCommand() *cobra.Command {
 	// CallTx
 	callCmd := &cobra.Command{
 		Use:   "call",
-		Short: "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
-		Long:  "eris-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
+		Short: "burrow-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
+		Long:  "burrow-client tx call --amt <amt> --fee <fee> --gas <gas> --to <contract addr> --data <data>",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := methods.Call(clientDo)
 			if err != nil {
@@ -89,8 +89,8 @@ func buildTransactionCommand() *cobra.Command {
 	// BondTx
 	bondCmd := &cobra.Command{
 		Use:   "bond",
-		Short: "eris-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
-		Long:  "eris-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
+		Short: "burrow-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
+		Long:  "burrow-client tx bond --pubkey <pubkey> --amt <amt> --unbond-to <address>",
 		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Bond(clientDo)
 		},
@@ -102,8 +102,8 @@ func buildTransactionCommand() *cobra.Command {
 	// UnbondTx
 	unbondCmd := &cobra.Command{
 		Use:   "unbond",
-		Short: "eris-client tx unbond --addr <address> --height <block_height>",
-		Long:  "eris-client tx unbond --addr <address> --height <block_height>",
+		Short: "burrow-client tx unbond --addr <address> --height <block_height>",
+		Long:  "burrow-client tx unbond --addr <address> --height <block_height>",
 		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Unbond(clientDo)
 		},
@@ -115,8 +115,8 @@ func buildTransactionCommand() *cobra.Command {
 	// RebondTx
 	var rebondCmd = &cobra.Command{
 		Use:   "rebond",
-		Short: "eris-client tx rebond --addr <address> --height <block_height>",
-		Long:  "eris-client tx rebond --addr <address> --height <block_height>",
+		Short: "burrow-client tx rebond --addr <address> --height <block_height>",
+		Long:  "burrow-client tx rebond --addr <address> --height <block_height>",
 		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Rebond(clientDo)
 		},
@@ -128,8 +128,8 @@ func buildTransactionCommand() *cobra.Command {
 	// PermissionsTx
 	permissionsCmd := &cobra.Command{
 		Use:   "permission",
-		Short: "eris-client tx perm <function name> <args ...>",
-		Long:  "eris-client tx perm <function name> <args ...>",
+		Short: "burrow-client tx perm <function name> <args ...>",
+		Long:  "burrow-client tx perm <function name> <args ...>",
 		Run: func(cmd *cobra.Command, args []string) {
 			// transaction.Permsissions(clientDo)
 		},
@@ -141,14 +141,14 @@ func buildTransactionCommand() *cobra.Command {
 }
 
 func addTransactionPersistentFlags(transactionCmd *cobra.Command) {
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.SignAddrFlag, "sign-addr", "", defaultKeyDaemonAddress(), "set eris-keys daemon address (default respects $ERIS_CLIENT_SIGN_ADDRESS)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the eris-db node rpc server address (default respects $ERIS_CLIENT_NODE_ADDRESS)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $ERIS_CLIENT_PUBLIC_KEY)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at eris-keys) (default respects $ERIS_CLIENT_ADDRESS)")
+	transactionCmd.PersistentFlags().StringVarP(&clientDo.SignAddrFlag, "sign-addr", "", defaultKeyDaemonAddress(), "set monax-keys daemon address (default respects $BURROW_CLIENT_SIGN_ADDRESS)")
+	transactionCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the burrow node rpc server address (default respects $BURROW_CLIENT_NODE_ADDRESS)")
+	transactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $BURROW_CLIENT_PUBLIC_KEY)")
+	transactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at monax-keys) (default respects $BURROW_CLIENT_ADDRESS)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.ChainidFlag, "chain-id", "", defaultChainId(), "specify the chainID (default respects $CHAIN_ID)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "nonce", "", "", "specify the nonce to use for the transaction (should equal the sender account's nonce + 1)")
 
-	// transactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the eris-keys daemon")
+	// transactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the monax-keys daemon")
 	transactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", true, "broadcast the transaction to the blockchain")
 	transactionCmd.PersistentFlags().BoolVarP(&clientDo.WaitFlag, "wait", "w", true, "wait for the transaction to be committed in a block")
 }
@@ -161,19 +161,19 @@ func defaultChainId() string {
 }
 
 func defaultKeyDaemonAddress() string {
-	return setDefaultString("ERIS_CLIENT_SIGN_ADDRESS", "http://127.0.0.1:4767")
+	return setDefaultString("BURROW_CLIENT_SIGN_ADDRESS", "http://127.0.0.1:4767")
 }
 
 func defaultNodeRpcAddress() string {
-	return setDefaultString("ERIS_CLIENT_NODE_ADDRESS", "tcp://127.0.0.1:46657")
+	return setDefaultString("BURROW_CLIENT_NODE_ADDRESS", "tcp://127.0.0.1:46657")
 }
 
 func defaultPublicKey() string {
-	return setDefaultString("ERIS_CLIENT_PUBLIC_KEY", "")
+	return setDefaultString("BURROW_CLIENT_PUBLIC_KEY", "")
 }
 
 func defaultAddress() string {
-	return setDefaultString("ERIS_CLIENT_ADDRESS", "")
+	return setDefaultString("BURROW_CLIENT_ADDRESS", "")
 }
 
 //------------------------------------------------------------------------------

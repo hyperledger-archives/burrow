@@ -15,13 +15,13 @@
 package types
 
 import (
-	acm "github.com/monax/eris-db/account"
-	core_types "github.com/monax/eris-db/core/types"
-	genesis "github.com/monax/eris-db/genesis"
-	"github.com/monax/eris-db/txs"
+	acm "github.com/monax/burrow/account"
+	core_types "github.com/monax/burrow/core/types"
+	genesis "github.com/monax/burrow/genesis"
+	"github.com/monax/burrow/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	consensus_types "github.com/monax/eris-db/consensus/types"
+	consensus_types "github.com/monax/burrow/consensus/types"
 	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
@@ -181,7 +181,7 @@ const (
 	ResultTypeChainId            = byte(0x17)
 )
 
-type ErisDBResult interface {
+type BurrowResult interface {
 	rpctypes.Result
 }
 
@@ -213,4 +213,4 @@ func ConcreteTypes() []wire.ConcreteType {
 	}
 }
 
-var _ = wire.RegisterInterface(struct{ ErisDBResult }{}, ConcreteTypes()...)
+var _ = wire.RegisterInterface(struct{ BurrowResult }{}, ConcreteTypes()...)

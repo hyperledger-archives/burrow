@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/monax/eris-db/client"
-	"github.com/monax/eris-db/server"
+	"github.com/monax/burrow/client"
+	"github.com/monax/burrow/server"
 	"github.com/stretchr/testify/assert"
 )
 
