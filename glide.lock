@@ -78,7 +78,7 @@ imports:
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
 - name: github.com/Masterminds/glide
-  version: 84607742b10f492430762d038e954236bbaf23f7
+  version: 869001d1571ce5f03fd0078bff188b9d3f272807
 - name: github.com/mattn/go-colorable
   version: d228849504861217f796da67fae4f6e347643f15
 - name: github.com/mattn/go-isatty
@@ -245,5 +245,5 @@ imports:
 - name: gopkg.in/tylerb/graceful.v1
   version: ecde8c8f16df93a994dda8936c8f60f0c26c28ab
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
 testImports: []

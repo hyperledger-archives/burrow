@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/go-stack/stack"
-	"github.com/monax/eris-db/logging/loggers"
-	"github.com/monax/eris-db/logging/structure"
-	. "github.com/monax/eris-db/util/slice"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/logging/structure"
+	. "github.com/monax/burrow/util/slice"
 	"github.com/tendermint/log15"
 )
 

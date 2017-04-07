@@ -23,17 +23,17 @@ import (
 	"runtime"
 	"testing"
 
-	consensus_types "github.com/monax/eris-db/consensus/types"
+	consensus_types "github.com/monax/burrow/consensus/types"
 
-	account "github.com/monax/eris-db/account"
-	core_types "github.com/monax/eris-db/core/types"
-	event "github.com/monax/eris-db/event"
-	rpc "github.com/monax/eris-db/rpc"
-	server "github.com/monax/eris-db/server"
-	"github.com/monax/eris-db/txs"
+	account "github.com/monax/burrow/account"
+	core_types "github.com/monax/burrow/core/types"
+	event "github.com/monax/burrow/event"
+	rpc "github.com/monax/burrow/rpc"
+	server "github.com/monax/burrow/server"
+	"github.com/monax/burrow/txs"
 
 	"github.com/gin-gonic/gin"
-	"github.com/monax/eris-db/rpc/v0/shared"
+	"github.com/monax/burrow/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"
 )

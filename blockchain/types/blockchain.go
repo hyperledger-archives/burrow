@@ -16,8 +16,8 @@
 
 package types
 
-// Blockchain is part of the pipe for ErisMint and provides the implementation
-// for the pipe to call into the ErisMint application
+// Blockchain is part of the pipe for BurrowMint and provides the implementation
+// for the pipe to call into the BurrowMint application
 type Blockchain interface {
 	BlockStore
 	ChainId() string

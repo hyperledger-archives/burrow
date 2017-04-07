@@ -17,16 +17,14 @@ package mock
 import (
 	"github.com/tendermint/go-crypto"
 
-	acc "github.com/monax/eris-db/account"
-	. "github.com/monax/eris-db/client"
-	consensus_types "github.com/monax/eris-db/consensus/types"
-	core_types "github.com/monax/eris-db/core/types"
-	"github.com/monax/eris-db/logging/loggers"
-	"github.com/monax/eris-db/txs"
+	acc "github.com/monax/burrow/account"
+	. "github.com/monax/burrow/client"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	core_types "github.com/monax/burrow/core/types"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/txs"
 )
 
-// NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
-// eris-db/client.NodeClient
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {

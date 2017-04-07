@@ -18,15 +18,15 @@ package test
 import (
 	"fmt"
 
-	vm "github.com/monax/eris-db/manager/eris-mint/evm"
-	rpc_core "github.com/monax/eris-db/rpc/tendermint/core"
-	"github.com/monax/eris-db/test/fixtures"
+	vm "github.com/monax/burrow/manager/burrow-mint/evm"
+	rpc_core "github.com/monax/burrow/rpc/tendermint/core"
+	"github.com/monax/burrow/test/fixtures"
 )
 
 // Needs to be referenced by a *_test.go file to be picked up
 func TestWrapper(runner func() int) int {
 	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/common.go)...")
-	ffs := fixtures.NewFileFixtures("Eris-DB")
+	ffs := fixtures.NewFileFixtures("burrow")
 
 	defer ffs.RemoveAll()
 

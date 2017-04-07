@@ -22,8 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Since the logic for generating configuration files (in eris-cm) is split from
-// the logic for consuming them
 func TestGeneratedConfigIsUsable(t *testing.T) {
 	bs, err := GetExampleConfigFileBytes()
 	assert.NoError(t, err, "Should be able to create example config")

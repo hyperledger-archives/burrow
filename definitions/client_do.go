@@ -17,17 +17,17 @@ package definitions
 type ClientDo struct {
 	// Persistent flags not reflected in the configuration files
 	// only set through command line flags or environment variables
-	Debug   bool // ERIS_DB_DEBUG
-	Verbose bool // ERIS_DB_VERBOSE
+	Debug   bool // BURROW_DEBUG
+	Verbose bool // BURROW_VERBOSE
 
-	// Following parameters are global flags for eris-client tx
+	// Following parameters are global flags for burrow-client tx
 	SignAddrFlag string
 	NodeAddrFlag string
 	PubkeyFlag   string
 	AddrFlag     string
 	ChainidFlag  string
 
-	// signFlag      bool // TODO: remove; unsafe signing without eris-keys
+	// signFlag      bool // TODO: remove; unsafe signing without monax-keys
 	BroadcastFlag bool
 	WaitFlag      bool
 

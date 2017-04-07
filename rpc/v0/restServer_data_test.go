@@ -15,13 +15,13 @@
 package rpc_v0
 
 import (
-	account "github.com/monax/eris-db/account"
-	consensus_types "github.com/monax/eris-db/consensus/types"
-	core_types "github.com/monax/eris-db/core/types"
-	event "github.com/monax/eris-db/event"
-	genesis "github.com/monax/eris-db/genesis"
-	"github.com/monax/eris-db/rpc/v0/shared"
-	transaction "github.com/monax/eris-db/txs"
+	account "github.com/monax/burrow/account"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	core_types "github.com/monax/burrow/core/types"
+	event "github.com/monax/burrow/event"
+	genesis "github.com/monax/burrow/genesis"
+	"github.com/monax/burrow/rpc/v0/shared"
+	transaction "github.com/monax/burrow/txs"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 

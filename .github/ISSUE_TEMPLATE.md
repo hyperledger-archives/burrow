@@ -1,7 +1,7 @@
 Please include in your bug report:
 
-- [ ] `eris-db version` (docker image tag or branch if built from source)
-- [ ] `eris version` (if applicable)
+- [ ] `burrow version` (docker image tag or branch if built from source)
+- [ ] `monax version` (if applicable)
 - [ ] `go version` (if applicable)
 - [ ] `docker version` (if applicable)
 - [ ] operating system details (osx/windows/linux)

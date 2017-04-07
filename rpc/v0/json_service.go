@@ -20,10 +20,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	definitions "github.com/monax/eris-db/definitions"
-	event "github.com/monax/eris-db/event"
-	rpc "github.com/monax/eris-db/rpc"
-	server "github.com/monax/eris-db/server"
+	definitions "github.com/monax/burrow/definitions"
+	event "github.com/monax/burrow/event"
+	rpc "github.com/monax/burrow/rpc"
+	server "github.com/monax/burrow/server"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
@@ -63,20 +63,20 @@ func (this *JsonRpcServer) handleFunc(c *gin.Context) {
 	this.service.Process(r, w)
 }
 
-// Used for ErisDb. Implements server.HttpService
-type ErisDbJsonService struct {
+// Used for Burrow. Implements server.HttpService
+type BurrowJsonService struct {
 	codec           rpc.Codec
 	pipe            definitions.Pipe
 	eventSubs       *event.EventSubscriptions
 	defaultHandlers map[string]RequestHandlerFunc
 }
 
-// Create a new JSON-RPC 2.0 service for erisdb (tendermint).
-func NewErisDbJsonService(codec rpc.Codec, pipe definitions.Pipe,
+// Create a new JSON-RPC 2.0 service for burrow (tendermint).
+func NewBurrowJsonService(codec rpc.Codec, pipe definitions.Pipe,
 	eventSubs *event.EventSubscriptions) server.HttpService {
 
-	tmhttps := &ErisDbJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
-	mtds := NewErisDbMethods(codec, pipe)
+	tmhttps := &BurrowJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
+	mtds := NewBurrowMethods(codec, pipe)
 
 	dhMap := mtds.getMethods()
 	// Events
@@ -88,7 +88,7 @@ func NewErisDbJsonService(codec rpc.Codec, pipe definitions.Pipe,
 }
 
 // Process a request.
-func (this *ErisDbJsonService) Process(r *http.Request, w http.ResponseWriter) {
+func (this *BurrowJsonService) Process(r *http.Request, w http.ResponseWriter) {
 
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
@@ -124,7 +124,7 @@ func (this *ErisDbJsonService) Process(r *http.Request, w http.ResponseWriter) {
 }
 
 // Helper for writing error responses.
-func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.ResponseWriter) {
+func (this *BurrowJsonService) writeError(msg, id string, code int, w http.ResponseWriter) {
 	response := rpc.NewRPCErrorResponse(id, code, msg)
 	err := this.codec.Encode(response, w)
 	// If there's an error here all bets are off.
@@ -136,7 +136,7 @@ func (this *ErisDbJsonService) writeError(msg, id string, code int, w http.Respo
 }
 
 // Helper for writing responses.
-func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
+func (this *BurrowJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
 	response := rpc.NewRPCResponse(id, result)
 	err := this.codec.Encode(response, w)
 	if err != nil {
@@ -149,7 +149,7 @@ func (this *ErisDbJsonService) writeResponse(id string, result interface{}, w ht
 // *************************************** Events ************************************
 
 // Subscribe to an event.
-func (this *ErisDbJsonService) EventSubscribe(request *rpc.RPCRequest,
+func (this *BurrowJsonService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := json.Unmarshal(request.Params, param)
@@ -165,7 +165,7 @@ func (this *ErisDbJsonService) EventSubscribe(request *rpc.RPCRequest,
 }
 
 // Un-subscribe from an event.
-func (this *ErisDbJsonService) EventUnsubscribe(request *rpc.RPCRequest,
+func (this *BurrowJsonService) EventUnsubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
@@ -182,7 +182,7 @@ func (this *ErisDbJsonService) EventUnsubscribe(request *rpc.RPCRequest,
 }
 
 // Check subscription event cache for new data.
-func (this *ErisDbJsonService) EventPoll(request *rpc.RPCRequest,
+func (this *BurrowJsonService) EventPoll(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)

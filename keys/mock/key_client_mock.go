@@ -19,7 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	. "github.com/monax/eris-db/keys"
+	. "github.com/monax/burrow/keys"
 
 	// NOTE: prior to building out /crypto, use
 	// tendermint/go-crypto for the mock client
@@ -67,7 +67,7 @@ func (mockKey *MockKey) Sign(message []byte) ([]byte, error) {
 }
 
 //---------------------------------------------------------------------
-// Mock client for replacing signing done by eris-keys
+// Mock client for replacing signing done by monax-keys
 
 // Implementation assertion
 var _ KeyClient = (*MockKeyClient)(nil)
