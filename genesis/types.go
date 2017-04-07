@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	ptypes "github.com/monax/eris-db/permission/types"
+	ptypes "github.com/monax/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"

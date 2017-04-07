@@ -15,7 +15,7 @@
 package manager
 
 import (
-	erismint "github.com/monax/eris-db/manager/eris-mint"
+	burrowmint "github.com/monax/burrow/manager/burrow-mint"
 )
 
 //------------------------------------------------------------------------------
@@ -23,8 +23,8 @@ import (
 
 func AssertValidApplicationManagerModule(name, minorVersionString string) bool {
 	switch name {
-	case "erismint":
-		return minorVersionString == erismint.GetErisMintVersion().GetMinorVersionString()
+	case "burrowmint":
+		return minorVersionString == burrowmint.GetBurrowMintVersion().GetMinorVersionString()
 	case "geth":
 		// TODO: [ben] implement Geth 1.4 as an application manager
 		return false

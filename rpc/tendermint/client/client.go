@@ -18,10 +18,10 @@ import (
 	"errors"
 	"fmt"
 
-	acm "github.com/monax/eris-db/account"
-	core_types "github.com/monax/eris-db/core/types"
-	rpc_types "github.com/monax/eris-db/rpc/tendermint/core/types"
-	"github.com/monax/eris-db/txs"
+	acm "github.com/monax/burrow/account"
+	core_types "github.com/monax/burrow/core/types"
+	rpc_types "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )
@@ -182,7 +182,7 @@ func DumpConsensusState(client rpcclient.Client) (*rpc_types.ResultDumpConsensus
 }
 
 func performCall(client rpcclient.Client, method string,
-	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
+	paramKeyVals ...interface{}) (res rpc_types.BurrowResult, err error) {
 	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
 	if err != nil {
 		return

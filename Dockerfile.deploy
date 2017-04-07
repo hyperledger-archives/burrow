@@ -1,7 +1,8 @@
-FROM quay.io/eris/base:alpine
+FROM quay.io/monax/base:0.16
 MAINTAINER Monax <support@monax.io>
 
-ENV TARGET eris-db
+ENV TARGET burrow
+
 
 # Get the binary from the artefact in pwd/target/docker
 COPY ./target/docker/"$TARGET".dockerartefact $INSTALL_BASE/$TARGET
@@ -9,14 +10,14 @@ RUN chmod +x --recursive $INSTALL_BASE
 
 # Finalize
 RUN chown --recursive $USER:$USER /home/$USER
-VOLUME $ERIS
-WORKDIR $ERIS
+VOLUME $MONAX_PATH
+WORKDIR $MONAX_PATH
 USER $USER
 
 # runtime customization start here
-# Expose ports for 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc
+# Expose ports for 1337:burrow API; 46656:tendermint-peer; 46657:tendermint-rpc
 EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
 
-CMD [ "eris-db", "serve" ]
+CMD [ "burrow", "serve" ]

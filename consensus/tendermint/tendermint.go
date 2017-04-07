@@ -27,16 +27,16 @@ import (
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	edb_event "github.com/monax/eris-db/event"
+	edb_event "github.com/monax/burrow/event"
 
-	config "github.com/monax/eris-db/config"
-	manager_types "github.com/monax/eris-db/manager/types"
-	// files  "github.com/monax/eris-db/files"
-	blockchain_types "github.com/monax/eris-db/blockchain/types"
-	consensus_types "github.com/monax/eris-db/consensus/types"
-	"github.com/monax/eris-db/logging"
-	"github.com/monax/eris-db/logging/loggers"
-	"github.com/monax/eris-db/txs"
+	config "github.com/monax/burrow/config"
+	manager_types "github.com/monax/burrow/manager/types"
+	// files  "github.com/monax/burrow/files"
+	blockchain_types "github.com/monax/burrow/blockchain/types"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/txs"
 	"github.com/tendermint/go-wire"
 )
 
@@ -48,7 +48,7 @@ type Tendermint struct {
 }
 
 // Compiler checks to ensure Tendermint successfully implements
-// eris-db/definitions Consensus and Blockchain
+// burrow/definitions Consensus and Blockchain
 var _ consensus_types.ConsensusEngine = (*Tendermint)(nil)
 var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
@@ -103,7 +103,7 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 		"privValFile", moduleConfig.Config.GetString("private_validator_file"))
 
 	// TODO: [ben] do not "or Generate Validator keys", rather fail directly
-	// TODO: [ben] implement the signer for Private validator over eris-keys
+	// TODO: [ben] implement the signer for Private validator over monax-keys
 	// TODO: [ben] copy from rootDir to tendermint workingDir;
 	privateValidator := tendermint_types.LoadOrGenPrivValidator(
 		path.Join(moduleConfig.RootDir,

@@ -23,7 +23,6 @@ import (
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken
 // from the tendermint socket protocol application interface;
-// but for the needs of eris-rt and generalisation improvements will be made.
 
 // Application interface applies transactions to the state.
 type Application interface {
@@ -72,8 +71,8 @@ type Application interface {
 
 	// Query for state.  This query request is not passed over the p2p network
 	// and is called from Tendermint rpc directly up to the application.
-	// NOTE: [ben] Eris-DB will give preference to queries from the local client
-	// directly over the Eris-DB rpc.
+	// NOTE: [ben] burrow will give preference to queries from the local client
+	// directly over the burrow rpc.
 	// We will support this for Tendermint compatibility.
 	Query(query []byte) abci_types.Result
 }

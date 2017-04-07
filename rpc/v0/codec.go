@@ -18,9 +18,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"reflect"
-
-	rpc "github.com/monax/eris-db/rpc"
+	rpc "github.com/monax/burrow/rpc"
 
 	wire "github.com/tendermint/go-wire"
 )

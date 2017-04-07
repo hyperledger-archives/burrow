@@ -16,7 +16,7 @@ package loggers
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/eris-db/logging/structure"
+	"github.com/monax/burrow/logging/structure"
 )
 
 const (

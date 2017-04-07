@@ -15,7 +15,7 @@
 package types
 
 import (
-	"github.com/monax/eris-db/core/types"
+	"github.com/monax/burrow/core/types"
 )
 
 // UnwrapResultDumpStorage does a deep copy to remove /rpc/tendermint/core/types

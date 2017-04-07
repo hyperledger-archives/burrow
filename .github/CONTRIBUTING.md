@@ -1,5 +1,9 @@
-# Contributing to `eris-db`:
+# Contributing to `burrow`:
 Forked from Docker's [contributing guidelines](https://github.com/docker/docker/blob/master/CONTRIBUTING.md)
+
+## Developer Certificate of Origin
+
+Please always include "signed-off-by" in your commit message and note this constitutes a developer certification you are contributing a patch under Apache 2.0.  Please find a verbatim copy of the Developer Certificate of Origin in this repository [here](.github/DEVELOPER_CERTIFICATE_OF_ORIGIN.md) or on [developercertificate.org](https://developercertificate.org/).
 
 ## Bug Reporting
 

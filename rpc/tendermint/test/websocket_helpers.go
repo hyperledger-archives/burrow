@@ -20,11 +20,11 @@ import (
 	"testing"
 	"time"
 
-	ctypes "github.com/monax/eris-db/rpc/tendermint/core/types"
-	"github.com/monax/eris-db/txs"
+	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	tm_types "github.com/tendermint/tendermint/types"
 
-	edbcli "github.com/monax/eris-db/rpc/tendermint/client"
+	edbcli "github.com/monax/burrow/rpc/tendermint/client"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )
@@ -169,7 +169,7 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventid string,
 			case <-shutdownEventsCh:
 				break LOOP
 			case r := <-wsc.ResultsCh:
-				result := new(ctypes.ErisDBResult)
+				result := new(ctypes.BurrowResult)
 				wire.ReadJSONPtr(result, r, &err)
 				if err != nil {
 					errCh <- err
@@ -291,9 +291,9 @@ func unmarshalValidateCall(origin,
 	}
 }
 
-func readResult(t *testing.T, bs []byte) ctypes.ErisDBResult {
+func readResult(t *testing.T, bs []byte) ctypes.BurrowResult {
 	var err error
-	result := new(ctypes.ErisDBResult)
+	result := new(ctypes.BurrowResult)
 	wire.ReadJSONPtr(result, bs, &err)
 	if err != nil {
 		t.Fatal(err)

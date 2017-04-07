@@ -19,7 +19,7 @@ import (
 	"log"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/eris-db/logging/loggers"
+	"github.com/monax/burrow/logging/loggers"
 )
 
 func Capture(stdLibLogger log.Logger,

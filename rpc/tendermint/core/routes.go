@@ -17,10 +17,10 @@ package core
 import (
 	"fmt"
 
-	acm "github.com/monax/eris-db/account"
-	"github.com/monax/eris-db/definitions"
-	ctypes "github.com/monax/eris-db/rpc/tendermint/core/types"
-	"github.com/monax/eris-db/txs"
+	acm "github.com/monax/burrow/account"
+	"github.com/monax/burrow/definitions"
+	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	rpc "github.com/tendermint/go-rpc/server"
 	rpctypes "github.com/tendermint/go-rpc/types"
 )
@@ -66,7 +66,7 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 }
 
 func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
-	event string) (ctypes.ErisDBResult, error) {
+	event string) (ctypes.BurrowResult, error) {
 	// NOTE: RPCResponses of subscribed events have id suffix "#event"
 	// TODO: we really ought to allow multiple subscriptions from the same client address
 	// to the same event. The code as it stands reflects the somewhat broken tendermint
@@ -75,7 +75,7 @@ func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 	// subscription id if they wish to unsubscribe, but then again they can just
 	// drop their connection
 	result, err := tmRoutes.tendermintPipe.Subscribe(event,
-		func(result ctypes.ErisDBResult) {
+		func(result ctypes.BurrowResult) {
 			wsCtx.GetRemoteAddr()
 			// NOTE: EventSwitch callbacks must be nonblocking
 			wsCtx.TryWriteRPCResponse(
@@ -89,7 +89,7 @@ func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 }
 
 func (tmRoutes *TendermintRoutes) Unsubscribe(wsCtx rpctypes.WSRPCContext,
-	subscriptionId string) (ctypes.ErisDBResult, error) {
+	subscriptionId string) (ctypes.BurrowResult, error) {
 	result, err := tmRoutes.tendermintPipe.Unsubscribe(subscriptionId)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (tmRoutes *TendermintRoutes) Unsubscribe(wsCtx rpctypes.WSRPCContext,
 	}
 }
 
-func (tmRoutes *TendermintRoutes) StatusResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) StatusResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.Status(); err != nil {
 		return nil, err
 	} else {
@@ -106,7 +106,7 @@ func (tmRoutes *TendermintRoutes) StatusResult() (ctypes.ErisDBResult, error) {
 	}
 }
 
-func (tmRoutes *TendermintRoutes) NetInfoResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) NetInfoResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.NetInfo(); err != nil {
 		return nil, err
 	} else {
@@ -114,7 +114,7 @@ func (tmRoutes *TendermintRoutes) NetInfoResult() (ctypes.ErisDBResult, error) {
 	}
 }
 
-func (tmRoutes *TendermintRoutes) GenesisResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GenesisResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.Genesis(); err != nil {
 		return nil, err
 	} else {
@@ -122,7 +122,7 @@ func (tmRoutes *TendermintRoutes) GenesisResult() (ctypes.ErisDBResult, error) {
 	}
 }
 
-func (tmRoutes *TendermintRoutes) ChainIdResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) ChainIdResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.ChainId(); err != nil {
 		return nil, err
 	} else {
@@ -130,7 +130,7 @@ func (tmRoutes *TendermintRoutes) ChainIdResult() (ctypes.ErisDBResult, error) {
 	}
 }
 
-func (tmRoutes *TendermintRoutes) GetAccountResult(address []byte) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GetAccountResult(address []byte) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.GetAccount(address); err != nil {
 		return nil, err
 	} else {
@@ -138,7 +138,7 @@ func (tmRoutes *TendermintRoutes) GetAccountResult(address []byte) (ctypes.ErisD
 	}
 }
 
-func (tmRoutes *TendermintRoutes) GetStorageResult(address, key []byte) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GetStorageResult(address, key []byte) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.GetStorage(address, key); err != nil {
 		return nil, err
 	} else {
@@ -147,7 +147,7 @@ func (tmRoutes *TendermintRoutes) GetStorageResult(address, key []byte) (ctypes.
 }
 
 func (tmRoutes *TendermintRoutes) CallResult(fromAddress, toAddress,
-	data []byte) (ctypes.ErisDBResult, error) {
+	data []byte) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.Call(fromAddress, toAddress, data); err != nil {
 		return nil, err
 	} else {
@@ -156,7 +156,7 @@ func (tmRoutes *TendermintRoutes) CallResult(fromAddress, toAddress,
 }
 
 func (tmRoutes *TendermintRoutes) CallCodeResult(fromAddress, code,
-	data []byte) (ctypes.ErisDBResult, error) {
+	data []byte) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.CallCode(fromAddress, code, data); err != nil {
 		return nil, err
 	} else {
@@ -164,7 +164,7 @@ func (tmRoutes *TendermintRoutes) CallCodeResult(fromAddress, code,
 	}
 }
 
-func (tmRoutes *TendermintRoutes) DumpStorageResult(address []byte) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) DumpStorageResult(address []byte) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.DumpStorage(address); err != nil {
 		return nil, err
 	} else {
@@ -172,7 +172,7 @@ func (tmRoutes *TendermintRoutes) DumpStorageResult(address []byte) (ctypes.Eris
 	}
 }
 
-func (tmRoutes *TendermintRoutes) ListAccountsResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) ListAccountsResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.ListAccounts(); err != nil {
 		return nil, err
 	} else {
@@ -180,7 +180,7 @@ func (tmRoutes *TendermintRoutes) ListAccountsResult() (ctypes.ErisDBResult, err
 	}
 }
 
-func (tmRoutes *TendermintRoutes) GetNameResult(name string) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GetNameResult(name string) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.GetName(name); err != nil {
 		return nil, err
 	} else {
@@ -188,7 +188,7 @@ func (tmRoutes *TendermintRoutes) GetNameResult(name string) (ctypes.ErisDBResul
 	}
 }
 
-func (tmRoutes *TendermintRoutes) ListNamesResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) ListNamesResult() (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.ListNames(); err != nil {
 		return nil, err
 	} else {
@@ -196,7 +196,7 @@ func (tmRoutes *TendermintRoutes) ListNamesResult() (ctypes.ErisDBResult, error)
 	}
 }
 
-func (tmRoutes *TendermintRoutes) GenPrivAccountResult() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GenPrivAccountResult() (ctypes.BurrowResult, error) {
 	//if r, err := tmRoutes.tendermintPipe.GenPrivAccount(); err != nil {
 	//	return nil, err
 	//} else {
@@ -206,7 +206,7 @@ func (tmRoutes *TendermintRoutes) GenPrivAccountResult() (ctypes.ErisDBResult, e
 }
 
 func (tmRoutes *TendermintRoutes) SignTxResult(tx txs.Tx,
-	privAccounts []*acm.PrivAccount) (ctypes.ErisDBResult, error) {
+	privAccounts []*acm.PrivAccount) (ctypes.BurrowResult, error) {
 	// if r, err := tmRoutes.tendermintPipe.SignTx(tx, privAccounts); err != nil {
 	// 	return nil, err
 	// } else {
@@ -215,7 +215,7 @@ func (tmRoutes *TendermintRoutes) SignTxResult(tx txs.Tx,
 	return nil, fmt.Errorf("Unimplemented as poor practice to pass private account over unencrypted RPC")
 }
 
-func (tmRoutes *TendermintRoutes) BroadcastTxResult(tx txs.Tx) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) BroadcastTxResult(tx txs.Tx) (ctypes.BurrowResult, error) {
 	if r, err := tmRoutes.tendermintPipe.BroadcastTxSync(tx); err != nil {
 		return nil, err
 	} else {
@@ -224,7 +224,7 @@ func (tmRoutes *TendermintRoutes) BroadcastTxResult(tx txs.Tx) (ctypes.ErisDBRes
 }
 
 func (tmRoutes *TendermintRoutes) BlockchainInfo(minHeight,
-	maxHeight int) (ctypes.ErisDBResult, error) {
+	maxHeight int) (ctypes.BurrowResult, error) {
 	r, err := tmRoutes.tendermintPipe.BlockchainInfo(minHeight, maxHeight,
 		maxBlockLookback)
 	if err != nil {
@@ -234,7 +234,7 @@ func (tmRoutes *TendermintRoutes) BlockchainInfo(minHeight,
 	}
 }
 
-func (tmRoutes *TendermintRoutes) ListUnconfirmedTxs() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) ListUnconfirmedTxs() (ctypes.BurrowResult, error) {
 	// Get all Txs for now
 	r, err := tmRoutes.tendermintPipe.ListUnconfirmedTxs(-1)
 	if err != nil {
@@ -243,7 +243,7 @@ func (tmRoutes *TendermintRoutes) ListUnconfirmedTxs() (ctypes.ErisDBResult, err
 		return r, nil
 	}
 }
-func (tmRoutes *TendermintRoutes) GetBlock(height int) (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) GetBlock(height int) (ctypes.BurrowResult, error) {
 	r, err := tmRoutes.tendermintPipe.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func (tmRoutes *TendermintRoutes) GetBlock(height int) (ctypes.ErisDBResult, err
 		return r, nil
 	}
 }
-func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.BurrowResult, error) {
 	r, err := tmRoutes.tendermintPipe.ListValidators()
 	if err != nil {
 		return nil, err
@@ -259,6 +259,6 @@ func (tmRoutes *TendermintRoutes) ListValidators() (ctypes.ErisDBResult, error) 
 		return r, nil
 	}
 }
-func (tmRoutes *TendermintRoutes) DumpConsensusState() (ctypes.ErisDBResult, error) {
+func (tmRoutes *TendermintRoutes) DumpConsensusState() (ctypes.BurrowResult, error) {
 	return tmRoutes.tendermintPipe.DumpConsensusState()
 }

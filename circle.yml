@@ -4,7 +4,6 @@ machine:
     REPO: ${GOPATH}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
     DOCKER_VERSION: 1.9.1
     DOCKER_MACHINE_VERSION: 0.6.0
-    ERIS_CLI_BRANCH: develop
     GO15VENDOREXPERIMENT: 1
   post:
     - git config --global user.email "billings@monax.io"
@@ -17,24 +16,20 @@ dependencies:
   override:
     - sudo curl -L -o /usr/bin/docker http://s3-external-1.amazonaws.com/circle-downloads/docker-$DOCKER_VERSION-circleci; sudo chmod 0775 /usr/bin/docker; sudo usermod -a -G docker $USER; true
     - sudo service docker start
-    # - sudo curl -sSL -o /usr/local/bin/docker-machine https://github.com/docker/machine/releases/download/v$DOCKER_MACHINE_VERSION/docker-machine-linux-x86_64; sudo chmod 0755 /usr/local/bin/docker-machine
-    # - "go get github.com/monax/eris/cmd/eris; cd ${GOPATH%%:*}/src/github.com/monax/eris && git checkout origin/$ERIS_CLI_BRANCH && go install ./cmd/eris"
-    - "sudo apt-get update && sudo apt-get install -y libgmp3-dev"
-    # jq and curl is a dependency for the integration framework
+    - sudo apt-get update && sudo apt-get install -y libgmp3-dev
     - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
 test:
   pre:
     - cd $REPO && glide install
-    # Test the build target for eris-db
-    - echo "Build target eris-db..." && cd $REPO && go install ./cmd/eris-db && eris-db --help
-    # Test the build target for eris-client
-    - echo "Build target eris-client..." && cd $REPO && go install ./client/cmd/eris-client && eris-client --help
+    # Test the build target for burrow
+    - echo "Build target burrow..." && cd $REPO && go install ./cmd/burrow && burrow --help
+    # Test the build target for burrow-client
+    - echo "Build target burrow-client..." && cd $REPO && go install ./client/cmd/burrow-client && burrow-client --help
   override:
     # We only wish to test our packages not vendored ones
     - echo "Running unit tests..." && cd $REPO && glide novendor | xargs go test -tags integration
     # - echo "Running integration tests..." && cd $REPO && "tests/circle_test.sh" # | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
-
 
 deployment:
   release-0.12:
@@ -43,21 +38,21 @@ deployment:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   release-0.16:
     branch: release-0.16
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   develop:
     branch: develop
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       # build docker image and tag the image with the version
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   master:
     branch: master
     commands:
@@ -66,7 +61,7 @@ deployment:
       # builds on master are considered immutable so we do not push the version
       # tag to allow for hotfixes
       - tests/build_tool.sh latest
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
   tagged-releases:
     tag: /v[0-9]+(\.[0-9]+)*/
     commands:
@@ -75,4 +70,4 @@ deployment:
       # once the commit is tagged the docker image for this version tag is
       # considered immutable.
       - tests/build_tool.sh
-      - docker push quay.io/eris/db
+      - docker push quay.io/monax/db
