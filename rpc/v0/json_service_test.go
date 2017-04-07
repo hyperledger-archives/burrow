@@ -17,10 +17,10 @@ package v0
 import (
 	"testing"
 
-	"github.com/monax/eris-db/account"
-	"github.com/monax/eris-db/manager/eris-mint/evm/opcodes"
-	"github.com/monax/eris-db/rpc"
-	"github.com/monax/eris-db/txs"
+	"github.com/monax/burrow/account"
+	"github.com/monax/burrow/manager/burrow-mint/evm/opcodes"
+	"github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/txs"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
@@ -29,14 +29,14 @@ import (
 func TestBroadcastTx(t *testing.T) {
 	testData := LoadTestData()
 	pipe := NewMockPipe(testData)
-	methods := NewErisDbMethods(NewTCodec(), pipe)
+	methods := NewBurrowMethods(NewTCodec(), pipe)
 	pubKey := account.GenPrivAccount().PubKey
 	address := []byte{1}
 	code := opcodes.Bytecode(opcodes.PUSH1, 1, opcodes.PUSH1, 1, opcodes.ADD)
 	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
-	request := rpc.NewRPCRequest("TestBroadcastTx", "BroacastTx", jsonBytes)
+	request := rpc.NewRPCRequest("TestBroadcastTx", "BroadcastTx", jsonBytes)
 	result, _, err := methods.BroadcastTx(request, "TestBroadcastTx")
 	assert.NoError(t, err)
 	receipt, ok := result.(*txs.Receipt)

@@ -66,6 +66,17 @@ type (
 	}
 )
 
+// Create a new RPC request. This is the generic struct that is passed to RPC
+// methods
+func NewRPCRequest(id string, method string, params json.RawMessage) *RPCRequest {
+	return &RPCRequest{
+		JSONRPC: "2.0",
+		Id:      id,
+		Method:  method,
+		Params:  params,
+	}
+}
+
 // NewRPCResponse creates a new response object from a result
 func NewRPCResponse(id string, res interface{}) RPCResponse {
 	return RPCResponse(&RPCResultResponse{
