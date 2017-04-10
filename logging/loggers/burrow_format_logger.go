@@ -55,6 +55,6 @@ func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{
 	return key, value
 }
 
-func MonaxFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
+func BurrowFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
 	return &burrowFormatLogger{logger: logger}
 }

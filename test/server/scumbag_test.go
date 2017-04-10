@@ -23,8 +23,12 @@ import (
 	"github.com/monax/burrow/server"
 
 	"github.com/gin-gonic/gin"
+	"github.com/monax/burrow/logging/lifecycle"
+	logging_types "github.com/monax/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
+
+var logger logging_types.InfoTraceLogger = lifecycle.NewStdErrLogger()
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -68,13 +72,13 @@ func (this *ScumSocketService) Process(data []byte, session *server.WSSession) {
 
 func NewScumsocketServer(maxConnections uint16) *server.WebSocketServer {
 	sss := &ScumSocketService{}
-	return server.NewWebSocketServer(maxConnections, sss)
+	return server.NewWebSocketServer(maxConnections, sss, logger)
 }
 
 func NewServeScumbag() (*server.ServeProcess, error) {
 	cfg := server.DefaultServerConfig()
 	cfg.Bind.Port = uint16(31400)
-	return server.NewServeProcess(cfg, NewScumbagServer())
+	return server.NewServeProcess(cfg, logger, NewScumbagServer())
 }
 
 func NewServeScumSocket(wsServer *server.WebSocketServer) (*server.ServeProcess,
@@ -82,5 +86,5 @@ func NewServeScumSocket(wsServer *server.WebSocketServer) (*server.ServeProcess,
 	cfg := server.DefaultServerConfig()
 	cfg.WebSocket.WebSocketEndpoint = "/scumsocket"
 	cfg.Bind.Port = uint16(31401)
-	return server.NewServeProcess(cfg, wsServer)
+	return server.NewServeProcess(cfg, logger, wsServer)
 }

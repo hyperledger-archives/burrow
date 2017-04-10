@@ -27,7 +27,7 @@ import (
 	"github.com/monax/burrow/logging"
 	logging_types "github.com/monax/burrow/logging/types"
 
-	sm "github.com/monax/burrow/manager/eris-mint/state"
+	sm "github.com/monax/burrow/manager/burrow-mint/state"
 	manager_types "github.com/monax/burrow/manager/types"
 	"github.com/monax/burrow/txs"
 )
@@ -108,7 +108,7 @@ func (app *BurrowMint) DeliverTx(txBytes []byte) abci.Result {
 		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	err = sm.ExecTx(app.cache, *tx, true, app.evc)
+	err = sm.ExecTx(app.cache, *tx, true, app.evc, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
@@ -130,7 +130,7 @@ func (app *BurrowMint) CheckTx(txBytes []byte) abci.Result {
 	}
 
 	// TODO: map ExecTx errors to sensible abci error codes
-	err = sm.ExecTx(app.checkCache, *tx, false, nil)
+	err = sm.ExecTx(app.checkCache, *tx, false, nil, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}

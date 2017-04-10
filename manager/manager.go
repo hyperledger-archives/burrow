@@ -24,6 +24,7 @@ import (
 	burrowmint "github.com/monax/burrow/manager/burrow-mint"
 
 	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface

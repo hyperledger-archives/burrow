@@ -18,8 +18,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	rpc "github.com/monax/burrow/rpc"
-
 	"github.com/monax/burrow/rpc"
 	wire "github.com/tendermint/go-wire"
 )
