@@ -20,7 +20,6 @@ import (
 	"github.com/monax/burrow/definitions"
 	"github.com/monax/burrow/logging"
 	"github.com/monax/burrow/logging/lifecycle"
-	"github.com/monax/burrow/logging/loggers"
 	logging_types "github.com/monax/burrow/logging/types"
 )
 

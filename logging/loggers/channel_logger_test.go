@@ -17,9 +17,10 @@ package loggers
 import (
 	"testing"
 
+	"time"
+
 	"github.com/eapache/channels"
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 func TestChannelLogger(t *testing.T) {

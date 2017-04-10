@@ -27,6 +27,7 @@ import (
 	ptypes "github.com/monax/burrow/permission/types"
 	"github.com/monax/burrow/txs"
 	. "github.com/monax/burrow/word256"
+	"github.com/monax/cli/log"
 
 	"github.com/tendermint/go-events"
 )

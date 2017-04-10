@@ -17,8 +17,9 @@ package config
 import (
 	"bytes"
 	"fmt"
-	lconfig "github.com/monax/burrow/logging/config"
 	"text/template"
+
+	lconfig "github.com/monax/burrow/logging/config"
 )
 
 type ConfigServiceGeneral struct {

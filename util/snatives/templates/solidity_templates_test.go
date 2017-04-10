@@ -16,9 +16,10 @@ package templates
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/monax/burrow/manager/burrow-mint/evm"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSNativeFuncTemplate(t *testing.T) {

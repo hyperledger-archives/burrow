@@ -23,6 +23,7 @@ import (
 	"github.com/monax/burrow/logging"
 	"github.com/monax/burrow/logging/adapters/stdlib"
 	tmLog15adapter "github.com/monax/burrow/logging/adapters/tendermint_log15"
+	"github.com/monax/burrow/logging/config"
 	"github.com/monax/burrow/logging/loggers"
 	"github.com/monax/burrow/logging/structure"
 

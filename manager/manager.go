@@ -21,7 +21,6 @@ import (
 
 	config "github.com/monax/burrow/config"
 	definitions "github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/logging/types"
 	burrowmint "github.com/monax/burrow/manager/burrow-mint"
 
 	"github.com/monax/burrow/logging"
