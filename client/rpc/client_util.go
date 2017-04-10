@@ -109,7 +109,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return
 		}
 	} else {
-		// grab the pubkey from eris-keys
+		// grab the pubkey from monax-keys
 		addressBytes, err2 := hex.DecodeString(addr)
 		if err2 != nil {
 			err = fmt.Errorf("Bad hex string for address (%s): %v", addr, err)
@@ -139,7 +139,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 
 	if nonceS == "" {
 		if nodeClient == nil {
-			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or ERIS_CLIENT_NODE_ADDR) to fetch the nonce from a node")
+			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or BURROW_CLIENT_NODE_ADDR) to fetch the nonce from a node")
 			return
 		}
 		// fetch nonce from node

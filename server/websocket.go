@@ -20,10 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/monax/burrow/logging"
-	logging_types "github.com/monax/burrow/logging/types"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
 )
 
 // TODO too much fluff. Should probably phase gorilla out and move closer

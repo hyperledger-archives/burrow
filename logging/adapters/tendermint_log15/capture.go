@@ -1,4 +1,3 @@
-package tendermint_log15
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,11 @@ package tendermint_log15
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package tendermint_log15
+
 import (
-	"github.com/monax/burrow/logging/types"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
 

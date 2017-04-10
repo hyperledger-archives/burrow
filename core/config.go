@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // config.go keeps explicit structures on the runtime configuration of
-// Eris-DB and all modules.  It loads these from the Viper configuration
+// burrow and all modules.  It loads these from the Viper configuration
 // loaded in `definitions.Do`
 
 package core
@@ -91,7 +91,7 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 		Version:     minorVersionString,
 		WorkDir:     workDir,
 		DataDir:     dataDir,
-		RootDir:     rootWorkDir, // Eris-DB's working directory
+		RootDir:     rootWorkDir, // burrow's working directory
 		ChainId:     chainId,
 		GenesisFile: genesisFile,
 		Config:      subConfig,

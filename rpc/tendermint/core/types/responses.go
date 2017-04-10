@@ -181,7 +181,7 @@ const (
 	ResultTypeChainId            = byte(0x17)
 )
 
-type ErisDBResult interface {
+type BurrowResult interface {
 	rpctypes.Result
 }
 
@@ -213,4 +213,4 @@ func ConcreteTypes() []wire.ConcreteType {
 	}
 }
 
-var _ = wire.RegisterInterface(struct{ ErisDBResult }{}, ConcreteTypes()...)
+var _ = wire.RegisterInterface(struct{ BurrowResult }{}, ConcreteTypes()...)

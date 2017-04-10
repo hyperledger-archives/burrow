@@ -15,7 +15,7 @@
 package types
 
 // TODO: [ben] this is poorly constructed but copied over
-// from eris-db/erisdb/pipe/types to make incremental changes and allow
+// from burrow/burrow/pipe/types to make incremental changes and allow
 // for a discussion around the proper defintion of the needed types.
 
 import (

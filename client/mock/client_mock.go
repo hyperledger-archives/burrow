@@ -26,8 +26,6 @@ import (
 	"github.com/monax/burrow/txs"
 )
 
-// NOTE [ben] Compiler check to ensure ErisMockClient successfully implements
-// eris-db/client.NodeClient
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {

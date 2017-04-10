@@ -15,47 +15,84 @@
 package mock
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 
-	// for the mock of key server we explicitly import
-	// the keys server to ensure the core components are
-	// compatible with eris-db.
-	"github.com/monax/eris-keys/crypto"
-
 	. "github.com/monax/burrow/keys"
+
+	// NOTE: prior to building out /crypto, use
+	// tendermint/go-crypto for the mock client
+	"github.com/tendermint/ed25519"
+	"golang.org/x/crypto/ripemd160"
 )
 
 //---------------------------------------------------------------------
-// Mock client for replacing signing done by eris-keys
+// Mock ed25510 key for mock keys client
 
-// NOTE [ben] Compiler check to ensure MockKeyClient successfully implements
-// eris-db/keys.KeyClient
+// Simple ed25519 key structure for mock purposes with ripemd160 address
+type MockKey struct {
+	Address    []byte
+	PrivateKey [ed25519.PrivateKeySize]byte
+	PublicKey  []byte
+}
+
+func newMockKey() (*MockKey, error) {
+	key := &MockKey{
+		Address:   make([]byte, 20),
+		PublicKey: make([]byte, ed25519.PublicKeySize),
+	}
+	// this is a mock key, so the entropy of the source is purely
+	// for testing
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	copy(key.PrivateKey[:], privateKey[:])
+	copy(key.PublicKey[:], publicKey[:])
+
+	// prepend 0x01 for ed25519 public key
+	typedPublicKeyBytes := append([]byte{0x01}, key.PublicKey...)
+	hasher := ripemd160.New()
+	hasher.Write(typedPublicKeyBytes)
+	key.Address = hasher.Sum(nil)
+	return key, nil
+}
+
+func (mockKey *MockKey) Sign(message []byte) ([]byte, error) {
+	signatureBytes := make([]byte, ed25519.SignatureSize)
+	signature := ed25519.Sign(&mockKey.PrivateKey, message)
+	copy(signatureBytes[:], signature[:])
+	return signatureBytes, nil
+}
+
+//---------------------------------------------------------------------
+// Mock client for replacing signing done by monax-keys
+
+// Implementation assertion
 var _ KeyClient = (*MockKeyClient)(nil)
 
 type MockKeyClient struct {
-	knownKeys map[string]*crypto.Key
+	knownKeys map[string]*MockKey
 }
 
 func NewMockKeyClient() *MockKeyClient {
 	return &MockKeyClient{
-		knownKeys: make(map[string]*crypto.Key),
+		knownKeys: make(map[string]*MockKey),
 	}
 }
 
 func (mock *MockKeyClient) NewKey() (address []byte) {
 	// Only tests ED25519 curve and ripemd160.
-	keyType := crypto.KeyType{crypto.CurveTypeEd25519,
-		crypto.AddrTypeRipemd160}
-	key, err := crypto.NewKey(keyType)
+	key, err := newMockKey()
 	if err != nil {
-		panic(fmt.Sprintf("Mocked key client failed on key generation (%s): %s", keyType.String(), err))
+		panic(fmt.Sprintf("Mocked key client failed on key generation: %s", err))
 	}
 	mock.knownKeys[fmt.Sprintf("%X", key.Address)] = key
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signBytesString string, signAddress []byte) (signature []byte, err error) {
+func (mock *MockKeyClient) Sign(signBytesString string, signAddress []byte) ([]byte, error) {
 	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
 	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
@@ -72,5 +109,5 @@ func (mock *MockKeyClient) PublicKey(address []byte) (publicKey []byte, err erro
 	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", address)
 	}
-	return key.Pubkey()
+	return key.PublicKey, nil
 }

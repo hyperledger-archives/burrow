@@ -17,10 +17,10 @@ package tendermint_log15
 import (
 	"time"
 
+	"github.com/go-stack/stack"
 	"github.com/monax/burrow/logging/structure"
 	"github.com/monax/burrow/logging/types"
 	. "github.com/monax/burrow/util/slice"
-	"github.com/go-stack/stack"
 	"github.com/tendermint/log15"
 )
 

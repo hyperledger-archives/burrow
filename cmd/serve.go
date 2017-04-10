@@ -25,6 +25,7 @@ import (
 	"github.com/monax/burrow/definitions"
 	"github.com/monax/burrow/logging"
 	"github.com/monax/burrow/logging/lifecycle"
+	vm "github.com/monax/burrow/manager/burrow-mint/evm"
 	"github.com/monax/burrow/util"
 
 	"github.com/spf13/cobra"
@@ -43,18 +44,18 @@ var DefaultConfigFilename = fmt.Sprintf("%s.%s",
 func buildServeCommand(do *definitions.Do) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "serve",
-		Short: "Eris-DB serve starts an eris-db node with client API enabled by default.",
-		Long: `Eris-DB serve starts an eris-db node with client API enabled by default.
-The Eris-DB node is modularly configured for the consensus engine and application
+		Short: "burrow serve starts a burrow node with client API enabled by default.",
+		Long: `burrow serve starts a burrow node with client API enabled by default.
+The burrow node is modularly configured for the consensus engine and application
 manager.  The client API can be disabled.`,
-		Example: fmt.Sprintf(`$ eris-db serve -- will start the Eris-DB node based on the configuration file "%s" in the current working directory
-$ eris-db serve --work-dir <path-to-working-directory> -- will start the Eris-DB node based on the configuration file "%s" in the provided working directory
-$ eris-db serve --chain-id <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
+		Example: fmt.Sprintf(`$ burrow serve -- will start the burrow node based on the configuration file "%s" in the current working directory
+$ burrow serve --work-dir <path-to-working-directory> -- will start the burrow node based on the configuration file "%s" in the provided working directory
+$ burrow serve --chain-id <CHAIN_ID> -- will overrule the configuration entry assert_chain_id`,
 			DefaultConfigFilename, DefaultConfigFilename),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			// if WorkDir was not set by a flag or by $ERIS_DB_WORKDIR
+			// if WorkDir was not set by a flag or by $BURROW_WORKDIR
 			// NOTE [ben]: we can consider an `Explicit` flag that eliminates
-			// the use of any assumptions while starting Eris-DB
+			// the use of any assumptions while starting burrow
 			if do.WorkDir == "" {
 				if currentDirectory, err := os.Getwd(); err != nil {
 					panic(fmt.Sprintf("No directory provided and failed to get current "+
@@ -80,11 +81,11 @@ func addServeFlags(do *definitions.Do, serveCmd *cobra.Command) {
 	serveCmd.PersistentFlags().StringVarP(&do.ChainId, "chain-id", "c",
 		defaultChainId(), "specify the chain id to use for assertion against the genesis file or the existing state. If omitted, and no id is set in $CHAIN_ID, then assert_chain_id is used from the configuration file.")
 	serveCmd.PersistentFlags().StringVarP(&do.WorkDir, "work-dir", "w",
-		defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $ERIS_DB_WORKDIR, the current working directory is taken.")
+		defaultWorkDir(), "specify the working directory for the chain to run.  If omitted, and no path set in $BURROW_WORKDIR, the current working directory is taken.")
 	serveCmd.PersistentFlags().StringVarP(&do.DataDir, "data-dir", "",
-		defaultDataDir(), "specify the data directory.  If omitted and not set in $ERIS_DB_DATADIR, <working_directory>/data is taken.")
+		defaultDataDir(), "specify the data directory.  If omitted and not set in $BURROW_DATADIR, <working_directory>/data is taken.")
 	serveCmd.PersistentFlags().BoolVarP(&do.DisableRpc, "disable-rpc", "",
-		defaultDisableRpc(), "indicate for the RPC to be disabled. If omitted the RPC is enabled by default, unless (deprecated) $ERISDB_API is set to false.")
+		defaultDisableRpc(), "indicate for the RPC to be disabled. If omitted the RPC is enabled by default, unless (deprecated) $BURROW_API is set to false.")
 }
 
 //------------------------------------------------------------------------------
@@ -108,7 +109,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to load logging config: %s", err)
 	}
 
-  logger, err := lifecycle.NewLoggerFromLoggingConfig(loggerConfig)
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(loggerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to build logger from logging config: %s", err)
 	}
@@ -153,7 +154,7 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 }
 
 // ServeRunner() returns a command runner that prepares the environment and sets
-// up the core for Eris-DB to run. After the setup succeeds, it starts the core
+// up the core for burrow to run. After the setup succeeds, it starts the core
 // and waits for the core to terminate.
 func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 	return func(cmd *cobra.Command, args []string) {
@@ -164,6 +165,8 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 			util.Fatalf("Fatal error reading configuration from %s/%s", do.WorkDir,
 				DefaultConfigFilename)
 		}
+
+		vm.SetDebug(do.Debug)
 
 		newCore, err := NewCoreFromDo(do)
 
@@ -207,21 +210,21 @@ func defaultChainId() string {
 }
 
 func defaultWorkDir() string {
-	// if ERIS_DB_WORKDIR environment variable is not set, keep do.WorkDir empty
+	// if BURROW_WORKDIR environment variable is not set, keep do.WorkDir empty
 	// as do.WorkDir is set by the PreRun
-	return setDefaultString("ERIS_DB_WORKDIR", "")
+	return setDefaultString("BURROW_WORKDIR", "")
 }
 
 func defaultDataDir() string {
 	// As the default data directory depends on the default working directory,
 	// wait setting a default value, and initialise the data directory from serve()
-	return setDefaultString("ERIS_DB_DATADIR", "")
+	return setDefaultString("BURROW_DATADIR", "")
 }
 
 func defaultDisableRpc() bool {
-	// we currently observe environment variable ERISDB_API (true = enable)
+	// we currently observe environment variable BURROW_API (true = enable)
 	// and default to enabling the RPC if it is not set.
-	// TODO: [ben] deprecate ERISDB_API across the stack for 0.12.1, and only disable
+	// TODO: [ben] deprecate BURROW_API across the stack for 0.12.1, and only disable
 	// the rpc through a command line flag --disable-rpc
-	return !setDefaultBool("ERISDB_API", true)
+	return !setDefaultBool("BURROW_API", true)
 }

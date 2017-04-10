@@ -23,17 +23,16 @@ import (
 	"github.com/monax/burrow/logging"
 	"github.com/monax/burrow/logging/adapters/stdlib"
 	tmLog15adapter "github.com/monax/burrow/logging/adapters/tendermint_log15"
-	"github.com/monax/burrow/logging/config"
 	"github.com/monax/burrow/logging/loggers"
 	"github.com/monax/burrow/logging/structure"
 
-	"github.com/monax/burrow/logging/types"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
 )
 
-// Lifecycle provides a canonical source for eris loggers. Components should use the functions here
+// Lifecycle provides a canonical source for burrow loggers. Components should use the functions here
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
@@ -66,7 +65,7 @@ func NewStdErrLogger() types.InfoTraceLogger {
 	return NewLogger(nil, logger)
 }
 
-// Provided a standard eris logger that outputs to the supplied underlying info
+// Provided a standard logger that outputs to the supplied underlying info
 // and trace loggers
 func NewLogger(infoOnlyLogger, infoAndTraceLogger kitlog.Logger) types.InfoTraceLogger {
 	infoTraceLogger := loggers.NewInfoTraceLogger(infoOnlyLogger, infoAndTraceLogger)

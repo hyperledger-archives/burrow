@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/monax/burrow/logging"
 	logging_types "github.com/monax/burrow/logging/types"
-	"github.com/gin-gonic/gin"
 	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 )
@@ -228,7 +228,6 @@ func NewServeProcess(config *ServerConfig, logger logging_types.InfoTraceLogger,
 }
 
 // Used to enable log15 logging instead of the default Gin logging.
-// This is done mainly because we at Eris uses log15 in other components.
 func logHandler(logger logging_types.InfoTraceLogger) gin.HandlerFunc {
 	logger = logging.WithScope(logger, "ginLogHandler")
 	return func(c *gin.Context) {

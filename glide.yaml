@@ -9,6 +9,7 @@ import:
 - package: github.com/stretchr/testify
 - package: github.com/tendermint/tendermint
   version: ~0.8.0
+- package: github.com/tendermint/ed25519
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
   subpackages:

@@ -26,15 +26,15 @@ import (
 type Do struct {
 	// Persistent flags not reflected in the configuration files
 	// only set through command line flags or environment variables
-	Debug   bool // ERIS_DB_DEBUG
-	Verbose bool // ERIS_DB_VERBOSE
+	Debug   bool // BURROW_DEBUG
+	Verbose bool // BURROW_VERBOSE
 
-	// Work directory is the root directory for Eris-DB to act in
-	WorkDir string // ERIS_DB_WORKDIR
+	// Work directory is the root directory for burrow to act in
+	WorkDir string // BURROW_WORKDIR
 	// Data directory is defaulted to WorkDir + `/data`.
-	// If Eris-CLI maps a data container, DataDir is intended to point
+	// If cli maps a data container, DataDir is intended to point
 	// to that mapped data directory.
-	DataDir string // ERIS_DB_DATADIR
+	DataDir string // BURROW_DATADIR
 
 	// Capital configuration options explicitly extracted from the Viper config
 	ChainId string // has to be set to non-empty string,
@@ -65,13 +65,13 @@ func NewDo() *Do {
 }
 
 // ReadConfig uses Viper to set the configuration file name, file format
-// where Eris-DB currently only uses `toml`.
+// where burrow currently only uses `toml`.
 // The search directory is explicitly limited to a single location to
 // minimise the chance of loading the wrong configuration file.
 func (d *Do) ReadConfig(directory string, name string, configType string) error {
 	// name of the configuration file without extension
 	d.Config.SetConfigName(name)
-	// Eris-DB currently only uses "toml"
+	// burrow currently only uses "toml"
 	d.Config.SetConfigType(configType)
 	// look for configuration file in the working directory
 	d.Config.AddConfigPath(directory)

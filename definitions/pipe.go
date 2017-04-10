@@ -14,11 +14,11 @@
 
 package definitions
 
-// TODO: [ben] This respects the old Pipe interface from Eris-DB.
+// TODO: [ben] This respects the old Pipe interface from burrow.
 // This made sense as a wrapper around the old Tendermint, but now
 // it strongly reflects the internal details of old Tendermint outwards
 // and provides little value as an abstraction.
-// The refactor needed here for eris-db-0.12.1 is to expose a language
+// The refactor needed here for burrow-0.12.1 is to expose a language
 // of transactions, block verification and accounts, grouping
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 

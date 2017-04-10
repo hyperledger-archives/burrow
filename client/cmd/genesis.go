@@ -31,8 +31,8 @@ var (
 
 var GenesisGenCmd = &cobra.Command{
 	Use:   "make-genesis",
-	Short: "eris-client make-genesis creates a genesis.json with known inputs",
-	Long:  "eris-client make-genesis creates a genesis.json with known inputs",
+	Short: "burrow-client make-genesis creates a genesis.json with known inputs",
+	Long:  "burrow-client make-genesis creates a genesis.json with known inputs",
 
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO refactor to not panic

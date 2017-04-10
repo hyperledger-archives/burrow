@@ -182,7 +182,7 @@ func DumpConsensusState(client rpcclient.Client) (*rpc_types.ResultDumpConsensus
 }
 
 func performCall(client rpcclient.Client, method string,
-	paramKeyVals ...interface{}) (res rpc_types.ErisDBResult, err error) {
+	paramKeyVals ...interface{}) (res rpc_types.BurrowResult, err error) {
 	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
 	if err != nil {
 		return

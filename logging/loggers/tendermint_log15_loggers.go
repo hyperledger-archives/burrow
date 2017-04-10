@@ -6,8 +6,8 @@ import (
 	"log/syslog"
 	"net/url"
 
-	log15a "github.com/monax/burrow/logging/adapters/tendermint_log15"
 	kitlog "github.com/go-kit/kit/log"
+	log15a "github.com/monax/burrow/logging/adapters/tendermint_log15"
 	"github.com/tendermint/log15"
 )
 

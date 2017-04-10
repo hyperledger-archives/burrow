@@ -1,9 +1,9 @@
 package lifecycle
 
 import (
+	"runtime"
 	"testing"
 	"time"
-	"runtime"
 )
 
 func TestNewStdErrLogger(t *testing.T) {

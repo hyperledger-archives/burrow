@@ -15,10 +15,10 @@
 package logging
 
 import (
-	"github.com/monax/burrow/logging/types"
-	"github.com/monax/burrow/logging/structure"
-	"github.com/monax/burrow/util/slice"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/burrow/logging/types"
+	"github.com/monax/burrow/util/slice"
 )
 
 // Helper functions for InfoTraceLoggers, sort of extension methods to loggers
@@ -49,4 +49,3 @@ func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
 	prepended := slice.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }
-

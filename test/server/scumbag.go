@@ -19,10 +19,11 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/monax/burrow/rpc"
 	"github.com/monax/burrow/server"
+
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
-	"github.com/monax/burrow/rpc"
 )
 
 func init() {

@@ -17,8 +17,8 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"text/template"
 	lconfig "github.com/monax/burrow/logging/config"
+	"text/template"
 )
 
 type ConfigServiceGeneral struct {
@@ -31,8 +31,8 @@ type ConfigServiceGeneral struct {
 // TODO: [ben] increase the configurability upon need
 type ConfigChainGeneral struct {
 	AssertChainId       string
-	ErisdbMajorVersion  uint8
-	ErisdbMinorVersion  uint8
+	BurrowMajorVersion  uint8
+	BurrowMinorVersion  uint8
 	GenesisRelativePath string
 }
 
@@ -75,23 +75,23 @@ func init() {
 }
 
 // NOTE: [ben] for 0.12.0-rc3 we only have a single configuration path
-// with Tendermint in-process as the consensus engine and ErisMint
+// with Tendermint in-process as the consensus engine and BurrowMint
 // in-process as the application manager, so we hard-code the few
 // parameters that are already templated.
 // Let's learn to walk before we can run.
 func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName string,
 	useDataContainer bool, exportedPortsString, containerEntrypoint string) ([]byte, error) {
 
-	erisdbService := &ConfigServiceGeneral{
+	burrowService := &ConfigServiceGeneral{
 		ChainImageName:      chainImageName,
 		UseDataContainer:    useDataContainer,
 		ExportedPorts:       exportedPortsString,
 		ContainerEntrypoint: containerEntrypoint,
 	}
-	erisdbChain := &ConfigChainGeneral{
+	burrowChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
-		ErisdbMajorVersion:  uint8(0),
-		ErisdbMinorVersion:  uint8(17),
+		BurrowMajorVersion:  uint8(0),
+		BurrowMinorVersion:  uint8(17),
 		GenesisRelativePath: "genesis.json",
 	}
 	chainConsensusModule := &ConfigChainModule{
@@ -101,10 +101,10 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 		ModuleRelativeRoot: "tendermint",
 	}
 	chainApplicationManagerModule := &ConfigChainModule{
-		Name:               "erismint",
+		Name:               "burrowmint",
 		MajorVersion:       uint8(0),
 		MinorVersion:       uint8(17),
-		ModuleRelativeRoot: "erismint",
+		ModuleRelativeRoot: "burrowmint",
 	}
 	tendermintModule := &ConfigTendermint{
 		Moniker:  moniker,
@@ -122,16 +122,16 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	buffer.WriteString(headerCopyright)
 
 	// write section [service]
-	if err := serviceGeneralTemplate.Execute(&buffer, erisdbService); err != nil {
+	if err := serviceGeneralTemplate.Execute(&buffer, burrowService); err != nil {
 		return nil, fmt.Errorf("Failed to write template service general for %s: %s",
 			chainId, err)
 	}
 	// write section for service dependencies; this is currently a static section
-	// with a fixed dependency on eris-keys
+	// with a fixed dependency on monax-keys
 	buffer.WriteString(sectionServiceDependencies)
 
 	// write section [chain]
-	if err := chainGeneralTemplate.Execute(&buffer, erisdbChain); err != nil {
+	if err := chainGeneralTemplate.Execute(&buffer, burrowChain); err != nil {
 		return nil, fmt.Errorf("Failed to write template chain general for %s: %s",
 			chainId, err)
 	}
@@ -168,8 +168,8 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 			chainId, moniker, err)
 	}
 
-	// write static section erismint
-	buffer.WriteString(sectionErisMint)
+	// write static section burrowmint
+	buffer.WriteString(sectionBurrowMint)
 
 	buffer.WriteString(sectionLoggingHeader)
 	buffer.WriteString(lconfig.DefaultNodeLoggingConfig().RootTOMLString())
@@ -185,5 +185,5 @@ func GetExampleConfigFileBytes() ([]byte, error) {
 		"db:latest",
 		true,
 		"46657",
-		"eris-db")
+		"burrow")
 }

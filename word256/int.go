@@ -16,7 +16,7 @@ package word256
 
 // NOTE: [ben] this used to be in tendermint/go-common but should be
 // isolated and cleaned up and tested.  Should be used in permissions
-// and manager/eris-mint
+// and manager/burrow-mint
 // TODO: [ben] cleanup, but also write unit-tests
 
 import (

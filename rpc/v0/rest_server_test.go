@@ -23,16 +23,15 @@ import (
 	"runtime"
 	"testing"
 
-	consensus_types "github.com/monax/burrow/consensus/types"
-
 	account "github.com/monax/burrow/account"
+	consensus_types "github.com/monax/burrow/consensus/types"
 	core_types "github.com/monax/burrow/core/types"
 	event "github.com/monax/burrow/event"
+	rpc "github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/rpc/v0/shared"
 	server "github.com/monax/burrow/server"
 	"github.com/monax/burrow/txs"
 
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/rpc/v0/shared"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"

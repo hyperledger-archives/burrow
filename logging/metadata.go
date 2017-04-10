@@ -17,10 +17,10 @@ package logging
 import (
 	"time"
 
-	"github.com/monax/burrow/logging/structure"
-	"github.com/monax/burrow/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
+	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/burrow/logging/types"
 )
 
 const (

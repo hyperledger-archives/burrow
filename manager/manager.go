@@ -21,9 +21,8 @@ import (
 
 	config "github.com/monax/burrow/config"
 	definitions "github.com/monax/burrow/definitions"
-	logging_types "github.com/monax/burrow/logging/types"
-	erismint "github.com/monax/burrow/manager/eris-mint"
-	// types       "github.com/monax/burrow/manager/types"
+	"github.com/monax/burrow/logging/types"
+	burrowmint "github.com/monax/burrow/manager/burrow-mint"
 
 	"github.com/monax/burrow/logging"
 )
@@ -38,14 +37,14 @@ func NewApplicationPipe(moduleConfig *config.ModuleConfig,
 	consensusMinorVersion string) (definitions.Pipe,
 	error) {
 	switch moduleConfig.Name {
-	case "erismint":
-		if err := erismint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
+	case "burrowmint":
+		if err := burrowmint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
 			return nil, err
 		}
-		logging.InfoMsg(logger, "Loading ErisMint",
+		logging.InfoMsg(logger, "Loading BurrowMint",
 			"compatibleConsensus", consensusMinorVersion,
-			"erisMintVersion", erismint.GetErisMintVersion().GetVersionString())
-		return erismint.NewErisMintPipe(moduleConfig, evsw, logger)
+			"burrowMintVersion", burrowmint.GetBurrowMintVersion().GetVersionString())
+		return burrowmint.NewBurrowMintPipe(moduleConfig, evsw, logger)
 	}
 	return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)
 }

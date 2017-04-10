@@ -7,9 +7,9 @@ import (
 	"net/url"
 
 	"github.com/eapache/channels"
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/monax/burrow/logging/loggers"
 	"github.com/monax/burrow/logging/structure"
-	kitlog "github.com/go-kit/kit/log"
 )
 
 // This file contains definitions for a configurable output graph for the

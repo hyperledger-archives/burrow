@@ -15,9 +15,9 @@
 package loggers
 
 import (
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/monax/burrow/logging/structure"
 	"github.com/monax/burrow/logging/types"
-	kitlog "github.com/go-kit/kit/log"
 )
 
 type infoTraceLogger struct {

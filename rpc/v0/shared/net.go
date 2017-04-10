@@ -19,8 +19,8 @@ import (
 	"github.com/monax/burrow/definitions"
 )
 
-// Net is part of the pipe for ErisMint and provides the implementation
-// for the pipe to call into the ErisMint application
+// Net is part of the pipe for BurrowMint and provides the implementation
+// for the pipe to call into the BurrowMint application
 
 //-----------------------------------------------------------------------------
 

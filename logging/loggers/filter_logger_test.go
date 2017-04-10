@@ -1,9 +1,9 @@
 package loggers
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	. "github.com/monax/burrow/util/slice"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestFilterLogger(t *testing.T) {

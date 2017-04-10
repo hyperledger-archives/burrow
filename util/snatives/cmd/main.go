@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/monax/burrow/manager/eris-mint/evm"
+	"github.com/monax/burrow/manager/burrow-mint/evm"
 	"github.com/monax/burrow/util/snatives/templates"
 )
 
