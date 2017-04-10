@@ -21,9 +21,9 @@ import (
 
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/logging"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/monax/burrow/txs"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )

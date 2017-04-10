@@ -25,10 +25,10 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
-	"github.com/eris-ltd/eris-db/txs"
-	"github.com/eris-ltd/eris-db/word256"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	edbcli "github.com/monax/burrow/rpc/tendermint/client"
+	"github.com/monax/burrow/txs"
+	"github.com/monax/burrow/word256"
 
 	"github.com/stretchr/testify/assert"
 	rpcclient "github.com/tendermint/go-rpc/client"

@@ -19,8 +19,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/eris-ltd/eris-db/client/methods"
-	"github.com/eris-ltd/eris-db/util"
+	"github.com/monax/burrow/client/methods"
+	"github.com/monax/burrow/util"
 )
 
 func buildTransactionCommand() *cobra.Command {

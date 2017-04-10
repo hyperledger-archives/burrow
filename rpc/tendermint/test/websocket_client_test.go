@@ -23,8 +23,8 @@ import (
 
 	"time"
 
-	core_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	core_types "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )

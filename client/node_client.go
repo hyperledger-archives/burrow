@@ -20,14 +20,14 @@ import (
 
 	"github.com/tendermint/go-rpc/client"
 
-	acc "github.com/eris-ltd/eris-db/account"
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	"github.com/eris-ltd/eris-db/logging"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	tendermint_client "github.com/eris-ltd/eris-db/rpc/tendermint/client"
-	tendermint_types "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	acc "github.com/monax/burrow/account"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	core_types "github.com/monax/burrow/core/types"
+	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
+	tendermint_client "github.com/monax/burrow/rpc/tendermint/client"
+	tendermint_types "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	tmLog15 "github.com/tendermint/log15"
 )
 

@@ -18,9 +18,9 @@ package test
 import (
 	"fmt"
 
-	vm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	rpc_core "github.com/eris-ltd/eris-db/rpc/tendermint/core"
-	"github.com/eris-ltd/eris-db/test/fixtures"
+	vm "github.com/monax/burrow/manager/eris-mint/evm"
+	rpc_core "github.com/monax/burrow/rpc/tendermint/core"
+	"github.com/monax/burrow/test/fixtures"
 )
 
 // Needs to be referenced by a *_test.go file to be picked up

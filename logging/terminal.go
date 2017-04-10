@@ -15,7 +15,7 @@
 package logging
 
 import (
-	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/monax/burrow/logging/structure"
 	"github.com/go-kit/kit/log/term"
 )
 

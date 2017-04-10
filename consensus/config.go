@@ -15,8 +15,8 @@
 package consensus
 
 import (
-	// noops      "github.com/eris-ltd/eris-db/consensus/noops"
-	tendermint "github.com/eris-ltd/eris-db/consensus/tendermint"
+	// noops      "github.com/monax/burrow/consensus/noops"
+	tendermint "github.com/monax/burrow/consensus/tendermint"
 )
 
 //------------------------------------------------------------------------------

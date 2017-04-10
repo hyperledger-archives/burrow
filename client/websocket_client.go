@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"time"
 
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
+	logging_types "github.com/monax/burrow/logging/types"
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	"github.com/eris-ltd/eris-db/logging"
-	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/burrow/logging"
+	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 )
 
 const (

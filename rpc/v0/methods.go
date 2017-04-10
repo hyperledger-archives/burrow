@@ -15,13 +15,13 @@
 package v0
 
 import (
-	"github.com/eris-ltd/eris-db/blockchain"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/rpc/v0/shared"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/burrow/blockchain"
+	core_types "github.com/monax/burrow/core/types"
+	definitions "github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/event"
+	"github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/rpc/v0/shared"
+	"github.com/monax/burrow/txs"
 )
 
 // TODO use the method name definition file.

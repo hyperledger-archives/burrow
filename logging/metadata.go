@@ -17,8 +17,8 @@ package logging
 import (
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging/structure"
-	"github.com/eris-ltd/eris-db/logging/types"
+	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/burrow/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
 )

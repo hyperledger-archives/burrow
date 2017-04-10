@@ -22,8 +22,8 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	acm "github.com/monax/burrow/account"
+	ptypes "github.com/monax/burrow/permission/types"
 	. "github.com/tendermint/go-common"
 	"github.com/tendermint/go-wire"
 

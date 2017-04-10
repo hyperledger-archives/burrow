@@ -15,8 +15,8 @@
 package types
 
 import (
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/burrow/event"
+	"github.com/monax/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

@@ -17,18 +17,18 @@ package v0
 import (
 	"fmt"
 
-	account "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
+	account "github.com/monax/burrow/account"
+	core_types "github.com/monax/burrow/core/types"
+	definitions "github.com/monax/burrow/definitions"
+	event "github.com/monax/burrow/event"
 
-	blockchain_types "github.com/eris-ltd/eris-db/blockchain/types"
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	"github.com/eris-ltd/eris-db/txs"
+	blockchain_types "github.com/monax/burrow/blockchain/types"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	logging_types "github.com/monax/burrow/logging/types"
+	manager_types "github.com/monax/burrow/manager/types"
+	"github.com/monax/burrow/txs"
 
-	"github.com/eris-ltd/eris-db/logging/loggers"
+	"github.com/monax/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

@@ -21,12 +21,12 @@ import (
 	"strings"
 	"text/template"
 
-	commands "github.com/eris-ltd/eris-db/cmd"
-	docs "github.com/eris-ltd/eris-db/docs/generator"
+	commands "github.com/monax/burrow/cmd"
+	docs "github.com/monax/burrow/docs/generator"
 
-	clientCommands "github.com/eris-ltd/eris-db/client/cmd"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/version"
+	clientCommands "github.com/monax/burrow/client/cmd"
+	"github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/version"
 	"github.com/spf13/cobra"
 )
 

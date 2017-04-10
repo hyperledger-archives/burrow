@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/viper"
 	tendermintConfig "github.com/tendermint/go-config"
 
-	"github.com/eris-ltd/eris-db/config"
+	"github.com/monax/burrow/config"
 )
 
 // NOTE [ben] Compiler check to ensure TendermintConfig successfully implements

@@ -24,12 +24,12 @@ import (
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
 
-	"github.com/eris-ltd/eris-db/logging"
+	"github.com/monax/burrow/logging"
 
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	sm "github.com/eris-ltd/eris-db/manager/eris-mint/state"
-	manager_types "github.com/eris-ltd/eris-db/manager/types"
-	"github.com/eris-ltd/eris-db/txs"
+	logging_types "github.com/monax/burrow/logging/types"
+	sm "github.com/monax/burrow/manager/eris-mint/state"
+	manager_types "github.com/monax/burrow/manager/types"
+	"github.com/monax/burrow/txs"
 )
 
 //--------------------------------------------------------------------------------

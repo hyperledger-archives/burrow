@@ -15,13 +15,13 @@
 package v0
 
 import (
-	account "github.com/eris-ltd/eris-db/account"
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	event "github.com/eris-ltd/eris-db/event"
-	genesis "github.com/eris-ltd/eris-db/genesis"
-	"github.com/eris-ltd/eris-db/rpc/v0/shared"
-	transaction "github.com/eris-ltd/eris-db/txs"
+	account "github.com/monax/burrow/account"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	core_types "github.com/monax/burrow/core/types"
+	event "github.com/monax/burrow/event"
+	genesis "github.com/monax/burrow/genesis"
+	"github.com/monax/burrow/rpc/v0/shared"
+	transaction "github.com/monax/burrow/txs"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 

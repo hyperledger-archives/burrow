@@ -21,8 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/version"
+	"github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/version"
 )
 
 // Global flags for persistent flags

@@ -19,10 +19,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/eris-ltd/eris-db/server"
+	"github.com/monax/burrow/server"
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
-	"github.com/eris-ltd/eris-db/rpc"
+	"github.com/monax/burrow/rpc"
 )
 
 func init() {

@@ -15,7 +15,7 @@
 package main
 
 import (
-	commands "github.com/eris-ltd/eris-db/cmd"
+	commands "github.com/monax/burrow/cmd"
 )
 
 func main() {

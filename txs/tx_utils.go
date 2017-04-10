@@ -17,8 +17,8 @@ package txs
 import (
 	"fmt"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	acm "github.com/monax/burrow/account"
+	ptypes "github.com/monax/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 )

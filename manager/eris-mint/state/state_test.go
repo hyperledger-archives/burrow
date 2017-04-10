@@ -19,10 +19,10 @@ import (
 	"encoding/hex"
 	"testing"
 
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	evm "github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	"github.com/eris-ltd/eris-db/txs"
-	"github.com/eris-ltd/eris-db/word256"
+	core_types "github.com/monax/burrow/core/types"
+	evm "github.com/monax/burrow/manager/eris-mint/evm"
+	"github.com/monax/burrow/txs"
+	"github.com/monax/burrow/word256"
 
 	"github.com/tendermint/tendermint/config/tendermint_test"
 )

@@ -15,12 +15,12 @@
 package methods
 
 import (
-	"github.com/eris-ltd/eris-db/client/rpc"
-	"github.com/eris-ltd/eris-db/core"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/logging"
-	"github.com/eris-ltd/eris-db/logging/lifecycle"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
+	"github.com/monax/burrow/client/rpc"
+	"github.com/monax/burrow/core"
+	"github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/logging"
+	"github.com/monax/burrow/logging/lifecycle"
+	logging_types "github.com/monax/burrow/logging/types"
 )
 
 func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTraceLogger) {

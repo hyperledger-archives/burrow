@@ -18,11 +18,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/rpc"
-	server "github.com/eris-ltd/eris-db/server"
-	"github.com/eris-ltd/eris-db/txs"
+	definitions "github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/event"
+	"github.com/monax/burrow/rpc"
+	server "github.com/monax/burrow/server"
+	"github.com/monax/burrow/txs"
 )
 
 // Used for ErisDb. Implements WebSocketService.

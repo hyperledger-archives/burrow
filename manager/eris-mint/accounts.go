@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"sync"
 
-	account "github.com/eris-ltd/eris-db/account"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
-	word256 "github.com/eris-ltd/eris-db/word256"
+	account "github.com/monax/burrow/account"
+	core_types "github.com/monax/burrow/core/types"
+	definitions "github.com/monax/burrow/definitions"
+	event "github.com/monax/burrow/event"
+	word256 "github.com/monax/burrow/word256"
 )
 
 // NOTE [ben] Compiler check to ensure Accounts successfully implements

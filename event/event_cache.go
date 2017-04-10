@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eris-ltd/eris-db/txs"
+	"github.com/monax/burrow/txs"
 )
 
 var (

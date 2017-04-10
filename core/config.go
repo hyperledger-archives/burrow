@@ -23,14 +23,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/eris-ltd/eris-db/config"
-	"github.com/eris-ltd/eris-db/consensus"
-	"github.com/eris-ltd/eris-db/definitions"
-	lconfig "github.com/eris-ltd/eris-db/logging/config"
-	"github.com/eris-ltd/eris-db/manager"
-	"github.com/eris-ltd/eris-db/server"
-	"github.com/eris-ltd/eris-db/util"
-	"github.com/eris-ltd/eris-db/version"
+	"github.com/monax/burrow/config"
+	"github.com/monax/burrow/consensus"
+	"github.com/monax/burrow/definitions"
+	lconfig "github.com/monax/burrow/logging/config"
+	"github.com/monax/burrow/manager"
+	"github.com/monax/burrow/server"
+	"github.com/monax/burrow/util"
+	"github.com/monax/burrow/version"
 	"github.com/spf13/viper"
 )
 

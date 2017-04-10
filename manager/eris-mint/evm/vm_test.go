@@ -24,10 +24,10 @@ import (
 
 	"errors"
 
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/eris-ltd/eris-db/word256"
+	. "github.com/monax/burrow/manager/eris-mint/evm/opcodes"
+	ptypes "github.com/monax/burrow/permission/types"
+	"github.com/monax/burrow/txs"
+	. "github.com/monax/burrow/word256"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-events"
 )
@@ -194,7 +194,7 @@ func TestSendCall(t *testing.T) {
 
 // This test was introduced to cover an issues exposed in our handling of the
 // gas limit passed from caller to callee on various forms of CALL
-// this ticket gives some background: https://github.com/eris-ltd/eris-pm/issues/212
+// this ticket gives some background: https://github.com/monax/eris-pm/issues/212
 // The idea of this test is to implement a simple DelegateCall in EVM code
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure

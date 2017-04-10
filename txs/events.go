@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/eris-ltd/eris-db/word256"
+	. "github.com/monax/burrow/word256"
 
 	"github.com/tendermint/go-wire"
 	tm_types "github.com/tendermint/tendermint/types" // Block

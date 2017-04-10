@@ -17,7 +17,7 @@ package genesis
 import (
 	"fmt"
 
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	ptypes "github.com/monax/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 )

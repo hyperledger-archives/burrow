@@ -5,7 +5,7 @@ import (
 
 	"regexp"
 
-	"github.com/eris-ltd/eris-db/common/math/integral"
+	"github.com/monax/burrow/common/math/integral"
 )
 
 func BuildFilterPredicate(filterConfig *FilterConfig) (func([]interface{}) bool, error) {

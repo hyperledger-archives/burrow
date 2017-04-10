@@ -17,9 +17,9 @@ package vm
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/common/math/integral"
-	"github.com/eris-ltd/eris-db/common/sanity"
-	. "github.com/eris-ltd/eris-db/word256"
+	"github.com/monax/burrow/common/math/integral"
+	"github.com/monax/burrow/common/sanity"
+	. "github.com/monax/burrow/word256"
 )
 
 // Not goroutine safe

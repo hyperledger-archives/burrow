@@ -17,7 +17,7 @@ package vm
 import (
 	"crypto/sha256"
 
-	. "github.com/eris-ltd/eris-db/word256"
+	. "github.com/monax/burrow/word256"
 
 	"golang.org/x/crypto/ripemd160"
 )

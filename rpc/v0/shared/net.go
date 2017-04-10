@@ -15,8 +15,8 @@
 package shared
 
 import (
-	consensus_types "github.com/eris-ltd/eris-db/consensus/types"
-	"github.com/eris-ltd/eris-db/definitions"
+	consensus_types "github.com/monax/burrow/consensus/types"
+	"github.com/monax/burrow/definitions"
 )
 
 // Net is part of the pipe for ErisMint and provides the implementation

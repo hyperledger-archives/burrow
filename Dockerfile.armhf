@@ -11,7 +11,7 @@ EXPOSE 46657
 # install eris-db
 
 # set the source code path and copy the repository in
-ENV ERIS_DB_SRC_PATH $GOPATH/src/github.com/eris-ltd/eris-db
+ENV ERIS_DB_SRC_PATH $GOPATH/src/github.com/monax/burrow
 COPY . $ERIS_DB_SRC_PATH
 
 # fetch and install eris-db and its dependencies
@@ -28,7 +28,7 @@ RUN go get github.com/Masterminds/glide \
 #-----------------------------------------------------------------------------
 # install mint-client [to be deprecated]
 
-ENV ERIS_DB_MINT_REPO github.com/eris-ltd/mint-client
+ENV ERIS_DB_MINT_REPO github.com/monax/mint-client
 ENV ERIS_DB_MINT_SRC_PATH $GOPATH/src/$ERIS_DB_MINT_REPO
 
 WORKDIR $ERIS_DB_MINT_SRC_PATH

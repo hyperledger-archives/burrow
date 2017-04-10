@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
+	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )

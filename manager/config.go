@@ -15,7 +15,7 @@
 package manager
 
 import (
-	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
+	erismint "github.com/monax/burrow/manager/eris-mint"
 )
 
 //------------------------------------------------------------------------------

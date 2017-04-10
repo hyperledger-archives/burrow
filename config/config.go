@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
-	lconfig "github.com/eris-ltd/eris-db/logging/config"
+	lconfig "github.com/monax/burrow/logging/config"
 )
 
 type ConfigServiceGeneral struct {

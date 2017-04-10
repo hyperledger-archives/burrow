@@ -17,10 +17,10 @@ package methods
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/client"
-	"github.com/eris-ltd/eris-db/client/rpc"
-	"github.com/eris-ltd/eris-db/definitions"
-	"github.com/eris-ltd/eris-db/keys"
+	"github.com/monax/burrow/client"
+	"github.com/monax/burrow/client/rpc"
+	"github.com/monax/burrow/definitions"
+	"github.com/monax/burrow/keys"
 )
 
 func Call(do *definitions.ClientDo) error {

@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/eris-ltd/eris-db/common/math/integral"
-	"github.com/eris-ltd/eris-db/common/sanity"
-	. "github.com/eris-ltd/eris-db/manager/eris-mint/evm/opcodes"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm/sha3"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
-	"github.com/eris-ltd/eris-db/txs"
-	. "github.com/eris-ltd/eris-db/word256"
+	"github.com/monax/burrow/common/math/integral"
+	"github.com/monax/burrow/common/sanity"
+	. "github.com/monax/burrow/manager/eris-mint/evm/opcodes"
+	"github.com/monax/burrow/manager/eris-mint/evm/sha3"
+	ptypes "github.com/monax/burrow/permission/types"
+	"github.com/monax/burrow/txs"
+	. "github.com/monax/burrow/word256"
 
 	"github.com/tendermint/go-events"
 )

@@ -17,10 +17,10 @@ package core
 import (
 	"fmt"
 
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/definitions"
-	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	acm "github.com/monax/burrow/account"
+	"github.com/monax/burrow/definitions"
+	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	rpc "github.com/tendermint/go-rpc/server"
 	rpctypes "github.com/tendermint/go-rpc/types"
 )

@@ -22,15 +22,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/eris-ltd/eris-db/blockchain"
-	core_types "github.com/eris-ltd/eris-db/core/types"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	event "github.com/eris-ltd/eris-db/event"
-	"github.com/eris-ltd/eris-db/rpc"
-	"github.com/eris-ltd/eris-db/rpc/v0/shared"
-	server "github.com/eris-ltd/eris-db/server"
-	"github.com/eris-ltd/eris-db/txs"
-	"github.com/eris-ltd/eris-db/util"
+	"github.com/monax/burrow/blockchain"
+	core_types "github.com/monax/burrow/core/types"
+	definitions "github.com/monax/burrow/definitions"
+	event "github.com/monax/burrow/event"
+	"github.com/monax/burrow/rpc"
+	"github.com/monax/burrow/rpc/v0/shared"
+	server "github.com/monax/burrow/server"
+	"github.com/monax/burrow/txs"
+	"github.com/monax/burrow/util"
 )
 
 // Provides a REST-like web-api. Implements server.Server

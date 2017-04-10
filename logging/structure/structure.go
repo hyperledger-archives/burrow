@@ -14,7 +14,7 @@
 
 package structure
 
-import . "github.com/eris-ltd/eris-db/util/slice"
+import . "github.com/monax/burrow/util/slice"
 
 const (
 	// Log time (time.Time)

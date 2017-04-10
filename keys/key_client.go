@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	"github.com/eris-ltd/eris-db/logging"
+	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/monax/burrow/logging"
 )
 
 type KeyClient interface {

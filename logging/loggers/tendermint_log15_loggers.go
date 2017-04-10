@@ -6,7 +6,7 @@ import (
 	"log/syslog"
 	"net/url"
 
-	log15a "github.com/eris-ltd/eris-db/logging/adapters/tendermint_log15"
+	log15a "github.com/monax/burrow/logging/adapters/tendermint_log15"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/tendermint/log15"
 )

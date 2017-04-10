@@ -17,7 +17,7 @@ package opcodes
 import (
 	"fmt"
 
-	"github.com/eris-ltd/eris-db/word256"
+	"github.com/monax/burrow/word256"
 	"gopkg.in/fatih/set.v0"
 )
 

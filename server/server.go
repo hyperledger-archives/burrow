@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/eris-ltd/eris-db/logging"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
+	"github.com/monax/burrow/logging"
+	logging_types "github.com/monax/burrow/logging/types"
 	"github.com/gin-gonic/gin"
 	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"

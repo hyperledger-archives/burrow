@@ -19,7 +19,7 @@ import (
 
 	tendermint_version "github.com/tendermint/tendermint/version"
 
-	version "github.com/eris-ltd/eris-db/version"
+	version "github.com/monax/burrow/version"
 )
 
 const (

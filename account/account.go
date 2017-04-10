@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/eris-ltd/eris-db/common/sanity"
-	ptypes "github.com/eris-ltd/eris-db/permission/types"
+	"github.com/monax/burrow/common/sanity"
+	ptypes "github.com/monax/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"

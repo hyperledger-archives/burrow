@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	. "github.com/eris-ltd/eris-db/util/slice"
+	. "github.com/monax/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 

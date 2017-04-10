@@ -19,13 +19,13 @@ import (
 
 	events "github.com/tendermint/go-events"
 
-	config "github.com/eris-ltd/eris-db/config"
-	definitions "github.com/eris-ltd/eris-db/definitions"
-	logging_types "github.com/eris-ltd/eris-db/logging/types"
-	erismint "github.com/eris-ltd/eris-db/manager/eris-mint"
-	// types       "github.com/eris-ltd/eris-db/manager/types"
+	config "github.com/monax/burrow/config"
+	definitions "github.com/monax/burrow/definitions"
+	logging_types "github.com/monax/burrow/logging/types"
+	erismint "github.com/monax/burrow/manager/eris-mint"
+	// types       "github.com/monax/burrow/manager/types"
 
-	"github.com/eris-ltd/eris-db/logging"
+	"github.com/monax/burrow/logging"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface

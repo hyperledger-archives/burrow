@@ -20,11 +20,11 @@ import (
 	"testing"
 	"time"
 
-	ctypes "github.com/eris-ltd/eris-db/rpc/tendermint/core/types"
-	"github.com/eris-ltd/eris-db/txs"
+	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
+	"github.com/monax/burrow/txs"
 	tm_types "github.com/tendermint/tendermint/types"
 
-	edbcli "github.com/eris-ltd/eris-db/rpc/tendermint/client"
+	edbcli "github.com/monax/burrow/rpc/tendermint/client"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )

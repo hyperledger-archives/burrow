@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/eapache/channels"
-	"github.com/eris-ltd/eris-db/logging/loggers"
-	"github.com/eris-ltd/eris-db/logging/structure"
+	"github.com/monax/burrow/logging/loggers"
+	"github.com/monax/burrow/logging/structure"
 	kitlog "github.com/go-kit/kit/log"
 )
 

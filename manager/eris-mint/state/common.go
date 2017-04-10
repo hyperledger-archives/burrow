@@ -15,9 +15,9 @@
 package state
 
 import (
-	acm "github.com/eris-ltd/eris-db/account"
-	"github.com/eris-ltd/eris-db/manager/eris-mint/evm"
-	. "github.com/eris-ltd/eris-db/word256"
+	acm "github.com/monax/burrow/account"
+	"github.com/monax/burrow/manager/eris-mint/evm"
+	. "github.com/monax/burrow/word256"
 )
 
 type AccountGetter interface {

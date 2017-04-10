@@ -14,7 +14,7 @@ package tendermint_log15
 // limitations under the License.
 
 import (
-	"github.com/eris-ltd/eris-db/logging/types"
+	"github.com/monax/burrow/logging/types"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/tendermint/log15"
 )

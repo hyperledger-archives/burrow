@@ -3,7 +3,7 @@ package loggers
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	. "github.com/eris-ltd/eris-db/util/slice"
+	. "github.com/monax/burrow/util/slice"
 )
 
 func TestFilterLogger(t *testing.T) {

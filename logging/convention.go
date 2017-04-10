@@ -15,9 +15,9 @@
 package logging
 
 import (
-	"github.com/eris-ltd/eris-db/logging/types"
-	"github.com/eris-ltd/eris-db/logging/structure"
-	"github.com/eris-ltd/eris-db/util/slice"
+	"github.com/monax/burrow/logging/types"
+	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/burrow/util/slice"
 	kitlog "github.com/go-kit/kit/log"
 )
 
