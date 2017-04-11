@@ -28,7 +28,7 @@ then
   REPO=`pwd`
   CI="true"
 else
-  REPO=$GOPATH/src/github.com/monax/$TARGET
+  REPO=$GOPATH/src/github.com/hyperledger/$TARGET
 fi
 
 release_min=$(cat $REPO/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
