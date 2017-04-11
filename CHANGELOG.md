@@ -1,4 +1,15 @@
 # burrow changelog
+## v0.16.2
+This release finalises our accession to the Hyperledger project and updates our
+root package namespace to github.com/hyperledger/burrow.
+
+It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any 
+transaction type and various pieces of internal clean-up.
+
+## v0.16.1
+This release was an internal rename to 'Burrow' with some minor other attendant
+clean up.
+
 ## v0.16.0
 This is a consolidation release that fixes various bugs and improves elements
 of the architecture across the Monax Platform to support a quicker release

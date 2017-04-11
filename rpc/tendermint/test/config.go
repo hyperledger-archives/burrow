@@ -14,6 +14,7 @@
 
 package test
 
+// TODO [Silas]: this needs to be auto-generated
 var defaultConfig = `# Copyright 2017 Monax Industries Limited
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +39,7 @@ var defaultConfig = `# Copyright 2017 Monax Industries Limited
 assert_chain_id = "MyChainId"
 # semantic major and minor version
 major_version = 0
-minor_version = 17
+minor_version = 16
 # genesis file, relative path is to burrow working directory
 genesis_file = "genesis.json"
 
@@ -73,7 +74,7 @@ genesis_file = "genesis.json"
   # version is the major and minor semantic version;
   # the version will be asserted on
   major_version = 0
-  minor_version = 17
+  minor_version = 16
   # relative path to application manager root folder
   relative_root = "burrowmint"
 
@@ -217,7 +218,7 @@ private_validator_file = "priv_validator.json"
 ################################################################################
 ##
 ## burrow-mint
-## version 0.17.0
+## version 0.16.2
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

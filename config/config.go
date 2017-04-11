@@ -90,7 +90,7 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	burrowChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
 		BurrowMajorVersion:  uint8(0),
-		BurrowMinorVersion:  uint8(17),
+		BurrowMinorVersion:  uint8(16),
 		GenesisRelativePath: "genesis.json",
 	}
 	chainConsensusModule := &ConfigChainModule{
@@ -102,7 +102,7 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	chainApplicationManagerModule := &ConfigChainModule{
 		Name:               "burrowmint",
 		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(17),
+		MinorVersion:       uint8(16),
 		ModuleRelativeRoot: "burrowmint",
 	}
 	tendermintModule := &ConfigTendermint{
