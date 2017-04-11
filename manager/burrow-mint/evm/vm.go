@@ -27,7 +27,6 @@ import (
 	ptypes "github.com/monax/burrow/permission/types"
 	"github.com/monax/burrow/txs"
 	. "github.com/monax/burrow/word256"
-	"github.com/monax/cli/log"
 
 	"github.com/tendermint/go-events"
 )
@@ -107,12 +106,12 @@ func (vm *VM) SetFireable(evc events.Fireable) {
 // (unlike in state/execution, where we guarantee HasPermission is called
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
-// prints a log warning and returns false.
+// this function returns false.
 func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if appState == nil {
-			log.Warn(fmt.Sprintf("\n\n***** Unknown permission %b! ********\n\n", perm))
+			// In this case the permission is unknown
 			return false
 		}
 		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
