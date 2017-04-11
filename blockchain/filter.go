@@ -21,10 +21,10 @@ import (
 
 	"sync"
 
-	blockchain_types "github.com/monax/burrow/blockchain/types"
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/event"
-	"github.com/monax/burrow/util/architecture"
+	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/util/architecture"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
 

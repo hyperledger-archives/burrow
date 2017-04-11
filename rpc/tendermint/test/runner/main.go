@@ -20,8 +20,8 @@ package main
 import (
 	"fmt"
 
-	rpctest "github.com/monax/burrow/rpc/tendermint/test"
-	"github.com/monax/burrow/util"
+	rpctest "github.com/hyperledger/burrow/rpc/tendermint/test"
+	"github.com/hyperledger/burrow/util"
 )
 
 func main() {

@@ -22,15 +22,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/monax/burrow/blockchain"
-	core_types "github.com/monax/burrow/core/types"
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/rpc/v0/shared"
-	server "github.com/monax/burrow/server"
-	"github.com/monax/burrow/txs"
-	"github.com/monax/burrow/util"
+	"github.com/hyperledger/burrow/blockchain"
+	core_types "github.com/hyperledger/burrow/core/types"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/v0/shared"
+	server "github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/util"
 )
 
 // Provides a REST-like web-api. Implements server.Server

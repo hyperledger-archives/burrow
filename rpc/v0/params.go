@@ -15,9 +15,9 @@
 package rpc_v0
 
 import (
-	"github.com/monax/burrow/account"
-	event "github.com/monax/burrow/event"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/account"
+	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/txs"
 )
 
 type (

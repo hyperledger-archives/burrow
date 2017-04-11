@@ -17,9 +17,9 @@ package consensus
 import (
 	"fmt"
 
-	config "github.com/monax/burrow/config"
-	tendermint "github.com/monax/burrow/consensus/tendermint"
-	definitions "github.com/monax/burrow/definitions"
+	config "github.com/hyperledger/burrow/config"
+	tendermint "github.com/hyperledger/burrow/consensus/tendermint"
+	definitions "github.com/hyperledger/burrow/definitions"
 )
 
 func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,

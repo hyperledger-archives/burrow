@@ -21,9 +21,9 @@ import (
 
 	"fmt"
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/txs"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
 )

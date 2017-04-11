@@ -15,7 +15,7 @@
 package main
 
 import (
-	commands "github.com/monax/burrow/cmd"
+	commands "github.com/hyperledger/burrow/cmd"
 )
 
 func main() {

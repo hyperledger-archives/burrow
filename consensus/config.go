@@ -15,8 +15,8 @@
 package consensus
 
 import (
-	// noops      "github.com/monax/burrow/consensus/noops"
-	tendermint "github.com/monax/burrow/consensus/tendermint"
+	// noops      "github.com/hyperledger/burrow/consensus/noops"
+	tendermint "github.com/hyperledger/burrow/consensus/tendermint"
 )
 
 //------------------------------------------------------------------------------

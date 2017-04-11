@@ -19,7 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	. "github.com/monax/burrow/keys"
+	. "github.com/hyperledger/burrow/keys"
 
 	// NOTE: prior to building out /crypto, use
 	// tendermint/go-crypto for the mock client

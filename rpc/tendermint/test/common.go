@@ -18,9 +18,9 @@ package test
 import (
 	"fmt"
 
-	vm "github.com/monax/burrow/manager/burrow-mint/evm"
-	rpc_core "github.com/monax/burrow/rpc/tendermint/core"
-	"github.com/monax/burrow/test/fixtures"
+	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	rpc_core "github.com/hyperledger/burrow/rpc/tendermint/core"
+	"github.com/hyperledger/burrow/test/fixtures"
 )
 
 // Needs to be referenced by a *_test.go file to be picked up

@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	acm "github.com/monax/burrow/account"
-	"github.com/monax/burrow/common/sanity"
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/manager/burrow-mint/evm"
-	ptypes "github.com/monax/burrow/permission/types" // for GlobalPermissionAddress ...
-	"github.com/monax/burrow/txs"
-	. "github.com/monax/burrow/word256"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/common/sanity"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	ptypes "github.com/hyperledger/burrow/permission/types" // for GlobalPermissionAddress ...
+	"github.com/hyperledger/burrow/txs"
+	. "github.com/hyperledger/burrow/word256"
 
 	"github.com/tendermint/go-events"
 )

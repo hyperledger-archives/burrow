@@ -27,16 +27,16 @@ import (
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	edb_event "github.com/monax/burrow/event"
+	edb_event "github.com/hyperledger/burrow/event"
 
-	config "github.com/monax/burrow/config"
-	manager_types "github.com/monax/burrow/manager/types"
-	// files  "github.com/monax/burrow/files"
-	blockchain_types "github.com/monax/burrow/blockchain/types"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/txs"
+	config "github.com/hyperledger/burrow/config"
+	manager_types "github.com/hyperledger/burrow/manager/types"
+	// files  "github.com/hyperledger/burrow/files"
+	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
 )
 

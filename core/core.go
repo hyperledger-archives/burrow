@@ -20,19 +20,19 @@ import (
 	// TODO: [ben] swap out go-events with burrow/event (currently unused)
 	events "github.com/tendermint/go-events"
 
-	"github.com/monax/burrow/config"
-	"github.com/monax/burrow/consensus"
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/event"
-	"github.com/monax/burrow/manager"
+	"github.com/hyperledger/burrow/config"
+	"github.com/hyperledger/burrow/consensus"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/manager"
 	// rpc_v0 is carried over from burrowv0.11 and before on port 1337
-	rpc_v0 "github.com/monax/burrow/rpc/v0"
+	rpc_v0 "github.com/hyperledger/burrow/rpc/v0"
 	// rpc_tendermint is carried over from burrowv0.11 and before on port 46657
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
-	rpc_tendermint "github.com/monax/burrow/rpc/tendermint/core"
-	"github.com/monax/burrow/server"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
+	rpc_tendermint "github.com/hyperledger/burrow/rpc/tendermint/core"
+	"github.com/hyperledger/burrow/server"
 )
 
 // Core is the high-level structure

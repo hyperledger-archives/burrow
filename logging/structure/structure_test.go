@@ -17,7 +17,7 @@ package structure
 import (
 	"testing"
 
-	. "github.com/monax/burrow/util/slice"
+	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 
