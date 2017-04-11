@@ -17,7 +17,7 @@ package structure
 import (
 	"reflect"
 
-	. "github.com/monax/burrow/util/slice"
+	. "github.com/hyperledger/burrow/util/slice"
 )
 
 const (

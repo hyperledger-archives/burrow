@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"encoding/json"
 	"fmt"
 
-	definitions "github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/event"
-	rpc "github.com/monax/burrow/rpc"
-	server "github.com/monax/burrow/server"
-	"github.com/monax/burrow/txs"
+	definitions "github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/event"
+	rpc "github.com/hyperledger/burrow/rpc"
+	server "github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/txs"
 )
 
 // Used for Burrow. Implements WebSocketService.
@@ -54,13 +54,15 @@ func (this *BurrowWsService) Process(msg []byte, session *server.WSSession) {
 
 	// Error when unmarshaling.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg), "", rpc.PARSE_ERROR, session)
+		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg),
+			"", rpc.PARSE_ERROR, session)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id, rpc.INVALID_REQUEST, session)
+		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
+			rpc.INVALID_REQUEST, session)
 		return
 	}
 
@@ -74,7 +76,8 @@ func (this *BurrowWsService) Process(msg []byte, session *server.WSSession) {
 			this.writeResponse(req.Id, resp, session)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, session)
+		this.writeError("Method not found: "+mName, req.Id,
+			rpc.METHOD_NOT_FOUND, session)
 	}
 }
 

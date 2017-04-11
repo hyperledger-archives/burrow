@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"sort"
 
-	acm "github.com/monax/burrow/account"
-	"github.com/monax/burrow/common/sanity"
-	core_types "github.com/monax/burrow/core/types"
-	. "github.com/monax/burrow/word256"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/common/sanity"
+	core_types "github.com/hyperledger/burrow/core/types"
+	. "github.com/hyperledger/burrow/word256"
 
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-merkle"

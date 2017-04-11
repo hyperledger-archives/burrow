@@ -15,8 +15,8 @@
 package types
 
 import (
-	"github.com/monax/burrow/event"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

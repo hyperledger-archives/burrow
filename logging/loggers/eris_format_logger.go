@@ -17,7 +17,7 @@ package loggers
 import (
 	"fmt"
 
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
 )

@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"fmt"
 
-	account "github.com/monax/burrow/account"
-	core_types "github.com/monax/burrow/core/types"
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
+	account "github.com/hyperledger/burrow/account"
+	core_types "github.com/hyperledger/burrow/core/types"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
 
-	blockchain_types "github.com/monax/burrow/blockchain/types"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	manager_types "github.com/monax/burrow/manager/types"
-	"github.com/monax/burrow/txs"
+	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	manager_types "github.com/hyperledger/burrow/manager/types"
+	"github.com/hyperledger/burrow/txs"
 
-	"github.com/monax/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"
@@ -36,7 +36,7 @@ import (
 
 // Base struct.
 type MockPipe struct {
-	testData        *TestData
+	testData        TestData
 	accounts        definitions.Accounts
 	blockchain      blockchain_types.Blockchain
 	consensusEngine consensus_types.ConsensusEngine
@@ -49,9 +49,9 @@ type MockPipe struct {
 // Create a new mock tendermint pipe.
 func NewMockPipe(td *TestData) definitions.Pipe {
 	return &MockPipe{
-		testData:        td,
+		testData:        *td,
 		accounts:        &accounts{td},
-		blockchain:      &mockBlockchain{td},
+		blockchain:      &chain{td},
 		consensusEngine: &consensusEngine{td},
 		events:          &eventer{td},
 		namereg:         &namereg{td},
@@ -152,23 +152,23 @@ func (acc *accounts) StorageAt(address, key []byte) (*core_types.StorageItem, er
 }
 
 // Blockchain
-type mockBlockchain struct {
+type chain struct {
 	testData *TestData
 }
 
-func (this *mockBlockchain) ChainId() string {
+func (this *chain) ChainId() string {
 	return this.testData.GetChainId.Output.ChainId
 }
 
-func (this *mockBlockchain) Height() int {
+func (this *chain) Height() int {
 	return this.testData.GetLatestBlockHeight.Output.Height
 }
 
-func (this *mockBlockchain) Block(height int) *mintTypes.Block {
+func (this *chain) Block(height int) *mintTypes.Block {
 	return this.testData.GetBlock.Output
 }
 
-func (this *mockBlockchain) BlockMeta(height int) *mintTypes.BlockMeta {
+func (this *chain) BlockMeta(height int) *mintTypes.BlockMeta {
 	return &mintTypes.BlockMeta{}
 }
 
@@ -276,7 +276,8 @@ func (trans *transactor) CallCode(from, code, data []byte) (*core_types.Call, er
 }
 
 func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
-	return nil, nil
+	receipt := txs.GenerateReceipt(trans.testData.GetChainId.Output.ChainId, tx)
+	return &receipt, nil
 }
 
 func (trans *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*txs.Receipt, error) {

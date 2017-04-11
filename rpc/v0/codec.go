@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"io"
@@ -20,7 +20,7 @@ import (
 
 	wire "github.com/tendermint/go-wire"
 
-	rpc "github.com/monax/burrow/rpc"
+	rpc "github.com/hyperledger/burrow/rpc"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.

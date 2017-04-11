@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
-	"github.com/monax/burrow/account"
-	event "github.com/monax/burrow/event"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/account"
+	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/txs"
 )
 
 type (

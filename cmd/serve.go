@@ -21,12 +21,12 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/monax/burrow/core"
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/lifecycle"
-	vm "github.com/monax/burrow/manager/burrow-mint/evm"
-	"github.com/monax/burrow/util"
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/lifecycle"
+	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/util"
 
 	"github.com/spf13/cobra"
 )

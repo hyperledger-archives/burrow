@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
-	"github.com/monax/burrow/blockchain"
-	core_types "github.com/monax/burrow/core/types"
-	definitions "github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/event"
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/rpc/v0/shared"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/blockchain"
+	core_types "github.com/hyperledger/burrow/core/types"
+	definitions "github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/v0/shared"
+	"github.com/hyperledger/burrow/txs"
 )
 
 // TODO use the method name definition file.

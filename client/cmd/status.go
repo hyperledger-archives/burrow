@@ -17,8 +17,8 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/monax/burrow/client/methods"
-	"github.com/monax/burrow/util"
+	"github.com/hyperledger/burrow/client/methods"
+	"github.com/hyperledger/burrow/util"
 )
 
 func buildStatusCommand() *cobra.Command {

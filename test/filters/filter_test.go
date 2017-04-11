@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	event "github.com/monax/burrow/event"
+	event "github.com/hyperledger/burrow/event"
 	"github.com/stretchr/testify/suite"
 )
 

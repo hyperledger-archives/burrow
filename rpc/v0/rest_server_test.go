@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 // Basic imports
 import (
@@ -23,17 +23,16 @@ import (
 	"runtime"
 	"testing"
 
-	consensus_types "github.com/monax/burrow/consensus/types"
-
-	account "github.com/monax/burrow/account"
-	core_types "github.com/monax/burrow/core/types"
-	event "github.com/monax/burrow/event"
-	rpc "github.com/monax/burrow/rpc"
-	server "github.com/monax/burrow/server"
-	"github.com/monax/burrow/txs"
+	account "github.com/hyperledger/burrow/account"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	core_types "github.com/hyperledger/burrow/core/types"
+	event "github.com/hyperledger/burrow/event"
+	rpc "github.com/hyperledger/burrow/rpc"
+	server "github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/txs"
 
 	"github.com/gin-gonic/gin"
-	"github.com/monax/burrow/rpc/v0/shared"
+	"github.com/hyperledger/burrow/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"
 )

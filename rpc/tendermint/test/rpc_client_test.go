@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	consensus_types "github.com/monax/burrow/consensus/types"
-	edbcli "github.com/monax/burrow/rpc/tendermint/client"
-	"github.com/monax/burrow/txs"
-	"github.com/monax/burrow/word256"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/word256"
 
 	"github.com/stretchr/testify/assert"
 	rpcclient "github.com/tendermint/go-rpc/client"

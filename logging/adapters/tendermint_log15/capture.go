@@ -16,7 +16,7 @@ package adapters
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/tendermint/log15"
 )
 

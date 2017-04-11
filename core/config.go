@@ -23,14 +23,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/monax/burrow/config"
-	"github.com/monax/burrow/consensus"
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/manager"
-	"github.com/monax/burrow/server"
-	"github.com/monax/burrow/util"
-	"github.com/monax/burrow/version"
+	"github.com/hyperledger/burrow/config"
+	"github.com/hyperledger/burrow/consensus"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/manager"
+	"github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/util"
+	"github.com/hyperledger/burrow/version"
 	"github.com/spf13/viper"
 )
 
@@ -59,7 +59,7 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
 		minorVersion, 0)
 	if !assertValidModule(module, moduleName, minorVersionString) {
-		return nil, fmt.Errorf("%s module %s (%s) is not supported by %s",
+		return nil, fmt.Errorf("Error reading config: %s module %s (%s) is not supported by %s",
 			module, moduleName, minorVersionString, version.GetVersionString())
 	}
 	// set up the directory structure for the module inside the data directory

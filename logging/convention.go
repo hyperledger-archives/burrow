@@ -16,9 +16,9 @@ package logging
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/logging/structure"
-	"github.com/monax/burrow/util/slice"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/util/slice"
 )
 
 // Helper functions for InfoTraceLoggers, sort of extension methods to loggers

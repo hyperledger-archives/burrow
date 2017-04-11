@@ -17,8 +17,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/monax/burrow/manager/burrow-mint/evm/sha3"
-	. "github.com/monax/burrow/word256"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm/sha3"
+	. "github.com/hyperledger/burrow/word256"
 )
 
 type FakeAppState struct {

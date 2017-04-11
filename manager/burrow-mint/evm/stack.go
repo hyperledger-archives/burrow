@@ -17,9 +17,9 @@ package vm
 import (
 	"fmt"
 
-	"github.com/monax/burrow/common/math/integral"
-	"github.com/monax/burrow/common/sanity"
-	. "github.com/monax/burrow/word256"
+	"github.com/hyperledger/burrow/common/math/integral"
+	"github.com/hyperledger/burrow/common/sanity"
+	. "github.com/hyperledger/burrow/word256"
 )
 
 // Not goroutine safe

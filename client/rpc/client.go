@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strconv"
 
-	ptypes "github.com/monax/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 
-	"github.com/monax/burrow/client"
-	"github.com/monax/burrow/keys"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/txs"
 )
 
 //------------------------------------------------------------------------------------

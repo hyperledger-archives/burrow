@@ -15,8 +15,8 @@
 package shared
 
 import (
-	consensus_types "github.com/monax/burrow/consensus/types"
-	"github.com/monax/burrow/definitions"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	"github.com/hyperledger/burrow/definitions"
 )
 
 // Net is part of the pipe for BurrowMint and provides the implementation
