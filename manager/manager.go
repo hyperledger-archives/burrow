@@ -19,13 +19,13 @@ import (
 
 	events "github.com/tendermint/go-events"
 
-	config "github.com/monax/burrow/config"
-	definitions "github.com/monax/burrow/definitions"
-	burrowmint "github.com/monax/burrow/manager/burrow-mint"
-	// types       "github.com/monax/burrow/manager/types"
+	config "github.com/hyperledger/burrow/config"
+	definitions "github.com/hyperledger/burrow/definitions"
+	burrowmint "github.com/hyperledger/burrow/manager/burrow-mint"
+	// types       "github.com/hyperledger/burrow/manager/types"
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface

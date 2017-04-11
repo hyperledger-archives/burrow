@@ -20,7 +20,7 @@ import (
 
 	viper "github.com/spf13/viper"
 
-	util "github.com/monax/burrow/util"
+	util "github.com/hyperledger/burrow/util"
 )
 
 type Do struct {

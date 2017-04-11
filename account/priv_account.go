@@ -21,7 +21,7 @@ package account
 import (
 	"fmt"
 
-	"github.com/monax/burrow/common/sanity"
+	"github.com/hyperledger/burrow/common/sanity"
 
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-crypto"

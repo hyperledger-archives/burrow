@@ -19,9 +19,9 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/monax/burrow/manager/burrow-mint/evm/opcodes"
-	"github.com/monax/burrow/txs"
-	. "github.com/monax/burrow/word256"
+	. "github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
+	"github.com/hyperledger/burrow/txs"
+	. "github.com/hyperledger/burrow/word256"
 	"github.com/tendermint/go-events"
 )
 

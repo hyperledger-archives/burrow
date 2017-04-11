@@ -24,12 +24,12 @@ import (
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
 
-	sm "github.com/monax/burrow/manager/burrow-mint/state"
-	manager_types "github.com/monax/burrow/manager/types"
-	"github.com/monax/burrow/txs"
+	sm "github.com/hyperledger/burrow/manager/burrow-mint/state"
+	manager_types "github.com/hyperledger/burrow/manager/types"
+	"github.com/hyperledger/burrow/txs"
 )
 
 //--------------------------------------------------------------------------------

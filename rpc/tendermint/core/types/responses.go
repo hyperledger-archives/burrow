@@ -15,13 +15,13 @@
 package types
 
 import (
-	acm "github.com/monax/burrow/account"
-	core_types "github.com/monax/burrow/core/types"
-	genesis "github.com/monax/burrow/genesis"
-	"github.com/monax/burrow/txs"
+	acm "github.com/hyperledger/burrow/account"
+	core_types "github.com/hyperledger/burrow/core/types"
+	genesis "github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
-	consensus_types "github.com/monax/burrow/consensus/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

@@ -17,10 +17,10 @@ package core
 import (
 	"fmt"
 
-	acm "github.com/monax/burrow/account"
-	"github.com/monax/burrow/definitions"
-	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
-	"github.com/monax/burrow/txs"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/definitions"
+	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/txs"
 	rpc "github.com/tendermint/go-rpc/server"
 	rpctypes "github.com/tendermint/go-rpc/types"
 )

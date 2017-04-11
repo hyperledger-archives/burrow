@@ -17,10 +17,10 @@ package methods
 import (
 	"fmt"
 
-	"github.com/monax/burrow/client"
-	"github.com/monax/burrow/client/rpc"
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/keys"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/client/rpc"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/keys"
 )
 
 func Call(do *definitions.ClientDo) error {

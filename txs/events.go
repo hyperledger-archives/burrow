@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/monax/burrow/word256"
+	. "github.com/hyperledger/burrow/word256"
 
 	"github.com/tendermint/go-wire"
 	tm_types "github.com/tendermint/tendermint/types" // Block

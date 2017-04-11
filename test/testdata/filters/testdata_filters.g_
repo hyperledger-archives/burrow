@@ -1,9 +1,9 @@
 package filters
 
 import (
-	core_types "github.com/monax/burrow/core/types"
+	core_types "github.com/hyperledger/burrow/core/types"
 
-	stypes "github.com/monax/burrow/manager/burrow-mint/state/types"
+	stypes "github.com/hyperledger/burrow/manager/burrow-mint/state/types"
 	"github.com/tendermint/tendermint/types"
 )
 

@@ -23,8 +23,8 @@ import (
 
 	"time"
 
-	core_types "github.com/monax/burrow/rpc/tendermint/core/types"
-	"github.com/monax/burrow/txs"
+	core_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )

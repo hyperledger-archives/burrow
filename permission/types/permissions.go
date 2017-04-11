@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/monax/burrow/word256"
+	"github.com/hyperledger/burrow/word256"
 )
 
 //------------------------------------------------------------------------------------------------

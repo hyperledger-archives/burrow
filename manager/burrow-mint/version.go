@@ -17,7 +17,7 @@ package burrowmint
 import (
 	"fmt"
 
-	version "github.com/monax/burrow/version"
+	version "github.com/hyperledger/burrow/version"
 )
 
 const (

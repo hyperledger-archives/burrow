@@ -17,7 +17,7 @@ package genesis
 import (
 	"fmt"
 
-	ptypes "github.com/monax/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 )

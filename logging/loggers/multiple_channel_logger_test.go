@@ -20,7 +20,7 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/stretchr/testify/assert"
 )
 

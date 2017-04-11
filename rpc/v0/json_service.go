@@ -20,10 +20,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
-	rpc "github.com/monax/burrow/rpc"
-	server "github.com/monax/burrow/server"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
+	rpc "github.com/hyperledger/burrow/rpc"
+	server "github.com/hyperledger/burrow/server"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server

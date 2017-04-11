@@ -1,6 +1,6 @@
 # Burrow v0.16
 
-|[![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/monax/burrow) | Linux |
+|[![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow) | Linux |
 |---|-------|
 | Master | [![Circle CI](https://circleci.com/gh/monax/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/monax/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/develop) |
@@ -47,8 +47,8 @@ Dependency management for Burrow is managed with [glide](github.com/Masterminds/
 - Ensure you have `gmp` installed (`sudo apt-get install libgmp3-dev || brew install gmp`)
 - and execute following commands in a terminal:
 - `go get github.com/Masterminds/glide`
-- `go get -d github.com/monax/burrow`
-- `REPO=$($GOPATH/src/github.com/monax/burrow)`
+- `go get -d github.com/hyperledger/burrow`
+- `REPO=$($GOPATH/src/github.com/hyperledger/burrow)`
 - `cd $REPO && glide install`
 - `cd $REPO/cmd/burrow && go install`
 
@@ -57,11 +57,11 @@ To run `burrow`, just type `$ burrow serve --work-dir <path to chain directory>`
 
 This will start the node using the provided folder as working dir. If the path is omitted it defaults to `~/.monax`.
 
-For a Vagrant file see [monax-vagrant](https://github.com/monax/monax-vagrant) for drafts or soon this repo for [Vagrant](https://github.com/monax/burrow/issues/514) and Packer files.
+For a Vagrant file see [monax-vagrant](https://github.com/monax/monax-vagrant) for drafts or soon this repo for [Vagrant](https://github.com/hyperledger/burrow/issues/514) and Packer files.
 
 ## Usage
 
-Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/monax/burrow.js), but it is possible to connect directly via HTTP or websocket.
+Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/hyperledger/burrow.js), but it is possible to connect directly via HTTP or websocket.
 
 ## Configuration
 
@@ -73,7 +73,7 @@ We welcome all contributions and have submitted the code base to the Hyperledger
 
 You can find us on:
 - [the Marmot Den (slack)](http://slack.monax.io)
-- [here on Github](http://github.com/monax/burrow/issues)
+- [here on Github](http://github.com/hyperledger/burrow/issues)
 - [support.monax.io](http://support.monax.io)
 - read the [Contributor file](.github/CONTRIBUTING.md)
 

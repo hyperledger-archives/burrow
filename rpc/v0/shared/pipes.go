@@ -17,8 +17,8 @@ package shared
 // Shared extension methods for Pipe and its derivatives
 
 import (
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/definitions"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/definitions"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
 

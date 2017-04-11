@@ -20,14 +20,14 @@ import (
 
 	"github.com/tendermint/go-rpc/client"
 
-	acc "github.com/monax/burrow/account"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
-	tendermint_client "github.com/monax/burrow/rpc/tendermint/client"
-	tendermint_types "github.com/monax/burrow/rpc/tendermint/core/types"
-	"github.com/monax/burrow/txs"
+	acc "github.com/hyperledger/burrow/account"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
+	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
+	tendermint_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/txs"
 	tmLog15 "github.com/tendermint/log15"
 )
 
