@@ -17,7 +17,7 @@ package vm
 import (
 	"crypto/sha256"
 
-	. "github.com/monax/burrow/word256"
+	. "github.com/hyperledger/burrow/word256"
 
 	"golang.org/x/crypto/ripemd160"
 )

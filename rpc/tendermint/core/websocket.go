@@ -23,8 +23,8 @@ import (
 	events "github.com/tendermint/go-events"
 	rpcserver "github.com/tendermint/go-rpc/server"
 
-	definitions "github.com/monax/burrow/definitions"
-	server "github.com/monax/burrow/server"
+	definitions "github.com/hyperledger/burrow/definitions"
+	server "github.com/hyperledger/burrow/server"
 )
 
 type TendermintWebsocketServer struct {

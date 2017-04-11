@@ -17,8 +17,8 @@ package vm
 import (
 	"fmt"
 
-	ptypes "github.com/monax/burrow/permission/types"
-	. "github.com/monax/burrow/word256"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	. "github.com/hyperledger/burrow/word256"
 )
 
 const (

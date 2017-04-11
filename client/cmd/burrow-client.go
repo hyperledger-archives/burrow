@@ -21,8 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/version"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/version"
 )
 
 // Global flags for persistent flags

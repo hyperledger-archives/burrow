@@ -17,7 +17,7 @@ package txs
 import (
 	"regexp"
 
-	core_types "github.com/monax/burrow/core/types"
+	core_types "github.com/hyperledger/burrow/core/types"
 )
 
 var (

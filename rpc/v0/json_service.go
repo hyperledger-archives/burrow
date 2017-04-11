@@ -18,10 +18,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
-	rpc "github.com/monax/burrow/rpc"
-	server "github.com/monax/burrow/server"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
+	rpc "github.com/hyperledger/burrow/rpc"
+	server "github.com/hyperledger/burrow/server"
 
 	"github.com/gin-gonic/gin"
 )

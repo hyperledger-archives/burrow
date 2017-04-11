@@ -21,12 +21,12 @@ import (
 
 	"github.com/tendermint/go-crypto"
 
-	acc "github.com/monax/burrow/account"
-	"github.com/monax/burrow/client"
-	"github.com/monax/burrow/keys"
-	"github.com/monax/burrow/logging"
-	ptypes "github.com/monax/burrow/permission/types"
-	"github.com/monax/burrow/txs"
+	acc "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/logging"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/txs"
 )
 
 //------------------------------------------------------------------------------------

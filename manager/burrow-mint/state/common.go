@@ -15,9 +15,9 @@
 package state
 
 import (
-	acm "github.com/monax/burrow/account"
-	"github.com/monax/burrow/manager/burrow-mint/evm"
-	. "github.com/monax/burrow/word256"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	. "github.com/hyperledger/burrow/word256"
 )
 
 type AccountGetter interface {

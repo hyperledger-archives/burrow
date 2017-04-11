@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs"
 
 	"github.com/stretchr/testify/assert"
 )

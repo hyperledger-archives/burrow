@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	sm "github.com/monax/burrow/manager/burrow-mint/state"
+	sm "github.com/hyperledger/burrow/manager/burrow-mint/state"
 
-	core_types "github.com/monax/burrow/core/types"
-	event "github.com/monax/burrow/event"
+	core_types "github.com/hyperledger/burrow/core/types"
+	event "github.com/hyperledger/burrow/event"
 )
 
 // NameReg is part of the pipe for BurrowMint and provides the implementation

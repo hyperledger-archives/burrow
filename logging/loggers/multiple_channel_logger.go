@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/structure"
 )
 
 // This represents a 'SELECT ONE' type logger. When logged to it will search

@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/monax/burrow/common/sanity"
+	"github.com/hyperledger/burrow/common/sanity"
 )
 
 const (

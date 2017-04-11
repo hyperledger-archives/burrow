@@ -17,7 +17,7 @@ package opcodes
 import (
 	"fmt"
 
-	"github.com/monax/burrow/word256"
+	"github.com/hyperledger/burrow/word256"
 	"gopkg.in/fatih/set.v0"
 )
 

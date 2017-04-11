@@ -18,9 +18,9 @@ import (
 	"io"
 	"io/ioutil"
 
-	rpc "github.com/monax/burrow/rpc"
-
 	wire "github.com/tendermint/go-wire"
+
+	rpc "github.com/hyperledger/burrow/rpc"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.

@@ -19,8 +19,8 @@ import (
 	"os"
 	"runtime"
 
-	rpc "github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/server"
+	rpc "github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/server"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"

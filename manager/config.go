@@ -15,7 +15,7 @@
 package manager
 
 import (
-	burrowmint "github.com/monax/burrow/manager/burrow-mint"
+	burrowmint "github.com/hyperledger/burrow/manager/burrow-mint"
 )
 
 //------------------------------------------------------------------------------

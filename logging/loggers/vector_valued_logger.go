@@ -16,7 +16,7 @@ package loggers
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/structure"
 )
 
 // Treat duplicate key-values as consecutive entries in a vector-valued lookup

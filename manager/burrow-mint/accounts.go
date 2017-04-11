@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"sync"
 
-	account "github.com/monax/burrow/account"
-	core_types "github.com/monax/burrow/core/types"
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
-	word256 "github.com/monax/burrow/word256"
+	account "github.com/hyperledger/burrow/account"
+	core_types "github.com/hyperledger/burrow/core/types"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
+	word256 "github.com/hyperledger/burrow/word256"
 )
 
 // NOTE [ben] Compiler check to ensure Accounts successfully implements

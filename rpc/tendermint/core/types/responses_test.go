@@ -19,7 +19,7 @@ import (
 
 	"time"
 
-	consensus_types "github.com/monax/burrow/consensus/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/tendermint/go-wire"
 	tendermint_types "github.com/tendermint/tendermint/types"
 )
