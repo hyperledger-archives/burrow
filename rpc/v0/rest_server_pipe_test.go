@@ -17,17 +17,17 @@ package v0
 import (
 	"fmt"
 
-	account "github.com/monax/burrow/account"
-	core_types "github.com/monax/burrow/core/types"
-	definitions "github.com/monax/burrow/definitions"
-	event "github.com/monax/burrow/event"
+	account "github.com/hyperledger/burrow/account"
+	core_types "github.com/hyperledger/burrow/core/types"
+	definitions "github.com/hyperledger/burrow/definitions"
+	event "github.com/hyperledger/burrow/event"
 
-	blockchain_types "github.com/monax/burrow/blockchain/types"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	manager_types "github.com/monax/burrow/manager/types"
-	"github.com/monax/burrow/txs"
+	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	manager_types "github.com/hyperledger/burrow/manager/types"
+	"github.com/hyperledger/burrow/txs"
 
-	"github.com/monax/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-p2p"

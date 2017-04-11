@@ -17,12 +17,12 @@ package mock
 import (
 	"github.com/tendermint/go-crypto"
 
-	acc "github.com/monax/burrow/account"
-	. "github.com/monax/burrow/client"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/txs"
+	acc "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/client"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/txs"
 )
 
 var _ NodeClient = (*MockNodeClient)(nil)

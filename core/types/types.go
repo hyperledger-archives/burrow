@@ -22,7 +22,7 @@ import (
 	// NodeInfo (drop this!)
 	"github.com/tendermint/tendermint/types"
 
-	account "github.com/monax/burrow/account"
+	account "github.com/hyperledger/burrow/account"
 )
 
 type (

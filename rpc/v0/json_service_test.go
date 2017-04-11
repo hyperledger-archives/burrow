@@ -17,10 +17,10 @@ package v0
 import (
 	"testing"
 
-	"github.com/monax/burrow/account"
-	"github.com/monax/burrow/manager/burrow-mint/evm/opcodes"
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"

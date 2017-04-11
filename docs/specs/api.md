@@ -2,7 +2,7 @@
 
 ### for burrow version 0.11.x
 
-Burrow allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [burrow-js](https://github.com/monax/burrow.js) library.
+Burrow allows remote access to its functionality over http and websocket. It currently supports [JSON-RPC 2.0](http://www.jsonrpc.org/specification), and REST-like http. There is also javascript bindings available in the [burrow-js](https://github.com/hyperledger/burrow.js) library.
 
 ## TOC
 

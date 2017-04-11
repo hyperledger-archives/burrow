@@ -23,7 +23,7 @@ import (
 
 	"sync"
 
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 )
 

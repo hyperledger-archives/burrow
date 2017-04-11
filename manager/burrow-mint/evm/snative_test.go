@@ -20,11 +20,11 @@ import (
 
 	"strings"
 
-	"github.com/monax/burrow/manager/burrow-mint/evm/abi"
-	. "github.com/monax/burrow/manager/burrow-mint/evm/opcodes"
-	"github.com/monax/burrow/manager/burrow-mint/evm/sha3"
-	ptypes "github.com/monax/burrow/permission/types"
-	. "github.com/monax/burrow/word256"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm/abi"
+	. "github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm/sha3"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	. "github.com/hyperledger/burrow/word256"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/monax/burrow/util/hell"
+	"github.com/hyperledger/burrow/util/hell"
 
 	"github.com/Masterminds/glide/action"
 	"github.com/Masterminds/glide/cache"
