@@ -5,7 +5,7 @@
 | Master | [![Circle CI](https://circleci.com/gh/monax/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/monax/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/develop) |
 
-burrow is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. burrow provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `monax chains`, exposed through [monax](https://monax.io/docs), the entry point for the Monax Platform.
+Burrow is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `monax chains`, exposed through [monax](https://monax.io/docs), the entry point for the Monax Platform.
 
 ## Table of Contents
 
