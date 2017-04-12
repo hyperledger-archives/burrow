@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/monax/burrow/common/sanity"
-	ptypes "github.com/monax/burrow/permission/types"
+	"github.com/hyperledger/burrow/common/sanity"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"

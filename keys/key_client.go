@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/monax/burrow/logging"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 type KeyClient interface {

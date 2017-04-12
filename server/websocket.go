@@ -22,8 +22,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/monax/burrow/logging"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // TODO too much fluff. Should probably phase gorilla out and move closer

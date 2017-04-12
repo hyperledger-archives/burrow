@@ -19,10 +19,10 @@ import (
 	"encoding/hex"
 	"testing"
 
-	core_types "github.com/monax/burrow/core/types"
-	evm "github.com/monax/burrow/manager/burrow-mint/evm"
-	"github.com/monax/burrow/txs"
-	"github.com/monax/burrow/word256"
+	core_types "github.com/hyperledger/burrow/core/types"
+	evm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/word256"
 
 	"github.com/tendermint/tendermint/config/tendermint_test"
 )

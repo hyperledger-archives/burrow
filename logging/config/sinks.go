@@ -8,8 +8,8 @@ import (
 
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/structure"
 )
 
 // This file contains definitions for a configurable output graph for the

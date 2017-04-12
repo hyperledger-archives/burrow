@@ -15,12 +15,12 @@
 package methods
 
 import (
-	"github.com/monax/burrow/client/rpc"
-	"github.com/monax/burrow/core"
-	"github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/lifecycle"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/client/rpc"
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/lifecycle"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTraceLogger) {

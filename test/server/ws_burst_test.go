@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/monax/burrow/client"
-	"github.com/monax/burrow/server"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/server"
 	"github.com/stretchr/testify/assert"
 )
 

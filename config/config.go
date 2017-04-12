@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"text/template"
 
-	lconfig "github.com/monax/burrow/logging/config"
+	lconfig "github.com/hyperledger/burrow/logging/config"
 )
 
 type ConfigServiceGeneral struct {

@@ -19,12 +19,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/monax/burrow/rpc"
-	"github.com/monax/burrow/server"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/server"
 
 	"github.com/gin-gonic/gin"
-	"github.com/monax/burrow/logging/lifecycle"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging/lifecycle"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
 

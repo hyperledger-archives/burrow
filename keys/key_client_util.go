@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/monax/burrow/logging"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // Monax-Keys server connects over http request-response structures

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/BurntSushi/toml"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/structure"
 )
 
 type LoggingConfig struct {

@@ -14,7 +14,7 @@
 
 package structure
 
-import . "github.com/monax/burrow/util/slice"
+import . "github.com/hyperledger/burrow/util/slice"
 
 const (
 	// Log time (time.Time)

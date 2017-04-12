@@ -17,8 +17,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/monax/burrow/manager/burrow-mint/evm"
-	"github.com/monax/burrow/util/snatives/templates"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/util/snatives/templates"
 )
 
 // Dump SNative contracts

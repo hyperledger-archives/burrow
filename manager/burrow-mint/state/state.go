@@ -21,18 +21,18 @@ import (
 	"io/ioutil"
 	"time"
 
-	acm "github.com/monax/burrow/account"
-	genesis "github.com/monax/burrow/genesis"
-	ptypes "github.com/monax/burrow/permission/types"
-	"github.com/monax/burrow/txs"
+	acm "github.com/hyperledger/burrow/account"
+	genesis "github.com/hyperledger/burrow/genesis"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/txs"
 
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
 	"github.com/tendermint/go-merkle"
 	"github.com/tendermint/go-wire"
 
-	core_types "github.com/monax/burrow/core/types"
-	"github.com/monax/burrow/util"
+	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/util"
 	"github.com/tendermint/tendermint/types"
 )
 

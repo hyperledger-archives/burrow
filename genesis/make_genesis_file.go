@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"time"
 
-	ptypes "github.com/monax/burrow/permission/types"
-	"github.com/monax/burrow/util"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/util"
 
 	"github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"

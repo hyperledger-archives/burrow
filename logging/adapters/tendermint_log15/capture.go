@@ -16,7 +16,7 @@ package tendermint_log15
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
 

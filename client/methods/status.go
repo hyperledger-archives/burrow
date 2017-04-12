@@ -17,8 +17,8 @@ package methods
 import (
 	"fmt"
 
-	"github.com/monax/burrow/client"
-	"github.com/monax/burrow/definitions"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/definitions"
 )
 
 func Status(do *definitions.ClientDo) error {

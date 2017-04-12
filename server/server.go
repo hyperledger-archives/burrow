@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/monax/burrow/logging"
-	logging_types "github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	cors "github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 )

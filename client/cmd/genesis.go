@@ -17,8 +17,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/monax/burrow/common/sanity"
-	"github.com/monax/burrow/genesis"
+	"github.com/hyperledger/burrow/common/sanity"
+	"github.com/hyperledger/burrow/genesis"
 
 	"github.com/spf13/cobra"
 )

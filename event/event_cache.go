@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/txs"
 )
 
 var (

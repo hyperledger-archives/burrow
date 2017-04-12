@@ -20,15 +20,15 @@ import (
 
 	"time"
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/adapters/stdlib"
-	tmLog15adapter "github.com/monax/burrow/logging/adapters/tendermint_log15"
-	"github.com/monax/burrow/logging/config"
-	"github.com/monax/burrow/logging/loggers"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/adapters/stdlib"
+	tmLog15adapter "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
+	"github.com/hyperledger/burrow/logging/config"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/monax/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
 )

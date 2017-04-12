@@ -23,15 +23,15 @@ package definitions
 // these interfaces into an Engine, Communicator, NameReg, Permissions (suggestion)
 
 import (
-	account "github.com/monax/burrow/account"
-	blockchain_types "github.com/monax/burrow/blockchain/types"
-	consensus_types "github.com/monax/burrow/consensus/types"
-	core_types "github.com/monax/burrow/core/types"
-	types "github.com/monax/burrow/core/types"
-	event "github.com/monax/burrow/event"
-	logging_types "github.com/monax/burrow/logging/types"
-	manager_types "github.com/monax/burrow/manager/types"
-	"github.com/monax/burrow/txs"
+	account "github.com/hyperledger/burrow/account"
+	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	core_types "github.com/hyperledger/burrow/core/types"
+	types "github.com/hyperledger/burrow/core/types"
+	event "github.com/hyperledger/burrow/event"
+	logging_types "github.com/hyperledger/burrow/logging/types"
+	manager_types "github.com/hyperledger/burrow/manager/types"
+	"github.com/hyperledger/burrow/txs"
 )
 
 type Pipe interface {

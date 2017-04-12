@@ -28,7 +28,7 @@ then
   REPO=`pwd`
   CI="true"
 else
-  REPO=$GOPATH/src/github.com/monax/$TARGET
+  REPO=$GOPATH/src/github.com/hyperledger/$TARGET
 fi
 
 release_min=$(cat $REPO/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
@@ -51,4 +51,9 @@ fi
 # Cleanup
 rm $REPO/target/docker/burrow.dockerartefact
 rm $REPO/target/docker/burrow-client.dockerartefact
-docker rmi -f $IMAGE:build
+
+# CircleCI seems to have an issues removing this build, in any case it is not necessary on CI
+if [ ! "$CI" ]
+then
+  docker rmi -f $IMAGE:build
+fi

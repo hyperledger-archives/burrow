@@ -24,10 +24,10 @@ import (
 
 	"errors"
 
-	. "github.com/monax/burrow/manager/burrow-mint/evm/opcodes"
-	ptypes "github.com/monax/burrow/permission/types"
-	"github.com/monax/burrow/txs"
-	. "github.com/monax/burrow/word256"
+	. "github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/txs"
+	. "github.com/hyperledger/burrow/word256"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-events"
 )

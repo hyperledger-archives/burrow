@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	kitlog "github.com/go-kit/kit/log"
-	log15a "github.com/monax/burrow/logging/adapters/tendermint_log15"
+	log15a "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
 	"github.com/tendermint/log15"
 )
 

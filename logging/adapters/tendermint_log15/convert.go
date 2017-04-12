@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/go-stack/stack"
-	"github.com/monax/burrow/logging/structure"
-	"github.com/monax/burrow/logging/types"
-	. "github.com/monax/burrow/util/slice"
+	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/types"
+	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/tendermint/log15"
 )
 

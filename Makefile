@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/monax/burrow/... | grep -v /vendor/)
+PACKAGES_NOVENDOR := $(shell go list github.com/hyperledger/burrow/... | grep -v /vendor/)
 VERSION := $(shell cat ${REPO}/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
@@ -54,7 +54,7 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
-### Dependency management for github.com/monax/burrow
+### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
@@ -78,13 +78,13 @@ hell:
 snatives:
 	@go run ./util/snatives/cmd/main.go
 
-### Building github.com/monax/burrow
+### Building github.com/hyperledger/burrow
 
-# build all targets in github.com/monax/burrow
+# build all targets in github.com/hyperledger/burrow
 .PHONY: build
 build:	check build_db build_client
 
-# build all targets in github.com/monax/burrow with checks for race conditions
+# build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
 build_race:	check build_race_db build_race_client build_race_keys
 
@@ -108,7 +108,7 @@ build_race_db:
 build_race_client:
 	go build -race -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
 
-### Testing github.com/monax/burrow
+### Testing github.com/hyperledger/burrow
 
 # test burrow
 .PHONY: test
@@ -120,7 +120,7 @@ test: build
 test_race: build_race
 	@go test -race ${PACKAGES_NOVENDOR}
 
-### Build docker images for github.com/monax/burrow
+### Build docker images for github.com/hyperledger/burrow
 
 # build docker image for burrow
 .PHONY: build_docker_db
@@ -135,7 +135,7 @@ build_docker_db: check
 	@rm ${REPO}/target/docker/burrow-client.dockerartefact
 	docker rmi ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA}
 
-### Test docker images for github.com/monax/burrow
+### Test docker images for github.com/hyperledger/burrow
 
 # test docker image for burrow
 .PHONY: test_docker_db

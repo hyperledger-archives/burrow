@@ -15,9 +15,9 @@
 package definitions
 
 import (
-	"github.com/monax/burrow/account"
-	rpc_tm_types "github.com/monax/burrow/rpc/tendermint/core/types"
-	"github.com/monax/burrow/txs"
+	"github.com/hyperledger/burrow/account"
+	rpc_tm_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/txs"
 )
 
 // NOTE: [ben] TendermintPipe is the additional pipe to carry over

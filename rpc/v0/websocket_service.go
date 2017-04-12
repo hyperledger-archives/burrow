@@ -18,11 +18,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	definitions "github.com/monax/burrow/definitions"
-	"github.com/monax/burrow/event"
-	rpc "github.com/monax/burrow/rpc"
-	server "github.com/monax/burrow/server"
-	"github.com/monax/burrow/txs"
+	definitions "github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/event"
+	rpc "github.com/hyperledger/burrow/rpc"
+	server "github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/txs"
 )
 
 // Used for Burrow. Implements WebSocketService.
