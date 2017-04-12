@@ -2,7 +2,7 @@ FROM quay.io/monax/build:0.16
 MAINTAINER Monax <support@monax.io>
 
 ENV TARGET burrow
-ENV REPO $GOPATH/src/github.com/monax/$TARGET
+ENV REPO $GOPATH/src/github.com/hyperledger/$TARGET
 
 ADD ./glide.yaml $REPO/
 ADD ./glide.lock $REPO/

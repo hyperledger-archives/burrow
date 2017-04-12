@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 // Basic imports
 import (
@@ -23,9 +23,8 @@ import (
 	"runtime"
 	"testing"
 
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
-
 	account "github.com/hyperledger/burrow/account"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	event "github.com/hyperledger/burrow/event"
 	rpc "github.com/hyperledger/burrow/rpc"

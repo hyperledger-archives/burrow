@@ -19,9 +19,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/gin-gonic/gin"
 	rpc "github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/server"
+
+	"github.com/gin-gonic/gin"
 	"github.com/tendermint/log15"
 )
 

@@ -59,7 +59,7 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
 		minorVersion, 0)
 	if !assertValidModule(module, moduleName, minorVersionString) {
-		return nil, fmt.Errorf("%s module %s (%s) is not supported by %s",
+		return nil, fmt.Errorf("Error reading config: %s module %s (%s) is not supported by %s",
 			module, moduleName, minorVersionString, version.GetVersionString())
 	}
 	// set up the directory structure for the module inside the data directory

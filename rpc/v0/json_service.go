@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc_v0
+package v0
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-
 	definitions "github.com/hyperledger/burrow/definitions"
 	event "github.com/hyperledger/burrow/event"
 	rpc "github.com/hyperledger/burrow/rpc"
 	server "github.com/hyperledger/burrow/server"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
