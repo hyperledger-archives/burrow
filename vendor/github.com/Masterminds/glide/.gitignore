@@ -1,0 +1,8 @@
+glide
+glide.exe
+*.a
+*.sublime-project
+*.sublime-workspace
+dist/
+.DS_Store
+.idea
