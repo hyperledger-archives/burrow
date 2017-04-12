@@ -280,7 +280,7 @@ const sectionBurrowMint = `
 ################################################################################
 ##
 ## Burrow-Mint
-## version 0.17
+## version 0.16
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding
