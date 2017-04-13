@@ -2,11 +2,11 @@ package config
 
 import (
 	"bytes"
-
 	"fmt"
 
-	"github.com/BurntSushi/toml"
 	"github.com/hyperledger/burrow/logging/structure"
+
+	"github.com/BurntSushi/toml"
 )
 
 type LoggingConfig struct {
