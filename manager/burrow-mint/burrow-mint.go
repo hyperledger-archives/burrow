@@ -25,7 +25,7 @@ import (
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 
 	sm "github.com/hyperledger/burrow/manager/burrow-mint/state"
 	manager_types "github.com/hyperledger/burrow/manager/types"
@@ -48,7 +48,7 @@ type BurrowMint struct {
 	evsw tendermint_events.EventSwitch
 
 	nTxs   int // count txs in a block
-	logger loggers.InfoTraceLogger
+	logger logging_types.InfoTraceLogger
 }
 
 // NOTE [ben] Compiler check to ensure BurrowMint successfully implements
@@ -72,7 +72,8 @@ func (app *BurrowMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewBurrowMint(s *sm.State, evsw tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *BurrowMint {
+func NewBurrowMint(s *sm.State, evsw tendermint_events.EventSwitch,
+	logger logging_types.InfoTraceLogger) *BurrowMint {
 	return &BurrowMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
@@ -107,7 +108,7 @@ func (app *BurrowMint) DeliverTx(txBytes []byte) abci.Result {
 		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	err = sm.ExecTx(app.cache, *tx, true, app.evc)
+	err = sm.ExecTx(app.cache, *tx, true, app.evc, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
@@ -129,7 +130,7 @@ func (app *BurrowMint) CheckTx(txBytes []byte) abci.Result {
 	}
 
 	// TODO: map ExecTx errors to sensible abci error codes
-	err = sm.ExecTx(app.checkCache, *tx, false, nil)
+	err = sm.ExecTx(app.checkCache, *tx, false, nil, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}

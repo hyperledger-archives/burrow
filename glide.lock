@@ -31,6 +31,8 @@ imports:
   version: c1eddaa09da2b4017351245b0d43234955276798
 - name: github.com/fsnotify/fsnotify
   version: 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
+- name: github.com/Graylog2/go-gelf
+  version: 5bfd5bbbfe86489017c268bf86539fcec7e28d8e
 - name: github.com/gin-gonic/gin
   version: f931d1ea80ae95a6fc739213cdd9399bd2967fb6
   subpackages:
@@ -84,7 +86,7 @@ imports:
 - name: github.com/mattn/go-isatty
   version: 30a891c33c7cde7b02a981314b4228ec99380cca
 - name: github.com/mitchellh/mapstructure
-  version: d2dd0262208475919e1a362f675cfc0e7c10e905
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/naoina/toml
   version: 751171607256bb66e64c9f0220c00662420c38e9
 - name: github.com/pmezard/go-difflib

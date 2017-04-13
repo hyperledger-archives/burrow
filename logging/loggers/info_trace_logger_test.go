@@ -26,3 +26,8 @@ func TestLogger(t *testing.T) {
 	logger := NewInfoTraceLogger(stderrLogger, stderrLogger)
 	logger.Trace("hello", "barry")
 }
+
+func TestNewNoopInfoTraceLogger(t *testing.T) {
+	logger := NewNoopInfoTraceLogger()
+	logger.Trace("goodbye", "trevor")
+}

@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 type KeyClient interface {
@@ -36,12 +36,12 @@ var _ KeyClient = (*monaxKeyClient)(nil)
 
 type monaxKeyClient struct {
 	rpcString string
-	logger    loggers.InfoTraceLogger
+	logger    logging_types.InfoTraceLogger
 }
 
 // monaxKeyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewBurrowKeyClient(rpcString string, logger loggers.InfoTraceLogger) *monaxKeyClient {
+func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) *monaxKeyClient {
 	return &monaxKeyClient{
 		rpcString: rpcString,
 		logger:    logging.WithScope(logger, "BurrowKeyClient"),

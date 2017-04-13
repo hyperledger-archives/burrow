@@ -23,7 +23,7 @@ import (
 // Safely get the subtree from a viper config, returning an error if it could not
 // be obtained for any reason.
 func ViperSubConfig(conf *viper.Viper, configSubtreePath string) (subConfig *viper.Viper, err error) {
-	// Viper internally panics if `moduleName` contains an unallowed
+	// Viper internally panics if `moduleName` contains an disallowed
 	// character (eg, a dash).
 	defer func() {
 		if r := recover(); r != nil {

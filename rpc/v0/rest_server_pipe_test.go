@@ -24,6 +24,7 @@ import (
 
 	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	"github.com/hyperledger/burrow/txs"
 
@@ -43,7 +44,7 @@ type MockPipe struct {
 	events          event.EventEmitter
 	namereg         definitions.NameReg
 	transactor      definitions.Transactor
-	logger          loggers.InfoTraceLogger
+	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new mock tendermint pipe.
@@ -85,7 +86,7 @@ func (pipe *MockPipe) Transactor() definitions.Transactor {
 	return pipe.transactor
 }
 
-func (pipe *MockPipe) Logger() loggers.InfoTraceLogger {
+func (pipe *MockPipe) Logger() logging_types.InfoTraceLogger {
 	return pipe.logger
 }
 

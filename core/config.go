@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus"
 	"github.com/hyperledger/burrow/definitions"
-	"github.com/hyperledger/burrow/logging"
+	lconfig "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/manager"
 	"github.com/hyperledger/burrow/server"
 	"github.com/hyperledger/burrow/util"
@@ -113,14 +113,13 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	return serverConfig, err
 }
 
-func LoadLoggingConfigFromDo(do *definitions.Do) (*logging.LoggingConfig, error) {
-	//subConfig, err := SubConfig(conf, "logging")
-	loggingConfig := &logging.LoggingConfig{}
-	return loggingConfig, nil
+func LoadLoggingConfigFromDo(do *definitions.Do) (*lconfig.LoggingConfig, error) {
+	loggingConfigMap := do.Config.GetStringMap("logging")
+	return lconfig.LoggingConfigFromMap(loggingConfigMap)
 }
 
-func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*logging.LoggingConfig, error) {
-	loggingConfig := &logging.LoggingConfig{}
+func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*lconfig.LoggingConfig, error) {
+	loggingConfig := lconfig.DefaultClientLoggingConfig()
 	return loggingConfig, nil
 }
 

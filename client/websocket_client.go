@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
 	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -46,7 +46,7 @@ var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
 type burrowNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
-	logger              loggers.InfoTraceLogger
+	logger              logging_types.InfoTraceLogger
 }
 
 // Subscribe to an eventid

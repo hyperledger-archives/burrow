@@ -22,10 +22,9 @@ import (
 	config "github.com/hyperledger/burrow/config"
 	definitions "github.com/hyperledger/burrow/definitions"
 	burrowmint "github.com/hyperledger/burrow/manager/burrow-mint"
-	// types       "github.com/hyperledger/burrow/manager/types"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -34,7 +33,7 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-	evsw events.EventSwitch, logger loggers.InfoTraceLogger,
+	evsw events.EventSwitch, logger logging_types.InfoTraceLogger,
 	consensusMinorVersion string) (definitions.Pipe,
 	error) {
 	switch moduleConfig.Name {

@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	. "github.com/hyperledger/burrow/word256"
 
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/go-db"
 	"github.com/tendermint/go-events"
@@ -109,6 +110,7 @@ x 		- roles: has, add, rm
 // keys
 var user = makeUsers(10)
 var chainID = "testchain"
+var logger = lifecycle.NewStdErrLogger()
 
 func makeUsers(n int) []*acm.PrivAccount {
 	accounts := []*acm.PrivAccount{}
@@ -175,7 +177,7 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(user[1].Address, 5)
 	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -188,7 +190,7 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(user[4].Address, 5)
 	tx.SignInput(chainID, 0, user[2])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -201,7 +203,7 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(user[4].Address, 5)
 	tx.SignInput(chainID, 0, user[3])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -217,7 +219,7 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(user[6].Address, 5)
 	tx.SignInput(chainID, 0, user[3])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -241,7 +243,7 @@ func TestName(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -253,7 +255,7 @@ func TestName(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -273,7 +275,7 @@ func TestCallFails(t *testing.T) {
 	// simple call tx should fail
 	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, user[4].Address, nil, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -282,7 +284,7 @@ func TestCallFails(t *testing.T) {
 	// simple call tx with send permission should fail
 	tx, _ = txs.NewCallTx(blockCache, user[1].PubKey, user[4].Address, nil, 100, 100, 100)
 	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -291,7 +293,7 @@ func TestCallFails(t *testing.T) {
 	// simple call tx with create permission should fail
 	tx, _ = txs.NewCallTx(blockCache, user[3].PubKey, user[4].Address, nil, 100, 100, 100)
 	tx.Sign(chainID, user[3])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -303,7 +305,7 @@ func TestCallFails(t *testing.T) {
 	// simple call create tx should fail
 	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, nil, nil, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -312,7 +314,7 @@ func TestCallFails(t *testing.T) {
 	// simple call create tx with send perm should fail
 	tx, _ = txs.NewCallTx(blockCache, user[1].PubKey, nil, nil, 100, 100, 100)
 	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -321,7 +323,7 @@ func TestCallFails(t *testing.T) {
 	// simple call create tx with call perm should fail
 	tx, _ = txs.NewCallTx(blockCache, user[2].PubKey, nil, nil, 100, 100, 100)
 	tx.Sign(chainID, user[2])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -342,7 +344,7 @@ func TestSendPermission(t *testing.T) {
 	}
 	tx.AddOutput(user[1].Address, 5)
 	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
@@ -357,7 +359,7 @@ func TestSendPermission(t *testing.T) {
 	tx.AddOutput(user[2].Address, 10)
 	tx.SignInput(chainID, 0, user[0])
 	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -390,7 +392,7 @@ func TestCallPermission(t *testing.T) {
 	// A single input, having the permission, should succeed
 	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, simpleContractAddr, nil, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
@@ -504,7 +506,7 @@ func TestCreatePermission(t *testing.T) {
 	// A single input, having the permission, should succeed
 	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, nil, createCode, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
@@ -529,7 +531,7 @@ func TestCreatePermission(t *testing.T) {
 	// A single input, having the permission, should succeed
 	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, nil, createFactoryCode, 100, 100, 100)
 	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
@@ -747,7 +749,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	}
 	tx.AddOutput(user[6].Address, 5)
 	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
@@ -762,7 +764,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	tx.AddOutput(user[7].Address, 10)
 	tx.SignInput(chainID, 0, user[0])
 	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -780,7 +782,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	tx.AddOutput(user[4].Address, 6)
 	tx.SignInput(chainID, 0, user[0])
 	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -800,7 +802,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	tx.AddOutput(user[7].Address, 10)
 	tx.SignInput(chainID, 0, user[0])
 	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
@@ -816,7 +818,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	tx.AddOutput(user[4].Address, 3)
 	tx.SignInput(chainID, 0, user[0])
 	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
@@ -1091,7 +1093,7 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx txs.Tx, eventid st
 	})
 	evc := events.NewEventCache(evsw)
 	go func() {
-		if err := ExecTx(blockCache, tx, true, evc); err != nil {
+		if err := ExecTx(blockCache, tx, true, evc, logger); err != nil {
 			ch <- err.Error()
 		}
 		evc.Flush()
@@ -1174,7 +1176,7 @@ func testSNativeTx(t *testing.T, expectPass bool, blockCache *BlockCache, perm p
 	}
 	tx, _ := txs.NewPermissionsTx(blockCache, user[0].PubKey, snativeArgs)
 	tx.Sign(chainID, user[0])
-	err := ExecTx(blockCache, tx, true, nil)
+	err := ExecTx(blockCache, tx, true, nil, logger)
 	if expectPass {
 		if err != nil {
 			t.Fatal("Unexpected exception", err)

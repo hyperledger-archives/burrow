@@ -34,7 +34,7 @@ func init() {
 
 func execTxWithState(state *State, tx txs.Tx, runCall bool) error {
 	cache := NewBlockCache(state)
-	if err := ExecTx(cache, tx, runCall, nil); err != nil {
+	if err := ExecTx(cache, tx, runCall, nil, logger); err != nil {
 		return err
 	} else {
 		cache.Sync()
@@ -769,7 +769,7 @@ func TestSuicide(t *testing.T) {
 
 	// we use cache instead of execTxWithState so we can run the tx twice
 	cache := NewBlockCache(state)
-	if err := ExecTx(cache, tx, true, nil); err != nil {
+	if err := ExecTx(cache, tx, true, nil, logger); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
 
@@ -777,7 +777,7 @@ func TestSuicide(t *testing.T) {
 	// shouldn't happen twice and the caller should lose fee
 	tx.Input.Sequence += 1
 	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
-	if err := ExecTx(cache, tx, true, nil); err != nil {
+	if err := ExecTx(cache, tx, true, nil, logger); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
 

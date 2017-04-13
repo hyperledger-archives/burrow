@@ -162,11 +162,6 @@ const sectionServers = `[servers]
 	rpc_local_address = "0.0.0.0:46657"
 	endpoint = "/websocket"
 
-  [servers.logging]
-  console_log_level = "info"
-  file_log_level = "warn"
-  log_file = ""
-
   `
 
 const separatorModules = `
@@ -294,5 +289,19 @@ db_backend = "leveldb"
 # tendermint host address needs to correspond to tendermints configuration
 # of the rpc local address
 tendermint_host = "0.0.0.0:46657"
+
+`
+
+const sectionLoggingHeader = `
+################################################################################
+##
+## System-wide logging configuration
+##
+## Log messages are sent to one of two 'channels': info or trace
+##
+## They are delivered on two independent streams: 'info' or 'info and trace'.
+## Each of these streams has a root
+##
+################################################################################
 
 `

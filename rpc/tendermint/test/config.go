@@ -119,11 +119,6 @@ genesis_file = "genesis.json"
 	rpc_local_address = "0.0.0.0:36657"
 	endpoint = "/websocket"
 
-  [servers.logging]
-  console_log_level = "info"
-  file_log_level = "warn"
-  log_file = ""
-
 ################################################################################
 ################################################################################
 ##

@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -42,7 +42,7 @@ type EventEmitter interface {
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch go_events.EventSwitch, logger loggers.InfoTraceLogger) *events {
+func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
 	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
 }
 
@@ -56,7 +56,7 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 // The events struct has methods for working with events.
 type events struct {
 	eventSwitch go_events.EventSwitch
-	logger      loggers.InfoTraceLogger
+	logger      logging_types.InfoTraceLogger
 }
 
 // Subscribe to an event.

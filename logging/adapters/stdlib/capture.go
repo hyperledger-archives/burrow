@@ -19,22 +19,22 @@ import (
 	"log"
 
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/types"
 )
 
 func Capture(stdLibLogger log.Logger,
-	logger loggers.InfoTraceLogger) io.Writer {
+	logger types.InfoTraceLogger) io.Writer {
 	adapter := newAdapter(logger)
 	stdLibLogger.SetOutput(adapter)
 	return adapter
 }
 
-func CaptureRootLogger(logger loggers.InfoTraceLogger) io.Writer {
+func CaptureRootLogger(logger types.InfoTraceLogger) io.Writer {
 	adapter := newAdapter(logger)
 	log.SetOutput(adapter)
 	return adapter
 }
 
-func newAdapter(logger loggers.InfoTraceLogger) io.Writer {
+func newAdapter(logger types.InfoTraceLogger) io.Writer {
 	return kitlog.NewStdlibAdapter(logger)
 }

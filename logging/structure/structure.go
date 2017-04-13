@@ -14,21 +14,19 @@
 
 package structure
 
-import (
-	"reflect"
-
-	. "github.com/hyperledger/burrow/util/slice"
-)
+import . "github.com/hyperledger/burrow/util/slice"
 
 const (
 	// Log time (time.Time)
 	TimeKey = "time"
 	// Call site for log invocation (go-stack.Call)
 	CallerKey = "caller"
+	// Trace for log call
+	TraceKey = "trace"
 	// Level name (string)
 	LevelKey = "level"
 	// Channel name in a vector channel logging context
-	ChannelKey = "channel"
+	ChannelKey = "log_channel"
 	// Log message (string)
 	MessageKey = "message"
 	// Captured logging source (like tendermint_log15, stdlib_log)
@@ -48,6 +46,7 @@ const (
 // the unmatched remainder keyvals as context as a slice of key-values.
 func ValuesAndContext(keyvals []interface{},
 	keys ...interface{}) (map[interface{}]interface{}, []interface{}) {
+
 	vals := make(map[interface{}]interface{}, len(keys))
 	context := make([]interface{}, len(keyvals))
 	copy(context, keyvals)
@@ -72,6 +71,21 @@ func ValuesAndContext(keyvals []interface{},
 		}
 	}
 	return vals, context
+}
+
+// Drops all key value pairs where the key is in keys
+func RemoveKeys(keyvals []interface{}, keys ...interface{}) []interface{} {
+	keyvalsWithoutKeys := make([]interface{}, 0, len(keyvals))
+NEXT_KEYVAL:
+	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
+		for _, key := range keys {
+			if keyvals[i] == key {
+				continue NEXT_KEYVAL
+			}
+		}
+		keyvalsWithoutKeys = append(keyvalsWithoutKeys, keyvals[i], keyvals[i+1])
+	}
+	return keyvalsWithoutKeys
 }
 
 // Stateful index that tracks the location of a possible vector value
@@ -134,18 +148,6 @@ func Value(keyvals []interface{}, key interface{}) interface{} {
 		}
 	}
 	return nil
-}
-
-// Obtain a canonical key from a value. Useful for structured logging where the
-// type of value alone may be sufficient to determine its key. Providing this
-// function centralises any convention over type names
-func KeyFromValue(val interface{}) string {
-	switch val.(type) {
-	case string:
-		return "text"
-	default:
-		return reflect.TypeOf(val).Name()
-	}
 }
 
 // Maps key values pairs with a function (key, value) -> (new key, new value)
