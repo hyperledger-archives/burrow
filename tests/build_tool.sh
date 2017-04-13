@@ -52,8 +52,5 @@ fi
 rm $REPO/target/docker/burrow.dockerartefact
 rm $REPO/target/docker/burrow-client.dockerartefact
 
-# CircleCI seems to have an issues removing this build, in any case it is not necessary on CI
-if [ ! "$CI" ]
-then
-  docker rmi -f $IMAGE:build
-fi
+# Remove build image so we don't push it when we push all tags
+docker rmi -f $IMAGE:build

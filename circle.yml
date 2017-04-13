@@ -1,21 +1,21 @@
 machine:
   environment:
     GOPATH: $HOME/.go_workspace
-    REPO: ${GOPATH}/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-    DOCKER_VERSION: 1.9.1
-    DOCKER_MACHINE_VERSION: 0.6.0
+    REPO: ${GOPATH}/src/github.com/hyperledger/burrow
     GO15VENDOREXPERIMENT: 1
+  pre:
+    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+  services:
+    - docker
   post:
     - git config --global user.email "billings@monax.io"
     - git config --global user.name "Billings the Bot"
-    - rm -rf ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
-    - mkdir -p ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}
-    - cp -r ${HOME}/${CIRCLE_PROJECT_REPONAME} ${GOPATH%%:*}/src/github.com/${CIRCLE_PROJECT_USERNAME}/.
+    - rm -rf ${GOPATH%%:*}/src/github.com/hyperledger
+    - mkdir -p ${GOPATH%%:*}/src/github.com/hyperledger
+    - cp -r ${HOME}/${CIRCLE_PROJECT_REPONAME} ${GOPATH%%:*}/src/github.com/hyperledger/.
 
 dependencies:
   override:
-    - sudo curl -L -o /usr/bin/docker http://s3-external-1.amazonaws.com/circle-downloads/docker-$DOCKER_VERSION-circleci; sudo chmod 0775 /usr/bin/docker; sudo usermod -a -G docker $USER; true
-    - sudo service docker start
     - sudo apt-get update && sudo apt-get install -y libgmp3-dev
     - sudo apt-get install jq curl && go get github.com/Masterminds/glide
 
