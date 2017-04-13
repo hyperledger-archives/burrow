@@ -22,6 +22,7 @@ import (
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -115,6 +116,6 @@ func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators,
 	return 0, nil, nil, nil
 }
 
-func (mock *MockNodeClient) Logger() loggers.InfoTraceLogger {
+func (mock *MockNodeClient) Logger() logging_types.InfoTraceLogger {
 	return loggers.NewNoopInfoTraceLogger()
 }

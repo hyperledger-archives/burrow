@@ -24,7 +24,7 @@ import (
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
 	tendermint_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
@@ -46,7 +46,7 @@ type NodeClient interface {
 	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
 
 	// Logging context for this NodeClient
-	Logger() loggers.InfoTraceLogger
+	Logger() logging_types.InfoTraceLogger
 }
 
 type NodeWebsocketClient interface {
@@ -64,12 +64,12 @@ var _ NodeClient = (*burrowNodeClient)(nil)
 // burrow-client is a simple struct exposing the client rpc methods
 type burrowNodeClient struct {
 	broadcastRPC string
-	logger       loggers.InfoTraceLogger
+	logger       logging_types.InfoTraceLogger
 }
 
 // BurrowKeyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewBurrowNodeClient(rpcString string, logger loggers.InfoTraceLogger) *burrowNodeClient {
+func NewBurrowNodeClient(rpcString string, logger logging_types.InfoTraceLogger) *burrowNodeClient {
 	return &burrowNodeClient{
 		broadcastRPC: rpcString,
 		logger:       logging.WithScope(logger, "BurrowNodeClient"),
@@ -263,6 +263,6 @@ func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight int,
 	return
 }
 
-func (burrowNodeClient *burrowNodeClient) Logger() loggers.InfoTraceLogger {
+func (burrowNodeClient *burrowNodeClient) Logger() logging_types.InfoTraceLogger {
 	return burrowNodeClient.logger
 }

@@ -35,7 +35,7 @@ import (
 	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
 )
@@ -44,7 +44,7 @@ type Tendermint struct {
 	tmintNode   *node.Node
 	tmintConfig *TendermintConfig
 	chainId     string
-	logger      loggers.InfoTraceLogger
+	logger      logging_types.InfoTraceLogger
 }
 
 // Compiler checks to ensure Tendermint successfully implements
@@ -54,7 +54,7 @@ var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 
 func NewTendermint(moduleConfig *config.ModuleConfig,
 	application manager_types.Application,
-	logger loggers.InfoTraceLogger) (*Tendermint, error) {
+	logger logging_types.InfoTraceLogger) (*Tendermint, error) {
 	// re-assert proper configuration for module
 	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
 		return nil, fmt.Errorf("Version string %s did not match %s",

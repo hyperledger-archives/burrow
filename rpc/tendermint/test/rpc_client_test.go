@@ -20,9 +20,10 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ripemd160"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ripemd160"
 
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"

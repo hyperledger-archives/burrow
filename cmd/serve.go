@@ -109,8 +109,12 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to load logging config: %s", err)
 	}
 
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(loggerConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to build logger from logging config: %s", err)
+	}
 	// Create a root logger to pass through to dependencies
-	logger := logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(loggerConfig), "Serve")
+	logger = logging.WithScope(logger, "Serve")
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)

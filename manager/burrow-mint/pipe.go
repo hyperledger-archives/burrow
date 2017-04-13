@@ -35,7 +35,7 @@ import (
 	edb_event "github.com/hyperledger/burrow/event"
 	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/manager/burrow-mint/state"
 	manager_types "github.com/hyperledger/burrow/manager/types"
@@ -57,7 +57,7 @@ type burrowMintPipe struct {
 	// Genesis cache
 	genesisDoc   *genesis.GenesisDoc
 	genesisState *state.State
-	logger       loggers.InfoTraceLogger
+	logger       logging_types.InfoTraceLogger
 }
 
 // Interface type assertions
@@ -67,7 +67,7 @@ var _ definitions.TendermintPipe = (*burrowMintPipe)(nil)
 
 func NewBurrowMintPipe(moduleConfig *config.ModuleConfig,
 	eventSwitch go_events.EventSwitch,
-	logger loggers.InfoTraceLogger) (*burrowMintPipe, error) {
+	logger logging_types.InfoTraceLogger) (*burrowMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
 		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
@@ -177,7 +177,7 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for burrowMintPipe
 
-func (pipe *burrowMintPipe) Logger() loggers.InfoTraceLogger {
+func (pipe *burrowMintPipe) Logger() logging_types.InfoTraceLogger {
 	return pipe.logger
 }
 

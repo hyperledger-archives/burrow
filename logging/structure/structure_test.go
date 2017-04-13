@@ -40,6 +40,7 @@ func TestVectorise(t *testing.T) {
 	)
 
 	kvsVector := Vectorise(kvs, "occupation", "scope")
+	// Vectorise scope
 	assert.Equal(t, Slice(
 		"scope", Slice("lawnmower", "hose pipe", "rake"),
 		"hub", "budub",
@@ -47,4 +48,25 @@ func TestVectorise(t *testing.T) {
 		"flub", Slice("dub", "brub"),
 	),
 		kvsVector)
+}
+
+func TestRemoveKeys(t *testing.T) {
+	// Remove multiple of same key
+	assert.Equal(t, Slice("Fish", 9),
+		RemoveKeys(Slice("Foo", "Bar", "Fish", 9, "Foo", "Baz", "odd-key"),
+			"Foo"))
+
+	// Remove multiple different keys
+	assert.Equal(t, Slice("Fish", 9),
+		RemoveKeys(Slice("Foo", "Bar", "Fish", 9, "Foo", "Baz", "Bar", 89),
+			"Foo", "Bar"))
+
+	// Remove nothing but supply keys
+	assert.Equal(t, Slice("Foo", "Bar", "Fish", 9),
+		RemoveKeys(Slice("Foo", "Bar", "Fish", 9),
+			"A", "B", "C"))
+
+	// Remove nothing since no keys supplied
+	assert.Equal(t, Slice("Foo", "Bar", "Fish", 9),
+		RemoveKeys(Slice("Foo", "Bar", "Fish", 9)))
 }
