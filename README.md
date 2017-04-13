@@ -1,11 +1,11 @@
-# Burrow v0.16
+# Hyperledger Burrow v0.16
 
 |[![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow) | Linux |
 |---|-------|
-| Master | [![Circle CI](https://circleci.com/gh/monax/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/master) |
-| Develop | [![Circle CI (develop)](https://circleci.com/gh/monax/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/monax/burrow/tree/develop) |
+| Master | [![Circle CI](https://circleci.com/gh/hyperledger/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/master) |
+| Develop | [![Circle CI (develop)](https://circleci.com/gh/hyperledger/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/develop) |
 
-Burrow is Monax' permissioned blockchain client. It executes Ethereum smart contracts on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `monax chains`, exposed through [monax](https://monax.io/docs), the entry point for the Monax Platform.
+Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node built with <3 by Monax. It executes Ethereum smart contract code on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake Tendermint consensus engine. For smart contract development most functionality is provided by `monax chains`, exposed through [monax](https://monax.io/docs), the entry point for the Monax Platform.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ Burrow is Monax' permissioned blockchain client. It executes Ethereum smart cont
 
 ## What is Burrow ?
 
-Burrow is a permissioned blockchain node that executes smart contract code following the Ethereum specification.  Burrow is built for a multi-chain universe with application specific optimization in mind. Burrow as a node is constructed out of three main components; the consensus engine, the permissioned Ethereum virtual machine and the rpc gateway.  More specifically Burrow consists of the following:
+Hyperledger Burrow is a permissioned blockchain node that executes smart contract code following the Ethereum specification.  Burrow is built for a multi-chain universe with application specific optimization in mind. Burrow as a node is constructed out of three main components; the consensus engine, the permissioned Ethereum virtual machine and the rpc gateway.  More specifically Burrow consists of the following:
 
 - **Consensus Engine:** transactions are ordered and finalised with the Byzantine fault-tolerant Tendermint protocol.  The Tendermint protocol provides high transaction throughput over a set of known validators and prevents the blockchain from forking.
 - **Application Blockchain Interface (ABCI):** The smart contract application interfaces with the consensus engine over the ABCI. The ABCI allows for the consensus engine to remain agnostic from the smart contract application.
