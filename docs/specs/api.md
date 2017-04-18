@@ -39,7 +39,7 @@ INVALID_PARAMS   = -32602
 INTERNAL_ERROR   = -32603
 ```
 
-#####Request
+##### Request
 
 ```
 {
@@ -50,7 +50,7 @@ INTERNAL_ERROR   = -32603
 }
 ```
 
-#####Response
+##### Response
 
 ```
 {
@@ -61,7 +61,7 @@ INTERNAL_ERROR   = -32603
 }
 ```
 
-#####Error
+##### Error
 
 ```
 {
@@ -72,7 +72,7 @@ INTERNAL_ERROR   = -32603
 
 Id can be any string value. Parameters are named, and wrapped in objects. Also, params, result and error params may be `null`.
 
-#####Example
+##### Example
 
 Request:
 
@@ -104,17 +104,17 @@ Response:
 The REST-like API provides the typical endpoint structure i.e. endpoints are named as resources, parameters can be put in the path, and queries are used for filtering and such. It is not fully compatible with REST; partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before version 1.0.
 
 <a name="formatting-conventions"></a>
-##Common objects and formatting
+## Common objects and formatting
 
 This section contains some common objects and explanations of how they work.
 
-###Numbers and strings
+### Numbers and strings
 
 Numbers are always numbers, and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays.
 
 Hex strings are never prefixed.
 
-#####Examples
+##### Examples
 
 ```
 "some_number_field" : 5892,
@@ -122,7 +122,7 @@ Hex strings are never prefixed.
 "hex_string" : "37236DF251AB70022B1DA351F08A20FB52443E37"
 ```
 
-###Keys and addresses
+### Keys and addresses
 
 Public and Private keys in JSON data are either null, or on the form: `[type, hex]`, where `type` is the [public](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go), or [private](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go) key type, and `hex` is the hex-string representation of the key bytes.
 
@@ -130,11 +130,11 @@ Public and Private keys in JSON data are either null, or on the form: `[type, he
 - A `public key` is a 32 byte hex string.
 - A `private key` is a 64 byte hex string.
 
-#####WARNING
+##### WARNING
 
 **When using a client-server setup, do NOT send public keys over non-secure connections. The only time this is fine is during development when the keys are nothing but test data and does not protect anything of value. Normally they should either be kept locally and used to sign transactions locally, held on the server where the blockchain client is running, or be passed over secure channels.**
 
-#####Examples
+##### Examples
 
 A public address: `"37236DF251AB70022B1DA351F08A20FB52443E37"`
 
@@ -143,11 +143,11 @@ The corresponding Ed25519 public key: `[1, "CB3688B7561D488A2A4834E1AEE9398BEF94
 The corresponding Ed25519 private key: `[1, "6B72D45EB65F619F11CE580C8CAED9E0BADC774E9C9C334687A65DCBAD2C4151CB3688B7561D488A2A4834E1AEE9398BEF94844D8BDBBCA980C11E3654A45906"]`
 
 <a name="the-transaction-types"></a>
-###The transaction types
+### The transaction types
 
 These are the types of transactions. Note that in DApp programming you would only use the `CallTx`, and maybe `NameTx`.
 
-####SendTx
+#### SendTx
 
 ```
 {
@@ -156,7 +156,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####CallTx
+#### CallTx
 
 ```
 {
@@ -168,7 +168,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####NameTx
+#### NameTx
 
 ```
 {
@@ -180,7 +180,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####BondTx
+#### BondTx
 
 ```
 {
@@ -191,7 +191,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####UnbondTx
+#### UnbondTx
 
 ```
 {
@@ -201,7 +201,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####RebondTx
+#### RebondTx
 
 ```
 {
@@ -211,7 +211,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-####DupeoutTx
+#### DupeoutTx
 
 ```
 {
@@ -223,7 +223,7 @@ These are the types of transactions. Note that in DApp programming you would onl
 
 These are the support types that are referenced in the transactions:
 
-####TxInput
+#### TxInput
 
 ```
 {
@@ -235,7 +235,7 @@ These are the support types that are referenced in the transactions:
 }
 ```
 
-####TxOutput
+#### TxOutput
 
 ```
 {
@@ -244,7 +244,7 @@ These are the support types that are referenced in the transactions:
 }
 ```
 
-####Vote
+#### Vote
 
 ```
 {
@@ -260,7 +260,7 @@ These are the support types that are referenced in the transactions:
 ```
 
 <a name="event-system"></a>
-##Event system
+## Event system
 
 Tendermint events can be subscribed to regardless of what connection type is used. There are three methods for this:
 
@@ -468,9 +468,9 @@ To pay this cost you use the `amount` field in the namereg transaction. If you w
 See the [TransactNameReg](#transact-name-reg) method for more info about adding entries to the name-registry, and the methods in the [Name-registry](#name-registry) for accessing them.
 
 <a name="methods"></a>
-##Methods
+## Methods
 
-###Accounts
+### Accounts
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetAccounts](#get-accounts) | burrow.getAccounts | GET | `/accounts` |
@@ -478,7 +478,7 @@ See the [TransactNameReg](#transact-name-reg) method for more info about adding 
 | [GetStorage](#get-storage) | burrow.getStorage | GET | `/accounts/:address/storage` |
 | [GetStorageAt](#get-storage-at) | burrow.getStorageAt | GET | `/accounts/:address/storage/:key` |
 
-###Blockchain
+### Blockchain
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetBlockchainInfo](#get-blockchain-info) | burrow.getBlockchainInfo | GET | `/blockchain` |
@@ -489,26 +489,26 @@ See the [TransactNameReg](#transact-name-reg) method for more info about adding 
 | [GetBlocks](#get-blocks) | burrow.getBlocks | GET | `/blockchain/blocks` |
 | [GetBlock](#get-block) | burrow.getBlock | GET | `/blockchain/blocks/:height` |
 
-###Consensus
+### Consensus
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetConsensusState](#get-consensus-state) | burrow.getConsensusState | GET | `/consensus` |
 | [GetValidators](#get-validators) | burrow.getValidators | GET | `/consensus/validators` |
 
-###Events
+### Events
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [EventSubscribe](#event-subscribe) | burrow.eventSubscribe | POST | `/event_subs` |
 | [EventUnsubscribe](#event-unsubscribe) | burrow.eventUnsubscribe | DELETE | `/event_subs/:id` |
 | [EventPoll](#event-poll) | burrow.eventPoll | GET | `/event_subs/:id` |
 
-###Name-registry
+### Name-registry
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetNameRegEntry](#get-namereg-entry) | burrow.getNameRegEntry | GET | `/namereg/:key` |
 | [GetNameRegEntries](#get-namereg-entries) | burrow.getNameRegEntries | GET | `/namereg` |
 
-###Network
+### Network
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [GetNetworkInfo](#get-network-info) | burrow.getNetworkInfo | GET | `/network` |
@@ -521,19 +521,19 @@ See the [TransactNameReg](#transact-name-reg) method for more info about adding 
 
 NOTE: Get peer is not fully implemented.
 
-###Transactions
+### Transactions
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [BroadcastTx](#broadcast-tx) | burrow.broadcastTx | POST | `/txpool` |
 | [GetUnconfirmedTxs](#get-unconfirmed-txs) | burrow.getUnconfirmedTxs | GET | `/txpool` |
 
-###Code execution
+### Code execution
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Call](#call) | burrow.call | POST | `/calls` |
 | [CallCode](#call-code) | burrow.callCode | POST | `/codecalls` |
 
-####Unsafe
+#### Unsafe
 | Name | RPC method name | HTTP method | HTTP endpoint |
 | :--- | :-------------- | :---------: | :------------ |
 | [Transact](#transact) | burrow.transact | POST | `/unsafe/txpool` |
@@ -560,22 +560,22 @@ In the case of **REST-like HTTP** GET requests, the params (and query) is provid
 **Unsafe** is methods that require a private key to be sent either to or from the client, and should therefore be used only during development/testing, or with extreme care. They may be phased out entirely.
 
 <a name="accounts"></a>
-###Accounts
+### Accounts
 
 ***
 
 <a name="get-accounts"></a>
-####GetAccounts
+#### GetAccounts
 
 Get accounts will return a list of accounts. If no filtering is used, it will return all existing accounts.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/accounts`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getAccounts`
 
@@ -594,7 +594,7 @@ Parameter:
 | `balance` | uint64 | `<`, `>`, `<=`, `>=`, `==` | `q=balance:<=11` |
 | `code` | byte[] | `==`, `!=` | `q=code:1FA872` |
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -602,7 +602,7 @@ Parameter:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See GetAccount below for more info on the `Account` object.
 
@@ -611,11 +611,11 @@ See the section on [Filters](#queries-filters) for info on the `FilterData` obje
 ***
 
 <a name="get-account"></a>
-####GetAccount
+#### GetAccount
 
 Get an account by its address.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
@@ -624,7 +624,7 @@ Endpoint: `/accounts/:address`
 Params: The public `address` as a hex string.
 
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getAccount`
 
@@ -636,7 +636,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -652,7 +652,7 @@ Parameter:
 `address` is a public address.
 `pub_key` is a public key.
 
-#####Additional info
+##### Additional info
 
 Sequence is sometimes referred to as the "nonce".
 
@@ -661,13 +661,13 @@ There are two types of objects used to represent accounts, one is public account
 ***
 
 <a name="get-storage"></a>
-####GetStorage
+#### GetStorage
 
 Get the complete storage of a contract account. Non-contract accounts has no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
@@ -676,7 +676,7 @@ Endpoint: `/accounts/:address/storage`
 Params: The public `address` as a hex string.
 
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getStorage`
 
@@ -688,7 +688,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -703,13 +703,13 @@ See `GetStorageAt` below for more info on the `StorageItem` object.
 ***
 
 <a name="get-storage-at"></a>
-####GetStorageAt
+#### GetStorageAt
 
 Get a particular entry in the storage of a contract account. Non-contract accounts has no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
@@ -717,7 +717,7 @@ Endpoint: `/accounts/:address/storage/:key`
 
 Params: The public `address` as a hex string, and the `key` as a hex string.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getStorageAt`
 
@@ -730,7 +730,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -744,28 +744,28 @@ Both `key` and `value` are hex strings.
 ***
 
 <a name="blockchain"></a>
-###Blockchain
+### Blockchain
 
 ***
 
 <a name="get-blockchain-info"></a>
-####GetBlockchainInfo
+#### GetBlockchainInfo
 
 Get the current state of the blockchain. This includes things like chain-id and latest block height. There are individual getters for all fields as well.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getBlockchainInfo`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -776,7 +776,7 @@ Parameter: -
 }
 ```
 
-#####Additional info
+##### Additional info
 
 `chain_id` is the name of the chain.
 `genesis_hash` is a 32 byte hex-string. It is the hash of the genesis block, which is the first block on the chain.
@@ -790,23 +790,23 @@ See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 ***
 
 <a name="get-chain-id"></a>
-####GetChainId
+#### GetChainId
 
 Get the chain id.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/chain_id`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getChainId`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -816,23 +816,23 @@ Parameter: -
 ***
 
 <a name="get-genesis-hash"></a>
-####GetGenesisHash
+#### GetGenesisHash
 
 Get the genesis hash. This is a 32 byte hex-string representation of the hash of the genesis block. The genesis block is the first block on the chain.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/genesis_hash`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getGenesisHash`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -843,23 +843,23 @@ Parameter: -
 ***
 
 <a name="get-latest-block-height"></a>
-####GetLatestBlockHeight
+#### GetLatestBlockHeight
 
 Get the height of the latest block. This would also be the height of the entire chain.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/latest_block/height`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getLatestBlockHeight`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -870,23 +870,23 @@ Parameter: -
 ***
 
 <a name="get-latest-block"></a>
-####GetLatestBlock
+#### GetLatestBlock
 
 Gets the block that was added to the chain most recently.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/latest_block`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getLatestBlock`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -894,24 +894,24 @@ Parameter: -
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 
 ***
 
 <a name="get-blocks"></a>
-####GetBlocks
+#### GetBlocks
 
 Get a series of blocks from the chain.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/blocks`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getBlocks`
 
@@ -931,7 +931,7 @@ Parameter:
 
 
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -966,7 +966,7 @@ The `BlockMeta` object:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 TODO
 
@@ -979,17 +979,17 @@ See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 ***
 
 <a name="get-block"></a>
-####GetBlock
+#### GetBlock
 
 Get the block at the given height.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/blockchain/block/:number`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getBlock`
 
@@ -1001,7 +1001,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1040,7 +1040,7 @@ The `Commit` object:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 TODO
 
@@ -1049,28 +1049,28 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 ***
 
 <a name="consensus"></a>
-###Consensus
+### Consensus
 
 ***
 
 <a name="get-consensus-state"></a>
-####GetConsensusState
+#### GetConsensusState
 
 Get the current consensus state.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/consensus`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getConsensusState`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1096,7 +1096,7 @@ Parameter: -
 }
 ```
 
-#####Additional info
+##### Additional info
 
 TODO
 
@@ -1105,23 +1105,23 @@ See the GetValidators method right below for info about the `Validator` object.
 ***
 
 <a name="get-validators"></a>
-####GetValidators
+#### GetValidators
 
 Get the validators.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/consensus/validators`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getValidators`
 
 Parameter: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1145,23 +1145,23 @@ The `Validator` object:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 TODO
 
 ***
 
 <a name="events"></a>
-###Events
+### Events
 
 ***
 
 <a name="event-subscribe"></a>
-####EventSubscribe
+#### EventSubscribe
 
 Subscribe to a given type of event. The event is identified by the `event_id` (see [Event types](#event-types). The response provides a subscription identifier `sub_id` which tracks your client and can be used to [unsubscribe](#eventunsubscribe).
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1169,7 +1169,7 @@ Endpoint: `/event_subs/`
 
 Body: See JSON-RPC parameter.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.eventSubscribe`
 
@@ -1181,7 +1181,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1189,24 +1189,24 @@ Parameter:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 For more information about events and the event system, see the [Event system](#event-system) section.
 
 ***
 
 <a name="event-unsubscribe"></a>
-####EventUnsubscribe
+#### EventUnsubscribe
 
 Unsubscribe to an event by supplying the subscription identifier `sub_id` you obtained from a previous call to [subscribe](#eventsubscribe).
 
-#####HTTP
+##### HTTP
 
 Method: DELETE
 
 Endpoint: `/event_subs/:id`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.eventUnsubscribe`
 
@@ -1217,7 +1217,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1225,28 +1225,28 @@ Parameter:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 For more information about events and the event system, see the [Event system](#event-system) section.
 
 ***
 
 <a name="event-poll"></a>
-####EventPoll
+#### EventPoll
 
 Poll a subscription. Note this cannot be done if using websockets, because then the events will be passed automatically over the socket.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/event_subs/:id`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.eventPoll`
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1254,7 +1254,7 @@ Method: `burrow.eventPoll`
 }
 ```
 
-#####Additional info
+##### Additional info
 
 For more information about events and the event system, see the [Event system](#event-system) section. This includes info about the `Event` object.
 
@@ -1262,20 +1262,20 @@ For more information about events and the event system, see the [Event system](#
 
 
 <a name="name-registry"></a>
-####Name-registry
+#### Name-registry
 
 <a name="get-namereg-entries"></a>
-####GetNameRegEntries
+#### GetNameRegEntries
 
 This will return a list of name reg entries. Filters may be used.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/namereg`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getNameRegEntries`
 
@@ -1298,7 +1298,7 @@ Parameter:
 
 NOTE: While it is supported, there is no point in using `name:==...`, as it would search the entire map of names for that entry. Instead you should use the method `GetNameRegEntry` which takes the name (key) as argument.
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1307,7 +1307,7 @@ NOTE: While it is supported, there is no point in using `name:==...`, as it woul
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See GetNameRegEntry below for more info on the `NameRegEntry` object.
 
@@ -1316,11 +1316,11 @@ See the section on [Filters](#queries-filters) for info on the `FilterData` obje
 ***
 
 <a name="get-namereg-entry"></a>
-####GetNameRegEntry
+#### GetNameRegEntry
 
 Get a namereg entry by its key.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
@@ -1329,7 +1329,7 @@ Endpoint: `/namereg/:name`
 Params: The key (a string)
 
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getNameRegEntry`
 
@@ -1341,7 +1341,7 @@ Parameter:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1355,28 +1355,28 @@ Parameter:
 ***
 
 <a name="network"></a>
-###Network
+### Network
 
 ***
 
 <a name="get-network-info"></a>
-####GetNetworkInfo
+#### GetNetworkInfo
 
 Get the network information. This includes the blockchain client moniker, peer data, and other things.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getNetworkInfo`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1388,7 +1388,7 @@ Parameters: -
 }
 ```
 
-#####Additional info
+##### Additional info
 
 `client_version` is the version of the running client, or node.
 `moniker` is a moniker for the node.
@@ -1401,23 +1401,23 @@ See [GetPeer](#get-peer) for info on the `Peer` object.
 ***
 
 <a name="get-client-version"></a>
-####GetClientVersion
+#### GetClientVersion
 
 Get the version of the running client (node).
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/client_version`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getClientVersion`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1428,23 +1428,23 @@ Parameters: -
 ***
 
 <a name="get-moniker"></a>
-####GetMoniker
+#### GetMoniker
 
 Get the node moniker, or nickname.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/moniker`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getMoniker`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1455,23 +1455,23 @@ Parameters: -
 ***
 
 <a name="is-listening"></a>
-####IsListening
+#### IsListening
 
 Check whether or not the node is listening for connections.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/listening`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.isListening`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1482,23 +1482,23 @@ Parameters: -
 ***
 
 <a name="get-listeners"></a>
-####GetListeners
+#### GetListeners
 
 Get a list of all active listeners.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/listeners`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getListeners`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1509,23 +1509,23 @@ Parameters: -
 ***
 
 <a name="get-peers"></a>
-####GetPeers
+#### GetPeers
 
 Get a list of all peers.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/peers`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getPeers`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1538,17 +1538,17 @@ See [GetPeer](#get-peer) below for info on the `Peer` object.
 ***
 
 <a name="get-peer"></a>
-####GetPeer
+#### GetPeer
 
 Get the peer with the given IP address.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/network/peer/:address`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getPeer`
 
@@ -1560,7 +1560,7 @@ Parameters:
 }
 ```
 
-#####Return value
+##### Return value
 
 This is the peer object.
 
@@ -1577,25 +1577,25 @@ This is the peer object.
 ```
 
 
-#####Additional info
+##### Additional info
 
 TODO
 
 ***
 
 <a name="transactions"></a>
-###Transactions
+### Transactions
 
 ***
 
 <a name="broadcast-tx"></a>
-####BroadcastTx
+#### BroadcastTx
 
 Broadcast a given (signed) transaction to the node. It will be added to the tx pool if there are no issues, and if it is accepted by all validators it will eventually be committed to a block.
 
 WARNING: BroadcastTx will not be useful until we add a client-side signing solution.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1607,7 +1607,7 @@ Body:
 <Tx>
 ```
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.BroadcastTx`
 
@@ -1617,7 +1617,7 @@ Parameters:
 <Tx>
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1627,7 +1627,7 @@ Parameters:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 `tx_hash` is the hash of the transaction (think digest), and can be used to reference it.
 
@@ -1640,23 +1640,23 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 ***
 
 <a name="get-unconfirmed-txs"></a>
-####GetUnconfirmedTxs
+#### GetUnconfirmedTxs
 
 Get a list of transactions currently residing in the transaction pool. These have been admitted to the pool, but has not yet been committed.
 
-#####HTTP
+##### HTTP
 
 Method: GET
 
 Endpoint: `/txpool`
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.getUnconfirmedTxs`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1665,23 +1665,23 @@ Parameters: -
 ```
 
 
-#####Additional info
+##### Additional info
 
 See [The transaction types](#the-transaction-types) for more info on the `Tx` types.
 
 ***
 
 <a name="calls"></a>
-###Code execution (calls)
+### Code execution (calls)
 
 ***
 
 <a name="call"></a>
-####Call
+#### Call
 
 Call a given (contract) account to execute its code with the given in-data.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1689,7 +1689,7 @@ Endpoint: `/calls`
 
 Body: See JSON-RPC parameter.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.call`
 
@@ -1702,7 +1702,7 @@ Parameters:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1711,18 +1711,18 @@ Parameters:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 `data` is a string of data formatted in accordance with the.
 
 ***
 
 <a name="call-code"></a>
-####CallCode
+#### CallCode
 
 Pass contract code and tx data to the node and have it executed in the virtual machine. This is mostly a dev feature.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1730,7 +1730,7 @@ Endpoint: `/codecalls`
 
 Body: See JSON-RPC parameter.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.callCode`
 
@@ -1743,7 +1743,7 @@ Parameters:
 }
 ```
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1752,7 +1752,7 @@ Parameters:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 `code` is a hex-string representation of compiled contract code.
 `data` is a string of data formatted in accordance with the [contract ABI](https://github.com/monax/legacy-contracts.js)
@@ -1760,14 +1760,14 @@ Parameters:
 ***
 
 <a name="unsafe"></a>
-###Unsafe
+### Unsafe
 
 These methods are unsafe because they require that a private key is either transmitted or received. They are supposed to be used only in development.
 
 ***
 
 <a name="transact"></a>
-####Transact
+#### Transact
 
 Convenience method for sending a transaction. It will do the following things:
 
@@ -1776,7 +1776,7 @@ Convenience method for sending a transaction. It will do the following things:
 * Sign the transaction.
 * Broadcast the transaction.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1784,7 +1784,7 @@ Endpoint: `/unsafe/txpool`
 
 Body: See JSON-RPC parameters.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.transact`
 
@@ -1802,7 +1802,7 @@ Parameters:
 
 private key is the hex string only.
 
-#####Return value
+##### Return value
 
 The same as with BroadcastTx:
 
@@ -1814,7 +1814,7 @@ The same as with BroadcastTx:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See [The transaction types](#the-transaction-types) for more info on the `CallTx` type.
 
@@ -1823,7 +1823,7 @@ If you want to hold the tx, use `/unsafe/txpool?hold=true`. See `TransactAndHold
 ***
 
 <a name="transact-and-hold"></a>
-####TransactAndHold
+#### TransactAndHold
 
 Convenience method for sending a transaction and holding until it's been committed (or not). It will do the following things:
 
@@ -1835,7 +1835,7 @@ Convenience method for sending a transaction and holding until it's been committ
 
 When holding, the request will eventually timeout if the transaction is not processed nor produce an error. The response will then be an error that includes the transaction hash (which can be used for further investigation).
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1845,7 +1845,7 @@ Query: `?hold=true`
 
 Body: See JSON-RPC parameters.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.transactAndHold`
 
@@ -1863,7 +1863,7 @@ Parameters:
 
 private key is the hex string only.
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1881,7 +1881,7 @@ private key is the hex string only.
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See [The transaction types](#the-transaction-types) for more info on the `CallTx` type.
 
@@ -1890,7 +1890,7 @@ If you don't want to hold the tx, either use `/unsafe/txpool?hold=false` or omit
 ***
 
 <a name="transact-name-reg"></a>
-####TransactNameReg
+#### TransactNameReg
 
 Convenience method for sending a transaction to the name registry. It will do the following things:
 
@@ -1899,7 +1899,7 @@ Convenience method for sending a transaction to the name registry. It will do th
 * Sign the transaction.
 * Broadcast the transaction.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
@@ -1907,7 +1907,7 @@ Endpoint: `/unsafe/namereg/txpool`
 
 Body: See JSON-RPC parameters.
 
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.transactNameReg`
 
@@ -1923,7 +1923,7 @@ Parameters:
 }
 ```
 
-#####Return value
+##### Return value
 
 The same as with BroadcastTx:
 
@@ -1935,29 +1935,29 @@ The same as with BroadcastTx:
 }
 ```
 
-#####Additional info
+##### Additional info
 
 See [The transaction types](#the-transaction-types) for more info on the `NameTx` type.
 
 ***
 
 <a name="gen-priv-account"></a>
-####GenPrivAccount
+#### GenPrivAccount
 
 Convenience method for generating a `PrivAccount` object, which contains a private key and the corresponding public key and address.
 
-#####HTTP
+##### HTTP
 
 Method: POST
 
 Endpoint: `/unsafe/pa_generator`
-#####JSON-RPC
+##### JSON-RPC
 
 Method: `burrow.genPrivAccount`
 
 Parameters: -
 
-#####Return value
+##### Return value
 
 ```
 {
@@ -1967,7 +1967,7 @@ Parameters: -
 }
 ```
 
-#####Additional info
+##### Additional info
 
 TODO fix endpoint and method.
 
@@ -1976,11 +1976,11 @@ Again - This is unsafe. Be warned.
 ***
 
 <a name="queries-filters"></a>
-##Filters
+## Filters
 
 Filters are used in searches. The structure is similar to that of the [Github api (v3)](https://developer.github.com/v3/search/).
 
-###JSON-RPC
+### JSON-RPC
 
 Filters are added as objects in the request parameter. Methods that supports filtering includes an array of filters somewhere in their params object.
 
@@ -1999,7 +1999,7 @@ Filter:
 * The `value` is the value to match against. It is always a string.
 * Range queries are done simply by adding two filters - one for the minimum value and one for the maximum.
 
-#####Examples
+##### Examples
 
 We want an account filter that only includes accounts that has code in them (i.e. contract accounts):
 
@@ -2043,7 +2043,7 @@ The field `code` is supported by accounts. It allows for the `==` and `!=` opera
 
 If we wanted only non-contract accounts then we would have used the same object but changed it to `op: "=="`.
 
-###HTTP Queries
+### HTTP Queries
 
 The structure of a normal query is: `q=field:[op]value+field2:[op2]value2+ ... `.
 
@@ -2062,7 +2062,7 @@ NOTE: URL encoding applies as usual. Omitting it here for clarity.
 
 `value` may be left out if the field accepts the empty string as input. This means if `code` is a supported string type,  `code:==` would check if the code field is empty. We could also use the inferred `==` meaning this would be equivalent: `code:`.  The system may be extended so that the empty string is automatically converted to the null-type of the underlying field, no matter what that type is. If balance is a number then `balance:` would be the same as `balance:==0` (and `balance:0`).
 
-#####Example
+##### Example
 
 We want to use the same filter as in the JSON version; one that finds all contract accounts.
 
