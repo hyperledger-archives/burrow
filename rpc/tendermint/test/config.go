@@ -218,7 +218,6 @@ private_validator_file = "priv_validator.json"
 ################################################################################
 ##
 ## burrow-mint
-## version 0.16.2
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

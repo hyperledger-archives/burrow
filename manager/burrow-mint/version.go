@@ -28,7 +28,7 @@ const (
 	// Minor version component of the current release
 	burrowMintVersionMinor = 16
 	// Patch version component of the current release
-	burrowMintVersionPatch = 2
+	burrowMintVersionPatch = 3
 )
 
 // Define the compatible consensus engines this application manager
