@@ -1,4 +1,14 @@
 # burrow changelog
+## v0.16.3
+This release adds an stop-gap fix to the `Transact` method so that it never
+transfers value with the `CallTx` is generates.
+
+We hard-code `amount = fee` so that no value is transferred
+regardless of fee sent. This fixes an invalid jump destination error arising 
+from transferring value to non-payable functions with newer versions of solidity.
+By doing this we can resolve some issues with users of the v0 RPC without making 
+a breaking API change.
+
 ## v0.16.2
 This release finalises our accession to the Hyperledger project and updates our
 root package namespace to github.com/hyperledger/burrow.
