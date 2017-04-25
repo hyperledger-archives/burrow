@@ -32,7 +32,7 @@ const (
 	// Minor version component of the current release
 	versionMinor = 16
 	// Patch version component of the current release
-	versionPatch = 3
+	versionPatch = 4
 )
 
 var version *VersionIdentifier
@@ -126,4 +126,4 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 
 // IMPORTANT: burrow version must be on the last line of this file for
 // the deployment script tests/build_tool.sh to pick up the right label.
-const VERSION = "0.16.3"
+const VERSION = "0.16.4"
