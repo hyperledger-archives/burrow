@@ -193,8 +193,8 @@ private_validator_file = "priv_validator.json"
   # db_dir = "./data/tendermint/data"
   # prof_laddr = ""
   # revision_file = "./data/tendermint/revision"
-  # cswal = "./data/tendermint/data/cswal"
-  # cswal_light = false
+  # cs_wal_dir = "./data/tendermint/data/cswal"
+  # cs_wal_light = false
 
   # block_size = 10000
   # disable_data_hash = false
