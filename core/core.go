@@ -119,3 +119,8 @@ func (core *Core) NewGatewayTendermint(config *server.ServerConfig) (
 	return rpc_tendermint.NewTendermintWebsocketServer(config,
 		core.tendermintPipe, core.evsw)
 }
+
+// Stop the core allowing for a graceful shutdown of component in order.
+func (core *Core) Stop() bool {
+	return core.pipe.GetConsensusEngine().Stop()
+}

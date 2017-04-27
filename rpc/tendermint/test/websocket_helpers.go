@@ -20,13 +20,13 @@ import (
 	"testing"
 	"time"
 
+	burrow_client "github.com/hyperledger/burrow/rpc/tendermint/client"
 	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
-	tm_types "github.com/tendermint/tendermint/types"
 
-	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -81,13 +81,13 @@ func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWaitForBlock(t *testing.T, client rpcclient.Client, wsc *rpcclient.WSClient,
-	tx txs.Tx) (txs.Receipt, error) {
+func broadcastTxAndWaitForBlock(t *testing.T, client burrow_client.RPCClient,
+	wsc *rpcclient.WSClient, tx txs.Tx) (txs.Receipt, error) {
 	var rec txs.Receipt
 	var err error
 	runThenWaitForBlock(t, wsc, nextBlockPredicateFn(),
 		func() {
-			rec, err = edbcli.BroadcastTx(client, tx)
+			rec, err = burrow_client.BroadcastTx(client, tx)
 			mempoolCount += 1
 		})
 	return rec, err
@@ -231,14 +231,14 @@ func unmarshalValidateSend(amt int64,
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.SendTx)
-		if !bytes.Equal(tx.Inputs[0].Address, user[0].Address) {
-			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x", tx.Inputs[0].Address, user[0].Address)
+		if !bytes.Equal(tx.Inputs[0].Address, users[0].Address) {
+			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x", tx.Inputs[0].Address, users[0].Address)
 		}
 		if tx.Inputs[0].Amount != amt {
 			return true, fmt.Errorf("Amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
 		}
 		if !bytes.Equal(tx.Outputs[0].Address, toAddr) {
-			return true, fmt.Errorf("Receivers do not match up! Got %x, expected %x", tx.Outputs[0].Address, user[0].Address)
+			return true, fmt.Errorf("Receivers do not match up! Got %x, expected %x", tx.Outputs[0].Address, users[0].Address)
 		}
 		return true, nil
 	}
@@ -252,9 +252,9 @@ func unmarshalValidateTx(amt int64,
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.CallTx)
-		if !bytes.Equal(tx.Input.Address, user[0].Address) {
+		if !bytes.Equal(tx.Input.Address, users[0].Address) {
 			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x",
-				tx.Input.Address, user[0].Address)
+				tx.Input.Address, users[0].Address)
 		}
 		if tx.Input.Amount != amt {
 			return true, fmt.Errorf("Amt does not match up! Got %d, expected %d",

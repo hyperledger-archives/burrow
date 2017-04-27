@@ -237,6 +237,10 @@ func (cons *consensusEngine) PeerConsensusStates() map[string]string {
 	return map[string]string{}
 }
 
+func (cons *consensusEngine) Stop() bool {
+	return true
+}
+
 // Events
 type eventer struct {
 	testData *TestData

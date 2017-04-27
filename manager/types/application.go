@@ -18,7 +18,8 @@ import (
 	// TODO: [ben] this is currently only used for abci result type; but should
 	// be removed as abci dependencies shouldn't feature in the application
 	// manager
-	abci_types "github.com/tendermint/abci/types"
+	abci "github.com/tendermint/abci/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 )
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken
@@ -29,7 +30,7 @@ type Application interface {
 
 	// Info returns application information as a string
 	// NOTE: [ben] likely to move
-	Info() (info abci_types.ResponseInfo)
+	Info() (info abci.ResponseInfo)
 
 	// Set application option (e.g. mode=mempool, mode=consensus)
 	// NOTE: [ben] taken from tendermint, but it is unclear what the use is,
@@ -48,7 +49,7 @@ type Application interface {
 	// TODO: implementation notes:
 	// 1. at this point the transaction should already be strongly typed
 	// 2.
-	DeliverTx(tx []byte) abci_types.Result
+	DeliverTx(tx []byte) abci.Result
 
 	// Check Transaction validates a transaction before being allowed into the
 	// consensus' engine memory pool.  This is the original defintion and
@@ -59,7 +60,7 @@ type Application interface {
 	// TODO: implementation notes:
 	// 1. at this point the transaction should already be strongly typed
 	// 2.
-	CheckTx(tx []byte) abci_types.Result
+	CheckTx(tx []byte) abci.Result
 
 	// Commit returns the root hash of the current application state
 	// NOTE: [ben] Because the concept of the block has been erased here
@@ -67,30 +68,37 @@ type Application interface {
 	// the opposit the principle of explicit stateless functions.
 	// This will be amended when we introduce the concept of (streaming)
 	// blocks in the pipe.
-	Commit() abci_types.Result
+	Commit() abci.Result
 
 	// Query for state.  This query request is not passed over the p2p network
-	// and is called from Tendermint rpc directly up to the application.
+	// and is called from Tenderpmint rpc directly up to the application.
 	// NOTE: [ben] burrow will give preference to queries from the local client
 	// directly over the burrow rpc.
 	// We will support this for Tendermint compatibility.
-	Query(query []byte) abci_types.Result
-}
+	Query(reqQuery abci.RequestQuery) abci.ResponseQuery
 
-// Tendermint has a separate interface for reintroduction of blocks
-type BlockchainAware interface {
+	// Tendermint acbi_types.Application extends our base definition of an
+	// Application with a parenthetical (begin/end) streaming block interface
 
 	// Initialise the blockchain
-	// validators: genesis validators from tendermint core
-	InitChain(validators []*abci_types.Validator)
+	// When Tendermint initialises the genesis validators from tendermint core
+	// are passed in as validators
+	InitChain(validators []*abci.Validator)
 
-	// Signals the beginning of a block;
-	// NOTE: [ben] currently not supported by tendermint
-	BeginBlock(height uint64)
+	// Signals the beginning of communicating a block (all transactions have been
+	// closed into the block already
+	BeginBlock(hash []byte, header *abci.Header)
 
 	// Signals the end of a blockchain
-	// validators: changed validators from app to Tendermint
-	// NOTE: [ben] currently not supported by tendermint
-	// not yet well defined what the change set contains.
-	EndBlock(height uint64) (validators []*abci_types.Validator)
+	// ResponseEndBlock wraps a slice of Validators with the Diff field. A Validator
+	// is a public key and a voting power. Returning a Validator within this slice
+	// asks Tendermint to set that validator's voting power to the Power provided.
+	// Note: although the field is named 'Diff' the intention is that it declares
+	// the what the new voting power should be (for validators specified,
+	// those omitted are left alone) it is not an relative increment to
+	// be added (or subtracted) from voting power.
+	EndBlock(height uint64) abci.ResponseEndBlock
+
+	// Is this the passed ConsensusEngine compatible with this manager
+	CompatibleConsensus(consensusEngine consensus_types.ConsensusEngine) bool
 }

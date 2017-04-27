@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tendermint
+package version
 
 import (
 	"strconv"
@@ -28,9 +28,9 @@ const (
 	// Major version component of the current release
 	tendermintVersionMajorConst uint8 = 0
 	// Minor version component of the current release
-	tendermintVersionMinorConst uint8 = 8
+	tendermintVersionMinorConst uint8 = 9
 	// Patch version component of the current release
-	tendermintVersionPatchConst uint8 = 0
+	tendermintVersionPatchConst uint8 = 2
 )
 
 var (

@@ -93,9 +93,9 @@ func TestWSBlockchainGrowth(t *testing.T) {
 // send a transaction and validate the events from listening for both sender and receiver
 func TestWSSend(t *testing.T) {
 	wsc := newWSClient()
-	toAddr := user[1].Address
+	toAddr := users[1].Address
 	amt := int64(100)
-	eidInput := txs.EventStringAccInput(user[0].Address)
+	eidInput := txs.EventStringAccInput(users[0].Address)
 	eidOutput := txs.EventStringAccOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
 	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
@@ -119,14 +119,14 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := txs.EventStringAccInput(user[0].Address)
+	eid := txs.EventStringAccInput(users[0].Address)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	amt := int64(100)
-	toAddr := user[1].Address
+	toAddr := users[1].Address
 	// broadcast the transaction, wait to hear about it
 	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
@@ -150,7 +150,7 @@ func TestWSCallWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid1 := txs.EventStringAccInput(user[0].Address)
+	eid1 := txs.EventStringAccInput(users[0].Address)
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, subId1)
@@ -252,7 +252,7 @@ func TestWSCallCall(t *testing.T) {
 		tx := makeDefaultCallTx(t, jsonRpcClient, contractAddr2, nil, amt, gasLim, fee)
 		broadcastTx(t, jsonRpcClient, tx)
 		*txid = txs.TxHash(chainID, tx)
-	}, unmarshalValidateCall(user[0].Address, returnVal, txid))
+	}, unmarshalValidateCall(users[0].Address, returnVal, txid))
 }
 
 func TestSubscribe(t *testing.T) {

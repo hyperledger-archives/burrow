@@ -77,7 +77,7 @@ func (tmintConfig *TendermintConfig) AssertTendermintDefaults(chainId, workDir,
 	tmintConfig.SetDefault("rpc_laddr", "")
 	tmintConfig.SetDefault("prof_laddr", "")
 	tmintConfig.SetDefault("revision_file", path.Join(workDir, "revision"))
-	tmintConfig.SetDefault("cs_wal_dir", path.Join(dataDir, "cs.wal"))
+	tmintConfig.SetDefault("cs_wal_file", path.Join(dataDir, "cs.wal/wal"))
 	tmintConfig.SetDefault("cs_wal_light", false)
 	tmintConfig.SetDefault("filter_peers", false)
 

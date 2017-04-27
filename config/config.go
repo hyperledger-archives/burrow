@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"text/template"
 
+	tendermint_version "github.com/hyperledger/burrow/consensus/tendermint/version"
 	lconfig "github.com/hyperledger/burrow/logging/config"
+	"github.com/hyperledger/burrow/version"
+	"github.com/spf13/viper"
 )
 
 type ConfigServiceGeneral struct {
@@ -89,22 +92,28 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 		ExportedPorts:       exportedPortsString,
 		ContainerEntrypoint: containerEntrypoint,
 	}
+
+	// We want to encode in the config file which Burrow version generated the config
+	burrowVersion := version.GetBurrowVersion()
 	burrowChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
-		BurrowMajorVersion:  uint8(0),
-		BurrowMinorVersion:  uint8(17),
+		BurrowMajorVersion:  burrowVersion.MajorVersion,
+		BurrowMinorVersion:  burrowVersion.MinorVersion,
 		GenesisRelativePath: "genesis.json",
 	}
+
+	tendermintVersion := tendermint_version.GetTendermintVersion()
 	chainConsensusModule := &ConfigChainModule{
 		Name:               "tendermint",
-		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(8),
+		MajorVersion:       tendermintVersion.MajorVersion,
+		MinorVersion:       tendermintVersion.MinorVersion,
 		ModuleRelativeRoot: "tendermint",
 	}
+
 	chainApplicationManagerModule := &ConfigChainModule{
 		Name:               "burrowmint",
-		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(17),
+		MajorVersion:       burrowVersion.MajorVersion,
+		MinorVersion:       burrowVersion.MinorVersion,
 		ModuleRelativeRoot: "burrowmint",
 	}
 	tendermintModule := &ConfigTendermint{
@@ -176,6 +185,19 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	buffer.WriteString(lconfig.DefaultNodeLoggingConfig().RootTOMLString())
 
 	return buffer.Bytes(), nil
+}
+
+func AssertConfigCompatibleWithRuntime(conf *viper.Viper) error {
+	burrowVersion := version.GetBurrowVersion()
+	majorVersion := uint8(conf.GetInt(fmt.Sprintf("chain.%s", majorVersionKey)))
+	minorVersion := uint8(conf.GetInt(fmt.Sprintf("chain.%s", majorVersionKey)))
+	if burrowVersion.MajorVersion != majorVersion ||
+		burrowVersion.MinorVersion != minorVersion {
+		fmt.Errorf("Runtime Burrow version %s is not compatible with "+
+			"configuration file version: major=%s, minor=%s",
+			burrowVersion.GetVersionString(), majorVersion, minorVersion)
+	}
+	return nil
 }
 
 func GetExampleConfigFileBytes() ([]byte, error) {
