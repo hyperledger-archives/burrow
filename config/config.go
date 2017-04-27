@@ -20,6 +20,9 @@ import (
 	"text/template"
 
 	lconfig "github.com/hyperledger/burrow/logging/config"
+	"github.com/hyperledger/burrow/manager/burrow-mint"
+	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/version"
 )
 
 type ConfigServiceGeneral struct {
@@ -89,22 +92,27 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 		ExportedPorts:       exportedPortsString,
 		ContainerEntrypoint: containerEntrypoint,
 	}
+	// We want to encode in a config the Burrow version that made it
+	burrowVersion := version.GetBurrowVersion()
 	burrowChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
-		BurrowMajorVersion:  uint8(0),
-		BurrowMinorVersion:  uint8(17),
+		BurrowMajorVersion:  burrowVersion.MajorVersion,
+		BurrowMinorVersion:  burrowVersion.MinorVersion,
 		GenesisRelativePath: "genesis.json",
 	}
+
+	tendermintVersion := tendermint.GetTendermintVersion()
 	chainConsensusModule := &ConfigChainModule{
 		Name:               "tendermint",
-		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(8),
+		MajorVersion:       tendermintVersion.MajorVersion,
+		MinorVersion:       tendermintVersion.MajorVersion,
 		ModuleRelativeRoot: "tendermint",
 	}
+
 	chainApplicationManagerModule := &ConfigChainModule{
 		Name:               "burrowmint",
-		MajorVersion:       uint8(0),
-		MinorVersion:       uint8(17),
+		MajorVersion:       burrowVersion.MajorVersion,
+		MinorVersion:       burrowVersion.MinorVersion,
 		ModuleRelativeRoot: "burrowmint",
 	}
 	tendermintModule := &ConfigTendermint{

@@ -177,6 +177,31 @@ func (app *BurrowMint) Commit() (res abci.Result) {
 	return abci.NewResultOK(appHash, "Success")
 }
 
-func (app *BurrowMint) Query(query []byte) (res abci.Result) {
-	return abci.NewResultOK(nil, "Success")
+func (app *BurrowMint) Query(query abci.RequestQuery) (res abci.ResponseQuery) {
+	return abci.ResponseQuery{
+		Code: abci.CodeType_OK,
+		Log:  "success",
+	}
+}
+
+// BlockchainAware interface
+
+// Initialise the blockchain
+// validators: genesis validators from tendermint core
+func (app *BurrowMint) InitChain(validators []*abci.Validator) {
+	// Could verify agreement on initial validator set here
+}
+
+// Signals the beginning of a block
+func (app *BurrowMint) BeginBlock(hash []byte, header *abci.Header) {
+
+}
+
+// Signals the end of a blockchain, return value can be used to modify validator
+// set and voting power distribution see our BlockchainAware interface
+func (app *BurrowMint) EndBlock(height uint64) (respEndblock abci.ResponseEndBlock) {
+	// TODO: [Silas] Bondage
+	// TODO: [Silas] this might be a better place for us to dispatch new block
+	// events particularly if we want to separate ourselves from go-events
+	return
 }

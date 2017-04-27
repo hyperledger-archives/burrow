@@ -98,10 +98,15 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	}, nil
 }
 
-// LoadServerModuleConfig wraps specifically for the servers run by core
-func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
+// Load the ServerConfig from commandline Do object
+func LoadServerConfigFromDo(do *definitions.Do) (*server.ServerConfig, error) {
 	// load configuration subtree for servers
-	subConfig, err := config.ViperSubConfig(do.Config, "servers")
+	return LoadServerConfig(do.ChainId, do.Config)
+}
+
+// Load the ServerConfig from root Viper config, fixing the ChainId
+func LoadServerConfig(chainId string, rootConfig *viper.Viper) (*server.ServerConfig, error) {
+	subConfig, err := config.ViperSubConfig(rootConfig, "servers")
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +114,7 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	serverConfig.ChainId = do.ChainId
+	serverConfig.ChainId = chainId
 	return serverConfig, err
 }
 

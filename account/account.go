@@ -24,9 +24,7 @@ import (
 	"io"
 
 	"github.com/hyperledger/burrow/common/sanity"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -48,20 +46,6 @@ func SignBytes(chainID string, o Signable) []byte {
 }
 
 //-----------------------------------------------------------------------------
-
-// Account resides in the application state, and is mutated by transactions
-// on the blockchain.
-// Serialized by wire.[read|write]Reflect
-type Account struct {
-	Address     []byte        `json:"address"`
-	PubKey      crypto.PubKey `json:"pub_key"`
-	Sequence    int           `json:"sequence"`
-	Balance     int64         `json:"balance"`
-	Code        []byte        `json:"code"`         // VM code
-	StorageRoot []byte        `json:"storage_root"` // VM storage merkle root.
-
-	Permissions ptypes.AccountPermissions `json:"permissions"`
-}
 
 func (acc *Account) Copy() *Account {
 	accCopy := *acc

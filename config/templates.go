@@ -180,7 +180,6 @@ const sectionTendermint = `
 ################################################################################
 ##
 ## Tendermint
-## version 0.8
 ##
 ## in-process execution of Tendermint consensus engine
 ##

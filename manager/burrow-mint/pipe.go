@@ -297,7 +297,7 @@ func (pipe *burrowMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 	)
 	if latestHeight != 0 {
 		latestBlockMeta = pipe.blockchain.BlockMeta(latestHeight)
-		latestBlockHash = latestBlockMeta.Hash
+		latestBlockHash = latestBlockMeta.Header.Hash()
 		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
 	}
 	return &rpc_tm_types.ResultStatus{

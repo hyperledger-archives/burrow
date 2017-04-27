@@ -14,10 +14,6 @@
 
 package account
 
-// TODO: [ben] Account and PrivateAccount need to become a pure interface
-// and then move the implementation to the manager types.
-// Eg, Geth has its accounts, different from BurrowMint
-
 import (
 	"fmt"
 
@@ -27,12 +23,6 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
-
-type PrivAccount struct {
-	Address []byte         `json:"address"`
-	PubKey  crypto.PubKey  `json:"pub_key"`
-	PrivKey crypto.PrivKey `json:"priv_key"`
-}
 
 func (pA *PrivAccount) Generate(index int) *PrivAccount {
 	newPrivKey := pA.PrivKey.(crypto.PrivKeyEd25519).Generate(index)

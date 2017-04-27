@@ -38,6 +38,7 @@ import (
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
+	"errors"
 )
 
 type Tendermint struct {
@@ -128,9 +129,13 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	newNode.AddListener(listener)
 	// TODO: [ben] delay starting the node to a different function, to hand
 	// control over events to Core
-	if err := newNode.Start(); err != nil {
+	if started, err := newNode.Start(); !started {
 		newNode.Stop()
-		return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
+		}
+		return nil, errors.New("Failed to start Tendermint consensus node, " +
+				"probably because it is already started, see logs")
 	}
 	logging.InfoMsg(logger, "Tendermint consensus node started",
 		"nodeAddress", tmintConfig.GetString("node_laddr"),
@@ -269,6 +274,10 @@ func (tendermint *Tendermint) PeerConsensusStates() map[string]string {
 	return peerConsensusStates
 }
 
+// Allow for graceful shutdown of node. Returns whether the node was stopped.
+func (tendermint *Tendermint) Stop() bool {
+	return tendermint.tmintNode.Stop()
+}
 //------------------------------------------------------------------------------
 // Helper functions
 

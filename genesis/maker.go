@@ -27,6 +27,8 @@ const (
 	PublicKeySecp256k1ByteLength int = 64
 )
 
+
+
 // NewGenesisAccount returns a new GenesisAccount
 func NewGenesisAccount(address []byte, amount int64, name string,
 	permissions *ptypes.AccountPermissions) *GenesisAccount {
@@ -46,22 +48,22 @@ func NewGenesisValidator(amount int64, name string, unbondToAddress []byte,
 	case "ed25519":
 		// TODO: [ben] functionality and checks need to be inherit in the type
 		if len(publicKeyBytes) != PublicKeyEd25519ByteLength {
-			return nil, fmt.Errorf("Invalid length provided for ed25519 public key (len %v)",
-				len(publicKeyBytes))
+			return nil, fmt.Errorf("Invalid length provided for ed25519 public key (%v bytes provided but expected %v bytes)",
+				len(publicKeyBytes), PublicKeyEd25519ByteLength)
 		}
 		// ed25519 has type byte 0x01
 		typedPublicKeyBytes = make([]byte, PublicKeyEd25519ByteLength+1)
 		// prepend type byte to public key
-		typedPublicKeyBytes = append([]byte{crypto.PubKeyTypeEd25519}, publicKeyBytes...)
+		typedPublicKeyBytes = append([]byte{crypto.TypeEd25519}, publicKeyBytes...)
 	case "secp256k1":
 		if len(publicKeyBytes) != PublicKeySecp256k1ByteLength {
-			return nil, fmt.Errorf("Invalid length provided for secp256k1 public key (len %v)",
-				len(publicKeyBytes))
+			return nil, fmt.Errorf("Invalid length provided for secp256k1 public key (%v bytes provided but expected %v bytes)",
+				len(publicKeyBytes), PublicKeySecp256k1ByteLength)
 		}
 		// secp256k1 has type byte 0x02
 		typedPublicKeyBytes = make([]byte, PublicKeySecp256k1ByteLength+1)
 		// prepend type byte to public key
-		typedPublicKeyBytes = append([]byte{crypto.PubKeyTypeSecp256k1}, publicKeyBytes...)
+		typedPublicKeyBytes = append([]byte{crypto.TypeSecp256k1}, publicKeyBytes...)
 	default:
 		return nil, fmt.Errorf("Unsupported key type (%s)", keyType)
 	}

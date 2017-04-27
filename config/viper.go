@@ -17,6 +17,8 @@ package config
 import (
 	"fmt"
 
+	"bytes"
+
 	"github.com/spf13/viper"
 )
 
@@ -41,4 +43,16 @@ func ViperSubConfig(conf *viper.Viper, configSubtreePath string) (subConfig *vip
 			configSubtreePath)
 	}
 	return subConfig, err
+}
+
+// Read in TOML Viper config from bytes
+func ReadViperConfig(configBytes []byte) (*viper.Viper, error) {
+	buf := bytes.NewBuffer(configBytes)
+	conf := viper.New()
+	viper.SetConfigType("toml")
+	err := conf.ReadConfig(buf)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }

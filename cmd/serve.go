@@ -175,7 +175,7 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 		}
 
 		if !do.DisableRpc {
-			serverConfig, err := core.LoadServerConfig(do)
+			serverConfig, err := core.LoadServerConfigFromDo(do)
 			if err != nil {
 				util.Fatalf("Failed to load server configuration: %s.", err)
 			}
@@ -192,6 +192,8 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 				util.Fatalf("Failed to start Tendermint gateway")
 			}
 			<-serverProcess.StopEventChannel()
+			// Attempt graceful shutdown
+			newCore.Stop()
 		} else {
 			signals := make(chan os.Signal, 1)
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

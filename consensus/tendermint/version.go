@@ -28,9 +28,9 @@ const (
 	// Major version component of the current release
 	tendermintVersionMajorConst uint8 = 0
 	// Minor version component of the current release
-	tendermintVersionMinorConst uint8 = 8
+	tendermintVersionMinorConst uint8 = 9
 	// Patch version component of the current release
-	tendermintVersionPatchConst uint8 = 0
+	tendermintVersionPatchConst uint8 = 2
 )
 
 var (
@@ -46,7 +46,7 @@ func init() {
 	tendermintVersionPatch, _ = getTendermintPatchVersionFromSource()
 }
 
-func GetTendermintVersion() *version.VersionIdentifier {
+func GetTendermintVersion() version.VersionIdentifier {
 	return version.New(tendermintClientIdentifier, tendermintVersionMajor,
 		tendermintVersionMinor, tendermintVersionPatch)
 }
