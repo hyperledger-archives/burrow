@@ -19,6 +19,7 @@ import (
 	// be removed as abci dependencies shouldn't feature in the application
 	// manager
 	abci "github.com/tendermint/abci/types"
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 )
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken
@@ -97,4 +98,7 @@ type Application interface {
 	// those omitted are left alone) it is not an relative increment to
 	// be added (or subtracted) from voting power.
 	EndBlock(height uint64) abci.ResponseEndBlock
+
+	// Is this the passed ConsensusEngine compatible with this manager
+	CompatibleConsensus(consensusEngine consensus_types.ConsensusEngine) bool
 }

@@ -24,9 +24,9 @@ import (
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
 
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-
 	sm "github.com/hyperledger/burrow/manager/burrow-mint/state"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	"github.com/hyperledger/burrow/txs"
@@ -51,13 +51,22 @@ type BurrowMint struct {
 	logger logging_types.InfoTraceLogger
 }
 
+// Currently we just wrap ConsensusEngine but this interface can give us
+// arbitrary control over the type of ConsensusEngine at such a point that we
+// support others. For example it can demand a 'marker' function:
+// func IsBurrowMint_0.XX.XX_CompatibleConsensusEngine()
+type BurrowMintCompatibleConsensusEngine interface {
+	consensus_types.ConsensusEngine
+}
+
 // NOTE [ben] Compiler check to ensure BurrowMint successfully implements
 // burrow/manager/types.Application
 var _ manager_types.Application = (*BurrowMint)(nil)
 
-// NOTE: [ben] also automatically implements abci.Application,
-// undesired but unharmful
-// var _ abci.Application = (*BurrowMint)(nil)
+func (app *BurrowMint) CompatibleConsensus(consensusEngine consensus_types.ConsensusEngine) bool {
+	_, ok := consensusEngine.(BurrowMintCompatibleConsensusEngine)
+	return ok
+}
 
 func (app *BurrowMint) GetState() *sm.State {
 	app.mtx.Lock()
@@ -205,3 +214,4 @@ func (app *BurrowMint) EndBlock(height uint64) (respEndblock abci.ResponseEndBlo
 	// events particularly if we want to separate ourselves from go-events
 	return
 }
+

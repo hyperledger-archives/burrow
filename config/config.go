@@ -21,6 +21,7 @@ import (
 
 	lconfig "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/version"
+	"github.com/spf13/viper"
 )
 
 type ConfigServiceGeneral struct {
@@ -88,7 +89,8 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 		ExportedPorts:       exportedPortsString,
 		ContainerEntrypoint: containerEntrypoint,
 	}
-	// We want to encode in a config the Burrow version that made it
+
+	// We want to encode in the config file which Burrow version generated the config
 	burrowVersion := version.GetBurrowVersion()
 	burrowChain := &ConfigChainGeneral{
 		AssertChainId:       chainId,
@@ -175,6 +177,19 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 	buffer.WriteString(lconfig.DefaultNodeLoggingConfig().RootTOMLString())
 
 	return buffer.Bytes(), nil
+}
+
+func AssertConfigCompatibleWithRuntime(conf *viper.Viper) error {
+	burrowVersion := version.GetBurrowVersion()
+	majorVersion := uint8(conf.GetInt(fmt.Sprintf("chain.%s", majorVersionKey)))
+	minorVersion := uint8(conf.GetInt(fmt.Sprintf("chain.%s", majorVersionKey)))
+	if burrowVersion.MajorVersion != majorVersion ||
+		burrowVersion.MinorVersion != minorVersion {
+		fmt.Errorf("Runtime Burrow version %s is not compatible with "+
+			"configuration file version: major=%s, minor=%s",
+			burrowVersion.GetVersionString(), majorVersion, minorVersion)
+	}
+	return nil
 }
 
 func GetExampleConfigFileBytes() ([]byte, error) {

@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/util"
 
 	"github.com/spf13/cobra"
+	"github.com/hyperledger/burrow/config"
 )
 
 const (
@@ -94,6 +95,11 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	// load the genesis file path
 	do.GenesisFile = path.Join(do.WorkDir,
 		do.Config.GetString("chain.genesis_file"))
+
+	err := config.AssertConfigCompatibleWithRuntime(do.Config)
+	if err != nil {
+		return nil, err
+	}
 
 	if do.Config.GetString("chain.genesis_file") == "" {
 		return nil, fmt.Errorf("The config value chain.genesis_file is empty, " +

@@ -14,6 +14,8 @@
 
 package config
 
+import "fmt"
+
 const headerCopyright = `# Copyright 2017 Monax Industries Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,20 +58,22 @@ const sectionServiceDependencies = `[dependencies]
 services = [ "keys" ]
 
 `
+const majorVersionKey = "major_version"
+const minorVersionKey = "minor_version"
 
-const sectionChainGeneral = `[chain]
+var sectionChainGeneral string = fmt.Sprintf(`[chain]
 
 # ChainId is a human-readable name to identify the chain.
 # This must correspond to the chain_id defined in the genesis file
 # and the assertion here provides a safe-guard on misconfiguring chains.
 assert_chain_id = "{{.AssertChainId}}"
 # semantic major and minor version
-major_version = {{.BurrowMajorVersion}}
-minor_version = {{.BurrowMinorVersion}}
+%s = {{.BurrowMajorVersion}}
+%s = {{.BurrowMinorVersion}}
 # genesis file, relative path is to burrow working directory
 genesis_file = "{{.GenesisRelativePath}}"
 
-`
+`, majorVersionKey, minorVersionKey)
 
 const separatorChainConsensus = `
 ################################################################################
