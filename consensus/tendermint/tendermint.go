@@ -32,13 +32,14 @@ import (
 	config "github.com/hyperledger/burrow/config"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	// files  "github.com/hyperledger/burrow/files"
+	"errors"
+
 	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
-	"errors"
 )
 
 type Tendermint struct {
@@ -123,10 +124,6 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	newNode := node.NewNode(tmintConfig, privateValidator,
 		proxy.NewLocalClientCreator(application))
 
-	listener := p2p.NewDefaultListener("tcp", tmintConfig.GetString("node_laddr"),
-		tmintConfig.GetBool("skip_upnp"))
-
-	newNode.AddListener(listener)
 	// TODO: [ben] delay starting the node to a different function, to hand
 	// control over events to Core
 	if started, err := newNode.Start(); !started {
@@ -135,7 +132,8 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 			return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
 		}
 		return nil, errors.New("Failed to start Tendermint consensus node, " +
-				"probably because it is already started, see logs")
+			"probably because it is already started, see logs")
+
 	}
 	logging.InfoMsg(logger, "Tendermint consensus node started",
 		"nodeAddress", tmintConfig.GetString("node_laddr"),
@@ -278,6 +276,7 @@ func (tendermint *Tendermint) PeerConsensusStates() map[string]string {
 func (tendermint *Tendermint) Stop() bool {
 	return tendermint.tmintNode.Stop()
 }
+
 //------------------------------------------------------------------------------
 // Helper functions
 

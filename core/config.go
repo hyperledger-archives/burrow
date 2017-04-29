@@ -24,13 +24,10 @@ import (
 	"path"
 
 	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/consensus"
 	"github.com/hyperledger/burrow/definitions"
 	lconfig "github.com/hyperledger/burrow/logging/config"
-	"github.com/hyperledger/burrow/manager"
 	"github.com/hyperledger/burrow/server"
 	"github.com/hyperledger/burrow/util"
-	"github.com/hyperledger/burrow/version"
 	"github.com/spf13/viper"
 )
 

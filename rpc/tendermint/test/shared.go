@@ -73,6 +73,7 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	if err != nil {
 		return err
 	}
+
 	genesisBytes, err := genesisFileBytesFromUsers(chainID, users)
 	if err != nil {
 		return err
@@ -159,11 +160,11 @@ func genesisFileBytesFromUsers(chainName string, accounts []*acm.PrivAccount) ([
 		return nil, errors.New("Please pass in at least 1 account to be the validator")
 	}
 	genesisValidators := make([]*genesis.GenesisValidator, 1)
-	genesisAccounts := make([]*genesis.GenesisAccount, len(accounts)-1)
+	genesisAccounts := make([]*genesis.GenesisAccount, len(accounts))
 	genesisValidators[0] = genesisValidatorFromPrivAccount(accounts[0])
 
-	for i := 1; i < len(accounts); i++ {
-		genesisAccounts[i-1] = genesisAccountFromPrivAccount(accounts[i])
+	for i, acc := range accounts {
+		genesisAccounts[i] = genesisAccountFromPrivAccount(acc)
 	}
 
 	return genesis.GenerateGenesisFileBytes(chainName, genesisAccounts, genesisValidators)

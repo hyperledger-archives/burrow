@@ -234,7 +234,7 @@ private_validator_file = "priv_validator.json"
   # db_dir = "./data/tendermint/data"
   # prof_laddr = ""
   # revision_file = "./data/tendermint/revision"
-  # cs_wal_dir = "./data/tendermint/data/cswal"
+  # cs_wal_file = "./data/tendermint/data/cs.wal/wal"
   # cs_wal_light = false
   # filter_peers = false
 
@@ -280,7 +280,6 @@ const sectionBurrowMint = `
 ################################################################################
 ##
 ## Burrow-Mint
-## version 0.17
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

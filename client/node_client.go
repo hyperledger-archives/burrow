@@ -87,7 +87,7 @@ func init() {
 // broadcast to blockchain node
 
 func (burrowNodeClient *burrowNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
-	client := rpcclient.NewClientURI(burrowNodeClient.broadcastRPC)
+	client := rpcclient.NewURIClient(burrowNodeClient.broadcastRPC)
 	receipt, err := tendermint_client.BroadcastTx(client, tx)
 	if err != nil {
 		return nil, err

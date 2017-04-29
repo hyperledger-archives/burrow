@@ -112,12 +112,14 @@ func TestGetStorage(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer func() {
+		wsc.Stop()
+	}()
 	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
-			wsc.Stop()
 		}()
 
 		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
@@ -172,12 +174,14 @@ func TestCallContract(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer func() {
+		wsc.Stop()
+	}()
 	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
-			wsc.Stop()
 		}()
 
 		// create the contract
