@@ -12,30 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package version
+package tendermint
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestMinorVersionTendermintEqual(t *testing.T) {
-	// assert explicitly on major and minor version number
-	assert.Equal(t, tendermintVersionMajorConst, tendermintVersionMajor,
-		fmt.Sprintf("Major version number for Tendermint consensus is not %v as expected: %v",
-			tendermintVersionMajorConst, tendermintVersionMajor))
-	assert.Equal(t, tendermintVersionMinorConst, tendermintVersionMinor,
-		fmt.Sprintf("Minor version number for Tendermint consensus is not %v as expected: %v",
-			tendermintVersionMinorConst, tendermintVersionMinor))
-	// assert patch number can not regress
-	if tendermintVersionPatchConst > tendermintVersionPatch {
-		t.Errorf("Patch version has regressed for Tendermint consensus: expected minimally %v, got %v",
-			tendermintVersionPatchConst, tendermintVersionPatch)
-		t.Fail()
-	}
-}
+import "testing"
 
 func TestSemanticVersioningTendermint(t *testing.T) {
 	// assert that reading the semantic version from Tendermint vendored source

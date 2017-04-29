@@ -54,8 +54,7 @@ func NewCore(chainId string,
 	logger = logging.WithScope(logger, "Core")
 
 	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
-		consensusConfig.Version)
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
 	}
@@ -67,7 +66,7 @@ func NewCore(chainId string,
 	tendermintPipe, err := pipe.GetTendermintPipe()
 	if err != nil {
 		logging.TraceMsg(logger, "Tendermint gateway not supported by manager",
-			"manager-version", managerConfig.Version)
+			"manager", managerConfig.Name)
 	}
 	return &Core{
 		chainId:        chainId,
