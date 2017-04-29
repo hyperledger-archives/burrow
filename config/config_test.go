@@ -15,10 +15,8 @@
 package config
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 

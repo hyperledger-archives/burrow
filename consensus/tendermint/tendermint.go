@@ -57,11 +57,6 @@ var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 func NewTendermint(moduleConfig *config.ModuleConfig,
 	application manager_types.Application,
 	logger logging_types.InfoTraceLogger) (*Tendermint, error) {
-	// re-assert proper configuration for module
-	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
-		return nil, fmt.Errorf("Version string %s did not match %s",
-			moduleConfig.Version, GetTendermintVersion().GetMinorVersionString())
-	}
 	// loading the module has ensured the working and data directory
 	// for tendermint have been created, but the config files needs
 	// to be written in tendermint's root directory.
