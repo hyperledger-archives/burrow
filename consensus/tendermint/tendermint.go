@@ -32,6 +32,8 @@ import (
 	config "github.com/hyperledger/burrow/config"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	// files  "github.com/hyperledger/burrow/files"
+	"errors"
+
 	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/hyperledger/burrow/logging"
@@ -55,11 +57,6 @@ var _ blockchain_types.Blockchain = (*Tendermint)(nil)
 func NewTendermint(moduleConfig *config.ModuleConfig,
 	application manager_types.Application,
 	logger logging_types.InfoTraceLogger) (*Tendermint, error) {
-	// re-assert proper configuration for module
-	if moduleConfig.Version != GetTendermintVersion().GetMinorVersionString() {
-		return nil, fmt.Errorf("Version string %s did not match %s",
-			moduleConfig.Version, GetTendermintVersion().GetMinorVersionString())
-	}
 	// loading the module has ensured the working and data directory
 	// for tendermint have been created, but the config files needs
 	// to be written in tendermint's root directory.
@@ -122,15 +119,16 @@ func NewTendermint(moduleConfig *config.ModuleConfig,
 	newNode := node.NewNode(tmintConfig, privateValidator,
 		proxy.NewLocalClientCreator(application))
 
-	listener := p2p.NewDefaultListener("tcp", tmintConfig.GetString("node_laddr"),
-		tmintConfig.GetBool("skip_upnp"))
-
-	newNode.AddListener(listener)
 	// TODO: [ben] delay starting the node to a different function, to hand
 	// control over events to Core
-	if err := newNode.Start(); err != nil {
+	if started, err := newNode.Start(); !started {
 		newNode.Stop()
-		return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to start Tendermint consensus node: %v", err)
+		}
+		return nil, errors.New("Failed to start Tendermint consensus node, " +
+			"probably because it is already started, see logs")
+
 	}
 	logging.InfoMsg(logger, "Tendermint consensus node started",
 		"nodeAddress", tmintConfig.GetString("node_laddr"),
@@ -267,6 +265,11 @@ func (tendermint *Tendermint) PeerConsensusStates() map[string]string {
 		peerConsensusStates[peer.Key] = string(wire.JSONBytes(peerRoundState))
 	}
 	return peerConsensusStates
+}
+
+// Allow for graceful shutdown of node. Returns whether the node was stopped.
+func (tendermint *Tendermint) Stop() bool {
+	return tendermint.tmintNode.Stop()
 }
 
 //------------------------------------------------------------------------------

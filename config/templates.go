@@ -14,6 +14,8 @@
 
 package config
 
+import "fmt"
+
 const headerCopyright = `# Copyright 2017 Monax Industries Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,20 +58,22 @@ const sectionServiceDependencies = `[dependencies]
 services = [ "keys" ]
 
 `
+const majorVersionKey = "major_version"
+const minorVersionKey = "minor_version"
 
-const sectionChainGeneral = `[chain]
+var sectionChainGeneral string = fmt.Sprintf(`[chain]
 
 # ChainId is a human-readable name to identify the chain.
 # This must correspond to the chain_id defined in the genesis file
 # and the assertion here provides a safe-guard on misconfiguring chains.
 assert_chain_id = "{{.AssertChainId}}"
 # semantic major and minor version
-major_version = {{.BurrowMajorVersion}}
-minor_version = {{.BurrowMinorVersion}}
+%s = {{.BurrowMajorVersion}}
+%s = {{.BurrowMinorVersion}}
 # genesis file, relative path is to burrow working directory
 genesis_file = "{{.GenesisRelativePath}}"
 
-`
+`, majorVersionKey, minorVersionKey)
 
 const separatorChainConsensus = `
 ################################################################################
@@ -85,10 +89,6 @@ const sectionChainConsensus = `  [chain.consensus]
   # this will define the peer-to-peer consensus network;
   # accepted values are ("noops", "abci",) "tendermint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to consensus' module root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -107,10 +107,6 @@ const sectionChainApplicationManager = `  [chain.manager]
   # application manager name defines the module to use for handling
   # the transactions.  Supported names are "burrowmint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to application manager root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -180,7 +176,6 @@ const sectionTendermint = `
 ################################################################################
 ##
 ## Tendermint
-## version 0.8
 ##
 ## in-process execution of Tendermint consensus engine
 ##
@@ -235,7 +230,7 @@ private_validator_file = "priv_validator.json"
   # db_dir = "./data/tendermint/data"
   # prof_laddr = ""
   # revision_file = "./data/tendermint/revision"
-  # cs_wal_dir = "./data/tendermint/data/cswal"
+  # cs_wal_file = "./data/tendermint/data/cs.wal/wal"
   # cs_wal_light = false
   # filter_peers = false
 
@@ -281,7 +276,6 @@ const sectionBurrowMint = `
 ################################################################################
 ##
 ## Burrow-Mint
-## version 0.17
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding

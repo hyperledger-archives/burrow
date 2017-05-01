@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/util"
 
 	"github.com/spf13/cobra"
+	"github.com/hyperledger/burrow/config"
 )
 
 const (
@@ -95,6 +96,11 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	do.GenesisFile = path.Join(do.WorkDir,
 		do.Config.GetString("chain.genesis_file"))
 
+	err := config.AssertConfigCompatibleWithRuntime(do.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	if do.Config.GetString("chain.genesis_file") == "" {
 		return nil, fmt.Errorf("The config value chain.genesis_file is empty, " +
 			"but should be set to the location of the genesis.json file.")
@@ -147,8 +153,8 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	}
 
 	logging.Msg(logger, "Modules configured",
-		"consensusModule", consensusConfig.Version,
-		"applicationManager", managerConfig.Version)
+		"consensusModule", consensusConfig.Name,
+		"applicationManager", managerConfig.Name)
 
 	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
 }
@@ -175,7 +181,7 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 		}
 
 		if !do.DisableRpc {
-			serverConfig, err := core.LoadServerConfig(do)
+			serverConfig, err := core.LoadServerConfigFromDo(do)
 			if err != nil {
 				util.Fatalf("Failed to load server configuration: %s.", err)
 			}
@@ -192,6 +198,8 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 				util.Fatalf("Failed to start Tendermint gateway")
 			}
 			<-serverProcess.StopEventChannel()
+			// Attempt graceful shutdown
+			newCore.Stop()
 		} else {
 			signals := make(chan os.Signal, 1)
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
