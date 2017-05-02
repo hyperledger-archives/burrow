@@ -25,7 +25,7 @@ import (
 
 // Needs to be referenced by a *_test.go file to be picked up
 func TestWrapper(runner func() int) int {
-	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/common.go)...")
+	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/common.go)...\n")
 	ffs := fixtures.NewFileFixtures("burrow")
 
 	defer ffs.RemoveAll()

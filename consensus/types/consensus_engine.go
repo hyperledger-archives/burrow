@@ -48,4 +48,7 @@ type ConsensusEngine interface {
 	// TODO: Consider creating a real type for PeerRoundState, but at the looks
 	// quite coupled to tendermint
 	PeerConsensusStates() map[string]string
+
+	// Allow for graceful shutdown of node. Returns whether the node was stopped.
+	Stop() bool
 }

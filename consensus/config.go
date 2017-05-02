@@ -15,8 +15,7 @@
 package consensus
 
 import (
-	// noops      "github.com/hyperledger/burrow/consensus/noops"
-	tendermint "github.com/hyperledger/burrow/consensus/tendermint"
+	tendermint_version "github.com/hyperledger/burrow/consensus/tendermint/version"
 )
 
 //------------------------------------------------------------------------------
@@ -29,7 +28,7 @@ func AssertValidConsensusModule(name, minorVersionString string) bool {
 		// over iterations
 		return true
 	case "tendermint":
-		return minorVersionString == tendermint.GetTendermintVersion().GetMinorVersionString()
+		return minorVersionString == tendermint_version.GetTendermintVersion().GetMinorVersionString()
 	case "bigchaindb":
 		// TODO: [ben] implement BigchainDB as consensus engine
 		return false
