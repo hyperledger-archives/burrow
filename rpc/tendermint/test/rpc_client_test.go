@@ -96,7 +96,7 @@ func TestGetAccount(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
-		acc := getAccount(t,  client, users[0].Address)
+		acc := getAccount(t, client, users[0].Address)
 		if acc == nil {
 			t.Fatal("Account was nil")
 		}

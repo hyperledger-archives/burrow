@@ -58,9 +58,9 @@ type VersionIdentifier struct {
 func New(client string, major, minor, patch uint8) *VersionIdentifier {
 	return &VersionIdentifier{
 		ClientIdentifier: client,
-		MajorVersion: major,
-		MinorVersion: minor,
-		PatchVersion: patch,
+		MajorVersion:     major,
+		MinorVersion:     minor,
+		PatchVersion:     patch,
 	}
 }
 

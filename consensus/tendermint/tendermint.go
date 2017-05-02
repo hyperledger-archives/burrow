@@ -19,6 +19,7 @@ import (
 	"path"
 	"strings"
 
+	tendermint_version "github.com/hyperledger/burrow/consensus/tendermint/version"
 	abci_types "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
 	p2p "github.com/tendermint/go-p2p"
@@ -26,7 +27,6 @@ import (
 	node "github.com/tendermint/tendermint/node"
 	proxy "github.com/tendermint/tendermint/proxy"
 	tendermint_types "github.com/tendermint/tendermint/types"
-	tendermint_version "github.com/hyperledger/burrow/consensus/tendermint/version"
 
 	edb_event "github.com/hyperledger/burrow/event"
 

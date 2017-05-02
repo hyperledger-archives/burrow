@@ -32,9 +32,9 @@ import (
 	"github.com/hyperledger/burrow/txs"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hyperledger/burrow/rpc/v0/shared"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"
 )

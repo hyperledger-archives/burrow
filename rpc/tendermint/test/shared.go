@@ -173,12 +173,12 @@ func genesisFileBytesFromUsers(chainName string, accounts []*acm.PrivAccount) ([
 func genesisValidatorFromPrivAccount(account *acm.PrivAccount) *genesis.GenesisValidator {
 	return &genesis.GenesisValidator{
 		Amount: 1000000,
-		Name: fmt.Sprintf("full-account_%X", account.Address),
+		Name:   fmt.Sprintf("full-account_%X", account.Address),
 		PubKey: account.PubKey,
 		UnbondTo: []genesis.BasicAccount{
 			{
 				Address: account.Address,
-				Amount: 100,
+				Amount:  100,
 			},
 		},
 	}

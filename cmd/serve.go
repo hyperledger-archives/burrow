@@ -28,8 +28,8 @@ import (
 	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/util"
 
-	"github.com/spf13/cobra"
 	"github.com/hyperledger/burrow/config"
+	"github.com/spf13/cobra"
 )
 
 const (

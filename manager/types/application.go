@@ -18,8 +18,8 @@ import (
 	// TODO: [ben] this is currently only used for abci result type; but should
 	// be removed as abci dependencies shouldn't feature in the application
 	// manager
-	abci "github.com/tendermint/abci/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	abci "github.com/tendermint/abci/types"
 )
 
 // NOTE: [ben] this interface is likely to be changed.  Currently it is taken

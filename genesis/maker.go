@@ -27,8 +27,6 @@ const (
 	PublicKeySecp256k1ByteLength int = 64
 )
 
-
-
 // NewGenesisAccount returns a new GenesisAccount
 func NewGenesisAccount(address []byte, amount int64, name string,
 	permissions *ptypes.AccountPermissions) *GenesisAccount {

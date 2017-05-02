@@ -214,4 +214,3 @@ func (app *BurrowMint) EndBlock(height uint64) (respEndblock abci.ResponseEndBlo
 	// events particularly if we want to separate ourselves from go-events
 	return
 }
-
