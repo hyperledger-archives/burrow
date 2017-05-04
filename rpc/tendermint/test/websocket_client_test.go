@@ -260,11 +260,12 @@ func TestSubscribe(t *testing.T) {
 	var subId string
 	subscribe(t, wsc, txs.EventStringNewBlock())
 
-	timeout := time.NewTimer(timeoutSeconds * time.Second)
+	// timeout to check subscription process is live
+	timeout := time.After(timeoutSeconds * time.Second)
 Subscribe:
 	for {
 		select {
-		case <-timeout.C:
+		case <-timeout:
 			t.Fatal("Timed out waiting for subscription result")
 
 		case bs := <-wsc.ResultsCh:
@@ -277,12 +278,13 @@ Subscribe:
 		}
 	}
 
-	seenBlock := false
-	timeout = time.NewTimer(timeoutSeconds * time.Second)
+	blocksSeen := 0
 	for {
 		select {
-		case <-timeout.C:
-			if !seenBlock {
+		// wait long enough to check we don't see another new block event even though
+		// a block will have come
+		case <-time.After(expectBlockInSeconds * time.Second):
+			if blocksSeen == 0 {
 				t.Fatal("Timed out without seeing a NewBlock event")
 			}
 			return
@@ -292,13 +294,13 @@ Subscribe:
 			if ok {
 				_, ok := resultEvent.Data.(txs.EventDataNewBlock)
 				if ok {
-					if seenBlock {
-						// There's a mild race here, but when we enter we've just seen a block
-						// so we should be able to unsubscribe before we see another block
+					if blocksSeen > 1 {
 						t.Fatal("Continued to see NewBlock event after unsubscribing")
 					} else {
-						seenBlock = true
-						unsubscribe(t, wsc, subId)
+						if blocksSeen == 0 {
+							unsubscribe(t, wsc, subId)
+						}
+						blocksSeen++
 					}
 				}
 			}

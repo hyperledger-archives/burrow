@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	timeoutSeconds = 2
+	timeoutSeconds       = 2
+	expectBlockInSeconds = timeoutSeconds * 2
 )
 
 //--------------------------------------------------------------------------------
@@ -48,14 +49,14 @@ func newWSClient() *rpcclient.WSClient {
 
 // subscribe to an event
 func subscribe(t *testing.T, wsc *rpcclient.WSClient, eventId string) {
-	if err := wsc.Subscribe(eventId); err != nil {
+	if err := burrow_client.Subscribe(wsc, eventId); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 	eventId string) string {
-	if err := wsc.Subscribe(eventId); err != nil {
+	if err := burrow_client.Subscribe(wsc, eventId); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,7 +76,7 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 
 // unsubscribe from an event
 func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
-	if err := wsc.Unsubscribe(subscriptionId); err != nil {
+	if err := burrow_client.Unsubscribe(wsc, subscriptionId); err != nil {
 		t.Fatal(err)
 	}
 }

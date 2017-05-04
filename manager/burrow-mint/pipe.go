@@ -246,24 +246,26 @@ func (pipe *burrowMintPipe) consensusAndManagerEvents() edb_event.EventEmitter {
 
 //------------------------------------------------------------------------------
 // Implement definitions.TendermintPipe for burrowMintPipe
-func (pipe *burrowMintPipe) Subscribe(event string,
+func (pipe *burrowMintPipe) Subscribe(eventId string,
 	rpcResponseWriter func(result rpc_tm_types.BurrowResult)) (*rpc_tm_types.ResultSubscribe, error) {
 	subscriptionId, err := edb_event.GenerateSubId()
 	if err != nil {
 		return nil, err
 		logging.InfoMsg(pipe.logger, "Subscribing to event",
-			"event", event, "subscriptionId", subscriptionId)
+			"eventId", eventId, "subscriptionId", subscriptionId)
 	}
-	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, event,
+	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, eventId,
 		func(eventData txs.EventData) {
-			result := rpc_tm_types.BurrowResult(&rpc_tm_types.ResultEvent{event,
-				txs.EventData(eventData)})
+			result := rpc_tm_types.BurrowResult(
+				&rpc_tm_types.ResultEvent{
+					Event: eventId,
+					Data:  txs.EventData(eventData)})
 			// NOTE: EventSwitch callbacks must be nonblocking
 			rpcResponseWriter(result)
 		})
 	return &rpc_tm_types.ResultSubscribe{
 		SubscriptionId: subscriptionId,
-		Event:          event,
+		Event:          eventId,
 	}, nil
 }
 
