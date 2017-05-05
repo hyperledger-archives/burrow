@@ -224,7 +224,7 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveAccount([]byte(addrStr))
 			if !removed {
-				sanity.PanicCrisis(fmt.Sprintf("Could not remove account to be removed: %X", acc.Address))
+				sanity.PanicCrisis(fmt.Sprintf("Could not remove account to be removed: %X", addrStr))
 			}
 		} else {
 			if acc == nil {

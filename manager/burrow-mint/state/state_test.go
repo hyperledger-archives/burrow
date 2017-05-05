@@ -744,7 +744,7 @@ proof-of-work chain as proof of what happened while they were gone `
 
 }
 
-func TestSuicide(t *testing.T) {
+func TestSelfDestruct(t *testing.T) {
 
 	state, privAccounts, _ := RandGenesisState(3, true, 1000, 1, true, 1000)
 
@@ -756,14 +756,14 @@ func TestSuicide(t *testing.T) {
 
 	newAcc1 := state.GetAccount(acc1.Address)
 
-	// store 0x1 at 0x1, push an address, then suicide :)
+	// store 0x1 at 0x1, push an address, then self-destruct:)
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
 	contractCode = append(contractCode, acc2.Address...)
 	contractCode = append(contractCode, 0xff)
 	newAcc1.Code = contractCode
 	state.UpdateAccount(newAcc1)
 
-	// send call tx with no data, cause suicide
+	// send call tx with no data, cause self-destruct
 	tx := txs.NewCallTxWithNonce(acc0PubKey, acc1.Address, nil, sendingAmount, 1000, 0, acc0.Sequence+1)
 	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)
 
@@ -773,7 +773,7 @@ func TestSuicide(t *testing.T) {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
 
-	// if we do it again, we won't get an error, but the suicide
+	// if we do it again, we won't get an error, but the self-destruct
 	// shouldn't happen twice and the caller should lose fee
 	tx.Input.Sequence += 1
 	tx.Input.Signature = privAccounts[0].Sign(state.ChainID, tx)

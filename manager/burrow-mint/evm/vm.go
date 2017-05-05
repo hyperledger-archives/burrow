@@ -907,7 +907,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			output = copyslice(ret)
 			return output, nil
 
-		case SUICIDE: // 0xFF
+		case SELFDESTRUCT: // 0xFF
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
