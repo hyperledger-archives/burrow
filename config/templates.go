@@ -300,6 +300,9 @@ tendermint_host = "0.0.0.0:46657"
 
 `
 
+// TODO: [Silas]: before next logging release (finalising this stuff and adding
+// presets) add full documentation of transforms, outputs, and their available
+// configuration options.
 const sectionLoggingHeader = `
 ################################################################################
 ##
@@ -308,8 +311,27 @@ const sectionLoggingHeader = `
 ## Log messages are sent to one of two 'channels': info or trace
 ##
 ## They are delivered on two independent streams: 'info' or 'info and trace'.
-## Each of these streams has a root
+## Each of these streams has a root logging 'sink' (configured under the keys
+## logging.info_sink and logging.info_and_trace_sink respectively) where each
+## channels messages are delivered.
+##
+## A sink may optionally define any of a 'transform', an 'output', and a list of
+## downstream sinks. Log messages flow through a sink by first having that
+## sink's transform applied and then writing to its output and downstream sinks.
+## In this way the log messages can output can be finely controlled and sent to
+## a multiple different outputs having been filtered, modified, augmented, or
+## labelled. This can be used to give more relevant output or to drive external
+## systems.
+##
 ##
 ################################################################################
 
+## A minimal logging config for multi-line, colourised terminal output would be:
+#
+# [logging]
+#  [logging.info_sink]
+#  [logging.info_and_trace_sink]
+#    [logging.info_and_trace_sink.output]
+#      output_type = "stderr"
+#      format = "terminal"
 `

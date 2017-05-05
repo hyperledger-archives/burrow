@@ -11,7 +11,10 @@ import (
 	"github.com/tendermint/log15"
 )
 
-const syslogPriority = syslog.LOG_LOCAL0
+const (
+	syslogPriority    = syslog.LOG_LOCAL0
+	defaultFormatName = "terminal"
+)
 
 func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
 	return log15a.Log15HandlerAsKitLogger(log15.StreamHandler(writer,
@@ -49,6 +52,6 @@ func format(name string) log15.Format {
 	case "terminal":
 		return log15.TerminalFormat()
 	default:
-		return log15.LogfmtFormat()
+		return format(defaultFormatName)
 	}
 }
