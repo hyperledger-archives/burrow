@@ -165,7 +165,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 				[]abi.Arg{
 					arg("_account", abi.AddressTypeName),
 					arg("_permission", permFlagTypeName)},
-				ret("result", permFlagTypeName),
+				ret("result", abi.BoolTypeName),
 				ptypes.HasBase,
 				hasBase},
 

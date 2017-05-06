@@ -409,6 +409,11 @@ func (pipe *burrowMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDum
 // TODO: [ben] resolve incompatibilities in byte representation for 0.12.0 release
 func (pipe *burrowMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall,
 	error) {
+	if vm.RegisteredNativeContract(word256.LeftPadWord256(toAddress)) {
+		return nil, fmt.Errorf("Attempt to call native contract at address "+
+			"%X, but native contracts can not be called directly. Use a deployed "+
+			"contract that calls the native function instead.", toAddress)
+	}
 	st := pipe.burrowMint.GetState()
 	cache := state.NewBlockCache(st)
 	outAcc := cache.GetAccount(toAddress)
