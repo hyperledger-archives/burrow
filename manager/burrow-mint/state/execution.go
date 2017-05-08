@@ -431,7 +431,10 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			}
 			// check if its a native contract
 			if vm.RegisteredNativeContract(LeftPadWord256(tx.Address)) {
-				return fmt.Errorf("NativeContracts can not be called using CallTx. Use a contract or the appropriate tx type (eg. PermissionsTx, NameTx)")
+				return fmt.Errorf("Attempt to call a native contract at %X, "+
+					"but native contracts cannot be called using CallTx. Use a "+
+					"contract that calls the native contract or the appropriate tx "+
+					"type (eg. PermissionsTx, NameTx).", tx.Address)
 			}
 
 			// Output account may be nil if we are still in mempool and contract was created in same block as this tx

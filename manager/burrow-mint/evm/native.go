@@ -24,8 +24,8 @@ import (
 
 var registeredNativeContracts = make(map[Word256]NativeContract)
 
-func RegisteredNativeContract(addr Word256) bool {
-	_, ok := registeredNativeContracts[addr]
+func RegisteredNativeContract(address Word256) bool {
+	_, ok := registeredNativeContracts[address]
 	return ok
 }
 
