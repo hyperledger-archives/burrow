@@ -87,10 +87,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"addRole",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_role", roleTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_role", roleTypeName),
 				},
-				ret("result", abi.BoolTypeName),
+				abiReturn("result", abi.BoolTypeName),
 				ptypes.AddRole,
 				addRole},
 
@@ -102,10 +102,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"removeRole",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_role", roleTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_role", roleTypeName),
 				},
-				ret("result", abi.BoolTypeName),
+				abiReturn("result", abi.BoolTypeName),
 				ptypes.RmRole,
 				removeRole},
 
@@ -117,10 +117,10 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"hasRole",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_role", roleTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_role", roleTypeName),
 				},
-				ret("result", abi.BoolTypeName),
+				abiReturn("result", abi.BoolTypeName),
 				ptypes.HasRole,
 				hasRole},
 
@@ -133,11 +133,11 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"setBase",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_permission", permFlagTypeName),
-					arg("_set", abi.BoolTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_permission", permFlagTypeName),
+					abiArg("_set", abi.BoolTypeName),
 				},
-				ret("result", permFlagTypeName),
+				abiReturn("result", permFlagTypeName),
 				ptypes.SetBase,
 				setBase},
 
@@ -149,9 +149,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
       `,
 				"unsetBase",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_permission", permFlagTypeName)},
-				ret("result", permFlagTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_permission", permFlagTypeName)},
+				abiReturn("result", permFlagTypeName),
 				ptypes.UnsetBase,
 				unsetBase},
 
@@ -163,9 +163,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"hasBase",
 				[]abi.Arg{
-					arg("_account", abi.AddressTypeName),
-					arg("_permission", permFlagTypeName)},
-				ret("result", abi.BoolTypeName),
+					abiArg("_account", abi.AddressTypeName),
+					abiArg("_permission", permFlagTypeName)},
+				abiReturn("result", abi.BoolTypeName),
 				ptypes.HasBase,
 				hasBase},
 
@@ -177,9 +177,9 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			`,
 				"setGlobal",
 				[]abi.Arg{
-					arg("_permission", permFlagTypeName),
-					arg("_set", abi.BoolTypeName)},
-				ret("result", permFlagTypeName),
+					abiArg("_permission", permFlagTypeName),
+					abiArg("_set", abi.BoolTypeName)},
+				abiReturn("result", permFlagTypeName),
 				ptypes.SetGlobal,
 				setGlobal},
 		),
@@ -324,14 +324,14 @@ func (function *SNativeFunctionDescription) NArgs() int {
 	return len(function.Args)
 }
 
-func arg(name string, abiTypeName abi.TypeName) abi.Arg {
+func abiArg(name string, abiTypeName abi.TypeName) abi.Arg {
 	return abi.Arg{
 		Name:     name,
 		TypeName: abiTypeName,
 	}
 }
 
-func ret(name string, abiTypeName abi.TypeName) abi.Return {
+func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 	return abi.Return{
 		Name:     name,
 		TypeName: abiTypeName,
