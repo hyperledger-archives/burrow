@@ -43,9 +43,8 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 		Call: call,
 		Ctx:  ctx,
 		KeyNames: log15.RecordKeyNames{
-			Time: structure.TimeKey,
-			Msg:  structure.MessageKey,
-			Lvl:  structure.LevelKey,
+			Msg: structure.MessageKey,
+			Lvl: structure.LevelKey,
 		}}
 }
 
@@ -54,7 +53,6 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 func RecordToLogLine(record *log15.Record) []interface{} {
 	return Concat(
 		Slice(
-			structure.TimeKey, record.Time,
 			structure.CallerKey, record.Call,
 			structure.LevelKey, record.Lvl.String(),
 		),
