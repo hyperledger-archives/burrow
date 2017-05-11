@@ -173,8 +173,8 @@ func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAdd
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
-		err = fmt.Errorf("Error connnecting to node (%s) to query contract at (%X) with data (%X)",
-			burrowNodeClient.broadcastRPC, calleeAddress, data, err.Error())
+		err = fmt.Errorf("Error (%v) connnecting to node (%s) to query contract at (%X) with data (%X)",
+			err.Error(), burrowNodeClient.broadcastRPC, calleeAddress, data)
 		return nil, int64(0), err
 	}
 	return callResult.Return, callResult.GasUsed, nil
