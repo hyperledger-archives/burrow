@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/word256"
 )
 
 // Logger that implements some formatting conventions for burrow and burrow-client
@@ -50,7 +51,10 @@ func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{
 		switch v := value.(type) {
 		case []byte:
 			return key, fmt.Sprintf("%X", v)
+		case word256.Word256:
+			return burrowFormatKeyValueMapper(key, v.Bytes())
 		}
+
 	}
 	return key, value
 }

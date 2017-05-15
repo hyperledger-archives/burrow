@@ -244,9 +244,7 @@ var opCodeToString = map[OpCode]string{
 	EXTCODECOPY:           "EXTCODECOPY",
 
 	// 0x50 range - 'storage' and execution
-	POP: "POP",
-	//DUP:     "DUP",
-	//SWAP:    "SWAP",
+	POP:      "POP",
 	MLOAD:    "MLOAD",
 	MSTORE:   "MSTORE",
 	MSTORE8:  "MSTORE8",
