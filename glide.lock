@@ -39,7 +39,7 @@ imports:
   - binding
   - render
 - name: github.com/go-kit/kit
-  version: f66b0e13579bfc5a48b9e2a94b1209c107ea1f41
+  version: fadad6fffe0466b19df9efd9acde5c9a52df5fa4
   subpackages:
   - log
 - name: github.com/go-logfmt/logfmt
