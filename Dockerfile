@@ -4,10 +4,7 @@ MAINTAINER Monax <support@monax.io>
 ENV TARGET burrow
 ENV REPO $GOPATH/src/github.com/hyperledger/$TARGET
 
-ADD ./glide.yaml $REPO/
-ADD ./glide.lock $REPO/
 WORKDIR $REPO
-RUN glide install
 
 COPY . $REPO/.
 RUN cd $REPO/cmd/$TARGET && \
