@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"text/template"
 
-	tendermint_version "github.com/hyperledger/burrow/consensus/tendermint/version"
 	lconfig "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/version"
 	"github.com/spf13/viper"
@@ -42,8 +41,6 @@ type ConfigChainGeneral struct {
 
 type ConfigChainModule struct {
 	Name               string
-	MajorVersion       uint8
-	MinorVersion       uint8
 	ModuleRelativeRoot string
 }
 
@@ -102,18 +99,13 @@ func GetConfigurationFileBytes(chainId, moniker, seeds string, chainImageName st
 		GenesisRelativePath: "genesis.json",
 	}
 
-	tendermintVersion := tendermint_version.GetTendermintVersion()
 	chainConsensusModule := &ConfigChainModule{
 		Name:               "tendermint",
-		MajorVersion:       tendermintVersion.MajorVersion,
-		MinorVersion:       tendermintVersion.MinorVersion,
 		ModuleRelativeRoot: "tendermint",
 	}
 
 	chainApplicationManagerModule := &ConfigChainModule{
 		Name:               "burrowmint",
-		MajorVersion:       burrowVersion.MajorVersion,
-		MinorVersion:       burrowVersion.MinorVersion,
 		ModuleRelativeRoot: "burrowmint",
 	}
 	tendermintModule := &ConfigTendermint{

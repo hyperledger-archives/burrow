@@ -89,10 +89,6 @@ const sectionChainConsensus = `  [chain.consensus]
   # this will define the peer-to-peer consensus network;
   # accepted values are ("noops", "abci",) "tendermint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to consensus' module root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -111,10 +107,6 @@ const sectionChainApplicationManager = `  [chain.manager]
   # application manager name defines the module to use for handling
   # the transactions.  Supported names are "burrowmint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to application manager root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
