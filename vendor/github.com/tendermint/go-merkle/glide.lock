@@ -1,0 +1,62 @@
+hash: 51d7f4d326ffc233a66329719e1c5358aa4a94937ce6ead12fd24ccfffda9230
+updated: 2017-01-09T19:48:12.398070413+01:00
+imports:
+- name: github.com/go-stack/stack
+  version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
+- name: github.com/golang/snappy
+  version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
+- name: github.com/mattn/go-colorable
+  version: ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8
+- name: github.com/mattn/go-isatty
+  version: 66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  subpackages:
+  - assert
+  - require
+- name: github.com/syndtr/goleveldb
+  version: 6ae1797c0b42b9323fc27ff7dcf568df88f2f33d
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
+- name: github.com/tendermint/go-common
+  version: 47e06734f6ee488cc2e61550a38642025e1d4227
+  subpackages:
+  - test
+- name: github.com/tendermint/go-db
+  version: 2645626c33d8702739e52a61a55d705c2dfe4530
+- name: github.com/tendermint/go-logger
+  version: cefb3a45c0bf3c493a04e9bcd9b1540528be59f2
+- name: github.com/tendermint/go-wire
+  version: 3b0adbc86ed8425eaed98516165b6788d9f4de7a
+- name: github.com/tendermint/log15
+  version: 9545b249b3aacafa97f79e0838b02b274adc6f5f
+  subpackages:
+  - term
+- name: golang.org/x/crypto
+  version: aa2481cbfe81d911eb62b642b7a6b5ec58bbea71
+  subpackages:
+  - ripemd160
+- name: golang.org/x/sys
+  version: 30de6d19a3bd89a5f38ae4028e23aaa5582648af
+  subpackages:
+  - unix
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
