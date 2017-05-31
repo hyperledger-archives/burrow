@@ -17,7 +17,6 @@ package files
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 )
@@ -62,7 +61,6 @@ func WriteFile(fileName string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	if err2 == nil && n < len(data) {
-		err2 = io.ErrShortWrite
 		return err
 	}
 

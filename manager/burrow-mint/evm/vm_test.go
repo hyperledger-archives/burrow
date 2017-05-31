@@ -103,11 +103,10 @@ func TestJumpErr(t *testing.T) {
 
 	var gas int64 = 100000
 	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
-	var output []byte
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		output, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+		_, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)

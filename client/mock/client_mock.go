@@ -41,9 +41,9 @@ func NewMockNodeClient() *MockNodeClient {
 func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
-		TxHash:          make([]byte, 20, 20),
+		TxHash:          make([]byte, 20),
 		CreatesContract: 0,
-		ContractAddr:    make([]byte, 20, 20),
+		ContractAddr:    make([]byte, 20),
 	}
 	return txReceipt, nil
 }
@@ -55,7 +55,7 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	// make zero account
 	var zero [32]byte
-	copyAddressBytes := make([]byte, len(address), len(address))
+	copyAddressBytes := make([]byte, len(address))
 	copy(copyAddressBytes, address)
 	account := &acc.Account{
 		Address:     copyAddressBytes,

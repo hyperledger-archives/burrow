@@ -15,7 +15,6 @@ import (
 // This file contains definitions for a configurable output graph for the
 // logging system.
 
-type source string
 type outputType string
 type transformType string
 type filterMode string

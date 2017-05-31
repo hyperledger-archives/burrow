@@ -26,6 +26,7 @@ func TestParamsMap(t *testing.T) {
 	}
 	dict, err := paramsMap("Foo", aStruct{5},
 		"Bar", "Nibbles")
+	assert.NoError(t, err, "Should not be a paramsMaperror")
 	assert.Equal(t, map[string]interface{}{
 		"Foo": aStruct{5},
 		"Bar": "Nibbles",

@@ -195,7 +195,6 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 			Exception: nil,
 			Error:     fmt.Errorf("timed out waiting for event"),
 		}
-		return
 	}()
 	return confirmationChannel, nil
 }

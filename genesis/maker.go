@@ -43,23 +43,19 @@ func NewGenesisValidator(amount int64, name string, unbondToAddress []byte,
 	// convert the key bytes into a typed fixed size byte array
 	var typedPublicKeyBytes []byte
 	switch keyType {
-	case "ed25519":
+	case "ed25519": // ed25519 has type byte 0x01
 		// TODO: [ben] functionality and checks need to be inherit in the type
 		if len(publicKeyBytes) != PublicKeyEd25519ByteLength {
 			return nil, fmt.Errorf("Invalid length provided for ed25519 public key (%v bytes provided but expected %v bytes)",
 				len(publicKeyBytes), PublicKeyEd25519ByteLength)
 		}
-		// ed25519 has type byte 0x01
-		typedPublicKeyBytes = make([]byte, PublicKeyEd25519ByteLength+1)
 		// prepend type byte to public key
 		typedPublicKeyBytes = append([]byte{crypto.TypeEd25519}, publicKeyBytes...)
-	case "secp256k1":
+	case "secp256k1": // secp256k1 has type byte 0x02
 		if len(publicKeyBytes) != PublicKeySecp256k1ByteLength {
 			return nil, fmt.Errorf("Invalid length provided for secp256k1 public key (%v bytes provided but expected %v bytes)",
 				len(publicKeyBytes), PublicKeySecp256k1ByteLength)
 		}
-		// secp256k1 has type byte 0x02
-		typedPublicKeyBytes = make([]byte, PublicKeySecp256k1ByteLength+1)
 		// prepend type byte to public key
 		typedPublicKeyBytes = append([]byte{crypto.TypeSecp256k1}, publicKeyBytes...)
 	default:

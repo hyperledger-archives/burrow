@@ -52,7 +52,6 @@ func init() {
 
 type MockSuite struct {
 	suite.Suite
-	baseDir      string
 	serveProcess *server.ServeProcess
 	codec        rpc.Codec
 	sUrl         string

@@ -286,7 +286,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 func (trans *transactor) Transact(privKey, address, data []byte, gasLimit, fee int64) (*txs.Receipt, error) {
-	if address == nil || len(address) == 0 {
+	if len(address) == 0 {
 		return trans.testData.TransactCreate.Output, nil
 	}
 	return trans.testData.Transact.Output, nil

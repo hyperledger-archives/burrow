@@ -515,7 +515,7 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %X", contractAddr)
 	}
-	if bytes.Compare(contractAcc.Code, contractCode) != 0 {
+	if !bytes.Equal(contractAcc.Code, contractCode) {
 		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, contractCode)
 	}
 
@@ -540,7 +540,7 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %X", contractAddr)
 	}
-	if bytes.Compare(contractAcc.Code, factoryCode) != 0 {
+	if !bytes.Equal(contractAcc.Code, factoryCode) {
 		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, factoryCode)
 	}
 

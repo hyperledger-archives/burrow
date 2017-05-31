@@ -106,7 +106,6 @@ func (st *Stack) Swap(n int) {
 		return
 	}
 	st.data[st.ptr-n], st.data[st.ptr-1] = st.data[st.ptr-1], st.data[st.ptr-n]
-	return
 }
 
 func (st *Stack) Dup(n int) {
@@ -116,7 +115,6 @@ func (st *Stack) Dup(n int) {
 		return
 	}
 	st.Push(st.data[st.ptr-n])
-	return
 }
 
 // Not an opcode, costs no gas.

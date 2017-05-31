@@ -275,7 +275,7 @@ func TestNameTxs(t *testing.T) {
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
 		}
-		if bytes.Compare(entry.Owner, addr) != 0 {
+		if !bytes.Equal(entry.Owner, addr) {
 			t.Fatalf("Wrong owner. Got %X expected %X", entry.Owner, addr)
 		}
 		if data != entry.Data {

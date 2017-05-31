@@ -84,6 +84,9 @@ func (ffs *FileFixtures) RemoveAll() {
 func createWriteClose(filename, content string) error {
 	// We'll create any parent dirs, with permissive permissions
 	err := os.MkdirAll(path.Dir(filename), 0777)
+	if err != nil {
+		return err
+	}
 	f, err := os.Create(filename)
 	if err != nil {
 		return err

@@ -17,7 +17,6 @@ package commands
 import (
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -97,14 +96,6 @@ func setDefaultString(envVar, def string) string {
 	env := os.Getenv(envVar)
 	if env != "" {
 		return env
-	}
-	return def
-}
-
-func setDefaultStringSlice(envVar string, def []string) []string {
-	env := os.Getenv(envVar)
-	if env != "" {
-		return strings.Split(env, ",")
 	}
 	return def
 }

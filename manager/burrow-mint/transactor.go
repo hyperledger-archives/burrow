@@ -391,12 +391,10 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 			input.PubKey = privAccounts[i].PubKey
 			input.Signature = privAccounts[i].Sign(this.chainID, sendTx)
 		}
-		break
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
 		callTx.Input.Signature = privAccounts[0].Sign(this.chainID, callTx)
-		break
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
@@ -406,15 +404,12 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(this.chainID, bondTx)
 		}
-		break
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
 		unbondTx.Signature = privAccounts[0].Sign(this.chainID, unbondTx).(crypto.SignatureEd25519)
-		break
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
 		rebondTx.Signature = privAccounts[0].Sign(this.chainID, rebondTx).(crypto.SignatureEd25519)
-		break
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
 	}
