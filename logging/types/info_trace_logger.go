@@ -10,13 +10,11 @@ const (
 	TraceLevelName = TraceChannelName
 )
 
-// InfoTraceLogger maintains two independent concurrently-safe channels of
-// logging. The idea behind the independence is that you can ignore one channel
-// with no performance penalty. For more fine grained filtering or aggregation
-// the Info and Trace loggers can be decorated loggers that perform arbitrary
-// filtering/routing/aggregation on log messages.
+// InfoTraceLogger maintains provides two logging 'channels' that are interlaced
+// to provide a coarse grained filter to distinguish human-consumable 'Info'
+// messages and execution level 'Trace' messages.
 type InfoTraceLogger interface {
-	// Send a log message to the default channel
+	// Send a log message to the default channel of the implementation
 	kitlog.Logger
 
 	// Send an log message to the Info channel, formed of a sequence of key value
@@ -24,8 +22,7 @@ type InfoTraceLogger interface {
 	// monitoring the logs. But not necessarily a human who is trying to
 	// understand or debug the system. Any handled errors or warnings should be
 	// sent to the Info channel (where you may wish to tag them with a suitable
-	// key-value pair to categorise them as such). Info messages will be sent to
-	// the infoOnly and the infoAndTrace output loggers.
+	// key-value pair to categorise them as such).
 	Info(keyvals ...interface{}) error
 
 	// Send an log message to the Trace channel, formed of a sequence of key-value
@@ -33,7 +30,7 @@ type InfoTraceLogger interface {
 	// may be of interest to a machine consumer or a human who is trying to debug
 	// the system or trying to understand the system in detail. If the messages
 	// are very point-like and contain little structure, consider using a metric
-	// instead. Trace messages will only be sent to the infoAndTrace output logger.
+	// instead.
 	Trace(keyvals ...interface{}) error
 
 	// A logging context (see go-kit log's Context). Takes a sequence key values
@@ -53,13 +50,9 @@ type InfoTraceLogger interface {
 	// contextual values
 	WithPrefix(keyvals ...interface{}) InfoTraceLogger
 
-	// Hot swap the underlying infoOnlyLogger with another one to re-route messages
-	// on the Info channel
-	SwapInfoOnlyOutput(infoOnlyLogger kitlog.Logger)
+	// Hot swap the underlying outputLogger with another one to re-route messages
+	SwapOutput(outputLogger kitlog.Logger)
 
-	// Hot swap the underlying infoAndTraceLogger with another one to re-route messages
-	// on the Info and Trace channels
-	SwapInfoAndTraceOutput(infoTraceLogger kitlog.Logger)
 }
 
 // Interface assertions

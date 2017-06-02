@@ -41,35 +41,33 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.Info
 	if loggingConfig == nil {
 		return NewStdErrLogger(), nil
 	}
-	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersFromLoggingConfig(loggingConfig)
+	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return nil, err
 	}
-	return NewLogger(infoOnlyLogger, infoAndTraceLogger), nil
+	return NewLogger(outputLogger), nil
 }
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
 func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 	loggingConfig *config.LoggingConfig) error {
-	infoOnlyLogger, infoAndTraceLogger, err := infoTraceLoggersFromLoggingConfig(loggingConfig)
+	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return err
 	}
-	logger.SwapInfoOnlyOutput(infoOnlyLogger)
-	logger.SwapInfoAndTraceOutput(infoAndTraceLogger)
+	logger.SwapOutput(outputLogger)
 	return nil
 }
 
 func NewStdErrLogger() types.InfoTraceLogger {
 	logger := loggers.NewStreamLogger(os.Stderr, "terminal")
-	return NewLogger(nil, logger)
+	return NewLogger(logger)
 }
 
-// Provided a standard logger that outputs to the supplied underlying info
-// and trace loggers
-func NewLogger(infoOnlyLogger, infoAndTraceLogger kitlog.Logger) types.InfoTraceLogger {
-	infoTraceLogger := loggers.NewInfoTraceLogger(infoOnlyLogger, infoAndTraceLogger)
+// Provided a standard logger that outputs to the supplied underlying outputLogger
+func NewLogger(outputLogger kitlog.Logger) types.InfoTraceLogger {
+	infoTraceLogger := loggers.NewInfoTraceLogger(outputLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
@@ -91,14 +89,10 @@ func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 }
 
 // Helpers
-func infoTraceLoggersFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, kitlog.Logger, error) {
-	infoOnlyLogger, _, err := loggingConfig.InfoSink.BuildLogger()
+func infoTraceLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, error) {
+	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	infoAndTraceLogger, _, err := loggingConfig.InfoAndTraceSink.BuildLogger()
-	if err != nil {
-		return nil, nil, err
-	}
-	return infoOnlyLogger, infoAndTraceLogger, nil
+	return outputLogger, nil
 }

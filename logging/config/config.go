@@ -10,8 +10,7 @@ import (
 )
 
 type LoggingConfig struct {
-	InfoSink         *SinkConfig `toml:"info_sink"`
-	InfoAndTraceSink *SinkConfig `toml:"info_and_trace_sink"`
+	RootSink         *SinkConfig `toml:"root_sink,omitempty"`
 }
 
 // For encoding a top-level '[logging]' TOML table
@@ -21,19 +20,17 @@ type LoggingConfigWrapper struct {
 
 func DefaultNodeLoggingConfig() *LoggingConfig {
 	return &LoggingConfig{
-		InfoSink:         Sink(),
-		InfoAndTraceSink: Sink().SetOutput(StderrOutput()),
+		RootSink: Sink().SetOutput(StderrOutput()),
 	}
 }
 
 func DefaultClientLoggingConfig() *LoggingConfig {
 	return &LoggingConfig{
 		// No output
-		InfoSink: Sink().
+		RootSink: Sink().
 			SetTransform(FilterTransform(ExcludeWhenAnyMatches,
 				structure.CapturedLoggingSourceKey, "")).
 			SetOutput(StderrOutput()),
-		InfoAndTraceSink: Sink(),
 	}
 }
 
