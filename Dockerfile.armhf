@@ -1,5 +1,5 @@
 # Pull base image.
-FROM quay.io/eris/build:arm
+FROM quay.io/monax/build:arm
 MAINTAINER Eris Industries <support@erisindustries.com>
 
 # Expose ports for 1337:eris-db API; 46656:tendermint-peer; 46657:tendermint-rpc

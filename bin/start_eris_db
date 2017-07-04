@@ -78,7 +78,7 @@ case $CMD in
 	exit 1
 	;;
 # we append $@ to eris-db to expose the same flags on the docker container,
-# eg `docker run -it quay.io/eris/erisdb --chain-id=<chain_id>`, will overwrite $CHAIN_ID
+# eg `docker run -it quay.io/monax/erisdb --chain-id=<chain_id>`, will overwrite $CHAIN_ID
 *) echo "no known command given: $CMD"
 	;;
 esac

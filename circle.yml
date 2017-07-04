@@ -42,14 +42,14 @@ deployment:
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - tests/build_tool.sh
-      - "docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
-      - docker push quay.io/eris/db
+      - "docker tag quay.io/monax/db:build throw:build && docker rmi quay.io/monax/db:build"
+      - docker push quay.io/monax/db
       - docs/build.sh master
   develop:
     branch: develop
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - tests/build_tool.sh
-      - "docker rmi quay.io/eris/db:latest && docker tag quay.io/eris/db:build throw:build && docker rmi quay.io/eris/db:build"
-      - docker push quay.io/eris/db
+      - "docker rmi quay.io/monax/db:latest && docker tag quay.io/monax/db:build throw:build && docker rmi quay.io/monax/db:build"
+      - docker push quay.io/monax/db
       - docs/build.sh

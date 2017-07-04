@@ -1,6 +1,6 @@
 # Pull base image.
 # NOTE: to use this Dockerfile, mount the chain data, including an init.sh, to /home/eris/data 
-FROM quay.io/eris/base
+FROM quay.io/monax/base
 
 
 ENV TMROOT /home/$USER/data

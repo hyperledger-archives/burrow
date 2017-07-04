@@ -19,7 +19,7 @@
 # ----------------------------------------------------------
 
 TARGET=eris-db
-IMAGE=quay.io/eris/db
+IMAGE=quay.io/monax/db
 
 set -e
 
@@ -28,7 +28,7 @@ then
   REPO=`pwd`
   CI="true"
 else
-  REPO=$GOPATH/src/github.com/eris-ltd/$TARGET
+  REPO=$GOPATH/src/github.com/hyperledger/burrow
 fi
 
 release_min=$(cat $REPO/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')

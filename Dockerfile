@@ -1,4 +1,4 @@
-FROM quay.io/eris/build
+FROM quay.io/monax/build:0.16
 MAINTAINER Monax <support@monax.io>
 
 # Install eris-db, a go app that manages relationships
