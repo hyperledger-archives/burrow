@@ -73,6 +73,7 @@ type Transactor interface {
 	// Send(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
 	// SendAndHold(privKey, toAddress []byte, amount int64) (*types.Receipt, error)
 	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
+	BroadcastTxAndHold(tx txs.Tx) (*txs.EventDataCall, error)
 	Transact(privKey, address, data []byte, gasLimit,
 		fee int64) (*txs.Receipt, error)
 	TransactAndHold(privKey, address, data []byte, gasLimit,

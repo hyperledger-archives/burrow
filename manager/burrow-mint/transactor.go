@@ -151,6 +151,12 @@ func (this *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	return &txs.Receipt{txHash, createsContract, contractAddr}, nil
 }
 
+// Broadcast a transaction and hold.
+func (this *transactor) BroadcastTxAndHold(tx txs.Tx) (*txs.EventDataCall, error) {
+	rec, tErr := this.BroadcastTx(tx)
+	return this.Hold(rec, tx.(*txs.CallTx).Data, tx.(*txs.CallTx).Address, tErr)
+}
+
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
 	fee int64) (*txs.Receipt, error) {

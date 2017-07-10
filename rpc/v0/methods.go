@@ -53,6 +53,7 @@ const (
 	CALL                      = SERVICE_NAME + ".call" // Tx
 	CALL_CODE                 = SERVICE_NAME + ".callCode"
 	BROADCAST_TX              = SERVICE_NAME + ".broadcastTx"
+	BROADCAST_TX_AND_HOLD     = SERVICE_NAME + ".broadcastTxAndHold"
 	GET_UNCONFIRMED_TXS       = SERVICE_NAME + ".getUnconfirmedTxs"
 	SIGN_TX                   = SERVICE_NAME + ".signTx"
 	TRANSACT                  = SERVICE_NAME + ".transact"
@@ -120,6 +121,7 @@ func (burrowMethods *BurrowMethods) getMethods() map[string]RequestHandlerFunc {
 	dhMap[CALL] = burrowMethods.Call
 	dhMap[CALL_CODE] = burrowMethods.CallCode
 	dhMap[BROADCAST_TX] = burrowMethods.BroadcastTx
+	dhMap[BROADCAST_TX_AND_HOLD] = burrowMethods.BroadcastTxAndHold
 	dhMap[GET_UNCONFIRMED_TXS] = burrowMethods.UnconfirmedTxs
 	dhMap[SIGN_TX] = burrowMethods.SignTx
 	dhMap[TRANSACT] = burrowMethods.Transact
@@ -370,6 +372,20 @@ func (burrowMethods *BurrowMethods) BroadcastTx(request *rpc.RPCRequest, request
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
 	return receipt, 0, nil
+}
+
+func (burrowMethods *BurrowMethods) BroadcastTxAndHold(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	// Accept all transaction types as parameter for broadcast.
+	param := new(txs.Tx)
+	err := burrowMethods.codec.DecodeBytesPtr(param, request.Params)
+	if err != nil {
+		return nil, rpc.INVALID_PARAMS, err
+	}
+	ce, errC := burrowMethods.pipe.Transactor().BroadcastTxAndHold(*param)
+	if errC != nil {
+		return nil, rpc.INTERNAL_ERROR, errC
+	}
+	return ce, 0, nil
 }
 
 func (burrowMethods *BurrowMethods) Transact(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
