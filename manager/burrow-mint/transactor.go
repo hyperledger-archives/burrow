@@ -201,6 +201,10 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
 
 func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
 	rec, tErr := this.Transact(privKey, address, data, gasLimit, fee)
+	return this.Hold(rec, data, address, tErr)
+}
+
+func (this *transactor) Hold(rec *txs.Receipt, data, address []byte, tErr error) (*txs.EventDataCall, error) {
 	if tErr != nil {
 		return nil, tErr
 	}
@@ -217,7 +221,7 @@ func (this *transactor) TransactAndHold(privKey, address, data []byte, gasLimit,
 	this.eventEmitter.Subscribe(subId, txs.EventStringAccCall(addr),
 		func(evt txs.EventData) {
 			eventDataCall := evt.(txs.EventDataCall)
-			if bytes.Equal(eventDataCall.TxID, rec.TxHash) {
+			if (bytes.Equal(eventDataCall.TxID, rec.TxHash) && bytes.Equal(eventDataCall.CallData.Data, data)) {
 				// Beware the contract of go-events subscribe is that we must not be
 				// blocking in an event callback when we try to unsubscribe!
 				// We work around this by using a non-blocking send.
