@@ -47,7 +47,7 @@ func TestLog4(t *testing.T) {
 	st.accounts[account1.Address.String()] = account1
 	st.accounts[account2.Address.String()] = account2
 
-	ourVm := NewVM(st, newParams(), Zero256, nil)
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	eventSwitch := events.NewEventSwitch()
 	_, err := eventSwitch.Start()

@@ -153,8 +153,8 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	}
 
 	logging.Msg(logger, "Modules configured",
-		"consensusModule", consensusConfig.Version,
-		"applicationManager", managerConfig.Version)
+		"consensusModule", consensusConfig.Name,
+		"applicationManager", managerConfig.Name)
 
 	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
 }

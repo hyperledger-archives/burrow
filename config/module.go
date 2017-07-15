@@ -23,7 +23,6 @@ import (
 type ModuleConfig struct {
 	Module      string
 	Name        string
-	Version     string
 	WorkDir     string
 	DataDir     string
 	RootDir     string

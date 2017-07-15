@@ -89,10 +89,6 @@ const sectionChainConsensus = `  [chain.consensus]
   # this will define the peer-to-peer consensus network;
   # accepted values are ("noops", "abci",) "tendermint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to consensus' module root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -111,10 +107,6 @@ const sectionChainApplicationManager = `  [chain.manager]
   # application manager name defines the module to use for handling
   # the transactions.  Supported names are "burrowmint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to application manager root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -310,10 +302,7 @@ const sectionLoggingHeader = `
 ##
 ## Log messages are sent to one of two 'channels': info or trace
 ##
-## They are delivered on two independent streams: 'info' or 'info and trace'.
-## Each of these streams has a root logging 'sink' (configured under the keys
-## logging.info_sink and logging.info_and_trace_sink respectively) where each
-## channels messages are delivered.
+## They are delivered on a single non-blocking stream to a 'root sink'.
 ##
 ## A sink may optionally define any of a 'transform', an 'output', and a list of
 ## downstream sinks. Log messages flow through a sink by first having that
@@ -329,9 +318,8 @@ const sectionLoggingHeader = `
 ## A minimal logging config for multi-line, colourised terminal output would be:
 #
 # [logging]
-#  [logging.info_sink]
-#  [logging.info_and_trace_sink]
-#    [logging.info_and_trace_sink.output]
+#  [logging.root_sink]
+#    [logging.root_sink.output]
 #      output_type = "stderr"
 #      format = "terminal"
 `

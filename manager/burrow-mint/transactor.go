@@ -85,7 +85,8 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	vmach.SetFireable(this.eventSwitch)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
@@ -118,7 +119,8 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {

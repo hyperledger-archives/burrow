@@ -342,9 +342,9 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 			keyvals = append(keyvals, k, v)
 		}
 		if transformConfig.LabelConfig.Prefix {
-			return kitlog.NewContext(outputLogger).WithPrefix(keyvals...), captures, nil
+			return kitlog.WithPrefix(outputLogger, keyvals...), captures, nil
 		} else {
-			return kitlog.NewContext(outputLogger).With(keyvals...), captures, nil
+			return kitlog.With(outputLogger, keyvals...), captures, nil
 		}
 	case Prune:
 		keys := make([]interface{}, len(transformConfig.PruneConfig.Keys))

@@ -39,7 +39,7 @@ imports:
   - binding
   - render
 - name: github.com/go-kit/kit
-  version: f66b0e13579bfc5a48b9e2a94b1209c107ea1f41
+  version: fadad6fffe0466b19df9efd9acde5c9a52df5fa4
   subpackages:
   - log
 - name: github.com/go-logfmt/logfmt
@@ -82,8 +82,6 @@ imports:
   version: c265cfa48dda6474e208715ca93e987829f572f8
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
-- name: github.com/Masterminds/glide
-  version: 869001d1571ce5f03fd0078bff188b9d3f272807
 - name: github.com/mattn/go-colorable
   version: ded68f7a9561c023e790de24279db7ebf473ea80
 - name: github.com/mattn/go-isatty

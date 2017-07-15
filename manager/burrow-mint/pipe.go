@@ -141,8 +141,8 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 	// avoid Tendermints PanicSanity and return a clean error
 	if backend != db.MemDBBackendStr &&
 		backend != db.LevelDBBackendStr {
-		return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
-			backend, GetBurrowMintVersion)
+		return nil, nil, fmt.Errorf("Database backend %s is not supported "+
+			"by burrowmint", backend)
 	}
 
 	stateDB := db.NewDB("burrowmint", backend, dataDir)
@@ -434,7 +434,8 @@ func (pipe *burrowMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_t
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
@@ -461,7 +462,8 @@ func (pipe *burrowMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_ty
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -588,7 +590,7 @@ func (pipe *burrowMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroa
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
 	default:
 		logging.InfoMsg(pipe.logger, "Unknown error returned from Tendermint CheckTx on BroadcastTxSync",
-			"application", GetBurrowMintVersion().GetVersionString(),
+			"application", "burrowmint",
 			"abci_code_type", responseCheckTx.Code,
 			"abci_log", responseCheckTx.Log,
 		)

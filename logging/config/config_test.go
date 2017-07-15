@@ -10,9 +10,7 @@ import (
 )
 
 var complexConfig *LoggingConfig = &LoggingConfig{
-	InfoSink: Sink().
-		SetOutput(StderrOutput()),
-	InfoAndTraceSink: Sink().
+	RootSink: Sink().
 		SetTransform(LabelTransform(false, "Info", "Trace")).
 		AddSinks(
 			Sink().
