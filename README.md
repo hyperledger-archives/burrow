@@ -61,7 +61,7 @@ For a Vagrant file see [monax-vagrant](https://github.com/monax/monax-vagrant) f
 
 ## Usage
 
-Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/hyperledger/burrow.js), but it is possible to connect directly via HTTP or websocket.
+Once the server has started, it will begin syncing up with the network. At that point you may begin using it. The preferred way is through our [javascript api](https://github.com/monax/legacy-contracts.js), but it is possible to connect directly via HTTP or websocket.
 
 ## Configuration
 
