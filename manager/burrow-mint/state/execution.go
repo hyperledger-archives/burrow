@@ -16,7 +16,6 @@ package state
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -627,7 +626,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			// if the entry already exists, and hasn't expired, we must be owner
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner
-				if bytes.Compare(entry.Owner, tx.Input.Address) != 0 {
+				if !bytes.Equal(entry.Owner, tx.Input.Address) {
 					logging.InfoMsg(logger, "Sender is trying to update a name for which they are not an owner",
 						"sender_address", tx.Input.Address,
 						"name", tx.Name)
@@ -649,7 +648,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 				// and changing the data
 				if expired {
 					if expiresIn < txs.MinNameRegistrationPeriod {
-						return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+						return fmt.Errorf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
@@ -664,7 +663,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 					credit := oldCredit + value
 					expiresIn = int(credit / costPerBlock)
 					if expiresIn < txs.MinNameRegistrationPeriod {
-						return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+						return fmt.Errorf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					logging.TraceMsg(logger, "Updated NameReg entry",
@@ -679,7 +678,7 @@ func ExecTx(blockCache *BlockCache, tx txs.Tx, runCall bool, evc events.Fireable
 			}
 		} else {
 			if expiresIn < txs.MinNameRegistrationPeriod {
-				return errors.New(fmt.Sprintf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod))
+				return fmt.Errorf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
 			}
 			// entry does not exist, so create it
 			entry = &core_types.NameRegEntry{
@@ -1001,11 +1000,11 @@ func HasPermission(state AccountGetter, acc *acm.Account, perm ptypes.PermFlag,
 		sanity.PanicSanity("Checking an unknown permission in state should never happen")
 	}
 
-	if acc == nil {
-		// TODO
-		// this needs to fall back to global or do some other specific things
-		// eg. a bondAcc may be nil and so can only bond if global bonding is true
-	}
+	//if acc == nil {
+	// TODO
+	// this needs to fall back to global or do some other specific things
+	// eg. a bondAcc may be nil and so can only bond if global bonding is true
+	//}
 	permString := ptypes.PermFlagToString(perm)
 
 	v, err := acc.Permissions.Base.Get(perm)

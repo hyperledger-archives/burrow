@@ -358,9 +358,8 @@ func (sessionManager *SessionManager) RemoveSessionOpenEventChannel(lChan chan *
 	if len(ec) == 0 {
 		return false
 	}
-	for i, c := range ec {
+	for _, c := range ec {
 		if lChan == c {
-			ec[i], ec = ec[len(ec)-1], ec[:len(ec)-1]
 			return true
 		}
 	}
@@ -380,9 +379,8 @@ func (sessionManager *SessionManager) RemoveSessionCloseEventChannel(lChan chan 
 	if len(ec) == 0 {
 		return false
 	}
-	for i, c := range ec {
+	for _, c := range ec {
 		if lChan == c {
-			ec[i], ec = ec[len(ec)-1], ec[:len(ec)-1]
 			return true
 		}
 	}

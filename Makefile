@@ -54,6 +54,12 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
+# run the megacheck tool for code compliance
+.PHONY: megacheck
+megacheck:
+	@go get honnef.co/go/tools/cmd/megacheck
+	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
+
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory

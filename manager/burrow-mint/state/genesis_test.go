@@ -33,7 +33,7 @@ import (
 
 var chain_id = "lone_ranger"
 var addr1, _ = hex.DecodeString("964B1493BBE3312278B7DEB94C39149F7899A345")
-var send1, name1, call1 = 1, 1, 0
+var send1 = 1
 var perms, setbit = 66, 70
 var accName = "me"
 var roles1 = []string{"master", "universal-ruler"}
@@ -79,7 +79,7 @@ func TestGenesisReadable(t *testing.T) {
 		t.Fatalf("Incorrect chain id. Got %d, expected %d\n", genDoc.ChainID, chain_id)
 	}
 	acc := genDoc.Accounts[0]
-	if bytes.Compare(acc.Address, addr1) != 0 {
+	if !bytes.Equal(acc.Address, addr1) {
 		t.Fatalf("Incorrect address for account. Got %X, expected %X\n", acc.Address, addr1)
 	}
 	if acc.Amount != amt1 {

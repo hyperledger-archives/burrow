@@ -21,8 +21,8 @@ func TestBlockCache_Sync_Accounts(t *testing.T) {
 	// to remove them twice from merkle tree
 	defer func() {
 		if r := recover(); r != nil {
-			t.Fatalf("Consecutive calls to BlockCache.Sync() failed. " +
-					"Is cache dirty?\n Error: %s", r)
+			t.Fatalf("Consecutive calls to BlockCache.Sync() failed. "+
+				"Is cache dirty?\n Error: %s", r)
 		}
 	}()
 	blockCache.Sync()
@@ -46,8 +46,8 @@ func TestBlockCache_Sync_NameReg(t *testing.T) {
 	blockCache.Sync()
 	defer func() {
 		if r := recover(); r != nil {
-			t.Fatalf("Consecutive calls to BlockCache.Sync() failed. " +
-					"Is cache dirty?\n Error: %s", r)
+			t.Fatalf("Consecutive calls to BlockCache.Sync() failed. "+
+				"Is cache dirty?\n Error: %s", r)
 		}
 	}()
 	blockCache.Sync()
