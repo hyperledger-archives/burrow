@@ -23,7 +23,7 @@ import (
 
 	"github.com/hyperledger/burrow/account"
 	core_types "github.com/hyperledger/burrow/core/types"
-	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/manager/burrow-mint/state"
 	"github.com/hyperledger/burrow/txs"
@@ -178,10 +178,20 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	// fmt.Printf("Sequence %d\n", sequence)
+	// TODO: [Silas] we should consider revising this method and removing fee, or
+	// possibly adding an amount parameter. It is non-sensical to just be able to
+	// set the fee. Our support of fees in general is questionable since at the
+	// moment all we do is deduct the fee effectively leaking token. It is possible
+	// someone may be using the sending of native token to payable functions but
+	// they can be served by broadcasting a token.
+
+	// We hard-code the amount to be equal to the fee which means the CallTx we
+	// generate transfers 0 value, which is the most sensible default since in
+	// recent solidity compilers the EVM generated will throw an error if value
+	// is transferred to a non-payable function.
 	txInput := &txs.TxInput{
 		Address:  pa.Address,
-		Amount:   1,
+		Amount:   fee,
 		Sequence: sequence,
 		PubKey:   pa.PubKey,
 	}
