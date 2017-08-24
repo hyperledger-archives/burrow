@@ -10,7 +10,7 @@ import (
 )
 
 type LoggingConfig struct {
-	RootSink         *SinkConfig `toml:"root_sink,omitempty"`
+	RootSink *SinkConfig `toml:"root_sink,omitempty"`
 }
 
 // For encoding a top-level '[logging]' TOML table

@@ -52,7 +52,6 @@ type InfoTraceLogger interface {
 
 	// Hot swap the underlying outputLogger with another one to re-route messages
 	SwapOutput(outputLogger kitlog.Logger)
-
 }
 
 // Interface assertions
