@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/word256"
 )
 
 // Logger that implements some formatting conventions for burrow and burrow-client
@@ -34,6 +35,13 @@ type burrowFormatLogger struct {
 var _ kitlog.Logger = &burrowFormatLogger{}
 
 func (efl *burrowFormatLogger) Log(keyvals ...interface{}) error {
+	if efl.logger == nil {
+		return nil
+	}
+	if len(keyvals)%2 != 0 {
+		return fmt.Errorf("Log line contains an odd number of elements so "+
+			"was dropped: %v", keyvals)
+	}
 	return efl.logger.Log(structure.MapKeyValues(keyvals, burrowFormatKeyValueMapper)...)
 }
 
@@ -43,11 +51,14 @@ func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{
 		switch v := value.(type) {
 		case []byte:
 			return key, fmt.Sprintf("%X", v)
+		case word256.Word256:
+			return burrowFormatKeyValueMapper(key, v.Bytes())
 		}
+
 	}
 	return key, value
 }
 
-func MonaxFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
+func BurrowFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
 	return &burrowFormatLogger{logger: logger}
 }

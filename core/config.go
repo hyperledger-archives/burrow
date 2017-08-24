@@ -24,13 +24,10 @@ import (
 	"path"
 
 	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/consensus"
 	"github.com/hyperledger/burrow/definitions"
-	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/manager"
+	lconfig "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/server"
 	"github.com/hyperledger/burrow/util"
-	"github.com/hyperledger/burrow/version"
 	"github.com/spf13/viper"
 )
 
@@ -54,14 +51,6 @@ func loadModuleConfigFromDo(do *definitions.Do, module string) (*config.ModuleCo
 func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	genesisFile, chainId, module string) (*config.ModuleConfig, error) {
 	moduleName := conf.GetString("chain." + module + ".name")
-	majorVersion := conf.GetInt("chain." + module + ".major_version")
-	minorVersion := conf.GetInt("chain." + module + ".minor_version")
-	minorVersionString := version.MakeMinorVersionString(moduleName, majorVersion,
-		minorVersion, 0)
-	if !assertValidModule(module, moduleName, minorVersionString) {
-		return nil, fmt.Errorf("Error reading config: %s module %s (%s) is not supported by %s",
-			module, moduleName, minorVersionString, version.GetVersionString())
-	}
 	// set up the directory structure for the module inside the data directory
 	workDir := path.Join(rootDataDir, conf.GetString("chain."+module+
 		".relative_root"))
@@ -88,7 +77,6 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	return &config.ModuleConfig{
 		Module:      module,
 		Name:        moduleName,
-		Version:     minorVersionString,
 		WorkDir:     workDir,
 		DataDir:     dataDir,
 		RootDir:     rootWorkDir, // burrow's working directory
@@ -98,10 +86,15 @@ func LoadModuleConfig(conf *viper.Viper, rootWorkDir, rootDataDir,
 	}, nil
 }
 
-// LoadServerModuleConfig wraps specifically for the servers run by core
-func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
+// Load the ServerConfig from commandline Do object
+func LoadServerConfigFromDo(do *definitions.Do) (*server.ServerConfig, error) {
 	// load configuration subtree for servers
-	subConfig, err := config.ViperSubConfig(do.Config, "servers")
+	return LoadServerConfig(do.ChainId, do.Config)
+}
+
+// Load the ServerConfig from root Viper config, fixing the ChainId
+func LoadServerConfig(chainId string, rootConfig *viper.Viper) (*server.ServerConfig, error) {
+	subConfig, err := config.ViperSubConfig(rootConfig, "servers")
 	if err != nil {
 		return nil, err
 	}
@@ -109,30 +102,16 @@ func LoadServerConfig(do *definitions.Do) (*server.ServerConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	serverConfig.ChainId = do.ChainId
+	serverConfig.ChainId = chainId
 	return serverConfig, err
 }
 
-func LoadLoggingConfigFromDo(do *definitions.Do) (*logging.LoggingConfig, error) {
-	//subConfig, err := SubConfig(conf, "logging")
-	loggingConfig := &logging.LoggingConfig{}
-	return loggingConfig, nil
+func LoadLoggingConfigFromDo(do *definitions.Do) (*lconfig.LoggingConfig, error) {
+	loggingConfigMap := do.Config.GetStringMap("logging")
+	return lconfig.LoggingConfigFromMap(loggingConfigMap)
 }
 
-func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*logging.LoggingConfig, error) {
-	loggingConfig := &logging.LoggingConfig{}
+func LoadLoggingConfigFromClientDo(do *definitions.ClientDo) (*lconfig.LoggingConfig, error) {
+	loggingConfig := lconfig.DefaultClientLoggingConfig()
 	return loggingConfig, nil
-}
-
-//------------------------------------------------------------------------------
-// Helper functions
-
-func assertValidModule(module, name, minorVersionString string) bool {
-	switch module {
-	case "consensus":
-		return consensus.AssertValidConsensusModule(name, minorVersionString)
-	case "manager":
-		return manager.AssertValidApplicationManagerModule(name, minorVersionString)
-	}
-	return false
 }

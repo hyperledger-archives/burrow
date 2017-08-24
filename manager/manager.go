@@ -22,10 +22,9 @@ import (
 	config "github.com/hyperledger/burrow/config"
 	definitions "github.com/hyperledger/burrow/definitions"
 	burrowmint "github.com/hyperledger/burrow/manager/burrow-mint"
-	// types       "github.com/hyperledger/burrow/manager/types"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // NewApplicationPipe returns an initialised Pipe interface
@@ -34,17 +33,11 @@ import (
 // of an application.  It is feasible this will be insufficient to support
 // different types of applications later down the line.
 func NewApplicationPipe(moduleConfig *config.ModuleConfig,
-	evsw events.EventSwitch, logger loggers.InfoTraceLogger,
-	consensusMinorVersion string) (definitions.Pipe,
-	error) {
+	evsw events.EventSwitch,
+	logger logging_types.InfoTraceLogger) (definitions.Pipe, error) {
 	switch moduleConfig.Name {
 	case "burrowmint":
-		if err := burrowmint.AssertCompatibleConsensus(consensusMinorVersion); err != nil {
-			return nil, err
-		}
-		logging.InfoMsg(logger, "Loading BurrowMint",
-			"compatibleConsensus", consensusMinorVersion,
-			"burrowMintVersion", burrowmint.GetBurrowMintVersion().GetVersionString())
+		logging.InfoMsg(logger, "Loading BurrowMint")
 		return burrowmint.NewBurrowMintPipe(moduleConfig, evsw, logger)
 	}
 	return nil, fmt.Errorf("Failed to return Pipe for %s", moduleConfig.Name)

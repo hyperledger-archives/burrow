@@ -185,7 +185,7 @@ const (
 	DELEGATECALL
 
 	// 0x70 range - other
-	SUICIDE = 0xff
+	SELFDESTRUCT = 0xff
 )
 
 // Since the opcodes aren't all in order we can't use a regular slice
@@ -244,9 +244,7 @@ var opCodeToString = map[OpCode]string{
 	EXTCODECOPY:           "EXTCODECOPY",
 
 	// 0x50 range - 'storage' and execution
-	POP: "POP",
-	//DUP:     "DUP",
-	//SWAP:    "SWAP",
+	POP:      "POP",
 	MLOAD:    "MLOAD",
 	MSTORE:   "MSTORE",
 	MSTORE8:  "MSTORE8",
@@ -340,7 +338,7 @@ var opCodeToString = map[OpCode]string{
 	DELEGATECALL: "DELEGATECALL",
 
 	// 0x70 range - other
-	SUICIDE: "SUICIDE",
+	SELFDESTRUCT: "SELFDESTRUCT",
 }
 
 func (o OpCode) String() string {

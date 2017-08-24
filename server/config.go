@@ -30,7 +30,6 @@ type (
 		HTTP       HTTP      `toml:"HTTP"`
 		WebSocket  WebSocket `toml:"web_socket"`
 		Tendermint Tendermint
-		Logging    Logging `toml:"logging"`
 	}
 
 	Bind struct {
@@ -69,12 +68,6 @@ type (
 	Tendermint struct {
 		RpcLocalAddress string
 		Endpoint        string
-	}
-
-	Logging struct {
-		ConsoleLogLevel string `toml:"console_log_level"`
-		FileLogLevel    string `toml:"file_log_level"`
-		LogFile         string `toml:"log_file"`
 	}
 )
 
@@ -160,11 +153,6 @@ func ReadServerConfig(viper *viper.Viper) (*ServerConfig, error) {
 			RpcLocalAddress: viper.GetString("tendermint.rpc_local_address"),
 			Endpoint:        viper.GetString("tendermint.endpoint"),
 		},
-		Logging: Logging{
-			ConsoleLogLevel: viper.GetString("logging.console_log_level"),
-			FileLogLevel:    viper.GetString("logging.file_log_level"),
-			LogFile:         viper.GetString("logging.log_file"),
-		},
 	}, nil
 }
 
@@ -193,11 +181,6 @@ func DefaultServerConfig() *ServerConfig {
 		Tendermint: Tendermint{
 			RpcLocalAddress: "0.0.0.0:46657",
 			Endpoint:        "/websocket",
-		},
-		Logging: Logging{
-			ConsoleLogLevel: "info",
-			FileLogLevel:    "warn",
-			LogFile:         "",
 		},
 	}
 }

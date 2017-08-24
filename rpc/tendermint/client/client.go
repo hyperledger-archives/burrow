@@ -22,36 +22,39 @@ import (
 	core_types "github.com/hyperledger/burrow/core/types"
 	rpc_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
-	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 )
 
-func Status(client rpcclient.Client) (*rpc_types.ResultStatus, error) {
-	res, err := performCall(client, "status")
+type RPCClient interface {
+	Call(method string, params map[string]interface{}, result interface{}) (interface{}, error)
+}
+
+func Status(client RPCClient) (*rpc_types.ResultStatus, error) {
+	res, err := call(client, "status")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultStatus), nil
 }
 
-func ChainId(client rpcclient.Client) (*rpc_types.ResultChainId, error) {
-	res, err := performCall(client, "chain_id")
+func ChainId(client RPCClient) (*rpc_types.ResultChainId, error) {
+	res, err := call(client, "chain_id")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultChainId), nil
 }
 
-func GenPrivAccount(client rpcclient.Client) (*acm.PrivAccount, error) {
-	res, err := performCall(client, "unsafe/gen_priv_account")
+func GenPrivAccount(client RPCClient) (*acm.PrivAccount, error) {
+	res, err := call(client, "unsafe/gen_priv_account")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultGenPrivAccount).PrivAccount, nil
 }
 
-func GetAccount(client rpcclient.Client, address []byte) (*acm.Account, error) {
-	res, err := performCall(client, "get_account",
+func GetAccount(client RPCClient, address []byte) (*acm.Account, error) {
+	res, err := call(client, "get_account",
 		"address", address)
 	if err != nil {
 		return nil, err
@@ -59,9 +62,9 @@ func GetAccount(client rpcclient.Client, address []byte) (*acm.Account, error) {
 	return res.(*rpc_types.ResultGetAccount).Account, nil
 }
 
-func SignTx(client rpcclient.Client, tx txs.Tx,
+func SignTx(client RPCClient, tx txs.Tx,
 	privAccounts []*acm.PrivAccount) (txs.Tx, error) {
-	res, err := performCall(client, "unsafe/sign_tx",
+	res, err := call(client, "unsafe/sign_tx",
 		"tx", wrappedTx{tx},
 		"privAccounts", privAccounts)
 	if err != nil {
@@ -70,9 +73,9 @@ func SignTx(client rpcclient.Client, tx txs.Tx,
 	return res.(*rpc_types.ResultSignTx).Tx, nil
 }
 
-func BroadcastTx(client rpcclient.Client,
+func BroadcastTx(client RPCClient,
 	tx txs.Tx) (txs.Receipt, error) {
-	res, err := performCall(client, "broadcast_tx",
+	res, err := call(client, "broadcast_tx",
 		"tx", wrappedTx{tx})
 	if err != nil {
 		return txs.Receipt{}, err
@@ -84,9 +87,9 @@ func BroadcastTx(client rpcclient.Client,
 
 }
 
-func DumpStorage(client rpcclient.Client,
+func DumpStorage(client RPCClient,
 	address []byte) (*rpc_types.ResultDumpStorage, error) {
-	res, err := performCall(client, "dump_storage",
+	res, err := call(client, "dump_storage",
 		"address", address)
 	if err != nil {
 		return nil, err
@@ -94,8 +97,8 @@ func DumpStorage(client rpcclient.Client,
 	return res.(*rpc_types.ResultDumpStorage), err
 }
 
-func GetStorage(client rpcclient.Client, address, key []byte) ([]byte, error) {
-	res, err := performCall(client, "get_storage",
+func GetStorage(client RPCClient, address, key []byte) ([]byte, error) {
+	res, err := call(client, "get_storage",
 		"address", address,
 		"key", key)
 	if err != nil {
@@ -104,9 +107,9 @@ func GetStorage(client rpcclient.Client, address, key []byte) ([]byte, error) {
 	return res.(*rpc_types.ResultGetStorage).Value, nil
 }
 
-func CallCode(client rpcclient.Client, fromAddress, code,
+func CallCode(client RPCClient, fromAddress, code,
 	data []byte) (*rpc_types.ResultCall, error) {
-	res, err := performCall(client, "call_code",
+	res, err := call(client, "call_code",
 		"fromAddress", fromAddress,
 		"code", code,
 		"data", data)
@@ -116,9 +119,9 @@ func CallCode(client rpcclient.Client, fromAddress, code,
 	return res.(*rpc_types.ResultCall), err
 }
 
-func Call(client rpcclient.Client, fromAddress, toAddress,
+func Call(client RPCClient, fromAddress, toAddress,
 	data []byte) (*rpc_types.ResultCall, error) {
-	res, err := performCall(client, "call",
+	res, err := call(client, "call",
 		"fromAddress", fromAddress,
 		"toAddress", toAddress,
 		"data", data)
@@ -128,8 +131,8 @@ func Call(client rpcclient.Client, fromAddress, toAddress,
 	return res.(*rpc_types.ResultCall), err
 }
 
-func GetName(client rpcclient.Client, name string) (*core_types.NameRegEntry, error) {
-	res, err := performCall(client, "get_name",
+func GetName(client RPCClient, name string) (*core_types.NameRegEntry, error) {
+	res, err := call(client, "get_name",
 		"name", name)
 	if err != nil {
 		return nil, err
@@ -137,9 +140,9 @@ func GetName(client rpcclient.Client, name string) (*core_types.NameRegEntry, er
 	return res.(*rpc_types.ResultGetName).Entry, nil
 }
 
-func BlockchainInfo(client rpcclient.Client, minHeight,
+func BlockchainInfo(client RPCClient, minHeight,
 	maxHeight int) (*rpc_types.ResultBlockchainInfo, error) {
-	res, err := performCall(client, "blockchain",
+	res, err := call(client, "blockchain",
 		"minHeight", minHeight,
 		"maxHeight", maxHeight)
 	if err != nil {
@@ -148,8 +151,8 @@ func BlockchainInfo(client rpcclient.Client, minHeight,
 	return res.(*rpc_types.ResultBlockchainInfo), err
 }
 
-func GetBlock(client rpcclient.Client, height int) (*rpc_types.ResultGetBlock, error) {
-	res, err := performCall(client, "get_block",
+func GetBlock(client RPCClient, height int) (*rpc_types.ResultGetBlock, error) {
+	res, err := call(client, "get_block",
 		"height", height)
 	if err != nil {
 		return nil, err
@@ -157,69 +160,57 @@ func GetBlock(client rpcclient.Client, height int) (*rpc_types.ResultGetBlock, e
 	return res.(*rpc_types.ResultGetBlock), err
 }
 
-func ListUnconfirmedTxs(client rpcclient.Client) (*rpc_types.ResultListUnconfirmedTxs, error) {
-	res, err := performCall(client, "list_unconfirmed_txs")
+func ListUnconfirmedTxs(client RPCClient) (*rpc_types.ResultListUnconfirmedTxs, error) {
+	res, err := call(client, "list_unconfirmed_txs")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultListUnconfirmedTxs), err
 }
 
-func ListValidators(client rpcclient.Client) (*rpc_types.ResultListValidators, error) {
-	res, err := performCall(client, "list_validators")
+func ListValidators(client RPCClient) (*rpc_types.ResultListValidators, error) {
+	res, err := call(client, "list_validators")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultListValidators), err
 }
 
-func DumpConsensusState(client rpcclient.Client) (*rpc_types.ResultDumpConsensusState, error) {
-	res, err := performCall(client, "dump_consensus_state")
+func DumpConsensusState(client RPCClient) (*rpc_types.ResultDumpConsensusState, error) {
+	res, err := call(client, "dump_consensus_state")
 	if err != nil {
 		return nil, err
 	}
 	return res.(*rpc_types.ResultDumpConsensusState), err
 }
 
-func performCall(client rpcclient.Client, method string,
+func call(client RPCClient, method string,
 	paramKeyVals ...interface{}) (res rpc_types.BurrowResult, err error) {
-	paramsMap, paramsSlice, err := mapAndValues(paramKeyVals...)
+	pMap, err := paramsMap(paramKeyVals...)
 	if err != nil {
 		return
 	}
-	switch cli := client.(type) {
-	case *rpcclient.ClientJSONRPC:
-		_, err = cli.Call(method, paramsSlice, &res)
-	case *rpcclient.ClientURI:
-		_, err = cli.Call(method, paramsMap, &res)
-	default:
-		panic(fmt.Errorf("peformCall called against an unknown rpcclient.Client %v",
-			cli))
-	}
+	_, err = client.Call(method, pMap, &res)
 	return
-
 }
 
-func mapAndValues(orderedKeyVals ...interface{}) (map[string]interface{},
-	[]interface{}, error) {
+func paramsMap(orderedKeyVals ...interface{}) (map[string]interface{}, error) {
 	if len(orderedKeyVals)%2 != 0 {
-		return nil, nil, fmt.Errorf("mapAndValues requires a even length list of"+
+		return nil, fmt.Errorf("mapAndValues requires a even length list of"+
 			" keys and values but got: %v (length %v)",
 			orderedKeyVals, len(orderedKeyVals))
 	}
 	paramsMap := make(map[string]interface{})
-	paramsSlice := make([]interface{}, len(orderedKeyVals)/2)
 	for i := 0; i < len(orderedKeyVals); i += 2 {
 		key, ok := orderedKeyVals[i].(string)
 		if !ok {
-			return nil, nil, errors.New("mapAndValues requires every even element" +
+			return nil, errors.New("mapAndValues requires every even element" +
 				" of orderedKeyVals to be a string key")
 		}
 		val := orderedKeyVals[i+1]
 		paramsMap[key] = val
-		paramsSlice[i/2] = val
 	}
-	return paramsMap, paramsSlice, nil
+	return paramsMap, nil
 }
 
 type wrappedTx struct {

@@ -14,6 +14,8 @@
 
 package config
 
+import "fmt"
+
 const headerCopyright = `# Copyright 2017 Monax Industries Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,20 +58,22 @@ const sectionServiceDependencies = `[dependencies]
 services = [ "keys" ]
 
 `
+const majorVersionKey = "major_version"
+const minorVersionKey = "minor_version"
 
-const sectionChainGeneral = `[chain]
+var sectionChainGeneral string = fmt.Sprintf(`[chain]
 
 # ChainId is a human-readable name to identify the chain.
 # This must correspond to the chain_id defined in the genesis file
 # and the assertion here provides a safe-guard on misconfiguring chains.
 assert_chain_id = "{{.AssertChainId}}"
 # semantic major and minor version
-major_version = {{.BurrowMajorVersion}}
-minor_version = {{.BurrowMinorVersion}}
+%s = {{.BurrowMajorVersion}}
+%s = {{.BurrowMinorVersion}}
 # genesis file, relative path is to burrow working directory
 genesis_file = "{{.GenesisRelativePath}}"
 
-`
+`, majorVersionKey, minorVersionKey)
 
 const separatorChainConsensus = `
 ################################################################################
@@ -85,10 +89,6 @@ const sectionChainConsensus = `  [chain.consensus]
   # this will define the peer-to-peer consensus network;
   # accepted values are ("noops", "abci",) "tendermint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to consensus' module root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -107,10 +107,6 @@ const sectionChainApplicationManager = `  [chain.manager]
   # application manager name defines the module to use for handling
   # the transactions.  Supported names are "burrowmint"
   name = "{{.Name}}"
-  # version is the major and minor semantic version;
-  # the version will be asserted on
-  major_version = {{.MajorVersion}}
-  minor_version = {{.MinorVersion}}
   # relative path to application manager root folder
   relative_root = "{{.ModuleRelativeRoot}}"
 
@@ -162,11 +158,6 @@ const sectionServers = `[servers]
 	rpc_local_address = "0.0.0.0:46657"
 	endpoint = "/websocket"
 
-  [servers.logging]
-  console_log_level = "info"
-  file_log_level = "warn"
-  log_file = ""
-
   `
 
 const separatorModules = `
@@ -185,7 +176,6 @@ const sectionTendermint = `
 ################################################################################
 ##
 ## Tendermint
-## version 0.8
 ##
 ## in-process execution of Tendermint consensus engine
 ##
@@ -234,14 +224,18 @@ private_validator_file = "priv_validator.json"
   # genesis_file = "./data/tendermint/genesis.json"
   # skip_upnp = false
   # addrbook_file = "./data/tendermint/addrbook.json"
+  # addrbook_strict = true
+  # pex_reactor = false
   # priv_validator_file = "./data/tendermint/priv_validator.json"
   # db_dir = "./data/tendermint/data"
   # prof_laddr = ""
   # revision_file = "./data/tendermint/revision"
-  # cswal = "./data/tendermint/data/cswal"
-  # cswal_light = false
+  # cs_wal_file = "./data/tendermint/data/cs.wal/wal"
+  # cs_wal_light = false
+  # filter_peers = false
 
   # block_size = 10000
+  # block_part_size = 65536
   # disable_data_hash = false
   # timeout_propose = 3000
   # timeout_propose_delta = 500
@@ -250,9 +244,11 @@ private_validator_file = "priv_validator.json"
   # timeout_precommit = 1000
   # timeout_precommit_delta = 500
   # timeout_commit = 1000
+  # skip_timeout_commit = false
   # mempool_recheck = true
   # mempool_recheck_empty = true
   # mempool_broadcast = true
+  # mempool_wal_dir = "./data/tendermint/data/mempool.wal"
 
 		[tendermint.configuration.p2p]
 		# Switch config keys
@@ -280,7 +276,6 @@ const sectionBurrowMint = `
 ################################################################################
 ##
 ## Burrow-Mint
-## version 0.16
 ##
 ## The original Ethereum virtual machine with IAVL merkle trees
 ## and tendermint/go-wire encoding
@@ -295,4 +290,36 @@ db_backend = "leveldb"
 # of the rpc local address
 tendermint_host = "0.0.0.0:46657"
 
+`
+
+// TODO: [Silas]: before next logging release (finalising this stuff and adding
+// presets) add full documentation of transforms, outputs, and their available
+// configuration options.
+const sectionLoggingHeader = `
+################################################################################
+##
+## System-wide logging configuration
+##
+## Log messages are sent to one of two 'channels': info or trace
+##
+## They are delivered on a single non-blocking stream to a 'root sink'.
+##
+## A sink may optionally define any of a 'transform', an 'output', and a list of
+## downstream sinks. Log messages flow through a sink by first having that
+## sink's transform applied and then writing to its output and downstream sinks.
+## In this way the log messages can output can be finely controlled and sent to
+## a multiple different outputs having been filtered, modified, augmented, or
+## labelled. This can be used to give more relevant output or to drive external
+## systems.
+##
+##
+################################################################################
+
+## A minimal logging config for multi-line, colourised terminal output would be:
+#
+# [logging]
+#  [logging.root_sink]
+#    [logging.root_sink.output]
+#      output_type = "stderr"
+#      format = "terminal"
 `

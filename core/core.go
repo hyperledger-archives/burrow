@@ -30,7 +30,7 @@ import (
 	// rpc_tendermint is carried over from burrowv0.11 and before on port 46657
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	rpc_tendermint "github.com/hyperledger/burrow/rpc/tendermint/core"
 	"github.com/hyperledger/burrow/server"
 )
@@ -41,20 +41,20 @@ type Core struct {
 	evsw           events.EventSwitch
 	pipe           definitions.Pipe
 	tendermintPipe definitions.TendermintPipe
+	logger         logging_types.InfoTraceLogger
 }
 
 func NewCore(chainId string,
 	consensusConfig *config.ModuleConfig,
 	managerConfig *config.ModuleConfig,
-	logger loggers.InfoTraceLogger) (*Core, error) {
+	logger logging_types.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with burrow/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 	logger = logging.WithScope(logger, "Core")
 
 	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger,
-		consensusConfig.Version)
+	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
 	}
@@ -66,13 +66,14 @@ func NewCore(chainId string,
 	tendermintPipe, err := pipe.GetTendermintPipe()
 	if err != nil {
 		logging.TraceMsg(logger, "Tendermint gateway not supported by manager",
-			"manager-version", managerConfig.Version)
+			"manager", managerConfig.Name)
 	}
 	return &Core{
 		chainId:        chainId,
 		evsw:           evsw,
 		pipe:           pipe,
 		tendermintPipe: tendermintPipe,
+		logger:         logger,
 	}, nil
 }
 
@@ -99,9 +100,9 @@ func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProces
 	jsonServer := rpc_v0.NewJsonRpcServer(tmjs)
 	restServer := rpc_v0.NewRestServer(codec, core.pipe, eventSubscriptions)
 	wsServer := server.NewWebSocketServer(config.WebSocket.MaxWebSocketSessions,
-		tmwss)
+		tmwss, core.logger)
 	// Create a server process.
-	proc, err := server.NewServeProcess(config, jsonServer, restServer, wsServer)
+	proc, err := server.NewServeProcess(config, core.logger, jsonServer, restServer, wsServer)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load gateway: %v", err)
 	}
@@ -116,4 +117,9 @@ func (core *Core) NewGatewayTendermint(config *server.ServerConfig) (
 	}
 	return rpc_tendermint.NewTendermintWebsocketServer(config,
 		core.tendermintPipe, core.evsw)
+}
+
+// Stop the core allowing for a graceful shutdown of component in order.
+func (core *Core) Stop() bool {
+	return core.pipe.GetConsensusEngine().Stop()
 }

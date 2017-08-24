@@ -24,9 +24,13 @@ func TestNewMultipleOutputLogger(t *testing.T) {
 	a, b := newErrorLogger("error a"), newErrorLogger("error b")
 	mol := NewMultipleOutputLogger(a, b)
 	logLine := []interface{}{"msg", "hello"}
-	err := mol.Log(logLine...)
+	errLog := mol.Log(logLine...)
 	expected := [][]interface{}{logLine}
-	assert.Equal(t, expected, a.logLines)
-	assert.Equal(t, expected, b.logLines)
-	assert.IsType(t, multipleErrors{}, err)
+	logLineA, err := a.logLines(1)
+	assert.NoError(t, err)
+	logLineB, err := b.logLines(1)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, logLineA)
+	assert.Equal(t, expected, logLineB)
+	assert.IsType(t, multipleErrors{}, errLog)
 }

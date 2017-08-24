@@ -25,12 +25,6 @@ import (
 const (
 	// Client identifier to advertise over the network
 	tendermintClientIdentifier = "tendermint"
-	// Major version component of the current release
-	tendermintVersionMajorConst uint8 = 0
-	// Minor version component of the current release
-	tendermintVersionMinorConst uint8 = 8
-	// Patch version component of the current release
-	tendermintVersionPatchConst uint8 = 0
 )
 
 var (
@@ -54,7 +48,7 @@ func GetTendermintVersion() *version.VersionIdentifier {
 func getTendermintMajorVersionFromSource() (uint8, error) {
 	majorVersionUint, err := strconv.ParseUint(tendermint_version.Maj, 10, 8)
 	if err != nil {
-		return tendermintVersionMajorConst, err
+		return 0, err
 	}
 	return uint8(majorVersionUint), nil
 }
@@ -62,7 +56,7 @@ func getTendermintMajorVersionFromSource() (uint8, error) {
 func getTendermintMinorVersionFromSource() (uint8, error) {
 	minorVersionUint, err := strconv.ParseUint(tendermint_version.Min, 10, 8)
 	if err != nil {
-		return tendermintVersionMinorConst, err
+		return 0, err
 	}
 	return uint8(minorVersionUint), nil
 }
@@ -70,7 +64,7 @@ func getTendermintMinorVersionFromSource() (uint8, error) {
 func getTendermintPatchVersionFromSource() (uint8, error) {
 	patchVersionUint, err := strconv.ParseUint(tendermint_version.Fix, 10, 8)
 	if err != nil {
-		return tendermintVersionPatchConst, err
+		return 0, err
 	}
 	return uint8(patchVersionUint), nil
 }

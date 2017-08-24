@@ -38,7 +38,7 @@ type TendermintRoutes struct {
 
 func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 	var routes = map[string]*rpc.RPCFunc{
-		"subscribe":               rpc.NewWSRPCFunc(tmRoutes.Subscribe, "event"),
+		"subscribe":               rpc.NewWSRPCFunc(tmRoutes.Subscribe, "eventId"),
 		"unsubscribe":             rpc.NewWSRPCFunc(tmRoutes.Unsubscribe, "subscriptionId"),
 		"status":                  rpc.NewRPCFunc(tmRoutes.StatusResult, ""),
 		"net_info":                rpc.NewRPCFunc(tmRoutes.NetInfoResult, ""),
@@ -66,7 +66,7 @@ func (tmRoutes *TendermintRoutes) GetRoutes() map[string]*rpc.RPCFunc {
 }
 
 func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
-	event string) (ctypes.BurrowResult, error) {
+	eventId string) (ctypes.BurrowResult, error) {
 	// NOTE: RPCResponses of subscribed events have id suffix "#event"
 	// TODO: we really ought to allow multiple subscriptions from the same client address
 	// to the same event. The code as it stands reflects the somewhat broken tendermint
@@ -74,7 +74,7 @@ func (tmRoutes *TendermintRoutes) Subscribe(wsCtx rpctypes.WSRPCContext,
 	// and return it in the result. This would require clients to hang on to a
 	// subscription id if they wish to unsubscribe, but then again they can just
 	// drop their connection
-	result, err := tmRoutes.tendermintPipe.Subscribe(event,
+	result, err := tmRoutes.tendermintPipe.Subscribe(eventId,
 		func(result ctypes.BurrowResult) {
 			wsCtx.GetRemoteAddr()
 			// NOTE: EventSwitch callbacks must be nonblocking

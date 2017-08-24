@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package adapters
+package tendermint_log15
 
 import (
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
 
 type infoTraceLoggerAsLog15Handler struct {
-	logger loggers.InfoTraceLogger
+	logger types.InfoTraceLogger
 }
 
 var _ log15.Handler = (*infoTraceLoggerAsLog15Handler)(nil)
@@ -54,7 +54,7 @@ func Log15HandlerAsKitLogger(handler log15.Handler) kitlog.Logger {
 	}
 }
 
-func InfoTraceLoggerAsLog15Handler(logger loggers.InfoTraceLogger) log15.Handler {
+func InfoTraceLoggerAsLog15Handler(logger types.InfoTraceLogger) log15.Handler {
 	return &infoTraceLoggerAsLog15Handler{
 		logger: logger,
 	}

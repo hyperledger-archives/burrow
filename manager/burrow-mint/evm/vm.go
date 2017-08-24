@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger/burrow/common/math/integral"
 	"github.com/hyperledger/burrow/common/sanity"
 	. "github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
 	"github.com/hyperledger/burrow/manager/burrow-mint/evm/sha3"
@@ -57,8 +56,7 @@ func (err ErrPermission) Error() string {
 
 const (
 	dataStackCapacity = 1024
-	callStackCapacity = 100         // TODO ensure usage.
-	memoryCapacity    = 1024 * 1024 // 1 MB
+	callStackCapacity = 100 // TODO ensure usage.
 )
 
 type Debug bool
@@ -76,23 +74,26 @@ func (d Debug) Printf(s string, a ...interface{}) {
 }
 
 type VM struct {
-	appState AppState
-	params   Params
-	origin   Word256
-	txid     []byte
+	appState       AppState
+	memoryProvider func() Memory
+	params         Params
+	origin         Word256
+	txid           []byte
 
 	callDepth int
 
 	evc events.Fireable
 }
 
-func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
+func NewVM(appState AppState, memoryProvider func() Memory, params Params,
+	origin Word256, txid []byte) *VM {
 	return &VM{
-		appState:  appState,
-		params:    params,
-		origin:    origin,
-		callDepth: 0,
-		txid:      txid,
+		appState:       appState,
+		memoryProvider: memoryProvider,
+		params:         params,
+		origin:         origin,
+		callDepth:      0,
+		txid:           txid,
 	}
 }
 
@@ -106,12 +107,12 @@ func (vm *VM) SetFireable(evc events.Fireable) {
 // (unlike in state/execution, where we guarantee HasPermission is called
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
-// prints a log warning and returns false.
+// this function returns false.
 func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
 	v, err := acc.Permissions.Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if appState == nil {
-			log.Warn(fmt.Sprintf("\n\n***** Unknown permission %b! ********\n\n", perm))
+			// In this case the permission is unknown
 			return false
 		}
 		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
@@ -211,7 +212,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 	var (
 		pc     int64 = 0
 		stack        = NewStack(dataStackCapacity, gas, &err)
-		memory       = make([]byte, memoryCapacity)
+		memory       = vm.memoryProvider()
 	)
 
 	for {
@@ -488,8 +489,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				return nil, err
 			}
 			offset, size := stack.Pop64(), stack.Pop64()
-			data, ok := subslice(memory, offset, size)
-			if !ok {
+			data, memErr := memory.Read(offset, size)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			data = sha3.Sha3(data)
@@ -547,11 +549,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if !ok {
 				return nil, firstErr(err, ErrInputOutOfBounds)
 			}
-			dest, ok := subslice(memory, memOff, length)
-			if !ok {
+			memErr := memory.Write(memOff, data)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			copy(dest, data)
 			dbg.Printf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
@@ -567,11 +569,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if !ok {
 				return nil, firstErr(err, ErrCodeOutOfBounds)
 			}
-			dest, ok := subslice(memory, memOff, length)
-			if !ok {
+			memErr := memory.Write(memOff, data)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			copy(dest, data)
 			dbg.Printf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case GASPRICE_DEPRECATED: // 0x3A
@@ -617,11 +619,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			if !ok {
 				return nil, firstErr(err, ErrCodeOutOfBounds)
 			}
-			dest, ok := subslice(memory, memOff, length)
-			if !ok {
+			memErr := memory.Write(memOff, data)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			copy(dest, data)
 			dbg.Printf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case BLOCKHASH: // 0x40
@@ -652,28 +654,30 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case MLOAD: // 0x51
 			offset := stack.Pop64()
-			data, ok := subslice(memory, offset, 32)
-			if !ok {
+			data, memErr := memory.Read(offset, 32)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			stack.Push(LeftPadWord256(data))
-			dbg.Printf(" => 0x%X\n", data)
+			dbg.Printf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE: // 0x52
 			offset, data := stack.Pop64(), stack.Pop()
-			dest, ok := subslice(memory, offset, 32)
-			if !ok {
+			memErr := memory.Write(offset, data.Bytes())
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			copy(dest, data[:])
-			dbg.Printf(" => 0x%X\n", data)
+			dbg.Printf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE8: // 0x53
 			offset, val := stack.Pop64(), byte(stack.Pop64()&0xFF)
-			if len(memory) <= int(offset) {
+			memErr := memory.Write(offset, []byte{val})
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			memory[offset] = val
 			dbg.Printf(" => [%v] 0x%X\n", offset, val)
 
 		case SLOAD: // 0x54
@@ -710,7 +714,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			stack.Push64(pc)
 
 		case MSIZE: // 0x59
-			stack.Push64(int64(len(memory)))
+			// Note: Solidity will write to this offset expecting to find guaranteed
+			// free memory to be allocated for it if a subsequent MSTORE is made to
+			// this offset.
+			capacity := memory.Capacity()
+			stack.Push64(capacity)
+			dbg.Printf(" => 0x%X\n", capacity)
 
 		case GAS: // 0x5A
 			stack.Push64(*gas)
@@ -750,11 +759,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			for i := 0; i < n; i++ {
 				topics[i] = stack.Pop()
 			}
-			data, ok := subslice(memory, offset, size)
-			if !ok {
+			data, memErr := memory.Read(offset, size)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			data = copyslice(data)
 			if vm.evc != nil {
 				eventID := txs.EventStringLogEvent(callee.Address.Postfix(20))
 				fmt.Printf("eventID: %s\n", eventID)
@@ -774,8 +783,9 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 			contractValue := stack.Pop64()
 			offset, size := stack.Pop64(), stack.Pop64()
-			input, ok := subslice(memory, offset, size)
-			if !ok {
+			input, memErr := memory.Read(offset, size)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 
@@ -785,7 +795,6 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			}
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
-
 			newAccount := vm.appState.CreateAccount(callee)
 
 			// Run the input to get the contract code.
@@ -817,11 +826,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			dbg.Printf(" => %X\n", addr)
 
 			// Get the arguments from the memory
-			args, ok := subslice(memory, inOffset, inSize)
-			if !ok {
+			args, memErr := memory.Read(inOffset, inSize)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			args = copyslice(args)
 
 			// Ensure that gasLimit is reasonable
 			if *gas < gasLimit {
@@ -885,11 +894,15 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				stack.Push(Zero256)
 			} else {
 				stack.Push(One256)
-				dest, ok := subslice(memory, retOffset, retSize)
-				if !ok {
+
+				// Should probably only be necessary when there is no return value and
+				// ret is empty, but since EVM expects retSize to be respected this will
+				// defensively pad or truncate the portion of ret to be returned.
+				memErr := memory.Write(retOffset, RightPadBytes(ret, int(retSize)))
+				if memErr != nil {
+					dbg.Printf(" => Memory err: %s", memErr)
 					return nil, firstErr(err, ErrMemoryOutOfBounds)
 				}
-				copy(dest, ret)
 			}
 
 			// Handle remaining gas.
@@ -899,15 +912,15 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case RETURN: // 0xF3
 			offset, size := stack.Pop64(), stack.Pop64()
-			ret, ok := subslice(memory, offset, size)
-			if !ok {
+			output, memErr := memory.Read(offset, size)
+			if memErr != nil {
+				dbg.Printf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			dbg.Printf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(ret), ret)
-			output = copyslice(ret)
+			dbg.Printf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
 			return output, nil
 
-		case SUICIDE: // 0xFF
+		case SELFDESTRUCT: // 0xFF
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
@@ -937,6 +950,16 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 	}
 }
 
+// TODO: [Silas] this function seems extremely dubious to me. It was being used
+// in circumstances where its behaviour did not match the intention. It's bounds
+// check is strange (treats a read at data length as a zero read of arbitrary length)
+// I have left it in for now to be conservative about where its behaviour is being used
+//
+// Returns a subslice from offset of length length and a bool
+// (true iff slice was possible). If the subslice
+// extends past the end of data it returns A COPY of the segment at the end of
+// data padded with zeroes on the right. If offset == len(data) it returns all
+// zeroes. if offset > len(data) it returns a false
 func subslice(data []byte, offset, length int64) (ret []byte, ok bool) {
 	size := int64(len(data))
 	if size < offset {
@@ -948,18 +971,6 @@ func subslice(data []byte, offset, length int64) (ret []byte, ok bool) {
 		ret, ok = data[offset:offset+length], true
 	}
 	return
-}
-
-func copyslice(src []byte) (dest []byte) {
-	dest = make([]byte, len(src))
-	copy(dest, src)
-	return dest
-}
-
-func rightMostBytes(data []byte, n int) []byte {
-	size := integral.MinInt(len(data), n)
-	offset := len(data) - size
-	return data[offset:]
 }
 
 func codeGetOp(code []byte, n int64) OpCode {

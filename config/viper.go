@@ -17,13 +17,15 @@ package config
 import (
 	"fmt"
 
+	"bytes"
+
 	"github.com/spf13/viper"
 )
 
 // Safely get the subtree from a viper config, returning an error if it could not
 // be obtained for any reason.
 func ViperSubConfig(conf *viper.Viper, configSubtreePath string) (subConfig *viper.Viper, err error) {
-	// Viper internally panics if `moduleName` contains an unallowed
+	// Viper internally panics if `moduleName` contains an disallowed
 	// character (eg, a dash).
 	defer func() {
 		if r := recover(); r != nil {
@@ -41,4 +43,16 @@ func ViperSubConfig(conf *viper.Viper, configSubtreePath string) (subConfig *vip
 			configSubtreePath)
 	}
 	return subConfig, err
+}
+
+// Read in TOML Viper config from bytes
+func ReadViperConfig(configBytes []byte) (*viper.Viper, error) {
+	buf := bytes.NewBuffer(configBytes)
+	conf := viper.New()
+	viper.SetConfigType("toml")
+	err := conf.ReadConfig(buf)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }

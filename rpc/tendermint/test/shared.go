@@ -16,15 +16,21 @@ package test
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"hash/fnv"
 	"path"
 	"strconv"
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/core"
 	core_types "github.com/hyperledger/burrow/core/types"
+	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/rpc/tendermint/client"
 	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
 	rpc_core "github.com/hyperledger/burrow/rpc/tendermint/core"
 	rpc_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
@@ -32,37 +38,52 @@ import (
 	"github.com/hyperledger/burrow/test/fixtures"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/word256"
-
-	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/tendermint/types"
 )
 
+const chainID = "RPC_Test_Chain"
+
 // global variables for use across all tests
 var (
-	config            = server.DefaultServerConfig()
+	serverConfig      *server.ServerConfig
 	rootWorkDir       string
 	mempoolCount      = 0
-	chainID           string
 	websocketAddr     string
 	genesisDoc        *genesis.GenesisDoc
 	websocketEndpoint string
-	user              = makeUsers(5) // make keys
-	jsonRpcClient     rpcclient.Client
-	httpClient        rpcclient.Client
-	clients           map[string]rpcclient.Client
+	users             = makeUsers(5) // make keys
+	jsonRpcClient     client.RPCClient
+	httpClient        client.RPCClient
+	clients           map[string]client.RPCClient
 	testCore          *core.Core
 )
 
 // initialize config and create new node
 func initGlobalVariables(ffs *fixtures.FileFixtures) error {
-	testConfigFile := ffs.AddFile("config.toml", defaultConfig)
+	configBytes, err := config.GetConfigurationFileBytes(chainID,
+		"test_single_node",
+		"",
+		"burrow",
+		true,
+		"46657",
+		"burrow serve")
+	if err != nil {
+		return err
+	}
+
+	genesisBytes, err := genesisFileBytesFromUsers(chainID, users)
+	if err != nil {
+		return err
+	}
+
+	testConfigFile := ffs.AddFile("config.toml", string(configBytes))
 	rootWorkDir = ffs.AddDir("rootWorkDir")
 	rootDataDir := ffs.AddDir("rootDataDir")
-	genesisFile := ffs.AddFile("rootWorkDir/genesis.json", defaultGenesis)
-	genesisDoc = genesis.GenesisDocFromJSON([]byte(defaultGenesis))
+	genesisFile := ffs.AddFile("rootWorkDir/genesis.json", string(genesisBytes))
+	genesisDoc = genesis.GenesisDocFromJSON(genesisBytes)
 
 	if ffs.Error != nil {
 		return ffs.Error
@@ -70,14 +91,19 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 
 	testConfig := viper.New()
 	testConfig.SetConfigFile(testConfigFile)
-	err := testConfig.ReadInConfig()
+	err = testConfig.ReadInConfig()
 
 	if err != nil {
 		return err
 	}
 
-	chainID = testConfig.GetString("chain.assert_chain_id")
-	rpcAddr := config.Tendermint.RpcLocalAddress
+	sconf, err := core.LoadServerConfig(chainID, testConfig)
+	if err != nil {
+		return err
+	}
+	serverConfig = sconf
+
+	rpcAddr := serverConfig.Tendermint.RpcLocalAddress
 	websocketAddr = rpcAddr
 	websocketEndpoint = "/websocket"
 
@@ -108,31 +134,65 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 		return err
 	}
 
-	jsonRpcClient = rpcclient.NewClientJSONRPC(rpcAddr)
-	httpClient = rpcclient.NewClientURI(rpcAddr)
+	jsonRpcClient = rpcclient.NewJSONRPCClient(rpcAddr)
+	httpClient = rpcclient.NewURIClient(rpcAddr)
 
-	clients = map[string]rpcclient.Client{
+	clients = map[string]client.RPCClient{
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
 	return nil
 }
 
-// deterministic account generation, synced with genesis file in config/tendermint_test/config.go
+// Deterministic account generation helper. Pass number of accounts to make
 func makeUsers(n int) []*acm.PrivAccount {
 	accounts := []*acm.PrivAccount{}
 	for i := 0; i < n; i++ {
-		secret := ("mysecret" + strconv.Itoa(i))
+		secret := "mysecret" + strconv.Itoa(i)
 		user := acm.GenPrivAccountFromSecret(secret)
 		accounts = append(accounts, user)
 	}
 	return accounts
 }
 
+func genesisFileBytesFromUsers(chainName string, accounts []*acm.PrivAccount) ([]byte, error) {
+	if len(accounts) < 1 {
+		return nil, errors.New("Please pass in at least 1 account to be the validator")
+	}
+	genesisValidators := make([]*genesis.GenesisValidator, 1)
+	genesisAccounts := make([]*genesis.GenesisAccount, len(accounts))
+	genesisValidators[0] = genesisValidatorFromPrivAccount(accounts[0])
+
+	for i, acc := range accounts {
+		genesisAccounts[i] = genesisAccountFromPrivAccount(acc)
+	}
+
+	return genesis.GenerateGenesisFileBytes(chainName, genesisAccounts, genesisValidators)
+}
+
+func genesisValidatorFromPrivAccount(account *acm.PrivAccount) *genesis.GenesisValidator {
+	return &genesis.GenesisValidator{
+		Amount: 1000000,
+		Name:   fmt.Sprintf("full-account_%X", account.Address),
+		PubKey: account.PubKey,
+		UnbondTo: []genesis.BasicAccount{
+			{
+				Address: account.Address,
+				Amount:  100,
+			},
+		},
+	}
+}
+
+func genesisAccountFromPrivAccount(account *acm.PrivAccount) *genesis.GenesisAccount {
+	return genesis.NewGenesisAccount(account.Address, 100000,
+		fmt.Sprintf("account_%X", account.Address), &ptypes.DefaultAccountPermissions)
+}
+
 func newNode(ready chan error,
 	tmServer chan *rpc_core.TendermintWebsocketServer) {
 	// Run the 'tendermint' rpc server
-	server, err := testCore.NewGatewayTendermint(config)
+	server, err := testCore.NewGatewayTendermint(serverConfig)
 	ready <- err
 	tmServer <- server
 }
@@ -140,9 +200,9 @@ func newNode(ready chan error,
 func saveNewPriv() {
 	// Save new priv_validator file.
 	priv := &types.PrivValidator{
-		Address: user[0].Address,
-		PubKey:  crypto.PubKeyEd25519(user[0].PubKey.(crypto.PubKeyEd25519)),
-		PrivKey: crypto.PrivKeyEd25519(user[0].PrivKey.(crypto.PrivKeyEd25519)),
+		Address: users[0].Address,
+		PubKey:  crypto.PubKeyEd25519(users[0].PubKey.(crypto.PubKeyEd25519)),
+		PrivKey: crypto.PrivKeyEd25519(users[0].PrivKey.(crypto.PrivKeyEd25519)),
 	}
 	priv.SetFile(path.Join(rootWorkDir, "priv_validator.json"))
 	priv.Save()
@@ -151,36 +211,36 @@ func saveNewPriv() {
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client rpcclient.Client, addr []byte,
+func makeDefaultSendTx(t *testing.T, client client.RPCClient, addr []byte,
 	amt int64) *txs.SendTx {
-	nonce := getNonce(t, client, user[0].Address)
+	nonce := getNonce(t, client, users[0].Address)
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(user[0].PubKey, amt, nonce+1)
+	tx.AddInputWithNonce(users[0].PubKey, amt, nonce+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client rpcclient.Client, addr []byte,
+func makeDefaultSendTxSigned(t *testing.T, client client.RPCClient, addr []byte,
 	amt int64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
-	tx.SignInput(chainID, 0, user[0])
+	tx.SignInput(chainID, 0, users[0])
 	return tx
 }
 
-func makeDefaultCallTx(t *testing.T, client rpcclient.Client, addr, code []byte, amt, gasLim,
+func makeDefaultCallTx(t *testing.T, client client.RPCClient, addr, code []byte, amt, gasLim,
 	fee int64) *txs.CallTx {
-	nonce := getNonce(t, client, user[0].Address)
-	tx := txs.NewCallTxWithNonce(user[0].PubKey, addr, code, amt, gasLim, fee,
+	nonce := getNonce(t, client, users[0].Address)
+	tx := txs.NewCallTxWithNonce(users[0].PubKey, addr, code, amt, gasLim, fee,
 		nonce+1)
-	tx.Sign(chainID, user[0])
+	tx.Sign(chainID, users[0])
 	return tx
 }
 
-func makeDefaultNameTx(t *testing.T, client rpcclient.Client, name, value string, amt,
+func makeDefaultNameTx(t *testing.T, client client.RPCClient, name, value string, amt,
 	fee int64) *txs.NameTx {
-	nonce := getNonce(t, client, user[0].Address)
-	tx := txs.NewNameTxWithNonce(user[0].PubKey, name, value, amt, fee, nonce+1)
-	tx.Sign(chainID, user[0])
+	nonce := getNonce(t, client, users[0].Address)
+	tx := txs.NewNameTxWithNonce(users[0].PubKey, name, value, amt, fee, nonce+1)
+	tx.Sign(chainID, users[0])
 	return tx
 }
 
@@ -188,7 +248,7 @@ func makeDefaultNameTx(t *testing.T, client rpcclient.Client, name, value string
 // rpc call wrappers (fail on err)
 
 // get an account's nonce
-func getNonce(t *testing.T, client rpcclient.Client, addr []byte) int {
+func getNonce(t *testing.T, client client.RPCClient, addr []byte) int {
 	ac, err := edbcli.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -200,7 +260,7 @@ func getNonce(t *testing.T, client rpcclient.Client, addr []byte) int {
 }
 
 // get the account
-func getAccount(t *testing.T, client rpcclient.Client, addr []byte) *acm.Account {
+func getAccount(t *testing.T, client client.RPCClient, addr []byte) *acm.Account {
 	ac, err := edbcli.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +269,7 @@ func getAccount(t *testing.T, client rpcclient.Client, addr []byte) *acm.Account
 }
 
 // sign transaction
-func signTx(t *testing.T, client rpcclient.Client, tx txs.Tx,
+func signTx(t *testing.T, client client.RPCClient, tx txs.Tx,
 	privAcc *acm.PrivAccount) txs.Tx {
 	signedTx, err := edbcli.SignTx(client, tx, []*acm.PrivAccount{privAcc})
 	if err != nil {
@@ -219,7 +279,7 @@ func signTx(t *testing.T, client rpcclient.Client, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, client rpcclient.Client, tx txs.Tx) txs.Receipt {
+func broadcastTx(t *testing.T, client client.RPCClient, tx txs.Tx) txs.Receipt {
 	rec, err := edbcli.BroadcastTx(client, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -238,7 +298,7 @@ func dumpStorage(t *testing.T, addr []byte) *rpc_types.ResultDumpStorage {
 	return resp
 }
 
-func getStorage(t *testing.T, client rpcclient.Client, addr, key []byte) []byte {
+func getStorage(t *testing.T, client client.RPCClient, addr, key []byte) []byte {
 	resp, err := edbcli.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
@@ -246,7 +306,7 @@ func getStorage(t *testing.T, client rpcclient.Client, addr, key []byte) []byte 
 	return resp
 }
 
-func callCode(t *testing.T, client rpcclient.Client, fromAddress, code, data,
+func callCode(t *testing.T, client client.RPCClient, fromAddress, code, data,
 	expected []byte) {
 	resp, err := edbcli.CallCode(client, fromAddress, code, data)
 	if err != nil {
@@ -259,7 +319,7 @@ func callCode(t *testing.T, client rpcclient.Client, fromAddress, code, data,
 	}
 }
 
-func callContract(t *testing.T, client rpcclient.Client, fromAddress, toAddress,
+func callContract(t *testing.T, client client.RPCClient, fromAddress, toAddress,
 	data, expected []byte) {
 	resp, err := edbcli.Call(client, fromAddress, toAddress, data)
 	if err != nil {
@@ -273,7 +333,7 @@ func callContract(t *testing.T, client rpcclient.Client, fromAddress, toAddress,
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, client rpcclient.Client, name string) *core_types.NameRegEntry {
+func getNameRegEntry(t *testing.T, client client.RPCClient, name string) *core_types.NameRegEntry {
 	entry, err := edbcli.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)

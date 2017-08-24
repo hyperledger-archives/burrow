@@ -1,25 +1,4 @@
 # burrow changelog
-## v0.16.3
-This release adds an stop-gap fix to the `Transact` method so that it never
-transfers value with the `CallTx` is generates.
-
-We hard-code `amount = fee` so that no value is transferred
-regardless of fee sent. This fixes an invalid jump destination error arising 
-from transferring value to non-payable functions with newer versions of solidity.
-By doing this we can resolve some issues with users of the v0 RPC without making 
-a breaking API change.
-
-## v0.16.2
-This release finalises our accession to the Hyperledger project and updates our
-root package namespace to github.com/hyperledger/burrow.
-
-It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any 
-transaction type and various pieces of internal clean-up.
-
-## v0.16.1
-This release was an internal rename to 'Burrow' with some minor other attendant
-clean up.
-
 ## v0.16.0
 This is a consolidation release that fixes various bugs and improves elements
 of the architecture across the Monax Platform to support a quicker release

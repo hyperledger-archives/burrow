@@ -23,6 +23,11 @@ import (
 
 func TestLogger(t *testing.T) {
 	stderrLogger := kitlog.NewLogfmtLogger(os.Stderr)
-	logger := NewInfoTraceLogger(stderrLogger, stderrLogger)
+	logger := NewInfoTraceLogger(stderrLogger)
 	logger.Trace("hello", "barry")
+}
+
+func TestNewNoopInfoTraceLogger(t *testing.T) {
+	logger := NewNoopInfoTraceLogger()
+	logger.Trace("goodbye", "trevor")
 }

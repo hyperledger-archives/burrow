@@ -85,7 +85,8 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	vmach.SetFireable(this.eventSwitch)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
@@ -118,7 +119,8 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -176,20 +178,10 @@ func (this *transactor) Transact(privKey, address, data []byte, gasLimit,
 	} else {
 		sequence = acc.Sequence + 1
 	}
-	// TODO: [Silas] we should consider revising this method and removing fee, or
-	// possibly adding an amount parameter. It is non-sensical to just be able to
-	// set the fee. Our support of fees in general is questionable since at the
-	// moment all we do is deduct the fee effectively leaking token. It is possible
-	// someone may be using the sending of native token to payable functions but
-	// they can be served by broadcasting a token.
-
-	// We hard-code the amount to be equal to the fee which means the CallTx we
-	// generate transfers 0 value, which is the most sensible default since in
-	// recent solidity compilers the EVM generated will throw an error if value
-	// is transferred to a non-payable function.
+	// fmt.Printf("Sequence %d\n", sequence)
 	txInput := &txs.TxInput{
 		Address:  pa.Address,
-		Amount:   fee,
+		Amount:   1,
 		Sequence: sequence,
 		PubKey:   pa.PubKey,
 	}

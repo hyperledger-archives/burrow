@@ -23,10 +23,12 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/adapters/stdlib"
 	tmLog15adapter "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
+	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
 )
@@ -35,22 +37,37 @@ import (
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(LoggingConfig *logging.LoggingConfig) loggers.InfoTraceLogger {
-	return NewStdErrLogger()
+func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.InfoTraceLogger, error) {
+	if loggingConfig == nil {
+		return NewStdErrLogger(), nil
+	}
+	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
+	if err != nil {
+		return nil, err
+	}
+	return NewLogger(outputLogger), nil
 }
 
-func NewStdErrLogger() loggers.InfoTraceLogger {
-	logger := tmLog15adapter.Log15HandlerAsKitLogger(
-		tmLog15.StreamHandler(os.Stderr, tmLog15.TerminalFormat()))
-	return NewLogger(logger, logger)
+// Hot swap logging config by replacing output loggers of passed InfoTraceLogger
+// with those built from loggingConfig
+func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
+	loggingConfig *config.LoggingConfig) error {
+	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
+	if err != nil {
+		return err
+	}
+	logger.SwapOutput(outputLogger)
+	return nil
 }
 
-// Provided a standard burrow logger that outputs to the supplied underlying info and trace
-// loggers
-func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
-	infoTraceLogger := loggers.NewInfoTraceLogger(
-		loggers.MonaxFormatLogger(infoLogger),
-		loggers.MonaxFormatLogger(traceLogger))
+func NewStdErrLogger() types.InfoTraceLogger {
+	logger := loggers.NewStreamLogger(os.Stderr, "terminal")
+	return NewLogger(logger)
+}
+
+// Provided a standard logger that outputs to the supplied underlying outputLogger
+func NewLogger(outputLogger kitlog.Logger) types.InfoTraceLogger {
+	infoTraceLogger := loggers.NewInfoTraceLogger(outputLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
@@ -60,13 +77,22 @@ func NewLogger(infoLogger, traceLogger kitlog.Logger) loggers.InfoTraceLogger {
 	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId))
 }
 
-func CaptureTendermintLog15Output(infoTraceLogger loggers.InfoTraceLogger) {
+func CaptureTendermintLog15Output(infoTraceLogger types.InfoTraceLogger) {
 	tmLog15.Root().SetHandler(
 		tmLog15adapter.InfoTraceLoggerAsLog15Handler(infoTraceLogger.
 			With(structure.CapturedLoggingSourceKey, "tendermint_log15")))
 }
 
-func CaptureStdlibLogOutput(infoTraceLogger loggers.InfoTraceLogger) {
+func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 	stdlib.CaptureRootLogger(infoTraceLogger.
 		With(structure.CapturedLoggingSourceKey, "stdlib_log"))
+}
+
+// Helpers
+func infoTraceLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, error) {
+	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
+	if err != nil {
+		return nil, err
+	}
+	return outputLogger, nil
 }

@@ -28,6 +28,7 @@ import (
 	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/util"
 
+	"github.com/hyperledger/burrow/config"
 	"github.com/spf13/cobra"
 )
 
@@ -95,6 +96,11 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	do.GenesisFile = path.Join(do.WorkDir,
 		do.Config.GetString("chain.genesis_file"))
 
+	err := config.AssertConfigCompatibleWithRuntime(do.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	if do.Config.GetString("chain.genesis_file") == "" {
 		return nil, fmt.Errorf("The config value chain.genesis_file is empty, " +
 			"but should be set to the location of the genesis.json file.")
@@ -109,8 +115,12 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 		return nil, fmt.Errorf("Failed to load logging config: %s", err)
 	}
 
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(loggerConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to build logger from logging config: %s", err)
+	}
 	// Create a root logger to pass through to dependencies
-	logger := logging.WithScope(lifecycle.NewLoggerFromLoggingConfig(loggerConfig), "Serve")
+	logger = logging.WithScope(logger, "Serve")
 	// Capture all logging from tendermint/tendermint and tendermint/go-*
 	// dependencies
 	lifecycle.CaptureTendermintLog15Output(logger)
@@ -143,8 +153,8 @@ func NewCoreFromDo(do *definitions.Do) (*core.Core, error) {
 	}
 
 	logging.Msg(logger, "Modules configured",
-		"consensusModule", consensusConfig.Version,
-		"applicationManager", managerConfig.Version)
+		"consensusModule", consensusConfig.Name,
+		"applicationManager", managerConfig.Name)
 
 	return core.NewCore(do.ChainId, consensusConfig, managerConfig, logger)
 }
@@ -171,7 +181,7 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 		}
 
 		if !do.DisableRpc {
-			serverConfig, err := core.LoadServerConfig(do)
+			serverConfig, err := core.LoadServerConfigFromDo(do)
 			if err != nil {
 				util.Fatalf("Failed to load server configuration: %s.", err)
 			}
@@ -188,6 +198,8 @@ func ServeRunner(do *definitions.Do) func(*cobra.Command, []string) {
 				util.Fatalf("Failed to start Tendermint gateway")
 			}
 			<-serverProcess.StopEventChannel()
+			// Attempt graceful shutdown
+			newCore.Stop()
 		} else {
 			signals := make(chan os.Signal, 1)
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
