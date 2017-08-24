@@ -32,35 +32,12 @@ test:
     # - echo "Running integration tests..." && cd $REPO && "tests/circle_test.sh" # | tee $CIRCLE_ARTIFACTS/output.log; test ${PIPESTATUS[0]} -eq 0"
 
 deployment:
-  release-0.12:
-    branch: release-0.12
-    commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      # build docker image and tag the image with the version
-      - tests/build_tool.sh
-      - docker push quay.io/monax/db
-  release-0.16:
-    branch: release-0.16
-    commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      # build docker image and tag the image with the version
-      - tests/build_tool.sh
-      - docker push quay.io/monax/db
   develop:
     branch: develop
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      # build docker image and tag the image with the version
+      # build docker image and tag the image with the version, date, and commit hash
       - tests/build_tool.sh
-      - docker push quay.io/monax/db
-  master:
-    branch: master
-    commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      # build docker image and tag the image with ':latest'
-      # builds on master are considered immutable so we do not push the version
-      # tag to allow for hotfixes
-      - tests/build_tool.sh latest
       - docker push quay.io/monax/db
   tagged-releases:
     tag: /v[0-9]+(\.[0-9]+)*/
