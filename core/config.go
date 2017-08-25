@@ -107,6 +107,9 @@ func LoadServerConfig(chainId string, rootConfig *viper.Viper) (*server.ServerCo
 }
 
 func LoadLoggingConfigFromDo(do *definitions.Do) (*lconfig.LoggingConfig, error) {
+	if !do.Config.IsSet("logging") {
+		return nil, nil
+	}
 	loggingConfigMap := do.Config.GetStringMap("logging")
 	return lconfig.LoggingConfigFromMap(loggingConfigMap)
 }
