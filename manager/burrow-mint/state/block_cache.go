@@ -197,9 +197,6 @@ func (cache *BlockCache) Sync() {
 			curStorage = storage
 		}
 		if curAccRemoved {
-			// We should delete any storage for removed accounts in anticipation of
-			// those accounts being reaped from the cache
-			delete(cache.storages, storageKey)
 			continue
 		}
 		value, dirty := cache.storages[storageKey].unpack()
@@ -227,12 +224,8 @@ func (cache *BlockCache) Sync() {
 		if removed {
 			removed := cache.backend.RemoveAccount([]byte(addrStr))
 			if !removed {
-				sanity.PanicCrisis(fmt.Sprintf("Could not remove account to be removed: %X", addrStr))
+				sanity.PanicCrisis(fmt.Sprintf("Could not remove account to be removed: %X", acc.Address))
 			}
-			// Since attempting to delete an already deleted account leads to a
-			// PanicCrisis (above) we must make sure we remove the tombstones of
-			// removed accounts
-			delete(cache.accounts, addrStr)
 		} else {
 			if acc == nil {
 				continue
@@ -266,8 +259,6 @@ func (cache *BlockCache) Sync() {
 			if !removed {
 				sanity.PanicCrisis(fmt.Sprintf("Could not remove namereg entry to be removed: %s", nameStr))
 			}
-			// Remove the tombstone name reg object from the cache
-			delete(cache.names, nameStr)
 		} else {
 			if entry == nil {
 				continue
