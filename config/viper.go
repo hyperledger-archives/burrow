@@ -49,7 +49,7 @@ func ViperSubConfig(conf *viper.Viper, configSubtreePath string) (subConfig *vip
 func ReadViperConfig(configBytes []byte) (*viper.Viper, error) {
 	buf := bytes.NewBuffer(configBytes)
 	conf := viper.New()
-	viper.SetConfigType("toml")
+	conf.SetConfigType("toml")
 	err := conf.ReadConfig(buf)
 	if err != nil {
 		return nil, err
