@@ -24,10 +24,18 @@ import (
 
 func LoadConsensusEngineInPipe(moduleConfig *config.ModuleConfig,
 	pipe definitions.Pipe) error {
+
+	// Check interface-level compatibility
+	if !pipe.GetApplication().CompatibleConsensus(&tendermint.Tendermint{}) {
+		return fmt.Errorf("Manager Application %s it no compatible with "+
+			"%s consensus", moduleConfig.Name, pipe.GetApplication())
+	}
+
 	switch moduleConfig.Name {
 	case "tendermint":
+
 		tmint, err := tendermint.NewTendermint(moduleConfig, pipe.GetApplication(),
-			pipe.Logger().With())
+			pipe.Logger())
 		if err != nil {
 			return fmt.Errorf("Failed to load Tendermint node: %v", err)
 		}

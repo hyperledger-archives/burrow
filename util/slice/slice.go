@@ -14,6 +14,7 @@
 
 package slice
 
+// Convenience function
 func Slice(elements ...interface{}) []interface{} {
 	return elements
 }

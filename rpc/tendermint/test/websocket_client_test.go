@@ -93,9 +93,9 @@ func TestWSBlockchainGrowth(t *testing.T) {
 // send a transaction and validate the events from listening for both sender and receiver
 func TestWSSend(t *testing.T) {
 	wsc := newWSClient()
-	toAddr := user[1].Address
+	toAddr := users[1].Address
 	amt := int64(100)
-	eidInput := txs.EventStringAccInput(user[0].Address)
+	eidInput := txs.EventStringAccInput(users[0].Address)
 	eidOutput := txs.EventStringAccOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
 	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
@@ -119,14 +119,14 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := txs.EventStringAccInput(user[0].Address)
+	eid := txs.EventStringAccInput(users[0].Address)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
 		wsc.Stop()
 	}()
 	amt := int64(100)
-	toAddr := user[1].Address
+	toAddr := users[1].Address
 	// broadcast the transaction, wait to hear about it
 	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
@@ -150,7 +150,7 @@ func TestWSCallWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid1 := txs.EventStringAccInput(user[0].Address)
+	eid1 := txs.EventStringAccInput(users[0].Address)
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, subId1)
@@ -252,7 +252,7 @@ func TestWSCallCall(t *testing.T) {
 		tx := makeDefaultCallTx(t, jsonRpcClient, contractAddr2, nil, amt, gasLim, fee)
 		broadcastTx(t, jsonRpcClient, tx)
 		*txid = txs.TxHash(chainID, tx)
-	}, unmarshalValidateCall(user[0].Address, returnVal, txid))
+	}, unmarshalValidateCall(users[0].Address, returnVal, txid))
 }
 
 func TestSubscribe(t *testing.T) {
@@ -260,11 +260,12 @@ func TestSubscribe(t *testing.T) {
 	var subId string
 	subscribe(t, wsc, txs.EventStringNewBlock())
 
-	timeout := time.NewTimer(timeoutSeconds * time.Second)
+	// timeout to check subscription process is live
+	timeout := time.After(timeoutSeconds * time.Second)
 Subscribe:
 	for {
 		select {
-		case <-timeout.C:
+		case <-timeout:
 			t.Fatal("Timed out waiting for subscription result")
 
 		case bs := <-wsc.ResultsCh:
@@ -277,12 +278,13 @@ Subscribe:
 		}
 	}
 
-	seenBlock := false
-	timeout = time.NewTimer(timeoutSeconds * time.Second)
+	blocksSeen := 0
 	for {
 		select {
-		case <-timeout.C:
-			if !seenBlock {
+		// wait long enough to check we don't see another new block event even though
+		// a block will have come
+		case <-time.After(expectBlockInSeconds * time.Second):
+			if blocksSeen == 0 {
 				t.Fatal("Timed out without seeing a NewBlock event")
 			}
 			return
@@ -292,13 +294,13 @@ Subscribe:
 			if ok {
 				_, ok := resultEvent.Data.(txs.EventDataNewBlock)
 				if ok {
-					if seenBlock {
-						// There's a mild race here, but when we enter we've just seen a block
-						// so we should be able to unsubscribe before we see another block
+					if blocksSeen > 1 {
 						t.Fatal("Continued to see NewBlock event after unsubscribing")
 					} else {
-						seenBlock = true
-						unsubscribe(t, wsc, subId)
+						if blocksSeen == 0 {
+							unsubscribe(t, wsc, subId)
+						}
+						blocksSeen++
 					}
 				}
 			}

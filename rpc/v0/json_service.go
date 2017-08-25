@@ -20,7 +20,7 @@ import (
 
 	definitions "github.com/hyperledger/burrow/definitions"
 	event "github.com/hyperledger/burrow/event"
-	rpc "github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc"
 	server "github.com/hyperledger/burrow/server"
 
 	"github.com/gin-gonic/gin"

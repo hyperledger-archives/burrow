@@ -15,19 +15,14 @@
 package config
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGeneratedConfigIsUsable(t *testing.T) {
 	bs, err := GetExampleConfigFileBytes()
 	assert.NoError(t, err, "Should be able to create example config")
-	buf := bytes.NewBuffer(bs)
-	conf := viper.New()
-	viper.SetConfigType("toml")
-	err = conf.ReadConfig(buf)
+	_, err = ReadViperConfig(bs)
 	assert.NoError(t, err, "Should be able to read example config into Viper")
 }

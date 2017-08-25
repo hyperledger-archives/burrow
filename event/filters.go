@@ -107,7 +107,7 @@ func (this *FilterFactory) RegisterFilterPool(fieldName string, pool *sync.Pool)
 // only if all the sub-filters matches.
 func (this *FilterFactory) NewFilter(fdArr []*FilterData) (Filter, error) {
 
-	if fdArr == nil || len(fdArr) == 0 {
+	if len(fdArr) == 0 {
 		return &MatchAllFilter{}, nil
 	}
 	if len(fdArr) == 1 {

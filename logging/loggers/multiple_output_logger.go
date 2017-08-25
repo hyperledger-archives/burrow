@@ -39,7 +39,16 @@ func (mol MultipleOutputLogger) Log(keyvals ...interface{}) error {
 
 // Creates a logger that forks log messages to each of its outputLoggers
 func NewMultipleOutputLogger(outputLoggers ...kitlog.Logger) kitlog.Logger {
-	return MultipleOutputLogger(outputLoggers)
+	moLogger := make(MultipleOutputLogger, 0, len(outputLoggers))
+	// Flatten any MultipleOutputLoggers
+	for _, ol := range outputLoggers {
+		if ls, ok := ol.(MultipleOutputLogger); ok {
+			moLogger = append(moLogger, ls...)
+		} else {
+			moLogger = append(moLogger, ol)
+		}
+	}
+	return moLogger
 }
 
 type multipleErrors []error

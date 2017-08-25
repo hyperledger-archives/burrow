@@ -24,9 +24,9 @@ import (
 	tendermint_events "github.com/tendermint/go-events"
 	wire "github.com/tendermint/go-wire"
 
+	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
-
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	sm "github.com/hyperledger/burrow/manager/burrow-mint/state"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	"github.com/hyperledger/burrow/txs"
@@ -48,16 +48,25 @@ type BurrowMint struct {
 	evsw tendermint_events.EventSwitch
 
 	nTxs   int // count txs in a block
-	logger loggers.InfoTraceLogger
+	logger logging_types.InfoTraceLogger
+}
+
+// Currently we just wrap ConsensusEngine but this interface can give us
+// arbitrary control over the type of ConsensusEngine at such a point that we
+// support others. For example it can demand a 'marker' function:
+// func IsBurrowMint_0.XX.XX_CompatibleConsensusEngine()
+type BurrowMintCompatibleConsensusEngine interface {
+	consensus_types.ConsensusEngine
 }
 
 // NOTE [ben] Compiler check to ensure BurrowMint successfully implements
 // burrow/manager/types.Application
 var _ manager_types.Application = (*BurrowMint)(nil)
 
-// NOTE: [ben] also automatically implements abci.Application,
-// undesired but unharmful
-// var _ abci.Application = (*BurrowMint)(nil)
+func (app *BurrowMint) CompatibleConsensus(consensusEngine consensus_types.ConsensusEngine) bool {
+	_, ok := consensusEngine.(BurrowMintCompatibleConsensusEngine)
+	return ok
+}
 
 func (app *BurrowMint) GetState() *sm.State {
 	app.mtx.Lock()
@@ -72,7 +81,8 @@ func (app *BurrowMint) GetCheckCache() *sm.BlockCache {
 	return app.checkCache
 }
 
-func NewBurrowMint(s *sm.State, evsw tendermint_events.EventSwitch, logger loggers.InfoTraceLogger) *BurrowMint {
+func NewBurrowMint(s *sm.State, evsw tendermint_events.EventSwitch,
+	logger logging_types.InfoTraceLogger) *BurrowMint {
 	return &BurrowMint{
 		state:      s,
 		cache:      sm.NewBlockCache(s),
@@ -107,7 +117,7 @@ func (app *BurrowMint) DeliverTx(txBytes []byte) abci.Result {
 		return abci.NewError(abci.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 
-	err = sm.ExecTx(app.cache, *tx, true, app.evc)
+	err = sm.ExecTx(app.cache, *tx, true, app.evc, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
@@ -129,7 +139,7 @@ func (app *BurrowMint) CheckTx(txBytes []byte) abci.Result {
 	}
 
 	// TODO: map ExecTx errors to sensible abci error codes
-	err = sm.ExecTx(app.checkCache, *tx, false, nil)
+	err = sm.ExecTx(app.checkCache, *tx, false, nil, app.logger)
 	if err != nil {
 		return abci.NewError(abci.CodeType_InternalError, fmt.Sprintf("Internal error: %v", err))
 	}
@@ -176,6 +186,31 @@ func (app *BurrowMint) Commit() (res abci.Result) {
 	return abci.NewResultOK(appHash, "Success")
 }
 
-func (app *BurrowMint) Query(query []byte) (res abci.Result) {
-	return abci.NewResultOK(nil, "Success")
+func (app *BurrowMint) Query(query abci.RequestQuery) (res abci.ResponseQuery) {
+	return abci.ResponseQuery{
+		Code: abci.CodeType_OK,
+		Log:  "success",
+	}
+}
+
+// BlockchainAware interface
+
+// Initialise the blockchain
+// validators: genesis validators from tendermint core
+func (app *BurrowMint) InitChain(validators []*abci.Validator) {
+	// Could verify agreement on initial validator set here
+}
+
+// Signals the beginning of a block
+func (app *BurrowMint) BeginBlock(hash []byte, header *abci.Header) {
+
+}
+
+// Signals the end of a blockchain, return value can be used to modify validator
+// set and voting power distribution see our BlockchainAware interface
+func (app *BurrowMint) EndBlock(height uint64) (respEndblock abci.ResponseEndBlock) {
+	// TODO: [Silas] Bondage
+	// TODO: [Silas] this might be a better place for us to dispatch new block
+	// events particularly if we want to separate ourselves from go-events
+	return
 }

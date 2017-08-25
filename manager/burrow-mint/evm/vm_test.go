@@ -65,7 +65,7 @@ func makeBytes(n int) []byte {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), newParams(), Zero256, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
 	account1 := &Account{
@@ -91,7 +91,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), newParams(), Zero256, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
 	account1 := &Account{
@@ -103,11 +103,10 @@ func TestJumpErr(t *testing.T) {
 
 	var gas int64 = 100000
 	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
-	var output []byte
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		output, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+		_, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)
@@ -134,7 +133,7 @@ func TestSubcurrency(t *testing.T) {
 	st.accounts[account1.Address.String()] = account1
 	st.accounts[account2.Address.String()] = account2
 
-	ourVm := NewVM(st, newParams(), Zero256, nil)
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	var gas int64 = 1000
 	code_parts := []string{"620f42403355",
@@ -156,7 +155,7 @@ func TestSubcurrency(t *testing.T) {
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, newParams(), Zero256, nil)
+	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
 	account1 := &Account{
@@ -199,7 +198,7 @@ func TestSendCall(t *testing.T) {
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
 	appState := newAppState()
-	ourVm := NewVM(appState, newParams(), Zero256, nil)
+	ourVm := NewVM(appState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -253,6 +252,66 @@ func TestDelegateCallGas(t *testing.T) {
 	_, err = runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
 		callerAccount.Code, 100)
 	assert.Error(t, err, "Should have insufficient funds for call")
+}
+
+func TestMemoryBounds(t *testing.T) {
+	appState := newAppState()
+	memoryProvider := func() Memory {
+		return NewDynamicMemory(1024, 2048)
+	}
+	ourVm := NewVM(appState, memoryProvider, newParams(), Zero256, nil)
+	caller, _ := makeAccountWithCode(appState, "caller", nil)
+	callee, _ := makeAccountWithCode(appState, "callee", nil)
+	gas := int64(100000)
+	// This attempts to store a value at the memory boundary and return it
+	word := One256
+	output, err := ourVm.call(caller, callee,
+		Bytecode(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		nil, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, word.Bytes(), output)
+
+	// Same with number
+	word = Int64ToWord256(232234234432)
+	output, err = ourVm.call(caller, callee,
+		Bytecode(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		nil, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, word.Bytes(), output)
+
+	// Now test a series of boundary stores
+	code := pushWord(word)
+	for i := 0; i < 10; i++ {
+		code = Bytecode(code, storeAtEnd(), MLOAD)
+	}
+	output, err = ourVm.call(caller, callee, Bytecode(code, storeAtEnd(), returnAfterStore()),
+		nil, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, word.Bytes(), output)
+
+	// Same as above but we should breach the upper memory limit set in memoryProvider
+	code = pushWord(word)
+	for i := 0; i < 100; i++ {
+		code = Bytecode(code, storeAtEnd(), MLOAD)
+	}
+	output, err = ourVm.call(caller, callee, Bytecode(code, storeAtEnd(), returnAfterStore()),
+		nil, 0, &gas)
+	assert.Error(t, err, "Should hit memory out of bounds")
+}
+
+// These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
+// both of the memory operations. Each MSTORE is done on the memory boundary
+// (at MSIZE) which Solidity uses to find guaranteed unallocated memory.
+
+// storeAtEnd expects the value to be stored to be on top of the stack, it then
+// stores that value at the current memory boundary
+func storeAtEnd() []byte {
+	// Pull in MSIZE (to carry forward to MLOAD), swap in value to store, store it at MSIZE
+	return Bytecode(MSIZE, SWAP1, DUP2, MSTORE)
+}
+
+func returnAfterStore() []byte {
+	return Bytecode(PUSH1, 32, DUP2, RETURN)
 }
 
 // Store the top element of the stack (which is a 32-byte word) in memory
@@ -344,6 +403,37 @@ func callContractCode(addr []byte) []byte {
 	return Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
+}
+
+func pushInt64(i int64) []byte {
+	return pushWord(Int64ToWord256(i))
+}
+
+// Produce bytecode for a PUSH<N>, b_1, ..., b_N where the N is number of bytes
+// contained in the unpadded word
+func pushWord(word Word256) []byte {
+	leadingZeros := byte(0)
+	for leadingZeros < 32 {
+		if word[leadingZeros] == 0 {
+			leadingZeros++
+		} else {
+			return Bytecode(byte(PUSH32)-leadingZeros, word[leadingZeros:])
+		}
+	}
+	return Bytecode(PUSH1, 0)
+}
+
+func TestPushWord(t *testing.T) {
+	word := Int64ToWord256(int64(2133213213))
+	assert.Equal(t, Bytecode(PUSH4, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
+	word[0] = 1
+	assert.Equal(t, Bytecode(PUSH32,
+		1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
+	assert.Equal(t, Bytecode(PUSH1, 0), pushWord(Word256{}))
+	assert.Equal(t, Bytecode(PUSH1, 1), pushWord(Int64ToWord256(1)))
 }
 
 func TestBytecode(t *testing.T) {

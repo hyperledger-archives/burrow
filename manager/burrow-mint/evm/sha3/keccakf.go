@@ -40,7 +40,7 @@ var rc = [...]uint64{
 // ro_xx represent the rotation offsets for use in the χ step.
 // Defining them as const instead of in an array allows the compiler to insert constant shifts.
 const (
-	ro_00 = 0
+	ro_00 = 0 // not used
 	ro_01 = 36
 	ro_02 = 3
 	ro_03 = 41

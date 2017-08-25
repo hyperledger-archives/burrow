@@ -1,4 +1,19 @@
 # burrow changelog
+## v0.17.0
+This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
+
+- [Upgrade to use Tendermint v0.9.2](https://github.com/hyperledger/burrow/pull/595)
+- [Implemented dynamic memory](https://github.com/hyperledger/burrow/pull/607) assumed by the EVM bytecode produce by solidity, fixing various issues.
+- Logging sinks and configuration - providing a flexible mechanism for configuring log flows and outputs see [logging section in readme](https://github.com/hyperledger/burrow#logging). Various other logging enhancements.
+- Fix event unsubscription
+- Remove module-specific versioning
+- Rename suicide to selfdestruct
+- SNative tweaks
+
+Known issues:
+
+- SELFDESTRUCT opcode causes a panic when an account is removed. A [fix](https://github.com/hyperledger/burrow/pull/605) was produced but was [reverted](https://github.com/hyperledger/burrow/pull/636) pending investigation of a possible regression.
+
 ## v0.16.3
 This release adds an stop-gap fix to the `Transact` method so that it never
 transfers value with the `CallTx` is generates.

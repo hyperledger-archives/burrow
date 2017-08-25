@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package adapters
+package tendermint_log15
 
 import (
 	"time"
 
 	"github.com/go-stack/stack"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/types"
 	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/tendermint/log15"
 )
@@ -43,9 +43,8 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 		Call: call,
 		Ctx:  ctx,
 		KeyNames: log15.RecordKeyNames{
-			Time: structure.TimeKey,
-			Msg:  structure.MessageKey,
-			Lvl:  structure.LevelKey,
+			Msg: structure.MessageKey,
+			Lvl: structure.LevelKey,
 		}}
 }
 
@@ -54,7 +53,6 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 func RecordToLogLine(record *log15.Record) []interface{} {
 	return Concat(
 		Slice(
-			structure.TimeKey, record.Time,
 			structure.CallerKey, record.Call,
 			structure.LevelKey, record.Lvl.String(),
 		),
@@ -70,9 +68,9 @@ func Log15LvlFromString(level string) log15.Lvl {
 		return log15.LvlDebug
 	}
 	switch level {
-	case loggers.InfoLevelName:
+	case types.InfoLevelName:
 		return log15.LvlInfo
-	case loggers.TraceLevelName:
+	case types.TraceLevelName:
 		return log15.LvlDebug
 	default:
 		lvl, err := log15.LvlFromString(level)

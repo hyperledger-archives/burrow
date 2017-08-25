@@ -500,15 +500,6 @@ func heightParam(c *gin.Context) {
 	c.Next()
 }
 
-func subIdParam(c *gin.Context) {
-	subId := c.Param("id")
-	if len(subId) != 64 || !util.IsHex(subId) {
-		c.AbortWithError(400, fmt.Errorf("Malformed event id"))
-	}
-	c.Set("id", subId)
-	c.Next()
-}
-
 // TODO
 func peerAddressParam(c *gin.Context) {
 	subId := c.Param("address")

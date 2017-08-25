@@ -70,7 +70,7 @@ func FilterBlocks(blockchain blockchain_types.Blockchain,
 	// Optimization. Break any height filters out. Messy but makes sure we don't
 	// fetch more blocks then necessary. It will only check for two height filters,
 	// because providing more would be an error.
-	if filterData == nil || len(filterData) == 0 {
+	if len(filterData) == 0 {
 		minHeight = 0
 		maxHeight = height
 	} else {
@@ -178,29 +178,24 @@ func getHeightMinMax(fda []*event.FilterData, height int) (int, int, []*event.Fi
 				}
 				min = val
 				max = val
-				break
 			case "<":
 				mx := val - 1
 				if mx > min && mx < max {
 					max = mx
 				}
-				break
 			case "<=":
 				if val > min && val < max {
 					max = val
 				}
-				break
 			case ">":
 				mn := val + 1
 				if mn < max && mn > min {
 					min = mn
 				}
-				break
 			case ">=":
 				if val < max && val > min {
 					min = val
 				}
-				break
 			default:
 				return 0, 0, nil, fmt.Errorf("Operator not supported")
 			}
@@ -213,11 +208,4 @@ func getHeightMinMax(fda []*event.FilterData, height int) (int, int, []*event.Fi
 		max = min
 	}
 	return min, max, fda, nil
-}
-
-func min(x, y int) int {
-	if x > y {
-		return y
-	}
-	return x
 }

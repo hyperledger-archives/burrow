@@ -31,6 +31,11 @@ check:
 	@gofmt -l -d ${GOFILES_NOVENDOR}
 	@gofmt -l ${GOFILES_NOVENDOR} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
+# Just fix it
+.PHONY: fix
+fix:
+	@goimports -l -w ${GOFILES_NOVENDOR}
+
 # fmt runs gofmt -w on the code, modifying any files that do not match
 # the style guide.
 .PHONY: fmt
@@ -54,6 +59,12 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
+# run the megacheck tool for code compliance
+.PHONY: megacheck
+megacheck:
+	@go get honnef.co/go/tools/cmd/megacheck
+	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
+
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory
@@ -66,12 +77,6 @@ erase_vendor:
 install_vendor:
 	go get github.com/Masterminds/glide
 	glide install
-
-# hell runs utility tool hell to selectively update glide dependencies
-.PHONY: hell
-hell:
-	go build -o ${REPO}/target/hell ./util/hell/cmd/hell/main.go
-	./target/hell $(filter-out $@,$(MAKECMDGOALS))
 
 # Dumps Solidity interface contracts for SNatives
 .PHONY: snatives

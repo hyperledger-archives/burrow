@@ -96,7 +96,7 @@ type FilterSuite struct {
 }
 
 func (this *FilterSuite) SetupSuite() {
-	objects := make([]FilterableObject, OBJECTS, OBJECTS)
+	objects := make([]FilterableObject, OBJECTS)
 
 	for i := 0; i < 100; i++ {
 		objects[i] = FilterableObject{i, fmt.Sprintf("string%d", i)}

@@ -26,15 +26,15 @@ const (
 	// Major version component of the current release
 	burrowMintVersionMajor = 0
 	// Minor version component of the current release
-	burrowMintVersionMinor = 16
+	burrowMintVersionMinor = 17
 	// Patch version component of the current release
-	burrowMintVersionPatch = 4
+	burrowMintVersionPatch = 0
 )
 
 // Define the compatible consensus engines this application manager
 // is compatible and has been tested with.
 var compatibleConsensus = [...]string{
-	"tendermint-0.8",
+	"tendermint-0.9",
 }
 
 func GetBurrowMintVersion() *version.VersionIdentifier {

@@ -360,9 +360,9 @@ type DupeoutTx struct {
 }
 
 func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	//PanicSanity("DupeoutTx has no sign bytes")
+	// PanicSanity("DupeoutTx has no sign bytes")
 	// TODO
-	return
+	// return
 }
 
 func (tx *DupeoutTx) String() string {

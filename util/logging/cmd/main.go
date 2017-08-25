@@ -12,10 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package main
 
 import (
-	"github.com/tendermint/log15"
+	"fmt"
+
+	. "github.com/hyperledger/burrow/logging/config"
 )
 
-var log = log15.New("module", "server")
+// Dump an example logging configuration
+func main() {
+	loggingConfig := &LoggingConfig{
+		RootSink: Sink().
+			AddSinks(
+				// Log everything to Stderr
+				Sink().SetOutput(StderrOutput()),
+				Sink().SetTransform(FilterTransform(ExcludeWhenAllMatch,
+					"module", "p2p",
+					"captured_logging_source", "tendermint_log15")).
+					AddSinks(
+						Sink().SetOutput(SyslogOutput("Burrow-network")),
+						Sink().SetOutput(FileOutput("/var/log/burrow-network.log")),
+					),
+			),
+	}
+	fmt.Println(loggingConfig.RootTOMLString())
+}
