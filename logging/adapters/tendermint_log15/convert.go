@@ -43,8 +43,9 @@ func LogLineToRecord(keyvals ...interface{}) *log15.Record {
 		Call: call,
 		Ctx:  ctx,
 		KeyNames: log15.RecordKeyNames{
-			Msg: structure.MessageKey,
-			Lvl: structure.LevelKey,
+			Time: structure.TimeKey,
+			Msg:  structure.MessageKey,
+			Lvl:  structure.LevelKey,
 		}}
 }
 
