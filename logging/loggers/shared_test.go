@@ -53,7 +53,7 @@ func makeTestLogger(err error) *testLogger {
 	go cl.DrainForever(kitlog.LoggerFunc(func(keyvals ...interface{}) error {
 		logLineCh <- keyvals
 		return nil
-	}))
+	}), nil)
 	return &testLogger{
 		channelLogger: cl,
 		logLineCh:     logLineCh,

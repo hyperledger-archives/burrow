@@ -15,15 +15,17 @@
 package loggers
 
 import (
+	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/logging/types"
 )
 
 type infoTraceLogger struct {
-	infoContext  kitlog.Logger
-	traceContext kitlog.Logger
-	outputLogger *kitlog.SwapLogger
+	infoContext        kitlog.Logger
+	traceContext       kitlog.Logger
+	outputLogger       *kitlog.SwapLogger
+	outputLoggerErrors channels.Channel
 }
 
 // Interface assertions
@@ -31,28 +33,28 @@ var _ types.InfoTraceLogger = (*infoTraceLogger)(nil)
 var _ kitlog.Logger = (types.InfoTraceLogger)(nil)
 
 // Create an InfoTraceLogger by passing the initial outputLogger.
-func NewInfoTraceLogger(outputLogger kitlog.Logger) types.InfoTraceLogger {
+func NewInfoTraceLogger(outputLogger kitlog.Logger) (types.InfoTraceLogger, channels.Channel) {
 	// We will never halt the progress of a log emitter. If log output takes too
 	// long will start dropping log lines by using a ring buffer.
 	swapLogger := new(kitlog.SwapLogger)
 	swapLogger.Swap(outputLogger)
-	wrappedOutputLogger := wrapOutputLogger(swapLogger)
+	wrappedOutputLogger, errCh := wrapOutputLogger(swapLogger)
 	return &infoTraceLogger{
-		outputLogger: swapLogger,
+		outputLogger:       swapLogger,
+		outputLoggerErrors: errCh,
 		// logging contexts
 		infoContext: kitlog.With(wrappedOutputLogger,
 			structure.ChannelKey, types.InfoChannelName,
-			structure.LevelKey, types.InfoLevelName,
 		),
 		traceContext: kitlog.With(wrappedOutputLogger,
 			structure.ChannelKey, types.TraceChannelName,
-			structure.LevelKey, types.TraceLevelName,
 		),
-	}
+	}, errCh
 }
 
 func NewNoopInfoTraceLogger() types.InfoTraceLogger {
-	return NewInfoTraceLogger(nil)
+	logger, _ := NewInfoTraceLogger(nil)
+	return logger
 }
 
 func (l *infoTraceLogger) With(keyvals ...interface{}) types.InfoTraceLogger {
@@ -94,6 +96,6 @@ func (l *infoTraceLogger) Log(keyvals ...interface{}) error {
 
 // Wrap the output loggers with a a set of standard transforms, a non-blocking
 // ChannelLogger and an outer context
-func wrapOutputLogger(outputLogger kitlog.Logger) kitlog.Logger {
+func wrapOutputLogger(outputLogger kitlog.Logger) (kitlog.Logger, channels.Channel) {
 	return NonBlockingLogger(BurrowFormatLogger(VectorValuedLogger(outputLogger)))
 }

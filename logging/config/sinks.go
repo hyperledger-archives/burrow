@@ -170,6 +170,11 @@ func (sinkConfig *SinkConfig) SetOutput(output *OutputConfig) *SinkConfig {
 	return sinkConfig
 }
 
+func (outputConfig *OutputConfig) SetFormat(format string) *OutputConfig {
+	outputConfig.Format = format
+	return outputConfig
+}
+
 func StdoutOutput() *OutputConfig {
 	return &OutputConfig{
 		OutputType: Stdout,

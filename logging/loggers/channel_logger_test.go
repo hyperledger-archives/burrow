@@ -19,6 +19,8 @@ import (
 
 	"time"
 
+	"fmt"
+
 	"github.com/eapache/channels"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,7 +64,7 @@ func TestChannelLogger_Reset(t *testing.T) {
 
 func TestNonBlockingLogger(t *testing.T) {
 	tl := newTestLogger()
-	nbl := NonBlockingLogger(tl)
+	nbl, _ := NonBlockingLogger(tl)
 	nbl.Log("Foo", "Bar")
 	nbl.Log("Baz", "Bur")
 	nbl.Log("Badger", "Romeo")
@@ -73,4 +75,12 @@ func TestNonBlockingLogger(t *testing.T) {
 	assert.Equal(t, logLines("Foo", "Bar", "",
 		"Baz", "Bur", "",
 		"Badger", "Romeo"), lls)
+}
+
+func TestNonBlockingLoggerErrors(t *testing.T) {
+	el := newErrorLogger("Should surface")
+	nbl, errCh := NonBlockingLogger(el)
+	nbl.Log("failure", "true")
+	assert.Equal(t, "Should surface",
+		fmt.Sprintf("%s", <-errCh.Out()))
 }

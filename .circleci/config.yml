@@ -82,6 +82,7 @@ workflows:
             - test
             - test_integration
           filters:
+            <<: *tags_filters
             branches:
               # Although we seem to exclude the master branch below, since
               # matching on tags is independent we will still build tags that

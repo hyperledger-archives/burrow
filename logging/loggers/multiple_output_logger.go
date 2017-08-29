@@ -15,9 +15,8 @@
 package loggers
 
 import (
-	"strings"
-
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging/errors"
 )
 
 // This represents an 'AND' type logger. When logged to it will log to each of
@@ -34,7 +33,7 @@ func (mol MultipleOutputLogger) Log(keyvals ...interface{}) error {
 			errs = append(errs, err)
 		}
 	}
-	return combineErrors(errs)
+	return errors.CombineErrors(errs)
 }
 
 // Creates a logger that forks log messages to each of its outputLoggers
@@ -49,25 +48,4 @@ func NewMultipleOutputLogger(outputLoggers ...kitlog.Logger) kitlog.Logger {
 		}
 	}
 	return moLogger
-}
-
-type multipleErrors []error
-
-func combineErrors(errs []error) error {
-	switch len(errs) {
-	case 0:
-		return nil
-	case 1:
-		return errs[0]
-	default:
-		return multipleErrors(errs)
-	}
-}
-
-func (errs multipleErrors) Error() string {
-	var errStrings []string
-	for _, err := range errs {
-		errStrings = append(errStrings, err.Error())
-	}
-	return strings.Join(errStrings, ";")
 }

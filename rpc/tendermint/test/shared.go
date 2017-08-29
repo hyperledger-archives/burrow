@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"testing"
 
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/core"
@@ -42,7 +44,6 @@ import (
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/tendermint/types"
-	"time"
 )
 
 const chainID = "RPC_Test_Chain"
@@ -156,7 +157,7 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 	// Set up priv_validator.json before we start tendermint (otherwise it will
 	// create its own one.
 	saveNewPriv()
-	logger := lifecycle.NewStdErrLogger()
+	logger, _ := lifecycle.NewStdErrLogger()
 	// To spill tendermint logs on the floor:
 	// lifecycle.CaptureTendermintLog15Output(loggers.NewNoopInfoTraceLogger())
 	lifecycle.CaptureTendermintLog15Output(logger)

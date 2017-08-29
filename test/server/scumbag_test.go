@@ -24,11 +24,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/log15"
 )
 
-var logger logging_types.InfoTraceLogger = lifecycle.NewStdErrLogger()
+var logger, _ = lifecycle.NewStdErrLogger()
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
