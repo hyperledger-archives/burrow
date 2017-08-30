@@ -29,10 +29,10 @@ import (
 	core_types "github.com/hyperledger/burrow/core/types"
 	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/rpc/tendermint/client"
 	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
-	rpc_core "github.com/hyperledger/burrow/rpc/tendermint/core"
 	rpc_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/server"
 	"github.com/hyperledger/burrow/test/fixtures"
@@ -42,6 +42,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/tendermint/types"
+	"time"
 )
 
 const chainID = "RPC_Test_Chain"
@@ -60,6 +61,39 @@ var (
 	clients           map[string]client.RPCClient
 	testCore          *core.Core
 )
+
+// We use this to wrap tests
+func TestWrapper(runner func() int) int {
+	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/shared_test.go)...")
+	ffs := fixtures.NewFileFixtures("burrow")
+
+	defer func() {
+		// Tendermint likes to try and save to priv_validator.json after its been
+		// asked to shutdown so we pause to try and avoid collision
+		time.Sleep(time.Second)
+		ffs.RemoveAll()
+	}()
+
+	vm.SetDebug(true)
+	err := initGlobalVariables(ffs)
+
+	if err != nil {
+		panic(err)
+	}
+
+	tmServer, err := testCore.NewGatewayTendermint(serverConfig)
+	defer func() {
+		// Shutdown -- make sure we don't hit a race on ffs.RemoveAll
+		tmServer.Shutdown()
+		testCore.Stop()
+	}()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return runner()
+}
 
 // initialize config and create new node
 func initGlobalVariables(ffs *fixtures.FileFixtures) error {
@@ -187,14 +221,6 @@ func genesisValidatorFromPrivAccount(account *acm.PrivAccount) *genesis.GenesisV
 func genesisAccountFromPrivAccount(account *acm.PrivAccount) *genesis.GenesisAccount {
 	return genesis.NewGenesisAccount(account.Address, 100000,
 		fmt.Sprintf("account_%X", account.Address), &ptypes.DefaultAccountPermissions)
-}
-
-func newNode(ready chan error,
-	tmServer chan *rpc_core.TendermintWebsocketServer) {
-	// Run the 'tendermint' rpc server
-	server, err := testCore.NewGatewayTendermint(serverConfig)
-	ready <- err
-	tmServer <- server
 }
 
 func saveNewPriv() {

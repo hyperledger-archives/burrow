@@ -103,6 +103,7 @@ func MakeMinorVersionString(client string, major, minor, patch int) string {
 func GetVersion() (client string, major, minor, patch uint8) {
 	return burrowVersion.GetVersion()
 }
+
 func (version *VersionIdentifier) GetVersion() (
 	client string, major, minor, patch uint8) {
 	return version.ClientIdentifier, version.MajorVersion, version.MinorVersion,
@@ -126,8 +127,6 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 }
 
 //------------------------------------------------------------------------------
-// Version number for tests/build_tool.sh
-
-// IMPORTANT: burrow version must be on the last line of this file for
-// the deployment script tests/build_tool.sh to pick up the right label.
+// util/version/cmd prints this when run and is used to by build_tool.sh to obtain
+// Burrow version
 const VERSION = "0.17.0"
