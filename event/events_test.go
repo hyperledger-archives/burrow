@@ -53,16 +53,21 @@ func TestMultiplexedEvents(t *testing.T) {
 		mutex2.Unlock()
 	})
 
-	time.Sleep(mockInterval)
+	time.Sleep(2 * mockInterval)
 
-	allEventData := make(map[txs.EventData]int)
-	for k, v := range eventData1 {
-		allEventData[k] = v
-	}
-	for k, v := range eventData2 {
-		allEventData[k] = v
-	}
+	err := emitter12.Unsubscribe("Sub12")
+	assert.NoError(t, err)
+	err = emitter1.Unsubscribe("Sub2")
+	assert.NoError(t, err)
+	err = emitter2.Unsubscribe("Sub2")
+	assert.NoError(t, err)
 
+	mutex1.Lock()
+	defer mutex1.Unlock()
+	mutex2.Lock()
+	defer mutex2.Unlock()
+	mutex12.Lock()
+	defer mutex12.Unlock()
 	assert.Equal(t, map[txs.EventData]int{mockEventData{"Sub1", "Event1"}: 1},
 		eventData1)
 	assert.Equal(t, map[txs.EventData]int{mockEventData{"Sub2", "Event2"}: 1},
@@ -70,5 +75,4 @@ func TestMultiplexedEvents(t *testing.T) {
 	assert.Equal(t, map[txs.EventData]int{mockEventData{"Sub12", "Event12"}: 1},
 		eventData12)
 
-	assert.NotEmpty(t, allEventData, "Some events should have been published")
 }

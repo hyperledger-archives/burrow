@@ -27,14 +27,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockInterval = 40 * time.Millisecond
+var mockInterval = 20 * time.Millisecond
 
 type mockSub struct {
-	subId    string
-	eventId  string
-	f        func(txs.EventData)
-	shutdown bool
-	sdChan   chan struct{}
+	subId   string
+	eventId string
+	f       func(txs.EventData)
+	sdChan  chan struct{}
 }
 
 type mockEventData struct {
@@ -46,7 +45,7 @@ func (eventData mockEventData) AssertIsEventData() {}
 
 // A mock event
 func newMockSub(subId, eventId string, f func(txs.EventData)) mockSub {
-	return mockSub{subId, eventId, f, false, make(chan struct{})}
+	return mockSub{subId, eventId, f, make(chan struct{})}
 }
 
 type mockEventEmitter struct {
@@ -68,32 +67,29 @@ func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(txs
 	this.mutex.Unlock()
 
 	go func() {
-		<-me.sdChan
-		me.shutdown = true
-	}()
-	go func() {
 		for {
-			if !me.shutdown {
-				me.f(mockEventData{subId, eventId})
-			} else {
+			select {
+			case <-me.sdChan:
 				this.mutex.Lock()
 				delete(this.subs, subId)
 				this.mutex.Unlock()
 				return
+			case <-time.After(mockInterval):
+				me.f(mockEventData{subId, eventId})
 			}
-			time.Sleep(mockInterval)
 		}
 	}()
 	return nil
 }
 
 func (this *mockEventEmitter) Unsubscribe(subId string) error {
+	this.mutex.Lock()
 	sub, ok := this.subs[subId]
+	this.mutex.Unlock()
 	if !ok {
 		return nil
 	}
-	sub.shutdown = true
-	delete(this.subs, subId)
+	sub.sdChan <- struct{}{}
 	return nil
 }
 
