@@ -1,9 +1,14 @@
+.github
 .git
+.gitignore
 .project
 run.sh
-build
+build_tool.sh
+Makefile
 Vagrantfile
+Dockerfile
+CHANGELOG.md
 README.md
-circle.yml
-api.md
+.circleci
+docs
 vendor
