@@ -17,11 +17,13 @@ package loggers
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/logging/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMultipleOutputLogger(t *testing.T) {
-	a, b := newErrorLogger("error a"), newErrorLogger("error b")
+	a := newErrorLogger("error a")
+	b := newErrorLogger("error b")
 	mol := NewMultipleOutputLogger(a, b)
 	logLine := []interface{}{"msg", "hello"}
 	errLog := mol.Log(logLine...)
@@ -32,5 +34,5 @@ func TestNewMultipleOutputLogger(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, logLineA)
 	assert.Equal(t, expected, logLineB)
-	assert.IsType(t, multipleErrors{}, errLog)
+	assert.IsType(t, errors.MultipleErrors{}, errLog)
 }

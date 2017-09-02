@@ -13,12 +13,22 @@ import (
 
 const (
 	syslogPriority    = syslog.LOG_LOCAL0
-	defaultFormatName = "terminal"
+	JSONFormat        = "json"
+	LogfmtFormat      = "logfmt"
+	TerminalFormat    = "terminal"
+	defaultFormatName = TerminalFormat
 )
 
 func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
-	return log15a.Log15HandlerAsKitLogger(log15.StreamHandler(writer,
-		format(formatName)))
+	switch formatName {
+	case JSONFormat:
+		return kitlog.NewJSONLogger(writer)
+	case LogfmtFormat:
+		return kitlog.NewLogfmtLogger(writer)
+	default:
+		return log15a.Log15HandlerAsKitLogger(log15.StreamHandler(writer,
+			format(formatName)))
+	}
 }
 
 func NewFileLogger(path string, formatName string) (kitlog.Logger, error) {
@@ -45,11 +55,11 @@ func NewSyslogLogger(tag, formatName string) (kitlog.Logger, error) {
 
 func format(name string) log15.Format {
 	switch name {
-	case "json":
+	case JSONFormat:
 		return log15.JsonFormat()
-	case "logfmt":
+	case LogfmtFormat:
 		return log15.LogfmtFormat()
-	case "terminal":
+	case TerminalFormat:
 		return log15.TerminalFormat()
 	default:
 		return format(defaultFormatName)

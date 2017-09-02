@@ -19,6 +19,7 @@ import (
 
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging/errors"
 )
 
 const (
@@ -92,26 +93,35 @@ func readLogLine(logLine interface{}, ok bool) []interface{} {
 }
 
 // Enters an infinite loop that will drain any log lines from the passed logger.
+// You may pass in a channel
 //
 // Exits if the channel is closed.
-func (cl *ChannelLogger) DrainForever(logger kitlog.Logger) {
+func (cl *ChannelLogger) DrainForever(logger kitlog.Logger, errCh channels.Channel) {
 	// logLine could be nil if channel was closed while waiting for next line
 	for logLine := cl.WaitReadLogLine(); logLine != nil; logLine = cl.WaitReadLogLine() {
-		logger.Log(logLine...)
+		err := logger.Log(logLine...)
+		if err != nil && errCh != nil {
+			errCh.In() <- err
+		}
 	}
 }
 
 // Drains everything that is available at the time of calling
-func (cl *ChannelLogger) Flush(logger kitlog.Logger) {
+func (cl *ChannelLogger) Flush(logger kitlog.Logger) error {
 	// Grab the buffer at the here rather than within loop condition so that we
 	// do not drain the buffer forever
 	bufferLength := cl.BufferLength()
+	var errs []error
 	for i := 0; i < bufferLength; i++ {
 		logLine := cl.WaitReadLogLine()
 		if logLine != nil {
-			logger.Log(logLine...)
+			err := logger.Log(logLine...)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
+	return errors.CombineErrors(errs)
 }
 
 // Drains the next contiguous segment of loglines up to the buffer cap waiting
@@ -137,9 +147,10 @@ func (cl *ChannelLogger) Reset() {
 }
 
 // Returns a Logger that wraps the outputLogger passed and does not block on
-// calls to Log.
-func NonBlockingLogger(outputLogger kitlog.Logger) *ChannelLogger {
+// calls to Log and a channel of any errors from the underlying logger
+func NonBlockingLogger(outputLogger kitlog.Logger) (*ChannelLogger, channels.Channel) {
 	cl := NewChannelLogger(DefaultLoggingRingBufferCap)
-	go cl.DrainForever(outputLogger)
-	return cl
+	errCh := channels.NewRingChannel(cl.BufferCap())
+	go cl.DrainForever(outputLogger, errCh)
+	return cl, errCh
 }

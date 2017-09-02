@@ -6,10 +6,45 @@ import (
 
 	"bufio"
 
+	. "github.com/hyperledger/burrow/logging/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/log15"
 )
 
 func TestNewLoggerFromLoggingConfig(t *testing.T) {
+	reader := CaptureStderr(t, func() {
+		logger, err := NewLoggerFromLoggingConfig(nil)
+		assert.NoError(t, err)
+		logger.Info("Quick", "Test")
+	})
+	line, _, err := reader.ReadLine()
+	assert.NoError(t, err)
+	lineString := string(line)
+	assert.NotEmpty(t, lineString)
+}
+
+func TestCaptureTendermintLog15Output(t *testing.T) {
+	reader := CaptureStderr(t, func() {
+		loggingConfig := &LoggingConfig{
+			RootSink: Sink().
+				SetOutput(StderrOutput().SetFormat("logfmt")).
+				SetTransform(FilterTransform(ExcludeWhenAllMatch,
+					"log_channel", "Trace",
+				)),
+		}
+		outputLogger, err := NewLoggerFromLoggingConfig(loggingConfig)
+		assert.NoError(t, err)
+		CaptureTendermintLog15Output(outputLogger)
+		log15Logger := log15.New()
+		log15Logger.Info("bar", "number_of_forks", 2)
+	})
+	line, _, err := reader.ReadLine()
+	assert.NoError(t, err)
+	assert.Contains(t, string(line), "number_of_forks=2")
+	assert.Contains(t, string(line), "message=bar")
+}
+
+func CaptureStderr(t *testing.T, runner func()) *bufio.Reader {
 	stderr := os.Stderr
 	defer func() {
 		os.Stderr = stderr
@@ -17,14 +52,8 @@ func TestNewLoggerFromLoggingConfig(t *testing.T) {
 	r, w, err := os.Pipe()
 	assert.NoError(t, err, "Couldn't make fifo")
 	os.Stderr = w
-	logger, err := NewLoggerFromLoggingConfig(nil)
-	assert.NoError(t, err)
-	logger.Info("Quick", "Test")
-	reader := bufio.NewReader(r)
-	assert.NoError(t, err)
-	line, _, err := reader.ReadLine()
-	assert.NoError(t, err)
-	// This test shouldn't really depend on colour codes, if you find yourself
-	// changing it then assert.NotEmpty() should do
-	assert.Contains(t, string(line), "\x1b[34mQuick\x1b[0m=Test")
+
+	runner()
+
+	return bufio.NewReader(r)
 }

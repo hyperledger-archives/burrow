@@ -110,7 +110,7 @@ x 		- roles: has, add, rm
 // keys
 var user = makeUsers(10)
 var chainID = "testchain"
-var logger = lifecycle.NewStdErrLogger()
+var logger, _ = lifecycle.NewStdErrLogger()
 
 func makeUsers(n int) []*acm.PrivAccount {
 	accounts := []*acm.PrivAccount{}

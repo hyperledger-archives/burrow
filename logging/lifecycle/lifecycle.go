@@ -20,14 +20,17 @@ import (
 
 	"time"
 
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/adapters/stdlib"
 	tmLog15adapter "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 
+	"fmt"
+
+	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
 	tmLog15 "github.com/tendermint/log15"
@@ -38,14 +41,27 @@ import (
 
 // Obtain a logger from a LoggingConfig
 func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.InfoTraceLogger, error) {
+	var logger types.InfoTraceLogger
+	var errCh channels.Channel
 	if loggingConfig == nil {
-		return NewStdErrLogger(), nil
+		logger, errCh = NewStdErrLogger()
+	} else {
+		outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
+		if err != nil {
+			return nil, err
+		}
+		logger, errCh = NewLogger(outputLogger)
 	}
-	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
-	if err != nil {
-		return nil, err
-	}
-	return NewLogger(outputLogger), nil
+	go func() {
+		err := <-errCh.Out()
+		if err != nil {
+			logger.Info("logging_error", err,
+				"logging_config", loggingConfig.RootTOMLString(),
+				"logger", fmt.Sprintf("%#v", logger))
+		}
+	}()
+
+	return logger, nil
 }
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
@@ -60,21 +76,21 @@ func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 	return nil
 }
 
-func NewStdErrLogger() types.InfoTraceLogger {
+func NewStdErrLogger() (types.InfoTraceLogger, channels.Channel) {
 	logger := loggers.NewStreamLogger(os.Stderr, "terminal")
 	return NewLogger(logger)
 }
 
 // Provided a standard logger that outputs to the supplied underlying outputLogger
-func NewLogger(outputLogger kitlog.Logger) types.InfoTraceLogger {
-	infoTraceLogger := loggers.NewInfoTraceLogger(outputLogger)
+func NewLogger(outputLogger kitlog.Logger) (types.InfoTraceLogger, channels.Channel) {
+	infoTraceLogger, errCh := loggers.NewInfoTraceLogger(outputLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
 	if uuid != nil {
 		runId = uuid.String()
 	}
-	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId))
+	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId)), errCh
 }
 
 func CaptureTendermintLog15Output(infoTraceLogger types.InfoTraceLogger) {
