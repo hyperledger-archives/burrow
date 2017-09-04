@@ -1,0 +1,92 @@
+# Some resuable sections, note the top-level keys 'defaults' and 'tag_filters'
+# have no special meaning, they just exist so I can alias them and import them
+# in later blocks
+defaults: &defaults
+  working_directory: /go/src/github.com/hyperledger/burrow
+  docker:
+    - image: circleci/golang:1.8.1
+
+tag_filters: &tags_filters
+  tags:
+    only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+
+version: 2
+jobs:
+  checkout_code:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: go get github.com/Masterminds/glide
+      - run: glide install
+
+      # Just persist the entire working dir (burrow checkout)
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  test:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make test
+
+  test_integration:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make test_integration
+
+  release:
+    <<: *defaults
+    steps:
+      # restore checkout
+      - attach_workspace:
+          at: .
+      # This allows us to perform our docker builds
+      - setup_remote_docker:
+          version: 17.06.1-ce
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      # build docker image and tag the image with the version, date, and commit hash
+      - run: make build_docker_db
+      - run: docker push quay.io/monax/db
+
+
+workflows:
+  version: 2
+
+  test_and_release:
+    jobs:
+      - checkout_code:
+          # Rather annoyingly we need this boilerplate on all transitive
+          # dependencies if we want the deploy job to build against a version
+          # tag.
+          # Also note jobs build against all branches by default
+          filters:
+            <<: *tags_filters
+      - test:
+          requires:
+            - checkout_code
+          filters:
+            <<: *tags_filters
+
+      - test_integration:
+          requires:
+            - checkout_code
+          filters:
+            <<: *tags_filters
+
+      - release:
+          requires:
+            - test
+            - test_integration
+          filters:
+            <<: *tags_filters
+            branches:
+              # Although we seem to exclude the master branch below, since
+              # matching on tags is independent we will still build tags that
+              # happen to point to a commit on master
+              # We push dev pre-release images for every commit on develop
+              only: develop
+

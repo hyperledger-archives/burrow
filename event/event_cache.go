@@ -59,7 +59,7 @@ func (this *EventCache) poll() []interface{} {
 
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type EventSubscriptions struct {
-	mtx          *sync.Mutex
+	mtx          *sync.RWMutex
 	eventEmitter EventEmitter
 	subs         map[string]*EventCache
 	reap         bool
@@ -67,7 +67,7 @@ type EventSubscriptions struct {
 
 func NewEventSubscriptions(eventEmitter EventEmitter) *EventSubscriptions {
 	es := &EventSubscriptions{
-		mtx:          &sync.Mutex{},
+		mtx:          &sync.RWMutex{},
 		eventEmitter: eventEmitter,
 		subs:         make(map[string]*EventCache),
 		reap:         true,
@@ -121,6 +121,8 @@ func (this *EventSubscriptions) Add(eventId string) (string, error) {
 }
 
 func (this *EventSubscriptions) Poll(subId string) ([]interface{}, error) {
+	this.mtx.RLock()
+	defer this.mtx.RUnlock()
 	sub, ok := this.subs[subId]
 	if !ok {
 		return nil, fmt.Errorf("Subscription not active. ID: " + subId)

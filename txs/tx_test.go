@@ -212,6 +212,7 @@ func TestEncodeTxDecodeTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	txOut, err := DecodeTx(txBytes)
+	assert.NoError(t, err, "DecodeTx error")
 	assert.Equal(t, tx, txOut)
 }
 

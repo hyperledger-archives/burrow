@@ -73,17 +73,16 @@ func (ffs *FileFixtures) AddDir(name string) string {
 
 // Cleans up the the temporary files (with fire)
 func (ffs *FileFixtures) RemoveAll() {
-	if err := os.RemoveAll(ffs.tempDir); err != nil {
-		// Since we expect to be called from being deferred in a test it's
-		// better if we panic here so that the caller finds
-		panic(err)
-	}
+	os.RemoveAll(ffs.tempDir)
 }
 
 // Create a text file at filename with contents content
 func createWriteClose(filename, content string) error {
 	// We'll create any parent dirs, with permissive permissions
 	err := os.MkdirAll(path.Dir(filename), 0777)
+	if err != nil {
+		return err
+	}
 	f, err := os.Create(filename)
 	if err != nil {
 		return err

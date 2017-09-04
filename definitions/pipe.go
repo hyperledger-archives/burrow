@@ -29,7 +29,7 @@ import (
 	core_types "github.com/hyperledger/burrow/core/types"
 	types "github.com/hyperledger/burrow/core/types"
 	event "github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	manager_types "github.com/hyperledger/burrow/manager/types"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -42,7 +42,7 @@ type Pipe interface {
 	Transactor() Transactor
 	// Hash of Genesis state
 	GenesisHash() []byte
-	Logger() loggers.InfoTraceLogger
+	Logger() logging_types.InfoTraceLogger
 	// NOTE: [ben] added to Pipe interface on 0.12 refactor
 	GetApplication() manager_types.Application
 	SetConsensusEngine(consensusEngine consensus_types.ConsensusEngine) error

@@ -117,7 +117,7 @@ func testName(t *testing.T,
 	// set data
 	dataString := fmt.Sprintf("%X", "We are DOUG.")
 	// set name
-	nameString := fmt.Sprintf("%s", "DOUG")
+	nameString := "DOUG"
 
 	_, err := Name(nodeClient, keyClient, publicKeyString, addressString,
 		amountString, nonceString, feeString, nameString, dataString)

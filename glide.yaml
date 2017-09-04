@@ -6,8 +6,6 @@ import:
 - package: github.com/gorilla/websocket
 - package: github.com/naoina/toml
 - package: github.com/stretchr/testify
-- package: github.com/tendermint/tendermint
-  version: ~0.8.0
 - package: github.com/tendermint/ed25519
 - package: github.com/tommy351/gin-cors
 - package: golang.org/x/crypto
@@ -19,7 +17,7 @@ import:
   subpackages:
   - http2
 - package: github.com/go-kit/kit
-  version: ^0.3.0
+  version: ~0.5.0
 - package: github.com/eapache/channels
   version: ~1.1.0
 - package: github.com/go-logfmt/logfmt
@@ -30,5 +28,6 @@ import:
 - package: github.com/Sirupsen/logrus
   version: ^0.11.0
 - package: github.com/streadway/simpleuuid
-- package: github.com/Masterminds/glide
-  version: ~0.12.3
+- package: github.com/Graylog2/go-gelf
+- package: github.com/tendermint/tendermint
+  version: ~0.9.2

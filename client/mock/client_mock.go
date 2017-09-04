@@ -22,6 +22,7 @@ import (
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -40,9 +41,9 @@ func NewMockNodeClient() *MockNodeClient {
 func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
-		TxHash:          make([]byte, 20, 20),
+		TxHash:          make([]byte, 20),
 		CreatesContract: 0,
-		ContractAddr:    make([]byte, 20, 20),
+		ContractAddr:    make([]byte, 20),
 	}
 	return txReceipt, nil
 }
@@ -54,7 +55,7 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	// make zero account
 	var zero [32]byte
-	copyAddressBytes := make([]byte, len(address), len(address))
+	copyAddressBytes := make([]byte, len(address))
 	copy(copyAddressBytes, address)
 	account := &acc.Account{
 		Address:     copyAddressBytes,
@@ -115,6 +116,6 @@ func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators,
 	return 0, nil, nil, nil
 }
 
-func (mock *MockNodeClient) Logger() loggers.InfoTraceLogger {
+func (mock *MockNodeClient) Logger() logging_types.InfoTraceLogger {
 	return loggers.NewNoopInfoTraceLogger()
 }

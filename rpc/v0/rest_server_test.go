@@ -32,10 +32,13 @@ import (
 	"github.com/hyperledger/burrow/txs"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/log15"
 )
+
+var logger, _ = lifecycle.NewStdErrLogger()
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -48,7 +51,6 @@ func init() {
 
 type MockSuite struct {
 	suite.Suite
-	baseDir      string
 	serveProcess *server.ServeProcess
 	codec        rpc.Codec
 	sUrl         string
@@ -67,7 +69,7 @@ func (mockSuite *MockSuite) SetupSuite() {
 	sConf := server.DefaultServerConfig()
 	sConf.Bind.Port = 31402
 	// Create a server process.
-	proc, _ := server.NewServeProcess(sConf, restServer)
+	proc, _ := server.NewServeProcess(sConf, logger, restServer)
 	err := proc.Start()
 	if err != nil {
 		panic(err)

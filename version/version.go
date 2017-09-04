@@ -30,43 +30,47 @@ const (
 	// Major version component of the current release
 	versionMajor = 0
 	// Minor version component of the current release
-	versionMinor = 16
+	versionMinor = 17
 	// Patch version component of the current release
-	versionPatch = 4
+	versionPatch = 0
 )
 
-var version *VersionIdentifier
+var burrowVersion *VersionIdentifier
 
 func init() {
-	version = New(clientIdentifier, versionMajor, versionMinor, versionPatch)
+	burrowVersion = New(clientIdentifier, versionMajor, versionMinor, versionPatch)
+}
+
+func GetBurrowVersion() *VersionIdentifier {
+	return burrowVersion
 }
 
 //------------------------------------------------------------------------------
 // versioning globally for burrow and scoped for modules
 
 type VersionIdentifier struct {
-	clientIdentifier string
-	versionMajor     uint8
-	versionMinor     uint8
-	versionPatch     uint8
+	ClientIdentifier string
+	MajorVersion     uint8
+	MinorVersion     uint8
+	PatchVersion     uint8
 }
 
 func New(client string, major, minor, patch uint8) *VersionIdentifier {
-	v := new(VersionIdentifier)
-	v.clientIdentifier = client
-	v.versionMajor = major
-	v.versionMinor = minor
-	v.versionPatch = patch
-	return v
+	return &VersionIdentifier{
+		ClientIdentifier: client,
+		MajorVersion:     major,
+		MinorVersion:     minor,
+		PatchVersion:     patch,
+	}
 }
 
 // GetVersionString returns `client-major.minor.patch` for burrow
 // without a receiver, or for the version called on.
 // MakeVersionString builds the same version string with provided parameters.
-func GetVersionString() string { return version.GetVersionString() }
+func GetVersionString() string { return burrowVersion.GetVersionString() }
 func (v *VersionIdentifier) GetVersionString() string {
-	return fmt.Sprintf("%s-%d.%d.%d", v.clientIdentifier, v.versionMajor,
-		v.versionMinor, v.versionPatch)
+	return fmt.Sprintf("%s-%d.%d.%d", v.ClientIdentifier, v.MajorVersion,
+		v.MinorVersion, v.PatchVersion)
 }
 
 // note: the arguments are passed in as int (rather than uint8)
@@ -82,10 +86,10 @@ func MakeVersionString(client string, major, minor, patch int) string {
 // without a receiver, or for the version called on.
 // MakeMinorVersionString builds the same version string with
 // provided parameters.
-func GetMinorVersionString() string { return version.GetVersionString() }
+func GetMinorVersionString() string { return burrowVersion.GetVersionString() }
 func (v *VersionIdentifier) GetMinorVersionString() string {
-	return fmt.Sprintf("%s-%d.%d", v.clientIdentifier, v.versionMajor,
-		v.versionMinor)
+	return fmt.Sprintf("%s-%d.%d", v.ClientIdentifier, v.MajorVersion,
+		v.MinorVersion)
 }
 
 // note: similar remark applies here on the use of `int` over `uint8`
@@ -97,12 +101,13 @@ func MakeMinorVersionString(client string, major, minor, patch int) string {
 // GetVersion returns a tuple of client, major, minor, and patch as types,
 // either for burrow without a receiver or the called version structure.
 func GetVersion() (client string, major, minor, patch uint8) {
-	return version.GetVersion()
+	return burrowVersion.GetVersion()
 }
+
 func (version *VersionIdentifier) GetVersion() (
 	client string, major, minor, patch uint8) {
-	return version.clientIdentifier, version.versionMajor, version.versionMinor,
-		version.versionPatch
+	return version.ClientIdentifier, version.MajorVersion, version.MinorVersion,
+		version.PatchVersion
 }
 
 //------------------------------------------------------------------------------
@@ -111,19 +116,17 @@ func (version *VersionIdentifier) GetVersion() (
 // MatchesMinorVersion matches the client identifier, major and minor version
 // number of the reference version identifier to be equal with the receivers.
 func MatchesMinorVersion(referenceVersion *VersionIdentifier) bool {
-	return version.MatchesMinorVersion(referenceVersion)
+	return burrowVersion.MatchesMinorVersion(referenceVersion)
 }
 func (version *VersionIdentifier) MatchesMinorVersion(
 	referenceVersion *VersionIdentifier) bool {
 	referenceClient, referenceMajor, referenceMinor, _ := referenceVersion.GetVersion()
-	return version.clientIdentifier == referenceClient &&
-		version.versionMajor == referenceMajor &&
-		version.versionMinor == referenceMinor
+	return version.ClientIdentifier == referenceClient &&
+		version.MajorVersion == referenceMajor &&
+		version.MinorVersion == referenceMinor
 }
 
 //------------------------------------------------------------------------------
-// Version number for tests/build_tool.sh
-
-// IMPORTANT: burrow version must be on the last line of this file for
-// the deployment script tests/build_tool.sh to pick up the right label.
-const VERSION = "0.16.4"
+// util/version/cmd prints this when run and is used to by build_tool.sh to obtain
+// Burrow version
+const VERSION = "0.17.0"

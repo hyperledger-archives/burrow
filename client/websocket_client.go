@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"time"
 
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
 	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -46,18 +47,20 @@ var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
 type burrowNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
-	logger              loggers.InfoTraceLogger
+	logger              logging_types.InfoTraceLogger
 }
 
 // Subscribe to an eventid
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Subscribe(eventid string) error {
+func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Subscribe(eventId string) error {
 	// TODO we can in the background listen to the subscription id and remember it to ease unsubscribing later.
-	return burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(eventid)
+	return tendermint_client.Subscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+		eventId)
 }
 
 // Unsubscribe from an eventid
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
-	return burrowNodeWebsocketClient.tendermintWebsocket.Unsubscribe(subscriptionId)
+	return tendermint_client.Unsubscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+		subscriptionId)
 }
 
 // Returns a channel that will receive a confirmation with a result or the exception that
@@ -73,10 +76,10 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	var latestBlockHash []byte
 
 	eid := txs.EventStringAccInput(inputAddr)
-	if err := burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(eid); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(eid); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
 	}
-	if err := burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(txs.EventStringNewBlock()); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(txs.EventStringNewBlock()); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
@@ -163,7 +166,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				confirmationChannel <- Confirmation{
 					BlockHash: latestBlockHash,
 					Event:     &data,
-					Exception: fmt.Errorf("Transaction confirmed with exception:", data.Exception),
+					Exception: fmt.Errorf("Transaction confirmed with exception: %v", data.Exception),
 					Error:     nil,
 				}
 				return
@@ -192,7 +195,6 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 			Exception: nil,
 			Error:     fmt.Errorf("timed out waiting for event"),
 		}
-		return
 	}()
 	return confirmationChannel, nil
 }

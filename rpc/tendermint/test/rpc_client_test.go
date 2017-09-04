@@ -20,17 +20,17 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ripemd160"
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/ripemd160"
+
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
-	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
+	burrow_client "github.com/hyperledger/burrow/rpc/tendermint/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/word256"
 
 	"github.com/stretchr/testify/assert"
-	rpcclient "github.com/tendermint/go-rpc/client"
 	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
 
@@ -41,7 +41,7 @@ import (
 // due to weirdness with go-wire's interface registration, and those global
 // registrations not being available within a *_test.go runtime context.
 func testWithAllClients(t *testing.T,
-	testFunction func(*testing.T, string, rpcclient.Client)) {
+	testFunction func(*testing.T, string, burrow_client.RPCClient)) {
 	for clientName, client := range clients {
 		testFunction(t, clientName, client)
 	}
@@ -49,8 +49,8 @@ func testWithAllClients(t *testing.T,
 
 //--------------------------------------------------------------------------------
 func TestStatus(t *testing.T) {
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		resp, err := edbcli.Status(client)
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
+		resp, err := burrow_client.Status(client)
 		assert.NoError(t, err)
 		fmt.Println(resp)
 		if resp.NodeInfo.Network != chainID {
@@ -62,12 +62,11 @@ func TestStatus(t *testing.T) {
 
 func TestBroadcastTx(t *testing.T) {
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
-		toAddr := user[1].Address
+		toAddr := users[1].Address
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
-		//receipt := broadcastTx(t, client, tx)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err)
 		if receipt.CreatesContract > 0 {
@@ -96,14 +95,14 @@ func TestGetAccount(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
-		acc := getAccount(t, client, user[0].Address)
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
+		acc := getAccount(t, client, users[0].Address)
 		if acc == nil {
 			t.Fatal("Account was nil")
 		}
-		if bytes.Compare(acc.Address, user[0].Address) != 0 {
+		if bytes.Compare(acc.Address, users[0].Address) != 0 {
 			t.Fatalf("Failed to get correct account. Got %x, expected %x", acc.Address,
-				user[0].Address)
+				users[0].Address)
 		}
 	})
 }
@@ -113,12 +112,14 @@ func TestGetStorage(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	defer func() {
+		wsc.Stop()
+	}()
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
-			wsc.Stop()
 		}()
 
 		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
@@ -150,13 +151,13 @@ func TestCallCode(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		// add two integers and return the result
 		code := []byte{0x60, 0x5, 0x60, 0x6, 0x1, 0x60, 0x0, 0x52, 0x60, 0x20, 0x60,
 			0x0, 0xf3}
 		data := []byte{}
 		expected := []byte{0xb}
-		callCode(t, client, user[0].PubKey.Address(), code, data, expected)
+		callCode(t, client, users[0].PubKey.Address(), code, data, expected)
 
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
@@ -164,7 +165,7 @@ func TestCallCode(t *testing.T) {
 		data = append(word256.LeftPadWord256([]byte{0x5}).Bytes(),
 			word256.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
-		callCode(t, client, user[0].PubKey.Address(), code, data, expected)
+		callCode(t, client, users[0].PubKey.Address(), code, data, expected)
 	})
 }
 
@@ -173,12 +174,14 @@ func TestCallContract(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	defer func() {
+		wsc.Stop()
+	}()
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		eid := txs.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
-			wsc.Stop()
 		}()
 
 		// create the contract
@@ -201,7 +204,7 @@ func TestCallContract(t *testing.T) {
 		// run a call through the contract
 		data := []byte{}
 		expected := []byte{0xb}
-		callContract(t, client, user[0].PubKey.Address(), contractAddr, data, expected)
+		callContract(t, client, users[0].PubKey.Address(), contractAddr, data, expected)
 	})
 }
 
@@ -210,7 +213,7 @@ func TestNameReg(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 
 		txs.MinNameRegistrationPeriod = 1
 
@@ -242,7 +245,7 @@ func TestNameReg(t *testing.T) {
 
 		entry := getNameRegEntry(t, client, name)
 		assert.Equal(t, data, entry.Data)
-		assert.Equal(t, user[0].Address, entry.Owner)
+		assert.Equal(t, users[0].Address, entry.Owner)
 
 		// update the data as the owner, make sure still there
 		numDesiredBlocks = int64(5)
@@ -259,9 +262,9 @@ func TestNameReg(t *testing.T) {
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithNonce(user[1].PubKey, name, "never mind", amt, fee,
-			getNonce(t, client, user[1].Address)+1)
-		tx.Sign(chainID, user[1])
+		tx = txs.NewNameTxWithNonce(users[1].PubKey, name, "never mind", amt, fee,
+			getNonce(t, client, users[1].Address)+1)
+		tx.Sign(chainID, users[1])
 
 		_, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.Error(t, err, "Expected error when updating someone else's unexpired"+
@@ -276,28 +279,28 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithNonce(user[1].PubKey, name, data2, amt, fee,
-			getNonce(t, client, user[1].Address)+1)
-		tx.Sign(chainID, user[1])
+		tx = txs.NewNameTxWithNonce(users[1].PubKey, name, data2, amt, fee,
+			getNonce(t, client, users[1].Address)+1)
+		tx.Sign(chainID, users[1])
 		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err, "Should be able to update a previously expired name"+
 			" registry entry as a different address")
 		mempoolCount = 0
 		entry = getNameRegEntry(t, client, name)
 		assert.Equal(t, data2, entry.Data)
-		assert.Equal(t, user[1].Address, entry.Owner)
+		assert.Equal(t, users[1].Address, entry.Owner)
 	})
 }
 
 func TestBlockchainInfo(t *testing.T) {
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		// wait a mimimal number of blocks to ensure that the later query for block
 		// headers has a non-trivial length
 		nBlocks := 4
 		waitNBlocks(t, wsc, nBlocks)
 
-		resp, err := edbcli.BlockchainInfo(client, 0, 0)
+		resp, err := burrow_client.BlockchainInfo(client, 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}
@@ -309,18 +312,18 @@ func TestBlockchainInfo(t *testing.T) {
 			"Should see at least 4 BlockMetas after waiting for 4 blocks")
 		// For the maximum number (default to 20) of retrieved block headers,
 		// check that they correctly chain to each other.
-		lastBlockHash := resp.BlockMetas[nMetaBlocks-1].Hash
+		lastBlockHash := resp.BlockMetas[nMetaBlocks-1].Header.Hash()
 		for i := nMetaBlocks - 2; i >= 0; i-- {
 			// the blockhash in header of height h should be identical to the hash
 			// in the LastBlockID of the header of block height h+1.
 			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockID.Hash,
 				"Blockchain should be a hash tree!")
-			lastBlockHash = resp.BlockMetas[i].Hash
+			lastBlockHash = resp.BlockMetas[i].Header.Hash()
 		}
 
 		// Now retrieve only two blockheaders (h=1, and h=2) and check that we got
 		// two results.
-		resp, err = edbcli.BlockchainInfo(client, 1, 2)
+		resp, err = burrow_client.BlockchainInfo(client, 1, 2)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(resp.BlockMetas),
 			"Should see 2 BlockMetas after extracting 2 blocks")
@@ -332,7 +335,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
@@ -348,7 +351,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 		go func() {
 			for {
-				resp, err := edbcli.ListUnconfirmedTxs(client)
+				resp, err := burrow_client.ListUnconfirmedTxs(client)
 				assert.NoError(t, err)
 				if resp.N > 0 {
 					txChan <- resp.Txs
@@ -374,9 +377,9 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 func TestGetBlock(t *testing.T) {
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		waitNBlocks(t, wsc, 3)
-		resp, err := edbcli.GetBlock(client, 2)
+		resp, err := burrow_client.GetBlock(client, 2)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, resp.Block.Height)
 		assert.Equal(t, 2, resp.BlockMeta.Header.Height)
@@ -385,9 +388,9 @@ func TestGetBlock(t *testing.T) {
 
 func TestListValidators(t *testing.T) {
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		waitNBlocks(t, wsc, 3)
-		resp, err := edbcli.ListValidators(client)
+		resp, err := burrow_client.ListValidators(client)
 		assert.NoError(t, err)
 		assert.Len(t, resp.BondedValidators, 1)
 		validator := resp.BondedValidators[0].(*consensus_types.TendermintValidator)
@@ -397,9 +400,9 @@ func TestListValidators(t *testing.T) {
 
 func TestDumpConsensusState(t *testing.T) {
 	wsc := newWSClient()
-	testWithAllClients(t, func(t *testing.T, clientName string, client rpcclient.Client) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client burrow_client.RPCClient) {
 		waitNBlocks(t, wsc, 3)
-		resp, err := edbcli.DumpConsensusState(client)
+		resp, err := burrow_client.DumpConsensusState(client)
 		assert.NoError(t, err)
 		startTime := resp.ConsensusState.StartTime
 		// TODO: uncomment lines involving commitTime when

@@ -35,7 +35,7 @@ import (
 	edb_event "github.com/hyperledger/burrow/event"
 	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/loggers"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	vm "github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/manager/burrow-mint/state"
 	manager_types "github.com/hyperledger/burrow/manager/types"
@@ -57,7 +57,7 @@ type burrowMintPipe struct {
 	// Genesis cache
 	genesisDoc   *genesis.GenesisDoc
 	genesisState *state.State
-	logger       loggers.InfoTraceLogger
+	logger       logging_types.InfoTraceLogger
 }
 
 // Interface type assertions
@@ -67,7 +67,7 @@ var _ definitions.TendermintPipe = (*burrowMintPipe)(nil)
 
 func NewBurrowMintPipe(moduleConfig *config.ModuleConfig,
 	eventSwitch go_events.EventSwitch,
-	logger loggers.InfoTraceLogger) (*burrowMintPipe, error) {
+	logger logging_types.InfoTraceLogger) (*burrowMintPipe, error) {
 
 	startedState, genesisDoc, err := startState(moduleConfig.DataDir,
 		moduleConfig.Config.GetString("db_backend"), moduleConfig.GenesisFile,
@@ -141,8 +141,8 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 	// avoid Tendermints PanicSanity and return a clean error
 	if backend != db.MemDBBackendStr &&
 		backend != db.LevelDBBackendStr {
-		return nil, nil, fmt.Errorf("Database backend %s is not supported by %s",
-			backend, GetBurrowMintVersion)
+		return nil, nil, fmt.Errorf("Database backend %s is not supported "+
+			"by burrowmint", backend)
 	}
 
 	stateDB := db.NewDB("burrowmint", backend, dataDir)
@@ -177,7 +177,7 @@ func startState(dataDir, backend, genesisFile, chainId string) (*state.State,
 //------------------------------------------------------------------------------
 // Implement definitions.Pipe for burrowMintPipe
 
-func (pipe *burrowMintPipe) Logger() loggers.InfoTraceLogger {
+func (pipe *burrowMintPipe) Logger() logging_types.InfoTraceLogger {
 	return pipe.logger
 }
 
@@ -246,24 +246,26 @@ func (pipe *burrowMintPipe) consensusAndManagerEvents() edb_event.EventEmitter {
 
 //------------------------------------------------------------------------------
 // Implement definitions.TendermintPipe for burrowMintPipe
-func (pipe *burrowMintPipe) Subscribe(event string,
+func (pipe *burrowMintPipe) Subscribe(eventId string,
 	rpcResponseWriter func(result rpc_tm_types.BurrowResult)) (*rpc_tm_types.ResultSubscribe, error) {
 	subscriptionId, err := edb_event.GenerateSubId()
 	if err != nil {
 		return nil, err
 		logging.InfoMsg(pipe.logger, "Subscribing to event",
-			"event", event, "subscriptionId", subscriptionId)
+			"eventId", eventId, "subscriptionId", subscriptionId)
 	}
-	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, event,
+	pipe.consensusAndManagerEvents().Subscribe(subscriptionId, eventId,
 		func(eventData txs.EventData) {
-			result := rpc_tm_types.BurrowResult(&rpc_tm_types.ResultEvent{event,
-				txs.EventData(eventData)})
+			result := rpc_tm_types.BurrowResult(
+				&rpc_tm_types.ResultEvent{
+					Event: eventId,
+					Data:  txs.EventData(eventData)})
 			// NOTE: EventSwitch callbacks must be nonblocking
 			rpcResponseWriter(result)
 		})
 	return &rpc_tm_types.ResultSubscribe{
 		SubscriptionId: subscriptionId,
-		Event:          event,
+		Event:          eventId,
 	}, nil
 }
 
@@ -297,7 +299,7 @@ func (pipe *burrowMintPipe) Status() (*rpc_tm_types.ResultStatus, error) {
 	)
 	if latestHeight != 0 {
 		latestBlockMeta = pipe.blockchain.BlockMeta(latestHeight)
-		latestBlockHash = latestBlockMeta.Hash
+		latestBlockHash = latestBlockMeta.Header.Hash()
 		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
 	}
 	return &rpc_tm_types.ResultStatus{
@@ -407,6 +409,11 @@ func (pipe *burrowMintPipe) DumpStorage(address []byte) (*rpc_tm_types.ResultDum
 // TODO: [ben] resolve incompatibilities in byte representation for 0.12.0 release
 func (pipe *burrowMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_types.ResultCall,
 	error) {
+	if vm.RegisteredNativeContract(word256.LeftPadWord256(toAddress)) {
+		return nil, fmt.Errorf("Attempt to call native contract at address "+
+			"%X, but native contracts can not be called directly. Use a deployed "+
+			"contract that calls the native function instead.", toAddress)
+	}
 	st := pipe.burrowMint.GetState()
 	cache := state.NewBlockCache(st)
 	outAcc := cache.GetAccount(toAddress)
@@ -427,7 +434,8 @@ func (pipe *burrowMintPipe) Call(fromAddress, toAddress, data []byte) (*rpc_tm_t
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
 	if err != nil {
@@ -454,7 +462,8 @@ func (pipe *burrowMintPipe) CallCode(fromAddress, code, data []byte) (*rpc_tm_ty
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -581,7 +590,7 @@ func (pipe *burrowMintPipe) BroadcastTxSync(tx txs.Tx) (*rpc_tm_types.ResultBroa
 		return resultBroadCastTx, fmt.Errorf(resultBroadCastTx.Log)
 	default:
 		logging.InfoMsg(pipe.logger, "Unknown error returned from Tendermint CheckTx on BroadcastTxSync",
-			"application", GetBurrowMintVersion().GetVersionString(),
+			"application", "burrowmint",
 			"abci_code_type", responseCheckTx.Code,
 			"abci_log", responseCheckTx.Log,
 		)

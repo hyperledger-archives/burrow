@@ -23,7 +23,7 @@ import (
 
 	"github.com/hyperledger/burrow/account"
 	core_types "github.com/hyperledger/burrow/core/types"
-	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	"github.com/hyperledger/burrow/manager/burrow-mint/state"
 	"github.com/hyperledger/burrow/txs"
@@ -85,7 +85,8 @@ func (this *transactor) Call(fromAddress, toAddress, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	vmach.SetFireable(this.eventSwitch)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
@@ -118,7 +119,8 @@ func (this *transactor) CallCode(fromAddress, code, data []byte) (
 		GasLimit:    gasLimit,
 	}
 
-	vmach := vm.NewVM(txCache, params, caller.Address, nil)
+	vmach := vm.NewVM(txCache, vm.DefaultDynamicMemoryProvider, params,
+		caller.Address, nil)
 	gas := gasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -399,12 +401,10 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 			input.PubKey = privAccounts[i].PubKey
 			input.Signature = privAccounts[i].Sign(this.chainID, sendTx)
 		}
-		break
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
 		callTx.Input.PubKey = privAccounts[0].PubKey
 		callTx.Input.Signature = privAccounts[0].Sign(this.chainID, callTx)
-		break
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
@@ -414,15 +414,12 @@ func (this *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (
 			input.PubKey = privAccounts[i+1].PubKey
 			input.Signature = privAccounts[i+1].Sign(this.chainID, bondTx)
 		}
-		break
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
 		unbondTx.Signature = privAccounts[0].Sign(this.chainID, unbondTx).(crypto.SignatureEd25519)
-		break
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
 		rebondTx.Signature = privAccounts[0].Sign(this.chainID, rebondTx).(crypto.SignatureEd25519)
-		break
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
 	}

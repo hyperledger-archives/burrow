@@ -10,7 +10,7 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
 PACKAGES_NOVENDOR := $(shell go list github.com/hyperledger/burrow/... | grep -v /vendor/)
-VERSION := $(shell cat ${REPO}/version/version.go | tail -n 1 | cut -d \  -f 4 | tr -d '"')
+VERSION := $(shell go run ./util/version/cmd/main.go)
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
 
@@ -21,6 +21,10 @@ DOCKER_NAMESPACE := quay.io/monax
 greet:
 	@echo "Hi! I'm the marmot that will help you with burrow v${VERSION}"
 
+.PHONY: version
+version:
+	@echo "${VERSION}"
+
 ### Formatting, linting and vetting
 
 # check the code for style standards; currently enforces go formatting.
@@ -30,6 +34,11 @@ check:
 	@echo "Checking code for formatting style compliance."
 	@gofmt -l -d ${GOFILES_NOVENDOR}
 	@gofmt -l ${GOFILES_NOVENDOR} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+
+# Just fix it
+.PHONY: fix
+fix:
+	@goimports -l -w ${GOFILES_NOVENDOR}
 
 # fmt runs gofmt -w on the code, modifying any files that do not match
 # the style guide.
@@ -54,6 +63,12 @@ vet:
 	@echo "Running go vet."
 	@go vet ${PACKAGES_NOVENDOR}
 
+# run the megacheck tool for code compliance
+.PHONY: megacheck
+megacheck:
+	@go get honnef.co/go/tools/cmd/megacheck
+	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
+
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory
@@ -66,12 +81,6 @@ erase_vendor:
 install_vendor:
 	go get github.com/Masterminds/glide
 	glide install
-
-# hell runs utility tool hell to selectively update glide dependencies
-.PHONY: hell
-hell:
-	go build -o ${REPO}/target/hell ./util/hell/cmd/hell/main.go
-	./target/hell $(filter-out $@,$(MAKECMDGOALS))
 
 # Dumps Solidity interface contracts for SNatives
 .PHONY: snatives
@@ -112,8 +121,12 @@ build_race_client:
 
 # test burrow
 .PHONY: test
-test: build
-	@go test ${PACKAGES_NOVENDOR} -tags integration
+test:
+	@go test ${PACKAGES_NOVENDOR}
+
+.PHONY: test_integration
+test_integration:
+	@go test ./rpc/tendermint/test -tags integration
 
 # test burrow with checks for race conditions
 .PHONY: test_race
@@ -125,23 +138,7 @@ test_race: build_race
 # build docker image for burrow
 .PHONY: build_docker_db
 build_docker_db: check
-	@mkdir -p ${REPO}/target/docker
-	docker build -t ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} ${REPO}
-	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/burrow > ${REPO}/target/docker/burrow.dockerartefact
-	docker run --rm --entrypoint cat ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} /usr/local/bin/burrow-client > ${REPO}/target/docker/burrow-client.dockerartefact
-	docker build -t ${DOCKER_NAMESPACE}/db:${VERSION} -f Dockerfile.deploy ${REPO}
-
-	@rm ${REPO}/target/docker/burrow.dockerartefact
-	@rm ${REPO}/target/docker/burrow-client.dockerartefact
-	docker rmi ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA}
-
-### Test docker images for github.com/hyperledger/burrow
-
-# test docker image for burrow
-.PHONY: test_docker_db
-test_docker_db: check
-	docker build -t ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} ${REPO}
-	docker run ${DOCKER_NAMESPACE}/db:build-${COMMIT_SHA} glide nv | xargs go test -tags integration
+	@./build_tool.sh
 
 ### Clean up
 

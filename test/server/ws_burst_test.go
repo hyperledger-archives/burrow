@@ -94,7 +94,7 @@ func runWs() error {
 	runners := uint16(0)
 	for runners < CONNS {
 		select {
-		case _ = <-doneChan:
+		case <-doneChan:
 			runners++
 		case err := <-errChan:
 			return err
