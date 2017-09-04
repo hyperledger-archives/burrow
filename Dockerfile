@@ -23,7 +23,6 @@ ENV REPO /go/src/github.com/hyperledger/burrow
 ENV USER monax
 ENV MONAX_PATH /home/$USER/.monax
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
-VOLUME $MONAX_PATH
 WORKDIR $MONAX_PATH
 USER $USER:$USER
 
