@@ -38,6 +38,13 @@ jobs:
           at: .
       - run: make test_integration
 
+  build:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make build
+
   release:
     <<: *defaults
     steps:
@@ -77,10 +84,17 @@ workflows:
           filters:
             <<: *tags_filters
 
+      - build:
+          requires:
+            - checkout_code
+          filters:
+            <<: *tags_filters
+
       - release:
           requires:
             - test
             - test_integration
+            - build
           filters:
             # tags filters and branch filters are applied disjunctively, so we
             # will still build tags not on develop (i.e. including tagged

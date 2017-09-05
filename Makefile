@@ -121,7 +121,7 @@ build_race_client:
 
 # test burrow
 .PHONY: test
-test:
+test: check
 	@go test ${PACKAGES_NOVENDOR}
 
 .PHONY: test_integration

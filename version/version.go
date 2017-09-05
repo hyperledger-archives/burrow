@@ -93,7 +93,7 @@ func (v *VersionIdentifier) GetMinorVersionString() string {
 }
 
 // Return the plain version string without the ClientIdentifier
-func  GetSemanticVersionString() string { return burrowVersion.GetSemanticVersionString() }
+func GetSemanticVersionString() string { return burrowVersion.GetSemanticVersionString() }
 func (v *VersionIdentifier) GetSemanticVersionString() string {
 	return fmt.Sprintf("%d.%d.%d", v.MajorVersion,
 		v.MinorVersion, v.PatchVersion)
