@@ -22,5 +22,5 @@ import (
 
 // Print the Burrow version
 func main() {
-	fmt.Println(version.VERSION)
+	fmt.Println(version.GetSemanticVersionString())
 }
