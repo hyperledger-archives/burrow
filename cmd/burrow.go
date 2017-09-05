@@ -34,7 +34,7 @@ your needs.
 Made with <3 by Monax Industries.
 
 Complete documentation is available at https://monax.io/docs
-` + "\nVERSION:\n " + version.VERSION,
+` + "\nVERSION:\n " + version.GetSemanticVersionString(),
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 

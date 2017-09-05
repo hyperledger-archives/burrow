@@ -32,7 +32,7 @@ const (
 	// Minor version component of the current release
 	versionMinor = 17
 	// Patch version component of the current release
-	versionPatch = 0
+	versionPatch = 1
 )
 
 var burrowVersion *VersionIdentifier
@@ -92,6 +92,13 @@ func (v *VersionIdentifier) GetMinorVersionString() string {
 		v.MinorVersion)
 }
 
+// Return the plain version string without the ClientIdentifier
+func GetSemanticVersionString() string { return burrowVersion.GetSemanticVersionString() }
+func (v *VersionIdentifier) GetSemanticVersionString() string {
+	return fmt.Sprintf("%d.%d.%d", v.MajorVersion,
+		v.MinorVersion, v.PatchVersion)
+}
+
 // note: similar remark applies here on the use of `int` over `uint8`
 // for the arguments as above for MakeVersionString()
 func MakeMinorVersionString(client string, major, minor, patch int) string {
@@ -125,8 +132,3 @@ func (version *VersionIdentifier) MatchesMinorVersion(
 		version.MajorVersion == referenceMajor &&
 		version.MinorVersion == referenceMinor
 }
-
-//------------------------------------------------------------------------------
-// util/version/cmd prints this when run and is used to by build_tool.sh to obtain
-// Burrow version
-const VERSION = "0.17.0"

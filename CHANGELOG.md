@@ -1,4 +1,7 @@
 # burrow changelog
+## v0.17.1
+Minor tweaks to docker build file
+
 ## v0.17.0
 This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
 

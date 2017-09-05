@@ -53,7 +53,7 @@ func TestMultiplexedEvents(t *testing.T) {
 		mutex2.Unlock()
 	})
 
-	time.Sleep(2 * mockInterval)
+	time.Sleep(4 * mockInterval)
 
 	err := emitter12.Unsubscribe("Sub12")
 	assert.NoError(t, err)
