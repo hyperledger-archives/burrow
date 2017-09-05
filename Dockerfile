@@ -5,7 +5,7 @@ MAINTAINER Monax <support@monax.io>
 RUN apk add --no-cache --update git
 RUN go get github.com/Masterminds/glide
 
-ENV REPO $GOPATH/src/github.com/hyperledger/burrow
+ARG REPO=$GOPATH/src/github.com/hyperledger/burrow
 COPY . $REPO
 WORKDIR $REPO
 RUN glide install
@@ -17,13 +17,9 @@ RUN go build --ldflags '-extldflags "-static"' -o bin/burrow-client ./client/cmd
 # This will be our base container image
 FROM alpine:3.6
 
-# There does not appear to be a way to share environment variables between stages
-ENV REPO /go/src/github.com/hyperledger/burrow
-
 ENV USER monax
 ENV MONAX_PATH /home/$USER/.monax
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
-VOLUME $MONAX_PATH
 WORKDIR $MONAX_PATH
 USER $USER:$USER
 

@@ -59,10 +59,10 @@ workflows:
   test_and_release:
     jobs:
       - checkout_code:
-          # Rather annoyingly we need this boilerplate on all transitive
+          # Rather annoyingly we need to include tags_filters on all transitive
           # dependencies if we want the deploy job to build against a version
           # tag.
-          # Also note jobs build against all branches by default
+          # In contract jobs build against all branches by default
           filters:
             <<: *tags_filters
       - test:
@@ -82,11 +82,10 @@ workflows:
             - test
             - test_integration
           filters:
+            # tags filters and branch filters are applied disjunctively, so we
+            # will still build tags not on develop (i.e. including tagged
+            # releases on master that we specifically want to build)
             <<: *tags_filters
             branches:
-              # Although we seem to exclude the master branch below, since
-              # matching on tags is independent we will still build tags that
-              # happen to point to a commit on master
-              # We push dev pre-release images for every commit on develop
               only: develop
 
