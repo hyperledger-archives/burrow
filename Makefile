@@ -138,7 +138,7 @@ test_race: build_race
 # build docker image for burrow
 .PHONY: build_docker_db
 build_docker_db: check
-	@./build_tool.sh
+	@scripts/build_tool.sh
 
 ### Clean up
 

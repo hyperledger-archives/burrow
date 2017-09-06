@@ -17,6 +17,8 @@ RUN go build --ldflags '-extldflags "-static"' -o bin/burrow-client ./client/cmd
 # This will be our base container image
 FROM alpine:3.6
 
+ARG REPO=/go/src/github.com/hyperledger/burrow
+
 ENV USER monax
 ENV MONAX_PATH /home/$USER/.monax
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
