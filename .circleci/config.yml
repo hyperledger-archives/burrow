@@ -10,6 +10,10 @@ tag_filters: &tags_filters
   tags:
     only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
 
+setup_docker: &setup_docker
+  version: 17.06.1-ce
+
+# Start of CircleCI 2.0 config
 version: 2
 jobs:
   checkout_code:
@@ -38,25 +42,44 @@ jobs:
           at: .
       - run: make test_integration
 
-  build:
+  build_docker:
     <<: *defaults
     steps:
       - attach_workspace:
           at: .
-      - run: make build
-
-  release:
-    <<: *defaults
-    steps:
-      # restore checkout
-      - attach_workspace:
-          at: .
-      # This allows us to perform our docker builds
+        # This allows us to perform our docker builds
       - setup_remote_docker:
-          version: 17.06.1-ce
+          <<: *setup_docker
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      # build docker image and tag the image with the version, date, and commit hash
+        # build docker image and tag the docker image(s) depending on branch/tag
       - run: make build_docker_db
+      - run: docker save quay.io/monax/db > db-images.tar
+      - persist_to_workspace:
+          root: .
+          paths:
+            - db-images.tar
+
+  # Simple smoke test to ensure burrow binary has been provisioned to container
+  test_docker_smoke:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - setup_remote_docker:
+          <<: *setup_docker
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - run: docker load -i db-images.tar
+      - run: docker run quay.io/monax/db:$(./scripts/local_version.sh) burrow -h
+
+  push_docker:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - setup_remote_docker:
+          <<: *setup_docker
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
+      - run: docker load -i db-images.tar
       - run: docker push quay.io/monax/db
 
 
@@ -72,6 +95,7 @@ workflows:
           # In contract jobs build against all branches by default
           filters:
             <<: *tags_filters
+            
       - test:
           requires:
             - checkout_code
@@ -84,17 +108,23 @@ workflows:
           filters:
             <<: *tags_filters
 
-      - build:
+      - build_docker:
           requires:
             - checkout_code
           filters:
             <<: *tags_filters
 
-      - release:
+      - test_docker_smoke:
+          requires:
+            - build_docker
+          filters:
+            <<: *tags_filters
+
+      - push_docker:
           requires:
             - test
             - test_integration
-            - build
+            - test_docker_smoke
           filters:
             # tags filters and branch filters are applied disjunctively, so we
             # will still build tags not on develop (i.e. including tagged
