@@ -18,17 +18,16 @@ import (
 	"fmt"
 	// "strings"
 
-	"github.com/tendermint/go-rpc/client"
+	"github.com/tendermint/tendermint/rpc/lib/client"
 
 	acc "github.com/hyperledger/burrow/account"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
 	tendermint_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
-	tmLog15 "github.com/tendermint/log15"
+	abci_types "github.com/tendermint/abci/types"
 )
 
 type NodeClient interface {
@@ -43,7 +42,7 @@ type NodeClient interface {
 
 	DumpStorage(address []byte) (storage *core_types.Storage, err error)
 	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
-	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
+	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []abci_types.Validator, err error)
 
 	// Logging context for this NodeClient
 	Logger() logging_types.InfoTraceLogger
@@ -74,13 +73,6 @@ func NewBurrowNodeClient(rpcString string, logger logging_types.InfoTraceLogger)
 		broadcastRPC: rpcString,
 		logger:       logging.WithScope(logger, "BurrowNodeClient"),
 	}
-}
-
-// Note [Ben]: This is a hack to silence Tendermint logger from tendermint/go-rpc
-// it needs to be initialised before go-rpc, hence it's placement here.
-func init() {
-	h := tmLog15.LvlFilterHandler(tmLog15.LvlWarn, tmLog15.StdoutHandler)
-	tmLog15.Root().SetHandler(h)
 }
 
 //------------------------------------------------------------------------------------
@@ -248,7 +240,7 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner []byte, da
 //--------------------------------------------------------------------------------------------
 
 func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight int,
-	bondedValidators []consensus_types.Validator, unbondingValidators []consensus_types.Validator, err error) {
+	bondedValidators []abci_types.Validator, unbondingValidators []abci_types.Validator, err error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
 	if err != nil {

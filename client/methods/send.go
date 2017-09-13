@@ -28,7 +28,7 @@ func Send(do *definitions.ClientDo) error {
 	// blockchain node.
 	logger, err := loggerFromClientDo(do, "Send")
 	if err != nil {
-		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
 	burrowKeyClient := keys.NewBurrowKeyClient(do.SignAddrFlag, logger)
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)

@@ -14,26 +14,30 @@
 
 package client
 
-import "github.com/tendermint/go-rpc/types"
+import (
+	"context"
+
+	"github.com/tendermint/tendermint/rpc/lib/types"
+)
 
 type WebsocketClient interface {
-	WriteJSON(v interface{}) error
+	Send(ctx context.Context, request rpctypes.RPCRequest) error
 }
 
-func Subscribe(websocketClient WebsocketClient, eventId string) error {
-	return websocketClient.WriteJSON(rpctypes.RPCRequest{
-		JSONRPC: "2.0",
-		ID:      "",
-		Method:  "subscribe",
-		Params:  map[string]interface{}{"eventId": eventId},
-	})
+func Subscribe(websocketClient WebsocketClient, subscriptionId string) error {
+	req, err := rpctypes.MapToRequest("", "subscribe",
+		map[string]interface{}{"subscriptionId": subscriptionId})
+	if err != nil {
+		return err
+	}
+	return websocketClient.Send(context.Background(), req)
 }
 
 func Unsubscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	return websocketClient.WriteJSON(rpctypes.RPCRequest{
-		JSONRPC: "2.0",
-		ID:      "",
-		Method:  "unsubscribe",
-		Params:  map[string]interface{}{"subscriptionId": subscriptionId},
-	})
+	req, err := rpctypes.MapToRequest("", "unsubscribe",
+		map[string]interface{}{"subscriptionId": subscriptionId})
+	if err != nil {
+		return err
+	}
+	return websocketClient.Send(context.Background(), req)
 }

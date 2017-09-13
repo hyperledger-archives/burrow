@@ -24,8 +24,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
-	go_events "github.com/tendermint/go-events"
 	tm_types "github.com/tendermint/tendermint/types"
+	go_events "github.com/tendermint/tmlibs/events"
 )
 
 // TODO: [Silas] this is a compatibility layer between our event types and

@@ -24,8 +24,8 @@ import (
 	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
 
-	rpcclient "github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
+	"github.com/tendermint/tendermint/rpc/lib/client"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 

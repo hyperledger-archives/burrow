@@ -24,9 +24,8 @@ import (
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-p2p"
-	"github.com/tendermint/go-rpc/types"
 	"github.com/tendermint/go-wire"
+	"github.com/tendermint/tendermint/p2p"
 )
 
 type ResultGetStorage struct {
@@ -182,7 +181,6 @@ const (
 )
 
 type BurrowResult interface {
-	rpctypes.Result
 }
 
 func ConcreteTypes() []wire.ConcreteType {

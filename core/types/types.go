@@ -16,7 +16,7 @@ package types
 
 // TODO: [ben] this is poorly constructed but copied over
 // from burrow/burrow/pipe/types to make incremental changes and allow
-// for a discussion around the proper defintion of the needed types.
+// for a discussion around the proper definition of the needed types.
 
 import (
 	// NodeInfo (drop this!)

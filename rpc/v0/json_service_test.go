@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
+	"github.com/hyperledger/burrow/execution/evm/opcodes"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 

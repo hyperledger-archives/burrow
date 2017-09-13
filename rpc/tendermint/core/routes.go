@@ -18,11 +18,11 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/definitions"
+	definitions "github.com/hyperledger/burrow/definitions"
 	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
 	"github.com/hyperledger/burrow/txs"
-	rpc "github.com/tendermint/go-rpc/server"
-	rpctypes "github.com/tendermint/go-rpc/types"
+	rpc "github.com/tendermint/tendermint/rpc/lib/server"
+	"github.com/tendermint/tendermint/rpc/lib/types"
 )
 
 // TODO: [ben] encapsulate Routes into a struct for a given TendermintPipe

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/execution/evm"
 )
 
 const contractTemplateText = `/**

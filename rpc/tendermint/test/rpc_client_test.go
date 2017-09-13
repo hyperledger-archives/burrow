@@ -31,7 +31,6 @@ import (
 	"github.com/hyperledger/burrow/word256"
 
 	"github.com/stretchr/testify/assert"
-	_ "github.com/tendermint/tendermint/config/tendermint_test"
 )
 
 // When run with `-test.short` we only run:

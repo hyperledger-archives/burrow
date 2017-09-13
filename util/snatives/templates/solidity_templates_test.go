@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/stretchr/testify/assert"
 )
 

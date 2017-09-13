@@ -20,11 +20,11 @@ import (
 	"net/http"
 	"strings"
 
-	events "github.com/tendermint/go-events"
-	rpcserver "github.com/tendermint/go-rpc/server"
+	"github.com/tendermint/tendermint/rpc/lib/server"
+	"github.com/tendermint/tmlibs/events"
 
-	definitions "github.com/hyperledger/burrow/definitions"
-	server "github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/definitions"
+	"github.com/hyperledger/burrow/server"
 )
 
 type TendermintWebsocketServer struct {

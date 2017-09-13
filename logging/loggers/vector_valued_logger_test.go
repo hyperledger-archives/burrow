@@ -17,7 +17,6 @@ package loggers
 import (
 	"testing"
 
-	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,6 +26,6 @@ func TestVectorValuedLogger(t *testing.T) {
 	vvl.Log("foo", "bar", "seen", 1, "seen", 3, "seen", 2)
 	lls, err := logger.logLines(1)
 	assert.NoError(t, err)
-	assert.Equal(t, Slice("foo", "bar", "seen", Slice(1, 3, 2)),
+	assert.Equal(t, []interface{}{"foo", "bar", "seen", []interface{}{1, 3, 2}},
 		lls[0])
 }

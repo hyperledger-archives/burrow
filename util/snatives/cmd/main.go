@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/util/snatives/templates"
 )
 

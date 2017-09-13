@@ -1,0 +1,10 @@
+
+Usage: app [-o] ARG
+
+Longer App Desc
+               
+Arguments:     
+  ARG          Argument
+               
+Options:       
+  -o, --opt    Option

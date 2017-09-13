@@ -52,7 +52,7 @@ func (tx *SendTx) AddInputWithNonce(pubkey crypto.PubKey, amt int64, nonce int) 
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: crypto.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    pubkey,
 	})
 	return nil
@@ -95,7 +95,7 @@ func NewCallTxWithNonce(from crypto.PubKey, to, data []byte, amt, gasLimit, fee 
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: crypto.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 
@@ -133,7 +133,7 @@ func NewNameTxWithNonce(from crypto.PubKey, name, data string, amt, fee int64, n
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: crypto.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 
@@ -154,7 +154,7 @@ func (tx *NameTx) Sign(chainID string, privAccount *acm.PrivAccount) {
 // BondTx interface for adding inputs/outputs and adding signatures
 
 func NewBondTx(pubkey crypto.PubKey) (*BondTx, error) {
-	pubkeyEd, ok := pubkey.(crypto.PubKeyEd25519)
+	pubkeyEd, ok := pubkey.Unwrap().(crypto.PubKeyEd25519)
 	if !ok {
 		return nil, fmt.Errorf("Pubkey must be ed25519")
 	}
@@ -180,7 +180,7 @@ func (tx *BondTx) AddInputWithNonce(pubkey crypto.PubKey, amt int64, nonce int) 
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  nonce,
-		Signature: crypto.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    pubkey,
 	})
 	return nil
@@ -196,7 +196,7 @@ func (tx *BondTx) AddOutput(addr []byte, amt int64) error {
 
 func (tx *BondTx) SignBond(chainID string, privAccount *acm.PrivAccount) error {
 	sig := privAccount.Sign(chainID, tx)
-	sigEd, ok := sig.(crypto.SignatureEd25519)
+	sigEd, ok := sig.Unwrap().(crypto.SignatureEd25519)
 	if !ok {
 		return fmt.Errorf("Bond signer must be ED25519")
 	}
@@ -224,7 +224,7 @@ func NewUnbondTx(addr []byte, height int) *UnbondTx {
 }
 
 func (tx *UnbondTx) Sign(chainID string, privAccount *acm.PrivAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).(crypto.SignatureEd25519)
+	tx.Signature = privAccount.Sign(chainID, tx).Unwrap().(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------
@@ -238,7 +238,7 @@ func NewRebondTx(addr []byte, height int) *RebondTx {
 }
 
 func (tx *RebondTx) Sign(chainID string, privAccount *acm.PrivAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).(crypto.SignatureEd25519)
+	tx.Signature = privAccount.Sign(chainID, tx).Unwrap().(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------------
@@ -261,7 +261,7 @@ func NewPermissionsTxWithNonce(from crypto.PubKey, args ptypes.PermArgs, nonce i
 		Address:   addr,
 		Amount:    1, // NOTE: amounts can't be 0 ...
 		Sequence:  nonce,
-		Signature: crypto.SignatureEd25519{},
+		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 

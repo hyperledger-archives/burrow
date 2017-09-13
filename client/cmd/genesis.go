@@ -17,7 +17,6 @@ package commands
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/common/sanity"
 	"github.com/hyperledger/burrow/genesis"
 
 	"github.com/spf13/cobra"
@@ -38,7 +37,7 @@ var GenesisGenCmd = &cobra.Command{
 		// TODO refactor to not panic
 		genesisFile, err := genesis.GenerateKnown(args[0], AccountsPathFlag, ValidatorsPathFlag)
 		if err != nil {
-			sanity.PanicSanity(err)
+			panic(err)
 		}
 		fmt.Println(genesisFile) // may want to save somewhere instead
 	},

@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"net/http"
-	"os"
 	"runtime"
 	"testing"
 
@@ -35,17 +34,12 @@ import (
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/v0/shared"
 	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/log15"
 )
 
 var logger, _ = lifecycle.NewStdErrLogger()
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	log15.Root().SetHandler(log15.LvlFilterHandler(
-		log15.LvlWarn,
-		log15.StreamHandler(os.Stdout, log15.TerminalFormat()),
-	))
 	gin.SetMode(gin.ReleaseMode)
 }
 

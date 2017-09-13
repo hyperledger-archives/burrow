@@ -3,7 +3,6 @@ package loggers
 import (
 	"testing"
 
-	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,5 +13,5 @@ func TestFilterLogger(t *testing.T) {
 	})
 	filterLogger.Log("Fish", "Present")
 	filterLogger.Log("Spoon", "Present")
-	assert.Equal(t, [][]interface{}{Slice("Fish", "Present")}, testLogger.FlushLogLines())
+	assert.Equal(t, [][]interface{}{{"Fish", "Present"}}, testLogger.FlushLogLines())
 }

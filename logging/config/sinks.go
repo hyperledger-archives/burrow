@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"net/url"
-
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/loggers"
@@ -22,9 +20,6 @@ type filterMode string
 const (
 	// OutputType
 	NoOutput outputType = ""
-	Graylog  outputType = "graylog"
-	Syslog   outputType = "syslog"
-	File     outputType = "file"
 	Stdout   outputType = "stdout"
 	Stderr   outputType = "stderr"
 
@@ -187,29 +182,6 @@ func StderrOutput() *OutputConfig {
 	}
 }
 
-func SyslogOutput(tag string) *OutputConfig {
-	return RemoteSyslogOutput(tag, "")
-}
-
-func FileOutput(path string) *OutputConfig {
-	return &OutputConfig{
-		OutputType: File,
-		FileConfig: &FileConfig{
-			Path: path,
-		},
-	}
-}
-
-func RemoteSyslogOutput(tag, remoteUrl string) *OutputConfig {
-	return &OutputConfig{
-		OutputType: Syslog,
-		SyslogConfig: &SyslogConfig{
-			Url: remoteUrl,
-			Tag: tag,
-		},
-	}
-}
-
 func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformConfig {
 	return &TransformConfig{
 		TransformType: Capture,
@@ -307,27 +279,10 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	switch outputConfig.OutputType {
 	case NoOutput:
 		return kitlog.NewNopLogger(), nil
-	//case Graylog:
-	case Syslog:
-		urlString := outputConfig.SyslogConfig.Url
-		if urlString != "" {
-			remoteUrl, err := url.Parse(urlString)
-			if err != nil {
-				return nil, fmt.Errorf("Error parsing remote syslog URL: %s, "+
-					"error: %s",
-					urlString, err)
-			}
-			return loggers.NewRemoteSyslogLogger(remoteUrl,
-				outputConfig.SyslogConfig.Tag, outputConfig.Format)
-		}
-		return loggers.NewSyslogLogger(outputConfig.SyslogConfig.Tag,
-			outputConfig.Format)
 	case Stdout:
 		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format), nil
 	case Stderr:
 		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format), nil
-	case File:
-		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
 	default:
 		return nil, fmt.Errorf("Could not build logger for output: '%s'",
 			outputConfig.OutputType)

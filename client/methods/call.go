@@ -19,16 +19,15 @@ import (
 
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/keys"
 )
 
-func Call(do *definitions.ClientDo) error {
+func Call(do *client.Do) error {
 	// construct two clients to call out to keys server and
 	// blockchain node.
 	logger, err := loggerFromClientDo(do, "Call")
 	if err != nil {
-		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
 	burrowKeyClient := keys.NewBurrowKeyClient(do.SignAddrFlag, logger)
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)

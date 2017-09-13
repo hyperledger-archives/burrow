@@ -18,13 +18,9 @@ import (
 	"fmt"
 
 	// TODO: [ben] swap out go-events with burrow/event (currently unused)
-	events "github.com/tendermint/go-events"
+	events "github.com/tendermint/tmlibs/events"
 
-	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/consensus"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/manager"
 	// rpc_v0 is carried over from burrowv0.11 and before on port 1337
 	rpc_v0 "github.com/hyperledger/burrow/rpc/v0"
 	// rpc_tendermint is carried over from burrowv0.11 and before on port 46657
@@ -33,47 +29,27 @@ import (
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	rpc_tendermint "github.com/hyperledger/burrow/rpc/tendermint/core"
 	"github.com/hyperledger/burrow/server"
+	"github.com/tendermint/tendermint/node"
 )
 
-// Core is the high-level structure
+// Core is the top-level structure of Burrow
 type Core struct {
 	chainId        string
-	evsw           events.EventSwitch
-	pipe           definitions.Pipe
-	tendermintPipe definitions.TendermintPipe
+	eventSwitch    events.EventSwitch
+	tendermintNode *node.Node
 	logger         logging_types.InfoTraceLogger
 }
 
-func NewCore(chainId string,
-	consensusConfig *config.ModuleConfig,
-	managerConfig *config.ModuleConfig,
-	logger logging_types.InfoTraceLogger) (*Core, error) {
+func NewCore(chainId string, logger logging_types.InfoTraceLogger) (*Core, error) {
 	// start new event switch, TODO: [ben] replace with burrow/event
 	evsw := events.NewEventSwitch()
 	evsw.Start()
 	logger = logging.WithScope(logger, "Core")
 
-	// start a new application pipe that will load an application manager
-	pipe, err := manager.NewApplicationPipe(managerConfig, evsw, logger)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to load application pipe: %v", err)
-	}
-	logging.TraceMsg(logger, "Loaded pipe with application manager")
-	// pass the consensus engine into the pipe
-	if e := consensus.LoadConsensusEngineInPipe(consensusConfig, pipe); e != nil {
-		return nil, fmt.Errorf("Failed to load consensus engine in pipe: %v", e)
-	}
-	tendermintPipe, err := pipe.GetTendermintPipe()
-	if err != nil {
-		logging.TraceMsg(logger, "Tendermint gateway not supported by manager",
-			"manager", managerConfig.Name)
-	}
 	return &Core{
-		chainId:        chainId,
-		evsw:           evsw,
-		pipe:           pipe,
-		tendermintPipe: tendermintPipe,
-		logger:         logger,
+		chainId:     chainId,
+		eventSwitch: evsw,
+		logger:      logger,
 	}, nil
 }
 
@@ -112,11 +88,8 @@ func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProces
 
 func (core *Core) NewGatewayTendermint(config *server.ServerConfig) (
 	*rpc_tendermint.TendermintWebsocketServer, error) {
-	if core.tendermintPipe == nil {
-		return nil, fmt.Errorf("No Tendermint pipe has been initialised for Tendermint gateway.")
-	}
 	return rpc_tendermint.NewTendermintWebsocketServer(config,
-		core.tendermintPipe, core.evsw)
+		core.tendermintPipe, core.eventSwitch)
 }
 
 // Stop the core allowing for a graceful shutdown of component in order.

@@ -24,7 +24,7 @@ import (
 func Status(do *definitions.ClientDo) error {
 	logger, err := loggerFromClientDo(do, "Status")
 	if err != nil {
-		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := burrowNodeClient.Status()

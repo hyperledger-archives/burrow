@@ -14,14 +14,8 @@
 
 package account
 
-// TODO: [ben] Account and PrivateAccount need to become a pure interface
-// and then move the implementation to the manager types.
-// Eg, Geth has its accounts, different from BurrowMint
-
 import (
 	"fmt"
-
-	"github.com/hyperledger/burrow/common/sanity"
 
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-crypto"
@@ -35,7 +29,7 @@ type PrivAccount struct {
 }
 
 func (pA *PrivAccount) Generate(index int) *PrivAccount {
-	newPrivKey := pA.PrivKey.(crypto.PrivKeyEd25519).Generate(index)
+	newPrivKey := pA.PrivKey.Unwrap().(crypto.PrivKeyEd25519).Generate(index).Wrap()
 	newPubKey := newPrivKey.PubKey()
 	newAddress := newPubKey.Address()
 	return &PrivAccount{
@@ -64,8 +58,8 @@ func GenPrivAccount() *PrivAccount {
 	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
 	return &PrivAccount{
 		Address: pubKey.Address(),
-		PubKey:  pubKey,
-		PrivKey: privKey,
+		PubKey:  pubKey.Wrap(),
+		PrivKey: privKey.Wrap(),
 	}
 }
 
@@ -84,14 +78,14 @@ func GenPrivAccountFromSecret(secret string) *PrivAccount {
 	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
 	return &PrivAccount{
 		Address: pubKey.Address(),
-		PubKey:  pubKey,
-		PrivKey: privKey,
+		PubKey:  pubKey.Wrap(),
+		PrivKey: privKey.Wrap(),
 	}
 }
 
 func GenPrivAccountFromPrivKeyBytes(privKeyBytes []byte) *PrivAccount {
 	if len(privKeyBytes) != 64 {
-		sanity.PanicSanity(fmt.Sprintf("Expected 64 bytes but got %v", len(privKeyBytes)))
+		panic(fmt.Sprintf("Expected 64 bytes but got %v", len(privKeyBytes)))
 	}
 	var privKeyArray [64]byte
 	copy(privKeyArray[:], privKeyBytes)
@@ -100,7 +94,7 @@ func GenPrivAccountFromPrivKeyBytes(privKeyBytes []byte) *PrivAccount {
 	privKey := crypto.PrivKeyEd25519(privKeyArray)
 	return &PrivAccount{
 		Address: pubKey.Address(),
-		PubKey:  pubKey,
-		PrivKey: privKey,
+		PubKey:  pubKey.Wrap(),
+		PrivKey: privKey.Wrap(),
 	}
 }

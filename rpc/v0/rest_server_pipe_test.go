@@ -24,14 +24,14 @@ import (
 
 	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	consensus_types "github.com/hyperledger/burrow/consensus/types"
+	manager_types "github.com/hyperledger/burrow/execution/types"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	manager_types "github.com/hyperledger/burrow/manager/types"
 	"github.com/hyperledger/burrow/txs"
 
 	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-p2p"
+	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 

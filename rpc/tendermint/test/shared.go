@@ -29,9 +29,9 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/core"
 	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/execution/evm"
 	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/rpc/tendermint/client"
 	edbcli "github.com/hyperledger/burrow/rpc/tendermint/client"
@@ -42,7 +42,7 @@ import (
 	"github.com/hyperledger/burrow/word256"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto"
-	rpcclient "github.com/tendermint/go-rpc/client"
+	"github.com/tendermint/tendermint/rpc/lib/client"
 	"github.com/tendermint/tendermint/types"
 )
 

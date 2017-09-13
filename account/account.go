@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hyperledger/burrow/common/sanity"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 
 	"github.com/tendermint/go-crypto"
@@ -41,9 +40,8 @@ func SignBytes(chainID string, o Signable) []byte {
 	buf, n, err := new(bytes.Buffer), new(int), new(error)
 	o.WriteSignBytes(chainID, buf, n, err)
 	if *err != nil {
-		sanity.PanicCrisis(err)
+		panic(fmt.Sprintf("could not write sign bytes for a signable: %s", *err))
 	}
-
 	return buf.Bytes()
 }
 
