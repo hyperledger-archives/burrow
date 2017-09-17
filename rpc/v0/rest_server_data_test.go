@@ -16,12 +16,14 @@ package v0
 
 import (
 	account "github.com/hyperledger/burrow/account"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution"
 	genesis "github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/rpc/v0/shared"
 	transaction "github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/tendermint/consensus"
+	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -555,8 +557,8 @@ type (
 	}
 
 	GetAccountData struct {
-		Input  *AddressParam    `json:"input"`
-		Output *account.Account `json:"output"`
+		Input  *AddressParam            `json:"input"`
+		Output *account.ConcreteAccount `json:"output"`
 	}
 
 	GetAccountsData struct {
@@ -575,7 +577,7 @@ type (
 	}
 
 	GenPrivAccountData struct {
-		Output *account.PrivAccount `json:"output"`
+		Output *account.ConcretePrivateAccount `json:"output"`
 	}
 
 	GetBlockchainInfoData struct {
@@ -609,7 +611,7 @@ type (
 	}
 
 	GetConsensusStateData struct {
-		Output *consensus_types.ConsensusState `json:"output"`
+		Output *consensus.RoundState `json:"output"`
 	}
 
 	GetValidatorsData struct {
@@ -637,12 +639,12 @@ type (
 	}
 
 	GetPeersData struct {
-		Output []*consensus_types.Peer `json:"output"`
+		Output []*p2p.Peer `json:"output"`
 	}
 
 	GetPeerData struct {
-		Input  *PeerParam            `json:"input"`
-		Output *consensus_types.Peer `json:"output"`
+		Input  *PeerParam `json:"input"`
+		Output *p2p.Peer  `json:"output"`
 	}
 
 	TransactData struct {
@@ -660,13 +662,13 @@ type (
 	}
 
 	CallCodeData struct {
-		Input  *CallCodeParam   `json:"input"`
-		Output *core_types.Call `json:"output"`
+		Input  *CallCodeParam  `json:"input"`
+		Output *execution.Call `json:"output"`
 	}
 
 	CallData struct {
-		Input  *CallParam       `json:"input"`
-		Output *core_types.Call `json:"output"`
+		Input  *CallParam      `json:"input"`
+		Output *execution.Call `json:"output"`
 	}
 
 	EventSubscribeData struct {
@@ -685,13 +687,13 @@ type (
 	}
 
 	GetNameRegEntryData struct {
-		Input  *NameRegEntryParam       `json:"input"`
-		Output *core_types.NameRegEntry `json:"output"`
+		Input  *NameRegEntryParam      `json:"input"`
+		Output *execution.NameRegEntry `json:"output"`
 	}
 
 	GetNameRegEntriesData struct {
-		Input  *FilterListParam            `json:"input"`
-		Output *core_types.ResultListNames `json:"output"`
+		Input  *FilterListParam           `json:"input"`
+		Output *execution.ResultListNames `json:"output"`
 	}
 
 	/*

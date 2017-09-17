@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission"
 
 	"fmt"
 

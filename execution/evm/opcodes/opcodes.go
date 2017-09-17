@@ -17,7 +17,8 @@ package opcodes
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/word256"
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/word"
 	"gopkg.in/fatih/set.v0"
 )
 
@@ -391,7 +392,11 @@ func Bytecode(bytelikes ...interface{}) []byte {
 			if int64(bytes[i]) != b {
 				panic(fmt.Sprintf("The int64 %v does not fit inside a byte", b))
 			}
-		case word256.Word256:
+		case word.Word256:
+			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
+		case word.Word160:
+			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
+		case account.Address:
 			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
 		case []byte:
 			// splice

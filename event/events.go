@@ -21,9 +21,9 @@ import (
 
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/hyperledger/burrow/txs"
 	tm_types "github.com/tendermint/tendermint/types"
 	go_events "github.com/tendermint/tmlibs/events"
 )
@@ -38,12 +38,15 @@ import (
 type anyEventData interface{}
 
 type EventEmitter interface {
-	Subscribe(subId, event string, callback func(txs.EventData)) error
+	go_events.Fireable
+	Subscribe(subId, event string, callback func(evm.EventData)) error
 	Unsubscribe(subId string) error
 }
 
-func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
-	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+// The events struct has methods for working with events.
+type events struct {
+	eventSwitch go_events.EventSwitch
+	logger      logging_types.InfoTraceLogger
 }
 
 // Provides an EventEmitter that wraps many underlying EventEmitters as a
@@ -53,15 +56,19 @@ func Multiplex(events ...EventEmitter) *multiplexedEvents {
 	return &multiplexedEvents{events}
 }
 
-// The events struct has methods for working with events.
-type events struct {
-	eventSwitch go_events.EventSwitch
-	logger      logging_types.InfoTraceLogger
+var _ EventEmitter = &events{}
+
+func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
+	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+}
+
+func (evts *events) FireEvent(event string, eventData go_events.EventData) {
+	evts.eventSwitch.FireEvent(event, eventData)
 }
 
 // Subscribe to an event.
 func (evts *events) Subscribe(subId, event string,
-	callback func(txs.EventData)) error {
+	callback func(evm.EventData)) error {
 	cb := func(evt go_events.EventData) {
 		eventData, err := mapToOurEventData(evt)
 		if err != nil {
@@ -87,7 +94,7 @@ type multiplexedEvents struct {
 
 // Subscribe to an event.
 func (multiEvents *multiplexedEvents) Subscribe(subId, event string,
-	callback func(txs.EventData)) error {
+	callback func(evm.EventData)) error {
 	for _, eventEmitter := range multiEvents.eventEmitters {
 		err := eventEmitter.Subscribe(subId, event, callback)
 		if err != nil {
@@ -108,6 +115,17 @@ func (multiEvents *multiplexedEvents) Unsubscribe(subId string) error {
 	}
 
 	return nil
+}
+
+type noOpFireable struct {
+}
+
+func (*noOpFireable) FireEvent(event string, data go_events.EventData) {
+
+}
+
+func NewNoOpFireable() go_events.Fireable {
+	return &noOpFireable{}
 }
 
 // *********************************** Events ***********************************
@@ -134,25 +152,25 @@ func GenerateSubId() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
-		return "", fmt.Errorf("Could not generate random bytes for a subscription"+
+		return "", fmt.Errorf("could not generate random bytes for a subscription"+
 			" id: %v", err)
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
 }
 
-func mapToOurEventData(eventData anyEventData) (txs.EventData, error) {
+func mapToOurEventData(eventData anyEventData) (evm.EventData, error) {
 	// TODO: [Silas] avoid this with a better event pub-sub system of our own
 	// TODO: that maybe involves a registry of events
 	switch eventData := eventData.(type) {
-	case txs.EventData:
+	case evm.EventData:
 		return eventData, nil
 	case tm_types.EventDataNewBlock:
-		return txs.EventDataNewBlock{
+		return evm.EventDataNewBlock{
 			Block: eventData.Block,
 		}, nil
 	case tm_types.EventDataNewBlockHeader:
-		return txs.EventDataNewBlockHeader{
+		return evm.EventDataNewBlockHeader{
 			Header: eventData.Header,
 		}, nil
 	default:

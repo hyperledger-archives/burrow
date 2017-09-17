@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/evm"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tendermint/go-wire"
 
+	"github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
-	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
-	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
+	ctypes "github.com/hyperledger/burrow/rpc/tm/core/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/rpc/lib/client"
 )
@@ -35,7 +37,7 @@ const (
 
 type Confirmation struct {
 	BlockHash []byte
-	Event     txs.EventData
+	Event     evm.EventData
 	Exception error
 	Error     error
 }
@@ -65,7 +67,8 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscrip
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
+func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string,
+	inputAddr account.Address) (chan Confirmation, error) {
 	// check no errors are reported on the websocket
 	if err := burrowNodeWebsocketClient.assertNoErrors(); err != nil {
 		return nil, err
@@ -75,11 +78,11 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
 
-	eid := txs.EventStringAccInput(inputAddr)
+	eid := evm.EventStringAccInput(inputAddr[:])
 	if err := burrowNodeWebsocketClient.Subscribe(eid); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
 	}
-	if err := burrowNodeWebsocketClient.Subscribe(txs.EventStringNewBlock()); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(evm.EventStringNewBlock()); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
@@ -114,7 +117,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				continue
 			}
 
-			blockData, ok := event.Data.(txs.EventDataNewBlock)
+			blockData, ok := event.Data.(evm.EventDataNewBlock)
 			if ok {
 				latestBlockHash = blockData.Block.Hash()
 				logging.TraceMsg(burrowNodeWebsocketClient.logger, "Registered new block",
@@ -143,7 +146,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				continue
 			}
 
-			data, ok := event.Data.(txs.EventDataTx)
+			data, ok := event.Data.(evm.EventDataTx)
 			if !ok {
 				// We are on the lookout for EventDataTx
 				confirmationChannel <- Confirmation{

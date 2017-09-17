@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
 	"fmt"
 	"time"
 
-	. "github.com/hyperledger/burrow/word256"
+	"github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/word"
 
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
@@ -27,18 +28,18 @@ import (
 
 // Functions to generate eventId strings
 
-func EventStringAccInput(addr []byte) string    { return fmt.Sprintf("Acc/%X/Input", addr) }
-func EventStringAccOutput(addr []byte) string   { return fmt.Sprintf("Acc/%X/Output", addr) }
-func EventStringAccCall(addr []byte) string     { return fmt.Sprintf("Acc/%X/Call", addr) }
-func EventStringLogEvent(addr []byte) string    { return fmt.Sprintf("Log/%X", addr) }
-func EventStringPermissions(name string) string { return fmt.Sprintf("Permissions/%s", name) }
-func EventStringNameReg(name string) string     { return fmt.Sprintf("NameReg/%s", name) }
-func EventStringBond() string                   { return "Bond" }
-func EventStringUnbond() string                 { return "Unbond" }
-func EventStringRebond() string                 { return "Rebond" }
-func EventStringDupeout() string                { return "Dupeout" }
-func EventStringNewBlock() string               { return "NewBlock" }
-func EventStringFork() string                   { return "Fork" }
+func EventStringAccInput(addr account.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
+func EventStringAccOutput(addr account.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
+func EventStringAccCall(addr account.Address) string   { return fmt.Sprintf("Acc/%s/Call", addr) }
+func EventStringLogEvent(addr account.Address) string  { return fmt.Sprintf("Log/%s", addr) }
+func EventStringPermissions(name string) string        { return fmt.Sprintf("Permissions/%s", name) }
+func EventStringNameReg(name string) string            { return fmt.Sprintf("NameReg/%s", name) }
+func EventStringBond() string                          { return "Bond" }
+func EventStringUnbond() string                        { return "Unbond" }
+func EventStringRebond() string                        { return "Rebond" }
+func EventStringDupeout() string                       { return "Dupeout" }
+func EventStringNewBlock() string                      { return "NewBlock" }
+func EventStringFork() string                          { return "Fork" }
 
 func EventStringNewRound() string         { return fmt.Sprintf("NewRound") }
 func EventStringTimeoutPropose() string   { return fmt.Sprintf("TimeoutPropose") }
@@ -142,7 +143,7 @@ type EventDataRoundState struct {
 
 type EventDataVote struct {
 	Index   int
-	Address []byte
+	Address account.Address
 	Vote    *tm_types.Vote
 }
 

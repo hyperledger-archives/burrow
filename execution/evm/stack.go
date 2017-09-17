@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
 	"fmt"
 
-	. "github.com/hyperledger/burrow/word256"
+	. "github.com/hyperledger/burrow/word"
 )
 
 // Not goroutine safe

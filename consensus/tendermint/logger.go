@@ -6,30 +6,30 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-type tmLogger struct {
+type tendermintLogger struct {
 	logger logging_types.InfoTraceLogger
 }
 
-func NewLogger(logger logging_types.InfoTraceLogger) *tmLogger {
-	return &tmLogger{
+func NewLogger(logger logging_types.InfoTraceLogger) *tendermintLogger {
+	return &tendermintLogger{
 		logger: logger,
 	}
 }
 
-func (tml *tmLogger) Info(msg string, keyvals ...interface{}) error {
+func (tml *tendermintLogger) Info(msg string, keyvals ...interface{}) error {
 	return logging.InfoMsg(tml.logger, msg, keyvals...)
 }
 
-func (tml *tmLogger) Error(msg string, keyvals ...interface{}) error {
+func (tml *tendermintLogger) Error(msg string, keyvals ...interface{}) error {
 	return logging.InfoMsg(tml.logger, msg, keyvals...)
 }
 
-func (tml *tmLogger) Debug(msg string, keyvals ...interface{}) error {
+func (tml *tendermintLogger) Debug(msg string, keyvals ...interface{}) error {
 	return logging.TraceMsg(tml.logger, msg, keyvals...)
 }
 
-func (tml *tmLogger) With(keyvals ...interface{}) log.Logger {
-	return &tmLogger{
+func (tml *tendermintLogger) With(keyvals ...interface{}) log.Logger {
+	return &tendermintLogger{
 		logger: tml.logger.With(keyvals...),
 	}
 }

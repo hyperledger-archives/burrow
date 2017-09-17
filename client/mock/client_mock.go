@@ -19,22 +19,22 @@ import (
 
 	acc "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/client"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging/loggers"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {
-	accounts map[string]*acc.Account
+	accounts map[string]*acc.ConcreteAccount
 }
 
 func NewMockNodeClient() *MockNodeClient {
 	return &MockNodeClient{
-		accounts: make(map[string]*acc.Account),
+		accounts: make(map[string]*acc.ConcreteAccount),
 	}
 }
 
@@ -43,7 +43,6 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	txReceipt := &txs.Receipt{
 		TxHash:          make([]byte, 20),
 		CreatesContract: 0,
-		ContractAddr:    make([]byte, 20),
 	}
 	return txReceipt, nil
 }
@@ -52,13 +51,11 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 	return nil, nil
 }
 
-func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+func (mock *MockNodeClient) GetAccount(address acc.Address) (*acc.ConcreteAccount, error) {
 	// make zero account
 	var zero [32]byte
-	copyAddressBytes := make([]byte, len(address))
-	copy(copyAddressBytes, address)
-	account := &acc.Account{
-		Address:     copyAddressBytes,
+	account := &acc.ConcreteAccount{
+		Address:     address,
 		PubKey:      crypto.PubKey(crypto.PubKeyEd25519(zero)),
 		Sequence:    0,
 		Balance:     0,
@@ -68,7 +65,7 @@ func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
 	return account, nil
 }
 
-func (mock *MockNodeClient) MockAddAccount(account *acc.Account) {
+func (mock *MockNodeClient) MockAddAccount(account *acc.ConcreteAccount) {
 	addressString := string(account.Address[:])
 	mock.accounts[addressString] = account.Copy()
 }
@@ -112,7 +109,8 @@ func (mock *MockNodeClient) GetName(name string) (owner []byte, data string, exp
 	return nil, "", 0, nil
 }
 
-func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error) {
+func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators,
+	unbondingValidators *tm_types.Validator, err error) {
 	return 0, nil, nil, nil
 }
 

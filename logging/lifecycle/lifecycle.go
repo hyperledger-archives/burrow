@@ -91,6 +91,10 @@ func NewLogger(outputLogger kitlog.Logger) (types.InfoTraceLogger, channels.Chan
 	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId)), errCh
 }
 
+func JustLogger(logger types.InfoTraceLogger, _ channels.Channel) types.InfoTraceLogger {
+	return logger
+}
+
 func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
 	stdlib.CaptureRootLogger(infoTraceLogger.
 		With(structure.CapturedLoggingSourceKey, "stdlib_log"))

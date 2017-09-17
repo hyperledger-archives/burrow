@@ -16,12 +16,10 @@ package txs
 
 import (
 	"regexp"
-
-	core_types "github.com/hyperledger/burrow/core/types"
 )
 
 var (
-	MinNameRegistrationPeriod int = 5
+	MinNameRegistrationPeriod uint64 = 5
 
 	// NOTE: base costs and validity checks are here so clients
 	// can use them without importing state
@@ -56,10 +54,4 @@ func NameBaseCost(name, data string) int64 {
 
 func NameCostPerBlock(baseCost int64) int64 {
 	return NameBlockCostMultiplier * NameByteCostMultiplier * baseCost
-}
-
-// XXX: vestige of an older time
-type ResultListNames struct {
-	BlockHeight int                        `json:"block_height"`
-	Names       []*core_types.NameRegEntry `json:"names"`
 }

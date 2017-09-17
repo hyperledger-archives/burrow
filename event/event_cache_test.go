@@ -32,7 +32,7 @@ var mockInterval = 20 * time.Millisecond
 type mockSub struct {
 	subId   string
 	eventId string
-	f       func(txs.EventData)
+	f       func(evm.EventData)
 	sdChan  chan struct{}
 }
 
@@ -44,7 +44,7 @@ type mockEventData struct {
 func (eventData mockEventData) AssertIsEventData() {}
 
 // A mock event
-func newMockSub(subId, eventId string, f func(txs.EventData)) mockSub {
+func newMockSub(subId, eventId string, f func(evm.EventData)) mockSub {
 	return mockSub{subId, eventId, f, make(chan struct{})}
 }
 
@@ -57,7 +57,7 @@ func newMockEventEmitter() *mockEventEmitter {
 	return &mockEventEmitter{make(map[string]mockSub), &sync.Mutex{}}
 }
 
-func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(txs.EventData)) error {
+func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evm.EventData)) error {
 	if _, ok := this.subs[subId]; ok {
 		return nil
 	}

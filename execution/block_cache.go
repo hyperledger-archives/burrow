@@ -20,13 +20,11 @@ import (
 	"sort"
 
 	acm "github.com/hyperledger/burrow/account"
-	core_types "github.com/hyperledger/burrow/core/types"
-	. "github.com/hyperledger/burrow/word256"
+	. "github.com/hyperledger/burrow/word"
 
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/merkle"
-	"github.com/hyperledger/burrow/execution/evm"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
@@ -35,13 +33,14 @@ func makeStorage(db dbm.DB, root []byte) merkle.Tree {
 	return storage
 }
 
-var _ vm.AppState = &TxCache{}
+// Implements all of evm.State except acm.Creator (it doesn't need to)
+var _ acm.UpdaterAndStorage = &BlockCache{}
 
 // The blockcache helps prevent unnecessary IAVLTree updates and garbage generation.
 type BlockCache struct {
 	db       dbm.DB
 	backend  *State
-	accounts map[string]accountInfo
+	accounts map[acm.Address]accountInfo
 	storages map[Tuple256]storageInfo
 	names    map[string]nameInfo
 }
@@ -51,7 +50,7 @@ func NewBlockCache(backend *State) *BlockCache {
 		// TODO: This is bad and probably the cause of various panics
 		db:       backend.db,
 		backend:  backend,
-		accounts: make(map[string]accountInfo),
+		accounts: make(map[acm.Address]accountInfo),
 		storages: make(map[Tuple256]storageInfo),
 		names:    make(map[string]nameInfo),
 	}
@@ -64,83 +63,82 @@ func (cache *BlockCache) State() *State {
 //-------------------------------------
 // BlockCache.account
 
-func (cache *BlockCache) GetAccount(addr []byte) *acm.Account {
-	acc, _, removed, _ := cache.accounts[string(addr)].unpack()
+func (cache *BlockCache) GetAccount(addr acm.Address) *acm.ConcreteAccount {
+	acc, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		return nil
 	} else if acc != nil {
 		return acc
 	} else {
 		acc = cache.backend.GetAccount(addr)
-		cache.accounts[string(addr)] = accountInfo{acc, nil, false, false}
+		cache.accounts[addr] = accountInfo{acc, nil, false, false}
 		return acc
 	}
 }
 
-func (cache *BlockCache) UpdateAccount(acc *acm.Account) {
+func (cache *BlockCache) UpdateAccount(acc *acm.ConcreteAccount) {
 	addr := acc.Address
-	_, storage, removed, _ := cache.accounts[string(addr)].unpack()
+	_, storage, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		panic("UpdateAccount on a removed account")
 	}
-	cache.accounts[string(addr)] = accountInfo{acc, storage, false, true}
+	cache.accounts[addr] = accountInfo{acc, storage, false, true}
 }
 
-func (cache *BlockCache) RemoveAccount(addr []byte) {
-	_, _, removed, _ := cache.accounts[string(addr)].unpack()
+func (cache *BlockCache) RemoveAccount(addr acm.Address) {
+	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		panic("RemoveAccount on a removed account")
 	}
-	cache.accounts[string(addr)] = accountInfo{nil, nil, true, false}
+	cache.accounts[addr] = accountInfo{nil, nil, true, false}
 }
 
 // BlockCache.account
 //-------------------------------------
 // BlockCache.storage
 
-func (cache *BlockCache) GetStorage(addr Word256, key Word256) (value Word256) {
+func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (value Word256) {
 	// Check cache
-	info, ok := cache.storages[Tuple256{addr, key}]
+	info, ok := cache.storages[Tuple256{addr.Word256(), key}]
 	if ok {
 		return info.value
 	}
 
 	// Get or load storage
-	acc, storage, removed, dirty := cache.accounts[string(addr.Postfix(20))].unpack()
+	acc, storage, removed, dirty := cache.accounts[addr].unpack()
 	if removed {
 		panic("GetStorage() on removed account")
 	}
 	if acc != nil && storage == nil {
 		storage = makeStorage(cache.db, acc.StorageRoot)
-		cache.accounts[string(addr.Postfix(20))] = accountInfo{acc, storage, false, dirty}
+		cache.accounts[addr] = accountInfo{acc, storage, false, dirty}
 	} else if acc == nil {
 		return Zero256
 	}
 
 	// Load and set cache
 	_, val_, _ := storage.Get(key.Bytes())
-	value = Zero256
 	if val_ != nil {
 		value = LeftPadWord256(val_)
 	}
-	cache.storages[Tuple256{addr, key}] = storageInfo{value, false}
+	cache.storages[Tuple256{addr.Word256(), key}] = storageInfo{value, false}
 	return value
 }
 
 // NOTE: Set value to zero to removed from the trie.
-func (cache *BlockCache) SetStorage(addr Word256, key Word256, value Word256) {
-	_, _, removed, _ := cache.accounts[string(addr.Postfix(20))].unpack()
+func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256) {
+	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		panic("SetStorage() on a removed account")
 	}
-	cache.storages[Tuple256{addr, key}] = storageInfo{value, true}
+	cache.storages[Tuple256{addr.Word256(), key}] = storageInfo{value, true}
 }
 
 // BlockCache.storage
 //-------------------------------------
 // BlockCache.names
 
-func (cache *BlockCache) GetNameRegEntry(name string) *core_types.NameRegEntry {
+func (cache *BlockCache) GetNameRegEntry(name string) *NameRegEntry {
 	entry, removed, _ := cache.names[name].unpack()
 	if removed {
 		return nil
@@ -153,7 +151,7 @@ func (cache *BlockCache) GetNameRegEntry(name string) *core_types.NameRegEntry {
 	}
 }
 
-func (cache *BlockCache) UpdateNameRegEntry(entry *core_types.NameRegEntry) {
+func (cache *BlockCache) UpdateNameRegEntry(entry *NameRegEntry) {
 	name := entry.Name
 	cache.names[name] = nameInfo{entry, false, true}
 }
@@ -183,15 +181,16 @@ func (cache *BlockCache) Sync() {
 	// Update storage for all account/key.
 	// Later we'll iterate over all the users and save storage + update storage root.
 	var (
-		curAddr       Word256
-		curAcc        *acm.Account
+		curAddr       acm.Address
+		curAcc        *acm.ConcreteAccount
 		curAccRemoved bool
 		curStorage    merkle.Tree
 	)
 	for _, storageKey := range storageKeys {
-		addr, key := Tuple256Split(storageKey)
+		addrWord256, key := Tuple256Split(storageKey)
+		addr := acm.AddressFromWord256(addrWord256)
 		if addr != curAddr || curAcc == nil {
-			acc, storage, removed, _ := cache.accounts[string(addr.Postfix(20))].unpack()
+			acc, storage, removed, _ := cache.accounts[addr].unpack()
 			if !removed && storage == nil {
 				storage = makeStorage(cache.db, acc.StorageRoot)
 			}
@@ -211,25 +210,24 @@ func (cache *BlockCache) Sync() {
 			curStorage.Remove(key.Bytes())
 		} else {
 			curStorage.Set(key.Bytes(), value.Bytes())
-			cache.accounts[string(addr.Postfix(20))] = accountInfo{curAcc, curStorage, false, true}
+			cache.accounts[addr] = accountInfo{curAcc, curStorage, false, true}
 		}
 	}
 
 	// Determine order for accounts
-	addrStrs := []string{}
-	for addrStr := range cache.accounts {
-		addrStrs = append(addrStrs, addrStr)
+	addrs := []acm.Address{}
+	for addr := range cache.accounts {
+		addrs = append(addrs, addr)
 	}
-	sort.Strings(addrStrs)
+	sort.Slice(addrs, func(i, j int) bool {
+		return addrs[i].String() < addrs[j].String()
+	})
 
 	// Update or delete accounts.
-	for _, addrStr := range addrStrs {
-		acc, storage, removed, dirty := cache.accounts[addrStr].unpack()
+	for _, addr := range addrs {
+		acc, storage, removed, dirty := cache.accounts[addr].unpack()
 		if removed {
-			removed := cache.backend.RemoveAccount([]byte(addrStr))
-			if !removed {
-				panic(fmt.Sprintf("Could not remove account to be removed: %X", acc.Address))
-			}
+			cache.backend.RemoveAccount(addr)
 		} else {
 			if acc == nil {
 				continue
@@ -278,13 +276,13 @@ func (cache *BlockCache) Sync() {
 //-----------------------------------------------------------------------------
 
 type accountInfo struct {
-	account *acm.Account
+	account *acm.ConcreteAccount
 	storage merkle.Tree
 	removed bool
 	dirty   bool
 }
 
-func (accInfo accountInfo) unpack() (*acm.Account, merkle.Tree, bool, bool) {
+func (accInfo accountInfo) unpack() (*acm.ConcreteAccount, merkle.Tree, bool, bool) {
 	return accInfo.account, accInfo.storage, accInfo.removed, accInfo.dirty
 }
 
@@ -298,11 +296,11 @@ func (stjInfo storageInfo) unpack() (Word256, bool) {
 }
 
 type nameInfo struct {
-	name    *core_types.NameRegEntry
+	name    *NameRegEntry
 	removed bool
 	dirty   bool
 }
 
-func (nInfo nameInfo) unpack() (*core_types.NameRegEntry, bool, bool) {
+func (nInfo nameInfo) unpack() (*NameRegEntry, bool, bool) {
 	return nInfo.name, nInfo.removed, nInfo.dirty
 }

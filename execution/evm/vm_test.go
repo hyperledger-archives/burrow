@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	acm "github.com/hyperledger/burrow/account"
+
 	"errors"
 
 	. "github.com/hyperledger/burrow/execution/evm/opcodes"
-	ptypes "github.com/hyperledger/burrow/permission/types"
-	. "github.com/hyperledger/burrow/word256"
+	"github.com/hyperledger/burrow/permission"
+	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tmlibs/events"
 )
@@ -37,12 +38,12 @@ func init() {
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
-		accounts: make(map[string]*Account),
+		accounts: make(map[acm.Address]*acm.ConcreteAccount),
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[ptypes.GlobalPermissionsAddress256.String()] = &Account{
-		Permissions: ptypes.DefaultAccountPermissions,
+	fas.accounts[permission.GlobalPermissionsAddress] = &acm.ConcreteAccount{
+		Permissions: permission.DefaultAccountPermissions,
 	}
 	return fas
 }
@@ -56,22 +57,16 @@ func newParams() Params {
 	}
 }
 
-func makeBytes(n int) []byte {
-	b := make([]byte, n)
-	rand.Read(b)
-	return b
-}
-
 // Runs a basic loop
 func TestVM(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &Account{
-		Address: Int64ToWord256(100),
+	account1 := &acm.ConcreteAccount{
+		Address: acm.Address{1},
 	}
-	account2 := &Account{
-		Address: Int64ToWord256(101),
+	account2 := &acm.ConcreteAccount{
+		Address: acm.Address{1, 0, 1},
 	}
 
 	var gas int64 = 100000
@@ -93,11 +88,11 @@ func TestJumpErr(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &Account{
-		Address: Int64ToWord256(100),
+	account1 := &acm.ConcreteAccount{
+		Address: acm.Address{1},
 	}
-	account2 := &Account{
-		Address: Int64ToWord256(101),
+	account2 := &acm.ConcreteAccount{
+		Address: acm.Address{2},
 	}
 
 	var gas int64 = 100000
@@ -123,14 +118,14 @@ func TestJumpErr(t *testing.T) {
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
 	// Create accounts
-	account1 := &Account{
-		Address: LeftPadWord256(makeBytes(20)),
+	account1 := &acm.ConcreteAccount{
+		Address: acm.Address{1, 2, 3},
 	}
-	account2 := &Account{
-		Address: LeftPadWord256(makeBytes(20)),
+	account2 := &acm.ConcreteAccount{
+		Address: acm.Address{3, 2, 1},
 	}
-	st.accounts[account1.Address.String()] = account1
-	st.accounts[account2.Address.String()] = account2
+	st.accounts[account1.Address] = account1
+	st.accounts[account2.Address] = account2
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
@@ -142,7 +137,7 @@ func TestSubcurrency(t *testing.T) {
 		"60043560805260243560a052335460c0523360e05260a05160c05112151561008657",
 		"60a05160c0510360e0515560a0516080515401608051555b5b505b6000f3"}
 	code, _ := hex.DecodeString(strings.Join(code_parts, ""))
-	fmt.Printf("Code: %x\n", code)
+	fmt.Printf("Code: %s\n", code)
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
 	output, err := ourVm.Call(account1, account2, code, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
@@ -157,18 +152,18 @@ func TestSendCall(t *testing.T) {
 	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &Account{
-		Address: Int64ToWord256(100),
+	account1 := &acm.ConcreteAccount{
+		Address: acm.Address{1},
 	}
-	account2 := &Account{
-		Address: Int64ToWord256(101),
+	account2 := &acm.ConcreteAccount{
+		Address: acm.Address{2},
 	}
-	account3 := &Account{
-		Address: Int64ToWord256(102),
+	account3 := &acm.ConcreteAccount{
+		Address: acm.Address{3},
 	}
 
 	// account1 will call account2 which will trigger CALL opcode to account3
-	addr := account3.Address.Postfix(20)
+	addr := account3.Address
 	contractCode := callContractCode(addr)
 
 	//----------------------------------------------
@@ -196,8 +191,8 @@ func TestSendCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	appState := newAppState()
-	ourVm := NewVM(appState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	state := newAppState()
+	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -217,7 +212,7 @@ func TestDelegateCallGas(t *testing.T) {
 	costBetweenGasAndDelegateCall := gasCost + subCost + delegateCallCost + pushCost
 
 	// Do a simple operation using 1 gas unit
-	calleeAccount, calleeAddress := makeAccountWithCode(appState, "callee",
+	calleeAccount, calleeAddress := makeAccountWithCode(state, "callee",
 		Bytecode(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
@@ -230,7 +225,7 @@ func TestDelegateCallGas(t *testing.T) {
 	callerCodeSuffix := Bytecode(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
-	callerAccount, _ := makeAccountWithCode(appState, "caller",
+	callerAccount, _ := makeAccountWithCode(state, "caller",
 		Bytecode(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
@@ -254,13 +249,13 @@ func TestDelegateCallGas(t *testing.T) {
 }
 
 func TestMemoryBounds(t *testing.T) {
-	appState := newAppState()
+	state := newAppState()
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(appState, memoryProvider, newParams(), Zero256, nil)
-	caller, _ := makeAccountWithCode(appState, "caller", nil)
-	callee, _ := makeAccountWithCode(appState, "callee", nil)
+	ourVm := NewVM(state, memoryProvider, newParams(), Zero256, nil)
+	caller, _ := makeAccountWithCode(state, "caller", nil)
+	callee, _ := makeAccountWithCode(state, "callee", nil)
 	gas := int64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
@@ -324,29 +319,25 @@ func returnWord() []byte {
 	return Bytecode(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
-func makeAccountWithCode(appState AppState, name string,
-	code []byte) (*Account, []byte) {
-	account := &Account{
-		Address: LeftPadWord256([]byte(name)),
-		Balance: 9999999,
-		Code:    code,
-		Nonce:   0,
+func makeAccountWithCode(state State, name string,
+	code []byte) (*acm.ConcreteAccount, acm.Address) {
+	address, _ := acm.AddressFromBytes([]byte(name))
+	account := &acm.ConcreteAccount{
+		Address:  address,
+		Balance:  9999999,
+		Code:     code,
+		Sequence: 0,
 	}
 	account.Code = code
-	appState.UpdateAccount(account)
-	// Sanity check
-	address := new([20]byte)
-	for i, b := range account.Address.Postfix(20) {
-		address[i] = b
-	}
-	return account, address[:]
+	state.UpdateAccount(account)
+	return account, account.Address
 }
 
 // Subscribes to an AccCall, runs the vm, returns the output any direct exception
 // and then waits for any exceptions transmitted by EventData in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(ourVm *VM, caller, callee *Account, subscribeAddr,
+func runVMWaitError(ourVm *VM, caller, callee *acm.ConcreteAccount, subscribeAddr acm.Address,
 	contractCode []byte, gas int64) (output []byte, err error) {
 	eventCh := make(chan EventData)
 	output, err = runVM(eventCh, ourVm, caller, callee, subscribeAddr,
@@ -371,13 +362,13 @@ func runVMWaitError(ourVm *VM, caller, callee *Account, subscribeAddr,
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan EventData, ourVm *VM, caller, callee *Account,
-	subscribeAddr, contractCode []byte, gas int64) ([]byte, error) {
+func runVM(eventCh chan EventData, ourVm *VM, caller, callee *acm.ConcreteAccount,
+	subscribeAddr acm.Address, contractCode []byte, gas int64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
 	evsw := events.NewEventSwitch()
 	evsw.Start()
-	fmt.Printf("subscribe to %x\n", subscribeAddr)
+	fmt.Printf("subscribe to %s\n", subscribeAddr)
 	evsw.AddListenerForEvent("test", EventStringAccCall(subscribeAddr),
 		func(msg events.EventData) {
 			eventCh <- msg.(EventData)
@@ -393,7 +384,7 @@ func runVM(eventCh chan EventData, ourVm *VM, caller, callee *Account,
 }
 
 // this is code to call another contract (hardcoded as addr)
-func callContractCode(addr []byte) []byte {
+func callContractCode(addr acm.Address) []byte {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
@@ -449,8 +440,8 @@ func TestBytecode(t *testing.T) {
 		[]byte{},
 		Bytecode(Bytecode(Bytecode())))
 
-	contractAccount := &Account{Address: Int64ToWord256(102)}
-	addr := contractAccount.Address.Postfix(20)
+	contractAccount := &acm.ConcreteAccount{Address: acm.AddressFromWord256(Int64ToWord256(102))}
+	addr := contractAccount.Address
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
@@ -459,7 +450,7 @@ func TestBytecode(t *testing.T) {
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 	contractCode := []byte{0x60, retSize, 0x60, retOff, 0x60, inSize, 0x60, inOff, 0x60, value, 0x73}
-	contractCode = append(contractCode, addr...)
+	contractCode = append(contractCode, addr[:]...)
 	contractCode = append(contractCode, []byte{0x61, gas1, gas2, 0xf1, 0x60, 0x20, 0x60, 0x0, 0xf3}...)
 	assert.Equal(t, contractCode, contractCodeBytecode)
 }

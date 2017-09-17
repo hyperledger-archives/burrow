@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
 	"encoding/hex"
@@ -20,12 +20,14 @@ import (
 
 	"strings"
 
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	. "github.com/hyperledger/burrow/word256"
-	"github.com/hyperledger/sawtooth-core/families/seth/src/burrow/evm/sha3"
+	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 )
 
 // Compiling the Permissions solidity contract at
@@ -63,11 +65,11 @@ func TestPermissionsContractSignatures(t *testing.T) {
 func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	contract := SNativeContracts()["Permissions"]
 	state := newAppState()
-	caller := &Account{
-		Address: addr(1, 1, 1),
+	caller := &acm.ConcreteAccount{
+		Address: acm.Address{1, 1, 1},
 	}
-	grantee := &Account{
-		Address: addr(2, 2, 2),
+	grantee := &acm.ConcreteAccount{
+		Address: acm.Address{2, 2, 2},
 	}
 	state.UpdateAccount(grantee)
 
@@ -80,16 +82,16 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 
 	// Should fail since we have no permissions
 	retValue, err := contract.Dispatch(state, caller, Bytecode(funcID[:],
-		grantee.Address, permFlagToWord256(ptypes.CreateAccount)), &gas)
-	assert.Error(t, err)
-	if err != nil {
-		assert.Contains(t, err.Error(), "does not have permission")
+		grantee.Address, permFlagToWord256(permission.CreateAccount)), &gas)
+	if !assert.Error(t, err, "Should fail due to lack of permissions") {
+		return
 	}
+	assert.IsType(t, err, ErrLacksSNativePermission{})
 
 	// Grant all permissions and dispatch should success
 	caller.Permissions = allAccountPermissions()
 	retValue, err = contract.Dispatch(state, caller, Bytecode(funcID[:],
-		grantee.Address, permFlagToWord256(ptypes.CreateAccount)), &gas)
+		grantee.Address.Word256(), permFlagToWord256(permission.CreateAccount)), &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }
@@ -97,7 +99,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 func TestSNativeContractDescription_Address(t *testing.T) {
 	contract := NewSNativeContract("A comment",
 		"CoolButVeryLongNamedContractOfDoom")
-	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[12:], contract.AddressBytes())
+	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[12:], contract.Address().Bytes())
 }
 
 //
@@ -128,15 +130,11 @@ func permFlagToWord256(permFlag ptypes.PermFlag) Word256 {
 	return Uint64ToWord256(uint64(permFlag))
 }
 
-func addr(rightBytes ...uint8) Word256 {
-	return LeftPadWord256(rightBytes)
-}
-
 func allAccountPermissions() ptypes.AccountPermissions {
 	return ptypes.AccountPermissions{
 		Base: ptypes.BasePermissions{
-			Perms:  ptypes.AllPermFlags,
-			SetBit: ptypes.AllPermFlags,
+			Perms:  permission.AllPermFlags,
+			SetBit: permission.AllPermFlags,
 		},
 		Roles: []string{},
 	}

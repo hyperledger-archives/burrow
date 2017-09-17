@@ -27,7 +27,7 @@ import (
 
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	rpc_tendermint "github.com/hyperledger/burrow/rpc/tendermint/core"
+	rpc_tendermint "github.com/hyperledger/burrow/rpc/tm/core"
 	"github.com/hyperledger/burrow/server"
 	"github.com/tendermint/tendermint/node"
 )
@@ -52,18 +52,6 @@ func NewCore(chainId string, logger logging_types.InfoTraceLogger) (*Core, error
 		logger:      logger,
 	}, nil
 }
-
-//------------------------------------------------------------------------------
-// Explicit switch that can later be abstracted into an `Engine` definition
-// where the Engine defines the explicit interaction of a specific application
-// manager with a consensus engine.
-// TODO: [ben] before such Engine abstraction,
-// think about many-manager-to-one-consensus
-
-//------------------------------------------------------------------------------
-// Server functions
-// NOTE: [ben] in phase 0 we exactly take over the full server architecture
-// from burrow and Tendermint; This is a draft and will be overhauled.
 
 func (core *Core) NewGatewayV0(config *server.ServerConfig) (*server.ServeProcess,
 	error) {

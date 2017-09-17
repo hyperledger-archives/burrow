@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
 
 	// NOTE: prior to building out /crypto, use
@@ -32,7 +33,7 @@ import (
 
 // Simple ed25519 key structure for mock purposes with ripemd160 address
 type MockKey struct {
-	Address    []byte
+	Address    account.Address
 	PrivateKey [ed25519.PrivateKeySize]byte
 	PublicKey  []byte
 }
@@ -92,7 +93,7 @@ func (mock *MockKeyClient) NewKey() (address []byte) {
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signBytesString string, signAddress []byte) ([]byte, error) {
+func (mock *MockKeyClient) Sign(signBytesString string, signAddress account.Address) ([]byte, error) {
 	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
 	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)

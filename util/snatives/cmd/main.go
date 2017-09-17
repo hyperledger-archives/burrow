@@ -23,7 +23,7 @@ import (
 
 // Dump SNative contracts
 func main() {
-	contracts := vm.SNativeContracts()
+	contracts := evm.SNativeContracts()
 	// Index of next contract
 	i := 1
 	fmt.Print("pragma solidity >=0.0.0;\n\n")

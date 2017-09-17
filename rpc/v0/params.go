@@ -25,7 +25,7 @@ type (
 	// Used to send an address. The address should be hex and properly formatted.
 	// TODO enforce.
 	AddressParam struct {
-		Address []byte `json:"address"`
+		Address account.Address `json:"address"`
 	}
 
 	// Used to send an address
@@ -45,8 +45,8 @@ type (
 
 	// StorageAt
 	StorageAtParam struct {
-		Address []byte `json:"address"`
-		Key     []byte `json:"key"`
+		Address account.Address `json:"address"`
+		Key     []byte          `json:"key"`
 	}
 
 	// Get a block
@@ -76,9 +76,9 @@ type (
 
 	// Used when doing calls
 	CallParam struct {
-		Address []byte `json:"address"`
-		From    []byte `json:"from"`
-		Data    []byte `json:"data"`
+		Address account.Address `json:"address"`
+		From    []byte          `json:"from"`
+		Data    []byte          `json:"data"`
 	}
 
 	// Used when doing code calls
@@ -90,25 +90,25 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           *txs.CallTx            `json:"tx"`
-		PrivAccounts []*account.PrivAccount `json:"priv_accounts"`
+		Tx           *txs.CallTx                       `json:"tx"`
+		PrivAccounts []*account.ConcretePrivateAccount `json:"priv_accounts"`
 	}
 
 	// Used when sending a transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactParam struct {
-		PrivKey  []byte `json:"priv_key"`
-		Data     []byte `json:"data"`
-		Address  []byte `json:"address"`
-		Fee      int64  `json:"fee"`
-		GasLimit int64  `json:"gas_limit"`
+		PrivKey  []byte          `json:"priv_key"`
+		Data     []byte          `json:"data"`
+		Address  account.Address `json:"address"`
+		Fee      int64           `json:"fee"`
+		GasLimit int64           `json:"gas_limit"`
 	}
 
 	// Used when sending a 'Send' transaction.
 	SendParam struct {
-		PrivKey   []byte `json:"priv_key"`
-		ToAddress []byte `json:"to_address"`
-		Amount    int64  `json:"amount"`
+		PrivKey   []byte          `json:"priv_key"`
+		ToAddress account.Address `json:"to_address"`
+		Amount    int64           `json:"amount"`
 	}
 
 	NameRegEntryParam struct {

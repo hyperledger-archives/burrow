@@ -23,127 +23,143 @@ import (
 	"fmt"
 	"sync"
 
-	account "github.com/hyperledger/burrow/account"
-	core_types "github.com/hyperledger/burrow/core/types"
-	event "github.com/hyperledger/burrow/event"
-	word256 "github.com/hyperledger/burrow/word256"
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/event"
+	word256 "github.com/hyperledger/burrow/word"
 )
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
-	burrowMint    *BurrowMint
+	state         *State
 	filterFactory *event.FilterFactory
 }
 
-func newAccounts(burrowMint *BurrowMint) *accounts {
-	ff := event.NewFilterFactory()
+// Accounts
+type AccountList struct {
+	Accounts []*account.ConcreteAccount `json:"accounts"`
+}
 
-	ff.RegisterFilterPool("code", &sync.Pool{
+// A contract account storage item.
+type StorageItem struct {
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
+// Account storage
+type Storage struct {
+	StorageRoot  []byte        `json:"storage_root"`
+	StorageItems []StorageItem `json:"storage_items"`
+}
+
+// TODO: [Silas] there are various notes about using mempool (which I guess translates to CheckTx cache). We need
+// to understand if this is the right thing to do, since we cannot guarantee stability of the check cache it doesn't
+// seem like the right thing to do....
+func newAccounts(state *State) *accounts {
+	filterFactory := event.NewFilterFactory()
+
+	filterFactory.RegisterFilterPool("code", &sync.Pool{
 		New: func() interface{} {
 			return &AccountCodeFilter{}
 		},
 	})
 
-	ff.RegisterFilterPool("balance", &sync.Pool{
+	filterFactory.RegisterFilterPool("balance", &sync.Pool{
 		New: func() interface{} {
 			return &AccountBalanceFilter{}
 		},
 	})
 
-	return &accounts{burrowMint, ff}
-
+	return &accounts{
+		state:         state,
+		filterFactory: filterFactory,
+	}
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccount() (*account.PrivAccount, error) {
-	pa := account.GenPrivAccount()
+func (accs *accounts) GenPrivAccount() (*account.ConcretePrivateAccount, error) {
+	pa := account.GenPrivAccount().Unwrap()
 	return pa, nil
 }
 
 // Generate a new Private Key Account.
-func (this *accounts) GenPrivAccountFromKey(privKey []byte) (
-	*account.PrivAccount, error) {
+func (accs *accounts) GenPrivAccountFromKey(privKey []byte) (
+	*account.ConcretePrivateAccount, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
 	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := account.GenPrivAccountFromPrivKeyBytes(privKey).Unwrap()
 	return pa, nil
 }
 
 // Get all accounts.
-func (this *accounts) Accounts(fda []*event.FilterData) (
-	*core_types.AccountList, error) {
-	accounts := make([]*account.Account, 0)
-	state := this.burrowMint.GetState()
-	filter, err := this.filterFactory.NewFilter(fda)
+func (accs *accounts) Accounts(fda []*event.FilterData) (
+	*AccountList, error) {
+	accounts := make([]*account.ConcreteAccount, 0)
+	filter, err := accs.filterFactory.NewFilter(fda)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetAccounts().Iterate(func(key, value []byte) bool {
+	accs.state.GetAccounts().Iterate(func(key, value []byte) bool {
 		acc := account.DecodeAccount(value)
 		if filter.Match(acc) {
 			accounts = append(accounts, acc)
 		}
 		return false
 	})
-	return &core_types.AccountList{accounts}, nil
+	return &AccountList{accounts}, nil
 }
 
 // Get an account.
-func (this *accounts) Account(address []byte) (*account.Account, error) {
-	cache := this.burrowMint.GetState() // NOTE: we want to read from mempool!
-	acc := cache.GetAccount(address)
+func (accs *accounts) Account(address account.Address) (*account.ConcreteAccount, error) {
+	acc := accs.state.GetAccount(address) // NOTE: we want to read from mempool!
 	if acc == nil {
-		acc = this.newAcc(address)
+		acc = accs.newAcc(address)
 	}
 	return acc, nil
 }
 
 // Get the value stored at 'key' in the account with address 'address'
 // Both the key and value is returned.
-func (this *accounts) StorageAt(address, key []byte) (*core_types.StorageItem,
+func (accs *accounts) StorageAt(address account.Address, key []byte) (*StorageItem,
 	error) {
-	state := this.burrowMint.GetState()
-	account := state.GetAccount(address)
-	if account == nil {
-		return &core_types.StorageItem{key, []byte{}}, nil
+	acc := accs.state.GetAccount(address)
+	if acc == nil {
+		return &StorageItem{key, []byte{}}, nil
 	}
-	storageRoot := account.StorageRoot
-	storageTree := state.LoadStorage(storageRoot)
+	storageRoot := acc.StorageRoot
+	storageTree := accs.state.LoadStorage(storageRoot)
 
 	_, value, _ := storageTree.Get(word256.LeftPadWord256(key).Bytes())
 	if value == nil {
-		return &core_types.StorageItem{key, []byte{}}, nil
+		return &StorageItem{key, []byte{}}, nil
 	}
-	return &core_types.StorageItem{key, value}, nil
+	return &StorageItem{key, value}, nil
 }
 
 // Get the storage of the account with address 'address'.
-func (this *accounts) Storage(address []byte) (*core_types.Storage, error) {
-
-	state := this.burrowMint.GetState()
-	account := state.GetAccount(address)
-	storageItems := make([]core_types.StorageItem, 0)
-	if account == nil {
-		return &core_types.Storage{nil, storageItems}, nil
+func (accs *accounts) Storage(address account.Address) (*Storage, error) {
+	state := accs.state
+	acc := state.GetAccount(address)
+	storageItems := make([]StorageItem, 0)
+	if acc == nil {
+		return &Storage{nil, storageItems}, nil
 	}
-	storageRoot := account.StorageRoot
+	storageRoot := acc.StorageRoot
 	storageTree := state.LoadStorage(storageRoot)
 
 	storageTree.Iterate(func(key, value []byte) bool {
-		storageItems = append(storageItems, core_types.StorageItem{
+		storageItems = append(storageItems, StorageItem{
 			key, value})
 		return false
 	})
-	return &core_types.Storage{storageRoot, storageItems}, nil
+	return &Storage{storageRoot, storageItems}, nil
 }
 
 // Create a new account.
-func (this *accounts) newAcc(address []byte) *account.Account {
-	return &account.Account{
+func (accs *accounts) newAcc(address account.Address) *account.ConcreteAccount {
+	return &account.ConcreteAccount{
 		Address:     address,
-		PubKey:      nil,
 		Sequence:    0,
 		Balance:     0,
 		Code:        nil,
@@ -184,7 +200,7 @@ func (this *AccountCodeFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *AccountCodeFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*account.ConcreteAccount)
 	if !ok {
 		return false
 	}
@@ -215,7 +231,7 @@ func (this *AccountBalanceFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *AccountBalanceFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.Account)
+	acc, ok := v.(*account.ConcreteAccount)
 	if !ok {
 		return false
 	}

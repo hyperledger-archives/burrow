@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
 	"bytes"
 	"reflect"
 	"testing"
 
+	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/execution/evm/opcodes"
-	. "github.com/hyperledger/burrow/word256"
+	. "github.com/hyperledger/burrow/word"
 	"github.com/tendermint/tmlibs/events"
 )
 
@@ -37,14 +38,14 @@ func TestLog4(t *testing.T) {
 
 	st := newAppState()
 	// Create accounts
-	account1 := &Account{
-		Address: LeftPadWord256(makeBytes(20)),
+	account1 := &acm.ConcreteAccount{
+		Address: acm.Address{1,3,5,7,9},
 	}
-	account2 := &Account{
-		Address: LeftPadWord256(makeBytes(20)),
+	account2 := &acm.ConcreteAccount{
+		Address: acm.Address{2,4,6,8,10},
 	}
-	st.accounts[account1.Address.String()] = account1
-	st.accounts[account2.Address.String()] = account2
+	st.accounts[account1.Address] = account1
+	st.accounts[account2.Address] = account2
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
@@ -53,7 +54,7 @@ func TestLog4(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to start eventSwitch: %v", err)
 	}
-	eventID := EventStringLogEvent(account2.Address.Postfix(20))
+	eventID := EventStringLogEvent(account2.Address)
 
 	doneChan := make(chan struct{}, 1)
 

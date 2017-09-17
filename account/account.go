@@ -14,10 +14,6 @@
 
 package account
 
-// TODO: [ben] Account and PrivateAccount need to become a pure interface
-// and then move the implementation to the manager types.
-// Eg, Geth has its accounts, different from BurrowMint
-
 import (
 	"bytes"
 	"fmt"
@@ -45,40 +41,92 @@ func SignBytes(chainID string, o Signable) []byte {
 	return buf.Bytes()
 }
 
-//-----------------------------------------------------------------------------
+type Addressable interface {
+	Address() Address
+	PubKey() crypto.PubKey
+}
 
-// Account resides in the application state, and is mutated by transactions
-// on the blockchain.
-// Serialized by wire.[read|write]Reflect
-type Account struct {
-	Address     []byte        `json:"address"`
-	PubKey      crypto.PubKey `json:"pub_key"`
-	Sequence    int           `json:"sequence"`
-	Balance     int64         `json:"balance"`
-	Code        []byte        `json:"code"`         // VM code
-	StorageRoot []byte        `json:"storage_root"` // VM storage merkle root.
+type Account interface {
+	Addressable
+	Balance() int64
+	Code() []byte
+	Sequence() int64
+	StorageRoot() []byte
+	Permissions() ptypes.AccountPermissions
+}
 
+// ConcreteAccount is the canonical serialisation object for Account
+type ConcreteAccount struct {
+	Address     Address                   `json:"address"`
+	PubKey      crypto.PubKey             `json:"pub_key"`
+	Balance     int64                     `json:"balance"`
+	Code        []byte                    `json:"code"` // VM code
+	Sequence    int64                     `json:"sequence"`
+	StorageRoot []byte                    `json:"storage_root"` // VM storage merkle root.
 	Permissions ptypes.AccountPermissions `json:"permissions"`
 }
 
-func (acc *Account) Copy() *Account {
+type concreteAccountWrapper struct {
+	*ConcreteAccount
+}
+
+var _ Account = concreteAccountWrapper{}
+
+func (caw concreteAccountWrapper) Address() Address {
+	return caw.ConcreteAccount.Address
+}
+
+func (caw concreteAccountWrapper) PubKey() crypto.PubKey {
+	return caw.ConcreteAccount.PubKey
+}
+
+func (caw concreteAccountWrapper) Balance() int64 {
+	return caw.ConcreteAccount.Balance
+}
+
+func (caw concreteAccountWrapper) Code() []byte {
+	return caw.ConcreteAccount.Code
+}
+
+func (caw concreteAccountWrapper) Sequence() int64 {
+	return caw.ConcreteAccount.Sequence
+}
+
+func (caw concreteAccountWrapper) StorageRoot() []byte {
+	return caw.ConcreteAccount.StorageRoot
+}
+
+func (caw concreteAccountWrapper) Permissions() ptypes.AccountPermissions {
+	return caw.ConcreteAccount.Permissions
+}
+
+func (caw concreteAccountWrapper) Unwrap() *ConcreteAccount {
+	return caw.ConcreteAccount
+}
+
+func (acc *ConcreteAccount) Wrap() concreteAccountWrapper {
+	return concreteAccountWrapper{acc}
+}
+
+func (acc *ConcreteAccount) Copy() *ConcreteAccount {
 	accCopy := *acc
 	return &accCopy
 }
 
-func (acc *Account) String() string {
+func (acc *ConcreteAccount) String() string {
 	if acc == nil {
 		return "nil-Account"
 	}
-	return fmt.Sprintf("Account{%X:%v B:%v C:%v S:%X P:%s}", acc.Address, acc.PubKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
+	return fmt.Sprintf("Account{%s:%v B:%v C:%v S:%X P:%s}", acc.Address, acc.PubKey, acc.Balance,
+		len(acc.Code), acc.StorageRoot, acc.Permissions)
 }
 
 func AccountEncoder(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*Account), w, n, err)
+	wire.WriteBinary(o.(*ConcreteAccount), w, n, err)
 }
 
 func AccountDecoder(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&Account{}, r, 0, n, err)
+	return wire.ReadBinary(&ConcreteAccount{}, r, 0, n, err)
 }
 
 var AccountCodec = wire.Codec{
@@ -86,7 +134,7 @@ var AccountCodec = wire.Codec{
 	Decode: AccountDecoder,
 }
 
-func EncodeAccount(acc *Account) []byte {
+func EncodeAccount(acc *ConcreteAccount) []byte {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
@@ -94,9 +142,9 @@ func EncodeAccount(acc *Account) []byte {
 	return w.Bytes()
 }
 
-func DecodeAccount(accBytes []byte) *Account {
+func DecodeAccount(accBytes []byte) *ConcreteAccount {
 	var n int
 	var err error
 	acc := AccountDecoder(bytes.NewBuffer(accBytes), &n, &err)
-	return acc.(*Account)
+	return acc.(*ConcreteAccount)
 }

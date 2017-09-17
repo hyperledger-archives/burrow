@@ -21,10 +21,11 @@ import (
 
 	"github.com/tendermint/go-crypto"
 
-	acc "github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -34,28 +35,28 @@ import (
 
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
-func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.Tx, error) {
-	signBytesString := fmt.Sprintf("%X", acc.SignBytes(chainID, tx_))
-	var inputAddr []byte
+func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, txs.Tx, error) {
+	signBytesString := fmt.Sprintf("%X", acm.SignBytes(chainID, tx_))
+	var inputAddr acm.Address
 	var sigED crypto.SignatureEd25519
 	switch tx := tx_.(type) {
 	case *txs.SendTx:
 		inputAddr = tx.Inputs[0].Address
-		defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = *s }(&sigED)
+		defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = s.Wrap() }(&sigED)
 	case *txs.NameTx:
 		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
 	case *txs.CallTx:
 		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
 	case *txs.PermissionsTx:
 		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = *s }(&sigED)
+		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
 	case *txs.BondTx:
 		inputAddr = tx.Inputs[0].Address
 		defer func(s *crypto.SignatureEd25519) {
 			tx.Signature = *s
-			tx.Inputs[0].Signature = *s
+			tx.Inputs[0].Signature = s.Wrap()
 		}(&sigED)
 	case *txs.UnbondTx:
 		inputAddr = tx.Address
@@ -66,7 +67,7 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 	}
 	sig, err := keyClient.Sign(signBytesString, inputAddr)
 	if err != nil {
-		return nil, nil, err
+		return acm.Address{}, nil, err
 	}
 	// TODO: [ben] temporarily address the type conflict here, to be cleaned up
 	// with full type restructuring
@@ -76,11 +77,12 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) ([]byte, txs.T
 	return inputAddr, tx_, nil
 }
 
-func decodeAddressPermFlag(addrS, permFlagS string) (addr []byte, pFlag ptypes.PermFlag, err error) {
-	if addr, err = hex.DecodeString(addrS); err != nil {
+func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag ptypes.PermFlag, err error) {
+	if addrBytes, err := hex.DecodeString(addrS); err != nil {
+		copy(addr[:], addrBytes)
 		return
 	}
-	if pFlag, err = ptypes.PermStringToFlag(permFlagS); err != nil {
+	if pFlag, err = permission.PermStringToFlag(permFlagS); err != nil {
 		return
 	}
 	return
@@ -134,8 +136,11 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 
 	var pubArray [32]byte
 	copy(pubArray[:], pubKeyBytes)
-	pub = crypto.PubKeyEd25519(pubArray)
-	addrBytes := pub.Address()
+	pub = crypto.PubKeyEd25519(pubArray).Wrap()
+	address, err := acm.AddressFromBytes(pub.Address())
+	if err != nil {
+		return
+	}
 
 	if nonceS == "" {
 		if nodeClient == nil {
@@ -143,14 +148,14 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return
 		}
 		// fetch nonce from node
-		account, err2 := nodeClient.GetAccount(addrBytes)
+		account, err2 := nodeClient.GetAccount(address)
 		if err2 != nil {
 			return pub, amt, nonce, err2
 		}
 		nonce = int64(account.Sequence) + 1
 		logging.TraceMsg(nodeClient.Logger(), "Fetch nonce from node",
 			"nonce", nonce,
-			"account address", addrBytes,
+			"account address", address,
 		)
 	} else {
 		nonce, err = strconv.ParseInt(nonceS, 10, 64)

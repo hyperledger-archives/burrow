@@ -125,7 +125,7 @@ func (this *BurrowWsService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INTERNAL_ERROR, errSID
 	}
 
-	callback := func(ret txs.EventData) {
+	callback := func(ret evm.EventData) {
 		this.writeResponse(subId, ret, session)
 	}
 	errC := this.pipe.Events().Subscribe(subId, eventId, callback)

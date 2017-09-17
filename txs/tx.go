@@ -23,7 +23,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/go-wire"
 
 	"fmt"
@@ -53,8 +53,8 @@ func (e ErrTxInvalidString) Error() string {
 }
 
 type ErrTxInvalidSequence struct {
-	Got      int
-	Expected int
+	Got      int64
+	Expected int64
 }
 
 func (e ErrTxInvalidSequence) Error() string {
@@ -95,7 +95,6 @@ const (
 	TxTypePermissions = byte(0x20)
 )
 
-
 //-----------------------------------------------------------------------------
 
 type (
@@ -103,7 +102,12 @@ type (
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 	}
 
+	Encoder interface {
+		EncodeTx(tx Tx) ([]byte, error)
+	}
+
 	Decoder interface {
+		DecodeTx(txBytes []byte) (Tx, error)
 	}
 
 	// UnconfirmedTxs
@@ -118,9 +122,9 @@ type (
 
 	// BroadcastTx or Transact
 	Receipt struct {
-		TxHash          []byte `json:"tx_hash"`
-		CreatesContract uint8  `json:"creates_contract"`
-		ContractAddr    []byte `json:"contract_addr"`
+		TxHash          []byte      `json:"tx_hash"`
+		CreatesContract uint8       `json:"creates_contract"`
+		ContractAddr    acm.Address `json:"contract_addr"`
 	}
 
 	NameTx struct {
@@ -131,24 +135,24 @@ type (
 	}
 
 	CallTx struct {
-		Input    *TxInput `json:"input"`
-		Address  []byte   `json:"address"`
-		GasLimit int64    `json:"gas_limit"`
-		Fee      int64    `json:"fee"`
-		Data     []byte   `json:"data"`
+		Input    *TxInput    `json:"input"`
+		Address  acm.Address `json:"address"`
+		GasLimit int64       `json:"gas_limit"`
+		Fee      int64       `json:"fee"`
+		Data     []byte      `json:"data"`
 	}
 
 	TxInput struct {
-		Address   []byte           `json:"address"`   // Hash of the PubKey
+		Address   acm.Address      `json:"address"`   // Hash of the PubKey
 		Amount    int64            `json:"amount"`    // Must not exceed account balance
-		Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Sequence  int64            `json:"sequence"`  // Must be 1 greater than the last committed TxInput
 		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
 		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
-		Address []byte `json:"address"` // Hash of the PubKey
-		Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+		Address acm.Address `json:"address"` // Hash of the PubKey
+		Amount  int64       `json:"amount"`  // The sum of all outputs must not exceed the inputs.
 	}
 )
 
@@ -163,11 +167,11 @@ func (txIn *TxInput) ValidateBasic() error {
 }
 
 func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%X","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
 }
 
 func (txIn *TxInput) String() string {
-	return fmt.Sprintf("TxInput{%X,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PubKey)
+	return fmt.Sprintf("TxInput{%s,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PubKey)
 }
 
 //-----------------------------------------------------------------------------
@@ -183,11 +187,11 @@ func (txOut *TxOutput) ValidateBasic() error {
 }
 
 func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%X","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
 }
 
 func (txOut *TxOutput) String() string {
-	return fmt.Sprintf("TxOutput{%X,%v}", txOut.Address, txOut.Amount)
+	return fmt.Sprintf("TxOutput{%s,%v}", txOut.Address, txOut.Amount)
 }
 
 //-----------------------------------------------------------------------------
@@ -219,23 +223,24 @@ func (tx *SendTx) String() string {
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","data":"%s"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
 	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
 func (tx *CallTx) String() string {
-	return fmt.Sprintf("CallTx{%v -> %x: %x}", tx.Input, tx.Address, tx.Data)
+	return fmt.Sprintf("CallTx{%v -> %s: %s}", tx.Input, tx.Address, tx.Data)
 }
 
-func NewContractAddress(caller []byte, nonce int) []byte {
+func NewContractAddress(caller acm.Address, sequence int64) (newAddr acm.Address) {
 	temp := make([]byte, 32+8)
-	copy(temp, caller)
-	binary.BigEndian.PutUint64(temp[32:], uint64(nonce))
+	copy(temp, caller[:])
+	binary.BigEndian.PutUint64(temp[32:], uint64(sequence))
 	hasher := ripemd160.New()
 	hasher.Write(temp) // does not error
-	return hasher.Sum(nil)
+	copy(newAddr[:], hasher.Sum(nil))
+	return
 }
 
 //-----------------------------------------------------------------------------
@@ -312,41 +317,41 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   []byte                  `json:"address"`
+	Address   acm.Address             `json:"address"`
 	Height    int                     `json:"height"`
 	Signature crypto.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *UnbondTx) String() string {
-	return fmt.Sprintf("UnbondTx{%X,%v,%v}", tx.Address, tx.Height, tx.Signature)
+	return fmt.Sprintf("UnbondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   []byte                  `json:"address"`
+	Address   acm.Address             `json:"address"`
 	Height    int                     `json:"height"`
 	Signature crypto.SignatureEd25519 `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *RebondTx) String() string {
-	return fmt.Sprintf("RebondTx{%X,%v,%v}", tx.Address, tx.Height, tx.Signature)
+	return fmt.Sprintf("RebondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
 //-----------------------------------------------------------------------------
 
 type DupeoutTx struct {
-	Address []byte                `json:"address"`
+	Address acm.Address           `json:"address"`
 	VoteA   tendermint_types.Vote `json:"vote_a"`
 	VoteB   tendermint_types.Vote `json:"vote_b"`
 }
@@ -358,7 +363,7 @@ func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *er
 }
 
 func (tx *DupeoutTx) String() string {
-	return fmt.Sprintf("DupeoutTx{%X,%v,%v}", tx.Address, tx.VoteA, tx.VoteB)
+	return fmt.Sprintf("DupeoutTx{%s,%v,%v}", tx.Address, tx.VoteA, tx.VoteB)
 }
 
 //-----------------------------------------------------------------------------
@@ -397,10 +402,9 @@ func GenerateReceipt(chainId string, tx Tx) Receipt {
 	receipt := Receipt{
 		TxHash:          TxHash(chainId, tx),
 		CreatesContract: 0,
-		ContractAddr:    nil,
 	}
 	if callTx, ok := tx.(*CallTx); ok {
-		if len(callTx.Address) == 0 {
+		if callTx.Address == acm.ZeroAddress {
 			receipt.CreatesContract = 1
 			receipt.ContractAddr = NewContractAddress(callTx.Input.Address,
 				callTx.Input.Sequence)

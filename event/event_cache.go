@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/execution/evm"
 )
 
 var (
@@ -105,7 +105,7 @@ func (this *EventSubscriptions) Add(eventId string) (string, error) {
 	}
 	cache := newEventCache()
 	errC := this.eventEmitter.Subscribe(subId, eventId,
-		func(evt txs.EventData) {
+		func(evt evm.EventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)
