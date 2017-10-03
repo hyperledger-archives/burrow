@@ -20,9 +20,9 @@ import (
 
 	definitions "github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/evm"
 	rpc "github.com/hyperledger/burrow/rpc"
 	server "github.com/hyperledger/burrow/server"
-	"github.com/hyperledger/burrow/txs"
 )
 
 // Used for Burrow. Implements WebSocketService.

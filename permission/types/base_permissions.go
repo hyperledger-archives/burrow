@@ -32,7 +32,7 @@ type BasePermissions struct {
 // Get a permission value. ty should be a power of 2.
 // ErrValueNotSet is returned if the permission's set bit is off,
 // and should be caught by caller so the global permission can be fetched
-func (p *BasePermissions) Get(ty PermFlag) (bool, error) {
+func (p BasePermissions) Get(ty PermFlag) (bool, error) {
 	if ty == 0 {
 		return false, ErrInvalidPermission(ty)
 	}
@@ -66,7 +66,7 @@ func (p *BasePermissions) Unset(ty PermFlag) error {
 }
 
 // Check if the permission is set
-func (p *BasePermissions) IsSet(ty PermFlag) bool {
+func (p BasePermissions) IsSet(ty PermFlag) bool {
 	if ty == 0 {
 		return false
 	}
@@ -75,7 +75,7 @@ func (p *BasePermissions) IsSet(ty PermFlag) bool {
 
 // Returns the Perms PermFlag masked with SetBit bit field to give the resultant
 // permissions enabled by this BasePermissions
-func (p *BasePermissions) ResultantPerms() PermFlag {
+func (p BasePermissions) ResultantPerms() PermFlag {
 	return p.Perms & p.SetBit
 }
 

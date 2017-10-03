@@ -8,7 +8,7 @@ type AccountPermissions struct {
 }
 
 // Returns true if the role is found
-func (aP *AccountPermissions) HasRole(role string) bool {
+func (aP AccountPermissions) HasRole(role string) bool {
 	role = string(word.RightPadBytes([]byte(role), 32))
 	for _, r := range aP.Roles {
 		if r == role {

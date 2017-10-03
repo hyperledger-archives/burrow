@@ -25,6 +25,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int,
 	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount, []*tm_types.PrivValidatorFS) {
+
 	accounts := make([]GenesisAccount, numAccounts)
 	privAccounts := make([]acm.PrivateAccount, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
@@ -57,8 +58,8 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 	}
 	sort.Sort(tm_types.PrivValidatorsByAddress(privValidators))
 	return &GenesisDoc{
+		ChainName:   "TestChain",
 		GenesisTime: time.Unix(1506172037, 0),
-		ChainID:     "tendermint_test",
 		Accounts:    accounts,
 		Validators:  validators,
 	}, privAccounts, privValidators
@@ -84,7 +85,7 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance int64) (acm
 	if randBalance {
 		acc.Balance += dg.random.Int63()
 	}
-	return acc.Wrap(), privAccount.Wrap()
+	return acc.Account(), privAccount.PrivateAccount()
 }
 
 func (dg *deterministicGenesis) Validator(randPower bool, minPower int64) (*tm_types.Validator, *tm_types.PrivValidatorFS) {

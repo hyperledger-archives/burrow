@@ -20,13 +20,13 @@ import (
 	"testing"
 	"time"
 
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution/evm"
 	ctypes "github.com/hyperledger/burrow/rpc/tm/types"
 	"github.com/hyperledger/burrow/txs"
-
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/rpc/lib/client"
 	tm_types "github.com/tendermint/tendermint/types"
-	"github.com/hyperledger/burrow/execution/evm"
 )
 
 const (
@@ -83,8 +83,8 @@ func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
 
 // broadcast transaction and wait for new block
 func broadcastTxAndWaitForBlock(t *testing.T, client RPCClient,
-	wsc *rpcclient.WSClient, tx txs.Tx) (txs.Receipt, error) {
-	var rec txs.Receipt
+	wsc *rpcclient.WSClient, tx txs.Tx) (*txs.Receipt, error) {
+	var rec *txs.Receipt
 	var err error
 	runThenWaitForBlock(t, wsc, nextBlockPredicateFn(),
 		func() {
@@ -225,20 +225,20 @@ func (err waitForEventResult) Timeout() bool {
 //--------------------------------------------------------------------------------
 
 func unmarshalValidateSend(amt int64,
-	toAddr []byte) func(string, evm.EventData) (bool, error) {
+	toAddr acm.Address) func(string, evm.EventData) (bool, error) {
 	return func(eid string, eventData evm.EventData) (bool, error) {
 		var data = eventData.(evm.EventDataTx)
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.SendTx)
-		if !bytes.Equal(tx.Inputs[0].Address, users[0].Address) {
+		if tx.Inputs[0].Address != users[0].Address {
 			return true, fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address, users[0].Address)
 		}
 		if tx.Inputs[0].Amount != amt {
 			return true, fmt.Errorf("amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
 		}
-		if !bytes.Equal(tx.Outputs[0].Address, toAddr) {
+		if tx.Outputs[0].Address != toAddr {
 			return true, fmt.Errorf("receivers do not match up! Got %s, expected %s", tx.Outputs[0].Address, users[0].Address)
 		}
 		return true, nil
@@ -253,7 +253,7 @@ func unmarshalValidateTx(amt int64,
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.CallTx)
-		if !bytes.Equal(tx.Input.Address, users[0].Address) {
+		if tx.Input.Address != users[0].Address {
 			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x",
 				tx.Input.Address, users[0].Address)
 		}

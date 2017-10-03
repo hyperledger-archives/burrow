@@ -23,11 +23,11 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 )
 
 // Compiling the Permissions solidity contract at
@@ -65,12 +65,12 @@ func TestPermissionsContractSignatures(t *testing.T) {
 func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	contract := SNativeContracts()["Permissions"]
 	state := newAppState()
-	caller := &acm.ConcreteAccount{
+	caller := acm.ConcreteAccount{
 		Address: acm.Address{1, 1, 1},
-	}
-	grantee := &acm.ConcreteAccount{
+	}.MutableAccount()
+	grantee := acm.ConcreteAccount{
 		Address: acm.Address{2, 2, 2},
-	}
+	}.MutableAccount()
 	state.UpdateAccount(grantee)
 
 	function, err := contract.FunctionByName("addRole")
@@ -82,16 +82,16 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 
 	// Should fail since we have no permissions
 	retValue, err := contract.Dispatch(state, caller, Bytecode(funcID[:],
-		grantee.Address, permFlagToWord256(permission.CreateAccount)), &gas)
+		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
 	assert.IsType(t, err, ErrLacksSNativePermission{})
 
 	// Grant all permissions and dispatch should success
-	caller.Permissions = allAccountPermissions()
+	caller.SetPermissions(allAccountPermissions())
 	retValue, err = contract.Dispatch(state, caller, Bytecode(funcID[:],
-		grantee.Address.Word256(), permFlagToWord256(permission.CreateAccount)), &gas)
+		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }

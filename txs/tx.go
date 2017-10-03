@@ -15,21 +15,17 @@
 package txs
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-
-	"golang.org/x/crypto/ripemd160"
 
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
-	"github.com/tendermint/go-wire"
-
-	"fmt"
-
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	tendermint_types "github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"golang.org/x/crypto/ripemd160"
 )
 
 var (
@@ -123,7 +119,7 @@ type (
 	// BroadcastTx or Transact
 	Receipt struct {
 		TxHash          []byte      `json:"tx_hash"`
-		CreatesContract uint8       `json:"creates_contract"`
+		CreatesContract bool        `json:"creates_contract"`
 		ContractAddr    acm.Address `json:"contract_addr"`
 	}
 
@@ -135,11 +131,12 @@ type (
 	}
 
 	CallTx struct {
-		Input    *TxInput    `json:"input"`
-		Address  acm.Address `json:"address"`
-		GasLimit int64       `json:"gas_limit"`
-		Fee      int64       `json:"fee"`
-		Data     []byte      `json:"data"`
+		Input *TxInput `json:"input"`
+		// Pointer since CallTx defines unset 'to' address as inducing account creation
+		Address  *acm.Address `json:"address"`
+		GasLimit int64        `json:"gas_limit"`
+		Fee      int64        `json:"fee"`
+		Data     []byte       `json:"data"`
 	}
 
 	TxInput struct {
@@ -223,7 +220,7 @@ func (tx *SendTx) String() string {
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","data":"%s"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
 	wire.WriteTo([]byte(`}]}`), w, n, err)
@@ -231,16 +228,6 @@ func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 
 func (tx *CallTx) String() string {
 	return fmt.Sprintf("CallTx{%v -> %s: %s}", tx.Input, tx.Address, tx.Data)
-}
-
-func NewContractAddress(caller acm.Address, sequence int64) (newAddr acm.Address) {
-	temp := make([]byte, 32+8)
-	copy(temp, caller[:])
-	binary.BigEndian.PutUint64(temp[32:], uint64(sequence))
-	hasher := ripemd160.New()
-	hasher.Write(temp) // does not error
-	copy(newAddr[:], hasher.Sum(nil))
-	return
 }
 
 //-----------------------------------------------------------------------------
@@ -400,14 +387,14 @@ func TxHash(chainID string, tx Tx) []byte {
 
 func GenerateReceipt(chainId string, tx Tx) Receipt {
 	receipt := Receipt{
-		TxHash:          TxHash(chainId, tx),
-		CreatesContract: 0,
+		TxHash: TxHash(chainId, tx),
 	}
 	if callTx, ok := tx.(*CallTx); ok {
-		if callTx.Address == acm.ZeroAddress {
-			receipt.CreatesContract = 1
-			receipt.ContractAddr = NewContractAddress(callTx.Input.Address,
-				callTx.Input.Sequence)
+		receipt.CreatesContract = callTx.Address == nil
+		if receipt.CreatesContract {
+			receipt.ContractAddr = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+		} else {
+			receipt.ContractAddr = *callTx.Address
 		}
 	}
 	return receipt

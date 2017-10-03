@@ -14,11 +14,6 @@
 
 package word
 
-// NOTE: [ben] this used to be in tendermint/go-common but should be
-// isolated and cleaned up and tested.  Should be used in permissions
-// and manager/burrow-mint
-// TODO: [ben] cleanup, but also write unit-tests
-
 import (
 	"bytes"
 	"sort"
@@ -31,14 +26,12 @@ var (
 
 const Word256Length = 32
 
+var trimCutSet = string([]byte{0})
+
 type Word256 [Word256Length]byte
 
 func (w Word256) String() string {
 	return string(w[:])
-}
-
-func (w Word256) TrimmedString() string {
-	return TrimmedString(w.Bytes())
 }
 
 func (w Word256) Copy() Word256 {
@@ -71,8 +64,17 @@ func (w Word256) IsZero() bool {
 	}
 	return accum == 0
 }
+
 func (w Word256) Compare(other Word256) int {
 	return bytes.Compare(w[:], other[:])
+}
+
+func (w Word256) UnpadLeft() []byte {
+	return bytes.TrimLeft(w[:], trimCutSet)
+}
+
+func (w Word256) UnpadRight() []byte {
+	return bytes.TrimRight(w[:], trimCutSet)
 }
 
 func Uint64ToWord256(i uint64) Word256 {

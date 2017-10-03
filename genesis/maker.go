@@ -44,8 +44,8 @@ func NewGenesisAccount(address account.Address, amount int64, name string,
 	permissions *ptypes.AccountPermissions) *GenesisAccount {
 	return &GenesisAccount{
 		BasicAccount: BasicAccount{
-			Address:     address,
-			Amount:      amount,
+			Address: address,
+			Amount:  amount,
 		},
 		Name:        name,
 		Permissions: permissions,
@@ -96,8 +96,8 @@ func NewGenesisValidator(amount int64, name string, unbondToAddress account.Addr
 //------------------------------------------------------------------------------------
 // interface functions that are consumed by monax tooling
 
-func GenerateKnown(chainID, accountsPathCSV, validatorsPathCSV string) (string, error) {
-	return generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV,
+func GenerateKnown(chainName, accountsPathCSV, validatorsPathCSV string) (string, error) {
+	return generateKnownWithTime(chainName, accountsPathCSV, validatorsPathCSV,
 		// set the timestamp for the genesis
 		time.Now())
 }
@@ -125,12 +125,12 @@ func GenerateGenesisFileBytes(chainName string, genesisAccounts []*GenesisAccoun
 //------------------------------------------------------------------------------------
 // core functions that provide functionality for monax tooling in v0.16
 
-// GenerateKnownWithTime takes chainId, an accounts and validators CSV filepath
+// GenerateKnownWithTime takes chainName, an accounts and validators CSV filepath
 // and a timestamp to generate the string of `genesis.json`
 // NOTE: [ben] is introduced as technical debt to preserve the signature
 // of GenerateKnown but in order to introduce the timestamp gradually
 // This will be deprecated in v0.17
-func generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV string,
+func generateKnownWithTime(chainName, accountsPathCSV, validatorsPathCSV string,
 	genesisTime time.Time) (string, error) {
 	var genDoc *GenesisDoc
 
@@ -149,7 +149,7 @@ func generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV string,
 		return "", err
 	}
 
-	genDoc = newGenDoc(chainID, genesisTime, len(pubkeys), len(pubkeysA))
+	genDoc = newGenDoc(chainName, genesisTime, len(pubkeys), len(pubkeysA))
 	for i, pk := range pubkeys {
 		genDocAddValidator(genDoc, pk, amts[i], names[i], perms[i], setbits[i], i)
 	}
@@ -172,9 +172,9 @@ func generateKnownWithTime(chainID, accountsPathCSV, validatorsPathCSV string,
 //-----------------------------------------------------------------------------
 // gendoc convenience functions
 
-func newGenDoc(chainID string, genesisTime time.Time, nVal, nAcc int) *GenesisDoc {
+func newGenDoc(chainName string, genesisTime time.Time, nVal, nAcc int) *GenesisDoc {
 	genDoc := GenesisDoc{
-		ChainID:     chainID,
+		ChainName:   chainName,
 		GenesisTime: genesisTime,
 	}
 	genDoc.Accounts = make([]GenesisAccount, nAcc)
@@ -189,7 +189,7 @@ func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64
 			Address: addr,
 			Amount:  amt,
 		},
-		Name:    name,
+		Name: name,
 		Permissions: &ptypes.AccountPermissions{
 			Base: ptypes.BasePermissions{
 				Perms:  perm,

@@ -19,12 +19,23 @@ package blockchain
 import (
 	"time"
 
+	"sync"
+
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/genesis"
 )
 
-// Pointer to the tip of the blockchain
-type BlockchainTip interface {
+// Immutable Root of blockchain
+type Root interface {
+	// ChainID precomputed from GenesisDoc
 	ChainID() string
+	// GenesisHash precomputed from GenesisDoc
+	GenesisHash() []byte
+	GenesisDoc() genesis.GenesisDoc
+}
+
+// Immutable pointer to the current tip of the blockchain
+type Tip interface {
 	// All Last* references are to the block last committed
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
@@ -35,38 +46,76 @@ type BlockchainTip interface {
 	AppHashAfterLastBlock() []byte
 }
 
-// Burrow's view on the blockchain maintained by tendermint
+// Burrow's portion of the Blockchain state
 type Blockchain interface {
-	CommitBlock(blockTime time.Time, blockHash, appHash []byte)
-	GenesisDoc() genesis.GenesisDoc
-	BlockchainTip
+	Root() Root
+	// Returns
+	Tip() Tip
+	// Returns a copy of the current validator set
+	Validators() []*acm.Validator
 }
 
-type blockchain struct {
-	chainID               string
-	genesisDoc            genesis.GenesisDoc
+type MutableBlockchain interface {
+	Blockchain
+	CommitBlock(blockTime time.Time, blockHash, appHash []byte)
+}
+
+type root struct {
+	chainID     string
+	genesisHash []byte
+	genesisDoc  genesis.GenesisDoc
+}
+
+type tip struct {
 	lastBlockHeight       uint64
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
 	appHashAfterLastBlock []byte
 }
 
-var _ Blockchain = &blockchain{}
+type blockchain struct {
+	sync.RWMutex
+	*root
+	*tip
+	validators []acm.Validator
+}
 
-// Mutable pointer to blockchain tip initialised from genesis
-func NewBlockchainFromGenesisDoc(genesisDoc *genesis.GenesisDoc) *blockchain {
+var _ Root = &blockchain{}
+var _ Tip = &blockchain{}
+var _ Blockchain = &blockchain{}
+var _ MutableBlockchain = &blockchain{}
+
+// Pointer to blockchain state initialised from genesis
+func NewBlockchain(genesisDoc *genesis.GenesisDoc) *blockchain {
+	var validators []acm.Validator
+	for _, gv := range genesisDoc.Validators {
+		validators = append(validators, acm.ConcreteValidator{
+			PubKey: gv.PubKey,
+			Power:  uint64(gv.Amount),
+		}.Validator())
+	}
+	root := NewRoot(genesisDoc)
 	return &blockchain{
-		chainID:               genesisDoc.ChainID,
-		genesisDoc:            *genesisDoc,
-		lastBlockTime:         genesisDoc.GenesisTime,
-		appHashAfterLastBlock: genesisDoc.Hash(),
+		root: root,
+		tip: &tip{
+			lastBlockTime:         root.genesisDoc.GenesisTime,
+			appHashAfterLastBlock: root.genesisHash,
+		},
+		validators: validators,
 	}
 }
 
-func NewBlockchain(chainID string, lastBlockHeight uint64, lastBlockTime time.Time,
-	lastBlockHash, appHashAfterLastBlock []byte) *blockchain {
-	return &blockchain{
-		chainID:               chainID,
+func NewRoot(genesisDoc *genesis.GenesisDoc) *root {
+	return &root{
+		chainID:     genesisDoc.ChainID(),
+		genesisHash: genesisDoc.Hash(),
+		genesisDoc:  *genesisDoc,
+	}
+}
+
+// Create
+func NewTip(lastBlockHeight uint64, lastBlockTime time.Time, lastBlockHash []byte, appHashAfterLastBlock []byte) *tip {
+	return &tip{
 		lastBlockHeight:       lastBlockHeight,
 		lastBlockTime:         lastBlockTime,
 		lastBlockHash:         lastBlockHash,
@@ -75,32 +124,59 @@ func NewBlockchain(chainID string, lastBlockHeight uint64, lastBlockTime time.Ti
 }
 
 func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) {
+	bc.Lock()
+	defer bc.Unlock()
 	bc.lastBlockHeight += 1
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
 }
 
-func (bc *blockchain) GenesisDoc() genesis.GenesisDoc {
-	return bc.genesisDoc
+func (bc *blockchain) Root() Root {
+	return bc.root
 }
 
-func (bc *blockchain) ChainID() string {
-	return bc.chainID
+func (bc *blockchain) Tip() Tip {
+	bc.RLock()
+	defer bc.RUnlock()
+	t := *bc.tip
+	return &t
 }
 
-func (bc *blockchain) LastBlockHeight() uint64 {
-	return bc.lastBlockHeight
+func (bc *blockchain) Validators() []*acm.Validator {
+	bc.RLock()
+	defer bc.RUnlock()
+	vs := make([]*acm.Validator, len(bc.validators))
+	for i, v := range bc.validators {
+		vs[i] = &v
+	}
+	return vs
 }
 
-func (bc *blockchain) LastBlockTime() time.Time {
-	return bc.lastBlockTime
+func (r *root) ChainID() string {
+	return r.chainID
 }
 
-func (bc *blockchain) LastBlockHash() []byte {
-	return bc.lastBlockHash
+func (r *root) GenesisHash() []byte {
+	return r.genesisHash
 }
 
-func (bc *blockchain) AppHashAfterLastBlock() []byte {
-	return bc.appHashAfterLastBlock
+func (r *root) GenesisDoc() genesis.GenesisDoc {
+	return r.genesisDoc
+}
+
+func (t *tip) LastBlockHeight() uint64 {
+	return t.lastBlockHeight
+}
+
+func (t *tip) LastBlockTime() time.Time {
+	return t.lastBlockTime
+}
+
+func (t *tip) LastBlockHash() []byte {
+	return t.lastBlockHash
+}
+
+func (t *tip) AppHashAfterLastBlock() []byte {
+	return t.appHashAfterLastBlock
 }

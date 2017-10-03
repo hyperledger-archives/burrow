@@ -22,17 +22,28 @@ import (
 
 	"github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/blockchain"
-	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event"
 )
 
 // NameReg is part of the pipe for BurrowMint and provides the implementation
 // for the pipe to call into the BurrowMint application
+
+type NameRegGetter interface {
+	GetNameRegEntry(name string) *NameRegEntry
+}
+
+type NameRegIterable interface {
+	NameRegGetter
+	IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool)
+}
 
 type namereg struct {
 	state         *State
 	blockchain    blockchain.Blockchain
 	filterFactory *event.FilterFactory
 }
+
+var _ NameRegIterable = &namereg{}
 
 type NameRegEntry struct {
 	Name    string          `json:"name"`    // registered name for the entry
@@ -41,7 +52,7 @@ type NameRegEntry struct {
 	Expires uint64          `json:"expires"` // block at which this entry expires
 }
 
-func newNameReg(state *State, blockchain blockchain.Blockchain) *namereg {
+func NewNameReg(state *State, blockchain blockchain.Blockchain) *namereg {
 	filterFactory := event.NewFilterFactory()
 
 	filterFactory.RegisterFilterPool("name", &sync.Pool{
@@ -85,7 +96,7 @@ func (nr *namereg) Entry(key string) (*NameRegEntry, error) {
 
 func (nr *namereg) Entries(filters []*event.FilterData) (*ResultListNames, error) {
 	var names []*NameRegEntry
-	blockHeight := nr.blockchain.LastBlockHeight()
+	blockHeight := nr.blockchain.Tip().LastBlockHeight()
 	filter, err := nr.filterFactory.NewFilter(filters)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())

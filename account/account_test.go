@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/go-wire"
 )
 
 func TestAddress(t *testing.T) {
@@ -39,4 +40,52 @@ func TestAddress(t *testing.T) {
 	addrFromWord256 := AddressFromWord256(word256)
 	assert.Equal(t, bs, addrFromWord256[:])
 	assert.Equal(t, addr, addrFromWord256)
+}
+
+func TestAccountSerialise(t *testing.T) {
+
+	type AccountContainingStruct struct {
+		Account Account
+		ChainID string
+	}
+	// This test is really testing this go wire declaration in account.go
+	//var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
+
+	acc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Secret Secret")))
+
+	// Go wire cannot serialise a top-level interface type it needs to be a field or sub-field of a struct
+	// at some depth. i.e. you MUST wrap an interface if you want it to be decoded (they do not document this)
+	var accStruct = AccountContainingStruct{
+		Account: acc.Account(),
+		ChainID: "TestChain",
+	}
+
+	// We will write into this
+	accStructOut := AccountContainingStruct{}
+
+	// We must pass in a value type to read from (accStruct), but provide a pointer type to write into (accStructout
+	wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
+
+	assert.Equal(t, accStruct, accStructOut)
+}
+
+func TestDecodeConcrete(t *testing.T) {
+	concreteAcc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	acc := concreteAcc.Account()
+	concreteAccOut, err := DecodeConcrete(acc.Encode())
+	assert.NoError(t, err)
+	assert.Equal(t, concreteAcc, *concreteAccOut)
+
+	concreteAccOut, err = DecodeConcrete([]byte("flungepliffery munknut tolopops"))
+	assert.Error(t, err)
+}
+
+func TestDecode(t *testing.T) {
+	concreteAcc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	acc := concreteAcc.Account()
+	accOut := Decode(acc.Encode())
+	assert.Equal(t, concreteAcc, AsConcreteAccount(accOut))
+
+	accOut = Decode([]byte("flungepliffery munknut tolopops"))
+	assert.Nil(t, accOut)
 }

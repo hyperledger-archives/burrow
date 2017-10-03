@@ -20,9 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/burrow/txs"
-	"github.com/stretchr/testify/assert"
 	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMultiplexedEvents(t *testing.T) {

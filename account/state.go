@@ -4,46 +4,61 @@ import (
 	"github.com/hyperledger/burrow/word"
 )
 
-type Creator interface {
-	// Create an account as a child of the creatorAccount deriving the new
-	// accounts address from the creator's address and updating the creator's
-	// sequence number
-	CreateAccount(creatorAccount *ConcreteAccount) *ConcreteAccount
-}
-
 type Getter interface {
 	// Get an account by its address
-	GetAccount(address Address) *ConcreteAccount
+	GetAccount(address Address) (Account, error)
+}
+
+type Iterable interface {
+	// Iterates through accounts calling passed function once per account, if the consumer
+	// returns true the iteration breaks and returns true to indicate it iteration
+	// was escaped
+	IterateAccounts(consumer func(Account) (stop bool)) (stopped bool, err error)
 }
 
 type Updater interface {
-	Getter
 	// Updates the fields of updatedAccount by address, creating the account
 	// if it does not exist
-	UpdateAccount(updatedAccount *ConcreteAccount)
+	UpdateAccount(updatedAccount Account) error
 	// Remove the account at address
-	RemoveAccount(address Address)
+	RemoveAccount(address Address) error
 }
 
 type StorageGetter interface {
 	// Retrieve a 32-byte value stored at key for the account at address
-	GetStorage(address Address, key word.Word256) (value word.Word256)
+	GetStorage(address Address, key word.Word256) (value word.Word256, err error)
 }
 
-type Storage interface {
-	StorageGetter
+type StorageSetter interface {
 	// Store a 32-byte value at key for the account at address
-	SetStorage(address Address, key word.Word256, value word.Word256)
+	SetStorage(address Address, key, value word.Word256) error
 }
 
-// Read-write account and storage state
-type UpdaterAndStorage interface {
-	Updater
-	Storage
+type StorageIterable interface {
+	// Iterates through the storage of account ad address calling the passed function once per account,
+	// if the iterator function returns true the iteration breaks and returns true to indicate it iteration
+	// was escaped
+	IterateStorage(address Address, consumer func(key, value word.Word256) (stop bool)) (stopped bool, err error)
 }
+
+// Compositions
 
 // Read-only account and storage state
-type GetterAndStorageGetter interface {
+type StateReader interface {
 	Getter
 	StorageGetter
+}
+
+// Read and list account and storage state
+type StateIterable interface {
+	StateReader
+	Iterable
+	StorageIterable
+}
+
+// Read and write account and storage state
+type StateWriter interface {
+	StateReader
+	Updater
+	StorageSetter
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package core
 
 import (
 	acm "github.com/hyperledger/burrow/account"
@@ -20,13 +20,12 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	tendermint_types "github.com/tendermint/tendermint/types"
 
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/evm"
-	abcitypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
-	"github.com/hyperledger/burrow/execution"
 )
 
 type ResultGetStorage struct {
@@ -35,14 +34,12 @@ type ResultGetStorage struct {
 }
 
 type ResultCall struct {
-	Return  []byte `json:"return"`
-	GasUsed int64  `json:"gas_used"`
-	// TODO ...
+	execution.Call `json:"unwrap"`
 }
 
 type ResultListAccounts struct {
-	BlockHeight int                    `json:"block_height"`
-	Accounts    []*acm.ConcreteAccount `json:"accounts"`
+	BlockHeight uint64        `json:"block_height"`
+	Accounts    []acm.Account `json:"accounts"`
 }
 
 type ResultDumpStorage struct {
@@ -56,7 +53,7 @@ type StorageItem struct {
 }
 
 type ResultBlockchainInfo struct {
-	LastHeight int                           `json:"last_height"`
+	LastHeight uint64                        `json:"last_height"`
 	BlockMetas []*tendermint_types.BlockMeta `json:"block_metas"`
 }
 
@@ -70,7 +67,7 @@ type ResultStatus struct {
 	GenesisHash       []byte        `json:"genesis_hash"`
 	PubKey            crypto.PubKey `json:"pub_key"`
 	LatestBlockHash   []byte        `json:"latest_block_hash"`
-	LatestBlockHeight int           `json:"latest_block_height"`
+	LatestBlockHeight uint64        `json:"latest_block_height"`
 	LatestBlockTime   int64         `json:"latest_block_time"` // nano
 }
 
@@ -89,45 +86,43 @@ type ResultUnsubscribe struct {
 	SubscriptionId string `json:"subscription_id"`
 }
 
+type Peer struct {
+	NodeInfo   *p2p.NodeInfo `json:"node_info"`
+	IsOutbound bool          `json:"is_outbound"`
+}
+
 type ResultNetInfo struct {
-	Listening bool        `json:"listening"`
-	Listeners []string    `json:"listeners"`
-	Peers     []*p2p.Peer `json:"peers"`
+	Listening bool     `json:"listening"`
+	Listeners []string `json:"listeners"`
+	Peers     []*Peer  `json:"peers"`
 }
 
 type ResultListValidators struct {
-	BlockHeight         int                           `json:"block_height"`
-	BondedValidators    []*abcitypes.Validator `json:"bonded_validators"`
-	UnbondingValidators []*abcitypes.Validator `json:"unbonding_validators"`
+	BlockHeight         uint64           `json:"block_height"`
+	BondedValidators    []*acm.Validator `json:"bonded_validators"`
+	UnbondingValidators []*acm.Validator `json:"unbonding_validators"`
 }
 
 type ResultDumpConsensusState struct {
-	RoundState          *consensus.RoundState       `json:"consensus_state"`
-	PeerConsensusStates []*ResultPeerConsensusState `json:"peer_consensus_states"`
-}
-
-type ResultPeerConsensusState struct {
-	PeerKey            string `json:"peer_key"`
-	PeerConsensusState string `json:"peer_consensus_state"`
+	RoundState      *consensus.RoundState       `json:"consensus_state"`
+	PeerRoundStates []*consensus.PeerRoundState `json:"peer_round_states"`
 }
 
 type ResultListNames struct {
-	BlockHeight int                        `json:"block_height"`
+	BlockHeight uint64                    `json:"block_height"`
 	Names       []*execution.NameRegEntry `json:"names"`
 }
 
-type ResultGenPrivAccount struct {
+type ResultGeneratePrivateAccount struct {
 	PrivAccount *acm.ConcretePrivateAccount `json:"priv_account"`
 }
 
 type ResultGetAccount struct {
-	Account *acm.ConcreteAccount `json:"account"`
+	Account acm.Account `json:"account"`
 }
 
 type ResultBroadcastTx struct {
-	Code abcitypes.CodeType `json:"code"`
-	Data []byte             `json:"data"`
-	Log  string             `json:"log"`
+	txs.Receipt `json:"unwrap"`
 }
 
 type ResultListUnconfirmedTxs struct {
@@ -140,7 +135,7 @@ type ResultGetName struct {
 }
 
 type ResultGenesis struct {
-	Genesis *genesis.GenesisDoc `json:"genesis"`
+	Genesis genesis.GenesisDoc `json:"genesis"`
 }
 
 type ResultSignTx struct {
@@ -187,7 +182,7 @@ type BurrowResult interface {
 func ConcreteTypes() []wire.ConcreteType {
 	return []wire.ConcreteType{
 		{&ResultGetStorage{}, ResultTypeGetStorage},
-		{&ResultCall{}, ResultTypeCall},
+		{&execution.Call{}, ResultTypeCall},
 		{&ResultListAccounts{}, ResultTypeListAccounts},
 		{&ResultDumpStorage{}, ResultTypeDumpStorage},
 		{&ResultBlockchainInfo{}, ResultTypeBlockchainInfo},
@@ -198,7 +193,7 @@ func ConcreteTypes() []wire.ConcreteType {
 		{&ResultDumpConsensusState{}, ResultTypeDumpConsensusState},
 		{&ResultDumpConsensusState{}, ResultTypePeerConsensusState},
 		{&ResultListNames{}, ResultTypeListNames},
-		{&ResultGenPrivAccount{}, ResultTypeGenPrivAccount},
+		{&ResultGeneratePrivateAccount{}, ResultTypeGenPrivAccount},
 		{&ResultGetAccount{}, ResultTypeGetAccount},
 		{&ResultBroadcastTx{}, ResultTypeBroadcastTx},
 		{&ResultListUnconfirmedTxs{}, ResultTypeListUnconfirmedTxs},

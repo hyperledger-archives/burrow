@@ -19,10 +19,9 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution"
 	rpc_types "github.com/hyperledger/burrow/rpc/tm/types"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-wire"
-	"github.com/hyperledger/burrow/execution"
 )
 
 type RPCClient interface {
@@ -53,7 +52,7 @@ func GenPrivAccount(client RPCClient) (*acm.ConcretePrivateAccount, error) {
 	return res.(*rpc_types.ResultGenPrivAccount).PrivAccount, nil
 }
 
-func GetAccount(client RPCClient, address acm.Address) (*acm.ConcreteAccount, error) {
+func GetAccount(client RPCClient, address acm.Address) (acm.Account, error) {
 	res, err := call(client, "get_account",
 		"address", address)
 	if err != nil {
@@ -73,17 +72,12 @@ func SignTx(client RPCClient, tx txs.Tx,
 	return res.(*rpc_types.ResultSignTx).Tx, nil
 }
 
-func BroadcastTx(client RPCClient,
-	tx txs.Tx) (txs.Receipt, error) {
-	res, err := call(client, "broadcast_tx",
-		"tx", wrappedTx{tx})
+func BroadcastTx(client RPCClient, tx txs.Tx) (*txs.Receipt, error) {
+	res, err := call(client, "broadcast_tx", "tx", wrappedTx{tx})
 	if err != nil {
-		return txs.Receipt{}, err
+		return nil, err
 	}
-	receiptBytes := res.(*rpc_types.ResultBroadcastTx).Data
-	receipt := txs.Receipt{}
-	err = wire.ReadBinaryBytes(receiptBytes, &receipt)
-	return receipt, err
+	return res.(*txs.Receipt), err
 
 }
 

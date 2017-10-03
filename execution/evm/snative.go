@@ -17,13 +17,14 @@ package evm
 import (
 	"fmt"
 
+	"strings"
+
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	. "github.com/hyperledger/burrow/word"
-	"strings"
-	"github.com/hyperledger/burrow/execution/evm/abi"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 )
 
 //
@@ -189,8 +190,8 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 		if _, ok := contractMap[contract.Name]; ok {
 			// If this happens we have a pseudo compile time error that will be caught
 			// on native.go init()
-			panic(fmt.Errorf("Duplicate contract with name %s defined. "+
-				"Contract names must be unique.", contract.Name))
+			panic(fmt.Errorf("duplicate contract with name %s defined. "+
+				"Contract names must be unique", contract.Name))
 		}
 		contractMap[contract.Name] = contract
 	}
@@ -207,7 +208,7 @@ func NewSNativeContract(comment, name string,
 		fid := f.ID()
 		otherF, ok := functionsByID[fid]
 		if ok {
-			panic(fmt.Errorf("Function with ID %x already defined: %s", fid,
+			panic(fmt.Errorf("function with ID %x already defined: %s", fid,
 				otherF))
 		}
 		functionsByID[fid] = f
@@ -223,8 +224,8 @@ func NewSNativeContract(comment, name string,
 // This function is designed to be called from the EVM once a SNative contract
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
-func (contract *SNativeContractDescription) Dispatch(state State,
-	caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
+	args []byte, gas *int64) (output []byte, err error) {
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 			"identifier but arguments are only %s bytes long", len(args))
@@ -239,7 +240,7 @@ func (contract *SNativeContractDescription) Dispatch(state State,
 
 	// check if we have permission to call this function
 	if !HasPermission(state, caller, function.PermFlag) {
-		return nil, ErrLacksSNativePermission{caller.Address, function.Name}
+		return nil, ErrLacksSNativePermission{caller.Address(), function.Name}
 	}
 
 	// ensure there are enough arguments
@@ -328,25 +329,25 @@ func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
-func hasBase(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := state.GetAccount(acm.AddressFromWord256(addr))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum)) // already shifted
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permInt := byteFromBool(HasPermission(state, vmAcc, permN))
+	permInt := byteFromBool(HasPermission(state, acc, permN))
 	dbg.Printf("snative.hasBasePerm(0x%X, %b) = %v\n", addr.Postfix(20), permN, permInt)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func setBase(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum, permVal := returnThreeArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
@@ -354,36 +355,36 @@ func setBase(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) 
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
-	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
+	if err = acc.MutablePermissions().Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
-	state.UpdateAccount(vmAcc)
+	state.UpdateAccount(acc)
 	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
-	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(state)), nil
+	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func unsetBase(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	if err = vmAcc.Permissions.Base.Unset(permN); err != nil {
+	if err = acc.MutablePermissions().Base.Unset(permN); err != nil {
 		return nil, err
 	}
-	state.UpdateAccount(vmAcc)
+	state.UpdateAccount(acc)
 	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
-	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(state)), nil
+	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func setGlobal(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	permNum, permVal := returnTwoArgs(args)
-	vmAcc := state.GetAccount(permission.GlobalPermissionsAddress)
-	if vmAcc == nil {
+	acc := acm.AsMutableAccount(state.GetAccount(permission.GlobalPermissionsAddress))
+	if acc == nil {
 		panic("cant find the global permissions account")
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
@@ -391,48 +392,48 @@ func setGlobal(state State, caller *acm.ConcreteAccount, args []byte, gas *int64
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
-	if err = vmAcc.Permissions.Base.Set(permN, permV); err != nil {
+	if err = acc.MutablePermissions().Base.Set(permN, permV); err != nil {
 		return nil, err
 	}
-	state.UpdateAccount(vmAcc)
+	state.UpdateAccount(acc)
 	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
-	return permBytes(vmAcc.Permissions.Base.ResultantPerms()), nil
+	return permBytes(acc.Permissions().Base.ResultantPerms()), nil
 }
 
-func hasRole(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := state.GetAccount(acm.AddressFromWord256(addr))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(vmAcc.Permissions.HasRole(roleS))
+	permInt := byteFromBool(acc.Permissions().HasRole(roleS))
 	dbg.Printf("snative.hasRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func addRole(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(vmAcc.Permissions.AddRole(roleS))
-	state.UpdateAccount(vmAcc)
+	permInt := byteFromBool(acc.MutablePermissions().AddRole(roleS))
+	state.UpdateAccount(acc)
 	dbg.Printf("snative.addRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func removeRole(state State, caller *acm.ConcreteAccount, args []byte, gas *int64) (output []byte, err error) {
+func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	vmAcc := state.GetAccount(acm.AddressFromWord256(addr))
-	if vmAcc == nil {
+	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(vmAcc.Permissions.RmRole(roleS))
-	state.UpdateAccount(vmAcc)
+	permInt := byteFromBool(acc.MutablePermissions().RmRole(roleS))
+	state.UpdateAccount(acc)
 	dbg.Printf("snative.rmRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
@@ -455,12 +456,12 @@ func ValidPermN(n ptypes.PermFlag) bool {
 }
 
 // Get the global BasePermissions
-func globalPerms(state State) ptypes.BasePermissions {
-	vmAcc := state.GetAccount(permission.GlobalPermissionsAddress)
-	if vmAcc == nil {
+func globalPerms(state acm.StateWriter) ptypes.BasePermissions {
+	acc := state.GetAccount(permission.GlobalPermissionsAddress)
+	if acc == nil {
 		panic("cant find the global permissions account")
 	}
-	return vmAcc.Permissions.Base
+	return acc.Permissions().Base
 }
 
 // Compute the effective permissions from an acm.Account's BasePermissions by

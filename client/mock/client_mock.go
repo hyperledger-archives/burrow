@@ -42,7 +42,7 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
 		TxHash:          make([]byte, 20),
-		CreatesContract: 0,
+		CreatesContract: false,
 	}
 	return txReceipt, nil
 }

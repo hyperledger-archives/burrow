@@ -163,11 +163,11 @@ func initGlobalVariables(ffs *fixtures.FileFixtures) error {
 }
 
 // Deterministic account generation helper. Pass number of accounts to make
-func makeUsers(n int) []*acm.ConcretePrivateAccount {
-	accounts := []*acm.ConcretePrivateAccount{}
+func makeUsers(n int) []acm.PrivateAccount {
+	accounts := make([]acm.PrivateAccount, n)
 	for i := 0; i < n; i++ {
 		secret := "mysecret" + strconv.Itoa(i)
-		user := acm.GenPrivAccountFromSecret(secret)
+		user := acm.GeneratePrivateAccountFromSecret(secret)
 		accounts = append(accounts, user)
 	}
 	return accounts
@@ -209,8 +209,8 @@ func genesisAccountFromPrivAccount(account *acm.ConcretePrivateAccount) *genesis
 
 func saveNewPriv() {
 	// Save new priv_validator file.
-	priv := &types.PrivValidator{
-		Address: users[0].Address.Bytes(),
+	priv := &types.PrivValidatorFS{
+		Address: users[0].Address().Bytes(),
 		PubKey:  users[0].PubKey,
 		PrivKey: users[0].PrivKey,
 	}
@@ -223,7 +223,7 @@ func saveNewPriv() {
 
 func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address,
 	amt int64) *txs.SendTx {
-	nonce := getNonce(t, client, users[0].Address)
+	nonce := getNonce(t, client, users[0].Address())
 	tx := txs.NewSendTx()
 	tx.AddInputWithNonce(users[0].PubKey, amt, nonce+1)
 	tx.AddOutput(addr, amt)
@@ -239,7 +239,7 @@ func makeDefaultSendTxSigned(t *testing.T, client RPCClient, addr acm.Address,
 
 func makeDefaultCallTx(t *testing.T, client RPCClient, addr acm.Address, code []byte, amt, gasLim,
 	fee int64) *txs.CallTx {
-	nonce := getNonce(t, client, users[0].Address)
+	nonce := getNonce(t, client, users[0].Address())
 	tx := txs.NewCallTxWithNonce(users[0].PubKey, addr, code, amt, gasLim, fee,
 		nonce+1)
 	tx.Sign(chainID, users[0])
@@ -248,7 +248,7 @@ func makeDefaultCallTx(t *testing.T, client RPCClient, addr acm.Address, code []
 
 func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt,
 	fee int64) *txs.NameTx {
-	nonce := getNonce(t, client, users[0].Address)
+	nonce := getNonce(t, client, users[0].Address())
 	tx := txs.NewNameTxWithNonce(users[0].PubKey, name, value, amt, fee, nonce+1)
 	tx.Sign(chainID, users[0])
 	return tx
@@ -270,7 +270,7 @@ func getNonce(t *testing.T, client RPCClient, addr acm.Address) int64 {
 }
 
 // get the account
-func getAccount(t *testing.T, client RPCClient, addr acm.Address) *acm.ConcreteAccount {
+func getAccount(t *testing.T, client RPCClient, addr acm.Address) acm.Account {
 	ac, err := GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -289,7 +289,7 @@ func signTx(t *testing.T, client RPCClient, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) txs.Receipt {
+func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) *txs.Receipt {
 	rec, err := BroadcastTx(client, tx)
 	if err != nil {
 		t.Fatal(err)

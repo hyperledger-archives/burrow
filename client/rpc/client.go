@@ -21,7 +21,7 @@ import (
 
 	ptypes "github.com/hyperledger/burrow/permission"
 
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/keys"
@@ -243,7 +243,7 @@ type TxResult struct {
 	Hash      []byte // all txs get a hash
 
 	// only CallTx
-	Address   account.Address // only for new contracts
+	Address   acm.Address // only for new contracts
 	Return    []byte
 	Exception string
 
@@ -254,7 +254,7 @@ type TxResult struct {
 // Preserve
 func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign,
 	broadcast, wait bool) (txResult *TxResult, err error) {
-	var inputAddr account.Address
+	var inputAddr acm.Address
 	if sign {
 		inputAddr, tx, err = signTx(keyClient, chainID, tx)
 		if err != nil {
@@ -311,18 +311,18 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		// reasonable to get this returned from the chain directly.  Alternatively,
 		// the benefit is that the we don't need to trust the chain node
 		if tx_, ok := tx.(*txs.CallTx); ok {
-			if tx_.Address == account.ZeroAddress {
-				txResult.Address = txs.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
+			if tx_.Address == nil {
+				txResult.Address = acm.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
 			}
 		}
 	}
 	return
 }
 
-func addressFromHexString(addrString string) (account.Address, error) {
+func addressFromHexString(addrString string) (acm.Address, error) {
 	addrBytes, err := hex.DecodeString(addrString)
 	if err != nil {
-		return account.Address{}, err
+		return acm.Address{}, err
 	}
-	return account.AddressFromBytes(addrBytes)
+	return acm.AddressFromBytes(addrBytes)
 }

@@ -14,13 +14,6 @@
 
 package word
 
-// TODO: [ben] byteslice is not specific for word256, but it is used exclusively
-// for word256 (and for word160* 20byte addresses) so consider stronger typing.
-
-import (
-	"bytes"
-)
-
 func Fingerprint(slice []byte) []byte {
 	fingerprint := make([]byte, 6)
 	copy(fingerprint, slice)
@@ -52,10 +45,4 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	padded := make([]byte, l)
 	copy(padded[l-len(slice):], slice)
 	return padded
-}
-
-func TrimmedString(b []byte) string {
-	trimSet := string([]byte{0})
-	return string(bytes.TrimLeft(b, trimSet))
-
 }

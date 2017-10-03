@@ -16,18 +16,22 @@ package genesis
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"crypto/sha256"
-
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 )
+
+// How many bytes to take from the front of the GenesisDoc hash to append
+// to the ChainName to form the ChainID. The idea is to avoid some classes
+// of replay attack between chains with the same name.
+const ChainIDHashSuffixBytes = 4
 
 // we store the GenesisDoc in the db under this key
 
@@ -37,8 +41,8 @@ var GenDocKey = []byte("GenDocKey")
 // core types for a genesis definition
 
 type BasicAccount struct {
-	Address account.Address `json:"address"`
-	Amount  int64           `json:"amount"`
+	Address acm.Address `json:"address"`
+	Amount  int64       `json:"amount"`
 }
 
 type GenesisAccount struct {
@@ -63,7 +67,8 @@ type GenesisParams struct {
 
 type GenesisDoc struct {
 	GenesisTime time.Time          `json:"genesis_time"`
-	ChainID     string             `json:"chain_id"`
+	ChainName   string             `json:"chain_name"`
+	Salt        []byte             `json:"salt"`
 	Params      *GenesisParams     `json:"params"`
 	Accounts    []GenesisAccount   `json:"accounts"`
 	Validators  []GenesisValidator `json:"validators"`
@@ -89,7 +94,6 @@ func (genesisDoc *GenesisDoc) GenesisFileBytes() ([]byte, error) {
 	return indentedBuffer.Bytes(), nil
 }
 
-
 func (genesisDoc *GenesisDoc) Hash() []byte {
 	genesisDocBytes, err := genesisDoc.GenesisFileBytes()
 	if err != nil {
@@ -98,6 +102,10 @@ func (genesisDoc *GenesisDoc) Hash() []byte {
 	hasher := sha256.New()
 	hasher.Write(genesisDocBytes)
 	return hasher.Sum(nil)
+}
+
+func (genesisDoc *GenesisDoc) ChainID() string {
+	return fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.Hash()[:ChainIDHashSuffixBytes])
 }
 
 //------------------------------------------------------------
@@ -138,17 +146,25 @@ func (genesisAccount *GenesisAccount) Clone() GenesisAccount {
 //------------------------------------------------------------
 // GenesisValidator methods
 
+func (gv *GenesisValidator) Validator() acm.Validator {
+	return acm.ConcreteValidator{
+		Address: acm.MustAddressFromBytes(gv.PubKey.Address()),
+		PubKey:  gv.PubKey,
+		Power:   uint64(gv.Amount),
+	}.Validator()
+}
+
 // Clone clones the genesis validator
-func (genesisValidator *GenesisValidator) Clone() GenesisValidator {
+func (gv *GenesisValidator) Clone() GenesisValidator {
 	// clone the addresses to unbond to
-	unbondToClone := make([]BasicAccount, len(genesisValidator.UnbondTo))
-	for i, basicAccount := range genesisValidator.UnbondTo {
+	unbondToClone := make([]BasicAccount, len(gv.UnbondTo))
+	for i, basicAccount := range gv.UnbondTo {
 		unbondToClone[i] = basicAccount.Clone()
 	}
 	return GenesisValidator{
-		PubKey:   genesisValidator.PubKey,
-		Amount:   genesisValidator.Amount,
-		Name:     genesisValidator.Name,
+		PubKey:   gv.PubKey,
+		Amount:   gv.Amount,
+		Name:     gv.Name,
 		UnbondTo: unbondToClone,
 	}
 }
@@ -188,7 +204,6 @@ func MakeGenesisDocFromAccounts(chainID string, accounts []*GenesisAccount,
 	}
 	return &GenesisDoc{
 		GenesisTime: time.Now(),
-		ChainID:     chainID,
 		Params:      genesisParameters,
 		Accounts:    accountsCopy,
 		Validators:  validatorsCopy,

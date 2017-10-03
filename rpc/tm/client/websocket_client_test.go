@@ -23,10 +23,10 @@ import (
 
 	"time"
 
+	"github.com/hyperledger/burrow/execution/evm"
 	core_types "github.com/hyperledger/burrow/rpc/tm/core/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
-	"github.com/hyperledger/burrow/execution/evm"
 )
 
 //--------------------------------------------------------------------------------

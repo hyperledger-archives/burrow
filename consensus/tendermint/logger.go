@@ -16,16 +16,16 @@ func NewLogger(logger logging_types.InfoTraceLogger) *tendermintLogger {
 	}
 }
 
-func (tml *tendermintLogger) Info(msg string, keyvals ...interface{}) error {
-	return logging.InfoMsg(tml.logger, msg, keyvals...)
+func (tml *tendermintLogger) Info(msg string, keyvals ...interface{}) {
+	logging.InfoMsg(tml.logger, msg, keyvals...)
 }
 
-func (tml *tendermintLogger) Error(msg string, keyvals ...interface{}) error {
-	return logging.InfoMsg(tml.logger, msg, keyvals...)
+func (tml *tendermintLogger) Error(msg string, keyvals ...interface{}) {
+	logging.InfoMsg(tml.logger, msg, keyvals...)
 }
 
-func (tml *tendermintLogger) Debug(msg string, keyvals ...interface{}) error {
-	return logging.TraceMsg(tml.logger, msg, keyvals...)
+func (tml *tendermintLogger) Debug(msg string, keyvals ...interface{}) {
+	logging.TraceMsg(tml.logger, msg, keyvals...)
 }
 
 func (tml *tendermintLogger) With(keyvals ...interface{}) log.Logger {

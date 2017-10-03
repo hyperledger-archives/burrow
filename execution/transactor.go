@@ -21,24 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/word"
-
-	"github.com/hyperledger/burrow/blockchain"
+	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 )
-
-// Transactor is the controller/middleware for the v0 RPC
-type transactor struct {
-	txMtx         *sync.Mutex
-	blockchain    blockchain.Blockchain
-	state         account.GetterAndStorageGetter
-	eventEmitter  event.EventEmitter
-	txBroadcaster func(tx txs.Tx) error
-}
 
 type Call struct {
 	Return  string `json:"return"`
@@ -46,35 +38,62 @@ type Call struct {
 	// TODO ...
 }
 
-func newTransactor(blockchain blockchain.Blockchain,
-	state account.GetterAndStorageGetter,
-	eventEmitter event.EventEmitter,
-	txBroadcaster func(tx txs.Tx) error) *transactor {
+type Transactor interface {
+	Call(fromAddress, toAddress acm.Address, data []byte) (*Call, error)
+	CallCode(fromAddress acm.Address, code, data []byte) (*Call, error)
+	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
+	BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error
+	Transact(privKey []byte, address acm.Address, data []byte, gasLimit, fee int64) (*txs.Receipt, error)
+	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee int64) (*evm.EventDataCall, error)
+	Send(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error)
+	SendAndHold(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error)
+	TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*txs.Receipt, error)
+	SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (txs.Tx, error)
+}
+
+// Transactor is the controller/middleware for the v0 RPC
+type transactor struct {
+	txMtx            *sync.Mutex
+	blockchain       blockchain.Blockchain
+	state            acm.StateReader
+	eventEmitter     event.EventEmitter
+	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
+}
+
+var _ Transactor = &transactor{}
+
+func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.EventEmitter,
+	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error) *transactor {
 	return &transactor{
-		blockchain:    blockchain,
-		state:         state,
-		eventEmitter:  eventEmitter,
-		txBroadcaster: txBroadcaster,
+		blockchain:       blockchain,
+		state:            state,
+		eventEmitter:     eventEmitter,
+		broadcastTxAsync: broadcastTxAsync,
 	}
 }
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *transactor) Call(fromAddress, toAddress account.Address, data []byte) (*Call, error) {
+func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (*Call, error) {
+	if evm.RegisteredNativeContract(toAddress.Word256()) {
+		return nil, fmt.Errorf("attempt to call native contract at address "+
+			"%X, but native contracts can not be called directly. Use a deployed "+
+			"contract that calls the native function instead", toAddress)
+	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee := trans.state.GetAccount(toAddress)
+	callee := acm.AsMutableAccount(trans.state.GetAccount(toAddress))
 	if callee == nil {
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
-	caller := &account.ConcreteAccount{Address: fromAddress}
+	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := NewTxCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address.Word256(), nil)
+	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address().Word256(), nil)
 	vmach.SetFireable(trans.eventEmitter)
 
 	gas := params.GasLimit
-	ret, err := vmach.Call(caller, callee, callee.Code, data, 0, &gas)
+	ret, err := vmach.Call(caller, callee, callee.Code(), data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +105,14 @@ func (trans *transactor) Call(fromAddress, toAddress account.Address, data []byt
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (trans *transactor) CallCode(fromAddress account.Address, code, data []byte) (*Call, error) {
+func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*Call, error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee := &account.ConcreteAccount{Address: fromAddress}
-	caller := &account.ConcreteAccount{Address: fromAddress}
+	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
+	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := NewTxCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address.Word256(), nil)
+	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address().Word256(), nil)
 	gas := params.GasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -105,40 +124,56 @@ func (trans *transactor) CallCode(fromAddress account.Address, code, data []byte
 	return &Call{Return: hex.EncodeToString(ret), GasUsed: gasUsed}, nil
 }
 
+func (trans *transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error {
+	return trans.broadcastTxAsync(tx, callback)
+}
+
 // Broadcast a transaction.
 func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
-	err := trans.txBroadcaster(tx)
+	responseCh := make(chan *abci_types.Response, 1)
+	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
+		responseCh <- res
+	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Error broadcasting transaction: %v", err)
+		return nil, err
+	}
+	response := <-responseCh
+	checkTxResponse := response.GetCheckTx()
+	if checkTxResponse == nil {
+		return nil, fmt.Errorf("application did not return CheckTx response")
 	}
 
-	txHash := txs.TxHash(trans.blockchain.ChainID(), tx)
-	var createsContract uint8
-	var contractAddr account.Address
-	// check if creates new contract
-	if callTx, ok := tx.(*txs.CallTx); ok {
-		if callTx.Address == account.ZeroAddress {
-			createsContract = 1
-			contractAddr = txs.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+	switch checkTxResponse.Code {
+	case abci_types.CodeType_OK:
+		receipt := new(txs.Receipt)
+		err := wire.ReadBinaryBytes(checkTxResponse.Data, receipt)
+		if err != nil {
+			return nil, fmt.Errorf("could not deserialise transaction receipt: %s", err)
 		}
+		return receipt, nil
+	case abci_types.CodeType_EncodingError, abci_types.CodeType_InternalError:
+		return nil, fmt.Errorf("error code %s received, log: %s", checkTxResponse.Code, checkTxResponse.Log)
+	default:
+		return nil, fmt.Errorf("unknown error returned from Tendermint by BroadcastTxSync "+
+			"ABCI code: %v, ABCI log: %v", checkTxResponse.Code, checkTxResponse.Log)
 	}
-	return &txs.Receipt{txHash, createsContract, contractAddr}, nil
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *transactor) Transact(privKey []byte, address account.Address, data []byte, gasLimit,
+func (trans *transactor) Transact(privKey []byte, address acm.Address, data []byte, gasLimit,
 	fee int64) (*txs.Receipt, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	// [Silas] This is puzzling, if the account doesn't exist the CallTx will fail, so what's the point in this?
 	acc := trans.state.GetAccount(pa.Address())
 	sequence := int64(1)
 	if acc != nil {
-		sequence = acc.Sequence + 1
+		sequence = acc.Sequence() + 1
 	}
 	// TODO: [Silas] we should consider revising this method and removing fee, or
 	// possibly adding an amount parameter. It is non-sensical to just be able to
@@ -159,28 +194,28 @@ func (trans *transactor) Transact(privKey []byte, address account.Address, data 
 	}
 	tx := &txs.CallTx{
 		Input:    txInput,
-		Address:  address,
+		Address:  &address,
 		GasLimit: gasLimit,
 		Fee:      fee,
 		Data:     data,
 	}
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []*account.ConcretePrivateAccount{pa.Unwrap()})
+	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) TransactAndHold(privKey []byte, address account.Address, data []byte, gasLimit,
+func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit,
 	fee int64) (*evm.EventDataCall, error) {
 	rec, tErr := trans.Transact(privKey, address, data, gasLimit, fee)
 	if tErr != nil {
 		return nil, tErr
 	}
-	var addr account.Address
-	if rec.CreatesContract == 1 {
+	var addr acm.Address
+	if rec.CreatesContract {
 		addr = rec.ContractAddr
 	} else {
 		addr = address
@@ -227,7 +262,7 @@ func (trans *transactor) TransactAndHold(privKey []byte, address account.Address
 	return ret, rErr
 }
 
-func (trans *transactor) Send(privKey []byte, toAddress account.Address, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n",
 			len(privKey))
@@ -237,12 +272,12 @@ func (trans *transactor) Send(privKey []byte, toAddress account.Address, amount 
 	copy(pk[:], privKey)
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	cache := trans.state
 	acc := cache.GetAccount(pa.Address())
 	sequence := int64(1)
 	if acc != nil {
-		sequence = acc.Sequence + 1
+		sequence = acc.Sequence() + 1
 	}
 
 	tx := txs.NewSendTx()
@@ -261,14 +296,14 @@ func (trans *transactor) Send(privKey []byte, toAddress account.Address, amount 
 	tx.Outputs = append(tx.Outputs, txOutput)
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []*account.ConcretePrivateAccount{pa.Unwrap()})
+	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) SendAndHold(privKey []byte, toAddress account.Address,
+func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address,
 	amount int64) (*txs.Receipt, error) {
 	rec, tErr := trans.Send(privKey, toAddress, amount)
 	if tErr != nil {
@@ -290,7 +325,7 @@ func (trans *transactor) SendAndHold(privKey []byte, toAddress account.Address,
 
 	var rErr error
 
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 
 	select {
 	case <-toChan:
@@ -313,16 +348,16 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string,
 	}
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey)
+	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	cache := trans.state // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	acc := cache.GetAccount(pa.Address())
 	sequence := int64(1)
 	if acc == nil {
-		sequence = acc.Sequence + 1
+		sequence = acc.Sequence() + 1
 	}
 	tx := txs.NewNameTxWithNonce(pa.PubKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []*account.ConcretePrivateAccount{pa.Unwrap()})
+	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
@@ -330,46 +365,47 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string,
 }
 
 // Sign a transaction
-func (trans *transactor) SignTx(tx txs.Tx, privAccounts []*account.ConcretePrivateAccount) (txs.Tx, error) {
+func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (txs.Tx, error) {
 	// more checks?
 
 	for i, privAccount := range privAccounts {
-		if privAccount == nil || privAccount.PrivKey.Unwrap() == nil {
-			return nil, fmt.Errorf("Invalid (empty) privAccount @%v", i)
+		if privAccount == nil || privAccount.PrivKey().Unwrap() == nil {
+			return nil, fmt.Errorf("invalid (empty) privAccount @%v", i)
 		}
 	}
+	chainID := trans.blockchain.Root().ChainID()
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
-		nameTx.Input.PubKey = privAccounts[0].PubKey
-		nameTx.Input.Signature = privAccounts[0].Sign(trans.blockchain.ChainID(), nameTx)
+		nameTx.Input.PubKey = privAccounts[0].PubKey()
+		nameTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, nameTx)
 	case *txs.SendTx:
 		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
-			input.PubKey = privAccounts[i].PubKey
-			input.Signature = privAccounts[i].Sign(trans.blockchain.ChainID(), sendTx)
+			input.PubKey = privAccounts[i].PubKey()
+			input.Signature = acm.ChainSign(privAccounts[i], chainID, sendTx)
 		}
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
-		callTx.Input.PubKey = privAccounts[0].PubKey
-		callTx.Input.Signature = privAccounts[0].Sign(trans.blockchain.ChainID(), callTx)
+		callTx.Input.PubKey = privAccounts[0].PubKey()
+		callTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, callTx)
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = privAccounts[0].Sign(trans.blockchain.ChainID(), bondTx).
+		bondTx.Signature = acm.ChainSign(privAccounts[0], chainID, bondTx).
 			Unwrap().(crypto.SignatureEd25519)
 		for i, input := range bondTx.Inputs {
-			input.PubKey = privAccounts[i+1].PubKey
-			input.Signature = privAccounts[i+1].Sign(trans.blockchain.ChainID(), bondTx)
+			input.PubKey = privAccounts[i+1].PubKey()
+			input.Signature = acm.ChainSign(privAccounts[i+1], chainID, bondTx)
 		}
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
-		unbondTx.Signature = privAccounts[0].Sign(trans.blockchain.ChainID(), unbondTx).
+		unbondTx.Signature = acm.ChainSign(privAccounts[0], chainID, unbondTx).
 			Unwrap().(crypto.SignatureEd25519)
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
-		rebondTx.Signature = privAccounts[0].Sign(trans.blockchain.ChainID(), rebondTx).
+		rebondTx.Signature = acm.ChainSign(privAccounts[0], chainID, rebondTx).
 			Unwrap().(crypto.SignatureEd25519)
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
@@ -378,10 +414,11 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []*account.ConcretePriva
 }
 
 func vmParams(blockchain blockchain.Blockchain) evm.Params {
+	tip := blockchain.Tip()
 	return evm.Params{
-		BlockHeight: int64(blockchain.LastBlockHeight()),
-		BlockHash:   word.LeftPadWord256(blockchain.LastBlockHash()),
-		BlockTime:   blockchain.LastBlockTime().Unix(),
+		BlockHeight: int64(tip.LastBlockHeight()),
+		BlockHash:   word.LeftPadWord256(tip.LastBlockHash()),
+		BlockTime:   tip.LastBlockTime().Unix(),
 		GasLimit:    GasLimit,
 	}
 }

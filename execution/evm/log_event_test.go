@@ -38,14 +38,14 @@ func TestLog4(t *testing.T) {
 
 	st := newAppState()
 	// Create accounts
-	account1 := &acm.ConcreteAccount{
-		Address: acm.Address{1,3,5,7,9},
-	}
-	account2 := &acm.ConcreteAccount{
-		Address: acm.Address{2,4,6,8,10},
-	}
-	st.accounts[account1.Address] = account1
-	st.accounts[account2.Address] = account2
+	account1 := acm.ConcreteAccount{
+		Address: acm.Address{1, 3, 5, 7, 9},
+	}.MutableAccount()
+	account2 := acm.ConcreteAccount{
+		Address: acm.Address{2, 4, 6, 8, 10},
+	}.MutableAccount()
+	st.accounts[account1.Address()] = account1
+	st.accounts[account2.Address()] = account2
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
@@ -54,7 +54,7 @@ func TestLog4(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to start eventSwitch: %v", err)
 	}
-	eventID := EventStringLogEvent(account2.Address)
+	eventID := EventStringLogEvent(account2.Address())
 
 	doneChan := make(chan struct{}, 1)
 

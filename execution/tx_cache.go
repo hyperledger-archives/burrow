@@ -15,24 +15,19 @@
 package execution
 
 import (
-	"fmt"
-
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/word"
 )
 
 type TxCache struct {
-	backend  acm.GetterAndStorageGetter
+	backend  acm.StateReader
 	accounts map[acm.Address]vmAccountInfo
 	storages map[word.Tuple256]word.Word256
 }
 
-var _ evm.State = &TxCache{}
+var _ acm.StateWriter = &TxCache{}
 
-func NewTxCache(backend acm.GetterAndStorageGetter) *TxCache {
+func NewTxCache(backend acm.StateReader) *TxCache {
 	return &TxCache{
 		backend:  backend,
 		accounts: make(map[acm.Address]vmAccountInfo),
@@ -43,25 +38,22 @@ func NewTxCache(backend acm.GetterAndStorageGetter) *TxCache {
 //-------------------------------------
 // TxCache.account
 
-func (cache *TxCache) GetAccount(addr acm.Address) *acm.ConcreteAccount {
+func (cache *TxCache) GetAccount(addr acm.Address) acm.Account {
 	acc, removed := cache.accounts[addr].unpack()
 	if removed {
 		return nil
 	} else if acc == nil {
-		acc2 := cache.backend.GetAccount(addr)
-		if acc2 != nil {
-			return acc2.Copy()
-		}
+		return cache.backend.GetAccount(addr)
 	}
 	return acc
 }
 
-func (cache *TxCache) UpdateAccount(acc *acm.ConcreteAccount) {
-	_, removed := cache.accounts[acc.Address].unpack()
+func (cache *TxCache) UpdateAccount(acc acm.Account) {
+	_, removed := cache.accounts[acc.Address()].unpack()
 	if removed {
 		panic("UpdateAccount on a removed account")
 	}
-	cache.accounts[acc.Address] = vmAccountInfo{acc, false}
+	cache.accounts[acc.Address()] = vmAccountInfo{acc, false}
 }
 
 func (cache *TxCache) RemoveAccount(addr acm.Address) {
@@ -72,40 +64,13 @@ func (cache *TxCache) RemoveAccount(addr acm.Address) {
 	cache.accounts[addr] = vmAccountInfo{acc, true}
 }
 
-// Creates a 20 byte address and bumps the creator's nonce.
-func (cache *TxCache) CreateAccount(creator *acm.ConcreteAccount) *acm.ConcreteAccount {
-	// Generate an address
-	sequence := creator.Sequence
-	creator.Sequence += 1
-
-	addr := txs.NewContractAddress(creator.Address, sequence)
-
-	// Create account from address.
-	account, removed := cache.accounts[addr].unpack()
-	if removed || account == nil {
-		account = &acm.ConcreteAccount{
-			Address:     addr,
-			Balance:     0,
-			Code:        nil,
-			Sequence:    0,
-			Permissions: cache.GetAccount(permission.GlobalPermissionsAddress).Permissions,
-		}
-		cache.accounts[addr] = vmAccountInfo{account, false}
-		return account
-	} else {
-		// either we've messed up nonce handling, or sha3 is broken
-		panic(fmt.Sprintf("Could not create account, address already exists: %s", addr))
-		return nil
-	}
-}
-
 // TxCache.account
 //-------------------------------------
 // TxCache.storage
 
 func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) word.Word256 {
 	// Check cache
-	value, ok := cache.storages[word.Tuple256{addr.Word256(), key}]
+	value, ok := cache.storages[word.Tuple256{First: addr.Word256(), Second: key}]
 	if ok {
 		return value
 	}
@@ -128,7 +93,7 @@ func (cache *TxCache) SetStorage(addr acm.Address, key word.Word256, value word.
 
 // These updates do not have to be in deterministic order,
 // the backend is responsible for ordering updates.
-func (cache *TxCache) Sync(backend acm.UpdaterAndStorage) {
+func (cache *TxCache) Sync(backend acm.StateWriter) {
 	// Remove or update storage
 	for addrKey, value := range cache.storages {
 		addrWord256, key := word.Tuple256Split(addrKey)
@@ -149,10 +114,10 @@ func (cache *TxCache) Sync(backend acm.UpdaterAndStorage) {
 //-----------------------------------------------------------------------------
 
 type vmAccountInfo struct {
-	account *acm.ConcreteAccount
+	account acm.Account
 	removed bool
 }
 
-func (accInfo vmAccountInfo) unpack() (*acm.ConcreteAccount, bool) {
+func (accInfo vmAccountInfo) unpack() (acm.Account, bool) {
 	return accInfo.account, accInfo.removed
 }

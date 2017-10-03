@@ -15,14 +15,13 @@
 package methods
 
 import (
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
 	"github.com/hyperledger/burrow/core"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/client"
 )
 
 func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTraceLogger) {

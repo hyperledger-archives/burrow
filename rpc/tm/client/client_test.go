@@ -61,12 +61,12 @@ func TestBroadcastTx(t *testing.T) {
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
-		toAddr := users[1].Address
+		toAddr := users[1].Address()
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err)
-		if receipt.CreatesContract > 0 {
-			t.Fatal("This tx does not create a contract")
+		if receipt.CreatesContract {
+			t.Fatal("This tx should not create a contract")
 		}
 		if len(receipt.TxHash) == 0 {
 			t.Fatal("Failed to compute tx hash")
@@ -92,13 +92,13 @@ func TestGetAccount(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-		acc := getAccount(t, client, users[0].Address)
+		acc := getAccount(t, client, users[0].Address())
 		if acc == nil {
 			t.Fatal("Account was nil")
 		}
-		if acc.Address != users[0].Address {
-			t.Fatalf("Failed to get correct account. Got %s, expected %s", acc.Address,
-				users[0].Address)
+		if acc.Address() != users[0].Address() {
+			t.Fatalf("Failed to get correct account. Got %s, expected %s", acc.Address(),
+				users[0].Address())
 		}
 	})
 }
@@ -124,7 +124,7 @@ func TestGetStorage(t *testing.T) {
 		tx := makeDefaultCallTx(t, client, acm.ZeroAddress, code, amt, gasLim, fee)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err)
-		assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+		assert.Equal(t, true, receipt.CreatesContract, "This transaction should"+
 			" create a contract")
 		assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
 			" transaction hash")
@@ -153,7 +153,7 @@ func TestCallCode(t *testing.T) {
 			0x0, 0xf3}
 		data := []byte{}
 		expected := []byte{0xb}
-		callCode(t, client, users[0].PubKey.Address(), code, data, expected)
+		callCode(t, client, users[0].PubKey().Address(), code, data, expected)
 
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
@@ -161,7 +161,7 @@ func TestCallCode(t *testing.T) {
 		data = append(word.LeftPadWord256([]byte{0x5}).Bytes(),
 			word.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
-		callCode(t, client, users[0].PubKey.Address(), code, data, expected)
+		callCode(t, client, users[0].PubKey().Address(), code, data, expected)
 	})
 }
 
@@ -189,7 +189,7 @@ func TestCallContract(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Problem broadcasting transaction: %v", err)
 		}
-		assert.Equal(t, uint8(1), receipt.CreatesContract, "This transaction should"+
+		assert.Equal(t, true, receipt.CreatesContract, "This transaction should"+
 			" create a contract")
 		assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
 			" transaction hash")
@@ -200,7 +200,7 @@ func TestCallContract(t *testing.T) {
 		// run a call through the contract
 		data := []byte{}
 		expected := []byte{0xb}
-		callContract(t, client, acm.MustAddressFromBytes(users[0].PubKey.Address()), contractAddr, data,
+		callContract(t, client, acm.MustAddressFromBytes(users[0].PubKey().Address()), contractAddr, data,
 			expected)
 	})
 }
@@ -259,8 +259,8 @@ func TestNameReg(t *testing.T) {
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithNonce(users[1].PubKey, name, "never mind", amt, fee,
-			getNonce(t, client, users[1].Address)+1)
+		tx = txs.NewNameTxWithNonce(users[1].PubKey(), name, "never mind", amt, fee,
+			getNonce(t, client, users[1].Address())+1)
 		tx.Sign(chainID, users[1])
 
 		_, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
@@ -276,8 +276,8 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithNonce(users[1].PubKey, name, data2, amt, fee,
-			getNonce(t, client, users[1].Address)+1)
+		tx = txs.NewNameTxWithNonce(users[1].PubKey(), name, data2, amt, fee,
+			getNonce(t, client, users[1].Address())+1)
 		tx.Sign(chainID, users[1])
 		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err, "Should be able to update a previously expired name"+

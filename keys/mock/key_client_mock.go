@@ -100,7 +100,7 @@ func (mock *MockKeyClient) Sign(signBytesString string, signAddress account.Addr
 	}
 	signBytes, err := hex.DecodeString(signBytesString)
 	if err != nil {
-		return nil, fmt.Errorf("Sign bytes string is invalid hex string: %s", err.Error())
+		return nil, fmt.Errorf("ChainSign bytes string is invalid hex string: %s", err.Error())
 	}
 	return key.Sign(signBytes)
 }

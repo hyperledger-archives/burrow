@@ -33,8 +33,9 @@ func makeStorage(db dbm.DB, root []byte) merkle.Tree {
 	return storage
 }
 
-// Implements all of evm.State except acm.Creator (it doesn't need to)
-var _ acm.UpdaterAndStorage = &BlockCache{}
+var _ acm.StateWriter = &BlockCache{}
+
+var _ acm.StateIterable = &BlockCache{}
 
 // The blockcache helps prevent unnecessary IAVLTree updates and garbage generation.
 type BlockCache struct {
@@ -47,7 +48,8 @@ type BlockCache struct {
 
 func NewBlockCache(backend *State) *BlockCache {
 	return &BlockCache{
-		// TODO: This is bad and probably the cause of various panics
+		// TODO: This is bad and probably the cause of various panics. Accounts themselves are written
+		// to the State 'backend' but updates to storage just skip that and write directly to the database
 		db:       backend.db,
 		backend:  backend,
 		accounts: make(map[acm.Address]accountInfo),
@@ -63,7 +65,7 @@ func (cache *BlockCache) State() *State {
 //-------------------------------------
 // BlockCache.account
 
-func (cache *BlockCache) GetAccount(addr acm.Address) *acm.ConcreteAccount {
+func (cache *BlockCache) GetAccount(addr acm.Address) acm.Account {
 	acc, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		return nil
@@ -76,8 +78,8 @@ func (cache *BlockCache) GetAccount(addr acm.Address) *acm.ConcreteAccount {
 	}
 }
 
-func (cache *BlockCache) UpdateAccount(acc *acm.ConcreteAccount) {
-	addr := acc.Address
+func (cache *BlockCache) UpdateAccount(acc acm.Account) {
+	addr := acc.Address()
 	_, storage, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		panic("UpdateAccount on a removed account")
@@ -93,13 +95,17 @@ func (cache *BlockCache) RemoveAccount(addr acm.Address) {
 	cache.accounts[addr] = accountInfo{nil, nil, true, false}
 }
 
+func (cache *BlockCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool) {
+
+}
+
 // BlockCache.account
 //-------------------------------------
 // BlockCache.storage
 
 func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (value Word256) {
 	// Check cache
-	info, ok := cache.storages[Tuple256{addr.Word256(), key}]
+	info, ok := cache.storages[Tuple256{First: addr.Word256(), Second: key}]
 	if ok {
 		return info.value
 	}
@@ -110,7 +116,7 @@ func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (value Word25
 		panic("GetStorage() on removed account")
 	}
 	if acc != nil && storage == nil {
-		storage = makeStorage(cache.db, acc.StorageRoot)
+		storage = makeStorage(cache.db, acc.StorageRoot())
 		cache.accounts[addr] = accountInfo{acc, storage, false, dirty}
 	} else if acc == nil {
 		return Zero256
@@ -121,7 +127,7 @@ func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (value Word25
 	if val_ != nil {
 		value = LeftPadWord256(val_)
 	}
-	cache.storages[Tuple256{addr.Word256(), key}] = storageInfo{value, false}
+	cache.storages[Tuple256{First: addr.Word256(), Second: key}] = storageInfo{value, false}
 	return value
 }
 
@@ -131,7 +137,12 @@ func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256
 	if removed {
 		panic("SetStorage() on a removed account")
 	}
-	cache.storages[Tuple256{addr.Word256(), key}] = storageInfo{value, true}
+	cache.storages[Tuple256{First: addr.Word256(), Second: key}] = storageInfo{value, true}
+}
+
+func (cache *BlockCache) IterateStorage(address acm.Address,
+	consumer func(key, value Word256) (stop bool)) (stopped bool) {
+
 }
 
 // BlockCache.storage
@@ -182,7 +193,7 @@ func (cache *BlockCache) Sync() {
 	// Later we'll iterate over all the users and save storage + update storage root.
 	var (
 		curAddr       acm.Address
-		curAcc        *acm.ConcreteAccount
+		curAcc        acm.Account
 		curAccRemoved bool
 		curStorage    merkle.Tree
 	)
@@ -192,7 +203,7 @@ func (cache *BlockCache) Sync() {
 		if addr != curAddr || curAcc == nil {
 			acc, storage, removed, _ := cache.accounts[addr].unpack()
 			if !removed && storage == nil {
-				storage = makeStorage(cache.db, acc.StorageRoot)
+				storage = makeStorage(cache.db, acc.StorageRoot())
 			}
 			curAddr = addr
 			curAcc = acc
@@ -234,8 +245,8 @@ func (cache *BlockCache) Sync() {
 			}
 			if storage != nil {
 				newStorageRoot := storage.Save()
-				if !bytes.Equal(newStorageRoot, acc.StorageRoot) {
-					acc.StorageRoot = newStorageRoot
+				if !bytes.Equal(newStorageRoot, acc.StorageRoot()) {
+					acc = acm.AsMutableAccount(acc).SetStorageRoot(newStorageRoot)
 					dirty = true
 				}
 			}
@@ -276,13 +287,13 @@ func (cache *BlockCache) Sync() {
 //-----------------------------------------------------------------------------
 
 type accountInfo struct {
-	account *acm.ConcreteAccount
+	account acm.Account
 	storage merkle.Tree
 	removed bool
 	dirty   bool
 }
 
-func (accInfo accountInfo) unpack() (*acm.ConcreteAccount, merkle.Tree, bool, bool) {
+func (accInfo accountInfo) unpack() (acm.Account, merkle.Tree, bool, bool) {
 	return accInfo.account, accInfo.storage, accInfo.removed, accInfo.dirty
 }
 

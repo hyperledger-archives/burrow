@@ -35,7 +35,7 @@ type NodeClient interface {
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight int, LatestBlockTime int64, err error)
-	GetAccount(address acm.Address) (*acm.ConcreteAccount, error)
+	GetAccount(address acm.Address) (acm.Account, error)
 	QueryContract(callerAddress, calleeAddress acm.Address, data []byte) (ret []byte, gasUsed int64, err error)
 	QueryContractCode(address acm.Address, code, data []byte) (ret []byte, gasUsed int64, err error)
 
@@ -83,7 +83,7 @@ func (burrowNodeClient *burrowNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, er
 	if err != nil {
 		return nil, err
 	}
-	return &receipt, nil
+	return receipt, nil
 }
 
 func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
@@ -190,7 +190,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address, code, data 
 }
 
 // GetAccount returns a copy of the account
-func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (*acm.ConcreteAccount, error) {
+func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {

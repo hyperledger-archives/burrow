@@ -23,20 +23,20 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
-	word256 "github.com/hyperledger/burrow/word"
+	"github.com/hyperledger/burrow/word"
 )
 
 // The accounts struct has methods for working with accounts.
 type accounts struct {
-	state         *State
+	state         acm.StateIterable
 	filterFactory *event.FilterFactory
 }
 
 // Accounts
 type AccountList struct {
-	Accounts []*account.ConcreteAccount `json:"accounts"`
+	Accounts []acm.Account `json:"accounts"`
 }
 
 // A contract account storage item.
@@ -54,7 +54,7 @@ type Storage struct {
 // TODO: [Silas] there are various notes about using mempool (which I guess translates to CheckTx cache). We need
 // to understand if this is the right thing to do, since we cannot guarantee stability of the check cache it doesn't
 // seem like the right thing to do....
-func newAccounts(state *State) *accounts {
+func newAccounts(state acm.StateIterable) *accounts {
 	filterFactory := event.NewFilterFactory()
 
 	filterFactory.RegisterFilterPool("code", &sync.Pool{
@@ -76,34 +76,33 @@ func newAccounts(state *State) *accounts {
 }
 
 // Generate a new Private Key Account.
-func (accs *accounts) GenPrivAccount() (*account.ConcretePrivateAccount, error) {
-	pa := account.GenPrivAccount().Unwrap()
+func (accs *accounts) GenPrivAccount() (*acm.ConcretePrivateAccount, error) {
+	pa := acm.GeneratePrivateAccount().ConcretePrivateAccount
 	return pa, nil
 }
 
 // Generate a new Private Key Account.
 func (accs *accounts) GenPrivAccountFromKey(privKey []byte) (
-	*account.ConcretePrivateAccount, error) {
+	*acm.ConcretePrivateAccount, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
 	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
-	pa := account.GenPrivAccountFromPrivKeyBytes(privKey).Unwrap()
+	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey).ConcretePrivateAccount
 	return pa, nil
 }
 
 // Get all accounts.
 func (accs *accounts) Accounts(fda []*event.FilterData) (
 	*AccountList, error) {
-	accounts := make([]*account.ConcreteAccount, 0)
+	accounts := make([]acm.Account, 0)
 	filter, err := accs.filterFactory.NewFilter(fda)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	accs.state.GetAccounts().Iterate(func(key, value []byte) bool {
-		acc := account.DecodeAccount(value)
-		if filter.Match(acc) {
-			accounts = append(accounts, acc)
+	accs.state.IterateAccounts(func(account acm.Account) bool {
+		if filter.Match(account) {
+			accounts = append(accounts, account)
 		}
 		return false
 	})
@@ -111,8 +110,11 @@ func (accs *accounts) Accounts(fda []*event.FilterData) (
 }
 
 // Get an account.
-func (accs *accounts) Account(address account.Address) (*account.ConcreteAccount, error) {
-	acc := accs.state.GetAccount(address) // NOTE: we want to read from mempool!
+func (accs *accounts) Account(address acm.Address) (acm.Account, error) {
+	acc, err := accs.state.GetAccount(address) // NOTE: we want to read from mempool!
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		acc = accs.newAcc(address)
 	}
@@ -121,50 +123,55 @@ func (accs *accounts) Account(address account.Address) (*account.ConcreteAccount
 
 // Get the value stored at 'key' in the account with address 'address'
 // Both the key and value is returned.
-func (accs *accounts) StorageAt(address account.Address, key []byte) (*StorageItem,
+func (accs *accounts) StorageAt(address acm.Address, key []byte) (*StorageItem,
 	error) {
-	acc := accs.state.GetAccount(address)
+	acc, err := accs.state.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return &StorageItem{key, []byte{}}, nil
 	}
-	storageRoot := acc.StorageRoot
-	storageTree := accs.state.LoadStorage(storageRoot)
-
-	_, value, _ := storageTree.Get(word256.LeftPadWord256(key).Bytes())
-	if value == nil {
+	value, err := accs.state.GetStorage(address, word.LeftPadWord256(key))
+	if err != nil {
+		return nil, err
+	}
+	if value == word.Zero256 {
 		return &StorageItem{key, []byte{}}, nil
 	}
-	return &StorageItem{key, value}, nil
+	return &StorageItem{key, value.UnpadLeft()}, nil
 }
 
 // Get the storage of the account with address 'address'.
-func (accs *accounts) Storage(address account.Address) (*Storage, error) {
+func (accs *accounts) Storage(address acm.Address) (*Storage, error) {
 	state := accs.state
-	acc := state.GetAccount(address)
+	acc, err:= state.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
 	storageItems := make([]StorageItem, 0)
 	if acc == nil {
 		return &Storage{nil, storageItems}, nil
 	}
-	storageRoot := acc.StorageRoot
-	storageTree := state.LoadStorage(storageRoot)
-
-	storageTree.Iterate(func(key, value []byte) bool {
+	accs.state.IterateStorage(address, func(key, value word.Word256) bool {
 		storageItems = append(storageItems, StorageItem{
-			key, value})
+			Key:   key.UnpadLeft(),
+			Value: value.UnpadLeft(),
+		})
 		return false
 	})
-	return &Storage{storageRoot, storageItems}, nil
+	return &Storage{acc.StorageRoot(), storageItems}, nil
 }
 
 // Create a new account.
-func (accs *accounts) newAcc(address account.Address) *account.ConcreteAccount {
-	return &account.ConcreteAccount{
+func (accs *accounts) newAcc(address acm.Address) acm.Account {
+	return (&acm.ConcreteAccount{
 		Address:     address,
 		Sequence:    0,
 		Balance:     0,
 		Code:        nil,
 		StorageRoot: nil,
-	}
+	}).Account()
 }
 
 // Filter for account code.
@@ -200,11 +207,11 @@ func (this *AccountCodeFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *AccountCodeFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.ConcreteAccount)
+	acc, ok := v.(acm.Account)
 	if !ok {
 		return false
 	}
-	return this.match(acc.Code, this.value)
+	return this.match(acc.Code(), this.value)
 }
 
 // Filter for account balance.
@@ -231,9 +238,9 @@ func (this *AccountBalanceFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *AccountBalanceFilter) Match(v interface{}) bool {
-	acc, ok := v.(*account.ConcreteAccount)
+	acc, ok := v.(acm.Account)
 	if !ok {
 		return false
 	}
-	return this.match(int64(acc.Balance), this.value)
+	return this.match(acc.Balance(), this.value)
 }

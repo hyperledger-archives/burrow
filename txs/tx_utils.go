@@ -39,7 +39,7 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt int64) error
 	if acc == nil {
 		return fmt.Errorf("invalid address %s from pubkey %s", addr, pubkey)
 	}
-	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence+1)
+	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+1)
 }
 
 func (tx *SendTx) AddInputWithNonce(pubkey crypto.PubKey, amt int64, nonce int64) error {
@@ -70,15 +70,16 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
 	tx.Inputs[i].PubKey = privAccount.PubKey()
-	tx.Inputs[i].Signature = privAccount.Sign(chainID, tx)
+	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
 
 //----------------------------------------------------------------------------
 // CallTx interface for creating tx
 
-func NewCallTx(st acm.Getter, from crypto.PubKey, to acm.Address, data []byte,
-	amt, gasLimit, fee int64) (*CallTx, error) {
+func NewCallTx(st acm.Getter, from crypto.PubKey, to *acm.Address, data []byte, amt,
+	gasLimit, fee int64) (*CallTx, error) {
+
 	addr, err := acm.AddressFromBytes(from.Address())
 	if err != nil {
 		return nil, err
@@ -88,11 +89,11 @@ func NewCallTx(st acm.Getter, from crypto.PubKey, to acm.Address, data []byte,
 		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence + 1
+	nonce := acc.Sequence() + 1
 	return NewCallTxWithNonce(from, to, data, amt, gasLimit, fee, nonce), nil
 }
 
-func NewCallTxWithNonce(from crypto.PubKey, to acm.Address, data []byte, amt, gasLimit, fee, nonce int64) *CallTx {
+func NewCallTxWithNonce(from crypto.PubKey, to *acm.Address, data []byte, amt, gasLimit, fee, nonce int64) *CallTx {
 	input := &TxInput{
 		Address:   acm.MustAddressFromBytes(from.Address()),
 		Amount:    amt,
@@ -112,7 +113,7 @@ func NewCallTxWithNonce(from crypto.PubKey, to acm.Address, data []byte, amt, ga
 
 func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 	tx.Input.PubKey = privAccount.PubKey()
-	tx.Input.Signature = privAccount.Sign(chainID, tx)
+	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------------
@@ -125,7 +126,7 @@ func NewNameTx(st acm.Getter, from crypto.PubKey, name, data string, amt, fee in
 		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence + 1
+	nonce := acc.Sequence() + 1
 	return NewNameTxWithNonce(from, name, data, amt, fee, nonce), nil
 }
 
@@ -148,7 +149,7 @@ func NewNameTxWithNonce(from crypto.PubKey, name, data string, amt, fee, nonce i
 
 func (tx *NameTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 	tx.Input.PubKey = privAccount.PubKey()
-	tx.Input.Signature = privAccount.Sign(chainID, tx)
+	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------------
@@ -172,7 +173,7 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt int64) error
 	if acc == nil {
 		return fmt.Errorf("Invalid address %s from pubkey %s", addr, pubkey)
 	}
-	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence+1)
+	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+1)
 }
 
 func (tx *BondTx) AddInputWithNonce(pubkey crypto.PubKey, amt, nonce int64) error {
@@ -195,7 +196,7 @@ func (tx *BondTx) AddOutput(addr acm.Address, amt int64) error {
 }
 
 func (tx *BondTx) SignBond(chainID string, privAccount acm.PrivateAccount) error {
-	sig := privAccount.Sign(chainID, tx)
+	sig := acm.ChainSign(privAccount, chainID, tx)
 	sigEd, ok := sig.Unwrap().(crypto.SignatureEd25519)
 	if !ok {
 		return fmt.Errorf("Bond signer must be ED25519")
@@ -209,7 +210,7 @@ func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
 	tx.Inputs[i].PubKey = privAccount.PubKey()
-	tx.Inputs[i].Signature = privAccount.Sign(chainID, tx)
+	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
 
@@ -224,7 +225,7 @@ func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
 }
 
 func (tx *UnbondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).Unwrap().(crypto.SignatureEd25519)
+	tx.Signature = acm.ChainSign(privAccount, chainID, tx).Unwrap().(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------
@@ -238,7 +239,7 @@ func NewRebondTx(addr acm.Address, height int) *RebondTx {
 }
 
 func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Signature = privAccount.Sign(chainID, tx).Unwrap().(crypto.SignatureEd25519)
+	tx.Signature = acm.ChainSign(privAccount, chainID, tx).Unwrap().(crypto.SignatureEd25519)
 }
 
 //----------------------------------------------------------------------------
@@ -251,7 +252,7 @@ func NewPermissionsTx(st acm.Getter, from crypto.PubKey, args ptypes.PermArgs) (
 		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence + 1
+	nonce := acc.Sequence() + 1
 	return NewPermissionsTxWithNonce(from, args, nonce), nil
 }
 
@@ -272,5 +273,5 @@ func NewPermissionsTxWithNonce(from crypto.PubKey, args ptypes.PermArgs, nonce i
 
 func (tx *PermissionsTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 	tx.Input.PubKey = privAccount.PubKey()
-	tx.Input.Signature = privAccount.Sign(chainID, tx)
+	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }

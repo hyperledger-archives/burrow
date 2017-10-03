@@ -19,7 +19,6 @@ import (
 
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/keys"
 )
 

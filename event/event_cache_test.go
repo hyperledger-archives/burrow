@@ -23,7 +23,7 @@ import (
 
 	"sync"
 
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/stretchr/testify/assert"
 )
 

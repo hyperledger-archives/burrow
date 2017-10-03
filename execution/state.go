@@ -27,6 +27,7 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/util"
+	"github.com/hyperledger/burrow/word"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -49,7 +50,7 @@ const GasLimit = int64(1000000)
 
 // NOTE: not goroutine-safe.
 type State struct {
-	mtx sync.Mutex
+	mtx sync.RWMutex
 	db  dbm.DB
 	//	BondedValidators     *types.ValidatorSet
 	//	LastBondedValidators *types.ValidatorSet
@@ -61,6 +62,10 @@ type State struct {
 
 // Implements account and blockchain state
 var _ acm.Updater = &State{}
+
+var _ acm.StateIterable = &State{}
+
+var _ acm.StateWriter = &State{}
 
 func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	if len(genDoc.Validators) == 0 {
@@ -88,7 +93,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 			Balance:     genAcc.Amount,
 			Permissions: perm,
 		}
-		accounts.Set(acc.Address.Bytes(), acm.EncodeAccount(acc))
+		accounts.Set(acc.Address.Bytes(), acc.Encode())
 	}
 
 	// global permissions are saved as the 0 address
@@ -106,7 +111,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	accounts.Set(permsAcc.Address.Bytes(), acm.EncodeAccount(permsAcc))
+	accounts.Set(permsAcc.Address.Bytes(), permsAcc.Encode())
 
 	// Make validatorInfos state tree && validators slice
 	/*
@@ -160,6 +165,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 		nameReg: nameReg,
 	}
 }
+
 func LoadState(db dbm.DB) (*State, error) {
 	s := &State{db: db}
 	buf := db.Get(stateKey)
@@ -220,19 +226,10 @@ func (s *State) Copy() *State {
 //	return stateCopy
 //}
 
-// TODO [Silas]: yep, this implementation is a disaster, if you attempt an actual copy you get a different hash because
-// IAVLTree is insertion-order-dependent. What a massive fuck-up.
-func copyTree(inTree merkle.Tree) *iavl.IAVLTree {
-	outTree := iavl.NewIAVLTree(defaultAccountsCacheCapacity, dbm.NewMemDB())
-	inTree.Iterate(func(key []byte, value []byte) (stop bool) {
-		outTree.Set(key, value)
-		return false
-	})
-	return outTree
-}
-
 // Returns a hash that represents the state data, excluding Last*
 func (s *State) Hash() []byte {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 	return merkle.SimpleHashFromMap(map[string]interface{}{
 		//"BondedValidators":    s.BondedValidators,
 		//"UnbondingValidators": s.UnbondingValidators,
@@ -243,31 +240,49 @@ func (s *State) Hash() []byte {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address acm.Address) *acm.ConcreteAccount {
+func (s *State) GetAccount(address acm.Address) acm.Account {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 	_, accBytes, _ := s.accounts.Get(address.Bytes())
 	if accBytes == nil {
 		return nil
 	}
-	return acm.DecodeAccount(accBytes)
+	return acm.Decode(accBytes)
 }
 
 // The account is copied before setting, so mutating it
 // afterwards has no side effects.
 // Implements Statelike
-func (s *State) UpdateAccount(account *acm.ConcreteAccount) {
-	s.accounts.Set(account.Address.Bytes(), acm.EncodeAccount(account))
+func (s *State) UpdateAccount(account acm.Account) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	s.accounts.Set(account.Address().Bytes(), account.Encode())
 
 }
 
 func (s *State) RemoveAccount(address acm.Address) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 	s.accounts.Remove(address.Bytes())
 }
 
 // The returned Account is a copy, so mutating it
-// has no side effects.
+// has no side effects. (TODO [Silas]: Yeah you'd think, but that's bollocks, just like this merkle tree implementation)
 func (s *State) GetAccounts() merkle.Tree {
-	//return s.accounts.Copy()
-	return nil
+	return s.accounts.Copy()
+}
+
+func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool) {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.accounts.Iterate(func(key, value []byte) bool {
+		account := acm.Decode(value)
+		// We shouldn't find an non-decodable account, but we're error-free here...
+		if account != nil {
+			return consumer(account)
+		}
+		return false
+	})
 }
 
 // State.accounts
@@ -383,15 +398,62 @@ func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
 //-------------------------------------
 // State.storage
 
-func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
-	storage = iavl.NewIAVLTree(1024, s.db)
+func (s *State) accountStorage(address acm.Address) merkle.Tree {
+	account := s.GetAccount(address)
+	if account == nil {
+		// [Silas] if we wrap the State serialisation struct in an struct that holds a logger we could log this
+		// Even better we could add an error to the signature of StorageSetter
+		return nil
+	}
+	return s.LoadStorage(account.StorageRoot())
+}
+
+func (s *State) LoadStorage(hash []byte) merkle.Tree {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	storage := iavl.NewIAVLTree(1024, s.db)
 	storage.Load(hash)
 	return storage
+}
+
+func (s *State) GetStorage(address acm.Address, key word.Word256) word.Word256 {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	storageTree := s.accountStorage(address)
+	if storageTree != nil {
+		_, value, _ := storageTree.Get(key.Bytes())
+		return word.LeftPadWord256(value)
+	}
+	return word.Zero256
+}
+
+func (s *State) SetStorage(address acm.Address, key, value word.Word256) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	storageTree := s.accountStorage(address)
+	if storageTree != nil {
+		storageTree.Set(key.Bytes(), value.Bytes())
+	}
+}
+
+func (s *State) IterateStorage(address acm.Address,
+	consumer func(key, value word.Word256) (stop bool)) (stopped bool) {
+
+	storageTree := s.accountStorage(address)
+	if storageTree != nil {
+		return storageTree.Iterate(func(key []byte, value []byte) (stop bool) {
+			// Note: no left padding should occur unless someone has be writing non-words to this storage tree
+			return consumer(word.LeftPadWord256(key), word.LeftPadWord256(value))
+		})
+	}
+	return false
 }
 
 // State.storage
 //-------------------------------------
 // State.nameReg
+
+var _ NameRegIterable = &State{}
 
 func (s *State) GetNameRegEntry(name string) *NameRegEntry {
 	_, valueBytes, _ := s.nameReg.Get([]byte(name))
@@ -400,6 +462,12 @@ func (s *State) GetNameRegEntry(name string) *NameRegEntry {
 	}
 
 	return DecodeNameRegEntry(valueBytes)
+}
+
+func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool) {
+	return s.nameReg.Iterate(func(key []byte, value []byte) (stop bool) {
+		return consumer(DecodeNameRegEntry(value))
+	})
 }
 
 func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {

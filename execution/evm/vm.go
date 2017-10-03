@@ -25,9 +25,9 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	. "github.com/hyperledger/burrow/word"
 
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/tmlibs/events"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 )
 
 var (
@@ -81,7 +81,7 @@ type Params struct {
 }
 
 type VM struct {
-	state       State
+	state          acm.StateWriter
 	memoryProvider func() Memory
 	params         Params
 	origin         Word256
@@ -92,9 +92,9 @@ type VM struct {
 	evc events.Fireable
 }
 
-func NewVM(state State, memoryProvider func() Memory, params Params, origin Word256, txid []byte) *VM {
+func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin Word256, txid []byte) *VM {
 	return &VM{
-		state:       state,
+		state:          state,
 		memoryProvider: memoryProvider,
 		params:         params,
 		origin:         origin,
@@ -114,8 +114,8 @@ func (vm *VM) SetFireable(evc events.Fireable) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(state State, acc *acm.ConcreteAccount, perm ptypes.PermFlag) bool {
-	v, err := acc.Permissions.Base.Get(perm)
+func HasPermission(state acm.StateWriter, acc acm.Account, perm ptypes.PermFlag) bool {
+	v, err := acc.Permissions().Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if state == nil {
 			// In this case the permission is unknown
@@ -126,12 +126,12 @@ func HasPermission(state State, acc *acm.ConcreteAccount, perm ptypes.PermFlag) 
 	return v
 }
 
-func (vm *VM) fireCallEvent(exception *string, output *[]byte, caller, callee *acm.ConcreteAccount, input []byte, value int64, gas *int64) {
+func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, calleeAddress acm.Address, input []byte, value int64, gas *int64) {
 	// fire the post call event (including exception if applicable)
 	if vm.evc != nil {
-		stringAccCall := EventStringAccCall(callee.Address)
+		stringAccCall := EventStringAccCall(calleeAddress)
 		vm.evc.FireEvent(stringAccCall, EventDataCall{
-			&CallData{caller.Address.Bytes(), callee.Address.Bytes(), input, value, *gas},
+			&CallData{callerAddress.Bytes(), calleeAddress.Bytes(), input, value, *gas},
 			vm.origin.Postfix(20),
 			vm.txid,
 			*output,
@@ -146,11 +146,11 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, caller, callee *a
 // value: To be transferred from caller to callee. Refunded upon error.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(caller, callee *acm.ConcreteAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
+func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
+	defer vm.fireCallEvent(exception, &output, caller.Address(), callee.Address(), input, value, gas)
 
 	if err = transfer(caller, callee, value); err != nil {
 		*exception = err.Error()
@@ -178,7 +178,7 @@ func (vm *VM) Call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(caller, callee *acm.ConcreteAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
+func (vm *VM) DelegateCall(caller, callee acm.MutableAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -213,8 +213,9 @@ func useGasNegative(gasLeft *int64, gasToUse int64, err *error) bool {
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
-	dbg.Printf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address[:4], callee.Address, len(callee.Code), *gas, input)
+func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value int64, gas *int64) (output []byte, err error) {
+	dbg.Printf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address().Bytes()[:4], callee.Address(),
+		len(callee.Code()), *gas, input)
 
 	var (
 		pc     int64 = 0
@@ -506,8 +507,8 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			dbg.Printf(" => (%v) %X\n", size, data)
 
 		case ADDRESS: // 0x30
-			stack.Push(callee.Address.Word256())
-			dbg.Printf(" => %X\n", callee.Address)
+			stack.Push(callee.Address().Word256())
+			dbg.Printf(" => %X\n", callee.Address())
 
 		case BALANCE: // 0x31
 			addr := stack.Pop()
@@ -518,7 +519,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			if acc == nil {
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
-			balance := acc.Balance
+			balance := acc.Balance()
 			stack.Push64(balance)
 			dbg.Printf(" => %v (%X)\n", balance, addr)
 
@@ -527,8 +528,8 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			dbg.Printf(" => %X\n", vm.origin)
 
 		case CALLER: // 0x33
-			stack.Push(caller.Address.Word256())
-			dbg.Printf(" => %X\n", caller.Address)
+			stack.Push(caller.Address().Word256())
+			dbg.Printf(" => %X\n", caller.Address())
 
 		case CALLVALUE: // 0x34
 			stack.Push64(value)
@@ -600,7 +601,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 				dbg.Printf(" => returning code size of 1 to indicated existence of native contract at %X\n", addr)
 				stack.Push(One256)
 			} else {
-				code := acc.Code
+				code := acc.Code()
 				l := int64(len(code))
 				stack.Push64(l)
 				dbg.Printf(" => %d\n", l)
@@ -618,7 +619,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 				}
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
-			code := acc.Code
+			code := acc.Code()
 			memOff := stack.Pop64()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
@@ -689,7 +690,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data := vm.state.GetStorage(callee.Address, loc)
+			data := vm.state.GetStorage(callee.Address(), loc)
 			stack.Push(data)
 			dbg.Printf(" {0x%X : 0x%X}\n", loc, data)
 
@@ -698,7 +699,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
 			}
-			vm.state.SetStorage(callee.Address, loc, data)
+			vm.state.SetStorage(callee.Address(), loc, data)
 			dbg.Printf(" {0x%X : 0x%X}\n", loc, data)
 
 		case JUMP: // 0x56
@@ -772,10 +773,10 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			if vm.evc != nil {
-				eventID := EventStringLogEvent(callee.Address)
+				eventID := EventStringLogEvent(callee.Address())
 				fmt.Printf("eventID: %s\n", eventID)
 				log := EventDataLog{
-					callee.Address.Word256(),
+					callee.Address().Word256(),
 					topics,
 					data,
 					vm.params.BlockHeight,
@@ -797,12 +798,13 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			}
 
 			// Check balance
-			if callee.Balance < contractValue {
+			if callee.Balance() < contractValue {
 				return nil, firstErr(err, ErrInsufficientBalance)
 			}
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
-			newAccount := vm.state.CreateAccount(callee)
+			newAccount := DeriveAccount(callee, permission.Global(vm.state))
+			vm.state.UpdateAccount(newAccount)
 
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
@@ -810,8 +812,8 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			if err_ != nil {
 				stack.Push(Zero256)
 			} else {
-				newAccount.Code = ret // Set the code (ret need not be copied as per Call contract)
-				stack.Push(newAccount.Address.Word256())
+				newAccount.SetCode(ret) // Set the code (ret need not be copied as per Call contract)
+				stack.Push(newAccount.Address().Word256())
 			}
 
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
@@ -860,13 +862,13 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 					exception = err.Error()
 				}
 				// NOTE: these fire call events and not particular events for eg name reg or permissions
-				vm.fireCallEvent(&exception, &ret, callee, &acm.ConcreteAccount{Address: acm.AddressFromWord256(addr)}, args, value, &gasLimit)
+				vm.fireCallEvent(&exception, &ret, callee.Address(), acm.AddressFromWord256(addr), args, value, &gasLimit)
 			} else {
 				// EVM contract
 				if useGasNegative(gas, GasGetAccount, &err) {
 					return nil, err
 				}
-				acc := vm.state.GetAccount(acm.AddressFromWord256(addr))
+				acc := acm.AsMutableAccount(vm.state.GetAccount(acm.AddressFromWord256(addr)))
 				// since CALL is used also for sending funds,
 				// acc may not exist yet. This is an error for
 				// CALLCODE, but not for CALL, though I don't think
@@ -875,23 +877,23 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 					if acc == nil {
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
-					ret, err = vm.Call(callee, callee, acc.Code, args, value, &gasLimit)
+					ret, err = vm.Call(callee, callee, acc.Code(), args, value, &gasLimit)
 				} else if op == DELEGATECALL {
 					if acc == nil {
 						return nil, firstErr(err, ErrUnknownAddress)
 					}
-					ret, err = vm.DelegateCall(caller, callee, acc.Code, args, value, &gasLimit)
+					ret, err = vm.DelegateCall(caller, callee, acc.Code(), args, value, &gasLimit)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
 						if !HasPermission(vm.state, caller, permission.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
-						acc = &acm.ConcreteAccount{Address: acm.AddressFromWord256(addr)}
+						acc = (&acm.ConcreteAccount{Address: acm.AddressFromWord256(addr)}).MutableAccount()
 					}
 					// add account to the tx cache
 					vm.state.UpdateAccount(acc)
-					ret, err = vm.Call(callee, acc, acc.Code, args, value, &gasLimit)
+					ret, err = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
 				}
 			}
 
@@ -915,7 +917,7 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			// Handle remaining gas.
 			*gas += gasLimit
 
-			dbg.Printf("resume %s (%v)\n", callee.Address, gas)
+			dbg.Printf("resume %s (%v)\n", callee.Address(), gas)
 
 		case RETURN: // 0xF3
 			offset, size := stack.Pop64(), stack.Pop64()
@@ -934,15 +936,14 @@ func (vm *VM) call(caller, callee *acm.ConcreteAccount, code, input []byte, valu
 			}
 			// TODO if the receiver is , then make it the fee. (?)
 			// TODO: create account if doesn't exist (no reason not to)
-			receiver := vm.state.GetAccount(acm.AddressFromWord256(addr))
+			receiver := acm.AsMutableAccount(vm.state.GetAccount(acm.AddressFromWord256(addr)))
 			if receiver == nil {
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
-			balance := callee.Balance
-			receiver.Balance += balance
+			receiver.AlterBalance(callee.Balance())
 			vm.state.UpdateAccount(receiver)
-			vm.state.RemoveAccount(callee.Address)
-			dbg.Printf(" => (%X) %v\n", addr[:4], balance)
+			vm.state.RemoveAccount(callee.Address())
+			dbg.Printf(" => (%X) %v\n", addr[:4], callee.Balance())
 			fallthrough
 
 		case STOP: // 0x00
@@ -1007,13 +1008,12 @@ func firstErr(errA, errB error) error {
 	}
 }
 
-func transfer(from, to *acm.ConcreteAccount, amount int64) error {
-	if from.Balance < amount {
+func transfer(from, to acm.MutableAccount, amount int64) error {
+	if from.Balance() < amount {
 		return ErrInsufficientBalance
 	} else {
-		from.Balance -= amount
-		to.Balance += amount
+		from.AlterBalance(-amount)
+		to.AlterBalance(amount)
 		return nil
 	}
 }
-

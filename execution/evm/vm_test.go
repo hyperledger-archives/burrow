@@ -38,13 +38,13 @@ func init() {
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
-		accounts: make(map[acm.Address]*acm.ConcreteAccount),
+		accounts: make(map[acm.Address]acm.Account),
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[permission.GlobalPermissionsAddress] = &acm.ConcreteAccount{
+	fas.accounts[permission.GlobalPermissionsAddress] = acm.ConcreteAccount{
 		Permissions: permission.DefaultAccountPermissions,
-	}
+	}.Account()
 	return fas
 }
 
@@ -57,17 +57,19 @@ func newParams() Params {
 	}
 }
 
+func newAccount(address ...byte) acm.MutableAccount {
+	return acm.ConcreteAccount{
+		Address: acm.AddressFromWord256(RightPadWord256(address)),
+	}.MutableAccount()
+}
+
 // Runs a basic loop
 func TestVM(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &acm.ConcreteAccount{
-		Address: acm.Address{1},
-	}
-	account2 := &acm.ConcreteAccount{
-		Address: acm.Address{1, 0, 1},
-	}
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
 
 	var gas int64 = 100000
 	N := []byte{0x0f, 0x0f}
@@ -88,12 +90,8 @@ func TestJumpErr(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &acm.ConcreteAccount{
-		Address: acm.Address{1},
-	}
-	account2 := &acm.ConcreteAccount{
-		Address: acm.Address{2},
-	}
+	account1 := newAccount(1)
+	account2 := newAccount(2)
 
 	var gas int64 = 100000
 	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
@@ -118,14 +116,10 @@ func TestJumpErr(t *testing.T) {
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
 	// Create accounts
-	account1 := &acm.ConcreteAccount{
-		Address: acm.Address{1, 2, 3},
-	}
-	account2 := &acm.ConcreteAccount{
-		Address: acm.Address{3, 2, 1},
-	}
-	st.accounts[account1.Address] = account1
-	st.accounts[account2.Address] = account2
+	account1 := newAccount(1, 2, 3)
+	account2 := newAccount(3, 2, 1)
+	st.accounts[account1.Address()] = account1
+	st.accounts[account2.Address()] = account2
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
@@ -152,18 +146,12 @@ func TestSendCall(t *testing.T) {
 	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
 	// Create accounts
-	account1 := &acm.ConcreteAccount{
-		Address: acm.Address{1},
-	}
-	account2 := &acm.ConcreteAccount{
-		Address: acm.Address{2},
-	}
-	account3 := &acm.ConcreteAccount{
-		Address: acm.Address{3},
-	}
+	account1 := newAccount(1)
+	account2 := newAccount(2)
+	account3 := newAccount(3)
 
 	// account1 will call account2 which will trigger CALL opcode to account3
-	addr := account3.Address
+	addr := account3.Address()
 	contractCode := callContractCode(addr)
 
 	//----------------------------------------------
@@ -173,14 +161,13 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2.Balance = 100000
+	account2 = newAccount(2).AlterBalance(100000)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-
-	account2.Balance = 100000
+	account2 = newAccount(2).AlterBalance(100000)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
 	assert.Error(t, err, "Expected insufficient gas error")
 }
@@ -233,18 +220,18 @@ func TestDelegateCallGas(t *testing.T) {
 
 	// Should pass
 	output, err := runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
-		callerAccount.Code, 100)
+		callerAccount.Code(), 100)
 	assert.NoError(t, err, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
 
-	callerAccount.Code = Bytecode(callerCodePrefix,
+	callerAccount.SetCode(Bytecode(callerCodePrefix,
 		// Shouldn't be enough gas to make call
 		costBetweenGasAndDelegateCall-1,
-		callerCodeSuffix)
+		callerCodeSuffix))
 
 	// Should fail
 	_, err = runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
-		callerAccount.Code, 100)
+		callerAccount.Code(), 100)
 	assert.Error(t, err, "Should have insufficient funds for call")
 }
 
@@ -319,25 +306,24 @@ func returnWord() []byte {
 	return Bytecode(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
-func makeAccountWithCode(state State, name string,
-	code []byte) (*acm.ConcreteAccount, acm.Address) {
+func makeAccountWithCode(state acm.Updater, name string,
+	code []byte) (acm.MutableAccount, acm.Address) {
 	address, _ := acm.AddressFromBytes([]byte(name))
-	account := &acm.ConcreteAccount{
+	account := acm.ConcreteAccount{
 		Address:  address,
 		Balance:  9999999,
 		Code:     code,
 		Sequence: 0,
-	}
-	account.Code = code
+	}.MutableAccount()
 	state.UpdateAccount(account)
-	return account, account.Address
+	return account, account.Address()
 }
 
 // Subscribes to an AccCall, runs the vm, returns the output any direct exception
 // and then waits for any exceptions transmitted by EventData in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(ourVm *VM, caller, callee *acm.ConcreteAccount, subscribeAddr acm.Address,
+func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
 	contractCode []byte, gas int64) (output []byte, err error) {
 	eventCh := make(chan EventData)
 	output, err = runVM(eventCh, ourVm, caller, callee, subscribeAddr,
@@ -362,7 +348,7 @@ func runVMWaitError(ourVm *VM, caller, callee *acm.ConcreteAccount, subscribeAdd
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan EventData, ourVm *VM, caller, callee *acm.ConcreteAccount,
+func runVM(eventCh chan EventData, ourVm *VM, caller, callee acm.MutableAccount,
 	subscribeAddr acm.Address, contractCode []byte, gas int64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions

@@ -18,20 +18,21 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/account"
+	definitions "github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/event"
 
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 
+	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/consensus"
-	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/blockchain"
 )
 
 // Base struct.

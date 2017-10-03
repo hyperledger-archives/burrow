@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/blockchain"
+	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
@@ -34,12 +34,12 @@ import (
 )
 
 type BatchQuerier interface {
-	acm.GetterAndStorageGetter
+	acm.StateReader
 }
 
 type BatchExecutor interface {
 	acm.Updater
-	acm.Storage
+	acm.StorageSetter
 	// Execute transaction against block cache (i.e. block buffer)
 	Execute(tx txs.Tx) error
 	// Reset executor to underlying State
@@ -55,12 +55,11 @@ type BatchCommitter interface {
 }
 
 type executor struct {
-	mtx sync.Mutex
-	// cache so we are not copying GenesisDoc repeatedly
+	mtx        sync.Mutex
 	chainID    string
+	tip        bcm.Tip
 	runCall    bool
 	state      *State
-	blockchain blockchain.BlockchainTip
 	blockCache *BlockCache
 	fireable   events.Fireable
 	eventCache *events.EventCache
@@ -68,40 +67,49 @@ type executor struct {
 }
 
 var _ BatchExecutor = (*executor)(nil)
+var _ acm.StateIterable = (*executor)(nil)
 
-func NewBatchChecker(state *State, blockchain blockchain.BlockchainTip, logger logging_types.InfoTraceLogger) BatchExecutor {
-	return newExecutor(false, state, blockchain, event.NewNoOpFireable(),
+// Wraps a cache of what is variously known as the 'check cache' and 'mempool'
+func NewBatchChecker(state *State,
+	chainID string,
+	tip bcm.Tip,
+	logger logging_types.InfoTraceLogger) BatchExecutor {
+	return newExecutor(false, state, chainID, tip, event.NewNoOpFireable(),
 		logging.WithScope(logger, "NewBatchExecutor"))
 }
 
-func NewBatchCommitter(state *State, blockchain blockchain.BlockchainTip,
+func NewBatchCommitter(state *State,
+	chainID string,
+	tip bcm.Tip,
 	fireable events.Fireable,
 	logger logging_types.InfoTraceLogger) BatchCommitter {
-	return newExecutor(true, state, blockchain, fireable,
+	return newExecutor(true, state, chainID, tip, fireable,
 		logging.WithScope(logger, "NewBatchCommitter"))
 }
 
 func newExecutor(runCall bool,
 	state *State,
-	blockchain blockchain.BlockchainTip,
+	chainID string,
+	tip bcm.Tip,
 	eventFireable events.Fireable,
 	logger logging_types.InfoTraceLogger) *executor {
 	return &executor{
-		chainID:    blockchain.ChainID(),
+		chainID:    chainID,
+		tip:        tip,
 		runCall:    runCall,
 		state:      state,
-		blockchain: blockchain,
 		blockCache: NewBlockCache(state),
 		fireable:   eventFireable,
 		eventCache: events.NewEventCache(eventFireable),
 		logger:     logger,
 	}
 }
-func (exe *executor) GetAccount(address acm.Address) *acm.ConcreteAccount {
+
+func (exe *executor) GetAccount(address acm.Address) acm.Account {
 	return exe.blockCache.GetAccount(address)
 }
 
-func (exe *executor) UpdateAccount(account *acm.ConcreteAccount) {
+func (exe *executor) UpdateAccount(account acm.Account) {
 	exe.blockCache.UpdateAccount(account)
 }
 
@@ -138,26 +146,26 @@ func (exe *executor) Reset() error {
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
 func (exe *executor) Execute(tx txs.Tx) (err error) {
-	exe.logger = logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)")
+	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)")
 	// TODO: do something with fees
 	fees := int64(0)
 
 	// Exec tx
 	switch tx := tx.(type) {
 	case *txs.SendTx:
-		accounts, err := getInputs(exe.blockCache.GetAccount, tx.Inputs)
+		accounts, err := getInputs(exe.blockCache, tx.Inputs)
 		if err != nil {
 			return err
 		}
 
 		// ensure all inputs have send permissions
-		if !hasSendPermission(exe.blockCache.GetAccount, accounts, exe.logger) {
+		if !hasSendPermission(exe.blockCache, accounts, logger) {
 			return fmt.Errorf("at least one input lacks permission for SendTx")
 		}
 
 		// add outputs to accounts map
 		// if any outputs don't exist, all inputs must have CreateAccount perm
-		accounts, err = getOrMakeOutputs(exe.blockCache.GetAccount, accounts, tx.Outputs, exe.logger)
+		accounts, err = getOrMakeOutputs(exe.blockCache, accounts, tx.Outputs, logger)
 		if err != nil {
 			return err
 		}
@@ -197,42 +205,43 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		return nil
 
 	case *txs.CallTx:
-		var inAcc, outAcc *acm.ConcreteAccount
+		var inAcc acm.MutableAccount
+		var outAcc acm.Account
 
 		// Validate input
-		inAcc = exe.blockCache.GetAccount(tx.Input.Address)
+		inAcc = acm.AsMutableAccount(exe.blockCache.GetAccount(tx.Input.Address))
 		if inAcc == nil {
-			logging.InfoMsg(exe.logger, "Cannot find input account",
+			logging.InfoMsg(logger, "Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
 
-		createContract := tx.Address == acm.ZeroAddress
+		createContract := tx.Address == nil
 		if createContract {
-			if !hasCreateContractPermission(exe.blockCache.GetAccount, inAcc, exe.logger) {
+			if !hasCreateContractPermission(exe.blockCache, inAcc, logger) {
 				return fmt.Errorf("account %s does not have CreateContract permission", tx.Input.Address)
 			}
 		} else {
-			if !hasCallPermission(exe.blockCache.GetAccount, inAcc, exe.logger) {
+			if !hasCallPermission(exe.blockCache, inAcc, logger) {
 				return fmt.Errorf("account %s does not have Call permission", tx.Input.Address)
 			}
 		}
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(exe.logger, "Cannot find public key for input account",
+			logging.InfoMsg(logger, "Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(exe.logger, "validateInput failed",
+			logging.InfoMsg(logger, "validateInput failed",
 				"tx_input", tx.Input, "error", err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			logging.InfoMsg(exe.logger, "Sender did not send enough to cover the fee",
+			logging.InfoMsg(logger, "Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
 			return txs.ErrTxInsufficientFunds
 		}
@@ -249,16 +258,17 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			// Output account may be nil if we are still in mempool and contract was created in same block as this tx
 			// but that's fine, because the account will be created properly when the create tx runs in the block
 			// and then this won't return nil. otherwise, we take their fee
-			outAcc = exe.blockCache.GetAccount(tx.Address)
+			// Note: tx.Address == nil iff createContract so dereference is okay
+			outAcc = exe.blockCache.GetAccount(*tx.Address)
 		}
 
-		exe.logger.Trace("output_account", outAcc)
+		logger.Trace("output_account", outAcc)
 
 		// Good!
 		value := tx.Input.Amount - tx.Fee
 
-		inAcc.Sequence += 1
-		inAcc.Balance -= tx.Fee
+		inAcc.IncSequence().AlterBalance(-tx.Fee)
+
 		exe.blockCache.UpdateAccount(inAcc)
 
 		// The logic in runCall MUST NOT return.
@@ -266,22 +276,22 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 			// VM call variables
 			var (
-				gas     int64                = tx.GasLimit
-				err     error                = nil
-				caller  *acm.ConcreteAccount = inAcc.Copy()
-				callee  *acm.ConcreteAccount = nil // initialized below
-				code    []byte               = nil
-				ret     []byte               = nil
-				txCache                      = NewTxCache(exe.blockCache)
-				params                       = evm.Params{
-					BlockHeight: int64(exe.blockchain.LastBlockHeight()),
-					BlockHash:   word.LeftPadWord256(exe.blockchain.LastBlockHash()),
-					BlockTime:   exe.blockchain.LastBlockTime().Unix(),
+				gas     int64              = tx.GasLimit
+				err     error              = nil
+				caller  acm.MutableAccount = acm.AsMutableAccount(inAcc)
+				callee  acm.MutableAccount = nil // initialized below
+				code    []byte             = nil
+				ret     []byte             = nil
+				txCache                    = NewTxCache(exe.blockCache)
+				params                     = evm.Params{
+					BlockHeight: int64(exe.tip.LastBlockHeight()),
+					BlockHash:   word.LeftPadWord256(exe.tip.LastBlockHash()),
+					BlockTime:   exe.tip.LastBlockTime().Unix(),
 					GasLimit:    GasLimit,
 				}
 			)
 
-			if !createContract && (outAcc == nil || len(outAcc.Code) == 0) {
+			if !createContract && (outAcc == nil || len(outAcc.Code()) == 0) {
 				// if you call an account that doesn't exist
 				// or an account with no code then we take fees (sorry pal)
 				// NOTE: it's fine to create a contract and call it within one
@@ -290,11 +300,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// you have to wait a block to avoid a re-ordering attack
 				// that will take your fees
 				if outAcc == nil {
-					logging.InfoMsg(exe.logger, "Call to address that does not exist",
+					logging.InfoMsg(logger, "Call to address that does not exist",
 						"caller_address", inAcc.Address,
 						"callee_address", tx.Address)
 				} else {
-					logging.InfoMsg(exe.logger, "Call to address that holds no code",
+					logging.InfoMsg(logger, "Call to address that holds no code",
 						"caller_address", inAcc.Address,
 						"callee_address", tx.Address)
 				}
@@ -305,19 +315,19 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			// get or create callee
 			if createContract {
 				// We already checked for permission
-				callee = txCache.CreateAccount(caller)
-				logging.TraceMsg(exe.logger, "Created new contract",
+				callee = evm.DeriveAccount(caller, permission.Global(exe.state))
+				logging.TraceMsg(logger, "Created new contract",
 					"contract_address", callee.Address,
 					"contract_code", callee.Code)
 				code = tx.Data
 			} else {
-				callee = outAcc.Copy()
-				logging.TraceMsg(exe.logger, "Calling existing contract",
+				callee = acm.AsMutableAccount(outAcc)
+				logging.TraceMsg(logger, "Calling existing contract",
 					"contract_address", callee.Address,
 					"contract_code", callee.Code)
-				code = callee.Code
+				code = callee.Code()
 			}
-			exe.logger.Trace("callee_")
+			logger.Trace("callee", callee.Address().String())
 
 			// Run VM call and sync txCache to exe.blockCache.
 			{ // Capture scope for goto.
@@ -325,20 +335,20 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
 				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params,
-					caller.Address.Word256(), txs.TxHash(exe.chainID, tx))
+					caller.Address().Word256(), txs.TxHash(exe.chainID, tx))
 				vmach.SetFireable(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-					logging.InfoMsg(exe.logger, "Error on execution",
+					logging.InfoMsg(logger, "Error on execution",
 						"error", err)
 					goto CALL_COMPLETE
 				}
 
-				logging.TraceMsg(exe.logger, "Successful execution")
+				logging.TraceMsg(logger, "Successful execution")
 				if createContract {
-					callee.Code = ret
+					callee.SetCode(ret)
 				}
 				txCache.Sync(exe.blockCache)
 			}
@@ -346,7 +356,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		CALL_COMPLETE: // err may or may not be nil.
 
 			// Create a receipt from the ret and whether it erred.
-			logging.TraceMsg(exe.logger, "VM call complete",
+			logging.TraceMsg(logger, "VM call complete",
 				"caller", caller,
 				"callee", callee,
 				"return", ret,
@@ -359,17 +369,21 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				if err != nil {
 					exception = err.Error()
 				}
-				exe.eventCache.FireEvent(evm.EventStringAccInput(tx.Input.Address), evm.EventDataTx{tx, ret, exception})
-				exe.eventCache.FireEvent(evm.EventStringAccOutput(tx.Address), evm.EventDataTx{tx, ret, exception})
+				exe.eventCache.FireEvent(evm.EventStringAccInput(tx.Input.Address),
+					evm.EventDataTx{tx, ret, exception})
+				if tx.Address != nil {
+					exe.eventCache.FireEvent(evm.EventStringAccOutput(*tx.Address),
+						evm.EventDataTx{tx, ret, exception})
+				}
 			}
 		} else {
 			// The mempool does not call txs until
 			// the proposer determines the order of txs.
 			// So mempool will skip the actual .Call(),
 			// and only deduct from the caller's balance.
-			inAcc.Balance -= value
+			inAcc.AlterBalance(-value)
 			if createContract {
-				inAcc.Sequence += 1 // XXX ?!
+				inAcc.IncSequence()
 			}
 			exe.blockCache.UpdateAccount(inAcc)
 		}
@@ -377,34 +391,32 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		return nil
 
 	case *txs.NameTx:
-		var inAcc *acm.ConcreteAccount
-
 		// Validate input
-		inAcc = exe.blockCache.GetAccount(tx.Input.Address)
+		inAcc := acm.AsMutableAccount(exe.blockCache.GetAccount(tx.Input.Address))
 		if inAcc == nil {
-			logging.InfoMsg(exe.logger, "Cannot find input account",
+			logging.InfoMsg(logger, "Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
 		// check permission
-		if !hasNamePermission(exe.blockCache.GetAccount, inAcc, exe.logger) {
+		if !hasNamePermission(exe.blockCache, inAcc, logger) {
 			return fmt.Errorf("account %s does not have Name permission", tx.Input.Address)
 		}
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(exe.logger, "Cannot find public key for input account",
+			logging.InfoMsg(logger, "Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(exe.logger, "validateInput failed",
+			logging.InfoMsg(logger, "validateInput failed",
 				"tx_input", tx.Input, "error", err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			logging.InfoMsg(exe.logger, "Sender did not send enough to cover the fee",
+			logging.InfoMsg(logger, "Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
 			return txs.ErrTxInsufficientFunds
 		}
@@ -419,9 +431,9 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// let's say cost of a name for one block is len(data) + 32
 		costPerBlock := txs.NameCostPerBlock(txs.NameBaseCost(tx.Name, tx.Data))
 		expiresIn := uint64(value / costPerBlock)
-		lastBlockHeight := exe.blockchain.LastBlockHeight()
+		lastBlockHeight := exe.tip.LastBlockHeight()
 
-		logging.TraceMsg(exe.logger, "New NameTx",
+		logging.TraceMsg(logger, "New NameTx",
 			"value", value,
 			"cost_per_block", costPerBlock,
 			"expires_in", expiresIn,
@@ -437,7 +449,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner
 				if entry.Owner != tx.Input.Address {
-					logging.InfoMsg(exe.logger, "Sender is trying to update a name for which they are not an owner",
+					logging.InfoMsg(logger, "Sender is trying to update a name for which they are not an owner",
 						"sender_address", tx.Input.Address,
 						"name", tx.Name)
 					return txs.ErrTxPermissionDenied
@@ -450,7 +462,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			if value == 0 && len(tx.Data) == 0 {
 				// maybe we reward you for telling us we can delete this crap
 				// (owners if not expired, anyone if expired)
-				logging.TraceMsg(exe.logger, "Removing NameReg entry (no value and empty data in tx requests this)",
+				logging.TraceMsg(logger, "Removing NameReg entry (no value and empty data in tx requests this)",
 					"name", entry.Name)
 				exe.blockCache.RemoveNameRegEntry(entry.Name)
 			} else {
@@ -462,7 +474,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
-					logging.TraceMsg(exe.logger, "An old NameReg entry has expired and been reclaimed",
+					logging.TraceMsg(logger, "An old NameReg entry has expired and been reclaimed",
 						"name", entry.Name,
 						"expires_in", expiresIn,
 						"owner", entry.Owner)
@@ -476,7 +488,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						return fmt.Errorf("names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
-					logging.TraceMsg(exe.logger, "Updated NameReg entry",
+					logging.TraceMsg(logger, "Updated NameReg entry",
 						"name", entry.Name,
 						"expires_in", expiresIn,
 						"old_credit", oldCredit,
@@ -497,7 +509,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				Data:    tx.Data,
 				Expires: lastBlockHeight + expiresIn,
 			}
-			logging.TraceMsg(exe.logger, "Creating NameReg entry",
+			logging.TraceMsg(logger, "Creating NameReg entry",
 				"name", entry.Name,
 				"expires_in", expiresIn)
 			exe.blockCache.UpdateNameRegEntry(entry)
@@ -506,8 +518,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO: something with the value sent?
 
 		// Good!
-		inAcc.Sequence += 1
-		inAcc.Balance -= value
+		inAcc.IncSequence()
+		inAcc.AlterBalance(-value)
 		exe.blockCache.UpdateAccount(inAcc)
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
@@ -523,7 +535,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO!
 		/*
 			case *txs.BondTx:
-						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PubKey.Address())
+						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PubKey().Address())
 						if valInfo != nil {
 							// TODO: In the future, check that the validator wasn't destroyed,
 							// add funds, merge UnbondTo outputs, and unbond validator.
@@ -546,7 +558,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 							}
 						}
 
-						bondAcc := exe.blockCache.GetAccount(tx.PubKey.Address())
+						bondAcc := exe.blockCache.GetAccount(tx.PubKey().Address())
 						if !hasBondPermission(exe.blockCache, bondAcc) {
 							return fmt.Errorf("The bonder does not have permission to bond")
 						}
@@ -560,7 +572,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						if err != nil {
 							return err
 						}
-						if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						if !tx.PubKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 						outTotal, err := validateOutputs(tx.UnbondTo)
@@ -580,16 +592,16 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						}
 						// Add ValidatorInfo
 						_s.SetValidatorInfo(&txs.ValidatorInfo{
-							Address:         tx.PubKey.Address(),
-							PubKey:          tx.PubKey,
+							Address:         tx.PubKey().Address(),
+							PubKey:          tx.PubKey(),
 							UnbondTo:        tx.UnbondTo,
 							FirstBondHeight: _s.lastBlockHeight + 1,
 							FirstBondAmount: outTotal,
 						})
 						// Add Validator
 						added := _s.BondedValidators.Add(&txs.Validator{
-							Address:     tx.PubKey.Address(),
-							PubKey:      tx.PubKey,
+							Address:     tx.PubKey().Address(),
+							PubKey:      tx.PubKey(),
 							BondHeight:  _s.lastBlockHeight + 1,
 							VotingPower: outTotal,
 							Accum:       0,
@@ -612,7 +624,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						if !val.PubKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 
@@ -637,7 +649,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PubKey.VerifyBytes(signBytes, tx.Signature) {
+						if !val.PubKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 
@@ -667,8 +679,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						}
 						voteASignBytes := acm.SignBytes(exe.chainID, &tx.VoteA)
 						voteBSignBytes := acm.SignBytes(exe.chainID, &tx.VoteB)
-						if !accused.PubKey.VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
-							!accused.PubKey.VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
+						if !accused.PubKey().VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
+							!accused.PubKey().VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 
@@ -697,33 +709,31 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		*/
 
 	case *txs.PermissionsTx:
-		var inAcc *acm.ConcreteAccount
-
 		// Validate input
-		inAcc = exe.blockCache.GetAccount(tx.Input.Address)
+		inAcc := acm.AsMutableAccount(exe.blockCache.GetAccount(tx.Input.Address))
 		if inAcc == nil {
-			logging.InfoMsg(exe.logger, "Cannot find input account",
+			logging.InfoMsg(logger, "Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
 
 		permFlag := tx.PermArgs.PermFlag()
 		// check permission
-		if !HasPermission(exe.blockCache.GetAccount, inAcc, permFlag, exe.logger) {
+		if !HasPermission(exe.blockCache, inAcc, permFlag, logger) {
 			return fmt.Errorf("account %s does not have moderator permission %s (%b)", tx.Input.Address,
 				permission.PermFlagToString(permFlag), permFlag)
 		}
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(exe.logger, "Cannot find public key for input account",
+			logging.InfoMsg(logger, "Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(exe.logger, "validateInput failed",
+			logging.InfoMsg(logger, "validateInput failed",
 				"tx_input", tx.Input,
 				"error", err)
 			return err
@@ -731,46 +741,48 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		value := tx.Input.Amount
 
-		logging.TraceMsg(exe.logger, "New PermissionsTx",
+		logging.TraceMsg(logger, "New PermissionsTx",
 			"perm_flag", permission.PermFlagToString(permFlag),
 			"perm_args", tx.PermArgs)
 
-		var permAcc *acm.ConcreteAccount
+		var permAcc acm.Account
 		switch args := tx.PermArgs.(type) {
 		case *permission.HasBaseArgs:
 			// this one doesn't make sense from txs
 			return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
 		case *permission.SetBaseArgs:
-			if permAcc = exe.blockCache.GetAccount(args.Address); permAcc == nil {
-				return fmt.Errorf("trying to update permissions for unknown account %s", args.Address)
-			}
-			err = permAcc.Permissions.Base.Set(args.Permission, args.Value)
+			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+				func(perms *ptypes.AccountPermissions) error {
+					return perms.Base.Set(args.Permission, args.Value)
+				})
 		case *permission.UnsetBaseArgs:
-			if permAcc = exe.blockCache.GetAccount(args.Address); permAcc == nil {
-				return fmt.Errorf("trying to update permissions for unknown account %s", args.Address)
-			}
-			err = permAcc.Permissions.Base.Unset(args.Permission)
+			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+				func(perms *ptypes.AccountPermissions) error {
+					return perms.Base.Unset(args.Permission)
+				})
 		case *permission.SetGlobalArgs:
-			if permAcc = exe.blockCache.GetAccount(permission.GlobalPermissionsAddress); permAcc == nil {
-				panic("can't find global permissions account")
-			}
-			err = permAcc.Permissions.Base.Set(args.Permission, args.Value)
+			permAcc, err = mutatePermissions(exe.blockCache, permission.GlobalPermissionsAddress,
+				func(perms *ptypes.AccountPermissions) error {
+					return perms.Base.Set(args.Permission, args.Value)
+				})
 		case *permission.HasRoleArgs:
 			return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
 		case *permission.AddRoleArgs:
-			if permAcc = exe.blockCache.GetAccount(args.Address); permAcc == nil {
-				return fmt.Errorf("trying to update roles for unknown account %s", args.Address)
-			}
-			if !permAcc.Permissions.AddRole(args.Role) {
-				return fmt.Errorf("role (%s) already exists for account %s", args.Role, args.Address)
-			}
+			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+				func(perms *ptypes.AccountPermissions) error {
+					if !perms.AddRole(args.Role) {
+						return fmt.Errorf("role (%s) already exists for account %s", args.Role, args.Address)
+					}
+					return nil
+				})
 		case *permission.RmRoleArgs:
-			if permAcc = exe.blockCache.GetAccount(args.Address); permAcc == nil {
-				return fmt.Errorf("trying to update roles for unknown account %s", args.Address)
-			}
-			if !permAcc.Permissions.RmRole(args.Role) {
-				return fmt.Errorf("role (%s) does not exist for account %s", args.Role, args.Address)
-			}
+			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+				func(perms *ptypes.AccountPermissions) error {
+					if !perms.RmRole(args.Role) {
+						return fmt.Errorf("role (%s) does not exist for account %s", args.Role, args.Address)
+					}
+					return nil
+				})
 		default:
 			panic(fmt.Sprintf("invalid permission function: %s", permission.PermFlagToString(permFlag)))
 		}
@@ -781,8 +793,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		// Good!
-		inAcc.Sequence += 1
-		inAcc.Balance -= value
+		inAcc.IncSequence()
+		inAcc.AlterBalance(-value)
 		exe.blockCache.UpdateAccount(inAcc)
 		if permAcc != nil {
 			exe.blockCache.UpdateAccount(permAcc)
@@ -800,6 +812,18 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		panic("Unknown Tx type")
 		return nil
 	}
+}
+
+func mutatePermissions(stateReader acm.StateReader, address acm.Address,
+	mutator func(*ptypes.AccountPermissions) error) (acm.Account, error) {
+
+	account := stateReader.GetAccount(address)
+	if account == nil {
+		return nil, fmt.Errorf("could not get account at address %s in order to alter permissions", address)
+	}
+	mutableAccount := acm.AsMutableAccount(account)
+
+	return mutableAccount, mutator(mutableAccount.MutablePermissions())
 }
 
 // ExecBlock stuff is now taken care of by the consensus engine.
@@ -932,18 +956,20 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 */
 
 // The accounts from the TxInputs must either already have
-// acm.PubKey.(type) != nil, (it must be known),
+// acm.PubKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
-// the TxInput is modified and input.PubKey set to nil.
-func getInputs(accountGetter func(address acm.Address) *acm.ConcreteAccount,
-	ins []*txs.TxInput) (map[acm.Address]*acm.ConcreteAccount, error) {
-	accounts := map[acm.Address]*acm.ConcreteAccount{}
+// the TxInput is modified and input.PubKey() set to nil.
+func getInputs(accountGetter acm.Getter,
+	ins []*txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
+
+	accounts := map[acm.Address]acm.MutableAccount{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
 			return nil, txs.ErrTxDuplicateAddress
 		}
-		acc := accountGetter(in.Address)
+		acc, err := accountGetter.GetAccount(in.Address)
+		acc := acm.AsMutableAccount(
 		if acc == nil {
 			return nil, txs.ErrTxInvalidAddress
 		}
@@ -956,10 +982,10 @@ func getInputs(accountGetter func(address acm.Address) *acm.ConcreteAccount,
 	return accounts, nil
 }
 
-func getOrMakeOutputs(accountGetter func(address acm.Address) *acm.ConcreteAccount, accs map[acm.Address]*acm.ConcreteAccount,
-	outs []*txs.TxOutput, logger logging_types.InfoTraceLogger) (map[acm.Address]*acm.ConcreteAccount, error) {
+func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
+	outs []*txs.TxOutput, logger logging_types.InfoTraceLogger) (map[acm.Address]acm.MutableAccount, error) {
 	if accs == nil {
-		accs = make(map[acm.Address]*acm.ConcreteAccount)
+		accs = make(map[acm.Address]acm.MutableAccount)
 	}
 
 	// we should err if an account is being created but the inputs don't have permission
@@ -969,21 +995,21 @@ func getOrMakeOutputs(accountGetter func(address acm.Address) *acm.ConcreteAccou
 		if _, ok := accs[out.Address]; ok {
 			return nil, txs.ErrTxDuplicateAddress
 		}
-		acc := accountGetter(out.Address)
+		acc := acm.AsMutableAccount(accountGetter.GetAccount(out.Address))
 		// output account may be nil (new)
 		if acc == nil {
 			if !checkedCreatePerms {
 				if !hasCreateAccountPermission(accountGetter, accs, logger) {
-					return nil, fmt.Errorf("At least one input does not have permission to create accounts")
+					return nil, fmt.Errorf("at least one input does not have permission to create accounts")
 				}
 				checkedCreatePerms = true
 			}
-			acc = &acm.ConcreteAccount{
+			acc = acm.ConcreteAccount{
 				Address:     out.Address,
 				Sequence:    0,
 				Balance:     0,
 				Permissions: permission.ZeroAccountPermissions,
-			}
+			}.MutableAccount()
 		}
 		accs[out.Address] = acc
 	}
@@ -996,22 +1022,24 @@ func getOrMakeOutputs(accountGetter func(address acm.Address) *acm.ConcreteAccou
 // transaction acting on behalf of that account we will be given a public key that we can check matches the address.
 // If it does then we will associate the public key with the stub account already registered in the system once and
 // for all time.
-func checkInputPubKey(acc *acm.ConcreteAccount, in *txs.TxInput) error {
-	if acc.PubKey.Unwrap() == nil {
+func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
+	if acc.PubKey().Unwrap() == nil {
 		if in.PubKey.Unwrap() == nil {
 			return txs.ErrTxUnknownPubKey
 		}
-		if !bytes.Equal(in.PubKey.Address(), acc.Address.Bytes()) {
+		addressFromPubKey := in.PubKey.Address()
+		addressFromAccount := acc.Address().Bytes()
+		if !bytes.Equal(addressFromPubKey, addressFromAccount) {
 			return txs.ErrTxInvalidPubKey
 		}
-		acc.PubKey = in.PubKey
+		acc.SetPubKey(in.PubKey)
 	} else {
 		in.PubKey = crypto.PubKey{}
 	}
 	return nil
 }
 
-func validateInputs(accs map[acm.Address]*acm.ConcreteAccount, signBytes []byte, ins []*txs.TxInput) (total int64, err error) {
+func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (total int64, err error) {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1027,24 +1055,24 @@ func validateInputs(accs map[acm.Address]*acm.ConcreteAccount, signBytes []byte,
 	return total, nil
 }
 
-func validateInput(acc *acm.ConcreteAccount, signBytes []byte, in *txs.TxInput) (err error) {
+func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) (err error) {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
 	}
 	// Check signatures
-	if !acc.PubKey.VerifyBytes(signBytes, in.Signature) {
+	if !acc.PubKey().VerifyBytes(signBytes, in.Signature) {
 		return txs.ErrTxInvalidSignature
 	}
 	// Check sequences
-	if acc.Sequence+1 != in.Sequence {
+	if acc.Sequence()+1 != in.Sequence {
 		return txs.ErrTxInvalidSequence{
 			Got:      in.Sequence,
-			Expected: acc.Sequence + 1,
+			Expected: acc.Sequence() + 1,
 		}
 	}
 	// Check amount
-	if acc.Balance < in.Amount {
+	if acc.Balance() < in.Amount {
 		return txs.ErrTxInsufficientFunds
 	}
 	return nil
@@ -1062,35 +1090,35 @@ func validateOutputs(outs []*txs.TxOutput) (total int64, err error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]*acm.ConcreteAccount, ins []*txs.TxInput) {
+func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput) {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
 			panic("adjustByInputs() expects account in accounts")
 		}
-		if acc.Balance < in.Amount {
+		if acc.Balance() < in.Amount {
 			panic("adjustByInputs() expects sufficient funds")
 		}
-		acc.Balance -= in.Amount
+		acc.AlterBalance(-in.Amount)
 
-		acc.Sequence += 1
+		acc.IncSequence()
 	}
 }
 
-func adjustByOutputs(accs map[acm.Address]*acm.ConcreteAccount, outs []*txs.TxOutput) {
+func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutput) {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
 			panic("adjustByOutputs() expects account in accounts")
 		}
-		acc.Balance += out.Amount
+		acc.AlterBalance(out.Amount)
 	}
 }
 
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, acc *acm.ConcreteAccount, perm ptypes.PermFlag,
+func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag,
 	logger logging_types.InfoTraceLogger) bool {
 	if perm > permission.AllPermFlags {
 		panic("Checking an unknown permission in state should never happen")
@@ -1103,14 +1131,14 @@ func HasPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount,
 	//}
 	permString := permission.PermFlagToString(perm)
 
-	v, err := acc.Permissions.Base.Get(perm)
+	v, err := acc.Permissions().Base.Get(perm)
 	if _, ok := err.(ptypes.ErrValueNotSet); ok {
 		if accountGetter == nil {
 			panic("All known global permissions should be set!")
 		}
 		logging.TraceMsg(logger, "Permission for account is not set. Querying GlobalPermissionsAddres.",
 			"perm_flag", permString)
-		return HasPermission(nil, accountGetter(permission.GlobalPermissionsAddress), perm, logger)
+		return HasPermission(nil, accountGetter.GetAccount(permission.GlobalPermissionsAddress), perm, logger)
 	} else if v {
 		logging.TraceMsg(logger, "Account has permission",
 			"account_address", acc.Address,
@@ -1124,7 +1152,7 @@ func HasPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount,
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, accs map[acm.Address]*acm.ConcreteAccount,
+func hasSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
 	logger logging_types.InfoTraceLogger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Send, logger) {
@@ -1134,22 +1162,22 @@ func hasSendPermission(accountGetter func(address acm.Address) *acm.ConcreteAcco
 	return true
 }
 
-func hasNamePermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, acc *acm.ConcreteAccount,
+func hasNamePermission(accountGetter acm.Getter, acc acm.Account,
 	logger logging_types.InfoTraceLogger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
-func hasCallPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, acc *acm.ConcreteAccount,
+func hasCallPermission(accountGetter acm.Getter, acc acm.Account,
 	logger logging_types.InfoTraceLogger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
-func hasCreateContractPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, acc *acm.ConcreteAccount,
+func hasCreateContractPermission(accountGetter acm.Getter, acc acm.Account,
 	logger logging_types.InfoTraceLogger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, accs map[acm.Address]*acm.ConcreteAccount,
+func hasCreateAccountPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
 	logger logging_types.InfoTraceLogger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -1159,12 +1187,12 @@ func hasCreateAccountPermission(accountGetter func(address acm.Address) *acm.Con
 	return true
 }
 
-func hasBondPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, acc *acm.ConcreteAccount,
+func hasBondPermission(accountGetter acm.Getter, acc acm.Account,
 	logger logging_types.InfoTraceLogger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter func(address acm.Address) *acm.ConcreteAccount, accs map[acm.Address]*acm.ConcreteAccount,
+func hasBondOrSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.Account,
 	logger logging_types.InfoTraceLogger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

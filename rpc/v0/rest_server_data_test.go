@@ -23,7 +23,6 @@ import (
 	"github.com/hyperledger/burrow/rpc/v0/shared"
 	transaction "github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
-	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -639,12 +638,12 @@ type (
 	}
 
 	GetPeersData struct {
-		Output []*p2p.Peer `json:"output"`
+		Output []*Peer `json:"output"`
 	}
 
 	GetPeerData struct {
 		Input  *PeerParam `json:"input"`
-		Output *p2p.Peer  `json:"output"`
+		Output *Peer      `json:"output"`
 	}
 
 	TransactData struct {
