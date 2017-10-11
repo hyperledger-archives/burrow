@@ -218,8 +218,8 @@ func (this *AccountCodeFilter) Match(v interface{}) bool {
 // Ops: All
 type AccountBalanceFilter struct {
 	op    string
-	value int64
-	match func(int64, int64) bool
+	value uint64
+	match func(uint64, uint64) bool
 }
 
 func (this *AccountBalanceFilter) Configure(fd *event.FilterData) error {
@@ -233,7 +233,7 @@ func (this *AccountBalanceFilter) Configure(fd *event.FilterData) error {
 	}
 	this.match = match
 	this.op = fd.Op
-	this.value = val
+	this.value = uint64(val)
 	return nil
 }
 

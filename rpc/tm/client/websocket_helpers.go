@@ -232,7 +232,7 @@ func unmarshalValidateSend(amt int64,
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.SendTx)
-		if tx.Inputs[0].Address != users[0].Address {
+		if tx.Inputs[0].Address != users[0].Address() {
 			return true, fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address, users[0].Address)
 		}
 		if tx.Inputs[0].Amount != amt {

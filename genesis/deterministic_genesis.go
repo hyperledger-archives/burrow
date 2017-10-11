@@ -23,7 +23,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 	}
 }
 
-func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance int64, numValidators int,
+func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
 	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount, []*tm_types.PrivValidatorFS) {
 
 	accounts := make([]GenesisAccount, numAccounts)
@@ -36,7 +36,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 				Address: account.Address(),
 				Amount:  account.Balance(),
 			},
-			Permissions: &defaultPerms, // This will get copied into each state.Account.
+			Permissions: defaultPerms.Clone(), // This will get copied into each state.Account.
 		}
 		privAccounts[i] = privAccount
 	}
@@ -46,11 +46,11 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		valInfo, privVal := dg.Validator(randBonded, minBonded)
 		validators[i] = GenesisValidator{
 			PubKey: valInfo.PubKey,
-			Amount: valInfo.VotingPower,
+			Amount: uint64(valInfo.VotingPower),
 			UnbondTo: []BasicAccount{
 				{
 					Address: acm.MustAddressFromBytes(valInfo.PubKey.Address()),
-					Amount:  valInfo.VotingPower,
+					Amount:  uint64(valInfo.VotingPower),
 				},
 			},
 		}
@@ -66,7 +66,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 
 }
 
-func (dg *deterministicGenesis) Account(randBalance bool, minBalance int64) (acm.Account, acm.PrivateAccount) {
+func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, acm.PrivateAccount) {
 	privKey := dg.PrivKey()
 	pubKey := privKey.PubKey()
 	privAccount := &acm.ConcretePrivateAccount{
@@ -78,12 +78,12 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance int64) (acm
 	acc := &acm.ConcreteAccount{
 		Address:     privAccount.Address,
 		PubKey:      privAccount.PubKey,
-		Sequence:    int64(dg.random.Int()),
+		Sequence:    uint64(dg.random.Int()),
 		Balance:     minBalance,
 		Permissions: perms,
 	}
 	if randBalance {
-		acc.Balance += dg.random.Int63()
+		acc.Balance += uint64(dg.random.Int())
 	}
 	return acc.Account(), privAccount.PrivateAccount()
 }

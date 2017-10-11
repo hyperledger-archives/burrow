@@ -49,8 +49,8 @@ func (e ErrTxInvalidString) Error() string {
 }
 
 type ErrTxInvalidSequence struct {
-	Got      int64
-	Expected int64
+	Got      uint64
+	Expected uint64
 }
 
 func (e ErrTxInvalidSequence) Error() string {
@@ -127,29 +127,29 @@ type (
 		Input *TxInput `json:"input"`
 		Name  string   `json:"name"`
 		Data  string   `json:"data"`
-		Fee   int64    `json:"fee"`
+		Fee   uint64    `json:"fee"`
 	}
 
 	CallTx struct {
 		Input *TxInput `json:"input"`
 		// Pointer since CallTx defines unset 'to' address as inducing account creation
 		Address  *acm.Address `json:"address"`
-		GasLimit int64        `json:"gas_limit"`
-		Fee      int64        `json:"fee"`
+		GasLimit uint64        `json:"gas_limit"`
+		Fee      uint64        `json:"fee"`
 		Data     []byte       `json:"data"`
 	}
 
 	TxInput struct {
 		Address   acm.Address      `json:"address"`   // Hash of the PubKey
-		Amount    int64            `json:"amount"`    // Must not exceed account balance
-		Sequence  int64            `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Amount    uint64            `json:"amount"`    // Must not exceed account balance
+		Sequence  uint64            `json:"sequence"`  // Must be 1 greater than the last committed TxInput
 		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
 		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
 		Address acm.Address `json:"address"` // Hash of the PubKey
-		Amount  int64       `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+		Amount  uint64       `json:"amount"`  // The sum of all outputs must not exceed the inputs.
 	}
 )
 

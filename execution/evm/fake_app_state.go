@@ -30,16 +30,17 @@ type FakeAppState struct {
 
 var _ acm.StateWriter = &FakeAppState{}
 
-func (fas *FakeAppState) GetAccount(addr acm.Address) acm.Account {
+func (fas *FakeAppState) GetAccount(addr acm.Address) (acm.Account, error) {
 	account := fas.accounts[addr]
-	return account
+	return account, nil
 }
 
-func (fas *FakeAppState) UpdateAccount(account acm.Account) {
+func (fas *FakeAppState) UpdateAccount(account acm.Account) error {
 	fas.accounts[account.Address()] = account
+	return nil
 }
 
-func (fas *FakeAppState) RemoveAccount(address acm.Address) {
+func (fas *FakeAppState) RemoveAccount(address acm.Address) error {
 	_, ok := fas.accounts[address]
 	if !ok {
 		panic(fmt.Sprintf("Invalid account addr: %s", address))
@@ -47,9 +48,10 @@ func (fas *FakeAppState) RemoveAccount(address acm.Address) {
 		// Remove account
 		delete(fas.accounts, address)
 	}
+	return nil
 }
 
-func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) Word256 {
+func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) (Word256, error) {
 	_, ok := fas.accounts[addr]
 	if !ok {
 		panic(fmt.Sprintf("Invalid account addr: %s", addr))
@@ -57,13 +59,13 @@ func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) Word256 {
 
 	value, ok := fas.storage[addr.String()+key.String()]
 	if ok {
-		return value
+		return value, nil
 	} else {
-		return Zero256
+		return Zero256, nil
 	}
 }
 
-func (fas *FakeAppState) SetStorage(addr acm.Address, key Word256, value Word256) {
+func (fas *FakeAppState) SetStorage(addr acm.Address, key Word256, value Word256) error {
 	_, ok := fas.accounts[addr]
 	if !ok {
 
@@ -72,6 +74,7 @@ func (fas *FakeAppState) SetStorage(addr acm.Address, key Word256, value Word256
 	}
 
 	fas.storage[addr.String()+key.String()] = value
+	return nil
 }
 
 func (fas *FakeAppState) accountsDump() string {

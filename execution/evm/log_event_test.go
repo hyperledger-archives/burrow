@@ -20,13 +20,13 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
-	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/word"
 	"github.com/tendermint/tmlibs/events"
 )
 
 var expectedData = []byte{0x10}
-var expectedHeight int64 = 0
+var expectedHeight uint64 = 0
 var expectedTopics = []Word256{
 	Int64ToWord256(1),
 	Int64ToWord256(2),
@@ -75,7 +75,7 @@ func TestLog4(t *testing.T) {
 
 	ourVm.SetFireable(eventSwitch)
 
-	var gas int64 = 100000
+	var gas uint64 = 100000
 
 	mstore8 := byte(MSTORE8)
 	push1 := byte(PUSH1)

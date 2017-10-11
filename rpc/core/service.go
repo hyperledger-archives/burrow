@@ -45,7 +45,8 @@ type Service interface {
 	NetInfo() (*ResultNetInfo, error)
 	Genesis() (*ResultGenesis, error)
 	GetAccount(addressBytes []byte) (*ResultGetAccount, error)
-	ListAccounts() (*ResultListAccounts, error)
+	//ListAccounts() (*ResultListAccounts, error)
+	ListAccounts() (BurrowResult, error)
 	GetStorage(addressBytes, key []byte) (*ResultGetStorage, error)
 	DumpStorage(addressBytes []byte) (*ResultDumpStorage, error)
 	Call(fromAddressBytes, toAddressBytes, data []byte) (*execution.Call, error)
@@ -147,7 +148,7 @@ func (s *service) Status() (*ResultStatus, error) {
 	}
 	return &ResultStatus{
 		NodeInfo:          s.nodeView.NodeInfo(),
-		GenesisHash:       s.blockchain.Root().GenesisHash(),
+		GenesisHash:       s.blockchain.GenesisHash(),
 		PubKey:            s.nodeView.PrivValidatorPubKey(),
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
@@ -155,12 +156,12 @@ func (s *service) Status() (*ResultStatus, error) {
 }
 
 func (s *service) ChainId() (*ResultChainId, error) {
-	chainId := s.blockchain.Root().ChainID()
+	chainId := s.blockchain.ChainID()
 
 	return &ResultChainId{
 		ChainName:   chainId, // TODO: remove ChainName, we should stick with Tendermint's human readable notion of ChainID
 		ChainId:     chainId,
-		GenesisHash: s.blockchain.Root().GenesisHash(),
+		GenesisHash: s.blockchain.GenesisHash(),
 	}, nil
 }
 
@@ -194,7 +195,7 @@ func (s *service) NetInfo() (*ResultNetInfo, error) {
 
 func (s *service) Genesis() (*ResultGenesis, error) {
 	return &ResultGenesis{
-		Genesis: s.blockchain.Root().GenesisDoc(),
+		Genesis: s.blockchain.GenesisDoc(),
 	}, nil
 }
 
@@ -204,10 +205,15 @@ func (s *service) GetAccount(addressBytes []byte) (*ResultGetAccount, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ResultGetAccount{Account: s.state.GetAccount(address)}, nil
+
+	acc, err := s.state.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	return &ResultGetAccount{Account: acc}, nil
 }
 
-func (s *service) ListAccounts() (*ResultListAccounts, error) {
+func (s *service) ListAccounts() (BurrowResult, error) {
 	accounts := make([]acm.Account, 0)
 	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
 		accounts = append(accounts, account)
@@ -225,12 +231,18 @@ func (s *service) GetStorage(addressBytes, key []byte) (*ResultGetStorage, error
 	if err != nil {
 		return nil, fmt.Errorf("GetStorage could not get address: %v", err)
 	}
-	account := s.state.GetAccount(address)
+	account, err := s.state.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
 	if account == nil {
 		return nil, fmt.Errorf("UnknownAddress: %X", addressBytes)
 	}
 
-	value := s.state.GetStorage(address, word.LeftPadWord256(key))
+	value, err := s.state.GetStorage(address, word.LeftPadWord256(key))
+	if err != nil {
+		return nil, err
+	}
 	if value == word.Zero256 {
 		return &ResultGetStorage{Key: key, Value: nil}, nil
 	}
@@ -242,7 +254,10 @@ func (s *service) DumpStorage(addressBytes []byte) (*ResultDumpStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("DumpStorage could not get address: %v", err)
 	}
-	account := s.state.GetAccount(address)
+	account, err := s.state.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
 	if account == nil {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}

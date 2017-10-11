@@ -17,6 +17,9 @@ package account
 import (
 	"testing"
 
+	"encoding/json"
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
 )
@@ -43,15 +46,15 @@ func TestAddress(t *testing.T) {
 }
 
 func TestAccountSerialise(t *testing.T) {
-
 	type AccountContainingStruct struct {
 		Account Account
 		ChainID string
 	}
+
 	// This test is really testing this go wire declaration in account.go
 	//var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
 
-	acc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Secret Secret")))
+	acc := NewConcreteAccountFromSecret("Super Semi Secret")
 
 	// Go wire cannot serialise a top-level interface type it needs to be a field or sub-field of a struct
 	// at some depth. i.e. you MUST wrap an interface if you want it to be decoded (they do not document this)
@@ -70,7 +73,7 @@ func TestAccountSerialise(t *testing.T) {
 }
 
 func TestDecodeConcrete(t *testing.T) {
-	concreteAcc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	acc := concreteAcc.Account()
 	concreteAccOut, err := DecodeConcrete(acc.Encode())
 	assert.NoError(t, err)
@@ -81,11 +84,24 @@ func TestDecodeConcrete(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	concreteAcc := AsConcreteAccount(FromAddressable(GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	acc := concreteAcc.Account()
-	accOut := Decode(acc.Encode())
+	accOut, err := Decode(acc.Encode())
+	assert.NoError(t, err)
 	assert.Equal(t, concreteAcc, AsConcreteAccount(accOut))
 
-	accOut = Decode([]byte("flungepliffery munknut tolopops"))
+	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
+	assert.Error(t, err)
 	assert.Nil(t, accOut)
+}
+
+func TestMarshalJSON(t *testing.T) {
+	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
+	concreteAcc.Code = []byte{60, 23, 45}
+	acc := concreteAcc.Account()
+	fmt.Println(acc)
+	bs, err := json.Marshal(acc)
+	assert.Equal(t, `{"address":"745BD6BE33020146E04FA0F293A41E389887DE86","pub_key":{"type":"ed25519","data":"8CEBC16C166A0614AD7C8E330318E774E1A039321F17274DF12ABA3B1BFC773C"},"balance":0,"code":"3C172D","sequence":0,"storage_root":"","permissions":{"base":{"perms":0,"set":0},"roles":[]}}`,
+		string(bs))
+	assert.NoError(t, err)
 }

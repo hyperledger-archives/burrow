@@ -25,7 +25,8 @@ import (
 
 	"errors"
 
-	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	. "github.com/hyperledger/burrow/execution/evm/asm"
+	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/permission"
 	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +72,7 @@ func TestVM(t *testing.T) {
 	account1 := newAccount(1)
 	account2 := newAccount(1, 0, 1)
 
-	var gas int64 = 100000
+	var gas uint64 = 100000
 	N := []byte{0x0f, 0x0f}
 	// Loop N times
 	code := []byte{0x60, 0x00, 0x60, 0x20, 0x52, 0x5B, byte(0x60 + len(N) - 1)}
@@ -93,7 +94,7 @@ func TestJumpErr(t *testing.T) {
 	account1 := newAccount(1)
 	account2 := newAccount(2)
 
-	var gas int64 = 100000
+	var gas uint64 = 100000
 	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
 	var err error
 	ch := make(chan struct{})
@@ -123,7 +124,7 @@ func TestSubcurrency(t *testing.T) {
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
 
-	var gas int64 = 1000
+	var gas uint64 = 1000
 	code_parts := []string{"620f42403355",
 		"7c0100000000000000000000000000000000000000000000000000000000",
 		"600035046315cf268481141561004657",
@@ -161,13 +162,13 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2 = newAccount(2).AlterBalance(100000)
+	account2 = newAccount(2).AddToBalance(100000)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2 = newAccount(2).AlterBalance(100000)
+	account2 = newAccount(2).AddToBalance(100000)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
 	assert.Error(t, err, "Expected insufficient gas error")
 }
@@ -200,20 +201,20 @@ func TestDelegateCallGas(t *testing.T) {
 
 	// Do a simple operation using 1 gas unit
 	calleeAccount, calleeAddress := makeAccountWithCode(state, "callee",
-		Bytecode(PUSH1, calleeReturnValue, return1()))
+		Splice(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
 	// different amounts of gas. The value we sandwich in the middle is the amount
 	// we subtract from the available gas (that the caller has available), so:
-	// code := Bytecode(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
+	// code := Splice(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
 	// gives us the code to make the call
-	callerCodePrefix := Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
+	callerCodePrefix := Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
 		PUSH1, inOff, PUSH20, calleeAddress, PUSH1)
-	callerCodeSuffix := Bytecode(GAS, SUB, DELEGATECALL, returnWord())
+	callerCodeSuffix := Splice(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
 	callerAccount, _ := makeAccountWithCode(state, "caller",
-		Bytecode(callerCodePrefix,
+		Splice(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
 			callerCodeSuffix))
@@ -224,7 +225,7 @@ func TestDelegateCallGas(t *testing.T) {
 	assert.NoError(t, err, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
 
-	callerAccount.SetCode(Bytecode(callerCodePrefix,
+	callerAccount.SetCode(Splice(callerCodePrefix,
 		// Shouldn't be enough gas to make call
 		costBetweenGasAndDelegateCall-1,
 		callerCodeSuffix))
@@ -243,11 +244,11 @@ func TestMemoryBounds(t *testing.T) {
 	ourVm := NewVM(state, memoryProvider, newParams(), Zero256, nil)
 	caller, _ := makeAccountWithCode(state, "caller", nil)
 	callee, _ := makeAccountWithCode(state, "callee", nil)
-	gas := int64(100000)
+	gas := uint64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
 	output, err := ourVm.call(caller, callee,
-		Bytecode(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		Splice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -255,7 +256,7 @@ func TestMemoryBounds(t *testing.T) {
 	// Same with number
 	word = Int64ToWord256(232234234432)
 	output, err = ourVm.call(caller, callee,
-		Bytecode(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		Splice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -263,9 +264,9 @@ func TestMemoryBounds(t *testing.T) {
 	// Now test a series of boundary stores
 	code := pushWord(word)
 	for i := 0; i < 10; i++ {
-		code = Bytecode(code, storeAtEnd(), MLOAD)
+		code = Splice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, Bytecode(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(caller, callee, Splice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -273,9 +274,9 @@ func TestMemoryBounds(t *testing.T) {
 	// Same as above but we should breach the upper memory limit set in memoryProvider
 	code = pushWord(word)
 	for i := 0; i < 100; i++ {
-		code = Bytecode(code, storeAtEnd(), MLOAD)
+		code = Splice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, Bytecode(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(caller, callee, Splice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
 }
@@ -288,22 +289,22 @@ func TestMemoryBounds(t *testing.T) {
 // stores that value at the current memory boundary
 func storeAtEnd() []byte {
 	// Pull in MSIZE (to carry forward to MLOAD), swap in value to store, store it at MSIZE
-	return Bytecode(MSIZE, SWAP1, DUP2, MSTORE)
+	return Splice(MSIZE, SWAP1, DUP2, MSTORE)
 }
 
 func returnAfterStore() []byte {
-	return Bytecode(PUSH1, 32, DUP2, RETURN)
+	return Splice(PUSH1, 32, DUP2, RETURN)
 }
 
 // Store the top element of the stack (which is a 32-byte word) in memory
 // and return it. Useful for a simple return value.
 func return1() []byte {
-	return Bytecode(PUSH1, 0, MSTORE, returnWord())
+	return Splice(PUSH1, 0, MSTORE, returnWord())
 }
 
 func returnWord() []byte {
 	// PUSH1 => return size, PUSH1 => return offset, RETURN
-	return Bytecode(PUSH1, 32, PUSH1, 0, RETURN)
+	return Splice(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
 func makeAccountWithCode(state acm.Updater, name string,
@@ -324,7 +325,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
 func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
-	contractCode []byte, gas int64) (output []byte, err error) {
+	contractCode []byte, gas uint64) (output []byte, err error) {
 	eventCh := make(chan EventData)
 	output, err = runVM(eventCh, ourVm, caller, callee, subscribeAddr,
 		contractCode, gas)
@@ -349,7 +350,7 @@ func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
 func runVM(eventCh chan EventData, ourVm *VM, caller, callee acm.MutableAccount,
-	subscribeAddr acm.Address, contractCode []byte, gas int64) ([]byte, error) {
+	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
 	evsw := events.NewEventSwitch()
@@ -376,7 +377,7 @@ func callContractCode(addr acm.Address) []byte {
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
 	// this is the code we want to run (send funds to an account and return)
-	return Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	return Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 }
@@ -393,38 +394,38 @@ func pushWord(word Word256) []byte {
 		if word[leadingZeros] == 0 {
 			leadingZeros++
 		} else {
-			return Bytecode(byte(PUSH32)-leadingZeros, word[leadingZeros:])
+			return Splice(byte(PUSH32)-leadingZeros, word[leadingZeros:])
 		}
 	}
-	return Bytecode(PUSH1, 0)
+	return Splice(PUSH1, 0)
 }
 
 func TestPushWord(t *testing.T) {
 	word := Int64ToWord256(int64(2133213213))
-	assert.Equal(t, Bytecode(PUSH4, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
+	assert.Equal(t, Splice(PUSH4, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
 	word[0] = 1
-	assert.Equal(t, Bytecode(PUSH32,
+	assert.Equal(t, Splice(PUSH32,
 		1, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
-	assert.Equal(t, Bytecode(PUSH1, 0), pushWord(Word256{}))
-	assert.Equal(t, Bytecode(PUSH1, 1), pushWord(Int64ToWord256(1)))
+	assert.Equal(t, Splice(PUSH1, 0), pushWord(Word256{}))
+	assert.Equal(t, Splice(PUSH1, 1), pushWord(Int64ToWord256(1)))
 }
 
 func TestBytecode(t *testing.T) {
 	assert.Equal(t,
-		Bytecode(1, 2, 3, 4, 5, 6),
-		Bytecode(1, 2, 3, Bytecode(4, 5, 6)))
+		Splice(1, 2, 3, 4, 5, 6),
+		Splice(1, 2, 3, Splice(4, 5, 6)))
 	assert.Equal(t,
-		Bytecode(1, 2, 3, 4, 5, 6, 7, 8),
-		Bytecode(1, 2, 3, Bytecode(4, Bytecode(5), 6), 7, 8))
+		Splice(1, 2, 3, 4, 5, 6, 7, 8),
+		Splice(1, 2, 3, Splice(4, Splice(5), 6), 7, 8))
 	assert.Equal(t,
-		Bytecode(PUSH1, 2),
-		Bytecode(byte(PUSH1), 0x02))
+		Splice(PUSH1, 2),
+		Splice(byte(PUSH1), 0x02))
 	assert.Equal(t,
 		[]byte{},
-		Bytecode(Bytecode(Bytecode())))
+		Splice(Splice(Splice())))
 
 	contractAccount := &acm.ConcreteAccount{Address: acm.AddressFromWord256(Int64ToWord256(102))}
 	addr := contractAccount.Address
@@ -432,7 +433,7 @@ func TestBytecode(t *testing.T) {
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
-	contractCodeBytecode := Bytecode(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	contractCodeBytecode := Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 	contractCode := []byte{0x60, retSize, 0x60, retOff, 0x60, inSize, 0x60, inOff, 0x60, value, 0x73}

@@ -53,7 +53,7 @@ func (w Word256) Postfix(n int) []byte {
 
 // Get a Word160 embedded a Word256 and padded on the left (as it is for account addresses in EVM)
 func (w Word256) Word160() (w160 Word160) {
-	copy(w160[:], w.Postfix(Word160Length))
+	copy(w160[:], w[Word256Word160Delta:])
 	return
 }
 

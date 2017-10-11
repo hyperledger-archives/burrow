@@ -48,8 +48,9 @@ type Tip interface {
 
 // Burrow's portion of the Blockchain state
 type Blockchain interface {
-	Root() Root
-	// Returns
+	Root
+	Tip
+	// Returns an immutable copy of the tip
 	Tip() Tip
 	// Returns a copy of the current validator set
 	Validators() []*acm.Validator

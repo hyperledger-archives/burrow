@@ -2,9 +2,11 @@ package account
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/burrow/word"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -51,10 +53,27 @@ func (address Address) Bytes() []byte {
 }
 
 func (address Address) String() string {
-	return fmt.Sprintf("%X", address[:])
+	return hex.EncodeUpperToString(address[:])
 }
 
-func NewContractAddress(caller Address, sequence int64) (newAddr Address) {
+func (address *Address) UnmarshalJSON(data []byte) error {
+	str := new(string)
+	err := json.Unmarshal(data, str)
+	if err != nil {
+		return err
+	}
+	_, err = hex.Decode(address[:], []byte(*str))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (address Address) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeUpperToString(address[:]))
+}
+
+func NewContractAddress(caller Address, sequence uint64) (newAddr Address) {
 	temp := make([]byte, 32+8)
 	copy(temp, caller[:])
 	binary.BigEndian.PutUint64(temp[32:], uint64(sequence))

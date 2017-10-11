@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
+	"encoding/json"
 )
 
 func TestResultBroadcastTx(t *testing.T) {
@@ -54,4 +55,18 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	}
 	fmt.Println(string(wire.JSONBytes(res)))
 
+}
+
+func TestJSONEncode(t *testing.T) {
+	concreteAcc := acm.AsConcreteAccount(acm.FromAddressable(
+		acm.GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	acc := concreteAcc.Account()
+	res := &ResultListAccounts{
+		Accounts:    []acm.Account{acc},
+		BlockHeight: 2,
+	}
+	fmt.Println(string(wire.JSONBytes(res)))
+	fmt.Println("")
+	bs, _ := json.Marshal(res)
+	fmt.Println(string(bs))
 }

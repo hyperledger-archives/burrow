@@ -14,15 +14,14 @@
 
 package word
 
-// NOTE: [ben] this used to be in tendermint/go-common but should be
-// isolated and cleaned up and tested.  Should be used in permissions
-// and manager/burrow-mint
-// TODO: [ben] cleanup, but also write unit-tests
-
 import (
 	"encoding/binary"
 	"sort"
+	"math"
 )
+
+
+const Uint64TopBitMask = 1 << 63
 
 // Sort for []uint64
 
@@ -71,4 +70,9 @@ func PutInt64BE(dest []byte, i int64) {
 
 func GetInt64BE(src []byte) int64 {
 	return int64(binary.BigEndian.Uint64(src))
+}
+
+// Returns whether a + b would be a uint64 overflow
+func IsUint64SumOverflow(a, b uint64) bool {
+	return math.MaxUint64 - a < b
 }

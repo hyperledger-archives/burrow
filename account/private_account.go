@@ -103,24 +103,18 @@ func GeneratePrivateAccount() concretePrivateAccountWrapper {
 	}.PrivateAccount()
 }
 
-// Generates 32 priv key bytes from secret
-func GeneratePrivateKeyBytesFromSecret(secret string) []byte {
-	return wire.BinarySha256(secret) // Not Ripemd160 because we want 32 bytes.
+func PrivKeyFromSecret(secret string) crypto.PrivKey {
+	return crypto.GenPrivKeyEd25519FromSecret(wire.BinarySha256(secret)).Wrap()
 }
 
 // Generates a new account with private key from SHA256 hash of a secret
 func GeneratePrivateAccountFromSecret(secret string) concretePrivateAccountWrapper {
-	privKey32 := GeneratePrivateKeyBytesFromSecret(secret)
-	privKeyBytes := new([64]byte)
-	copy(privKeyBytes[:32], privKey32)
-	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
-	address, _ := AddressFromBytes(pubKey.Address())
-	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
+	privKey := PrivKeyFromSecret(secret)
+	pubKey := privKey.PubKey()
 	return ConcretePrivateAccount{
-		Address: address,
-		PubKey:  pubKey.Wrap(),
-		PrivKey: privKey.Wrap(),
+		Address: MustAddressFromBytes(pubKey.Address()),
+		PubKey:  pubKey,
+		PrivKey: privKey,
 	}.PrivateAccount()
 }
 

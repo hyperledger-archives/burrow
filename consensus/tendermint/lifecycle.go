@@ -8,14 +8,12 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
-	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/rpc/core"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/tendermint/config"
@@ -28,17 +26,50 @@ import (
 
 const GenesisValidatorPower = 1 << 10
 
-func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, abciApp abci_types.Application,
-	genDocProvider node.GenesisDocProvider, logger logging_types.InfoTraceLogger) (*node.Node, error) {
+type NodeDeps struct {
+	*config.Config
+	tm_types.PrivValidator
+	*tm_types.GenesisDoc
+	bcm.MutableBlockchain
+	*execution.State
+	event.EventEmitter
+	logging_types.InfoTraceLogger
+}
 
-	return node.NewNode(conf, privValidator, proxy.NewLocalClientCreator(abciApp), genDocProvider,
-		node.DefaultDBProvider, NewLogger(logger))
+func deps() {
+	NodeDeps{
+		InfoTraceLogger:,
+		EventEmitter:,
+	}
+}
+
+func NewNode(
+	conf *config.Config,
+	privValidator tm_types.PrivValidator,
+	genesisDoc *tm_types.GenesisDoc,
+	blockchain bcm.MutableBlockchain,
+	state *execution.State,
+	eventEmitter event.EventEmitter,
+	logger logging_types.InfoTraceLogger) (*node.Node, error) {
+
+	checker := execution.NewBatchChecker(state, genesisDoc.ChainID, blockchain, logger)
+	committer := execution.NewBatchCommitter(state, genesisDoc.ChainID, blockchain, eventEmitter, logger)
+	app := abci.NewApp(blockchain, checker, committer, logger)
+	return node.NewNode(conf, privValidator,
+		proxy.NewLocalClientCreator(app),
+		func() (*tm_types.GenesisDoc, error) {
+			return genesisDoc, nil
+		},
+		node.DefaultDBProvider,
+		NewLogger(logger))
 }
 
 func Init() {
 }
 
 func LaunchGenesisValidator(conf *config.Config, logger logging_types.InfoTraceLogger) error {
+	// disable Tendermint's RPC
+	conf.RPC.ListenAddress = ""
 	// Validator setup
 	validatorAccount := acm.GeneratePrivateAccount()
 	genesisDoc := GenerateGenesis(conf.ChainID, validatorAccount)
@@ -48,39 +79,22 @@ func LaunchGenesisValidator(conf *config.Config, logger logging_types.InfoTraceL
 	// Connect Burrow genesis state root with Tendermint's
 	genesisDoc.AppHash = burrowGenesis.Hash()
 
+	// Logger
 	logger = logging.WithScope(logger, "LaunchGenesisValidator")
+
+	// State
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, conf.DBDir())
 	state := execution.MakeGenesisState(stateDB, burrowGenesis)
 	state.Save()
 
 	blockchain := bcm.NewBlockchain(burrowGenesis)
-	eventEmitter := event.NewEvents(events.NewEventSwitch(), logger)
-	checker := execution.NewBatchChecker(state, genesisDoc.ChainID, blockchain, logger)
-	committer := execution.NewBatchCommitter(state, genesisDoc.ChainID, blockchain, eventEmitter, logger)
-	validatorNode, err := NewNode(conf, privValidator, abci.NewApp(blockchain, checker, committer, logger),
-		func() (*tm_types.GenesisDoc, error) {
-			return genesisDoc, nil
-		}, logger)
+	eventSwitch := events.NewEventSwitch()
+	eventEmitter := event.NewEvents(eventSwitch, logger)
 
+	validatorNode, err := NewNode(conf, privValidator, genesisDoc, blockchain, state, eventEmitter, logger)
 	if err != nil {
 		return err
 	}
-
-	txCodec := txs.NewGoWireCodec()
-	transactor := execution.NewTransactor(blockchain, state, eventEmitter,
-		BroadcastTxAsyncFunc(validatorNode, txCodec))
-
-	nameReg := execution.NewNameReg(state, blockchain)
-
-	service := core.NewService(
-		state,
-		eventEmitter,
-		nameReg,
-		blockchain,
-		transactor,
-		query.NewNodeView(validatorNode, txCodec),
-		logger,
-	)
 
 	_, err = validatorNode.Start()
 	if err != nil {
@@ -106,19 +120,7 @@ func BroadcastTxAsyncFunc(validator *node.Node, txEncoder txs.Encoder) func(tx t
 	}
 }
 
-func GenerateGenesis(chainID string, privateAccount acm.PrivateAccount) *tm_types.GenesisDoc {
-	return &tm_types.GenesisDoc{
-		GenesisTime: time.Now(),
-		ChainID:     chainID,
-		Validators: []tm_types.GenesisValidator{{
-			PubKey: privateAccount.PubKey(),
-			Power:  GenesisValidatorPower,
-			Name:   "GenesisValidator",
-		}},
-	}
-}
-
-func BurrowGenesis(tmGenesisDoc *tm_types.GenesisDoc) *genesis.GenesisDoc {
+func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
 	accs := make([]*genesis.GenesisAccount, len(tmGenesisDoc.Validators))
 	vals := make([]*genesis.GenesisValidator, len(tmGenesisDoc.Validators))
 	for i, tmVal := range tmGenesisDoc.Validators {

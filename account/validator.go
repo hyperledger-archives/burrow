@@ -1,6 +1,8 @@
 package account
 
 import (
+	"encoding/json"
+
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -11,7 +13,7 @@ type Validator interface {
 	Power() uint64
 	// Alter the validator's voting power by amount that can be negative or positive.
 	// A power of 0 effectively unbonds the validator
-	AlterPower(amount int64) Validator
+	SetPower(uint64) Validator
 }
 
 // Neither abci_types or tm_types has quite the representation we want
@@ -29,6 +31,14 @@ var _ Validator = concreteValidatorWrapper{}
 
 var _ = wire.RegisterInterface(struct{ Validator }{}, wire.ConcreteType{concreteValidatorWrapper{}, 0x01})
 
+func AsValidator(account Account) Validator {
+	return ConcreteValidator{
+		Address: account.Address(),
+		PubKey:  account.PubKey(),
+		Power:   account.Balance(),
+	}.Validator()
+}
+
 func (cvw concreteValidatorWrapper) Address() Address {
 	return cvw.ConcreteValidator.Address
 }
@@ -41,18 +51,34 @@ func (cvw concreteValidatorWrapper) Power() uint64 {
 	return cvw.ConcreteValidator.Power
 }
 
-func (cvw concreteValidatorWrapper) AlterPower(amount int64) Validator {
-	//cv := *cvw.ConcreteValidator
-	//cv.Power = cv.Power + amount
-	//cvw.ConcreteValidator.Power
-	return cvw
+func (cvw concreteValidatorWrapper) SetPower(power uint64) Validator {
+	cv := cvw.Copy()
+	cv.Power = power
+	return concreteValidatorWrapper{
+		ConcreteValidator: cv,
+	}
 }
 
 func (cv ConcreteValidator) Validator() Validator {
-	return concreteValidatorWrapper{&cv}
+	return concreteValidatorWrapper{
+		ConcreteValidator: &cv,
+	}
 }
 
 func (cv *ConcreteValidator) Copy() *ConcreteValidator {
 	cvCopy := *cv
 	return &cvCopy
+}
+
+func (cv *ConcreteValidator) String() string {
+	if cv == nil {
+		return "Nil Validator"
+	}
+
+	bs, err := json.Marshal(cv)
+	if err != nil {
+		return "error serialising Validator"
+	}
+
+	return string(bs)
 }

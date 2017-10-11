@@ -22,7 +22,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
@@ -78,10 +78,10 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 		t.Fatalf("Could not get function: %s", err)
 	}
 	funcID := function.ID()
-	gas := int64(1000)
+	gas := uint64(1000)
 
 	// Should fail since we have no permissions
-	retValue, err := contract.Dispatch(state, caller, Bytecode(funcID[:],
+	retValue, err := contract.Dispatch(state, caller, bc.Splice(funcID[:],
 		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
@@ -90,7 +90,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 
 	// Grant all permissions and dispatch should success
 	caller.SetPermissions(allAccountPermissions())
-	retValue, err = contract.Dispatch(state, caller, Bytecode(funcID[:],
+	retValue, err = contract.Dispatch(state, caller, bc.Splice(funcID[:],
 		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))

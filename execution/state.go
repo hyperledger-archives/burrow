@@ -44,7 +44,7 @@ var (
 )
 
 // TODO
-const GasLimit = int64(1000000)
+const GasLimit = uint64(1000000)
 
 //-----------------------------------------------------------------------------
 
@@ -84,10 +84,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	// Make accounts state tree
 	accounts := iavl.NewIAVLTree(defaultAccountsCacheCapacity, db)
 	for _, genAcc := range genDoc.Accounts {
-		perm := ptypes.ZeroAccountPermissions
-		if genAcc.Permissions != nil {
-			perm = *genAcc.Permissions
-		}
+		perm := genAcc.Permissions
 		acc := &acm.ConcreteAccount{
 			Address:     genAcc.Address,
 			Balance:     genAcc.Amount,
@@ -99,12 +96,10 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	// global permissions are saved as the 0 address
 	// so they are included in the accounts tree
 	globalPerms := ptypes.DefaultAccountPermissions
-	if genDoc.Params != nil && genDoc.Params.GlobalPermissions != nil {
-		globalPerms = *genDoc.Params.GlobalPermissions
-		// XXX: make sure the set bits are all true
-		// Without it the HasPermission() functions will fail
-		globalPerms.Base.SetBit = ptypes.AllPermFlags
-	}
+	globalPerms = genDoc.Params.GlobalPermissions
+	// XXX: make sure the set bits are all true
+	// Without it the HasPermission() functions will fail
+	globalPerms.Base.SetBit = ptypes.AllPermFlags
 
 	permsAcc := &acm.ConcreteAccount{
 		Address:     permission.GlobalPermissionsAddress,
@@ -240,12 +235,12 @@ func (s *State) Hash() []byte {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address acm.Address) acm.Account {
+func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	_, accBytes, _ := s.accounts.Get(address.Bytes())
 	if accBytes == nil {
-		return nil
+		return nil, nil
 	}
 	return acm.Decode(accBytes)
 }
@@ -253,17 +248,18 @@ func (s *State) GetAccount(address acm.Address) acm.Account {
 // The account is copied before setting, so mutating it
 // afterwards has no side effects.
 // Implements Statelike
-func (s *State) UpdateAccount(account acm.Account) {
+func (s *State) UpdateAccount(account acm.Account) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.accounts.Set(account.Address().Bytes(), account.Encode())
-
+	return nil
 }
 
-func (s *State) RemoveAccount(address acm.Address) {
+func (s *State) RemoveAccount(address acm.Address) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.accounts.Remove(address.Bytes())
+	return nil
 }
 
 // The returned Account is a copy, so mutating it
@@ -272,17 +268,18 @@ func (s *State) GetAccounts() merkle.Tree {
 	return s.accounts.Copy()
 }
 
-func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool) {
+func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-	return s.accounts.Iterate(func(key, value []byte) bool {
-		account := acm.Decode(value)
-		// We shouldn't find an non-decodable account, but we're error-free here...
-		if account != nil {
-			return consumer(account)
+	stopped = s.accounts.Iterate(func(key, value []byte) bool {
+		var account acm.Account
+		account, err = acm.Decode(value)
+		if err != nil {
+			return true
 		}
-		return false
+		return consumer(account)
 	})
+	return
 }
 
 // State.accounts
@@ -398,14 +395,15 @@ func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
 //-------------------------------------
 // State.storage
 
-func (s *State) accountStorage(address acm.Address) merkle.Tree {
-	account := s.GetAccount(address)
-	if account == nil {
-		// [Silas] if we wrap the State serialisation struct in an struct that holds a logger we could log this
-		// Even better we could add an error to the signature of StorageSetter
-		return nil
+func (s *State) accountStorage(address acm.Address) (merkle.Tree, error) {
+	account, err := s.GetAccount(address)
+	if err != nil {
+		return nil, err
 	}
-	return s.LoadStorage(account.StorageRoot())
+	if account == nil {
+		return nil, fmt.Errorf("could not find account %s to access its storage", address)
+	}
+	return s.LoadStorage(account.StorageRoot()), nil
 }
 
 func (s *State) LoadStorage(hash []byte) merkle.Tree {
@@ -416,37 +414,53 @@ func (s *State) LoadStorage(hash []byte) merkle.Tree {
 	return storage
 }
 
-func (s *State) GetStorage(address acm.Address, key word.Word256) word.Word256 {
+func (s *State) GetStorage(address acm.Address, key word.Word256) (word.Word256, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-	storageTree := s.accountStorage(address)
-	if storageTree != nil {
-		_, value, _ := storageTree.Get(key.Bytes())
-		return word.LeftPadWord256(value)
+	storageTree, err := s.accountStorage(address)
+	if err != nil {
+		return word.Zero256, err
 	}
-	return word.Zero256
+	_, value, _ := storageTree.Get(key.Bytes())
+	return word.LeftPadWord256(value), nil
 }
 
-func (s *State) SetStorage(address acm.Address, key, value word.Word256) {
+func (s *State) SetStorage(address acm.Address, key, value word.Word256) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	storageTree := s.accountStorage(address)
+	storageTree, err := s.accountStorage(address)
+	if err != nil {
+		return err
+	}
 	if storageTree != nil {
 		storageTree.Set(key.Bytes(), value.Bytes())
 	}
+	return nil
 }
 
 func (s *State) IterateStorage(address acm.Address,
-	consumer func(key, value word.Word256) (stop bool)) (stopped bool) {
+	consumer func(key, value word.Word256) (stop bool)) (stopped bool, err error) {
 
-	storageTree := s.accountStorage(address)
-	if storageTree != nil {
-		return storageTree.Iterate(func(key []byte, value []byte) (stop bool) {
-			// Note: no left padding should occur unless someone has be writing non-words to this storage tree
-			return consumer(word.LeftPadWord256(key), word.LeftPadWord256(value))
-		})
+	var storageTree merkle.Tree
+	storageTree, err = s.accountStorage(address)
+	if err != nil {
+		return
 	}
-	return false
+	stopped = storageTree.Iterate(func(key []byte, value []byte) (stop bool) {
+		// Note: no left padding should occur unless there is a bug and non-words have been writte to this storage tree
+		if len(key) != word.Word256Length {
+			err = fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+				key, address, word.Word256Length)
+			return true
+		}
+		if len(value) != word.Word256Length {
+			err = fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+				key, address, word.Word256Length)
+			return true
+		}
+		return consumer(word.LeftPadWord256(key), word.LeftPadWord256(value))
+	})
+	return
 }
 
 // State.storage

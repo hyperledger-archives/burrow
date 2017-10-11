@@ -26,8 +26,8 @@ var (
 
 	// cost for storing a name for a block is
 	// CostPerBlock*CostPerByte*(len(data) + 32)
-	NameByteCostMultiplier  int64 = 1
-	NameBlockCostMultiplier int64 = 1
+	NameByteCostMultiplier  uint64 = 1
+	NameBlockCostMultiplier uint64 = 1
 
 	MaxNameLength = 64
 	MaxDataLength = 1 << 16
@@ -48,10 +48,10 @@ func validateNameRegEntryData(data string) bool {
 }
 
 // base cost is "effective" number of bytes
-func NameBaseCost(name, data string) int64 {
-	return int64(len(data) + 32)
+func NameBaseCost(name, data string) uint64 {
+	return uint64(len(data) + 32)
 }
 
-func NameCostPerBlock(baseCost int64) int64 {
+func NameCostPerBlock(baseCost uint64) uint64 {
 	return NameBlockCostMultiplier * NameByteCostMultiplier * baseCost
 }

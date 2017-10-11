@@ -57,23 +57,23 @@ func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
 }
 
 func execTxWithState(state *State, tx txs.Tx) error {
-	return execTxWithStateAndBlockchain(state, bcm.NewBlockchain(testGenesisDoc).Tip(), tx)
+	return execTxWithStateAndBlockchain(state, bcm.NewBlockchain(testGenesisDoc), tx)
 }
 
 func commitNewBlock(state *State, blockchain bcm.MutableBlockchain) {
-	tip := blockchain.Tip()
-	blockchain.CommitBlock(tip.LastBlockTime().Add(time.Second), sha3.Sha3(tip.LastBlockHash()), state.Hash())
+	blockchain.CommitBlock(blockchain.LastBlockTime().Add(time.Second), sha3.Sha3(blockchain.LastBlockHash()),
+		state.Hash())
 }
 
 func execTxWithStateNewBlock(state *State, blockchain bcm.MutableBlockchain, tx txs.Tx) error {
-	if err := execTxWithStateAndBlockchain(state, blockchain.Tip(), tx); err != nil {
+	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
 		return err
 	}
 	commitNewBlock(state, blockchain)
 	return nil
 }
 
-func makeGenesisState(numAccounts int, randBalance bool, minBalance int64, numValidators int, randBonded bool,
+func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
 	minBonded int64) (*State, []acm.PrivateAccount, []*tm_types.PrivValidatorFS) {
 	testGenesisDoc, privAccounts, privValidators := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
@@ -82,8 +82,9 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance int64, numVa
 	return s0, privAccounts, privValidators
 }
 
-func getAccount(state *State, address acm.Address) acm.MutableAccount {
-	return acm.AsMutableAccount(state.GetAccount(address))
+func getAccount(state acm.Getter, address acm.Address) acm.MutableAccount {
+	acc, _ := acm.GetMutableAccount(state, address)
+	return acc
 }
 
 func addressPtr(account acm.Account) *acm.Address {
@@ -112,7 +113,7 @@ func TestCopyState(t *testing.T) {
 	// Mutate the original; hash should change.
 	acc0Address := privAccounts[0].Address()
 	acc := getAccount(s0, acc0Address)
-	acc.AlterBalance(1)
+	acc.AddToBalance(1)
 
 	// The account balance shouldn't have changed yet.
 	if getAccount(s0, acc0Address).Balance() == acc.Balance() {
@@ -245,7 +246,7 @@ func TestTxSequence(t *testing.T) {
 
 	// Test a variety of sequence numbers for the tx.
 	// The tx should only pass when i == 1.
-	for i := int64(-1); i < 3; i++ {
+	for i := uint64(0); i < 3; i++ {
 		sequence := acc0.Sequence() + i
 		tx := txs.NewSendTx()
 		tx.AddInputWithNonce(acc0PubKey, 1, sequence)
@@ -291,11 +292,11 @@ func TestNameTxs(t *testing.T) {
 	names := []string{"", "\n", "123#$%", "\x00", string([]byte{20, 40, 60, 80}),
 		"baffledbythespectacleinallofthisyouseeehesaidwithouteyessurprised", "no spaces please"}
 	data := "something about all this just doesn't feel right."
-	fee := int64(1000)
+	fee := uint64(1000)
 	numDesiredBlocks := uint64(5)
 	for _, name := range names {
-		amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*
-			txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+		amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*
+			txs.NameBaseCost(name, data)
 		tx, _ := txs.NewNameTx(state, testPrivAccounts[0].PubKey(), name, data, amt, fee)
 		tx.Sign(testChainID, testPrivAccounts[0])
 
@@ -308,7 +309,7 @@ func TestNameTxs(t *testing.T) {
 	name := "hold_it_chum"
 	datas := []string{"cold&warm", "!@#$%^&*()", "<<<>>>>", "because why would you ever need a ~ or a & or even a % in a json file? make your case and we'll talk"}
 	for _, data := range datas {
-		amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*
+		amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*
 			txs.NameBaseCost(name, data)
 		tx, _ := txs.NewNameTx(state, testPrivAccounts[0].PubKey(), name, data, amt, fee)
 		tx.Sign(testChainID, testPrivAccounts[0])
@@ -318,8 +319,7 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *NameRegEntry, name,
-		data string, addr acm.Address, expires uint64) {
+	validateEntry := func(t *testing.T, entry *NameRegEntry, name, data string, addr acm.Address, expires uint64) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
@@ -341,7 +341,7 @@ func TestNameTxs(t *testing.T) {
 	// try a good one, check data, owner, expiry
 	name = "@looking_good/karaoke_bar.broadband"
 	data = "on this side of neptune there are 1234567890 people: first is OMNIVORE+-3. Or is it. Ok this is pretty restrictive. No exclamations :(. Faces tho :')"
-	amt := fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+	amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 	tx, _ := txs.NewNameTx(state, testPrivAccounts[0].PubKey(), name, data, amt, fee)
 	tx.Sign(testChainID, testPrivAccounts[0])
 	if err := execTxWithState(state, tx); err != nil {
@@ -401,7 +401,7 @@ func TestNameTxs(t *testing.T) {
 	data = "In the beginning there was no thing, not even the beginning. It hadn't been here, no there, nor for that matter anywhere, not especially because it had not to even exist, let alone to not. Nothing especially odd about that."
 	oldCredit := amt - fee
 	numDesiredBlocks = 10
-	amt = fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data) - oldCredit
+	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier* txs.NameBaseCost(name, data) - oldCredit
 	tx, _ = txs.NewNameTx(state, testPrivAccounts[1].PubKey(), name, data, amt, fee)
 	tx.Sign(testChainID, testPrivAccounts[1])
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
@@ -427,7 +427,7 @@ func TestNameTxs(t *testing.T) {
 	// test removal by key1 after expiry
 	name = "looking_good/karaoke_bar"
 	data = "some data"
-	amt = fee + int64(numDesiredBlocks)*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 	tx, _ = txs.NewNameTx(state, testPrivAccounts[0].PubKey(), name, data, amt, fee)
 	tx.Sign(testChainID, testPrivAccounts[0])
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
@@ -575,7 +575,7 @@ func TestContractSend(t *testing.T) {
 	state.UpdateAccount(newAcc1)
 
 	sendData = append(sendData, acc2.Address().Word256().Bytes()...)
-	sendAmt := int64(10)
+	sendAmt := uint64(10)
 	acc2Balance := acc2.Balance()
 
 	// call the contract, triggering the send
@@ -770,7 +770,7 @@ attack the network, they'll generate the longest chain and outpace attackers.   
 network itself requires minimal structure.   Messages are broadcast on a best effort
 basis,   and   nodes   can   leave  and   rejoin   the  network   at  will,  accepting   the   longest
 proof-of-work chain as proof of what happened while they were gone `
-		entryAmount := int64(10000)
+		entryAmount := uint64(10000)
 
 		stateNameTx := state.Copy()
 		tx := &txs.NameTx{
@@ -875,7 +875,7 @@ func TestSelfDestruct(t *testing.T) {
 	acc0PubKey := privAccounts[0].PubKey()
 	acc1 := getAccount(state, privAccounts[1].Address())
 	acc2 := getAccount(state, privAccounts[2].Address())
-	sendingAmount, refundedBalance, oldBalance := int64(1), acc1.Balance(), acc2.Balance()
+	sendingAmount, refundedBalance, oldBalance := uint64(1), acc1.Balance(), acc2.Balance()
 
 	newAcc1 := getAccount(state, acc1.Address())
 

@@ -5,7 +5,7 @@ import (
 )
 
 type Getter interface {
-	// Get an account by its address
+	// Get an account by its address return nil if it does not exist (which should not be an error)
 	GetAccount(address Address) (Account, error)
 }
 
@@ -25,7 +25,8 @@ type Updater interface {
 }
 
 type StorageGetter interface {
-	// Retrieve a 32-byte value stored at key for the account at address
+	// Retrieve a 32-byte value stored at key for the account at address, return Zero256 if key does not exist but
+	// error if address does not
 	GetStorage(address Address, key word.Word256) (value word.Word256, err error)
 }
 

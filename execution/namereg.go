@@ -86,6 +86,14 @@ func NewNameReg(state *State, blockchain blockchain.Blockchain) *namereg {
 	}
 }
 
+func (nr *namereg) GetNameRegEntry(name string) *NameRegEntry {
+	return nr.state.GetNameRegEntry(name)
+}
+
+func (nr *namereg) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) bool {
+	return nr.state.IterateNameRegEntries(consumer)
+}
+
 func (nr *namereg) Entry(key string) (*NameRegEntry, error) {
 	entry := nr.state.GetNameRegEntry(key)
 	if entry == nil {
@@ -231,8 +239,8 @@ func (this *NameRegDataFilter) Match(v interface{}) bool {
 // Ops: All
 type NameRegExpiresFilter struct {
 	op    string
-	value int64
-	match func(int64, int64) bool
+	value uint64
+	match func(uint64, uint64) bool
 }
 
 func (this *NameRegExpiresFilter) Configure(fd *event.FilterData) error {
@@ -255,5 +263,5 @@ func (this *NameRegExpiresFilter) Match(v interface{}) bool {
 	if !ok {
 		return false
 	}
-	return this.match(int64(nre.Expires), this.value)
+	return this.match(nre.Expires, this.value)
 }

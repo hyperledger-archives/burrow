@@ -78,7 +78,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.Result {
 			fmt.Sprintf("Could not execute transaction: %s, error: %v", tx, err))
 	}
 
-	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.Root().ChainID(), tx))
+	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.ChainID(), tx))
 	return abci_types.NewResultOK(receiptBytes, "Success")
 }
 
@@ -105,7 +105,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.Result {
 			fmt.Sprintf("Could not execute transaction: %s, error: %s", tx, err))
 	}
 
-	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.Root().ChainID(), tx))
+	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.ChainID(), tx))
 	return abci_types.NewResultOK(receiptBytes, "Success")
 }
 

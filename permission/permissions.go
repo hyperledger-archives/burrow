@@ -145,7 +145,15 @@ func PermStringToFlag(perm string) (pf types.PermFlag, err error) {
 	return
 }
 
+func GlobalPermissionsAccount(state acm.Getter) acm.Account {
+	acc, err := state.GetAccount(GlobalPermissionsAddress)
+	if err != nil {
+		panic("Could not get global permission account, but this must exist")
+	}
+	return acc
+}
+
 // Get global permissions from the account at GlobalPermissionsAddress
-func Global(state acm.Getter) types.AccountPermissions {
-	return state.GetAccount(GlobalPermissionsAddress).Permissions()
+func GlobalAccountPermissions(state acm.Getter) types.AccountPermissions {
+	return GlobalPermissionsAccount(state).Permissions()
 }

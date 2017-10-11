@@ -34,8 +34,7 @@ import (
 
 type Call struct {
 	Return  string `json:"return"`
-	GasUsed int64  `json:"gas_used"`
-	// TODO ...
+	GasUsed uint64 `json:"gas_used"`
 }
 
 type Transactor interface {
@@ -43,11 +42,11 @@ type Transactor interface {
 	CallCode(fromAddress acm.Address, code, data []byte) (*Call, error)
 	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
 	BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error
-	Transact(privKey []byte, address acm.Address, data []byte, gasLimit, fee int64) (*txs.Receipt, error)
-	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee int64) (*evm.EventDataCall, error)
-	Send(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error)
-	SendAndHold(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error)
-	TransactNameReg(privKey []byte, name, data string, amount, fee int64) (*txs.Receipt, error)
+	Transact(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*txs.Receipt, error)
+	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*evm.EventDataCall, error)
+	Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
+	SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
+	TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error)
 	SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (txs.Tx, error)
 }
 
@@ -81,7 +80,10 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 			"contract that calls the native function instead", toAddress)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee := acm.AsMutableAccount(trans.state.GetAccount(toAddress))
+	callee, err := acm.GetMutableAccount(trans.state, toAddress)
+	if err != nil {
+		return nil, err
+	}
 	if callee == nil {
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
@@ -162,7 +164,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *transactor) Transact(privKey []byte, address acm.Address, data []byte, gasLimit,
-	fee int64) (*txs.Receipt, error) {
+	fee uint64) (*txs.Receipt, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
@@ -170,10 +172,13 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 	defer trans.txMtx.Unlock()
 	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	// [Silas] This is puzzling, if the account doesn't exist the CallTx will fail, so what's the point in this?
-	acc := trans.state.GetAccount(pa.Address())
-	sequence := int64(1)
+	acc, err := trans.state.GetAccount(pa.Address())
+	if err != nil {
+		return nil, err
+	}
+	sequence := uint64(1)
 	if acc != nil {
-		sequence = acc.Sequence() + 1
+		sequence = acc.Sequence() + uint64(1)
 	}
 	// TODO: [Silas] we should consider revising this method and removing fee, or
 	// possibly adding an amount parameter. It is non-sensical to just be able to
@@ -209,7 +214,7 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 }
 
 func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit,
-	fee int64) (*evm.EventDataCall, error) {
+	fee uint64) (*evm.EventDataCall, error) {
 	rec, tErr := trans.Transact(privKey, address, data, gasLimit, fee)
 	if tErr != nil {
 		return nil, tErr
@@ -262,7 +267,7 @@ func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, da
 	return ret, rErr
 }
 
-func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n",
 			len(privKey))
@@ -274,10 +279,13 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount int6
 	defer trans.txMtx.Unlock()
 	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	cache := trans.state
-	acc := cache.GetAccount(pa.Address())
-	sequence := int64(1)
+	acc, err := cache.GetAccount(pa.Address())
+	if err != nil {
+		return nil, err
+	}
+	sequence := uint64(1)
 	if acc != nil {
-		sequence = acc.Sequence() + 1
+		sequence = acc.Sequence() + uint64(1)
 	}
 
 	tx := txs.NewSendTx()
@@ -303,8 +311,7 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount int6
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address,
-	amount int64) (*txs.Receipt, error) {
+func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	rec, tErr := trans.Send(privKey, toAddress, amount)
 	if tErr != nil {
 		return nil, tErr
@@ -340,8 +347,7 @@ func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address,
 	return nil, rErr
 }
 
-func (trans *transactor) TransactNameReg(privKey []byte, name, data string,
-	amount, fee int64) (*txs.Receipt, error) {
+func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
@@ -350,10 +356,13 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string,
 	defer trans.txMtx.Unlock()
 	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	cache := trans.state // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
-	acc := cache.GetAccount(pa.Address())
-	sequence := int64(1)
+	acc, err := cache.GetAccount(pa.Address())
+	if err != nil {
+		return nil, err
+	}
+	sequence := uint64(1)
 	if acc == nil {
-		sequence = acc.Sequence() + 1
+		sequence = acc.Sequence() + uint64(1)
 	}
 	tx := txs.NewNameTxWithNonce(pa.PubKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
@@ -373,7 +382,7 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 			return nil, fmt.Errorf("invalid (empty) privAccount @%v", i)
 		}
 	}
-	chainID := trans.blockchain.Root().ChainID()
+	chainID := trans.blockchain.ChainID()
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
@@ -416,7 +425,7 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 func vmParams(blockchain blockchain.Blockchain) evm.Params {
 	tip := blockchain.Tip()
 	return evm.Params{
-		BlockHeight: int64(tip.LastBlockHeight()),
+		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   word.LeftPadWord256(tip.LastBlockHash()),
 		BlockTime:   tip.LastBlockTime().Unix(),
 		GasLimit:    GasLimit,

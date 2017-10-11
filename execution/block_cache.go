@@ -42,7 +42,7 @@ type BlockCache struct {
 	db       dbm.DB
 	backend  *State
 	accounts map[acm.Address]accountInfo
-	storages map[Tuple256]storageInfo
+	storages map[acm.Address]map[Word256]storageInfo
 	names    map[string]nameInfo
 }
 
@@ -53,7 +53,7 @@ func NewBlockCache(backend *State) *BlockCache {
 		db:       backend.db,
 		backend:  backend,
 		accounts: make(map[acm.Address]accountInfo),
-		storages: make(map[Tuple256]storageInfo),
+		storages: make(map[acm.Address]map[Word256]storageInfo),
 		names:    make(map[string]nameInfo),
 	}
 }
@@ -65,84 +65,97 @@ func (cache *BlockCache) State() *State {
 //-------------------------------------
 // BlockCache.account
 
-func (cache *BlockCache) GetAccount(addr acm.Address) acm.Account {
+func (cache *BlockCache) GetAccount(addr acm.Address) (acm.Account, error) {
 	acc, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
-		return nil
+		return nil, nil
 	} else if acc != nil {
-		return acc
+		return acc, nil
 	} else {
-		acc = cache.backend.GetAccount(addr)
+		acc, err := cache.backend.GetAccount(addr)
+		if err != nil {
+			return nil, err
+		}
 		cache.accounts[addr] = accountInfo{acc, nil, false, false}
-		return acc
+		return acc, nil
 	}
 }
 
-func (cache *BlockCache) UpdateAccount(acc acm.Account) {
+func (cache *BlockCache) UpdateAccount(acc acm.Account) error {
 	addr := acc.Address()
 	_, storage, removed, _ := cache.accounts[addr].unpack()
 	if removed {
-		panic("UpdateAccount on a removed account")
+		return fmt.Errorf("UpdateAccount on a removed account %s", addr)
 	}
 	cache.accounts[addr] = accountInfo{acc, storage, false, true}
+	return nil
 }
 
-func (cache *BlockCache) RemoveAccount(addr acm.Address) {
+func (cache *BlockCache) RemoveAccount(addr acm.Address) error {
 	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
-		panic("RemoveAccount on a removed account")
+		return fmt.Errorf("RemoveAccount on a removed account %s", addr)
 	}
 	cache.accounts[addr] = accountInfo{nil, nil, true, false}
+	return nil
 }
 
-func (cache *BlockCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool) {
-
+func (cache *BlockCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (bool, error) {
+	for _, info := range cache.accounts {
+		if consumer(info.account) {
+			return true, nil
+		}
+	}
+	return cache.backend.IterateAccounts(consumer)
 }
 
 // BlockCache.account
 //-------------------------------------
 // BlockCache.storage
 
-func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (value Word256) {
+func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (Word256, error) {
 	// Check cache
-	info, ok := cache.storages[Tuple256{First: addr.Word256(), Second: key}]
+	info, ok := cache.lookupStorage(addr, key)
 	if ok {
-		return info.value
+		return info.value, nil
 	}
-
 	// Get or load storage
 	acc, storage, removed, dirty := cache.accounts[addr].unpack()
 	if removed {
-		panic("GetStorage() on removed account")
+		return Zero256, fmt.Errorf("GetStorage on a removed account %s", addr)
 	}
 	if acc != nil && storage == nil {
 		storage = makeStorage(cache.db, acc.StorageRoot())
 		cache.accounts[addr] = accountInfo{acc, storage, false, dirty}
 	} else if acc == nil {
-		return Zero256
+		return Zero256, nil
 	}
-
 	// Load and set cache
-	_, val_, _ := storage.Get(key.Bytes())
-	if val_ != nil {
-		value = LeftPadWord256(val_)
-	}
-	cache.storages[Tuple256{First: addr.Word256(), Second: key}] = storageInfo{value, false}
-	return value
+	_, val, _ := storage.Get(key.Bytes())
+	value := LeftPadWord256(val)
+	cache.setStorage(addr, key, storageInfo{value, false})
+	return value, nil
 }
 
 // NOTE: Set value to zero to removed from the trie.
-func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256) {
+func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256) error {
 	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
-		panic("SetStorage() on a removed account")
+		return fmt.Errorf("SetStorage on a removed account %s", addr)
 	}
-	cache.storages[Tuple256{First: addr.Word256(), Second: key}] = storageInfo{value, true}
+	cache.setStorage(addr, key, storageInfo{value, true})
+	return nil
 }
 
-func (cache *BlockCache) IterateStorage(address acm.Address,
-	consumer func(key, value Word256) (stop bool)) (stopped bool) {
+func (cache *BlockCache) IterateStorage(address acm.Address, consumer func(key, value Word256) (stop bool)) (bool, error) {
+	// Try cache first for early exit
+	for key, info := range cache.storages[address] {
+		if consumer(key, info.value) {
+			return true, nil
+		}
+	}
 
+	return cache.backend.IterateStorage(address, consumer)
 }
 
 // BlockCache.storage
@@ -184,8 +197,10 @@ func (cache *BlockCache) Sync() {
 	// Determine order for storage updates
 	// The address comes first so it'll be grouped.
 	storageKeys := make([]Tuple256, 0, len(cache.storages))
-	for keyTuple := range cache.storages {
-		storageKeys = append(storageKeys, keyTuple)
+	for address, keyInfoMap := range cache.storages {
+		for key, _ := range keyInfoMap {
+			storageKeys = append(storageKeys, Tuple256{First: address.Word256(), Second: key})
+		}
 	}
 	Tuple256Slice(storageKeys).Sort()
 
@@ -213,7 +228,7 @@ func (cache *BlockCache) Sync() {
 		if curAccRemoved {
 			continue
 		}
-		value, dirty := cache.storages[storageKey].unpack()
+		value, dirty := cache.storages[acm.AddressFromWord256(storageKey.First)][storageKey.Second].unpack()
 		if !dirty {
 			continue
 		}
@@ -281,7 +296,24 @@ func (cache *BlockCache) Sync() {
 			}
 		}
 	}
+}
 
+func (cache *BlockCache) lookupStorage(address acm.Address, key Word256) (storageInfo, bool) {
+	keyInfoMap, ok := cache.storages[address]
+	if !ok {
+		return storageInfo{}, false
+	}
+	info, ok := keyInfoMap[key]
+	return info, ok
+}
+
+func (cache *BlockCache) setStorage(address acm.Address, key Word256, info storageInfo) {
+	keyInfoMap, ok := cache.storages[address]
+	if !ok {
+		keyInfoMap = make(map[Word256]storageInfo)
+		cache.storages[address] = keyInfoMap
+	}
+	keyInfoMap[key] = info
 }
 
 //-----------------------------------------------------------------------------

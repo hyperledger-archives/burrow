@@ -8,9 +8,9 @@ type AccountPermissions struct {
 }
 
 // Returns true if the role is found
-func (aP AccountPermissions) HasRole(role string) bool {
+func (ap AccountPermissions) HasRole(role string) bool {
 	role = string(word.RightPadBytes([]byte(role), 32))
-	for _, r := range aP.Roles {
+	for _, r := range ap.Roles {
 		if r == role {
 			return true
 		}
@@ -19,27 +19,27 @@ func (aP AccountPermissions) HasRole(role string) bool {
 }
 
 // Returns true if the role is added, and false if it already exists
-func (aP *AccountPermissions) AddRole(role string) bool {
+func (ap *AccountPermissions) AddRole(role string) bool {
 	role = string(word.RightPadBytes([]byte(role), 32))
-	for _, r := range aP.Roles {
+	for _, r := range ap.Roles {
 		if r == role {
 			return false
 		}
 	}
-	aP.Roles = append(aP.Roles, role)
+	ap.Roles = append(ap.Roles, role)
 	return true
 }
 
 // Returns true if the role is removed, and false if it is not found
-func (aP *AccountPermissions) RmRole(role string) bool {
+func (ap *AccountPermissions) RmRole(role string) bool {
 	role = string(word.RightPadBytes([]byte(role), 32))
-	for i, r := range aP.Roles {
+	for i, r := range ap.Roles {
 		if r == role {
 			post := []string{}
-			if len(aP.Roles) > i+1 {
-				post = aP.Roles[i+1:]
+			if len(ap.Roles) > i+1 {
+				post = ap.Roles[i+1:]
 			}
-			aP.Roles = append(aP.Roles[:i], post...)
+			ap.Roles = append(ap.Roles[:i], post...)
 			return true
 		}
 	}
@@ -47,13 +47,13 @@ func (aP *AccountPermissions) RmRole(role string) bool {
 }
 
 // Clone clones the account permissions
-func (accountPermissions *AccountPermissions) Clone() AccountPermissions {
+func (ap *AccountPermissions) Clone() AccountPermissions {
 	// clone base permissions
-	basePermissionsClone := accountPermissions.Base
+	basePermissionsClone := ap.Base
 	// clone roles []string
-	rolesClone := make([]string, len(accountPermissions.Roles))
+	rolesClone := make([]string, len(ap.Roles))
 	// strings are immutable so copy suffices
-	copy(rolesClone, accountPermissions.Roles)
+	copy(rolesClone, ap.Roles)
 
 	return AccountPermissions{
 		Base:  basePermissionsClone,

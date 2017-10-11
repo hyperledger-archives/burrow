@@ -18,7 +18,8 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/execution/evm/opcodes"
+	"github.com/hyperledger/burrow/execution/evm/asm"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestBroadcastTx(t *testing.T) {
 	methods := NewBurrowMethods(NewTCodec(), pipe)
 	pubKey := acm.GeneratePrivateAccount().PubKey()
 	address := acm.Address{1}
-	code := opcodes.Bytecode(opcodes.PUSH1, 1, opcodes.PUSH1, 1, opcodes.ADD)
+	code := bc.Splice(asm.PUSH1, 1, asm.PUSH1, 1, asm.ADD)
 	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, &address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})

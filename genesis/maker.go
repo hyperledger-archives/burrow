@@ -15,20 +15,18 @@
 package genesis
 
 import (
-	"fmt"
-
-	"github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
-
 	"bytes"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/util"
 	"github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
@@ -40,7 +38,7 @@ const (
 )
 
 // NewGenesisAccount returns a new GenesisAccount
-func NewGenesisAccount(address account.Address, amount int64, name string,
+func NewGenesisAccount(address acm.Address, amount uint64, name string,
 	permissions *ptypes.AccountPermissions) *GenesisAccount {
 	return &GenesisAccount{
 		BasicAccount: BasicAccount{
@@ -48,12 +46,12 @@ func NewGenesisAccount(address account.Address, amount int64, name string,
 			Amount:  amount,
 		},
 		Name:        name,
-		Permissions: permissions,
+		Permissions: permissions.Clone(),
 	}
 }
 
-func NewGenesisValidator(amount int64, name string, unbondToAddress account.Address,
-	unbondAmount int64, keyType string, publicKeyBytes []byte) (*GenesisValidator, error) {
+func NewGenesisValidator(amount uint64, name string, unbondToAddress acm.Address,
+	unbondAmount uint64, keyType string, publicKeyBytes []byte) (*GenesisValidator, error) {
 	// convert the key bytes into a typed fixed size byte array
 	var typedPublicKeyBytes []byte
 	switch keyType {
@@ -105,9 +103,10 @@ func GenerateKnown(chainName, accountsPathCSV, validatorsPathCSV string) (string
 //------------------------------------------------------------------------------------
 // interface functions that are consumed by monax tooling
 
-func GenerateGenesisFileBytes(chainName string, genesisAccounts []*GenesisAccount,
-	genesisValidators []*GenesisValidator) ([]byte, error) {
-	genesisDoc := MakeGenesisDocFromAccounts(chainName, genesisAccounts, genesisValidators)
+func GenerateGenesisFileBytes(chainName string, salt []byte, genesisAccounts map[string]acm.Account,
+	genesisValidators map[string]acm.Validator) ([]byte, error) {
+
+	genesisDoc := MakeGenesisDocFromAccounts(chainName, salt, genesisAccounts, genesisValidators)
 
 	var err error
 	buf, buf2, n := new(bytes.Buffer), new(bytes.Buffer), new(int)
@@ -182,15 +181,16 @@ func newGenDoc(chainName string, genesisTime time.Time, nVal, nAcc int) *Genesis
 	return &genDoc
 }
 
-func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string, perm, setbit ptypes.PermFlag, index int) {
-	addr, _ := account.AddressFromBytes(pubKey.Address())
+func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uint64, name string,
+	perm, setbit ptypes.PermFlag, index int) {
+	addr, _ := acm.AddressFromBytes(pubKey.Address())
 	acc := GenesisAccount{
 		BasicAccount: BasicAccount{
 			Address: addr,
 			Amount:  amt,
 		},
 		Name: name,
-		Permissions: &ptypes.AccountPermissions{
+		Permissions: ptypes.AccountPermissions{
 			Base: ptypes.BasePermissions{
 				Perms:  perm,
 				SetBit: setbit,
@@ -204,9 +204,9 @@ func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64
 	}
 }
 
-func genDocAddValidator(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt int64, name string,
+func genDocAddValidator(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uint64, name string,
 	perm, setbit ptypes.PermFlag, index int) {
-	addr, _ := account.AddressFromBytes(pubKey.Address())
+	addr, _ := acm.AddressFromBytes(pubKey.Address())
 	genDoc.Validators[index] = GenesisValidator{
 		PubKey: pubKey.Wrap(),
 		Amount: amt,
@@ -248,7 +248,7 @@ func ifExistsElse(list []string, index int, defaultValue string) string {
 }
 
 // takes a csv in the following format: pubkey, starting balance, name, permissions, setbit
-func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, names []string, perms, setbits []ptypes.PermFlag, err error) {
+func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []uint64, names []string, perms, setbits []ptypes.PermFlag, err error) {
 
 	csvFile, err := os.Open(filePath)
 	if err != nil {
@@ -296,9 +296,9 @@ func parseCsv(filePath string) (pubKeys []crypto.PubKeyEd25519, amts []int64, na
 	}
 
 	// convert amts to ints
-	amts = make([]int64, len(amtS))
+	amts = make([]uint64, len(amtS))
 	for i, a := range amtS {
-		if amts[i], err = strconv.ParseInt(a, 10, 64); err != nil {
+		if amts[i], err = strconv.ParseUint(a, 10, 64); err != nil {
 			err = fmt.Errorf("Invalid amount: %v", err)
 			return
 		}

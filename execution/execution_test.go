@@ -24,14 +24,14 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/execution/evm"
-	. "github.com/hyperledger/burrow/execution/evm/opcodes"
+	. "github.com/hyperledger/burrow/execution/evm/asm"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 	. "github.com/hyperledger/burrow/word"
-
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/events"
 )
@@ -129,15 +129,15 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 				Address: user.Address(),
 				Amount:  1000000,
 			},
-			Permissions: &accountPermCopy,
+			Permissions: accountPermCopy,
 		})
 	}
 
 	return genesis.GenesisDoc{
 		GenesisTime: time.Now(),
 		ChainName:   testGenesisDoc.ChainName,
-		Params: &genesis.GenesisParams{
-			GlobalPermissions: &globalPerm,
+		Params: genesis.GenesisParams{
+			GlobalPermissions: globalPerm,
 		},
 		Accounts: genAccounts,
 		Validators: []genesis.GenesisValidator{
@@ -153,6 +153,11 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 		},
 	}
 }
+
+//func getAccount(state acm.Getter, address acm.Address) acm.MutableAccount {
+//	acc, _ := acm.GetMutableAccount(state, address)
+//	return acc
+//}
 
 func TestSendFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
@@ -206,7 +211,7 @@ func TestSendFails(t *testing.T) {
 	}
 
 	// simple send tx to unknown account without create_account perm should fail
-	acc := acm.AsMutableAccount(batchCommitter.blockCache.GetAccount(users[3].Address()))
+	acc := getAccount(batchCommitter.blockCache, users[3].Address())
 	acc.MutablePermissions().Base.Set(permission.Send, true)
 	batchCommitter.blockCache.UpdateAccount(acc)
 	tx = txs.NewSendTx()
@@ -508,7 +513,7 @@ func TestCreatePermission(t *testing.T) {
 	}
 	// ensure the contract is there
 	contractAddr := acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
-	contractAcc := acm.AsMutableAccount(batchCommitter.blockCache.GetAccount(contractAddr))
+	contractAcc := getAccount(batchCommitter.blockCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
@@ -533,7 +538,7 @@ func TestCreatePermission(t *testing.T) {
 	}
 	// ensure the contract is there
 	contractAddr = acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
-	contractAcc = acm.AsMutableAccount(batchCommitter.blockCache.GetAccount(contractAddr))
+	contractAcc = getAccount(batchCommitter.blockCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
@@ -595,7 +600,7 @@ func TestCreatePermission(t *testing.T) {
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
-	zeroAcc := batchCommitter.blockCache.GetAccount(acm.Address{})
+	zeroAcc := getAccount(batchCommitter.blockCache, acm.Address{})
 	if len(zeroAcc.Code()) != 0 {
 		t.Fatal("the zero account was given code from a CALL!")
 	}
@@ -785,7 +790,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	}
 
 	// Two inputs, both with send, both with create, should pass
-	acc := acm.AsMutableAccount(batchCommitter.blockCache.GetAccount(users[1].Address()))
+	acc := getAccount(batchCommitter.blockCache, users[1].Address())
 	acc.MutablePermissions().Base.Set(permission.CreateAccount, true)
 	batchCommitter.blockCache.UpdateAccount(acc)
 	tx = txs.NewSendTx()
@@ -821,7 +826,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	//----------------------------------------------------------
 	// CALL to unknown account
 
-	acc = acm.AsMutableAccount(batchCommitter.blockCache.GetAccount(users[0].Address()))
+	acc = getAccount(batchCommitter.blockCache, users[0].Address())
 	acc.MutablePermissions().Base.Set(permission.Call, true)
 	batchCommitter.blockCache.UpdateAccount(acc)
 
@@ -1022,13 +1027,13 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs := snativePermTestInputTx("setBase", users[3], permission.Bond, false)
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.SetBase, snativeArgs)
-	acc := acm.AsMutableAccount(batchCommitter.GetAccount(users[3].Address()))
+	acc := getAccount(batchCommitter.blockCache, users[3].Address())
 	if v, _ := acc.MutablePermissions().Base.Get(permission.Bond); v {
 		t.Fatal("expected permission to be set false")
 	}
 	snativeArgs = snativePermTestInputTx("setBase", users[3], permission.CreateContract, true)
 	testSNativeTxExpectPass(t, batchCommitter, permission.SetBase, snativeArgs)
-	acc = acm.AsMutableAccount(batchCommitter.GetAccount(users[3].Address()))
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
 	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); !v {
 		t.Fatal("expected permission to be set true")
 	}
@@ -1038,7 +1043,7 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs = snativePermTestInputTx("unsetBase", users[3], permission.CreateContract, false)
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.UnsetBase, snativeArgs)
-	acc = acm.AsMutableAccount(batchCommitter.GetAccount(users[3].Address()))
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
 	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); v {
 		t.Fatal("expected permission to be set false")
 	}
@@ -1048,7 +1053,7 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs = snativePermTestInputTx("setGlobal", users[3], permission.CreateContract, true)
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.SetGlobal, snativeArgs)
-	acc = acm.AsMutableAccount(batchCommitter.GetAccount(permission.GlobalPermissionsAddress))
+	acc = getAccount(batchCommitter.blockCache, permission.GlobalPermissionsAddress)
 	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); !v {
 		t.Fatal("expected permission to be set true")
 	}
@@ -1058,7 +1063,7 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs = snativeRoleTestInputTx("addRole", users[3], "chuck")
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.AddRole, snativeArgs)
-	acc = acm.AsMutableAccount(batchCommitter.GetAccount(users[3].Address()))
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
 	if v := acc.Permissions().HasRole("chuck"); !v {
 		t.Fatal("expected role to be added")
 	}
@@ -1068,7 +1073,7 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs = snativeRoleTestInputTx("removeRole", users[3], "chuck")
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.RmRole, snativeArgs)
-	acc = acm.AsMutableAccount(batchCommitter.GetAccount(users[3].Address()))
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
 	if v := acc.Permissions().HasRole("chuck"); v {
 		t.Fatal("expected role to be removed")
 	}
@@ -1171,7 +1176,7 @@ func testSNativeTxExpectPass(t *testing.T, batchCommitter *executor, perm ptypes
 
 func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *executor, perm ptypes.PermFlag, snativeArgs permission.PermArgs) {
 	if expectPass {
-		acc := acm.AsMutableAccount(batchCommitter.GetAccount(users[0].Address()))
+		acc := getAccount(batchCommitter.blockCache, users[0].Address())
 		acc.MutablePermissions().Base.Set(perm, true)
 		batchCommitter.blockCache.UpdateAccount(acc)
 	}
@@ -1280,7 +1285,7 @@ func callContractCode(contractAddr acm.Address) []byte {
 	retOff, retSize := byte(0x0), byte(0x20)
 
 	// this is the code we want to run (call a contract and return)
-	return Bytecode(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
+	return bc.Splice(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
 		CALLDATACOPY, PUSH1, retSize, PUSH1, retOff, CALLDATASIZE, PUSH1, inOff,
 		PUSH1, value, PUSH20, contractAddr,
 		// Zeno loves us - call with half of the available gas each time we CALL

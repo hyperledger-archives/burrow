@@ -112,8 +112,8 @@ type CallData struct {
 	Caller []byte `json:"caller"`
 	Callee []byte `json:"callee"`
 	Data   []byte `json:"data"`
-	Value  int64  `json:"value"`
-	Gas    int64  `json:"gas"`
+	Value  uint64  `json:"value"`
+	Gas    uint64  `json:"gas"`
 }
 
 // EventDataLog fires when a contract executes the LOG opcode
@@ -121,7 +121,7 @@ type EventDataLog struct {
 	Address Word256   `json:"address"`
 	Topics  []Word256 `json:"topics"`
 	Data    []byte    `json:"data"`
-	Height  int64     `json:"height"`
+	Height  uint64     `json:"height"`
 }
 
 // We fire the most recent round state that led to the event

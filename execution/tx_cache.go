@@ -15,6 +15,8 @@
 package execution
 
 import (
+	"fmt"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/word"
 )
@@ -38,41 +40,43 @@ func NewTxCache(backend acm.StateReader) *TxCache {
 //-------------------------------------
 // TxCache.account
 
-func (cache *TxCache) GetAccount(addr acm.Address) acm.Account {
+func (cache *TxCache) GetAccount(addr acm.Address) (acm.Account, error) {
 	acc, removed := cache.accounts[addr].unpack()
 	if removed {
-		return nil
+		return nil, nil
 	} else if acc == nil {
 		return cache.backend.GetAccount(addr)
 	}
-	return acc
+	return acc, nil
 }
 
-func (cache *TxCache) UpdateAccount(acc acm.Account) {
+func (cache *TxCache) UpdateAccount(acc acm.Account) error {
 	_, removed := cache.accounts[acc.Address()].unpack()
 	if removed {
-		panic("UpdateAccount on a removed account")
+		return fmt.Errorf("UpdateAccount on a removed account %s", acc.Address())
 	}
 	cache.accounts[acc.Address()] = vmAccountInfo{acc, false}
+	return nil
 }
 
-func (cache *TxCache) RemoveAccount(addr acm.Address) {
+func (cache *TxCache) RemoveAccount(addr acm.Address) error {
 	acc, removed := cache.accounts[addr].unpack()
 	if removed {
-		panic("RemoveAccount on a removed account")
+		fmt.Errorf("RemoveAccount on a removed account %s", addr)
 	}
 	cache.accounts[addr] = vmAccountInfo{acc, true}
+	return nil
 }
 
 // TxCache.account
 //-------------------------------------
 // TxCache.storage
 
-func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) word.Word256 {
+func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) (word.Word256, error) {
 	// Check cache
 	value, ok := cache.storages[word.Tuple256{First: addr.Word256(), Second: key}]
 	if ok {
-		return value
+		return value, nil
 	}
 
 	// Load from backend
@@ -80,12 +84,13 @@ func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) word.Word25
 }
 
 // NOTE: Set value to zero to removed from the trie.
-func (cache *TxCache) SetStorage(addr acm.Address, key word.Word256, value word.Word256) {
+func (cache *TxCache) SetStorage(addr acm.Address, key word.Word256, value word.Word256) error {
 	_, removed := cache.accounts[addr].unpack()
 	if removed {
-		panic("SetStorage() on a removed account")
+		fmt.Errorf("SetStorage on a removed account %s", addr)
 	}
-	cache.storages[word.Tuple256{addr.Word256(), key}] = value
+	cache.storages[word.Tuple256{First: addr.Word256(), Second: key}] = value
+	return nil
 }
 
 // TxCache.storage

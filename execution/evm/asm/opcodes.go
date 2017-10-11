@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opcodes
+package asm
 
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/word"
 	"gopkg.in/fatih/set.v0"
 )
 
@@ -342,6 +340,11 @@ var opCodeToString = map[OpCode]string{
 	SELFDESTRUCT: "SELFDESTRUCT",
 }
 
+func OpCodeName(op OpCode) (name string, isOpcode bool) {
+	name, isOpcode = opCodeToString[op]
+	return name, isOpcode
+}
+
 func (o OpCode) String() string {
 	str := opCodeToString[o]
 	if len(str) == 0 {
@@ -368,58 +371,4 @@ func AnalyzeJumpDests(code []byte) (dests *set.Set) {
 		}
 	}
 	return
-}
-
-// Convenience function to allow us to mix bytes, ints, and OpCodes that
-// represent bytes in an EVM assembly code to make assembly more readable.
-// Also allows us to splice together assembly
-// fragments because any []byte arguments are flattened in the result.
-func Bytecode(bytelikes ...interface{}) []byte {
-	bytes := make([]byte, len(bytelikes))
-	for i, bytelike := range bytelikes {
-		switch b := bytelike.(type) {
-		case byte:
-			bytes[i] = b
-		case OpCode:
-			bytes[i] = byte(b)
-		case int:
-			bytes[i] = byte(b)
-			if int(bytes[i]) != b {
-				panic(fmt.Sprintf("The int %v does not fit inside a byte", b))
-			}
-		case int64:
-			bytes[i] = byte(b)
-			if int64(bytes[i]) != b {
-				panic(fmt.Sprintf("The int64 %v does not fit inside a byte", b))
-			}
-		case word.Word256:
-			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
-		case word.Word160:
-			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
-		case account.Address:
-			return Concat(bytes[:i], b[:], Bytecode(bytelikes[i+1:]...))
-		case []byte:
-			// splice
-			return Concat(bytes[:i], b, Bytecode(bytelikes[i+1:]...))
-		default:
-			panic("Only byte-like codes (and []byte sequences) can be used to form bytecode")
-		}
-	}
-	return bytes
-}
-
-func Concat(bss ...[]byte) []byte {
-	offset := 0
-	for _, bs := range bss {
-		offset += len(bs)
-	}
-	bytes := make([]byte, offset)
-	offset = 0
-	for _, bs := range bss {
-		for i, b := range bs {
-			bytes[offset+i] = b
-		}
-		offset += len(bs)
-	}
-	return bytes
 }

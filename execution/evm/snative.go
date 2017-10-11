@@ -225,7 +225,7 @@ func NewSNativeContract(comment, name string,
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
 func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
-	args []byte, gas *int64) (output []byte, err error) {
+	args []byte, gas *uint64) (output []byte, err error) {
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 			"identifier but arguments are only %s bytes long", len(args))
@@ -329,9 +329,12 @@ func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
-func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
-	acc := state.GetAccount(acm.AddressFromWord256(addr))
+	acc, err := state.GetAccount(acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -344,9 +347,12 @@ func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, permNum, permVal := returnThreeArgs(args)
-	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -363,9 +369,12 @@ func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64)
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, permNum := returnTwoArgs(args)
-	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -381,9 +390,12 @@ func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *int6
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	permNum, permVal := returnTwoArgs(args)
-	acc := acm.AsMutableAccount(state.GetAccount(permission.GlobalPermissionsAddress))
+	acc, err := acm.GetMutableAccount(state, permission.GlobalPermissionsAddress)
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		panic("cant find the global permissions account")
 	}
@@ -400,9 +412,12 @@ func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *int6
 	return permBytes(acc.Permissions().Base.ResultantPerms()), nil
 }
 
-func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	acc := state.GetAccount(acm.AddressFromWord256(addr))
+	acc, err := state.GetAccount(acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -412,9 +427,12 @@ func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -425,9 +443,12 @@ func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *int64) (output []byte, err error) {
+func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
 	addr, role := returnTwoArgs(args)
-	acc := acm.AsMutableAccount(state.GetAccount(acm.AddressFromWord256(addr)))
+	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+	if err != nil {
+		return nil, err
+	}
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %X", addr)
 	}
@@ -457,11 +478,7 @@ func ValidPermN(n ptypes.PermFlag) bool {
 
 // Get the global BasePermissions
 func globalPerms(state acm.StateWriter) ptypes.BasePermissions {
-	acc := state.GetAccount(permission.GlobalPermissionsAddress)
-	if acc == nil {
-		panic("cant find the global permissions account")
-	}
-	return acc.Permissions().Base
+	return permission.GlobalAccountPermissions(state).Base
 }
 
 // Compute the effective permissions from an acm.Account's BasePermissions by
