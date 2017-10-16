@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"testing"
 
+	"encoding/json"
+
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
@@ -190,6 +192,29 @@ func TestPermissionsTxSignable(t *testing.T) {
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
+}
+
+func TestTxWrapper_MarshalJSON(t *testing.T) {
+	toAddress := makeAddress("contract1")
+	callTx := &CallTx{
+		Input: &TxInput{
+			Address:  makeAddress("input1"),
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		Address:  &toAddress,
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
+	}
+	txw := &Wrapper{Tx: callTx}
+	bs, err := json.Marshal(txw)
+	assert.NoError(t, err)
+	txwOut := new(Wrapper)
+	json.Unmarshal(bs, txwOut)
+	bsOut, err := json.Marshal(txwOut)
+	assert.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
 }
 
 /*

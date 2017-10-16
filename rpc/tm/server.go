@@ -19,13 +19,13 @@ import (
 	"net/http"
 
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/rpc/core"
+	"github.com/hyperledger/burrow/rpc"
 	"github.com/tendermint/tendermint/rpc/lib/server"
 	"github.com/tendermint/tmlibs/events"
 	"github.com/tendermint/tmlibs/log"
 )
 
-func StartServer(service core.Service, pattern, listenAddress string,
+func StartServer(service rpc.Service, pattern, listenAddress string,
 	evsw events.EventSwitch, logger log.Logger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "rpc/tm")

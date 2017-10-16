@@ -18,12 +18,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
-	"sync"
-
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +30,7 @@ var mockInterval = 20 * time.Millisecond
 type mockSub struct {
 	subId   string
 	eventId string
-	f       func(evm.EventData)
+	f       func(AnyEventData)
 	sdChan  chan struct{}
 }
 
@@ -41,10 +39,10 @@ type mockEventData struct {
 	eventId string
 }
 
-func (eventData mockEventData) AssertIsEventData() {}
+func (eventData mockEventData) AssertIsEVMEventData() {}
 
 // A mock event
-func newMockSub(subId, eventId string, f func(evm.EventData)) mockSub {
+func newMockSub(subId, eventId string, f func(AnyEventData)) mockSub {
 	return mockSub{subId, eventId, f, make(chan struct{})}
 }
 
@@ -57,35 +55,35 @@ func newMockEventEmitter() *mockEventEmitter {
 	return &mockEventEmitter{make(map[string]mockSub), &sync.Mutex{}}
 }
 
-func (this *mockEventEmitter) Subscribe(subId, eventId string, callback func(evm.EventData)) error {
-	if _, ok := this.subs[subId]; ok {
+func (mee *mockEventEmitter) Subscribe(subId, eventId string, callback func(AnyEventData)) error {
+	if _, ok := mee.subs[subId]; ok {
 		return nil
 	}
 	me := newMockSub(subId, eventId, callback)
-	this.mutex.Lock()
-	this.subs[subId] = me
-	this.mutex.Unlock()
+	mee.mutex.Lock()
+	mee.subs[subId] = me
+	mee.mutex.Unlock()
 
 	go func() {
 		for {
 			select {
 			case <-me.sdChan:
-				this.mutex.Lock()
-				delete(this.subs, subId)
-				this.mutex.Unlock()
+				mee.mutex.Lock()
+				delete(mee.subs, subId)
+				mee.mutex.Unlock()
 				return
 			case <-time.After(mockInterval):
-				me.f(mockEventData{subId, eventId})
+				me.f(AnyEventData{EVMEventData: mockEventData{subId, eventId}})
 			}
 		}
 	}()
 	return nil
 }
 
-func (this *mockEventEmitter) Unsubscribe(subId string) error {
-	this.mutex.Lock()
-	sub, ok := this.subs[subId]
-	this.mutex.Unlock()
+func (mee *mockEventEmitter) Unsubscribe(subId string) error {
+	mee.mutex.Lock()
+	sub, ok := mee.subs[subId]
+	mee.mutex.Unlock()
 	if !ok {
 		return nil
 	}

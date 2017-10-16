@@ -21,13 +21,13 @@ import (
 	"math/big"
 
 	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	ptypes "github.com/hyperledger/burrow/permission/types"
-	. "github.com/hyperledger/burrow/word"
-
+	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/tendermint/tmlibs/events"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	go_events "github.com/tendermint/tmlibs/events"
 )
 
 var (
@@ -84,15 +84,15 @@ type VM struct {
 	state          acm.StateWriter
 	memoryProvider func() Memory
 	params         Params
-	origin         Word256
+	origin         acm.Address
 	txid           []byte
 
 	callDepth int
 
-	evc events.Fireable
+	evc go_events.Fireable
 }
 
-func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin Word256, txid []byte) *VM {
+func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte) *VM {
 	return &VM{
 		state:          state,
 		memoryProvider: memoryProvider,
@@ -103,8 +103,8 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 	}
 }
 
-// satisfies events.Eventable
-func (vm *VM) SetFireable(evc events.Fireable) {
+// satisfies go_events.Eventable
+func (vm *VM) SetFireable(evc go_events.Fireable) {
 	vm.evc = evc
 }
 
@@ -129,10 +129,10 @@ func HasPermission(state acm.StateWriter, acc acm.Account, perm ptypes.PermFlag)
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, calleeAddress acm.Address, input []byte, value uint64, gas *uint64) {
 	// fire the post call event (including exception if applicable)
 	if vm.evc != nil {
-		stringAccCall := EventStringAccCall(calleeAddress)
-		vm.evc.FireEvent(stringAccCall, EventDataCall{
-			&CallData{callerAddress.Bytes(), calleeAddress.Bytes(), input, value, *gas},
-			vm.origin.Postfix(20),
+		stringAccCall := events.EventStringAccCall(calleeAddress)
+		vm.evc.FireEvent(stringAccCall, events.EventDataCall{
+			&events.CallData{Caller: callerAddress, Callee: calleeAddress, Data: input, Value: value, Gas: *gas},
+			vm.origin,
 			vm.txid,
 			*output,
 			*exception,
@@ -527,7 +527,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			dbg.Printf(" => %v (%X)\n", balance, addr)
 
 		case ORIGIN: // 0x32
-			stack.Push(vm.origin)
+			stack.Push(vm.origin.Word256())
 			dbg.Printf(" => %X\n", vm.origin)
 
 		case CALLER: // 0x33
@@ -785,13 +785,13 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			if vm.evc != nil {
-				eventID := EventStringLogEvent(callee.Address())
+				eventID := events.EventStringLogEvent(callee.Address())
 				fmt.Printf("eventID: %s\n", eventID)
-				log := EventDataLog{
-					callee.Address().Word256(),
-					topics,
-					data,
-					vm.params.BlockHeight,
+				log := events.EventDataLog{
+					Address: callee.Address(),
+					Topics:  topics,
+					Data:    data,
+					Height:  vm.params.BlockHeight,
 				}
 				vm.evc.FireEvent(eventID, log)
 			}
@@ -873,7 +873,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				if err != nil {
 					exception = err.Error()
 				}
-				// NOTE: these fire call events and not particular events for eg name reg or permissions
+				// NOTE: these fire call go_events and not particular go_events for eg name reg or permissions
 				vm.fireCallEvent(&exception, &ret, callee.Address(), acm.AddressFromWord256(addr), args, value, &gasLimit)
 			} else {
 				// EVM contract

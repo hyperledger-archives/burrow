@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package word
+package binary
 
 func Fingerprint(slice []byte) []byte {
 	fingerprint := make([]byte, 6)

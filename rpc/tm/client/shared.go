@@ -16,241 +16,139 @@ package client
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"hash/fnv"
-	"path"
 	"strconv"
 	"testing"
 
-	"time"
+	"os"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/evm"
-	genesis "github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	ptypes "github.com/hyperledger/burrow/permission"
-	rpc_types "github.com/hyperledger/burrow/rpc/tm/types"
-	"github.com/hyperledger/burrow/server"
-	"github.com/hyperledger/burrow/test/fixtures"
+	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/word"
-	"github.com/spf13/viper"
+	tm_config "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/rpc/lib/client"
-	"github.com/tendermint/tendermint/types"
 )
 
-const chainID = "RPC_Test_Chain"
+const (
+	chainName         = "RPC_Test_Chain"
+	rpcAddr           = "0.0.0.0:46657"
+	websocketAddr     = rpcAddr
+	websocketEndpoint = "/websocket"
+	testDir           = "./scratch"
+)
 
 // global variables for use across all tests
 var (
-	serverConfig      *server.ServerConfig
-	rootWorkDir       string
-	mempoolCount      = 0
-	websocketAddr     string
-	genesisDoc        *genesis.GenesisDoc
-	websocketEndpoint string
-	users             = makeUsers(5) // make keys
-	jsonRpcClient     RPCClient
-	httpClient        RPCClient
-	clients           map[string]RPCClient
-	testCore          *core.Core
+	privateAccounts = makePrivateAccounts(5) // make keys
+	jsonRpcClient   = rpcclient.NewJSONRPCClient(rpcAddr)
+	httpClient      = rpcclient.NewURIClient(rpcAddr)
+	clients         = map[string]RPCClient{
+		"JSONRPC": jsonRpcClient,
+		"HTTP":    httpClient,
+	}
+	// Initialised in TestWrapper
+	genesisDoc = new(genesis.GenesisDoc)
+	kernel     = new(core.Kernel)
 )
 
 // We use this to wrap tests
 func TestWrapper(runner func() int) int {
 	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/shared_test.go)...")
-	ffs := fixtures.NewFileFixtures("burrow")
-
-	defer func() {
-		// Tendermint likes to try and save to priv_validator.json after its been
-		// asked to shutdown so we pause to try and avoid collision
-		time.Sleep(time.Second)
-		ffs.RemoveAll()
-	}()
 
 	evm.SetDebug(true)
-	err := initGlobalVariables(ffs)
 
+	err := initGlobalVariables()
 	if err != nil {
 		panic(err)
 	}
 
-	tmServer, err := testCore.NewGatewayTendermint(serverConfig)
+	err = kernel.Boot()
+	if err != nil {
+		panic(err)
+	}
+
 	defer func() {
-		// Shutdown -- make sure we don't hit a race on ffs.RemoveAll
-		tmServer.Shutdown()
-		testCore.Stop()
+		kernel.Shutdown()
 	}()
-
-	if err != nil {
-		panic(err)
-	}
 
 	return runner()
 }
 
-// initialize config and create new node
-func initGlobalVariables(ffs *fixtures.FileFixtures) error {
-	configBytes, err := config.GetConfigurationFileBytes(chainID,
-		"test_single_node",
-		"",
-		"burrow",
-		true,
-		"46657",
-		"burrow serve")
-	if err != nil {
-		return err
-	}
-
-	genesisBytes, err := genesisFileBytesFromUsers(chainID, users)
-	if err != nil {
-		return err
-	}
-
-	testConfigFile := ffs.AddFile("config.toml", string(configBytes))
-	rootWorkDir = ffs.AddDir("rootWorkDir")
-	if ffs.Error != nil {
-		return ffs.Error
-	}
-
-	genesisDoc, err = genesis.GenesisDocFromJSON(genesisBytes)
-	if err != nil {
-		return err
-	}
-
-	testConfig := viper.New()
-	testConfig.SetConfigFile(testConfigFile)
-	err = testConfig.ReadInConfig()
-
-	if err != nil {
-		return err
-	}
-
-	sconf, err := core.LoadServerConfig(chainID, testConfig)
-	if err != nil {
-		return err
-	}
-	serverConfig = sconf
-
-	rpcAddr := serverConfig.Tendermint.RpcLocalAddress
-	websocketAddr = rpcAddr
-	websocketEndpoint = "/websocket"
-
-	// Set up priv_validator.json before we start tendermint (otherwise it will
-	// create its own one.
-	saveNewPriv()
+func initGlobalVariables() error {
+	var err error
+	os.RemoveAll(testDir)
+	os.MkdirAll(testDir, 0777)
+	os.Chdir(testDir)
+	tmConf := tm_config.DefaultConfig()
 	logger, _ := lifecycle.NewStdErrLogger()
-	// To spill tendermint logs on the floor:
-	// lifecycle.CaptureTendermintLog15Output(loggers.NewNoopInfoTraceLogger())
-	lifecycle.CaptureStdlibLogOutput(logger)
+	privValidator := tendermint.NewPrivValidatorMemory(privateAccounts[0])
+	genesisDoc = testGenesisDoc()
+	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, logger)
+	return err
+}
 
-	testCore, err = core.NewCore("testCore", logger)
-	if err != nil {
-		return err
+func testGenesisDoc() *genesis.GenesisDoc {
+	accounts := make(map[string]acm.Account, len(privateAccounts))
+	for i, pa := range privateAccounts {
+		account := acm.FromAddressable(pa)
+		account.AddToBalance(1 << 16)
+		account.SetPermissions(permission.AllAccountPermissions.Clone())
+		accounts[fmt.Sprintf("user_%v", i)] = account
 	}
-
-	jsonRpcClient = rpcclient.NewJSONRPCClient(rpcAddr)
-	httpClient = rpcclient.NewURIClient(rpcAddr)
-
-	clients = map[string]RPCClient{
-		"JSONRPC": jsonRpcClient,
-		"HTTP":    httpClient,
-	}
-	return nil
+	return genesis.MakeGenesisDocFromAccounts(chainName, nil, accounts,
+		map[string]acm.Validator{
+			"genesis_validator": acm.AsValidator(accounts["user_0"]),
+		})
 }
 
 // Deterministic account generation helper. Pass number of accounts to make
-func makeUsers(n int) []acm.PrivateAccount {
+func makePrivateAccounts(n int) []acm.PrivateAccount {
 	accounts := make([]acm.PrivateAccount, n)
 	for i := 0; i < n; i++ {
-		secret := "mysecret" + strconv.Itoa(i)
-		user := acm.GeneratePrivateAccountFromSecret(secret)
-		accounts = append(accounts, user)
+		accounts[i] = acm.GeneratePrivateAccountFromSecret("mysecret" + strconv.Itoa(i))
 	}
 	return accounts
-}
-
-func genesisFileBytesFromUsers(chainName string, accounts []*acm.ConcretePrivateAccount) ([]byte, error) {
-	if len(accounts) < 1 {
-		return nil, errors.New("Please pass in at least 1 account to be the validator")
-	}
-	genesisValidators := make([]*genesis.GenesisValidator, 1)
-	genesisAccounts := make([]*genesis.GenesisAccount, len(accounts))
-	genesisValidators[0] = genesisValidatorFromPrivAccount(accounts[0])
-
-	for i, acc := range accounts {
-		genesisAccounts[i] = genesisAccountFromPrivAccount(acc)
-	}
-
-	return genesis.GenerateGenesisFileBytes(chainName, genesisAccounts, genesisValidators)
-}
-
-func genesisValidatorFromPrivAccount(account *acm.ConcretePrivateAccount) *genesis.GenesisValidator {
-	return &genesis.GenesisValidator{
-		Amount: 1000000,
-		Name:   fmt.Sprintf("full-account_%s", account.Address),
-		PubKey: account.PubKey,
-		UnbondTo: []genesis.BasicAccount{
-			{
-				Address: account.Address,
-				Amount:  100,
-			},
-		},
-	}
-}
-
-func genesisAccountFromPrivAccount(account *acm.ConcretePrivateAccount) *genesis.GenesisAccount {
-	return genesis.NewGenesisAccount(account.Address, 100000,
-		fmt.Sprintf("account_%s", account.Address), &ptypes.DefaultAccountPermissions)
-}
-
-func saveNewPriv() {
-	// Save new priv_validator file.
-	priv := &types.PrivValidatorFS{
-		Address: users[0].Address().Bytes(),
-		PubKey:  users[0].PubKey,
-		PrivKey: users[0].PrivKey,
-	}
-	priv.SetFile(path.Join(rootWorkDir, "priv_validator.json"))
-	priv.Save()
 }
 
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address,
-	amt int64) *txs.SendTx {
-	nonce := getNonce(t, client, users[0].Address())
+func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+	nonce := getNonce(t, client, privateAccounts[0].Address())
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(users[0].PubKey, amt, nonce+1)
+	tx.AddInputWithNonce(privateAccounts[0].PubKey(), amt, nonce+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client RPCClient, addr acm.Address,
-	amt int64) *txs.SendTx {
+func makeDefaultSendTxSigned(t *testing.T, client RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
-	tx.SignInput(chainID, 0, users[0])
+	tx.SignInput(genesisDoc.ChainID(), 0, privateAccounts[0])
 	return tx
 }
 
-func makeDefaultCallTx(t *testing.T, client RPCClient, addr acm.Address, code []byte, amt, gasLim,
-	fee int64) *txs.CallTx {
-	nonce := getNonce(t, client, users[0].Address())
-	tx := txs.NewCallTxWithNonce(users[0].PubKey, addr, code, amt, gasLim, fee,
+func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code []byte, amt, gasLim,
+	fee uint64) *txs.CallTx {
+	nonce := getNonce(t, client, privateAccounts[0].Address())
+	tx := txs.NewCallTxWithNonce(privateAccounts[0].PubKey(), addr, code, amt, gasLim, fee,
 		nonce+1)
-	tx.Sign(chainID, users[0])
+	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
 }
 
-func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt,
-	fee int64) *txs.NameTx {
-	nonce := getNonce(t, client, users[0].Address())
-	tx := txs.NewNameTxWithNonce(users[0].PubKey, name, value, amt, fee, nonce+1)
-	tx.Sign(chainID, users[0])
+func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
+	nonce := getNonce(t, client, privateAccounts[0].Address())
+	tx := txs.NewNameTxWithNonce(privateAccounts[0].PubKey(), name, value, amt, fee, nonce+1)
+	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
 }
 
@@ -258,15 +156,15 @@ func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt,
 // rpc call wrappers (fail on err)
 
 // get an account's nonce
-func getNonce(t *testing.T, client RPCClient, addr acm.Address) int64 {
-	ac, err := GetAccount(client, addr)
+func getNonce(t *testing.T, client RPCClient, addr acm.Address) uint64 {
+	acc, err := GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ac == nil {
+	if acc == nil {
 		return 0
 	}
-	return ac.Sequence
+	return acc.Sequence()
 }
 
 // get the account
@@ -294,12 +192,11 @@ func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) *txs.Receipt {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mempoolCount += 1
 	return rec
 }
 
 // dump all storage for an account. currently unused
-func dumpStorage(t *testing.T, addr acm.Address) *rpc_types.ResultDumpStorage {
+func dumpStorage(t *testing.T, addr acm.Address) *rpc.ResultDumpStorage {
 	client := clients["HTTP"]
 	resp, err := DumpStorage(client, addr)
 	if err != nil {
@@ -324,7 +221,7 @@ func callCode(t *testing.T, client RPCClient, fromAddress, code, data,
 	}
 	ret := resp.Return
 	// NOTE: we don't flip memory when it comes out of RETURN (?!)
-	if bytes.Compare(ret, word.LeftPadWord256(expected).Bytes()) != 0 {
+	if bytes.Compare(ret, binary.LeftPadWord256(expected).Bytes()) != 0 {
 		t.Fatalf("Conflicting return value. Got %x, expected %x", ret, expected)
 	}
 }
@@ -337,7 +234,7 @@ func callContract(t *testing.T, client RPCClient, fromAddress, toAddress acm.Add
 	}
 	ret := resp.Return
 	// NOTE: we don't flip memory when it comes out of RETURN (?!)
-	if bytes.Compare(ret, word.LeftPadWord256(expected).Bytes()) != 0 {
+	if bytes.Compare(ret, binary.LeftPadWord256(expected).Bytes()) != 0 {
 		t.Fatalf("Conflicting return value. Got %x, expected %x", ret, expected)
 	}
 }
@@ -352,15 +249,10 @@ func getNameRegEntry(t *testing.T, client RPCClient, name string) *execution.Nam
 }
 
 // Returns a positive int64 hash of text (consumers want int64 instead of uint64)
-func hashString(text string) int64 {
+func hashString(text string) uint64 {
 	hasher := fnv.New64()
 	hasher.Write([]byte(text))
-	value := int64(hasher.Sum64())
-	// Flip the sign if we wrapped
-	if value < 0 {
-		return -value
-	}
-	return value
+	return uint64(hasher.Sum64())
 }
 
 //--------------------------------------------------------------------------------
@@ -376,14 +268,14 @@ func simpleContract() ([]byte, []byte, []byte) {
 	// push code to the stack
 	//code := append([]byte{byte(0x60 + lenCode - 1)}, RightPadWord256(contractCode).Bytes()...)
 	code := append([]byte{0x7f},
-		word.RightPadWord256(contractCode).Bytes()...)
+		binary.RightPadWord256(contractCode).Bytes()...)
 	// store it in memory
 	code = append(code, []byte{0x60, 0x0, 0x52}...)
 	// return whats in memory
 	//code = append(code, []byte{0x60, byte(32 - lenCode), 0x60, byte(lenCode), 0xf3}...)
 	code = append(code, []byte{0x60, byte(lenCode), 0x60, 0x0, 0xf3}...)
 	// return init code, contract code, expected return
-	return code, contractCode, word.LeftPadBytes([]byte{0xb}, 32)
+	return code, contractCode, binary.LeftPadBytes([]byte{0xb}, 32)
 }
 
 // simple call contract calls another contract
@@ -395,7 +287,7 @@ func simpleCallContract(addr acm.Address) ([]byte, []byte, []byte) {
 	// this is the code we want to run (call a contract and return)
 	contractCode := []byte{0x60, retSize, 0x60, retOff, 0x60, inSize, 0x60, inOff,
 		0x60, value, 0x73}
-	contractCode = append(contractCode, addr...)
+	contractCode = append(contractCode, addr.Bytes()...)
 	contractCode = append(contractCode, []byte{0x61, gas1, gas2, 0xf1, 0x60, 0x20,
 		0x60, 0x0, 0xf3}...)
 
@@ -411,5 +303,5 @@ func simpleCallContract(addr acm.Address) ([]byte, []byte, []byte) {
 	code = append(code, []byte{0x60, byte(lenCode), 0x60, 0x0, 0xf3}...)
 	code = append(code, contractCode...)
 	// return init code, contract code, expected return
-	return code, contractCode, word.LeftPadBytes([]byte{0xb}, 32)
+	return code, contractCode, binary.LeftPadBytes([]byte{0xb}, 32)
 }

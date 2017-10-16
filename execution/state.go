@@ -22,12 +22,12 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/util"
-	"github.com/hyperledger/burrow/word"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -414,18 +414,18 @@ func (s *State) LoadStorage(hash []byte) merkle.Tree {
 	return storage
 }
 
-func (s *State) GetStorage(address acm.Address, key word.Word256) (word.Word256, error) {
+func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	storageTree, err := s.accountStorage(address)
 	if err != nil {
-		return word.Zero256, err
+		return binary.Zero256, err
 	}
 	_, value, _ := storageTree.Get(key.Bytes())
-	return word.LeftPadWord256(value), nil
+	return binary.LeftPadWord256(value), nil
 }
 
-func (s *State) SetStorage(address acm.Address, key, value word.Word256) error {
+func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	storageTree, err := s.accountStorage(address)
@@ -439,7 +439,7 @@ func (s *State) SetStorage(address acm.Address, key, value word.Word256) error {
 }
 
 func (s *State) IterateStorage(address acm.Address,
-	consumer func(key, value word.Word256) (stop bool)) (stopped bool, err error) {
+	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 
 	var storageTree merkle.Tree
 	storageTree, err = s.accountStorage(address)
@@ -448,17 +448,17 @@ func (s *State) IterateStorage(address acm.Address,
 	}
 	stopped = storageTree.Iterate(func(key []byte, value []byte) (stop bool) {
 		// Note: no left padding should occur unless there is a bug and non-words have been writte to this storage tree
-		if len(key) != word.Word256Length {
+		if len(key) != binary.Word256Length {
 			err = fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
-				key, address, word.Word256Length)
+				key, address, binary.Word256Length)
 			return true
 		}
-		if len(value) != word.Word256Length {
+		if len(value) != binary.Word256Length {
 			err = fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
-				key, address, word.Word256Length)
+				key, address, binary.Word256Length)
 			return true
 		}
-		return consumer(word.LeftPadWord256(key), word.LeftPadWord256(value))
+		return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
 	})
 	return
 }

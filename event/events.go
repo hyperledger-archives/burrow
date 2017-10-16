@@ -17,104 +17,139 @@ package event
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"strings"
 
-	"fmt"
-
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	tm_types "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tmlibs/common"
 	go_events "github.com/tendermint/tmlibs/events"
 )
 
-// TODO: [Silas] this is a compatibility layer between our event types and
-// TODO: go-events. Our ultimate plan is to replace go-events with our own pub-sub
-// TODO: code that will better allow us to manage and multiplex events from different
-// TODO: subsystems
+type Subscribable interface {
+	Subscribe(subId, event string, callback func(AnyEventData)) error
+	Unsubscribe(subId string) error
+}
 
-// Oh for a sum type
-// We are using this as a marker interface for the
-type anyEventData interface{}
+type Fireable interface {
+	FireEvent(event string, data go_events.EventData)
+}
 
 type EventEmitter interface {
-	go_events.Fireable
-	Subscribe(subId, event string, callback func(evm.EventData)) error
-	Unsubscribe(subId string) error
+	go_events.EventSwitch
+	Subscribable
 }
 
 // The events struct has methods for working with events.
 type events struct {
+	// Bah, Service infects everything
+	common.BaseService
 	eventSwitch go_events.EventSwitch
 	logger      logging_types.InfoTraceLogger
+}
+
+var _ EventEmitter = &events{}
+
+func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
+	eventSwitch.Start()
+	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+}
+
+// Fireable
+func (evts *events) FireEvent(event string, eventData go_events.EventData) {
+	evts.eventSwitch.FireEvent(event, eventData)
+}
+
+// EventSwitch
+func (evts *events) AddListenerForEvent(listenerID, event string, cb go_events.EventCallback) {
+	evts.eventSwitch.AddListenerForEvent(listenerID, event, cb)
+}
+
+func (evts *events) RemoveListenerForEvent(event string, listenerID string) {
+	evts.eventSwitch.RemoveListenerForEvent(event, listenerID)
+}
+
+func (evts *events) RemoveListener(listenerID string) {
+	evts.eventSwitch.RemoveListener(listenerID)
+}
+
+// Subscribe to an event.
+func (evts *events) Subscribe(subId, event string, callback func(AnyEventData)) error {
+	logging.TraceMsg(evts.logger, "Subscribing to event",
+		structure.ScopeKey, "events.Subscribe", "subId", subId, "event", event)
+	evts.eventSwitch.AddListenerForEvent(subId, event, func(eventData go_events.EventData) {
+		callback(MapToAnyEventData(eventData))
+	})
+	return nil
+}
+
+// Un-subscribe from an event.
+func (evts *events) Unsubscribe(subId string) error {
+	logging.TraceMsg(evts.logger, "Unsubscribing from event",
+		structure.ScopeKey, "events.Unsubscribe", "subId", subId)
+	evts.eventSwitch.RemoveListener(subId)
+	return nil
 }
 
 // Provides an EventEmitter that wraps many underlying EventEmitters as a
 // convenience for Subscribing and Unsubscribing on multiple EventEmitters at
 // once
 func Multiplex(events ...EventEmitter) *multiplexedEvents {
-	return &multiplexedEvents{events}
-}
-
-var _ EventEmitter = &events{}
-
-func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
-	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
-}
-
-func (evts *events) FireEvent(event string, eventData go_events.EventData) {
-	evts.eventSwitch.FireEvent(event, eventData)
-}
-
-// Subscribe to an event.
-func (evts *events) Subscribe(subId, event string,
-	callback func(evm.EventData)) error {
-	cb := func(evt go_events.EventData) {
-		eventData, err := mapToOurEventData(evt)
-		if err != nil {
-			logging.InfoMsg(evts.logger, "Failed to map go-events EventData to our EventData",
-				"error", err,
-				"event", event)
-		}
-		callback(eventData)
-	}
-	evts.eventSwitch.AddListenerForEvent(subId, event, cb)
-	return nil
-}
-
-// Un-subscribe from an event.
-func (evts *events) Unsubscribe(subId string) error {
-	evts.eventSwitch.RemoveListener(subId)
-	return nil
+	return &multiplexedEvents{eventEmitters: events}
 }
 
 type multiplexedEvents struct {
+	common.BaseService
 	eventEmitters []EventEmitter
 }
 
+var _ EventEmitter = &multiplexedEvents{}
+
 // Subscribe to an event.
-func (multiEvents *multiplexedEvents) Subscribe(subId, event string,
-	callback func(evm.EventData)) error {
-	for _, eventEmitter := range multiEvents.eventEmitters {
-		err := eventEmitter.Subscribe(subId, event, callback)
+func (multiEvents *multiplexedEvents) Subscribe(subId, event string, cb func(AnyEventData)) error {
+	for _, evts := range multiEvents.eventEmitters {
+		err := evts.Subscribe(subId, event, cb)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-// Un-subscribe from an event.
 func (multiEvents *multiplexedEvents) Unsubscribe(subId string) error {
-	for _, eventEmitter := range multiEvents.eventEmitters {
-		err := eventEmitter.Unsubscribe(subId)
+	for _, evts := range multiEvents.eventEmitters {
+		err := evts.Unsubscribe(subId)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (multiEvents *multiplexedEvents) FireEvent(event string, eventData go_events.EventData) {
+	for _, evts := range multiEvents.eventEmitters {
+		evts.FireEvent(event, eventData)
+	}
+}
+
+// EventSwitch
+func (multiEvents *multiplexedEvents) AddListenerForEvent(listenerID, event string, cb go_events.EventCallback) {
+	for _, evts := range multiEvents.eventEmitters {
+		evts.AddListenerForEvent(listenerID, event, cb)
+	}
+}
+
+func (multiEvents *multiplexedEvents) RemoveListenerForEvent(event string, listenerID string) {
+	for _, evts := range multiEvents.eventEmitters {
+		evts.RemoveListenerForEvent(event, listenerID)
+	}
+}
+
+func (multiEvents *multiplexedEvents) RemoveListener(listenerID string) {
+	for _, evts := range multiEvents.eventEmitters {
+		evts.RemoveListener(listenerID)
+	}
 }
 
 type noOpFireable struct {
@@ -157,24 +192,4 @@ func GenerateSubId() (string, error) {
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
-}
-
-func mapToOurEventData(eventData anyEventData) (evm.EventData, error) {
-	// TODO: [Silas] avoid this with a better event pub-sub system of our own
-	// TODO: that maybe involves a registry of events
-	switch eventData := eventData.(type) {
-	case evm.EventData:
-		return eventData, nil
-	case tm_types.EventDataNewBlock:
-		return evm.EventDataNewBlock{
-			Block: eventData.Block,
-		}, nil
-	case tm_types.EventDataNewBlockHeader:
-		return evm.EventDataNewBlockHeader{
-			Header: eventData.Header,
-		}, nil
-	default:
-		return nil, fmt.Errorf("EventData not recognised as known EventData: %v",
-			eventData)
-	}
 }

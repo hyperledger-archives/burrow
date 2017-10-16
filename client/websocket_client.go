@@ -19,16 +19,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger/burrow/execution/evm"
-	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/tendermint/go-wire"
-
 	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
-	ctypes "github.com/hyperledger/burrow/rpc/tm/core/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/rpc/lib/client"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -82,7 +81,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	if err := burrowNodeWebsocketClient.Subscribe(eid); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
 	}
-	if err := burrowNodeWebsocketClient.Subscribe(evm.EventStringNewBlock()); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(tm_types.EventStringNewBlock()); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events

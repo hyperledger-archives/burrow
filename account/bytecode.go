@@ -1,8 +1,9 @@
 package account
 
 import (
-	"github.com/tmthrgd/go-hex"
 	"encoding/json"
+
+	"github.com/tmthrgd/go-hex"
 )
 
 // TODO: write a simple lexer that prints the opcodes. Each byte is either an OpCode or part of the Word256 argument

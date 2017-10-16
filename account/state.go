@@ -1,7 +1,7 @@
 package account
 
 import (
-	"github.com/hyperledger/burrow/word"
+	"github.com/hyperledger/burrow/binary"
 )
 
 type Getter interface {
@@ -27,19 +27,19 @@ type Updater interface {
 type StorageGetter interface {
 	// Retrieve a 32-byte value stored at key for the account at address, return Zero256 if key does not exist but
 	// error if address does not
-	GetStorage(address Address, key word.Word256) (value word.Word256, err error)
+	GetStorage(address Address, key binary.Word256) (value binary.Word256, err error)
 }
 
 type StorageSetter interface {
 	// Store a 32-byte value at key for the account at address
-	SetStorage(address Address, key, value word.Word256) error
+	SetStorage(address Address, key, value binary.Word256) error
 }
 
 type StorageIterable interface {
 	// Iterates through the storage of account ad address calling the passed function once per account,
 	// if the iterator function returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateStorage(address Address, consumer func(key, value word.Word256) (stop bool)) (stopped bool, err error)
+	IterateStorage(address Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error)
 }
 
 // Compositions

@@ -1,6 +1,3 @@
-// +build integration
-
-// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +16,16 @@ package client
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
+	tm_types "github.com/tendermint/tendermint/types"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -48,11 +46,7 @@ func TestStatus(t *testing.T) {
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		resp, err := Status(client)
 		assert.NoError(t, err)
-		fmt.Println(resp)
-		if resp.NodeInfo.Network != chainID {
-			t.Fatal(fmt.Errorf("chainID mismatch: got %s expected %s",
-				resp.NodeInfo.Network, chainID))
-		}
+		assert.Equal(t, genesisDoc.ChainID(), resp.NodeInfo.Network, "ChainID should match NodeInfo.Network")
 	})
 }
 
@@ -61,10 +55,12 @@ func TestBroadcastTx(t *testing.T) {
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
-		toAddr := users[1].Address()
+		toAddr := privateAccounts[1].Address()
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
-		assert.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if receipt.CreatesContract {
 			t.Fatal("This tx should not create a contract")
 		}
@@ -74,7 +70,7 @@ func TestBroadcastTx(t *testing.T) {
 		n, errp := new(int), new(error)
 		buf := new(bytes.Buffer)
 		hasher := ripemd160.New()
-		tx.WriteSignBytes(chainID, buf, n, errp)
+		tx.WriteSignBytes(genesisDoc.ChainID(), buf, n, errp)
 		assert.NoError(t, *errp)
 		txSignBytes := buf.Bytes()
 		hasher.Write(txSignBytes)
@@ -92,13 +88,13 @@ func TestGetAccount(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-		acc := getAccount(t, client, users[0].Address())
+		acc := getAccount(t, client, privateAccounts[0].Address())
 		if acc == nil {
 			t.Fatal("Account was nil")
 		}
-		if acc.Address() != users[0].Address() {
+		if acc.Address() != privateAccounts[0].Address() {
 			t.Fatalf("Failed to get correct account. Got %s, expected %s", acc.Address(),
-				users[0].Address())
+				privateAccounts[0].Address())
 		}
 	})
 }
@@ -112,16 +108,16 @@ func TestGetStorage(t *testing.T) {
 		wsc.Stop()
 	}()
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-		eid := evm.EventStringNewBlock()
+		eid := tm_types.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
 		}()
 
-		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
+		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
-		tx := makeDefaultCallTx(t, client, acm.ZeroAddress, code, amt, gasLim, fee)
+		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, true, receipt.CreatesContract, "This transaction should"+
@@ -133,8 +129,8 @@ func TestGetStorage(t *testing.T) {
 			" created a contract but the contract address is empty")
 
 		v := getStorage(t, client, contractAddr, []byte{0x1})
-		got := word.LeftPadWord256(v)
-		expected := word.LeftPadWord256([]byte{0x5})
+		got := binary.LeftPadWord256(v)
+		expected := binary.LeftPadWord256([]byte{0x5})
 		if got.Compare(expected) != 0 {
 			t.Fatalf("Wrong storage value. Got %x, expected %x", got.Bytes(),
 				expected.Bytes())
@@ -153,15 +149,15 @@ func TestCallCode(t *testing.T) {
 			0x0, 0xf3}
 		data := []byte{}
 		expected := []byte{0xb}
-		callCode(t, client, users[0].PubKey().Address(), code, data, expected)
+		callCode(t, client, privateAccounts[0].PubKey().Address(), code, data, expected)
 
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
 			0x20, 0x60, 0x0, 0xf3}
-		data = append(word.LeftPadWord256([]byte{0x5}).Bytes(),
-			word.LeftPadWord256([]byte{0x6}).Bytes()...)
+		data = append(binary.LeftPadWord256([]byte{0x5}).Bytes(),
+			binary.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
-		callCode(t, client, users[0].PubKey().Address(), code, data, expected)
+		callCode(t, client, privateAccounts[0].PubKey().Address(), code, data, expected)
 	})
 }
 
@@ -174,16 +170,16 @@ func TestCallContract(t *testing.T) {
 		wsc.Stop()
 	}()
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-		eid := evm.EventStringNewBlock()
+		eid := tm_types.EventStringNewBlock()
 		subscribe(t, wsc, eid)
 		defer func() {
 			unsubscribe(t, wsc, eid)
 		}()
 
 		// create the contract
-		amt, gasLim, fee := int64(6969), int64(1000), int64(1000)
+		amt, gasLim, fee := uint64(6969), uint64(1000), uint64(1000)
 		code, _, _ := simpleContract()
-		tx := makeDefaultCallTx(t, client, acm.ZeroAddress, code, amt, gasLim, fee)
+		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err)
 		if err != nil {
@@ -200,7 +196,7 @@ func TestCallContract(t *testing.T) {
 		// run a call through the contract
 		data := []byte{}
 		expected := []byte{0xb}
-		callContract(t, client, acm.MustAddressFromBytes(users[0].PubKey().Address()), contractAddr, data,
+		callContract(t, client, acm.MustAddressFromBytes(privateAccounts[0].PubKey().Address()), contractAddr, data,
 			expected)
 	})
 }
@@ -218,18 +214,19 @@ func TestNameReg(t *testing.T) {
 		// since entries ought to be unique and these run against different clients, we append the client
 		name := "ye_old_domain_name_" + clientName
 		const data = "if not now, when"
-		fee := int64(1000)
-		numDesiredBlocks := int64(2)
+		fee := uint64(1000)
+		numDesiredBlocks := uint64(2)
 		amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
 
 		tx := makeDefaultNameTx(t, client, name, data, amt, fee)
 		// verify the name by both using the event and by checking get_name
-		subscribeAndWaitForNext(t, wsc, evm.EventStringNameReg(name),
+		subscribeAndWaitForNext(t, wsc, events.EventStringNameReg(name),
 			func() {
 				broadcastTxAndWaitForBlock(t, client, wsc, tx)
 			},
-			func(eid string, eventData evm.EventData) (bool, error) {
-				eventDataTx := asEventDataTx(t, eventData)
+			func(eid string, eventData event.AnyEventData) (bool, error) {
+				eventDataTx := eventData.EventDataTx()
+				assert.NotNil(t, eventDataTx, "could not convert %s to EventDataTx", eventData)
 				tx, ok := eventDataTx.Tx.(*txs.NameTx)
 				if !ok {
 					t.Fatalf("Could not convert %v to *NameTx", eventDataTx)
@@ -238,14 +235,13 @@ func TestNameReg(t *testing.T) {
 				assert.Equal(t, data, tx.Data)
 				return true, nil
 			})
-		mempoolCount = 0
 
 		entry := getNameRegEntry(t, client, name)
 		assert.Equal(t, data, entry.Data)
-		assert.Equal(t, users[0].Address, entry.Owner)
+		assert.Equal(t, privateAccounts[0].Address, entry.Owner)
 
 		// update the data as the owner, make sure still there
-		numDesiredBlocks = int64(5)
+		numDesiredBlocks = uint64(5)
 		const updatedData = "these are amongst the things I wish to bestow upon " +
 			"the youth of generations come: a safe supply of honey, and a better " +
 			"money. For what else shall they need"
@@ -253,15 +249,14 @@ func TestNameReg(t *testing.T) {
 			txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 		tx = makeDefaultNameTx(t, client, name, updatedData, amt, fee)
 		broadcastTxAndWaitForBlock(t, client, wsc, tx)
-		mempoolCount = 0
 		entry = getNameRegEntry(t, client, name)
 
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithNonce(users[1].PubKey(), name, "never mind", amt, fee,
-			getNonce(t, client, users[1].Address())+1)
-		tx.Sign(chainID, users[1])
+		tx = txs.NewNameTxWithNonce(privateAccounts[1].PubKey(), name, "never mind", amt, fee,
+			getNonce(t, client, privateAccounts[1].Address())+1)
+		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 
 		_, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.Error(t, err, "Expected error when updating someone else's unexpired"+
@@ -276,16 +271,15 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithNonce(users[1].PubKey(), name, data2, amt, fee,
-			getNonce(t, client, users[1].Address())+1)
-		tx.Sign(chainID, users[1])
+		tx = txs.NewNameTxWithNonce(privateAccounts[1].PubKey(), name, data2, amt, fee,
+			getNonce(t, client, privateAccounts[1].Address())+1)
+		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err, "Should be able to update a previously expired name"+
 			" registry entry as a different address")
-		mempoolCount = 0
 		entry = getNameRegEntry(t, client, name)
 		assert.Equal(t, data2, entry.Data)
-		assert.Equal(t, users[1].Address, entry.Owner)
+		assert.Equal(t, privateAccounts[1].Address, entry.Owner)
 	})
 }
 
@@ -302,7 +296,7 @@ func TestBlockchainInfo(t *testing.T) {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}
 		lastBlockHeight := resp.LastHeight
-		nMetaBlocks := len(resp.BlockMetas)
+		nMetaBlocks := uint64(len(resp.BlockMetas))
 		assert.True(t, nMetaBlocks <= lastBlockHeight,
 			"Logically number of block metas should be equal or less than block height.")
 		assert.True(t, nBlocks <= len(resp.BlockMetas),
@@ -333,10 +327,10 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	}
 	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-		amt, gasLim, fee := int64(1100), int64(1000), int64(1000)
+		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
-		tx := makeDefaultCallTx(t, client, acm.ZeroAddress, code, amt, gasLim, fee)
+		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
 		txChan := make(chan []txs.Tx)
 
 		// We want to catch the Tx in mempool before it gets reaped by tendermint
@@ -437,12 +431,4 @@ func TestParamsMap(t *testing.T) {
 
 	_, err = paramsMap("Foo", 4, 4, "Bar")
 	assert.Error(t, err, "Should be an error to provide non-string keys")
-}
-
-func asEventDataTx(t *testing.T, eventData evm.EventData) evm.EventDataTx {
-	eventDataTx, ok := eventData.(evm.EventDataTx)
-	if !ok {
-		t.Fatalf("Expected eventData to be EventDataTx was %v", eventData)
-	}
-	return eventDataTx
 }

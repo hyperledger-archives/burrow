@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package rpc
 
 import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/word"
 	"github.com/tendermint/tendermint/rpc/lib/types"
 	tm_types "github.com/tendermint/tendermint/types"
 )
@@ -44,16 +43,16 @@ type Service interface {
 	Peers() ([]*Peer, error)
 	NetInfo() (*ResultNetInfo, error)
 	Genesis() (*ResultGenesis, error)
-	GetAccount(addressBytes []byte) (*ResultGetAccount, error)
+	GetAccount(address acm.Address) (*ResultGetAccount, error)
 	//ListAccounts() (*ResultListAccounts, error)
-	ListAccounts() (BurrowResult, error)
-	GetStorage(addressBytes, key []byte) (*ResultGetStorage, error)
-	DumpStorage(addressBytes []byte) (*ResultDumpStorage, error)
-	Call(fromAddressBytes, toAddressBytes, data []byte) (*execution.Call, error)
-	CallCode(fromAddressBytes, code, data []byte) (*execution.Call, error)
+	ListAccounts() (*ResultListAccounts, error)
+	GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error)
+	DumpStorage(address acm.Address) (*ResultDumpStorage, error)
+	Call(fromAddress, toAddress acm.Address, data []byte) (*execution.Call, error)
+	CallCode(fromAddress acm.Address, code, data []byte) (*execution.Call, error)
 	GetName(name string) (*ResultGetName, error)
 	ListNames() (*ResultListNames, error)
-	BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error)
+	BroadcastTx(tx *txs.Wrapper) (*ResultBroadcastTx, error)
 	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
 	BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchainInfo, error)
 	GetBlock(height uint64) (*ResultGetBlock, error)
@@ -94,30 +93,21 @@ func NewService(state acm.StateIterable, eventEmitter event.EventEmitter, nameRe
 // signature assumed by go-rpc
 
 func (s *service) Subscribe(wsCtx rpctypes.WSRPCContext, eventId string) (*ResultSubscribe, error) {
-	// NOTE: RPCResponses of subscribed events have id suffix "#event"
-	// TODO: we really ought to allow multiple subscriptions from the same client address
-	// to the same event. The code as it stands reflects the somewhat broken tendermint
-	// implementation. We can use GenerateSubId to randomize the subscriptions id
-	// and return it in the result. This would require clients to hang on to a
-	// subscription id if they wish to unsubscribe, but then again they can just
-	// drop their connection
 	subscriptionId, err := event.GenerateSubId()
 	if err != nil {
 		return nil, err
 		logging.InfoMsg(s.logger, "Subscribing to event",
 			"eventId", eventId, "subscriptionId", subscriptionId)
 	}
-	s.eventEmitter.Subscribe(subscriptionId, eventId,
-		func(eventData evm.EventData) {
-			result := BurrowResult(
-				&ResultEvent{
-					Event: eventId,
-					Data:  evm.EventData(eventData)})
+	err = s.eventEmitter.Subscribe(subscriptionId, eventId,
+		func(eventData event.AnyEventData) {
 			// NOTE: EventSwitch callbacks must be nonblocking
-			wsCtx.GetRemoteAddr()
-			// NOTE: EventSwitch callbacks must be nonblocking
-			wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(wsCtx.Request.ID+"#event", &result))
+			wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(wsCtx.Request.ID+"#event",
+				&ResultEvent{Event: eventId, Data: eventData}))
 		})
+	if err != nil {
+		return nil, err
+	}
 	return &ResultSubscribe{
 		SubscriptionId: subscriptionId,
 		Event:          eventId,
@@ -200,20 +190,15 @@ func (s *service) Genesis() (*ResultGenesis, error) {
 }
 
 // Accounts
-func (s *service) GetAccount(addressBytes []byte) (*ResultGetAccount, error) {
-	address, err := acm.AddressFromBytes(addressBytes)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
-	return &ResultGetAccount{Account: acc}, nil
+	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 
-func (s *service) ListAccounts() (BurrowResult, error) {
+func (s *service) ListAccounts() (*ResultListAccounts, error) {
 	accounts := make([]acm.Account, 0)
 	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
 		accounts = append(accounts, account)
@@ -226,34 +211,26 @@ func (s *service) ListAccounts() (BurrowResult, error) {
 	}, nil
 }
 
-func (s *service) GetStorage(addressBytes, key []byte) (*ResultGetStorage, error) {
-	address, err := acm.AddressFromBytes(addressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("GetStorage could not get address: %v", err)
-	}
+func (s *service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error) {
 	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
 	if account == nil {
-		return nil, fmt.Errorf("UnknownAddress: %X", addressBytes)
+		return nil, fmt.Errorf("UnknownAddress: %s", address)
 	}
 
-	value, err := s.state.GetStorage(address, word.LeftPadWord256(key))
+	value, err := s.state.GetStorage(address, binary.LeftPadWord256(key))
 	if err != nil {
 		return nil, err
 	}
-	if value == word.Zero256 {
+	if value == binary.Zero256 {
 		return &ResultGetStorage{Key: key, Value: nil}, nil
 	}
 	return &ResultGetStorage{Key: key, Value: value.UnpadLeft()}, nil
 }
 
-func (s *service) DumpStorage(addressBytes []byte) (*ResultDumpStorage, error) {
-	address, err := acm.AddressFromBytes(addressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("DumpStorage could not get address: %v", err)
-	}
+func (s *service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -262,7 +239,7 @@ func (s *service) DumpStorage(addressBytes []byte) (*ResultDumpStorage, error) {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	storageItems := []StorageItem{}
-	s.state.IterateStorage(address, func(key, value word.Word256) (stop bool) {
+	s.state.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
 		return
 	})
@@ -272,26 +249,11 @@ func (s *service) DumpStorage(addressBytes []byte) (*ResultDumpStorage, error) {
 	}, nil
 }
 
-func (s *service) Call(fromAddressBytes, toAddressBytes, data []byte) (*execution.Call, error) {
-	fromAddress, err := acm.AddressFromBytes(fromAddressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("Call could not get 'from' address: %v", err)
-	}
-
-	toAddress, err := acm.AddressFromBytes(toAddressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("Call could not get 'to' address: %v", err)
-	}
-
+func (s *service) Call(fromAddress, toAddress acm.Address, data []byte) (*execution.Call, error) {
 	return s.transactor.Call(fromAddress, toAddress, data)
 }
 
-func (s *service) CallCode(fromAddressBytes, code, data []byte) (*execution.Call, error) {
-	fromAddress, err := acm.AddressFromBytes(fromAddressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("CallCode could not get 'from' address: %v", err)
-	}
-
+func (s *service) CallCode(fromAddress acm.Address, code, data []byte) (*execution.Call, error) {
 	return s.transactor.CallCode(fromAddress, code, data)
 }
 
@@ -316,13 +278,13 @@ func (s *service) ListNames() (*ResultListNames, error) {
 	}, nil
 }
 
-func (s *service) BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error) {
-	receipt, err := s.transactor.BroadcastTx(tx)
+func (s *service) BroadcastTx(tx *txs.Wrapper) (*ResultBroadcastTx, error) {
+	receipt, err := s.transactor.BroadcastTx(tx.Unwrap())
 	if err != nil {
 		return nil, err
 	}
 	return &ResultBroadcastTx{
-		Receipt: *receipt,
+		Receipt: receipt,
 	}, nil
 }
 

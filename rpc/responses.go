@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package rpc
 
 import (
 	acm "github.com/hyperledger/burrow/account"
-	genesis "github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/txs"
-	tendermint_types "github.com/tendermint/tendermint/types"
-
+	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 type ResultGetStorage struct {
@@ -53,13 +52,13 @@ type StorageItem struct {
 }
 
 type ResultBlockchainInfo struct {
-	LastHeight uint64                        `json:"last_height"`
-	BlockMetas []*tendermint_types.BlockMeta `json:"block_metas"`
+	LastHeight uint64                `json:"last_height"`
+	BlockMetas []*tm_types.BlockMeta `json:"block_metas"`
 }
 
 type ResultGetBlock struct {
-	BlockMeta *tendermint_types.BlockMeta `json:"block_meta"`
-	Block     *tendermint_types.Block     `json:"block"`
+	BlockMeta *tm_types.BlockMeta `json:"block_meta"`
+	Block     *tm_types.Block     `json:"block"`
 }
 
 type ResultStatus struct {
@@ -98,9 +97,9 @@ type ResultNetInfo struct {
 }
 
 type ResultListValidators struct {
-	BlockHeight         uint64           `json:"block_height"`
-	BondedValidators    []*acm.Validator `json:"bonded_validators"`
-	UnbondingValidators []*acm.Validator `json:"unbonding_validators"`
+	BlockHeight         uint64          `json:"block_height"`
+	BondedValidators    []acm.Validator `json:"bonded_validators"`
+	UnbondingValidators []acm.Validator `json:"unbonding_validators"`
 }
 
 type ResultDumpConsensusState struct {
@@ -118,11 +117,11 @@ type ResultGeneratePrivateAccount struct {
 }
 
 type ResultGetAccount struct {
-	Account acm.Account `json:"account"`
+	Account *acm.ConcreteAccount `json:"account"`
 }
 
 type ResultBroadcastTx struct {
-	txs.Receipt `json:"unwrap"`
+	*txs.Receipt `json:"unwrap"`
 }
 
 type ResultListUnconfirmedTxs struct {
@@ -143,8 +142,8 @@ type ResultSignTx struct {
 }
 
 type ResultEvent struct {
-	Event string        `json:"event"`
-	Data  evm.EventData `json:"data"`
+	Event string             `json:"event"`
+	Data  event.AnyEventData `json:"data"`
 }
 
 //----------------------------------------

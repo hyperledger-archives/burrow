@@ -1,4 +1,4 @@
-package word
+package binary
 
 import (
 	"testing"

@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package word
+package binary
 
 import (
 	"encoding/binary"
-	"sort"
 	"math"
+	"sort"
 )
-
 
 const Uint64TopBitMask = 1 << 63
 
@@ -74,5 +73,5 @@ func GetInt64BE(src []byte) int64 {
 
 // Returns whether a + b would be a uint64 overflow
 func IsUint64SumOverflow(a, b uint64) bool {
-	return math.MaxUint64 - a < b
+	return math.MaxUint64-a < b
 }

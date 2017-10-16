@@ -22,6 +22,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -31,7 +32,6 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
-	. "github.com/hyperledger/burrow/word"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/events"
 )
@@ -872,7 +872,7 @@ func TestCreateAccountPermission(t *testing.T) {
 }
 
 // holla at my boy
-var DougAddress = acm.AdddressFromString("THISISDOUG")
+var DougAddress = acm.AddressFromString("THISISDOUG")
 
 func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)

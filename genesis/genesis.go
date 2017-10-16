@@ -44,7 +44,7 @@ var GenDocKey = []byte("GenDocKey")
 
 type BasicAccount struct {
 	Address acm.Address `json:"address"`
-	Amount  uint64       `json:"amount"`
+	Amount  uint64      `json:"amount"`
 }
 
 type GenesisAccount struct {
@@ -78,10 +78,10 @@ type GenesisDoc struct {
 	Validators  []GenesisValidator `json:"validators"`
 }
 
-// GenesisFileBytes returns the JSON (not-yet) canonical bytes for a given
+// JSONBytes returns the JSON (not-yet) canonical bytes for a given
 // GenesisDoc or an error.  In a first rewrite, rely on go-wire
 // for the JSON serialisation with type-bytes.
-func (genesisDoc *GenesisDoc) GenesisFileBytes() ([]byte, error) {
+func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
 	// TODO: write JSON in canonical order
 	var err error
 	buffer, n := new(bytes.Buffer), new(int)
@@ -99,7 +99,7 @@ func (genesisDoc *GenesisDoc) GenesisFileBytes() ([]byte, error) {
 }
 
 func (genesisDoc *GenesisDoc) Hash() []byte {
-	genesisDocBytes, err := genesisDoc.GenesisFileBytes()
+	genesisDocBytes, err := genesisDoc.JSONBytes()
 	if err != nil {
 		panic(fmt.Errorf("could not create hash of GenesisDoc: %v", err))
 	}
@@ -117,12 +117,12 @@ func (genesisDoc *GenesisDoc) ChainID() string {
 
 func GenesisDocFromJSON(jsonBlob []byte) (*GenesisDoc, error) {
 	var err error
-	genState := new(GenesisDoc)
-	wire.ReadJSONPtr(genState, jsonBlob, &err)
+	genDoc := new(GenesisDoc)
+	wire.ReadJSONPtr(genDoc, jsonBlob, &err)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't read GenesisDoc: %v", err)
 	}
-	return genState, nil
+	return genDoc, nil
 }
 
 //------------------------------------------------------------

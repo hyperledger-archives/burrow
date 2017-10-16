@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/word"
 )
 
 // The accounts struct has methods for working with accounts.
@@ -132,11 +132,11 @@ func (accs *accounts) StorageAt(address acm.Address, key []byte) (*StorageItem,
 	if acc == nil {
 		return &StorageItem{key, []byte{}}, nil
 	}
-	value, err := accs.state.GetStorage(address, word.LeftPadWord256(key))
+	value, err := accs.state.GetStorage(address, binary.LeftPadWord256(key))
 	if err != nil {
 		return nil, err
 	}
-	if value == word.Zero256 {
+	if value == binary.Zero256 {
 		return &StorageItem{key, []byte{}}, nil
 	}
 	return &StorageItem{key, value.UnpadLeft()}, nil
@@ -145,7 +145,7 @@ func (accs *accounts) StorageAt(address acm.Address, key []byte) (*StorageItem,
 // Get the storage of the account with address 'address'.
 func (accs *accounts) Storage(address acm.Address) (*Storage, error) {
 	state := accs.state
-	acc, err:= state.GetAccount(address)
+	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (accs *accounts) Storage(address acm.Address) (*Storage, error) {
 	if acc == nil {
 		return &Storage{nil, storageItems}, nil
 	}
-	accs.state.IterateStorage(address, func(key, value word.Word256) bool {
+	accs.state.IterateStorage(address, func(key, value binary.Word256) bool {
 		storageItems = append(storageItems, StorageItem{
 			Key:   key.UnpadLeft(),
 			Value: value.UnpadLeft(),

@@ -53,7 +53,7 @@ type Blockchain interface {
 	// Returns an immutable copy of the tip
 	Tip() Tip
 	// Returns a copy of the current validator set
-	Validators() []*acm.Validator
+	Validators() []acm.Validator
 }
 
 type MutableBlockchain interface {
@@ -144,12 +144,12 @@ func (bc *blockchain) Tip() Tip {
 	return &t
 }
 
-func (bc *blockchain) Validators() []*acm.Validator {
+func (bc *blockchain) Validators() []acm.Validator {
 	bc.RLock()
 	defer bc.RUnlock()
-	vs := make([]*acm.Validator, len(bc.validators))
+	vs := make([]acm.Validator, len(bc.validators))
 	for i, v := range bc.validators {
-		vs[i] = &v
+		vs[i] = v
 	}
 	return vs
 }

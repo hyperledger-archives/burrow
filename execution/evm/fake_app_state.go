@@ -20,7 +20,7 @@ import (
 	"bytes"
 
 	acm "github.com/hyperledger/burrow/account"
-	. "github.com/hyperledger/burrow/word"
+	. "github.com/hyperledger/burrow/binary"
 )
 
 type FakeAppState struct {

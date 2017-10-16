@@ -2,9 +2,9 @@ package permission
 
 import (
 	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/word"
+	"github.com/hyperledger/burrow/binary"
 )
 
 var (
-	GlobalPermissionsAddress = account.Address(word.Zero160)
+	GlobalPermissionsAddress = account.Address(binary.Zero160)
 )

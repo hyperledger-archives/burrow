@@ -25,10 +25,10 @@ import (
 
 	"errors"
 
+	. "github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/permission"
-	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tmlibs/events"
 )
@@ -66,7 +66,7 @@ func newAccount(address ...byte) acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -88,7 +88,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -122,7 +122,7 @@ func TestSubcurrency(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
 
 	var gas uint64 = 1000
 	code_parts := []string{"620f42403355",
@@ -144,7 +144,7 @@ func TestSubcurrency(t *testing.T) {
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -180,7 +180,7 @@ func TestSendCall(t *testing.T) {
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
 	state := newAppState()
-	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -241,7 +241,7 @@ func TestMemoryBounds(t *testing.T) {
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(state, memoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(state, memoryProvider, newParams(), acm.ZeroAddress, nil)
 	caller, _ := makeAccountWithCode(state, "caller", nil)
 	callee, _ := makeAccountWithCode(state, "callee", nil)
 	gas := uint64(100000)
@@ -321,7 +321,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 }
 
 // Subscribes to an AccCall, runs the vm, returns the output any direct exception
-// and then waits for any exceptions transmitted by EventData in the AccCall
+// and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
 func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,

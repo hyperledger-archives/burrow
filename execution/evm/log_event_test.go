@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	. "github.com/hyperledger/burrow/word"
 	"github.com/tendermint/tmlibs/events"
 )
 

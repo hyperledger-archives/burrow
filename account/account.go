@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/hyperledger/burrow/binary"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/hyperledger/burrow/word"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
@@ -163,11 +163,14 @@ func (acc *ConcreteAccount) String() string {
 // from <Type> to Account. Conversions are done by copying
 
 // Returns a mutable, serialisable ConcreteAccount by copying from account
-func AsConcreteAccount(account Account) ConcreteAccount {
+func AsConcreteAccount(account Account) *ConcreteAccount {
 	if account == nil {
-		return ConcreteAccount{}
+		return nil
 	}
-	return ConcreteAccount{
+	if ca, ok := account.(concreteAccountWrapper); ok {
+		return ca.ConcreteAccount
+	}
+	return &ConcreteAccount{
 		Address:     account.Address(),
 		PubKey:      account.PubKey(),
 		Balance:     account.Balance(),
@@ -178,8 +181,8 @@ func AsConcreteAccount(account Account) ConcreteAccount {
 	}
 }
 
-// Creates an otherwise zeroed Account from an Addressable
-func FromAddressable(addressable Addressable) Account {
+// Creates an otherwise zeroed Account from an Addressable and returns it as MutableAccount
+func FromAddressable(addressable Addressable) MutableAccount {
 	return ConcreteAccount{
 		Address: addressable.Address(),
 		PubKey:  addressable.PubKey(),
@@ -189,7 +192,7 @@ func FromAddressable(addressable Addressable) Account {
 		Permissions: ptypes.AccountPermissions{
 			Roles: []string{},
 		},
-	}.Account()
+	}.MutableAccount()
 }
 
 // Returns an immutable account by copying from account
@@ -302,7 +305,7 @@ func (caw concreteAccountWrapper) SubtractFromBalance(amount uint64) MutableAcco
 }
 
 func (caw concreteAccountWrapper) AddToBalance(amount uint64) MutableAccount {
-	if word.IsUint64SumOverflow(caw.Balance(), amount) {
+	if binary.IsUint64SumOverflow(caw.Balance(), amount) {
 		panic(fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
 			amount, caw.ConcreteAccount))
 	}

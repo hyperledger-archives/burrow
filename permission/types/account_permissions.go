@@ -1,6 +1,6 @@
 package types
 
-import "github.com/hyperledger/burrow/word"
+import "github.com/hyperledger/burrow/binary"
 
 type AccountPermissions struct {
 	Base  BasePermissions `json:"base"`
@@ -9,7 +9,7 @@ type AccountPermissions struct {
 
 // Returns true if the role is found
 func (ap AccountPermissions) HasRole(role string) bool {
-	role = string(word.RightPadBytes([]byte(role), 32))
+	role = string(binary.RightPadBytes([]byte(role), 32))
 	for _, r := range ap.Roles {
 		if r == role {
 			return true
@@ -20,7 +20,7 @@ func (ap AccountPermissions) HasRole(role string) bool {
 
 // Returns true if the role is added, and false if it already exists
 func (ap *AccountPermissions) AddRole(role string) bool {
-	role = string(word.RightPadBytes([]byte(role), 32))
+	role = string(binary.RightPadBytes([]byte(role), 32))
 	for _, r := range ap.Roles {
 		if r == role {
 			return false
@@ -32,7 +32,7 @@ func (ap *AccountPermissions) AddRole(role string) bool {
 
 // Returns true if the role is removed, and false if it is not found
 func (ap *AccountPermissions) RmRole(role string) bool {
-	role = string(word.RightPadBytes([]byte(role), 32))
+	role = string(binary.RightPadBytes([]byte(role), 32))
 	for i, r := range ap.Roles {
 		if r == role {
 			post := []string{}

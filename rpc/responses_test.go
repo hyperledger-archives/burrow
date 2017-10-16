@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package rpc
 
 import (
 	"testing"
 
 	"fmt"
 
+	"encoding/json"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
-	"encoding/json"
 )
 
 func TestResultBroadcastTx(t *testing.T) {
@@ -42,6 +43,20 @@ func TestResultBroadcastTx(t *testing.T) {
 	res2 := new(ResultBroadcastTx)
 	wire.ReadBinaryBytes(wire.BinaryBytes(res), res2)
 	assert.Equal(t, res, *res2)
+
+	resultBroadcastTx := `{
+	  "jsonrpc": "2.0",
+	  "id": "jsonrpc-client",
+	  "result": {
+		"unwrap": {
+		  "tx_hash": "EAM2TH2KlqLyiy7l8qkiv8eG8Hg=",
+		  "creates_contract": false,
+		  "contract_addr": "0000000000000000000000000000000000000000"
+		}
+	  }
+	}
+	`
+
 }
 
 func TestListUnconfirmedTxs(t *testing.T) {
@@ -70,3 +85,4 @@ func TestJSONEncode(t *testing.T) {
 	bs, _ := json.Marshal(res)
 	fmt.Println(string(bs))
 }
+

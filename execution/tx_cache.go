@@ -18,13 +18,13 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/word"
+	"github.com/hyperledger/burrow/binary"
 )
 
 type TxCache struct {
 	backend  acm.StateReader
 	accounts map[acm.Address]vmAccountInfo
-	storages map[word.Tuple256]word.Word256
+	storages map[binary.Tuple256]binary.Word256
 }
 
 var _ acm.StateWriter = &TxCache{}
@@ -33,7 +33,7 @@ func NewTxCache(backend acm.StateReader) *TxCache {
 	return &TxCache{
 		backend:  backend,
 		accounts: make(map[acm.Address]vmAccountInfo),
-		storages: make(map[word.Tuple256]word.Word256),
+		storages: make(map[binary.Tuple256]binary.Word256),
 	}
 }
 
@@ -72,9 +72,9 @@ func (cache *TxCache) RemoveAccount(addr acm.Address) error {
 //-------------------------------------
 // TxCache.storage
 
-func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) (word.Word256, error) {
+func (cache *TxCache) GetStorage(addr acm.Address, key binary.Word256) (binary.Word256, error) {
 	// Check cache
-	value, ok := cache.storages[word.Tuple256{First: addr.Word256(), Second: key}]
+	value, ok := cache.storages[binary.Tuple256{First: addr.Word256(), Second: key}]
 	if ok {
 		return value, nil
 	}
@@ -84,12 +84,12 @@ func (cache *TxCache) GetStorage(addr acm.Address, key word.Word256) (word.Word2
 }
 
 // NOTE: Set value to zero to removed from the trie.
-func (cache *TxCache) SetStorage(addr acm.Address, key word.Word256, value word.Word256) error {
+func (cache *TxCache) SetStorage(addr acm.Address, key binary.Word256, value binary.Word256) error {
 	_, removed := cache.accounts[addr].unpack()
 	if removed {
 		fmt.Errorf("SetStorage on a removed account %s", addr)
 	}
-	cache.storages[word.Tuple256{First: addr.Word256(), Second: key}] = value
+	cache.storages[binary.Tuple256{First: addr.Word256(), Second: key}] = value
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (cache *TxCache) SetStorage(addr acm.Address, key word.Word256, value word.
 func (cache *TxCache) Sync(backend acm.StateWriter) {
 	// Remove or update storage
 	for addrKey, value := range cache.storages {
-		addrWord256, key := word.Tuple256Split(addrKey)
+		addrWord256, key := binary.Tuple256Split(addrKey)
 		backend.SetStorage(acm.AddressFromWord256(addrWord256), key, value)
 	}
 

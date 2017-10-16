@@ -21,12 +21,12 @@ import (
 	"strings"
 
 	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	. "github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
 )
 

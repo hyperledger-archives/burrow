@@ -15,48 +15,49 @@
 package tm
 
 import (
-	"github.com/hyperledger/burrow/rpc/core"
-	rpc "github.com/tendermint/tendermint/rpc/lib/server"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/tm/method"
+	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
 )
 
-func GetRoutes(service core.Service) map[string]*rpc.RPCFunc {
-	return map[string]*rpc.RPCFunc{
+func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
+	return map[string]*gorpc.RPCFunc{
 		// Events
-		"subscribe":   rpc.NewWSRPCFunc(service.Subscribe, "eventId"),
-		"unsubscribe": rpc.NewWSRPCFunc(service.Unsubscribe, "subscriptionId"),
+		method.Subscribe:   gorpc.NewWSRPCFunc(service.Subscribe, "eventId"),
+		method.Unsubscribe: gorpc.NewWSRPCFunc(service.Unsubscribe, "subscriptionId"),
 
 		// Status
-		"status":   rpc.NewRPCFunc(service.Status, ""),
-		"net_info": rpc.NewRPCFunc(service.NetInfo, ""),
+		method.Status:  gorpc.NewRPCFunc(service.Status, ""),
+		method.NetInfo: gorpc.NewRPCFunc(service.NetInfo, ""),
 
 		// Accounts
-		"list_accounts": rpc.NewRPCFunc(service.ListAccounts, ""),
-		"get_account":   rpc.NewRPCFunc(service.GetAccount, "address"),
-		"get_storage":   rpc.NewRPCFunc(service.GetStorage, "address,key"),
-		"dump_storage":  rpc.NewRPCFunc(service.DumpStorage, "address"),
+		method.ListAccounts: gorpc.NewRPCFunc(service.ListAccounts, ""),
+		method.GetAccount:   gorpc.NewRPCFunc(service.GetAccount, "address"),
+		method.GetStorage:   gorpc.NewRPCFunc(service.GetStorage, "address,key"),
+		method.DumpStorage:  gorpc.NewRPCFunc(service.DumpStorage, "address"),
 
 		// Simulated call
-		"call":      rpc.NewRPCFunc(service.Call, "fromAddress,toAddress,data"),
-		"call_code": rpc.NewRPCFunc(service.CallCode, "fromAddress,code,data"),
+		method.Call:     gorpc.NewRPCFunc(service.Call, "fromAddress,toAddress,data"),
+		method.CallCode: gorpc.NewRPCFunc(service.CallCode, "fromAddress,code,data"),
 
 		// Names
-		"get_name":     rpc.NewRPCFunc(service.GetName, "name"),
-		"list_names":   rpc.NewRPCFunc(service.ListNames, ""),
-		"broadcast_tx": rpc.NewRPCFunc(service.BroadcastTx, "tx"),
+		method.GetName:     gorpc.NewRPCFunc(service.GetName, "name"),
+		method.ListNames:   gorpc.NewRPCFunc(service.ListNames, ""),
+		method.BroadcastTx: gorpc.NewRPCFunc(service.BroadcastTx, "tx"),
 
 		// Blockchain
-		"genesis":    rpc.NewRPCFunc(service.Genesis, ""),
-		"chain_id":   rpc.NewRPCFunc(service.ChainId, ""),
-		"blockchain": rpc.NewRPCFunc(service.BlockchainInfo, "minHeight,maxHeight"),
-		"get_block":  rpc.NewRPCFunc(service.GetBlock, "height"),
+		method.Genesis:    gorpc.NewRPCFunc(service.Genesis, ""),
+		method.ChainID:    gorpc.NewRPCFunc(service.ChainId, ""),
+		method.Blockchain: gorpc.NewRPCFunc(service.BlockchainInfo, "minHeight,maxHeight"),
+		method.GetBlock:   gorpc.NewRPCFunc(service.GetBlock, "height"),
 
 		// Consensus
-		"list_unconfirmed_txs": rpc.NewRPCFunc(service.ListUnconfirmedTxs, ""),
-		"list_validators":      rpc.NewRPCFunc(service.ListValidators, ""),
-		"dump_consensus_state": rpc.NewRPCFunc(service.DumpConsensusState, ""),
+		method.ListUnconfirmedTxs: gorpc.NewRPCFunc(service.ListUnconfirmedTxs, ""),
+		method.ListValidators:     gorpc.NewRPCFunc(service.ListValidators, ""),
+		method.DumpConsensusState: gorpc.NewRPCFunc(service.DumpConsensusState, ""),
 
 		// Private keys and signing
-		"unsafe/gen_priv_account": rpc.NewRPCFunc(service.GeneratePrivateAccount, ""),
-		"unsafe/sign_tx":          rpc.NewRPCFunc(service.SignTx, "tx,privAccounts"),
+		method.GeneratePrivateAccount: gorpc.NewRPCFunc(service.GeneratePrivateAccount, ""),
+		method.SignTx:                 gorpc.NewRPCFunc(service.SignTx, "tx,privAccounts"),
 	}
 }

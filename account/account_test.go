@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"encoding/json"
-	"fmt"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
@@ -99,7 +98,6 @@ func TestMarshalJSON(t *testing.T) {
 	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	concreteAcc.Code = []byte{60, 23, 45}
 	acc := concreteAcc.Account()
-	fmt.Println(acc)
 	bs, err := json.Marshal(acc)
 	assert.Equal(t, `{"address":"745BD6BE33020146E04FA0F293A41E389887DE86","pub_key":{"type":"ed25519","data":"8CEBC16C166A0614AD7C8E330318E774E1A039321F17274DF12ABA3B1BFC773C"},"balance":0,"code":"3C172D","sequence":0,"storage_root":"","permissions":{"base":{"perms":0,"set":0},"roles":[]}}`,
 		string(bs))

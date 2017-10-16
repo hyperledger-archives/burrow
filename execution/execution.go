@@ -20,17 +20,17 @@ import (
 	"sync"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/word"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/tmlibs/events"
 )
 
 type BatchExecutor interface {
@@ -57,8 +57,8 @@ type executor struct {
 	runCall    bool
 	state      *State
 	blockCache *BlockCache
-	fireable   events.Fireable
-	eventCache *events.EventCache
+	fireable   event.Fireable
+	eventCache *event.EventCache
 	logger     logging_types.InfoTraceLogger
 }
 
@@ -77,7 +77,7 @@ func NewBatchChecker(state *State,
 func NewBatchCommitter(state *State,
 	chainID string,
 	tip bcm.Tip,
-	fireable events.Fireable,
+	fireable event.Fireable,
 	logger logging_types.InfoTraceLogger) BatchCommitter {
 	return newExecutor(true, state, chainID, tip, fireable,
 		logging.WithScope(logger, "NewBatchCommitter"))
@@ -87,7 +87,7 @@ func newExecutor(runCall bool,
 	state *State,
 	chainID string,
 	tip bcm.Tip,
-	eventFireable events.Fireable,
+	eventFireable event.Fireable,
 	logger logging_types.InfoTraceLogger) *executor {
 	return &executor{
 		chainID:    chainID,
@@ -96,7 +96,7 @@ func newExecutor(runCall bool,
 		state:      state,
 		blockCache: NewBlockCache(state),
 		fireable:   eventFireable,
-		eventCache: events.NewEventCache(eventFireable),
+		eventCache: event.NewEventCache(eventFireable),
 		logger:     logger,
 	}
 }
@@ -119,15 +119,15 @@ func (exe *executor) IterateAccounts(consumer func(acm.Account) bool) (bool, err
 }
 
 // Storage
-func (exe *executor) GetStorage(address acm.Address, key word.Word256) (word.Word256, error) {
+func (exe *executor) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
 	return exe.blockCache.GetStorage(address, key)
 }
 
-func (exe *executor) SetStorage(address acm.Address, key word.Word256, value word.Word256) error {
+func (exe *executor) SetStorage(address acm.Address, key binary.Word256, value binary.Word256) error {
 	return exe.blockCache.SetStorage(address, key, value)
 }
 
-func (exe *executor) IterateStorage(address acm.Address, consumer func(key, value word.Word256) bool) (bool, error) {
+func (exe *executor) IterateStorage(address acm.Address, consumer func(key, value binary.Word256) bool) (bool, error) {
 	return exe.blockCache.IterateStorage(address, consumer)
 }
 
@@ -145,7 +145,7 @@ func (exe *executor) Commit() ([]byte, error) {
 
 func (exe *executor) Reset() error {
 	exe.blockCache = NewBlockCache(exe.state)
-	exe.eventCache = events.NewEventCache(exe.fireable)
+	exe.eventCache = event.NewEventCache(exe.fireable)
 	return nil
 }
 
@@ -201,11 +201,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// if the exe.eventCache is nil, nothing will happen
 		if exe.eventCache != nil {
 			for _, i := range tx.Inputs {
-				exe.eventCache.FireEvent(evm.EventStringAccInput(i.Address), evm.EventDataTx{tx, nil, ""})
+				exe.eventCache.FireEvent(events.EventStringAccInput(i.Address), events.EventDataTx{tx, nil, ""})
 			}
 
 			for _, o := range tx.Outputs {
-				exe.eventCache.FireEvent(evm.EventStringAccOutput(o.Address), evm.EventDataTx{tx, nil, ""})
+				exe.eventCache.FireEvent(events.EventStringAccOutput(o.Address), events.EventDataTx{tx, nil, ""})
 			}
 		}
 		return nil
@@ -288,7 +288,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 			// VM call variables
 			var (
-				gas     uint64              = tx.GasLimit
+				gas     uint64             = tx.GasLimit
 				err     error              = nil
 				caller  acm.MutableAccount = acm.AsMutableAccount(inAcc)
 				callee  acm.MutableAccount = nil // initialized below
@@ -297,7 +297,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				txCache                    = NewTxCache(exe.blockCache)
 				params                     = evm.Params{
 					BlockHeight: exe.tip.LastBlockHeight(),
-					BlockHash:   word.LeftPadWord256(exe.tip.LastBlockHash()),
+					BlockHash:   binary.LeftPadWord256(exe.tip.LastBlockHash()),
 					BlockTime:   exe.tip.LastBlockTime().Unix(),
 					GasLimit:    GasLimit,
 				}
@@ -346,8 +346,8 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params,
-					caller.Address().Word256(), txs.TxHash(exe.chainID, tx))
+				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(),
+					txs.TxHash(exe.chainID, tx))
 				vmach.SetFireable(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
@@ -381,11 +381,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				if err != nil {
 					exception = err.Error()
 				}
-				exe.eventCache.FireEvent(evm.EventStringAccInput(tx.Input.Address),
-					evm.EventDataTx{tx, ret, exception})
+				exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address),
+					events.EventDataTx{tx, ret, exception})
 				if tx.Address != nil {
-					exe.eventCache.FireEvent(evm.EventStringAccOutput(*tx.Address),
-						evm.EventDataTx{tx, ret, exception})
+					exe.eventCache.FireEvent(events.EventStringAccOutput(*tx.Address),
+						events.EventDataTx{tx, ret, exception})
 				}
 			}
 		} else {
@@ -496,7 +496,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				} else {
 					// since the size of the data may have changed
 					// we use the total amount of "credit"
-					oldCredit := (entry.Expires-lastBlockHeight) * txs.NameBaseCost(entry.Name, entry.Data)
+					oldCredit := (entry.Expires - lastBlockHeight) * txs.NameBaseCost(entry.Name, entry.Data)
 					credit := oldCredit + value
 					expiresIn = uint64(credit / costPerBlock)
 					if expiresIn < txs.MinNameRegistrationPeriod {
@@ -540,8 +540,8 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			exe.eventCache.FireEvent(evm.EventStringAccInput(tx.Input.Address), evm.EventDataTx{tx, nil, ""})
-			exe.eventCache.FireEvent(evm.EventStringNameReg(tx.Name), evm.EventDataTx{tx, nil, ""})
+			exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address), events.EventDataTx{tx, nil, ""})
+			exe.eventCache.FireEvent(events.EventStringNameReg(tx.Name), events.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -819,8 +819,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		}
 
 		if exe.eventCache != nil {
-			exe.eventCache.FireEvent(evm.EventStringAccInput(tx.Input.Address), evm.EventDataTx{tx, nil, ""})
-			exe.eventCache.FireEvent(evm.EventStringPermissions(permission.PermFlagToString(permFlag)), evm.EventDataTx{tx, nil, ""})
+			exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address),
+				events.EventDataTx{tx, nil, ""})
+			exe.eventCache.FireEvent(events.EventStringPermissions(permission.PermFlagToString(permFlag)),
+				events.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -1091,7 +1093,7 @@ func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) (e
 		return txs.ErrTxInvalidSignature
 	}
 	// Check sequences
-	if acc.Sequence()+1 !=  uint64(in.Sequence) {
+	if acc.Sequence()+1 != uint64(in.Sequence) {
 		return txs.ErrTxInvalidSequence{
 			Got:      in.Sequence,
 			Expected: acc.Sequence() + uint64(1),

@@ -14,30 +14,18 @@
 
 package client
 
-import (
-	"context"
-
-	"github.com/tendermint/tendermint/rpc/lib/types"
-)
+import "context"
 
 type WebsocketClient interface {
-	Send(ctx context.Context, request rpctypes.RPCRequest) error
+	Call(ctx context.Context, method string, params map[string]interface{}) error
 }
 
-func Subscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	req, err := rpctypes.MapToRequest("", "subscribe",
-		map[string]interface{}{"subscriptionId": subscriptionId})
-	if err != nil {
-		return err
-	}
-	return websocketClient.Send(context.Background(), req)
+func Subscribe(websocketClient WebsocketClient, eventId string) error {
+	return websocketClient.Call(context.Background(), "subscribe",
+		map[string]interface{}{"eventId": eventId})
 }
 
 func Unsubscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	req, err := rpctypes.MapToRequest("", "unsubscribe",
+	return websocketClient.Call(context.Background(), "unsubscribe",
 		map[string]interface{}{"subscriptionId": subscriptionId})
-	if err != nil {
-		return err
-	}
-	return websocketClient.Send(context.Background(), req)
 }

@@ -1,9 +1,10 @@
 package bc
 
 import (
-	"github.com/hyperledger/burrow/word"
-	"github.com/hyperledger/burrow/account"
 	"fmt"
+
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 )
 
@@ -34,9 +35,9 @@ func Splice(bytelikes ...interface{}) []byte {
 			if uint64(bytes[i]) != b {
 				panic(fmt.Sprintf("The uint64 %v does not fit inside a byte", b))
 			}
-		case word.Word256:
+		case binary.Word256:
 			return Concat(bytes[:i], b[:], Splice(bytelikes[i+1:]...))
-		case word.Word160:
+		case binary.Word160:
 			return Concat(bytes[:i], b[:], Splice(bytelikes[i+1:]...))
 		case account.Address:
 			return Concat(bytes[:i], b[:], Splice(bytelikes[i+1:]...))

@@ -13,7 +13,7 @@ type Validator interface {
 	Power() uint64
 	// Alter the validator's voting power by amount that can be negative or positive.
 	// A power of 0 effectively unbonds the validator
-	SetPower(uint64) Validator
+	WithNewPower(uint64) Validator
 }
 
 // Neither abci_types or tm_types has quite the representation we want
@@ -51,7 +51,7 @@ func (cvw concreteValidatorWrapper) Power() uint64 {
 	return cvw.ConcreteValidator.Power
 }
 
-func (cvw concreteValidatorWrapper) SetPower(power uint64) Validator {
+func (cvw concreteValidatorWrapper) WithNewPower(power uint64) Validator {
 	cv := cvw.Copy()
 	cv.Power = power
 	return concreteValidatorWrapper{

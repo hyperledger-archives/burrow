@@ -17,7 +17,7 @@ package evm
 import (
 	"fmt"
 
-	. "github.com/hyperledger/burrow/word"
+	. "github.com/hyperledger/burrow/binary"
 )
 
 // Not goroutine safe

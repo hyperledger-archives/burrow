@@ -91,11 +91,28 @@ const (
 	TxTypePermissions = byte(0x20)
 )
 
+// for wire.readReflect
+var _ = wire.RegisterInterface(
+	struct{ Tx }{},
+	wire.ConcreteType{&SendTx{}, TxTypeSend},
+	wire.ConcreteType{&CallTx{}, TxTypeCall},
+	wire.ConcreteType{&NameTx{}, TxTypeName},
+	wire.ConcreteType{&BondTx{}, TxTypeBond},
+	wire.ConcreteType{&UnbondTx{}, TxTypeUnbond},
+	wire.ConcreteType{&RebondTx{}, TxTypeRebond},
+	wire.ConcreteType{&DupeoutTx{}, TxTypeDupeout},
+	wire.ConcreteType{&PermissionsTx{}, TxTypePermissions},
+)
+
 //-----------------------------------------------------------------------------
 
 type (
 	Tx interface {
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
+	}
+
+	Wrapper struct {
+		Tx `json:"tx"`
 	}
 
 	Encoder interface {
@@ -127,31 +144,56 @@ type (
 		Input *TxInput `json:"input"`
 		Name  string   `json:"name"`
 		Data  string   `json:"data"`
-		Fee   uint64    `json:"fee"`
+		Fee   uint64   `json:"fee"`
 	}
 
 	CallTx struct {
 		Input *TxInput `json:"input"`
 		// Pointer since CallTx defines unset 'to' address as inducing account creation
 		Address  *acm.Address `json:"address"`
-		GasLimit uint64        `json:"gas_limit"`
-		Fee      uint64        `json:"fee"`
+		GasLimit uint64       `json:"gas_limit"`
+		Fee      uint64       `json:"fee"`
 		Data     []byte       `json:"data"`
 	}
 
 	TxInput struct {
 		Address   acm.Address      `json:"address"`   // Hash of the PubKey
-		Amount    uint64            `json:"amount"`    // Must not exceed account balance
-		Sequence  uint64            `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Amount    uint64           `json:"amount"`    // Must not exceed account balance
+		Sequence  uint64           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
 		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
 		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
 		Address acm.Address `json:"address"` // Hash of the PubKey
-		Amount  uint64       `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+		Amount  uint64      `json:"amount"`  // The sum of all outputs must not exceed the inputs.
 	}
 )
+
+// Wrap the Tx in a struct that allows for go-wire JSON seserialisation
+func Wrap(tx Tx) *Wrapper {
+	return &Wrapper{
+		Tx: tx,
+	}
+}
+
+// A serialisation wrapper that is itself a Tx
+func (txw *Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
+	txw.Tx.WriteSignBytes(chainID, w, n, err)
+}
+
+func (txw *Wrapper) UnmarshalJSON(data []byte) error {
+	return wire.ReadJSONBytes(data, &(txw.Tx))
+}
+
+func (txw *Wrapper) MarshalJSON() ([]byte, error) {
+	return wire.JSONBytes(&(txw.Tx)), nil
+}
+
+// Get the inner Tx that this Wrapper wraps
+func (txw *Wrapper) Unwrap() Tx {
+	return txw.Tx
+}
 
 func (txIn *TxInput) ValidateBasic() error {
 	if len(txIn.Address) != 20 {

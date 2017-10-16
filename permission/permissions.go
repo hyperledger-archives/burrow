@@ -63,6 +63,13 @@ var (
 		},
 		Roles: []string{},
 	}
+	AllAccountPermissions = types.AccountPermissions{
+		Base: types.BasePermissions{
+			Perms:  AllPermFlags,
+			SetBit: AllPermFlags,
+		},
+		Roles: []string{},
+	}
 )
 
 //---------------------------------------------------------------------------------------------

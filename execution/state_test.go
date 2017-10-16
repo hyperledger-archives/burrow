@@ -26,12 +26,12 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/word"
 	"github.com/stretchr/testify/assert"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -401,7 +401,7 @@ func TestNameTxs(t *testing.T) {
 	data = "In the beginning there was no thing, not even the beginning. It hadn't been here, no there, nor for that matter anywhere, not especially because it had not to even exist, let alone to not. Nothing especially odd about that."
 	oldCredit := amt - fee
 	numDesiredBlocks = 10
-	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier* txs.NameBaseCost(name, data) - oldCredit
+	amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data) - oldCredit
 	tx, _ = txs.NewNameTx(state, testPrivAccounts[1].PubKey(), name, data, amt, fee)
 	tx.Sign(testChainID, testPrivAccounts[1])
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
@@ -519,7 +519,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = getAccount(state, acc1.Address())
 	storage := state.LoadStorage(acc1.StorageRoot())
-	_, firstCreatedAddress, _ := storage.Get(word.LeftPadBytes([]byte{0}, 32))
+	_, firstCreatedAddress, _ := storage.Get(binary.LeftPadBytes([]byte{0}, 32))
 
 	acc0 = getAccount(state, acc0.Address())
 	// call the pre-factory, triggering the factory to run a create
@@ -543,7 +543,7 @@ func TestCreates(t *testing.T) {
 
 	acc1 = getAccount(state, acc1.Address())
 	storage = state.LoadStorage(acc1.StorageRoot())
-	_, secondCreatedAddress, _ := storage.Get(word.LeftPadBytes([]byte{0}, 32))
+	_, secondCreatedAddress, _ := storage.Get(binary.LeftPadBytes([]byte{0}, 32))
 
 	if bytes.Equal(firstCreatedAddress, secondCreatedAddress) {
 		t.Errorf("Multiple contracts created with the same address!")

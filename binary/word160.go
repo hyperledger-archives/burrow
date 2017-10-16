@@ -1,4 +1,4 @@
-package word
+package binary
 
 const Word160Length = 20
 const Word256Word160Delta = 12

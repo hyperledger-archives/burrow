@@ -20,7 +20,7 @@ import (
 	"sort"
 
 	acm "github.com/hyperledger/burrow/account"
-	. "github.com/hyperledger/burrow/word"
+	. "github.com/hyperledger/burrow/binary"
 
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"

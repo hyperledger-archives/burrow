@@ -18,7 +18,7 @@ import (
 	"crypto/sha256"
 
 	acm "github.com/hyperledger/burrow/account"
-	. "github.com/hyperledger/burrow/word"
+	. "github.com/hyperledger/burrow/binary"
 
 	"golang.org/x/crypto/ripemd160"
 )
