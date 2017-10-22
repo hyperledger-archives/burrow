@@ -33,78 +33,91 @@ type Subscribable interface {
 }
 
 type Fireable interface {
-	FireEvent(event string, data go_events.EventData)
+	Fire(event string, data interface{})
 }
 
-type EventEmitter interface {
+type Emitter interface {
+	Fireable
 	go_events.EventSwitch
 	Subscribable
 }
 
 // The events struct has methods for working with events.
-type events struct {
+type emitter struct {
 	// Bah, Service infects everything
 	common.BaseService
 	eventSwitch go_events.EventSwitch
 	logger      logging_types.InfoTraceLogger
 }
 
-var _ EventEmitter = &events{}
+var _ Emitter = &emitter{}
 
-func NewEvents(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *events {
+func NewEmitter(logger logging_types.InfoTraceLogger) *emitter {
+	return WrapEventSwitch(go_events.NewEventSwitch(), logger)
+}
+
+func WrapEventSwitch(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *emitter {
 	eventSwitch.Start()
-	return &events{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+	return &emitter{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
 }
 
 // Fireable
-func (evts *events) FireEvent(event string, eventData go_events.EventData) {
+func (evts *emitter) Fire(event string, eventData interface{}) {
 	evts.eventSwitch.FireEvent(event, eventData)
 }
 
+func (evts *emitter) FireEvent(event string, data go_events.EventData) {
+	evts.Fire(event, data)
+}
+
 // EventSwitch
-func (evts *events) AddListenerForEvent(listenerID, event string, cb go_events.EventCallback) {
+func (evts *emitter) AddListenerForEvent(listenerID, event string, cb go_events.EventCallback) {
 	evts.eventSwitch.AddListenerForEvent(listenerID, event, cb)
 }
 
-func (evts *events) RemoveListenerForEvent(event string, listenerID string) {
+func (evts *emitter) RemoveListenerForEvent(event string, listenerID string) {
 	evts.eventSwitch.RemoveListenerForEvent(event, listenerID)
 }
 
-func (evts *events) RemoveListener(listenerID string) {
+func (evts *emitter) RemoveListener(listenerID string) {
 	evts.eventSwitch.RemoveListener(listenerID)
 }
 
 // Subscribe to an event.
-func (evts *events) Subscribe(subId, event string, callback func(AnyEventData)) error {
+func (evts *emitter) Subscribe(subId, event string, callback func(AnyEventData)) error {
 	logging.TraceMsg(evts.logger, "Subscribing to event",
 		structure.ScopeKey, "events.Subscribe", "subId", subId, "event", event)
 	evts.eventSwitch.AddListenerForEvent(subId, event, func(eventData go_events.EventData) {
+		if eventData == nil {
+			logging.TraceMsg(evts.logger, "Sent nil go-events EventData")
+			return
+		}
 		callback(MapToAnyEventData(eventData))
 	})
 	return nil
 }
 
 // Un-subscribe from an event.
-func (evts *events) Unsubscribe(subId string) error {
+func (evts *emitter) Unsubscribe(subId string) error {
 	logging.TraceMsg(evts.logger, "Unsubscribing from event",
 		structure.ScopeKey, "events.Unsubscribe", "subId", subId)
 	evts.eventSwitch.RemoveListener(subId)
 	return nil
 }
 
-// Provides an EventEmitter that wraps many underlying EventEmitters as a
+// Provides an Emitter that wraps many underlying EventEmitters as a
 // convenience for Subscribing and Unsubscribing on multiple EventEmitters at
 // once
-func Multiplex(events ...EventEmitter) *multiplexedEvents {
+func Multiplex(events ...Emitter) *multiplexedEvents {
 	return &multiplexedEvents{eventEmitters: events}
 }
 
 type multiplexedEvents struct {
 	common.BaseService
-	eventEmitters []EventEmitter
+	eventEmitters []Emitter
 }
 
-var _ EventEmitter = &multiplexedEvents{}
+var _ Emitter = &multiplexedEvents{}
 
 // Subscribe to an event.
 func (multiEvents *multiplexedEvents) Subscribe(subId, event string, cb func(AnyEventData)) error {
@@ -127,10 +140,14 @@ func (multiEvents *multiplexedEvents) Unsubscribe(subId string) error {
 	return nil
 }
 
-func (multiEvents *multiplexedEvents) FireEvent(event string, eventData go_events.EventData) {
+func (multiEvents *multiplexedEvents) Fire(event string, eventData interface{}) {
 	for _, evts := range multiEvents.eventEmitters {
-		evts.FireEvent(event, eventData)
+		evts.Fire(event, eventData)
 	}
+}
+
+func (multiEvents *multiplexedEvents) FireEvent(event string, eventData go_events.EventData) {
+	multiEvents.Fire(event, eventData)
 }
 
 // EventSwitch
@@ -155,11 +172,11 @@ func (multiEvents *multiplexedEvents) RemoveListener(listenerID string) {
 type noOpFireable struct {
 }
 
-func (*noOpFireable) FireEvent(event string, data go_events.EventData) {
+func (*noOpFireable) Fire(string, interface{}) {
 
 }
 
-func NewNoOpFireable() go_events.Fireable {
+func NewNoOpFireable() Fireable {
 	return &noOpFireable{}
 }
 

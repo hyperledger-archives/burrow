@@ -26,8 +26,10 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
+	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/execution/evm/events"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
@@ -47,7 +49,7 @@ type Transactor interface {
 	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
 	BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error
 	Transact(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*txs.Receipt, error)
-	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*events.EventDataCall, error)
+	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error)
 	Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
 	SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
 	TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error)
@@ -59,14 +61,14 @@ type transactor struct {
 	txMtx            *sync.Mutex
 	blockchain       blockchain.Blockchain
 	state            acm.StateReader
-	eventEmitter     event.EventEmitter
+	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           logging_types.InfoTraceLogger
 }
 
 var _ Transactor = &transactor{}
 
-func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.EventEmitter,
+func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
 	logger logging_types.InfoTraceLogger) *transactor {
 
@@ -99,7 +101,8 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 	txCache := NewTxCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil)
+	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
+		logging.WithScope(trans.logger, "Call"))
 	vmach.SetFireable(trans.eventEmitter)
 
 	gas := params.GasLimit
@@ -120,7 +123,8 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	txCache := NewTxCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil)
+	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
+		logging.WithScope(trans.logger, "CallCode"))
 	gas := params.GasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -158,10 +162,8 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 			return nil, fmt.Errorf("could not deserialise transaction receipt: %s", err)
 		}
 		return receipt, nil
-	case abci_types.CodeType_EncodingError, abci_types.CodeType_InternalError:
-		return nil, fmt.Errorf("error code %s received, log: %s", checkTxResponse.Code, checkTxResponse.Log)
 	default:
-		return nil, fmt.Errorf("unknown error returned from Tendermint by BroadcastTxSync "+
+		return nil, fmt.Errorf("error returned by Tendermint in BroadcastTxSync "+
 			"ABCI code: %v, ABCI log: %v", checkTxResponse.Code, checkTxResponse.Log)
 	}
 }
@@ -218,7 +220,7 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 }
 
 func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit,
-	fee uint64) (*events.EventDataCall, error) {
+	fee uint64) (*evm_events.EventDataCall, error) {
 	rec, tErr := trans.Transact(privKey, address, data, gasLimit, fee)
 	if tErr != nil {
 		return nil, tErr
@@ -231,9 +233,9 @@ func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, da
 	}
 	// We want non-blocking on the first event received (but buffer the value),
 	// after which we want to block (and then discard the value - see below)
-	wc := make(chan *events.EventDataCall, 1)
+	wc := make(chan *evm_events.EventDataCall, 1)
 	subId := fmt.Sprintf("%X", rec.TxHash)
-	trans.eventEmitter.Subscribe(subId, events.EventStringAccCall(addr),
+	trans.eventEmitter.Subscribe(subId, evm_events.EventStringAccCall(addr),
 		func(eventData event.AnyEventData) {
 			eventDataCall := eventData.EventDataCall()
 			if eventDataCall == nil {
@@ -260,7 +262,7 @@ func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, da
 	timer := time.NewTimer(300 * time.Second)
 	toChan := timer.C
 
-	var ret *events.EventDataCall
+	var ret *evm_events.EventDataCall
 	var rErr error
 
 	select {
@@ -331,9 +333,9 @@ func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amou
 	wc := make(chan *txs.SendTx)
 	subId := fmt.Sprintf("%X", rec.TxHash)
 
-	trans.eventEmitter.Subscribe(subId, events.EventStringAccOutput(toAddress),
+	trans.eventEmitter.Subscribe(subId, exe_events.EventStringAccOutput(toAddress),
 		func(eventData event.AnyEventData) {
-			eventDataTx, ok := eventData.Get().(events.EventDataTx)
+			eventDataTx, ok := eventData.Get().(exe_events.EventDataTx)
 			if !ok {
 				trans.logger.Info("error", "cold not be convert event data to EventDataCall",
 					structure.ScopeKey, "SendAndHold",

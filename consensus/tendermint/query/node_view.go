@@ -5,10 +5,11 @@ import (
 
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/tendermint/consensus"
+	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/consensus"
 )
 
 // You're like the interface I never had
@@ -28,9 +29,9 @@ type NodeView interface {
 	// Get the currently unconfirmed but not known to be invalid transactions from the Node's mempool
 	MempoolTransactions(maxTxs int) ([]txs.Tx, error)
 	// Get the validator's consensus RoundState
-	RoundState() *consensus.RoundState
+	RoundState() *ctypes.RoundState
 	// Get the validator's peer's consensus RoundState
-	PeerRoundStates() ([]*consensus.PeerRoundState, error)
+	PeerRoundStates() ([]*ctypes.PeerRoundState, error)
 }
 
 type nodeView struct {
@@ -82,13 +83,13 @@ func (nv *nodeView) MempoolTransactions(maxTxs int) ([]txs.Tx, error) {
 	return transactions, nil
 }
 
-func (nv *nodeView) RoundState() *consensus.RoundState {
+func (nv *nodeView) RoundState() *ctypes.RoundState {
 	return nv.tmNode.ConsensusState().GetRoundState()
 }
 
-func (nv *nodeView) PeerRoundStates() ([]*consensus.PeerRoundState, error) {
+func (nv *nodeView) PeerRoundStates() ([]*ctypes.PeerRoundState, error) {
 	peers := nv.tmNode.Switch().Peers().List()
-	peerRoundStates := make([]*consensus.PeerRoundState, len(peers))
+	peerRoundStates := make([]*ctypes.PeerRoundState, len(peers))
 	for i, peer := range peers {
 		peerState, ok := peer.Get(types.PeerStateKey).(*consensus.PeerState)
 		if !ok {

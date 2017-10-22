@@ -39,6 +39,21 @@ func AsValidator(account Account) Validator {
 	}.Validator()
 }
 
+func AsConcreteValidator(validator Validator) *ConcreteValidator {
+	if validator == nil {
+		return nil
+	}
+	if ca, ok := validator.(concreteValidatorWrapper); ok {
+		return ca.ConcreteValidator
+	}
+	return &ConcreteValidator{
+		Address: validator.Address(),
+		PubKey:  validator.PubKey(),
+		Power:   validator.Power(),
+	}
+
+}
+
 func (cvw concreteValidatorWrapper) Address() Address {
 	return cvw.ConcreteValidator.Address
 }

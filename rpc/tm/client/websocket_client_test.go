@@ -21,11 +21,13 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/evm/events"
+	exe_events "github.com/hyperledger/burrow/execution/events"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	tm_types "github.com/tendermint/tendermint/types"
+	"github.com/stretchr/testify/require"
 )
 
 //--------------------------------------------------------------------------------
@@ -34,7 +36,7 @@ import (
 // make a simple connection to the server
 func TestWSConnect(t *testing.T) {
 	wsc := newWSClient()
-	wsc.Stop()
+	stopWSClient(wsc)
 }
 
 // receive a new block message
@@ -44,7 +46,7 @@ func TestWSNewBlock(t *testing.T) {
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
-		wsc.Stop()
+		stopWSClient(wsc)
 	}()
 	waitForEvent(t, wsc, eid, func() {},
 		func(eid string, eventData event.AnyEventData) (bool, error) {
@@ -63,7 +65,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
-		wsc.Stop()
+		stopWSClient(wsc)
 	}()
 	// listen for NewBlock, ensure height increases by 1
 	var initBlockN int
@@ -94,14 +96,14 @@ func TestWSSend(t *testing.T) {
 	wsc := newWSClient()
 	toAddr := privateAccounts[1].Address()
 	amt := uint64(100)
-	eidInput := events.EventStringAccInput(privateAccounts[0].Address())
-	eidOutput := events.EventStringAccOutput(toAddr)
+	eidInput := exe_events.EventStringAccInput(privateAccounts[0].Address())
+	eidOutput := exe_events.EventStringAccOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
 	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
 	defer func() {
 		unsubscribe(t, wsc, subIdInput)
 		unsubscribe(t, wsc, subIdOutput)
-		wsc.Stop()
+		stopWSClient(wsc)
 	}()
 	waitForEvent(t, wsc, eidInput, func() {
 		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
@@ -118,11 +120,11 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := events.EventStringAccInput(privateAccounts[0].Address())
+	eid := exe_events.EventStringAccInput(privateAccounts[0].Address())
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
-		wsc.Stop()
+		stopWSClient(wsc)
 	}()
 	amt := uint64(100)
 	toAddr := privateAccounts[1].Address()
@@ -149,11 +151,11 @@ func TestWSCallWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid1 := events.EventStringAccInput(privateAccounts[0].Address())
+	eid1 := exe_events.EventStringAccInput(privateAccounts[0].Address())
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, subId1)
-		wsc.Stop()
+		stopWSClient(wsc)
 	}()
 	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 	code, returnCode, returnVal := simpleContract()
@@ -167,7 +169,7 @@ func TestWSCallWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
-	eid2 := events.EventStringAccOutput(contractAddr)
+	eid2 := exe_events.EventStringAccOutput(contractAddr)
 	subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
 	defer func() {
 		unsubscribe(t, wsc, subId2)
@@ -188,21 +190,20 @@ func TestWSCallNoWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 	code, _, returnVal := simpleContract()
 
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, jsonRpcClient, tx)
+	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
+	require.NoError(t, err)
 	contractAddr := receipt.ContractAddr
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
-	eid := events.EventStringAccOutput(contractAddr)
+	eid := exe_events.EventStringAccOutput(contractAddr)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
-	defer func() {
-		unsubscribe(t, wsc, subId)
-		wsc.Stop()
-	}()
+	defer unsubscribe(t, wsc, subId)
 	// get the return value from a call
 	data := []byte{0x1}
 	waitForEvent(t, wsc, eid, func() {
@@ -217,41 +218,46 @@ func TestWSCallCall(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 	code, _, returnVal := simpleContract()
 	txid := new([]byte)
 
 	// deploy the two contracts
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, jsonRpcClient, tx)
+	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
+	require.NoError(t, err)
 	contractAddr1 := receipt.ContractAddr
 
+	// subscribe to the new contracts
+	eid := evm_events.EventStringAccCall(contractAddr1)
+	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
+	defer unsubscribe(t, wsc, subId)
+	// call contract2, which should call contract1, and wait for ev1
 	code, _, _ = simpleCallContract(contractAddr1)
 	tx = makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 	receipt = broadcastTx(t, jsonRpcClient, tx)
 	contractAddr2 := receipt.ContractAddr
 
-	// subscribe to the new contracts
-	amt = uint64(10001)
-	eid := events.EventStringAccCall(contractAddr1)
-	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
-	defer func() {
-		unsubscribe(t, wsc, subId)
-		wsc.Stop()
-	}()
-	// call contract2, which should call contract1, and wait for ev1
-
 	// let the contract get created first
-	waitForEvent(t, wsc, eid, func() {
-	}, func(eid string, b event.AnyEventData) (bool, error) {
-		return true, nil
-	})
+	waitForEvent(t, wsc, eid,
+		// Runner
+		func() {
+		},
+		// Event Checker
+		func(eid string, b event.AnyEventData) (bool, error) {
+			return true, nil
+		})
 	// call it
-	waitForEvent(t, wsc, eid, func() {
-		tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr2, nil, amt, gasLim, fee)
-		broadcastTx(t, jsonRpcClient, tx)
-		*txid = txs.TxHash(genesisDoc.ChainID(), tx)
-	}, unmarshalValidateCall(privateAccounts[0].Address(), returnVal, txid))
+	waitForEvent(t, wsc, eid,
+		// Runner
+		func() {
+			tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr2, nil, amt, gasLim, fee)
+			broadcastTx(t, jsonRpcClient, tx)
+			*txid = txs.TxHash(genesisDoc.ChainID(), tx)
+		},
+		// Event checker
+		unmarshalValidateCall(privateAccounts[0].Address(), returnVal, txid))
 }
 
 func TestSubscribe(t *testing.T) {
@@ -268,8 +274,7 @@ Subscribe:
 			t.Fatal("Timed out waiting for subscription result")
 
 		case bs := <-wsc.ResultsCh:
-			res := new(rpc.ResultSubscribe)
-			readResult(t, bs, res)
+			res := readResult(t, bs).(*rpc.ResultSubscribe)
 			assert.Equal(t, tm_types.EventStringNewBlock(), res.Event)
 			subId = res.SubscriptionId
 			break Subscribe
@@ -288,18 +293,18 @@ Subscribe:
 			return
 
 		case bs := <-wsc.ResultsCh:
-			res := new(rpc.ResultEvent)
-			readResult(t, bs, res)
-			enb := res.Data.EventDataNewBlock()
-			if enb != nil {
-				assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)
-				if blocksSeen > 1 {
-					t.Fatal("Continued to see NewBlock event after unsubscribing")
-				} else {
-					if blocksSeen == 0 {
-						unsubscribe(t, wsc, subId)
+			if res, ok := readResult(t, bs).(*rpc.ResultEvent); ok {
+				enb := res.EventDataNewBlock()
+				if enb != nil {
+					assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)
+					if blocksSeen > 1 {
+						t.Fatal("Continued to see NewBlock event after unsubscribing")
+					} else {
+						if blocksSeen == 0 {
+							unsubscribe(t, wsc, subId)
+						}
+						blocksSeen++
 					}
-					blocksSeen++
 				}
 			}
 		}

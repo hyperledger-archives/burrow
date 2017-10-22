@@ -29,17 +29,12 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
 )
-
-func init() {
-	evm.SetDebug(true)
-}
 
 var deterministicGenesis = genesis.NewDeterministicGenesis(34059836243380576)
 var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.

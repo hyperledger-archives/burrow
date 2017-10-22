@@ -19,7 +19,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
-
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -53,7 +53,8 @@ func registerNativeContracts() {
 
 //-----------------------------------------------------------------------------
 
-type NativeContract func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64) (output []byte, err error)
+type NativeContract func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error)
 
 /* Removed due to C dependency
 func ecrecoverFunc(state State, caller *acm.Account, input []byte, gas *int64) (output []byte, err error) {
@@ -78,7 +79,8 @@ func ecrecoverFunc(state State, caller *acm.Account, input []byte, gas *int64) (
 }
 */
 
-func sha256Func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64) (output []byte, err error) {
+func sha256Func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasSha256Word + GasSha256Base
 	if *gas < gasRequired {
@@ -93,7 +95,8 @@ func sha256Func(state acm.StateWriter, caller acm.Account, input []byte, gas *ui
 	return hasher.Sum(nil), nil
 }
 
-func ripemd160Func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64) (output []byte, err error) {
+func ripemd160Func(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasRipemd160Word + GasRipemd160Base
 	if *gas < gasRequired {
@@ -108,7 +111,8 @@ func ripemd160Func(state acm.StateWriter, caller acm.Account, input []byte, gas 
 	return LeftPadBytes(hasher.Sum(nil), 32), nil
 }
 
-func identityFunc(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64) (output []byte, err error) {
+func identityFunc(state acm.StateWriter, caller acm.Account, input []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasIdentityWord + GasIdentityBase
 	if *gas < gasRequired {

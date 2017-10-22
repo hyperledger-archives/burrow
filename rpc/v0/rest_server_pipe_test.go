@@ -41,7 +41,7 @@ type MockPipe struct {
 	accounts        definitions.Accounts
 	blockchain      blockchain.Blockchain
 	consensusEngine consensus_types.ConsensusEngine
-	events          event.EventEmitter
+	events          event.Emitter
 	namereg         definitions.NameReg
 	transactor      definitions.Transactor
 	logger          logging_types.InfoTraceLogger
@@ -74,7 +74,7 @@ func (pipe *MockPipe) Blockchain() blockchain_types.Blockchain {
 	return pipe.blockchain
 }
 
-func (pipe *MockPipe) Events() event.EventEmitter {
+func (pipe *MockPipe) Events() event.Emitter {
 	return pipe.events
 }
 
@@ -217,7 +217,7 @@ func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
 	}.Wrap()
 }
 
-func (cons *consensusEngine) Events() event.EventEmitter {
+func (cons *consensusEngine) Events() event.Emitter {
 	return nil
 }
 

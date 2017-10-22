@@ -19,6 +19,8 @@ import (
 	"os"
 	"os/signal"
 
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -61,7 +63,7 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	state.Save()
 
 	blockchain := bcm.NewBlockchain(genesisDoc)
-	evmEvents := event.NewEvents(events.NewEventSwitch(), logger)
+	evmEvents := event.NewEmitter(logger)
 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
 	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain, logger)
@@ -70,9 +72,8 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	if err != nil {
 		return nil, err
 	}
-
 	// Multiplex Tendermint and EVM events
-	eventEmitter := event.Multiplex(evmEvents, event.NewEvents(tmNode.EventSwitch(), logger))
+	eventEmitter := event.Multiplex(evmEvents, event.WrapEventSwitch(tmNode.EventSwitch(), logger))
 
 	txCodec := txs.NewGoWireCodec()
 	nameReg := execution.NewNameReg(state, blockchain)
@@ -80,6 +81,12 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	transactor := execution.NewTransactor(blockchain, state, eventEmitter,
 		tendermint.BroadcastTxAsyncFunc(tmNode, txCodec), logger)
 
+	// TODO: consider whether we need to be more explicit about pre-commit (check cache) versus committed (state) values
+	// Note we pass the checker as the StateIterable to NewService which means the RPC layers will query the check
+	// cache state. This is in line with previous behaviour of Burrow and chiefly serves to get provide a pre-commit
+	// view of nonce values on the node that a client is communicating with.
+	// Since we don't currently execute EVM code in the checker possible conflicts are limited to account creation
+	// which increments the creator's account Sequence and SendTxs
 	service := rpc.NewService(state, eventEmitter, nameReg, blockchain, transactor, query.NewNodeView(tmNode, txCodec),
 		logger)
 
@@ -97,7 +104,7 @@ func NewGenesisKernel() (*Kernel, error) {
 	genesisAccount.AddToBalance(GenesisAccountBalance)
 	genesisValidator := acm.AsValidator(genesisAccount)
 	privValidator := tendermint.NewPrivValidatorMemory(genesisPrivateAccount)
-	genesisDoc := genesis.MakeGenesisDocFromAccounts("GenesisChain", nil,
+	genesisDoc := genesis.MakeGenesisDocFromAccounts("GenesisChain", nil, time.Now(),
 		map[string]acm.Account{
 			"genesisAccount": genesisAccount,
 		},

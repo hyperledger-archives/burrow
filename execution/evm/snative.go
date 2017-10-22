@@ -23,6 +23,9 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
@@ -225,7 +228,11 @@ func NewSNativeContract(comment, name string,
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
 func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
-	args []byte, gas *uint64) (output []byte, err error) {
+	args []byte, gas *uint64, logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	logger = logger.WithPrefix(structure.ComponentKey, "SNatives").
+		With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
+
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
 			"identifier but arguments are only %s bytes long", len(args))
@@ -235,6 +242,8 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 	if err != nil {
 		return nil, err
 	}
+
+	logging.TraceMsg(logger, "Dispatching to function", "function_name", function.Name)
 
 	remainingArgs := args[abi.FunctionSelectorLength:]
 
@@ -250,7 +259,7 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 	}
 
 	// call the function
-	return function.F(state, caller, remainingArgs, gas)
+	return function.F(state, caller, remainingArgs, gas, logger)
 }
 
 // We define the address of an SNative contact as the last 20 bytes of the sha3
@@ -329,32 +338,40 @@ func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
-func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, permNum := returnTwoArgs(args)
-	acc, err := state.GetAccount(acm.AddressFromWord256(addr))
+func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, permNum := returnTwoArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum)) // already shifted
 	if !ValidPermN(permN) {
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
-	permInt := byteFromBool(HasPermission(state, acc, permN))
-	dbg.Printf("snative.hasBasePerm(0x%X, %b) = %v\n", addr.Postfix(20), permN, permInt)
+	hasPermission := HasPermission(state, acc, permN)
+	permInt := byteFromBool(hasPermission)
+	logger.Trace("function", "hasBase", "address", address.String(),
+		"perm_flag", fmt.Sprintf("%b", permN), "has_permission", hasPermission)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, permNum, permVal := returnThreeArgs(args)
-	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, permNum, permVal := returnThreeArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := acm.GetMutableAccount(state, address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
@@ -365,18 +382,23 @@ func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
+	logger.Trace("function", "setBase", "address", address.String(),
+		"permission_flag", fmt.Sprintf("%b", permN),
+		"permission_value", permV)
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, permNum := returnTwoArgs(args)
-	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, permNum := returnTwoArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := acm.GetMutableAccount(state, address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
@@ -386,11 +408,16 @@ func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
+	logger.Trace("function", "unsetBase", "address", address.String(),
+		"perm_flag", fmt.Sprintf("%b", permN),
+		"permission_flag", fmt.Sprintf("%b", permN))
+
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
-func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
+func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
 	permNum, permVal := returnTwoArgs(args)
 	acc, err := acm.GetMutableAccount(state, permission.GlobalPermissionsAddress)
 	if err != nil {
@@ -408,54 +435,74 @@ func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
+	logger.Trace("function", "setGlobal",
+		"permission_flag", fmt.Sprintf("%b", permN),
+		"permission_value", permV)
 	return permBytes(acc.Permissions().Base.ResultantPerms()), nil
 }
 
-func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, role := returnTwoArgs(args)
-	acc, err := state.GetAccount(acm.AddressFromWord256(addr))
+func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, role := returnTwoArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(acc.Permissions().HasRole(roleS))
-	dbg.Printf("snative.hasRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	hasRole := acc.Permissions().HasRole(roleS)
+	permInt := byteFromBool(hasRole)
+	logger.Trace("function", "hasRole", "address", address.String(),
+		"role", roleS,
+		"has_role", hasRole)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, role := returnTwoArgs(args)
-	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, role := returnTwoArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := acm.GetMutableAccount(state, address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(acc.MutablePermissions().AddRole(roleS))
+	roleAdded := acc.MutablePermissions().AddRole(roleS)
+	permInt := byteFromBool(roleAdded)
 	state.UpdateAccount(acc)
-	dbg.Printf("snative.addRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	logger.Trace("function", "addRole", "address", address.String(),
+		"role", roleS,
+		"role_added", roleAdded)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64) (output []byte, err error) {
-	addr, role := returnTwoArgs(args)
-	acc, err := acm.GetMutableAccount(state, acm.AddressFromWord256(addr))
+func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
+	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+
+	addrWord256, role := returnTwoArgs(args)
+	address := acm.AddressFromWord256(addrWord256)
+	acc, err := acm.GetMutableAccount(state, address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("unknown account %X", addr)
+		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	roleS := string(role.Bytes())
-	permInt := byteFromBool(acc.MutablePermissions().RmRole(roleS))
+	roleRemoved := acc.MutablePermissions().RmRole(roleS)
+	permInt := byteFromBool(roleRemoved)
 	state.UpdateAccount(acc)
-	dbg.Printf("snative.rmRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	logger.Trace("function", "removeRole", "address", address.String(),
+		"role", roleS,
+		"role_removed", roleRemoved)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 

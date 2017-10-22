@@ -50,8 +50,8 @@ const GasLimit = uint64(1000000)
 
 // NOTE: not goroutine-safe.
 type State struct {
-	mtx sync.RWMutex
-	db  dbm.DB
+	sync.RWMutex
+	db dbm.DB
 	//	BondedValidators     *types.ValidatorSet
 	//	LastBondedValidators *types.ValidatorSet
 	//	UnbondingValidators  *types.ValidatorSet
@@ -178,8 +178,8 @@ func LoadState(db dbm.DB) (*State, error) {
 }
 
 func (s *State) Save() {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	s.accounts.Save()
 	//s.validatorInfos.Save()
 	s.nameReg.Save()
@@ -223,8 +223,8 @@ func (s *State) Copy() *State {
 
 // Returns a hash that represents the state data, excluding Last*
 func (s *State) Hash() []byte {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	return merkle.SimpleHashFromMap(map[string]interface{}{
 		//"BondedValidators":    s.BondedValidators,
 		//"UnbondingValidators": s.UnbondingValidators,
@@ -236,8 +236,8 @@ func (s *State) Hash() []byte {
 
 // Returns nil if account does not exist with given address.
 func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	_, accBytes, _ := s.accounts.Get(address.Bytes())
 	if accBytes == nil {
 		return nil, nil
@@ -245,32 +245,29 @@ func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
 	return acm.Decode(accBytes)
 }
 
-// The account is copied before setting, so mutating it
-// afterwards has no side effects.
-// Implements Statelike
 func (s *State) UpdateAccount(account acm.Account) error {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	s.accounts.Set(account.Address().Bytes(), account.Encode())
 	return nil
 }
 
 func (s *State) RemoveAccount(address acm.Address) error {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	s.accounts.Remove(address.Bytes())
 	return nil
 }
 
-// The returned Account is a copy, so mutating it
-// has no side effects. (TODO [Silas]: Yeah you'd think, but that's bollocks, just like this merkle tree implementation)
+// This does not give a true independent copy since the underlying database is shared and any save calls all copies
+// to become invalid and using them may cause panics
 func (s *State) GetAccounts() merkle.Tree {
 	return s.accounts.Copy()
 }
 
 func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	stopped = s.accounts.Iterate(func(key, value []byte) bool {
 		var account acm.Account
 		account, err = acm.Decode(value)
@@ -407,16 +404,16 @@ func (s *State) accountStorage(address acm.Address) (merkle.Tree, error) {
 }
 
 func (s *State) LoadStorage(hash []byte) merkle.Tree {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	storage := iavl.NewIAVLTree(1024, s.db)
 	storage.Load(hash)
 	return storage
 }
 
 func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	storageTree, err := s.accountStorage(address)
 	if err != nil {
 		return binary.Zero256, err
@@ -426,8 +423,8 @@ func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word
 }
 
 func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	storageTree, err := s.accountStorage(address)
 	if err != nil {
 		return err

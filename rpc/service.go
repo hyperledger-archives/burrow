@@ -26,7 +26,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/tendermint/rpc/lib/types"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -36,35 +35,43 @@ const MaxBlockLookback = 100
 
 // Base service that provides implementation for all underlying RPC methods
 type Service interface {
-	Subscribe(wsCtx rpctypes.WSRPCContext, eventId string) (*ResultSubscribe, error)
-	Unsubscribe(wsCtx rpctypes.WSRPCContext, subscriptionId string) (*ResultUnsubscribe, error)
+	// Transact
+	BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error)
+	// Events
+	Subscribe(eventId string, callback func(eventData event.AnyEventData)) (*ResultSubscribe, error)
+	Unsubscribe(subscriptionId string) (*ResultUnsubscribe, error)
+	// Status
 	Status() (*ResultStatus, error)
-	ChainId() (*ResultChainId, error)
-	Peers() ([]*Peer, error)
 	NetInfo() (*ResultNetInfo, error)
-	Genesis() (*ResultGenesis, error)
+	// Accounts
 	GetAccount(address acm.Address) (*ResultGetAccount, error)
-	//ListAccounts() (*ResultListAccounts, error)
 	ListAccounts() (*ResultListAccounts, error)
 	GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error)
 	DumpStorage(address acm.Address) (*ResultDumpStorage, error)
-	Call(fromAddress, toAddress acm.Address, data []byte) (*execution.Call, error)
-	CallCode(fromAddress acm.Address, code, data []byte) (*execution.Call, error)
-	GetName(name string) (*ResultGetName, error)
-	ListNames() (*ResultListNames, error)
-	BroadcastTx(tx *txs.Wrapper) (*ResultBroadcastTx, error)
-	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
+	// Simulated call
+	Call(fromAddress, toAddress acm.Address, data []byte) (*ResultCall, error)
+	CallCode(fromAddress acm.Address, code, data []byte) (*ResultCall, error)
+	// Blockchain
+	Genesis() (*ResultGenesis, error)
+	ChainId() (*ResultChainId, error)
 	BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchainInfo, error)
 	GetBlock(height uint64) (*ResultGetBlock, error)
+	// Consensus
+	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
 	ListValidators() (*ResultListValidators, error)
 	DumpConsensusState() (*ResultDumpConsensusState, error)
+	Peers() (*ResultPeers, error)
+	// Names
+	GetName(name string) (*ResultGetName, error)
+	ListNames() (*ResultListNames, error)
+	// Private keys and signing
 	SignTx(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*ResultSignTx, error)
 	GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error)
 }
 
 type service struct {
 	state        acm.StateIterable
-	eventEmitter event.EventEmitter
+	eventEmitter event.Emitter
 	nameReg      execution.NameRegIterable
 	blockchain   bcm.Blockchain
 	transactor   execution.Transactor
@@ -74,7 +81,7 @@ type service struct {
 
 var _ Service = &service{}
 
-func NewService(state acm.StateIterable, eventEmitter event.EventEmitter, nameReg execution.NameRegIterable,
+func NewService(state acm.StateIterable, eventEmitter event.Emitter, nameReg execution.NameRegIterable,
 	blockchain bcm.Blockchain, transactor execution.Transactor, nodeView query.NodeView,
 	logger logging_types.InfoTraceLogger) *service {
 
@@ -92,19 +99,15 @@ func NewService(state acm.StateIterable, eventEmitter event.EventEmitter, nameRe
 // All methods in this file return (Result*, error) which is the return
 // signature assumed by go-rpc
 
-func (s *service) Subscribe(wsCtx rpctypes.WSRPCContext, eventId string) (*ResultSubscribe, error) {
+func (s *service) Subscribe(eventId string, callback func(event.AnyEventData)) (*ResultSubscribe, error) {
 	subscriptionId, err := event.GenerateSubId()
+
+	logging.InfoMsg(s.logger, "Subscribing to event",
+		"eventId", eventId, "subscriptionId", subscriptionId)
 	if err != nil {
 		return nil, err
-		logging.InfoMsg(s.logger, "Subscribing to event",
-			"eventId", eventId, "subscriptionId", subscriptionId)
 	}
-	err = s.eventEmitter.Subscribe(subscriptionId, eventId,
-		func(eventData event.AnyEventData) {
-			// NOTE: EventSwitch callbacks must be nonblocking
-			wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(wsCtx.Request.ID+"#event",
-				&ResultEvent{Event: eventId, Data: eventData}))
-		})
+	err = s.eventEmitter.Subscribe(subscriptionId, eventId, callback)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +117,7 @@ func (s *service) Subscribe(wsCtx rpctypes.WSRPCContext, eventId string) (*Resul
 	}, nil
 }
 
-func (s *service) Unsubscribe(wsCtx rpctypes.WSRPCContext, subscriptionId string) (*ResultUnsubscribe, error) {
+func (s *service) Unsubscribe(subscriptionId string) (*ResultUnsubscribe, error) {
 	err := s.eventEmitter.Unsubscribe(subscriptionId)
 	if err != nil {
 		return nil, err
@@ -146,16 +149,14 @@ func (s *service) Status() (*ResultStatus, error) {
 }
 
 func (s *service) ChainId() (*ResultChainId, error) {
-	chainId := s.blockchain.ChainID()
-
 	return &ResultChainId{
-		ChainName:   chainId, // TODO: remove ChainName, we should stick with Tendermint's human readable notion of ChainID
-		ChainId:     chainId,
+		ChainName:   s.blockchain.GenesisDoc().ChainName,
+		ChainId:     s.blockchain.ChainID(),
 		GenesisHash: s.blockchain.GenesisHash(),
 	}, nil
 }
 
-func (s *service) Peers() ([]*Peer, error) {
+func (s *service) Peers() (*ResultPeers, error) {
 	peers := make([]*Peer, s.nodeView.Peers().Size())
 	for i, peer := range s.nodeView.Peers().List() {
 		peers[i] = &Peer{
@@ -163,7 +164,9 @@ func (s *service) Peers() ([]*Peer, error) {
 			IsOutbound: peer.IsOutbound(),
 		}
 	}
-	return peers, nil
+	return &ResultPeers{
+		Peers: peers,
+	}, nil
 }
 
 func (s *service) NetInfo() (*ResultNetInfo, error) {
@@ -179,7 +182,7 @@ func (s *service) NetInfo() (*ResultNetInfo, error) {
 	return &ResultNetInfo{
 		Listening: listening,
 		Listeners: listeners,
-		Peers:     peers,
+		Peers:     peers.Peers,
 	}, nil
 }
 
@@ -199,9 +202,9 @@ func (s *service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 }
 
 func (s *service) ListAccounts() (*ResultListAccounts, error) {
-	accounts := make([]acm.Account, 0)
+	accounts := make([]*acm.ConcreteAccount, 0)
 	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
-		accounts = append(accounts, account)
+		accounts = append(accounts, acm.AsConcreteAccount(account))
 		return
 	})
 
@@ -249,12 +252,24 @@ func (s *service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 	}, nil
 }
 
-func (s *service) Call(fromAddress, toAddress acm.Address, data []byte) (*execution.Call, error) {
-	return s.transactor.Call(fromAddress, toAddress, data)
+func (s *service) Call(fromAddress, toAddress acm.Address, data []byte) (*ResultCall, error) {
+	call, err := s.transactor.Call(fromAddress, toAddress, data)
+	if err != nil {
+		return nil, err
+	}
+	return &ResultCall{
+		Call: call,
+	}, nil
 }
 
-func (s *service) CallCode(fromAddress acm.Address, code, data []byte) (*execution.Call, error) {
-	return s.transactor.CallCode(fromAddress, code, data)
+func (s *service) CallCode(fromAddress acm.Address, code, data []byte) (*ResultCall, error) {
+	call, err := s.transactor.CallCode(fromAddress, code, data)
+	if err != nil {
+		return nil, err
+	}
+	return &ResultCall{
+		Call: call,
+	}, nil
 }
 
 // Name registry
@@ -278,8 +293,8 @@ func (s *service) ListNames() (*ResultListNames, error) {
 	}, nil
 }
 
-func (s *service) BroadcastTx(tx *txs.Wrapper) (*ResultBroadcastTx, error) {
-	receipt, err := s.transactor.BroadcastTx(tx.Unwrap())
+func (s *service) BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error) {
+	receipt, err := s.transactor.BroadcastTx(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -294,9 +309,13 @@ func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 	if err != nil {
 		return nil, err
 	}
+	wrappedTxs := make([]txs.Wrapper, len(transactions))
+	for i, tx := range transactions {
+		wrappedTxs[i] = txs.Wrap(tx)
+	}
 	return &ResultListUnconfirmedTxs{
 		N:   len(transactions),
-		Txs: transactions,
+		Txs: wrappedTxs,
 	}, nil
 }
 
@@ -308,16 +327,14 @@ func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 func (s *service) BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchainInfo, error) {
 	latestHeight := s.blockchain.Tip().LastBlockHeight()
 
-	if maxHeight < 1 || latestHeight < maxHeight {
+	if minHeight == 0 {
+		minHeight = 1
+	}
+	if maxHeight == 0 || latestHeight < maxHeight {
 		maxHeight = latestHeight
 	}
-	if minHeight < 1 {
-		lookbackHeight := maxHeight - MaxBlockLookback
-		if lookbackHeight > 1 {
-			minHeight = lookbackHeight
-		} else {
-			minHeight = 1
-		}
+	if maxHeight > minHeight && maxHeight-minHeight > MaxBlockLookback {
+		minHeight = maxHeight - MaxBlockLookback
 	}
 
 	blockMetas := []*tm_types.BlockMeta{}
@@ -342,9 +359,14 @@ func (s *service) GetBlock(height uint64) (*ResultGetBlock, error) {
 func (s *service) ListValidators() (*ResultListValidators, error) {
 	// TODO: when we reintroduce support for bonding and unbonding update this
 	// to reflect the mutable bonding state
+	validators := s.blockchain.Validators()
+	concreteValidators := make([]*acm.ConcreteValidator, len(validators))
+	for i, validator := range validators {
+		concreteValidators[i] = acm.AsConcreteValidator(validator)
+	}
 	return &ResultListValidators{
 		BlockHeight:         s.blockchain.Tip().LastBlockHeight(),
-		BondedValidators:    s.blockchain.Validators(),
+		BondedValidators:    concreteValidators,
 		UnbondingValidators: nil,
 	}, nil
 }
@@ -368,7 +390,7 @@ func (s *service) SignTx(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePriva
 	}
 
 	tx, err := s.transactor.SignTx(tx, privateAccounts)
-	return &ResultSignTx{Tx: tx}, err
+	return &ResultSignTx{Tx: txs.Wrap(tx)}, err
 }
 
 func (s *service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {

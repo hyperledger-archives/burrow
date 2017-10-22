@@ -24,20 +24,18 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
-	tendermint_types "github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"github.com/tendermint/go-wire/data"
 	"golang.org/x/crypto/ripemd160"
 )
 
 var (
-	ErrTxInvalidAddress       = errors.New("error invalid address")
-	ErrTxDuplicateAddress     = errors.New("error duplicate address")
-	ErrTxInvalidAmount        = errors.New("error invalid amount")
-	ErrTxInsufficientFunds    = errors.New("error insufficient funds")
-	ErrTxInsufficientGasPrice = errors.New("error insufficient gas price")
-	ErrTxUnknownPubKey        = errors.New("error unknown pubkey")
-	ErrTxInvalidPubKey        = errors.New("error invalid pubkey")
-	ErrTxInvalidSignature     = errors.New("error invalid signature")
-	ErrTxPermissionDenied     = errors.New("error permission denied")
+	ErrTxInvalidAddress    = errors.New("error invalid address")
+	ErrTxDuplicateAddress  = errors.New("error duplicate address")
+	ErrTxInvalidAmount     = errors.New("error invalid amount")
+	ErrTxInsufficientFunds = errors.New("error insufficient funds")
+	ErrTxUnknownPubKey     = errors.New("error unknown pubkey")
+	ErrTxInvalidPubKey     = errors.New("error invalid pubkey")
+	ErrTxInvalidSignature  = errors.New("error invalid signature")
 )
 
 type ErrTxInvalidString struct {
@@ -68,7 +66,6 @@ Account Txs:
 Validation Txs:
  - BondTx         New validator posts a bond
  - UnbondTx       Validator leaves
- - DupeoutTx      Validator dupes out (equivocates)
 
 Admin Txs:
  - PermissionsTx
@@ -82,27 +79,22 @@ const (
 	TxTypeName = byte(0x03)
 
 	// Validation transactions
-	TxTypeBond    = byte(0x11)
-	TxTypeUnbond  = byte(0x12)
-	TxTypeRebond  = byte(0x13)
-	TxTypeDupeout = byte(0x14)
+	TxTypeBond   = byte(0x11)
+	TxTypeUnbond = byte(0x12)
+	TxTypeRebond = byte(0x13)
 
 	// Admin transactions
 	TxTypePermissions = byte(0x20)
 )
 
-// for wire.readReflect
-var _ = wire.RegisterInterface(
-	struct{ Tx }{},
-	wire.ConcreteType{&SendTx{}, TxTypeSend},
-	wire.ConcreteType{&CallTx{}, TxTypeCall},
-	wire.ConcreteType{&NameTx{}, TxTypeName},
-	wire.ConcreteType{&BondTx{}, TxTypeBond},
-	wire.ConcreteType{&UnbondTx{}, TxTypeUnbond},
-	wire.ConcreteType{&RebondTx{}, TxTypeRebond},
-	wire.ConcreteType{&DupeoutTx{}, TxTypeDupeout},
-	wire.ConcreteType{&PermissionsTx{}, TxTypePermissions},
-)
+var mapper = data.NewMapper(Wrapper{}).
+	RegisterImplementation(&SendTx{}, "send_tx", TxTypeSend).
+	RegisterImplementation(&CallTx{}, "call_tx", TxTypeCall).
+	RegisterImplementation(&NameTx{}, "name_tx", TxTypeName).
+	RegisterImplementation(&BondTx{}, "bond_tx", TxTypeBond).
+	RegisterImplementation(&UnbondTx{}, "unbond_tx", TxTypeUnbond).
+	RegisterImplementation(&RebondTx{}, "rebond_tx", TxTypeRebond).
+	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions)
 
 //-----------------------------------------------------------------------------
 
@@ -112,7 +104,7 @@ type (
 	}
 
 	Wrapper struct {
-		Tx `json:"tx"`
+		Tx `json:"unwrap"`
 	}
 
 	Encoder interface {
@@ -170,24 +162,31 @@ type (
 	}
 )
 
-// Wrap the Tx in a struct that allows for go-wire JSON seserialisation
-func Wrap(tx Tx) *Wrapper {
-	return &Wrapper{
+// Wrap the Tx in a struct that allows for go-wire JSON serialisation
+func Wrap(tx Tx) Wrapper {
+	if txWrapped, ok := tx.(Wrapper); ok {
+		return txWrapped
+	}
+	return Wrapper{
 		Tx: tx,
 	}
 }
 
 // A serialisation wrapper that is itself a Tx
-func (txw *Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
+func (txw Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	txw.Tx.WriteSignBytes(chainID, w, n, err)
 }
 
-func (txw *Wrapper) UnmarshalJSON(data []byte) error {
-	return wire.ReadJSONBytes(data, &(txw.Tx))
+func (txw Wrapper) MarshalJSON() ([]byte, error) {
+	return mapper.ToJSON(txw.Tx)
 }
 
-func (txw *Wrapper) MarshalJSON() ([]byte, error) {
-	return wire.JSONBytes(&(txw.Tx)), nil
+func (txw *Wrapper) UnmarshalJSON(data []byte) (err error) {
+	parsed, err := mapper.FromJSON(data)
+	if err == nil && parsed != nil {
+		txw.Tx = parsed.(Tx)
+	}
+	return err
 }
 
 // Get the inner Tx that this Wrapper wraps
@@ -269,7 +268,7 @@ func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 }
 
 func (tx *CallTx) String() string {
-	return fmt.Sprintf("CallTx{%v -> %s: %s}", tx.Input, tx.Address, tx.Data)
+	return fmt.Sprintf("CallTx{%v -> %s: %X}", tx.Input, tx.Address, tx.Data)
 }
 
 //-----------------------------------------------------------------------------
@@ -375,24 +374,6 @@ func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *err
 
 func (tx *RebondTx) String() string {
 	return fmt.Sprintf("RebondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
-}
-
-//-----------------------------------------------------------------------------
-
-type DupeoutTx struct {
-	Address acm.Address           `json:"address"`
-	VoteA   tendermint_types.Vote `json:"vote_a"`
-	VoteB   tendermint_types.Vote `json:"vote_b"`
-}
-
-func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	// PanicSanity("DupeoutTx has no sign bytes")
-	// TODO
-	// return
-}
-
-func (tx *DupeoutTx) String() string {
-	return fmt.Sprintf("DupeoutTx{%s,%v,%v}", tx.Address, tx.VoteA, tx.VoteB)
 }
 
 //-----------------------------------------------------------------------------

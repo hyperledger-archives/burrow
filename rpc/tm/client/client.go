@@ -29,117 +29,150 @@ type RPCClient interface {
 	Call(method string, params map[string]interface{}, result interface{}) (interface{}, error)
 }
 
-func Status(client RPCClient) (res *rpc.ResultStatus, err error) {
-	_, err = client.Call(method.Status, pmap(), &res)
-	return
+func Status(client RPCClient) (*rpc.ResultStatus, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.Status, pmap(), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultStatus), nil
 }
 
-func ChainId(client RPCClient) (res *rpc.ResultChainId, err error) {
-	_, err = client.Call(method.ChainID, pmap(), &res)
-	return
+func ChainId(client RPCClient) (*rpc.ResultChainId, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.ChainID, pmap(), &res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultChainId), nil
 }
 
-func GenPrivAccount(client RPCClient) (res *rpc.ResultGeneratePrivateAccount, err error) {
-	_, err = client.Call(method.GeneratePrivateAccount, pmap(), res)
-	return
+func GenPrivAccount(client RPCClient) (*rpc.ResultGeneratePrivateAccount, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.GeneratePrivateAccount, pmap(), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultGeneratePrivateAccount), nil
 }
 
 func GetAccount(client RPCClient, address acm.Address) (acm.Account, error) {
-	res := new(rpc.ResultGetAccount)
+	res := new(rpc.Result)
 	_, err := client.Call(method.GetAccount, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Account.Account(), nil
+	return res.Unwrap().(*rpc.ResultGetAccount).Account.Account(), nil
 }
 
 func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (txs.Tx, error) {
-	res := new(rpc.ResultSignTx)
+	res := new(rpc.Result)
 	_, err := client.Call(method.SignTx, pmap("tx", tx, "privAccounts", privAccounts), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Tx, nil
+	return res.Unwrap().(*rpc.ResultSignTx).Tx, nil
 }
 
 func BroadcastTx(client RPCClient, tx txs.Tx) (*txs.Receipt, error) {
-	res := new(rpc.ResultBroadcastTx)
+	res := new(rpc.Result)
 	_, err := client.Call(method.BroadcastTx, pmap("tx", txs.Wrap(tx)), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Receipt, nil
+	return res.Unwrap().(*rpc.ResultBroadcastTx).Receipt, nil
 }
 
-func DumpStorage(client RPCClient, address acm.Address) (res *rpc.ResultDumpStorage, err error) {
-	_, err = client.Call(method.DumpStorage, pmap("address", address), res)
-	return
+func DumpStorage(client RPCClient, address acm.Address) (*rpc.ResultDumpStorage, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.DumpStorage, pmap("address", address), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultDumpStorage), nil
 }
 
 func GetStorage(client RPCClient, address acm.Address, key []byte) ([]byte, error) {
-	res := new(rpc.ResultGetStorage)
+	res := new(rpc.Result)
 	_, err := client.Call(method.GetStorage, pmap("address", address, "key", key), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Value, nil
+	return res.Unwrap().(*rpc.ResultGetStorage).Value, nil
 }
 
-func CallCode(client RPCClient, fromAddress, code, data []byte) (res *rpc.ResultCall, err error) {
-	_, err = client.Call(method.CallCode, pmap("fromAddress", fromAddress, "code", code, "data", data), res)
+func CallCode(client RPCClient, fromAddress acm.Address, code, data []byte) (*rpc.ResultCall, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.CallCode, pmap("fromAddress", fromAddress, "code", code, "data", data), res)
 	if err != nil {
 		return nil, err
 	}
-	return
+	return res.Unwrap().(*rpc.ResultCall), nil
 }
 
-func Call(client RPCClient, fromAddress, toAddress acm.Address, data []byte) (res *rpc.ResultCall, err error) {
-	_, err = client.Call(method.Call, pmap("fromAddress", fromAddress, "toAddress", toAddress,
+func Call(client RPCClient, fromAddress, toAddress acm.Address, data []byte) (*rpc.ResultCall, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.Call, pmap("fromAddress", fromAddress, "toAddress", toAddress,
 		"data", data), res)
 	if err != nil {
 		return nil, err
 	}
-	return
+	return res.Unwrap().(*rpc.ResultCall), nil
 }
 
 func GetName(client RPCClient, name string) (*execution.NameRegEntry, error) {
-	res := new(rpc.ResultGetName)
+	res := new(rpc.Result)
 	_, err := client.Call(method.GetName, pmap("name", name), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Entry, nil
+	return res.Unwrap().(*rpc.ResultGetName).Entry, nil
 }
 
-func BlockchainInfo(client RPCClient, minHeight, maxHeight int) (res *rpc.ResultBlockchainInfo, err error) {
-	_, err = client.Call(method.Blockchain, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
+func BlockchainInfo(client RPCClient, minHeight, maxHeight int) (*rpc.ResultBlockchainInfo, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.Blockchain, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
 	if err != nil {
 		return nil, err
 	}
-	return
+	return res.Unwrap().(*rpc.ResultBlockchainInfo), nil
 }
 
-func GetBlock(client RPCClient, height int) (res *rpc.ResultGetBlock, err error) {
-	_, err = client.Call(method.GetBlock, pmap("height", height), res)
+func GetBlock(client RPCClient, height int) ( *rpc.ResultGetBlock,  error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.GetBlock, pmap("height", height), res)
 	if err != nil {
 		return nil, err
 	}
-	return
+	return res.Unwrap().(*rpc.ResultGetBlock), nil
 }
 
-func ListUnconfirmedTxs(client RPCClient) (res *rpc.ResultListUnconfirmedTxs, err error) {
-	_, err = client.Call(method.ListUnconfirmedTxs, pmap(), res)
-	return
+func ListUnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultListUnconfirmedTxs, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.ListUnconfirmedTxs, pmap("maxTxs", maxTxs), res)
+	if err != nil {
+		return nil, err
+	}
+	resCon := res.Unwrap().(*rpc.ResultListUnconfirmedTxs)
+	return resCon, nil
 }
 
-func ListValidators(client RPCClient) (res *rpc.ResultListValidators, err error) {
-	_, err = client.Call(method.ListValidators, pmap(), res)
-	return
+func ListValidators(client RPCClient) (*rpc.ResultListValidators, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.ListValidators, pmap(), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultListValidators), nil
 }
 
-func DumpConsensusState(client RPCClient) (res *rpc.ResultDumpConsensusState, err error) {
-	_, err = client.Call(method.DumpConsensusState, pmap(), res)
-	return
+func DumpConsensusState(client RPCClient) (*rpc.ResultDumpConsensusState, error) {
+	res := new(rpc.Result)
+	_, err := client.Call(method.DumpConsensusState, pmap(), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Unwrap().(*rpc.ResultDumpConsensusState), nil
 }
 
 func pmap(keyvals ...interface{}) map[string]interface{} {

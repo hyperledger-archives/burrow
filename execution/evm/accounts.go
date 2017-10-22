@@ -5,7 +5,9 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
-func DeriveAccount(creator acm.MutableAccount, permissions ptypes.AccountPermissions) acm.MutableAccount {
+// Create a new account from a parent 'creator' account. The creator account will have its
+// sequence number incremented
+func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPermissions) acm.MutableAccount {
 	// Generate an address
 	sequence := creator.Sequence()
 	creator.IncSequence()

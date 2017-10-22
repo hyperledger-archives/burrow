@@ -25,7 +25,7 @@ import (
 
 func buildTransactionCommand() *cobra.Command {
 	// Transaction command has subcommands send, name, call, bond,
-	// unbond, rebond, permissions. Dupeout transaction is not accessible through the command line.
+	// unbond, rebond, permissions.
 	transactionCmd := &cobra.Command{
 		Use:   "tx",
 		Short: "burrow-client tx formulates and signs a transaction to a chain",

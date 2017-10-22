@@ -22,7 +22,9 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/tendermint/tmlibs/events"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/execution/evm/events"
 )
 
 var expectedData = []byte{0x10}
@@ -47,19 +49,15 @@ func TestLog4(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), Zero256, nil)
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
-	eventSwitch := events.NewEventSwitch()
-	_, err := eventSwitch.Start()
-	if err != nil {
-		t.Errorf("Failed to start eventSwitch: %v", err)
-	}
-	eventID := EventStringLogEvent(account2.Address())
+	eventSwitch := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	eventID := events.EventStringLogEvent(account2.Address())
 
 	doneChan := make(chan struct{}, 1)
 
-	eventSwitch.AddListenerForEvent("test", eventID, func(event events.EventData) {
-		logEvent := event.(EventDataLog)
+	eventSwitch.Subscribe("test", eventID, func(eventData event.AnyEventData) {
+		logEvent := eventData.EventDataLog()
 		// No need to test address as this event would not happen if it wasn't correct
 		if !reflect.DeepEqual(logEvent.Topics, expectedTopics) {
 			t.Errorf("Event topics are wrong. Got: %v. Expected: %v", logEvent.Topics, expectedTopics)
@@ -96,7 +94,7 @@ func TestLog4(t *testing.T) {
 		stop,
 	}
 
-	_, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+	_, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
 	<-doneChan
 	if err != nil {
 		t.Fatal(err)

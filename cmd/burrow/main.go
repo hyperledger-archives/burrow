@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/jawher/mow.cli"
 )
 
 func main() {
-	bos := cli.App("Burrow",
+	burrow := cli.App("Burrow",
 		"Deep in the Burrow")
-	bos.Action = func() {
-		//logger, _ := lifecycle.NewStdErrLogger()
-		//tendermint.LaunchGenesisValidator(logger)
+	burrow.Action = func() {
+		logger, _ := lifecycle.NewStdErrLogger()
+		core.NewGenesisKernel()
 	}
-	bos.Run(os.Args)
+	burrow.Run(os.Args)
 }
 
 // Print informational output to Stderr

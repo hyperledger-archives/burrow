@@ -22,9 +22,11 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/evm/events"
+	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/consensus/types"
 	tm_types "github.com/tendermint/tendermint/types"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -104,9 +106,7 @@ func TestGetStorage(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	defer func() {
-		wsc.Stop()
-	}()
+	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		eid := tm_types.EventStringNewBlock()
 		subscribe(t, wsc, eid)
@@ -149,7 +149,7 @@ func TestCallCode(t *testing.T) {
 			0x0, 0xf3}
 		data := []byte{}
 		expected := []byte{0xb}
-		callCode(t, client, privateAccounts[0].PubKey().Address(), code, data, expected)
+		callCode(t, client, privateAccounts[0].Address(), code, data, expected)
 
 		// pass two ints as calldata, add, and return the result
 		code = []byte{0x60, 0x0, 0x35, 0x60, 0x20, 0x35, 0x1, 0x60, 0x0, 0x52, 0x60,
@@ -157,7 +157,7 @@ func TestCallCode(t *testing.T) {
 		data = append(binary.LeftPadWord256([]byte{0x5}).Bytes(),
 			binary.LeftPadWord256([]byte{0x6}).Bytes()...)
 		expected = []byte{0xb}
-		callCode(t, client, privateAccounts[0].PubKey().Address(), code, data, expected)
+		callCode(t, client, privateAccounts[0].Address(), code, data, expected)
 	})
 }
 
@@ -166,9 +166,7 @@ func TestCallContract(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	defer func() {
-		wsc.Stop()
-	}()
+	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		eid := tm_types.EventStringNewBlock()
 		subscribe(t, wsc, eid)
@@ -206,8 +204,8 @@ func TestNameReg(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
-
 		txs.MinNameRegistrationPeriod = 1
 
 		// register a new name, check if its there
@@ -220,7 +218,7 @@ func TestNameReg(t *testing.T) {
 
 		tx := makeDefaultNameTx(t, client, name, data, amt, fee)
 		// verify the name by both using the event and by checking get_name
-		subscribeAndWaitForNext(t, wsc, events.EventStringNameReg(name),
+		subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
 			func() {
 				broadcastTxAndWaitForBlock(t, client, wsc, tx)
 			},
@@ -238,7 +236,7 @@ func TestNameReg(t *testing.T) {
 
 		entry := getNameRegEntry(t, client, name)
 		assert.Equal(t, data, entry.Data)
-		assert.Equal(t, privateAccounts[0].Address, entry.Owner)
+		assert.Equal(t, privateAccounts[0].Address(), entry.Owner)
 
 		// update the data as the owner, make sure still there
 		numDesiredBlocks = uint64(5)
@@ -279,12 +277,19 @@ func TestNameReg(t *testing.T) {
 			" registry entry as a different address")
 		entry = getNameRegEntry(t, client, name)
 		assert.Equal(t, data2, entry.Data)
-		assert.Equal(t, privateAccounts[1].Address, entry.Owner)
+		assert.Equal(t, privateAccounts[1].Address(), entry.Owner)
 	})
+}
+
+func TestWaitBlocks(t *testing.T) {
+	wsc := newWSClient()
+	defer stopWSClient(wsc)
+	waitNBlocks(t, wsc, 5)
 }
 
 func TestBlockchainInfo(t *testing.T) {
 	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		// wait a mimimal number of blocks to ensure that the later query for block
 		// headers has a non-trivial length
@@ -296,11 +301,12 @@ func TestBlockchainInfo(t *testing.T) {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}
 		lastBlockHeight := resp.LastHeight
-		nMetaBlocks := uint64(len(resp.BlockMetas))
-		assert.True(t, nMetaBlocks <= lastBlockHeight,
+		nMetaBlocks := len(resp.BlockMetas)
+		assert.True(t, uint64(nMetaBlocks) <= lastBlockHeight,
 			"Logically number of block metas should be equal or less than block height.")
 		assert.True(t, nBlocks <= len(resp.BlockMetas),
-			"Should see at least 4 BlockMetas after waiting for 4 blocks")
+			"Should see at least %v BlockMetas after waiting for %v blocks but saw %v",
+			nBlocks, nBlocks, len(resp.BlockMetas))
 		// For the maximum number (default to 20) of retrieved block headers,
 		// check that they correctly chain to each other.
 		lastBlockHash := resp.BlockMetas[nMetaBlocks-1].Header.Hash()
@@ -326,12 +332,13 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
-		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
-		txChan := make(chan []txs.Tx)
+		tx := txs.Wrap(makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee))
+		txChan := make(chan []txs.Wrapper)
 
 		// We want to catch the Tx in mempool before it gets reaped by tendermint
 		// consensus. We should be able to do this almost always if we broadcast our
@@ -342,8 +349,11 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 		go func() {
 			for {
-				resp, err := ListUnconfirmedTxs(client)
-				assert.NoError(t, err)
+				resp, err := ListUnconfirmedTxs(client, -1)
+				if resp != nil {
+
+				}
+				require.NoError(t, err)
 				if resp.N > 0 {
 					txChan <- resp.Txs
 				}
@@ -353,14 +363,12 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
 			broadcastTx(t, client, tx)
 			select {
-			case <-time.After(time.Second * timeoutSeconds):
+			case <-time.After(time.Second * timeoutSeconds * 10):
 				t.Fatal("Timeout out waiting for unconfirmed transactions to appear")
 			case transactions := <-txChan:
-				assert.Len(t, transactions, 1,
-					"There should only be a single transaction in the mempool during "+
-						"this test (previous txs should have made it into a block)")
-				assert.Contains(t, transactions, tx,
-					"Transaction should be returned by ListUnconfirmedTxs")
+				assert.Len(t, transactions, 1, "There should only be a single transaction in the "+
+					"mempool during this test (previous txs should have made it into a block)")
+				assert.Contains(t, transactions, tx, "Transaction should be returned by ListUnconfirmedTxs")
 			}
 		})
 	})
@@ -391,19 +399,17 @@ func TestListValidators(t *testing.T) {
 
 func TestDumpConsensusState(t *testing.T) {
 	wsc := newWSClient()
+	startTime := time.Now()
 	testWithAllClients(t, func(t *testing.T, clientName string, client RPCClient) {
 		waitNBlocks(t, wsc, 3)
 		resp, err := DumpConsensusState(client)
 		assert.NoError(t, err)
-		startTime := resp.RoundState.StartTime
-		// TODO: uncomment lines involving commitTime when
-		// https://github.com/tendermint/tendermint/issues/277 is fixed in Tendermint
-		//commitTime := resp.RoundState.CommitTime
+		commitTime := resp.RoundState.CommitTime
 		assert.NotZero(t, startTime)
-		//assert.NotZero(t, commitTime)
-		//assert.True(t, commitTime.Unix() > startTime.Unix(),
-		//	"Commit time %v should be later than start time %v", commitTime, startTime)
-		assert.Equal(t, uint8(1), resp.RoundState.Step)
+		assert.NotZero(t, commitTime)
+		assert.True(t, commitTime.Unix() > startTime.Unix(),
+			"Commit time %v should be later than start time %v", commitTime, startTime)
+		assert.Equal(t, types.RoundStepNewHeight, resp.RoundState.Step)
 	})
 }
 

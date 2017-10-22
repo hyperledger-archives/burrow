@@ -56,7 +56,7 @@ func (mockSuite *MockSuite) SetupSuite() {
 	testData := LoadTestData()
 	pipe := NewMockPipe(testData)
 	codec := &TCodec{}
-	evtSubs := event.NewEventSubscriptions(pipe.Events())
+	evtSubs := event.NewSubscriptions(pipe.Events())
 	// The server
 	restServer := NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()

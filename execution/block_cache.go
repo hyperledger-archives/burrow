@@ -25,6 +25,7 @@ import (
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/merkle"
+	"sync"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {
@@ -37,8 +38,16 @@ var _ acm.StateWriter = &BlockCache{}
 
 var _ acm.StateIterable = &BlockCache{}
 
+// TODO: BlockCache badly needs a rewrite to remove database sharing with State and make it communicate using the
+// Account interfaces like a proper person. As well as other oddities of decoupled storage and account state
+
 // The blockcache helps prevent unnecessary IAVLTree updates and garbage generation.
 type BlockCache struct {
+	// We currently provide the RPC layer with access to read-only access to BlockCache via the StateIterable interface
+	// on BatchExecutor. However since read-only operations generate writes to the BlockCache in the current design
+	// we need a mutex here. Otherwise BlockCache ought to be used within a component that is responsible for serialising
+	// the operations on the BlockCache.
+	sync.RWMutex
 	db       dbm.DB
 	backend  *State
 	accounts map[acm.Address]accountInfo
@@ -76,12 +85,16 @@ func (cache *BlockCache) GetAccount(addr acm.Address) (acm.Account, error) {
 		if err != nil {
 			return nil, err
 		}
+		cache.Lock()
+		defer cache.Unlock()
 		cache.accounts[addr] = accountInfo{acc, nil, false, false}
 		return acc, nil
 	}
 }
 
 func (cache *BlockCache) UpdateAccount(acc acm.Account) error {
+	cache.Lock()
+	defer cache.Unlock()
 	addr := acc.Address()
 	_, storage, removed, _ := cache.accounts[addr].unpack()
 	if removed {
@@ -92,6 +105,8 @@ func (cache *BlockCache) UpdateAccount(acc acm.Account) error {
 }
 
 func (cache *BlockCache) RemoveAccount(addr acm.Address) error {
+	cache.Lock()
+	defer cache.Unlock()
 	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		return fmt.Errorf("RemoveAccount on a removed account %s", addr)
@@ -101,6 +116,8 @@ func (cache *BlockCache) RemoveAccount(addr acm.Address) error {
 }
 
 func (cache *BlockCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (bool, error) {
+	cache.RLock()
+	defer cache.RUnlock()
 	for _, info := range cache.accounts {
 		if consumer(info.account) {
 			return true, nil
@@ -115,6 +132,7 @@ func (cache *BlockCache) IterateAccounts(consumer func(acm.Account) (stop bool))
 
 func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (Word256, error) {
 	// Check cache
+	cache.RLock()
 	info, ok := cache.lookupStorage(addr, key)
 	if ok {
 		return info.value, nil
@@ -124,6 +142,10 @@ func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (Word256, err
 	if removed {
 		return Zero256, fmt.Errorf("GetStorage on a removed account %s", addr)
 	}
+	cache.RUnlock()
+	cache.Lock()
+	defer cache.Unlock()
+
 	if acc != nil && storage == nil {
 		storage = makeStorage(cache.db, acc.StorageRoot())
 		cache.accounts[addr] = accountInfo{acc, storage, false, dirty}
@@ -139,6 +161,8 @@ func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (Word256, err
 
 // NOTE: Set value to zero to removed from the trie.
 func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256) error {
+	cache.Lock()
+	defer cache.Unlock()
 	_, _, removed, _ := cache.accounts[addr].unpack()
 	if removed {
 		return fmt.Errorf("SetStorage on a removed account %s", addr)
@@ -148,6 +172,8 @@ func (cache *BlockCache) SetStorage(addr acm.Address, key Word256, value Word256
 }
 
 func (cache *BlockCache) IterateStorage(address acm.Address, consumer func(key, value Word256) (stop bool)) (bool, error) {
+	cache.RLock()
+	defer cache.RUnlock()
 	// Try cache first for early exit
 	for key, info := range cache.storages[address] {
 		if consumer(key, info.value) {
@@ -163,24 +189,31 @@ func (cache *BlockCache) IterateStorage(address acm.Address, consumer func(key, 
 // BlockCache.names
 
 func (cache *BlockCache) GetNameRegEntry(name string) *NameRegEntry {
+	cache.RLock()
 	entry, removed, _ := cache.names[name].unpack()
+	cache.RUnlock()
 	if removed {
 		return nil
 	} else if entry != nil {
 		return entry
 	} else {
 		entry = cache.backend.GetNameRegEntry(name)
+		cache.Lock()
 		cache.names[name] = nameInfo{entry, false, false}
+		cache.Unlock()
 		return entry
 	}
 }
 
 func (cache *BlockCache) UpdateNameRegEntry(entry *NameRegEntry) {
-	name := entry.Name
-	cache.names[name] = nameInfo{entry, false, true}
+	cache.Lock()
+	defer cache.Unlock()
+	cache.names[entry.Name] = nameInfo{entry, false, true}
 }
 
 func (cache *BlockCache) RemoveNameRegEntry(name string) {
+	cache.Lock()
+	defer cache.Unlock()
 	_, removed, _ := cache.names[name].unpack()
 	if removed {
 		panic("RemoveNameRegEntry on a removed entry")
@@ -193,7 +226,8 @@ func (cache *BlockCache) RemoveNameRegEntry(name string) {
 
 // CONTRACT the updates are in deterministic order.
 func (cache *BlockCache) Sync() {
-
+	cache.Lock()
+	defer cache.Unlock()
 	// Determine order for storage updates
 	// The address comes first so it'll be grouped.
 	storageKeys := make([]Tuple256, 0, len(cache.storages))

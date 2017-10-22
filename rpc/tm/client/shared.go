@@ -23,17 +23,19 @@ import (
 
 	"os"
 
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/stretchr/testify/require"
 	tm_config "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/rpc/lib/client"
 )
@@ -55,7 +57,7 @@ var (
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
-	// Initialised in TestWrapper
+	// Initialised in initGlobalVariables
 	genesisDoc = new(genesis.GenesisDoc)
 	kernel     = new(core.Kernel)
 )
@@ -63,8 +65,6 @@ var (
 // We use this to wrap tests
 func TestWrapper(runner func() int) int {
 	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/shared_test.go)...")
-
-	evm.SetDebug(true)
 
 	err := initGlobalVariables()
 	if err != nil {
@@ -89,7 +89,8 @@ func initGlobalVariables() error {
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
 	tmConf := tm_config.DefaultConfig()
-	logger, _ := lifecycle.NewStdErrLogger()
+	//logger, _ := lifecycle.NewStdErrLogger()
+	logger := loggers.NewNoopInfoTraceLogger()
 	privValidator := tendermint.NewPrivValidatorMemory(privateAccounts[0])
 	genesisDoc = testGenesisDoc()
 	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, logger)
@@ -100,11 +101,15 @@ func testGenesisDoc() *genesis.GenesisDoc {
 	accounts := make(map[string]acm.Account, len(privateAccounts))
 	for i, pa := range privateAccounts {
 		account := acm.FromAddressable(pa)
-		account.AddToBalance(1 << 16)
+		account.AddToBalance(1 << 32)
 		account.SetPermissions(permission.AllAccountPermissions.Clone())
 		accounts[fmt.Sprintf("user_%v", i)] = account
 	}
-	return genesis.MakeGenesisDocFromAccounts(chainName, nil, accounts,
+	genesisTime, err := time.Parse("02-01-2006", "27-10-2017")
+	if err != nil {
+		panic("could not parse test genesis time")
+	}
+	return genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, accounts,
 		map[string]acm.Validator{
 			"genesis_validator": acm.AsValidator(accounts["user_0"]),
 		})
@@ -141,6 +146,14 @@ func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code [
 	nonce := getNonce(t, client, privateAccounts[0].Address())
 	tx := txs.NewCallTxWithNonce(privateAccounts[0].PubKey(), addr, code, amt, gasLim, fee,
 		nonce+1)
+	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
+	return tx
+}
+
+func makeDefaultCallTxWithNonce(t *testing.T, addr *acm.Address, sequence uint64, code []byte,
+	amt, gasLim, fee uint64) *txs.CallTx {
+
+	tx := txs.NewCallTxWithNonce(privateAccounts[0].PubKey(), addr, code, amt, gasLim, fee, sequence)
 	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
 }
@@ -189,9 +202,7 @@ func signTx(t *testing.T, client RPCClient, tx txs.Tx,
 // broadcast transaction
 func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) *txs.Receipt {
 	rec, err := BroadcastTx(client, tx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return rec
 }
 
@@ -213,7 +224,7 @@ func getStorage(t *testing.T, client RPCClient, addr acm.Address, key []byte) []
 	return resp
 }
 
-func callCode(t *testing.T, client RPCClient, fromAddress, code, data,
+func callCode(t *testing.T, client RPCClient, fromAddress acm.Address, code, data,
 	expected []byte) {
 	resp, err := CallCode(client, fromAddress, code, data)
 	if err != nil {

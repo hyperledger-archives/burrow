@@ -103,10 +103,10 @@ func GenerateKnown(chainName, accountsPathCSV, validatorsPathCSV string) (string
 //------------------------------------------------------------------------------------
 // interface functions that are consumed by monax tooling
 
-func GenerateGenesisFileBytes(chainName string, salt []byte, genesisAccounts map[string]acm.Account,
+func GenerateGenesisFileBytes(chainName string, salt []byte, genesisTime time.Time, genesisAccounts map[string]acm.Account,
 	genesisValidators map[string]acm.Validator) ([]byte, error) {
 
-	genesisDoc := MakeGenesisDocFromAccounts(chainName, salt, genesisAccounts, genesisValidators)
+	genesisDoc := MakeGenesisDocFromAccounts(chainName, salt, genesisTime, genesisAccounts, genesisValidators)
 
 	var err error
 	buf, buf2, n := new(bytes.Buffer), new(bytes.Buffer), new(int)

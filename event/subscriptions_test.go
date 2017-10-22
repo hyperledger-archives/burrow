@@ -73,7 +73,9 @@ func (mee *mockEventEmitter) Subscribe(subId, eventId string, callback func(AnyE
 				mee.mutex.Unlock()
 				return
 			case <-time.After(mockInterval):
-				me.f(AnyEventData{EVMEventData: mockEventData{subId, eventId}})
+				me.f(AnyEventData{BurrowEventData: &EventData{
+					EventDataInner: mockEventData{subId: subId, eventId: eventId},
+				}})
 			}
 		}
 	}()
@@ -99,7 +101,7 @@ func TestSubReaping(t *testing.T) {
 	reaperTimeout = 100 * time.Millisecond
 
 	mee := newMockEventEmitter()
-	eSubs := NewEventSubscriptions(mee)
+	eSubs := NewSubscriptions(mee)
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -144,7 +146,7 @@ func TestSubManualClose(t *testing.T) {
 	reaperTimeout = 10000 * time.Millisecond
 
 	mee := newMockEventEmitter()
-	eSubs := NewEventSubscriptions(mee)
+	eSubs := NewSubscriptions(mee)
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -192,7 +194,7 @@ func TestSubFlooding(t *testing.T) {
 	// Crank it up. Now pressure is 10 times higher on each sub.
 	mockInterval = 1 * time.Millisecond
 	mee := newMockEventEmitter()
-	eSubs := NewEventSubscriptions(mee)
+	eSubs := NewSubscriptions(mee)
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {

@@ -25,8 +25,8 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-func StartServer(service rpc.Service, pattern, listenAddress string,
-	evsw events.EventSwitch, logger log.Logger) (net.Listener, error) {
+func StartServer(service rpc.Service, pattern, listenAddress string, evsw events.EventSwitch,
+	logger log.Logger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "rpc/tm")
 	routes := GetRoutes(service)

@@ -25,15 +25,15 @@ var (
 	reaperThreshold = 10 * time.Second
 )
 
-type EventSubscriptionsCache struct {
+type SubscriptionsCache struct {
 	mtx    *sync.Mutex
 	events []interface{}
 	ts     time.Time
 	subId  string
 }
 
-func newEventCache() *EventSubscriptionsCache {
-	return &EventSubscriptionsCache{
+func newSubscriptionsCache() *SubscriptionsCache {
+	return &SubscriptionsCache{
 		&sync.Mutex{},
 		make([]interface{}, 0),
 		time.Now(),
@@ -41,40 +41,40 @@ func newEventCache() *EventSubscriptionsCache {
 	}
 }
 
-func (this *EventSubscriptionsCache) poll() []interface{} {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+func (subsCache *SubscriptionsCache) poll() []interface{} {
+	subsCache.mtx.Lock()
+	defer subsCache.mtx.Unlock()
 	var evts []interface{}
-	if len(this.events) > 0 {
-		evts = this.events
-		this.events = []interface{}{}
+	if len(subsCache.events) > 0 {
+		evts = subsCache.events
+		subsCache.events = []interface{}{}
 	} else {
 		evts = []interface{}{}
 	}
-	this.ts = time.Now()
+	subsCache.ts = time.Now()
 	return evts
 }
 
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
-type EventSubscriptions struct {
+type Subscriptions struct {
 	mtx          *sync.RWMutex
 	subscribable Subscribable
-	subs         map[string]*EventSubscriptionsCache
+	subs         map[string]*SubscriptionsCache
 	reap         bool
 }
 
-func NewEventSubscriptions(subscribable Subscribable) *EventSubscriptions {
-	es := &EventSubscriptions{
+func NewSubscriptions(subscribable Subscribable) *Subscriptions {
+	es := &Subscriptions{
 		mtx:          &sync.RWMutex{},
 		subscribable: subscribable,
-		subs:         make(map[string]*EventSubscriptionsCache),
+		subs:         make(map[string]*SubscriptionsCache),
 		reap:         true,
 	}
 	go reap(es)
 	return es
 }
 
-func reap(es *EventSubscriptions) {
+func reap(es *Subscriptions) {
 	if !es.reap {
 		return
 	}
@@ -95,47 +95,47 @@ func reap(es *EventSubscriptions) {
 // has to call func which involves acquiring a mutex lock, so might be
 // a delay - though a conflict is practically impossible, and if it does
 // happen it's for an insignificant amount of time (the time it takes to
-// carry out EventSubscriptionsCache.poll() ).
-func (this *EventSubscriptions) Add(eventId string) (string, error) {
+// carry out SubscriptionsCache.poll() ).
+func (subs *Subscriptions) Add(eventId string) (string, error) {
 	subId, errSID := GenerateSubId()
 	if errSID != nil {
 		return "", errSID
 	}
-	cache := newEventCache()
-	errC := this.subscribable.Subscribe(subId, eventId,
+	cache := newSubscriptionsCache()
+	errC := subs.subscribable.Subscribe(subId, eventId,
 		func(evt AnyEventData) {
 			cache.mtx.Lock()
 			defer cache.mtx.Unlock()
 			cache.events = append(cache.events, evt)
 		})
 	cache.subId = subId
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
-	this.subs[subId] = cache
+	subs.mtx.Lock()
+	defer subs.mtx.Unlock()
+	subs.subs[subId] = cache
 	if errC != nil {
 		return "", errC
 	}
 	return subId, nil
 }
 
-func (this *EventSubscriptions) Poll(subId string) ([]interface{}, error) {
-	this.mtx.RLock()
-	defer this.mtx.RUnlock()
-	sub, ok := this.subs[subId]
+func (subs *Subscriptions) Poll(subId string) ([]interface{}, error) {
+	subs.mtx.RLock()
+	defer subs.mtx.RUnlock()
+	sub, ok := subs.subs[subId]
 	if !ok {
 		return nil, fmt.Errorf("Subscription not active. ID: " + subId)
 	}
 	return sub.poll(), nil
 }
 
-func (this *EventSubscriptions) Remove(subId string) error {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+func (subs *Subscriptions) Remove(subId string) error {
+	subs.mtx.Lock()
+	defer subs.mtx.Unlock()
 	// TODO Check this.
-	_, ok := this.subs[subId]
+	_, ok := subs.subs[subId]
 	if !ok {
 		return fmt.Errorf("Subscription not active. ID: " + subId)
 	}
-	delete(this.subs, subId)
+	delete(subs.subs, subId)
 	return nil
 }

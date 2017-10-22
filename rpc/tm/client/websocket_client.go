@@ -14,18 +14,34 @@
 
 package client
 
-import "context"
+import (
+	"context"
+	"fmt"
+
+	"github.com/tendermint/tendermint/rpc/lib/types"
+)
 
 type WebsocketClient interface {
-	Call(ctx context.Context, method string, params map[string]interface{}) error
+	Send(ctx context.Context, request rpctypes.RPCRequest) error
 }
 
-func Subscribe(websocketClient WebsocketClient, eventId string) error {
-	return websocketClient.Call(context.Background(), "subscribe",
-		map[string]interface{}{"eventId": eventId})
+func Subscribe(wsc WebsocketClient, eventId string) error {
+	req, err := rpctypes.MapToRequest(fmt.Sprintf("wsclient_subscribe?eventId=%s", eventId),
+		"subscribe", map[string]interface{}{"eventId": eventId})
+	if err != nil {
+		return err
+	}
+	return wsc.Send(context.Background(), req)
+
+	//return wsc.Call(context.Background(), "subscribe",
+	//	map[string]interface{}{"eventId": eventId})
 }
 
 func Unsubscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	return websocketClient.Call(context.Background(), "unsubscribe",
-		map[string]interface{}{"subscriptionId": subscriptionId})
+	req, err := rpctypes.MapToRequest(fmt.Sprintf("wsclient_unsubscribe?subId=%s", subscriptionId),
+		"unsubscribe", map[string]interface{}{"subscriptionId": subscriptionId})
+	if err != nil {
+		return err
+	}
+	return websocketClient.Send(context.Background(), req)
 }

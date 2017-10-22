@@ -23,8 +23,8 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
@@ -34,6 +34,7 @@ import (
 )
 
 type BatchExecutor interface {
+	acm.StateIterable
 	acm.Updater
 	acm.StorageSetter
 	// Execute transaction against block cache (i.e. block buffer)
@@ -58,12 +59,11 @@ type executor struct {
 	state      *State
 	blockCache *BlockCache
 	fireable   event.Fireable
-	eventCache *event.EventCache
+	eventCache *event.Cache
 	logger     logging_types.InfoTraceLogger
 }
 
 var _ BatchExecutor = (*executor)(nil)
-var _ acm.StateIterable = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
 func NewBatchChecker(state *State,
@@ -136,10 +136,10 @@ func (exe *executor) Commit() ([]byte, error) {
 	defer exe.mtx.Unlock()
 	// sync the cache
 	exe.blockCache.Sync()
-	// flush events to listeners (XXX: note issue with blocking)
-	exe.eventCache.Flush()
 	// save state to disk
 	exe.state.Save()
+	// flush events to listeners (XXX: note issue with blocking)
+	exe.eventCache.Flush()
 	return exe.state.Hash(), nil
 }
 
@@ -201,11 +201,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// if the exe.eventCache is nil, nothing will happen
 		if exe.eventCache != nil {
 			for _, i := range tx.Inputs {
-				exe.eventCache.FireEvent(events.EventStringAccInput(i.Address), events.EventDataTx{tx, nil, ""})
+				exe.eventCache.Fire(events.EventStringAccInput(i.Address), events.EventDataTx{tx, nil, ""})
 			}
 
 			for _, o := range tx.Outputs {
-				exe.eventCache.FireEvent(events.EventStringAccOutput(o.Address), events.EventDataTx{tx, nil, ""})
+				exe.eventCache.Fire(events.EventStringAccOutput(o.Address), events.EventDataTx{tx, nil, ""})
 			}
 		}
 		return nil
@@ -327,7 +327,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			// get or create callee
 			if createContract {
 				// We already checked for permission
-				callee = evm.DeriveAccount(caller, permission.GlobalAccountPermissions(exe.state))
+				callee = evm.DeriveNewAccount(caller, permission.GlobalAccountPermissions(exe.state))
 				logging.TraceMsg(logger, "Created new contract",
 					"contract_address", callee.Address,
 					"contract_code", callee.Code)
@@ -347,7 +347,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
 				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(),
-					txs.TxHash(exe.chainID, tx))
+					txs.TxHash(exe.chainID, tx), logger)
 				vmach.SetFireable(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
@@ -381,10 +381,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				if err != nil {
 					exception = err.Error()
 				}
-				exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address),
+				exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address),
 					events.EventDataTx{tx, ret, exception})
 				if tx.Address != nil {
-					exe.eventCache.FireEvent(events.EventStringAccOutput(*tx.Address),
+					exe.eventCache.Fire(events.EventStringAccOutput(*tx.Address),
 						events.EventDataTx{tx, ret, exception})
 				}
 			}
@@ -395,6 +395,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			// and only deduct from the caller's balance.
 			inAcc.SubtractFromBalance(value)
 			if createContract {
+				// This is done by DeriveNewAccount when runCall == true
 				inAcc.IncSequence()
 			}
 			exe.blockCache.UpdateAccount(inAcc)
@@ -464,10 +465,8 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			if entry.Expires > lastBlockHeight {
 				// ensure we are owner
 				if entry.Owner != tx.Input.Address {
-					logging.InfoMsg(logger, "Sender is trying to update a name for which they are not an owner",
-						"sender_address", tx.Input.Address,
-						"name", tx.Name)
-					return txs.ErrTxPermissionDenied
+					return fmt.Errorf("permission denied: sender %s is trying to update a name (%s) for "+
+						"which they are not an owner", tx.Input.Address, tx.Name)
 				}
 			} else {
 				expired = true
@@ -540,8 +539,8 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address), events.EventDataTx{tx, nil, ""})
-			exe.eventCache.FireEvent(events.EventStringNameReg(tx.Name), events.EventDataTx{tx, nil, ""})
+			exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address), events.EventDataTx{tx, nil, ""})
+			exe.eventCache.Fire(events.EventStringNameReg(tx.Name), events.EventDataTx{tx, nil, ""})
 		}
 
 		return nil
@@ -626,7 +625,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 						}
 						if exe.eventCache != nil {
 							// TODO: fire for all inputs
-							exe.eventCache.FireEvent(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
+							exe.eventCache.Fire(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
@@ -651,7 +650,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 						// Good!
 						_s.unbondValidator(val)
 						if exe.eventCache != nil {
-							exe.eventCache.FireEvent(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
+							exe.eventCache.Fire(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
@@ -679,48 +678,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 						// Good!
 						_s.rebondValidator(val)
 						if exe.eventCache != nil {
-							exe.eventCache.FireEvent(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
+							exe.eventCache.Fire(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
 						}
 						return nil
 
-					case *txs.DupeoutTx:
-						// Verify the signatures
-						_, accused := _s.BondedValidators.GetByAddress(tx.Address)
-						if accused == nil {
-							_, accused = _s.UnbondingValidators.GetByAddress(tx.Address)
-							if accused == nil {
-								return txs.ErrTxInvalidAddress
-							}
-						}
-						voteASignBytes := acm.SignBytes(exe.chainID, &tx.VoteA)
-						voteBSignBytes := acm.SignBytes(exe.chainID, &tx.VoteB)
-						if !accused.PubKey().VerifyBytes(voteASignBytes, tx.VoteA.Signature) ||
-							!accused.PubKey().VerifyBytes(voteBSignBytes, tx.VoteB.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
-
-						// Verify equivocation
-						// TODO: in the future, just require one vote from a previous height that
-						// doesn't exist on this chain.
-						if tx.VoteA.Height != tx.VoteB.Height {
-							return errors.New("DupeoutTx heights don't match")
-						}
-						if tx.VoteA.Round != tx.VoteB.Round {
-							return errors.New("DupeoutTx rounds don't match")
-						}
-						if tx.VoteA.Type != tx.VoteB.Type {
-							return errors.New("DupeoutTx types don't match")
-						}
-						if bytes.Equal(tx.VoteA.BlockHash, tx.VoteB.BlockHash) {
-							return errors.New("DupeoutTx blockhashes shouldn't match")
-						}
-
-						// Good! (Bad validator!)
-						_s.destroyValidator(accused)
-						if exe.eventCache != nil {
-							exe.eventCache.FireEvent(txs.EventStringDupeout(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
 		*/
 
 	case *txs.PermissionsTx:
@@ -819,9 +780,9 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		}
 
 		if exe.eventCache != nil {
-			exe.eventCache.FireEvent(events.EventStringAccInput(tx.Input.Address),
+			exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address),
 				events.EventDataTx{tx, nil, ""})
-			exe.eventCache.FireEvent(events.EventStringPermissions(permission.PermFlagToString(permFlag)),
+			exe.eventCache.Fire(events.EventStringPermissions(permission.PermFlagToString(permFlag)),
 				events.EventDataTx{tx, nil, ""})
 		}
 

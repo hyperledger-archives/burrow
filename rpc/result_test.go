@@ -24,13 +24,14 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tendermint/go-wire"
 )
 
 func TestResultBroadcastTx(t *testing.T) {
 	// Make sure these are unpacked as expected
 	res := ResultBroadcastTx{
-		Receipt: txs.Receipt{
+		Receipt: &txs.Receipt{
 			ContractAddr:    acm.Address{0, 2, 3},
 			CreatesContract: true,
 			TxHash:          []byte("foo"),
@@ -43,20 +44,6 @@ func TestResultBroadcastTx(t *testing.T) {
 	res2 := new(ResultBroadcastTx)
 	wire.ReadBinaryBytes(wire.BinaryBytes(res), res2)
 	assert.Equal(t, res, *res2)
-
-	resultBroadcastTx := `{
-	  "jsonrpc": "2.0",
-	  "id": "jsonrpc-client",
-	  "result": {
-		"unwrap": {
-		  "tx_hash": "EAM2TH2KlqLyiy7l8qkiv8eG8Hg=",
-		  "creates_contract": false,
-		  "contract_addr": "0000000000000000000000000000000000000000"
-		}
-	  }
-	}
-	`
-
 }
 
 func TestListUnconfirmedTxs(t *testing.T) {
@@ -72,17 +59,26 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 }
 
-func TestJSONEncode(t *testing.T) {
+func TestResultListAccounts(t *testing.T) {
 	concreteAcc := acm.AsConcreteAccount(acm.FromAddressable(
 		acm.GeneratePrivateAccountFromSecret("Super Semi Secret")))
-	acc := concreteAcc.Account()
-	res := &ResultListAccounts{
-		Accounts:    []acm.Account{acc},
+	acc := concreteAcc
+	res := ResultListAccounts{
+		Accounts:    []*acm.ConcreteAccount{acc},
 		BlockHeight: 2,
 	}
-	fmt.Println(string(wire.JSONBytes(res)))
-	fmt.Println("")
-	bs, _ := json.Marshal(res)
-	fmt.Println(string(bs))
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	resOut := new(ResultListAccounts)
+	json.Unmarshal(bs, resOut)
+	bsOut, err := json.Marshal(resOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs),string(bsOut))
 }
 
+func TestResultEvent(t *testing.T) {
+	res := ResultEvent{
+		Event: "a",
+	}
+	fmt.Println(res)
+}

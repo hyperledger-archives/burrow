@@ -19,49 +19,14 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-wire"
 )
 
 // Functions to generate eventId strings
 
-func EventStringAccInput(addr acm.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
-func EventStringAccOutput(addr acm.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
 func EventStringAccCall(addr acm.Address) string   { return fmt.Sprintf("Acc/%s/Call", addr) }
 func EventStringLogEvent(addr acm.Address) string  { return fmt.Sprintf("Log/%s", addr) }
-func EventStringPermissions(name string) string    { return fmt.Sprintf("Permissions/%s", name) }
-func EventStringNameReg(name string) string        { return fmt.Sprintf("NameReg/%s", name) }
-func EventStringBond() string                      { return "Bond" }
-func EventStringUnbond() string                    { return "Unbond" }
-func EventStringRebond() string                    { return "Rebond" }
 
 //----------------------------------------
-
-const (
-	EventDataTypeNewBlock       = byte(0x01)
-	EventDataTypeTx             = byte(0x03)
-	EventDataTypeCall           = byte(0x04)
-	EventDataTypeLog            = byte(0x05)
-	EventDataTypeNewBlockHeader = byte(0x06)
-)
-
-type EventData interface {
-	AssertIsEVMEventData()
-}
-
-var _ = wire.RegisterInterface(
-	struct{ EventData }{},
-	wire.ConcreteType{EventDataTx{}, EventDataTypeTx},
-	wire.ConcreteType{EventDataCall{}, EventDataTypeCall},
-	wire.ConcreteType{EventDataLog{}, EventDataTypeLog},
-)
-
-// All txs fire EventDataTx, but only CallTx might have Return or Exception
-type EventDataTx struct {
-	Tx        txs.Tx `json:"tx"`
-	Return    []byte `json:"return"`
-	Exception string `json:"exception"`
-}
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract
 type EventDataCall struct {
@@ -87,7 +52,3 @@ type EventDataLog struct {
 	Data    []byte      `json:"data"`
 	Height  uint64      `json:"height"`
 }
-
-func (_ EventDataTx) AssertIsEVMEventData()   {}
-func (_ EventDataCall) AssertIsEVMEventData() {}
-func (_ EventDataLog) AssertIsEVMEventData()  {}

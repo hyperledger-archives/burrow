@@ -176,7 +176,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAdd
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (burrowNodeClient *burrowNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
+func (burrowNodeClient *burrowNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed uint64, err error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	// TODO: [ben] Call and CallCode have an inconsistent signature; it makes sense for both to only
 	// have a single address that is the contract to query.
@@ -184,7 +184,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address, code, data 
 	if err != nil {
 		err = fmt.Errorf("Error connnecting to node (%s) to query contract code at (%X) with data (%X) and code (%X)",
 			burrowNodeClient.broadcastRPC, address, data, code, err.Error())
-		return nil, int64(0), err
+		return nil, uint64(0), err
 	}
 	return callResult.Return, callResult.GasUsed, nil
 }
@@ -203,7 +203,7 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.A
 		return nil, err
 	}
 
-	return account.Copy(), nil
+	return account, nil
 }
 
 // DumpStorage returns the full storage for an acm.

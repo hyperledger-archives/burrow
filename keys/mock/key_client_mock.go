@@ -19,11 +19,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
-
-	// NOTE: prior to building out /crypto, use
-	// tendermint/go-crypto for the mock client
 	"github.com/tendermint/ed25519"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -33,14 +30,13 @@ import (
 
 // Simple ed25519 key structure for mock purposes with ripemd160 address
 type MockKey struct {
-	Address    account.Address
+	Address    acm.Address
 	PrivateKey [ed25519.PrivateKeySize]byte
 	PublicKey  []byte
 }
 
 func newMockKey() (*MockKey, error) {
 	key := &MockKey{
-		Address:   make([]byte, 20),
 		PublicKey: make([]byte, ed25519.PublicKeySize),
 	}
 	// this is a mock key, so the entropy of the source is purely
@@ -56,7 +52,10 @@ func newMockKey() (*MockKey, error) {
 	typedPublicKeyBytes := append([]byte{0x01}, key.PublicKey...)
 	hasher := ripemd160.New()
 	hasher.Write(typedPublicKeyBytes)
-	key.Address = hasher.Sum(nil)
+	key.Address, err = acm.AddressFromBytes(hasher.Sum(nil))
+	if err != nil {
+		return nil, err
+	}
 	return key, nil
 }
 
@@ -83,7 +82,7 @@ func NewMockKeyClient() *MockKeyClient {
 	}
 }
 
-func (mock *MockKeyClient) NewKey() (address []byte) {
+func (mock *MockKeyClient) NewKey() acm.Address {
 	// Only tests ED25519 curve and ripemd160.
 	key, err := newMockKey()
 	if err != nil {
@@ -93,7 +92,7 @@ func (mock *MockKeyClient) NewKey() (address []byte) {
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signBytesString string, signAddress account.Address) ([]byte, error) {
+func (mock *MockKeyClient) Sign(signBytesString string, signAddress acm.Address) ([]byte, error) {
 	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
 	if key == nil {
 		return nil, fmt.Errorf("Unknown address (%X)", signAddress)

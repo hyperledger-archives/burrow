@@ -187,7 +187,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 // and a slice of pointers to GenesisValidator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
-func MakeGenesisDocFromAccounts(chainName string, salt []byte, accounts map[string]acm.Account,
+func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
 	validators map[string]acm.Validator) *GenesisDoc {
 
 	// Establish deterministic order of accounts by name so we obtain identical GenesisDoc
@@ -237,7 +237,7 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, accounts map[stri
 	return &GenesisDoc{
 		ChainName:   chainName,
 		Salt:        salt,
-		GenesisTime: time.Now(),
+		GenesisTime: genesisTime,
 		Params: GenesisParams{
 			GlobalPermissions: permission.DefaultAccountPermissions.Clone(),
 		},

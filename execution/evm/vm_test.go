@@ -26,16 +26,18 @@ import (
 	"errors"
 
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/event"
+	exe_events "github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/tmlibs/events"
 )
 
-func init() {
-	SetDebug(true)
-}
+var logger, _ = lifecycle.NewStdErrLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -66,7 +68,7 @@ func newAccount(address ...byte) acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -88,7 +90,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -122,7 +124,7 @@ func TestSubcurrency(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
 	code_parts := []string{"620f42403355",
@@ -144,7 +146,7 @@ func TestSubcurrency(t *testing.T) {
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -180,7 +182,7 @@ func TestSendCall(t *testing.T) {
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
 	state := newAppState()
-	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -241,7 +243,7 @@ func TestMemoryBounds(t *testing.T) {
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(state, memoryProvider, newParams(), acm.ZeroAddress, nil)
+	ourVm := NewVM(state, memoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 	caller, _ := makeAccountWithCode(state, "caller", nil)
 	callee, _ := makeAccountWithCode(state, "callee", nil)
 	gas := uint64(100000)
@@ -326,7 +328,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 // at least 1 AccCall event)
 func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
 	contractCode []byte, gas uint64) (output []byte, err error) {
-	eventCh := make(chan EventData)
+	eventCh := make(chan event.EventData)
 	output, err = runVM(eventCh, ourVm, caller, callee, subscribeAddr,
 		contractCode, gas)
 	if err != nil {
@@ -334,10 +336,10 @@ func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr 
 	}
 	msg := <-eventCh
 	var errString string
-	switch ev := msg.(type) {
-	case EventDataTx:
+	switch ev := msg.Unwrap().(type) {
+	case exe_events.EventDataTx:
 		errString = ev.Exception
-	case EventDataCall:
+	case evm_events.EventDataCall:
 		errString = ev.Exception
 	}
 
@@ -349,18 +351,17 @@ func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr 
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan EventData, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan event.EventData, ourVm *VM, caller, callee acm.MutableAccount,
 	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
-	evsw := events.NewEventSwitch()
-	evsw.Start()
+	evsw := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
-	evsw.AddListenerForEvent("test", EventStringAccCall(subscribeAddr),
-		func(msg events.EventData) {
-			eventCh <- msg.(EventData)
+	evsw.Subscribe("test", evm_events.EventStringAccCall(subscribeAddr),
+		func(msg event.AnyEventData) {
+			eventCh <- *msg.BurrowEventData
 		})
-	evc := events.NewEventCache(evsw)
+	evc := event.NewEventCache(evsw)
 	ourVm.SetFireable(evc)
 	start := time.Now()
 	output, err := ourVm.Call(caller, callee, contractCode, []byte{}, 0, &gas)

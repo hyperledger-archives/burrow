@@ -16,22 +16,24 @@ package client
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"encoding/json"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/rpc/lib/client"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const (
 	timeoutSeconds       = 2
-	expectBlockInSeconds = timeoutSeconds
+	expectBlockInSeconds = 2
 )
 
 //--------------------------------------------------------------------------------
@@ -45,6 +47,22 @@ func newWSClient() *rpcclient.WSClient {
 		panic(err)
 	}
 	return wsc
+}
+
+func stopWSClient(wsc *rpcclient.WSClient) {
+	// drain until ResultsCh is closed because it may block
+	go func() {
+		for {
+			select {
+			case _, ok := <-wsc.ResultsCh:
+				if !ok {
+					// channel closed stop this goroutine
+					return
+				}
+			}
+		}
+	}()
+	wsc.Stop()
 }
 
 // subscribe to an event
@@ -66,9 +84,10 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 		case <-timeout.C:
 			t.Fatal("Timeout waiting for subscription result")
 		case bs := <-wsc.ResultsCh:
-			res := new(rpc.ResultSubscribe)
-			readResult(t, bs, res)
-			return res.SubscriptionId
+			res, ok := readResult(t, bs).(*rpc.ResultSubscribe)
+			if ok {
+				return res.SubscriptionId
+			}
 		}
 	}
 }
@@ -120,29 +139,23 @@ func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
 		func() {})
 }
 
-func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient,
-	predicate blockPredicate, runner func()) {
-	subscribeAndWaitForNext(t, wsc, tm_types.EventStringNewBlock(),
-		runner,
-		func(event string, eventData event.AnyEventData) (bool, error) {
-			eventDataNewBlock := eventData.EventDataNewBlock()
-			if eventDataNewBlock == nil {
-				return false, fmt.Errorf("could not convert %s to EventDataNewBlock", eventData)
-			}
-			return predicate(eventDataNewBlock.Block), nil
-		})
+func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient, predicate blockPredicate, runner func()) {
+	eventDataChecker := func(event string, eventData event.AnyEventData) (bool, error) {
+		eventDataNewBlock := eventData.EventDataNewBlock()
+		if eventDataNewBlock == nil {
+			return false, fmt.Errorf("could not convert %#v to EventDataNewBlock", eventData)
+		}
+		return predicate(eventDataNewBlock.Block), nil
+	}
+	subscribeAndWaitForNext(t, wsc, tm_types.EventStringNewBlock(), runner, eventDataChecker)
 }
 
-func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string,
-	runner func(),
+func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(),
 	eventDataChecker func(string, event.AnyEventData) (bool, error)) {
+
 	subId := subscribeAndGetSubscriptionId(t, wsc, event)
 	defer unsubscribe(t, wsc, subId)
-	waitForEvent(t,
-		wsc,
-		event,
-		runner,
-		eventDataChecker)
+	waitForEvent(t, wsc, event, runner, eventDataChecker)
 }
 
 // waitForEvent executes runner that is expected to trigger events. It then
@@ -152,8 +165,7 @@ func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string
 // stopWaiting is true waitForEvent will return or if stopWaiting is false
 // waitForEvent will keep listening for new events. If an error is returned
 // waitForEvent will fail the test.
-func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventid string,
-	runner func(),
+func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner func(),
 	eventDataChecker func(string, event.AnyEventData) (bool, error)) waitForEventResult {
 
 	// go routine to wait for websocket msg
@@ -172,11 +184,10 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventid string,
 			case <-shutdownEventsCh:
 				break LOOP
 			case r := <-wsc.ResultsCh:
-				resultEvent := new(rpc.ResultEvent)
-				readResult(t, r, resultEvent)
-				if resultEvent != nil && resultEvent.Event == eventid {
+				resultEvent, _ := readResult(t, r).(*rpc.ResultEvent)
+				if resultEvent != nil && resultEvent.Event == eventID {
 					// Keep feeding events
-					eventsCh <- resultEvent.Data
+					eventsCh <- resultEvent.AnyEventData
 				}
 			case err := <-wsc.ErrorsCh:
 				errCh <- err
@@ -197,10 +208,8 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventid string,
 			return waitForEventResult{timeout: true}
 		case eventData := <-eventsCh:
 			// run the check
-			stopWaiting, err := eventDataChecker(eventid, eventData)
-			if err != nil {
-				t.Fatal(err) // Show the stack trace.
-			}
+			stopWaiting, err := eventDataChecker(eventID, eventData)
+			require.NoError(t, err)
 			if stopWaiting {
 				return waitForEventResult{}
 			}
@@ -296,9 +305,11 @@ func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) 
 	}
 }
 
-func readResult(t *testing.T, bs []byte, result interface{}) {
+func readResult(t *testing.T, bs []byte) rpc.ResultInner {
+	result := new(rpc.Result)
 	err := json.Unmarshal(bs, result)
 	if err != nil {
-		t.Fatal(err)
+		require.NoError(t, err)
 	}
+	return result.ResultInner
 }

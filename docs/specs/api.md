@@ -211,16 +211,6 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-#### DupeoutTx
-
-```
-{
-	address: <string>
-	vote_a:  <Vote>
-	vote_b:  <Vote>
-}
-```
-
 These are the support types that are referenced in the transactions:
 
 #### TxInput
@@ -427,18 +417,6 @@ Event object:
 This notifies you when a rebond event happens.
 
 Event ID: `Rebond`
-
-Event object:
-
-```
-<Tx>
-```
-
-#### Dupeout
-
-This notifies you when a dupeout event happens.
-
-Event ID: `Dupeout`
 
 Event object:
 

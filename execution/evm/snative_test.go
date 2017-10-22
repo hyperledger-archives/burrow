@@ -82,7 +82,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 
 	// Should fail since we have no permissions
 	retValue, err := contract.Dispatch(state, caller, bc.Splice(funcID[:],
-		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas)
+		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
@@ -91,7 +91,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	// Grant all permissions and dispatch should success
 	caller.SetPermissions(allAccountPermissions())
 	retValue, err = contract.Dispatch(state, caller, bc.Splice(funcID[:],
-		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas)
+		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }

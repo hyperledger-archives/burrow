@@ -15,7 +15,7 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
-const responseInfoName = "Bosmarmot"
+const responseInfoName = "Burrow"
 
 type abciApp struct {
 	mtx sync.Mutex
@@ -70,7 +70,6 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.Result {
 	if err != nil {
 		return abci_types.NewError(abci_types.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
-
 	// TODO: map ExecTx errors to sensible ABCI error codes
 	err = app.checker.Execute(tx)
 	if err != nil {
@@ -78,7 +77,11 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.Result {
 			fmt.Sprintf("Could not execute transaction: %s, error: %v", tx, err))
 	}
 
-	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.ChainID(), tx))
+	receipt := txs.GenerateReceipt(app.blockchain.ChainID(), tx)
+	receiptBytes := wire.BinaryBytes(receipt)
+	logging.TraceMsg(app.logger, "CheckTx",
+		"tx_hash", receipt.TxHash,
+		"creates_contract", receipt.CreatesContract)
 	return abci_types.NewResultOK(receiptBytes, "Success")
 }
 
@@ -105,7 +108,11 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.Result {
 			fmt.Sprintf("Could not execute transaction: %s, error: %s", tx, err))
 	}
 
-	receiptBytes := wire.BinaryBytes(txs.GenerateReceipt(app.blockchain.ChainID(), tx))
+	receipt := txs.GenerateReceipt(app.blockchain.ChainID(), tx)
+	logging.TraceMsg(app.logger, "DeliverTx",
+		"tx_hash", receipt.TxHash,
+		"creates_contract", receipt.CreatesContract)
+	receiptBytes := wire.BinaryBytes(receipt)
 	return abci_types.NewResultOK(receiptBytes, "Success")
 }
 
@@ -118,7 +125,10 @@ func (app *abciApp) Commit() abci_types.Result {
 	defer app.mtx.Unlock()
 	tip := app.blockchain.Tip()
 	logging.InfoMsg(app.logger, "Committing block",
-		"last_block_height", tip.LastBlockHeight(),
+		"block_height", tip.LastBlockHeight(),
+		"block_hash", app.block.Hash,
+		"block_time", app.block.Header.Time,
+		"num_txs", app.block.Header.NumTxs,
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
