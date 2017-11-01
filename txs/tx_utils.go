@@ -166,12 +166,8 @@ func (tx *NameTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 // BondTx interface for adding inputs/outputs and adding signatures
 
 func NewBondTx(pubkey crypto.PubKey) (*BondTx, error) {
-	pubkeyEd, ok := pubkey.Unwrap().(crypto.PubKeyEd25519)
-	if !ok {
-		return nil, fmt.Errorf("Pubkey must be ed25519")
-	}
 	return &BondTx{
-		PubKey:   pubkeyEd,
+		PubKey:   pubkey,
 		Inputs:   []*TxInput{},
 		UnbondTo: []*TxOutput{},
 	}, nil
@@ -209,12 +205,7 @@ func (tx *BondTx) AddOutput(addr acm.Address, amt uint64) error {
 }
 
 func (tx *BondTx) SignBond(chainID string, privAccount acm.PrivateAccount) error {
-	sig := acm.ChainSign(privAccount, chainID, tx)
-	sigEd, ok := sig.Unwrap().(crypto.SignatureEd25519)
-	if !ok {
-		return fmt.Errorf("Bond signer must be ED25519")
-	}
-	tx.Signature = sigEd
+	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
 
@@ -238,7 +229,7 @@ func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
 }
 
 func (tx *UnbondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Signature = acm.ChainSign(privAccount, chainID, tx).Unwrap().(crypto.SignatureEd25519)
+	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------
@@ -252,7 +243,7 @@ func NewRebondTx(addr acm.Address, height int) *RebondTx {
 }
 
 func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Signature = acm.ChainSign(privAccount, chainID, tx).Unwrap().(crypto.SignatureEd25519)
+	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------------

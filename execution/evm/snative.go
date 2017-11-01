@@ -109,7 +109,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				permission.RmRole,
+				permission.RemoveRole,
 				removeRole},
 
 			&SNativeFunctionDescription{`

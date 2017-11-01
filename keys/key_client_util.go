@@ -56,7 +56,7 @@ func RequestResponse(addr, method string, args map[string]string, logger logging
 	}
 	logging.TraceMsg(logger, "Received response from key server",
 		"endpoint", endpoint,
-		"request body", string(body),
+		"request_body", string(body),
 		"response", res,
 	)
 	return res, nil

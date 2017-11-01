@@ -16,12 +16,12 @@ package mock
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
 	"github.com/tendermint/ed25519"
+	"github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -59,11 +59,11 @@ func newMockKey() (*MockKey, error) {
 	return key, nil
 }
 
-func (mockKey *MockKey) Sign(message []byte) ([]byte, error) {
-	signatureBytes := make([]byte, ed25519.SignatureSize)
-	signature := ed25519.Sign(&mockKey.PrivateKey, message)
-	copy(signatureBytes[:], signature[:])
-	return signatureBytes, nil
+func (mockKey *MockKey) Sign(message []byte) (crypto.Signature, error) {
+	sigEd25519 := crypto.SignatureEd25519{}
+	signatureBytes := ed25519.Sign(&mockKey.PrivateKey, message)
+	copy(sigEd25519[:], signatureBytes[:])
+	return sigEd25519.Wrap(), nil
 }
 
 //---------------------------------------------------------------------
@@ -92,22 +92,24 @@ func (mock *MockKeyClient) NewKey() acm.Address {
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signBytesString string, signAddress acm.Address) ([]byte, error) {
+func (mock *MockKeyClient) Sign(signAddress acm.Address, message []byte) (crypto.Signature, error) {
 	key := mock.knownKeys[signAddress]
 	if key == nil {
-		return nil, fmt.Errorf("Unknown address (%s)", signAddress)
+		return crypto.Signature{}, fmt.Errorf("Unknown address (%s)", signAddress)
 	}
-	signBytes, err := hex.DecodeString(signBytesString)
-	if err != nil {
-		return nil, fmt.Errorf("ChainSign bytes string is invalid hex string: %s", err.Error())
-	}
-	return key.Sign(signBytes)
+	return key.Sign(message)
 }
 
-func (mock *MockKeyClient) PublicKey(address acm.Address) (publicKey []byte, err error) {
+func (mock *MockKeyClient) PublicKey(address acm.Address) (crypto.PubKey, error) {
 	key := mock.knownKeys[address]
 	if key == nil {
-		return nil, fmt.Errorf("Unknown address (%s)", address)
+		return crypto.PubKey{}, fmt.Errorf("Unknown address (%s)", address)
 	}
-	return key.PublicKey, nil
+	pubKeyEd25519 := crypto.PubKeyEd25519{}
+	copy(pubKeyEd25519[:], key.PublicKey)
+	return pubKeyEd25519.Wrap(), nil
+}
+
+func (mock *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
+	return mock.NewKey(), nil
 }

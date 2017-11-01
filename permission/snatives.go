@@ -118,5 +118,5 @@ type RmRoleArgs struct {
 }
 
 func (*RmRoleArgs) PermFlag() types.PermFlag {
-	return RmRole
+	return RemoveRole
 }

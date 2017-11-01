@@ -36,45 +36,48 @@ import (
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
 func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, txs.Tx, error) {
-	signBytesString := fmt.Sprintf("%X", acm.SignBytes(chainID, tx_))
-	var inputAddr acm.Address
-	var sigED crypto.SignatureEd25519
+	signBytes := acm.SignBytes(chainID, tx_)
+	var err error
 	switch tx := tx_.(type) {
 	case *txs.SendTx:
-		inputAddr = tx.Inputs[0].Address
-		defer func(s *crypto.SignatureEd25519) { tx.Inputs[0].Signature = s.Wrap() }(&sigED)
+		signAddress := tx.Inputs[0].Address
+		tx.Inputs[0].Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
 	case *txs.NameTx:
-		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
+		signAddress := tx.Input.Address
+		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
 	case *txs.CallTx:
-		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
+		signAddress := tx.Input.Address
+		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
 	case *txs.PermissionsTx:
-		inputAddr = tx.Input.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Input.Signature = s.Wrap() }(&sigED)
+		signAddress := tx.Input.Address
+		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
 	case *txs.BondTx:
-		inputAddr = tx.Inputs[0].Address
-		defer func(s *crypto.SignatureEd25519) {
-			tx.Signature = *s
-			tx.Inputs[0].Signature = s.Wrap()
-		}(&sigED)
+		signAddress := tx.Inputs[0].Address
+		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
+		tx.Inputs[0].Signature = tx.Signature
+		return signAddress, tx, err
+
 	case *txs.UnbondTx:
-		inputAddr = tx.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
+		signAddress := tx.Address
+		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
 	case *txs.RebondTx:
-		inputAddr = tx.Address
-		defer func(s *crypto.SignatureEd25519) { tx.Signature = *s }(&sigED)
+		signAddress := tx.Address
+		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
+		return signAddress, tx, err
+
+	default:
+		return acm.ZeroAddress, nil, fmt.Errorf("unknown transaction type for signTx: %#v", tx_)
 	}
-	sig, err := keyClient.Sign(signBytesString, inputAddr)
-	if err != nil {
-		return acm.Address{}, nil, err
-	}
-	// TODO: [ben] temporarily address the type conflict here, to be cleaned up
-	// with full type restructuring
-	var sig64 [64]byte
-	copy(sig64[:], sig)
-	sigED = crypto.SignatureEd25519(sig64)
-	return inputAddr, tx_, nil
 }
 
 func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag ptypes.PermFlag, err error) {
@@ -97,7 +100,6 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return
 	}
 
-	var pubKeyBytes []byte
 	if pubkey == "" && addr == "" {
 		err = fmt.Errorf("at least one of --pubkey or --addr must be given")
 		return
@@ -108,11 +110,16 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 				"address", addr,
 			)
 		}
+		var pubKeyBytes []byte
 		pubKeyBytes, err = hex.DecodeString(pubkey)
 		if err != nil {
 			err = fmt.Errorf("pubkey is bad hex: %v", err)
 			return
 		}
+
+		pubKeyEd25519 := crypto.PubKeyEd25519{}
+		copy(pubKeyEd25519[:], pubKeyBytes)
+		pub = pubKeyEd25519.Wrap()
 	} else {
 		// grab the pubkey from monax-keys
 		addressBytes, err2 := hex.DecodeString(addr)
@@ -124,29 +131,22 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		if err2 != nil {
 			err = fmt.Errorf("Could not convert bytes (%X) to address: %v", addressBytes, err2)
 		}
-		pubKeyBytes, err2 = keyClient.PublicKey(address)
+		pub, err2 = keyClient.PublicKey(address)
 		if err2 != nil {
 			err = fmt.Errorf("Failed to fetch pubkey for address (%s): %v", addr, err2)
 			return
 		}
 	}
 
-	if len(pubKeyBytes) == 0 {
-		err = fmt.Errorf("Error resolving public key")
+	var address acm.Address
+	address, err = acm.AddressFromBytes(pub.Address())
+	if err != nil {
 		return
 	}
 
 	amt, err = strconv.ParseUint(amtS, 10, 64)
 	if err != nil {
 		err = fmt.Errorf("amt is misformatted: %v", err)
-	}
-
-	var pubArray [32]byte
-	copy(pubArray[:], pubKeyBytes)
-	pub = crypto.PubKeyEd25519(pubArray).Wrap()
-	address, err := acm.AddressFromBytes(pub.Address())
-	if err != nil {
-		return
 	}
 
 	if nonceS == "" {

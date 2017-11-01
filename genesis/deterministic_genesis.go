@@ -26,12 +26,12 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
 	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount, []*tm_types.PrivValidatorFS) {
 
-	accounts := make([]GenesisAccount, numAccounts)
+	accounts := make([]Account, numAccounts)
 	privAccounts := make([]acm.PrivateAccount, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := dg.Account(randBalance, minBalance)
-		accounts[i] = GenesisAccount{
+		accounts[i] = Account{
 			BasicAccount: BasicAccount{
 				Address: account.Address(),
 				Amount:  account.Balance(),
@@ -40,13 +40,16 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		}
 		privAccounts[i] = privAccount
 	}
-	validators := make([]GenesisValidator, numValidators)
+	validators := make([]Validator, numValidators)
 	privValidators := make([]*tm_types.PrivValidatorFS, numValidators)
 	for i := 0; i < numValidators; i++ {
 		valInfo, privVal := dg.Validator(randBonded, minBonded)
-		validators[i] = GenesisValidator{
-			PubKey: valInfo.PubKey,
-			Amount: uint64(valInfo.VotingPower),
+		validators[i] = Validator{
+			BasicAccount: BasicAccount{
+				Address: acm.MustAddressFromBytes(valInfo.PubKey.Address()),
+				PubKey:  valInfo.PubKey,
+				Amount:  uint64(valInfo.VotingPower),
+			},
 			UnbondTo: []BasicAccount{
 				{
 					Address: acm.MustAddressFromBytes(valInfo.PubKey.Address()),

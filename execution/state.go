@@ -96,7 +96,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 	// global permissions are saved as the 0 address
 	// so they are included in the accounts tree
 	globalPerms := ptypes.DefaultAccountPermissions
-	globalPerms = genDoc.Params.GlobalPermissions
+	globalPerms = genDoc.GlobalPermissions
 	// XXX: make sure the set bits are all true
 	// Without it the HasPermission() functions will fail
 	globalPerms.Base.SetBit = ptypes.AllPermFlags

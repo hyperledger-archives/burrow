@@ -31,7 +31,6 @@ func (pvm *privValidatorMemory) GetAddress() data.Bytes {
 
 func (pvm *privValidatorMemory) GetPubKey() crypto.PubKey {
 	return pvm.PubKey()
-
 }
 
 func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) error {
@@ -40,7 +39,6 @@ func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) er
 
 func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tm_types.Proposal) error {
 	return pvm.lastSignedInfo.SignProposal(pvm, chainID, proposal)
-
 }
 
 func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tm_types.Heartbeat) error {

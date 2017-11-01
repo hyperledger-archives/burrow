@@ -1,17 +1,19 @@
 package genesis
 
 import (
-	"testing"
-
 	"fmt"
+	"testing"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )
 
+var genesisTime, _ = time.Parse("02-01-2006", "27-10-2017")
+
 func TestMakeGenesisDocFromAccounts(t *testing.T) {
-	genDoc := MakeGenesisDocFromAccounts("test-chain", nil,
+	genDoc := MakeGenesisDocFromAccounts("test-chain", nil, genesisTime,
 		accountMap("Tinkie-winkie", "Lala", "Po", "Dipsy"),
 		validatorMap("Foo", "Bar", "Baz"),
 	)

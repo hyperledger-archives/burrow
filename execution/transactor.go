@@ -34,7 +34,6 @@ import (
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -430,20 +429,17 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = acm.ChainSign(privAccounts[0], chainID, bondTx).
-			Unwrap().(crypto.SignatureEd25519)
+		bondTx.Signature = acm.ChainSign(privAccounts[0], chainID, bondTx)
 		for i, input := range bondTx.Inputs {
 			input.PubKey = privAccounts[i+1].PubKey()
 			input.Signature = acm.ChainSign(privAccounts[i+1], chainID, bondTx)
 		}
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
-		unbondTx.Signature = acm.ChainSign(privAccounts[0], chainID, unbondTx).
-			Unwrap().(crypto.SignatureEd25519)
+		unbondTx.Signature = acm.ChainSign(privAccounts[0], chainID, unbondTx)
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
-		rebondTx.Signature = acm.ChainSign(privAccounts[0], chainID, rebondTx).
-			Unwrap().(crypto.SignatureEd25519)
+		rebondTx.Signature = acm.ChainSign(privAccounts[0], chainID, rebondTx)
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
 	}

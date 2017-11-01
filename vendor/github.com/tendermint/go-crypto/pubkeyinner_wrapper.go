@@ -6,6 +6,7 @@ package crypto
 
 import (
 	"github.com/tendermint/go-wire/data"
+	"encoding"
 )
 
 // Auto-generated adapters for happily unmarshaling interfaces
@@ -28,6 +29,16 @@ func (h *PubKey) UnmarshalJSON(data []byte) (err error) {
 		h.PubKeyInner = parsed.(PubKeyInner)
 	}
 	return err
+}
+
+var _ encoding.TextMarshaler = PubKey{}
+
+func (h PubKey) MarshalText() ([]byte, error) {
+	return h.MarshalJSON()
+}
+
+func (h *PubKey) UnmarshalText(text []byte) error {
+	return h.UnmarshalJSON(text)
 }
 
 // Unwrap recovers the concrete interface safely (regardless of levels of embeds)

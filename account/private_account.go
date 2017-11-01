@@ -33,9 +33,9 @@ type PrivateAccount interface {
 }
 
 type ConcretePrivateAccount struct {
-	Address Address        `json:"address"`
-	PubKey  crypto.PubKey  `json:"pub_key"`
-	PrivKey crypto.PrivKey `json:"priv_key"`
+	Address Address
+	PubKey  crypto.PubKey
+	PrivKey crypto.PrivKey
 }
 
 type concretePrivateAccountWrapper struct {

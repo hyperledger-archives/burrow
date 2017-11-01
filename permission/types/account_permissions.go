@@ -3,8 +3,8 @@ package types
 import "github.com/hyperledger/burrow/binary"
 
 type AccountPermissions struct {
-	Base  BasePermissions `json:"base"`
-	Roles []string        `json:"roles"`
+	Base  BasePermissions
+	Roles []string
 }
 
 // Returns true if the role is found

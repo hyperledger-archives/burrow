@@ -37,10 +37,10 @@ const (
 	PublicKeySecp256k1ByteLength int = 64
 )
 
-// NewGenesisAccount returns a new GenesisAccount
+// NewGenesisAccount returns a new Account
 func NewGenesisAccount(address acm.Address, amount uint64, name string,
-	permissions *ptypes.AccountPermissions) *GenesisAccount {
-	return &GenesisAccount{
+	permissions *ptypes.AccountPermissions) *Account {
+	return &Account{
 		BasicAccount: BasicAccount{
 			Address: address,
 			Amount:  amount,
@@ -51,7 +51,7 @@ func NewGenesisAccount(address acm.Address, amount uint64, name string,
 }
 
 func NewGenesisValidator(amount uint64, name string, unbondToAddress acm.Address,
-	unbondAmount uint64, keyType string, publicKeyBytes []byte) (*GenesisValidator, error) {
+	unbondAmount uint64, keyType string, publicKeyBytes []byte) (*Validator, error) {
 	// convert the key bytes into a typed fixed size byte array
 	var typedPublicKeyBytes []byte
 	switch keyType {
@@ -80,10 +80,17 @@ func NewGenesisValidator(amount uint64, name string, unbondToAddress acm.Address
 	// ability to unbond to multiple accounts currently unused
 	var unbondTo []BasicAccount
 
-	return &GenesisValidator{
-		PubKey: newPublicKey,
-		Amount: unbondAmount,
-		Name:   name,
+	address, err := acm.AddressFromBytes(newPublicKey.Address())
+	if err != nil {
+		return nil, err
+	}
+	return &Validator{
+		BasicAccount: BasicAccount{
+			Address: address,
+			PubKey:  newPublicKey,
+			Amount:  amount,
+		},
+		Name: name,
 		UnbondTo: append(unbondTo, BasicAccount{
 			Address: unbondToAddress,
 			Amount:  unbondAmount,
@@ -176,15 +183,15 @@ func newGenDoc(chainName string, genesisTime time.Time, nVal, nAcc int) *Genesis
 		ChainName:   chainName,
 		GenesisTime: genesisTime,
 	}
-	genDoc.Accounts = make([]GenesisAccount, nAcc)
-	genDoc.Validators = make([]GenesisValidator, nVal)
+	genDoc.Accounts = make([]Account, nAcc)
+	genDoc.Validators = make([]Validator, nVal)
 	return &genDoc
 }
 
 func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uint64, name string,
 	perm, setbit ptypes.PermFlag, index int) {
 	addr, _ := acm.AddressFromBytes(pubKey.Address())
-	acc := GenesisAccount{
+	acc := Account{
 		BasicAccount: BasicAccount{
 			Address: addr,
 			Amount:  amt,
@@ -207,10 +214,13 @@ func genDocAddAccount(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uint6
 func genDocAddValidator(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uint64, name string,
 	perm, setbit ptypes.PermFlag, index int) {
 	addr, _ := acm.AddressFromBytes(pubKey.Address())
-	genDoc.Validators[index] = GenesisValidator{
-		PubKey: pubKey.Wrap(),
-		Amount: amt,
-		Name:   name,
+	genDoc.Validators[index] = Validator{
+		BasicAccount: BasicAccount{
+			Address: acm.MustAddressFromBytes(pubKey.Address()),
+			PubKey:  pubKey.Wrap(),
+			Amount:  amt,
+		},
+		Name: name,
 		UnbondTo: []BasicAccount{
 			{
 				Address: addr,

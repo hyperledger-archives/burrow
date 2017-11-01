@@ -8,6 +8,7 @@ import (
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/version"
@@ -125,6 +126,7 @@ func (app *abciApp) Commit() abci_types.Result {
 	defer app.mtx.Unlock()
 	tip := app.blockchain.Tip()
 	logging.InfoMsg(app.logger, "Committing block",
+		structure.ScopeKey, "Commit()",
 		"block_height", tip.LastBlockHeight(),
 		"block_hash", app.block.Hash,
 		"block_time", app.block.Header.Time,
@@ -143,5 +145,17 @@ func (app *abciApp) Commit() abci_types.Result {
 	}
 	// Commit to our blockchain state
 	app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+
+	// Perform a sanity check our block height
+	if app.blockchain.LastBlockHeight() != app.block.Header.Height {
+		logging.InfoMsg(app.logger, "Burrow block height disagrees with Tendermint block height",
+			structure.ScopeKey, "Commit()",
+			"burrow_height", app.blockchain.LastBlockHeight(),
+			"tendermint_height", app.block.Header.Height)
+		return abci_types.NewError(abci_types.CodeType_InternalError,
+			fmt.Sprintf("Burrow has recorded a block height of %v, "+
+				"but Tendermint reports a block height of %v, and the two should agree.",
+				app.blockchain.LastBlockHeight(), app.block.Header.Height))
+	}
 	return abci_types.NewResultOK(appHash, "Success")
 }

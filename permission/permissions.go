@@ -42,13 +42,33 @@ const (
 	SetGlobal
 	HasRole
 	AddRole
-	RmRole
+	RemoveRole
 
 	NumPermissions uint = 14 // NOTE Adjust this too. We can support upto 64
 
 	TopPermFlag      types.PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     types.PermFlag = TopPermFlag | (TopPermFlag - 1)
 	DefaultPermFlags types.PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole
+
+	RootString           string = "root"
+	SendString                  = "send"
+	CallString                  = "call"
+	CreateContractString        = "createContract"
+	CreateAccountString         = "createAccount"
+	BondString                  = "bond"
+	NameString                  = "name"
+
+	// moderator permissions
+	HasBaseString    = "hasBase"
+	SetBaseString    = "setBase"
+	UnsetBaseString  = "unsetBase"
+	SetGlobalString  = "setGlobal"
+	HasRoleString    = "hasRole"
+	AddRoleString    = "addRole"
+	RemoveRoleString = "removeRole"
+	UnknownString    = "#-UNKNOWN-#"
+
+	AllString = "all"
 )
 
 var (
@@ -80,36 +100,38 @@ var (
 // PermFlagToString assumes the permFlag is valid, else returns "#-UNKNOWN-#"
 func PermFlagToString(pf types.PermFlag) (perm string) {
 	switch pf {
+	case AllPermFlags:
+		perm = AllString
 	case Root:
-		perm = "root"
+		perm = RootString
 	case Send:
-		perm = "send"
+		perm = SendString
 	case Call:
-		perm = "call"
+		perm = CallString
 	case CreateContract:
-		perm = "create_contract"
+		perm = CreateContractString
 	case CreateAccount:
-		perm = "create_account"
+		perm = CreateAccountString
 	case Bond:
-		perm = "bond"
+		perm = BondString
 	case Name:
-		perm = "name"
+		perm = NameString
 	case HasBase:
-		perm = "hasBase"
+		perm = HasBaseString
 	case SetBase:
-		perm = "setBase"
+		perm = SetBaseString
 	case UnsetBase:
-		perm = "unsetBase"
+		perm = UnsetBaseString
 	case SetGlobal:
-		perm = "setGlobal"
+		perm = SetGlobalString
 	case HasRole:
-		perm = "hasRole"
+		perm = HasRoleString
 	case AddRole:
-		perm = "addRole"
-	case RmRole:
-		perm = "removeRole"
+		perm = AddRoleString
+	case RemoveRole:
+		perm = RemoveRoleString
 	default:
-		perm = "#-UNKNOWN-#"
+		perm = UnknownString
 	}
 	return
 }
@@ -118,36 +140,38 @@ func PermFlagToString(pf types.PermFlag) (perm string) {
 // the corresponding permission flag.
 func PermStringToFlag(perm string) (pf types.PermFlag, err error) {
 	switch strings.ToLower(perm) {
-	case "root":
+	case AllString:
+		pf = AllPermFlags
+	case RootString:
 		pf = Root
-	case "send":
+	case SendString:
 		pf = Send
-	case "call":
+	case CallString:
 		pf = Call
-	case "createcontract", "create_contract":
+	case CreateContractString, "createcontract", "create_contract":
 		pf = CreateContract
-	case "createaccount", "create_account":
+	case CreateAccountString, "createaccount", "create_account":
 		pf = CreateAccount
-	case "bond":
+	case BondString:
 		pf = Bond
-	case "name":
+	case NameString:
 		pf = Name
-	case "hasbase", "has_base":
+	case HasBaseString, "hasbase", "has_base":
 		pf = HasBase
-	case "setbase", "set_base":
+	case SetBaseString, "setbase", "set_base":
 		pf = SetBase
-	case "unsetbase", "unset_base":
+	case UnsetBaseString, "unsetbase", "unset_base":
 		pf = UnsetBase
-	case "setglobal", "set_global":
+	case SetGlobalString, "setglobal", "set_global":
 		pf = SetGlobal
-	case "hasrole", "has_role":
+	case HasRoleString, "hasrole", "has_role":
 		pf = HasRole
-	case "addrole", "add_role":
+	case AddRoleString, "addrole", "add_role":
 		pf = AddRole
-	case "removerole", "rmrole", "rm_role":
-		pf = RmRole
+	case RemoveRoleString, "removerole", "rmrole", "rm_role":
+		pf = RemoveRole
 	default:
-		err = fmt.Errorf("Unknown permission %s", perm)
+		err = fmt.Errorf("unknown permission %s", perm)
 	}
 	return
 }

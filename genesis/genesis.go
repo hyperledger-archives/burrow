@@ -15,25 +15,22 @@
 package genesis
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"time"
-
 	"sort"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire"
 )
 
 // How many bytes to take from the front of the GenesisDoc hash to append
 // to the ChainName to form the ChainID. The idea is to avoid some classes
 // of replay attack between chains with the same name.
-const ChainIDHashSuffixBytes = 4
+const ShortHashSuffixBytes = 3
 
 // we store the GenesisDoc in the db under this key
 
@@ -43,59 +40,41 @@ var GenDocKey = []byte("GenDocKey")
 // core types for a genesis definition
 
 type BasicAccount struct {
-	Address acm.Address `json:"address"`
-	Amount  uint64      `json:"amount"`
-}
-
-type GenesisAccount struct {
-	BasicAccount
-	Name        string                    `json:"name"`
-	Permissions ptypes.AccountPermissions `json:"permissions"`
-}
-
-type GenesisValidator struct {
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PubKey
-	Address  acm.Address    `json:"address,omitempty"`
-	Amount   uint64         `json:"amount"`
-	PubKey   crypto.PubKey  `json:"pub_key"`
-	Name     string         `json:"name"`
-	UnbondTo []BasicAccount `json:"unbond_to"`
+	Address acm.Address
+	PubKey  crypto.PubKey
+	Amount  uint64
 }
 
-type GenesisParams struct {
-	GlobalPermissions ptypes.AccountPermissions `json:"global_permissions"`
+type Account struct {
+	BasicAccount
+	Name        string
+	Permissions ptypes.AccountPermissions
+}
+
+type Validator struct {
+	BasicAccount
+	Name     string
+	UnbondTo []BasicAccount
 }
 
 //------------------------------------------------------------
 // GenesisDoc is stored in the state database
 
 type GenesisDoc struct {
-	GenesisTime time.Time          `json:"genesis_time"`
-	ChainName   string             `json:"chain_name"`
-	Salt        []byte             `json:"salt,omitempty"`
-	Params      GenesisParams      `json:"params"`
-	Accounts    []GenesisAccount   `json:"accounts"`
-	Validators  []GenesisValidator `json:"validators"`
+	GenesisTime       time.Time
+	ChainName         string
+	Salt              []byte `json:",omitempty"`
+	GlobalPermissions ptypes.AccountPermissions
+	Accounts          []Account
+	Validators        []Validator
 }
 
 // JSONBytes returns the JSON (not-yet) canonical bytes for a given
-// GenesisDoc or an error.  In a first rewrite, rely on go-wire
-// for the JSON serialisation with type-bytes.
+// GenesisDoc or an error.
 func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
 	// TODO: write JSON in canonical order
-	var err error
-	buffer, n := new(bytes.Buffer), new(int)
-	// write JSON with go-wire type-bytes (for public keys)
-	wire.WriteJSON(genesisDoc, buffer, n, &err)
-	if err != nil {
-		return nil, err
-	}
-	// rewrite buffer with indentation
-	indentedBuffer := new(bytes.Buffer)
-	if err := json.Indent(indentedBuffer, buffer.Bytes(), "", "\t"); err != nil {
-		return nil, err
-	}
-	return indentedBuffer.Bytes(), nil
+	return json.MarshalIndent(genesisDoc, "", "\t")
 }
 
 func (genesisDoc *GenesisDoc) Hash() []byte {
@@ -108,17 +87,20 @@ func (genesisDoc *GenesisDoc) Hash() []byte {
 	return hasher.Sum(nil)
 }
 
+func (genesisDoc *GenesisDoc) ShortHash() []byte {
+	return genesisDoc.Hash()[:ShortHashSuffixBytes]
+}
+
 func (genesisDoc *GenesisDoc) ChainID() string {
-	return fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.Hash()[:ChainIDHashSuffixBytes])
+	return fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
 }
 
 //------------------------------------------------------------
 // Make genesis state from file
 
 func GenesisDocFromJSON(jsonBlob []byte) (*GenesisDoc, error) {
-	var err error
 	genDoc := new(GenesisDoc)
-	wire.ReadJSONPtr(genDoc, jsonBlob, &err)
+	err := json.Unmarshal(jsonBlob, genDoc)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't read GenesisDoc: %v", err)
 	}
@@ -126,17 +108,23 @@ func GenesisDocFromJSON(jsonBlob []byte) (*GenesisDoc, error) {
 }
 
 //------------------------------------------------------------
-// Methods for genesis types
-// NOTE: breaks formatting convention
-// TODO: split each genesis type in its own file definition
+// Account methods
 
-//------------------------------------------------------------
-// GenesisAccount methods
+func GenesisAccountFromAccount(name string, account acm.Account) Account {
+	return Account{
+		Name:        name,
+		Permissions: account.Permissions(),
+		BasicAccount: BasicAccount{
+			Address: account.Address(),
+			Amount:  account.Balance(),
+		},
+	}
+}
 
 // Clone clones the genesis account
-func (genesisAccount *GenesisAccount) Clone() GenesisAccount {
+func (genesisAccount *Account) Clone() Account {
 	// clone the account permissions
-	return GenesisAccount{
+	return Account{
 		BasicAccount: BasicAccount{
 			Address: genesisAccount.Address,
 			Amount:  genesisAccount.Amount,
@@ -147,9 +135,9 @@ func (genesisAccount *GenesisAccount) Clone() GenesisAccount {
 }
 
 //------------------------------------------------------------
-// GenesisValidator methods
+// Validator methods
 
-func (gv *GenesisValidator) Validator() acm.Validator {
+func (gv *Validator) Validator() acm.Validator {
 	return acm.ConcreteValidator{
 		Address: acm.MustAddressFromBytes(gv.PubKey.Address()),
 		PubKey:  gv.PubKey,
@@ -158,15 +146,17 @@ func (gv *GenesisValidator) Validator() acm.Validator {
 }
 
 // Clone clones the genesis validator
-func (gv *GenesisValidator) Clone() GenesisValidator {
+func (gv *Validator) Clone() Validator {
 	// clone the addresses to unbond to
 	unbondToClone := make([]BasicAccount, len(gv.UnbondTo))
 	for i, basicAccount := range gv.UnbondTo {
 		unbondToClone[i] = basicAccount.Clone()
 	}
-	return GenesisValidator{
-		PubKey:   gv.PubKey,
-		Amount:   gv.Amount,
+	return Validator{
+		BasicAccount: BasicAccount{
+			PubKey: gv.PubKey,
+			Amount: gv.Amount,
+		},
 		Name:     gv.Name,
 		UnbondTo: unbondToClone,
 	}
@@ -183,8 +173,8 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 	}
 }
 
-// MakeGenesisDocFromAccounts takes a chainName and a slice of pointers to GenesisAccount,
-// and a slice of pointers to GenesisValidator to construct a GenesisDoc, or returns an error on
+// MakeGenesisDocFromAccounts takes a chainName and a slice of pointers to Account,
+// and a slice of pointers to Validator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
 func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
@@ -198,17 +188,9 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 	}
 	sort.Strings(names)
 	// copy slice of pointers to accounts into slice of accounts
-	genesisAccounts := make([]GenesisAccount, 0, len(accounts))
+	genesisAccounts := make([]Account, 0, len(accounts))
 	for _, name := range names {
-		acc := accounts[name]
-		genesisAccounts = append(genesisAccounts, GenesisAccount{
-			Name:        name,
-			Permissions: acc.Permissions(),
-			BasicAccount: BasicAccount{
-				Address: acc.Address(),
-				Amount:  acc.Balance(),
-			},
-		})
+		genesisAccounts = append(genesisAccounts, GenesisAccountFromAccount(name, accounts[name]))
 	}
 	// Sigh...
 	names = names[:0]
@@ -217,14 +199,16 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 	}
 	sort.Strings(names)
 	// copy slice of pointers to validators into slice of validators
-	genesisValidators := make([]GenesisValidator, 0, len(validators))
+	genesisValidators := make([]Validator, 0, len(validators))
 	for _, name := range names {
 		val := validators[name]
-		genesisValidators = append(genesisValidators, GenesisValidator{
-			Name:    name,
-			Address: val.Address(),
-			PubKey:  val.PubKey(),
-			Amount:  val.Power(),
+		genesisValidators = append(genesisValidators, Validator{
+			Name: name,
+			BasicAccount: BasicAccount{
+				Address: val.Address(),
+				PubKey:  val.PubKey(),
+				Amount:  val.Power(),
+			},
 			// Simpler to just do this by convention
 			UnbondTo: []BasicAccount{
 				{
@@ -235,13 +219,11 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 		})
 	}
 	return &GenesisDoc{
-		ChainName:   chainName,
-		Salt:        salt,
-		GenesisTime: genesisTime,
-		Params: GenesisParams{
-			GlobalPermissions: permission.DefaultAccountPermissions.Clone(),
-		},
-		Accounts:   genesisAccounts,
-		Validators: genesisValidators,
+		ChainName:         chainName,
+		Salt:              salt,
+		GenesisTime:       genesisTime,
+		GlobalPermissions: permission.DefaultAccountPermissions.Clone(),
+		Accounts:          genesisAccounts,
+		Validators:        genesisValidators,
 	}
 }

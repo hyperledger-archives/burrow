@@ -72,6 +72,15 @@ func (address Address) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeUpperToString(address[:]))
 }
 
+func (address *Address) UnmarshalText(text []byte) error {
+	_, err := hex.Decode(address[:], text)
+	return err
+}
+
+func (address Address) MarshalText() ([]byte, error) {
+	return ([]byte)(hex.EncodeUpperToString(address[:])), nil
+}
+
 func NewContractAddress(caller Address, sequence uint64) (newAddr Address) {
 	temp := make([]byte, 32+8)
 	copy(temp, caller[:])

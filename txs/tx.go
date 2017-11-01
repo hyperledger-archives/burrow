@@ -311,10 +311,10 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    crypto.PubKeyEd25519    `json:"pub_key"` // NOTE: these don't have type byte
-	Signature crypto.SignatureEd25519 `json:"signature"`
-	Inputs    []*TxInput              `json:"inputs"`
-	UnbondTo  []*TxOutput             `json:"unbond_to"`
+	PubKey    crypto.PubKey    `json:"pub_key"` // NOTE: these don't have type byte
+	Signature crypto.Signature `json:"signature"`
+	Inputs    []*TxInput       `json:"inputs"`
+	UnbondTo  []*TxOutput      `json:"unbond_to"`
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -345,9 +345,9 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   acm.Address             `json:"address"`
-	Height    int                     `json:"height"`
-	Signature crypto.SignatureEd25519 `json:"signature"`
+	Address   acm.Address      `json:"address"`
+	Height    int              `json:"height"`
+	Signature crypto.Signature `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -362,9 +362,9 @@ func (tx *UnbondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   acm.Address             `json:"address"`
-	Height    int                     `json:"height"`
-	Signature crypto.SignatureEd25519 `json:"signature"`
+	Address   acm.Address      `json:"address"`
+	Height    int              `json:"height"`
+	Signature crypto.Signature `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

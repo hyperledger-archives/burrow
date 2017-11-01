@@ -96,13 +96,13 @@ type MutableAccount interface {
 
 // ConcreteAccount is the canonical serialisation and bash-in-place object for an Account
 type ConcreteAccount struct {
-	Address     Address                   `json:"address"`
-	PubKey      crypto.PubKey             `json:"pub_key"`
-	Balance     uint64                    `json:"balance"`
-	Code        Bytecode                  `json:"code"` // VM code
-	Sequence    uint64                    `json:"sequence"`
-	StorageRoot []byte                    `json:"storage_root"` // VM storage merkle root.
-	Permissions ptypes.AccountPermissions `json:"permissions"`
+	Address     Address
+	PubKey      crypto.PubKey
+	Balance     uint64
+	Code        Bytecode
+	Sequence    uint64
+	StorageRoot []byte
+	Permissions ptypes.AccountPermissions
 }
 
 func NewConcreteAccount(pubKey crypto.PubKey) ConcreteAccount {

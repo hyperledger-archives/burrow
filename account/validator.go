@@ -18,9 +18,9 @@ type Validator interface {
 
 // Neither abci_types or tm_types has quite the representation we want
 type ConcreteValidator struct {
-	Address Address       `json:"address"`
-	PubKey  crypto.PubKey `json:"pub_key"`
-	Power   uint64        `json:"power"`
+	Address Address
+	PubKey  crypto.PubKey
+	Power   uint64
 }
 
 type concreteValidatorWrapper struct {
@@ -51,7 +51,6 @@ func AsConcreteValidator(validator Validator) *ConcreteValidator {
 		PubKey:  validator.PubKey(),
 		Power:   validator.Power(),
 	}
-
 }
 
 func (cvw concreteValidatorWrapper) Address() Address {

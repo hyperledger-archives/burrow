@@ -124,10 +124,10 @@ func makeExecutor(state *State) *executor {
 }
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
-	genAccounts := []genesis.GenesisAccount{}
+	genAccounts := []genesis.Account{}
 	for _, user := range users[:5] {
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
-		genAccounts = append(genAccounts, genesis.GenesisAccount{
+		genAccounts = append(genAccounts, genesis.Account{
 			BasicAccount: genesis.BasicAccount{
 				Address: user.Address(),
 				Amount:  1000000,
@@ -137,16 +137,16 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 	}
 
 	return genesis.GenesisDoc{
-		GenesisTime: time.Now(),
-		ChainName:   testGenesisDoc.ChainName,
-		Params: genesis.GenesisParams{
-			GlobalPermissions: globalPerm,
-		},
-		Accounts: genAccounts,
-		Validators: []genesis.GenesisValidator{
+		GenesisTime:       time.Now(),
+		ChainName:         testGenesisDoc.ChainName,
+		GlobalPermissions: globalPerm,
+		Accounts:          genAccounts,
+		Validators: []genesis.Validator{
 			{
-				PubKey: users[0].PubKey(),
-				Amount: 10,
+				BasicAccount: genesis.BasicAccount{
+					PubKey: users[0].PubKey(),
+					Amount: 10,
+				},
 				UnbondTo: []genesis.BasicAccount{
 					{
 						Address: users[0].Address(),
@@ -998,8 +998,8 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 
-	fmt.Println("\n#### RmRole")
-	// RmRole
+	fmt.Println("\n#### RemoveRole")
+	// RemoveRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", users[3], "chuck")
 	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
@@ -1071,11 +1071,11 @@ func TestSNativeTx(t *testing.T) {
 		t.Fatal("expected role to be added")
 	}
 
-	fmt.Println("\n#### RmRole")
-	// RmRole
+	fmt.Println("\n#### RemoveRole")
+	// RemoveRole
 	snativeArgs = snativeRoleTestInputTx("removeRole", users[3], "chuck")
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
-	testSNativeTxExpectPass(t, batchCommitter, permission.RmRole, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.RemoveRole, snativeArgs)
 	acc = getAccount(batchCommitter.blockCache, users[3].Address())
 	if v := acc.Permissions().HasRole("chuck"); v {
 		t.Fatal("expected role to be removed")

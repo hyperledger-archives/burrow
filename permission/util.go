@@ -50,3 +50,18 @@ func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool
 
 	return basePermissions, nil
 }
+
+func BasePermissionsFromStringList(permissions []string) (types.BasePermissions, error) {
+	var permFlag types.PermFlag
+	for _, perm := range permissions {
+		flag, err := PermStringToFlag(perm)
+		if err != nil {
+			return ZeroBasePermissions, err
+		}
+		permFlag |= flag
+	}
+	return types.BasePermissions{
+		Perms:  permFlag,
+		SetBit: permFlag,
+	}, nil
+}

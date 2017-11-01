@@ -40,3 +40,20 @@ func TestAddress_MarshalJSON(t *testing.T) {
 
 	assert.Equal(t, addr, *addrOut)
 }
+
+func TestAddress_MarshalText(t *testing.T) {
+	addr := Address{
+		73, 234, 48, 252, 174,
+		115, 27, 222, 54, 116,
+		47, 133, 144, 21, 73,
+		245, 21, 234, 26, 50,
+	}
+
+	bs, err := addr.MarshalText()
+	assert.NoError(t, err)
+
+	addrOut := new(Address)
+	err = addrOut.UnmarshalText(bs)
+
+	assert.Equal(t, addr, *addrOut)
+}

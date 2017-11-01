@@ -76,9 +76,7 @@ func TestWrapper(runner func() int) int {
 		panic(err)
 	}
 
-	defer func() {
-		kernel.Shutdown()
-	}()
+	defer kernel.Shutdown()
 
 	return runner()
 }
