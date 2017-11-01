@@ -22,10 +22,11 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 
+	"sync"
+
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/merkle"
-	"sync"
 )
 
 func makeStorage(db dbm.DB, root []byte) merkle.Tree {

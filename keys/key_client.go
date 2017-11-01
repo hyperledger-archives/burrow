@@ -16,9 +16,8 @@ package keys
 
 import (
 	"encoding/hex"
-	"fmt"
 
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 )
@@ -26,9 +25,9 @@ import (
 type KeyClient interface {
 	// Sign needs to return the signature bytes for given message to sign
 	// and the address to sign it with.
-	Sign(signBytesString string, signAddress account.Address) (signature []byte, err error)
+	Sign(signBytesString string, signAddress acm.Address) (signature []byte, err error)
 	// PublicKey needs to return the public key associated with a given address
-	PublicKey(address []byte) (publicKey []byte, err error)
+	PublicKey(address acm.Address) (publicKey []byte, err error)
 }
 
 // NOTE [ben] Compiler check to ensure monaxKeyClient successfully implements
@@ -51,7 +50,7 @@ func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) 
 
 // Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (monaxKeys *monaxKeyClient) Sign(signBytesString string, signAddress account.Address) (signature []byte, err error) {
+func (monaxKeys *monaxKeyClient) Sign(signBytesString string, signAddress acm.Address) (signature []byte, err error) {
 	args := map[string]string{
 		"msg":  signBytesString,
 		"hash": signBytesString, // TODO:[ben] backwards compatibility
@@ -70,9 +69,9 @@ func (monaxKeys *monaxKeyClient) Sign(signBytesString string, signAddress accoun
 
 // Monax-keys client PublicKey requests the public key associated with an address from
 // the monax-keys server.
-func (monaxKeys *monaxKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
+func (monaxKeys *monaxKeyClient) PublicKey(address acm.Address) (publicKey []byte, err error) {
 	args := map[string]string{
-		"addr": fmt.Sprintf("%X", address),
+		"addr": address.String(),
 	}
 	pubS, err := RequestResponse(monaxKeys.rpcString, "pub", args, monaxKeys.logger)
 	if err != nil {

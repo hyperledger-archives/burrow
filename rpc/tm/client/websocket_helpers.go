@@ -50,18 +50,6 @@ func newWSClient() *rpcclient.WSClient {
 }
 
 func stopWSClient(wsc *rpcclient.WSClient) {
-	// drain until ResultsCh is closed because it may block
-	go func() {
-		for {
-			select {
-			case _, ok := <-wsc.ResultsCh:
-				if !ok {
-					// channel closed stop this goroutine
-					return
-				}
-			}
-		}
-	}()
 	wsc.Stop()
 }
 
@@ -83,8 +71,9 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 		select {
 		case <-timeout.C:
 			t.Fatal("Timeout waiting for subscription result")
-		case bs := <-wsc.ResultsCh:
-			res, ok := readResult(t, bs).(*rpc.ResultSubscribe)
+		case response := <-wsc.ResponsesCh:
+			require.Nil(t, response.Error, "got error response from websocket channel")
+			res, ok := readResult(t, *response.Result).(*rpc.ResultSubscribe)
 			if ok {
 				return res.SubscriptionId
 			}
@@ -183,15 +172,16 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 			select {
 			case <-shutdownEventsCh:
 				break LOOP
-			case r := <-wsc.ResultsCh:
-				resultEvent, _ := readResult(t, r).(*rpc.ResultEvent)
+			case r := <-wsc.ResponsesCh:
+				if r.Error != nil {
+					errCh <- r.Error
+					break LOOP
+				}
+				resultEvent, _ := readResult(t, *r.Result).(*rpc.ResultEvent)
 				if resultEvent != nil && resultEvent.Event == eventID {
 					// Keep feeding events
 					eventsCh <- resultEvent.AnyEventData
 				}
-			case err := <-wsc.ErrorsCh:
-				errCh <- err
-				break LOOP
 			case <-wsc.Quit:
 				break LOOP
 			}

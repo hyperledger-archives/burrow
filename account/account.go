@@ -353,11 +353,6 @@ func AccountDecoder(r io.Reader, n *int, err *error) interface{} {
 	return wire.ReadBinary(&ConcreteAccount{}, r, 0, n, err)
 }
 
-var AccountCodec = wire.Codec{
-	Encode: AccountEncoder,
-	Decode: AccountDecoder,
-}
-
 func Decode(accBytes []byte) (Account, error) {
 	ca, err := DecodeConcrete(accBytes)
 	if err != nil {

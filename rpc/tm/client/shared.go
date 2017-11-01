@@ -27,7 +27,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
@@ -91,7 +91,7 @@ func initGlobalVariables() error {
 	tmConf := tm_config.DefaultConfig()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := loggers.NewNoopInfoTraceLogger()
-	privValidator := tendermint.NewPrivValidatorMemory(privateAccounts[0])
+	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
 	genesisDoc = testGenesisDoc()
 	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, logger)
 	return err

@@ -5,11 +5,11 @@ import (
 
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/consensus"
 )
 
 // You're like the interface I never had

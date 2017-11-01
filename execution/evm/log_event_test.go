@@ -21,10 +21,10 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
-	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/logging/loggers"
+	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/logging/loggers"
 )
 
 var expectedData = []byte{0x10}

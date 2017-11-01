@@ -23,7 +23,6 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -65,12 +64,12 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("toAddr is bad hex: %v", err)
 	}
 
-	fee, err := strconv.ParseInt(feeS, 10, 64)
+	fee, err := strconv.ParseUint(feeS, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("fee is misformatted: %v", err)
 	}
 
-	gas, err := strconv.ParseInt(gasS, 10, 64)
+	gas, err := strconv.ParseUint(gasS, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("gas is misformatted: %v", err)
 	}
@@ -80,7 +79,7 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("data is bad hex: %v", err)
 	}
 
-	tx := txs.NewCallTxWithNonce(pub, toAddress, dataBytes, amt, gas, fee, nonce)
+	tx := txs.NewCallTxWithNonce(pub, &toAddress, dataBytes, amt, gas, fee, nonce)
 	return tx, nil
 }
 
@@ -90,7 +89,7 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, err
 	}
 
-	fee, err := strconv.ParseInt(feeS, 10, 64)
+	fee, err := strconv.ParseUint(feeS, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("fee is misformatted: %v", err)
 	}
@@ -289,9 +288,9 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 					}
 					txResult.BlockHash = confirmation.BlockHash
 					txResult.Exception = ""
-					eventDataTx, ok := confirmation.Event.(*evm.EventDataTx)
-					if !ok {
-						err = fmt.Errorf("Received wrong event type.")
+					eventDataTx := confirmation.EventDataTx
+					if eventDataTx == nil {
+						err = fmt.Errorf("EventDataTx was nil")
 						return
 					}
 					txResult.Return = eventDataTx.Return

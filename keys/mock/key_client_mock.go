@@ -73,12 +73,12 @@ func (mockKey *MockKey) Sign(message []byte) ([]byte, error) {
 var _ KeyClient = (*MockKeyClient)(nil)
 
 type MockKeyClient struct {
-	knownKeys map[string]*MockKey
+	knownKeys map[acm.Address]*MockKey
 }
 
 func NewMockKeyClient() *MockKeyClient {
 	return &MockKeyClient{
-		knownKeys: make(map[string]*MockKey),
+		knownKeys: make(map[acm.Address]*MockKey),
 	}
 }
 
@@ -88,14 +88,14 @@ func (mock *MockKeyClient) NewKey() acm.Address {
 	if err != nil {
 		panic(fmt.Sprintf("Mocked key client failed on key generation: %s", err))
 	}
-	mock.knownKeys[fmt.Sprintf("%X", key.Address)] = key
+	mock.knownKeys[key.Address] = key
 	return key.Address
 }
 
 func (mock *MockKeyClient) Sign(signBytesString string, signAddress acm.Address) ([]byte, error) {
-	key := mock.knownKeys[fmt.Sprintf("%X", signAddress)]
+	key := mock.knownKeys[signAddress]
 	if key == nil {
-		return nil, fmt.Errorf("Unknown address (%X)", signAddress)
+		return nil, fmt.Errorf("Unknown address (%s)", signAddress)
 	}
 	signBytes, err := hex.DecodeString(signBytesString)
 	if err != nil {
@@ -104,10 +104,10 @@ func (mock *MockKeyClient) Sign(signBytesString string, signAddress acm.Address)
 	return key.Sign(signBytes)
 }
 
-func (mock *MockKeyClient) PublicKey(address []byte) (publicKey []byte, err error) {
-	key := mock.knownKeys[fmt.Sprintf("%X", address)]
+func (mock *MockKeyClient) PublicKey(address acm.Address) (publicKey []byte, err error) {
+	key := mock.knownKeys[address]
 	if key == nil {
-		return nil, fmt.Errorf("Unknown address (%X)", address)
+		return nil, fmt.Errorf("Unknown address (%s)", address)
 	}
 	return key.PublicKey, nil
 }

@@ -25,6 +25,7 @@ import (
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
+	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
@@ -103,7 +104,7 @@ func NewGenesisKernel() (*Kernel, error) {
 	genesisAccount := acm.FromAddressable(genesisPrivateAccount)
 	genesisAccount.AddToBalance(GenesisAccountBalance)
 	genesisValidator := acm.AsValidator(genesisAccount)
-	privValidator := tendermint.NewPrivValidatorMemory(genesisPrivateAccount)
+	privValidator := validator.NewPrivValidatorMemory(genesisPrivateAccount, genesisPrivateAccount)
 	genesisDoc := genesis.MakeGenesisDocFromAccounts("GenesisChain", nil, time.Now(),
 		map[string]acm.Account{
 			"genesisAccount": genesisAccount,

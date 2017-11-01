@@ -73,7 +73,7 @@ func TestResultListAccounts(t *testing.T) {
 	json.Unmarshal(bs, resOut)
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
-	assert.Equal(t, string(bs),string(bsOut))
+	assert.Equal(t, string(bs), string(bsOut))
 }
 
 func TestResultEvent(t *testing.T) {

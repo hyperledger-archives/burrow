@@ -1,4 +1,4 @@
-package tendermint
+package validator
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -29,42 +28,6 @@ func VoteToStep(vote *tm_types.Vote) int8 {
 	default:
 		return StepError
 	}
-}
-
-type privValidatorMemory struct {
-	privateAccount acm.PrivateAccount
-	lastSignedInfo *LastSignedInfo
-}
-
-var _ tm_types.PrivValidator = &privValidatorMemory{}
-
-func NewPrivValidatorMemory(privateAccount acm.PrivateAccount) *privValidatorMemory {
-	return &privValidatorMemory{
-		privateAccount: privateAccount,
-		lastSignedInfo: new(LastSignedInfo),
-	}
-}
-
-func (pvm *privValidatorMemory) GetAddress() data.Bytes {
-	return pvm.privateAccount.Address().Bytes()
-}
-
-func (pvm *privValidatorMemory) GetPubKey() crypto.PubKey {
-	return pvm.privateAccount.PubKey()
-
-}
-
-func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) error {
-	return pvm.lastSignedInfo.SignVote(pvm.privateAccount, chainID, vote)
-}
-
-func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tm_types.Proposal) error {
-	return pvm.lastSignedInfo.SignProposal(pvm.privateAccount, chainID, proposal)
-
-}
-
-func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tm_types.Heartbeat) error {
-	return pvm.lastSignedInfo.SignHeartbeat(pvm.privateAccount, chainID, heartbeat)
 }
 
 type Verifier interface {

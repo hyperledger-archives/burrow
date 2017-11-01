@@ -26,8 +26,8 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
-	tm_types "github.com/tendermint/tendermint/types"
 	"github.com/stretchr/testify/require"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 //--------------------------------------------------------------------------------
@@ -273,8 +273,9 @@ Subscribe:
 		case <-timeout:
 			t.Fatal("Timed out waiting for subscription result")
 
-		case bs := <-wsc.ResultsCh:
-			res := readResult(t, bs).(*rpc.ResultSubscribe)
+		case response := <-wsc.ResponsesCh:
+			require.Nil(t, response.Error)
+			res := readResult(t, *response.Result).(*rpc.ResultSubscribe)
 			assert.Equal(t, tm_types.EventStringNewBlock(), res.Event)
 			subId = res.SubscriptionId
 			break Subscribe
@@ -292,8 +293,9 @@ Subscribe:
 			}
 			return
 
-		case bs := <-wsc.ResultsCh:
-			if res, ok := readResult(t, bs).(*rpc.ResultEvent); ok {
+		case response := <-wsc.ResponsesCh:
+			require.Nil(t, response.Error)
+			if res, ok := readResult(t, *response.Result).(*rpc.ResultEvent); ok {
 				enb := res.EventDataNewBlock()
 				if enb != nil {
 					assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)

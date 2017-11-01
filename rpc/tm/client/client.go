@@ -138,7 +138,7 @@ func BlockchainInfo(client RPCClient, minHeight, maxHeight int) (*rpc.ResultBloc
 	return res.Unwrap().(*rpc.ResultBlockchainInfo), nil
 }
 
-func GetBlock(client RPCClient, height int) ( *rpc.ResultGetBlock,  error) {
+func GetBlock(client RPCClient, height int) (*rpc.ResultGetBlock, error) {
 	res := new(rpc.Result)
 	_, err := client.Call(method.GetBlock, pmap("height", height), res)
 	if err != nil {

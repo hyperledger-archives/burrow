@@ -23,8 +23,8 @@ import (
 
 // Functions to generate eventId strings
 
-func EventStringAccCall(addr acm.Address) string   { return fmt.Sprintf("Acc/%s/Call", addr) }
-func EventStringLogEvent(addr acm.Address) string  { return fmt.Sprintf("Log/%s", addr) }
+func EventStringAccCall(addr acm.Address) string  { return fmt.Sprintf("Acc/%s/Call", addr) }
+func EventStringLogEvent(addr acm.Address) string { return fmt.Sprintf("Log/%s", addr) }
 
 //----------------------------------------
 

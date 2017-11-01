@@ -3,9 +3,9 @@ package event
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/hyperledger/burrow/logging/loggers"
 )
 
 func TestEventCache_Flush(t *testing.T) {

@@ -78,7 +78,8 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, 
 }
 
 func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag ptypes.PermFlag, err error) {
-	if addrBytes, err := hex.DecodeString(addrS); err != nil {
+	var addrBytes []byte
+	if addrBytes, err = hex.DecodeString(addrS); err != nil {
 		copy(addr[:], addrBytes)
 		return
 	}
@@ -88,7 +89,9 @@ func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag pty
 	return
 }
 
-func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS string) (pub crypto.PubKey, amt int64, nonce int64, err error) {
+func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,
+	nonceS string) (pub crypto.PubKey, amt uint64, nonce uint64, err error) {
+
 	if amtS == "" {
 		err = fmt.Errorf("input must specify an amount with the --amt flag")
 		return
@@ -117,7 +120,11 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			err = fmt.Errorf("Bad hex string for address (%s): %v", addr, err)
 			return
 		}
-		pubKeyBytes, err2 = keyClient.PublicKey(addressBytes)
+		address, err2 := acm.AddressFromBytes(addressBytes)
+		if err2 != nil {
+			err = fmt.Errorf("Could not convert bytes (%X) to address: %v", addressBytes, err2)
+		}
+		pubKeyBytes, err2 = keyClient.PublicKey(address)
 		if err2 != nil {
 			err = fmt.Errorf("Failed to fetch pubkey for address (%s): %v", addr, err2)
 			return
@@ -129,7 +136,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return
 	}
 
-	amt, err = strconv.ParseInt(amtS, 10, 64)
+	amt, err = strconv.ParseUint(amtS, 10, 64)
 	if err != nil {
 		err = fmt.Errorf("amt is misformatted: %v", err)
 	}
@@ -152,13 +159,13 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		if err2 != nil {
 			return pub, amt, nonce, err2
 		}
-		nonce = int64(account.Sequence) + 1
+		nonce = account.Sequence() + 1
 		logging.TraceMsg(nodeClient.Logger(), "Fetch nonce from node",
 			"nonce", nonce,
 			"account address", address,
 		)
 	} else {
-		nonce, err = strconv.ParseInt(nonceS, 10, 64)
+		nonce, err = strconv.ParseUint(nonceS, 10, 64)
 		if err != nil {
 			err = fmt.Errorf("nonce is misformatted: %v", err)
 			return

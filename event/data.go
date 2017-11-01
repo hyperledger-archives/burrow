@@ -3,8 +3,8 @@ package event
 import (
 	"fmt"
 
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	exe_events "github.com/hyperledger/burrow/execution/events"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/tendermint/go-wire/data"
 	tm_types "github.com/tendermint/tendermint/types"
 )

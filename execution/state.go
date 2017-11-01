@@ -484,7 +484,7 @@ func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) 
 func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {
 	var n int
 	var err error
-	value := NameRegCodec.Decode(bytes.NewBuffer(entryBytes), &n, &err)
+	value := NameRegDecode(bytes.NewBuffer(entryBytes), &n, &err)
 	return value.(*NameRegEntry)
 }
 
@@ -492,7 +492,7 @@ func (s *State) UpdateNameRegEntry(entry *NameRegEntry) bool {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
-	NameRegCodec.Encode(entry, w, &n, &err)
+	NameRegEncode(entry, w, &n, &err)
 	return s.nameReg.Set([]byte(entry.Name), w.Bytes())
 }
 
@@ -509,15 +509,10 @@ func (s *State) GetNames() merkle.Tree {
 func (s *State) SetNameReg(nameReg merkle.Tree) {
 	s.nameReg = nameReg
 }
-func NameRegEncoder(o interface{}, w io.Writer, n *int, err *error) {
+func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
 	wire.WriteBinary(o.(*NameRegEntry), w, n, err)
 }
 
-func NameRegDecoder(r io.Reader, n *int, err *error) interface{} {
+func NameRegDecode(r io.Reader, n *int, err *error) interface{} {
 	return wire.ReadBinary(&NameRegEntry{}, r, txs.MaxDataLength, n, err)
-}
-
-var NameRegCodec = wire.Codec{
-	Encode: NameRegEncoder,
-	Decode: NameRegDecoder,
 }

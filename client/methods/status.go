@@ -18,10 +18,9 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/definitions"
 )
 
-func Status(do *definitions.ClientDo) error {
+func Status(do *client.Do) error {
 	logger, err := loggerFromClientDo(do, "Status")
 	if err != nil {
 		return fmt.Errorf("Could not generate logging config from Do: %s", err)
