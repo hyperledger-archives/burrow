@@ -22,7 +22,6 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -46,7 +45,7 @@ type Addressable interface {
 	// Get the 20 byte EVM address of this account
 	Address() Address
 	// Public key from which the Address is derived
-	PubKey() crypto.PubKey
+	PublicKey() PublicKey
 }
 
 // The default immutable interface to an account
@@ -72,7 +71,7 @@ type Account interface {
 type MutableAccount interface {
 	Account
 	// Set public key (needed for lazy initialisation), should also set the dependent address
-	SetPubKey(pubKey crypto.PubKey) MutableAccount
+	SetPublicKey(pubKey PublicKey) MutableAccount
 	// Subtract amount from account balance (will panic if amount is greater than balance)
 	SubtractFromBalance(amount uint64) MutableAccount
 	// Add amount to balance (will panic if amount plus balance is a uint64 overflow)
@@ -97,7 +96,7 @@ type MutableAccount interface {
 // ConcreteAccount is the canonical serialisation and bash-in-place object for an Account
 type ConcreteAccount struct {
 	Address     Address
-	PubKey      crypto.PubKey
+	PublicKey   PublicKey
 	Balance     uint64
 	Code        Bytecode
 	Sequence    uint64
@@ -105,10 +104,10 @@ type ConcreteAccount struct {
 	Permissions ptypes.AccountPermissions
 }
 
-func NewConcreteAccount(pubKey crypto.PubKey) ConcreteAccount {
+func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
 	return ConcreteAccount{
-		Address: MustAddressFromBytes(pubKey.Address()),
-		PubKey:  pubKey,
+		Address:   MustAddressFromBytes(pubKey.Address()),
+		PublicKey: pubKey,
 		// Since nil slices and maps compare differently to empty ones
 		Code:        Bytecode{},
 		StorageRoot: []byte{},
@@ -119,7 +118,7 @@ func NewConcreteAccount(pubKey crypto.PubKey) ConcreteAccount {
 }
 
 func NewConcreteAccountFromSecret(secret string) ConcreteAccount {
-	return NewConcreteAccount(PrivKeyFromSecret(secret).PubKey())
+	return NewConcreteAccount(PublicKeyFromPubKey(PrivateKeyFromSecret(secret).PubKey()))
 }
 
 // Return as immutable Account
@@ -151,7 +150,7 @@ func (acc *ConcreteAccount) String() string {
 	}
 
 	return fmt.Sprintf("Account{Address: %s; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
-		acc.Address, acc.PubKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
+		acc.Address, acc.PublicKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
 }
 
 // ConcreteAccount
@@ -172,7 +171,7 @@ func AsConcreteAccount(account Account) *ConcreteAccount {
 	}
 	return &ConcreteAccount{
 		Address:     account.Address(),
-		PubKey:      account.PubKey(),
+		PublicKey:   account.PublicKey(),
 		Balance:     account.Balance(),
 		Code:        account.Code(),
 		Sequence:    account.Sequence(),
@@ -184,8 +183,8 @@ func AsConcreteAccount(account Account) *ConcreteAccount {
 // Creates an otherwise zeroed Account from an Addressable and returns it as MutableAccount
 func FromAddressable(addressable Addressable) MutableAccount {
 	return ConcreteAccount{
-		Address: addressable.Address(),
-		PubKey:  addressable.PubKey(),
+		Address:   addressable.Address(),
+		PublicKey: addressable.PublicKey(),
 		// Since nil slices and maps compare differently to empty ones
 		Code:        Bytecode{},
 		StorageRoot: []byte{},
@@ -244,8 +243,8 @@ func (caw concreteAccountWrapper) Address() Address {
 	return caw.ConcreteAccount.Address
 }
 
-func (caw concreteAccountWrapper) PubKey() crypto.PubKey {
-	return caw.ConcreteAccount.PubKey
+func (caw concreteAccountWrapper) PublicKey() PublicKey {
+	return caw.ConcreteAccount.PublicKey
 }
 
 func (caw concreteAccountWrapper) Balance() uint64 {
@@ -279,8 +278,8 @@ func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {
 // Account mutation via MutableAccount interface
 var _ MutableAccount = concreteAccountWrapper{}
 
-func (caw concreteAccountWrapper) SetPubKey(pubKey crypto.PubKey) MutableAccount {
-	caw.ConcreteAccount.PubKey = pubKey
+func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount {
+	caw.ConcreteAccount.PublicKey = pubKey
 	addressFromPubKey, err := AddressFromBytes(pubKey.Address())
 	if err != nil {
 		// We rely on this working in all over the place so shouldn't happen

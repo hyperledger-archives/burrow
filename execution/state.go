@@ -113,13 +113,13 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 		validatorInfos := merkle.NewIAVLTree(wire.BasicCodec, types.ValidatorInfoCodec, 0, db)
 		validators := make([]*types.Validator, len(genDoc.Validators))
 		for i, val := range genDoc.Validators {
-			pubKey := val.PubKey
+			pubKey := val.PublicKey
 			address := pubKey.Address()
 
 			// Make ValidatorInfo
 			valInfo := &types.ValidatorInfo{
 				Address:         address,
-				PubKey:          pubKey,
+				PublicKey:          pubKey,
 				UnbondTo:        make([]*types.TxOutput, len(val.UnbondTo)),
 				FirstBondHeight: 0,
 				FirstBondAmount: val.Amount,
@@ -135,7 +135,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 			// Make validator
 			validators[i] = &types.Validator{
 				Address:     address,
-				PubKey:      pubKey,
+				PublicKey:      pubKey,
 				VotingPower: val.Amount,
 			}
 		}

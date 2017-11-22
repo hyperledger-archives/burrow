@@ -142,7 +142,7 @@ func (s *service) Status() (*ResultStatus, error) {
 	return &ResultStatus{
 		NodeInfo:          s.nodeView.NodeInfo(),
 		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            s.nodeView.PrivValidatorPubKey(),
+		PubKey:            s.nodeView.PrivValidatorPublicKey(),
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime}, nil

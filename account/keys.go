@@ -8,6 +8,14 @@ type PublicKey struct {
 	crypto.PubKey
 }
 
+func PublicKeyFromPubKey(pubKey crypto.PubKey) PublicKey {
+	return PublicKey{PubKey: pubKey}
+}
+
+func PrivateKeyFromPrivKey(privKey crypto.PrivKey) PrivateKey {
+	return PrivateKey{PrivKey: privKey}
+}
+
 func (pk PublicKey) MarshalJSON() ([]byte, error) {
 	return pk.PubKey.MarshalJSON()
 }

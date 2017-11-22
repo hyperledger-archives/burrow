@@ -29,7 +29,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
@@ -208,8 +207,8 @@ func (cons *consensusEngine) Peers() []*consensus_types.Peer {
 	return cons.testData.GetPeers.Output
 }
 
-func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
-	return crypto.PubKeyEd25519{
+func (cons *consensusEngine) PublicValidatorKey() acm.PublicKey {
+	return acm.PublicKeyEd25519{
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,

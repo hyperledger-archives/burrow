@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/tendermint/go-crypto"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
@@ -93,7 +91,7 @@ func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag pty
 }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,
-	nonceS string) (pub crypto.PubKey, amt uint64, nonce uint64, err error) {
+	nonceS string) (pub acm.PublicKey, amt uint64, nonce uint64, err error) {
 
 	if amtS == "" {
 		err = fmt.Errorf("input must specify an amount with the --amt flag")
@@ -117,7 +115,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return
 		}
 
-		pubKeyEd25519 := crypto.PubKeyEd25519{}
+		pubKeyEd25519 := acm.PublicKeyEd25519{}
 		copy(pubKeyEd25519[:], pubKeyBytes)
 		pub = pubKeyEd25519.Wrap()
 	} else {

@@ -21,11 +21,10 @@ func main() {
 		"Use the a specified burrow config TOML file")
 
 	burrow.Spec = "[--config=<config file>] [--genesis=<genesis json file>]"
-	configProvider := burrowConfigProvider(*configOpt, *genesisOpt)
 
 	burrow.Action = func() {
 		conf := config.DefaultBurrowConfig()
-		err := configProvider.Apply(conf)
+		err := burrowConfigProvider(*configOpt, *genesisOpt).Apply(conf)
 		if err != nil {
 			fatalf("could not obtain config: %v", err)
 		}
@@ -39,7 +38,7 @@ func main() {
 		if err != nil {
 			fatalf("could not boot Burrow kernel: %v", err)
 		}
-		defer kern.Shutdown()
+		kern.WaitForShutdown()
 	}
 
 	burrow.Command("spec",
@@ -48,11 +47,11 @@ func main() {
 			tomlOpt := cmd.BoolOpt("t toml", false, "Emit GenesisSpec as TOML rather than the "+
 				"default JSON")
 
-			participantsOpt := cmd.IntOpt("participants", 1, "Number of preset Participant type accounts")
+			participantsOpt := cmd.IntOpt("p participant-accounts", 1, "Number of preset Participant type accounts")
 
-			fullOpt := cmd.IntOpt("participants", 1, "Number of preset Full type accounts")
+			fullOpt := cmd.IntOpt("f full-accounts", 1, "Number of preset Full type accounts")
 
-			cmd.Spec = "[--toml]"
+			cmd.Spec = "[--participant-accounts] [--full-accounts] [--toml]"
 
 			cmd.Action = func() {
 				specs := make([]spec.GenesisSpec, 0, *participantsOpt+*fullOpt)
@@ -93,7 +92,7 @@ func main() {
 
 			cmd.Action = func() {
 				conf := config.DefaultBurrowConfig()
-				err := configProvider.Apply(conf)
+				err := burrowConfigProvider(*configOpt, *genesisOpt).Apply(conf)
 				if err != nil {
 					fatalf("could not obtain config: %v", err)
 				}

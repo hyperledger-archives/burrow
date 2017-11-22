@@ -128,7 +128,7 @@ func makePrivateAccounts(n int) []acm.PrivateAccount {
 func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	nonce := getNonce(t, client, privateAccounts[0].Address())
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(privateAccounts[0].PubKey(), amt, nonce+1)
+	tx.AddInputWithNonce(privateAccounts[0].PublicKey(), amt, nonce+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
@@ -142,7 +142,7 @@ func makeDefaultSendTxSigned(t *testing.T, client RPCClient, addr acm.Address, a
 func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.CallTx {
 	nonce := getNonce(t, client, privateAccounts[0].Address())
-	tx := txs.NewCallTxWithNonce(privateAccounts[0].PubKey(), addr, code, amt, gasLim, fee,
+	tx := txs.NewCallTxWithNonce(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
 		nonce+1)
 	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
@@ -151,14 +151,14 @@ func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code [
 func makeDefaultCallTxWithNonce(t *testing.T, addr *acm.Address, sequence uint64, code []byte,
 	amt, gasLim, fee uint64) *txs.CallTx {
 
-	tx := txs.NewCallTxWithNonce(privateAccounts[0].PubKey(), addr, code, amt, gasLim, fee, sequence)
+	tx := txs.NewCallTxWithNonce(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee, sequence)
 	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
 }
 
 func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
 	nonce := getNonce(t, client, privateAccounts[0].Address())
-	tx := txs.NewNameTxWithNonce(privateAccounts[0].PubKey(), name, value, amt, fee, nonce+1)
+	tx := txs.NewNameTxWithNonce(privateAccounts[0].PublicKey(), name, value, amt, fee, nonce+1)
 	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
 	return tx
 }

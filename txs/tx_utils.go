@@ -33,7 +33,7 @@ func NewSendTx() *SendTx {
 	}
 }
 
-func (tx *SendTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt uint64) error {
+func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
 	addr := acm.MustAddressFromBytes(pubkey.Address())
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -45,7 +45,7 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt uint64) erro
 	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+1)
 }
 
-func (tx *SendTx) AddInputWithNonce(pubkey crypto.PubKey, amt uint64, sequence uint64) error {
+func (tx *SendTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	addr, err := acm.AddressFromBytes(pubkey.Address())
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
-	tx.Inputs[i].PubKey = privAccount.PubKey()
+	tx.Inputs[i].PubKey = privAccount.PublicKey()
 	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
@@ -80,7 +80,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 //----------------------------------------------------------------------------
 // CallTx interface for creating tx
 
-func NewCallTx(st acm.Getter, from crypto.PubKey, to *acm.Address, data []byte,
+func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
 	addr, err := acm.AddressFromBytes(from.Address())
@@ -99,7 +99,7 @@ func NewCallTx(st acm.Getter, from crypto.PubKey, to *acm.Address, data []byte,
 	return NewCallTxWithNonce(from, to, data, amt, gasLimit, fee, nonce), nil
 }
 
-func NewCallTxWithNonce(from crypto.PubKey, to *acm.Address, data []byte,
+func NewCallTxWithNonce(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
 		Address:   acm.MustAddressFromBytes(from.Address()),
@@ -119,14 +119,14 @@ func NewCallTxWithNonce(from crypto.PubKey, to *acm.Address, data []byte,
 }
 
 func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PubKey()
+	tx.Input.PubKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------------
 // NameTx interface for creating tx
 
-func NewNameTx(st acm.Getter, from crypto.PubKey, name, data string, amt, fee uint64) (*NameTx, error) {
+func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := acm.MustAddressFromBytes(from.Address())
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -140,7 +140,7 @@ func NewNameTx(st acm.Getter, from crypto.PubKey, name, data string, amt, fee ui
 	return NewNameTxWithNonce(from, name, data, amt, fee, nonce), nil
 }
 
-func NewNameTxWithNonce(from crypto.PubKey, name, data string, amt, fee, sequence uint64) *NameTx {
+func NewNameTxWithNonce(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
 		Address:   acm.MustAddressFromBytes(from.Address()),
 		Amount:    amt,
@@ -158,14 +158,14 @@ func NewNameTxWithNonce(from crypto.PubKey, name, data string, amt, fee, sequenc
 }
 
 func (tx *NameTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PubKey()
+	tx.Input.PubKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
 //----------------------------------------------------------------------------
 // BondTx interface for adding inputs/outputs and adding signatures
 
-func NewBondTx(pubkey crypto.PubKey) (*BondTx, error) {
+func NewBondTx(pubkey acm.PublicKey) (*BondTx, error) {
 	return &BondTx{
 		PubKey:   pubkey,
 		Inputs:   []*TxInput{},
@@ -173,7 +173,7 @@ func NewBondTx(pubkey crypto.PubKey) (*BondTx, error) {
 	}, nil
 }
 
-func (tx *BondTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt uint64) error {
+func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
 	addr := acm.MustAddressFromBytes(pubkey.Address())
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -185,7 +185,7 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey crypto.PubKey, amt uint64) erro
 	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+uint64(1))
 }
 
-func (tx *BondTx) AddInputWithNonce(pubkey crypto.PubKey, amt uint64, sequence uint64) error {
+func (tx *BondTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   acm.MustAddressFromBytes(pubkey.Address()),
 		Amount:    amt,
@@ -213,7 +213,7 @@ func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
-	tx.Inputs[i].PubKey = privAccount.PubKey()
+	tx.Inputs[i].PubKey = privAccount.PublicKey()
 	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
@@ -249,7 +249,7 @@ func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 //----------------------------------------------------------------------------
 // PermissionsTx interface for creating tx
 
-func NewPermissionsTx(st acm.Getter, from crypto.PubKey, args ptypes.PermArgs) (*PermissionsTx, error) {
+func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (*PermissionsTx, error) {
 	addr := acm.MustAddressFromBytes(from.Address())
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -263,7 +263,7 @@ func NewPermissionsTx(st acm.Getter, from crypto.PubKey, args ptypes.PermArgs) (
 	return NewPermissionsTxWithNonce(from, args, nonce), nil
 }
 
-func NewPermissionsTxWithNonce(from crypto.PubKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithNonce(from acm.PublicKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
 		Address:   acm.MustAddressFromBytes(from.Address()),
 		Amount:    1, // NOTE: amounts can't be 0 ...
@@ -279,6 +279,6 @@ func NewPermissionsTxWithNonce(from crypto.PubKey, args ptypes.PermArgs, sequenc
 }
 
 func (tx *PermissionsTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PubKey()
+	tx.Input.PubKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }

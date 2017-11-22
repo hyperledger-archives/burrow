@@ -23,7 +23,6 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/go-crypto"
 )
 
 var chainID = "myChainID"
@@ -114,7 +113,7 @@ func TestBondTxSignable(t *testing.T) {
 	privKeyBytes := make([]byte, 64)
 	privAccount := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes)
 	bondTx := &BondTx{
-		PubKey: privAccount.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		PubKey: privAccount.PubKey().Unwrap().(acm.PublicKeyEd25519),
 		Inputs: []*TxInput{
 			{
 				Address:  makeAddress("input1"),

@@ -21,7 +21,6 @@ import (
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-crypto"
 )
 
 var _ NodeClient = (*MockNodeClient)(nil)
@@ -53,7 +52,7 @@ func (mock *MockNodeClient) GetAccount(address acm.Address) (acm.Account, error)
 	// make zero account
 	return acm.ConcreteAccount{
 		Address:     address,
-		PubKey:      crypto.PubKeyEd25519{}.Wrap(),
+		PublicKey:   acm.PublicKeyEd25519{}.Wrap(),
 		Code:        make([]byte, 0),
 		StorageRoot: make([]byte, 0),
 	}.Account(), nil
@@ -69,7 +68,7 @@ func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte,
 	// fill return values
 	ChainId = make([]byte, 64)
 	LatestBlockHash = make([]byte, 64)
-	ValidatorPublicKey = crypto.PubKeyEd25519{}.Wrap().Bytes()
+	ValidatorPublicKey = acm.PublicKeyEd25519{}.Wrap().Bytes()
 	BlockHeight = 0
 	LatestBlockTime = 0
 	return

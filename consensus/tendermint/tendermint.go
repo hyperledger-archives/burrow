@@ -61,7 +61,7 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc
 	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
 		validators[i] = tm_types.GenesisValidator{
-			PubKey: validator.PubKey,
+			PubKey: validator.PublicKey.PubKey,
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}

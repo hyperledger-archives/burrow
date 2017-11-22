@@ -149,15 +149,15 @@ type (
 	}
 
 	TxInput struct {
-		Address   acm.Address      `json:"address"`   // Hash of the PubKey
+		Address   acm.Address      `json:"address"`   // Hash of the PublicKey
 		Amount    uint64           `json:"amount"`    // Must not exceed account balance
 		Sequence  uint64           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+		Signature crypto.Signature `json:"signature"` // Depends on the PublicKey type and the whole Tx
+		PubKey    acm.PublicKey    `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
-		Address acm.Address `json:"address"` // Hash of the PubKey
+		Address acm.Address `json:"address"` // Hash of the PublicKey
 		Amount  uint64      `json:"amount"`  // The sum of all outputs must not exceed the inputs.
 	}
 )
@@ -311,7 +311,7 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    crypto.PubKey    `json:"pub_key"` // NOTE: these don't have type byte
+	PubKey    acm.PublicKey    `json:"pub_key"` // NOTE: these don't have type byte
 	Signature crypto.Signature `json:"signature"`
 	Inputs    []*TxInput       `json:"inputs"`
 	UnbondTo  []*TxOutput      `json:"unbond_to"`

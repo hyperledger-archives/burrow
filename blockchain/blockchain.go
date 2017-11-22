@@ -89,8 +89,8 @@ func NewBlockchain(genesisDoc *genesis.GenesisDoc) *blockchain {
 	var validators []acm.Validator
 	for _, gv := range genesisDoc.Validators {
 		validators = append(validators, acm.ConcreteValidator{
-			PubKey: gv.PubKey,
-			Power:  uint64(gv.Amount),
+			PublicKey: gv.PublicKey,
+			Power:     uint64(gv.Amount),
 		}.Validator())
 	}
 	root := NewRoot(genesisDoc)

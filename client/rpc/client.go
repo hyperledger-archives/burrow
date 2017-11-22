@@ -168,7 +168,7 @@ func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbond
 	// if err != nil {
 	// 	return nil, err
 	// }
-	// var pubKey crypto.PubKeyEd25519
+	// var pubKey acm.PublicKeyEd25519
 	// var unbondAddrBytes []byte
 
 	// if unbondAddr == "" {

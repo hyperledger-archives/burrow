@@ -28,14 +28,14 @@ type Signer interface {
 
 type PrivateAccount interface {
 	Addressable
-	PrivKey() crypto.PrivKey
+	PrivateKey() PrivateKey
 	Signer
 }
 
 type ConcretePrivateAccount struct {
-	Address Address
-	PubKey  crypto.PubKey
-	PrivKey crypto.PrivKey
+	Address    Address
+	PublicKey  PublicKey
+	PrivateKey PrivateKey
 }
 
 type concretePrivateAccountWrapper struct {
@@ -50,12 +50,12 @@ func (cpaw concretePrivateAccountWrapper) Address() Address {
 	return cpaw.ConcretePrivateAccount.Address
 }
 
-func (cpaw concretePrivateAccountWrapper) PubKey() crypto.PubKey {
-	return cpaw.ConcretePrivateAccount.PubKey
+func (cpaw concretePrivateAccountWrapper) PublicKey() PublicKey {
+	return cpaw.ConcretePrivateAccount.PublicKey
 }
 
-func (cpaw concretePrivateAccountWrapper) PrivKey() crypto.PrivKey {
-	return cpaw.ConcretePrivateAccount.PrivKey
+func (cpaw concretePrivateAccountWrapper) PrivateKey() PrivateKey {
+	return cpaw.ConcretePrivateAccount.PrivateKey
 }
 
 func (pa ConcretePrivateAccount) PrivateAccount() concretePrivateAccountWrapper {
@@ -63,7 +63,7 @@ func (pa ConcretePrivateAccount) PrivateAccount() concretePrivateAccountWrapper 
 }
 
 func (pa ConcretePrivateAccount) Sign(msg []byte) (crypto.Signature, error) {
-	return pa.PrivKey.Sign(msg), nil
+	return pa.PrivateKey.Sign(msg), nil
 }
 
 func ChainSign(pa PrivateAccount, chainID string, o Signable) crypto.Signature {
@@ -72,13 +72,13 @@ func ChainSign(pa PrivateAccount, chainID string, o Signable) crypto.Signature {
 }
 
 func (pa *ConcretePrivateAccount) Generate(index int) concretePrivateAccountWrapper {
-	newPrivKey := pa.PrivKey.Unwrap().(crypto.PrivKeyEd25519).Generate(index).Wrap()
-	newPubKey := newPrivKey.PubKey()
+	newPrivKey := PrivateKeyFromPrivKey(pa.PrivateKey.Unwrap().(crypto.PrivKeyEd25519).Generate(index).Wrap())
+	newPubKey := PublicKeyFromPubKey(newPrivKey.PubKey())
 	newAddress, _ := AddressFromBytes(newPubKey.Address())
 	return ConcretePrivateAccount{
-		Address: newAddress,
-		PubKey:  newPubKey,
-		PrivKey: newPrivKey,
+		Address:    newAddress,
+		PublicKey:  newPubKey,
+		PrivateKey: newPrivKey,
 	}.PrivateAccount()
 }
 
@@ -93,28 +93,28 @@ func GeneratePrivateAccount() concretePrivateAccountWrapper {
 	privKeyBytes := new([64]byte)
 	copy(privKeyBytes[:32], crypto.CRandBytes(32))
 	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
-	address, _ := AddressFromBytes(pubKey.Address())
-	privKey := crypto.PrivKeyEd25519(*privKeyBytes)
+	publicKey := PublicKeyFromPubKey(crypto.PubKeyEd25519(*pubKeyBytes).Wrap())
+	address, _ := AddressFromBytes(publicKey.Address())
+	privateKey := PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(*privKeyBytes).Wrap())
 	return ConcretePrivateAccount{
-		Address: address,
-		PubKey:  pubKey.Wrap(),
-		PrivKey: privKey.Wrap(),
+		Address:    address,
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
 	}.PrivateAccount()
 }
 
-func PrivKeyFromSecret(secret string) crypto.PrivKey {
-	return crypto.GenPrivKeyEd25519FromSecret(wire.BinarySha256(secret)).Wrap()
+func PrivateKeyFromSecret(secret string) PrivateKey {
+	return PrivateKeyFromPrivKey(crypto.GenPrivKeyEd25519FromSecret(wire.BinarySha256(secret)).Wrap())
 }
 
 // Generates a new account with private key from SHA256 hash of a secret
 func GeneratePrivateAccountFromSecret(secret string) concretePrivateAccountWrapper {
-	privKey := PrivKeyFromSecret(secret)
-	pubKey := privKey.PubKey()
+	privKey := PrivateKeyFromSecret(secret)
+	pubKey := PublicKeyFromPubKey(privKey.PubKey())
 	return ConcretePrivateAccount{
-		Address: MustAddressFromBytes(pubKey.Address()),
-		PubKey:  pubKey,
-		PrivKey: privKey,
+		Address:    MustAddressFromBytes(pubKey.Address()),
+		PublicKey:  pubKey,
+		PrivateKey: privKey,
 	}.PrivateAccount()
 }
 
@@ -125,12 +125,12 @@ func GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) concretePriv
 	var privKeyArray [64]byte
 	copy(privKeyArray[:], privKeyBytes)
 	pubKeyBytes := ed25519.MakePublicKey(&privKeyArray)
-	pubKey := crypto.PubKeyEd25519(*pubKeyBytes)
-	address, _ := AddressFromBytes(pubKey.Address())
-	privKey := crypto.PrivKeyEd25519(privKeyArray)
+	publicKey := PublicKeyFromPubKey(crypto.PubKeyEd25519(*pubKeyBytes).Wrap())
+	address, _ := AddressFromBytes(publicKey.Address())
+	privateKey := PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(privKeyArray).Wrap())
 	return ConcretePrivateAccount{
-		Address: address,
-		PubKey:  pubKey.Wrap(),
-		PrivKey: privKey.Wrap(),
+		Address:    address,
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
 	}.PrivateAccount()
 }

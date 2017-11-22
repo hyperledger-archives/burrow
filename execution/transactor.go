@@ -200,7 +200,7 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 		Address:  pa.Address(),
 		Amount:   fee,
 		Sequence: sequence,
-		PubKey:   pa.PubKey(),
+		PubKey:   pa.PublicKey(),
 	}
 	tx := &txs.CallTx{
 		Input:    txInput,
@@ -306,7 +306,7 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 		Address:  pa.Address(),
 		Amount:   amount,
 		Sequence: sequence,
-		PubKey:   pa.PubKey(),
+		PubKey:   pa.PublicKey(),
 	}
 
 	tx.Inputs = append(tx.Inputs, txInput)
@@ -391,7 +391,7 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 	if acc == nil {
 		sequence = acc.Sequence() + uint64(1)
 	}
-	tx := txs.NewNameTxWithNonce(pa.PubKey(), name, data, amount, fee, sequence)
+	tx := txs.NewNameTxWithNonce(pa.PublicKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
 	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
 	if errS != nil {
@@ -405,7 +405,7 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 	// more checks?
 
 	for i, privAccount := range privAccounts {
-		if privAccount == nil || privAccount.PrivKey().Unwrap() == nil {
+		if privAccount == nil || privAccount.PrivateKey().Unwrap() == nil {
 			return nil, fmt.Errorf("invalid (empty) privAccount @%v", i)
 		}
 	}
@@ -413,17 +413,17 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
-		nameTx.Input.PubKey = privAccounts[0].PubKey()
+		nameTx.Input.PubKey = privAccounts[0].PublicKey()
 		nameTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, nameTx)
 	case *txs.SendTx:
 		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
-			input.PubKey = privAccounts[i].PubKey()
+			input.PubKey = privAccounts[i].PublicKey()
 			input.Signature = acm.ChainSign(privAccounts[i], chainID, sendTx)
 		}
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
-		callTx.Input.PubKey = privAccounts[0].PubKey()
+		callTx.Input.PubKey = privAccounts[0].PublicKey()
 		callTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, callTx)
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
@@ -431,7 +431,7 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 		// the rest to the inputs
 		bondTx.Signature = acm.ChainSign(privAccounts[0], chainID, bondTx)
 		for i, input := range bondTx.Inputs {
-			input.PubKey = privAccounts[i+1].PubKey()
+			input.PubKey = privAccounts[i+1].PublicKey()
 			input.Signature = acm.ChainSign(privAccounts[i+1], chainID, bondTx)
 		}
 	case *txs.UnbondTx:

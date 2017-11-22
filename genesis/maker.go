@@ -73,22 +73,22 @@ func NewGenesisValidator(amount uint64, name string, unbondToAddress acm.Address
 	default:
 		return nil, fmt.Errorf("Unsupported key type (%s)", keyType)
 	}
-	newPublicKey, err := crypto.PubKeyFromBytes(typedPublicKeyBytes)
+	newPubKey, err := crypto.PubKeyFromBytes(typedPublicKeyBytes)
 	if err != nil {
 		return nil, err
 	}
 	// ability to unbond to multiple accounts currently unused
 	var unbondTo []BasicAccount
 
-	address, err := acm.AddressFromBytes(newPublicKey.Address())
+	address, err := acm.AddressFromBytes(newPubKey.Address())
 	if err != nil {
 		return nil, err
 	}
 	return &Validator{
 		BasicAccount: BasicAccount{
-			Address: address,
-			PubKey:  newPublicKey,
-			Amount:  amount,
+			Address:   address,
+			PublicKey: acm.PublicKeyFromPubKey(newPubKey),
+			Amount:    amount,
 		},
 		Name: name,
 		UnbondTo: append(unbondTo, BasicAccount{
@@ -216,9 +216,9 @@ func genDocAddValidator(genDoc *GenesisDoc, pubKey crypto.PubKeyEd25519, amt uin
 	addr, _ := acm.AddressFromBytes(pubKey.Address())
 	genDoc.Validators[index] = Validator{
 		BasicAccount: BasicAccount{
-			Address: acm.MustAddressFromBytes(pubKey.Address()),
-			PubKey:  pubKey.Wrap(),
-			Amount:  amt,
+			Address:   acm.MustAddressFromBytes(pubKey.Address()),
+			PublicKey: acm.PublicKeyFromPubKey(pubKey.Wrap()),
+			Amount:    amt,
 		},
 		Name: name,
 		UnbondTo: []BasicAccount{

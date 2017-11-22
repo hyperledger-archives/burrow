@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-crypto"
 )
 
 const DefaultAmount uint64 = 1000000
@@ -33,9 +32,9 @@ type GenesisSpec struct {
 }
 
 type TemplateAccount struct {
-	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PubKey
+	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
 	Address *acm.Address   `json:",omitempty"`
-	PubKey  *crypto.PubKey `json:",omitempty"`
+	PubKey  *acm.PublicKey `json:",omitempty"`
 	Amount  *uint64        `json:",omitempty"`
 	// If any bonded amount then this account is also a Validator
 	AmountBonded *uint64  `json:",omitempty"`
@@ -47,7 +46,7 @@ type TemplateAccount struct {
 func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
-	gv.PubKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +62,9 @@ func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genes
 	}
 
 	gv.UnbondTo = []genesis.BasicAccount{{
-		Address: gv.Address,
-		PubKey:  gv.PubKey,
-		Amount:  gv.Amount,
+		Address:   gv.Address,
+		PublicKey: gv.PublicKey,
+		Amount:    gv.Amount,
 	}}
 	return gv, nil
 }
@@ -84,7 +83,7 @@ func (ta TemplateAccount) AccountPermissions() (ptypes.AccountPermissions, error
 func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
-	ga.PubKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+	ga.PublicKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +108,12 @@ func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis
 	return ga, nil
 }
 
-// Adds a public key and address to the template. If PubKey will try to fetch it by Address.
-// If both PubKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PubKey, address acm.Address, err error) {
+// Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
+// If both PublicKey and Address are not set will use the keyClient to generate a new keypair
+func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey acm.PublicKey, address acm.Address, err error) {
 	if ta.PubKey == nil {
 		if ta.Address == nil {
-			// If neither PubKey or Address set then generate a new one
+			// If neither PublicKey or Address set then generate a new one
 			address, err = keyClient.Generate(ta.Name, keys.KeyTypeEd25519Ripemd160)
 			if err != nil {
 				return

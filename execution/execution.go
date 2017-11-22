@@ -30,7 +30,6 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-crypto"
 )
 
 type BatchExecutor interface {
@@ -549,7 +548,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// TODO!
 		/*
 			case *txs.BondTx:
-						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PubKey().Address())
+						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PublicKey().Address())
 						if valInfo != nil {
 							// TODO: In the future, check that the validator wasn't destroyed,
 							// add funds, merge UnbondTo outputs, and unbond validator.
@@ -572,7 +571,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 							}
 						}
 
-						bondAcc := exe.blockCache.GetAccount(tx.PubKey().Address())
+						bondAcc := exe.blockCache.GetAccount(tx.PublicKey().Address())
 						if !hasBondPermission(exe.blockCache, bondAcc) {
 							return fmt.Errorf("The bonder does not have permission to bond")
 						}
@@ -586,7 +585,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 						if err != nil {
 							return err
 						}
-						if !tx.PubKey().VerifyBytes(signBytes, tx.Signature) {
+						if !tx.PublicKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 						outTotal, err := validateOutputs(tx.UnbondTo)
@@ -606,16 +605,16 @@ func (exe *executor) Execute(tx txs.Tx) error {
 						}
 						// Add ValidatorInfo
 						_s.SetValidatorInfo(&txs.ValidatorInfo{
-							Address:         tx.PubKey().Address(),
-							PubKey:          tx.PubKey(),
+							Address:         tx.PublicKey().Address(),
+							PublicKey:          tx.PublicKey(),
 							UnbondTo:        tx.UnbondTo,
 							FirstBondHeight: _s.lastBlockHeight + 1,
 							FirstBondAmount: outTotal,
 						})
 						// Add Validator
 						added := _s.BondedValidators.Add(&txs.Validator{
-							Address:     tx.PubKey().Address(),
-							PubKey:      tx.PubKey(),
+							Address:     tx.PublicKey().Address(),
+							PublicKey:      tx.PublicKey(),
 							BondHeight:  _s.lastBlockHeight + 1,
 							VotingPower: outTotal,
 							Accum:       0,
@@ -638,7 +637,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PubKey().VerifyBytes(signBytes, tx.Signature) {
+						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 
@@ -663,7 +662,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PubKey().VerifyBytes(signBytes, tx.Signature) {
+						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
 							return txs.ErrTxInvalidSignature
 						}
 
@@ -940,9 +939,9 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 */
 
 // The accounts from the TxInputs must either already have
-// acm.PubKey().(type) != nil, (it must be known),
+// acm.PublicKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
-// the TxInput is modified and input.PubKey() set to nil.
+// the TxInput is modified and input.PublicKey() set to nil.
 func getInputs(accountGetter acm.Getter,
 	ins []*txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
 
@@ -959,7 +958,7 @@ func getInputs(accountGetter acm.Getter,
 		if acc == nil {
 			return nil, txs.ErrTxInvalidAddress
 		}
-		// PubKey should be present in either "account" or "in"
+		// PublicKey should be present in either "account" or "in"
 		if err := checkInputPubKey(acc, in); err != nil {
 			return nil, err
 		}
@@ -1012,7 +1011,7 @@ func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.Mutable
 // If it does then we will associate the public key with the stub account already registered in the system once and
 // for all time.
 func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
-	if acc.PubKey().Unwrap() == nil {
+	if acc.PublicKey().Unwrap() == nil {
 		if in.PubKey.Unwrap() == nil {
 			return txs.ErrTxUnknownPubKey
 		}
@@ -1021,9 +1020,9 @@ func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
 		if !bytes.Equal(addressFromPubKey, addressFromAccount) {
 			return txs.ErrTxInvalidPubKey
 		}
-		acc.SetPubKey(in.PubKey)
+		acc.SetPublicKey(in.PubKey)
 	} else {
-		in.PubKey = crypto.PubKey{}
+		in.PubKey = acm.PublicKey{}
 	}
 	return nil
 }
@@ -1050,7 +1049,7 @@ func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) (e
 		return err
 	}
 	// Check signatures
-	if !acc.PubKey().VerifyBytes(signBytes, in.Signature) {
+	if !acc.PublicKey().VerifyBytes(signBytes, in.Signature) {
 		return txs.ErrTxInvalidSignature
 	}
 	// Check sequences

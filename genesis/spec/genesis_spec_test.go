@@ -28,9 +28,9 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	// Should create validator
 	require.Len(t, genesisDoc.Validators, 1)
 	assert.NotZero(t, genesisDoc.Accounts[0].Address)
-	assert.NotZero(t, genesisDoc.Accounts[0].PubKey)
+	assert.NotZero(t, genesisDoc.Accounts[0].PublicKey)
 	assert.Equal(t, genesisDoc.Accounts[0].Address, genesisDoc.Validators[0].Address)
-	assert.Equal(t, genesisDoc.Accounts[0].PubKey, genesisDoc.Validators[0].PubKey)
+	assert.Equal(t, genesisDoc.Accounts[0].PublicKey, genesisDoc.Validators[0].PublicKey)
 	assert.Equal(t, amtBonded, genesisDoc.Validators[0].Amount)
 	assert.NotEmpty(t, genesisDoc.ChainName, "Chain name should not be empty")
 
@@ -58,7 +58,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	require.Len(t, genesisDoc.Accounts, 2)
 	// Nothing bonded so no validators
 	require.Len(t, genesisDoc.Validators, 0)
-	assert.Equal(t, pubKey, genesisDoc.Accounts[0].PubKey)
+	assert.Equal(t, pubKey, genesisDoc.Accounts[0].PublicKey)
 	assert.Equal(t, amt, genesisDoc.Accounts[1].Amount)
 	permFlag := permission.CreateAccount | permission.Call
 	assert.Equal(t, permFlag, genesisDoc.Accounts[1].Permissions.Base.Perms)
@@ -75,9 +75,9 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	// Should create validator
 	require.Len(t, genesisDoc.Validators, 1)
 	assert.NotZero(t, genesisDoc.Accounts[0].Address)
-	assert.NotZero(t, genesisDoc.Accounts[0].PubKey)
+	assert.NotZero(t, genesisDoc.Accounts[0].PublicKey)
 	assert.Equal(t, genesisDoc.Accounts[0].Address, genesisDoc.Validators[0].Address)
-	assert.Equal(t, genesisDoc.Accounts[0].PubKey, genesisDoc.Validators[0].PubKey)
+	assert.Equal(t, genesisDoc.Accounts[0].PublicKey, genesisDoc.Validators[0].PublicKey)
 }
 
 func TestJSONRoundTrip(t *testing.T) {

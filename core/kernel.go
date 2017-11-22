@@ -51,6 +51,7 @@ type Kernel struct {
 	service     rpc.Service
 	listeners   []net.Listener
 	logger      logging_types.InfoTraceLogger
+	shutdownCh  chan struct{}
 }
 
 func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config,
@@ -96,6 +97,7 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 		tmNode:      tmNode,
 		service:     service,
 		logger:      logger,
+		shutdownCh:  make(chan struct{}),
 	}, nil
 }
 
@@ -130,6 +132,10 @@ func (kern *Kernel) Boot() error {
 	return nil
 }
 
+func (kern *Kernel) WaitForShutdown() {
+	<-kern.shutdownCh
+}
+
 func (kern *Kernel) supervise() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
@@ -139,8 +145,14 @@ func (kern *Kernel) supervise() {
 
 // Stop the core allowing for a graceful shutdown of component in order.
 func (kern *Kernel) Shutdown() {
+	logger := logging.WithScope(kern.logger, "Shutdown")
+	logging.InfoMsg(logger, "Attempting graceful shutdown...")
+	logging.InfoMsg(logger, "Shutting down listeners")
 	for _, listener := range kern.listeners {
 		listener.Close()
 	}
+	logging.InfoMsg(logger, "Shutting down Tendermint node")
 	kern.tmNode.Stop()
+	logging.InfoMsg(logger, "Shutdown complete")
+	close(kern.shutdownCh)
 }

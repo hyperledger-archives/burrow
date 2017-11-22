@@ -100,12 +100,12 @@ func (mock *MockKeyClient) Sign(signAddress acm.Address, message []byte) (crypto
 	return key.Sign(message)
 }
 
-func (mock *MockKeyClient) PublicKey(address acm.Address) (crypto.PubKey, error) {
+func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
 	key := mock.knownKeys[address]
 	if key == nil {
-		return crypto.PubKey{}, fmt.Errorf("Unknown address (%s)", address)
+		return acm.PublicKey{}, fmt.Errorf("Unknown address (%s)", address)
 	}
-	pubKeyEd25519 := crypto.PubKeyEd25519{}
+	pubKeyEd25519 := acm.PublicKeyEd25519{}
 	copy(pubKeyEd25519[:], key.PublicKey)
 	return pubKeyEd25519.Wrap(), nil
 }

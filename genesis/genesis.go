@@ -24,7 +24,6 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-crypto"
 )
 
 // How many bytes to take from the front of the GenesisDoc hash to append
@@ -40,10 +39,10 @@ var GenDocKey = []byte("GenDocKey")
 // core types for a genesis definition
 
 type BasicAccount struct {
-	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PubKey
-	Address acm.Address
-	PubKey  crypto.PubKey
-	Amount  uint64
+	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
+	Address   acm.Address
+	PublicKey acm.PublicKey
+	Amount    uint64
 }
 
 type Account struct {
@@ -139,9 +138,9 @@ func (genesisAccount *Account) Clone() Account {
 
 func (gv *Validator) Validator() acm.Validator {
 	return acm.ConcreteValidator{
-		Address: acm.MustAddressFromBytes(gv.PubKey.Address()),
-		PubKey:  gv.PubKey,
-		Power:   uint64(gv.Amount),
+		Address:   acm.MustAddressFromBytes(gv.PublicKey.Address()),
+		PublicKey: gv.PublicKey,
+		Power:     uint64(gv.Amount),
 	}.Validator()
 }
 
@@ -154,8 +153,8 @@ func (gv *Validator) Clone() Validator {
 	}
 	return Validator{
 		BasicAccount: BasicAccount{
-			PubKey: gv.PubKey,
-			Amount: gv.Amount,
+			PublicKey: gv.PublicKey,
+			Amount:    gv.Amount,
 		},
 		Name:     gv.Name,
 		UnbondTo: unbondToClone,
@@ -205,9 +204,9 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 		genesisValidators = append(genesisValidators, Validator{
 			Name: name,
 			BasicAccount: BasicAccount{
-				Address: val.Address(),
-				PubKey:  val.PubKey(),
-				Amount:  val.Power(),
+				Address:   val.Address(),
+				PublicKey: val.PublicKey(),
+				Amount:    val.Power(),
 			},
 			// Simpler to just do this by convention
 			UnbondTo: []BasicAccount{

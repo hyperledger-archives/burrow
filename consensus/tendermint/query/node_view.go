@@ -4,18 +4,18 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/types"
+	acm "github.com/hyperledger/burrow/account"
 )
 
 // You're like the interface I never had
 type NodeView interface {
 	// PrivValidator public key
-	PrivValidatorPubKey() crypto.PubKey
+	PrivValidatorPublicKey() acm.PublicKey
 	// NodeInfo for this node broadcast to other nodes (including ephemeral STS ED25519 public key)
 	NodeInfo() *p2p.NodeInfo
 	// Whether the Tendermint node is listening
@@ -46,8 +46,8 @@ func NewNodeView(tmNode *node.Node, txDecoder txs.Decoder) NodeView {
 	}
 }
 
-func (nv *nodeView) PrivValidatorPubKey() crypto.PubKey {
-	return nv.tmNode.PrivValidator().GetPubKey()
+func (nv *nodeView) PrivValidatorPublicKey() acm.PublicKey {
+	return acm.PublicKeyFromPubKey(nv.tmNode.PrivValidator().GetPubKey())
 }
 
 func (nv *nodeView) NodeInfo() *p2p.NodeInfo {

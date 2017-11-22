@@ -194,7 +194,7 @@ func TestCallContract(t *testing.T) {
 		// run a call through the contract
 		data := []byte{}
 		expected := []byte{0xb}
-		callContract(t, client, acm.MustAddressFromBytes(privateAccounts[0].PubKey().Address()), contractAddr, data,
+		callContract(t, client, acm.MustAddressFromBytes(privateAccounts[0].PublicKey().Address()), contractAddr, data,
 			expected)
 	})
 }
@@ -252,7 +252,7 @@ func TestNameReg(t *testing.T) {
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithNonce(privateAccounts[1].PubKey(), name, "never mind", amt, fee,
+		tx = txs.NewNameTxWithNonce(privateAccounts[1].PublicKey(), name, "never mind", amt, fee,
 			getNonce(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 
@@ -269,7 +269,7 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithNonce(privateAccounts[1].PubKey(), name, data2, amt, fee,
+		tx = txs.NewNameTxWithNonce(privateAccounts[1].PublicKey(), name, data2, amt, fee,
 			getNonce(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
@@ -393,7 +393,7 @@ func TestListValidators(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, resp.BondedValidators, 1)
 		validator := resp.BondedValidators[0]
-		assert.Equal(t, genesisDoc.Validators[0].PubKey, validator.PubKey)
+		assert.Equal(t, genesisDoc.Validators[0].PublicKey, validator.PublicKey)
 	})
 }
 

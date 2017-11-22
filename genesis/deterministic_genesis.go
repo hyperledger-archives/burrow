@@ -2,14 +2,14 @@ package genesis
 
 import (
 	"math/rand"
-	"sort"
 	"time"
+
+	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-crypto"
-	tm_types "github.com/tendermint/tendermint/types"
 )
 
 type deterministicGenesis struct {
@@ -24,7 +24,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 }
 
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
-	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount, []*tm_types.PrivValidatorFS) {
+	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount) {
 
 	accounts := make([]Account, numAccounts)
 	privAccounts := make([]acm.PrivateAccount, numAccounts)
@@ -41,46 +41,43 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		privAccounts[i] = privAccount
 	}
 	validators := make([]Validator, numValidators)
-	privValidators := make([]*tm_types.PrivValidatorFS, numValidators)
 	for i := 0; i < numValidators; i++ {
-		valInfo, privVal := dg.Validator(randBonded, minBonded)
+		validator := acm.GeneratePrivateAccountFromSecret(fmt.Sprintf("val_%v", i))
 		validators[i] = Validator{
 			BasicAccount: BasicAccount{
-				Address: acm.MustAddressFromBytes(valInfo.PubKey.Address()),
-				PubKey:  valInfo.PubKey,
-				Amount:  uint64(valInfo.VotingPower),
+				Address:   validator.Address(),
+				PublicKey: validator.PublicKey(),
+				Amount:    uint64(dg.random.Int63()),
 			},
 			UnbondTo: []BasicAccount{
 				{
-					Address: acm.MustAddressFromBytes(valInfo.PubKey.Address()),
-					Amount:  uint64(valInfo.VotingPower),
+					Address: validator.Address(),
+					Amount:  uint64(dg.random.Int63()),
 				},
 			},
 		}
-		privValidators[i] = privVal
 	}
-	sort.Sort(tm_types.PrivValidatorsByAddress(privValidators))
 	return &GenesisDoc{
 		ChainName:   "TestChain",
 		GenesisTime: time.Unix(1506172037, 0),
 		Accounts:    accounts,
 		Validators:  validators,
-	}, privAccounts, privValidators
+	}, privAccounts
 
 }
 
 func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, acm.PrivateAccount) {
-	privKey := dg.PrivKey()
-	pubKey := privKey.PubKey()
+	privKey := dg.PrivateKey()
+	pubKey := acm.PublicKeyFromPubKey(privKey.PubKey())
 	privAccount := &acm.ConcretePrivateAccount{
-		PubKey:  pubKey,
-		PrivKey: privKey.Wrap(),
-		Address: acm.MustAddressFromBytes(pubKey.Address()),
+		PublicKey:  pubKey,
+		PrivateKey: privKey,
+		Address:    acm.MustAddressFromBytes(pubKey.Address()),
 	}
 	perms := permission.DefaultAccountPermissions
 	acc := &acm.ConcreteAccount{
 		Address:     privAccount.Address,
-		PubKey:      privAccount.PubKey,
+		PublicKey:   privAccount.PublicKey,
 		Sequence:    uint64(dg.random.Int()),
 		Balance:     minBalance,
 		Permissions: perms,
@@ -91,28 +88,11 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 	return acc.Account(), privAccount.PrivateAccount()
 }
 
-func (dg *deterministicGenesis) Validator(randPower bool, minPower int64) (*tm_types.Validator, *tm_types.PrivValidatorFS) {
-	privKey := dg.PrivKey()
-	pubKey := privKey.PubKey()
-	privVal := &tm_types.PrivValidatorFS{
-		Address: pubKey.Address(),
-		PubKey:  pubKey,
-		PrivKey: privKey.Wrap(),
-		Signer:  tm_types.NewDefaultSigner(privKey.Wrap()),
-	}
-	votePower := minPower
-	if randPower {
-		votePower += dg.random.Int63()
-	}
-	val := tm_types.NewValidator(privVal.PubKey, votePower)
-	return val, privVal
-}
-
-func (dg *deterministicGenesis) PrivKey() crypto.PrivKeyEd25519 {
+func (dg *deterministicGenesis) PrivateKey() acm.PrivateKey {
 	privKeyBytes := new([64]byte)
 	for i := 0; i < 32; i++ {
 		privKeyBytes[i] = byte(dg.random.Int() % 256)
 	}
 	ed25519.MakePublicKey(privKeyBytes)
-	return crypto.PrivKeyEd25519(*privKeyBytes)
+	return acm.PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(*privKeyBytes).Wrap())
 }

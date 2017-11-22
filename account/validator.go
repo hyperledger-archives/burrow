@@ -3,7 +3,6 @@ package account
 import (
 	"encoding/json"
 
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -18,9 +17,9 @@ type Validator interface {
 
 // Neither abci_types or tm_types has quite the representation we want
 type ConcreteValidator struct {
-	Address Address
-	PubKey  crypto.PubKey
-	Power   uint64
+	Address   Address
+	PublicKey PublicKey
+	Power     uint64
 }
 
 type concreteValidatorWrapper struct {
@@ -33,9 +32,9 @@ var _ = wire.RegisterInterface(struct{ Validator }{}, wire.ConcreteType{concrete
 
 func AsValidator(account Account) Validator {
 	return ConcreteValidator{
-		Address: account.Address(),
-		PubKey:  account.PubKey(),
-		Power:   account.Balance(),
+		Address:   account.Address(),
+		PublicKey: account.PublicKey(),
+		Power:     account.Balance(),
 	}.Validator()
 }
 
@@ -47,9 +46,9 @@ func AsConcreteValidator(validator Validator) *ConcreteValidator {
 		return ca.ConcreteValidator
 	}
 	return &ConcreteValidator{
-		Address: validator.Address(),
-		PubKey:  validator.PubKey(),
-		Power:   validator.Power(),
+		Address:   validator.Address(),
+		PublicKey: validator.PublicKey(),
+		Power:     validator.Power(),
 	}
 }
 
@@ -57,8 +56,8 @@ func (cvw concreteValidatorWrapper) Address() Address {
 	return cvw.ConcreteValidator.Address
 }
 
-func (cvw concreteValidatorWrapper) PubKey() crypto.PubKey {
-	return cvw.ConcreteValidator.PubKey
+func (cvw concreteValidatorWrapper) PublicKey() PublicKey {
+	return cvw.ConcreteValidator.PublicKey
 }
 
 func (cvw concreteValidatorWrapper) Power() uint64 {

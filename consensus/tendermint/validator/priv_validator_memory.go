@@ -2,9 +2,9 @@ package validator
 
 import (
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	tm_types "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/go-crypto"
 )
 
 type privValidatorMemory struct {
@@ -30,7 +30,7 @@ func (pvm *privValidatorMemory) GetAddress() data.Bytes {
 }
 
 func (pvm *privValidatorMemory) GetPubKey() crypto.PubKey {
-	return pvm.PubKey()
+	return pvm.PublicKey().PubKey
 }
 
 func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) error {

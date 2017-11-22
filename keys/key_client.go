@@ -30,7 +30,7 @@ type KeyClient interface {
 	Sign(signAddress acm.Address, message []byte) (signature crypto.Signature, err error)
 
 	// PublicKey returns the public key associated with a given address
-	PublicKey(address acm.Address) (publicKey crypto.PubKey, err error)
+	PublicKey(address acm.Address) (publicKey acm.PublicKey, err error)
 
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType KeyType) (keyAddress acm.Address, err error)
@@ -78,16 +78,16 @@ func Signer(keyClient KeyClient, address acm.Address) acm.Signer {
 }
 
 type keyAddressable struct {
-	pubKey  crypto.PubKey
-	address acm.Address
+	publicKey acm.PublicKey
+	address   acm.Address
 }
 
 func (ka *keyAddressable) Address() acm.Address {
 	return ka.address
 }
 
-func (ka *keyAddressable) PubKey() crypto.PubKey {
-	return ka.pubKey
+func (ka *keyAddressable) PublicKey() acm.PublicKey {
+	return ka.publicKey
 }
 
 func Addressable(keyClient KeyClient, address acm.Address) (acm.Addressable, error) {
@@ -96,8 +96,8 @@ func Addressable(keyClient KeyClient, address acm.Address) (acm.Addressable, err
 		return nil, err
 	}
 	return &keyAddressable{
-		address: address,
-		pubKey:  pubKey,
+		address:   address,
+		publicKey: pubKey,
 	}, nil
 }
 
@@ -138,25 +138,25 @@ func (monaxKeys *monaxKeyClient) Sign(signAddress acm.Address, message []byte) (
 
 // Monax-keys client PublicKey requests the public key associated with an address from
 // the monax-keys server.
-func (monaxKeys *monaxKeyClient) PublicKey(address acm.Address) (crypto.PubKey, error) {
+func (monaxKeys *monaxKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
 	args := map[string]string{
 		"addr": address.String(),
 	}
 	pubS, err := RequestResponse(monaxKeys.rpcString, "pub", args, monaxKeys.logger)
 	if err != nil {
-		return crypto.PubKey{}, err
+		return acm.PublicKey{}, err
 	}
 	pubKey := crypto.PubKeyEd25519{}
 	pubKeyBytes, err := hex.DecodeString(pubS)
 	if err != nil {
-		return crypto.PubKey{}, err
+		return acm.PublicKey{}, err
 	}
 	copy(pubKey[:], pubKeyBytes)
 	if !bytes.Equal(address.Bytes(), pubKey.Address()) {
-		return crypto.PubKey{}, fmt.Errorf("public key %s maps to address %X but was returned for address %s",
+		return acm.PublicKey{}, fmt.Errorf("public key %s maps to address %X but was returned for address %s",
 			pubKey, pubKey.Address(), address)
 	}
-	return pubKey.Wrap(), nil
+	return acm.PublicKeyFromPubKey(pubKey.Wrap()), nil
 }
 
 func (monaxKeys *monaxKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {

@@ -26,9 +26,9 @@ func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
 		return term.NewLogger(writer, kitlog.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
 			switch structure.Value(keyvals, structure.ChannelKey) {
 			case types.TraceChannelName:
-				return term.FgBgColor{Fg: term.DarkGray}
+				return term.FgBgColor{Fg: term.DarkGreen}
 			default:
-				return term.FgBgColor{}
+				return term.FgBgColor{Fg: term.Yellow}
 			}
 		})
 	}

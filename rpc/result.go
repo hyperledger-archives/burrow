@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
@@ -128,7 +127,7 @@ type ResultGetBlock struct {
 type ResultStatus struct {
 	NodeInfo          *p2p.NodeInfo `json:"node_info"`
 	GenesisHash       []byte        `json:"genesis_hash"`
-	PubKey            crypto.PubKey `json:"pub_key"`
+	PubKey            acm.PublicKey `json:"pub_key"`
 	LatestBlockHash   []byte        `json:"latest_block_hash"`
 	LatestBlockHeight uint64        `json:"latest_block_height"`
 	LatestBlockTime   int64         `json:"latest_block_time"` // nano
