@@ -1,0 +1,161 @@
+jobs:
+
+- name: val1
+  set:
+      val: 1234
+
+- name: less
+  set:
+      val: 10000001232
+
+- name: same
+  set:
+      val: 10000001233
+
+- name: more
+  set:
+      val: 10000001234
+
+- name: receipient
+  set:
+      val: 6A3AFFB16BFB95AA547930572D71C460EFBCD857
+
+- name: sendTxTest1
+  send:
+      destination: 58FD1799AA32DED3F6EAC096A1DC77834A446B9C
+      amount: $val1
+
+- name: sendTxTest2
+  send:
+      destination: $receipient
+      amount: $val1
+
+- name: sendTxTest3
+  send:
+      destination: $addr2
+      amount: $val1
+
+- name: sendTxQuery1
+  query-account:
+      account: $receipient
+      field: balance
+
+- name: sendTxQuery2
+  query-account:
+      account: 58FD1799AA32DED3F6EAC096A1DC77834A446B9C
+      field: balance
+
+- name: sendTxQuery3
+  query-account:
+      account: $addr2
+      field: balance
+
+- name: sendTxAssert1
+  assert:
+      key: $sendTxQuery1
+      relation: eq
+      val: $val1
+
+- name: sendTxAssert2
+  assert:
+      key: $sendTxQuery2
+      relation: eq
+      val: $val1
+
+# first test using "wordy" syntax, then symbol-y syntax
+- name: sendTxAssert3
+  assert:
+      key: $sendTxQuery3
+      relation: eq
+      val: $same
+
+- name: sendTxAssert4
+  assert:
+      key: $sendTxQuery3
+      relation: ne
+      val: $more
+
+- name: sendTxAssert5
+  assert:
+      key: $sendTxQuery3
+      relation: gt
+      val: $less
+
+- name: sendTxAssert6
+  assert:
+      key: $sendTxQuery3
+      relation: ge
+      val: $same
+
+- name: sendTxAssert7
+  assert:
+      key: $sendTxQuery3
+      relation: ge
+      val: $less
+
+- name: sendTxAssert8
+  assert:
+      key: $sendTxQuery3
+      relation: lt
+      val: $more
+
+- name: sendTxAssert9
+  assert:
+      key: $sendTxQuery3
+      relation: le
+      val: $same
+
+- name: sendTxAssert10
+  assert:
+      key: $sendTxQuery3
+      relation: le
+      val: $more
+
+# second test using "symbol-y" syntax
+- name: sendTxAssert11
+  assert:
+      key: $sendTxQuery3
+      relation: ==
+      val: $same
+
+- name: sendTxAssert12
+  assert:
+      key: $sendTxQuery3
+      relation: "!="
+      val: $more
+
+- name: sendTxAssert13
+  assert:
+      key: $sendTxQuery3
+      relation: ">"
+      val: $less
+
+- name: sendTxAssert14
+  assert:
+      key: $sendTxQuery3
+      relation: ">="
+      val: $same
+
+- name: sendTxAssert15
+  assert:
+      key: $sendTxQuery3
+      relation: ">="
+      val: $less
+
+- name: sendTxAssert16
+  assert:
+      key: $sendTxQuery3
+      relation: <
+      val: $more
+
+- name: sendTxAssert17
+  assert:
+      key: $sendTxQuery3
+      relation: <=
+      val: $same
+
+- name: sendTxAssert18
+  assert:
+      key: $sendTxQuery3
+      relation: <=
+      val: $more

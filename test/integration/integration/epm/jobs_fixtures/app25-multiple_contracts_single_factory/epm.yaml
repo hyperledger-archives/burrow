@@ -1,0 +1,128 @@
+jobs:
+
+- name: setStorageBase
+  set:
+      val: 5
+
+- name: deployGSFactory
+  deploy:
+      contract: contracts/Factory.sol
+      instance: GSFactory
+
+- name: deployGSABIFactory
+  deploy:
+      contract: contracts/Factory.sol
+      instance: Storage
+
+- name: createGSContract1
+  call:
+      destination: $deployGSFactory
+      function: create
+      abi: GSFactory
+
+- name: createGSContract2
+  call:
+      destination: $deployGSFactory
+      function: create
+      abi: GSFactory
+
+- name: createGSContract3
+  call:
+      destination: $deployGSFactory
+      function: create
+      abi: GSFactory
+
+- name: getLastAddr
+  query-contract:
+      destination: $deployGSFactory
+      function: last
+      abi: GSFactory
+
+- name: assertAddrSingle
+  assert:
+      key: $getLastAddr
+      relation: eq
+      val: $createGSContract3
+
+- name: setStorageBase
+  set:
+      val: 5
+
+- name: setStorage1
+  call:
+      destination: $createGSContract1
+      function: set 
+      data:
+        - $setStorageBase
+      abi: $deployGSABIFactory
+
+- name: queryStorage1
+  query-contract:
+      destination: $createGSContract1
+      function: get
+      abi: $deployGSABIFactory
+
+- name: assertStorage1
+  assert:
+      key: $queryStorage1
+      relation: eq
+      val: $setStorageBase
+
+- name: setStorage2
+  call:
+      destination: $createGSContract2
+      function: set 
+      data:
+        - $setStorageBase
+      abi: $deployGSABIFactory
+
+- name: queryStorage2
+  query-contract:
+      destination: $createGSContract2
+      function: get
+      abi: $deployGSABIFactory
+
+- name: assertStorage2
+  assert:
+      key: $queryStorage2
+      relation: eq
+      val: $setStorageBase
+
+- name: setStorage3
+  call:
+      destination: $createGSContract3
+      function: set 
+      data:
+        - $setStorageBase
+      abi: $deployGSABIFactory
+
+- name: queryStorage3
+  query-contract:
+      destination: $createGSContract3
+      function: get
+      abi: $deployGSABIFactory
+
+- name: assertStorage3
+  assert:
+      key: $queryStorage3
+      relation: eq
+      val: $setStorageBase
+
+# tests variable overwrite
+- name: createGSContract3
+  call:
+      destination: $deployGSFactory
+      function: create
+      abi: GSFactory
+
+- name: getLastAddr
+  query-contract:
+      destination: $deployGSFactory
+      function: last
+      abi: GSFactory
+
+- name: assertAddrSingle
+  assert:
+      key: $getLastAddr
+      relation: eq
+      val: $createGSContract3

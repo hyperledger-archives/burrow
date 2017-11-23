@@ -1,0 +1,71 @@
+jobs:
+
+- name: val1
+  set:
+      val: "eris_loves"
+
+- name: val2
+  set:
+      val: "marmots"
+
+- name: to_save
+  set:
+      val: 5000
+
+- name: MinersFee
+  set:
+      val: 1234
+
+- name: nameRegTest1
+  register:
+      name: $val1
+      data: $val2
+      amount: $to_save
+      fee: $MinersFee
+
+- name: nameRegTest2
+  register:
+      name: marmots
+      data: love_eris
+      amount: $to_save
+      fee: $MinersFee
+
+- name: queryReg1
+  query-name:
+      name: $val1
+      field: data
+
+- name: nameRegAssert1
+  assert:
+      key: $queryReg1
+      relation: eq
+      val: $val2
+
+- name: queryReg2
+  query-name:
+      name: marmots
+      field: data
+
+- name: nameRegAssert1
+  assert:
+      key: $queryReg2
+      relation: eq
+      val: love_eris
+
+- name: nameRegAssert2
+  assert:
+      key: $queryReg2
+      relation: ==
+      val: love_eris
+
+- name: nameRegAssert3
+  assert:
+      key: $queryReg2
+      relation: ne
+      val: asdf
+
+- name: nameRegAssert4
+  assert:
+      key: $queryReg2
+      relation: "!="
+      val: asdf

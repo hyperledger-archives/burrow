@@ -1,0 +1,29 @@
+jobs:
+
+- name: setStorageBase
+  set:
+      val: 5
+
+- name: deployStorageK
+  deploy:
+      contract: storage.sol
+
+- name: setStorage
+  call:
+      destination: $deployStorageK
+      function: set
+      data:
+        - $setStorageBase
+      save: tx
+
+- name: queryStorage
+  query-contract:
+      destination: $deployStorageK
+      function: get
+
+
+- name: assertStorage
+  assert:
+      key: $queryStorage
+      relation: ne
+      val: $setStorage

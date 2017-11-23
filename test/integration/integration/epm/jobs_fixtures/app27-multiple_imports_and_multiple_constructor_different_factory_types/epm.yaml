@@ -1,0 +1,162 @@
+jobs:
+
+- name: setStorageBase1
+  set:
+      val: 5
+
+- name: setStorageBase2
+  set:
+      val: 17
+
+- name: deployGSFactory
+  deploy:
+      contract: GSFactory.sol
+      instance: GSFactory
+
+# Begin with single constructor contract
+- name: deployGSABIFactorySingle
+  deploy:
+      contract: GSFactory.sol
+      instance: GSSingle
+
+- name: createGSContractSingle
+  call:
+      destination: $deployGSFactory
+      function: createSingle
+      data:
+        - $setStorageBase1
+      abi: $deployGSFactory
+
+# Double check created address on single constructor
+- name:  getGSAddrSingle
+  query-contract:
+      destination: $deployGSFactory
+      function: getLastSingle
+      abi: $deployGSFactory
+
+- name: assertAddrSingle
+  assert:
+      key: $getGSAddrSingle
+      relation: eq
+      val: $createGSContractSingle
+
+# Test initialized value from construction is equal to setStorageBase1
+- name: queryStorageSingle
+  query-contract:
+      destination: $createGSContractSingle
+      function: get
+      abi: $deployGSABIFactorySingle
+
+- name: assertStorageSingle
+  assert:
+      key: $queryStorageSingle
+      relation: eq
+      val: $setStorageBase1
+
+# Set a new value to ensure constructors can be overwritten
+- name: setStorageSingle
+  call:
+      destination: $createGSContractSingle
+      function: set 
+      data:
+        - $setStorageBase2
+      abi: $deployGSABIFactorySingle
+
+- name: queryStorageSingleNew
+  query-contract:
+      destination: $createGSContractSingle
+      function: get
+      abi: $deployGSABIFactorySingle
+
+- name: assertStorageSingleNew
+  assert:
+      key: $queryStorageSingleNew
+      relation: eq
+      val: $setStorageBase2
+
+# Now Multi constructor Contract
+- name: deployGSABIFactoryMulti
+  deploy:
+      contract: GSFactory.sol
+      instance: GSMulti
+
+- name: createGSContractMulti
+  call:
+      destination: $deployGSFactory
+      function: createMulti
+      data:
+        - $setStorageBase1
+        - $setStorageBase2
+      abi: $deployGSFactory
+
+# Double check created address on single constructor
+- name:  getGSAddrMulti
+  query-contract:
+      destination: $deployGSFactory
+      function: getLastMulti
+      abi: $deployGSFactory
+
+- name: assertAddrMulti
+  assert:
+      key: $getGSAddrMulti
+      relation: eq
+      val: $createGSContractMulti
+
+# Test initialized value from construction is equal to setStorageBase1
+- name: queryStorageMultiFirst
+  query-contract:
+      destination: $createGSContractMulti
+      function: getFirst
+      abi: $deployGSABIFactoryMulti
+
+- name: assertStorageMultiFirst
+  assert:
+      key: $queryStorageMultiFirst
+      relation: eq
+      val: $setStorageBase1
+
+- name: queryStorageMultiSecond
+  query-contract:
+      destination: $createGSContractMulti
+      function: getSecond
+      abi: $deployGSABIFactoryMulti
+
+- name: assertStorageMultiSecond
+  assert:
+      key: $queryStorageMultiSecond
+      relation: eq
+      val: $setStorageBase2
+
+# Set a new value to ensure constructors can be overwritten
+- name: setStorageMulti
+  call:
+      destination: $createGSContractMulti
+      function: set
+      data: 
+        - $setStorageBase2 
+        - $setStorageBase1
+      abi: $deployGSABIFactoryMulti
+
+- name: queryStorageMultiNewFirst
+  query-contract:
+      destination: $createGSContractMulti
+      function: getFirst
+      abi: $deployGSABIFactoryMulti
+
+- name: assertStorageMultiNewFirst
+  assert:
+      key: $queryStorageMultiNewFirst
+      relation: eq
+      val: $setStorageBase2
+
+- name: queryStorageMultiNewSecond
+  query-contract:
+      destination: $createGSContractMulti
+      function: getSecond
+      abi: $deployGSABIFactoryMulti
+
+- name: assertStorageMultiNewSecond
+  assert:
+      key: $queryStorageMultiNewSecond
+      relation: eq
+      val: $setStorageBase1

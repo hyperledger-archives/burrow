@@ -1,0 +1,64 @@
+jobs:
+
+- name: setStorageBase
+  set:
+      val: 5
+
+- name: deployGSFactory
+  deploy:
+      contract: GSFactory.sol
+      instance: all
+
+- name: createGSContract
+  call:
+      destination: $deployGSFactory
+      abi: GSFactory
+      function: create
+
+# contract 1
+- name: setStorage
+  call:
+      destination: $createGSContract
+      abi: GSContract
+      function: set 
+      data:
+        - $setStorageBase
+
+- name: queryStorage
+  query-contract:
+      destination: $createGSContract
+      abi: GSContract
+      function: get
+
+- name: assertStorage
+  assert:
+      key: $queryStorage
+      relation: eq
+      val: $setStorageBase
+
+# contract 2
+- name: createGSContract2
+  call:
+      destination: $deployGSFactory
+      abi: GSFactory
+      function: create2
+
+- name: setStorage2
+  call:
+      destination: $createGSContract2
+      abi: GSContract2
+      function: set2 
+      data:
+        - $setStorageBase
+
+- name: queryStorage
+  query-contract:
+      destination: $createGSContract2
+      abi: GSContract2
+      function: get2
+
+- name: assertStorage
+  assert:
+      key: $queryStorage
+      relation: eq
+      val: $setStorageBase

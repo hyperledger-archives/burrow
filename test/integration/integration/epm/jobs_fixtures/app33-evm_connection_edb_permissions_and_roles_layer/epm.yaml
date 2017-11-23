@@ -1,0 +1,185 @@
+jobs:
+
+- name: role
+  set:
+      val: marmots_approve
+
+- name: permSetup
+  permission:
+      action: setBase
+      target: $addr2
+      permission: call
+      value: "true"
+
+- name: deployPermK
+  deploy:
+      contract: permissions.sol
+      instance: permSNative
+
+# contract needs perms
+- name: permContractAddRoles
+  permission:
+      action: setBase
+      target: $deployPermK
+      permission: addRole
+      value: "true"
+
+- name: permContractRmRoles
+  permission:
+      action: setBase
+      target: $deployPermK
+      permission: removeRole
+      value: "true"
+
+- name: permContractSetBase
+  permission:
+      action: setBase
+      target: $deployPermK
+      permission: setBase
+      value: "true"
+
+- name: permContractUnsetBase
+  permission:
+      action: setBase
+      target: $deployPermK
+      permission: unsetBase
+      value: "true"
+
+- name: roleSetup
+  permission:
+      action: addRole
+      target: $addr2
+      role: marmots_deny
+
+# roles
+- name: checkRole1
+  call:
+      destination: $deployPermK
+      function: hasRole
+      data:
+        - $addr2
+        - marmots_deny
+
+- name: assertRole1
+  assert:
+      key: $checkRole1
+      relation: eq
+      val: "true"
+
+- name: setRole
+  call:
+      destination: $deployPermK
+      function: addRole 
+      data: 
+        - $addr2
+        - $role
+
+- name: checkRole2
+  call:
+      destination: $deployPermK
+      function: hasRole
+      data:
+        - $addr2
+        - $role
+
+- name: assertRole2
+  assert:
+      key: $checkRole2
+      relation: eq
+      val: "true"
+
+- name: unsetRole
+  call:
+      destination: $deployPermK
+      function: removeRole
+      data:
+        - $addr2
+        - $role
+
+- name: checkRole3
+  query-contract:
+      destination: $deployPermK
+      function: hasRole
+      data:
+        - $addr2
+        - $role
+
+- name: assertRole3
+  assert:
+      key: $checkRole3
+      relation: eq
+      val: "false"
+
+# permissions
+- name: checkBase1
+  call:
+      destination: $deployPermK
+      function: hasBase
+      data:
+        - $addr2
+        - 2118
+
+- name: assertBase1
+  assert:
+      key: $checkBase1
+      relation: eq
+      val: "true"
+
+- name: checkBase2
+  call:
+      destination: $deployPermK
+      function: hasBase
+      data: 
+        - $addr2
+        - 14846
+
+- name: assertBase2
+  assert:
+      key: $checkBase2
+      relation: ne
+      val: "true"
+
+- name: setBase
+  call:
+      destination: $deployPermK
+      function: setBase 
+      data:
+        - $addr2
+        - 2119
+        - true
+
+- name: checkBase3
+  call:
+      destination: $deployPermK
+      function: hasBase
+      data:
+        - $addr2
+        - 2119
+
+- name: assertBase3
+  assert:
+      key: $checkBase3
+      relation: eq
+      val: "true"
+
+- name: unsetBase
+  call:
+      destination: $deployPermK
+      function: unsetBase
+      data:
+        - $addr2
+        - 2119
+
+- name: checkBase4
+  call:
+      destination: $deployPermK
+      function: hasBase
+      data:
+        - $addr2
+        - 2119
+
+- name: assertBase4
+  assert:
+      key: $checkBase4
+      relation: eq
+      val: "true"

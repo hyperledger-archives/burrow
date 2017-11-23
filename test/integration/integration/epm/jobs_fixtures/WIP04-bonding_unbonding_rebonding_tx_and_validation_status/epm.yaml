@@ -1,0 +1,75 @@
+jobs:
+
+- name: bond_account
+  job:
+    set:
+      val: $addr2
+
+- name: bond_pub_key
+  job:
+    set:
+      val: $addr2_pub
+
+- name: bond_amount
+  job:
+    set:
+      val: 1234
+
+- name: bondPerm
+  job:
+    permission:
+      action: set_base
+      target: $bond_account
+      permission: bond
+      value: "true"
+
+- name: account
+  job:
+    account:
+      address: $bond_account
+
+- name: bondTest1
+  job:
+    bond:
+      pub_key: $bond_pub_key
+      account: $bond_account
+      amount: $bond_amount
+      wait: false
+
+- name: bondTest2
+  job:
+    unbond:
+      account: $bond_account
+      height: $block
+      wait: false
+
+- name: bondTest3
+  job:
+    rebond:
+      account: $bond_account
+      height: $block+2
+      wait: false
+
+- name: queryBonded
+  job:
+    query-vals:
+      field: bonded_validators
+
+- name: queryUnbonding
+  job:
+    query-vals:
+      field: unbonding_validators
+
+- name: assertBonded
+  job:
+    assert:
+      key: $addr1
+      relation: eq
+      val: $queryBonded
+
+- name: assertUnbonded
+  job:
+    assert:
+      key: ""
+      relation: eq
+      val: $queryUnbonding

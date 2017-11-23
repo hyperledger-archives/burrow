@@ -1,0 +1,117 @@
+jobs:
+
+- name: setIntStorage
+  set:
+      val: 5
+
+- name: setBoolStorage
+  set:
+      val: false
+
+- name: setStringStorage
+  set:
+      val: "hello"
+
+- name: setBytesStorage
+  set:
+      val: "marmoty"
+
+- name: setArrayStorage
+  set:
+      val: "[1,2,3]"
+
+- name: deployIntConstructor
+  deploy:
+      contract: contracts/storage.sol
+      instance: SimpleConstructorInt
+      data: 
+        - $setIntStorage
+        - 3
+
+- name: queryIntStorage
+  query-contract:
+      destination: $deployIntConstructor
+      function: storedData
+
+- name: assertIntStorage
+  assert:
+      key: $queryIntStorage
+      relation: eq
+      val: $setIntStorage
+
+- name: deployBoolConstructor
+  deploy:
+      contract: contracts/storage.sol
+      instance: SimpleConstructorBool
+      data: 
+        - $setBoolStorage
+        - true
+
+- name: queryBoolStorage
+  query-contract:
+      destination: $deployBoolConstructor
+      function: storedData
+
+- name: assertBoolStorage
+  assert:
+      key: $queryBoolStorage
+      relation: eq
+      val: "false"
+
+- name: deployStringConstructor
+  deploy:
+      contract: contracts/storage.sol
+      instance: SimpleConstructorString
+      data: 
+        - $setStringStorage
+        - "world"
+      wait: true
+
+- name: queryStringStorage
+  query-contract:
+      destination: $deployStringConstructor
+      function: storedData
+
+- name: assertStringStorage
+  assert:
+      key: $queryStringStorage
+      relation: eq
+      val: $setStringStorage
+
+- name: deployBytesConstructor
+  deploy:
+      contract: contracts/storage.sol
+      instance: SimpleConstructorBytes
+      data: 
+        - $setBytesStorage
+        - "marmots"
+
+- name: queryBytesStorage
+  query-contract:
+      destination: $deployBytesConstructor
+      function: storedData
+
+- name: assertBytesStorage
+  assert:
+      key: $queryBytesStorage
+      relation: eq
+      val: $setBytesStorage
+
+- name: deployArrayConstructor
+  deploy:
+      contract: contracts/storage.sol
+      instance: SimpleConstructorArray
+      data:
+        - $setArrayStorage
+        - [4, 5, 6]
+
+- name: queryArrayStorage
+  query-contract:
+      destination: $deployArrayConstructor
+      function: get
+
+- name: assertArrayStorage
+  assert:
+      key: $queryArrayStorage
+      relation: eq
+      val: $setArrayStorage

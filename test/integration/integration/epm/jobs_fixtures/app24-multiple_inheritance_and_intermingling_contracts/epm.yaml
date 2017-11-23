@@ -1,0 +1,91 @@
+jobs:
+
+  #deploy contract One
+- name: deployOne 
+  deploy:
+       contract: three.sol
+       instance: one
+ 
+- name: get1i 
+  query-contract:
+       destination: $deployOne
+       function: i
+       abi: one
+
+- name: assert1One 
+  assert:
+       key: $get1i
+       relation: eq
+       val: 1
+
+#deploy contract two
+- name: deployTwo 
+  deploy:
+       contract: three.sol
+       instance: two
+ 
+- name:  get2i 
+  query-contract:
+       destination: $deployTwo
+       function: i
+       abi: two
+
+- name: assert2One 
+  assert:
+       key: $get2i
+       relation: eq
+       val: 1
+
+- name:  get2ii 
+  query-contract:
+       destination: $deployTwo
+       function: ii
+       abi: two
+
+- name: assert2Two 
+  assert:
+       key: $get2ii
+       relation: eq
+       val: 2
+
+#deploy contract three
+- name: deployThree 
+  deploy:
+       contract: three.sol
+       instance: three
+ 
+- name:  get3i 
+  query-contract:
+       destination: $deployThree
+       function: i
+       abi: three
+
+- name: assert3One 
+  assert:
+       key: $get3i
+       relation: eq
+       val: 1
+
+- name:  get3ii 
+  query-contract:
+       destination: $deployThree
+       function: ii
+       abi: three
+
+- name: assert3Two 
+  assert:
+       key: $get3ii
+       relation: eq
+       val: 2
+
+- name:  get3iii 
+  query-contract:
+       destination: $deployThree
+       function: iii
+       abi: three
+       
+- name: assert3Three 
+  assert:
+       key: $get3iii
+       relation: eq
+       val: 3 
