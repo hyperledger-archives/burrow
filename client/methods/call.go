@@ -38,10 +38,14 @@ func Call(do *client.Do) error {
 	if err != nil {
 		return fmt.Errorf("Failed on forming Call Transaction: %s", err)
 	}
+	_, chainID, _, err := burrowNodeClient.ChainId()
+	if err != nil {
+		return err
+	}
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
-	txResult, err := rpc.SignAndBroadcast(do.ChainidFlag, burrowNodeClient, burrowKeyClient,
+	txResult, err := rpc.SignAndBroadcast(chainID, burrowNodeClient, burrowKeyClient,
 		callTransaction, true, do.BroadcastFlag, do.WaitFlag)
 
 	if err != nil {

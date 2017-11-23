@@ -875,7 +875,11 @@ func TestCreateAccountPermission(t *testing.T) {
 }
 
 // holla at my boy
-var DougAddress = acm.AddressFromString("THISISDOUG")
+var DougAddress acm.Address
+
+func init() {
+	copy(DougAddress[:], ([]byte)("THISISDOUG"))
+}
 
 func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)

@@ -105,11 +105,15 @@ func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error)
 	if key == nil {
 		return acm.PublicKey{}, fmt.Errorf("Unknown address (%s)", address)
 	}
-	pubKeyEd25519 := acm.PublicKeyEd25519{}
+	pubKeyEd25519 := crypto.PubKeyEd25519{}
 	copy(pubKeyEd25519[:], key.PublicKey)
-	return pubKeyEd25519.Wrap(), nil
+	return acm.PublicKeyFromPubKey(pubKeyEd25519.Wrap()), nil
 }
 
 func (mock *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
 	return mock.NewKey(), nil
+}
+
+func (mock *MockKeyClient) HealthCheck() error {
+	return nil
 }

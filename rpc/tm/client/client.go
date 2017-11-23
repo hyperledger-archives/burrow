@@ -62,7 +62,11 @@ func GetAccount(client RPCClient, address acm.Address) (acm.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res.Unwrap().(*rpc.ResultGetAccount).Account.Account(), nil
+	concreteAccount := res.Unwrap().(*rpc.ResultGetAccount).Account
+	if concreteAccount == nil {
+		return nil, nil
+	}
+	return concreteAccount.Account(), nil
 }
 
 func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (txs.Tx, error) {

@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/go-crypto"
 )
 
 //------------------------------------------------------------------------------------
@@ -115,9 +116,9 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return
 		}
 
-		pubKeyEd25519 := acm.PublicKeyEd25519{}
+		pubKeyEd25519 := crypto.PubKeyEd25519{}
 		copy(pubKeyEd25519[:], pubKeyBytes)
-		pub = pubKeyEd25519.Wrap()
+		pub = acm.PublicKeyFromPubKey(pubKeyEd25519.Wrap())
 	} else {
 		// grab the pubkey from monax-keys
 		addressBytes, err2 := hex.DecodeString(addr)

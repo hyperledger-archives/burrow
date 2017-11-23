@@ -18,19 +18,15 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 
-	"time"
-
-	acm "github.com/hyperledger/burrow/account"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
-	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
@@ -46,12 +42,13 @@ const GenesisAccountBalance = uint64(1 << 20)
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
-	eventSwitch events.EventSwitch
-	tmNode      *node.Node
-	service     rpc.Service
-	listeners   []net.Listener
-	logger      logging_types.InfoTraceLogger
-	shutdownCh  chan struct{}
+	eventSwitch    events.EventSwitch
+	tmNode         *node.Node
+	service        rpc.Service
+	listeners      []net.Listener
+	logger         logging_types.InfoTraceLogger
+	shutdownNotify chan struct{}
+	shutdownOnce   sync.Once
 }
 
 func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config,
@@ -93,32 +90,15 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 		logger)
 
 	return &Kernel{
-		eventSwitch: eventEmitter,
-		tmNode:      tmNode,
-		service:     service,
-		logger:      logger,
-		shutdownCh:  make(chan struct{}),
+		eventSwitch:    eventEmitter,
+		tmNode:         tmNode,
+		service:        service,
+		logger:         logger,
+		shutdownNotify: make(chan struct{}),
 	}, nil
 }
 
-func NewGenesisKernel() (*Kernel, error) {
-	genesisPrivateAccount := acm.GeneratePrivateAccount()
-	genesisAccount := acm.FromAddressable(genesisPrivateAccount)
-	genesisAccount.AddToBalance(GenesisAccountBalance)
-	genesisValidator := acm.AsValidator(genesisAccount)
-	privValidator := validator.NewPrivValidatorMemory(genesisPrivateAccount, genesisPrivateAccount)
-	genesisDoc := genesis.MakeGenesisDocFromAccounts("GenesisChain", nil, time.Now(),
-		map[string]acm.Account{
-			"genesisAccount": genesisAccount,
-		},
-		map[string]acm.Validator{
-			"genesisValidator": genesisValidator,
-		})
-	tmConf := tm_config.DefaultConfig()
-	logger, _ := lifecycle.NewStdErrLogger()
-	return NewKernel(privValidator, genesisDoc, tmConf, logger)
-}
-
+// Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() error {
 	kern.tmNode.Start()
 	tmListener, err := tm.StartServer(kern.service, "/websocket", ":46657", kern.eventSwitch,
@@ -132,27 +112,34 @@ func (kern *Kernel) Boot() error {
 	return nil
 }
 
+// Wait for a graceful shutdown
 func (kern *Kernel) WaitForShutdown() {
-	<-kern.shutdownCh
+	// Supports multiple goroutines waiting for shutdown since channel is closed
+	<-kern.shutdownNotify
 }
 
+// Supervise kernel once booted
 func (kern *Kernel) supervise() {
+	// TODO: Consider capturing kernel panics from boot and sending them here via a channel where we could
+	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	<-signals
 	kern.Shutdown()
 }
 
-// Stop the core allowing for a graceful shutdown of component in order.
+// Stop the kernel allowing for a graceful shutdown of components in order
 func (kern *Kernel) Shutdown() {
-	logger := logging.WithScope(kern.logger, "Shutdown")
-	logging.InfoMsg(logger, "Attempting graceful shutdown...")
-	logging.InfoMsg(logger, "Shutting down listeners")
-	for _, listener := range kern.listeners {
-		listener.Close()
-	}
-	logging.InfoMsg(logger, "Shutting down Tendermint node")
-	kern.tmNode.Stop()
-	logging.InfoMsg(logger, "Shutdown complete")
-	close(kern.shutdownCh)
+	kern.shutdownOnce.Do(func() {
+		logger := logging.WithScope(kern.logger, "Shutdown")
+		logging.InfoMsg(logger, "Attempting graceful shutdown...")
+		logging.InfoMsg(logger, "Shutting down listeners")
+		for _, listener := range kern.listeners {
+			listener.Close()
+		}
+		logging.InfoMsg(logger, "Shutting down Tendermint node")
+		kern.tmNode.Stop()
+		logging.InfoMsg(logger, "Shutdown complete")
+		close(kern.shutdownNotify)
+	})
 }

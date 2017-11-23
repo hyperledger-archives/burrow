@@ -145,7 +145,6 @@ func addTransactionPersistentFlags(transactionCmd *cobra.Command) {
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the burrow node rpc server address (default respects $BURROW_CLIENT_NODE_ADDRESS)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $BURROW_CLIENT_PUBLIC_KEY)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at monax-keys) (default respects $BURROW_CLIENT_ADDRESS)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.ChainidFlag, "chain-id", "", defaultChainId(), "specify the chainID (default respects $CHAIN_ID)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "nonce", "", "", "specify the nonce to use for the transaction (should equal the sender account's nonce + 1)")
 
 	// transactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the monax-keys daemon")
@@ -180,10 +179,6 @@ func defaultAddress() string {
 // Helper functions
 
 func assertParameters(cmd *cobra.Command, args []string) {
-	if clientDo.ChainidFlag == "" {
-		util.Fatalf(`Please provide a chain id either through the flag --chain-id or environment variable $CHAIN_ID.`)
-	}
-
 	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") &&
 		!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
 		// TODO: [ben] go-rpc will deprecate reformatting; also it is bad practice to auto-correct for this;

@@ -25,7 +25,6 @@ type Do struct {
 	NodeAddrFlag string
 	PubkeyFlag   string
 	AddrFlag     string
-	ChainidFlag  string
 
 	// signFlag      bool // TODO: remove; unsafe signing without monax-keys
 	BroadcastFlag bool
@@ -55,7 +54,6 @@ func NewClientDo() *Do {
 	clientDo.NodeAddrFlag = ""
 	clientDo.PubkeyFlag = ""
 	clientDo.AddrFlag = ""
-	clientDo.ChainidFlag = ""
 
 	// clientDo.signFlag = false
 	clientDo.BroadcastFlag = false

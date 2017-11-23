@@ -2,9 +2,9 @@ package validator
 
 import (
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	tm_types "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/go-crypto"
 )
 
 type privValidatorMemory struct {

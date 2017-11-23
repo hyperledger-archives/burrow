@@ -15,11 +15,10 @@
 package methods
 
 import (
-	"github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 )
@@ -32,7 +31,7 @@ func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTrace
 
 	logger = logger.With("transaction hash", result.Hash)
 
-	if result.Address != account.ZeroAddress {
+	if result.Address != nil {
 		logger = logger.With("Contract Address", result.Address)
 	}
 
@@ -47,16 +46,11 @@ func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTrace
 }
 
 func loggerFromClientDo(do *client.Do, scope string) (logging_types.InfoTraceLogger, error) {
-	lc, err := core.LoadLoggingConfigFromClientDo(do)
-	if err != nil {
-		return nil, err
-	}
-	logger, err := lifecycle.NewLoggerFromLoggingConfig(lc)
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(config.DefaultClientLoggingConfig())
 	if err != nil {
 		return nil, err
 	}
 	logger = logging.WithScope(logger, scope)
 	lifecycle.CaptureStdlibLogOutput(logger)
-	lifecycle.CaptureTendermintLog15Output(logger)
 	return logger, nil
 }

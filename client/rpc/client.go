@@ -59,9 +59,14 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, err
 	}
 
-	toAddress, err := addressFromHexString(toAddr)
-	if err != nil {
-		return nil, fmt.Errorf("toAddr is bad hex: %v", err)
+	var toAddress *acm.Address
+
+	if toAddr != "" {
+		address, err := addressFromHexString(toAddr)
+		if err != nil {
+			return nil, fmt.Errorf("toAddr is bad hex: %v", err)
+		}
+		toAddress = &address
 	}
 
 	fee, err := strconv.ParseUint(feeS, 10, 64)
@@ -79,7 +84,7 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("data is bad hex: %v", err)
 	}
 
-	tx := txs.NewCallTxWithNonce(pub, &toAddress, dataBytes, amt, gas, fee, nonce)
+	tx := txs.NewCallTxWithNonce(pub, toAddress, dataBytes, amt, gas, fee, nonce)
 	return tx, nil
 }
 
@@ -242,7 +247,7 @@ type TxResult struct {
 	Hash      []byte // all txs get a hash
 
 	// only CallTx
-	Address   acm.Address // only for new contracts
+	Address   *acm.Address // only for new contracts
 	Return    []byte
 	Exception string
 
@@ -311,7 +316,8 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		// the benefit is that the we don't need to trust the chain node
 		if tx_, ok := tx.(*txs.CallTx); ok {
 			if tx_.Address == nil {
-				txResult.Address = acm.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
+				address := acm.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
+				txResult.Address = &address
 			}
 		}
 	}

@@ -24,9 +24,12 @@ func AddressFromBytes(addr []byte) (address Address, err error) {
 	return
 }
 
-func AddressFromString(str string) (address Address) {
-	copy(address[:], ([]byte)(str))
-	return
+func AddressFromHexString(str string) (Address, error) {
+	bs, err := hex.DecodeString(str)
+	if err != nil {
+		return ZeroAddress, err
+	}
+	return AddressFromBytes(bs)
 }
 
 func MustAddressFromBytes(addr []byte) Address {

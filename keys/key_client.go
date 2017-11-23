@@ -34,6 +34,9 @@ type KeyClient interface {
 
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType KeyType) (keyAddress acm.Address, err error)
+
+	// Returns nil if the keys isntance is health, error otherwise
+	HealthCheck() error
 }
 
 // This mirrors "github.com/monax/keys/crypto/KeyType" but since we have no use for the struct here it seems simpler
@@ -169,9 +172,10 @@ func (monaxKeys *monaxKeyClient) Generate(keyName string, keyType KeyType) (acm.
 	if err != nil {
 		return acm.ZeroAddress, err
 	}
-	addrBytes, err := hex.DecodeString(addr)
-	if err != nil {
-		return acm.ZeroAddress, err
-	}
-	return acm.AddressFromBytes(addrBytes)
+	return acm.AddressFromHexString(addr)
+}
+
+func (monaxKeys *monaxKeyClient) HealthCheck() error {
+	_, err := RequestResponse(monaxKeys.rpcString, "name/ls", nil, monaxKeys.logger)
+	return err
 }

@@ -38,7 +38,7 @@ type NodeClient interface {
 
 	DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error)
 	GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error)
-	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []*acm.ConcreteValidator, err error)
+	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
 
 	// Logging context for this NodeClient
 	Logger() logging_types.InfoTraceLogger
@@ -239,19 +239,24 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Addres
 //--------------------------------------------------------------------------------------------
 
 func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
-	bondedValidators []*acm.ConcreteValidator, unbondingValidators []*acm.ConcreteValidator, err error) {
+	bondedValidators, unbondingValidators []acm.Validator, err error) {
 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get validators",
-			burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("Error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
 		return
 	}
 	// unwrap return results
 	blockHeight = validatorsResult.BlockHeight
-	bondedValidators = validatorsResult.BondedValidators
-	unbondingValidators = validatorsResult.UnbondingValidators
+	bondedValidators = make([]acm.Validator, len(validatorsResult.BondedValidators))
+	for i, cv := range validatorsResult.BondedValidators {
+		bondedValidators[i] = cv.Validator()
+	}
+	unbondingValidators = make([]acm.Validator, len(validatorsResult.UnbondingValidators))
+	for i, cv := range validatorsResult.UnbondingValidators {
+		unbondingValidators[i] = cv.Validator()
+	}
 	return
 }
 

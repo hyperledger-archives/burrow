@@ -18,10 +18,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/spf13/cobra"
-
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/version"
+	"github.com/spf13/cobra"
 )
 
 // Global flags for persistent flags
@@ -48,7 +47,7 @@ func Execute() {
 
 func InitBurrowClientInit() {
 	// initialise an empty Do struct for command execution
-	clientDo = definitions.NewClientDo()
+	clientDo = client.NewClientDo()
 }
 
 func AddGlobalFlags() {
