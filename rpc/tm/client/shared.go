@@ -45,7 +45,7 @@ const (
 	rpcAddr           = "0.0.0.0:46657"
 	websocketAddr     = rpcAddr
 	websocketEndpoint = "/websocket"
-	testDir           = "./scratch"
+	testDir           = "./test_scratch/tm_test"
 )
 
 // global variables for use across all tests
@@ -91,7 +91,7 @@ func initGlobalVariables() error {
 	logger := loggers.NewNoopInfoTraceLogger()
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
 	genesisDoc = testGenesisDoc()
-	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, logger)
+	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
 	return err
 }
 

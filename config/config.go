@@ -14,6 +14,7 @@ import (
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/rpc"
 )
 
 const DefaultBurrowConfigTOMLFileName = "burrow.toml"
@@ -25,6 +26,7 @@ type BurrowConfig struct {
 	GenesisDoc       *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
 	Tendermint       *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
 	Keys             *keys.KeysConfig                   `json:",omitempty" toml:",omitempty"`
+	RPC              *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
 	Logging          *logging_config.LoggingConfig      `json:",omitempty" toml:",omitempty"`
 }
 
@@ -32,6 +34,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 	return &BurrowConfig{
 		Tendermint: tendermint.DefaultBurrowTendermintConfig(),
 		Keys:       keys.DefaultKeysConfig(),
+		RPC:        rpc.DefaultRPCConfig(),
 		Logging:    logging_config.DefaultNodeLoggingConfig(),
 	}
 }
@@ -54,7 +57,7 @@ func (conf *BurrowConfig) Kernel() (*core.Kernel, error) {
 	}
 	privValidator := validator.NewPrivValidatorMemory(val, keys.Signer(keyClient, val.Address()))
 
-	return core.NewKernel(privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), logger)
+	return core.NewKernel(privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

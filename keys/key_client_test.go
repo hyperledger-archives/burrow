@@ -46,6 +46,12 @@ func TestMonaxKeyClient_PublicKey(t *testing.T) {
 	assert.Equal(t, addr[:], pubKey.Address())
 }
 
+func TestMonaxKeyClient_PublicKey_NonExistent(t *testing.T) {
+	keyClient := NewBurrowKeyClient(rpcString, logger)
+	_, err := keyClient.PublicKey(acm.Address{8, 7, 6, 222})
+	assert.Error(t, err)
+}
+
 func TestMonaxKeyClient_Sign(t *testing.T) {
 	keyClient := NewBurrowKeyClient(rpcString, logger)
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)

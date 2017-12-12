@@ -42,9 +42,9 @@ type concretePrivateAccountWrapper struct {
 	*ConcretePrivateAccount `json:"unwrap"`
 }
 
-var _ = wire.RegisterInterface(struct{ PrivateAccount }{}, wire.ConcreteType{concretePrivateAccountWrapper{}, 0x01})
-
 var _ PrivateAccount = concretePrivateAccountWrapper{}
+
+var _ = wire.RegisterInterface(struct{ PrivateAccount }{}, wire.ConcreteType{concretePrivateAccountWrapper{}, 0x01})
 
 func (cpaw concretePrivateAccountWrapper) Address() Address {
 	return cpaw.ConcretePrivateAccount.Address

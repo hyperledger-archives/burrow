@@ -19,7 +19,7 @@ type deterministicGenesis struct {
 // Generates deterministic pseudo-random genesis state
 func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 	return &deterministicGenesis{
-		random: rand.New(rand.NewSource(31230398587433)),
+		random: rand.New(rand.NewSource(seed)),
 	}
 }
 

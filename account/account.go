@@ -126,17 +126,13 @@ func (acc ConcreteAccount) Account() Account {
 	return concreteAccountWrapper{&acc}
 }
 
-// Return as mutable MutableACCount
+// Return as mutable MutableAccount
 func (acc ConcreteAccount) MutableAccount() MutableAccount {
 	return concreteAccountWrapper{&acc}
 }
 
 func (acc *ConcreteAccount) Encode() []byte {
-	w := new(bytes.Buffer)
-	var n int
-	var err error
-	AccountEncoder(acc, w, &n, &err)
-	return w.Bytes()
+	return wire.BinaryBytes(acc)
 }
 
 func (acc *ConcreteAccount) Copy() *ConcreteAccount {
@@ -234,8 +230,6 @@ func GetMutableAccount(getter Getter, address Address) (MutableAccount, error) {
 type concreteAccountWrapper struct {
 	*ConcreteAccount `json:"unwrap"`
 }
-
-var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
 
 var _ Account = concreteAccountWrapper{}
 
@@ -340,17 +334,11 @@ func (caw concreteAccountWrapper) Copy() MutableAccount {
 	return concreteAccountWrapper{caw.ConcreteAccount.Copy()}
 }
 
+var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
+
 // concreteAccount Wrapper
 //----------------------------------------------
 // Encoding/decoding
-
-func AccountEncoder(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*ConcreteAccount), w, n, err)
-}
-
-func AccountDecoder(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&ConcreteAccount{}, r, 0, n, err)
-}
 
 func Decode(accBytes []byte) (Account, error) {
 	ca, err := DecodeConcrete(accBytes)
@@ -361,15 +349,10 @@ func Decode(accBytes []byte) (Account, error) {
 }
 
 func DecodeConcrete(accBytes []byte) (*ConcreteAccount, error) {
-	var n int
-	var err error
-	acc := AccountDecoder(bytes.NewBuffer(accBytes), &n, &err)
+	ca := new(concreteAccountWrapper)
+	err := wire.ReadBinaryBytes(accBytes, ca)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not convert decoded account to *ConcreteAccount: %v", err)
 	}
-	ca, ok := acc.(*ConcreteAccount)
-	if !ok {
-		return nil, fmt.Errorf("could not convert decoded account to *ConcreteAccount")
-	}
-	return ca, nil
+	return ca.ConcreteAccount, nil
 }

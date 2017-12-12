@@ -74,7 +74,7 @@ func main() {
 		"Create Burrow configuration by consuming a GenesisDoc or GenesisSpec, creating keys, and emitting the config",
 		func(cmd *cli.Cmd) {
 			genesisSpecOpt := cmd.StringOpt("s genesis-spec", "",
-				"A GenesisSpec to use as a tmeplate for a GenesisDoc that will be created along with keys")
+				"A GenesisSpec to use as a template for a GenesisDoc that will be created along with keys")
 
 			tomlInOpt := cmd.BoolOpt("t toml-in", false, "Consume GenesisSpec/GenesisDoc as TOML "+
 				"rather than the JSON default")
@@ -166,7 +166,7 @@ func genesisDocProvider(genesisFile string, skipNonExistent bool) source.ConfigP
 	return source.NewConfigProvider(fmt.Sprintf("genesis file at %s", genesisFile),
 		source.ShouldSkipFile(genesisFile, skipNonExistent),
 		func(baseConfig interface{}) error {
-			conf, ok := baseConfig.(config.BurrowConfig)
+			conf, ok := baseConfig.(*config.BurrowConfig)
 			if !ok {
 				return fmt.Errorf("config passed was not BurrowConfig")
 			}

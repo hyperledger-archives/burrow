@@ -135,15 +135,17 @@ func (cache *BlockCache) GetStorage(addr acm.Address, key Word256) (Word256, err
 	// Check cache
 	cache.RLock()
 	info, ok := cache.lookupStorage(addr, key)
+	cache.RUnlock()
 	if ok {
 		return info.value, nil
 	}
 	// Get or load storage
+	cache.RLock()
 	acc, storage, removed, dirty := cache.accounts[addr].unpack()
+	cache.RUnlock()
 	if removed {
 		return Zero256, fmt.Errorf("GetStorage on a removed account %s", addr)
 	}
-	cache.RUnlock()
 	cache.Lock()
 	defer cache.Unlock()
 

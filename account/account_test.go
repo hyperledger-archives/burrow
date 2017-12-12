@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tendermint/go-wire"
 )
 
@@ -51,7 +52,6 @@ func TestAccountSerialise(t *testing.T) {
 	}
 
 	// This test is really testing this go wire declaration in account.go
-	//var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
 
 	acc := NewConcreteAccountFromSecret("Super Semi Secret")
 
@@ -74,10 +74,10 @@ func TestAccountSerialise(t *testing.T) {
 func TestDecodeConcrete(t *testing.T) {
 	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	acc := concreteAcc.Account()
-	concreteAccOut, err := DecodeConcrete(acc.Encode())
-	assert.NoError(t, err)
+	encodedAcc := acc.Encode()
+	concreteAccOut, err := DecodeConcrete(encodedAcc)
+	require.NoError(t, err)
 	assert.Equal(t, concreteAcc, *concreteAccOut)
-
 	concreteAccOut, err = DecodeConcrete([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
 }
@@ -87,7 +87,7 @@ func TestDecode(t *testing.T) {
 	acc := concreteAcc.Account()
 	accOut, err := Decode(acc.Encode())
 	assert.NoError(t, err)
-	assert.Equal(t, concreteAcc, AsConcreteAccount(accOut))
+	assert.Equal(t, concreteAcc, *AsConcreteAccount(accOut))
 
 	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
@@ -99,7 +99,7 @@ func TestMarshalJSON(t *testing.T) {
 	concreteAcc.Code = []byte{60, 23, 45}
 	acc := concreteAcc.Account()
 	bs, err := json.Marshal(acc)
-	assert.Equal(t, `{"address":"745BD6BE33020146E04FA0F293A41E389887DE86","pub_key":{"type":"ed25519","data":"8CEBC16C166A0614AD7C8E330318E774E1A039321F17274DF12ABA3B1BFC773C"},"balance":0,"code":"3C172D","sequence":0,"storage_root":"","permissions":{"base":{"perms":0,"set":0},"roles":[]}}`,
+	assert.Equal(t, `{"Address":"745BD6BE33020146E04FA0F293A41E389887DE86","PublicKey":{"type":"ed25519","data":"8CEBC16C166A0614AD7C8E330318E774E1A039321F17274DF12ABA3B1BFC773C"},"Balance":0,"Code":"3C172D","Sequence":0,"StorageRoot":"","Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":[]}}`,
 		string(bs))
 	assert.NoError(t, err)
 }

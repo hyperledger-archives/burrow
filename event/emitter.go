@@ -45,7 +45,7 @@ type Emitter interface {
 // The events struct has methods for working with events.
 type emitter struct {
 	// Bah, Service infects everything
-	common.BaseService
+	*common.BaseService
 	eventSwitch go_events.EventSwitch
 	logger      logging_types.InfoTraceLogger
 }
@@ -58,7 +58,11 @@ func NewEmitter(logger logging_types.InfoTraceLogger) *emitter {
 
 func WrapEventSwitch(eventSwitch go_events.EventSwitch, logger logging_types.InfoTraceLogger) *emitter {
 	eventSwitch.Start()
-	return &emitter{eventSwitch: eventSwitch, logger: logging.WithScope(logger, "Events")}
+	return &emitter{
+		BaseService: common.NewBaseService(nil, "BurrowEventEmitter", eventSwitch),
+		eventSwitch: eventSwitch,
+		logger:      logging.WithScope(logger, "Events"),
+	}
 }
 
 // Fireable
@@ -109,11 +113,14 @@ func (evts *emitter) Unsubscribe(subId string) error {
 // convenience for Subscribing and Unsubscribing on multiple EventEmitters at
 // once
 func Multiplex(events ...Emitter) *multiplexedEvents {
-	return &multiplexedEvents{eventEmitters: events}
+	return &multiplexedEvents{
+		BaseService: common.NewBaseService(nil, "BurrowMultiplexedEventEmitter", nil),
+		eventEmitters: events,
+	}
 }
 
 type multiplexedEvents struct {
-	common.BaseService
+	*common.BaseService
 	eventEmitters []Emitter
 }
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrivateAccountSerialise(t *testing.T) {
@@ -27,8 +28,6 @@ func TestPrivateAccountSerialise(t *testing.T) {
 		ChainID        string
 	}
 	// This test is really testing this go wire declaration in private_account.go
-	//var _ = wire.RegisterInterface(struct{ PrivateAccount }{}, wire.ConcreteType{concretePrivateAccountWrapper{}, 0x01})
-
 	acc := GeneratePrivateAccountFromSecret("Super Secret Secret")
 
 	// Go wire cannot serialise a top-level interface type it needs to be a field or sub-field of a struct
@@ -42,7 +41,8 @@ func TestPrivateAccountSerialise(t *testing.T) {
 	accStructOut := PrivateAccountContainingStruct{}
 
 	// We must pass in a value type to read from (accStruct), but provide a pointer type to write into (accStructout
-	wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
+	err := wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
+	require.NoError(t, err)
 
 	assert.Equal(t, accStruct, accStructOut)
 }

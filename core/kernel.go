@@ -20,6 +20,8 @@ import (
 	"os/signal"
 	"sync"
 
+	"fmt"
+
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
@@ -38,21 +40,25 @@ import (
 	"github.com/tendermint/tmlibs/events"
 )
 
-const GenesisAccountBalance = uint64(1 << 20)
-
 // Kernel is the root structure of Burrow
 type Kernel struct {
-	eventSwitch    events.EventSwitch
-	tmNode         *node.Node
-	service        rpc.Service
-	listeners      []net.Listener
-	logger         logging_types.InfoTraceLogger
-	shutdownNotify chan struct{}
-	shutdownOnce   sync.Once
+	eventSwitch     events.EventSwitch
+	tmNode          *node.Node
+	service         rpc.Service
+	serverLaunchers []ServerLauncher
+	listeners       []net.Listener
+	logger          logging_types.InfoTraceLogger
+	shutdownNotify  chan struct{}
+	shutdownOnce    sync.Once
+}
+
+type ServerLauncher struct {
+	Name   string
+	Launch func(rpc.Service) (net.Listener, error)
 }
 
 func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config,
-	logger logging_types.InfoTraceLogger) (*Kernel, error) {
+	rpcConfig *rpc.RPCConfig, logger logging_types.InfoTraceLogger) (*Kernel, error) {
 
 	events.NewEventSwitch().Start()
 	logger = logging.WithScope(logger, "Kernel")
@@ -89,25 +95,40 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	service := rpc.NewService(state, eventEmitter, nameReg, blockchain, transactor, query.NewNodeView(tmNode, txCodec),
 		logger)
 
+	servers := []ServerLauncher{
+		{
+			Name: "TM",
+			Launch: func(service rpc.Service) (net.Listener, error) {
+				return tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, eventEmitter,
+					tendermint.NewLogger(logger))
+			},
+		},
+	}
+
 	return &Kernel{
-		eventSwitch:    eventEmitter,
-		tmNode:         tmNode,
-		service:        service,
-		logger:         logger,
-		shutdownNotify: make(chan struct{}),
+		eventSwitch:     eventEmitter,
+		tmNode:          tmNode,
+		service:         service,
+		serverLaunchers: servers,
+		logger:          logger,
+		shutdownNotify:  make(chan struct{}),
 	}, nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() error {
-	kern.tmNode.Start()
-	tmListener, err := tm.StartServer(kern.service, "/websocket", ":46657", kern.eventSwitch,
-		tendermint.NewLogger(kern.logger))
+	_, err := kern.tmNode.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("error starting Tendermint node: %v", err)
 	}
-	kern.listeners = append(kern.listeners, tmListener)
+	for _, launcher := range kern.serverLaunchers {
+		listener, err := launcher.Launch(kern.service)
+		if err != nil {
+			return fmt.Errorf("error launching %s server", launcher.Name)
+		}
 
+		kern.listeners = append(kern.listeners, listener)
+	}
 	go kern.supervise()
 	return nil
 }
@@ -129,17 +150,18 @@ func (kern *Kernel) supervise() {
 }
 
 // Stop the kernel allowing for a graceful shutdown of components in order
-func (kern *Kernel) Shutdown() {
+func (kern *Kernel) Shutdown() (err error) {
 	kern.shutdownOnce.Do(func() {
 		logger := logging.WithScope(kern.logger, "Shutdown")
 		logging.InfoMsg(logger, "Attempting graceful shutdown...")
 		logging.InfoMsg(logger, "Shutting down listeners")
 		for _, listener := range kern.listeners {
-			listener.Close()
+			err = listener.Close()
 		}
 		logging.InfoMsg(logger, "Shutting down Tendermint node")
 		kern.tmNode.Stop()
 		logging.InfoMsg(logger, "Shutdown complete")
 		close(kern.shutdownNotify)
 	})
+	return
 }

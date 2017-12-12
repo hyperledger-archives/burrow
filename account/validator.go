@@ -2,8 +2,6 @@ package account
 
 import (
 	"encoding/json"
-
-	"github.com/tendermint/go-wire"
 )
 
 type Validator interface {
@@ -27,8 +25,6 @@ type concreteValidatorWrapper struct {
 }
 
 var _ Validator = concreteValidatorWrapper{}
-
-var _ = wire.RegisterInterface(struct{ Validator }{}, wire.ConcreteType{concreteValidatorWrapper{}, 0x01})
 
 func AsValidator(account Account) Validator {
 	return ConcreteValidator{
