@@ -138,7 +138,7 @@ func (genesisAccount *Account) Clone() Account {
 
 func (gv *Validator) Validator() acm.Validator {
 	return acm.ConcreteValidator{
-		Address:   acm.MustAddressFromBytes(gv.PublicKey.Address()),
+		Address:   gv.PublicKey.Address(),
 		PublicKey: gv.PublicKey,
 		Power:     uint64(gv.Amount),
 	}.Validator()

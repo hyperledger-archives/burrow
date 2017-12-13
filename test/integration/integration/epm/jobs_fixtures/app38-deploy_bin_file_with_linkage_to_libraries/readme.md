@@ -1,1 +1,0 @@
-* test binary linking to libraries

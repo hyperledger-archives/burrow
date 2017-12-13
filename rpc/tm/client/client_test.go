@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
@@ -194,8 +193,7 @@ func TestCallContract(t *testing.T) {
 		// run a call through the contract
 		data := []byte{}
 		expected := []byte{0xb}
-		callContract(t, client, acm.MustAddressFromBytes(privateAccounts[0].PublicKey().Address()), contractAddr, data,
-			expected)
+		callContract(t, client, privateAccounts[0].Address(), contractAddr, data, expected)
 	})
 }
 

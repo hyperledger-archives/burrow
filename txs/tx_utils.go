@@ -34,7 +34,7 @@ func NewSendTx() *SendTx {
 }
 
 func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
-	addr := acm.MustAddressFromBytes(pubkey.Address())
+	addr := pubkey.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return err
@@ -46,10 +46,7 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 }
 
 func (tx *SendTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
-	addr, err := acm.AddressFromBytes(pubkey.Address())
-	if err != nil {
-		return err
-	}
+	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   addr,
 		Amount:    amt,
@@ -83,10 +80,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
-	addr, err := acm.AddressFromBytes(from.Address())
-	if err != nil {
-		return nil, err
-	}
+	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -102,7 +96,7 @@ func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 func NewCallTxWithNonce(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
-		Address:   acm.MustAddressFromBytes(from.Address()),
+		Address:   from.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
 		Signature: crypto.SignatureEd25519{}.Wrap(),
@@ -127,7 +121,7 @@ func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 // NameTx interface for creating tx
 
 func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
-	addr := acm.MustAddressFromBytes(from.Address())
+	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -142,7 +136,7 @@ func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee ui
 
 func NewNameTxWithNonce(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
-		Address:   acm.MustAddressFromBytes(from.Address()),
+		Address:   from.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
 		Signature: crypto.SignatureEd25519{}.Wrap(),
@@ -174,7 +168,7 @@ func NewBondTx(pubkey acm.PublicKey) (*BondTx, error) {
 }
 
 func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
-	addr := acm.MustAddressFromBytes(pubkey.Address())
+	addr := pubkey.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return err
@@ -187,7 +181,7 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 
 func (tx *BondTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:   acm.MustAddressFromBytes(pubkey.Address()),
+		Address:   pubkey.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
 		Signature: crypto.SignatureEd25519{}.Wrap(),
@@ -249,8 +243,8 @@ func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 //----------------------------------------------------------------------------
 // PermissionsTx interface for creating tx
 
-func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (*PermissionsTx, error) {
-	addr := acm.MustAddressFromBytes(from.Address())
+func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args *ptypes.PermArgs) (*PermissionsTx, error) {
+	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -263,9 +257,9 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (
 	return NewPermissionsTxWithNonce(from, args, nonce), nil
 }
 
-func NewPermissionsTxWithNonce(from acm.PublicKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithNonce(from acm.PublicKey, args *ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
-		Address:   acm.MustAddressFromBytes(from.Address()),
+		Address:   from.Address(),
 		Amount:    1, // NOTE: amounts can't be 0 ...
 		Sequence:  sequence,
 		Signature: crypto.SignatureEd25519{}.Wrap(),

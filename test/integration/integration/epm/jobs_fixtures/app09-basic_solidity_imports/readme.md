@@ -1,1 +1,0 @@
-* tests basic solidity imports

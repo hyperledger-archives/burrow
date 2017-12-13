@@ -15,7 +15,6 @@
 package execution
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 
@@ -695,7 +694,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			return txs.ErrTxInvalidAddress
 		}
 
-		permFlag := tx.PermArgs.PermFlag()
+		permFlag := tx.PermArgs.PermFlag
 		// check permission
 		if !HasPermission(exe.blockCache, inAcc, permFlag, logger) {
 			return fmt.Errorf("account %s does not have moderator permission %s (%b)", tx.Input.Address,
@@ -724,40 +723,40 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			"perm_args", tx.PermArgs)
 
 		var permAcc acm.Account
-		switch args := tx.PermArgs.(type) {
-		case *permission.HasBaseArgs:
+		switch tx.PermArgs.PermFlag {
+		case permission.HasBase:
 			// this one doesn't make sense from txs
 			return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
-		case *permission.SetBaseArgs:
-			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+		case permission.SetBase:
+			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Set(args.Permission, args.Value)
+					return perms.Base.Set(tx.PermArgs.Permission, tx.PermArgs.Value)
 				})
-		case *permission.UnsetBaseArgs:
-			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+		case permission.UnsetBase:
+			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Unset(args.Permission)
+					return perms.Base.Unset(tx.PermArgs.Permission)
 				})
-		case *permission.SetGlobalArgs:
+		case permission.SetGlobal:
 			permAcc, err = mutatePermissions(exe.blockCache, permission.GlobalPermissionsAddress,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Set(args.Permission, args.Value)
+					return perms.Base.Set(tx.PermArgs.Permission, tx.PermArgs.Value)
 				})
-		case *permission.HasRoleArgs:
+		case permission.HasRole:
 			return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
-		case *permission.AddRoleArgs:
-			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+		case permission.AddRole:
+			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					if !perms.AddRole(args.Role) {
-						return fmt.Errorf("role (%s) already exists for account %s", args.Role, args.Address)
+					if !perms.AddRole(tx.PermArgs.Role) {
+						return fmt.Errorf("role (%s) already exists for account %s", tx.PermArgs.Role, tx.PermArgs.Address)
 					}
 					return nil
 				})
-		case *permission.RmRoleArgs:
-			permAcc, err = mutatePermissions(exe.blockCache, args.Address,
+		case permission.RemoveRole:
+			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					if !perms.RmRole(args.Role) {
-						return fmt.Errorf("role (%s) does not exist for account %s", args.Role, args.Address)
+					if !perms.RmRole(tx.PermArgs.Role) {
+						return fmt.Errorf("role (%s) does not exist for account %s", tx.PermArgs.Role, tx.PermArgs.Address)
 					}
 					return nil
 				})
@@ -1016,8 +1015,8 @@ func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
 			return txs.ErrTxUnknownPubKey
 		}
 		addressFromPubKey := in.PubKey.Address()
-		addressFromAccount := acc.Address().Bytes()
-		if !bytes.Equal(addressFromPubKey, addressFromAccount) {
+		addressFromAccount := acc.Address()
+		if addressFromPubKey != addressFromAccount {
 			return txs.ErrTxInvalidPubKey
 		}
 		acc.SetPublicKey(in.PubKey)

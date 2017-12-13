@@ -380,7 +380,7 @@ func (tx *RebondTx) String() string {
 
 type PermissionsTx struct {
 	Input    *TxInput        `json:"input"`
-	PermArgs ptypes.PermArgs `json:"args"`
+	PermArgs *ptypes.PermArgs `json:"args"`
 }
 
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

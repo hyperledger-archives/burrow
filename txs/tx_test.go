@@ -23,6 +23,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var chainID = "myChainID"
@@ -113,7 +114,7 @@ func TestBondTxSignable(t *testing.T) {
 	privKeyBytes := make([]byte, 64)
 	privAccount := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes)
 	bondTx := &BondTx{
-		PubKey: privAccount.PubKey().Unwrap().(acm.PublicKeyEd25519),
+		PubKey: privAccount.PublicKey(),
 		Inputs: []*TxInput{
 			{
 				Address:  makeAddress("input1"),
@@ -137,7 +138,7 @@ func TestBondTxSignable(t *testing.T) {
 			},
 		},
 	}
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"pub_key":"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29","unbond_to":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"pub_key":[1,"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29"],"unbond_to":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
 		chainID, bondTx.Inputs[0].Address.String(), bondTx.Inputs[1].Address.String(), bondTx.UnbondTo[0].Address.String(), bondTx.UnbondTo[1].Address.String())
 	assert.Equal(t, expected, string(acm.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
 }
@@ -177,17 +178,13 @@ func TestPermissionsTxSignable(t *testing.T) {
 			Amount:   12345,
 			Sequence: 250,
 		},
-		PermArgs: &ptypes.SetBaseArgs{
-			Address:    makeAddress("address1"),
-			Permission: 1,
-			Value:      true,
-		},
+		PermArgs: ptypes.SetBaseArgs(makeAddress("address1"), 1, true),
 	}
 
 	signBytes := acm.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[32,{"args":"[2,{"address":"%s","permission":1,"value":true}]","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
-		chainID, permsTx.PermArgs.(*ptypes.SetBaseArgs).Address.String(), permsTx.Input.Address.String())
+		chainID, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
@@ -206,13 +203,26 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 		Fee:      222,
 		Data:     []byte("data1"),
 	}
-	txw := &Wrapper{Tx: callTx}
+	testTxMarshalJSON(t, callTx)
+}
+
+func TestNewPermissionsTxWithNonce(t *testing.T) {
+	privateKey := acm.PrivateKeyFromSecret("Shhh...")
+
+	args := ptypes.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
+	permTx := NewPermissionsTxWithNonce(privateKey.PublicKey(), args, 1)
+	testTxMarshalJSON(t, permTx)
+}
+
+func testTxMarshalJSON(t *testing.T, tx Tx) {
+	txw := &Wrapper{Tx: tx}
 	bs, err := json.Marshal(txw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txwOut := new(Wrapper)
-	json.Unmarshal(bs, txwOut)
+	err = json.Unmarshal(bs, txwOut)
+	require.NoError(t, err)
 	bsOut, err := json.Marshal(txwOut)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
 }
 

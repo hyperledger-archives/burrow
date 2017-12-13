@@ -138,10 +138,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	}
 
 	var address acm.Address
-	address, err = acm.AddressFromBytes(pub.Address())
-	if err != nil {
-		return
-	}
+	address = pub.Address()
 
 	amt, err = strconv.ParseUint(amtS, 10, 64)
 	if err != nil {

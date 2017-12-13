@@ -106,7 +106,7 @@ type ConcreteAccount struct {
 
 func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
 	return ConcreteAccount{
-		Address:   MustAddressFromBytes(pubKey.Address()),
+		Address:   pubKey.Address(),
 		PublicKey: pubKey,
 		// Since nil slices and maps compare differently to empty ones
 		Code:        Bytecode{},
@@ -274,11 +274,7 @@ var _ MutableAccount = concreteAccountWrapper{}
 
 func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount {
 	caw.ConcreteAccount.PublicKey = pubKey
-	addressFromPubKey, err := AddressFromBytes(pubKey.Address())
-	if err != nil {
-		// We rely on this working in all over the place so shouldn't happen
-		panic(fmt.Errorf("could not obtain address from public key: %v", pubKey))
-	}
+	addressFromPubKey := pubKey.Address()
 	// We don't want the wrong public key to take control of an account so we panic here
 	if caw.ConcreteAccount.Address != addressFromPubKey {
 		panic(fmt.Errorf("attempt to set public key of account %s to %v, "+

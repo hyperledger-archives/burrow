@@ -32,7 +32,7 @@ func ParticipantAccount(index int) GenesisSpec {
 		Accounts: []TemplateAccount{{
 			Name:        fmt.Sprintf("Participant_%v", index),
 			Amount:      &amount,
-			Permissions: []string{permission.SendString, permission.NameString, permission.HasRoleString},
+			Permissions: []string{permission.SendString, permission.CallString, permission.NameString, permission.HasRoleString},
 		}},
 	}
 }

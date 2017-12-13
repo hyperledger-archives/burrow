@@ -108,7 +108,7 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	if err != nil {
 		return nil, err
 	}
-	var args ptypes.PermArgs
+	var args *ptypes.PermArgs
 	switch permFunc {
 	case "setBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
@@ -126,13 +126,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		} else {
 			return nil, fmt.Errorf("Unknown value %s", argsS[2])
 		}
-		args = &ptypes.SetBaseArgs{addr, pF, value}
+		args = ptypes.SetBaseArgs(addr, pF, value)
 	case "unsetBase":
 		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
 		if err != nil {
 			return nil, err
 		}
-		args = &ptypes.UnsetBaseArgs{addr, pF}
+		args = ptypes.UnsetBaseArgs(addr, pF)
 	case "setGlobal":
 		pF, err := ptypes.PermStringToFlag(argsS[0])
 		if err != nil {
@@ -146,21 +146,21 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		} else {
 			return nil, fmt.Errorf("Unknown value %s", argsS[1])
 		}
-		args = &ptypes.SetGlobalArgs{pF, value}
+		args = ptypes.SetGlobalArgs(pF, value)
 	case "addRole":
 		address, err := addressFromHexString(argsS[0])
 		if err != nil {
 			return nil, err
 		}
-		args = &ptypes.AddRoleArgs{address, argsS[1]}
+		args = ptypes.AddRoleArgs(address, argsS[1])
 	case "removeRole":
 		address, err := addressFromHexString(argsS[0])
 		if err != nil {
 			return nil, err
 		}
-		args = &ptypes.RmRoleArgs{address, argsS[1]}
+		args = ptypes.RemoveRoleArgs(address, argsS[1])
 	default:
-		return nil, fmt.Errorf("Invalid permission function for use in PermissionsTx: %s", permFunc)
+		return nil, fmt.Errorf("invalid permission function for use in PermissionsTx: %s", permFunc)
 	}
 	// args := snativeArgs(
 	tx := txs.NewPermissionsTxWithNonce(pub, args, nonce)
@@ -258,6 +258,7 @@ type TxResult struct {
 // Preserve
 func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign,
 	broadcast, wait bool) (txResult *TxResult, err error) {
+
 	var inputAddr acm.Address
 	if sign {
 		inputAddr, tx, err = signTx(keyClient, chainID, tx)
@@ -268,7 +269,8 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 
 	if broadcast {
 		if wait {
-			wsClient, err := nodeClient.DeriveWebsocketClient()
+			var wsClient client.NodeWebsocketClient
+			wsClient, err = nodeClient.DeriveWebsocketClient()
 			if err != nil {
 				return nil, err
 			}
@@ -276,31 +278,34 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 			confirmationChannel, err = wsClient.WaitForConfirmation(tx, chainID, inputAddr)
 			if err != nil {
 				return nil, err
-			} else {
-				defer func() {
-					if err != nil {
-						// if broadcast threw an error, just return
-						return
-					}
-					confirmation := <-confirmationChannel
-					if confirmation.Error != nil {
-						err = fmt.Errorf("Encountered error waiting for event: %s", confirmation.Error)
-						return
-					}
-					if confirmation.Exception != nil {
-						err = fmt.Errorf("Encountered Exception from chain: %s", confirmation.Exception)
-						return
-					}
-					txResult.BlockHash = confirmation.BlockHash
-					txResult.Exception = ""
-					eventDataTx := confirmation.EventDataTx
-					if eventDataTx == nil {
-						err = fmt.Errorf("EventDataTx was nil")
-						return
-					}
-					txResult.Return = eventDataTx.Return
-				}()
 			}
+			defer func() {
+				if err != nil {
+					// if broadcast threw an error, just return
+					return
+				}
+				if txResult == nil {
+					err = fmt.Errorf("txResult unexpectedly not initialised in SignAndBroadcast")
+					return
+				}
+				confirmation := <-confirmationChannel
+				if confirmation.Error != nil {
+					err = fmt.Errorf("encountered error waiting for event: %s", confirmation.Error)
+					return
+				}
+				if confirmation.Exception != nil {
+					err = fmt.Errorf("encountered Exception from chain: %s", confirmation.Exception)
+					return
+				}
+				txResult.BlockHash = confirmation.BlockHash
+				txResult.Exception = ""
+				eventDataTx := confirmation.EventDataTx
+				if eventDataTx == nil {
+					err = fmt.Errorf("EventDataTx was nil")
+					return
+				}
+				txResult.Return = eventDataTx.Return
+			}()
 		}
 
 		var receipt *txs.Receipt

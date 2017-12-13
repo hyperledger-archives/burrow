@@ -5,7 +5,7 @@ import "github.com/tendermint/go-crypto"
 // This allows us to control serialisation
 
 type PublicKey struct {
-	crypto.PubKey
+	crypto.PubKey `json:"unwrap"`
 }
 
 func PublicKeyFromPubKey(pubKey crypto.PubKey) PublicKey {
@@ -14,6 +14,10 @@ func PublicKeyFromPubKey(pubKey crypto.PubKey) PublicKey {
 
 func PrivateKeyFromPrivKey(privKey crypto.PrivKey) PrivateKey {
 	return PrivateKey{PrivKey: privKey}
+}
+
+func (pk PublicKey) Address() Address {
+	return MustAddressFromBytes(pk.PubKey.Address())
 }
 
 func (pk PublicKey) MarshalJSON() ([]byte, error) {
@@ -34,6 +38,10 @@ func (pk *PublicKey) UnmarshalText(text []byte) error {
 
 type PrivateKey struct {
 	crypto.PrivKey
+}
+
+func (pk PrivateKey) PublicKey() PublicKey {
+	return PublicKeyFromPubKey(pk.PubKey())
 }
 
 func (pk PrivateKey) MarshalJSON() ([]byte, error) {

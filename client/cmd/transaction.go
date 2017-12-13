@@ -155,10 +155,6 @@ func addTransactionPersistentFlags(transactionCmd *cobra.Command) {
 //------------------------------------------------------------------------------
 // Defaults
 
-func defaultChainId() string {
-	return setDefaultString("CHAIN_ID", "")
-}
-
 func defaultKeyDaemonAddress() string {
 	return setDefaultString("BURROW_CLIENT_SIGN_ADDRESS", "http://127.0.0.1:4767")
 }

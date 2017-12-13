@@ -15,108 +15,74 @@
 package permission
 
 import (
-	"github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-wire"
 )
 
 //---------------------------------------------------------------------------------------------------
 // PermissionsTx.PermArgs interface and argument encoding
 
-// Arguments are a registered interface in the PermissionsTx,
-// so binary handles the arguments and each permission function gets a type-byte
-// PermFlag() maps the type-byte to the permission
-// The account sending the PermissionsTx must have this PermFlag set
-type PermArgs interface {
-	PermFlag() types.PermFlag
+type PermArgs struct {
+	PermFlag   types.PermFlag
+	Address    acm.Address    `json:",omitempty"`
+	Permission types.PermFlag `json:",omitempty"`
+	Role       string         `json:",omitempty"`
+	Value      bool           `json:",omitempty"`
 }
 
-const (
-	PermArgsTypeHasBase   = byte(0x01)
-	PermArgsTypeSetBase   = byte(0x02)
-	PermArgsTypeUnsetBase = byte(0x03)
-	PermArgsTypeSetGlobal = byte(0x04)
-	PermArgsTypeHasRole   = byte(0x05)
-	PermArgsTypeAddRole   = byte(0x06)
-	PermArgsTypeRmRole    = byte(0x07)
-)
-
-// TODO: [ben] this registration needs to be lifted up
-// and centralised in core; here it pulls in go-wire dependency
-// while it suffices to have the type bytes defined;
-// ---
-// for wire.readReflect
-var _ = wire.RegisterInterface(
-	struct{ PermArgs }{},
-	wire.ConcreteType{&HasBaseArgs{}, PermArgsTypeHasBase},
-	wire.ConcreteType{&SetBaseArgs{}, PermArgsTypeSetBase},
-	wire.ConcreteType{&UnsetBaseArgs{}, PermArgsTypeUnsetBase},
-	wire.ConcreteType{&SetGlobalArgs{}, PermArgsTypeSetGlobal},
-	wire.ConcreteType{&HasRoleArgs{}, PermArgsTypeHasRole},
-	wire.ConcreteType{&AddRoleArgs{}, PermArgsTypeAddRole},
-	wire.ConcreteType{&RmRoleArgs{}, PermArgsTypeRmRole},
-)
-
-type HasBaseArgs struct {
-	Address    account.Address `json:"address"`
-	Permission types.PermFlag  `json:"permission"`
+func HasBaseArgs(address acm.Address, permission types.PermFlag) *PermArgs {
+	return &PermArgs{
+		PermFlag:   HasBase,
+		Address:    address,
+		Permission: permission,
+	}
 }
 
-func (*HasBaseArgs) PermFlag() types.PermFlag {
-	return HasBase
+func SetBaseArgs(address acm.Address, permission types.PermFlag, value bool) *PermArgs {
+	return &PermArgs{
+		PermFlag:   SetBase,
+		Address:    address,
+		Permission: permission,
+		Value:      value,
+	}
 }
 
-type SetBaseArgs struct {
-	Address    account.Address `json:"address"`
-	Permission types.PermFlag  `json:"permission"`
-	Value      bool            `json:"value"`
+func UnsetBaseArgs(address acm.Address, permission types.PermFlag) *PermArgs {
+	return &PermArgs{
+		PermFlag:   UnsetBase,
+		Address:    address,
+		Permission: permission,
+	}
 }
 
-func (*SetBaseArgs) PermFlag() types.PermFlag {
-	return SetBase
+func SetGlobalArgs(permission types.PermFlag, value bool) *PermArgs {
+	return &PermArgs{
+		PermFlag:   SetGlobal,
+		Permission: permission,
+		Value:      value,
+	}
 }
 
-type UnsetBaseArgs struct {
-	Address    account.Address `json:"address"`
-	Permission types.PermFlag  `json:"permission"`
+func HasRoleArgs(address acm.Address, role string) *PermArgs {
+	return &PermArgs{
+		PermFlag: HasRole,
+		Address:  address,
+		Role:     role,
+	}
 }
 
-func (*UnsetBaseArgs) PermFlag() types.PermFlag {
-	return UnsetBase
+func AddRoleArgs(address acm.Address, role string) *PermArgs {
+	return &PermArgs{
+		PermFlag: AddRole,
+		Address:  address,
+		Role:     role,
+	}
 }
 
-type SetGlobalArgs struct {
-	Permission types.PermFlag `json:"permission"`
-	Value      bool           `json:"value"`
-}
-
-func (*SetGlobalArgs) PermFlag() types.PermFlag {
-	return SetGlobal
-}
-
-type HasRoleArgs struct {
-	Address account.Address `json:"address"`
-	Role    string          `json:"role"`
-}
-
-func (*HasRoleArgs) PermFlag() types.PermFlag {
-	return HasRole
-}
-
-type AddRoleArgs struct {
-	Address account.Address `json:"address"`
-	Role    string          `json:"role"`
-}
-
-func (*AddRoleArgs) PermFlag() types.PermFlag {
-	return AddRole
-}
-
-type RmRoleArgs struct {
-	Address account.Address `json:"address"`
-	Role    string          `json:"role"`
-}
-
-func (*RmRoleArgs) PermFlag() types.PermFlag {
-	return RemoveRole
+func RemoveRoleArgs(address acm.Address, role string) *PermArgs {
+	return &PermArgs{
+		PermFlag: RemoveRole,
+		Address:  address,
+		Role:     role,
+	}
 }

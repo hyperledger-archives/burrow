@@ -72,7 +72,7 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 	privAccount := &acm.ConcretePrivateAccount{
 		PublicKey:  pubKey,
 		PrivateKey: privKey,
-		Address:    acm.MustAddressFromBytes(pubKey.Address()),
+		Address:    pubKey.Address(),
 	}
 	perms := permission.DefaultAccountPermissions
 	acc := &acm.ConcreteAccount{
