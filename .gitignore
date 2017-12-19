@@ -1,6 +1,11 @@
 # build target
 target
-scratch/
+bin/
+
+# tests
+test_scratch/
+*.log
+.burrow
 
 # Temporary / cached
 *.swp

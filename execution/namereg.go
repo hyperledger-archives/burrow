@@ -20,82 +20,108 @@ import (
 	"fmt"
 	"sync"
 
-	sm "github.com/hyperledger/burrow/execution/state"
-
-	core_types "github.com/hyperledger/burrow/core/types"
-	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/event"
 )
 
 // NameReg is part of the pipe for BurrowMint and provides the implementation
 // for the pipe to call into the BurrowMint application
 
+type NameRegGetter interface {
+	GetNameRegEntry(name string) *NameRegEntry
+}
+
+type NameRegIterable interface {
+	NameRegGetter
+	IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool)
+}
+
 type namereg struct {
-	burrowMint    *BurrowMint
+	state         *State
+	blockchain    blockchain.Blockchain
 	filterFactory *event.FilterFactory
 }
 
-func newNameReg(burrowMint *BurrowMint) *namereg {
+var _ NameRegIterable = &namereg{}
 
-	ff := event.NewFilterFactory()
+type NameRegEntry struct {
+	Name    string          `json:"name"`    // registered name for the entry
+	Owner   account.Address `json:"owner"`   // address that created the entry
+	Data    string          `json:"data"`    // data to store under this name
+	Expires uint64          `json:"expires"` // block at which this entry expires
+}
 
-	ff.RegisterFilterPool("name", &sync.Pool{
+func NewNameReg(state *State, blockchain blockchain.Blockchain) *namereg {
+	filterFactory := event.NewFilterFactory()
+
+	filterFactory.RegisterFilterPool("name", &sync.Pool{
 		New: func() interface{} {
 			return &NameRegNameFilter{}
 		},
 	})
 
-	ff.RegisterFilterPool("owner", &sync.Pool{
+	filterFactory.RegisterFilterPool("owner", &sync.Pool{
 		New: func() interface{} {
 			return &NameRegOwnerFilter{}
 		},
 	})
 
-	ff.RegisterFilterPool("data", &sync.Pool{
+	filterFactory.RegisterFilterPool("data", &sync.Pool{
 		New: func() interface{} {
 			return &NameRegDataFilter{}
 		},
 	})
 
-	ff.RegisterFilterPool("expires", &sync.Pool{
+	filterFactory.RegisterFilterPool("expires", &sync.Pool{
 		New: func() interface{} {
 			return &NameRegExpiresFilter{}
 		},
 	})
 
-	return &namereg{burrowMint, ff}
+	return &namereg{
+		state:         state,
+		blockchain:    blockchain,
+		filterFactory: filterFactory,
+	}
 }
 
-func (this *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
-	st := this.burrowMint.GetState() // performs a copy
-	entry := st.GetNameRegEntry(key)
+func (nr *namereg) GetNameRegEntry(name string) *NameRegEntry {
+	return nr.state.GetNameRegEntry(name)
+}
+
+func (nr *namereg) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) bool {
+	return nr.state.IterateNameRegEntries(consumer)
+}
+
+func (nr *namereg) Entry(key string) (*NameRegEntry, error) {
+	entry := nr.state.GetNameRegEntry(key)
 	if entry == nil {
-		return nil, fmt.Errorf("Entry %s not found", key)
+		return nil, fmt.Errorf("entry %s not found", key)
 	}
 	return entry, nil
 }
 
-func (this *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
-	var blockHeight int
-	var names []*core_types.NameRegEntry
-	state := this.burrowMint.GetState()
-	blockHeight = state.LastBlockHeight
-	filter, err := this.filterFactory.NewFilter(filters)
+func (nr *namereg) Entries(filters []*event.FilterData) (*ResultListNames, error) {
+	var names []*NameRegEntry
+	blockHeight := nr.blockchain.Tip().LastBlockHeight()
+	filter, err := nr.filterFactory.NewFilter(filters)
 	if err != nil {
 		return nil, fmt.Errorf("Error in query: " + err.Error())
 	}
-	state.GetNames().Iterate(func(key, value []byte) bool {
-		nre := sm.DecodeNameRegEntry(value)
+	nr.state.GetNames().Iterate(func(key, value []byte) bool {
+		nre := DecodeNameRegEntry(value)
 		if filter.Match(nre) {
 			names = append(names, nre)
 		}
 		return false
 	})
-	return &core_types.ResultListNames{blockHeight, names}, nil
+	return &ResultListNames{blockHeight, names}, nil
 }
 
 type ResultListNames struct {
-	BlockHeight int                        `json:"block_height"`
-	Names       []*core_types.NameRegEntry `json:"names"`
+	BlockHeight uint64          `json:"block_height"`
+	Names       []*NameRegEntry `json:"names"`
 }
 
 // Filter for namereg name. This should not be used to get individual entries by name.
@@ -127,7 +153,7 @@ func (this *NameRegNameFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegNameFilter) Match(v interface{}) bool {
-	nre, ok := v.(*core_types.NameRegEntry)
+	nre, ok := v.(*NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -147,7 +173,7 @@ func (this *NameRegOwnerFilter) Configure(fd *event.FilterData) error {
 	val, err := hex.DecodeString(fd.Value)
 
 	if err != nil {
-		return fmt.Errorf("Wrong value type.")
+		return fmt.Errorf("wrong value type.")
 	}
 	if op == "==" {
 		this.match = func(a, b []byte) bool {
@@ -166,11 +192,11 @@ func (this *NameRegOwnerFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegOwnerFilter) Match(v interface{}) bool {
-	nre, ok := v.(*core_types.NameRegEntry)
+	nre, ok := v.(*NameRegEntry)
 	if !ok {
 		return false
 	}
-	return this.match(nre.Owner, this.value)
+	return this.match(nre.Owner.Bytes(), this.value)
 }
 
 // Filter for namereg data. Useful for example if you store an ipfs hash and know the hash but need the key.
@@ -202,7 +228,7 @@ func (this *NameRegDataFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegDataFilter) Match(v interface{}) bool {
-	nre, ok := v.(*core_types.NameRegEntry)
+	nre, ok := v.(*NameRegEntry)
 	if !ok {
 		return false
 	}
@@ -213,8 +239,8 @@ func (this *NameRegDataFilter) Match(v interface{}) bool {
 // Ops: All
 type NameRegExpiresFilter struct {
 	op    string
-	value int64
-	match func(int64, int64) bool
+	value uint64
+	match func(uint64, uint64) bool
 }
 
 func (this *NameRegExpiresFilter) Configure(fd *event.FilterData) error {
@@ -233,9 +259,9 @@ func (this *NameRegExpiresFilter) Configure(fd *event.FilterData) error {
 }
 
 func (this *NameRegExpiresFilter) Match(v interface{}) bool {
-	nre, ok := v.(*core_types.NameRegEntry)
+	nre, ok := v.(*NameRegEntry)
 	if !ok {
 		return false
 	}
-	return this.match(int64(nre.Expires), this.value)
+	return this.match(nre.Expires, this.value)
 }

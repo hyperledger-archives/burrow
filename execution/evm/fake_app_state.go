@@ -12,83 +12,76 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 import (
 	"fmt"
 
-	. "github.com/hyperledger/burrow/word256"
-	"github.com/hyperledger/sawtooth-core/families/seth/src/burrow/evm/sha3"
+	"bytes"
+
+	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
 )
 
 type FakeAppState struct {
-	accounts map[string]*Account
+	accounts map[acm.Address]acm.Account
 	storage  map[string]Word256
 }
 
-func (fas *FakeAppState) GetAccount(addr Word256) *Account {
-	account := fas.accounts[addr.String()]
-	return account
+var _ acm.StateWriter = &FakeAppState{}
+
+func (fas *FakeAppState) GetAccount(addr acm.Address) (acm.Account, error) {
+	account := fas.accounts[addr]
+	return account, nil
 }
 
-func (fas *FakeAppState) UpdateAccount(account *Account) {
-	fas.accounts[account.Address.String()] = account
+func (fas *FakeAppState) UpdateAccount(account acm.Account) error {
+	fas.accounts[account.Address()] = account
+	return nil
 }
 
-func (fas *FakeAppState) RemoveAccount(account *Account) {
-	_, ok := fas.accounts[account.Address.String()]
+func (fas *FakeAppState) RemoveAccount(address acm.Address) error {
+	_, ok := fas.accounts[address]
 	if !ok {
-		panic(fmt.Sprintf("Invalid account addr: %X", account.Address))
+		panic(fmt.Sprintf("Invalid account addr: %s", address))
 	} else {
 		// Remove account
-		delete(fas.accounts, account.Address.String())
+		delete(fas.accounts, address)
 	}
+	return nil
 }
 
-func (fas *FakeAppState) CreateAccount(creator *Account) *Account {
-	addr := createAddress(creator)
-	account := fas.accounts[addr.String()]
-	if account == nil {
-		return &Account{
-			Address: addr,
-			Balance: 0,
-			Code:    nil,
-			Nonce:   0,
-		}
-	} else {
-		panic(fmt.Sprintf("Invalid account addr: %X", addr))
-	}
-}
-
-func (fas *FakeAppState) GetStorage(addr Word256, key Word256) Word256 {
-	_, ok := fas.accounts[addr.String()]
+func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) (Word256, error) {
+	_, ok := fas.accounts[addr]
 	if !ok {
-		panic(fmt.Sprintf("Invalid account addr: %X", addr))
+		panic(fmt.Sprintf("Invalid account addr: %s", addr))
 	}
 
 	value, ok := fas.storage[addr.String()+key.String()]
 	if ok {
-		return value
+		return value, nil
 	} else {
-		return Zero256
+		return Zero256, nil
 	}
 }
 
-func (fas *FakeAppState) SetStorage(addr Word256, key Word256, value Word256) {
-	_, ok := fas.accounts[addr.String()]
+func (fas *FakeAppState) SetStorage(addr acm.Address, key Word256, value Word256) error {
+	_, ok := fas.accounts[addr]
 	if !ok {
-		panic(fmt.Sprintf("Invalid account addr: %X", addr))
+
+		fmt.Println("\n\n", fas.accountsDump())
+		panic(fmt.Sprintf("Invalid account addr: %s", addr))
 	}
 
 	fas.storage[addr.String()+key.String()] = value
+	return nil
 }
 
-// Creates a 20 byte address and bumps the nonce.
-func createAddress(creator *Account) Word256 {
-	nonce := creator.Nonce
-	creator.Nonce += 1
-	temp := make([]byte, 32+8)
-	copy(temp, creator.Address[:])
-	PutInt64BE(temp[32:], nonce)
-	return LeftPadWord256(sha3.Sha3(temp)[:20])
+func (fas *FakeAppState) accountsDump() string {
+	buf := new(bytes.Buffer)
+	fmt.Fprint(buf, "Dumping accounts...", "\n")
+	for _, acc := range fas.accounts {
+		fmt.Fprint(buf, acc.Address().String(), "\n")
+	}
+	return buf.String()
 }

@@ -17,11 +17,11 @@ package v0
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/execution/evm/opcodes"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution/evm/asm"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-wire"
 )
@@ -30,10 +30,10 @@ func TestBroadcastTx(t *testing.T) {
 	testData := LoadTestData()
 	pipe := NewMockPipe(testData)
 	methods := NewBurrowMethods(NewTCodec(), pipe)
-	pubKey := account.GenPrivAccount().PubKey
-	address := []byte{1}
-	code := opcodes.Bytecode(opcodes.PUSH1, 1, opcodes.PUSH1, 1, opcodes.ADD)
-	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, address, code, 10, 2,
+	pubKey := acm.GeneratePrivateAccount().PubKey()
+	address := acm.Address{1}
+	code := bc.Splice(asm.PUSH1, 1, asm.PUSH1, 1, asm.ADD)
+	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, &address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
 	request := rpc.NewRPCRequest("TestBroadcastTx", "BroadcastTx", jsonBytes)

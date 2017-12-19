@@ -63,11 +63,11 @@ func init() {
 }
 
 type solidityContract struct {
-	*vm.SNativeContractDescription
+	*evm.SNativeContractDescription
 }
 
 type solidityFunction struct {
-	*vm.SNativeFunctionDescription
+	*evm.SNativeFunctionDescription
 }
 
 //
@@ -75,7 +75,7 @@ type solidityFunction struct {
 //
 
 // Create a templated solidityContract from an SNative contract description
-func NewSolidityContract(contract *vm.SNativeContractDescription) *solidityContract {
+func NewSolidityContract(contract *evm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{contract}
 }
 
@@ -95,7 +95,7 @@ func (contract *solidityContract) InstanceName() string {
 }
 
 func (contract *solidityContract) Address() string {
-	return fmt.Sprintf("0x%x",
+	return fmt.Sprintf("0x%s",
 		contract.SNativeContractDescription.Address())
 }
 
@@ -123,7 +123,7 @@ func (contract *solidityContract) Functions() []*solidityFunction {
 //
 
 // Create a templated solidityFunction from an SNative function description
-func NewSolidityFunction(function *vm.SNativeFunctionDescription) *solidityFunction {
+func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunction {
 	return &solidityFunction{function}
 }
 

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/config"
 )
 
@@ -16,6 +17,8 @@ func TestLaunchGenesisValidator(t *testing.T) {
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
 	conf := config.DefaultConfig()
+	conf.ChainID = "TestChain"
 	logger, _ := lifecycle.NewStdErrLogger()
-	LaunchGenesisValidator(conf, logger)
+	err := LaunchGenesisValidator(conf, logger)
+	assert.NoError(t, err)
 }

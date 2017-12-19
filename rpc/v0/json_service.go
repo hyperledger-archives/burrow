@@ -67,13 +67,13 @@ func (this *JsonRpcServer) handleFunc(c *gin.Context) {
 type BurrowJsonService struct {
 	codec           rpc.Codec
 	pipe            definitions.Pipe
-	eventSubs       *event.EventSubscriptions
+	eventSubs       *event.Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
 }
 
 // Create a new JSON-RPC 2.0 service for burrow (tendermint).
 func NewBurrowJsonService(codec rpc.Codec, pipe definitions.Pipe,
-	eventSubs *event.EventSubscriptions) server.HttpService {
+	eventSubs *event.Subscriptions) server.HttpService {
 
 	tmhttps := &BurrowJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
 	mtds := NewBurrowMethods(codec, pipe)

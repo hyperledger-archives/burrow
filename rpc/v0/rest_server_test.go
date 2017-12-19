@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	account "github.com/hyperledger/burrow/account"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	event "github.com/hyperledger/burrow/event"
 	rpc "github.com/hyperledger/burrow/rpc"
@@ -57,7 +56,7 @@ func (mockSuite *MockSuite) SetupSuite() {
 	testData := LoadTestData()
 	pipe := NewMockPipe(testData)
 	codec := &TCodec{}
-	evtSubs := event.NewEventSubscriptions(pipe.Events())
+	evtSubs := event.NewSubscriptions(pipe.Events())
 	// The server
 	restServer := NewRestServer(codec, pipe, evtSubs)
 	sConf := server.DefaultServerConfig()
@@ -93,7 +92,7 @@ func (mockSuite *MockSuite) TestGetAccounts() {
 func (mockSuite *MockSuite) TestGetAccount() {
 	addr := hex.EncodeToString(mockSuite.testData.GetAccount.Input.Address)
 	resp := mockSuite.get("/accounts/" + addr)
-	ret := &account.Account{}
+	ret := &account.ConcreteAccount{}
 	errD := mockSuite.codec.Decode(ret, resp.Body)
 	mockSuite.NoError(errD)
 	mockSuite.Equal(mockSuite.testData.GetAccount.Output, ret)
@@ -165,7 +164,7 @@ func (mockSuite *MockSuite) TestBlocks() {
 // TODO: re-enable these when implemented
 //func (mockSuite *MockSuite) TestGetConsensusState() {
 //	resp := mockSuite.get("/consensus")
-//	ret := &core_types.ConsensusState{}
+//	ret := &core_types.RoundState{}
 //	errD := mockSuite.codec.Decode(ret, resp.Body)
 //	mockSuite.NoError(errD)
 //	ret.StartTime = ""

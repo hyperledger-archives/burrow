@@ -20,9 +20,9 @@ import (
 
 	definitions "github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/evm"
 	rpc "github.com/hyperledger/burrow/rpc"
 	server "github.com/hyperledger/burrow/server"
-	"github.com/hyperledger/burrow/txs"
 )
 
 // Used for Burrow. Implements WebSocketService.
@@ -125,7 +125,7 @@ func (this *BurrowWsService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INTERNAL_ERROR, errSID
 	}
 
-	callback := func(ret txs.EventData) {
+	callback := func(ret evm.EventData) {
 		this.writeResponse(subId, ret, session)
 	}
 	errC := this.pipe.Events().Subscribe(subId, eventId, callback)

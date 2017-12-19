@@ -17,20 +17,19 @@ package v0
 import (
 	"fmt"
 
-	account "github.com/hyperledger/burrow/account"
-	core_types "github.com/hyperledger/burrow/core/types"
+	"github.com/hyperledger/burrow/account"
 	definitions "github.com/hyperledger/burrow/definitions"
-	event "github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event"
 
-	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
-	manager_types "github.com/hyperledger/burrow/execution/types"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 
+	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging/loggers"
 	abci_types "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
 	mintTypes "github.com/tendermint/tendermint/types"
 )
@@ -39,9 +38,9 @@ import (
 type MockPipe struct {
 	testData        TestData
 	accounts        definitions.Accounts
-	blockchain      blockchain_types.Blockchain
+	blockchain      blockchain.Blockchain
 	consensusEngine consensus_types.ConsensusEngine
-	events          event.EventEmitter
+	events          event.Emitter
 	namereg         definitions.NameReg
 	transactor      definitions.Transactor
 	logger          logging_types.InfoTraceLogger
@@ -74,7 +73,7 @@ func (pipe *MockPipe) Blockchain() blockchain_types.Blockchain {
 	return pipe.blockchain
 }
 
-func (pipe *MockPipe) Events() event.EventEmitter {
+func (pipe *MockPipe) Events() event.Emitter {
 	return pipe.events
 }
 
@@ -128,27 +127,27 @@ type accounts struct {
 	testData *TestData
 }
 
-func (acc *accounts) GenPrivAccount() (*account.PrivAccount, error) {
+func (acc *accounts) GenPrivAccount() (*account.ConcretePrivateAccount, error) {
 	return acc.testData.GenPrivAccount.Output, nil
 }
 
-func (acc *accounts) GenPrivAccountFromKey(key []byte) (*account.PrivAccount, error) {
+func (acc *accounts) GenPrivAccountFromKey(key []byte) (*account.ConcretePrivateAccount, error) {
 	return acc.testData.GenPrivAccount.Output, nil
 }
 
-func (acc *accounts) Accounts([]*event.FilterData) (*core_types.AccountList, error) {
+func (acc *accounts) Accounts([]*event.FilterData) (*AccountList, error) {
 	return acc.testData.GetAccounts.Output, nil
 }
 
-func (acc *accounts) Account(address []byte) (*account.Account, error) {
+func (acc *accounts) Account(address []byte) (*account.ConcreteAccount, error) {
 	return acc.testData.GetAccount.Output, nil
 }
 
-func (acc *accounts) Storage(address []byte) (*core_types.Storage, error) {
+func (acc *accounts) Storage(address []byte) (*Storage, error) {
 	return acc.testData.GetStorage.Output, nil
 }
 
-func (acc *accounts) StorageAt(address, key []byte) (*core_types.StorageItem, error) {
+func (acc *accounts) StorageAt(address, key []byte) (*StorageItem, error) {
 	return acc.testData.GetStorageAt.Output, nil
 }
 
@@ -208,16 +207,16 @@ func (cons *consensusEngine) Peers() []*consensus_types.Peer {
 	return cons.testData.GetPeers.Output
 }
 
-func (cons *consensusEngine) PublicValidatorKey() crypto.PubKey {
-	return crypto.PubKeyEd25519{
+func (cons *consensusEngine) PublicValidatorKey() acm.PublicKey {
+	return acm.PublicKeyEd25519{
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,
-	}
+	}.Wrap()
 }
 
-func (cons *consensusEngine) Events() event.EventEmitter {
+func (cons *consensusEngine) Events() event.Emitter {
 	return nil
 }
 
@@ -225,12 +224,12 @@ func (cons *consensusEngine) ListUnconfirmedTxs(maxTxs int) ([]txs.Tx, error) {
 	return cons.testData.GetUnconfirmedTxs.Output.Txs, nil
 }
 
-func (cons *consensusEngine) ListValidators() []consensus_types.Validator {
+func (cons *consensusEngine) ListValidators() []abci_types.Validator {
 	return nil
 }
 
-func (cons *consensusEngine) ConsensusState() *consensus_types.ConsensusState {
-	return &consensus_types.ConsensusState{}
+func (cons *consensusEngine) ConsensusState() *consensus.RoundState {
+	return &consensus.RoundState{}
 }
 
 func (cons *consensusEngine) PeerConsensusStates() map[string]string {
@@ -246,7 +245,7 @@ type eventer struct {
 	testData *TestData
 }
 
-func (evntr *eventer) Subscribe(subId, event string, callback func(txs.EventData)) error {
+func (evntr *eventer) Subscribe(subId, event string, callback func(evm.EventData)) error {
 	return nil
 }
 
@@ -259,11 +258,11 @@ type namereg struct {
 	testData *TestData
 }
 
-func (nmreg *namereg) Entry(key string) (*core_types.NameRegEntry, error) {
+func (nmreg *namereg) Entry(key string) (*execution.NameRegEntry, error) {
 	return nmreg.testData.GetNameRegEntry.Output, nil
 }
 
-func (nmreg *namereg) Entries(filters []*event.FilterData) (*core_types.ResultListNames, error) {
+func (nmreg *namereg) Entries(filters []*event.FilterData) (*execution.ResultListNames, error) {
 	return nmreg.testData.GetNameRegEntries.Output, nil
 }
 
@@ -272,11 +271,11 @@ type transactor struct {
 	testData *TestData
 }
 
-func (trans *transactor) Call(fromAddress, toAddress, data []byte) (*core_types.Call, error) {
+func (trans *transactor) Call(fromAddress, toAddress, data []byte) (*execution.Call, error) {
 	return trans.testData.Call.Output, nil
 }
 
-func (trans *transactor) CallCode(from, code, data []byte) (*core_types.Call, error) {
+func (trans *transactor) CallCode(from, code, data []byte) (*execution.Call, error) {
 	return trans.testData.CallCode.Output, nil
 }
 
@@ -292,15 +291,15 @@ func (trans *transactor) Transact(privKey, address, data []byte, gasLimit, fee i
 	return trans.testData.Transact.Output, nil
 }
 
-func (trans *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*txs.EventDataCall, error) {
+func (trans *transactor) TransactAndHold(privKey, address, data []byte, gasLimit, fee int64) (*evm.EventDataCall, error) {
 	return nil, nil
 }
 
-func (trans *transactor) Send(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) Send(privKey, toAddress account.Address, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
-func (trans *transactor) SendAndHold(privKey, toAddress []byte, amount int64) (*txs.Receipt, error) {
+func (trans *transactor) SendAndHold(privKey, toAddress account.Address, amount int64) (*txs.Receipt, error) {
 	return nil, nil
 }
 
@@ -308,6 +307,6 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 	return trans.testData.TransactNameReg.Output, nil
 }
 
-func (trans *transactor) SignTx(tx txs.Tx, privAccounts []*account.PrivAccount) (txs.Tx, error) {
+func (trans *transactor) SignTx(tx txs.Tx, privAccounts []*account.ConcretePrivateAccount) (txs.Tx, error) {
 	return nil, nil
 }

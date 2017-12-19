@@ -21,11 +21,10 @@ import (
 
 	"sync"
 
-	blockchain_types "github.com/hyperledger/burrow/blockchain/types"
 	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/util/architecture"
-	tendermint_types "github.com/tendermint/tendermint/types"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const BLOCK_MAX = 50
@@ -52,19 +51,19 @@ func NewBlockchainFilterFactory() *event.FilterFactory {
 
 // Get the blocks from 'minHeight' to 'maxHeight'.
 // TODO Caps on total number of blocks should be set.
-func FilterBlocks(blockchain blockchain_types.Blockchain,
+func FilterBlocks(blockStore tm_types.BlockStoreRPC,
 	filterFactory *event.FilterFactory,
 	filterData []*event.FilterData) (*core_types.Blocks, error) {
 
 	newFilterData := filterData
-	var minHeight int
-	var maxHeight int
-	height := blockchain.Height()
+	var minHeight uint64
+	var maxHeight uint64
+	height := uint64(blockStore.Height())
 	if height == 0 {
 		return &core_types.Blocks{
 			MinHeight:  0,
 			MaxHeight:  0,
-			BlockMetas: []*tendermint_types.BlockMeta{},
+			BlockMetas: []*tm_types.BlockMeta{},
 		}, nil
 	}
 	// Optimization. Break any height filters out. Messy but makes sure we don't
@@ -80,13 +79,13 @@ func FilterBlocks(blockchain blockchain_types.Blockchain,
 			return nil, fmt.Errorf("Error in query: " + err.Error())
 		}
 	}
-	blockMetas := make([]*tendermint_types.BlockMeta, 0)
+	blockMetas := make([]*tm_types.BlockMeta, 0)
 	filter, skumtFel := filterFactory.NewFilter(newFilterData)
 	if skumtFel != nil {
 		return nil, fmt.Errorf("Fel i förfrågan. Helskumt...: " + skumtFel.Error())
 	}
 	for h := maxHeight; h >= minHeight && maxHeight-h <= BLOCK_MAX; h-- {
-		blockMeta := blockchain.BlockMeta(h)
+		blockMeta := blockStore.LoadBlockMeta(int(h))
 		if filter.Match(blockMeta) {
 			blockMetas = append(blockMetas, blockMeta)
 		}
@@ -143,7 +142,7 @@ func (blockHeightFilter *BlockHeightFilter) Configure(fd *event.FilterData) erro
 }
 
 func (this *BlockHeightFilter) Match(v interface{}) bool {
-	bl, ok := v.(*tendermint_types.BlockMeta)
+	bl, ok := v.(*tm_types.BlockMeta)
 	if !ok {
 		return false
 	}
@@ -151,15 +150,15 @@ func (this *BlockHeightFilter) Match(v interface{}) bool {
 }
 
 // TODO i should start using named return params...
-func getHeightMinMax(fda []*event.FilterData, height int) (int, int, []*event.FilterData, error) {
+func getHeightMinMax(fda []*event.FilterData, height uint64) (uint64, uint64, []*event.FilterData, error) {
 
-	min := 0
+	min := uint64(0)
 	max := height
 
 	for len(fda) > 0 {
 		fd := fda[0]
 		if strings.EqualFold(fd.Field, "height") {
-			var val int
+			var val uint64
 			if fd.Value == "min" {
 				val = 0
 			} else if fd.Value == "max" {
@@ -169,7 +168,7 @@ func getHeightMinMax(fda []*event.FilterData, height int) (int, int, []*event.Fi
 				if err != nil {
 					return 0, 0, nil, fmt.Errorf("Wrong value type")
 				}
-				val = int(v)
+				val = uint64(v)
 			}
 			switch fd.Op {
 			case "==":

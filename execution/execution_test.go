@@ -22,22 +22,26 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	. "github.com/hyperledger/burrow/binary"
+	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/event"
+	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
-	. "github.com/hyperledger/burrow/execution/evm/opcodes"
-	genesis "github.com/hyperledger/burrow/genesis"
+	. "github.com/hyperledger/burrow/execution/evm/asm"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
-	. "github.com/hyperledger/burrow/word256"
-
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/events"
 )
 
 var (
 	dbBackend           = "memdb"
 	dbDir               = ""
-	permissionsContract = vm.SNativeContracts()["Permissions"]
+	permissionsContract = evm.SNativeContracts()["Permissions"]
 )
 
 /*
@@ -102,49 +106,50 @@ x 		- roles: has, add, rm
 */
 
 // keys
-var user = makeUsers(10)
-var chainID = "testchain"
-var logger, _ = lifecycle.NewStdErrLogger()
+var users = makeUsers(10)
+var logger = loggers.NewNoopInfoTraceLogger()
 
-func makeUsers(n int) []*acm.PrivAccount {
-	accounts := []*acm.PrivAccount{}
+func makeUsers(n int) []acm.PrivateAccount {
+	users := make([]acm.PrivateAccount, n)
 	for i := 0; i < n; i++ {
-		secret := ("mysecret" + strconv.Itoa(i))
-		user := acm.GenPrivAccountFromSecret(secret)
-		accounts = append(accounts, user)
+		secret := "mysecret" + strconv.Itoa(i)
+		users[i] = acm.GeneratePrivateAccountFromSecret(secret)
 	}
-	return accounts
+	return users
 }
 
-var (
-	PermsAllFalse = ptypes.ZeroAccountPermissions
-)
+func makeExecutor(state *State) *executor {
+	return newExecutor(true, state, testChainID, bcm.NewBlockchain(testGenesisDoc), event.NewEmitter(logger),
+		logger)
+}
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
-	genAccounts := []genesis.GenesisAccount{}
-	for _, u := range user[:5] {
+	genAccounts := []genesis.Account{}
+	for _, user := range users[:5] {
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
-		genAccounts = append(genAccounts, genesis.GenesisAccount{
-			Address:     u.Address,
-			Amount:      1000000,
-			Permissions: &accountPermCopy,
+		genAccounts = append(genAccounts, genesis.Account{
+			BasicAccount: genesis.BasicAccount{
+				Address: user.Address(),
+				Amount:  1000000,
+			},
+			Permissions: accountPermCopy,
 		})
 	}
 
 	return genesis.GenesisDoc{
-		GenesisTime: time.Now(),
-		ChainID:     chainID,
-		Params: &genesis.GenesisParams{
-			GlobalPermissions: &globalPerm,
-		},
-		Accounts: genAccounts,
-		Validators: []genesis.GenesisValidator{
+		GenesisTime:       time.Now(),
+		ChainName:         testGenesisDoc.ChainName,
+		GlobalPermissions: globalPerm,
+		Accounts:          genAccounts,
+		Validators: []genesis.Validator{
 			{
-				PubKey: user[0].PubKey,
-				Amount: 10,
+				BasicAccount: genesis.BasicAccount{
+					PublicKey: users[0].PublicKey(),
+					Amount:    10,
+				},
 				UnbondTo: []genesis.BasicAccount{
 					{
-						Address: user[0].Address,
+						Address: users[0].Address(),
 					},
 				},
 			},
@@ -152,26 +157,31 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 	}
 }
 
+//func getAccount(state acm.Getter, address acm.Address) acm.MutableAccount {
+//	acc, _ := acm.GetMutableAccount(state, address)
+//	return acc
+//}
+
 func TestSendFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)
-	genDoc.Accounts[2].Permissions.Base.Set(ptypes.Call, true)
-	genDoc.Accounts[3].Permissions.Base.Set(ptypes.CreateContract, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
+	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
+	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//-------------------
 	// send txs
 
 	// simple send tx should fail
 	tx := txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[0])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -179,12 +189,12 @@ func TestSendFails(t *testing.T) {
 
 	// simple send tx with call perm should fail
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[2].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[2].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[4].Address, 5)
-	tx.SignInput(chainID, 0, user[2])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[4].Address(), 5)
+	tx.SignInput(testChainID, 0, users[2])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -192,28 +202,28 @@ func TestSendFails(t *testing.T) {
 
 	// simple send tx with create perm should fail
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[3].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[3].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[4].Address, 5)
-	tx.SignInput(chainID, 0, user[3])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[4].Address(), 5)
+	tx.SignInput(testChainID, 0, users[3])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple send tx to unknown account without create_account perm should fail
-	acc := blockCache.GetAccount(user[3].Address)
-	acc.Permissions.Base.Set(ptypes.Send, true)
-	blockCache.UpdateAccount(acc)
+	acc := getAccount(batchCommitter.blockCache, users[3].Address())
+	acc.MutablePermissions().Base.Set(permission.Send, true)
+	batchCommitter.blockCache.UpdateAccount(acc)
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[3].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[3].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[6].Address, 5)
-	tx.SignInput(chainID, 0, user[3])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[6].Address(), 5)
+	tx.SignInput(testChainID, 0, users[3])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -222,72 +232,73 @@ func TestSendFails(t *testing.T) {
 
 func TestName(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true)
-	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Name, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//-------------------
 	// name txs
 
 	// simple name tx without perm should fail
-	tx, err := txs.NewNameTx(st, user[0].PubKey, "somename", "somedata", 10000, 100)
+	tx, err := txs.NewNameTx(st, users[0].PublicKey(), "somename", "somedata", 10000, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple name tx with perm should pass
-	tx, err = txs.NewNameTx(st, user[1].PubKey, "somename", "somedata", 10000, 100)
+	tx, err = txs.NewNameTx(st, users[1].PublicKey(), "somename", "somedata", 10000, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx.Sign(testChainID, users[1])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCallFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)
-	genDoc.Accounts[2].Permissions.Base.Set(ptypes.Call, true)
-	genDoc.Accounts[3].Permissions.Base.Set(ptypes.CreateContract, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
+	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
+	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//-------------------
 	// call txs
 
+	address4 := users[4].Address()
 	// simple call tx should fail
-	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, user[4].Address, nil, 100, 100, 100)
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &address4, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple call tx with send permission should fail
-	tx, _ = txs.NewCallTx(blockCache, user[1].PubKey, user[4].Address, nil, 100, 100, 100)
-	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[1].PublicKey(), &address4, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[1])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple call tx with create permission should fail
-	tx, _ = txs.NewCallTx(blockCache, user[3].PubKey, user[4].Address, nil, 100, 100, 100)
-	tx.Sign(chainID, user[3])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[3].PublicKey(), &address4, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[3])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -297,27 +308,27 @@ func TestCallFails(t *testing.T) {
 	// create txs
 
 	// simple call create tx should fail
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, nil, nil, 100, 100, 100)
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), nil, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple call create tx with send perm should fail
-	tx, _ = txs.NewCallTx(blockCache, user[1].PubKey, nil, nil, 100, 100, 100)
-	tx.Sign(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[1].PublicKey(), nil, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[1])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// simple call create tx with call perm should fail
-	tx, _ = txs.NewCallTx(blockCache, user[2].PubKey, nil, nil, 100, 100, 100)
-	tx.Sign(chainID, user[2])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[2].PublicKey(), nil, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[2])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -326,34 +337,34 @@ func TestCallFails(t *testing.T) {
 
 func TestSendPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true) // give the 0 account permission
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	// A single input, having the permission, should succeed
 	tx := txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[0])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
 	// Two inputs, one with permission, one without, should fail
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[2].Address, 10)
-	tx.SignInput(chainID, 0, user[0])
-	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[2].Address(), 10)
+	tx.SignInput(testChainID, 0, users[0])
+	tx.SignInput(testChainID, 1, users[1])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -362,31 +373,31 @@ func TestSendPermission(t *testing.T) {
 
 func TestCallPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//------------------------------
 	// call to simple contract
 	fmt.Println("\n##### SIMPLE CONTRACT")
 
 	// create simple contract
-	simpleContractAddr := NewContractAddress(user[0].Address, 100)
-	simpleAcc := &acm.Account{
+	simpleContractAddr := acm.NewContractAddress(users[0].Address(), 100)
+	simpleAcc := acm.ConcreteAccount{
 		Address:     simpleContractAddr,
 		Balance:     0,
 		Code:        []byte{0x60},
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
 	st.UpdateAccount(simpleAcc)
 
 	// A single input, having the permission, should succeed
-	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, simpleContractAddr, nil, 100, 100, 100)
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &simpleContractAddr, nil, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
@@ -396,23 +407,23 @@ func TestCallPermission(t *testing.T) {
 
 	// create contract that calls the simple contract
 	contractCode := callContractCode(simpleContractAddr)
-	caller1ContractAddr := NewContractAddress(user[0].Address, 101)
-	caller1Acc := &acm.Account{
+	caller1ContractAddr := acm.NewContractAddress(users[0].Address(), 101)
+	caller1Acc := acm.ConcreteAccount{
 		Address:     caller1ContractAddr,
 		Balance:     10000,
 		Code:        contractCode,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
-	blockCache.UpdateAccount(caller1Acc)
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
 
 	// A single input, having the permission, but the contract doesn't have permission
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -422,13 +433,13 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### CALL TO SIMPLE CONTRACT (PASS)")
 
 	// A single input, having the permission, and the contract has permission
-	caller1Acc.Permissions.Base.Set(ptypes.Call, true)
-	blockCache.UpdateAccount(caller1Acc)
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
+	caller1Acc.MutablePermissions().Base.Set(permission.Call, true)
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception:", exception)
 	}
@@ -440,25 +451,25 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (FAIL)")
 
 	contractCode2 := callContractCode(caller1ContractAddr)
-	caller2ContractAddr := NewContractAddress(user[0].Address, 102)
-	caller2Acc := &acm.Account{
+	caller2ContractAddr := acm.NewContractAddress(users[0].Address(), 102)
+	caller2Acc := acm.ConcreteAccount{
 		Address:     caller2ContractAddr,
 		Balance:     1000,
 		Code:        contractCode2,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
-	caller1Acc.Permissions.Base.Set(ptypes.Call, false)
-	caller2Acc.Permissions.Base.Set(ptypes.Call, true)
-	blockCache.UpdateAccount(caller1Acc)
-	blockCache.UpdateAccount(caller2Acc)
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
+	caller1Acc.MutablePermissions().Base.Set(permission.Call, false)
+	caller2Acc.MutablePermissions().Base.Set(permission.Call, true)
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
+	batchCommitter.blockCache.UpdateAccount(caller2Acc)
 
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, caller2ContractAddr, nil, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller2ContractAddr, nil, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -469,14 +480,14 @@ func TestCallPermission(t *testing.T) {
 	// both caller1 and caller2 have permission
 	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (PASS)")
 
-	caller1Acc.Permissions.Base.Set(ptypes.Call, true)
-	blockCache.UpdateAccount(caller1Acc)
+	caller1Acc.MutablePermissions().Base.Set(permission.Call, true)
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
 
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, caller2ContractAddr, nil, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller2ContractAddr, nil, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
@@ -484,11 +495,11 @@ func TestCallPermission(t *testing.T) {
 
 func TestCreatePermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.CreateContract, true) // give the 0 account permission
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true)           // give the 0 account permission
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//------------------------------
 	// create a simple contract
@@ -498,19 +509,19 @@ func TestCreatePermission(t *testing.T) {
 	createCode := wrapContractForCreate(contractCode)
 
 	// A single input, having the permission, should succeed
-	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, nil, createCode, 100, 100, 100)
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), nil, createCode, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
-	contractAddr := NewContractAddress(tx.Input.Address, tx.Input.Sequence)
-	contractAcc := blockCache.GetAccount(contractAddr)
+	contractAddr := acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAcc := getAccount(batchCommitter.blockCache, contractAddr)
 	if contractAcc == nil {
-		t.Fatalf("failed to create contract %X", contractAddr)
+		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.Code, contractCode) {
-		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, contractCode)
+	if !bytes.Equal(contractAcc.Code(), contractCode) {
+		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code(), contractCode)
 	}
 
 	//------------------------------
@@ -523,19 +534,19 @@ func TestCreatePermission(t *testing.T) {
 	createFactoryCode := wrapContractForCreate(factoryCode)
 
 	// A single input, having the permission, should succeed
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, nil, createFactoryCode, 100, 100, 100)
-	tx.Sign(chainID, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), nil, createFactoryCode, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
-	contractAddr = NewContractAddress(tx.Input.Address, tx.Input.Sequence)
-	contractAcc = blockCache.GetAccount(contractAddr)
+	contractAddr = acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAcc = getAccount(batchCommitter.blockCache, contractAddr)
 	if contractAcc == nil {
-		t.Fatalf("failed to create contract %X", contractAddr)
+		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.Code, factoryCode) {
-		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, factoryCode)
+	if !bytes.Equal(contractAcc.Code(), factoryCode) {
+		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code(), factoryCode)
 	}
 
 	//------------------------------
@@ -543,10 +554,10 @@ func TestCreatePermission(t *testing.T) {
 	fmt.Println("\n###### CALL THE FACTORY (FAIL)")
 
 	// A single input, having the permission, should succeed
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 100, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(contractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(contractAddr)) //
 	if exception == "" {
 		t.Fatal("expected exception")
 	}
@@ -555,46 +566,45 @@ func TestCreatePermission(t *testing.T) {
 	// call the contract (should PASS)
 	fmt.Println("\n###### CALL THE FACTORY (PASS)")
 
-	contractAcc.Permissions.Base.Set(ptypes.CreateContract, true)
-	blockCache.UpdateAccount(contractAcc)
+	contractAcc.MutablePermissions().Base.Set(permission.CreateContract, true)
+	batchCommitter.blockCache.UpdateAccount(contractAcc)
 
 	// A single input, having the permission, should succeed
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 100, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 100, 100)
+	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(contractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(contractAddr)) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
 
 	//--------------------------------
 	fmt.Println("\n##### CALL to empty address")
-	zeroAddr := LeftPadBytes([]byte{}, 20)
-	code := callContractCode(zeroAddr)
+	code := callContractCode(acm.Address{})
 
-	contractAddr = NewContractAddress(user[0].Address, 110)
-	contractAcc = &acm.Account{
+	contractAddr = acm.NewContractAddress(users[0].Address(), 110)
+	contractAcc = acm.ConcreteAccount{
 		Address:     contractAddr,
 		Balance:     1000,
 		Code:        code,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
-	contractAcc.Permissions.Base.Set(ptypes.Call, true)
-	contractAcc.Permissions.Base.Set(ptypes.CreateContract, true)
-	blockCache.UpdateAccount(contractAcc)
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
+	contractAcc.MutablePermissions().Base.Set(permission.Call, true)
+	contractAcc.MutablePermissions().Base.Set(permission.CreateContract, true)
+	batchCommitter.blockCache.UpdateAccount(contractAcc)
 
 	// this should call the 0 address but not create ...
-	tx, _ = txs.NewCallTx(blockCache, user[0].PubKey, contractAddr, createCode, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
+	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(zeroAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(acm.Address{})) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
-	zeroAcc := blockCache.GetAccount(zeroAddr)
-	if len(zeroAcc.Code) != 0 {
+	zeroAcc := getAccount(batchCommitter.blockCache, acm.Address{})
+	if len(zeroAcc.Code()) != 0 {
 		t.Fatal("the zero account was given code from a CALL!")
 	}
 }
@@ -604,19 +614,19 @@ func TestBondPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state",dbBackend,dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 	var bondAcc *acm.Account
 
 	//------------------------------
 	// one bonder without permission should fail
-	tx, _ := txs.NewBondTx(user[1].PubKey)
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	tx, _ := txs.NewBondTx(users[1].PublicKey())
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[1])
-	tx.SignBond(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[1])
+	tx.SignBond(testChainID, users[1])
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -624,30 +634,30 @@ func TestBondPermission(t *testing.T) {
 
 	//------------------------------
 	// one bonder with permission should pass
-	bondAcc = blockCache.GetAccount(user[1].Address)
-	bondAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(bondAcc)
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	bondAcc = batchCommitter.blockCache.GetAccount(users[1].Address())
+	bondAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(bondAcc)
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
 	// reset state (we can only bond with an account once ..)
 	genDoc = newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st = MakeGenesisState(stateDB, &genDoc)
-	blockCache = NewBlockCache(st)
-	bondAcc = blockCache.GetAccount(user[1].Address)
-	bondAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(bondAcc)
+	batchCommitter.blockCache = NewBlockCache(st)
+	bondAcc = batchCommitter.blockCache.GetAccount(users[1].Address())
+	bondAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(bondAcc)
 	//------------------------------
 	// one bonder with permission and an input without send should fail
-	tx, _ = txs.NewBondTx(user[1].PubKey)
-	if err := tx.AddInput(blockCache, user[2].PubKey, 5); err != nil {
+	tx, _ = txs.NewBondTx(users[1].PublicKey())
+	if err := tx.AddInput(batchCommitter.blockCache, users[2].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[2])
-	tx.SignBond(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[2])
+	tx.SignBond(testChainID, users[1])
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -656,69 +666,69 @@ func TestBondPermission(t *testing.T) {
 	// reset state (we can only bond with an account once ..)
 	genDoc = newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st = MakeGenesisState(stateDB, &genDoc)
-	blockCache = NewBlockCache(st)
-	bondAcc = blockCache.GetAccount(user[1].Address)
-	bondAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(bondAcc)
+	batchCommitter.blockCache = NewBlockCache(st)
+	bondAcc = batchCommitter.blockCache.GetAccount(users[1].Address())
+	bondAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(bondAcc)
 	//------------------------------
 	// one bonder with permission and an input with send should pass
-	sendAcc := blockCache.GetAccount(user[2].Address)
-	sendAcc.Permissions.Base.Set(ptypes.Send, true)
-	blockCache.UpdateAccount(sendAcc)
-	tx, _ = txs.NewBondTx(user[1].PubKey)
-	if err := tx.AddInput(blockCache, user[2].PubKey, 5); err != nil {
+	sendAcc := batchCommitter.blockCache.GetAccount(users[2].Address())
+	sendAcc.Permissions.Base.Set(permission.Send, true)
+	batchCommitter.blockCache.UpdateAccount(sendAcc)
+	tx, _ = txs.NewBondTx(users[1].PublicKey())
+	if err := tx.AddInput(batchCommitter.blockCache, users[2].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[2])
-	tx.SignBond(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[2])
+	tx.SignBond(testChainID, users[1])
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
 	// reset state (we can only bond with an account once ..)
 	genDoc = newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st = MakeGenesisState(stateDB, &genDoc)
-	blockCache = NewBlockCache(st)
-	bondAcc = blockCache.GetAccount(user[1].Address)
-	bondAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(bondAcc)
+	batchCommitter.blockCache = NewBlockCache(st)
+	bondAcc = batchCommitter.blockCache.GetAccount(users[1].Address())
+	bondAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(bondAcc)
 	//------------------------------
 	// one bonder with permission and an input with bond should pass
-	sendAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(sendAcc)
-	tx, _ = txs.NewBondTx(user[1].PubKey)
-	if err := tx.AddInput(blockCache, user[2].PubKey, 5); err != nil {
+	sendAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(sendAcc)
+	tx, _ = txs.NewBondTx(users[1].PublicKey())
+	if err := tx.AddInput(batchCommitter.blockCache, users[2].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[2])
-	tx.SignBond(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err != nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[2])
+	tx.SignBond(testChainID, users[1])
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
 	// reset state (we can only bond with an account once ..)
 	genDoc = newBaseGenDoc(PermsAllFalse, PermsAllFalse)
 	st = MakeGenesisState(stateDB, &genDoc)
-	blockCache = NewBlockCache(st)
-	bondAcc = blockCache.GetAccount(user[1].Address)
-	bondAcc.Permissions.Base.Set(ptypes.Bond, true)
-	blockCache.UpdateAccount(bondAcc)
+	batchCommitter.blockCache = NewBlockCache(st)
+	bondAcc = batchCommitter.blockCache.GetAccount(users[1].Address())
+	bondAcc.Permissions.Base.Set(permission.Bond, true)
+	batchCommitter.blockCache.UpdateAccount(bondAcc)
 	//------------------------------
 	// one bonder with permission and an input from that bonder and an input without send or bond should fail
-	tx, _ = txs.NewBondTx(user[1].PubKey)
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	tx, _ = txs.NewBondTx(users[1].PublicKey())
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[2].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[2].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[1].Address, 5)
-	tx.SignInput(chainID, 0, user[1])
-	tx.SignInput(chainID, 1, user[2])
-	tx.SignBond(chainID, user[1])
-	if err := ExecTx(blockCache, tx, true, nil); err == nil {
+	tx.AddOutput(users[1].Address(), 5)
+	tx.SignInput(testChainID, 0, users[1])
+	tx.SignInput(testChainID, 1, users[2])
+	tx.SignBond(testChainID, users[1])
+	if err := ExecTx(batchCommitter.blockCache, tx, true, nil); err == nil {
 		t.Fatal("Expected error")
 	}
 }
@@ -726,39 +736,39 @@ func TestBondPermission(t *testing.T) {
 
 func TestCreateAccountPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true)          // give the 0 account permission
-	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Send, true)          // give the 0 account permission
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.CreateAccount, true) // give the 0 account permission
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// SendTx to unknown account
 
 	// A single input, having the permission, should succeed
 	tx := txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[6].Address, 5)
-	tx.SignInput(chainID, 0, user[0])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx.AddOutput(users[6].Address(), 5)
+	tx.SignInput(testChainID, 0, users[0])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
 
 	// Two inputs, both with send, one with create, one without, should fail
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[7].Address, 10)
-	tx.SignInput(chainID, 0, user[0])
-	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[7].Address(), 10)
+	tx.SignInput(testChainID, 0, users[0])
+	tx.SignInput(testChainID, 1, users[1])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
@@ -766,98 +776,98 @@ func TestCreateAccountPermission(t *testing.T) {
 
 	// Two inputs, both with send, one with create, one without, two ouputs (one known, one unknown) should fail
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[7].Address, 4)
-	tx.AddOutput(user[4].Address, 6)
-	tx.SignInput(chainID, 0, user[0])
-	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err == nil {
+	tx.AddOutput(users[7].Address(), 4)
+	tx.AddOutput(users[4].Address(), 6)
+	tx.SignInput(testChainID, 0, users[0])
+	tx.SignInput(testChainID, 1, users[1])
+	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
 		fmt.Println(err)
 	}
 
 	// Two inputs, both with send, both with create, should pass
-	acc := blockCache.GetAccount(user[1].Address)
-	acc.Permissions.Base.Set(ptypes.CreateAccount, true)
-	blockCache.UpdateAccount(acc)
+	acc := getAccount(batchCommitter.blockCache, users[1].Address())
+	acc.MutablePermissions().Base.Set(permission.CreateAccount, true)
+	batchCommitter.blockCache.UpdateAccount(acc)
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[7].Address, 10)
-	tx.SignInput(chainID, 0, user[0])
-	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx.AddOutput(users[7].Address(), 10)
+	tx.SignInput(testChainID, 0, users[0])
+	tx.SignInput(testChainID, 1, users[1])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
 	// Two inputs, both with send, both with create, two outputs (one known, one unknown) should pass
 	tx = txs.NewSendTx()
-	if err := tx.AddInput(blockCache, user[0].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(blockCache, user[1].PubKey, 5); err != nil {
+	if err := tx.AddInput(batchCommitter.blockCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	tx.AddOutput(user[7].Address, 7)
-	tx.AddOutput(user[4].Address, 3)
-	tx.SignInput(chainID, 0, user[0])
-	tx.SignInput(chainID, 1, user[1])
-	if err := ExecTx(blockCache, tx, true, nil, logger); err != nil {
+	tx.AddOutput(users[7].Address(), 7)
+	tx.AddOutput(users[4].Address(), 3)
+	tx.SignInput(testChainID, 0, users[0])
+	tx.SignInput(testChainID, 1, users[1])
+	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
 
 	//----------------------------------------------------------
 	// CALL to unknown account
 
-	acc = blockCache.GetAccount(user[0].Address)
-	acc.Permissions.Base.Set(ptypes.Call, true)
-	blockCache.UpdateAccount(acc)
+	acc = getAccount(batchCommitter.blockCache, users[0].Address())
+	acc.MutablePermissions().Base.Set(permission.Call, true)
+	batchCommitter.blockCache.UpdateAccount(acc)
 
 	// call to contract that calls unknown account - without create_account perm
 	// create contract that calls the simple contract
-	contractCode := callContractCode(user[9].Address)
-	caller1ContractAddr := NewContractAddress(user[4].Address, 101)
-	caller1Acc := &acm.Account{
+	contractCode := callContractCode(users[9].Address())
+	caller1ContractAddr := acm.NewContractAddress(users[4].Address(), 101)
+	caller1Acc := acm.ConcreteAccount{
 		Address:     caller1ContractAddr,
 		Balance:     0,
 		Code:        contractCode,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
-	blockCache.UpdateAccount(caller1Acc)
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
 
 	// A single input, having the permission, but the contract doesn't have permission
-	txCall, _ := txs.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
-	txCall.Sign(chainID, user[0])
+	txCall, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	txCall.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, blockCache, txCall, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
 
 	// NOTE: for a contract to be able to CreateAccount, it must be able to call
-	// NOTE: for a user to be able to CreateAccount, it must be able to send!
-	caller1Acc.Permissions.Base.Set(ptypes.CreateAccount, true)
-	caller1Acc.Permissions.Base.Set(ptypes.Call, true)
-	blockCache.UpdateAccount(caller1Acc)
+	// NOTE: for a users to be able to CreateAccount, it must be able to send!
+	caller1Acc.MutablePermissions().Base.Set(permission.CreateAccount, true)
+	caller1Acc.MutablePermissions().Base.Set(permission.Call, true)
+	batchCommitter.blockCache.UpdateAccount(caller1Acc)
 	// A single input, having the permission, but the contract doesn't have permission
-	txCall, _ = txs.NewCallTx(blockCache, user[0].PubKey, caller1ContractAddr, nil, 100, 10000, 100)
-	txCall.Sign(chainID, user[0])
+	txCall, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	txCall.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, blockCache, txCall, vm.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
@@ -865,39 +875,44 @@ func TestCreateAccountPermission(t *testing.T) {
 }
 
 // holla at my boy
-var DougAddress = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, []byte("THISISDOUG")...)
+var DougAddress acm.Address
+
+func init() {
+	copy(DougAddress[:], ([]byte)("THISISDOUG"))
+}
 
 func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
-	genDoc.Accounts[3].Permissions.Base.Set(ptypes.Bond, true) // some arbitrary permission to play with
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
+	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// Test CALL to SNative contracts
 
 	// make the main contract once
-	doug := &acm.Account{
+	doug := acm.ConcreteAccount{
 		Address:     DougAddress,
 		Balance:     0,
 		Code:        nil,
 		Sequence:    0,
 		StorageRoot: Zero256.Bytes(),
-		Permissions: ptypes.ZeroAccountPermissions,
-	}
-	doug.Permissions.Base.Set(ptypes.Call, true)
-	//doug.Permissions.Base.Set(ptypes.HasBase, true)
-	blockCache.UpdateAccount(doug)
+		Permissions: permission.ZeroAccountPermissions,
+	}.MutableAccount()
+
+	doug.MutablePermissions().Base.Set(permission.Call, true)
+	//doug.Permissions.Base.Set(permission.HasBase, true)
+	batchCommitter.blockCache.UpdateAccount(doug)
 
 	fmt.Println("\n#### HasBase")
 	// HasBase
-	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -907,21 +922,21 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### SetBase")
 	// SetBase
-	snativeAddress, pF, data = snativePermTestInputCALL("setBase", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.Bond, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], permission.Bond, false)
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
-	snativeAddress, pF, data = snativePermTestInputCALL("setBase", user[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], permission.CreateContract, true)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -931,11 +946,11 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
-	snativeAddress, pF, data = snativePermTestInputCALL("unsetBase", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativePermTestInputCALL("unsetBase", users[3], permission.CreateContract, false)
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -944,11 +959,11 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
-	snativeAddress, pF, data = snativePermTestInputCALL("setGlobal", user[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", user[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativePermTestInputCALL("setGlobal", users[3], permission.CreateContract, true)
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -958,9 +973,9 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### HasRole")
 	// HasRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "bumble")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "bumble")
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
@@ -969,31 +984,31 @@ func TestSNativeCALL(t *testing.T) {
 
 	fmt.Println("\n#### AddRole")
 	// AddRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
-	snativeAddress, pF, data = snativeRoleTestInputCALL("addRole", user[3], "chuck")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	snativeAddress, pF, data = snativeRoleTestInputCALL("addRole", users[3], "chuck")
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
 		return nil
 	})
 
-	fmt.Println("\n#### RmRole")
-	// RmRole
-	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", user[3], "chuck")
-	testSNativeCALLExpectFail(t, blockCache, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
-	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", user[3], "chuck")
-	testSNativeCALLExpectPass(t, blockCache, doug, pF, snativeAddress, data, func(ret []byte) error {
+	fmt.Println("\n#### RemoveRole")
+	// RemoveRole
+	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", users[3], "chuck")
+	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
+	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -1003,70 +1018,70 @@ func TestSNativeCALL(t *testing.T) {
 
 func TestSNativeTx(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
-	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
-	genDoc.Accounts[3].Permissions.Base.Set(ptypes.Bond, true) // some arbitrary permission to play with
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
+	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 	st := MakeGenesisState(stateDB, &genDoc)
-	blockCache := NewBlockCache(st)
+	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// Test SNativeTx
 
 	fmt.Println("\n#### SetBase")
 	// SetBase
-	snativeArgs := snativePermTestInputTx("setBase", user[3], ptypes.Bond, false)
-	testSNativeTxExpectFail(t, blockCache, snativeArgs)
-	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
-	acc := blockCache.GetAccount(user[3].Address)
-	if v, _ := acc.Permissions.Base.Get(ptypes.Bond); v {
+	snativeArgs := snativePermTestInputTx("setBase", users[3], permission.Bond, false)
+	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.SetBase, snativeArgs)
+	acc := getAccount(batchCommitter.blockCache, users[3].Address())
+	if v, _ := acc.MutablePermissions().Base.Get(permission.Bond); v {
 		t.Fatal("expected permission to be set false")
 	}
-	snativeArgs = snativePermTestInputTx("setBase", user[3], ptypes.CreateContract, true)
-	testSNativeTxExpectPass(t, blockCache, ptypes.SetBase, snativeArgs)
-	acc = blockCache.GetAccount(user[3].Address)
-	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); !v {
+	snativeArgs = snativePermTestInputTx("setBase", users[3], permission.CreateContract, true)
+	testSNativeTxExpectPass(t, batchCommitter, permission.SetBase, snativeArgs)
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
+	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); !v {
 		t.Fatal("expected permission to be set true")
 	}
 
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
-	snativeArgs = snativePermTestInputTx("unsetBase", user[3], ptypes.CreateContract, false)
-	testSNativeTxExpectFail(t, blockCache, snativeArgs)
-	testSNativeTxExpectPass(t, blockCache, ptypes.UnsetBase, snativeArgs)
-	acc = blockCache.GetAccount(user[3].Address)
-	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); v {
+	snativeArgs = snativePermTestInputTx("unsetBase", users[3], permission.CreateContract, false)
+	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.UnsetBase, snativeArgs)
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
+	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); v {
 		t.Fatal("expected permission to be set false")
 	}
 
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
-	snativeArgs = snativePermTestInputTx("setGlobal", user[3], ptypes.CreateContract, true)
-	testSNativeTxExpectFail(t, blockCache, snativeArgs)
-	testSNativeTxExpectPass(t, blockCache, ptypes.SetGlobal, snativeArgs)
-	acc = blockCache.GetAccount(ptypes.GlobalPermissionsAddress)
-	if v, _ := acc.Permissions.Base.Get(ptypes.CreateContract); !v {
+	snativeArgs = snativePermTestInputTx("setGlobal", users[3], permission.CreateContract, true)
+	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.SetGlobal, snativeArgs)
+	acc = getAccount(batchCommitter.blockCache, permission.GlobalPermissionsAddress)
+	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); !v {
 		t.Fatal("expected permission to be set true")
 	}
 
 	fmt.Println("\n#### AddRole")
 	// AddRole
-	snativeArgs = snativeRoleTestInputTx("addRole", user[3], "chuck")
-	testSNativeTxExpectFail(t, blockCache, snativeArgs)
-	testSNativeTxExpectPass(t, blockCache, ptypes.AddRole, snativeArgs)
-	acc = blockCache.GetAccount(user[3].Address)
-	if v := acc.Permissions.HasRole("chuck"); !v {
+	snativeArgs = snativeRoleTestInputTx("addRole", users[3], "chuck")
+	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.AddRole, snativeArgs)
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
+	if v := acc.Permissions().HasRole("chuck"); !v {
 		t.Fatal("expected role to be added")
 	}
 
-	fmt.Println("\n#### RmRole")
-	// RmRole
-	snativeArgs = snativeRoleTestInputTx("removeRole", user[3], "chuck")
-	testSNativeTxExpectFail(t, blockCache, snativeArgs)
-	testSNativeTxExpectPass(t, blockCache, ptypes.RmRole, snativeArgs)
-	acc = blockCache.GetAccount(user[3].Address)
-	if v := acc.Permissions.HasRole("chuck"); v {
+	fmt.Println("\n#### RemoveRole")
+	// RemoveRole
+	snativeArgs = snativeRoleTestInputTx("removeRole", users[3], "chuck")
+	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
+	testSNativeTxExpectPass(t, batchCommitter, permission.RemoveRole, snativeArgs)
+	acc = getAccount(batchCommitter.blockCache, users[3].Address())
+	if v := acc.Permissions().HasRole("chuck"); v {
 		t.Fatal("expected role to be removed")
 	}
 }
@@ -1078,32 +1093,33 @@ var ExceptionTimeOut = "timed out waiting for event"
 
 // run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
-func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx txs.Tx, eventid string) (interface{}, string) {
-	evsw := events.NewEventSwitch()
-	evsw.Start()
-	ch := make(chan interface{})
-	evsw.AddListenerForEvent("test", eventid, func(msg events.EventData) {
+func execTxWaitEvent(t *testing.T, batchCommitter *executor, tx txs.Tx, eventid string) (interface{}, string) {
+	evsw := event.NewEmitter(logger)
+	ch := make(chan event.AnyEventData)
+	evsw.Subscribe("test", eventid, func(msg event.AnyEventData) {
 		ch <- msg
 	})
-	evc := events.NewEventCache(evsw)
+	evc := event.NewEventCache(evsw)
+	batchCommitter.eventCache = evc
 	go func() {
-		if err := ExecTx(blockCache, tx, true, evc, logger); err != nil {
-			ch <- err.Error()
+		if err := batchCommitter.Execute(tx); err != nil {
+			errStr := err.Error()
+			ch <- event.AnyEventData{Err: &errStr}
 		}
 		evc.Flush()
 	}()
 	ticker := time.NewTicker(5 * time.Second)
-	var msg interface{}
+	var msg event.AnyEventData
 	select {
 	case msg = <-ch:
 	case <-ticker.C:
 		return nil, ExceptionTimeOut
 	}
 
-	switch ev := msg.(type) {
-	case vm.EventDataTx:
+	switch ev := msg.Get().(type) {
+	case exe_events.EventDataTx:
 		return ev, ev.Exception
-	case vm.EventDataCall:
+	case evm_events.EventDataCall:
 		return ev, ev.Exception
 	case string:
 		return nil, ev
@@ -1113,28 +1129,31 @@ func execTxWaitEvent(t *testing.T, blockCache *BlockCache, tx txs.Tx, eventid st
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
-func testSNativeCALLExpectFail(t *testing.T, blockCache *BlockCache, doug *acm.Account, snativeAddress, data []byte) {
-	testSNativeCALL(t, false, blockCache, doug, 0, snativeAddress, data, nil)
+func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, doug acm.MutableAccount,
+	snativeAddress acm.Address, data []byte) {
+	testSNativeCALL(t, false, batchCommitter, doug, 0, snativeAddress, data, nil)
 }
 
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
-func testSNativeCALLExpectPass(t *testing.T, blockCache *BlockCache, doug *acm.Account, snativePerm ptypes.PermFlag, snativeAddress, data []byte, f func([]byte) error) {
-	testSNativeCALL(t, true, blockCache, doug, snativePerm, snativeAddress, data, f)
+func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
+	snativeAddress acm.Address, data []byte, f func([]byte) error) {
+	testSNativeCALL(t, true, batchCommitter, doug, snativePerm, snativeAddress, data, f)
 }
 
-func testSNativeCALL(t *testing.T, expectPass bool, blockCache *BlockCache, doug *acm.Account, snativePerm ptypes.PermFlag, snativeAddress, data []byte, f func([]byte) error) {
+func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, doug acm.MutableAccount,
+	snativePerm ptypes.PermFlag, snativeAddress acm.Address, data []byte, f func([]byte) error) {
 	if expectPass {
-		doug.Permissions.Base.Set(snativePerm, true)
+		doug.MutablePermissions().Base.Set(snativePerm, true)
 	}
-	var addr []byte
-	contractCode := callContractCode(snativeAddress)
-	doug.Code = contractCode
-	blockCache.UpdateAccount(doug)
-	addr = doug.Address
-	tx, _ := txs.NewCallTx(blockCache, user[0].PubKey, addr, data, 100, 10000, 100)
-	tx.Sign(chainID, user[0])
-	fmt.Println("subscribing to", vm.EventStringAccCall(snativeAddress))
-	ev, exception := execTxWaitEvent(t, blockCache, tx, vm.EventStringAccCall(snativeAddress))
+
+	doug.SetCode(callContractCode(snativeAddress))
+	dougAddress := doug.Address()
+
+	batchCommitter.blockCache.UpdateAccount(doug)
+	tx, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &dougAddress, data, 100, 10000, 100)
+	tx.Sign(testChainID, users[0])
+	fmt.Println("subscribing to", evm_events.EventStringAccCall(snativeAddress))
+	ev, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(snativeAddress))
 	if exception == ExceptionTimeOut {
 		t.Fatal("Timed out waiting for event")
 	}
@@ -1142,7 +1161,7 @@ func testSNativeCALL(t *testing.T, expectPass bool, blockCache *BlockCache, doug
 		if exception != "" {
 			t.Fatal("Unexpected exception", exception)
 		}
-		evv := ev.(vm.EventDataCall)
+		evv := ev.(evm_events.EventDataCall)
 		ret := evv.Return
 		if err := f(ret); err != nil {
 			t.Fatal(err)
@@ -1154,23 +1173,23 @@ func testSNativeCALL(t *testing.T, expectPass bool, blockCache *BlockCache, doug
 	}
 }
 
-func testSNativeTxExpectFail(t *testing.T, blockCache *BlockCache, snativeArgs ptypes.PermArgs) {
-	testSNativeTx(t, false, blockCache, 0, snativeArgs)
+func testSNativeTxExpectFail(t *testing.T, batchCommitter *executor, snativeArgs permission.PermArgs) {
+	testSNativeTx(t, false, batchCommitter, 0, snativeArgs)
 }
 
-func testSNativeTxExpectPass(t *testing.T, blockCache *BlockCache, perm ptypes.PermFlag, snativeArgs ptypes.PermArgs) {
-	testSNativeTx(t, true, blockCache, perm, snativeArgs)
+func testSNativeTxExpectPass(t *testing.T, batchCommitter *executor, perm ptypes.PermFlag, snativeArgs permission.PermArgs) {
+	testSNativeTx(t, true, batchCommitter, perm, snativeArgs)
 }
 
-func testSNativeTx(t *testing.T, expectPass bool, blockCache *BlockCache, perm ptypes.PermFlag, snativeArgs ptypes.PermArgs) {
+func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *executor, perm ptypes.PermFlag, snativeArgs permission.PermArgs) {
 	if expectPass {
-		acc := blockCache.GetAccount(user[0].Address)
-		acc.Permissions.Base.Set(perm, true)
-		blockCache.UpdateAccount(acc)
+		acc := getAccount(batchCommitter.blockCache, users[0].Address())
+		acc.MutablePermissions().Base.Set(perm, true)
+		batchCommitter.blockCache.UpdateAccount(acc)
 	}
-	tx, _ := txs.NewPermissionsTx(blockCache, user[0].PubKey, snativeArgs)
-	tx.Sign(chainID, user[0])
-	err := ExecTx(blockCache, tx, true, nil, logger)
+	tx, _ := txs.NewPermissionsTx(batchCommitter.blockCache, users[0].PublicKey(), snativeArgs)
+	tx.Sign(testChainID, users[0])
+	err := batchCommitter.Execute(tx)
 	if expectPass {
 		if err != nil {
 			t.Fatal("Unexpected exception", err)
@@ -1201,14 +1220,15 @@ func permNameToFuncID(name string) []byte {
 	return id[:]
 }
 
-func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = permissionsContract.AddressBytes()
+func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+	val bool) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
+	addr = permissionsContract.Address()
 	switch name {
 	case "hasBase", "unsetBase":
-		data = LeftPadBytes(user.Address, 32)
+		data = user.Address().Word256().Bytes()
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
 	case "setBase":
-		data = LeftPadBytes(user.Address, 32)
+		data = user.Address().Word256().Bytes()
 		data = append(data, Uint64ToWord256(uint64(perm)).Bytes()...)
 		data = append(data, boolToWord256(val).Bytes()...)
 	case "setGlobal":
@@ -1217,53 +1237,54 @@ func snativePermTestInputCALL(name string, user *acm.PrivAccount, perm ptypes.Pe
 	}
 	data = append(permNameToFuncID(name), data...)
 	var err error
-	if pF, err = ptypes.PermStringToFlag(name); err != nil {
+	if pF, err = permission.PermStringToFlag(name); err != nil {
 		panic(fmt.Sprintf("failed to convert perm string (%s) to flag", name))
 	}
 	return
 }
 
-func snativePermTestInputTx(name string, user *acm.PrivAccount, perm ptypes.PermFlag, val bool) (snativeArgs ptypes.PermArgs) {
+func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag, val bool) (snativeArgs permission.PermArgs) {
 	switch name {
 	case "hasBase":
-		snativeArgs = &ptypes.HasBaseArgs{user.Address, perm}
+		snativeArgs = &permission.HasBaseArgs{user.Address(), perm}
 	case "unsetBase":
-		snativeArgs = &ptypes.UnsetBaseArgs{user.Address, perm}
+		snativeArgs = &permission.UnsetBaseArgs{user.Address(), perm}
 	case "setBase":
-		snativeArgs = &ptypes.SetBaseArgs{user.Address, perm, val}
+		snativeArgs = &permission.SetBaseArgs{user.Address(), perm, val}
 	case "setGlobal":
-		snativeArgs = &ptypes.SetGlobalArgs{perm, val}
+		snativeArgs = &permission.SetGlobalArgs{perm, val}
 	}
 	return
 }
 
-func snativeRoleTestInputCALL(name string, user *acm.PrivAccount, role string) (addr []byte, pF ptypes.PermFlag, data []byte) {
-	addr = permissionsContract.AddressBytes()
-	data = LeftPadBytes(user.Address, 32)
+func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
+	role string) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
+	addr = permissionsContract.Address()
+	data = user.Address().Word256().Bytes()
 	data = append(data, RightPadBytes([]byte(role), 32)...)
 	data = append(permNameToFuncID(name), data...)
 
 	var err error
-	if pF, err = ptypes.PermStringToFlag(name); err != nil {
+	if pF, err = permission.PermStringToFlag(name); err != nil {
 		panic(fmt.Sprintf("failed to convert perm string (%s) to flag", name))
 	}
 	return
 }
 
-func snativeRoleTestInputTx(name string, user *acm.PrivAccount, role string) (snativeArgs ptypes.PermArgs) {
+func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs permission.PermArgs) {
 	switch name {
 	case "hasRole":
-		snativeArgs = &ptypes.HasRoleArgs{user.Address, role}
+		snativeArgs = &permission.HasRoleArgs{user.Address(), role}
 	case "addRole":
-		snativeArgs = &ptypes.AddRoleArgs{user.Address, role}
+		snativeArgs = &permission.AddRoleArgs{user.Address(), role}
 	case "removeRole":
-		snativeArgs = &ptypes.RmRoleArgs{user.Address, role}
+		snativeArgs = &permission.RmRoleArgs{user.Address(), role}
 	}
 	return
 }
 
 // convenience function for contract that calls a given address
-func callContractCode(contractAddr []byte) []byte {
+func callContractCode(contractAddr acm.Address) []byte {
 	// calldatacopy into mem and use as input to call
 	memOff, inputOff := byte(0x0), byte(0x0)
 	value := byte(0x1)
@@ -1271,7 +1292,7 @@ func callContractCode(contractAddr []byte) []byte {
 	retOff, retSize := byte(0x0), byte(0x20)
 
 	// this is the code we want to run (call a contract and return)
-	return Bytecode(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
+	return bc.Splice(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
 		CALLDATACOPY, PUSH1, retSize, PUSH1, retOff, CALLDATASIZE, PUSH1, inOff,
 		PUSH1, value, PUSH20, contractAddr,
 		// Zeno loves us - call with half of the available gas each time we CALL

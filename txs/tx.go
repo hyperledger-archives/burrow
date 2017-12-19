@@ -15,33 +15,27 @@
 package txs
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
-	"golang.org/x/crypto/ripemd160"
-
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-wire"
-
-	"fmt"
-
+	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/go-crypto"
-	tendermint_types "github.com/tendermint/tendermint/types" // votes for dupeout ..
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire/data"
+	"golang.org/x/crypto/ripemd160"
 )
 
 var (
-	ErrTxInvalidAddress       = errors.New("error invalid address")
-	ErrTxDuplicateAddress     = errors.New("error duplicate address")
-	ErrTxInvalidAmount        = errors.New("error invalid amount")
-	ErrTxInsufficientFunds    = errors.New("error insufficient funds")
-	ErrTxInsufficientGasPrice = errors.New("error insufficient gas price")
-	ErrTxUnknownPubKey        = errors.New("error unknown pubkey")
-	ErrTxInvalidPubKey        = errors.New("error invalid pubkey")
-	ErrTxInvalidSignature     = errors.New("error invalid signature")
-	ErrTxPermissionDenied     = errors.New("error permission denied")
+	ErrTxInvalidAddress    = errors.New("error invalid address")
+	ErrTxDuplicateAddress  = errors.New("error duplicate address")
+	ErrTxInvalidAmount     = errors.New("error invalid amount")
+	ErrTxInsufficientFunds = errors.New("error insufficient funds")
+	ErrTxUnknownPubKey     = errors.New("error unknown pubkey")
+	ErrTxInvalidPubKey     = errors.New("error invalid pubkey")
+	ErrTxInvalidSignature  = errors.New("error invalid signature")
 )
 
 type ErrTxInvalidString struct {
@@ -53,8 +47,8 @@ func (e ErrTxInvalidString) Error() string {
 }
 
 type ErrTxInvalidSequence struct {
-	Got      int
-	Expected int
+	Got      uint64
+	Expected uint64
 }
 
 func (e ErrTxInvalidSequence) Error() string {
@@ -72,7 +66,6 @@ Account Txs:
 Validation Txs:
  - BondTx         New validator posts a bond
  - UnbondTx       Validator leaves
- - DupeoutTx      Validator dupes out (equivocates)
 
 Admin Txs:
  - PermissionsTx
@@ -86,15 +79,22 @@ const (
 	TxTypeName = byte(0x03)
 
 	// Validation transactions
-	TxTypeBond    = byte(0x11)
-	TxTypeUnbond  = byte(0x12)
-	TxTypeRebond  = byte(0x13)
-	TxTypeDupeout = byte(0x14)
+	TxTypeBond   = byte(0x11)
+	TxTypeUnbond = byte(0x12)
+	TxTypeRebond = byte(0x13)
 
 	// Admin transactions
 	TxTypePermissions = byte(0x20)
 )
 
+var mapper = data.NewMapper(Wrapper{}).
+	RegisterImplementation(&SendTx{}, "send_tx", TxTypeSend).
+	RegisterImplementation(&CallTx{}, "call_tx", TxTypeCall).
+	RegisterImplementation(&NameTx{}, "name_tx", TxTypeName).
+	RegisterImplementation(&BondTx{}, "bond_tx", TxTypeBond).
+	RegisterImplementation(&UnbondTx{}, "unbond_tx", TxTypeUnbond).
+	RegisterImplementation(&RebondTx{}, "rebond_tx", TxTypeRebond).
+	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions)
 
 //-----------------------------------------------------------------------------
 
@@ -103,7 +103,16 @@ type (
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 	}
 
+	Wrapper struct {
+		Tx `json:"unwrap"`
+	}
+
+	Encoder interface {
+		EncodeTx(tx Tx) ([]byte, error)
+	}
+
 	Decoder interface {
+		DecodeTx(txBytes []byte) (Tx, error)
 	}
 
 	// UnconfirmedTxs
@@ -118,39 +127,72 @@ type (
 
 	// BroadcastTx or Transact
 	Receipt struct {
-		TxHash          []byte `json:"tx_hash"`
-		CreatesContract uint8  `json:"creates_contract"`
-		ContractAddr    []byte `json:"contract_addr"`
+		TxHash          []byte      `json:"tx_hash"`
+		CreatesContract bool        `json:"creates_contract"`
+		ContractAddr    acm.Address `json:"contract_addr"`
 	}
 
 	NameTx struct {
 		Input *TxInput `json:"input"`
 		Name  string   `json:"name"`
 		Data  string   `json:"data"`
-		Fee   int64    `json:"fee"`
+		Fee   uint64   `json:"fee"`
 	}
 
 	CallTx struct {
-		Input    *TxInput `json:"input"`
-		Address  []byte   `json:"address"`
-		GasLimit int64    `json:"gas_limit"`
-		Fee      int64    `json:"fee"`
-		Data     []byte   `json:"data"`
+		Input *TxInput `json:"input"`
+		// Pointer since CallTx defines unset 'to' address as inducing account creation
+		Address  *acm.Address `json:"address"`
+		GasLimit uint64       `json:"gas_limit"`
+		Fee      uint64       `json:"fee"`
+		Data     []byte       `json:"data"`
 	}
 
 	TxInput struct {
-		Address   []byte           `json:"address"`   // Hash of the PubKey
-		Amount    int64            `json:"amount"`    // Must not exceed account balance
-		Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-		Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-		PubKey    crypto.PubKey    `json:"pub_key"`   // Must not be nil, may be nil
+		Address   acm.Address      `json:"address"`   // Hash of the PublicKey
+		Amount    uint64           `json:"amount"`    // Must not exceed account balance
+		Sequence  uint64           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Signature crypto.Signature `json:"signature"` // Depends on the PublicKey type and the whole Tx
+		PubKey    acm.PublicKey    `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
-		Address []byte `json:"address"` // Hash of the PubKey
-		Amount  int64  `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+		Address acm.Address `json:"address"` // Hash of the PublicKey
+		Amount  uint64      `json:"amount"`  // The sum of all outputs must not exceed the inputs.
 	}
 )
+
+// Wrap the Tx in a struct that allows for go-wire JSON serialisation
+func Wrap(tx Tx) Wrapper {
+	if txWrapped, ok := tx.(Wrapper); ok {
+		return txWrapped
+	}
+	return Wrapper{
+		Tx: tx,
+	}
+}
+
+// A serialisation wrapper that is itself a Tx
+func (txw Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
+	txw.Tx.WriteSignBytes(chainID, w, n, err)
+}
+
+func (txw Wrapper) MarshalJSON() ([]byte, error) {
+	return mapper.ToJSON(txw.Tx)
+}
+
+func (txw *Wrapper) UnmarshalJSON(data []byte) (err error) {
+	parsed, err := mapper.FromJSON(data)
+	if err == nil && parsed != nil {
+		txw.Tx = parsed.(Tx)
+	}
+	return err
+}
+
+// Get the inner Tx that this Wrapper wraps
+func (txw *Wrapper) Unwrap() Tx {
+	return txw.Tx
+}
 
 func (txIn *TxInput) ValidateBasic() error {
 	if len(txIn.Address) != 20 {
@@ -163,11 +205,11 @@ func (txIn *TxInput) ValidateBasic() error {
 }
 
 func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%X","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
 }
 
 func (txIn *TxInput) String() string {
-	return fmt.Sprintf("TxInput{%X,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PubKey)
+	return fmt.Sprintf("TxInput{%s,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PubKey)
 }
 
 //-----------------------------------------------------------------------------
@@ -183,11 +225,11 @@ func (txOut *TxOutput) ValidateBasic() error {
 }
 
 func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%X","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
 }
 
 func (txOut *TxOutput) String() string {
-	return fmt.Sprintf("TxOutput{%X,%v}", txOut.Address, txOut.Amount)
+	return fmt.Sprintf("TxOutput{%s,%v}", txOut.Address, txOut.Amount)
 }
 
 //-----------------------------------------------------------------------------
@@ -219,23 +261,14 @@ func (tx *SendTx) String() string {
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
 	tx.Input.WriteSignBytes(w, n, err)
 	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
 func (tx *CallTx) String() string {
-	return fmt.Sprintf("CallTx{%v -> %x: %x}", tx.Input, tx.Address, tx.Data)
-}
-
-func NewContractAddress(caller []byte, nonce int) []byte {
-	temp := make([]byte, 32+8)
-	copy(temp, caller)
-	binary.BigEndian.PutUint64(temp[32:], uint64(nonce))
-	hasher := ripemd160.New()
-	hasher.Write(temp) // does not error
-	return hasher.Sum(nil)
+	return fmt.Sprintf("CallTx{%v -> %s: %X}", tx.Input, tx.Address, tx.Data)
 }
 
 //-----------------------------------------------------------------------------
@@ -278,10 +311,10 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    crypto.PubKeyEd25519    `json:"pub_key"` // NOTE: these don't have type byte
-	Signature crypto.SignatureEd25519 `json:"signature"`
-	Inputs    []*TxInput              `json:"inputs"`
-	UnbondTo  []*TxOutput             `json:"unbond_to"`
+	PubKey    acm.PublicKey    `json:"pub_key"` // NOTE: these don't have type byte
+	Signature crypto.Signature `json:"signature"`
+	Inputs    []*TxInput       `json:"inputs"`
+	UnbondTo  []*TxOutput      `json:"unbond_to"`
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -312,60 +345,42 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   []byte                  `json:"address"`
-	Height    int                     `json:"height"`
-	Signature crypto.SignatureEd25519 `json:"signature"`
+	Address   acm.Address      `json:"address"`
+	Height    int              `json:"height"`
+	Signature crypto.Signature `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *UnbondTx) String() string {
-	return fmt.Sprintf("UnbondTx{%X,%v,%v}", tx.Address, tx.Height, tx.Signature)
+	return fmt.Sprintf("UnbondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   []byte                  `json:"address"`
-	Height    int                     `json:"height"`
-	Signature crypto.SignatureEd25519 `json:"signature"`
+	Address   acm.Address      `json:"address"`
+	Height    int              `json:"height"`
+	Signature crypto.Signature `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%X","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
+	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
 }
 
 func (tx *RebondTx) String() string {
-	return fmt.Sprintf("RebondTx{%X,%v,%v}", tx.Address, tx.Height, tx.Signature)
-}
-
-//-----------------------------------------------------------------------------
-
-type DupeoutTx struct {
-	Address []byte                `json:"address"`
-	VoteA   tendermint_types.Vote `json:"vote_a"`
-	VoteB   tendermint_types.Vote `json:"vote_b"`
-}
-
-func (tx *DupeoutTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	// PanicSanity("DupeoutTx has no sign bytes")
-	// TODO
-	// return
-}
-
-func (tx *DupeoutTx) String() string {
-	return fmt.Sprintf("DupeoutTx{%X,%v,%v}", tx.Address, tx.VoteA, tx.VoteB)
+	return fmt.Sprintf("RebondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
 //-----------------------------------------------------------------------------
 
 type PermissionsTx struct {
 	Input    *TxInput        `json:"input"`
-	PermArgs ptypes.PermArgs `json:"args"`
+	PermArgs *ptypes.PermArgs `json:"args"`
 }
 
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -395,15 +410,14 @@ func TxHash(chainID string, tx Tx) []byte {
 
 func GenerateReceipt(chainId string, tx Tx) Receipt {
 	receipt := Receipt{
-		TxHash:          TxHash(chainId, tx),
-		CreatesContract: 0,
-		ContractAddr:    nil,
+		TxHash: TxHash(chainId, tx),
 	}
 	if callTx, ok := tx.(*CallTx); ok {
-		if len(callTx.Address) == 0 {
-			receipt.CreatesContract = 1
-			receipt.ContractAddr = NewContractAddress(callTx.Input.Address,
-				callTx.Input.Sequence)
+		receipt.CreatesContract = callTx.Address == nil
+		if receipt.CreatesContract {
+			receipt.ContractAddr = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+		} else {
+			receipt.ContractAddr = *callTx.Address
 		}
 	}
 	return receipt

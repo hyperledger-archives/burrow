@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vm
+package evm
 
 const (
-	GasSha3          int64 = 1
-	GasGetAccount    int64 = 1
-	GasStorageUpdate int64 = 1
+	GasSha3          uint64 = 1
+	GasGetAccount    uint64 = 1
+	GasStorageUpdate uint64 = 1
 
-	GasBaseOp  int64 = 0 // TODO: make this 1
-	GasStackOp int64 = 1
+	GasBaseOp  uint64 = 0 // TODO: make this 1
+	GasStackOp uint64 = 1
 
-	GasEcRecover     int64 = 1
-	GasSha256Word    int64 = 1
-	GasSha256Base    int64 = 1
-	GasRipemd160Word int64 = 1
-	GasRipemd160Base int64 = 1
-	GasIdentityWord  int64 = 1
-	GasIdentityBase  int64 = 1
+	GasEcRecover     uint64 = 1
+	GasSha256Word    uint64 = 1
+	GasSha256Base    uint64 = 1
+	GasRipemd160Word uint64 = 1
+	GasRipemd160Base uint64 = 1
+	GasIdentityWord  uint64 = 1
+	GasIdentityBase  uint64 = 1
 )

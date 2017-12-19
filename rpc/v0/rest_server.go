@@ -39,14 +39,14 @@ import (
 type RestServer struct {
 	codec         rpc.Codec
 	pipe          definitions.Pipe
-	eventSubs     *event.EventSubscriptions
+	eventSubs     *event.Subscriptions
 	filterFactory *event.FilterFactory
 	running       bool
 }
 
 // Create a new rest server.
 func NewRestServer(codec rpc.Codec, pipe definitions.Pipe,
-	eventSubs *event.EventSubscriptions) *RestServer {
+	eventSubs *event.Subscriptions) *RestServer {
 	return &RestServer{
 		codec:         codec,
 		pipe:          pipe,

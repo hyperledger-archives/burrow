@@ -18,23 +18,20 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-wire"
-	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/events"
-
-	"sync"
-
-	core_types "github.com/hyperledger/burrow/core/types"
-	"github.com/hyperledger/burrow/util"
-	"github.com/tendermint/merkleeyes/iavl"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/merkle"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/permission"
+	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/util"
+	"github.com/tendermint/go-wire"
+	"github.com/tendermint/merkleeyes/iavl"
+	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tmlibs/merkle"
 )
 
 var (
@@ -46,48 +43,143 @@ var (
 	maxLoadStateElementSize      = 0                  // no max
 )
 
+// TODO
+const GasLimit = uint64(1000000)
+
 //-----------------------------------------------------------------------------
 
 // NOTE: not goroutine-safe.
 type State struct {
-	mtx             sync.Mutex
-	db              dbm.DB
-	ChainID         string
-	LastBlockHeight uint64
-	LastBlockHash   []byte
-	LastBlockTime   time.Time
-	// AppHash is updated after Commit
-	LastBlockAppHash []byte
+	sync.RWMutex
+	db dbm.DB
 	//	BondedValidators     *types.ValidatorSet
 	//	LastBondedValidators *types.ValidatorSet
 	//	UnbondingValidators  *types.ValidatorSet
 	accounts       merkle.Tree // Shouldn't be accessed directly.
 	validatorInfos merkle.Tree // Shouldn't be accessed directly.
 	nameReg        merkle.Tree // Shouldn't be accessed directly.
-
-	evc events.Fireable // typically an events.EventCache
 }
 
-func LoadState(db dbm.DB) *State {
+// Implements account and blockchain state
+var _ acm.Updater = &State{}
+
+var _ acm.StateIterable = &State{}
+
+var _ acm.StateWriter = &State{}
+
+func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
+	if len(genDoc.Validators) == 0 {
+		util.Fatalf("The genesis file has no validators")
+	}
+
+	if genDoc.GenesisTime.IsZero() {
+		// NOTE: [ben] change GenesisTime to requirement on v0.17
+		// GenesisTime needs to be deterministic across the chain
+		// and should be required in the genesis file;
+		// the requirement is not yet enforced when lacking set
+		// time to 11/18/2016 @ 4:09am (UTC)
+		genDoc.GenesisTime = time.Unix(1479442162, 0)
+	}
+
+	// Make accounts state tree
+	accounts := iavl.NewIAVLTree(defaultAccountsCacheCapacity, db)
+	for _, genAcc := range genDoc.Accounts {
+		perm := genAcc.Permissions
+		acc := &acm.ConcreteAccount{
+			Address:     genAcc.Address,
+			Balance:     genAcc.Amount,
+			Permissions: perm,
+		}
+		accounts.Set(acc.Address.Bytes(), acc.Encode())
+	}
+
+	// global permissions are saved as the 0 address
+	// so they are included in the accounts tree
+	globalPerms := ptypes.DefaultAccountPermissions
+	globalPerms = genDoc.GlobalPermissions
+	// XXX: make sure the set bits are all true
+	// Without it the HasPermission() functions will fail
+	globalPerms.Base.SetBit = ptypes.AllPermFlags
+
+	permsAcc := &acm.ConcreteAccount{
+		Address:     permission.GlobalPermissionsAddress,
+		Balance:     1337,
+		Permissions: globalPerms,
+	}
+	accounts.Set(permsAcc.Address.Bytes(), permsAcc.Encode())
+
+	// Make validatorInfos state tree && validators slice
+	/*
+		validatorInfos := merkle.NewIAVLTree(wire.BasicCodec, types.ValidatorInfoCodec, 0, db)
+		validators := make([]*types.Validator, len(genDoc.Validators))
+		for i, val := range genDoc.Validators {
+			pubKey := val.PublicKey
+			address := pubKey.Address()
+
+			// Make ValidatorInfo
+			valInfo := &types.ValidatorInfo{
+				Address:         address,
+				PublicKey:          pubKey,
+				UnbondTo:        make([]*types.TxOutput, len(val.UnbondTo)),
+				FirstBondHeight: 0,
+				FirstBondAmount: val.Amount,
+			}
+			for i, unbondTo := range val.UnbondTo {
+				valInfo.UnbondTo[i] = &types.TxOutput{
+					Address: unbondTo.Address,
+					Amount:  unbondTo.Amount,
+				}
+			}
+			validatorInfos.Set(address, valInfo)
+
+			// Make validator
+			validators[i] = &types.Validator{
+				Address:     address,
+				PublicKey:      pubKey,
+				VotingPower: val.Amount,
+			}
+		}
+	*/
+
+	// Make namereg tree
+	nameReg := iavl.NewIAVLTree(0, db)
+	// TODO: add names, contracts to genesis.json
+
+	// IAVLTrees must be persisted before copy operations.
+	accounts.Save()
+	//validatorInfos.Save()
+	nameReg.Save()
+
+	return &State{
+		db: db,
+		//BondedValidators:     types.NewValidatorSet(validators),
+		//LastBondedValidators: types.NewValidatorSet(nil),
+		//UnbondingValidators:  types.NewValidatorSet(nil),
+		accounts: accounts,
+		//validatorInfos:       validatorInfos,
+		nameReg: nameReg,
+	}
+}
+
+func LoadState(db dbm.DB) (*State, error) {
 	s := &State{db: db}
 	buf := db.Get(stateKey)
 	if len(buf) == 0 {
-		return nil
+		return nil, nil
 	} else {
 		r, n, err := bytes.NewReader(buf), new(int), new(error)
 		wire.ReadBinaryPtr(&s, r, 0, n, err)
 		if *err != nil {
 			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-			util.Fatalf("Data has been corrupted or its spec has changed: %v\n", *err)
+			return nil, fmt.Errorf("data has been corrupted or its spec has changed: %v", *err)
 		}
-		// TODO: ensure that buf is completely read.
 	}
-	return s
+	return s, nil
 }
 
 func (s *State) Save() {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	s.accounts.Save()
 	//s.validatorInfos.Save()
 	s.nameReg.Save()
@@ -97,94 +189,94 @@ func (s *State) Save() {
 // CONTRACT:
 // Copy() is a cheap way to take a snapshot,
 // as if State were copied by value.
+// TODO [Silas]: Kill this with fire it is totally broken - there is no safe way to copy IAVLTree while sharing database
 func (s *State) Copy() *State {
 	return &State{
-		db:               s.db,
-		ChainID:          s.ChainID,
-		LastBlockHeight:  s.LastBlockHeight,
-		LastBlockHash:    s.LastBlockHash,
-		LastBlockTime:    s.LastBlockTime,
-		LastBlockAppHash: s.LastBlockAppHash,
+		db: s.db,
 		// BondedValidators:     s.BondedValidators.Copy(),     // TODO remove need for Copy() here.
 		// LastBondedValidators: s.LastBondedValidators.Copy(), // That is, make updates to the validator set
 		// UnbondingValidators: s.UnbondingValidators.Copy(), // copy the valSet lazily.
 		accounts: s.accounts.Copy(),
 		//validatorInfos:       s.validatorInfos.Copy(),
 		nameReg: s.nameReg.Copy(),
-		evc:     nil,
 	}
 }
+
+//func (s *State) Copy() *State {
+//	stateCopy := &State{
+//		db:              dbm.NewMemDB(),
+//		chainID:         s.chainID,
+//		lastBlockHeight: s.lastBlockHeight,
+//		lastBlockAppHash:   s.lastBlockAppHash,
+//		lastBlockTime:   s.lastBlockTime,
+//		// BondedValidators:     s.BondedValidators.Copy(),     // TODO remove need for Copy() here.
+//		// LastBondedValidators: s.LastBondedValidators.Copy(), // That is, make updates to the validator set
+//		// UnbondingValidators: s.UnbondingValidators.Copy(), // copy the valSet lazily.
+//		accounts: copyTree(s.accounts),
+//		//validatorInfos:       s.validatorInfos.Copy(),
+//		nameReg: copyTree(s.nameReg),
+//		evc:     nil,
+//	}
+//	stateCopy.Save()
+//	return stateCopy
+//}
 
 // Returns a hash that represents the state data, excluding Last*
 func (s *State) Hash() []byte {
+	s.RLock()
+	defer s.RUnlock()
 	return merkle.SimpleHashFromMap(map[string]interface{}{
 		//"BondedValidators":    s.BondedValidators,
 		//"UnbondingValidators": s.UnbondingValidators,
-		"Accounts": s.accounts,
+		"Accounts": s.accounts.Hash(),
 		//"ValidatorInfos":      s.validatorInfos,
 		"NameRegistry": s.nameReg,
-		"AppHash":      s.LastBlockAppHash,
 	})
 }
 
-func (s *State) GetGenesisDoc() (*types.GenesisDoc, error) {
-	var genesisDoc *types.GenesisDoc
-	loadedGenesisDocBytes := s.db.Get(types.GenDocKey)
-	err := new(error)
-	wire.ReadJSONPtr(&genesisDoc, loadedGenesisDocBytes, err)
-	if *err != nil {
-		return nil, fmt.Errorf("Unable to read genesisDoc from db on Get: %v", err)
-	}
-	return genesisDoc, nil
-}
-
-func (s *State) SetDB(db dbm.DB) {
-	s.db = db
-}
-
-//-------------------------------------
-// State.params
-
-func (s *State) GetGasLimit() int64 {
-	return 1000000 // TODO
-}
-
-// State.params
-//-------------------------------------
-// State.accounts
-
 // Returns nil if account does not exist with given address.
-// Implements Statelike
-func (s *State) GetAccount(address []byte) *acm.Account {
-	_, accBytes, _ := s.accounts.Get(address)
+func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
+	s.RLock()
+	defer s.RUnlock()
+	_, accBytes, _ := s.accounts.Get(address.Bytes())
 	if accBytes == nil {
-		return nil
+		return nil, nil
 	}
-	return acm.DecodeAccount(accBytes)
+	return acm.Decode(accBytes)
 }
 
-// The account is copied before setting, so mutating it
-// afterwards has no side effects.
-// Implements Statelike
-func (s *State) UpdateAccount(account *acm.Account) bool {
-	return s.accounts.Set(account.Address, acm.EncodeAccount(account))
+func (s *State) UpdateAccount(account acm.Account) error {
+	s.Lock()
+	defer s.Unlock()
+	s.accounts.Set(account.Address().Bytes(), account.Encode())
+	return nil
 }
 
-// Implements Statelike
-func (s *State) RemoveAccount(address []byte) bool {
-	_, removed := s.accounts.Remove(address)
-	return removed
+func (s *State) RemoveAccount(address acm.Address) error {
+	s.Lock()
+	defer s.Unlock()
+	s.accounts.Remove(address.Bytes())
+	return nil
 }
 
-// The returned Account is a copy, so mutating it
-// has no side effects.
+// This does not give a true independent copy since the underlying database is shared and any save calls all copies
+// to become invalid and using them may cause panics
 func (s *State) GetAccounts() merkle.Tree {
 	return s.accounts.Copy()
 }
 
-// Set the accounts tree
-func (s *State) SetAccounts(accounts merkle.Tree) {
-	s.accounts = accounts
+func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+	s.RLock()
+	defer s.RUnlock()
+	stopped = s.accounts.Iterate(func(key, value []byte) bool {
+		var account acm.Account
+		account, err = acm.Decode(value)
+		if err != nil {
+			return true
+		}
+		return consumer(account)
+	})
+	return
 }
 
 // State.accounts
@@ -222,7 +314,7 @@ func (s *State) unbondValidator(val *types.Validator) {
 	if !removed {
 		PanicCrisis("Couldn't remove validator for unbonding")
 	}
-	val.UnbondHeight = s.LastBlockHeight + 1
+	val.UnbondHeight = s.lastBlockHeight + 1
 	added := s.UnbondingValidators.Add(val)
 	if !added {
 		PanicCrisis("Couldn't add validator for unbonding")
@@ -235,7 +327,7 @@ func (s *State) rebondValidator(val *types.Validator) {
 	if !removed {
 		PanicCrisis("Couldn't remove validator for rebonding")
 	}
-	val.BondHeight = s.LastBlockHeight + 1
+	val.BondHeight = s.lastBlockHeight + 1
 	added := s.BondedValidators.Add(val)
 	if !added {
 		PanicCrisis("Couldn't add validator for rebonding")
@@ -248,7 +340,7 @@ func (s *State) releaseValidator(val *types.Validator) {
 	if valInfo == nil {
 		PanicSanity("Couldn't find validatorInfo for release")
 	}
-	valInfo.ReleasedHeight = s.LastBlockHeight + 1
+	valInfo.ReleasedHeight = s.lastBlockHeight + 1
 	s.SetValidatorInfo(valInfo)
 
 	// Send coins back to UnbondTo outputs
@@ -274,7 +366,7 @@ func (s *State) destroyValidator(val *types.Validator) {
 	if valInfo == nil {
 		PanicSanity("Couldn't find validatorInfo for release")
 	}
-	valInfo.DestroyedHeight = s.LastBlockHeight + 1
+	valInfo.DestroyedHeight = s.lastBlockHeight + 1
 	valInfo.DestroyedAmount = val.VotingPower
 	s.SetValidatorInfo(valInfo)
 
@@ -300,17 +392,81 @@ func (s *State) SetValidatorInfos(validatorInfos merkle.Tree) {
 //-------------------------------------
 // State.storage
 
-func (s *State) LoadStorage(hash []byte) (storage merkle.Tree) {
-	storage = iavl.NewIAVLTree(1024, s.db)
+func (s *State) accountStorage(address acm.Address) (merkle.Tree, error) {
+	account, err := s.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	if account == nil {
+		return nil, fmt.Errorf("could not find account %s to access its storage", address)
+	}
+	return s.LoadStorage(account.StorageRoot()), nil
+}
+
+func (s *State) LoadStorage(hash []byte) merkle.Tree {
+	s.RLock()
+	defer s.RUnlock()
+	storage := iavl.NewIAVLTree(1024, s.db)
 	storage.Load(hash)
 	return storage
+}
+
+func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+	s.RLock()
+	defer s.RUnlock()
+	storageTree, err := s.accountStorage(address)
+	if err != nil {
+		return binary.Zero256, err
+	}
+	_, value, _ := storageTree.Get(key.Bytes())
+	return binary.LeftPadWord256(value), nil
+}
+
+func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
+	s.Lock()
+	defer s.Unlock()
+	storageTree, err := s.accountStorage(address)
+	if err != nil {
+		return err
+	}
+	if storageTree != nil {
+		storageTree.Set(key.Bytes(), value.Bytes())
+	}
+	return nil
+}
+
+func (s *State) IterateStorage(address acm.Address,
+	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+
+	var storageTree merkle.Tree
+	storageTree, err = s.accountStorage(address)
+	if err != nil {
+		return
+	}
+	stopped = storageTree.Iterate(func(key []byte, value []byte) (stop bool) {
+		// Note: no left padding should occur unless there is a bug and non-words have been writte to this storage tree
+		if len(key) != binary.Word256Length {
+			err = fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+				key, address, binary.Word256Length)
+			return true
+		}
+		if len(value) != binary.Word256Length {
+			err = fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+				key, address, binary.Word256Length)
+			return true
+		}
+		return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
+	})
+	return
 }
 
 // State.storage
 //-------------------------------------
 // State.nameReg
 
-func (s *State) GetNameRegEntry(name string) *core_types.NameRegEntry {
+var _ NameRegIterable = &State{}
+
+func (s *State) GetNameRegEntry(name string) *NameRegEntry {
 	_, valueBytes, _ := s.nameReg.Get([]byte(name))
 	if valueBytes == nil {
 		return nil
@@ -319,18 +475,24 @@ func (s *State) GetNameRegEntry(name string) *core_types.NameRegEntry {
 	return DecodeNameRegEntry(valueBytes)
 }
 
-func DecodeNameRegEntry(entryBytes []byte) *core_types.NameRegEntry {
-	var n int
-	var err error
-	value := NameRegCodec.Decode(bytes.NewBuffer(entryBytes), &n, &err)
-	return value.(*core_types.NameRegEntry)
+func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool) {
+	return s.nameReg.Iterate(func(key []byte, value []byte) (stop bool) {
+		return consumer(DecodeNameRegEntry(value))
+	})
 }
 
-func (s *State) UpdateNameRegEntry(entry *core_types.NameRegEntry) bool {
+func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {
+	var n int
+	var err error
+	value := NameRegDecode(bytes.NewBuffer(entryBytes), &n, &err)
+	return value.(*NameRegEntry)
+}
+
+func (s *State) UpdateNameRegEntry(entry *NameRegEntry) bool {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
-	NameRegCodec.Encode(entry, w, &n, &err)
+	NameRegEncode(entry, w, &n, &err)
 	return s.nameReg.Set([]byte(entry.Name), w.Bytes())
 }
 
@@ -347,128 +509,10 @@ func (s *State) GetNames() merkle.Tree {
 func (s *State) SetNameReg(nameReg merkle.Tree) {
 	s.nameReg = nameReg
 }
-
-func NameRegEncoder(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*core_types.NameRegEntry), w, n, err)
+func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
+	wire.WriteBinary(o.(*NameRegEntry), w, n, err)
 }
 
-func NameRegDecoder(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&core_types.NameRegEntry{}, r, txs.MaxDataLength, n, err)
-}
-
-var NameRegCodec = wire.Codec{
-	Encode: NameRegEncoder,
-	Decode: NameRegDecoder,
-}
-
-// State.nameReg
-//-------------------------------------
-
-// Implements events.Eventable. Typically uses events.EventCache
-func (s *State) SetFireable(evc events.Fireable) {
-	s.evc = evc
-}
-
-//-----------------------------------------------------------------------------
-// Genesis
-
-func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
-	if len(genDoc.Validators) == 0 {
-		util.Fatalf("The genesis file has no validators")
-	}
-
-	if genDoc.GenesisTime.IsZero() {
-		// NOTE: [ben] change GenesisTime to requirement on v0.17
-		// GenesisTime needs to be deterministic across the chain
-		// and should be required in the genesis file;
-		// the requirement is not yet enforced when lacking set
-		// time to 11/18/2016 @ 4:09am (UTC)
-		genDoc.GenesisTime = time.Unix(1479442162, 0)
-	}
-
-	// Make accounts state tree
-	accounts := iavl.NewIAVLTree(defaultAccountsCacheCapacity, db)
-	for _, genAcc := range genDoc.Accounts {
-		perm := ptypes.ZeroAccountPermissions
-		if genAcc.Permissions != nil {
-			perm = *genAcc.Permissions
-		}
-		acc := &acm.Account{
-			Address:     genAcc.Address,
-			Balance:     genAcc.Amount,
-			Permissions: perm,
-		}
-		accounts.Set(acc.Address, acm.EncodeAccount(acc))
-	}
-
-	// global permissions are saved as the 0 address
-	// so they are included in the accounts tree
-	globalPerms := ptypes.DefaultAccountPermissions
-	if genDoc.Params != nil && genDoc.Params.GlobalPermissions != nil {
-		globalPerms = *genDoc.Params.GlobalPermissions
-		// XXX: make sure the set bits are all true
-		// Without it the HasPermission() functions will fail
-		globalPerms.Base.SetBit = ptypes.AllPermFlags
-	}
-
-	permsAcc := &acm.Account{
-		Address:     ptypes.GlobalPermissionsAddress,
-		Balance:     1337,
-		Permissions: globalPerms,
-	}
-	accounts.Set(permsAcc.Address, acm.EncodeAccount(permsAcc))
-
-	// Make validatorInfos state tree && validators slice
-	/*
-		validatorInfos := merkle.NewIAVLTree(wire.BasicCodec, types.ValidatorInfoCodec, 0, db)
-		validators := make([]*types.Validator, len(genDoc.Validators))
-		for i, val := range genDoc.Validators {
-			pubKey := val.PubKey
-			address := pubKey.Address()
-
-			// Make ValidatorInfo
-			valInfo := &types.ValidatorInfo{
-				Address:         address,
-				PubKey:          pubKey,
-				UnbondTo:        make([]*types.TxOutput, len(val.UnbondTo)),
-				FirstBondHeight: 0,
-				FirstBondAmount: val.Amount,
-			}
-			for i, unbondTo := range val.UnbondTo {
-				valInfo.UnbondTo[i] = &types.TxOutput{
-					Address: unbondTo.Address,
-					Amount:  unbondTo.Amount,
-				}
-			}
-			validatorInfos.Set(address, valInfo)
-
-			// Make validator
-			validators[i] = &types.Validator{
-				Address:     address,
-				PubKey:      pubKey,
-				VotingPower: val.Amount,
-			}
-		}
-	*/
-
-	// Make namereg tree
-	nameReg := iavl.NewIAVLTree(0, db)
-	// TODO: add names, contracts to genesis.json
-
-	// IAVLTrees must be persisted before copy operations.
-	accounts.Save()
-	//validatorInfos.Save()
-	nameReg.Save()
-
-	return &State{
-		db:            db,
-		ChainID:       genDoc.ChainID,
-		LastBlockTime: genDoc.GenesisTime,
-		//BondedValidators:     types.NewValidatorSet(validators),
-		//LastBondedValidators: types.NewValidatorSet(nil),
-		//UnbondingValidators:  types.NewValidatorSet(nil),
-		accounts: accounts,
-		//validatorInfos:       validatorInfos,
-		nameReg: nameReg,
-	}
+func NameRegDecode(r io.Reader, n *int, err *error) interface{} {
+	return wire.ReadBinary(&NameRegEntry{}, r, txs.MaxDataLength, n, err)
 }
