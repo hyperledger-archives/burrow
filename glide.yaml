@@ -29,5 +29,10 @@ import:
   version: ^0.11.0
 - package: github.com/streadway/simpleuuid
 - package: github.com/Graylog2/go-gelf
+- package: github.com/tendermint/tmlibs
+  version: e4ef2835f0081c2ece83b9c1f777cf071f956e81
+  subpackages:
+  - clist
 - package: github.com/tendermint/tendermint
   version: ~0.9.2
+
