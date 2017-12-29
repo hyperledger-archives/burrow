@@ -144,8 +144,10 @@ imports:
   version: 84d9671090430e8ec80e35b339907e0579b999eb
 - name: github.com/tendermint/go-autofile
   version: 48b17de82914e1ec2f134ce823ba426337d2c518
-- name: github.com/tendermint/go-clist
-  version: 3baa390bbaf7634251c42ad69a8682e7e3990552
+- name: github.com/tendermint/tmlibs
+  version: 91b4b534ad78e442192c8175db92a06a51064064
+  subpackages:
+  - clist
 - name: github.com/tendermint/go-common
   version: f9e3db037330c8a8d61d3966de8473eaf01154fa
   subpackages:
