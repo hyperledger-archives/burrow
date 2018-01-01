@@ -38,7 +38,7 @@ Burrow has been architected with a longer term vision on security and data priva
 
 ## Installation
 
-`burrow` is intended to be used by the `monax chains` command via [monax](https://monax.io/docs). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
+`burrow` is intended to be used by the `monax chains` command via [monax](https://monax.io/docs/). Available commands such as `make | start | stop | logs | inspect | update` are used for chain lifecycle management.
 
 ### For Developers
 Dependency management for Burrow is managed with [glide](github.com/Masterminds/glide), and you can build Burrow from source by following
