@@ -17,7 +17,7 @@ package evm
 import (
 	"encoding/hex"
 	"fmt"
-	"strings"
+	//"strings"
 	"testing"
 	"time"
 
@@ -77,9 +77,16 @@ func TestVM(t *testing.T) {
 	var gas uint64 = 100000
 	N := []byte{0x0f, 0x0f}
 	// Loop N times
-	code := []byte{0x60, 0x00, 0x60, 0x20, 0x52, 0x5B, byte(0x60 + len(N) - 1)}
+	code := []byte{
+		byte(PUSH1), 0x00, byte(PUSH1), 0x20, byte(MSTORE), byte(JUMPDEST), byte(PUSH2),
+		/*byte(0x60 + len(N) - 1)*/}
 	code = append(code, N...)
-	code = append(code, []byte{0x60, 0x20, 0x51, 0x12, 0x15, 0x60, byte(0x1b + len(N)), 0x57, 0x60, 0x01, 0x60, 0x20, 0x51, 0x01, 0x60, 0x20, 0x52, 0x60, 0x05, 0x56, 0x5B}...)
+	code = append(code, []byte{
+		byte(PUSH1), 0x20, byte(MLOAD), byte(SLT), byte(ISZERO), byte(PUSH1),
+		0x1d /*byte(0x1b + len(N))*/, byte(JUMPI), byte(PUSH1), 0x01, byte(PUSH1),
+		0x20, byte(MLOAD), byte(ADD), byte(PUSH1), 0x20, byte(MSTORE), byte(PUSH1),
+		0x05, byte(JUMP), byte(JUMPDEST),
+	}...)
 	start := time.Now()
 	output, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
@@ -97,7 +104,7 @@ func TestJumpErr(t *testing.T) {
 	account2 := newAccount(2)
 
 	var gas uint64 = 100000
-	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
+	code := []byte{byte(PUSH1), 0x10, byte(JUMP)} // jump to position 16, a clear failure
 	var err error
 	ch := make(chan struct{})
 	go func() {
@@ -127,14 +134,44 @@ func TestSubcurrency(t *testing.T) {
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
-	code_parts := []string{"620f42403355",
-		"7c0100000000000000000000000000000000000000000000000000000000",
-		"600035046315cf268481141561004657",
-		"6004356040526040515460605260206060f35b63693200ce81141561008757",
-		"60043560805260243560a052335460c0523360e05260a05160c05112151561008657",
-		"60a05160c0510360e0515560a0516080515401608051555b5b505b6000f3"}
-	code, _ := hex.DecodeString(strings.Join(code_parts, ""))
-	fmt.Printf("Code: %s\n", code)
+
+	code := []byte{byte(PUSH3), 0x0f, 0x42, 0x40, byte(CALLER), byte(SSTORE)}
+	code = append(code, []byte{
+		byte(PUSH29), 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}...)
+	code = append(code, []byte{
+		byte(PUSH1), 0x00, byte(CALLDATALOAD), byte(DIV), byte(PUSH4), 0x15, 0xcf,
+		0x26, 0x84, byte(DUP2), byte(EQ), byte(ISZERO), byte(PUSH2), 0x00, 0x46, byte(JUMPI),
+	}...)
+	code = append(code, []byte{
+		byte(PUSH1), 0x04, byte(CALLDATALOAD), byte(PUSH1), 0x40, byte(MSTORE),
+		byte(PUSH1), 0x40, byte(MLOAD), byte(SLOAD), byte(PUSH1), 0x60, byte(MSTORE),
+		byte(PUSH1), 0x20, byte(PUSH1), 0x60, byte(RETURN), byte(JUMPDEST),
+		byte(PUSH4), 0x69, 0x32, 0x00, 0xce, byte(DUP2), byte(EQ), byte(ISZERO),
+		byte(PUSH2), 0x00, 0x87, byte(JUMPI),
+	}...)
+	code = append(code, []byte{
+		byte(PUSH1), 0x04, byte(CALLDATALOAD), byte(PUSH1), 0x80, byte(MSTORE),
+		byte(PUSH1), 0x24, byte(CALLDATALOAD), byte(PUSH1), 0xa0, byte(MSTORE),
+		byte(CALLER), byte(SLOAD), byte(PUSH1), 0xc0, byte(MSTORE), byte(CALLER),
+		byte(PUSH1), 0xe0, byte(MSTORE), byte(PUSH1), 0xa0, byte(MLOAD),
+		byte(PUSH1), 0xc0, byte(MLOAD), byte(SLT), byte(ISZERO), byte(ISZERO),
+		byte(PUSH2), 0x00, 0x86, byte(JUMPI),
+	}...)
+	code = append(code, []byte{
+		byte(PUSH1), 0xa0, byte(MLOAD), byte(PUSH1), 0xc0, byte(MLOAD), byte(SUB),
+		byte(PUSH1), 0xe0, byte(MLOAD), byte(SSTORE), byte(PUSH1), 0xa0, byte(MLOAD),
+		byte(PUSH1), 0x80, byte(MLOAD), byte(SLOAD), byte(ADD), byte(PUSH1), 0x80,
+		byte(MLOAD), byte(SSTORE), byte(JUMPDEST), byte(JUMPDEST), byte(POP),
+		byte(JUMPDEST), byte(PUSH1), 0x00, byte(RETURN),
+	}...)
+
+	for _, element := range code {
+		fmt.Printf("Code: %#x\n", element)
+	}
+
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
 	output, err := ourVm.Call(account1, account2, code, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
