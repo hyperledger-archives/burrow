@@ -75,18 +75,25 @@ func TestVM(t *testing.T) {
 	account2 := newAccount(1, 0, 1)
 
 	var gas uint64 = 100000
+
+	//Array defining how many times loop will run
 	N := []byte{0x0f, 0x0f}
-	// Loop N times
+
+	// Loop initialization
 	code := []byte{
-		byte(PUSH1), 0x00, byte(PUSH1), 0x20, byte(MSTORE), byte(JUMPDEST), byte(PUSH2),
-		/*byte(0x60 + len(N) - 1)*/}
+		byte(PUSH1), 0x00, byte(PUSH1), 0x20, byte(MSTORE), byte(JUMPDEST),
+		byte(0x60 + len(N) - 1),
+	}
+
 	code = append(code, N...)
+
 	code = append(code, []byte{
 		byte(PUSH1), 0x20, byte(MLOAD), byte(SLT), byte(ISZERO), byte(PUSH1),
-		0x1d /*byte(0x1b + len(N))*/, byte(JUMPI), byte(PUSH1), 0x01, byte(PUSH1),
-		0x20, byte(MLOAD), byte(ADD), byte(PUSH1), 0x20, byte(MSTORE), byte(PUSH1),
+		byte(0x1b + len(N)), byte(JUMPI), byte(PUSH1), 0x01, byte(PUSH1), 0x20,
+		byte(MLOAD), byte(ADD), byte(PUSH1), 0x20, byte(MSTORE), byte(PUSH1),
 		0x05, byte(JUMP), byte(JUMPDEST),
 	}...)
+
 	start := time.Now()
 	output, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
@@ -96,6 +103,7 @@ func TestVM(t *testing.T) {
 	}
 }
 
+//Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
@@ -104,7 +112,10 @@ func TestJumpErr(t *testing.T) {
 	account2 := newAccount(2)
 
 	var gas uint64 = 100000
-	code := []byte{byte(PUSH1), 0x10, byte(JUMP)} // jump to position 16, a clear failure
+
+	//Set jump destination to 16
+	code := []byte{byte(PUSH1), 0x10, byte(JUMP)}
+
 	var err error
 	ch := make(chan struct{})
 	go func() {
@@ -125,6 +136,7 @@ func TestJumpErr(t *testing.T) {
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
+
 	// Create accounts
 	account1 := newAccount(1, 2, 3)
 	account2 := newAccount(3, 2, 1)
