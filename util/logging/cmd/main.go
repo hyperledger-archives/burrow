@@ -31,8 +31,7 @@ func main() {
 					"module", "p2p",
 					"captured_logging_source", "tendermint_log15")).
 					AddSinks(
-						Sink().SetOutput(SyslogOutput("Burrow-network")),
-						Sink().SetOutput(FileOutput("/var/log/burrow-network.log")),
+						Sink().SetOutput(StdoutOutput()),
 					),
 			),
 	}

@@ -18,7 +18,6 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/logging/types"
-	"github.com/hyperledger/burrow/util/slice"
 )
 
 // Helper functions for InfoTraceLoggers, sort of extension methods to loggers
@@ -26,13 +25,13 @@ import (
 // logging interface
 
 // Record structured Info log line with a message
-func InfoMsg(logger types.InfoTraceLogger, message string, keyvals ...interface{}) {
-	Msg(kitlog.LoggerFunc(logger.Info), message, keyvals...)
+func InfoMsg(logger types.InfoTraceLogger, message string, keyvals ...interface{}) error {
+	return Msg(kitlog.LoggerFunc(logger.Info), message, keyvals...)
 }
 
 // Record structured Trace log line with a message
-func TraceMsg(logger types.InfoTraceLogger, message string, keyvals ...interface{}) {
-	Msg(kitlog.LoggerFunc(logger.Trace), message, keyvals...)
+func TraceMsg(logger types.InfoTraceLogger, message string, keyvals ...interface{}) error {
+	return Msg(kitlog.LoggerFunc(logger.Trace), message, keyvals...)
 }
 
 // Establish or extend the scope of this logger by appending scopeName to the Scope vector.
@@ -46,6 +45,6 @@ func WithScope(logger types.InfoTraceLogger, scopeName string) types.InfoTraceLo
 
 // Record a structured log line with a message
 func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
-	prepended := slice.CopyPrepend(keyvals, structure.MessageKey, message)
+	prepended := structure.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }
