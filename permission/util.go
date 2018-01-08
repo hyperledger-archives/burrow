@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package permission
+
+import "github.com/hyperledger/burrow/permission/types"
 
 // ConvertMapStringIntToPermissions converts a map of string-bool pairs and a slice of
 // strings for the roles to an AccountPermissions type. If the value in the
 // permissions map is true for a particular permission string then the permission
 // will be set in the AccountsPermissions. For all unmentioned permissions the
 // ZeroBasePermissions is defaulted to.
-func ConvertPermissionsMapAndRolesToAccountPermissions(permissions map[string]bool, roles []string) (*AccountPermissions, error) {
+func ConvertPermissionsMapAndRolesToAccountPermissions(permissions map[string]bool,
+	roles []string) (*types.AccountPermissions, error) {
 	var err error
-	accountPermissions := &AccountPermissions{}
+	accountPermissions := &types.AccountPermissions{}
 	accountPermissions.Base, err = convertPermissionsMapStringIntToBasePermissions(permissions)
 	if err != nil {
 		return nil, err
@@ -32,7 +35,7 @@ func ConvertPermissionsMapAndRolesToAccountPermissions(permissions map[string]bo
 
 // convertPermissionsMapStringIntToBasePermissions converts a map of string-bool
 // pairs to BasePermissions.
-func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool) (BasePermissions, error) {
+func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool) (types.BasePermissions, error) {
 	// initialise basePermissions as ZeroBasePermissions
 	basePermissions := ZeroBasePermissions
 
@@ -46,4 +49,19 @@ func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool
 	}
 
 	return basePermissions, nil
+}
+
+func BasePermissionsFromStringList(permissions []string) (types.BasePermissions, error) {
+	var permFlag types.PermFlag
+	for _, perm := range permissions {
+		flag, err := PermStringToFlag(perm)
+		if err != nil {
+			return ZeroBasePermissions, err
+		}
+		permFlag |= flag
+	}
+	return types.BasePermissions{
+		Perms:  permFlag,
+		SetBit: permFlag,
+	}, nil
 }
