@@ -33,8 +33,8 @@ type FilterableObject struct {
 // Ops: All
 type IntegerFilter struct {
 	op    string
-	value int64
-	match func(int64, int64) bool
+	value uint64
+	match func(uint64, uint64) bool
 }
 
 func (this *IntegerFilter) Configure(fd *FilterData) error {
@@ -57,7 +57,7 @@ func (this *IntegerFilter) Match(v interface{}) bool {
 	if !ok {
 		return false
 	}
-	return this.match(int64(fo.Integer), this.value)
+	return this.match(uint64(fo.Integer), this.value)
 }
 
 // Filter for integer value.

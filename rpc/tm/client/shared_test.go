@@ -14,26 +14,16 @@
 
 package client
 
-import "github.com/tendermint/go-rpc/types"
+import (
+	"os"
+	"testing"
+)
 
-type WebsocketClient interface {
-	WriteJSON(v interface{}) error
-}
-
-func Subscribe(websocketClient WebsocketClient, eventId string) error {
-	return websocketClient.WriteJSON(rpctypes.RPCRequest{
-		JSONRPC: "2.0",
-		ID:      "",
-		Method:  "subscribe",
-		Params:  map[string]interface{}{"eventId": eventId},
+// Needs to be in a _test.go file to be picked up
+func TestMain(m *testing.M) {
+	returnValue := TestWrapper(func() int {
+		return m.Run()
 	})
-}
 
-func Unsubscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	return websocketClient.WriteJSON(rpctypes.RPCRequest{
-		JSONRPC: "2.0",
-		ID:      "",
-		Method:  "unsubscribe",
-		Params:  map[string]interface{}{"subscriptionId": subscriptionId},
-	})
+	defer os.Exit(returnValue)
 }
