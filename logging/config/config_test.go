@@ -19,7 +19,7 @@ var complexConfig *LoggingConfig = &LoggingConfig{
 					"Foo", "Bars")).
 				AddSinks(
 					Sink().
-						SetOutput(RemoteSyslogOutput("Eris-db", "tcp://example.com:6514")),
+						SetOutput(StderrOutput()),
 					Sink().
 						SetOutput(StdoutOutput()),
 				),

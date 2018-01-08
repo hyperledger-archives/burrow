@@ -15,47 +15,53 @@
 package txs
 
 import (
+	"fmt"
 	"testing"
 
-	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"encoding/json"
 
+	acm "github.com/hyperledger/burrow/account"
+	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
-	. "github.com/tendermint/go-common"
-	"github.com/tendermint/go-crypto"
+	"github.com/stretchr/testify/require"
 )
 
 var chainID = "myChainID"
 
+func makeAddress(str string) (address acm.Address) {
+	copy(address[:], ([]byte)(str))
+	return
+}
+
 func TestSendTxSignable(t *testing.T) {
 	sendTx := &SendTx{
 		Inputs: []*TxInput{
-			&TxInput{
-				Address:  []byte("input1"),
+			{
+				Address:  makeAddress("input1"),
 				Amount:   12345,
 				Sequence: 67890,
 			},
-			&TxInput{
-				Address:  []byte("input2"),
+			{
+				Address:  makeAddress("input2"),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		Outputs: []*TxOutput{
-			&TxOutput{
-				Address: []byte("output1"),
+			{
+				Address: makeAddress("output1"),
 				Amount:  333,
 			},
-			&TxOutput{
-				Address: []byte("output2"),
+			{
+				Address: makeAddress("output2"),
 				Amount:  444,
 			},
 		},
 	}
 	signBytes := acm.SignBytes(chainID, sendTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"outputs":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"outputs":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
+		chainID, sendTx.Inputs[0].Address.String(), sendTx.Inputs[1].Address.String(), sendTx.Outputs[0].Address.String(), sendTx.Outputs[1].Address.String())
 
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for SendTx. Expected:\n%v\nGot:\n%v", expected, signStr)
@@ -63,21 +69,22 @@ func TestSendTxSignable(t *testing.T) {
 }
 
 func TestCallTxSignable(t *testing.T) {
+	toAddress := makeAddress("contract1")
 	callTx := &CallTx{
 		Input: &TxInput{
-			Address:  []byte("input1"),
+			Address:  makeAddress("input1"),
 			Amount:   12345,
 			Sequence: 67890,
 		},
-		Address:  []byte("contract1"),
+		Address:  &toAddress,
 		GasLimit: 111,
 		Fee:      222,
 		Data:     []byte("data1"),
 	}
 	signBytes := acm.SignBytes(chainID, callTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[2,{"address":"636F6E747261637431","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"696E70757431","amount":12345,"sequence":67890}}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[2,{"address":"%s","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"%s","amount":12345,"sequence":67890}}]}`,
+		chainID, callTx.Address.String(), callTx.Input.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
@@ -86,7 +93,7 @@ func TestCallTxSignable(t *testing.T) {
 func TestNameTxSignable(t *testing.T) {
 	nameTx := &NameTx{
 		Input: &TxInput{
-			Address:  []byte("input1"),
+			Address:  makeAddress("input1"),
 			Amount:   12345,
 			Sequence: 250,
 		},
@@ -96,8 +103,8 @@ func TestNameTxSignable(t *testing.T) {
 	}
 	signBytes := acm.SignBytes(chainID, nameTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"696E70757431","amount":12345,"sequence":250},"name":"google.com"}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"%s","amount":12345,"sequence":250},"name":"google.com"}]}`,
+		chainID, nameTx.Input.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
@@ -105,50 +112,46 @@ func TestNameTxSignable(t *testing.T) {
 
 func TestBondTxSignable(t *testing.T) {
 	privKeyBytes := make([]byte, 64)
-	privAccount := acm.GenPrivAccountFromPrivKeyBytes(privKeyBytes)
+	privAccount := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes)
 	bondTx := &BondTx{
-		PubKey: privAccount.PubKey.(crypto.PubKeyEd25519),
+		PubKey: privAccount.PublicKey(),
 		Inputs: []*TxInput{
-			&TxInput{
-				Address:  []byte("input1"),
+			{
+				Address:  makeAddress("input1"),
 				Amount:   12345,
 				Sequence: 67890,
 			},
-			&TxInput{
-				Address:  []byte("input2"),
+			{
+				Address:  makeAddress("input2"),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		UnbondTo: []*TxOutput{
-			&TxOutput{
-				Address: []byte("output1"),
+			{
+				Address: makeAddress("output1"),
 				Amount:  333,
 			},
-			&TxOutput{
-				Address: []byte("output2"),
+			{
+				Address: makeAddress("output2"),
 				Amount:  444,
 			},
 		},
 	}
-	signBytes := acm.SignBytes(chainID, bondTx)
-	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"696E70757431","amount":12345,"sequence":67890},{"address":"696E70757432","amount":111,"sequence":222}],"pub_key":"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29","unbond_to":[{"address":"6F757470757431","amount":333},{"address":"6F757470757432","amount":444}]}]}`,
-		chainID)
-	if signStr != expected {
-		t.Errorf("Unexpected sign string for BondTx. \nGot %s\nExpected %s", signStr, expected)
-	}
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"pub_key":[1,"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29"],"unbond_to":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
+		chainID, bondTx.Inputs[0].Address.String(), bondTx.Inputs[1].Address.String(), bondTx.UnbondTo[0].Address.String(), bondTx.UnbondTo[1].Address.String())
+	assert.Equal(t, expected, string(acm.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
 }
 
 func TestUnbondTxSignable(t *testing.T) {
 	unbondTx := &UnbondTx{
-		Address: []byte("address1"),
+		Address: makeAddress("address1"),
 		Height:  111,
 	}
 	signBytes := acm.SignBytes(chainID, unbondTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[18,{"address":"6164647265737331","height":111}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[18,{"address":"%s","height":111}]}`,
+		chainID, unbondTx.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for UnbondTx")
 	}
@@ -156,13 +159,13 @@ func TestUnbondTxSignable(t *testing.T) {
 
 func TestRebondTxSignable(t *testing.T) {
 	rebondTx := &RebondTx{
-		Address: []byte("address1"),
+		Address: makeAddress("address1"),
 		Height:  111,
 	}
 	signBytes := acm.SignBytes(chainID, rebondTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[19,{"address":"6164647265737331","height":111}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[19,{"address":"%s","height":111}]}`,
+		chainID, rebondTx.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for RebondTx")
 	}
@@ -171,77 +174,84 @@ func TestRebondTxSignable(t *testing.T) {
 func TestPermissionsTxSignable(t *testing.T) {
 	permsTx := &PermissionsTx{
 		Input: &TxInput{
-			Address:  []byte("input1"),
+			Address:  makeAddress("input1"),
 			Amount:   12345,
 			Sequence: 250,
 		},
-		PermArgs: &ptypes.SetBaseArgs{
-			Address:    []byte("address1"),
-			Permission: 1,
-			Value:      true,
-		},
+		PermArgs: ptypes.SetBaseArgs(makeAddress("address1"), 1, true),
 	}
 
 	signBytes := acm.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[32,{"args":"[2,{"address":"6164647265737331","permission":1,"value":true}]","input":{"address":"696E70757431","amount":12345,"sequence":250}}]}`,
-		chainID)
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[32,{"args":"[2,{"address":"%s","permission":1,"value":true}]","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
+		chainID, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
 	}
 }
 
-func TestEncodeTxDecodeTx(t *testing.T) {
-	inputAddress := []byte{1, 2, 3, 4, 5}
-	outputAddress := []byte{5, 4, 3, 2, 1}
-	amount := int64(2)
-	sequence := 3
-	tx := &SendTx{
-		Inputs: []*TxInput{{
-			Address:  inputAddress,
-			Amount:   amount,
-			Sequence: sequence,
-		}},
-		Outputs: []*TxOutput{{
-			Address: outputAddress,
-			Amount:  amount,
-		}},
+func TestTxWrapper_MarshalJSON(t *testing.T) {
+	toAddress := makeAddress("contract1")
+	callTx := &CallTx{
+		Input: &TxInput{
+			Address:  makeAddress("input1"),
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		Address:  &toAddress,
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
 	}
-	txBytes, err := EncodeTx(tx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	txOut, err := DecodeTx(txBytes)
-	assert.NoError(t, err, "DecodeTx error")
-	assert.Equal(t, tx, txOut)
+	testTxMarshalJSON(t, callTx)
+}
+
+func TestNewPermissionsTxWithNonce(t *testing.T) {
+	privateKey := acm.PrivateKeyFromSecret("Shhh...")
+
+	args := ptypes.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
+	permTx := NewPermissionsTxWithNonce(privateKey.PublicKey(), args, 1)
+	testTxMarshalJSON(t, permTx)
+}
+
+func testTxMarshalJSON(t *testing.T, tx Tx) {
+	txw := &Wrapper{Tx: tx}
+	bs, err := json.Marshal(txw)
+	require.NoError(t, err)
+	txwOut := new(Wrapper)
+	err = json.Unmarshal(bs, txwOut)
+	require.NoError(t, err)
+	bsOut, err := json.Marshal(txwOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
 }
 
 /*
 func TestDupeoutTxSignable(t *testing.T) {
-	privAcc := acm.GenPrivAccount()
-	partSetHeader := types.PartSetHeader{Total: 10, Hash: []byte("partsethash")}
+	privAcc := acm.GeneratePrivateAccount()
+	partSetHeader := types.PartSetHeader{Total: 10, Hash: makeAddress("partsethash")}
 	voteA := &types.Vote{
 		Height:           10,
 		Round:            2,
 		Type:             types.VoteTypePrevote,
-		BlockHash:        []byte("myblockhash"),
+		BlockHash:        makeAddress("myblockhash"),
 		BlockPartsHeader: partSetHeader,
 	}
-	sig := privAcc.Sign(chainID, voteA)
+	sig := privAcc acm.ChainSign(chainID, voteA)
 	voteA.Signature = sig.(crypto.SignatureEd25519)
 	voteB := voteA.Copy()
-	voteB.BlockHash = []byte("myotherblockhash")
-	sig = privAcc.Sign(chainID, voteB)
+	voteB.BlockHash = makeAddress("myotherblockhash")
+	sig = privAcc acm.ChainSign(chainID, voteB)
 	voteB.Signature = sig.(crypto.SignatureEd25519)
 
 	dupeoutTx := &DupeoutTx{
-		Address: []byte("address1"),
+		Address: makeAddress("address1"),
 		VoteA:   *voteA,
 		VoteB:   *voteB,
 	}
 	signBytes := acm.SignBytes(chainID, dupeoutTx)
 	signStr := string(signBytes)
-	expected := Fmt(`{"chain_id":"%s","tx":[20,{"address":"6164647265737331","vote_a":%v,"vote_b":%v}]}`,
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[20,{"address":"%s","vote_a":%v,"vote_b":%v}]}`,
 		chainID, *voteA, *voteB)
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for DupeoutTx")

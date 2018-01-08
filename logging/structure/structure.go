@@ -14,8 +14,6 @@
 
 package structure
 
-import . "github.com/hyperledger/burrow/util/slice"
-
 const (
 	// Log time (time.Time)
 	TimeKey = "time"
@@ -159,4 +157,28 @@ func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (inte
 		mappedKeyvals[i], mappedKeyvals[i+1] = fn(key, val)
 	}
 	return mappedKeyvals
+}
+
+// Deletes n elements starting with the ith from a slice by splicing.
+// Beware uses append so the underlying backing array will be modified!
+func Delete(slice []interface{}, i int, n int) []interface{} {
+	return append(slice[:i], slice[i+n:]...)
+}
+
+// Delete an element at a specific index and return the contracted list
+func DeleteAt(slice []interface{}, i int) []interface{} {
+	return Delete(slice, i, 1)
+}
+
+// Prepend elements to slice in the order they appear
+func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
+	elementsLength := len(elements)
+	newSlice := make([]interface{}, len(slice)+elementsLength)
+	for i, e := range elements {
+		newSlice[i] = e
+	}
+	for i, e := range slice {
+		newSlice[elementsLength+i] = e
+	}
+	return newSlice
 }

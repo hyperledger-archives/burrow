@@ -33,7 +33,7 @@ func NewTCodec() rpc.Codec {
 }
 
 // Encode to an io.Writer.
-func (this *TCodec) Encode(v interface{}, w io.Writer) error {
+func (tCodec *TCodec) Encode(v interface{}, w io.Writer) error {
 	var err error
 	var n int
 	wire.WriteJSON(v, w, &n, &err)
@@ -41,14 +41,14 @@ func (this *TCodec) Encode(v interface{}, w io.Writer) error {
 }
 
 // Encode to a byte array.
-func (this *TCodec) EncodeBytes(v interface{}) ([]byte, error) {
+func (tCodec *TCodec) EncodeBytes(v interface{}) ([]byte, error) {
 	return wire.JSONBytes(v), nil
 }
 
 // TODO: [ben] implement EncodeBytesPtr ?
 
 // Decode from an io.Reader.
-func (this *TCodec) Decode(v interface{}, r io.Reader) error {
+func (tCodec *TCodec) Decode(v interface{}, r io.Reader) error {
 	bts, errR := ioutil.ReadAll(r)
 	if errR != nil {
 		return errR
@@ -59,14 +59,14 @@ func (this *TCodec) Decode(v interface{}, r io.Reader) error {
 }
 
 // Decode from a byte array.
-func (this *TCodec) DecodeBytes(v interface{}, bts []byte) error {
+func (tCodec *TCodec) DecodeBytes(v interface{}, bts []byte) error {
 	var err error
 	wire.ReadJSON(v, bts, &err)
 	return err
 }
 
 // Decode from a byte array pointer.
-func (this *TCodec) DecodeBytesPtr(v interface{}, bts []byte) error {
+func (tCodec *TCodec) DecodeBytesPtr(v interface{}, bts []byte) error {
 	var err error
 	wire.ReadJSONPtr(v, bts, &err)
 	return err

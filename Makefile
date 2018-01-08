@@ -79,8 +79,8 @@ erase_vendor:
 # install vendor uses glide to install vendored dependencies
 .PHONY: install_vendor
 install_vendor:
-	go get github.com/Masterminds/glide
-	glide install
+	@go get -u github.com/golang/dep/cmd/dep
+	@dep ensure -v
 
 # Dumps Solidity interface contracts for SNatives
 .PHONY: snatives

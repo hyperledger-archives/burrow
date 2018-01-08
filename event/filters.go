@@ -141,15 +141,15 @@ func (this *FilterFactory) newSingleFilter(fd *FilterData) (ConfigurableFilter, 
 
 // Some standard value parsing functions.
 
-func ParseNumberValue(value string) (int64, error) {
-	var val int64
+func ParseNumberValue(value string) (uint64, error) {
+	var val uint64
 	// Check for wildcards.
 	if value == "min" {
-		val = math.MinInt64
+		val = 0
 	} else if value == "max" {
-		val = math.MaxInt64
+		val = math.MaxUint64
 	} else {
-		tv, err := strconv.ParseInt(value, 10, 64)
+		tv, err := strconv.ParseUint(value, 10, 64)
 
 		if err != nil {
 			return 0, fmt.Errorf("Wrong value type.")
@@ -161,29 +161,29 @@ func ParseNumberValue(value string) (int64, error) {
 
 // Some standard filtering functions.
 
-func GetRangeFilter(op, fName string) (func(a, b int64) bool, error) {
+func GetRangeFilter(op, fName string) (func(a, b uint64) bool, error) {
 	if op == "==" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a == b
 		}, nil
 	} else if op == "!=" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a != b
 		}, nil
 	} else if op == "<=" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a <= b
 		}, nil
 	} else if op == ">=" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a >= b
 		}, nil
 	} else if op == "<" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a < b
 		}, nil
 	} else if op == ">" {
-		return func(a, b int64) bool {
+		return func(a, b uint64) bool {
 			return a > b
 		}, nil
 	} else {

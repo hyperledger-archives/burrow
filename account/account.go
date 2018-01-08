@@ -14,19 +14,14 @@
 
 package account
 
-// TODO: [ben] Account and PrivateAccount need to become a pure interface
-// and then move the implementation to the manager types.
-// Eg, Geth has its accounts, different from BurrowMint
-
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
-	"github.com/hyperledger/burrow/common/sanity"
+	"github.com/hyperledger/burrow/binary"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -41,64 +36,319 @@ func SignBytes(chainID string, o Signable) []byte {
 	buf, n, err := new(bytes.Buffer), new(int), new(error)
 	o.WriteSignBytes(chainID, buf, n, err)
 	if *err != nil {
-		sanity.PanicCrisis(err)
+		panic(fmt.Sprintf("could not write sign bytes for a signable: %s", *err))
 	}
-
 	return buf.Bytes()
 }
 
-//-----------------------------------------------------------------------------
-
-// Account resides in the application state, and is mutated by transactions
-// on the blockchain.
-// Serialized by wire.[read|write]Reflect
-type Account struct {
-	Address     []byte        `json:"address"`
-	PubKey      crypto.PubKey `json:"pub_key"`
-	Sequence    int           `json:"sequence"`
-	Balance     int64         `json:"balance"`
-	Code        []byte        `json:"code"`         // VM code
-	StorageRoot []byte        `json:"storage_root"` // VM storage merkle root.
-
-	Permissions ptypes.AccountPermissions `json:"permissions"`
+type Addressable interface {
+	// Get the 20 byte EVM address of this account
+	Address() Address
+	// Public key from which the Address is derived
+	PublicKey() PublicKey
 }
 
-func (acc *Account) Copy() *Account {
+// The default immutable interface to an account
+type Account interface {
+	Addressable
+	// The value held by this account in terms of the chain-native token
+	Balance() uint64
+	// The EVM byte code held by this account (or equivalently, this contract)
+	Code() Bytecode
+	// The sequence number (or nonce) of this account, incremented each time a mutation of the
+	// Account is persisted to the blockchain state
+	Sequence() uint64
+	// The hash of all the values in this accounts storage (typically the root of some subtree
+	// in the merkle tree of global storage state)
+	StorageRoot() []byte
+	// The permission flags and roles for this account
+	Permissions() ptypes.AccountPermissions
+	// Obtain a deterministic serialisation of this account
+	// (i.e. update order and Go runtime independent)
+	Encode() []byte
+}
+
+type MutableAccount interface {
+	Account
+	// Set public key (needed for lazy initialisation), should also set the dependent address
+	SetPublicKey(pubKey PublicKey) MutableAccount
+	// Subtract amount from account balance (will panic if amount is greater than balance)
+	SubtractFromBalance(amount uint64) MutableAccount
+	// Add amount to balance (will panic if amount plus balance is a uint64 overflow)
+	AddToBalance(amount uint64) MutableAccount
+	// Set EVM byte code associated with account
+	SetCode(code []byte) MutableAccount
+	// Increment Sequence number by 1 (capturing the current Sequence number as the index for any pending mutations)
+	IncSequence() MutableAccount
+	// Set the storage root hash
+	SetStorageRoot(storageRoot []byte) MutableAccount
+	// Set account permissions
+	SetPermissions(permissions ptypes.AccountPermissions) MutableAccount
+	// Get a pointer this account's AccountPermissions in order to mutate them
+	MutablePermissions() *ptypes.AccountPermissions
+	// Create a complete copy of this MutableAccount that is itself mutable
+	Copy() MutableAccount
+}
+
+// -------------------------------------------------
+// ConcreteAccount
+
+// ConcreteAccount is the canonical serialisation and bash-in-place object for an Account
+type ConcreteAccount struct {
+	Address     Address
+	PublicKey   PublicKey
+	Balance     uint64
+	Code        Bytecode
+	Sequence    uint64
+	StorageRoot []byte
+	Permissions ptypes.AccountPermissions
+}
+
+func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
+	return ConcreteAccount{
+		Address:   pubKey.Address(),
+		PublicKey: pubKey,
+		// Since nil slices and maps compare differently to empty ones
+		Code:        Bytecode{},
+		StorageRoot: []byte{},
+		Permissions: ptypes.AccountPermissions{
+			Roles: []string{},
+		},
+	}
+}
+
+func NewConcreteAccountFromSecret(secret string) ConcreteAccount {
+	return NewConcreteAccount(PublicKeyFromPubKey(PrivateKeyFromSecret(secret).PubKey()))
+}
+
+// Return as immutable Account
+func (acc ConcreteAccount) Account() Account {
+	return concreteAccountWrapper{&acc}
+}
+
+// Return as mutable MutableAccount
+func (acc ConcreteAccount) MutableAccount() MutableAccount {
+	return concreteAccountWrapper{&acc}
+}
+
+func (acc *ConcreteAccount) Encode() []byte {
+	return wire.BinaryBytes(acc)
+}
+
+func (acc *ConcreteAccount) Copy() *ConcreteAccount {
 	accCopy := *acc
 	return &accCopy
 }
 
-func (acc *Account) String() string {
+func (acc *ConcreteAccount) String() string {
 	if acc == nil {
-		return "nil-Account"
+		return "Account{nil}"
 	}
-	return fmt.Sprintf("Account{%X:%v B:%v C:%v S:%X P:%s}", acc.Address, acc.PubKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
+
+	return fmt.Sprintf("Account{Address: %s; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
+		acc.Address, acc.PublicKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
 }
 
-func AccountEncoder(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*Account), w, n, err)
+// ConcreteAccount
+// -------------------------------------------------
+// Conversions
+//
+// Using the naming convention is this package of 'As<Type>' being
+// a conversion from Account to <Type> and 'From<Type>' being conversion
+// from <Type> to Account. Conversions are done by copying
+
+// Returns a mutable, serialisable ConcreteAccount by copying from account
+func AsConcreteAccount(account Account) *ConcreteAccount {
+	if account == nil {
+		return nil
+	}
+	if ca, ok := account.(concreteAccountWrapper); ok {
+		return ca.ConcreteAccount
+	}
+	return &ConcreteAccount{
+		Address:     account.Address(),
+		PublicKey:   account.PublicKey(),
+		Balance:     account.Balance(),
+		Code:        account.Code(),
+		Sequence:    account.Sequence(),
+		StorageRoot: account.StorageRoot(),
+		Permissions: account.Permissions(),
+	}
 }
 
-func AccountDecoder(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&Account{}, r, 0, n, err)
+// Creates an otherwise zeroed Account from an Addressable and returns it as MutableAccount
+func FromAddressable(addressable Addressable) MutableAccount {
+	return ConcreteAccount{
+		Address:   addressable.Address(),
+		PublicKey: addressable.PublicKey(),
+		// Since nil slices and maps compare differently to empty ones
+		Code:        Bytecode{},
+		StorageRoot: []byte{},
+		Permissions: ptypes.AccountPermissions{
+			Roles: []string{},
+		},
+	}.MutableAccount()
 }
 
-var AccountCodec = wire.Codec{
-	Encode: AccountEncoder,
-	Decode: AccountDecoder,
+// Returns an immutable account by copying from account
+func AsAccount(account Account) Account {
+	if account == nil {
+		return nil
+	}
+	return AsConcreteAccount(account).Account()
 }
 
-func EncodeAccount(acc *Account) []byte {
-	w := new(bytes.Buffer)
-	var n int
-	var err error
-	AccountEncoder(acc, w, &n, &err)
-	return w.Bytes()
+// Returns a MutableAccount by copying from account
+func AsMutableAccount(account Account) MutableAccount {
+	if account == nil {
+		return nil
+	}
+	return AsConcreteAccount(account).MutableAccount()
 }
 
-func DecodeAccount(accBytes []byte) *Account {
-	var n int
-	var err error
-	acc := AccountDecoder(bytes.NewBuffer(accBytes), &n, &err)
-	return acc.(*Account)
+func GetMutableAccount(getter Getter, address Address) (MutableAccount, error) {
+	acc, err := getter.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	// If we get get our own concreteAccountWrapper back we can save an unnecessary copy and just
+	// return since ConcreteAccount.Account() will have been used to produce it which will already
+	// have copied
+	caw, ok := acc.(concreteAccountWrapper)
+	if ok {
+		return caw, nil
+	}
+	return AsMutableAccount(acc), nil
+}
+
+//----------------------------------------------
+// concreteAccount Wrapper
+
+// concreteAccountWrapper wraps ConcreteAccount to provide a immutable read-only view
+// via its implementation of Account and a mutable implementation via its implementation of
+// MutableAccount
+type concreteAccountWrapper struct {
+	*ConcreteAccount `json:"unwrap"`
+}
+
+var _ Account = concreteAccountWrapper{}
+
+func (caw concreteAccountWrapper) Address() Address {
+	return caw.ConcreteAccount.Address
+}
+
+func (caw concreteAccountWrapper) PublicKey() PublicKey {
+	return caw.ConcreteAccount.PublicKey
+}
+
+func (caw concreteAccountWrapper) Balance() uint64 {
+	return caw.ConcreteAccount.Balance
+}
+
+func (caw concreteAccountWrapper) Code() Bytecode {
+	return caw.ConcreteAccount.Code
+}
+
+func (caw concreteAccountWrapper) Sequence() uint64 {
+	return caw.ConcreteAccount.Sequence
+}
+
+func (caw concreteAccountWrapper) StorageRoot() []byte {
+	return caw.ConcreteAccount.StorageRoot
+}
+
+func (caw concreteAccountWrapper) Permissions() ptypes.AccountPermissions {
+	return caw.ConcreteAccount.Permissions
+}
+
+func (caw concreteAccountWrapper) Encode() []byte {
+	return caw.ConcreteAccount.Encode()
+}
+
+func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {
+	return json.Marshal(caw.ConcreteAccount)
+}
+
+// Account mutation via MutableAccount interface
+var _ MutableAccount = concreteAccountWrapper{}
+
+func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount {
+	caw.ConcreteAccount.PublicKey = pubKey
+	addressFromPubKey := pubKey.Address()
+	// We don't want the wrong public key to take control of an account so we panic here
+	if caw.ConcreteAccount.Address != addressFromPubKey {
+		panic(fmt.Errorf("attempt to set public key of account %s to %v, "+
+			"but that public key has address %s",
+			caw.ConcreteAccount.Address, pubKey, addressFromPubKey))
+	}
+	return caw
+}
+
+func (caw concreteAccountWrapper) SubtractFromBalance(amount uint64) MutableAccount {
+	if amount > caw.Balance() {
+		panic(fmt.Errorf("insufficient funds: attempt to subtract %v from the balance of %s",
+			amount, caw.ConcreteAccount))
+	}
+	caw.ConcreteAccount.Balance -= amount
+	return caw
+}
+
+func (caw concreteAccountWrapper) AddToBalance(amount uint64) MutableAccount {
+	if binary.IsUint64SumOverflow(caw.Balance(), amount) {
+		panic(fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
+			amount, caw.ConcreteAccount))
+	}
+	caw.ConcreteAccount.Balance += amount
+	return caw
+}
+
+func (caw concreteAccountWrapper) SetCode(code []byte) MutableAccount {
+	caw.ConcreteAccount.Code = code
+	return caw
+}
+
+func (caw concreteAccountWrapper) IncSequence() MutableAccount {
+	caw.ConcreteAccount.Sequence += 1
+	return caw
+}
+
+func (caw concreteAccountWrapper) SetStorageRoot(storageRoot []byte) MutableAccount {
+	caw.ConcreteAccount.StorageRoot = storageRoot
+	return caw
+}
+
+func (caw concreteAccountWrapper) SetPermissions(permissions ptypes.AccountPermissions) MutableAccount {
+	caw.ConcreteAccount.Permissions = permissions
+	return caw
+}
+
+func (caw concreteAccountWrapper) MutablePermissions() *ptypes.AccountPermissions {
+	return &caw.ConcreteAccount.Permissions
+}
+
+func (caw concreteAccountWrapper) Copy() MutableAccount {
+	return concreteAccountWrapper{caw.ConcreteAccount.Copy()}
+}
+
+var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
+
+// concreteAccount Wrapper
+//----------------------------------------------
+// Encoding/decoding
+
+func Decode(accBytes []byte) (Account, error) {
+	ca, err := DecodeConcrete(accBytes)
+	if err != nil {
+		return nil, err
+	}
+	return ca.Account(), nil
+}
+
+func DecodeConcrete(accBytes []byte) (*ConcreteAccount, error) {
+	ca := new(concreteAccountWrapper)
+	err := wire.ReadBinaryBytes(accBytes, ca)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert decoded account to *ConcreteAccount: %v", err)
+	}
+	return ca.ConcreteAccount, nil
 }
