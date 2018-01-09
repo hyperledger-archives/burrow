@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package event
 
 import (
 	"fmt"
 	"sync"
 	"testing"
 
-	event "github.com/hyperledger/burrow/event"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -38,12 +37,12 @@ type IntegerFilter struct {
 	match func(int64, int64) bool
 }
 
-func (this *IntegerFilter) Configure(fd *event.FilterData) error {
-	val, err := event.ParseNumberValue(fd.Value)
+func (this *IntegerFilter) Configure(fd *FilterData) error {
+	val, err := ParseNumberValue(fd.Value)
 	if err != nil {
 		return err
 	}
-	match, err2 := event.GetRangeFilter(fd.Op, "integer")
+	match, err2 := GetRangeFilter(fd.Op, "integer")
 	if err2 != nil {
 		return err2
 	}
@@ -69,8 +68,8 @@ type StringFilter struct {
 	match func(string, string) bool
 }
 
-func (this *StringFilter) Configure(fd *event.FilterData) error {
-	match, err := event.GetStringFilter(fd.Op, "string")
+func (this *StringFilter) Configure(fd *FilterData) error {
+	match, err := GetStringFilter(fd.Op, "string")
 	if err != nil {
 		return err
 	}
@@ -92,17 +91,17 @@ func (this *StringFilter) Match(v interface{}) bool {
 type FilterSuite struct {
 	suite.Suite
 	objects       []FilterableObject
-	filterFactory *event.FilterFactory
+	filterFactory *FilterFactory
 }
 
-func (this *FilterSuite) SetupSuite() {
+func (fs *FilterSuite) SetupSuite() {
 	objects := make([]FilterableObject, OBJECTS)
 
 	for i := 0; i < 100; i++ {
 		objects[i] = FilterableObject{i, fmt.Sprintf("string%d", i)}
 	}
 
-	ff := event.NewFilterFactory()
+	ff := NewFilterFactory()
 
 	ff.RegisterFilterPool("integer", &sync.Pool{
 		New: func() interface{} {
@@ -116,140 +115,140 @@ func (this *FilterSuite) SetupSuite() {
 		},
 	})
 
-	this.objects = objects
-	this.filterFactory = ff
+	fs.objects = objects
+	fs.filterFactory = ff
 }
 
-func (this *FilterSuite) TearDownSuite() {
+func (fs *FilterSuite) TearDownSuite() {
 
 }
 
 // ********************************************* Tests *********************************************
 
-func (this *FilterSuite) Test_FilterIntegersEquals() {
-	fd := &event.FilterData{"integer", "==", "5"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersEquals() {
+	fd := &FilterData{"integer", "==", "5"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 			break
 		}
 	}
-	this.Equal(arr, this.objects[5:6])
+	fs.Equal(arr, fs.objects[5:6])
 }
 
-func (this *FilterSuite) Test_FilterIntegersLT() {
-	fd := &event.FilterData{"integer", "<", "5"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersLT() {
+	fd := &FilterData{"integer", "<", "5"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
-	this.Equal(arr, this.objects[:5])
+	fs.Equal(arr, fs.objects[:5])
 }
 
-func (this *FilterSuite) Test_FilterIntegersLTEQ() {
-	fd := &event.FilterData{"integer", "<=", "10"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersLTEQ() {
+	fd := &FilterData{"integer", "<=", "10"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
-	this.Equal(arr, this.objects[:11])
+	fs.Equal(arr, fs.objects[:11])
 }
 
-func (this *FilterSuite) Test_FilterIntegersGT() {
-	fd := &event.FilterData{"integer", ">", "50"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersGT() {
+	fd := &FilterData{"integer", ">", "50"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
-	this.Equal(arr, this.objects[51:])
+	fs.Equal(arr, fs.objects[51:])
 }
 
-func (this *FilterSuite) Test_FilterIntegersRange() {
-	fd0 := &event.FilterData{"integer", ">", "5"}
-	fd1 := &event.FilterData{"integer", "<", "38"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd0, fd1})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersRange() {
+	fd0 := &FilterData{"integer", ">", "5"}
+	fd1 := &FilterData{"integer", "<", "38"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd0, fd1})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
-	this.Equal(arr, this.objects[6:38])
+	fs.Equal(arr, fs.objects[6:38])
 }
 
-func (this *FilterSuite) Test_FilterIntegersGTEQ() {
-	fd := &event.FilterData{"integer", ">=", "77"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersGTEQ() {
+	fd := &FilterData{"integer", ">=", "77"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
-	this.Equal(arr, this.objects[77:])
+	fs.Equal(arr, fs.objects[77:])
 }
 
-func (this *FilterSuite) Test_FilterIntegersNEQ() {
-	fd := &event.FilterData{"integer", "!=", "50"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
+func (fs *FilterSuite) Test_FilterIntegersNEQ() {
+	fd := &FilterData{"integer", "!=", "50"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
 	arr := []FilterableObject{}
-	for _, o := range this.objects {
-		if filter.Match(o) {
-			arr = append(arr, o)
-		}
-	}
-	res := make([]FilterableObject, OBJECTS)
-	copy(res, this.objects)
-	res = append(res[:50], res[51:]...)
-	this.Equal(arr, res)
-}
-
-func (this *FilterSuite) Test_FilterStringEquals() {
-	fd := &event.FilterData{"string", "==", "string7"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
-	arr := []FilterableObject{}
-	for _, o := range this.objects {
-		if filter.Match(o) {
-			arr = append(arr, o)
-		}
-	}
-	this.Equal(arr, this.objects[7:8])
-}
-
-func (this *FilterSuite) Test_FilterStringNEQ() {
-	fd := &event.FilterData{"string", "!=", "string50"}
-	filter, err := this.filterFactory.NewFilter([]*event.FilterData{fd})
-	this.NoError(err)
-	arr := []FilterableObject{}
-
-	for _, o := range this.objects {
+	for _, o := range fs.objects {
 		if filter.Match(o) {
 			arr = append(arr, o)
 		}
 	}
 	res := make([]FilterableObject, OBJECTS)
-	copy(res, this.objects)
+	copy(res, fs.objects)
 	res = append(res[:50], res[51:]...)
-	this.Equal(arr, res)
+	fs.Equal(arr, res)
+}
+
+func (fs *FilterSuite) Test_FilterStringEquals() {
+	fd := &FilterData{"string", "==", "string7"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
+	arr := []FilterableObject{}
+	for _, o := range fs.objects {
+		if filter.Match(o) {
+			arr = append(arr, o)
+		}
+	}
+	fs.Equal(arr, fs.objects[7:8])
+}
+
+func (fs *FilterSuite) Test_FilterStringNEQ() {
+	fd := &FilterData{"string", "!=", "string50"}
+	filter, err := fs.filterFactory.NewFilter([]*FilterData{fd})
+	fs.NoError(err)
+	arr := []FilterableObject{}
+
+	for _, o := range fs.objects {
+		if filter.Match(o) {
+			arr = append(arr, o)
+		}
+	}
+	res := make([]FilterableObject, OBJECTS)
+	copy(res, fs.objects)
+	res = append(res[:50], res[51:]...)
+	fs.Equal(arr, res)
 }
 
 // ********************************************* Entrypoint *********************************************
