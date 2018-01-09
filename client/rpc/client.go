@@ -262,7 +262,8 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 
 	if broadcast {
 		if wait {
-			wsClient, err := nodeClient.DeriveWebsocketClient()
+			var wsClient client.NodeWebsocketClient
+			wsClient, err = nodeClient.DeriveWebsocketClient()
 			if err != nil {
 				return nil, err
 			}
