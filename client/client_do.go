@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package definitions
+package client
 
-type ClientDo struct {
+type Do struct {
 	// Persistent flags not reflected in the configuration files
 	// only set through command line flags or environment variables
 	Debug   bool // BURROW_DEBUG
@@ -25,7 +25,6 @@ type ClientDo struct {
 	NodeAddrFlag string
 	PubkeyFlag   string
 	AddrFlag     string
-	ChainidFlag  string
 
 	// signFlag      bool // TODO: remove; unsafe signing without monax-keys
 	BroadcastFlag bool
@@ -46,8 +45,8 @@ type ClientDo struct {
 	HeightFlag   string
 }
 
-func NewClientDo() *ClientDo {
-	clientDo := new(ClientDo)
+func NewClientDo() *Do {
+	clientDo := new(Do)
 	clientDo.Debug = false
 	clientDo.Verbose = false
 
@@ -55,7 +54,6 @@ func NewClientDo() *ClientDo {
 	clientDo.NodeAddrFlag = ""
 	clientDo.PubkeyFlag = ""
 	clientDo.AddrFlag = ""
-	clientDo.ChainidFlag = ""
 
 	// clientDo.signFlag = false
 	clientDo.BroadcastFlag = false
