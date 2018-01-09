@@ -1,8 +1,11 @@
-# do not vendor in dependencies
-vendor
-
 # build target
 target
+bin/
+
+# tests
+test_scratch/
+*.log
+.burrow
 
 # Temporary / cached
 *.swp
