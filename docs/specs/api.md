@@ -632,8 +632,6 @@ Parameter:
 
 ##### Additional info
 
-Sequence is sometimes referred to as the "nonce".
-
 There are two types of objects used to represent accounts, one is public accounts (like the one here), the other is private accounts, which only holds information about an accounts address, public and private key.
 
 ***

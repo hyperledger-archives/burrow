@@ -391,7 +391,7 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 	if acc == nil {
 		sequence = acc.Sequence() + uint64(1)
 	}
-	tx := txs.NewNameTxWithNonce(pa.PublicKey(), name, data, amount, fee, sequence)
+	tx := txs.NewNameTxWithSequence(pa.PublicKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
 	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
 	if errS != nil {

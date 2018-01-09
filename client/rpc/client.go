@@ -31,8 +31,8 @@ import (
 // core functions with string args.
 // validates strings and forms transaction
 
-func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS string) (*txs.SendTx, error) {
-	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
+func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS string) (*txs.SendTx, error) {
+	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +47,14 @@ func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 	}
 
 	tx := txs.NewSendTx()
-	tx.AddInputWithNonce(pub, amt, nonce)
+	tx.AddInputWithSequence(pub, amt, sequence)
 	tx.AddOutput(toAddress, amt)
 
 	return tx, nil
 }
 
-func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, nonceS, gasS, feeS, data string) (*txs.CallTx, error) {
-	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
+func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS, gasS, feeS, data string) (*txs.CallTx, error) {
+	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
 	}
@@ -84,12 +84,12 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("data is bad hex: %v", err)
 	}
 
-	tx := txs.NewCallTxWithNonce(pub, toAddress, dataBytes, amt, gas, fee, nonce)
+	tx := txs.NewCallTxWithSequence(pub, toAddress, dataBytes, amt, gas, fee, sequence)
 	return tx, nil
 }
 
-func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, nonceS, feeS, name, data string) (*txs.NameTx, error) {
-	pub, amt, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, nonceS)
+func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, sequenceS, feeS, name, data string) (*txs.NameTx, error) {
+	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
 	}
@@ -99,12 +99,12 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("fee is misformatted: %v", err)
 	}
 
-	tx := txs.NewNameTxWithNonce(pub, name, data, amt, fee, nonce)
+	tx := txs.NewNameTxWithSequence(pub, name, data, amt, fee, sequence)
 	return tx, nil
 }
 
-func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, nonceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
-	pub, _, nonce, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", nonceS)
+func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, sequenceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
+	pub, _, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", sequenceS)
 	if err != nil {
 		return nil, err
 	}
@@ -163,13 +163,13 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return nil, fmt.Errorf("invalid permission function for use in PermissionsTx: %s", permFunc)
 	}
 	// args := snativeArgs(
-	tx := txs.NewPermissionsTxWithNonce(pub, args, nonce)
+	tx := txs.NewPermissionsTxWithSequence(pub, args, sequence)
 	return tx, nil
 }
 
-func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbondAddr, amtS, nonceS string) (*txs.BondTx, error) {
+func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbondAddr, amtS, sequenceS string) (*txs.BondTx, error) {
 	return nil, fmt.Errorf("Bond Transaction formation to be implemented on 0.12.0")
-	// pub, amt, nonce, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, nonceS)
+	// pub, amt, sequence, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, sequenceS)
 	// if err != nil {
 	// 	return nil, err
 	// }
@@ -192,7 +192,7 @@ func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbond
 	// if err != nil {
 	// 	return nil, err
 	// }
-	// tx.AddInputWithNonce(pub, amt, int(nonce))
+	// tx.AddInputWithSequence(pub, amt, int(sequence))
 	// tx.AddOutput(unbondAddrBytes, amt)
 
 	// return tx, nil

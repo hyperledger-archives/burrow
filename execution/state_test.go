@@ -243,7 +243,7 @@ func TestTxSequence(t *testing.T) {
 	for i := uint64(0); i < 3; i++ {
 		sequence := acc0.Sequence() + i
 		tx := txs.NewSendTx()
-		tx.AddInputWithNonce(acc0PubKey, 1, sequence)
+		tx.AddInputWithSequence(acc0PubKey, 1, sequence)
 		tx.AddOutput(acc1.Address(), 1)
 		tx.Inputs[0].Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
 		stateCopy := state.Copy()
@@ -881,7 +881,7 @@ func TestSelfDestruct(t *testing.T) {
 	state.UpdateAccount(newAcc1)
 
 	// send call tx with no data, cause self-destruct
-	tx := txs.NewCallTxWithNonce(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
+	tx := txs.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
 
 	// we use cache instead of execTxWithState so we can run the tx twice

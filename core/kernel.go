@@ -89,7 +89,7 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	// TODO: consider whether we need to be more explicit about pre-commit (check cache) versus committed (state) values
 	// Note we pass the checker as the StateIterable to NewService which means the RPC layers will query the check
 	// cache state. This is in line with previous behaviour of Burrow and chiefly serves to get provide a pre-commit
-	// view of nonce values on the node that a client is communicating with.
+	// view of sequence values on the node that a client is communicating with.
 	// Since we don't currently execute EVM code in the checker possible conflicts are limited to account creation
 	// which increments the creator's account Sequence and SendTxs
 	service := rpc.NewService(state, eventEmitter, nameReg, blockchain, transactor, query.NewNodeView(tmNode, txCodec),

@@ -206,11 +206,11 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 	testTxMarshalJSON(t, callTx)
 }
 
-func TestNewPermissionsTxWithNonce(t *testing.T) {
+func TestNewPermissionsTxWithSequence(t *testing.T) {
 	privateKey := acm.PrivateKeyFromSecret("Shhh...")
 
 	args := ptypes.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
-	permTx := NewPermissionsTxWithNonce(privateKey.PublicKey(), args, 1)
+	permTx := NewPermissionsTxWithSequence(privateKey.PublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 }
 

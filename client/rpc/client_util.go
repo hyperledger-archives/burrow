@@ -92,7 +92,7 @@ func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag pty
 }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,
-	nonceS string) (pub acm.PublicKey, amt uint64, nonce uint64, err error) {
+	sequenceS string) (pub acm.PublicKey, amt uint64, sequence uint64, err error) {
 
 	if amtS == "" {
 		err = fmt.Errorf("input must specify an amount with the --amt flag")
@@ -145,25 +145,25 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		err = fmt.Errorf("amt is misformatted: %v", err)
 	}
 
-	if nonceS == "" {
+	if sequenceS == "" {
 		if nodeClient == nil {
-			err = fmt.Errorf("input must specify a nonce with the --nonce flag or use --node-addr (or BURROW_CLIENT_NODE_ADDR) to fetch the nonce from a node")
+			err = fmt.Errorf("input must specify a sequence with the --sequence flag or use --node-addr (or BURROW_CLIENT_NODE_ADDR) to fetch the sequence from a node")
 			return
 		}
-		// fetch nonce from node
+		// fetch sequence from node
 		account, err2 := nodeClient.GetAccount(address)
 		if err2 != nil {
-			return pub, amt, nonce, err2
+			return pub, amt, sequence, err2
 		}
-		nonce = account.Sequence() + 1
-		logging.TraceMsg(nodeClient.Logger(), "Fetch nonce from node",
-			"nonce", nonce,
+		sequence = account.Sequence() + 1
+		logging.TraceMsg(nodeClient.Logger(), "Fetch sequence from node",
+			"sequence", sequence,
 			"account address", address,
 		)
 	} else {
-		nonce, err = strconv.ParseUint(nonceS, 10, 64)
+		sequence, err = strconv.ParseUint(sequenceS, 10, 64)
 		if err != nil {
-			err = fmt.Errorf("nonce is misformatted: %v", err)
+			err = fmt.Errorf("sequence is misformatted: %v", err)
 			return
 		}
 	}

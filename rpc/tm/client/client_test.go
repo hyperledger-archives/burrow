@@ -250,8 +250,8 @@ func TestNameReg(t *testing.T) {
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithNonce(privateAccounts[1].PublicKey(), name, "never mind", amt, fee,
-			getNonce(t, client, privateAccounts[1].Address())+1)
+		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, "never mind", amt, fee,
+			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 
 		_, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
@@ -267,8 +267,8 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithNonce(privateAccounts[1].PublicKey(), name, data2, amt, fee,
-			getNonce(t, client, privateAccounts[1].Address())+1)
+		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, data2, amt, fee,
+			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
 		assert.NoError(t, err, "Should be able to update a previously expired name"+

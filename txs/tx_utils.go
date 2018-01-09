@@ -42,10 +42,10 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 	if acc == nil {
 		return fmt.Errorf("invalid address %s from pubkey %s", addr, pubkey)
 	}
-	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+1)
+	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence()+1)
 }
 
-func (tx *SendTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
+func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   addr,
@@ -89,11 +89,11 @@ func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence() + 1
-	return NewCallTxWithNonce(from, to, data, amt, gasLimit, fee, nonce), nil
+	sequence := acc.Sequence() + 1
+	return NewCallTxWithSequence(from, to, data, amt, gasLimit, fee, sequence), nil
 }
 
-func NewCallTxWithNonce(from acm.PublicKey, to *acm.Address, data []byte,
+func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
 		Address:   from.Address(),
@@ -130,11 +130,11 @@ func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee ui
 		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence() + 1
-	return NewNameTxWithNonce(from, name, data, amt, fee, nonce), nil
+	sequence := acc.Sequence() + 1
+	return NewNameTxWithSequence(from, name, data, amt, fee, sequence), nil
 }
 
-func NewNameTxWithNonce(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
+func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
 		Address:   from.Address(),
 		Amount:    amt,
@@ -176,10 +176,10 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 	if acc == nil {
 		return fmt.Errorf("Invalid address %s from pubkey %s", addr, pubkey)
 	}
-	return tx.AddInputWithNonce(pubkey, amt, acc.Sequence()+uint64(1))
+	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence()+uint64(1))
 }
 
-func (tx *BondTx) AddInputWithNonce(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
+func (tx *BondTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   pubkey.Address(),
 		Amount:    amt,
@@ -253,11 +253,11 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args *ptypes.PermArgs) 
 		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
 	}
 
-	nonce := acc.Sequence() + 1
-	return NewPermissionsTxWithNonce(from, args, nonce), nil
+	sequence := acc.Sequence() + 1
+	return NewPermissionsTxWithSequence(from, args, sequence), nil
 }
 
-func NewPermissionsTxWithNonce(from acm.PublicKey, args *ptypes.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithSequence(from acm.PublicKey, args *ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
 		Address:   from.Address(),
 		Amount:    1, // NOTE: amounts can't be 0 ...

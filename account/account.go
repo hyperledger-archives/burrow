@@ -55,7 +55,7 @@ type Account interface {
 	Balance() uint64
 	// The EVM byte code held by this account (or equivalently, this contract)
 	Code() Bytecode
-	// The sequence number (or nonce) of this account, incremented each time a mutation of the
+	// The sequence number of this account, incremented each time a mutation of the
 	// Account is persisted to the blockchain state
 	Sequence() uint64
 	// The hash of all the values in this accounts storage (typically the root of some subtree

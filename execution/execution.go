@@ -310,7 +310,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				// if you call an account that doesn't exist
 				// or an account with no code then we take fees (sorry pal)
 				// NOTE: it's fine to create a contract and call it within one
-				// block (nonce will prevent re-ordering of those txs)
+				// block (sequence number will prevent re-ordering of those txs)
 				// but to create with one contract and call with another
 				// you have to wait a block to avoid a re-ordering attack
 				// that will take your fees
