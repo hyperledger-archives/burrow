@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package integration
 
 import (
 	"os"
@@ -25,5 +28,5 @@ func TestMain(m *testing.M) {
 		return m.Run()
 	})
 
-	defer os.Exit(returnValue)
+	os.Exit(returnValue)
 }

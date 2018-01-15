@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -32,10 +33,6 @@ import (
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 0 * time.Second
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 0 * time.Second
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = 0 * time.Second
 	// Maximum message size allowed from a peer.
 	maxMessageSize = 1000000
 )
@@ -96,9 +93,10 @@ func (wsServer *WebSocketServer) Running() bool {
 }
 
 // Shut the server down.
-func (wsServer *WebSocketServer) ShutDown() {
+func (wsServer *WebSocketServer) Shutdown(ctx context.Context) error {
 	wsServer.sessionManager.Shutdown()
 	wsServer.running = false
+	return nil
 }
 
 // Get the session-manager.

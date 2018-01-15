@@ -26,6 +26,7 @@ type PrivateAccount interface {
 	Signer
 }
 
+//
 type ConcretePrivateAccount struct {
 	Address    Address
 	PublicKey  PublicKey
@@ -86,7 +87,14 @@ func (pa *ConcretePrivateAccount) String() string {
 	return fmt.Sprintf("ConcretePrivateAccount{%s}", pa.Address)
 }
 
-//----------------------------------------
+// Convert slice of ConcretePrivateAccounts to slice of PrivateAccounts
+func PrivateAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []PrivateAccount {
+	privateAccounts := make([]PrivateAccount, len(concretePrivateAccounts))
+	for i, cpa := range concretePrivateAccounts {
+		privateAccounts[i] = cpa.PrivateAccount()
+	}
+	return privateAccounts
+}
 
 // Generates a new account with private key.
 func GeneratePrivateAccount() (PrivateAccount, error) {

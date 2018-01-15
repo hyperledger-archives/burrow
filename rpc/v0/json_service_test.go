@@ -13,39 +13,3 @@
 // limitations under the License.
 
 package v0
-
-import (
-	"testing"
-
-	"github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm/opcodes"
-	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/txs"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/go-wire"
-)
-
-func TestBroadcastTx(t *testing.T) {
-	testData := LoadTestData()
-	pipe := NewMockPipe(testData)
-	methods := NewBurrowMethods(NewTCodec(), pipe)
-	pubKey := account.GenPrivAccount().PubKey
-	address := []byte{1}
-	code := opcodes.Bytecode(opcodes.PUSH1, 1, opcodes.PUSH1, 1, opcodes.ADD)
-	var tx txs.Tx = txs.NewCallTxWithSequence(pubKey, address, code, 10, 2,
-		1, 0)
-	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
-	request := rpc.NewRPCRequest("TestBroadcastTx", "BroadcastTx", jsonBytes)
-	result, _, err := methods.BroadcastTx(request, "TestBroadcastTx")
-	assert.NoError(t, err)
-	receipt, ok := result.(*txs.Receipt)
-	assert.True(t, ok, "Should get Receipt pointer")
-	assert.Equal(t, txs.TxHash(testData.GetChainId.Output.ChainId, tx), receipt.TxHash)
-}
-
-// Allows us to get the type byte included but then omit the outer struct and
-// embedded field
-type wrappedTx struct {
-	txs.Tx `json:"unwrap"`
-}

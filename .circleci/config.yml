@@ -31,8 +31,16 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run: sudo apt-get install libgmp3-dev
       - run: make test
 
+  test_integration:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make test_integration
+      
   test_integration:
     <<: *defaults
     steps:

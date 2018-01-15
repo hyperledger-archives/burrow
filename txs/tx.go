@@ -114,11 +114,6 @@ type (
 		DecodeTx(txBytes []byte) (Tx, error)
 	}
 
-	// UnconfirmedTxs
-	UnconfirmedTxs struct {
-		Txs []Tx `json:"txs"`
-	}
-
 	SendTx struct {
 		Inputs  []*TxInput  `json:"inputs"`
 		Outputs []*TxOutput `json:"outputs"`

@@ -33,4 +33,4 @@ EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
 
-CMD [ "burrow", "serve" ]
+CMD [ "burrow" ]

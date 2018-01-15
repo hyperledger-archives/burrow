@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -15,7 +16,6 @@ import (
 const testDir = "./test_scratch/kernel_test"
 
 func TestBootThenShutdown(t *testing.T) {
-
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
@@ -28,6 +28,6 @@ func TestBootThenShutdown(t *testing.T) {
 	require.NoError(t, err)
 	err = kern.Boot()
 	require.NoError(t, err)
-	err = kern.Shutdown()
+	err = kern.Shutdown(context.Background())
 	require.NoError(t, err)
 }

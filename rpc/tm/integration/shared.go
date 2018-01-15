@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"hash/fnv"
 	"strconv"
@@ -34,6 +38,7 @@ import (
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
+	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -53,46 +58,41 @@ var (
 	privateAccounts = makePrivateAccounts(5) // make keys
 	jsonRpcClient   = rpcclient.NewJSONRPCClient(rpcAddr)
 	httpClient      = rpcclient.NewURIClient(rpcAddr)
-	clients         = map[string]RPCClient{
+	clients         = map[string]tm_client.RPCClient{
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
 	// Initialised in initGlobalVariables
 	genesisDoc = new(genesis.GenesisDoc)
-	kernel     = new(core.Kernel)
 )
 
 // We use this to wrap tests
 func TestWrapper(runner func() int) int {
-	fmt.Println("Running with integration TestWrapper (rpc/tendermint/test/shared_test.go)...")
+	fmt.Println("Running with integration TestWrapper (rpc/tm/client/shared.go)...")
 
-	err := initGlobalVariables()
+	os.RemoveAll(testDir)
+	os.MkdirAll(testDir, 0777)
+	os.Chdir(testDir)
+
+	tmConf := tm_config.DefaultConfig()
+	// Uncomment for logs
+	//logger, _ := lifecycle.NewStdErrLogger()
+	logger := loggers.NewNoopInfoTraceLogger()
+
+	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
+	genesisDoc = testGenesisDoc()
+	kernel, err := core.NewKernel(privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
 	if err != nil {
 		panic(err)
 	}
+	defer kernel.Shutdown(context.Background())
 
 	err = kernel.Boot()
 	if err != nil {
 		panic(err)
 	}
 
-	defer kernel.Shutdown()
-
 	return runner()
-}
-
-func initGlobalVariables() error {
-	var err error
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0777)
-	os.Chdir(testDir)
-	tmConf := tm_config.DefaultConfig()
-	//logger, _ := lifecycle.NewStdErrLogger()
-	logger := loggers.NewNoopInfoTraceLogger()
-	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
-	genesisDoc = testGenesisDoc()
-	kernel, err = core.NewKernel(privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
-	return err
 }
 
 func testGenesisDoc() *genesis.GenesisDoc {
@@ -125,7 +125,7 @@ func makePrivateAccounts(n int) []acm.PrivateAccount {
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewSendTx()
 	tx.AddInputWithSequence(privateAccounts[0].PublicKey(), amt, sequence+1)
@@ -133,13 +133,13 @@ func makeDefaultSendTx(t *testing.T, client RPCClient, addr acm.Address, amt uin
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
 	tx.SignInput(genesisDoc.ChainID(), 0, privateAccounts[0])
 	return tx
 }
 
-func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code []byte, amt, gasLim,
+func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *acm.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.CallTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
@@ -148,7 +148,7 @@ func makeDefaultCallTx(t *testing.T, client RPCClient, addr *acm.Address, code [
 	return tx
 }
 
-func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
+func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
 	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
@@ -159,8 +159,9 @@ func makeDefaultNameTx(t *testing.T, client RPCClient, name, value string, amt, 
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func getSequence(t *testing.T, client RPCClient, addr acm.Address) uint64 {
-	acc, err := GetAccount(client, addr)
+func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uint64 {
+
+	acc, err := tm_client.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,8 +172,8 @@ func getSequence(t *testing.T, client RPCClient, addr acm.Address) uint64 {
 }
 
 // get the account
-func getAccount(t *testing.T, client RPCClient, addr acm.Address) acm.Account {
-	ac, err := GetAccount(client, addr)
+func getAccount(t *testing.T, client tm_client.RPCClient, addr acm.Address) acm.Account {
+	ac, err := tm_client.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,9 +181,9 @@ func getAccount(t *testing.T, client RPCClient, addr acm.Address) acm.Account {
 }
 
 // sign transaction
-func signTx(t *testing.T, client RPCClient, tx txs.Tx,
+func signTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx,
 	privAcc *acm.ConcretePrivateAccount) txs.Tx {
-	signedTx, err := SignTx(client, tx, []*acm.ConcretePrivateAccount{privAcc})
+	signedTx, err := tm_client.SignTx(client, tx, []*acm.ConcretePrivateAccount{privAcc})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,8 +191,8 @@ func signTx(t *testing.T, client RPCClient, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) *txs.Receipt {
-	rec, err := BroadcastTx(client, tx)
+func broadcastTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx) *txs.Receipt {
+	rec, err := tm_client.BroadcastTx(client, tx)
 	require.NoError(t, err)
 	return rec
 }
@@ -199,24 +200,24 @@ func broadcastTx(t *testing.T, client RPCClient, tx txs.Tx) *txs.Receipt {
 // dump all storage for an account. currently unused
 func dumpStorage(t *testing.T, addr acm.Address) *rpc.ResultDumpStorage {
 	client := clients["HTTP"]
-	resp, err := DumpStorage(client, addr)
+	resp, err := tm_client.DumpStorage(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return resp
 }
 
-func getStorage(t *testing.T, client RPCClient, addr acm.Address, key []byte) []byte {
-	resp, err := GetStorage(client, addr, key)
+func getStorage(t *testing.T, client tm_client.RPCClient, addr acm.Address, key []byte) []byte {
+	resp, err := tm_client.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return resp
 }
 
-func callCode(t *testing.T, client RPCClient, fromAddress acm.Address, code, data,
+func callCode(t *testing.T, client tm_client.RPCClient, fromAddress acm.Address, code, data,
 	expected []byte) {
-	resp, err := CallCode(client, fromAddress, code, data)
+	resp, err := tm_client.CallCode(client, fromAddress, code, data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,9 +228,9 @@ func callCode(t *testing.T, client RPCClient, fromAddress acm.Address, code, dat
 	}
 }
 
-func callContract(t *testing.T, client RPCClient, fromAddress, toAddress acm.Address,
+func callContract(t *testing.T, client tm_client.RPCClient, fromAddress, toAddress acm.Address,
 	data, expected []byte) {
-	resp, err := Call(client, fromAddress, toAddress, data)
+	resp, err := tm_client.Call(client, fromAddress, toAddress, data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,8 +242,8 @@ func callContract(t *testing.T, client RPCClient, fromAddress, toAddress acm.Add
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, client RPCClient, name string) *execution.NameRegEntry {
-	entry, err := GetName(client, name)
+func getNameRegEntry(t *testing.T, client tm_client.RPCClient, name string) *execution.NameRegEntry {
+	entry, err := tm_client.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)
 	}

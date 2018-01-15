@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +15,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
-	"encoding/json"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/rpc"
+	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/rpc/lib/client"
+	rpcclient "github.com/tendermint/tendermint/rpc/lib/client"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -55,14 +58,13 @@ func stopWSClient(wsc *rpcclient.WSClient) {
 
 // subscribe to an event
 func subscribe(t *testing.T, wsc *rpcclient.WSClient, eventId string) {
-	if err := Subscribe(wsc, eventId); err != nil {
+	if err := tm_client.Subscribe(wsc, eventId); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
-	eventId string) string {
-	if err := Subscribe(wsc, eventId); err != nil {
+func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient, eventId string) string {
+	if err := tm_client.Subscribe(wsc, eventId); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,9 +75,12 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 			t.Fatal("Timeout waiting for subscription result")
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error, "got error response from websocket channel")
-			res, ok := readResult(t, *response.Result).(*rpc.ResultSubscribe)
-			if ok {
-				return res.SubscriptionId
+			if response.ID == tm_client.SubscribeRequestID {
+				res := new(rpc.ResultSubscribe)
+				err := json.Unmarshal(*response.Result, res)
+				if err == nil {
+					return res.SubscriptionID
+				}
 			}
 		}
 	}
@@ -83,20 +88,20 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient,
 
 // unsubscribe from an event
 func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
-	if err := Unsubscribe(wsc, subscriptionId); err != nil {
+	if err := tm_client.Unsubscribe(wsc, subscriptionId); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWaitForBlock(t *testing.T, client RPCClient, wsc *rpcclient.WSClient,
+func broadcastTxAndWaitForBlock(t *testing.T, client tm_client.RPCClient, wsc *rpcclient.WSClient,
 	tx txs.Tx) (*txs.Receipt, error) {
 
 	var rec *txs.Receipt
 	var err error
 	runThenWaitForBlock(t, wsc, nextBlockPredicateFn(),
 		func() {
-			rec, err = BroadcastTx(client, tx)
+			rec, err = tm_client.BroadcastTx(client, tx)
 		})
 	return rec, err
 }
@@ -177,10 +182,13 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 					errCh <- r.Error
 					break LOOP
 				}
-				resultEvent, _ := readResult(t, *r.Result).(*rpc.ResultEvent)
-				if resultEvent != nil && resultEvent.Event == eventID {
-					// Keep feeding events
-					eventsCh <- resultEvent.AnyEventData
+				if r.ID == tm_client.EventResponseID(eventID) {
+					fmt.Println(string(*r.Result))
+					resultEvent := new(rpc.ResultEvent)
+					err := json.Unmarshal(*r.Result, resultEvent)
+					if err == nil {
+						eventsCh <- resultEvent.AnyEventData
+					}
 				}
 			case <-wsc.Quit:
 				break LOOP
@@ -293,13 +301,4 @@ func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) 
 		}
 		return true, nil
 	}
-}
-
-func readResult(t *testing.T, bs []byte) rpc.ResultInner {
-	result := new(rpc.Result)
-	err := json.Unmarshal(bs, result)
-	if err != nil {
-		require.NoError(t, err)
-	}
-	return result.ResultInner
 }

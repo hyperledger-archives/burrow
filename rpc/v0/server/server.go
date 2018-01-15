@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -24,7 +25,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	cors "github.com/tommy351/gin-cors"
+	"github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 )
 
@@ -40,7 +41,7 @@ type HttpService interface {
 type Server interface {
 	Start(*ServerConfig, *gin.Engine)
 	Running() bool
-	ShutDown()
+	Shutdown(ctx context.Context) error
 }
 
 // The ServeProcess wraps all the Servers. Starting it will
@@ -55,7 +56,6 @@ type ServeProcess struct {
 	config           *ServerConfig
 	servers          []Server
 	stopChan         chan struct{}
-	stoppedChan      chan struct{}
 	startListenChans []chan struct{}
 	stopListenChans  []chan struct{}
 	srv              *graceful.Server
@@ -131,7 +131,7 @@ func (serveProcess *ServeProcess) Start() error {
 	go func() {
 		serveProcess.srv.Serve(lst)
 		for _, s := range serveProcess.servers {
-			s.ShutDown()
+			s.Shutdown(context.Background())
 		}
 	}()
 	// Listen to the process stop event, it will call 'Stop'
@@ -157,25 +157,22 @@ func (serveProcess *ServeProcess) Start() error {
 // Stop will release the port, process any remaining requests
 // up until the timeout duration is passed, at which point it
 // will abort them and shut down.
-func (serveProcess *ServeProcess) Stop(timeout time.Duration) error {
+func (serveProcess *ServeProcess) Shutdown(ctx context.Context) error {
+	var err error
 	for _, s := range serveProcess.servers {
-		s.ShutDown()
-	}
-	toChan := make(chan struct{})
-	if timeout != 0 {
-		go func() {
-			time.Sleep(timeout)
-			toChan <- struct{}{}
-		}()
+		serr := s.Shutdown(ctx)
+		if serr != nil && err == nil {
+			err = serr
+		}
 	}
 
 	lChan := serveProcess.StopEventChannel()
 	serveProcess.stopChan <- struct{}{}
 	select {
 	case <-lChan:
-		return nil
-	case <-toChan:
-		return fmt.Errorf("Timeout when stopping server")
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -210,14 +207,12 @@ func NewServeProcess(config *ServerConfig, logger logging_types.InfoTraceLogger,
 		scfg = *config
 	}
 	stopChan := make(chan struct{}, 1)
-	stoppedChan := make(chan struct{}, 1)
 	startListeners := make([]chan struct{}, 0)
 	stopListeners := make([]chan struct{}, 0)
 	sp := &ServeProcess{
 		config:           &scfg,
 		servers:          servers,
 		stopChan:         stopChan,
-		stoppedChan:      stoppedChan,
 		startListenChans: startListeners,
 		stopListenChans:  stopListeners,
 		srv:              nil,

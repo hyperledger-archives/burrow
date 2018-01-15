@@ -60,13 +60,23 @@ const (
 var _ KeyClient = (*keyClient)(nil)
 
 type keyClient struct {
-	rpcString string
+	requester Requester
 	logger    logging_types.InfoTraceLogger
 }
 
 type signer struct {
 	keyClient KeyClient
 	address   acm.Address
+}
+
+// keyClient.New returns a new monax-keys client for provided rpc location
+// Monax-keys connects over http request-responses
+func NewKeyClient(rpcAddress string, logger logging_types.InfoTraceLogger) *keyClient {
+	logger = logging.WithScope(logger, "NewKeyClient")
+	return &keyClient{
+		requester: DefaultRequester(rpcAddress, logger),
+		logger:    logger,
+	}
 }
 
 // Creates a Signer that assumes the address holds an Ed25519 key
@@ -110,23 +120,13 @@ func (ms *signer) Sign(messsage []byte) (acm.Signature, error) {
 	return signature, nil
 }
 
-// keyClient.New returns a new monax-keys client for provided rpc location
-// Monax-keys connects over http request-responses
-func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) *keyClient {
-	return &keyClient{
-		rpcString: rpcString,
-		logger:    logging.WithScope(logger, "BurrowKeyClient"),
-	}
-}
-
 // Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (monaxKeys *keyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
-	args := map[string]string{
+func (kc *keyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
+	sigS, err := kc.requester("sign", map[string]string{
 		"msg":  hex.EncodeToString(message),
 		"addr": signAddress.String(),
-	}
-	sigS, err := RequestResponse(monaxKeys.rpcString, "sign", args, monaxKeys.logger)
+	})
 	if err != nil {
 		return acm.Signature{}, err
 	}
@@ -139,11 +139,10 @@ func (monaxKeys *keyClient) Sign(signAddress acm.Address, message []byte) (acm.S
 
 // Monax-keys client PublicKey requests the public key associated with an address from
 // the monax-keys server.
-func (monaxKeys *keyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
-	args := map[string]string{
+func (kc *keyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
+	pubS, err := kc.requester("pub", map[string]string{
 		"addr": address.String(),
-	}
-	pubS, err := RequestResponse(monaxKeys.rpcString, "pub", args, monaxKeys.logger)
+	})
 	if err != nil {
 		return acm.PublicKey{}, err
 	}
@@ -162,20 +161,19 @@ func (monaxKeys *keyClient) PublicKey(address acm.Address) (acm.PublicKey, error
 	return publicKey, nil
 }
 
-func (monaxKeys *keyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
-	args := map[string]string{
+func (kc *keyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
+	addr, err := kc.requester("gen", map[string]string{
 		//"auth": auth,
 		"name": keyName,
 		"type": keyType.String(),
-	}
-	addr, err := RequestResponse(monaxKeys.rpcString, "gen", args, monaxKeys.logger)
+	})
 	if err != nil {
 		return acm.ZeroAddress, err
 	}
 	return acm.AddressFromHexString(addr)
 }
 
-func (monaxKeys *keyClient) HealthCheck() error {
-	_, err := RequestResponse(monaxKeys.rpcString, "name/ls", nil, monaxKeys.logger)
+func (kc *keyClient) HealthCheck() error {
+	_, err := kc.requester("name/ls", nil)
 	return err
 }

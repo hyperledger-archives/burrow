@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/go-wire"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/go-wire"
 )
 
 func TestPrivateAccountSerialise(t *testing.T) {

@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/hyperledger/burrow/... | grep -v /vendor/)
+PACKAGES_NOVENDOR := $(shell go list ./... | grep -vF /vendor/)
 VERSION := $(shell go run ./util/version/cmd/main.go)
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
@@ -76,7 +76,7 @@ megacheck:
 erase_vendor:
 	rm -rf ${REPO}/vendor/
 
-# install vendor uses glide to install vendored dependencies
+# install vendor uses dep to install vendored dependencies
 .PHONY: install_vendor
 install_vendor:
 	@go get -u github.com/golang/dep/cmd/dep
@@ -126,7 +126,7 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-	@go test ./rpc/tendermint/test -tags integration
+	@go test ./rpc/tm/integration -tags integration
 
 # test burrow with checks for race conditions
 .PHONY: test_race

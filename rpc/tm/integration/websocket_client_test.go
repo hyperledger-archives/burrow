@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package integration
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -24,6 +28,7 @@ import (
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
+	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -275,9 +280,10 @@ Subscribe:
 
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error)
-			res := readResult(t, *response.Result).(*rpc.ResultSubscribe)
-			assert.Equal(t, tm_types.EventStringNewBlock(), res.Event)
-			subId = res.SubscriptionId
+			res := new(rpc.ResultSubscribe)
+			require.NoError(t, json.Unmarshal(*response.Result, res))
+			assert.Equal(t, tm_types.EventStringNewBlock(), res.EventID)
+			subId = res.SubscriptionID
 			break Subscribe
 		}
 	}
@@ -295,7 +301,10 @@ Subscribe:
 
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error)
-			if res, ok := readResult(t, *response.Result).(*rpc.ResultEvent); ok {
+
+			if response.ID == tm_client.EventResponseID(tm_types.EventStringNewBlock()) {
+				res := new(rpc.ResultEvent)
+				json.Unmarshal(*response.Result, res)
 				enb := res.EventDataNewBlock()
 				if enb != nil {
 					assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)

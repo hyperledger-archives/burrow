@@ -48,7 +48,7 @@ func (conf *BurrowConfig) Kernel() (*core.Kernel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not generate logger from logging config: %v", err)
 	}
-	keyClient := keys.NewBurrowKeyClient(conf.Keys.URL, logger)
+	keyClient := keys.NewKeyClient(conf.Keys.URL, logger)
 	val, err := keys.Addressable(keyClient, *conf.ValidatorAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)

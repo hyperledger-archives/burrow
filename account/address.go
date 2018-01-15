@@ -11,6 +11,8 @@ import (
 
 type Address binary.Word160
 
+const AddressHexLength = 2 * binary.Word160Length
+
 var ZeroAddress = Address{}
 
 func AddressFromBytes(addr []byte) (address Address, err error) {
@@ -64,7 +66,7 @@ func (address *Address) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = hex.Decode(address[:], []byte(*str))
+	err = address.UnmarshalText([]byte(*str))
 	if err != nil {
 		return err
 	}
@@ -76,6 +78,10 @@ func (address Address) MarshalJSON() ([]byte, error) {
 }
 
 func (address *Address) UnmarshalText(text []byte) error {
+	if len(text) != AddressHexLength {
+		return fmt.Errorf("address hex '%s' has length %v but must have length %v to be a valid address",
+			string(text), len(text), AddressHexLength)
+	}
 	_, err := hex.Decode(address[:], text)
 	return err
 }

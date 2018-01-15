@@ -97,7 +97,7 @@ func reap(es *Subscriptions) {
 // happen it's for an insignificant amount of time (the time it takes to
 // carry out SubscriptionsCache.poll() ).
 func (subs *Subscriptions) Add(eventId string) (string, error) {
-	subId, errSID := GenerateSubId()
+	subId, errSID := GenerateSubscriptionID()
 	if errSID != nil {
 		return "", errSID
 	}

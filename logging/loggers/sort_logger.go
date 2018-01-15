@@ -56,7 +56,7 @@ func (skv *sortableKeyvals) indexOfKey(i int) int {
 }
 
 // Provides a logger that sorts key-values with keys in keys before other key-values
-func SortLogger(outputLogger kitlog.Logger, keys... string) kitlog.Logger {
+func SortLogger(outputLogger kitlog.Logger, keys ...string) kitlog.Logger {
 	indices := make(map[string]int, len(keys))
 	for i, k := range keys {
 		indices[k] = i

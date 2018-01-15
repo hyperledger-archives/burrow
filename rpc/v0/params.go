@@ -15,28 +15,20 @@
 package v0
 
 import (
-	"github.com/hyperledger/burrow/account"
-	event "github.com/hyperledger/burrow/event"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/rpc/filters"
 	"github.com/hyperledger/burrow/txs"
 )
 
 type (
-
 	// Used to send an address. The address should be hex and properly formatted.
-	// TODO enforce.
 	AddressParam struct {
 		Address []byte `json:"address"`
 	}
 
 	// Used to send an address
-	// TODO deprecate in favor of 'FilterListParam'
-	AccountsParam struct {
-		Filters []*event.FilterData `json:"filters"`
-	}
-
-	// Used to send an address
 	FilterListParam struct {
-		Filters []*event.FilterData `json:"filters"`
+		Filters []*filters.FilterData `json:"filters"`
 	}
 
 	PrivKeyParam struct {
@@ -51,13 +43,12 @@ type (
 
 	// Get a block
 	HeightParam struct {
-		Height int `json:"height"`
+		Height uint64 `json:"height"`
 	}
 
-	// Get a series of blocks
-	// TODO deprecate in favor of 'FilterListParam'
 	BlocksParam struct {
-		Filters []*event.FilterData `json:"filters"`
+		MinHeight uint64 `json:"min_height"`
+		MaxHeight uint64 `json:"max_height"`
 	}
 
 	// Event Id
@@ -90,8 +81,8 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           *txs.CallTx            `json:"tx"`
-		PrivAccounts []*account.PrivAccount `json:"priv_accounts"`
+		Tx           *txs.CallTx                   `json:"tx"`
+		PrivAccounts []*acm.ConcretePrivateAccount `json:"priv_accounts"`
 	}
 
 	// Used when sending a transaction to be created and signed on the server
@@ -100,15 +91,15 @@ type (
 		PrivKey  []byte `json:"priv_key"`
 		Data     []byte `json:"data"`
 		Address  []byte `json:"address"`
-		Fee      int64  `json:"fee"`
-		GasLimit int64  `json:"gas_limit"`
+		Fee      uint64 `json:"fee"`
+		GasLimit uint64 `json:"gas_limit"`
 	}
 
 	// Used when sending a 'Send' transaction.
 	SendParam struct {
 		PrivKey   []byte `json:"priv_key"`
 		ToAddress []byte `json:"to_address"`
-		Amount    int64  `json:"amount"`
+		Amount    uint64 `json:"amount"`
 	}
 
 	NameRegEntryParam struct {
@@ -121,7 +112,7 @@ type (
 		PrivKey []byte `json:"priv_key"`
 		Name    string `json:"name"`
 		Data    string `json:"data"`
-		Fee     int64  `json:"fee"`
-		Amount  int64  `json:"amount"`
+		Fee     uint64 `json:"fee"`
+		Amount  uint64 `json:"amount"`
 	}
 )
