@@ -564,7 +564,7 @@ func TestTxs(t *testing.T) {
 		state := state.Copy()
 		tx := &txs.SendTx{
 			Inputs: []*txs.TxInput{
-				&txs.TxInput{
+				{
 					Address:  acc0.Address,
 					Amount:   1,
 					Sequence: acc0.Sequence + 1,
@@ -572,7 +572,7 @@ func TestTxs(t *testing.T) {
 				},
 			},
 			Outputs: []*txs.TxOutput{
-				&txs.TxOutput{
+				{
 					Address: acc1.Address,
 					Amount:  1,
 				},

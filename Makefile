@@ -28,12 +28,12 @@ version:
 ### Formatting, linting and vetting
 
 # check the code for style standards; currently enforces go formatting.
-# display output first, then check for success	
+# display output first, then check for success
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
-	@gofmt -l -d ${GOFILES_NOVENDOR}
-	@gofmt -l ${GOFILES_NOVENDOR} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+	@gofmt -l -s ${GOFILES_NOVENDOR}
+	@gofmt -l -s ${GOFILES_NOVENDOR} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
 # Just fix it
 .PHONY: fix
@@ -45,10 +45,10 @@ fix:
 .PHONY: fmt
 fmt:
 	@echo "Correcting any formatting style corrections."
-	@gofmt -l -w ${GOFILES_NOVENDOR}
+	@gofmt -l -s -w ${GOFILES_NOVENDOR}
 
 # lint installs golint and prints recommendations for coding style.
-lint: 
+lint:
 	@echo "Running lint checks."
 	go get -u github.com/golang/lint/golint
 	@for file in $(GOFILES_NOVENDOR); do \
@@ -145,4 +145,4 @@ build_docker_db: check
 # clean removes the target folder containing build artefacts
 .PHONY: clean
 clean:
-	-rm -r ./target 
+	-rm -r ./target
