@@ -145,11 +145,11 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 		},
 		Accounts: genAccounts,
 		Validators: []genesis.GenesisValidator{
-			genesis.GenesisValidator{
+			{
 				PubKey: user[0].PubKey.(crypto.PubKeyEd25519),
 				Amount: 10,
 				UnbondTo: []genesis.BasicAccount{
-					genesis.BasicAccount{
+					{
 						Address: user[0].Address,
 					},
 				},

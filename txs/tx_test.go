@@ -30,23 +30,23 @@ var chainID = "myChainID"
 func TestSendTxSignable(t *testing.T) {
 	sendTx := &SendTx{
 		Inputs: []*TxInput{
-			&TxInput{
+			{
 				Address:  []byte("input1"),
 				Amount:   12345,
 				Sequence: 67890,
 			},
-			&TxInput{
+			{
 				Address:  []byte("input2"),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		Outputs: []*TxOutput{
-			&TxOutput{
+			{
 				Address: []byte("output1"),
 				Amount:  333,
 			},
-			&TxOutput{
+			{
 				Address: []byte("output2"),
 				Amount:  444,
 			},
@@ -109,23 +109,23 @@ func TestBondTxSignable(t *testing.T) {
 	bondTx := &BondTx{
 		PubKey: privAccount.PubKey.(crypto.PubKeyEd25519),
 		Inputs: []*TxInput{
-			&TxInput{
+			{
 				Address:  []byte("input1"),
 				Amount:   12345,
 				Sequence: 67890,
 			},
-			&TxInput{
+			{
 				Address:  []byte("input2"),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		UnbondTo: []*TxOutput{
-			&TxOutput{
+			{
 				Address: []byte("output1"),
 				Amount:  333,
 			},
-			&TxOutput{
+			{
 				Address: []byte("output2"),
 				Amount:  444,
 			},
