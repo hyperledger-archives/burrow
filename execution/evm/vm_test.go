@@ -35,6 +35,7 @@ import (
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var logger, _ = lifecycle.NewStdErrLogger()
@@ -164,13 +165,15 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2 = newAccount(2).AddToBalance(100000)
+	account2, err = newAccount(2).AddToBalance(100000)
+	require.NoError(t, err)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2 = newAccount(2).AddToBalance(100000)
+	account2, err = newAccount(2).AddToBalance(100000)
+	require.NoError(t, err)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
 	assert.Error(t, err, "Expected insufficient gas error")
 }

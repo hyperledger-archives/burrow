@@ -58,10 +58,6 @@ func AddGlobalFlags() {
 func AddClientCommands() {
 	BurrowClientCmd.AddCommand(buildTransactionCommand())
 	BurrowClientCmd.AddCommand(buildStatusCommand())
-
-	buildGenesisGenCommand()
-	BurrowClientCmd.AddCommand(GenesisGenCmd)
-
 }
 
 //------------------------------------------------------------------------------

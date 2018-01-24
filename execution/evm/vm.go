@@ -953,7 +953,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 
-			receiver.AddToBalance(callee.Balance())
+			receiver, errAdd := receiver.AddToBalance(callee.Balance())
+			if errAdd != nil {
+				return nil, firstErr(err, errAdd)
+			}
 			vm.state.UpdateAccount(receiver)
 			vm.state.RemoveAccount(callee.Address())
 			vm.Debugf(" => (%X) %v\n", addr[:4], callee.Balance())
@@ -1026,7 +1029,10 @@ func transfer(from, to acm.MutableAccount, amount uint64) error {
 		return ErrInsufficientBalance
 	} else {
 		from.SubtractFromBalance(amount)
-		to.AddToBalance(amount)
-		return nil
+		_, err := to.AddToBalance(amount)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }

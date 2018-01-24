@@ -59,19 +59,30 @@ func main() {
 			tomlOpt := cmd.BoolOpt("t toml", false, "Emit GenesisSpec as TOML rather than the "+
 				"default JSON")
 
+			fullOpt := cmd.IntOpt("f full-accounts", 1, "Number of preset Full type accounts")
+			validatorOpt := cmd.IntOpt("v validator-accounts", 0, "Number of preset Validator type accounts")
+			rootOpt := cmd.IntOpt("r root-accounts", 0, "Number of preset Root type accounts")
+			developerOpt := cmd.IntOpt("d developer-accounts", 0, "Number of preset Developer type accounts")
 			participantsOpt := cmd.IntOpt("p participant-accounts", 1, "Number of preset Participant type accounts")
 
-			fullOpt := cmd.IntOpt("f full-accounts", 1, "Number of preset Full type accounts")
-
-			cmd.Spec = "[--participant-accounts] [--full-accounts] [--toml]"
+			cmd.Spec = "[--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] [--participant-accounts] [--toml]"
 
 			cmd.Action = func() {
 				specs := make([]spec.GenesisSpec, 0, *participantsOpt+*fullOpt)
-				for i := 0; i < *participantsOpt; i++ {
-					specs = append(specs, spec.ParticipantAccount(i))
-				}
 				for i := 0; i < *fullOpt; i++ {
 					specs = append(specs, spec.FullAccount(i))
+				}
+				for i := 0; i < *validatorOpt; i++ {
+					specs = append(specs, spec.ValidatorAccount(i))
+				}
+				for i := 0; i < *rootOpt; i++ {
+					specs = append(specs, spec.RootAccount(i))
+				}
+				for i := 0; i < *developerOpt; i++ {
+					specs = append(specs, spec.DeveloperAccount(i))
+				}
+				for i := 0; i < *participantsOpt; i++ {
+					specs = append(specs, spec.ParticipantAccount(i))
 				}
 				genesisSpec := spec.MergeGenesisSpecs(specs...)
 				if *tomlOpt {
@@ -177,7 +188,7 @@ func main() {
 					ops := strings.Split(*loggingOpt, ",")
 					sinkConfig, err := presets.BuildSinkConfig(ops...)
 					if err != nil {
-						fatalf("could not build logging configuration: %v\n\nTo see possible logging " +
+						fatalf("could not build logging configuration: %v\n\nTo see possible logging "+
 							"instructions run:\n  burrow configure --describe-logging", err)
 					}
 					conf.Logging = &logging_config.LoggingConfig{

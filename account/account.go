@@ -73,9 +73,9 @@ type MutableAccount interface {
 	// Set public key (needed for lazy initialisation), should also set the dependent address
 	SetPublicKey(pubKey PublicKey) MutableAccount
 	// Subtract amount from account balance (will panic if amount is greater than balance)
-	SubtractFromBalance(amount uint64) MutableAccount
+	SubtractFromBalance(amount uint64) (MutableAccount, error)
 	// Add amount to balance (will panic if amount plus balance is a uint64 overflow)
-	AddToBalance(amount uint64) MutableAccount
+	AddToBalance(amount uint64) (MutableAccount, error)
 	// Set EVM byte code associated with account
 	SetCode(code []byte) MutableAccount
 	// Increment Sequence number by 1 (capturing the current Sequence number as the index for any pending mutations)
@@ -162,6 +162,7 @@ func AsConcreteAccount(account Account) *ConcreteAccount {
 	if account == nil {
 		return nil
 	}
+	// Avoid a copy
 	if ca, ok := account.(concreteAccountWrapper); ok {
 		return ca.ConcreteAccount
 	}
@@ -210,13 +211,6 @@ func GetMutableAccount(getter Getter, address Address) (MutableAccount, error) {
 	acc, err := getter.GetAccount(address)
 	if err != nil {
 		return nil, err
-	}
-	// If we get get our own concreteAccountWrapper back we can save an unnecessary copy and just
-	// return since ConcreteAccount.Account() will have been used to produce it which will already
-	// have copied
-	caw, ok := acc.(concreteAccountWrapper)
-	if ok {
-		return caw, nil
 	}
 	return AsMutableAccount(acc), nil
 }
@@ -284,22 +278,22 @@ func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount 
 	return caw
 }
 
-func (caw concreteAccountWrapper) SubtractFromBalance(amount uint64) MutableAccount {
+func (caw concreteAccountWrapper) SubtractFromBalance(amount uint64) (MutableAccount, error) {
 	if amount > caw.Balance() {
-		panic(fmt.Errorf("insufficient funds: attempt to subtract %v from the balance of %s",
-			amount, caw.ConcreteAccount))
+		return nil, fmt.Errorf("insufficient funds: attempt to subtract %v from the balance of %s",
+			amount, caw.ConcreteAccount)
 	}
 	caw.ConcreteAccount.Balance -= amount
-	return caw
+	return caw, nil
 }
 
-func (caw concreteAccountWrapper) AddToBalance(amount uint64) MutableAccount {
+func (caw concreteAccountWrapper) AddToBalance(amount uint64) (MutableAccount, error) {
 	if binary.IsUint64SumOverflow(caw.Balance(), amount) {
-		panic(fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
-			amount, caw.ConcreteAccount))
+		return nil, fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
+			amount, caw.ConcreteAccount)
 	}
 	caw.ConcreteAccount.Balance += amount
-	return caw
+	return caw, nil
 }
 
 func (caw concreteAccountWrapper) SetCode(code []byte) MutableAccount {

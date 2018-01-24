@@ -26,13 +26,56 @@ func FullAccount(index int) GenesisSpec {
 	}
 }
 
+func RootAccount(index int) GenesisSpec {
+	// Inheriting from the arbitrary figures used by monax tool for now
+	amount := uint64(99999999999999)
+	return GenesisSpec{
+		Accounts: []TemplateAccount{{
+			Name:        fmt.Sprintf("Root_%v", index),
+			Amount:      &amount,
+			Permissions: []string{permission.AllString},
+		},
+		},
+	}
+}
+
 func ParticipantAccount(index int) GenesisSpec {
+	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:        fmt.Sprintf("Participant_%v", index),
-			Amount:      &amount,
-			Permissions: []string{permission.SendString, permission.CallString, permission.NameString, permission.HasRoleString},
+			Name:   fmt.Sprintf("Participant_%v", index),
+			Amount: &amount,
+			Permissions: []string{permission.SendString, permission.CallString, permission.NameString,
+				permission.HasRoleString},
+		}},
+	}
+}
+
+func DeveloperAccount(index int) GenesisSpec {
+	// Inheriting from the arbitrary figures used by monax tool for now
+	amount := uint64(9999999999)
+	return GenesisSpec{
+		Accounts: []TemplateAccount{{
+			Name:   fmt.Sprintf("Developer_%v", index),
+			Amount: &amount,
+			Permissions: []string{permission.SendString, permission.CallString, permission.CreateContractString,
+				permission.CreateAccountString, permission.NameString, permission.HasRoleString,
+				permission.RemoveRoleString},
+		}},
+	}
+}
+
+func ValidatorAccount(index int) GenesisSpec {
+	// Inheriting from the arbitrary figures used by monax tool for now
+	amount := uint64(9999999999)
+	amountBonded := amount - 1
+	return GenesisSpec{
+		Accounts: []TemplateAccount{{
+			Name:         fmt.Sprintf("Validator_%v", index),
+			Amount:       &amount,
+			AmountBonded: &amountBonded,
+			Permissions: []string{permission.BondString},
 		}},
 	}
 }

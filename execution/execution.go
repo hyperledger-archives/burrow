@@ -191,8 +191,16 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		fees += fee
 
 		// Good! Adjust accounts
-		adjustByInputs(accounts, tx.Inputs)
-		adjustByOutputs(accounts, tx.Outputs)
+		err = adjustByInputs(accounts, tx.Inputs)
+		if err != nil {
+			return err
+		}
+
+		err = adjustByOutputs(accounts, tx.Outputs)
+		if err != nil {
+			return err
+		}
+
 		for _, acc := range accounts {
 			exe.blockCache.UpdateAccount(acc)
 		}
@@ -282,7 +290,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			"account", inAcc.Address(),
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
-		inAcc.IncSequence().SubtractFromBalance(tx.Fee)
+
+		inAcc, err = inAcc.IncSequence().SubtractFromBalance(tx.Fee)
+		if err != nil {
+			return err
+		}
 
 		exe.blockCache.UpdateAccount(inAcc)
 
@@ -396,7 +408,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			// the proposer determines the order of txs.
 			// So mempool will skip the actual .Call(),
 			// and only deduct from the caller's balance.
-			inAcc.SubtractFromBalance(value)
+			inAcc, err = inAcc.SubtractFromBalance(value)
+			if err != nil {
+				return err
+			}
 			if createContract {
 				// This is done by DeriveNewAccount when runCall == true
 
@@ -541,7 +556,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 		// Good!
 		inAcc.IncSequence()
-		inAcc.SubtractFromBalance(value)
+		inAcc, err = inAcc.SubtractFromBalance(value)
+		if err != nil {
+			return err
+		}
 		exe.blockCache.UpdateAccount(inAcc)
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
@@ -771,7 +789,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 					return nil
 				})
 		default:
-			panic(fmt.Sprintf("invalid permission function: %s", permission.PermFlagToString(permFlag)))
+			return fmt.Errorf("invalid permission function: %s", permission.PermFlagToString(permFlag))
 		}
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
@@ -781,7 +799,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 		// Good!
 		inAcc.IncSequence()
-		inAcc.SubtractFromBalance(value)
+		inAcc, err = inAcc.SubtractFromBalance(value)
+		if err != nil {
+			return err
+		}
 		exe.blockCache.UpdateAccount(inAcc)
 		if permAcc != nil {
 			exe.blockCache.UpdateAccount(permAcc)
@@ -798,8 +819,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 	default:
 		// binary decoding should not let this happen
-		panic("Unknown Tx type")
-		return nil
+		return fmt.Errorf("unknown Tx type: %#v", tx)
 	}
 }
 
@@ -1036,15 +1056,16 @@ func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
 	return nil
 }
 
-func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (total uint64, err error) {
+func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (uint64, error) {
+	total := uint64(0)
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
-			panic("validateInputs() expects account in accounts")
+			return 0, fmt.Errorf("validateInputs() expects account in accounts, but account %s not found", in.Address)
 		}
-		err = validateInput(acc, signBytes, in)
+		err := validateInput(acc, signBytes, in)
 		if err != nil {
-			return
+			return 0, err
 		}
 		// Good. Add amount to total
 		total += in.Amount
@@ -1052,7 +1073,7 @@ func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, i
 	return total, nil
 }
 
-func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) (err error) {
+func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) error {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
@@ -1075,7 +1096,8 @@ func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) (e
 	return nil
 }
 
-func validateOutputs(outs []*txs.TxOutput) (total uint64, err error) {
+func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
+	total := uint64(0)
 	for _, out := range outs {
 		// Check TxOutput basic
 		if err := out.ValidateBasic(); err != nil {
@@ -1087,36 +1109,45 @@ func validateOutputs(outs []*txs.TxOutput) (total uint64, err error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput) {
+func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
-			panic("adjustByInputs() expects account in accounts")
+			return fmt.Errorf("adjustByInputs() expects account in accounts, but account %s not found", in.Address)
 		}
 		if acc.Balance() < in.Amount {
 			panic("adjustByInputs() expects sufficient funds")
+			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
+				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
 		}
-		acc.SubtractFromBalance(in.Amount)
-
+		acc, err := acc.SubtractFromBalance(in.Amount)
+		if err != nil {
+			return err
+		}
 		acc.IncSequence()
 	}
+	return nil
 }
 
-func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutput) {
+func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
-			panic("adjustByOutputs() expects account in accounts")
+			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
+				out.Address)
 		}
-		acc.AddToBalance(out.Amount)
+		_, err := acc.AddToBalance(out.Amount)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag,
-	logger logging_types.InfoTraceLogger) bool {
+func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag, logger logging_types.InfoTraceLogger) bool {
 	if perm > permission.AllPermFlags {
 		panic("Checking an unknown permission in state should never happen")
 	}
