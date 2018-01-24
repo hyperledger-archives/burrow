@@ -6,6 +6,7 @@ import (
 
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )
@@ -22,6 +23,7 @@ const (
 	NoOutput outputType = ""
 	Stdout   outputType = "stdout"
 	Stderr   outputType = "stderr"
+	File     outputType = "file"
 
 	// TransformType
 	NoTransform transformType = ""
@@ -78,9 +80,7 @@ func (mode filterMode) MatchAny() bool {
 // Sink configuration types
 type (
 	// Outputs
-	GraylogConfig struct {
-	}
-
+	// TODO: reintroduce syslog removed when we dropped log15 dependency
 	SyslogConfig struct {
 		Url string
 		Tag string
@@ -91,11 +91,10 @@ type (
 	}
 
 	OutputConfig struct {
-		OutputType     outputType
-		Format         string
-		*GraylogConfig `json:",omitempty" toml:",omitempty"`
-		*FileConfig    `json:",omitempty" toml:",omitempty"`
-		*SyslogConfig  `json:",omitempty" toml:",omitempty"`
+		OutputType    outputType
+		Format        string
+		*FileConfig   `json:",omitempty" toml:",omitempty"`
+		*SyslogConfig `json:",omitempty" toml:",omitempty"`
 	}
 
 	// Transforms
@@ -191,6 +190,15 @@ func StderrOutput() *OutputConfig {
 	}
 }
 
+func FileOutput(path string) *OutputConfig {
+	return &OutputConfig{
+		OutputType: File,
+		FileConfig: &FileConfig{
+			Path: path,
+		},
+	}
+}
+
 func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformConfig {
 	return &TransformConfig{
 		TransformType: Capture,
@@ -272,8 +280,9 @@ func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.
 	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
 }
 
-func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
-	captures map[string]*loggers.CaptureLogger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*loggers.CaptureLogger) (kitlog.Logger,
+	map[string]*loggers.CaptureLogger, error) {
+
 	if sinkConfig == nil {
 		return kitlog.NewNopLogger(), captures, nil
 	}
@@ -282,11 +291,11 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	// We need a depth-first post-order over the output loggers so we'll keep
 	// recurring into children sinks we reach a terminal sink (with no children)
 	for i, sc := range sinkConfig.Sinks {
-		l, captures, err := BuildLoggerFromSinkConfig(sc, captures)
+		var err error
+		outputLoggers[i], captures, err = BuildLoggerFromSinkConfig(sc, captures)
 		if err != nil {
-			return nil, captures, err
+			return nil, nil, err
 		}
-		outputLoggers[i] = l
 	}
 
 	// Grab the outputs after we have terminated any children sinks above
@@ -301,7 +310,7 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	outputLogger := loggers.NewMultipleOutputLogger(outputLoggers...)
 
 	if sinkConfig.Transform != nil && sinkConfig.Transform.TransformType != NoTransform {
-		return BuildTransformLogger(sinkConfig.Transform, captures, outputLogger)
+		return BuildTransformLoggerPassthrough(sinkConfig.Transform, captures, outputLogger)
 	}
 	return outputLogger, captures, nil
 }
@@ -310,6 +319,8 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	switch outputConfig.OutputType {
 	case NoOutput:
 		return kitlog.NewNopLogger(), nil
+	case File:
+		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
 	case Stdout:
 		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format), nil
 	case Stderr:
@@ -318,6 +329,16 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 		return nil, fmt.Errorf("could not build logger for output: '%s'",
 			outputConfig.OutputType)
 	}
+}
+
+func BuildTransformLoggerPassthrough(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
+	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+
+	transformThenOutputLogger, captures, err := BuildTransformLogger(transformConfig, captures, outputLogger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return signalPassthroughLogger(outputLogger, transformThenOutputLogger), captures, nil
 }
 
 func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
@@ -386,4 +407,13 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 	default:
 		return nil, captures, fmt.Errorf("could not build logger for transform: '%s'", transformConfig.TransformType)
 	}
+}
+
+func signalPassthroughLogger(ifSignalLogger kitlog.Logger, otherwiseLogger kitlog.Logger) kitlog.Logger {
+	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+		if logging.Signal(keyvals) != "" {
+			return ifSignalLogger.Log(keyvals...)
+		}
+		return otherwiseLogger.Log(keyvals...)
+	})
 }

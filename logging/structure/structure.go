@@ -36,6 +36,10 @@ const (
 	// Globally unique identifier persisting while a single instance (root process)
 	// of this program/service is running
 	RunId = "run_id"
+	// Provides special instructions (that may be ignored) to downstream loggers
+	SignalKey = "__signal__"
+	// The sync signal instructs sync-able loggers to sync
+	SyncSignal = "__sync__"
 )
 
 // Pull the specified values from a structured log line into a map.
@@ -182,3 +186,5 @@ func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
 	}
 	return newSlice
 }
+
+

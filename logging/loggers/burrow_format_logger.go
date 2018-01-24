@@ -33,15 +33,15 @@ type burrowFormatLogger struct {
 
 var _ kitlog.Logger = &burrowFormatLogger{}
 
-func (efl *burrowFormatLogger) Log(keyvals ...interface{}) error {
-	if efl.logger == nil {
+func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
+	if bfl.logger == nil {
 		return nil
 	}
 	if len(keyvals)%2 != 0 {
 		return fmt.Errorf("log line contains an odd number of elements so "+
 			"was dropped: %v", keyvals)
 	}
-	return efl.logger.Log(structure.MapKeyValues(keyvals, burrowFormatKeyValueMapper)...)
+	return bfl.logger.Log(structure.MapKeyValues(keyvals, burrowFormatKeyValueMapper)...)
 }
 
 func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{}) {

@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	"fmt"
 
@@ -39,6 +40,8 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/events"
 )
+
+const CooldownMilliseconds = 1000
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
@@ -160,6 +163,10 @@ func (kern *Kernel) Shutdown() (err error) {
 		logging.InfoMsg(logger, "Shutting down Tendermint node")
 		kern.tmNode.Stop()
 		logging.InfoMsg(logger, "Shutdown complete")
+		logging.Sync(kern.logger)
+		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush
+		// potentially interesting final output (e.g. log messages)
+		time.Sleep(time.Millisecond * CooldownMilliseconds)
 		close(kern.shutdownNotify)
 	})
 	return

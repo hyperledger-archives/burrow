@@ -48,3 +48,22 @@ func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
 	prepended := structure.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }
+
+// Sends the sync signal which causes any syncing loggers to sync.
+// loggers receiving the signal should drop the signal logline from output
+func Sync(logger kitlog.Logger) error {
+	return logger.Log(structure.SignalKey, structure.SyncSignal)
+}
+
+// Tried to interpret the logline as a signal by matching the last key-value pair as a signal, returns empty string if
+// no match
+func Signal(keyvals []interface{}) string {
+	last := len(keyvals) - 1
+	if last > 0 && keyvals[last-1] == structure.SignalKey {
+		signal, ok := keyvals[last].(string)
+		if ok {
+			return signal
+		}
+	}
+	return ""
+}
