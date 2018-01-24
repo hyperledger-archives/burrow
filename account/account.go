@@ -118,7 +118,7 @@ func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
 }
 
 func NewConcreteAccountFromSecret(secret string) ConcreteAccount {
-	return NewConcreteAccount(PublicKeyFromPubKey(PrivateKeyFromSecret(secret).PubKey()))
+	return NewConcreteAccount(PublicKeyFromGoCryptoPubKey(PrivateKeyFromSecret(secret).PubKey()))
 }
 
 // Return as immutable Account

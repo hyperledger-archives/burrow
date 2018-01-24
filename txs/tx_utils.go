@@ -19,8 +19,6 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
-
-	"github.com/tendermint/go-crypto"
 )
 
 //----------------------------------------------------------------------------
@@ -51,7 +49,6 @@ func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequenc
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  sequence,
-		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    pubkey,
 	})
 	return nil
@@ -99,7 +96,6 @@ func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 		Address:   from.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
-		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 
@@ -139,7 +135,6 @@ func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequ
 		Address:   from.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
-		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 
@@ -184,7 +179,6 @@ func (tx *BondTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequenc
 		Address:   pubkey.Address(),
 		Amount:    amt,
 		Sequence:  sequence,
-		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    pubkey,
 	})
 	return nil
@@ -262,7 +256,6 @@ func NewPermissionsTxWithSequence(from acm.PublicKey, args *ptypes.PermArgs, seq
 		Address:   from.Address(),
 		Amount:    1, // NOTE: amounts can't be 0 ...
 		Sequence:  sequence,
-		Signature: crypto.SignatureEd25519{}.Wrap(),
 		PubKey:    from,
 	}
 

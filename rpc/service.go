@@ -395,7 +395,11 @@ func (s *service) SignTx(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePriva
 }
 
 func (s *service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {
+	privateAccount, err := acm.GeneratePrivateAccount()
+	if err != nil {
+		return nil, err
+	}
 	return &ResultGeneratePrivateAccount{
-		PrivAccount: acm.GeneratePrivateAccount().ConcretePrivateAccount,
+		PrivAccount: acm.AsConcretePrivateAccount(privateAccount),
 	}, nil
 }

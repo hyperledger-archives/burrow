@@ -175,7 +175,10 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 	}
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	if err != nil {
+		return nil, err
+	}
 	// [Silas] This is puzzling, if the account doesn't exist the CallTx will fail, so what's the point in this?
 	acc, err := trans.state.GetAccount(pa.Address())
 	if err != nil {
@@ -289,7 +292,10 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 	copy(pk[:], privKey)
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	if err != nil {
+		return nil, err
+	}
 	cache := trans.state
 	acc, err := cache.GetAccount(pa.Address())
 	if err != nil {
@@ -359,7 +365,10 @@ func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amou
 
 	var rErr error
 
-	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	if tErr != nil {
+		return nil, err
+	}
 
 	select {
 	case <-toChan:
@@ -381,7 +390,10 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 	}
 	trans.txMtx.Lock()
 	defer trans.txMtx.Unlock()
-	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	if err != nil {
+		return nil, err
+	}
 	cache := trans.state // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
 	acc, err := cache.GetAccount(pa.Address())
 	if err != nil {

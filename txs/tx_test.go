@@ -111,8 +111,7 @@ func TestNameTxSignable(t *testing.T) {
 }
 
 func TestBondTxSignable(t *testing.T) {
-	privKeyBytes := make([]byte, 64)
-	privAccount := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes)
+	privAccount := acm.GeneratePrivateAccountFromSecret("foooobars")
 	bondTx := &BondTx{
 		PubKey: privAccount.PublicKey(),
 		Inputs: []*TxInput{
@@ -138,8 +137,20 @@ func TestBondTxSignable(t *testing.T) {
 			},
 		},
 	}
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[17,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"pub_key":[1,"3B6A27BCCEB6A42D62A3A8D02A6F0D73653215771DE243A63AC048A18B59DA29"],"unbond_to":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
-		chainID, bondTx.Inputs[0].Address.String(), bondTx.Inputs[1].Address.String(), bondTx.UnbondTo[0].Address.String(), bondTx.UnbondTo[1].Address.String())
+	expected := fmt.Sprintf(`{"chain_id":"%s",`+
+		`"tx":[17,{"inputs":[{"address":"%s",`+
+		`"amount":12345,"sequence":67890},{"address":"%s",`+
+		`"amount":111,"sequence":222}],"pub_key":[1,"%X"],`+
+		`"unbond_to":[{"address":"%s",`+
+		`"amount":333},{"address":"%s",`+
+		`"amount":444}]}]}`,
+		chainID,
+		bondTx.Inputs[0].Address.String(),
+		bondTx.Inputs[1].Address.String(),
+		bondTx.PubKey.RawBytes(),
+		bondTx.UnbondTo[0].Address.String(),
+		bondTx.UnbondTo[1].Address.String())
+
 	assert.Equal(t, expected, string(acm.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
 }
 

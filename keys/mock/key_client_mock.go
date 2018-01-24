@@ -21,7 +21,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
 	"github.com/tendermint/ed25519"
-	"github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -59,11 +59,8 @@ func newMockKey() (*MockKey, error) {
 	return key, nil
 }
 
-func (mockKey *MockKey) Sign(message []byte) (crypto.Signature, error) {
-	sigEd25519 := crypto.SignatureEd25519{}
-	signatureBytes := ed25519.Sign(&mockKey.PrivateKey, message)
-	copy(sigEd25519[:], signatureBytes[:])
-	return sigEd25519.Wrap(), nil
+func (mockKey *MockKey) Sign(message []byte) (acm.Signature, error) {
+	return acm.SignatureFromBytes(ed25519.Sign(&mockKey.PrivateKey, message)[:])
 }
 
 //---------------------------------------------------------------------
@@ -92,10 +89,10 @@ func (mock *MockKeyClient) NewKey() acm.Address {
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signAddress acm.Address, message []byte) (crypto.Signature, error) {
+func (mock *MockKeyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
 	key := mock.knownKeys[signAddress]
 	if key == nil {
-		return crypto.Signature{}, fmt.Errorf("Unknown address (%s)", signAddress)
+		return acm.Signature{}, fmt.Errorf("Unknown address (%s)", signAddress)
 	}
 	return key.Sign(message)
 }
@@ -107,7 +104,7 @@ func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error)
 	}
 	pubKeyEd25519 := crypto.PubKeyEd25519{}
 	copy(pubKeyEd25519[:], key.PublicKey)
-	return acm.PublicKeyFromPubKey(pubKeyEd25519.Wrap()), nil
+	return acm.PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap()), nil
 }
 
 func (mock *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {

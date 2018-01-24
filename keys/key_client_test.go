@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 		fatalf("couldn't create temp dir: %v", err)
 	}
 	go keys.StartServer(keysHost, keysPort)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestMonaxKeyClient_Generate(t *testing.T) {
@@ -43,7 +43,7 @@ func TestMonaxKeyClient_PublicKey(t *testing.T) {
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)
 	assert.NoError(t, err)
 	pubKey, err := keyClient.PublicKey(addr)
-	assert.Equal(t, addr[:], pubKey.Address())
+	assert.Equal(t, addr, pubKey.Address())
 }
 
 func TestMonaxKeyClient_PublicKey_NonExistent(t *testing.T) {

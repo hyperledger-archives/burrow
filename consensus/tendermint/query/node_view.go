@@ -47,7 +47,7 @@ func NewNodeView(tmNode *node.Node, txDecoder txs.Decoder) NodeView {
 }
 
 func (nv *nodeView) PrivValidatorPublicKey() acm.PublicKey {
-	return acm.PublicKeyFromPubKey(nv.tmNode.PrivValidator().GetPubKey())
+	return acm.PublicKeyFromGoCryptoPubKey(nv.tmNode.PrivValidator().GetPubKey())
 }
 
 func (nv *nodeView) NodeInfo() *p2p.NodeInfo {

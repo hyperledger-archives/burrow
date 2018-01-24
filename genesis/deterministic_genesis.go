@@ -1,15 +1,12 @@
 package genesis
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
-	"fmt"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/tendermint/ed25519"
-	"github.com/tendermint/go-crypto"
 )
 
 type deterministicGenesis struct {
@@ -67,8 +64,11 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 }
 
 func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, acm.PrivateAccount) {
-	privKey := dg.PrivateKey()
-	pubKey := acm.PublicKeyFromPubKey(privKey.PubKey())
+	privKey, err := acm.GeneratePrivateKey(dg.random)
+	if err != nil {
+		panic(fmt.Errorf("could not generate private key deterministically"))
+	}
+	pubKey := acm.PublicKeyFromGoCryptoPubKey(privKey.PubKey())
 	privAccount := &acm.ConcretePrivateAccount{
 		PublicKey:  pubKey,
 		PrivateKey: privKey,
@@ -86,13 +86,4 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 		acc.Balance += uint64(dg.random.Int())
 	}
 	return acc.Account(), privAccount.PrivateAccount()
-}
-
-func (dg *deterministicGenesis) PrivateKey() acm.PrivateKey {
-	privKeyBytes := new([64]byte)
-	for i := 0; i < 32; i++ {
-		privKeyBytes[i] = byte(dg.random.Int() % 256)
-	}
-	ed25519.MakePublicKey(privKeyBytes)
-	return acm.PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(*privKeyBytes).Wrap())
 }

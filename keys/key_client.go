@@ -15,19 +15,17 @@
 package keys
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/tendermint/go-crypto"
 )
 
 type KeyClient interface {
 	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress acm.Address, message []byte) (signature crypto.Signature, err error)
+	Sign(signAddress acm.Address, message []byte) (signature acm.Signature, err error)
 
 	// PublicKey returns the public key associated with a given address
 	PublicKey(address acm.Address) (publicKey acm.PublicKey, err error)
@@ -35,7 +33,7 @@ type KeyClient interface {
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType KeyType) (keyAddress acm.Address, err error)
 
-	// Returns nil if the keys isntance is health, error otherwise
+	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
 }
 
@@ -57,16 +55,16 @@ const (
 	KeyTypeDefault                          = KeyTypeEd25519Ripemd160
 )
 
-// NOTE [ben] Compiler check to ensure monaxKeyClient successfully implements
+// NOTE [ben] Compiler check to ensure keyClient successfully implements
 // burrow/keys.KeyClient
-var _ KeyClient = (*monaxKeyClient)(nil)
+var _ KeyClient = (*keyClient)(nil)
 
-type monaxKeyClient struct {
+type keyClient struct {
 	rpcString string
 	logger    logging_types.InfoTraceLogger
 }
 
-type monaxSigner struct {
+type signer struct {
 	keyClient KeyClient
 	address   acm.Address
 }
@@ -74,7 +72,7 @@ type monaxSigner struct {
 // Creates a Signer that assumes the address holds an Ed25519 key
 func Signer(keyClient KeyClient, address acm.Address) acm.Signer {
 	// TODO: we can do better than this and return a typed signature when we reform the keys service
-	return &monaxSigner{
+	return &signer{
 		keyClient: keyClient,
 		address:   address,
 	}
@@ -104,18 +102,18 @@ func Addressable(keyClient KeyClient, address acm.Address) (acm.Addressable, err
 	}, nil
 }
 
-func (ms *monaxSigner) Sign(messsage []byte) (crypto.Signature, error) {
+func (ms *signer) Sign(messsage []byte) (acm.Signature, error) {
 	signature, err := ms.keyClient.Sign(ms.address, messsage)
 	if err != nil {
-		return crypto.Signature{}, err
+		return acm.Signature{}, err
 	}
 	return signature, nil
 }
 
-// monaxKeyClient.New returns a new monax-keys client for provided rpc location
+// keyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) *monaxKeyClient {
-	return &monaxKeyClient{
+func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) *keyClient {
+	return &keyClient{
 		rpcString: rpcString,
 		logger:    logging.WithScope(logger, "BurrowKeyClient"),
 	}
@@ -123,25 +121,25 @@ func NewBurrowKeyClient(rpcString string, logger logging_types.InfoTraceLogger) 
 
 // Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (monaxKeys *monaxKeyClient) Sign(signAddress acm.Address, message []byte) (crypto.Signature, error) {
+func (monaxKeys *keyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
 	args := map[string]string{
 		"msg":  hex.EncodeToString(message),
 		"addr": signAddress.String(),
 	}
 	sigS, err := RequestResponse(monaxKeys.rpcString, "sign", args, monaxKeys.logger)
 	if err != nil {
-		return crypto.Signature{}, err
+		return acm.Signature{}, err
 	}
 	sigBytes, err := hex.DecodeString(sigS)
 	if err != nil {
-		return crypto.Signature{}, err
+		return acm.Signature{}, err
 	}
-	return crypto.SignatureEd25519FromBytes(sigBytes), err
+	return acm.SignatureFromBytes(sigBytes)
 }
 
 // Monax-keys client PublicKey requests the public key associated with an address from
 // the monax-keys server.
-func (monaxKeys *monaxKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
+func (monaxKeys *keyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
 	args := map[string]string{
 		"addr": address.String(),
 	}
@@ -149,20 +147,22 @@ func (monaxKeys *monaxKeyClient) PublicKey(address acm.Address) (acm.PublicKey, 
 	if err != nil {
 		return acm.PublicKey{}, err
 	}
-	pubKey := crypto.PubKeyEd25519{}
 	pubKeyBytes, err := hex.DecodeString(pubS)
 	if err != nil {
 		return acm.PublicKey{}, err
 	}
-	copy(pubKey[:], pubKeyBytes)
-	if !bytes.Equal(address.Bytes(), pubKey.Address()) {
-		return acm.PublicKey{}, fmt.Errorf("public key %s maps to address %X but was returned for address %s",
-			pubKey, pubKey.Address(), address)
+	publicKey, err := acm.PublicKeyFromBytes(pubKeyBytes)
+	if err != nil {
+		return acm.PublicKey{}, err
 	}
-	return acm.PublicKeyFromPubKey(pubKey.Wrap()), nil
+	if address != publicKey.Address() {
+		return acm.PublicKey{}, fmt.Errorf("public key %s maps to address %s but was returned for address %s",
+			publicKey, publicKey.Address(), address)
+	}
+	return publicKey, nil
 }
 
-func (monaxKeys *monaxKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
+func (monaxKeys *keyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
 	args := map[string]string{
 		//"auth": auth,
 		"name": keyName,
@@ -175,7 +175,7 @@ func (monaxKeys *monaxKeyClient) Generate(keyName string, keyType KeyType) (acm.
 	return acm.AddressFromHexString(addr)
 }
 
-func (monaxKeys *monaxKeyClient) HealthCheck() error {
+func (monaxKeys *keyClient) HealthCheck() error {
 	_, err := RequestResponse(monaxKeys.rpcString, "name/ls", nil, monaxKeys.logger)
 	return err
 }

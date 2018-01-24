@@ -34,13 +34,29 @@ func (pvm *privValidatorMemory) GetPubKey() crypto.PubKey {
 }
 
 func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) error {
-	return pvm.lastSignedInfo.SignVote(pvm, chainID, vote)
+	return pvm.lastSignedInfo.SignVote(asTendermintSigner(pvm.Signer), chainID, vote)
 }
 
 func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tm_types.Proposal) error {
-	return pvm.lastSignedInfo.SignProposal(pvm, chainID, proposal)
+	return pvm.lastSignedInfo.SignProposal(asTendermintSigner(pvm.Signer), chainID, proposal)
 }
 
 func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tm_types.Heartbeat) error {
-	return pvm.lastSignedInfo.SignHeartbeat(pvm, chainID, heartbeat)
+	return pvm.lastSignedInfo.SignHeartbeat(asTendermintSigner(pvm.Signer), chainID, heartbeat)
+}
+
+func asTendermintSigner(signer acm.Signer) tm_types.Signer {
+	return tendermintSigner{Signer: signer}
+}
+
+type tendermintSigner struct {
+	acm.Signer
+}
+
+func (tms tendermintSigner) Sign(msg []byte) (crypto.Signature, error) {
+	sig, err := tms.Signer.Sign(msg)
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	return sig.GoCryptoSignature(), nil
 }

@@ -19,8 +19,11 @@ import (
 
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -99,7 +102,11 @@ func TestMarshalJSON(t *testing.T) {
 	concreteAcc.Code = []byte{60, 23, 45}
 	acc := concreteAcc.Account()
 	bs, err := json.Marshal(acc)
-	assert.Equal(t, `{"Address":"745BD6BE33020146E04FA0F293A41E389887DE86","PublicKey":{"type":"ed25519","data":"8CEBC16C166A0614AD7C8E330318E774E1A039321F17274DF12ABA3B1BFC773C"},"Balance":0,"Code":"3C172D","Sequence":0,"StorageRoot":"","Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":[]}}`,
-		string(bs))
+
+	pubKeyEd25519 := concreteAcc.PublicKey.PubKey.Unwrap().(crypto.PubKeyEd25519)
+	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"type":"ed25519","data":"%X"},`+
+		`"Balance":0,"Code":"3C172D","Sequence":0,"StorageRoot":"","Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":[]}}`,
+		concreteAcc.Address, pubKeyEd25519[:])
+	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)
 }

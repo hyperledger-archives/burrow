@@ -22,7 +22,6 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/go-wire/data"
 	"golang.org/x/crypto/ripemd160"
@@ -149,11 +148,11 @@ type (
 	}
 
 	TxInput struct {
-		Address   acm.Address      `json:"address"`   // Hash of the PublicKey
-		Amount    uint64           `json:"amount"`    // Must not exceed account balance
-		Sequence  uint64           `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-		Signature crypto.Signature `json:"signature"` // Depends on the PublicKey type and the whole Tx
-		PubKey    acm.PublicKey    `json:"pub_key"`   // Must not be nil, may be nil
+		Address   acm.Address   `json:"address"`   // Hash of the PublicKey
+		Amount    uint64        `json:"amount"`    // Must not exceed account balance
+		Sequence  uint64        `json:"sequence"`  // Must be 1 greater than the last committed TxInput
+		Signature acm.Signature `json:"signature"` // Depends on the PublicKey type and the whole Tx
+		PubKey    acm.PublicKey `json:"pub_key"`   // Must not be nil, may be nil
 	}
 
 	TxOutput struct {
@@ -311,10 +310,10 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    acm.PublicKey    `json:"pub_key"` // NOTE: these don't have type byte
-	Signature crypto.Signature `json:"signature"`
-	Inputs    []*TxInput       `json:"inputs"`
-	UnbondTo  []*TxOutput      `json:"unbond_to"`
+	PubKey    acm.PublicKey `json:"pub_key"` // NOTE: these don't have type byte
+	Signature acm.Signature `json:"signature"`
+	Inputs    []*TxInput    `json:"inputs"`
+	UnbondTo  []*TxOutput   `json:"unbond_to"`
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -345,9 +344,9 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   acm.Address      `json:"address"`
-	Height    int              `json:"height"`
-	Signature crypto.Signature `json:"signature"`
+	Address   acm.Address   `json:"address"`
+	Height    int           `json:"height"`
+	Signature acm.Signature `json:"signature"`
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -362,9 +361,9 @@ func (tx *UnbondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   acm.Address      `json:"address"`
-	Height    int              `json:"height"`
-	Signature crypto.Signature `json:"signature"`
+	Address   acm.Address   `json:"address"`
+	Height    int           `json:"height"`
+	Signature acm.Signature `json:"signature"`
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -379,7 +378,7 @@ func (tx *RebondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type PermissionsTx struct {
-	Input    *TxInput        `json:"input"`
+	Input    *TxInput         `json:"input"`
 	PermArgs *ptypes.PermArgs `json:"args"`
 }
 

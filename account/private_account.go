@@ -17,14 +17,8 @@ package account
 import (
 	"fmt"
 
-	"github.com/tendermint/ed25519"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 )
-
-type Signer interface {
-	Sign(msg []byte) (crypto.Signature, error)
-}
 
 type PrivateAccount interface {
 	Addressable
@@ -46,6 +40,20 @@ var _ PrivateAccount = concretePrivateAccountWrapper{}
 
 var _ = wire.RegisterInterface(struct{ PrivateAccount }{}, wire.ConcreteType{concretePrivateAccountWrapper{}, 0x01})
 
+func AsConcretePrivateAccount(privateAccount PrivateAccount) *ConcretePrivateAccount {
+	if privateAccount == nil {
+		return nil
+	}
+	// Avoid a copy
+	if ca, ok := privateAccount.(concretePrivateAccountWrapper); ok {
+		return ca.ConcretePrivateAccount
+	}
+	return &ConcretePrivateAccount{
+		Address:    privateAccount.Address(),
+		PublicKey:  privateAccount.PublicKey(),
+		PrivateKey: privateAccount.PrivateKey(),
+	}
+}
 func (cpaw concretePrivateAccountWrapper) Address() Address {
 	return cpaw.ConcretePrivateAccount.Address
 }
@@ -58,28 +66,20 @@ func (cpaw concretePrivateAccountWrapper) PrivateKey() PrivateKey {
 	return cpaw.ConcretePrivateAccount.PrivateKey
 }
 
-func (pa ConcretePrivateAccount) PrivateAccount() concretePrivateAccountWrapper {
-	return concretePrivateAccountWrapper{&pa}
+func (pa ConcretePrivateAccount) PrivateAccount() PrivateAccount {
+	return concretePrivateAccountWrapper{ConcretePrivateAccount: &pa}
 }
 
-func (pa ConcretePrivateAccount) Sign(msg []byte) (crypto.Signature, error) {
-	return pa.PrivateKey.Sign(msg), nil
+func (pa ConcretePrivateAccount) Sign(msg []byte) (Signature, error) {
+	return pa.PrivateKey.Sign(msg)
 }
 
-func ChainSign(pa PrivateAccount, chainID string, o Signable) crypto.Signature {
-	sig, _ := pa.Sign(SignBytes(chainID, o))
+func ChainSign(pa PrivateAccount, chainID string, o Signable) Signature {
+	sig, err := pa.Sign(SignBytes(chainID, o))
+	if err != nil {
+		panic(err)
+	}
 	return sig
-}
-
-func (pa *ConcretePrivateAccount) Generate(index int) concretePrivateAccountWrapper {
-	newPrivKey := PrivateKeyFromPrivKey(pa.PrivateKey.Unwrap().(crypto.PrivKeyEd25519).Generate(index).Wrap())
-	newPubKey := PublicKeyFromPubKey(newPrivKey.PubKey())
-	newAddress := newPubKey.Address()
-	return ConcretePrivateAccount{
-		Address:    newAddress,
-		PublicKey:  newPubKey,
-		PrivateKey: newPrivKey,
-	}.PrivateAccount()
 }
 
 func (pa *ConcretePrivateAccount) String() string {
@@ -89,48 +89,39 @@ func (pa *ConcretePrivateAccount) String() string {
 //----------------------------------------
 
 // Generates a new account with private key.
-func GeneratePrivateAccount() concretePrivateAccountWrapper {
-	privKeyBytes := new([64]byte)
-	copy(privKeyBytes[:32], crypto.CRandBytes(32))
-	pubKeyBytes := ed25519.MakePublicKey(privKeyBytes)
-	publicKey := PublicKeyFromPubKey(crypto.PubKeyEd25519(*pubKeyBytes).Wrap())
-	address := publicKey.Address()
-	privateKey := PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(*privKeyBytes).Wrap())
+func GeneratePrivateAccount() (PrivateAccount, error) {
+	privateKey, err := GeneratePrivateKey(nil)
+	if err != nil {
+		return nil, err
+	}
+	publicKey := privateKey.PublicKey()
 	return ConcretePrivateAccount{
-		Address:    address,
+		Address:    publicKey.Address(),
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
-	}.PrivateAccount()
-}
-
-func PrivateKeyFromSecret(secret string) PrivateKey {
-	return PrivateKeyFromPrivKey(crypto.GenPrivKeyEd25519FromSecret(wire.BinarySha256(secret)).Wrap())
+	}.PrivateAccount(), nil
 }
 
 // Generates a new account with private key from SHA256 hash of a secret
-func GeneratePrivateAccountFromSecret(secret string) concretePrivateAccountWrapper {
-	privKey := PrivateKeyFromSecret(secret)
-	pubKey := PublicKeyFromPubKey(privKey.PubKey())
+func GeneratePrivateAccountFromSecret(secret string) PrivateAccount {
+	privateKey := PrivateKeyFromSecret(secret)
+	publicKey := privateKey.PublicKey()
 	return ConcretePrivateAccount{
-		Address:    pubKey.Address(),
-		PublicKey:  pubKey,
-		PrivateKey: privKey,
-	}.PrivateAccount()
-}
-
-func GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) concretePrivateAccountWrapper {
-	if len(privKeyBytes) != 64 {
-		panic(fmt.Sprintf("Expected 64 bytes but got %v", len(privKeyBytes)))
-	}
-	var privKeyArray [64]byte
-	copy(privKeyArray[:], privKeyBytes)
-	pubKeyBytes := ed25519.MakePublicKey(&privKeyArray)
-	publicKey := PublicKeyFromPubKey(crypto.PubKeyEd25519(*pubKeyBytes).Wrap())
-	address := publicKey.Address()
-	privateKey := PrivateKeyFromPrivKey(crypto.PrivKeyEd25519(privKeyArray).Wrap())
-	return ConcretePrivateAccount{
-		Address:    address,
+		Address:    publicKey.Address(),
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount()
+}
+
+func GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (PrivateAccount, error) {
+	privateKey, err := Ed25519PrivateKeyFromRawBytes(privKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	publicKey := privateKey.PublicKey()
+	return ConcretePrivateAccount{
+		Address:    publicKey.Address(),
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+	}.PrivateAccount(), nil
 }

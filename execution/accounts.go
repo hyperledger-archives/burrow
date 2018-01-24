@@ -77,8 +77,11 @@ func newAccounts(state acm.StateIterable) *accounts {
 
 // Generate a new Private Key Account.
 func (accs *accounts) GenPrivAccount() (*acm.ConcretePrivateAccount, error) {
-	pa := acm.GeneratePrivateAccount().ConcretePrivateAccount
-	return pa, nil
+	pa, err := acm.GeneratePrivateAccount()
+	if err != nil {
+		return nil, err
+	}
+	return acm.AsConcretePrivateAccount(pa), nil
 }
 
 // Generate a new Private Key Account.
@@ -88,8 +91,11 @@ func (accs *accounts) GenPrivAccountFromKey(privKey []byte) (
 		return nil, fmt.Errorf("Private key is not 64 bytes long.")
 	}
 	fmt.Printf("PK BYTES FROM ACCOUNTS: %x\n", privKey)
-	pa := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey).ConcretePrivateAccount
-	return pa, nil
+	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+	if err != nil {
+		return nil, err
+	}
+	return acm.AsConcretePrivateAccount(pa), nil
 }
 
 // Get all accounts.

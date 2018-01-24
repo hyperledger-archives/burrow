@@ -53,7 +53,7 @@ func (mock *MockNodeClient) GetAccount(address acm.Address) (acm.Account, error)
 	// make zero account
 	return acm.ConcreteAccount{
 		Address:     address,
-		PublicKey:   acm.PublicKeyFromPubKey(crypto.PubKeyEd25519{}.Wrap()),
+		PublicKey:   acm.PublicKeyFromGoCryptoPubKey(crypto.PubKeyEd25519{}.Wrap()),
 		Code:        make([]byte, 0),
 		StorageRoot: make([]byte, 0),
 	}.Account(), nil
