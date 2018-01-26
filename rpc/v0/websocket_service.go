@@ -48,6 +48,12 @@ func NewBurrowWsService(codec rpc.Codec,
 
 // Process a request.
 func (this *BurrowWsService) Process(msg []byte, session *server.WSSession) {
+	defer func() {
+		// this is to allow recovery when there is a PANIC
+		if r := recover(); r != nil {
+				fmt.Println("Recovered in rpc/v0/webosocket_service.go:Process()", r)
+		}
+}()
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
