@@ -17,7 +17,6 @@ package evm
 import (
 	"encoding/hex"
 	"fmt"
-	//"strings"
 	"testing"
 	"time"
 
@@ -77,26 +76,12 @@ func TestVM(t *testing.T) {
 
 	var gas uint64 = 100000
 
-	//Array defining how many times loop will run
-	N := []byte{0x0f, 0x0f}
-
-	// Loop initialization
-	code := []byte{
-		byte(PUSH1), 0x00, byte(PUSH1), 0x20, byte(MSTORE), byte(JUMPDEST),
-		byte(0x60 + len(N) - 1),
-	}
-
-	code = append(code, N...)
-
-	code = append(code, []byte{
-		byte(PUSH1), 0x20, byte(MLOAD), byte(SLT), byte(ISZERO), byte(PUSH1),
-		byte(0x1b + len(N)), byte(JUMPI), byte(PUSH1), 0x01, byte(PUSH1), 0x20,
-		byte(MLOAD), byte(ADD), byte(PUSH1), 0x20, byte(MSTORE), byte(PUSH1),
-		0x05, byte(JUMP), byte(JUMPDEST),
-	}...)
+	bytecode := Splice(PUSH1, 0x00, PUSH1, 0x20, MSTORE, JUMPDEST, PUSH2, 0x0F, 0x0F, PUSH1, 0x20, MLOAD,
+		SLT, ISZERO, PUSH1, 0x1D, JUMPI, PUSH1, 0x01, PUSH1, 0x20, MLOAD, ADD, PUSH1, 0x20,
+		MSTORE, PUSH1, 0x05, JUMP, JUMPDEST)
 
 	start := time.Now()
-	output, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	if err != nil {
@@ -114,13 +99,12 @@ func TestJumpErr(t *testing.T) {
 
 	var gas uint64 = 100000
 
-	//Set jump destination to 16
-	code := []byte{byte(PUSH1), 0x10, byte(JUMP)}
+	bytecode := Splice(PUSH1, 0x10, JUMP)
 
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		_, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+		_, err = ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)
@@ -148,45 +132,22 @@ func TestSubcurrency(t *testing.T) {
 
 	var gas uint64 = 1000
 
-	code := []byte{byte(PUSH3), 0x0f, 0x42, 0x40, byte(CALLER), byte(SSTORE)}
-	code = append(code, []byte{
-		byte(PUSH29), 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	}...)
-	code = append(code, []byte{
-		byte(PUSH1), 0x00, byte(CALLDATALOAD), byte(DIV), byte(PUSH4), 0x15, 0xcf,
-		0x26, 0x84, byte(DUP2), byte(EQ), byte(ISZERO), byte(PUSH2), 0x00, 0x46, byte(JUMPI),
-	}...)
-	code = append(code, []byte{
-		byte(PUSH1), 0x04, byte(CALLDATALOAD), byte(PUSH1), 0x40, byte(MSTORE),
-		byte(PUSH1), 0x40, byte(MLOAD), byte(SLOAD), byte(PUSH1), 0x60, byte(MSTORE),
-		byte(PUSH1), 0x20, byte(PUSH1), 0x60, byte(RETURN), byte(JUMPDEST),
-		byte(PUSH4), 0x69, 0x32, 0x00, 0xce, byte(DUP2), byte(EQ), byte(ISZERO),
-		byte(PUSH2), 0x00, 0x87, byte(JUMPI),
-	}...)
-	code = append(code, []byte{
-		byte(PUSH1), 0x04, byte(CALLDATALOAD), byte(PUSH1), 0x80, byte(MSTORE),
-		byte(PUSH1), 0x24, byte(CALLDATALOAD), byte(PUSH1), 0xa0, byte(MSTORE),
-		byte(CALLER), byte(SLOAD), byte(PUSH1), 0xc0, byte(MSTORE), byte(CALLER),
-		byte(PUSH1), 0xe0, byte(MSTORE), byte(PUSH1), 0xa0, byte(MLOAD),
-		byte(PUSH1), 0xc0, byte(MLOAD), byte(SLT), byte(ISZERO), byte(ISZERO),
-		byte(PUSH2), 0x00, 0x86, byte(JUMPI),
-	}...)
-	code = append(code, []byte{
-		byte(PUSH1), 0xa0, byte(MLOAD), byte(PUSH1), 0xc0, byte(MLOAD), byte(SUB),
-		byte(PUSH1), 0xe0, byte(MLOAD), byte(SSTORE), byte(PUSH1), 0xa0, byte(MLOAD),
-		byte(PUSH1), 0x80, byte(MLOAD), byte(SLOAD), byte(ADD), byte(PUSH1), 0x80,
-		byte(MLOAD), byte(SSTORE), byte(JUMPDEST), byte(JUMPDEST), byte(POP),
-		byte(JUMPDEST), byte(PUSH1), 0x00, byte(RETURN),
-	}...)
-
-	for _, element := range code {
-		fmt.Printf("Code: %#x\n", element)
-	}
+	bytecode := Splice(PUSH3, 0x0F, 0x42, 0x40, CALLER, SSTORE, PUSH29, 0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1,
+		0x00, CALLDATALOAD, DIV, PUSH4, 0x15, 0xCF, 0x26, 0x84, DUP2, EQ, ISZERO, PUSH2,
+		0x00, 0x46, JUMPI, PUSH1, 0x04, CALLDATALOAD, PUSH1, 0x40, MSTORE, PUSH1, 0x40,
+		MLOAD, SLOAD, PUSH1, 0x60, MSTORE, PUSH1, 0x20, PUSH1, 0x60, RETURN, JUMPDEST,
+		PUSH4, 0x69, 0x32, 0x00, 0xCE, DUP2, EQ, ISZERO, PUSH2, 0x00, 0x87, JUMPI, PUSH1,
+		0x04, CALLDATALOAD, PUSH1, 0x80, MSTORE, PUSH1, 0x24, CALLDATALOAD, PUSH1, 0xA0,
+		MSTORE, CALLER, SLOAD, PUSH1, 0xC0, MSTORE, CALLER, PUSH1, 0xE0, MSTORE, PUSH1,
+		0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SLT, ISZERO, ISZERO, PUSH2, 0x00, 0x86, JUMPI,
+		PUSH1, 0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SUB, PUSH1, 0xE0, MLOAD, SSTORE, PUSH1,
+		0xA0, MLOAD, PUSH1, 0x80, MLOAD, SLOAD, ADD, PUSH1, 0x80, MLOAD, SSTORE, JUMPDEST,
+		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, RETURN)
 
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
-	output, err := ourVm.Call(account1, account2, code, data, 0, &gas)
+	output, err := ourVm.Call(account1, account2, bytecode, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	if err != nil {
 		t.Fatal(err)
