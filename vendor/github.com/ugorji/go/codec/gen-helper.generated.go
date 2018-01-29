@@ -28,29 +28,73 @@ const GenVersion = 8
 // GenHelperEncoder is exported so that it can be used externally by codecgen.
 //
 // Library users: DO NOT USE IT DIRECTLY. IT WILL CHANGE CONTINOUSLY WITHOUT NOTICE.
-func GenHelperEncoder(e *Encoder) (ge genHelperEncoder, ee encDriver) {
+func GenHelperEncoder(e *Encoder) (ge genHelperEncoder, ee genHelperEncDriver) {
 	ge = genHelperEncoder{e: e}
-	ee = e.e
+	ee = genHelperEncDriver{encDriver: e.e}
 	return
 }
 
 // GenHelperDecoder is exported so that it can be used externally by codecgen.
 //
 // Library users: DO NOT USE IT DIRECTLY. IT WILL CHANGE CONTINOUSLY WITHOUT NOTICE.
-func GenHelperDecoder(d *Decoder) (gd genHelperDecoder, dd decDriver) {
+func GenHelperDecoder(d *Decoder) (gd genHelperDecoder, dd genHelperDecDriver) {
 	gd = genHelperDecoder{d: d}
-	dd = d.d
+	dd = genHelperDecDriver{decDriver: d.d}
+	return
+}
+
+type genHelperEncDriver struct {
+	encDriver
+}
+
+func (x genHelperEncDriver) EncodeBuiltin(rt uintptr, v interface{}) {}
+func (x genHelperEncDriver) EncStructFieldKey(keyType valueType, s string) {
+	encStructFieldKey(x.encDriver, keyType, s)
+}
+func (x genHelperEncDriver) EncodeSymbol(s string) {
+	x.encDriver.EncodeString(cUTF8, s)
+}
+
+type genHelperDecDriver struct {
+	decDriver
+	C checkOverflow
+}
+
+func (x genHelperDecDriver) DecodeBuiltin(rt uintptr, v interface{}) {}
+func (x genHelperDecDriver) DecStructFieldKey(keyType valueType, buf *[decScratchByteArrayLen]byte) []byte {
+	return decStructFieldKey(x.decDriver, keyType, buf)
+}
+func (x genHelperDecDriver) DecodeInt(bitsize uint8) (i int64) {
+	return x.C.IntV(x.decDriver.DecodeInt64(), bitsize)
+}
+func (x genHelperDecDriver) DecodeUint(bitsize uint8) (ui uint64) {
+	return x.C.UintV(x.decDriver.DecodeUint64(), bitsize)
+}
+func (x genHelperDecDriver) DecodeFloat(chkOverflow32 bool) (f float64) {
+	f = x.DecodeFloat64()
+	if chkOverflow32 && chkOvf.Float32(f) {
+		panicv.errorf("float32 overflow: %v", f)
+	}
+	return
+}
+func (x genHelperDecDriver) DecodeFloat32As64() (f float64) {
+	f = x.DecodeFloat64()
+	if chkOvf.Float32(f) {
+		panicv.errorf("float32 overflow: %v", f)
+	}
 	return
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 type genHelperEncoder struct {
+	M must
 	e *Encoder
 	F fastpathT
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 type genHelperDecoder struct {
+	C checkOverflow
 	d *Decoder
 	F fastpathT
 }
@@ -62,7 +106,12 @@ func (f genHelperEncoder) EncBasicHandle() *BasicHandle {
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) EncBinary() bool {
-	return f.e.cf.be // f.e.hh.isBinaryEncoding()
+	return f.e.be // f.e.hh.isBinaryEncoding()
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperEncoder) IsJSONHandle() bool {
+	return f.e.js
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -106,11 +155,6 @@ func (f genHelperEncoder) TimeRtidIfBinc() (v uintptr) { return }
 // }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperEncoder) IsJSONHandle() bool {
-	return f.e.cf.js
-}
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) I2Rtid(v interface{}) uintptr {
 	return i2rtid(v)
 }
@@ -126,14 +170,19 @@ func (f genHelperEncoder) EncExtension(v interface{}, xfFn *extTypeTagFn) {
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+//
+// Deprecated: No longer used,
+// but leave in-place so that old generated files continue to work without regeneration.
 func (f genHelperEncoder) HasExtensions() bool {
 	return len(f.e.h.extHandle) != 0
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+//
+// Deprecated: No longer used,
+// but leave in-place so that old generated files continue to work without regeneration.
 func (f genHelperEncoder) EncExt(v interface{}) (r bool) {
-	xfFn := f.e.h.getExt(i2rtid(v))
-	if xfFn != nil {
+	if xfFn := f.e.h.getExt(i2rtid(v)); xfFn != nil {
 		f.e.e.EncodeExt(v, xfFn.tag, xfFn.ext, f.e)
 		return true
 	}
@@ -158,6 +207,11 @@ func (f genHelperDecoder) DecSwallow() { f.d.swallow() }
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecScratchBuffer() []byte {
 	return f.d.b[:]
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperDecoder) DecScratchArrayBuffer() *[decScratchByteArrayLen]byte {
+	return &f.d.b
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -250,14 +304,19 @@ func (f genHelperDecoder) DecExtension(v interface{}, xfFn *extTypeTagFn) {
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+//
+// Deprecated: No longer used,
+// but leave in-place so that old generated files continue to work without regeneration.
 func (f genHelperDecoder) HasExtensions() bool {
 	return len(f.d.h.extHandle) != 0
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+//
+// Deprecated: No longer used,
+// but leave in-place so that old generated files continue to work without regeneration.
 func (f genHelperDecoder) DecExt(v interface{}) (r bool) {
-	xfFn := f.d.h.getExt(i2rtid(v))
-	if xfFn != nil {
+	if xfFn := f.d.h.getExt(i2rtid(v)); xfFn != nil {
 		f.d.d.DecodeExt(v, xfFn.tag, xfFn.ext)
 		return true
 	}

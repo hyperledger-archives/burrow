@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
@@ -20,8 +21,9 @@ var (
 // to be considered valid. It may depend on votes from a previous round,
 // a so-called Proof-of-Lock (POL) round, as noted in the POLRound and POLBlockID.
 type Proposal struct {
-	Height           int              `json:"height"`
+	Height           int64            `json:"height"`
 	Round            int              `json:"round"`
+	Timestamp        time.Time        `json:"timestamp"`
 	BlockPartsHeader PartSetHeader    `json:"block_parts_header"`
 	POLRound         int              `json:"pol_round"`    // -1 if null.
 	POLBlockID       BlockID          `json:"pol_block_id"` // zero if null.
@@ -30,10 +32,11 @@ type Proposal struct {
 
 // NewProposal returns a new Proposal.
 // If there is no POLRound, polRound should be -1.
-func NewProposal(height int, round int, blockPartsHeader PartSetHeader, polRound int, polBlockID BlockID) *Proposal {
+func NewProposal(height int64, round int, blockPartsHeader PartSetHeader, polRound int, polBlockID BlockID) *Proposal {
 	return &Proposal{
 		Height:           height,
 		Round:            round,
+		Timestamp:        time.Now().UTC(),
 		BlockPartsHeader: blockPartsHeader,
 		POLRound:         polRound,
 		POLBlockID:       polBlockID,
@@ -42,8 +45,9 @@ func NewProposal(height int, round int, blockPartsHeader PartSetHeader, polRound
 
 // String returns a string representation of the Proposal.
 func (p *Proposal) String() string {
-	return fmt.Sprintf("Proposal{%v/%v %v (%v,%v) %v}", p.Height, p.Round,
-		p.BlockPartsHeader, p.POLRound, p.POLBlockID, p.Signature)
+	return fmt.Sprintf("Proposal{%v/%v %v (%v,%v) %v @ %s}",
+		p.Height, p.Round, p.BlockPartsHeader, p.POLRound,
+		p.POLBlockID, p.Signature, CanonicalTime(p.Timestamp))
 }
 
 // WriteSignBytes writes the Proposal bytes for signing

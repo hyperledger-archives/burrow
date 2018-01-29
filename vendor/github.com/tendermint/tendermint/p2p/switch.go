@@ -1,11 +1,13 @@
 package p2p
 
 import (
-	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"time"
+
+	"github.com/pkg/errors"
 
 	crypto "github.com/tendermint/go-crypto"
 	cfg "github.com/tendermint/tendermint/config"
@@ -13,8 +15,19 @@ import (
 )
 
 const (
-	reconnectAttempts = 30
-	reconnectInterval = 3 * time.Second
+	// wait a random amount of time from this interval
+	// before dialing seeds or reconnecting to help prevent DoS
+	dialRandomizerIntervalMilliseconds = 3000
+
+	// repeatedly try to reconnect for a few minutes
+	// ie. 5 * 20 = 100s
+	reconnectAttempts = 20
+	reconnectInterval = 5 * time.Second
+
+	// then move into exponential backoff mode for ~1day
+	// ie. 3**10 = 16hrs
+	reconnectBackOffAttempts    = 10
+	reconnectBackOffBaseSeconds = 3
 )
 
 type Reactor interface {
@@ -24,7 +37,7 @@ type Reactor interface {
 	GetChannels() []*ChannelDescriptor
 	AddPeer(peer Peer)
 	RemovePeer(peer Peer, reason interface{})
-	Receive(chID byte, peer Peer, msgBytes []byte)
+	Receive(chID byte, peer Peer, msgBytes []byte) // CONTRACT: msgBytes are not nil
 }
 
 //--------------------------------------
@@ -73,6 +86,8 @@ type Switch struct {
 
 	filterConnByAddr   func(net.Addr) error
 	filterConnByPubKey func(crypto.PubKeyEd25519) error
+
+	rng *rand.Rand // seed for randomizing dial times and orders
 }
 
 var (
@@ -90,6 +105,10 @@ func NewSwitch(config *cfg.P2PConfig) *Switch {
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
 	}
+
+	// Ensure we have a completely undeterministic PRNG. cmd.RandInt64() draws
+	// from a seed that's initialized with OS entropy on process start.
+	sw.rng = rand.New(rand.NewSource(cmn.RandInt64()))
 
 	// TODO: collapse the peerConfig into the config ?
 	sw.peerConfig.MConfig.flushThrottle = time.Duration(config.FlushThrottleTimeout) * time.Millisecond
@@ -162,7 +181,7 @@ func (sw *Switch) NodeInfo() *NodeInfo {
 	return sw.nodeInfo
 }
 
-// SetNodePrivKey sets the switche's private key for authenticated encryption.
+// SetNodePrivKey sets the switch's private key for authenticated encryption.
 // NOTE: Overwrites sw.nodeInfo.PubKey.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
@@ -174,15 +193,13 @@ func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
-	sw.BaseService.OnStart()
 	// Start reactors
 	for _, reactor := range sw.reactors {
-		_, err := reactor.Start()
+		err := reactor.Start()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to start %v", reactor)
 		}
 	}
-
 	// Start listeners
 	for _, listener := range sw.listeners {
 		go sw.listenerRoutine(listener)
@@ -192,7 +209,6 @@ func (sw *Switch) OnStart() error {
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
-	sw.BaseService.OnStop()
 	// Stop listeners
 	for _, listener := range sw.listeners {
 		listener.Stop()
@@ -204,15 +220,16 @@ func (sw *Switch) OnStop() {
 		sw.peers.Remove(peer)
 	}
 	// Stop reactors
+	sw.Logger.Debug("Switch: Stopping reactors")
 	for _, reactor := range sw.reactors {
 		reactor.Stop()
 	}
 }
 
-// addPeer checks the given peer's validity, performs a handshake, and adds the peer to the switch
-// and to all registered reactors.
+// addPeer checks the given peer's validity, performs a handshake, and adds the
+// peer to the switch and to all registered reactors.
 // NOTE: This performs a blocking handshake before the peer is added.
-// CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
+// NOTE: If error is returned, caller is responsible for calling peer.CloseConn()
 func (sw *Switch) addPeer(peer *peer) error {
 
 	if err := sw.FilterConnByAddr(peer.Addr()); err != nil {
@@ -250,7 +267,7 @@ func (sw *Switch) addPeer(peer *peer) error {
 
 	// Add the peer to .peers.
 	// We start it first so that a peer in the list is safe to Stop.
-	// It should not err since we already checked peers.Has()
+	// It should not err since we already checked peers.Has().
 	if err := sw.peers.Add(peer); err != nil {
 		return err
 	}
@@ -287,18 +304,22 @@ func (sw *Switch) SetPubKeyFilter(f func(crypto.PubKeyEd25519) error) {
 }
 
 func (sw *Switch) startInitPeer(peer *peer) {
-	peer.Start() // spawn send/recv routines
+	err := peer.Start() // spawn send/recv routines
+	if err != nil {
+		// Should never happen
+		sw.Logger.Error("Error starting peer", "peer", peer, "err", err)
+	}
+
 	for _, reactor := range sw.reactors {
 		reactor.AddPeer(peer)
 	}
 }
 
-// DialSeeds dials a list of seeds asynchronously in random order
+// DialSeeds dials a list of seeds asynchronously in random order.
 func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
-
-	netAddrs, err := NewNetAddressStrings(seeds)
-	if err != nil {
-		return err
+	netAddrs, errs := NewNetAddressStrings(seeds)
+	for _, err := range errs {
+		sw.Logger.Error("Error in seed's address", "err", err)
 	}
 
 	if addrBook != nil {
@@ -316,15 +337,21 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 	}
 
 	// permute the list, dial them in random order.
-	perm := rand.Perm(len(netAddrs))
+	perm := sw.rng.Perm(len(netAddrs))
 	for i := 0; i < len(perm); i++ {
 		go func(i int) {
-			time.Sleep(time.Duration(rand.Int63n(3000)) * time.Millisecond)
+			sw.randomSleep(0)
 			j := perm[i]
 			sw.dialSeed(netAddrs[j])
 		}(i)
 	}
 	return nil
+}
+
+// sleep for interval plus some random amount of ms on [0, dialRandomizerIntervalMilliseconds]
+func (sw *Switch) randomSleep(interval time.Duration) {
+	r := time.Duration(sw.rng.Int63n(dialRandomizerIntervalMilliseconds)) * time.Millisecond
+	time.Sleep(r + interval)
 }
 
 func (sw *Switch) dialSeed(addr *NetAddress) {
@@ -369,7 +396,7 @@ func (sw *Switch) IsDialing(addr *NetAddress) bool {
 
 // Broadcast runs a go routine for each attempted send, which will block
 // trying to send for defaultSendTimeoutSeconds. Returns a channel
-// which receives success values for each attempted send (false if times out)
+// which receives success values for each attempted send (false if times out).
 // NOTE: Broadcast uses goroutines, so order of broadcast may not be preserved.
 // TODO: Something more intelligent.
 func (sw *Switch) Broadcast(chID byte, msg interface{}) chan bool {
@@ -398,7 +425,7 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 	return
 }
 
-// Peers returns the set of peers the switch is connected to.
+// Peers returns the set of peers that are connected to the switch.
 func (sw *Switch) Peers() IPeerSet {
 	return sw.peers
 }
@@ -407,34 +434,59 @@ func (sw *Switch) Peers() IPeerSet {
 // If the peer is persistent, it will attempt to reconnect.
 // TODO: make record depending on reason.
 func (sw *Switch) StopPeerForError(peer Peer, reason interface{}) {
-	addr, _ := NewNetAddressString(peer.NodeInfo().RemoteAddr)
 	sw.Logger.Error("Stopping peer for error", "peer", peer, "err", reason)
 	sw.stopAndRemovePeer(peer, reason)
 
 	if peer.IsPersistent() {
-		go func() {
-			sw.Logger.Info("Reconnecting to peer", "peer", peer)
-			for i := 1; i < reconnectAttempts; i++ {
-				if !sw.IsRunning() {
-					return
-				}
-
-				peer, err := sw.DialPeerWithAddress(addr, true)
-				if err != nil {
-					if i == reconnectAttempts {
-						sw.Logger.Info("Error reconnecting to peer. Giving up", "tries", i, "err", err)
-						return
-					}
-					sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err)
-					time.Sleep(reconnectInterval)
-					continue
-				}
-
-				sw.Logger.Info("Reconnected to peer", "peer", peer)
-				return
-			}
-		}()
+		go sw.reconnectToPeer(peer)
 	}
+}
+
+// reconnectToPeer tries to reconnect to the peer, first repeatedly
+// with a fixed interval, then with exponential backoff.
+// If no success after all that, it stops trying, and leaves it
+// to the PEX/Addrbook to find the peer again
+func (sw *Switch) reconnectToPeer(peer Peer) {
+	addr, _ := NewNetAddressString(peer.NodeInfo().RemoteAddr)
+	start := time.Now()
+	sw.Logger.Info("Reconnecting to peer", "peer", peer)
+	for i := 0; i < reconnectAttempts; i++ {
+		if !sw.IsRunning() {
+			return
+		}
+
+		peer, err := sw.DialPeerWithAddress(addr, true)
+		if err != nil {
+			sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "peer", peer)
+			// sleep a set amount
+			sw.randomSleep(reconnectInterval)
+			continue
+		} else {
+			sw.Logger.Info("Reconnected to peer", "peer", peer)
+			return
+		}
+	}
+
+	sw.Logger.Error("Failed to reconnect to peer. Beginning exponential backoff",
+		"peer", peer, "elapsed", time.Since(start))
+	for i := 0; i < reconnectBackOffAttempts; i++ {
+		if !sw.IsRunning() {
+			return
+		}
+
+		// sleep an exponentially increasing amount
+		sleepIntervalSeconds := math.Pow(reconnectBackOffBaseSeconds, float64(i))
+		sw.randomSleep(time.Duration(sleepIntervalSeconds) * time.Second)
+		peer, err := sw.DialPeerWithAddress(addr, true)
+		if err != nil {
+			sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "peer", peer)
+			continue
+		} else {
+			sw.Logger.Info("Reconnected to peer", "peer", peer)
+			return
+		}
+	}
+	sw.Logger.Error("Failed to reconnect to peer. Giving up", "peer", peer, "elapsed", time.Since(start))
 }
 
 // StopPeerGracefully disconnects from a peer gracefully.
@@ -475,29 +527,18 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 		// NOTE: We don't yet have the listening port of the
 		// remote (if they have a listener at all).
-		// The peerHandshake will handle that
+		// The peerHandshake will handle that.
 	}
 
 	// cleanup
 }
 
-//-----------------------------------------------------------------------------
-
-type SwitchEventNewPeer struct {
-	Peer Peer
-}
-
-type SwitchEventDonePeer struct {
-	Peer  Peer
-	Error interface{}
-}
-
 //------------------------------------------------------------------
-// Switches connected via arbitrary net.Conn; useful for testing
+// Connects switches via arbitrary net.Conn. Used for testing.
 
 // MakeConnectedSwitches returns n switches, connected according to the connect func.
 // If connect==Connect2Switches, the switches will be fully connected.
-// initSwitch defines how the ith switch should be initialized (ie. with what reactors).
+// initSwitch defines how the i'th switch should be initialized (ie. with what reactors).
 // NOTE: panics if any switch fails to start.
 func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
 	switches := make([]*Switch, n)
@@ -510,7 +551,7 @@ func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Swit
 	}
 
 	for i := 0; i < n; i++ {
-		for j := i; j < n; j++ {
+		for j := i + 1; j < n; j++ {
 			connect(switches, i, j)
 		}
 	}
@@ -518,26 +559,24 @@ func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Swit
 	return switches
 }
 
-var PanicOnAddPeerErr = false
-
-// Connect2Switches will connect switches i and j via net.Pipe()
-// Blocks until a conection is established.
-// NOTE: caller ensures i and j are within bounds
+// Connect2Switches will connect switches i and j via net.Pipe().
+// Blocks until a connection is established.
+// NOTE: caller ensures i and j are within bounds.
 func Connect2Switches(switches []*Switch, i, j int) {
 	switchI := switches[i]
 	switchJ := switches[j]
-	c1, c2 := net.Pipe()
+	c1, c2 := netPipe()
 	doneCh := make(chan struct{})
 	go func() {
 		err := switchI.addPeerWithConnection(c1)
-		if PanicOnAddPeerErr && err != nil {
+		if err != nil {
 			panic(err)
 		}
 		doneCh <- struct{}{}
 	}()
 	go func() {
 		err := switchJ.addPeerWithConnection(c2)
-		if PanicOnAddPeerErr && err != nil {
+		if err != nil {
 			panic(err)
 		}
 		doneCh <- struct{}{}
@@ -550,7 +589,7 @@ func Connect2Switches(switches []*Switch, i, j int) {
 // It returns the first encountered error.
 func StartSwitches(switches []*Switch) error {
 	for _, s := range switches {
-		_, err := s.Start() // start switch and reactors
+		err := s.Start() // start switch and reactors
 		if err != nil {
 			return err
 		}
@@ -578,12 +617,14 @@ func makeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch f
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 	peer, err := newInboundPeer(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			sw.Logger.Error("Error closing connection", "err", err)
+		}
 		return err
 	}
 	peer.SetLogger(sw.Logger.With("peer", conn.RemoteAddr()))
 	if err = sw.addPeer(peer); err != nil {
-		conn.Close()
+		peer.CloseConn()
 		return err
 	}
 
@@ -593,12 +634,14 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConfig) error {
 	peer, err := newInboundPeer(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, config)
 	if err != nil {
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			sw.Logger.Error("Error closing connection", "err", err)
+		}
 		return err
 	}
 	peer.SetLogger(sw.Logger.With("peer", conn.RemoteAddr()))
 	if err = sw.addPeer(peer); err != nil {
-		conn.Close()
+		peer.CloseConn()
 		return err
 	}
 

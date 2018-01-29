@@ -1,9 +1,11 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
@@ -12,20 +14,31 @@ import (
 )
 
 var (
-	ErrVoteUnexpectedStep          = errors.New("Unexpected step")
-	ErrVoteInvalidValidatorIndex   = errors.New("Invalid validator index")
-	ErrVoteInvalidValidatorAddress = errors.New("Invalid validator address")
-	ErrVoteInvalidSignature        = errors.New("Invalid signature")
-	ErrVoteInvalidBlockHash        = errors.New("Invalid block hash")
+	ErrVoteUnexpectedStep            = errors.New("Unexpected step")
+	ErrVoteInvalidValidatorIndex     = errors.New("Invalid validator index")
+	ErrVoteInvalidValidatorAddress   = errors.New("Invalid validator address")
+	ErrVoteInvalidSignature          = errors.New("Invalid signature")
+	ErrVoteInvalidBlockHash          = errors.New("Invalid block hash")
+	ErrVoteNonDeterministicSignature = errors.New("Non-deterministic signature")
+	ErrVoteNil                       = errors.New("Nil vote")
 )
 
 type ErrVoteConflictingVotes struct {
-	VoteA *Vote
-	VoteB *Vote
+	*DuplicateVoteEvidence
 }
 
 func (err *ErrVoteConflictingVotes) Error() string {
-	return "Conflicting votes"
+	return fmt.Sprintf("Conflicting votes from validator %v", err.PubKey.Address())
+}
+
+func NewConflictingVoteError(val *Validator, voteA, voteB *Vote) *ErrVoteConflictingVotes {
+	return &ErrVoteConflictingVotes{
+		&DuplicateVoteEvidence{
+			PubKey: val.PubKey,
+			VoteA:  voteA,
+			VoteB:  voteB,
+		},
+	}
 }
 
 // Types of votes
@@ -50,8 +63,9 @@ func IsVoteTypeValid(type_ byte) bool {
 type Vote struct {
 	ValidatorAddress data.Bytes       `json:"validator_address"`
 	ValidatorIndex   int              `json:"validator_index"`
-	Height           int              `json:"height"`
+	Height           int64            `json:"height"`
 	Round            int              `json:"round"`
+	Timestamp        time.Time        `json:"timestamp"`
 	Type             byte             `json:"type"`
 	BlockID          BlockID          `json:"block_id"` // zero if vote is nil.
 	Signature        crypto.Signature `json:"signature"`
@@ -83,8 +97,20 @@ func (vote *Vote) String() string {
 		cmn.PanicSanity("Unknown vote type")
 	}
 
-	return fmt.Sprintf("Vote{%v:%X %v/%02d/%v(%v) %X %v}",
+	return fmt.Sprintf("Vote{%v:%X %v/%02d/%v(%v) %X %v @ %s}",
 		vote.ValidatorIndex, cmn.Fingerprint(vote.ValidatorAddress),
 		vote.Height, vote.Round, vote.Type, typeString,
-		cmn.Fingerprint(vote.BlockID.Hash), vote.Signature)
+		cmn.Fingerprint(vote.BlockID.Hash), vote.Signature,
+		CanonicalTime(vote.Timestamp))
+}
+
+func (vote *Vote) Verify(chainID string, pubKey crypto.PubKey) error {
+	if !bytes.Equal(pubKey.Address(), vote.ValidatorAddress) {
+		return ErrVoteInvalidValidatorAddress
+	}
+
+	if !pubKey.VerifyBytes(SignBytes(chainID, vote), vote.Signature) {
+		return ErrVoteInvalidSignature
+	}
+	return nil
 }

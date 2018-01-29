@@ -15,25 +15,22 @@ import (
 )
 
 // Block defines the atomic unit of a Tendermint blockchain.
+// TODO: add Version byte
 type Block struct {
 	*Header    `json:"header"`
 	*Data      `json:"data"`
-	LastCommit *Commit `json:"last_commit"`
+	Evidence   EvidenceData `json:"evidence"`
+	LastCommit *Commit      `json:"last_commit"`
 }
 
-// MakeBlock returns a new block and corresponding partset from the given information.
-// TODO: Add version information to the Block struct.
-func MakeBlock(height int, chainID string, txs []Tx, commit *Commit,
-	prevBlockID BlockID, valHash, appHash []byte, partSize int) (*Block, *PartSet) {
+// MakeBlock returns a new block with an empty header, except what can be computed from itself.
+// It populates the same set of fields validated by ValidateBasic
+func MakeBlock(height int64, txs []Tx, commit *Commit) *Block {
 	block := &Block{
 		Header: &Header{
-			ChainID:        chainID,
-			Height:         height,
-			Time:           time.Now(),
-			NumTxs:         len(txs),
-			LastBlockID:    prevBlockID,
-			ValidatorsHash: valHash,
-			AppHash:        appHash, // state merkle root of txs from the previous block.
+			Height: height,
+			Time:   time.Now(),
+			NumTxs: int64(len(txs)),
 		},
 		LastCommit: commit,
 		Data: &Data{
@@ -41,33 +38,23 @@ func MakeBlock(height int, chainID string, txs []Tx, commit *Commit,
 		},
 	}
 	block.FillHeader()
-	return block, block.MakePartSet(partSize)
+	return block
+}
+
+// AddEvidence appends the given evidence to the block
+func (b *Block) AddEvidence(evidence []Evidence) {
+	b.Evidence.Evidence = append(b.Evidence.Evidence, evidence...)
 }
 
 // ValidateBasic performs basic validation that doesn't involve state data.
-func (b *Block) ValidateBasic(chainID string, lastBlockHeight int, lastBlockID BlockID,
-	lastBlockTime time.Time, appHash []byte) error {
-	if b.ChainID != chainID {
-		return errors.New(cmn.Fmt("Wrong Block.Header.ChainID. Expected %v, got %v", chainID, b.ChainID))
-	}
-	if b.Height != lastBlockHeight+1 {
-		return errors.New(cmn.Fmt("Wrong Block.Header.Height. Expected %v, got %v", lastBlockHeight+1, b.Height))
-	}
-	/*	TODO: Determine bounds for Time
-		See blockchain/reactor "stopSyncingDurationMinutes"
-
-		if !b.Time.After(lastBlockTime) {
-			return errors.New("Invalid Block.Header.Time")
-		}
-	*/
-	if b.NumTxs != len(b.Data.Txs) {
-		return errors.New(cmn.Fmt("Wrong Block.Header.NumTxs. Expected %v, got %v", len(b.Data.Txs), b.NumTxs))
-	}
-	if !b.LastBlockID.Equals(lastBlockID) {
-		return errors.New(cmn.Fmt("Wrong Block.Header.LastBlockID.  Expected %v, got %v", lastBlockID, b.LastBlockID))
+// It checks the internal consistency of the block.
+func (b *Block) ValidateBasic() error {
+	newTxs := int64(len(b.Data.Txs))
+	if b.NumTxs != newTxs {
+		return fmt.Errorf("Wrong Block.Header.NumTxs. Expected %v, got %v", newTxs, b.NumTxs)
 	}
 	if !bytes.Equal(b.LastCommitHash, b.LastCommit.Hash()) {
-		return errors.New(cmn.Fmt("Wrong Block.Header.LastCommitHash.  Expected %v, got %v", b.LastCommitHash, b.LastCommit.Hash()))
+		return fmt.Errorf("Wrong Block.Header.LastCommitHash.  Expected %v, got %v", b.LastCommitHash, b.LastCommit.Hash())
 	}
 	if b.Header.Height != 1 {
 		if err := b.LastCommit.ValidateBasic(); err != nil {
@@ -75,12 +62,11 @@ func (b *Block) ValidateBasic(chainID string, lastBlockHeight int, lastBlockID B
 		}
 	}
 	if !bytes.Equal(b.DataHash, b.Data.Hash()) {
-		return errors.New(cmn.Fmt("Wrong Block.Header.DataHash.  Expected %v, got %v", b.DataHash, b.Data.Hash()))
+		return fmt.Errorf("Wrong Block.Header.DataHash.  Expected %v, got %v", b.DataHash, b.Data.Hash())
 	}
-	if !bytes.Equal(b.AppHash, appHash) {
-		return errors.New(cmn.Fmt("Wrong Block.Header.AppHash.  Expected %X, got %v", appHash, b.AppHash))
+	if !bytes.Equal(b.EvidenceHash, b.Evidence.Hash()) {
+		return errors.New(cmn.Fmt("Wrong Block.Header.EvidenceHash.  Expected %v, got %v", b.EvidenceHash, b.Evidence.Hash()))
 	}
-	// NOTE: the AppHash and ValidatorsHash are validated later.
 	return nil
 }
 
@@ -92,12 +78,14 @@ func (b *Block) FillHeader() {
 	if b.DataHash == nil {
 		b.DataHash = b.Data.Hash()
 	}
+	if b.EvidenceHash == nil {
+		b.EvidenceHash = b.Evidence.Hash()
+	}
 }
 
 // Hash computes and returns the block hash.
 // If the block is incomplete, block hash is nil for safety.
 func (b *Block) Hash() data.Bytes {
-	// fmt.Println(">>", b.Data)
 	if b == nil || b.Header == nil || b.Data == nil || b.LastCommit == nil {
 		return nil
 	}
@@ -137,9 +125,11 @@ func (b *Block) StringIndented(indent string) string {
 %s  %v
 %s  %v
 %s  %v
+%s  %v
 %s}#%v`,
 		indent, b.Header.StringIndented(indent+"  "),
 		indent, b.Data.StringIndented(indent+"  "),
+		indent, b.Evidence.StringIndented(indent+"  "),
 		indent, b.LastCommit.StringIndented(indent+"  "),
 		indent, b.Hash())
 }
@@ -156,20 +146,35 @@ func (b *Block) StringShort() string {
 //-----------------------------------------------------------------------------
 
 // Header defines the structure of a Tendermint block header
+// TODO: limit header size
+// NOTE: changes to the Header should be duplicated in the abci Header
 type Header struct {
-	ChainID        string     `json:"chain_id"`
-	Height         int        `json:"height"`
-	Time           time.Time  `json:"time"`
-	NumTxs         int        `json:"num_txs"` // XXX: Can we get rid of this?
-	LastBlockID    BlockID    `json:"last_block_id"`
+	// basic block info
+	ChainID string    `json:"chain_id"`
+	Height  int64     `json:"height"`
+	Time    time.Time `json:"time"`
+	NumTxs  int64     `json:"num_txs"`
+
+	// prev block info
+	LastBlockID BlockID `json:"last_block_id"`
+	TotalTxs    int64   `json:"total_txs"`
+
+	// hashes of block data
 	LastCommitHash data.Bytes `json:"last_commit_hash"` // commit from validators from the last block
 	DataHash       data.Bytes `json:"data_hash"`        // transactions
-	ValidatorsHash data.Bytes `json:"validators_hash"`  // validators for the current block
-	AppHash        data.Bytes `json:"app_hash"`         // state after txs from the previous block
+
+	// hashes from the app output from the prev block
+	ValidatorsHash  data.Bytes `json:"validators_hash"`   // validators for the current block
+	ConsensusHash   data.Bytes `json:"consensus_hash"`    // consensus params for current block
+	AppHash         data.Bytes `json:"app_hash"`          // state after txs from the previous block
+	LastResultsHash data.Bytes `json:"last_results_hash"` // root hash of all results from the txs from the previous block
+
+	// consensus info
+	EvidenceHash data.Bytes `json:"evidence_hash"` // evidence included in the block
 }
 
 // Hash returns the hash of the header.
-// NOTE: hash is nil if required fields are missing.
+// Returns nil if ValidatorHash is missing.
 func (h *Header) Hash() data.Bytes {
 	if len(h.ValidatorsHash) == 0 {
 		return nil
@@ -179,11 +184,15 @@ func (h *Header) Hash() data.Bytes {
 		"Height":      h.Height,
 		"Time":        h.Time,
 		"NumTxs":      h.NumTxs,
+		"TotalTxs":    h.TotalTxs,
 		"LastBlockID": h.LastBlockID,
 		"LastCommit":  h.LastCommitHash,
 		"Data":        h.DataHash,
 		"Validators":  h.ValidatorsHash,
 		"App":         h.AppHash,
+		"Consensus":   h.ConsensusHash,
+		"Results":     h.LastResultsHash,
+		"Evidence":    h.EvidenceHash,
 	})
 }
 
@@ -197,21 +206,29 @@ func (h *Header) StringIndented(indent string) string {
 %s  Height:         %v
 %s  Time:           %v
 %s  NumTxs:         %v
+%s  TotalTxs:       %v
 %s  LastBlockID:    %v
 %s  LastCommit:     %v
 %s  Data:           %v
 %s  Validators:     %v
 %s  App:            %v
+%s  Conensus:       %v
+%s  Results:        %v
+%s  Evidence:       %v
 %s}#%v`,
 		indent, h.ChainID,
 		indent, h.Height,
 		indent, h.Time,
 		indent, h.NumTxs,
+		indent, h.TotalTxs,
 		indent, h.LastBlockID,
 		indent, h.LastCommitHash,
 		indent, h.DataHash,
 		indent, h.ValidatorsHash,
 		indent, h.AppHash,
+		indent, h.ConsensusHash,
+		indent, h.LastResultsHash,
+		indent, h.EvidenceHash,
 		indent, h.Hash())
 }
 
@@ -250,7 +267,7 @@ func (commit *Commit) FirstPrecommit() *Vote {
 }
 
 // Height returns the height of the commit
-func (commit *Commit) Height() int {
+func (commit *Commit) Height() int64 {
 	if len(commit.Precommits) == 0 {
 		return 0
 	}
@@ -414,6 +431,45 @@ func (data *Data) StringIndented(indent string) string {
 %s}#%v`,
 		indent, strings.Join(txStrings, "\n"+indent+"  "),
 		indent, data.hash)
+}
+
+//-----------------------------------------------------------------------------
+
+// EvidenceData contains any evidence of malicious wrong-doing by validators
+type EvidenceData struct {
+	Evidence EvidenceList `json:"evidence"`
+
+	// Volatile
+	hash data.Bytes
+}
+
+// Hash returns the hash of the data.
+func (data *EvidenceData) Hash() data.Bytes {
+	if data.hash == nil {
+		data.hash = data.Evidence.Hash()
+	}
+	return data.hash
+}
+
+// StringIndented returns a string representation of the evidence.
+func (data *EvidenceData) StringIndented(indent string) string {
+	if data == nil {
+		return "nil-Evidence"
+	}
+	evStrings := make([]string, cmn.MinInt(len(data.Evidence), 21))
+	for i, ev := range data.Evidence {
+		if i == 20 {
+			evStrings[i] = fmt.Sprintf("... (%v total)", len(data.Evidence))
+			break
+		}
+		evStrings[i] = fmt.Sprintf("Evidence:%v", ev)
+	}
+	return fmt.Sprintf(`Data{
+%s  %v
+%s}#%v`,
+		indent, strings.Join(evStrings, "\n"+indent+"  "),
+		indent, data.hash)
+	return ""
 }
 
 //--------------------------------------------------------------------------------

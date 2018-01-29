@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	P2P       *P2PConfig       `mapstructure:"p2p"`
 	Mempool   *MempoolConfig   `mapstructure:"mempool"`
 	Consensus *ConsensusConfig `mapstructure:"consensus"`
+	TxIndex   *TxIndexConfig   `mapstructure:"tx_index"`
 }
 
 // DefaultConfig returns a default configuration for a Tendermint node
@@ -26,6 +28,7 @@ func DefaultConfig() *Config {
 		P2P:        DefaultP2PConfig(),
 		Mempool:    DefaultMempoolConfig(),
 		Consensus:  DefaultConsensusConfig(),
+		TxIndex:    DefaultTxIndexConfig(),
 	}
 }
 
@@ -37,6 +40,7 @@ func TestConfig() *Config {
 		P2P:        TestP2PConfig(),
 		Mempool:    DefaultMempoolConfig(),
 		Consensus:  TestConsensusConfig(),
+		TxIndex:    DefaultTxIndexConfig(),
 	}
 }
 
@@ -93,9 +97,6 @@ type BaseConfig struct {
 	// so the app can decide if we should keep the connection or not
 	FilterPeers bool `mapstructure:"filter_peers"` // false
 
-	// What indexer to use for transactions
-	TxIndex string `mapstructure:"tx_index"`
-
 	// Database backend: leveldb | memdb
 	DBBackend string `mapstructure:"db_backend"`
 
@@ -108,14 +109,13 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Genesis:           "genesis.json",
 		PrivValidator:     "priv_validator.json",
-		Moniker:           "anonymous",
+		Moniker:           defaultMoniker,
 		ProxyApp:          "tcp://127.0.0.1:46658",
 		ABCI:              "socket",
 		LogLevel:          DefaultPackageLogLevels(),
 		ProfListenAddress: "",
 		FastSync:          true,
 		FilterPeers:       false,
-		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 	}
@@ -244,6 +244,7 @@ func DefaultP2PConfig() *P2PConfig {
 		MaxMsgPacketPayloadSize: 1024,   // 1 kB
 		SendRate:                512000, // 500 kB/s
 		RecvRate:                512000, // 500 kB/s
+		PexReactor:              true,
 	}
 }
 
@@ -255,7 +256,7 @@ func TestP2PConfig() *P2PConfig {
 	return conf
 }
 
-// AddrBookFile returns the full path to the address bool
+// AddrBookFile returns the full path to the address book
 func (p *P2PConfig) AddrBookFile() string {
 	return rootify(p.AddrBook, p.RootDir)
 }
@@ -388,7 +389,7 @@ func DefaultConsensusConfig() *ConsensusConfig {
 // TestConsensusConfig returns a configuration for testing the consensus service
 func TestConsensusConfig() *ConsensusConfig {
 	config := DefaultConsensusConfig()
-	config.TimeoutPropose = 2000
+	config.TimeoutPropose = 100
 	config.TimeoutProposeDelta = 1
 	config.TimeoutPrevote = 10
 	config.TimeoutPrevoteDelta = 1
@@ -413,6 +414,41 @@ func (c *ConsensusConfig) SetWalFile(walFile string) {
 }
 
 //-----------------------------------------------------------------------------
+// TxIndexConfig
+
+// TxIndexConfig defines the confuguration for the transaction
+// indexer, including tags to index.
+type TxIndexConfig struct {
+	// What indexer to use for transactions
+	//
+	// Options:
+	//   1) "null" (default)
+	//   2) "kv" - the simplest possible indexer, backed by key-value storage (defaults to levelDB; see DBBackend).
+	Indexer string `mapstructure:"indexer"`
+
+	// Comma-separated list of tags to index (by default the only tag is tx hash)
+	//
+	// It's recommended to index only a subset of tags due to possible memory
+	// bloat. This is, of course, depends on the indexer's DB and the volume of
+	// transactions.
+	IndexTags string `mapstructure:"index_tags"`
+
+	// When set to true, tells indexer to index all tags. Note this may be not
+	// desirable (see the comment above). IndexTags has a precedence over
+	// IndexAllTags (i.e. when given both, IndexTags will be indexed).
+	IndexAllTags bool `mapstructure:"index_all_tags"`
+}
+
+// DefaultTxIndexConfig returns a default configuration for the transaction indexer.
+func DefaultTxIndexConfig() *TxIndexConfig {
+	return &TxIndexConfig{
+		Indexer:      "kv",
+		IndexTags:    "",
+		IndexAllTags: false,
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Utils
 
 // helper function to make config creation independent of root dir
@@ -421,4 +457,19 @@ func rootify(path, root string) string {
 		return path
 	}
 	return filepath.Join(root, path)
+}
+
+//-----------------------------------------------------------------------------
+// Moniker
+
+var defaultMoniker = getDefaultMoniker()
+
+// getDefaultMoniker returns a default moniker, which is the host name. If runtime
+// fails to get the host name, "anonymous" will be returned.
+func getDefaultMoniker() string {
+	moniker, err := os.Hostname()
+	if err != nil {
+		moniker = "anonymous"
+	}
+	return moniker
 }

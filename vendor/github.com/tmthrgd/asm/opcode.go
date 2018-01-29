@@ -1361,8 +1361,6 @@ func (o Opcodes) Retfq(ops ...Operand)           { o.a.op("RETFQ", ops...) }
 func (o Opcodes) RETFQ(ops ...Operand)           { o.a.op("RETFQ", ops...) }
 func (o Opcodes) Swapgs(ops ...Operand)          { o.a.op("SWAPGS", ops...) }
 func (o Opcodes) SWAPGS(ops ...Operand)          { o.a.op("SWAPGS", ops...) }
-func (o Opcodes) Mode(ops ...Operand)            { o.a.op("MODE", ops...) }
-func (o Opcodes) MODE(ops ...Operand)            { o.a.op("MODE", ops...) }
 func (o Opcodes) Crc32b(ops ...Operand)          { o.a.op("CRC32B", ops...) }
 func (o Opcodes) CRC32B(ops ...Operand)          { o.a.op("CRC32B", ops...) }
 func (o Opcodes) Crc32q(ops ...Operand)          { o.a.op("CRC32Q", ops...) }

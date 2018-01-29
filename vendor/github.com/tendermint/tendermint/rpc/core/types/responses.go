@@ -2,17 +2,19 @@ package core_types
 
 import (
 	"strings"
+	"time"
 
 	abci "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	cstypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
 )
 
 type ResultBlockchainInfo struct {
-	LastHeight int                `json:"last_height"`
+	LastHeight int64              `json:"last_height"`
 	BlockMetas []*types.BlockMeta `json:"block_metas"`
 }
 
@@ -30,6 +32,11 @@ type ResultCommit struct {
 	// one level in the json output
 	types.SignedHeader
 	CanonicalCommit bool `json:"canonical"`
+}
+
+type ResultBlockResults struct {
+	Height  int64                `json:"height"`
+	Results *state.ABCIResponses `json:"results"`
 }
 
 // NewResultCommit is a helper to initialize the ResultCommit with
@@ -51,8 +58,8 @@ type ResultStatus struct {
 	PubKey            crypto.PubKey `json:"pub_key"`
 	LatestBlockHash   data.Bytes    `json:"latest_block_hash"`
 	LatestAppHash     data.Bytes    `json:"latest_app_hash"`
-	LatestBlockHeight int           `json:"latest_block_height"`
-	LatestBlockTime   int64         `json:"latest_block_time"` // nano
+	LatestBlockHeight int64         `json:"latest_block_height"`
+	LatestBlockTime   time.Time     `json:"latest_block_time"`
 	Syncing           bool          `json:"syncing"`
 }
 
@@ -86,7 +93,7 @@ type Peer struct {
 }
 
 type ResultValidators struct {
-	BlockHeight int                `json:"block_height"`
+	BlockHeight int64              `json:"block_height"`
 	Validators  []*types.Validator `json:"validators"`
 }
 
@@ -96,26 +103,26 @@ type ResultDumpConsensusState struct {
 }
 
 type ResultBroadcastTx struct {
-	Code abci.CodeType `json:"code"`
-	Data data.Bytes    `json:"data"`
-	Log  string        `json:"log"`
+	Code uint32     `json:"code"`
+	Data data.Bytes `json:"data"`
+	Log  string     `json:"log"`
 
 	Hash data.Bytes `json:"hash"`
 }
 
 type ResultBroadcastTxCommit struct {
-	CheckTx   abci.Result `json:"check_tx"`
-	DeliverTx abci.Result `json:"deliver_tx"`
-	Hash      data.Bytes  `json:"hash"`
-	Height    int         `json:"height"`
+	CheckTx   abci.ResponseCheckTx   `json:"check_tx"`
+	DeliverTx abci.ResponseDeliverTx `json:"deliver_tx"`
+	Hash      data.Bytes             `json:"hash"`
+	Height    int64                  `json:"height"`
 }
 
 type ResultTx struct {
-	Height   int           `json:"height"`
-	Index    int           `json:"index"`
-	TxResult abci.Result   `json:"tx_result"`
-	Tx       types.Tx      `json:"tx"`
-	Proof    types.TxProof `json:"proof,omitempty"`
+	Height   int64                  `json:"height"`
+	Index    uint32                 `json:"index"`
+	TxResult abci.ResponseDeliverTx `json:"tx_result"`
+	Tx       types.Tx               `json:"tx"`
+	Proof    types.TxProof          `json:"proof,omitempty"`
 }
 
 type ResultUnconfirmedTxs struct {
@@ -128,7 +135,7 @@ type ResultABCIInfo struct {
 }
 
 type ResultABCIQuery struct {
-	*abci.ResultQuery `json:"response"`
+	Response abci.ResponseQuery `json:"response"`
 }
 
 type ResultUnsafeFlushMempool struct{}
@@ -140,6 +147,6 @@ type ResultSubscribe struct{}
 type ResultUnsubscribe struct{}
 
 type ResultEvent struct {
-	Name string            `json:"name"`
-	Data types.TMEventData `json:"data"`
+	Query string            `json:"query"`
+	Data  types.TMEventData `json:"data"`
 }
