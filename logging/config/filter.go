@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"regexp"
-
-	"github.com/hyperledger/burrow/common/math/integral"
 )
 
 func BuildFilterPredicate(filterConfig *FilterConfig) (func([]interface{}) bool, error) {
@@ -59,7 +57,10 @@ func matchLogLine(keyvals []interface{}, keyRegexes, valueRegexes []*regexp.Rege
 	all := matchAll
 	// We should be passed an aligned list of keyRegexes and valueRegexes, but since we can't error here we'll guard
 	// against a failure of the caller to pass valid arguments
-	length := integral.MinInt(len(keyRegexes), len(valueRegexes))
+	length := len(keyRegexes)
+	if len(valueRegexes) < length {
+		length = len(valueRegexes)
+	}
 	for i := 0; i < length; i++ {
 		matched := findMatchInLogLine(keyvals, keyRegexes[i], valueRegexes[i])
 		if matchAll {

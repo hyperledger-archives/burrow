@@ -15,10 +15,10 @@
 package methods
 
 import (
+	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/core"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 )
@@ -45,17 +45,12 @@ func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTrace
 	logging.InfoMsg(logger, "SignAndBroadcast result")
 }
 
-func loggerFromClientDo(do *definitions.ClientDo, scope string) (logging_types.InfoTraceLogger, error) {
-	lc, err := core.LoadLoggingConfigFromClientDo(do)
-	if err != nil {
-		return nil, err
-	}
-	logger, err := lifecycle.NewLoggerFromLoggingConfig(lc)
+func loggerFromClientDo(do *client.Do, scope string) (logging_types.InfoTraceLogger, error) {
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(config.DefaultClientLoggingConfig())
 	if err != nil {
 		return nil, err
 	}
 	logger = logging.WithScope(logger, scope)
 	lifecycle.CaptureStdlibLogOutput(logger)
-	lifecycle.CaptureTendermintLog15Output(logger)
 	return logger, nil
 }

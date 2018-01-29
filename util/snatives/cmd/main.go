@@ -17,13 +17,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/util/snatives/templates"
 )
 
 // Dump SNative contracts
 func main() {
-	contracts := vm.SNativeContracts()
+	contracts := evm.SNativeContracts()
 	// Index of next contract
 	i := 1
 	fmt.Print("pragma solidity >=0.0.0;\n\n")

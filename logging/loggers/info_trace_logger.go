@@ -97,5 +97,6 @@ func (l *infoTraceLogger) Log(keyvals ...interface{}) error {
 // Wrap the output loggers with a a set of standard transforms, a non-blocking
 // ChannelLogger and an outer context
 func wrapOutputLogger(outputLogger kitlog.Logger) (kitlog.Logger, channels.Channel) {
-	return NonBlockingLogger(BurrowFormatLogger(VectorValuedLogger(outputLogger)))
+	return NonBlockingLogger(VectorValuedLogger(SortLogger(BurrowFormatLogger(outputLogger),
+		structure.ChannelKey, structure.MessageKey, structure.TimeKey, structure.ComponentKey)))
 }

@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/manager/burrow-mint/evm"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSNativeFuncTemplate(t *testing.T) {
-	contract := vm.SNativeContracts()["Permissions"]
+	contract := evm.SNativeContracts()["Permissions"]
 	function, err := contract.FunctionByName("removeRole")
 	if err != nil {
 		t.Fatal("Couldn't get function")
@@ -37,7 +37,7 @@ func TestSNativeFuncTemplate(t *testing.T) {
 // This test checks that we can generate the SNative contract interface and
 // prints it to stdout
 func TestSNativeContractTemplate(t *testing.T) {
-	contract := vm.SNativeContracts()["Permissions"]
+	contract := evm.SNativeContracts()["Permissions"]
 	solidityContract := NewSolidityContract(contract)
 	solidity, err := solidityContract.Solidity()
 	assert.NoError(t, err)

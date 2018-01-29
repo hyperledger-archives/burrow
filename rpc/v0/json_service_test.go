@@ -33,7 +33,7 @@ func TestBroadcastTx(t *testing.T) {
 	pubKey := account.GenPrivAccount().PubKey
 	address := []byte{1}
 	code := opcodes.Bytecode(opcodes.PUSH1, 1, opcodes.PUSH1, 1, opcodes.ADD)
-	var tx txs.Tx = txs.NewCallTxWithNonce(pubKey, address, code, 10, 2,
+	var tx txs.Tx = txs.NewCallTxWithSequence(pubKey, address, code, 10, 2,
 		1, 0)
 	jsonBytes := wire.JSONBytesPretty(wrappedTx{tx})
 	request := rpc.NewRPCRequest("TestBroadcastTx", "BroadcastTx", jsonBytes)

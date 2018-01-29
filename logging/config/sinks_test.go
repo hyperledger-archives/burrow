@@ -3,6 +3,11 @@ package config
 import (
 	"testing"
 
+	"fmt"
+
+	"encoding/json"
+
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,6 +31,19 @@ func TestBuildLoggerFromSinkConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, logLines("Foo", "Bar"),
 		captures["cap"].BufferLogger().FlushLogLines())
+}
+
+func TestFileLoggerSink(t *testing.T) {
+	sinkConfig := Sink().
+		SetOutput(FileOutput("/tmp/logmclogface")).AddSinks(
+		Sink().SetOutput(FileOutput("/tmp/doubleloglog")))
+
+	bs, err := json.Marshal(sinkConfig)
+	assert.NoError(t, err)
+
+	fmt.Println(string(bs))
+	_, _, err = sinkConfig.BuildLogger()
+	assert.NoError(t, err)
 }
 
 func TestFilterSinks(t *testing.T) {

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/logging/adapters/stdlib"
-	tmLog15adapter "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -33,7 +32,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
-	tmLog15 "github.com/tendermint/log15"
 )
 
 // Lifecycle provides a canonical source for burrow loggers. Components should use the functions here
@@ -93,10 +91,8 @@ func NewLogger(outputLogger kitlog.Logger) (types.InfoTraceLogger, channels.Chan
 	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId)), errCh
 }
 
-func CaptureTendermintLog15Output(infoTraceLogger types.InfoTraceLogger) {
-	tmLog15.Root().SetHandler(
-		tmLog15adapter.InfoTraceLoggerAsLog15Handler(infoTraceLogger.
-			With(structure.CapturedLoggingSourceKey, "tendermint_log15")))
+func JustLogger(logger types.InfoTraceLogger, _ channels.Channel) types.InfoTraceLogger {
+	return logger
 }
 
 func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
