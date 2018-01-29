@@ -41,12 +41,12 @@ jobs:
           at: .
       - run: make test_integration
       
-  test_integration:
+  ensure_vendor:
     <<: *defaults
     steps:
       - attach_workspace:
           at: .
-      - run: make test_integration
+      - run: make ensure_vendor
 
   build_docker:
     <<: *defaults
@@ -109,6 +109,12 @@ workflows:
             <<: *tags_filters
 
       - test_integration:
+          requires:
+            - checkout_code
+          filters:
+            <<: *tags_filters
+
+      - ensure_vendor:
           requires:
             - checkout_code
           filters:

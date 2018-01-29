@@ -77,12 +77,19 @@ erase_vendor:
 	rm -rf ${REPO}/vendor/
 
 # install vendor uses dep to install vendored dependencies
-.PHONY: install_vendor
-install_vendor:
+.PHONY: reinstall_vendor
+reinstall_vendor: erase_vendor
 	@go get -u github.com/golang/dep/cmd/dep
 	@dep ensure -v
 
-# Dumps Solidity interface contracts for SNatives
+# delete the vendor directy and pull back using dep lock and constraints file
+# will exit with an error if the working directory is not clean (any missing files or new
+# untracked ones)
+.PHONY: ensure_vendor
+ensure_vendor: reinstall_vendor
+	@scripts/is_checkout_dirty.sh
+
+# dumps Solidity interface contracts for SNatives
 .PHONY: snatives
 snatives:
 	@go run ./util/snatives/cmd/main.go
