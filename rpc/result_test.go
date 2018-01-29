@@ -15,29 +15,30 @@
 package rpc
 
 import (
+	"encoding/json"
 	"testing"
 
-	"encoding/json"
-
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/go-wire"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 func TestResultBroadcastTx(t *testing.T) {
 	// Make sure these are unpacked as expected
 	res := ResultBroadcastTx{
-		Receipt: &txs.Receipt{
+		Receipt: txs.Receipt{
 			ContractAddr:    acm.Address{0, 2, 3},
 			CreatesContract: true,
 			TxHash:          []byte("foo"),
 		},
 	}
 
-	assert.Equal(t, `{"tx_hash":"666F6F","creates_contract":true,"contract_addr":"0002030000000000000000000000000000000000"}`,
-		string(wire.JSONBytes(res)))
+	js := string(wire.JSONBytes(res))
+	assert.Equal(t, `{"Receipt":{"TxHash":"666F6F","CreatesContract":true,"ContractAddr":"0002030000000000000000000000000000000000"}}`, js)
 
 	res2 := new(ResultBroadcastTx)
 	wire.ReadBinaryBytes(wire.BinaryBytes(res), res2)
@@ -46,7 +47,7 @@ func TestResultBroadcastTx(t *testing.T) {
 
 func TestListUnconfirmedTxs(t *testing.T) {
 	res := &ResultListUnconfirmedTxs{
-		N: 3,
+		NumTxs: 3,
 		Txs: []txs.Wrapper{
 			txs.Wrap(&txs.CallTx{
 				Address: &acm.Address{1},
@@ -55,7 +56,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
-	assert.Equal(t, `{"n_txs":3,"txs":[{"type":"call_tx","data":{"input":null,"address":"0100000000000000000000000000000000000000","gas_limit":0,"fee":0,"data":null}}]}`,
+	assert.Equal(t, `{"NumTxs":3,"Txs":[{"type":"call_tx","data":{"Input":null,"Address":"0100000000000000000000000000000000000000","GasLimit":0,"Fee":0,"Data":null}}]}`,
 		string(bs))
 }
 
@@ -70,6 +71,47 @@ func TestResultListAccounts(t *testing.T) {
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
 	resOut := new(ResultListAccounts)
+	json.Unmarshal(bs, resOut)
+	bsOut, err := json.Marshal(resOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
+}
+
+func TestResultCall_MarshalJSON(t *testing.T) {
+	res := ResultCall{
+		Call: execution.Call{
+			Return:  []byte("hi"),
+			GasUsed: 1,
+		},
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+
+	resOut := new(ResultCall)
+	json.Unmarshal(bs, resOut)
+	bsOut, err := json.Marshal(resOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
+}
+
+func TestResultEvent(t *testing.T) {
+	eventDataNewBlock := tm_types.EventDataNewBlock{
+		Block: &tm_types.Block{
+			Header: &tm_types.Header{
+				ChainID: "chainy",
+				NumTxs:  30,
+			},
+		},
+	}
+	res := ResultEvent{
+		TMEventData: &tm_types.TMEventData{
+			TMEventDataInner: eventDataNewBlock,
+		},
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+
+	resOut := new(ResultEvent)
 	json.Unmarshal(bs, resOut)
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-
 	"strings"
 
 	"github.com/hyperledger/burrow/config"
@@ -42,7 +42,9 @@ func main() {
 			fatalf("could not obtain config: %v", err)
 		}
 
-		kern, err := conf.Kernel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		kern, err := conf.Kernel(ctx)
 		if err != nil {
 			fatalf("could not create Burrow kernel: %v", err)
 		}

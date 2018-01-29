@@ -42,7 +42,7 @@ var testGenesisDoc, testPrivAccounts = deterministicGenesis.
 var testChainID = testGenesisDoc.ChainID()
 
 func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
-	exe := newExecutor(true, state, testChainID, tip, event.NewNoOpFireable(), logger)
+	exe := newExecutor(true, state, testChainID, tip, event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		return err
 	} else {
@@ -890,7 +890,7 @@ func TestSelfDestruct(t *testing.T) {
 	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(testGenesisDoc), event.NewNoOpFireable(), logger)
+	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}

@@ -3,6 +3,9 @@ package tm
 import (
 	"fmt"
 
+	"context"
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
@@ -12,6 +15,7 @@ import (
 	"github.com/tendermint/tendermint/rpc/lib/types"
 )
 
+// Method names
 const (
 	Subscribe   = "subscribe"
 	Unsubscribe = "unsubscribe"
@@ -51,6 +55,8 @@ const (
 	SignTx                 = "unsafe/sign_tx"
 )
 
+const SubscriptionTimeoutSeconds = 5 * time.Second
+
 func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
 	return map[string]*gorpc.RPCFunc{
 		// Transact
@@ -60,7 +66,7 @@ func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
 				return nil, err
 			}
 			return &rpc.ResultBroadcastTx{
-				Receipt: receipt,
+				Receipt: *receipt,
 			}, nil
 		}, "tx"),
 
@@ -76,7 +82,7 @@ func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
 			if err != nil {
 				return nil, err
 			}
-			return &rpc.ResultCall{Call: call}, nil
+			return &rpc.ResultCall{Call: *call}, nil
 		}, "fromAddress,toAddress,data"),
 
 		CallCode: gorpc.NewRPCFunc(func(fromAddress acm.Address, code, data []byte) (*rpc.ResultCall, error) {
@@ -84,32 +90,35 @@ func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
 			if err != nil {
 				return nil, err
 			}
-			return &rpc.ResultCall{Call: call}, nil
+			return &rpc.ResultCall{Call: *call}, nil
 		}, "fromAddress,code,data"),
 
 		// Events
 		Subscribe: gorpc.NewWSRPCFunc(func(wsCtx rpctypes.WSRPCContext, eventID string) (*rpc.ResultSubscribe, error) {
-			subID, err := event.GenerateSubscriptionID()
+			subscriptionID, err := event.GenerateSubscriptionID()
 			if err != nil {
 				return nil, err
 			}
-			err = service.Subscribe(subID, eventID,
-				func(eventData event.AnyEventData) {
-					// NOTE: EventSwitch callbacks must be nonblocking
-					wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(EventResponseID(wsCtx.Request.ID, eventID),
-						rpc.ResultEvent{Event: eventID, AnyEventData: eventData}))
-				})
+			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
+			defer cancel()
+			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) {
+				wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(EventResponseID(wsCtx.Request.ID, eventID),
+					resultEvent))
+			})
 			if err != nil {
 				return nil, err
 			}
 			return &rpc.ResultSubscribe{
 				EventID:        eventID,
-				SubscriptionID: subID,
+				SubscriptionID: subscriptionID,
 			}, nil
 		}, "eventID"),
 
 		Unsubscribe: gorpc.NewWSRPCFunc(func(wsCtx rpctypes.WSRPCContext, subscriptionID string) (*rpc.ResultUnsubscribe, error) {
-			err := service.Unsubscribe(subscriptionID)
+			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
+			defer cancel()
+			// Since our model uses a random subscription ID per request we just drop all matching requests
+			err := service.Unsubscribe(ctx, subscriptionID)
 			if err != nil {
 				return nil, err
 			}

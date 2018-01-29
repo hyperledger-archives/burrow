@@ -16,8 +16,10 @@ package evm
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
@@ -25,6 +27,7 @@ import (
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/stretchr/testify/require"
 )
 
 var expectedData = []byte{0x10}
@@ -51,27 +54,13 @@ func TestLog4(t *testing.T) {
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
-	eventSwitch := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
-	eventID := events.EventStringLogEvent(account2.Address())
+	emitter := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
 
-	doneChan := make(chan struct{}, 1)
+	ch := make(chan *events.EventDataLog)
 
-	eventSwitch.Subscribe("test", eventID, func(eventData event.AnyEventData) {
-		logEvent := eventData.EventDataLog()
-		// No need to test address as this event would not happen if it wasn't correct
-		if !reflect.DeepEqual(logEvent.Topics, expectedTopics) {
-			t.Errorf("Event topics are wrong. Got: %v. Expected: %v", logEvent.Topics, expectedTopics)
-		}
-		if !bytes.Equal(logEvent.Data, expectedData) {
-			t.Errorf("Event data is wrong. Got: %s. Expected: %s", logEvent.Data, expectedData)
-		}
-		if logEvent.Height != expectedHeight {
-			t.Errorf("Event block height is wrong. Got: %d. Expected: %d", logEvent.Height, expectedHeight)
-		}
-		doneChan <- struct{}{}
-	})
+	require.NoError(t, events.SubscribeLogEvent(context.Background(), emitter, "test", account2.Address(), ch))
 
-	ourVm.SetFireable(eventSwitch)
+	ourVm.SetPublisher(emitter)
 
 	var gas uint64 = 100000
 
@@ -95,8 +84,19 @@ func TestLog4(t *testing.T) {
 	}
 
 	_, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
-	<-doneChan
-	if err != nil {
-		t.Fatal(err)
+	require.NoError(t, err)
+	select {
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timedout waiting for EventDataLog")
+	case eventDataLog := <-ch:
+		if !reflect.DeepEqual(eventDataLog.Topics, expectedTopics) {
+			t.Errorf("Event topics are wrong. Got: %v. Expected: %v", eventDataLog.Topics, expectedTopics)
+		}
+		if !bytes.Equal(eventDataLog.Data, expectedData) {
+			t.Errorf("Event data is wrong. Got: %s. Expected: %s", eventDataLog.Data, expectedData)
+		}
+		if eventDataLog.Height != expectedHeight {
+			t.Errorf("Event block height is wrong. Got: %d. Expected: %d", eventDataLog.Height, expectedHeight)
+		}
 	}
 }

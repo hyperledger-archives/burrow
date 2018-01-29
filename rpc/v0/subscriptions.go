@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package v0
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/rpc"
 )
 
 var (
@@ -57,18 +61,18 @@ func (subsCache *SubscriptionsCache) poll() []interface{} {
 
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type Subscriptions struct {
-	mtx          *sync.RWMutex
-	subscribable Subscribable
-	subs         map[string]*SubscriptionsCache
-	reap         bool
+	mtx     *sync.RWMutex
+	service rpc.Service
+	subs    map[string]*SubscriptionsCache
+	reap    bool
 }
 
-func NewSubscriptions(subscribable Subscribable) *Subscriptions {
+func NewSubscriptions(service rpc.Service) *Subscriptions {
 	es := &Subscriptions{
-		mtx:          &sync.RWMutex{},
-		subscribable: subscribable,
-		subs:         make(map[string]*SubscriptionsCache),
-		reap:         true,
+		mtx:     &sync.RWMutex{},
+		service: service,
+		subs:    make(map[string]*SubscriptionsCache),
+		reap:    true,
 	}
 	go reap(es)
 	return es
@@ -85,7 +89,7 @@ func reap(es *Subscriptions) {
 		if time.Since(sub.ts) > reaperThreshold {
 			// Seems like Go is ok with this..
 			delete(es.subs, id)
-			es.subscribable.Unsubscribe(id)
+			es.service.Unsubscribe(context.Background(), id)
 		}
 	}
 	go reap(es)
@@ -97,24 +101,24 @@ func reap(es *Subscriptions) {
 // happen it's for an insignificant amount of time (the time it takes to
 // carry out SubscriptionsCache.poll() ).
 func (subs *Subscriptions) Add(eventId string) (string, error) {
-	subId, errSID := GenerateSubscriptionID()
-	if errSID != nil {
-		return "", errSID
+	subId, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return "", err
 	}
 	cache := newSubscriptionsCache()
-	errC := subs.subscribable.Subscribe(subId, eventId,
-		func(evt AnyEventData) {
-			cache.mtx.Lock()
-			defer cache.mtx.Unlock()
-			cache.events = append(cache.events, evt)
-		})
+	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) {
+		cache.mtx.Lock()
+		defer cache.mtx.Unlock()
+		cache.events = append(cache.events, resultEvent)
+	})
+	if err != nil {
+		return "", err
+	}
 	cache.subId = subId
 	subs.mtx.Lock()
 	defer subs.mtx.Unlock()
 	subs.subs[subId] = cache
-	if errC != nil {
-		return "", errC
-	}
+
 	return subId, nil
 }
 

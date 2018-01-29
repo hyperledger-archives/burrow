@@ -15,16 +15,15 @@
 package execution
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"reflect"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -37,9 +36,11 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
+const BlockingTimeoutSeconds = 30
+
 type Call struct {
-	Return  []byte `json:"return"`
-	GasUsed uint64 `json:"gas_used"`
+	Return  []byte
+	GasUsed uint64
 }
 
 type Transactor interface {
@@ -102,7 +103,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
 		logging.WithScope(trans.logger, "Call"))
-	vmach.SetFireable(trans.eventEmitter)
+	vmach.SetPublisher(trans.eventEmitter)
 
 	gas := params.GasLimit
 	ret, err := vmach.Call(caller, callee, callee.Code(), data, 0, &gas)
@@ -154,7 +155,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	}
 
 	switch checkTxResponse.Code {
-	case abci_types.CodeType_OK:
+	case codes.TxExecutionSuccessCode:
 		receipt := new(txs.Receipt)
 		err := wire.ReadBinaryBytes(checkTxResponse.Data, receipt)
 		if err != nil {
@@ -170,6 +171,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *transactor) Transact(privKey []byte, address acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
+
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
@@ -223,63 +225,46 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 
 func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
-	rec, tErr := trans.Transact(privKey, address, data, gasLimit, fee)
-	if tErr != nil {
-		return nil, tErr
+
+	receipt, err := trans.Transact(privKey, address, data, gasLimit, fee)
+	if err != nil {
+		return nil, err
 	}
 	var addr acm.Address
-	if rec.CreatesContract {
-		addr = rec.ContractAddr
+	if receipt.CreatesContract {
+		addr = receipt.ContractAddr
 	} else {
 		addr = address
 	}
 	// We want non-blocking on the first event received (but buffer the value),
 	// after which we want to block (and then discard the value - see below)
 	wc := make(chan *evm_events.EventDataCall, 1)
-	subId := fmt.Sprintf("%X", rec.TxHash)
-	trans.eventEmitter.Subscribe(subId, evm_events.EventStringAccCall(addr),
-		func(eventData event.AnyEventData) {
-			eventDataCall := eventData.EventDataCall()
-			if eventDataCall == nil {
-				trans.logger.Info("error", "cold not be convert event data to EventDataCall",
-					structure.ScopeKey, "TransactAndHold",
-					"sub_id", subId,
-					"event_data_type", reflect.TypeOf(eventData.Get()).String())
-				return
-			}
-			if bytes.Equal(eventDataCall.TxID, rec.TxHash) {
-				// Beware the contract of go-events subscribe is that we must not be
-				// blocking in an event callback when we try to unsubscribe!
-				// We work around this by using a non-blocking send.
-				select {
-				// This is a non-blocking send, but since we are using a buffered
-				// channel of size 1 we will always grab our first event even if we
-				// haven't read from the channel at the time we receive the first event.
-				case wc <- eventDataCall:
-				default:
-				}
-			}
-		})
 
-	timer := time.NewTimer(300 * time.Second)
-	toChan := timer.C
+	subID, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, err
+	}
 
-	var ret *evm_events.EventDataCall
-	var rErr error
+	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, addr, receipt.TxHash, wc)
+	if err != nil {
+		return nil, err
+	}
+	// Will clean up callback goroutine and subscription in pubsub
+	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
+
+	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
+	defer timer.Stop()
 
 	select {
-	case <-toChan:
-		rErr = fmt.Errorf("Transaction timed out. Hash: " + subId)
-	case e := <-wc:
-		timer.Stop()
-		if e.Exception != "" {
-			rErr = fmt.Errorf("error when transacting: " + e.Exception)
+	case <-timer.C:
+		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
+	case eventDataCall := <-wc:
+		if eventDataCall.Exception != "" {
+			return nil, fmt.Errorf("error when transacting: " + eventDataCall.Exception)
 		} else {
-			ret = e
+			return eventDataCall, nil
 		}
 	}
-	trans.eventEmitter.Unsubscribe(subId)
-	return ret, rErr
 }
 
 func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
@@ -330,57 +315,44 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 }
 
 func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	rec, tErr := trans.Send(privKey, toAddress, amount)
-	if tErr != nil {
-		return nil, tErr
+	receipt, err := trans.Send(privKey, toAddress, amount)
+	if err != nil {
+		return nil, err
 	}
 
 	wc := make(chan *txs.SendTx)
-	subId := fmt.Sprintf("%X", rec.TxHash)
 
-	trans.eventEmitter.Subscribe(subId, exe_events.EventStringAccOutput(toAddress),
-		func(eventData event.AnyEventData) {
-			eventDataTx, ok := eventData.Get().(exe_events.EventDataTx)
-			if !ok {
-				trans.logger.Info("error", "cold not be convert event data to EventDataCall",
-					structure.ScopeKey, "SendAndHold",
-					"tx_hash", subId,
-					"event_data_type", reflect.TypeOf(eventData.Get()).String())
-				return
-			}
-			tx, ok := eventDataTx.Tx.(*txs.SendTx)
-			if !ok {
-				trans.logger.Info("error", "EventDataTx was expected to contain SendTx",
-					structure.ScopeKey, "SendAndHold",
-					"sub_id", subId,
-					"tx_type", reflect.TypeOf(eventDataTx.Tx).String())
-				return
-			}
+	subID, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, err
+	}
 
-			wc <- tx
-		})
+	err = exe_events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
+		receipt.TxHash, wc)
+	if err != nil {
+		return nil, err
+	}
+	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
 
-	timer := time.NewTimer(300 * time.Second)
-	toChan := timer.C
-
-	var rErr error
+	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
+	defer timer.Stop()
 
 	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
-	if tErr != nil {
+	if err != nil {
 		return nil, err
 	}
 
 	select {
-	case <-toChan:
-		rErr = fmt.Errorf("Transaction timed out. Hash: " + subId)
-	case e := <-wc:
-		if e.Inputs[0].Address == pa.Address() && e.Inputs[0].Amount == amount {
-			timer.Stop()
-			trans.eventEmitter.Unsubscribe(subId)
-			return rec, rErr
+	case <-timer.C:
+		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
+	case sendTx := <-wc:
+		// This is a double check - we subscribed to this tx's hash so something has gone wrong if the amounts don't match
+		if sendTx.Inputs[0].Address == pa.Address() && sendTx.Inputs[0].Amount == amount {
+			return receipt, nil
 		}
+		return nil, fmt.Errorf("received SendTx but hash doesn't seem to match what we subscribed to, "+
+			"received SendTx: %v which does not match receipt on sending: %v", sendTx, receipt)
 	}
-	return nil, rErr
 }
 
 func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error) {

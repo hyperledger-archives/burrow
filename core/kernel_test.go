@@ -24,7 +24,7 @@ func TestBootThenShutdown(t *testing.T) {
 	logger := loggers.NewNoopInfoTraceLogger()
 	genesisDoc, privateAccounts := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
-	kern, err := NewKernel(privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
+	kern, err := NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
 	require.NoError(t, err)
 	err = kern.Boot()
 	require.NoError(t, err)

@@ -23,14 +23,13 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/consensus/types"
-	tm_types "github.com/tendermint/tendermint/types"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -57,15 +56,9 @@ func TestBroadcastTx(t *testing.T) {
 		toAddr := privateAccounts[1].Address()
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
 		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if receipt.CreatesContract {
-			t.Fatal("This tx should not create a contract")
-		}
-		if len(receipt.TxHash) == 0 {
-			t.Fatal("Failed to compute tx hash")
-		}
+		require.NoError(t, err)
+		assert.False(t, receipt.CreatesContract, "This tx should not create a contract")
+		assert.NotEmpty(t, receipt.TxHash, "Failed to compute tx hash")
 		n, errp := new(int), new(error)
 		buf := new(bytes.Buffer)
 		hasher := ripemd160.New()
@@ -105,12 +98,6 @@ func TestGetStorage(t *testing.T) {
 	wsc := newWSClient()
 	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
-		eid := tm_types.EventStringNewBlock()
-		subscribe(t, wsc, eid)
-		defer func() {
-			unsubscribe(t, wsc, eid)
-		}()
-
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
@@ -165,12 +152,6 @@ func TestCallContract(t *testing.T) {
 	wsc := newWSClient()
 	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
-		eid := tm_types.EventStringNewBlock()
-		subscribe(t, wsc, eid)
-		defer func() {
-			unsubscribe(t, wsc, eid)
-		}()
-
 		// create the contract
 		amt, gasLim, fee := uint64(6969), uint64(1000), uint64(1000)
 		code, _, _ := simpleContract()
@@ -218,9 +199,10 @@ func TestNameReg(t *testing.T) {
 			func() {
 				broadcastTxAndWaitForBlock(t, client, wsc, tx)
 			},
-			func(eid string, eventData event.AnyEventData) (bool, error) {
-				eventDataTx := eventData.EventDataTx()
-				assert.NotNil(t, eventDataTx, "could not convert %s to EventDataTx", eventData)
+			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+
+				eventDataTx := resultEvent.EventDataTx
+				assert.NotNil(t, eventDataTx, "could not convert %s to EventDataTx", resultEvent)
 				tx, ok := eventDataTx.Tx.(*txs.NameTx)
 				if !ok {
 					t.Fatalf("Could not convert %v to *NameTx", eventDataTx)
@@ -350,7 +332,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 				}
 				require.NoError(t, err)
-				if resp.N > 0 {
+				if resp.NumTxs > 0 {
 					txChan <- resp.Txs
 				}
 			}
@@ -376,8 +358,8 @@ func TestGetBlock(t *testing.T) {
 		waitNBlocks(t, wsc, 3)
 		resp, err := tm_client.GetBlock(client, 2)
 		assert.NoError(t, err)
-		assert.Equal(t, 2, resp.Block.Height)
-		assert.Equal(t, 2, resp.BlockMeta.Header.Height)
+		assert.Equal(t, int64(2), resp.Block.Height)
+		assert.Equal(t, int64(2), resp.BlockMeta.Header.Height)
 	})
 }
 

@@ -1,4 +1,4 @@
-package core
+package server
 
 import (
 	"context"
@@ -11,7 +11,13 @@ type Server interface {
 	Shutdown(context.Context) error
 }
 
-type ServerLauncher struct {
+type ShutdownFunc func(context.Context) error
+
+func (sf ShutdownFunc) Shutdown(ctx context.Context) error {
+	return sf(ctx)
+}
+
+type Launcher struct {
 	Name   string
 	Launch func() (Server, error)
 }
@@ -22,7 +28,7 @@ type listenersServer struct {
 }
 
 // Providers a Server implementation from Listeners that are closed on shutdown
-func ListenersServer(listeners ...net.Listener) Server {
+func FromListeners(listeners ...net.Listener) Server {
 	lns := make(map[net.Listener]struct{}, len(listeners))
 	for _, l := range listeners {
 		lns[l] = struct{}{}

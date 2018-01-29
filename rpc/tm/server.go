@@ -19,20 +19,20 @@ import (
 	"net/http"
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/tendermint/tendermint/rpc/lib/server"
-	"github.com/tendermint/tmlibs/events"
 )
 
-func StartServer(service rpc.Service, pattern, listenAddress string, evsw events.EventSwitch,
+func StartServer(service rpc.Service, pattern, listenAddress string, emitter event.Emitter,
 	logger logging_types.InfoTraceLogger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
 	routes := GetRoutes(service)
 	mux := http.NewServeMux()
-	wm := rpcserver.NewWebsocketManager(routes, evsw)
+	wm := rpcserver.NewWebsocketManager(routes, rpcserver.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
 	mux.HandleFunc(pattern, wm.WebsocketHandler)
 	tmLogger := tendermint.NewLogger(logger)
 	rpcserver.RegisterRPCFuncs(mux, routes, tmLogger)

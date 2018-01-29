@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 
+	"context"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -37,7 +39,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 	}
 }
 
-func (conf *BurrowConfig) Kernel() (*core.Kernel, error) {
+func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if conf.GenesisDoc == nil {
 		return nil, fmt.Errorf("no GenesisDoc defined in config, cannot make Kernel")
 	}
@@ -55,7 +57,7 @@ func (conf *BurrowConfig) Kernel() (*core.Kernel, error) {
 	}
 	privValidator := validator.NewPrivValidatorMemory(val, keys.Signer(keyClient, val.Address()))
 
-	return core.NewKernel(privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, logger)
+	return core.NewKernel(ctx, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

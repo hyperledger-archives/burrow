@@ -1,0 +1,36 @@
+package event
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSubscribeCallback(t *testing.T) {
+	ctx := context.Background()
+	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
+	ch := make(chan interface{})
+	SubscribeCallback(ctx, em, "TestSubscribeCallback", MatchAllQueryable(), func(msg interface{}) {
+		ch <- msg
+	})
+
+	sent := "FROTHY"
+
+	n := 10
+	for i := 0; i < n; i++ {
+
+		em.Publish(ctx, sent, nil)
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case <-time.After(2 * time.Second):
+			t.Fatalf("Timed out waiting for event")
+		case msg := <-ch:
+			assert.Equal(t, sent, msg)
+		}
+	}
+}

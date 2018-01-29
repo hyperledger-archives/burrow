@@ -12,86 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package v0
 
 import (
 	"encoding/hex"
 	"fmt"
 	"runtime"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
 var mockInterval = 20 * time.Millisecond
-
-type mockSub struct {
-	subId   string
-	eventId string
-	f       func(AnyEventData)
-	sdChan  chan struct{}
-}
-
-type mockEventData struct {
-	subId   string
-	eventId string
-}
-
-func (eventData mockEventData) AssertIsEVMEventData() {}
-
-// A mock event
-func newMockSub(subId, eventId string, f func(AnyEventData)) mockSub {
-	return mockSub{subId, eventId, f, make(chan struct{})}
-}
-
-type mockEventEmitter struct {
-	subs  map[string]mockSub
-	mutex *sync.Mutex
-}
-
-func newMockEventEmitter() *mockEventEmitter {
-	return &mockEventEmitter{make(map[string]mockSub), &sync.Mutex{}}
-}
-
-func (mee *mockEventEmitter) Subscribe(subId, eventId string, callback func(AnyEventData)) error {
-	if _, ok := mee.subs[subId]; ok {
-		return nil
-	}
-	me := newMockSub(subId, eventId, callback)
-	mee.mutex.Lock()
-	mee.subs[subId] = me
-	mee.mutex.Unlock()
-
-	go func() {
-		for {
-			select {
-			case <-me.sdChan:
-				mee.mutex.Lock()
-				delete(mee.subs, subId)
-				mee.mutex.Unlock()
-				return
-			case <-time.After(mockInterval):
-				me.f(AnyEventData{BurrowEventData: &EventData{
-					EventDataInner: mockEventData{subId: subId, eventId: eventId},
-				}})
-			}
-		}
-	}()
-	return nil
-}
-
-func (mee *mockEventEmitter) Unsubscribe(subId string) error {
-	mee.mutex.Lock()
-	sub, ok := mee.subs[subId]
-	mee.mutex.Unlock()
-	if !ok {
-		return nil
-	}
-	sub.sdChan <- struct{}{}
-	return nil
-}
 
 // Test that event subscriptions can be added manually and then automatically reaped.
 func TestSubReaping(t *testing.T) {
@@ -100,8 +36,8 @@ func TestSubReaping(t *testing.T) {
 	reaperThreshold = 200 * time.Millisecond
 	reaperTimeout = 100 * time.Millisecond
 
-	mee := newMockEventEmitter()
-	eSubs := NewSubscriptions(mee)
+	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -133,7 +69,6 @@ func TestSubReaping(t *testing.T) {
 	}
 	time.Sleep(1100 * time.Millisecond)
 
-	assert.Len(t, mee.subs, 0)
 	assert.Len(t, eSubs.subs, 0)
 	t.Logf("Added %d subs that were all automatically reaped.", NUM_SUBS)
 }
@@ -145,8 +80,8 @@ func TestSubManualClose(t *testing.T) {
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
 
-	mee := newMockEventEmitter()
-	eSubs := NewSubscriptions(mee)
+	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -193,8 +128,8 @@ func TestSubFlooding(t *testing.T) {
 	reaperTimeout = 10000 * time.Millisecond
 	// Crank it up. Now pressure is 10 times higher on each sub.
 	mockInterval = 1 * time.Millisecond
-	mee := newMockEventEmitter()
-	eSubs := NewSubscriptions(mee)
+	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {

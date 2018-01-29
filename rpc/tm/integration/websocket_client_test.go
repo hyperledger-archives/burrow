@@ -24,7 +24,6 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
@@ -47,15 +46,15 @@ func TestWSConnect(t *testing.T) {
 // receive a new block message
 func TestWSNewBlock(t *testing.T) {
 	wsc := newWSClient()
-	eid := tm_types.EventStringNewBlock()
+	eid := tm_types.EventNewBlock
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
 		stopWSClient(wsc)
 	}()
 	waitForEvent(t, wsc, eid, func() {},
-		func(eid string, eventData event.AnyEventData) (bool, error) {
-			fmt.Println("Check: ", eventData.EventDataNewBlock().Block)
+		func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+			fmt.Println("Check: ", resultEvent.EventDataNewBlock().Block)
 			return true, nil
 		})
 }
@@ -66,20 +65,20 @@ func TestWSBlockchainGrowth(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := tm_types.EventStringNewBlock()
+	eid := tm_types.EventNewBlock
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
 		stopWSClient(wsc)
 	}()
 	// listen for NewBlock, ensure height increases by 1
-	var initBlockN int
-	for i := 0; i < 2; i++ {
+	var initBlockN int64
+	for i := int64(0); i < 2; i++ {
 		waitForEvent(t, wsc, eid, func() {},
-			func(eid string, eventData event.AnyEventData) (bool, error) {
-				eventDataNewBlock := eventData.EventDataNewBlock()
+			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+				eventDataNewBlock := resultEvent.EventDataNewBlock()
 				if eventDataNewBlock == nil {
-					t.Fatalf("Was expecting EventDataNewBlock but got %v", eventData)
+					t.Fatalf("Was expecting EventDataNewBlock but got %v", resultEvent)
 				}
 				block := eventDataNewBlock.Block
 				if i == 0 {
@@ -90,7 +89,6 @@ func TestWSBlockchainGrowth(t *testing.T) {
 							block.Header.Height)
 					}
 				}
-
 				return true, nil
 			})
 	}
@@ -101,8 +99,8 @@ func TestWSSend(t *testing.T) {
 	wsc := newWSClient()
 	toAddr := privateAccounts[1].Address()
 	amt := uint64(100)
-	eidInput := exe_events.EventStringAccInput(privateAccounts[0].Address())
-	eidOutput := exe_events.EventStringAccOutput(toAddr)
+	eidInput := exe_events.EventStringAccountInput(privateAccounts[0].Address())
+	eidOutput := exe_events.EventStringAccountOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
 	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
 	defer func() {
@@ -125,7 +123,7 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := exe_events.EventStringAccInput(privateAccounts[0].Address())
+	eid := exe_events.EventStringAccountInput(privateAccounts[0].Address())
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
@@ -137,13 +135,13 @@ func TestWSDoubleFire(t *testing.T) {
 	waitForEvent(t, wsc, eid, func() {
 		tx := makeDefaultSendTxSigned(t, jsonRpcClient, toAddr, amt)
 		broadcastTx(t, jsonRpcClient, tx)
-	}, func(eid string, b event.AnyEventData) (bool, error) {
+	}, func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 		return true, nil
 	})
 	// but make sure we don't hear about it twice
 	err := waitForEvent(t, wsc, eid,
 		func() {},
-		func(eid string, b event.AnyEventData) (bool, error) {
+		func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 			return false, nil
 		})
 	assert.True(t, err.Timeout(), "We should have timed out waiting for second"+
@@ -156,7 +154,7 @@ func TestWSCallWait(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid1 := exe_events.EventStringAccInput(privateAccounts[0].Address())
+	eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
 	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 	defer func() {
 		unsubscribe(t, wsc, subId1)
@@ -174,7 +172,7 @@ func TestWSCallWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
-	eid2 := exe_events.EventStringAccOutput(contractAddr)
+	eid2 := exe_events.EventStringAccountOutput(contractAddr)
 	subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
 	defer func() {
 		unsubscribe(t, wsc, subId2)
@@ -206,7 +204,7 @@ func TestWSCallNoWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
-	eid := exe_events.EventStringAccOutput(contractAddr)
+	eid := exe_events.EventStringAccountOutput(contractAddr)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
 	// get the return value from a call
@@ -235,7 +233,7 @@ func TestWSCallCall(t *testing.T) {
 	contractAddr1 := receipt.ContractAddr
 
 	// subscribe to the new contracts
-	eid := evm_events.EventStringAccCall(contractAddr1)
+	eid := evm_events.EventStringAccountCall(contractAddr1)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
 	// call contract2, which should call contract1, and wait for ev1
@@ -250,7 +248,7 @@ func TestWSCallCall(t *testing.T) {
 		func() {
 		},
 		// Event Checker
-		func(eid string, b event.AnyEventData) (bool, error) {
+		func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 			return true, nil
 		})
 	// call it
@@ -268,21 +266,19 @@ func TestWSCallCall(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	wsc := newWSClient()
 	var subId string
-	subscribe(t, wsc, tm_types.EventStringNewBlock())
+	subscribe(t, wsc, tm_types.EventNewBlock)
 
-	// timeout to check subscription process is live
-	timeout := time.After(timeoutSeconds * time.Second)
 Subscribe:
 	for {
 		select {
-		case <-timeout:
+		case <-time.After(timeoutSeconds * time.Second):
 			t.Fatal("Timed out waiting for subscription result")
 
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error)
 			res := new(rpc.ResultSubscribe)
-			require.NoError(t, json.Unmarshal(*response.Result, res))
-			assert.Equal(t, tm_types.EventStringNewBlock(), res.EventID)
+			require.NoError(t, json.Unmarshal(response.Result, res))
+			assert.Equal(t, tm_types.EventNewBlock, res.EventID)
 			subId = res.SubscriptionID
 			break Subscribe
 		}
@@ -302,9 +298,9 @@ Subscribe:
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error)
 
-			if response.ID == tm_client.EventResponseID(tm_types.EventStringNewBlock()) {
+			if response.ID == tm_client.EventResponseID(tm_types.EventNewBlock) {
 				res := new(rpc.ResultEvent)
-				json.Unmarshal(*response.Result, res)
+				json.Unmarshal(response.Result, res)
 				enb := res.EventDataNewBlock()
 				if enb != nil {
 					assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)
