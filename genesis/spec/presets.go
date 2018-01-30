@@ -75,7 +75,7 @@ func ValidatorAccount(index int) GenesisSpec {
 			Name:         fmt.Sprintf("Validator_%v", index),
 			Amount:       &amount,
 			AmountBonded: &amountBonded,
-			Permissions: []string{permission.BondString},
+			Permissions:  []string{permission.BondString},
 		}},
 	}
 }

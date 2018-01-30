@@ -30,7 +30,6 @@ type abciApp struct {
 	txDecoder txs.Decoder
 	// Logging
 	logger logging_types.InfoTraceLogger
-
 }
 
 func NewApp(blockchain bcm.MutableBlockchain,

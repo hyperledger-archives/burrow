@@ -186,5 +186,3 @@ func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
 	}
 	return newSlice
 }
-
-
