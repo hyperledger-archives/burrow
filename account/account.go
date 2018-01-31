@@ -97,9 +97,9 @@ type MutableAccount interface {
 type ConcreteAccount struct {
 	Address     Address
 	PublicKey   PublicKey
+	Sequence    uint64
 	Balance     uint64
 	Code        Bytecode
-	Sequence    uint64
 	StorageRoot []byte
 	Permissions ptypes.AccountPermissions
 }

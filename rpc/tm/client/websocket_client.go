@@ -16,8 +16,8 @@ package client
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/tendermint/tendermint/rpc/lib/types"
 )
 
@@ -25,21 +25,25 @@ type WebsocketClient interface {
 	Send(ctx context.Context, request rpctypes.RPCRequest) error
 }
 
-func Subscribe(wsc WebsocketClient, eventId string) error {
-	req, err := rpctypes.MapToRequest(fmt.Sprintf("wsclient_subscribe?eventId=%s", eventId),
-		"subscribe", map[string]interface{}{"eventId": eventId})
+const SubscribeRequestID = "Subscribe"
+const UnsubscribeRequestID = "Unsubscribe"
+
+func EventResponseID(eventID string) string {
+	return tm.EventResponseID(SubscribeRequestID, eventID)
+}
+
+func Subscribe(wsc WebsocketClient, eventID string) error {
+	req, err := rpctypes.MapToRequest(SubscribeRequestID,
+		"subscribe", map[string]interface{}{"eventID": eventID})
 	if err != nil {
 		return err
 	}
 	return wsc.Send(context.Background(), req)
-
-	//return wsc.Call(context.Background(), "subscribe",
-	//	map[string]interface{}{"eventId": eventId})
 }
 
-func Unsubscribe(websocketClient WebsocketClient, subscriptionId string) error {
-	req, err := rpctypes.MapToRequest(fmt.Sprintf("wsclient_unsubscribe?subId=%s", subscriptionId),
-		"unsubscribe", map[string]interface{}{"subscriptionId": subscriptionId})
+func Unsubscribe(websocketClient WebsocketClient, subscriptionID string) error {
+	req, err := rpctypes.MapToRequest(UnsubscribeRequestID,
+		"unsubscribe", map[string]interface{}{"subscriptionID": subscriptionID})
 	if err != nil {
 		return err
 	}

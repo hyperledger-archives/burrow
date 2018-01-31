@@ -13,9 +13,9 @@ import (
 
 // AnyEventData provides a single type for our multiplexed event categories of EVM events and Tendermint events
 type AnyEventData struct {
-	TMEventData     *tm_types.TMEventData `json:"tm_event_data,omitempty"`
-	BurrowEventData *EventData            `json:"burrow_event_data,omitempty"`
-	Err             *string               `json:"error,omitempty"`
+	TMEventData     *tm_types.TMEventData `json:",omitempty"`
+	BurrowEventData *EventData            `json:",omitempty"`
+	Err             *string               `json:",omitempty"`
 }
 
 type EventData struct {

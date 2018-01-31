@@ -32,56 +32,56 @@ type HTTPResponse struct {
 	Error    string
 }
 
-func RequestResponse(addr, method string, args map[string]string, logger logging_types.InfoTraceLogger) (string, error) {
-	body, err := json.Marshal(args)
-	if err != nil {
-		return "", err
+type Requester func(method string, args map[string]string) (response string, err error)
+
+func DefaultRequester(rpcAddress string, logger logging_types.InfoTraceLogger) Requester {
+	return func(method string, args map[string]string) (string, error) {
+		body, err := json.Marshal(args)
+		if err != nil {
+			return "", err
+		}
+		endpoint := fmt.Sprintf("%s/%s", rpcAddress, method)
+		logging.TraceMsg(logger, "Sending request to key server",
+			"key_server_endpoint", endpoint,
+			"request_body", string(body),
+		)
+		req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
+		if err != nil {
+			return "", err
+		}
+		req.Header.Add("Content-Type", "application/json")
+		res, err := requestResponse(req)
+		if err != nil {
+			return "", fmt.Errorf("error calling monax-keys at %s: %s", endpoint, err.Error())
+		}
+		if res.Error != "" {
+			return "", fmt.Errorf("response error when calling monax-keys at %s: %s", endpoint, res.Error)
+		}
+		logging.TraceMsg(logger, "Received response from key server",
+			"endpoint", endpoint,
+			"request_body", string(body),
+			"response", res,
+		)
+		return res.Response, nil
 	}
-	endpoint := fmt.Sprintf("%s/%s", addr, method)
-	logging.TraceMsg(logger, "Sending request to key server",
-		"key_server_endpoint", endpoint,
-		"request_body", string(body),
-	)
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	res, errS, err := requestResponse(req)
-	if err != nil {
-		return "", fmt.Errorf("Error calling monax-keys at %s: %s", endpoint, err.Error())
-	}
-	if errS != "" {
-		return "", fmt.Errorf("Error (string) calling monax-keys at %s: %s", endpoint, errS)
-	}
-	logging.TraceMsg(logger, "Received response from key server",
-		"endpoint", endpoint,
-		"request_body", string(body),
-		"response", res,
-	)
-	return res, nil
 }
 
-func requestResponse(req *http.Request) (string, string, error) {
+func requestResponse(req *http.Request) (*HTTPResponse, error) {
 	client := new(http.Client)
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		return "", "", fmt.Errorf(resp.Status)
+		return nil, fmt.Errorf(resp.Status)
 	}
-	return unpackResponse(resp)
-}
-
-func unpackResponse(resp *http.Response) (string, string, error) {
-	b, err := ioutil.ReadAll(resp.Body)
+	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
-	r := new(HTTPResponse)
-	if err := json.Unmarshal(b, r); err != nil {
-		return "", "", err
+	httpResponse := new(HTTPResponse)
+	if err := json.Unmarshal(bs, httpResponse); err != nil {
+		return nil, err
 	}
-	return r.Response, r.Error, nil
+	return httpResponse, nil
 }

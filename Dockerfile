@@ -3,12 +3,10 @@ FROM golang:1.9.0-alpine3.6 as builder
 MAINTAINER Monax <support@monax.io>
 
 RUN apk add --no-cache --update git
-RUN go get github.com/Masterminds/glide
 
 ARG REPO=$GOPATH/src/github.com/hyperledger/burrow
 COPY . $REPO
 WORKDIR $REPO
-RUN glide install
 
 # Build purely static binaries
 RUN go build --ldflags '-extldflags "-static"' -o bin/burrow ./cmd/burrow
@@ -33,4 +31,4 @@ EXPOSE 1337
 EXPOSE 46656
 EXPOSE 46657
 
-CMD [ "burrow", "serve" ]
+CMD [ "burrow" ]

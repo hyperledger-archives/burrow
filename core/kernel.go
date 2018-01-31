@@ -15,13 +15,12 @@
 package core
 
 import (
-	"net"
+	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
-
-	"fmt"
 
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -33,6 +32,8 @@ import (
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
+	"github.com/hyperledger/burrow/rpc/v0"
+	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
 	"github.com/hyperledger/burrow/txs"
 	tm_config "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
@@ -42,6 +43,7 @@ import (
 )
 
 const CooldownMilliseconds = 1000
+const ServerShutdownTimeoutMilliseconds = 1000
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
@@ -49,15 +51,10 @@ type Kernel struct {
 	tmNode          *node.Node
 	service         rpc.Service
 	serverLaunchers []ServerLauncher
-	listeners       []net.Listener
+	servers         []Server
 	logger          logging_types.InfoTraceLogger
 	shutdownNotify  chan struct{}
 	shutdownOnce    sync.Once
-}
-
-type ServerLauncher struct {
-	Name   string
-	Launch func(rpc.Service) (net.Listener, error)
 }
 
 func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config,
@@ -84,8 +81,6 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	eventEmitter := event.Multiplex(evmEvents, event.WrapEventSwitch(tmNode.EventSwitch(), logger))
 
 	txCodec := txs.NewGoWireCodec()
-	nameReg := execution.NewNameReg(state, blockchain)
-
 	transactor := execution.NewTransactor(blockchain, state, eventEmitter,
 		tendermint.BroadcastTxAsyncFunc(tmNode, txCodec), logger)
 
@@ -95,14 +90,37 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	// view of sequence values on the node that a client is communicating with.
 	// Since we don't currently execute EVM code in the checker possible conflicts are limited to account creation
 	// which increments the creator's account Sequence and SendTxs
-	service := rpc.NewService(state, eventEmitter, nameReg, blockchain, transactor, query.NewNodeView(tmNode, txCodec),
+	service := rpc.NewService(state, state, eventEmitter, blockchain, transactor, query.NewNodeView(tmNode, txCodec),
 		logger)
 
 	servers := []ServerLauncher{
 		{
 			Name: "TM",
-			Launch: func(service rpc.Service) (net.Listener, error) {
-				return tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, eventEmitter, logger)
+			Launch: func() (Server, error) {
+				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, eventEmitter, logger)
+				if err != nil {
+					return nil, err
+				}
+				return ListenersServer(listener), nil
+			},
+		},
+		{
+			Name: "V0",
+			Launch: func() (Server, error) {
+				codec := v0.NewTCodec()
+				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service))
+				websocketServer := v0_server.NewWebSocketServer(rpcConfig.V0.Server.WebSocket.MaxWebSocketSessions,
+					v0.NewWebsocketService(codec, service), logger)
+
+				serveProcess, err := v0_server.NewServeProcess(rpcConfig.V0.Server, logger, jsonServer, websocketServer)
+				if err != nil {
+					return nil, err
+				}
+				err = serveProcess.Start()
+				if err != nil {
+					return nil, err
+				}
+				return serveProcess, nil
 			},
 		},
 	}
@@ -124,12 +142,12 @@ func (kern *Kernel) Boot() error {
 		return fmt.Errorf("error starting Tendermint node: %v", err)
 	}
 	for _, launcher := range kern.serverLaunchers {
-		listener, err := launcher.Launch(kern.service)
+		server, err := launcher.Launch()
 		if err != nil {
-			return fmt.Errorf("error launching %s server", launcher.Name)
+			return fmt.Errorf("error launching %s server: %v", launcher.Name, err)
 		}
 
-		kern.listeners = append(kern.listeners, listener)
+		kern.servers = append(kern.servers, server)
 	}
 	go kern.supervise()
 	return nil
@@ -148,17 +166,19 @@ func (kern *Kernel) supervise() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	<-signals
-	kern.Shutdown()
+	kern.Shutdown(context.Background())
 }
 
 // Stop the kernel allowing for a graceful shutdown of components in order
-func (kern *Kernel) Shutdown() (err error) {
+func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 	kern.shutdownOnce.Do(func() {
 		logger := logging.WithScope(kern.logger, "Shutdown")
 		logging.InfoMsg(logger, "Attempting graceful shutdown...")
-		logging.InfoMsg(logger, "Shutting down listeners")
-		for _, listener := range kern.listeners {
-			err = listener.Close()
+		logging.InfoMsg(logger, "Shutting down servers")
+		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeoutMilliseconds*time.Millisecond)
+		defer cancel()
+		for _, server := range kern.servers {
+			err = server.Shutdown(ctx)
 		}
 		logging.InfoMsg(logger, "Shutting down Tendermint node")
 		kern.tmNode.Stop()

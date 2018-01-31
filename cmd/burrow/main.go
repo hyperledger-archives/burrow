@@ -29,7 +29,8 @@ func main() {
 	burrow.Spec = "[--config=<config file>] [--genesis=<genesis json file>]"
 
 	burrow.Action = func() {
-		conf := new(config.BurrowConfig)
+		// We need to reflect on whether this obscures where values are coming from
+		conf := config.DefaultBurrowConfig()
 		err := source.EachOf(
 			burrowConfigProvider(*configOpt),
 			source.FirstOf(
@@ -155,7 +156,7 @@ func main() {
 					if err != nil {
 						fatalf("could not read GenesisSpec: %v", err)
 					}
-					keyClient := keys.NewBurrowKeyClient(conf.Keys.URL, loggers.NewNoopInfoTraceLogger())
+					keyClient := keys.NewKeyClient(conf.Keys.URL, loggers.NewNoopInfoTraceLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
 						fatalf("could not realise GenesisSpec: %v", err)

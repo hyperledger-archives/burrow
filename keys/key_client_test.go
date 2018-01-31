@@ -32,14 +32,14 @@ func TestMain(m *testing.M) {
 }
 
 func TestMonaxKeyClient_Generate(t *testing.T) {
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)
 	assert.NoError(t, err)
 	assert.NotEqual(t, acm.ZeroAddress, addr)
 }
 
 func TestMonaxKeyClient_PublicKey(t *testing.T) {
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)
 	assert.NoError(t, err)
 	pubKey, err := keyClient.PublicKey(addr)
@@ -47,13 +47,13 @@ func TestMonaxKeyClient_PublicKey(t *testing.T) {
 }
 
 func TestMonaxKeyClient_PublicKey_NonExistent(t *testing.T) {
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	_, err := keyClient.PublicKey(acm.Address{8, 7, 6, 222})
 	assert.Error(t, err)
 }
 
 func TestMonaxKeyClient_Sign(t *testing.T) {
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
 	pubKey, err := keyClient.PublicKey(addr)
@@ -65,14 +65,14 @@ func TestMonaxKeyClient_Sign(t *testing.T) {
 }
 
 func TestMonaxKeyClient_HealthCheck(t *testing.T) {
-	deadKeyClient := NewBurrowKeyClient("http://localhost:99999", logger)
+	deadKeyClient := NewKeyClient("http://localhost:99999", logger)
 	assert.NotNil(t, deadKeyClient.HealthCheck())
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	assert.Nil(t, keyClient.HealthCheck())
 }
 
 func TestPublicKeyAddressAgreement(t *testing.T) {
-	keyClient := NewBurrowKeyClient(rpcString, logger)
+	keyClient := NewKeyClient(rpcString, logger)
 	addr, err := keyClient.Generate("I'm a lovely hat", KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
 	pubKey, err := keyClient.PublicKey(addr)

@@ -1,13 +1,10 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
-	"fmt"
-
-	"encoding/json"
-
-	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 )
 

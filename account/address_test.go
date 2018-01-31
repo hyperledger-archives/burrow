@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewContractAddress(t *testing.T) {
@@ -56,4 +57,16 @@ func TestAddress_MarshalText(t *testing.T) {
 	err = addrOut.UnmarshalText(bs)
 
 	assert.Equal(t, addr, *addrOut)
+}
+
+func TestAddress_Length(t *testing.T) {
+	addrOut := new(Address)
+	err := addrOut.UnmarshalText(([]byte)("49EA30FCAE731BDE36742F85901549F515EA1A10"))
+	require.NoError(t, err)
+
+	err = addrOut.UnmarshalText(([]byte)("49EA30FCAE731BDE36742F85901549F515EA1A1"))
+	assert.Error(t, err, "address too short")
+
+	err = addrOut.UnmarshalText(([]byte)("49EA30FCAE731BDE36742F85901549F515EA1A1020"))
+	assert.Error(t, err, "address too long")
 }

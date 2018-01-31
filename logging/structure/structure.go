@@ -27,6 +27,8 @@ const (
 	ChannelKey = "log_channel"
 	// Log message (string)
 	MessageKey = "message"
+	// Error key
+	ErrorKey = "error"
 	// Captured logging source (like tendermint_log15, stdlib_log)
 	CapturedLoggingSourceKey = "captured_logging_source"
 	// Top-level component (choose one) name
@@ -186,5 +188,3 @@ func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
 	}
 	return newSlice
 }
-
-

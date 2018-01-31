@@ -30,7 +30,6 @@ type abciApp struct {
 	txDecoder txs.Decoder
 	// Logging
 	logger logging_types.InfoTraceLogger
-
 }
 
 func NewApp(blockchain bcm.MutableBlockchain,
@@ -72,7 +71,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.Result {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		logging.TraceMsg(app.logger, "CheckTx decoding error",
-			"error", err)
+			structure.ErrorKey, err)
 		return abci_types.NewError(abci_types.CodeType_EncodingError, fmt.Sprintf("Encoding error: %v", err))
 	}
 	// TODO: map ExecTx errors to sensible ABCI error codes
@@ -81,7 +80,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.Result {
 	err = app.checker.Execute(tx)
 	if err != nil {
 		logging.TraceMsg(app.logger, "CheckTx execution error",
-			"error", err,
+			structure.ErrorKey, err,
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.NewError(abci_types.CodeType_InternalError,
@@ -109,7 +108,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.Result {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		logging.TraceMsg(app.logger, "DeliverTx decoding error",
-			"error", err)
+			structure.ErrorKey, err)
 		return abci_types.NewError(abci_types.CodeType_EncodingError, fmt.Sprintf("Encoding error: %s", err))
 	}
 
@@ -117,7 +116,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.Result {
 	err = app.committer.Execute(tx)
 	if err != nil {
 		logging.TraceMsg(app.logger, "DeliverTx execution error",
-			"error", err,
+			structure.ErrorKey, err,
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.NewError(abci_types.CodeType_InternalError,

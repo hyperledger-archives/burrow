@@ -253,7 +253,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logging.InfoMsg(logger, "validateInput failed",
-				"tx_input", tx.Input, "error", err)
+				"tx_input", tx.Input, structure.ErrorKey, err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
@@ -369,7 +369,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 					logging.InfoMsg(logger, "Error on execution",
-						"error", err)
+						structure.ErrorKey, err)
 					goto CALL_COMPLETE
 				}
 
@@ -387,7 +387,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				"caller", caller,
 				"callee", callee,
 				"return", ret,
-				"error", err)
+				structure.ErrorKey, err)
 
 			// Fire Events for sender and receiver
 			// a separate event will be fired from vm for each additional call
@@ -451,7 +451,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logging.InfoMsg(logger, "validateInput failed",
-				"tx_input", tx.Input, "error", err)
+				"tx_input", tx.Input, structure.ErrorKey, err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
@@ -740,7 +740,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		if err != nil {
 			logging.InfoMsg(logger, "validateInput failed",
 				"tx_input", tx.Input,
-				"error", err)
+				structure.ErrorKey, err)
 			return err
 		}
 

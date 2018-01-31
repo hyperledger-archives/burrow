@@ -27,6 +27,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/version"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -37,36 +38,33 @@ const MaxBlockLookback = 100
 // Base service that provides implementation for all underlying RPC methods
 type Service interface {
 	// Transact
-	BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error)
+	Transactor() execution.Transactor
+	// List mempool transactions pass -1 for all unconfirmed transactions
+	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
 	// Events
-	Subscribe(eventId string, callback func(eventData event.AnyEventData)) (*ResultSubscribe, error)
-	Unsubscribe(subscriptionId string) (*ResultUnsubscribe, error)
+	Subscribe(subscriptionId, eventId string, callback func(eventData event.AnyEventData)) error
+	Unsubscribe(subscriptionId string) error
 	// Status
 	Status() (*ResultStatus, error)
 	NetInfo() (*ResultNetInfo, error)
 	// Accounts
 	GetAccount(address acm.Address) (*ResultGetAccount, error)
-	ListAccounts() (*ResultListAccounts, error)
+	ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error)
 	GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error)
 	DumpStorage(address acm.Address) (*ResultDumpStorage, error)
-	// Simulated call
-	Call(fromAddress, toAddress acm.Address, data []byte) (*ResultCall, error)
-	CallCode(fromAddress acm.Address, code, data []byte) (*ResultCall, error)
 	// Blockchain
 	Genesis() (*ResultGenesis, error)
 	ChainId() (*ResultChainId, error)
-	BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchainInfo, error)
 	GetBlock(height uint64) (*ResultGetBlock, error)
+	ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error)
 	// Consensus
-	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
 	ListValidators() (*ResultListValidators, error)
 	DumpConsensusState() (*ResultDumpConsensusState, error)
 	Peers() (*ResultPeers, error)
 	// Names
 	GetName(name string) (*ResultGetName, error)
-	ListNames() (*ResultListNames, error)
+	ListNames(predicate func(*execution.NameRegEntry) bool) (*ResultListNames, error)
 	// Private keys and signing
-	SignTx(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*ResultSignTx, error)
 	GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error)
 }
 
@@ -81,15 +79,16 @@ type service struct {
 }
 
 var _ Service = &service{}
+var _ event.Subscribable = Service(nil)
 
-func NewService(state acm.StateIterable, eventEmitter event.Emitter, nameReg execution.NameRegIterable,
+func NewService(state acm.StateIterable, nameReg execution.NameRegIterable, eventEmitter event.Emitter,
 	blockchain bcm.Blockchain, transactor execution.Transactor, nodeView query.NodeView,
 	logger logging_types.InfoTraceLogger) *service {
 
 	return &service{
 		state:        state,
-		eventEmitter: eventEmitter,
 		nameReg:      nameReg,
+		eventEmitter: eventEmitter,
 		blockchain:   blockchain,
 		transactor:   transactor,
 		nodeView:     nodeView,
@@ -97,34 +96,38 @@ func NewService(state acm.StateIterable, eventEmitter event.Emitter, nameReg exe
 	}
 }
 
-// All methods in this file return (Result*, error) which is the return
-// signature assumed by go-rpc
+// Transacting...
 
-func (s *service) Subscribe(eventId string, callback func(event.AnyEventData)) (*ResultSubscribe, error) {
-	subscriptionId, err := event.GenerateSubId()
+func (s *service) Transactor() execution.Transactor {
+	return s.transactor
+}
 
-	logging.InfoMsg(s.logger, "Subscribing to event",
-		"eventId", eventId, "subscriptionId", subscriptionId)
+func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
+	// Get all transactions for now
+	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
 	if err != nil {
 		return nil, err
 	}
-	err = s.eventEmitter.Subscribe(subscriptionId, eventId, callback)
-	if err != nil {
-		return nil, err
+	wrappedTxs := make([]txs.Wrapper, len(transactions))
+	for i, tx := range transactions {
+		wrappedTxs[i] = txs.Wrap(tx)
 	}
-	return &ResultSubscribe{
-		SubscriptionId: subscriptionId,
-		Event:          eventId,
+	return &ResultListUnconfirmedTxs{
+		N:   len(transactions),
+		Txs: wrappedTxs,
 	}, nil
 }
 
-func (s *service) Unsubscribe(subscriptionId string) (*ResultUnsubscribe, error) {
-	err := s.eventEmitter.Unsubscribe(subscriptionId)
-	if err != nil {
-		return nil, err
-	} else {
-		return &ResultUnsubscribe{SubscriptionId: subscriptionId}, nil
-	}
+// All methods in this file return (Result*, error) which is the return
+// signature assumed by go-rpc
+func (s *service) Subscribe(subscriptionId, eventId string, callback func(event.AnyEventData)) error {
+	logging.InfoMsg(s.logger, "Subscribing to event",
+		"eventId", eventId, "subscriptionId", subscriptionId)
+	return s.eventEmitter.Subscribe(subscriptionId, eventId, callback)
+}
+
+func (s *service) Unsubscribe(subscriptionId string) error {
+	return s.eventEmitter.Unsubscribe(subscriptionId)
 }
 
 func (s *service) Status() (*ResultStatus, error) {
@@ -146,7 +149,9 @@ func (s *service) Status() (*ResultStatus, error) {
 		PubKey:            s.nodeView.PrivValidatorPublicKey(),
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
-		LatestBlockTime:   latestBlockTime}, nil
+		LatestBlockTime:   latestBlockTime,
+		NodeVersion:       version.GetVersionString(),
+	}, nil
 }
 
 func (s *service) ChainId() (*ResultChainId, error) {
@@ -202,10 +207,12 @@ func (s *service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 
-func (s *service) ListAccounts() (*ResultListAccounts, error) {
+func (s *service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error) {
 	accounts := make([]*acm.ConcreteAccount, 0)
 	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
-		accounts = append(accounts, acm.AsConcreteAccount(account))
+		if predicate(account) {
+			accounts = append(accounts, acm.AsConcreteAccount(account))
+		}
 		return
 	})
 
@@ -242,7 +249,7 @@ func (s *service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 	if account == nil {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
-	storageItems := []StorageItem{}
+	var storageItems []StorageItem
 	s.state.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
 		return
@@ -250,26 +257,6 @@ func (s *service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 	return &ResultDumpStorage{
 		StorageRoot:  account.StorageRoot(),
 		StorageItems: storageItems,
-	}, nil
-}
-
-func (s *service) Call(fromAddress, toAddress acm.Address, data []byte) (*ResultCall, error) {
-	call, err := s.transactor.Call(fromAddress, toAddress, data)
-	if err != nil {
-		return nil, err
-	}
-	return &ResultCall{
-		Call: call,
-	}, nil
-}
-
-func (s *service) CallCode(fromAddress acm.Address, code, data []byte) (*ResultCall, error) {
-	call, err := s.transactor.CallCode(fromAddress, code, data)
-	if err != nil {
-		return nil, err
-	}
-	return &ResultCall{
-		Call: call,
 	}, nil
 }
 
@@ -282,11 +269,13 @@ func (s *service) GetName(name string) (*ResultGetName, error) {
 	return &ResultGetName{Entry: entry}, nil
 }
 
-func (s *service) ListNames() (*ResultListNames, error) {
+func (s *service) ListNames(predicate func(*execution.NameRegEntry) bool) (*ResultListNames, error) {
 	var names []*execution.NameRegEntry
 	s.nameReg.IterateNameRegEntries(func(entry *execution.NameRegEntry) (stop bool) {
-		names = append(names, entry)
-		return false
+		if predicate(entry) {
+			names = append(names, entry)
+		}
+		return
 	})
 	return &ResultListNames{
 		BlockHeight: s.blockchain.Tip().LastBlockHeight(),
@@ -294,29 +283,10 @@ func (s *service) ListNames() (*ResultListNames, error) {
 	}, nil
 }
 
-func (s *service) BroadcastTx(tx txs.Tx) (*ResultBroadcastTx, error) {
-	receipt, err := s.transactor.BroadcastTx(tx)
-	if err != nil {
-		return nil, err
-	}
-	return &ResultBroadcastTx{
-		Receipt: receipt,
-	}, nil
-}
-
-func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
-	// Get all transactions for now
-	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
-	if err != nil {
-		return nil, err
-	}
-	wrappedTxs := make([]txs.Wrapper, len(transactions))
-	for i, tx := range transactions {
-		wrappedTxs[i] = txs.Wrap(tx)
-	}
-	return &ResultListUnconfirmedTxs{
-		N:   len(transactions),
-		Txs: wrappedTxs,
+func (s *service) GetBlock(height uint64) (*ResultGetBlock, error) {
+	return &ResultGetBlock{
+		Block:     s.nodeView.BlockStore().LoadBlock(int(height)),
+		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int(height)),
 	}, nil
 }
 
@@ -325,7 +295,7 @@ func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 // from the top of the range of blocks.
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
-func (s *service) BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchainInfo, error) {
+func (s *service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
 	latestHeight := s.blockchain.Tip().LastBlockHeight()
 
 	if minHeight == 0 {
@@ -338,22 +308,15 @@ func (s *service) BlockchainInfo(minHeight, maxHeight uint64) (*ResultBlockchain
 		minHeight = maxHeight - MaxBlockLookback
 	}
 
-	blockMetas := []*tm_types.BlockMeta{}
+	var blockMetas []*tm_types.BlockMeta
 	for height := maxHeight; height >= minHeight; height-- {
 		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int(height))
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
-	return &ResultBlockchainInfo{
+	return &ResultListBlocks{
 		LastHeight: latestHeight,
 		BlockMetas: blockMetas,
-	}, nil
-}
-
-func (s *service) GetBlock(height uint64) (*ResultGetBlock, error) {
-	return &ResultGetBlock{
-		Block:     s.nodeView.BlockStore().LoadBlock(int(height)),
-		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int(height)),
 	}, nil
 }
 
@@ -381,17 +344,6 @@ func (s *service) DumpConsensusState() (*ResultDumpConsensusState, error) {
 		RoundState:      s.nodeView.RoundState(),
 		PeerRoundStates: peerRoundState,
 	}, nil
-}
-
-// TODO: Either deprecate this or ensure it can only happen over secure transport
-func (s *service) SignTx(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*ResultSignTx, error) {
-	privateAccounts := make([]acm.PrivateAccount, len(concretePrivateAccounts))
-	for i, cpa := range concretePrivateAccounts {
-		privateAccounts[i] = cpa.PrivateAccount()
-	}
-
-	tx, err := s.transactor.SignTx(tx, privateAccounts)
-	return &ResultSignTx{Tx: txs.Wrap(tx)}, err
 }
 
 func (s *service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {

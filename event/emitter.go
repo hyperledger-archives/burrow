@@ -207,7 +207,7 @@ type PollResponse struct {
 // **************************************************************************************
 // Helper function
 
-func GenerateSubId() (string, error) {
+func GenerateSubscriptionID() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {

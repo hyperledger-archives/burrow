@@ -501,10 +501,6 @@ func (s *State) RemoveNameRegEntry(name string) bool {
 	return removed
 }
 
-func (s *State) GetNames() merkle.Tree {
-	return s.nameReg.Copy()
-}
-
 // Set the name reg tree
 func (s *State) SetNameReg(nameReg merkle.Tree) {
 	s.nameReg = nameReg

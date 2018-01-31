@@ -17,8 +17,6 @@ package rpc
 import (
 	"testing"
 
-	"fmt"
-
 	"encoding/json"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -49,14 +47,16 @@ func TestResultBroadcastTx(t *testing.T) {
 func TestListUnconfirmedTxs(t *testing.T) {
 	res := &ResultListUnconfirmedTxs{
 		N: 3,
-		Txs: []txs.Tx{
-			&txs.CallTx{
+		Txs: []txs.Wrapper{
+			txs.Wrap(&txs.CallTx{
 				Address: &acm.Address{1},
-			},
+			}),
 		},
 	}
-	fmt.Println(string(wire.JSONBytes(res)))
-
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	assert.Equal(t, `{"n_txs":3,"txs":[{"type":"call_tx","data":{"input":null,"address":"0100000000000000000000000000000000000000","gas_limit":0,"fee":0,"data":null}}]}`,
+		string(bs))
 }
 
 func TestResultListAccounts(t *testing.T) {
@@ -74,11 +74,4 @@ func TestResultListAccounts(t *testing.T) {
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
-}
-
-func TestResultEvent(t *testing.T) {
-	res := ResultEvent{
-		Event: "a",
-	}
-	fmt.Println(res)
 }

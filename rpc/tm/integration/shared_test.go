@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,4 +15,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v0
+package integration
+
+import (
+	"os"
+	"testing"
+)
+
+// Needs to be in a _test.go file to be picked up
+func TestMain(m *testing.M) {
+	returnValue := TestWrapper(func() int {
+		return m.Run()
+	})
+
+	os.Exit(returnValue)
+}

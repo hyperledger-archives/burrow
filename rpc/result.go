@@ -20,79 +20,14 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-wire/data"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
-type Result struct {
-	ResultInner `json:"unwrap"`
-}
-
-type ResultInner interface {
-}
-
-func (res Result) Unwrap() ResultInner {
-	return res.ResultInner
-}
-
-func (br Result) MarshalJSON() ([]byte, error) {
-	return mapper.ToJSON(br.ResultInner)
-}
-
-func (br *Result) UnmarshalJSON(data []byte) (err error) {
-	parsed, err := mapper.FromJSON(data)
-	if err == nil && parsed != nil {
-		br.ResultInner = parsed.(ResultInner)
-	}
-	return err
-}
-
-var mapper = data.NewMapper(Result{}).
-	// Transact
-	RegisterImplementation(&ResultBroadcastTx{}, "result_broadcast_tx", biota()).
-	// Events
-	RegisterImplementation(&ResultSubscribe{}, "result_subscribe", biota()).
-	RegisterImplementation(&ResultUnsubscribe{}, "result_unsubscribe", biota()).
-	RegisterImplementation(&ResultEvent{}, "result_event", biota()).
-	// Status
-	RegisterImplementation(&ResultStatus{}, "result_status", biota()).
-	RegisterImplementation(&ResultNetInfo{}, "result_net_info", biota()).
-	// Accounts
-	RegisterImplementation(&ResultGetAccount{}, "result_get_account", biota()).
-	RegisterImplementation(&ResultListAccounts{}, "result_list_account", biota()).
-	RegisterImplementation(&ResultGetStorage{}, "result_get_storage", biota()).
-	RegisterImplementation(&ResultDumpStorage{}, "result_dump_storage", biota()).
-	// Simulated call
-	RegisterImplementation(&ResultCall{}, "result_call", biota()).
-	// Blockchain
-	RegisterImplementation(&ResultGenesis{}, "result_genesis", biota()).
-	RegisterImplementation(&ResultChainId{}, "result_chain_id", biota()).
-	RegisterImplementation(&ResultBlockchainInfo{}, "result_blockchain_info", biota()).
-	RegisterImplementation(&ResultGetBlock{}, "result_get_block", biota()).
-	// Consensus
-	RegisterImplementation(&ResultListUnconfirmedTxs{}, "result_list_unconfirmed_txs", biota()).
-	RegisterImplementation(&ResultListValidators{}, "result_list_validators", biota()).
-	RegisterImplementation(&ResultDumpConsensusState{}, "result_dump_consensus_state", biota()).
-	RegisterImplementation(&ResultPeers{}, "result_peers", biota()).
-	// Names
-	RegisterImplementation(&ResultGetName{}, "result_get_name", biota()).
-	RegisterImplementation(&ResultListNames{}, "result_list_names", biota()).
-	// Private keys and signing
-	RegisterImplementation(&ResultSignTx{}, "result_sign_tx", biota()).
-	RegisterImplementation(&ResultGeneratePrivateAccount{}, "result_generate_private_account", biota())
-
 type ResultGetStorage struct {
 	Key   []byte `json:"key"`
 	Value []byte `json:"value"`
-}
-
-func (br Result) ResultGetStorage() *ResultGetStorage {
-	if res, ok := br.ResultInner.(*ResultGetStorage); ok {
-		return res
-	}
-	return nil
 }
 
 type ResultCall struct {
@@ -114,7 +49,7 @@ type StorageItem struct {
 	Value []byte `json:"value"`
 }
 
-type ResultBlockchainInfo struct {
+type ResultListBlocks struct {
 	LastHeight uint64                `json:"last_height"`
 	BlockMetas []*tm_types.BlockMeta `json:"block_metas"`
 }
@@ -131,6 +66,7 @@ type ResultStatus struct {
 	LatestBlockHash   []byte        `json:"latest_block_hash"`
 	LatestBlockHeight uint64        `json:"latest_block_height"`
 	LatestBlockTime   int64         `json:"latest_block_time"` // nano
+	NodeVersion       string        `json:"node_version"`      // nano
 }
 
 type ResultChainId struct {
@@ -140,12 +76,12 @@ type ResultChainId struct {
 }
 
 type ResultSubscribe struct {
-	Event          string `json:"event"`
-	SubscriptionId string `json:"subscription_id"`
+	EventID        string `json:"event"`
+	SubscriptionID string `json:"subscription_id"`
 }
 
 type ResultUnsubscribe struct {
-	SubscriptionId string `json:"subscription_id"`
+	SubscriptionID string `json:"subscription_id"`
 }
 
 type Peer struct {
@@ -211,12 +147,6 @@ type ResultSignTx struct {
 type ResultEvent struct {
 	Event              string `json:"event"`
 	event.AnyEventData `json:"data"`
-}
-
-func (re ResultEvent) Wrap() Result {
-	return Result{
-		ResultInner: &re,
-	}
 }
 
 // Type byte helper

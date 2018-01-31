@@ -10,17 +10,17 @@ import (
 // are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
-	Seeds                string
-	ListenAddress        string
-	Moniker              string
-	TendermintRoot       string
+	Seeds          string
+	ListenAddress  string
+	Moniker        string
+	TendermintRoot string
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 	tmDefaultConfig := tm_config.DefaultConfig()
 	return &BurrowTendermintConfig{
-		ListenAddress:        tmDefaultConfig.P2P.ListenAddress,
-		TendermintRoot:       ".burrow",
+		ListenAddress:  tmDefaultConfig.P2P.ListenAddress,
+		TendermintRoot: ".burrow",
 	}
 }
 

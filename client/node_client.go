@@ -127,7 +127,7 @@ func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, Validato
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get status: %s",
+		err = fmt.Errorf("error connecting to node (%s) to get status: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
 		return
 	}
@@ -145,7 +145,7 @@ func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	chainIdResult, err := tendermint_client.ChainId(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get chain id: %s",
+		err = fmt.Errorf("error connecting to node (%s) to get chain id: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
 		return "", "", nil, err
 	}
@@ -165,7 +165,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAdd
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
-		err = fmt.Errorf("Error (%v) connnecting to node (%s) to query contract at (%X) with data (%X)",
+		err = fmt.Errorf("error (%v) connnecting to node (%s) to query contract at (%s) with data (%X)",
 			err.Error(), burrowNodeClient.broadcastRPC, calleeAddress, data)
 		return
 	}
@@ -181,7 +181,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address,
 	// have a single address that is the contract to query.
 	callResult, err := tendermint_client.CallCode(client, address, code, data)
 	if err != nil {
-		err = fmt.Errorf("Error connnecting to node (%s) to query contract code at (%X) with data (%X) and code (%X)",
+		err = fmt.Errorf("error connnecting to node (%s) to query contract code at (%s) with data (%X) and code (%X)",
 			burrowNodeClient.broadcastRPC, address, data, code, err.Error())
 		return nil, uint64(0), err
 	}
@@ -193,7 +193,7 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.A
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
+		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%s): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
 		return nil, err
 	}

@@ -46,10 +46,10 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:   addr,
-		Amount:    amt,
-		Sequence:  sequence,
-		PubKey:    pubkey,
+		Address:  addr,
+		Amount:   amt,
+		Sequence: sequence,
+		PubKey:   pubkey,
 	})
 	return nil
 }
@@ -93,10 +93,10 @@ func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PubKey:    from,
+		Address:  from.Address(),
+		Amount:   amt,
+		Sequence: sequence,
+		PubKey:   from,
 	}
 
 	return &CallTx{
@@ -132,10 +132,10 @@ func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee ui
 
 func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PubKey:    from,
+		Address:  from.Address(),
+		Amount:   amt,
+		Sequence: sequence,
+		PubKey:   from,
 	}
 
 	return &NameTx{
@@ -176,10 +176,10 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 
 func (tx *BondTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:   pubkey.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PubKey:    pubkey,
+		Address:  pubkey.Address(),
+		Amount:   amt,
+		Sequence: sequence,
+		PubKey:   pubkey,
 	})
 	return nil
 }
@@ -253,10 +253,10 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args *ptypes.PermArgs) 
 
 func NewPermissionsTxWithSequence(from acm.PublicKey, args *ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    1, // NOTE: amounts can't be 0 ...
-		Sequence:  sequence,
-		PubKey:    from,
+		Address:  from.Address(),
+		Amount:   1, // NOTE: amounts can't be 0 ...
+		Sequence: sequence,
+		PubKey:   from,
 	}
 
 	return &PermissionsTx{
