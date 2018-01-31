@@ -20,8 +20,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: go get github.com/Masterminds/glide
-      - run: glide install
 
       # Just persist the entire working dir (burrow checkout)
       - persist_to_workspace:
@@ -33,6 +31,7 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run: sudo apt-get install libgmp3-dev
       - run: make test
 
   test_integration:
@@ -41,6 +40,13 @@ jobs:
       - attach_workspace:
           at: .
       - run: make test_integration
+      
+  ensure_vendor:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make ensure_vendor
 
   build_docker:
     <<: *defaults
@@ -103,6 +109,12 @@ workflows:
             <<: *tags_filters
 
       - test_integration:
+          requires:
+            - checkout_code
+          filters:
+            <<: *tags_filters
+
+      - ensure_vendor:
           requires:
             - checkout_code
           filters:

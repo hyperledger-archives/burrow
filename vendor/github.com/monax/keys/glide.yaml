@@ -1,0 +1,13 @@
+package: github.com/monax/keys
+import:
+- package: github.com/howeyc/gopass
+- package: github.com/rs/cors
+- package: github.com/spf13/cobra
+- package: github.com/tendermint/ed25519
+- package: github.com/tendermint/go-wire
+- package: github.com/wayn3h0/go-uuid
+- package: golang.org/x/crypto
+  subpackages:
+  - sha3
+  - ripemd160
+  - scrypt

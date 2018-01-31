@@ -1,0 +1,45 @@
+
+Usage: app [-bdsuikqs] BOOL1 [STR1] INT3... COMMAND [arg...]
+
+App Desc
+                
+Arguments:      
+  BOOL1         Bool Argument 1 (env $BOOL1)
+  BOOL2         Bool Argument 2 (default true)
+  BOOL3         Bool Argument 3 (env $BOOL3)
+  STR1          String Argument 1 (env $STR1)
+  STR2          String Argument 2 (env $STR2) (default "a value")
+  STR3          String Argument 3 (env $STR3)
+  INT1          Int Argument 1 (env $INT1) (default 0)
+  INT2          Int Argument 2 (env $INT2) (default 1)
+  INT3          Int Argument 3 (env $INT3)
+  STRS1         Strings Argument 1 (env $STRS1)
+  STRS2         (env $STRS2) (default ["value1", "value2"])
+  STRS3         Strings Argument 3 (env $STRS3)
+  INTS1         Ints Argument 1 (env $INTS1)
+  INTS2         Ints Argument 2 (env $INTS2) (default [1, 2, 3])
+  INTS3         Ints Argument 3 (env $INTS3)
+                
+Options:        
+  -b, --bool1   Bool Option 1 (env $BOOL1)
+      --bool2   Bool Option 2 (default true)
+  -d            Bool Option 3 (env $BOOL3)
+  -s, --str1    String Option 1 (env $STR1)
+      --str2    String Option 2 (default "a value")
+  -u            String Option 3 (env $STR3)
+  -i, --int1    (env $INT1, $ALIAS_INT1) (default 0)
+      --int2    Int Option 2 (env $INT2) (default 1)
+  -k            Int Option 3 (env $INT3)
+  -x, --strs1   Strings Option 1 (env $STRS1)
+      --strs2   Strings Option 2 (env $STRS2) (default ["value1", "value2"])
+  -z            Strings Option 3 (env $STRS3)
+  -q, --ints1   Ints Option 1 (env $INTS1)
+      --ints2   Ints Option 2 (env $INTS2) (default [1, 2, 3])
+  -s            Ints Option 3 (env $INTS3)
+                
+Commands:       
+  command1      command1 description
+  command2      command2 description
+  command3      command3 description
+                
+Run 'app COMMAND --help' for more information on a command.

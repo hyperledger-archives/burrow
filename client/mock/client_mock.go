@@ -15,26 +15,24 @@
 package mock
 
 import (
-	"github.com/tendermint/go-crypto"
-
-	acc "github.com/hyperledger/burrow/account"
+	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/client"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
-	core_types "github.com/hyperledger/burrow/core/types"
 	"github.com/hyperledger/burrow/logging/loggers"
 	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/go-crypto"
 )
 
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {
-	accounts map[string]*acc.Account
+	accounts map[string]*acm.ConcreteAccount
 }
 
 func NewMockNodeClient() *MockNodeClient {
 	return &MockNodeClient{
-		accounts: make(map[string]*acc.Account),
+		accounts: make(map[string]*acm.ConcreteAccount),
 	}
 }
 
@@ -42,8 +40,7 @@ func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) 
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
 		TxHash:          make([]byte, 20),
-		CreatesContract: 0,
-		ContractAddr:    make([]byte, 20),
+		CreatesContract: false,
 	}
 	return txReceipt, nil
 }
@@ -52,68 +49,60 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 	return nil, nil
 }
 
-func (mock *MockNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+func (mock *MockNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
 	// make zero account
-	var zero [32]byte
-	copyAddressBytes := make([]byte, len(address))
-	copy(copyAddressBytes, address)
-	account := &acc.Account{
-		Address:     copyAddressBytes,
-		PubKey:      crypto.PubKey(crypto.PubKeyEd25519(zero)),
-		Sequence:    0,
-		Balance:     0,
+	return acm.ConcreteAccount{
+		Address:     address,
+		PublicKey:   acm.PublicKeyFromGoCryptoPubKey(crypto.PubKeyEd25519{}.Wrap()),
 		Code:        make([]byte, 0),
 		StorageRoot: make([]byte, 0),
-	}
-	return account, nil
+	}.Account(), nil
 }
 
-func (mock *MockNodeClient) MockAddAccount(account *acc.Account) {
+func (mock *MockNodeClient) MockAddAccount(account *acm.ConcreteAccount) {
 	addressString := string(account.Address[:])
 	mock.accounts[addressString] = account.Copy()
 }
 
-func (mock *MockNodeClient) Status() (ChainId []byte,
-	ValidatorPublicKey []byte, LatestBlockHash []byte,
-	BlockHeight int, LatestBlockTime int64, err error) {
-	// make zero account
-	var zero [32]byte
-	ed25519 := crypto.PubKeyEd25519(zero)
-	pub := crypto.PubKey(ed25519)
-
+func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
+	BlockHeight uint64, LatestBlockTime int64, err error) {
 	// fill return values
 	ChainId = make([]byte, 64)
 	LatestBlockHash = make([]byte, 64)
-	ValidatorPublicKey = pub.Bytes()
+	ValidatorPublicKey = crypto.PubKeyEd25519{}.Wrap().Bytes()
 	BlockHeight = 0
 	LatestBlockTime = 0
 	return
 }
 
 // QueryContract executes the contract code at address with the given data
-func (mock *MockNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
+func (mock *MockNodeClient) QueryContract(callerAddress, calleeAddress acm.Address,
+	data []byte) (ret []byte, gasUsed uint64, err error) {
+
 	// return zero
 	ret = make([]byte, 0)
-	return ret, 0, nil
+	return
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (mock *MockNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
+func (mock *MockNodeClient) QueryContractCode(address acm.Address, code,
+	data []byte) (ret []byte, gasUsed uint64, err error) {
 	// return zero
 	ret = make([]byte, 0)
-	return ret, 0, nil
+	return
 }
 
-func (mock *MockNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
-	return nil, nil
+func (mock *MockNodeClient) DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error) {
+	return
 }
 
-func (mock *MockNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
-	return nil, "", 0, nil
+func (mock *MockNodeClient) GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error) {
+	return
 }
 
-func (mock *MockNodeClient) ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error) {
-	return 0, nil, nil, nil
+func (mock *MockNodeClient) ListValidators() (blockHeight uint64, bondedValidators,
+	unbondingValidators []acm.Validator, err error) {
+	return
 }
 
 func (mock *MockNodeClient) Logger() logging_types.InfoTraceLogger {

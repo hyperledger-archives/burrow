@@ -211,16 +211,6 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-#### DupeoutTx
-
-```
-{
-	address: <string>
-	vote_a:  <Vote>
-	vote_b:  <Vote>
-}
-```
-
 These are the support types that are referenced in the transactions:
 
 #### TxInput
@@ -427,18 +417,6 @@ Event object:
 This notifies you when a rebond event happens.
 
 Event ID: `Rebond`
-
-Event object:
-
-```
-<Tx>
-```
-
-#### Dupeout
-
-This notifies you when a dupeout event happens.
-
-Event ID: `Dupeout`
 
 Event object:
 
@@ -653,8 +631,6 @@ Parameter:
 `pub_key` is a public key.
 
 ##### Additional info
-
-Sequence is sometimes referred to as the "nonce".
 
 There are two types of objects used to represent accounts, one is public accounts (like the one here), the other is private accounts, which only holds information about an accounts address, public and private key.
 

@@ -3,16 +3,16 @@ package loggers
 import (
 	"io"
 
-	"log/syslog"
-	"net/url"
+	"os"
 
 	kitlog "github.com/go-kit/kit/log"
-	log15a "github.com/hyperledger/burrow/logging/adapters/tendermint_log15"
-	"github.com/tendermint/log15"
+	"github.com/go-kit/kit/log/term"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/logging/types"
 )
 
 const (
-	syslogPriority    = syslog.LOG_LOCAL0
 	JSONFormat        = "json"
 	LogfmtFormat      = "logfmt"
 	TerminalFormat    = "terminal"
@@ -20,48 +20,41 @@ const (
 )
 
 func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
+	var logger kitlog.Logger
 	switch formatName {
 	case JSONFormat:
-		return kitlog.NewJSONLogger(writer)
+		logger = kitlog.NewJSONLogger(writer)
 	case LogfmtFormat:
-		return kitlog.NewLogfmtLogger(writer)
+		logger = kitlog.NewLogfmtLogger(writer)
 	default:
-		return log15a.Log15HandlerAsKitLogger(log15.StreamHandler(writer,
-			format(formatName)))
+		logger = term.NewLogger(writer, kitlog.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
+			switch structure.Value(keyvals, structure.ChannelKey) {
+			case types.TraceChannelName:
+				return term.FgBgColor{Fg: term.DarkGreen}
+			default:
+				return term.FgBgColor{Fg: term.Yellow}
+			}
+		})
 	}
+	// Don't log signals
+	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+		if logging.Signal(keyvals) != "" {
+			return nil
+		}
+		return logger.Log(keyvals...)
+	})
 }
 
 func NewFileLogger(path string, formatName string) (kitlog.Logger, error) {
-	handler, err := log15.FileHandler(path, format(formatName))
-	return log15a.Log15HandlerAsKitLogger(handler), err
-}
-
-func NewRemoteSyslogLogger(url *url.URL, tag, formatName string) (kitlog.Logger, error) {
-	handler, err := log15.SyslogNetHandler(url.Scheme, url.Host, syslogPriority,
-		tag, format(formatName))
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
-	return log15a.Log15HandlerAsKitLogger(handler), nil
-}
-
-func NewSyslogLogger(tag, formatName string) (kitlog.Logger, error) {
-	handler, err := log15.SyslogHandler(syslogPriority, tag, format(formatName))
-	if err != nil {
-		return nil, err
-	}
-	return log15a.Log15HandlerAsKitLogger(handler), nil
-}
-
-func format(name string) log15.Format {
-	switch name {
-	case JSONFormat:
-		return log15.JsonFormat()
-	case LogfmtFormat:
-		return log15.LogfmtFormat()
-	case TerminalFormat:
-		return log15.TerminalFormat()
-	default:
-		return format(defaultFormatName)
-	}
+	streamLogger := NewStreamLogger(f, formatName)
+	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+		if logging.Signal(keyvals) == structure.SyncSignal {
+			return f.Sync()
+		}
+		return streamLogger.Log(keyvals...)
+	}), nil
 }

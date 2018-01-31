@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/hyperledger/burrow/... | grep -v /vendor/)
+PACKAGES_NOVENDOR := $(shell go list ./... | grep -vF /vendor/)
 VERSION := $(shell go run ./util/version/cmd/main.go)
 VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
@@ -76,13 +76,20 @@ megacheck:
 erase_vendor:
 	rm -rf ${REPO}/vendor/
 
-# install vendor uses glide to install vendored dependencies
-.PHONY: install_vendor
-install_vendor:
-	go get github.com/Masterminds/glide
-	glide install
+# install vendor uses dep to install vendored dependencies
+.PHONY: reinstall_vendor
+reinstall_vendor: erase_vendor
+	@go get -u github.com/golang/dep/cmd/dep
+	@dep ensure -v
 
-# Dumps Solidity interface contracts for SNatives
+# delete the vendor directy and pull back using dep lock and constraints file
+# will exit with an error if the working directory is not clean (any missing files or new
+# untracked ones)
+.PHONY: ensure_vendor
+ensure_vendor: reinstall_vendor
+	@scripts/is_checkout_dirty.sh
+
+# dumps Solidity interface contracts for SNatives
 .PHONY: snatives
 snatives:
 	@go run ./util/snatives/cmd/main.go
@@ -126,7 +133,7 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-	@go test ./rpc/tendermint/test -tags integration
+	@go test ./rpc/tm/integration -tags integration
 
 # test burrow with checks for race conditions
 .PHONY: test_race
