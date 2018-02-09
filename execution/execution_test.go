@@ -1292,7 +1292,7 @@ func callContractCode(contractAddr acm.Address) []byte {
 	retOff, retSize := byte(0x0), byte(0x20)
 
 	// this is the code we want to run (call a contract and return)
-	return bc.Splice(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
+	return bc.MustSplice(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
 		CALLDATACOPY, PUSH1, retSize, PUSH1, retOff, CALLDATASIZE, PUSH1, inOff,
 		PUSH1, value, PUSH20, contractAddr,
 		// Zeno loves us - call with half of the available gas each time we CALL
