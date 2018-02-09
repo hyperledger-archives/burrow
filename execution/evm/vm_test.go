@@ -17,7 +17,6 @@ package evm
 import (
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -76,13 +75,13 @@ func TestVM(t *testing.T) {
 	account2 := newAccount(1, 0, 1)
 
 	var gas uint64 = 100000
-	N := []byte{0x0f, 0x0f}
-	// Loop N times
-	code := []byte{0x60, 0x00, 0x60, 0x20, 0x52, 0x5B, byte(0x60 + len(N) - 1)}
-	code = append(code, N...)
-	code = append(code, []byte{0x60, 0x20, 0x51, 0x12, 0x15, 0x60, byte(0x1b + len(N)), 0x57, 0x60, 0x01, 0x60, 0x20, 0x51, 0x01, 0x60, 0x20, 0x52, 0x60, 0x05, 0x56, 0x5B}...)
+
+	bytecode := Splice(PUSH1, 0x00, PUSH1, 0x20, MSTORE, JUMPDEST, PUSH2, 0x0F, 0x0F, PUSH1, 0x20, MLOAD,
+		SLT, ISZERO, PUSH1, 0x1D, JUMPI, PUSH1, 0x01, PUSH1, 0x20, MLOAD, ADD, PUSH1, 0x20,
+		MSTORE, PUSH1, 0x05, JUMP, JUMPDEST)
+
 	start := time.Now()
-	output, err := ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	if err != nil {
@@ -90,6 +89,7 @@ func TestVM(t *testing.T) {
 	}
 }
 
+//Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
 	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
@@ -98,11 +98,13 @@ func TestJumpErr(t *testing.T) {
 	account2 := newAccount(2)
 
 	var gas uint64 = 100000
-	code := []byte{0x60, 0x10, 0x56} // jump to position 16, a clear failure
+
+	bytecode := Splice(PUSH1, 0x10, JUMP)
+
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		_, err = ourVm.Call(account1, account2, code, []byte{}, 0, &gas)
+		_, err = ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)
@@ -119,6 +121,7 @@ func TestJumpErr(t *testing.T) {
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
+
 	// Create accounts
 	account1 := newAccount(1, 2, 3)
 	account2 := newAccount(3, 2, 1)
@@ -128,16 +131,23 @@ func TestSubcurrency(t *testing.T) {
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
-	code_parts := []string{"620f42403355",
-		"7c0100000000000000000000000000000000000000000000000000000000",
-		"600035046315cf268481141561004657",
-		"6004356040526040515460605260206060f35b63693200ce81141561008757",
-		"60043560805260243560a052335460c0523360e05260a05160c05112151561008657",
-		"60a05160c0510360e0515560a0516080515401608051555b5b505b6000f3"}
-	code, _ := hex.DecodeString(strings.Join(code_parts, ""))
-	fmt.Printf("Code: %s\n", code)
+
+	bytecode := Splice(PUSH3, 0x0F, 0x42, 0x40, CALLER, SSTORE, PUSH29, 0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1,
+		0x00, CALLDATALOAD, DIV, PUSH4, 0x15, 0xCF, 0x26, 0x84, DUP2, EQ, ISZERO, PUSH2,
+		0x00, 0x46, JUMPI, PUSH1, 0x04, CALLDATALOAD, PUSH1, 0x40, MSTORE, PUSH1, 0x40,
+		MLOAD, SLOAD, PUSH1, 0x60, MSTORE, PUSH1, 0x20, PUSH1, 0x60, RETURN, JUMPDEST,
+		PUSH4, 0x69, 0x32, 0x00, 0xCE, DUP2, EQ, ISZERO, PUSH2, 0x00, 0x87, JUMPI, PUSH1,
+		0x04, CALLDATALOAD, PUSH1, 0x80, MSTORE, PUSH1, 0x24, CALLDATALOAD, PUSH1, 0xA0,
+		MSTORE, CALLER, SLOAD, PUSH1, 0xC0, MSTORE, CALLER, PUSH1, 0xE0, MSTORE, PUSH1,
+		0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SLT, ISZERO, ISZERO, PUSH2, 0x00, 0x86, JUMPI,
+		PUSH1, 0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SUB, PUSH1, 0xE0, MLOAD, SSTORE, PUSH1,
+		0xA0, MLOAD, PUSH1, 0x80, MLOAD, SLOAD, ADD, PUSH1, 0x80, MLOAD, SSTORE, JUMPDEST,
+		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, RETURN)
+
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
-	output, err := ourVm.Call(account1, account2, code, data, 0, &gas)
+	output, err := ourVm.Call(account1, account2, bytecode, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	if err != nil {
 		t.Fatal(err)
