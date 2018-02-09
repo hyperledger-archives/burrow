@@ -30,14 +30,16 @@ import (
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ripemd160"
 )
 
-var logger, _ = lifecycle.NewStdErrLogger()
+// Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below
+//var logger, _ = lifecycle.NewStdErrLogger()
+var logger = loggers.NewNoopInfoTraceLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -60,9 +62,11 @@ func newParams() Params {
 	}
 }
 
-func newAccount(address ...byte) acm.MutableAccount {
+func newAccount(seed ...byte) acm.MutableAccount {
+	hasher := ripemd160.New()
+	hasher.Write(seed)
 	return acm.ConcreteAccount{
-		Address: acm.AddressFromWord256(RightPadWord256(address)),
+		Address: acm.MustAddressFromBytes(hasher.Sum(nil)),
 	}.MutableAccount()
 }
 
@@ -294,6 +298,53 @@ func TestMemoryBounds(t *testing.T) {
 	output, err = ourVm.call(caller, callee, Splice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
+}
+
+func TestMsgSender(t *testing.T) {
+	st := newAppState()
+	account1 := newAccount(1, 2, 3)
+	account2 := newAccount(3, 2, 1)
+	st.accounts[account1.Address()] = account1
+	st.accounts[account2.Address()] = account2
+
+	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+
+	var gas uint64 = 100000
+
+	/*
+			pragma solidity ^0.4.0;
+
+			contract SimpleStorage {
+		                function get() public constant returns (address) {
+		        	        return msg.sender;
+		    	        }
+			}
+	*/
+
+	// This bytecode is compiled from Solidity contract above using remix.ethereum.org online compiler
+	code, err := hex.DecodeString("6060604052341561000f57600080fd5b60ca8061001d6000396000f30060606040526004361060" +
+		"3f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680636d4ce63c14604457" +
+		"5b600080fd5b3415604e57600080fd5b60546096565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ff" +
+		"ffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6000339050905600a165627a" +
+		"7a72305820b9ebf49535372094ae88f56d9ad18f2a79c146c8f56e7ef33b9402924045071e0029")
+	require.NoError(t, err)
+
+	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
+	contractCode, err := ourVm.Call(account1, account2, code, code, 0, &gas)
+	require.NoError(t, err)
+
+	// Not needed for this test (since contract code is passed as argument to vm), but this is what an execution
+	// framework must do
+	account2.SetCode(contractCode)
+
+	// Input is the function hash of `get()`
+	input, err := hex.DecodeString("6d4ce63c")
+
+	output, err := ourVm.Call(account1, account2, contractCode, input, 0, &gas)
+	require.NoError(t, err)
+
+	assert.Equal(t, account1.Address().Word256().Bytes(), output)
+
 }
 
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
