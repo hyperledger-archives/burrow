@@ -80,7 +80,7 @@ func TestVM(t *testing.T) {
 
 	var gas uint64 = 100000
 
-	bytecode := Splice(PUSH1, 0x00, PUSH1, 0x20, MSTORE, JUMPDEST, PUSH2, 0x0F, 0x0F, PUSH1, 0x20, MLOAD,
+	bytecode := MustSplice(PUSH1, 0x00, PUSH1, 0x20, MSTORE, JUMPDEST, PUSH2, 0x0F, 0x0F, PUSH1, 0x20, MLOAD,
 		SLT, ISZERO, PUSH1, 0x1D, JUMPI, PUSH1, 0x01, PUSH1, 0x20, MLOAD, ADD, PUSH1, 0x20,
 		MSTORE, PUSH1, 0x05, JUMP, JUMPDEST)
 
@@ -103,7 +103,7 @@ func TestJumpErr(t *testing.T) {
 
 	var gas uint64 = 100000
 
-	bytecode := Splice(PUSH1, 0x10, JUMP)
+	bytecode := MustSplice(PUSH1, 0x10, JUMP)
 
 	var err error
 	ch := make(chan struct{})
@@ -136,7 +136,7 @@ func TestSubcurrency(t *testing.T) {
 
 	var gas uint64 = 1000
 
-	bytecode := Splice(PUSH3, 0x0F, 0x42, 0x40, CALLER, SSTORE, PUSH29, 0x01, 0x00, 0x00, 0x00,
+	bytecode := MustSplice(PUSH3, 0x0F, 0x42, 0x40, CALLER, SSTORE, PUSH29, 0x01, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1,
 		0x00, CALLDATALOAD, DIV, PUSH4, 0x15, 0xCF, 0x26, 0x84, DUP2, EQ, ISZERO, PUSH2,
@@ -220,20 +220,20 @@ func TestDelegateCallGas(t *testing.T) {
 
 	// Do a simple operation using 1 gas unit
 	calleeAccount, calleeAddress := makeAccountWithCode(state, "callee",
-		Splice(PUSH1, calleeReturnValue, return1()))
+		MustSplice(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
 	// different amounts of gas. The value we sandwich in the middle is the amount
 	// we subtract from the available gas (that the caller has available), so:
-	// code := Splice(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
+	// code := MustSplice(callerCodePrefix, <amount to subtract from GAS> , callerCodeSuffix)
 	// gives us the code to make the call
-	callerCodePrefix := Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
+	callerCodePrefix := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
 		PUSH1, inOff, PUSH20, calleeAddress, PUSH1)
-	callerCodeSuffix := Splice(GAS, SUB, DELEGATECALL, returnWord())
+	callerCodeSuffix := MustSplice(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
 	callerAccount, _ := makeAccountWithCode(state, "caller",
-		Splice(callerCodePrefix,
+		MustSplice(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
 			callerCodeSuffix))
@@ -244,7 +244,7 @@ func TestDelegateCallGas(t *testing.T) {
 	assert.NoError(t, err, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
 
-	callerAccount.SetCode(Splice(callerCodePrefix,
+	callerAccount.SetCode(MustSplice(callerCodePrefix,
 		// Shouldn't be enough gas to make call
 		costBetweenGasAndDelegateCall-1,
 		callerCodeSuffix))
@@ -267,7 +267,7 @@ func TestMemoryBounds(t *testing.T) {
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
 	output, err := ourVm.call(caller, callee,
-		Splice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -275,7 +275,7 @@ func TestMemoryBounds(t *testing.T) {
 	// Same with number
 	word = Int64ToWord256(232234234432)
 	output, err = ourVm.call(caller, callee,
-		Splice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
+		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -283,9 +283,9 @@ func TestMemoryBounds(t *testing.T) {
 	// Now test a series of boundary stores
 	code := pushWord(word)
 	for i := 0; i < 10; i++ {
-		code = Splice(code, storeAtEnd(), MLOAD)
+		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, Splice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -293,9 +293,9 @@ func TestMemoryBounds(t *testing.T) {
 	// Same as above but we should breach the upper memory limit set in memoryProvider
 	code = pushWord(word)
 	for i := 0; i < 100; i++ {
-		code = Splice(code, storeAtEnd(), MLOAD)
+		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, Splice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
 }
@@ -355,22 +355,22 @@ func TestMsgSender(t *testing.T) {
 // stores that value at the current memory boundary
 func storeAtEnd() []byte {
 	// Pull in MSIZE (to carry forward to MLOAD), swap in value to store, store it at MSIZE
-	return Splice(MSIZE, SWAP1, DUP2, MSTORE)
+	return MustSplice(MSIZE, SWAP1, DUP2, MSTORE)
 }
 
 func returnAfterStore() []byte {
-	return Splice(PUSH1, 32, DUP2, RETURN)
+	return MustSplice(PUSH1, 32, DUP2, RETURN)
 }
 
 // Store the top element of the stack (which is a 32-byte word) in memory
 // and return it. Useful for a simple return value.
 func return1() []byte {
-	return Splice(PUSH1, 0, MSTORE, returnWord())
+	return MustSplice(PUSH1, 0, MSTORE, returnWord())
 }
 
 func returnWord() []byte {
 	// PUSH1 => return size, PUSH1 => return offset, RETURN
-	return Splice(PUSH1, 32, PUSH1, 0, RETURN)
+	return MustSplice(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
 func makeAccountWithCode(state acm.Updater, name string,
@@ -442,7 +442,7 @@ func callContractCode(addr acm.Address) []byte {
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
 	// this is the code we want to run (send funds to an account and return)
-	return Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	return MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 }
@@ -459,38 +459,39 @@ func pushWord(word Word256) []byte {
 		if word[leadingZeros] == 0 {
 			leadingZeros++
 		} else {
-			return Splice(byte(PUSH32)-leadingZeros, word[leadingZeros:])
+			return MustSplice(byte(PUSH32)-leadingZeros, word[leadingZeros:])
 		}
 	}
-	return Splice(PUSH1, 0)
+	return MustSplice(PUSH1, 0)
 }
 
 func TestPushWord(t *testing.T) {
 	word := Int64ToWord256(int64(2133213213))
-	assert.Equal(t, Splice(PUSH4, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
+	assert.Equal(t, MustSplice(PUSH4, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
 	word[0] = 1
-	assert.Equal(t, Splice(PUSH32,
+	assert.Equal(t, MustSplice(PUSH32,
 		1, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0x7F, 0x26, 0x40, 0x1D), pushWord(word))
-	assert.Equal(t, Splice(PUSH1, 0), pushWord(Word256{}))
-	assert.Equal(t, Splice(PUSH1, 1), pushWord(Int64ToWord256(1)))
+	assert.Equal(t, MustSplice(PUSH1, 0), pushWord(Word256{}))
+	assert.Equal(t, MustSplice(PUSH1, 1), pushWord(Int64ToWord256(1)))
 }
 
+// Kind of indirect test of Splice, but here to avoid import cycles
 func TestBytecode(t *testing.T) {
 	assert.Equal(t,
-		Splice(1, 2, 3, 4, 5, 6),
-		Splice(1, 2, 3, Splice(4, 5, 6)))
+		MustSplice(1, 2, 3, 4, 5, 6),
+		MustSplice(1, 2, 3, MustSplice(4, 5, 6)))
 	assert.Equal(t,
-		Splice(1, 2, 3, 4, 5, 6, 7, 8),
-		Splice(1, 2, 3, Splice(4, Splice(5), 6), 7, 8))
+		MustSplice(1, 2, 3, 4, 5, 6, 7, 8),
+		MustSplice(1, 2, 3, MustSplice(4, MustSplice(5), 6), 7, 8))
 	assert.Equal(t,
-		Splice(PUSH1, 2),
-		Splice(byte(PUSH1), 0x02))
+		MustSplice(PUSH1, 2),
+		MustSplice(byte(PUSH1), 0x02))
 	assert.Equal(t,
 		[]byte{},
-		Splice(Splice(Splice())))
+		MustSplice(MustSplice(MustSplice())))
 
 	contractAccount := &acm.ConcreteAccount{Address: acm.AddressFromWord256(Int64ToWord256(102))}
 	addr := contractAccount.Address
@@ -498,7 +499,7 @@ func TestBytecode(t *testing.T) {
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x20)
-	contractCodeBytecode := Splice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+	contractCodeBytecode := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, addr, PUSH2, gas1, gas2, CALL, PUSH1, retSize,
 		PUSH1, retOff, RETURN)
 	contractCode := []byte{0x60, retSize, 0x60, retOff, 0x60, inSize, 0x60, inOff, 0x60, value, 0x73}

@@ -74,7 +74,11 @@ func (address *Address) UnmarshalJSON(data []byte) error {
 }
 
 func (address Address) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeUpperToString(address[:]))
+	text, err := address.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(string(text))
 }
 
 func (address *Address) UnmarshalText(text []byte) error {
