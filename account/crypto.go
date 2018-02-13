@@ -19,13 +19,18 @@ type Signer interface {
 }
 
 // PublicKey
-
 type PublicKey struct {
 	crypto.PubKey `json:"unwrap"`
 }
 
-func PublicKeyFromGoCryptoPubKey(pubKey crypto.PubKey) PublicKey {
-	return PublicKey{PubKey: pubKey}
+func PublicKeyFromGoCryptoPubKey(pubKey crypto.PubKey) (PublicKey, error) {
+	_, err := AddressFromBytes(pubKey.Address())
+	if err != nil {
+		return PublicKey{}, fmt.Errorf("could not make valid address from public key %v: %v", pubKey, err)
+	}
+	return PublicKey{
+		PubKey: pubKey,
+	}, nil
 }
 
 // Currently this is a stub that reads the raw bytes returned by key_client and returns
@@ -39,9 +44,7 @@ func PublicKeyFromBytes(bs []byte) (PublicKey, error) {
 			len(bs), len(pubKeyEd25519))
 	}
 	copy(pubKeyEd25519[:], bs)
-	return PublicKey{
-		PubKey: pubKeyEd25519.Wrap(),
-	}, nil
+	return PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap())
 }
 
 // Returns a copy of the raw untyped public key bytes
@@ -65,6 +68,9 @@ func (pk PublicKey) VerifyBytes(msg []byte, signature Signature) bool {
 }
 
 func (pk PublicKey) Address() Address {
+	// We check this on initialisation to avoid this panic, but returning an error here is ugly and caching
+	// the address on PublicKey initialisation breaks go-wire serialisation since with unwrap we can only have one field.
+	// We can do something better with better serialisation
 	return MustAddressFromBytes(pk.PubKey.Address())
 }
 
@@ -90,8 +96,14 @@ type PrivateKey struct {
 	crypto.PrivKey `json:"unwrap"`
 }
 
-func PrivateKeyFromGoCryptoPrivKey(privKey crypto.PrivKey) PrivateKey {
-	return PrivateKey{PrivKey: privKey}
+func PrivateKeyFromGoCryptoPrivKey(privKey crypto.PrivKey) (PrivateKey, error) {
+	_, err := PublicKeyFromGoCryptoPubKey(privKey.PubKey())
+	if err != nil {
+		return PrivateKey{}, fmt.Errorf("could not create public key from private key: %v", err)
+	}
+	return PrivateKey{
+		PrivKey: privKey,
+	}, nil
 }
 
 func PrivateKeyFromSecret(secret string) PrivateKey {
@@ -126,9 +138,7 @@ func Ed25519PrivateKeyFromRawBytes(privKeyBytes []byte) (PrivateKey, error) {
 		return PrivateKey{}, err
 	}
 	copy(privKeyEd25519[:], privKeyBytes)
-	return PrivateKey{
-		PrivKey: privKeyEd25519.Wrap(),
-	}, nil
+	return PrivateKeyFromGoCryptoPrivKey(privKeyEd25519.Wrap())
 }
 
 // Ensures the last 32 bytes of the ed25519 private key is the public key derived from the first 32 private bytes
@@ -148,6 +158,16 @@ func EnsureEd25519PrivateKeyCorrect(candidatePrivateKey ed25519.PrivateKey) erro
 	return nil
 }
 
+func (pk PrivateKey) PublicKey() PublicKey {
+	publicKey, err := PublicKeyFromGoCryptoPubKey(pk.PrivKey.PubKey())
+	if err != nil {
+		// We check this on initialisation to avoid this panic, but returning an error here is ugly and  caching
+		// the public key on PrivateKey on initialisation breaks go-wire. We can do something better with better serialisation
+		panic(fmt.Errorf("error making public key from private key: %v", publicKey))
+	}
+	return publicKey
+}
+
 // Returns a copy of the raw untyped private key bytes
 func (pk PrivateKey) RawBytes() []byte {
 	switch privKey := pk.PrivKey.Unwrap().(type) {
@@ -162,10 +182,6 @@ func (pk PrivateKey) RawBytes() []byte {
 	default:
 		return nil
 	}
-}
-
-func (pk PrivateKey) PublicKey() PublicKey {
-	return PublicKeyFromGoCryptoPubKey(pk.PubKey())
 }
 
 func (pk PrivateKey) Sign(msg []byte) (Signature, error) {

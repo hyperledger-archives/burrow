@@ -38,10 +38,9 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-	  - run: go get -u github.com/monax/keys/cmd/monax-keys
       - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
-      
+
   ensure_vendor:
     <<: *defaults
     steps:

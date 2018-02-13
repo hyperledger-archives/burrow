@@ -51,12 +51,7 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 
 func (mock *MockNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
 	// make zero account
-	return acm.ConcreteAccount{
-		Address:     address,
-		PublicKey:   acm.PublicKeyFromGoCryptoPubKey(crypto.PubKeyEd25519{}.Wrap()),
-		Code:        make([]byte, 0),
-		StorageRoot: make([]byte, 0),
-	}.Account(), nil
+	return acm.FromAddressable(acm.GeneratePrivateAccountFromSecret("mock-node-client-account")), nil
 }
 
 func (mock *MockNodeClient) MockAddAccount(account *acm.ConcreteAccount) {

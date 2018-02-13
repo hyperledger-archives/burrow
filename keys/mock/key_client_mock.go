@@ -104,7 +104,7 @@ func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error)
 	}
 	pubKeyEd25519 := crypto.PubKeyEd25519{}
 	copy(pubKeyEd25519[:], key.PublicKey)
-	return acm.PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap()), nil
+	return acm.PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap())
 }
 
 func (mock *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {

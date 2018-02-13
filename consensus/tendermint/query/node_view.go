@@ -15,7 +15,7 @@ import (
 // You're like the interface I never had
 type NodeView interface {
 	// PrivValidator public key
-	PrivValidatorPublicKey() acm.PublicKey
+	PrivValidatorPublicKey() (acm.PublicKey, error)
 	// NodeInfo for this node broadcast to other nodes (including ephemeral STS ED25519 public key)
 	NodeInfo() *p2p.NodeInfo
 	// Whether the Tendermint node is listening
@@ -46,7 +46,7 @@ func NewNodeView(tmNode *node.Node, txDecoder txs.Decoder) NodeView {
 	}
 }
 
-func (nv *nodeView) PrivValidatorPublicKey() acm.PublicKey {
+func (nv *nodeView) PrivValidatorPublicKey() (acm.PublicKey, error) {
 	return acm.PublicKeyFromGoCryptoPubKey(nv.tmNode.PrivValidator().GetPubKey())
 }
 

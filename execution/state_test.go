@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/stretchr/testify/require"
 
 	"time"
 
@@ -71,7 +72,10 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	minBonded int64) (*State, []acm.PrivateAccount) {
 	testGenesisDoc, privAccounts := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
-	s0 := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	if err != nil {
+		panic(fmt.Errorf("could not make genesis state: %v", err))
+	}
 	s0.Save()
 	return s0, privAccounts
 }
@@ -275,7 +279,8 @@ func TestTxSequence(t *testing.T) {
 }
 
 func TestNameTxs(t *testing.T) {
-	state := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	state, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	require.NoError(t, err)
 	state.Save()
 
 	txs.MinNameRegistrationPeriod = 5

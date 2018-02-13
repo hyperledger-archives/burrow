@@ -55,6 +55,7 @@ func AsConcretePrivateAccount(privateAccount PrivateAccount) *ConcretePrivateAcc
 		PrivateKey: privateAccount.PrivateKey(),
 	}
 }
+
 func (cpaw concretePrivateAccountWrapper) Address() Address {
 	return cpaw.ConcretePrivateAccount.Address
 }
@@ -66,6 +67,8 @@ func (cpaw concretePrivateAccountWrapper) PublicKey() PublicKey {
 func (cpaw concretePrivateAccountWrapper) PrivateKey() PrivateKey {
 	return cpaw.ConcretePrivateAccount.PrivateKey
 }
+
+// ConcretePrivateAccount
 
 func (pa ConcretePrivateAccount) PrivateAccount() PrivateAccount {
 	return concretePrivateAccountWrapper{ConcretePrivateAccount: &pa}

@@ -64,7 +64,10 @@ func NewKernel(privValidator tm_types.PrivValidator, genesisDoc *genesis.Genesis
 	logger = logging.WithScope(logger, "NewKernel")
 
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
-	state := execution.MakeGenesisState(stateDB, genesisDoc)
+	state, err := execution.MakeGenesisState(stateDB, genesisDoc)
+	if err != nil {
+		return nil, fmt.Errorf("could not make genesis state: %v", err)
+	}
 	state.Save()
 
 	blockchain := bcm.NewBlockchain(genesisDoc)

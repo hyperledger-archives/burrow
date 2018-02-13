@@ -133,13 +133,8 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-<<<<<<< Updated upstream
-||||||| merged common ancestors
 	@go get -u github.com/monax/keys/cmd/monax-keys
 	@go test ./keys/integration -tags integration
-=======
-	@go test ./keys/integration -tags integration
->>>>>>> Stashed changes
 	@go test ./rpc/tm/integration -tags integration
 
 # test burrow with checks for race conditions

@@ -25,17 +25,21 @@ import (
 func TestKeysEncoding(t *testing.T) {
 	codec := NewTCodec()
 	privateKey := acm.PrivateKeyFromSecret("foo")
-	keyPair := struct {
+	type keyPair struct {
 		PrivateKey acm.PrivateKey
 		PublicKey  acm.PublicKey
-	}{
+	}
+
+	kp := keyPair{
 		PrivateKey: privateKey,
 		PublicKey:  privateKey.PublicKey(),
 	}
 
-	bs, err := codec.EncodeBytes(keyPair)
+	bs, err := codec.EncodeBytes(kp)
 	require.NoError(t, err)
-	assert.Equal(t, `{"PrivateKey":[1,"2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE34D26579DBB456693E540672CF922F52DDE0D6532E35BF06BE013A7C532F20E0"],"PublicKey":[1,"34D26579DBB456693E540672CF922F52DDE0D6532E35BF06BE013A7C532F20E0"]}`,
-		string(bs))
 
+	kpOut := keyPair{}
+	codec.DecodeBytes(&kpOut, bs)
+
+	assert.Equal(t, kp, kpOut)
 }

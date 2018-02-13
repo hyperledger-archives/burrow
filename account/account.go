@@ -65,7 +65,7 @@ type Account interface {
 	Permissions() ptypes.AccountPermissions
 	// Obtain a deterministic serialisation of this account
 	// (i.e. update order and Go runtime independent)
-	Encode() []byte
+	Encode() ([]byte, error)
 }
 
 type MutableAccount interface {
@@ -118,7 +118,7 @@ func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
 }
 
 func NewConcreteAccountFromSecret(secret string) ConcreteAccount {
-	return NewConcreteAccount(PublicKeyFromGoCryptoPubKey(PrivateKeyFromSecret(secret).PubKey()))
+	return NewConcreteAccount(PrivateKeyFromSecret(secret).PublicKey())
 }
 
 // Return as immutable Account
@@ -131,8 +131,15 @@ func (acc ConcreteAccount) MutableAccount() MutableAccount {
 	return concreteAccountWrapper{&acc}
 }
 
-func (acc *ConcreteAccount) Encode() []byte {
-	return wire.BinaryBytes(acc)
+func (acc *ConcreteAccount) Encode() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	var n int
+	var err error
+	wire.WriteBinary(acc, buf, &n, &err)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (acc *ConcreteAccount) Copy() *ConcreteAccount {
@@ -255,7 +262,7 @@ func (caw concreteAccountWrapper) Permissions() ptypes.AccountPermissions {
 	return caw.ConcreteAccount.Permissions
 }
 
-func (caw concreteAccountWrapper) Encode() []byte {
+func (caw concreteAccountWrapper) Encode() ([]byte, error) {
 	return caw.ConcreteAccount.Encode()
 }
 

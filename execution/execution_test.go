@@ -35,6 +35,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -168,7 +169,8 @@ func TestSendFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -235,7 +237,8 @@ func TestName(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -270,7 +273,8 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -339,7 +343,8 @@ func TestSendPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	// A single input, having the permission, should succeed
@@ -375,7 +380,8 @@ func TestCallPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//------------------------------
@@ -498,7 +504,8 @@ func TestCreatePermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//------------------------------
@@ -613,7 +620,7 @@ func TestCreatePermission(t *testing.T) {
 func TestBondPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state",dbBackend,dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
 	batchCommitter := makeExecutor(st)
 	var bondAcc *acm.Account
 
@@ -740,7 +747,8 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
@@ -888,7 +896,8 @@ func TestSNativeCALL(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
@@ -1023,7 +1032,8 @@ func TestSNativeTx(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------

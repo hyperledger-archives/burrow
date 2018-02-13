@@ -143,10 +143,14 @@ func (s *service) Status() (*ResultStatus, error) {
 		latestBlockHash = latestBlockMeta.Header.Hash()
 		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
 	}
+	publicKey, err := s.nodeView.PrivValidatorPublicKey()
+	if err != nil {
+		return nil, err
+	}
 	return &ResultStatus{
 		NodeInfo:          s.nodeView.NodeInfo(),
 		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            s.nodeView.PrivValidatorPublicKey(),
+		PubKey:            publicKey,
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime,
