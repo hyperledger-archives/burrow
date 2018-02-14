@@ -1,37 +1,60 @@
 package event
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEventCache_Flush(t *testing.T) {
-	evts := NewEmitter(loggers.NewNoopInfoTraceLogger())
-	evts.Subscribe("nothingness", "", func(data AnyEventData) {
-		// Check we are not initialising an empty buffer full of zeroed eventInfos in the Cache
-		require.FailNow(t, "We should never receive a message on this switch since none are fired")
+	//ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	//defer cancel()
+	ctx := context.Background()
+	errCh := make(chan error)
+	flushed := false
+
+	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
+	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) {
+		// Check against sending a buffer of zeroed messages
+		if message == nil {
+			errCh <- fmt.Errorf("recevied empty message but none sent")
+		}
 	})
-	evc := NewEventCache(evts)
+	evc := NewEventCache(em)
 	evc.Flush()
 	// Check after reset
 	evc.Flush()
-	fail := true
-	pass := false
-	evts.Subscribe("somethingness", "something", func(data AnyEventData) {
-		if fail {
-			require.FailNow(t, "Shouldn't see a message until flushed")
+	SubscribeCallback(ctx, em, "somethingness", NewQueryBuilder().AndEquals("foo", "bar"), func(interface{}) {
+		if flushed {
+			errCh <- nil
+		} else {
+			errCh <- fmt.Errorf("callback was run before messages were flushed")
 		}
-		pass = true
 	})
-	evc.Fire("something", AnyEventData{})
-	evc.Fire("something", AnyEventData{})
-	evc.Fire("something", AnyEventData{})
-	fail = false
+
+	numMessages := 3
+	tags := map[string]interface{}{"foo": "bar"}
+	for i := 0; i < numMessages; i++ {
+		evc.Publish(ctx, "something", tags)
+		evc.Publish(ctx, "something", tags)
+		evc.Publish(ctx, "something", tags)
+	}
+	flushed = true
 	evc.Flush()
-	assert.True(t, pass)
+	for i := 0; i < numMessages; i++ {
+		select {
+		case <-time.After(2 * time.Second):
+			t.Fatalf("callback did not run before timeout after messages were sent")
+		case err := <-errCh:
+			if err != nil {
+				t.Error(err)
+			}
+		}
+	}
 }
 
 func TestEventCacheGrowth(t *testing.T) {
@@ -66,6 +89,6 @@ func TestEventCacheGrowth(t *testing.T) {
 
 func fireNEvents(evc *Cache, n int) {
 	for i := 0; i < n; i++ {
-		evc.Fire("something", AnyEventData{})
+		evc.Publish(context.Background(), "something", nil)
 	}
 }

@@ -1,12 +1,13 @@
 package rpctypes
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
-	events "github.com/tendermint/tmlibs/events"
+	tmpubsub "github.com/tendermint/tmlibs/pubsub"
 )
 
 //----------------------------------------
@@ -68,14 +69,14 @@ func (err RPCError) Error() string {
 }
 
 type RPCResponse struct {
-	JSONRPC string           `json:"jsonrpc"`
-	ID      string           `json:"id"`
-	Result  *json.RawMessage `json:"result,omitempty"`
-	Error   *RPCError        `json:"error,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
+	ID      string          `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *RPCError       `json:"error,omitempty"`
 }
 
 func NewRPCSuccessResponse(id string, res interface{}) RPCResponse {
-	var raw *json.RawMessage
+	var rawMsg json.RawMessage
 
 	if res != nil {
 		var js []byte
@@ -83,11 +84,10 @@ func NewRPCSuccessResponse(id string, res interface{}) RPCResponse {
 		if err != nil {
 			return RPCInternalError(id, errors.Wrap(err, "Error marshalling response"))
 		}
-		rawMsg := json.RawMessage(js)
-		raw = &rawMsg
+		rawMsg = json.RawMessage(js)
 	}
 
-	return RPCResponse{JSONRPC: "2.0", ID: id, Result: raw}
+	return RPCResponse{JSONRPC: "2.0", ID: id, Result: rawMsg}
 }
 
 func NewRPCErrorResponse(id string, code int, msg string, data string) RPCResponse {
@@ -135,9 +135,16 @@ func RPCServerError(id string, err error) RPCResponse {
 // *wsConnection implements this interface.
 type WSRPCConnection interface {
 	GetRemoteAddr() string
-	GetEventSwitch() events.EventSwitch
 	WriteRPCResponse(resp RPCResponse)
 	TryWriteRPCResponse(resp RPCResponse) bool
+	GetEventSubscriber() EventSubscriber
+}
+
+// EventSubscriber mirros tendermint/tendermint/types.EventBusSubscriber
+type EventSubscriber interface {
+	Subscribe(ctx context.Context, subscriber string, query tmpubsub.Query, out chan<- interface{}) error
+	Unsubscribe(ctx context.Context, subscriber string, query tmpubsub.Query) error
+	UnsubscribeAll(ctx context.Context, subscriber string) error
 }
 
 // websocket-only RPCFuncs take this as the first parameter.

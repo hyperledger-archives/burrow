@@ -76,7 +76,7 @@ type VM struct {
 	origin         acm.Address
 	txid           []byte
 	callDepth      int
-	evc            event.Fireable
+	publisher      event.Publisher
 	logger         logging_types.InfoTraceLogger
 }
 
@@ -98,8 +98,8 @@ func (vm *VM) Debugf(format string, a ...interface{}) {
 }
 
 // satisfies go_events.Eventable
-func (vm *VM) SetFireable(evc event.Fireable) {
-	vm.evc = evc
+func (vm *VM) SetPublisher(publisher event.Publisher) {
+	vm.publisher = publisher
 }
 
 // CONTRACT: it is the duty of the contract writer to call known permissions
@@ -122,9 +122,8 @@ func HasPermission(state acm.StateWriter, acc acm.Account, perm ptypes.PermFlag)
 
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, calleeAddress acm.Address, input []byte, value uint64, gas *uint64) {
 	// fire the post call event (including exception if applicable)
-	if vm.evc != nil {
-		stringAccCall := events.EventStringAccCall(calleeAddress)
-		vm.evc.Fire(stringAccCall, events.EventDataCall{
+	if vm.publisher != nil {
+		events.PublishAccountCall(vm.publisher, calleeAddress, &events.EventDataCall{
 			&events.CallData{Caller: callerAddress, Callee: calleeAddress, Data: input, Value: value, Gas: *gas},
 			vm.origin,
 			vm.txid,
@@ -778,16 +777,15 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				vm.Debugf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
-			if vm.evc != nil {
+			if vm.publisher != nil {
 				eventID := events.EventStringLogEvent(callee.Address())
 				fmt.Printf("eventID: %s\n", eventID)
-				log := events.EventDataLog{
+				events.PublishLogEvent(vm.publisher, callee.Address(), &events.EventDataLog{
 					Address: callee.Address(),
 					Topics:  topics,
 					Data:    data,
 					Height:  vm.params.BlockHeight,
-				}
-				vm.evc.Fire(eventID, log)
+				})
 			}
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 

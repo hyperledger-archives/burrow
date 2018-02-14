@@ -15,6 +15,7 @@
 package evm
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -26,7 +27,6 @@ import (
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
-	exe_events "github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
@@ -391,47 +391,41 @@ func makeAccountWithCode(state acm.Updater, name string,
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
 func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
-	contractCode []byte, gas uint64) (output []byte, err error) {
-	eventCh := make(chan event.EventData)
-	output, err = runVM(eventCh, ourVm, caller, callee, subscribeAddr,
-		contractCode, gas)
+	contractCode []byte, gas uint64) ([]byte, error) {
+	eventCh := make(chan *evm_events.EventDataCall)
+	output, err := runVM(eventCh, ourVm, caller, callee, subscribeAddr, contractCode, gas)
 	if err != nil {
-		return
+		return output, err
 	}
-	msg := <-eventCh
-	var errString string
-	switch ev := msg.Unwrap().(type) {
-	case exe_events.EventDataTx:
-		errString = ev.Exception
-	case evm_events.EventDataCall:
-		errString = ev.Exception
+	select {
+	case eventDataCall := <-eventCh:
+		if eventDataCall.Exception != "" {
+			return output, errors.New(eventDataCall.Exception)
+		}
+		return output, nil
 	}
-
-	if errString != "" {
-		err = errors.New(errString)
-	}
-	return
 }
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan event.EventData, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee acm.MutableAccount,
 	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
-	evsw := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	emitter := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
-	evsw.Subscribe("test", evm_events.EventStringAccCall(subscribeAddr),
-		func(msg event.AnyEventData) {
-			eventCh <- *msg.BurrowEventData
-		})
-	evc := event.NewEventCache(evsw)
-	ourVm.SetFireable(evc)
+
+	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr, nil, eventCh)
+	if err != nil {
+		return nil, err
+	}
+	evc := event.NewEventCache(emitter)
+	ourVm.SetPublisher(evc)
 	start := time.Now()
 	output, err := ourVm.Call(caller, callee, contractCode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
-	go func() { evc.Flush() }()
+	evc.Flush()
 	return output, err
 }
 

@@ -1,137 +1,156 @@
 package types
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 
-	"github.com/tendermint/go-wire/data"
+	"github.com/gogo/protobuf/jsonpb"
 )
 
-// Result is a common result object for ABCI calls.
-// CONTRACT: a zero Result is OK.
-type Result struct {
-	Code CodeType   `json:"code"`
-	Data data.Bytes `json:"data"`
-	Log  string     `json:"log"` // Can be non-deterministic
+const (
+	CodeTypeOK uint32 = 0
+)
+
+// IsOK returns true if Code is OK.
+func (r ResponseCheckTx) IsOK() bool {
+	return r.Code == CodeTypeOK
 }
 
-func NewResult(code CodeType, data []byte, log string) Result {
-	return Result{
-		Code: code,
-		Data: data,
-		Log:  log,
+// IsErr returns true if Code is something other than OK.
+func (r ResponseCheckTx) IsErr() bool {
+	return r.Code != CodeTypeOK
+}
+
+// Error implements error interface by formatting response as string.
+func (r ResponseCheckTx) Error() string {
+	return fmtError(r.Code, r.Log)
+}
+
+// IsOK returns true if Code is OK.
+func (r ResponseDeliverTx) IsOK() bool {
+	return r.Code == CodeTypeOK
+}
+
+// IsErr returns true if Code is something other than OK.
+func (r ResponseDeliverTx) IsErr() bool {
+	return r.Code != CodeTypeOK
+}
+
+// Error implements error interface by formatting response as string.
+func (r ResponseDeliverTx) Error() string {
+	return fmtError(r.Code, r.Log)
+}
+
+// IsOK returns true if Code is OK.
+func (r ResponseCommit) IsOK() bool {
+	return r.Code == CodeTypeOK
+}
+
+// IsErr returns true if Code is something other than OK.
+func (r ResponseCommit) IsErr() bool {
+	return r.Code != CodeTypeOK
+}
+
+// Error implements error interface by formatting response as string.
+func (r ResponseCommit) Error() string {
+	return fmtError(r.Code, r.Log)
+}
+
+// IsOK returns true if Code is OK.
+func (r ResponseQuery) IsOK() bool {
+	return r.Code == CodeTypeOK
+}
+
+// IsErr returns true if Code is something other than OK.
+func (r ResponseQuery) IsErr() bool {
+	return r.Code != CodeTypeOK
+}
+
+// Error implements error interface by formatting response as string.
+func (r ResponseQuery) Error() string {
+	return fmtError(r.Code, r.Log)
+}
+
+func fmtError(code uint32, log string) string {
+	return fmt.Sprintf("Error code (%d): %s", code, log)
+}
+
+//---------------------------------------------------------------------------
+// override JSON marshalling so we dont emit defaults (ie. disable omitempty)
+// note we need Unmarshal functions too because protobuf had the bright idea
+// to marshal int64->string. cool. cool, cool, cool: https://developers.google.com/protocol-buffers/docs/proto3#json
+
+var (
+	jsonpbMarshaller = jsonpb.Marshaler{
+		EnumsAsInts:  true,
+		EmitDefaults: true,
 	}
+	jsonpbUnmarshaller = jsonpb.Unmarshaler{}
+)
+
+func (r *ResponseSetOption) MarshalJSON() ([]byte, error) {
+	s, err := jsonpbMarshaller.MarshalToString(r)
+	return []byte(s), err
 }
 
-func (res Result) IsOK() bool {
-	return res.Code == CodeType_OK
+func (r *ResponseSetOption) UnmarshalJSON(b []byte) error {
+	reader := bytes.NewBuffer(b)
+	return jsonpbUnmarshaller.Unmarshal(reader, r)
 }
 
-func (res Result) IsErr() bool {
-	return res.Code != CodeType_OK
+func (r *ResponseCheckTx) MarshalJSON() ([]byte, error) {
+	s, err := jsonpbMarshaller.MarshalToString(r)
+	return []byte(s), err
 }
 
-func (res Result) IsSameCode(compare Result) bool {
-	return res.Code == compare.Code
+func (r *ResponseCheckTx) UnmarshalJSON(b []byte) error {
+	reader := bytes.NewBuffer(b)
+	return jsonpbUnmarshaller.Unmarshal(reader, r)
 }
 
-func (res Result) Error() string {
-	return fmt.Sprintf("ABCI{code:%v, data:%X, log:%v}", res.Code, res.Data, res.Log)
+func (r *ResponseDeliverTx) MarshalJSON() ([]byte, error) {
+	s, err := jsonpbMarshaller.MarshalToString(r)
+	return []byte(s), err
 }
 
-func (res Result) String() string {
-	return fmt.Sprintf("ABCI{code:%v, data:%X, log:%v}", res.Code, res.Data, res.Log)
+func (r *ResponseDeliverTx) UnmarshalJSON(b []byte) error {
+	reader := bytes.NewBuffer(b)
+	return jsonpbUnmarshaller.Unmarshal(reader, r)
 }
 
-func (res Result) PrependLog(log string) Result {
-	return Result{
-		Code: res.Code,
-		Data: res.Data,
-		Log:  log + ";" + res.Log,
-	}
+func (r *ResponseQuery) MarshalJSON() ([]byte, error) {
+	s, err := jsonpbMarshaller.MarshalToString(r)
+	return []byte(s), err
 }
 
-func (res Result) AppendLog(log string) Result {
-	return Result{
-		Code: res.Code,
-		Data: res.Data,
-		Log:  res.Log + ";" + log,
-	}
+func (r *ResponseQuery) UnmarshalJSON(b []byte) error {
+	reader := bytes.NewBuffer(b)
+	return jsonpbUnmarshaller.Unmarshal(reader, r)
 }
 
-func (res Result) SetLog(log string) Result {
-	return Result{
-		Code: res.Code,
-		Data: res.Data,
-		Log:  log,
-	}
+func (r *ResponseCommit) MarshalJSON() ([]byte, error) {
+	s, err := jsonpbMarshaller.MarshalToString(r)
+	return []byte(s), err
 }
 
-func (res Result) SetData(data []byte) Result {
-	return Result{
-		Code: res.Code,
-		Data: data,
-		Log:  res.Log,
-	}
+func (r *ResponseCommit) UnmarshalJSON(b []byte) error {
+	reader := bytes.NewBuffer(b)
+	return jsonpbUnmarshaller.Unmarshal(reader, r)
 }
 
-//----------------------------------------
+// Some compile time assertions to ensure we don't
+// have accidental runtime surprises later on.
 
-// NOTE: if data == nil and log == "", same as zero Result.
-func NewResultOK(data []byte, log string) Result {
-	return Result{
-		Code: CodeType_OK,
-		Data: data,
-		Log:  log,
-	}
+// jsonEncodingRoundTripper ensures that asserted
+// interfaces implement both MarshalJSON and UnmarshalJSON
+type jsonRoundTripper interface {
+	json.Marshaler
+	json.Unmarshaler
 }
 
-func NewError(code CodeType, log string) Result {
-	return Result{
-		Code: code,
-		Log:  log,
-	}
-}
-
-//----------------------------------------
-// Convenience methods for turning the
-// pb type into one using data.Bytes
-
-// Convert ResponseCheckTx to standard Result
-func (r *ResponseCheckTx) Result() Result {
-	return Result{
-		Code: r.Code,
-		Data: r.Data,
-		Log:  r.Log,
-	}
-}
-
-// Convert ResponseDeliverTx to standard Result
-func (r *ResponseDeliverTx) Result() Result {
-	return Result{
-		Code: r.Code,
-		Data: r.Data,
-		Log:  r.Log,
-	}
-}
-
-type ResultQuery struct {
-	Code   CodeType   `json:"code"`
-	Index  int64      `json:"index"`
-	Key    data.Bytes `json:"key"`
-	Value  data.Bytes `json:"value"`
-	Proof  data.Bytes `json:"proof"`
-	Height uint64     `json:"height"`
-	Log    string     `json:"log"`
-}
-
-func (r *ResponseQuery) Result() *ResultQuery {
-	return &ResultQuery{
-		Code:   r.Code,
-		Index:  r.Index,
-		Key:    r.Key,
-		Value:  r.Value,
-		Proof:  r.Proof,
-		Height: r.Height,
-		Log:    r.Log,
-	}
-}
+var _ jsonRoundTripper = (*ResponseCommit)(nil)
+var _ jsonRoundTripper = (*ResponseQuery)(nil)
+var _ jsonRoundTripper = (*ResponseDeliverTx)(nil)
+var _ jsonRoundTripper = (*ResponseCheckTx)(nil)
+var _ jsonRoundTripper = (*ResponseSetOption)(nil)

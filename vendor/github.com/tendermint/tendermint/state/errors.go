@@ -9,22 +9,22 @@ type (
 	ErrProxyAppConn error
 
 	ErrUnknownBlock struct {
-		Height int
+		Height int64
 	}
 
 	ErrBlockHashMismatch struct {
 		CoreHash []byte
 		AppHash  []byte
-		Height   int
+		Height   int64
 	}
 
 	ErrAppBlockHeightTooHigh struct {
-		CoreHeight int
-		AppHeight  int
+		CoreHeight int64
+		AppHeight  int64
 	}
 
 	ErrLastStateMismatch struct {
-		Height int
+		Height int64
 		Core   []byte
 		App    []byte
 	}
@@ -35,7 +35,15 @@ type (
 	}
 
 	ErrNoValSetForHeight struct {
-		Height int
+		Height int64
+	}
+
+	ErrNoConsensusParamsForHeight struct {
+		Height int64
+	}
+
+	ErrNoABCIResponsesForHeight struct {
+		Height int64
 	}
 )
 
@@ -60,4 +68,12 @@ func (e ErrStateMismatch) Error() string {
 
 func (e ErrNoValSetForHeight) Error() string {
 	return cmn.Fmt("Could not find validator set for height #%d", e.Height)
+}
+
+func (e ErrNoConsensusParamsForHeight) Error() string {
+	return cmn.Fmt("Could not find consensus params for height #%d", e.Height)
+}
+
+func (e ErrNoABCIResponsesForHeight) Error() string {
+	return cmn.Fmt("Could not find results for height #%d", e.Height)
 }

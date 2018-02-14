@@ -76,11 +76,11 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
 
-	eventID := exe_events.EventStringAccInput(inputAddr)
+	eventID := exe_events.EventStringAccountInput(inputAddr)
 	if err := burrowNodeWebsocketClient.Subscribe(eventID); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eventID, err)
 	}
-	if err := burrowNodeWebsocketClient.Subscribe(tm_types.EventStringNewBlock()); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(tm_types.EventNewBlock); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
@@ -115,7 +115,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				switch response.ID {
 				case tm_client.SubscribeRequestID:
 					resultSubscribe := new(rpc.ResultSubscribe)
-					err = json.Unmarshal(*response.Result, resultSubscribe)
+					err = json.Unmarshal(response.Result, resultSubscribe)
 					if err != nil {
 						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultSubscribe",
 							structure.ErrorKey, err)
@@ -126,9 +126,9 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						"event", resultSubscribe.EventID,
 						"subscription_id", resultSubscribe.SubscriptionID)
 
-				case tm_client.EventResponseID(tm_types.EventStringNewBlock()):
+				case tm_client.EventResponseID(tm_types.EventNewBlock):
 					resultEvent := new(rpc.ResultEvent)
-					err = json.Unmarshal(*response.Result, resultEvent)
+					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
 						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultEvent",
 							structure.ErrorKey, err)
@@ -145,14 +145,14 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 
 				case tm_client.EventResponseID(eventID):
 					resultEvent := new(rpc.ResultEvent)
-					err = json.Unmarshal(*response.Result, resultEvent)
+					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
 						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultEvent",
 							structure.ErrorKey, err)
 						continue
 					}
 
-					eventDataTx := resultEvent.EventDataTx()
+					eventDataTx := resultEvent.EventDataTx
 					if eventDataTx == nil {
 						// We are on the lookout for EventDataTx
 						confirmationChannel <- Confirmation{

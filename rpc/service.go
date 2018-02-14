@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -35,15 +36,19 @@ import (
 // end up DoSing ourselves.
 const MaxBlockLookback = 100
 
+type SubscribableService interface {
+	// Events
+	Subscribe(ctx context.Context, subscriptionID string, eventID string, callback func(*ResultEvent)) error
+	Unsubscribe(ctx context.Context, subscriptionID string) error
+}
+
 // Base service that provides implementation for all underlying RPC methods
 type Service interface {
+	SubscribableService
 	// Transact
 	Transactor() execution.Transactor
 	// List mempool transactions pass -1 for all unconfirmed transactions
 	ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error)
-	// Events
-	Subscribe(subscriptionId, eventId string, callback func(eventData event.AnyEventData)) error
-	Unsubscribe(subscriptionId string) error
 	// Status
 	Status() (*ResultStatus, error)
 	NetInfo() (*ResultNetInfo, error)
@@ -69,8 +74,9 @@ type Service interface {
 }
 
 type service struct {
+	ctx          context.Context
 	state        acm.StateIterable
-	eventEmitter event.Emitter
+	subscribable event.Subscribable
 	nameReg      execution.NameRegIterable
 	blockchain   bcm.Blockchain
 	transactor   execution.Transactor
@@ -79,19 +85,28 @@ type service struct {
 }
 
 var _ Service = &service{}
-var _ event.Subscribable = Service(nil)
 
-func NewService(state acm.StateIterable, nameReg execution.NameRegIterable, eventEmitter event.Emitter,
-	blockchain bcm.Blockchain, transactor execution.Transactor, nodeView query.NodeView,
-	logger logging_types.InfoTraceLogger) *service {
+func NewService(ctx context.Context, state acm.StateIterable, nameReg execution.NameRegIterable,
+	subscribable event.Subscribable, blockchain bcm.Blockchain, transactor execution.Transactor,
+	nodeView query.NodeView, logger logging_types.InfoTraceLogger) *service {
 
 	return &service{
+		ctx:          ctx,
 		state:        state,
 		nameReg:      nameReg,
-		eventEmitter: eventEmitter,
+		subscribable: subscribable,
 		blockchain:   blockchain,
 		transactor:   transactor,
 		nodeView:     nodeView,
+		logger:       logger.With(structure.ComponentKey, "Service"),
+	}
+}
+
+// Provides a sub-service with only the subscriptions methods
+func NewSubscribableService(subscribable event.Subscribable, logger logging_types.InfoTraceLogger) *service {
+	return &service{
+		ctx:          context.Background(),
+		subscribable: subscribable,
 		logger:       logger.With(structure.ComponentKey, "Service"),
 	}
 }
@@ -113,21 +128,39 @@ func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 		wrappedTxs[i] = txs.Wrap(tx)
 	}
 	return &ResultListUnconfirmedTxs{
-		N:   len(transactions),
-		Txs: wrappedTxs,
+		NumTxs: len(transactions),
+		Txs:    wrappedTxs,
 	}, nil
 }
 
-// All methods in this file return (Result*, error) which is the return
-// signature assumed by go-rpc
-func (s *service) Subscribe(subscriptionId, eventId string, callback func(event.AnyEventData)) error {
-	logging.InfoMsg(s.logger, "Subscribing to event",
-		"eventId", eventId, "subscriptionId", subscriptionId)
-	return s.eventEmitter.Subscribe(subscriptionId, eventId, callback)
+func (s *service) Subscribe(ctx context.Context, subscriptionID string, eventID string,
+	callback func(resultEvent *ResultEvent)) error {
+
+	queryBuilder := event.QueryForEventID(eventID)
+	logging.InfoMsg(s.logger, "Subscribing to events",
+		"query", queryBuilder.String(),
+		"subscription_id", subscriptionID)
+	return event.SubscribeCallback(ctx, s.subscribable, subscriptionID, queryBuilder,
+		func(message interface{}) {
+			resultEvent, err := NewResultEvent(eventID, message)
+			if err != nil {
+				logging.InfoMsg(s.logger, "Received event that could not be mapped to ResultEvent",
+					structure.ErrorKey, err,
+					"event_id", eventID)
+				return
+			}
+			callback(resultEvent)
+		})
 }
 
-func (s *service) Unsubscribe(subscriptionId string) error {
-	return s.eventEmitter.Unsubscribe(subscriptionId)
+func (s *service) Unsubscribe(ctx context.Context, subscriptionID string) error {
+	logging.InfoMsg(s.logger, "Unsubscribing from events",
+		"subscription_id", subscriptionID)
+	err := s.subscribable.UnsubscribeAll(ctx, subscriptionID)
+	if err != nil {
+		return fmt.Errorf("error unsubscribing from event with subscriptionID '%s': %v", subscriptionID, err)
+	}
+	return nil
 }
 
 func (s *service) Status() (*ResultStatus, error) {
@@ -139,14 +172,18 @@ func (s *service) Status() (*ResultStatus, error) {
 		latestBlockTime int64
 	)
 	if latestHeight != 0 {
-		latestBlockMeta = s.nodeView.BlockStore().LoadBlockMeta(int(latestHeight))
+		latestBlockMeta = s.nodeView.BlockStore().LoadBlockMeta(int64(latestHeight))
 		latestBlockHash = latestBlockMeta.Header.Hash()
 		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
+	}
+	publicKey, err := s.nodeView.PrivValidatorPublicKey()
+	if err != nil {
+		return nil, err
 	}
 	return &ResultStatus{
 		NodeInfo:          s.nodeView.NodeInfo(),
 		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            s.nodeView.PrivValidatorPublicKey(),
+		PubKey:            publicKey,
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime,
@@ -285,8 +322,8 @@ func (s *service) ListNames(predicate func(*execution.NameRegEntry) bool) (*Resu
 
 func (s *service) GetBlock(height uint64) (*ResultGetBlock, error) {
 	return &ResultGetBlock{
-		Block:     s.nodeView.BlockStore().LoadBlock(int(height)),
-		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int(height)),
+		Block:     s.nodeView.BlockStore().LoadBlock(int64(height)),
+		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int64(height)),
 	}, nil
 }
 
@@ -310,7 +347,7 @@ func (s *service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 
 	var blockMetas []*tm_types.BlockMeta
 	for height := maxHeight; height >= minHeight; height-- {
-		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int(height))
+		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int64(height))
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
@@ -352,6 +389,6 @@ func (s *service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 		return nil, err
 	}
 	return &ResultGeneratePrivateAccount{
-		PrivAccount: acm.AsConcretePrivateAccount(privateAccount),
+		PrivateAccount: acm.AsConcretePrivateAccount(privateAccount),
 	}, nil
 }

@@ -11,15 +11,19 @@ import (
 	"time"
 
 	wire "github.com/tendermint/go-wire"
+	tmlegacy "github.com/tendermint/go-wire/nowriter/tmlegacy"
 	cmn "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
+	"github.com/tendermint/tmlibs/log"
 )
+
+var legacy = tmlegacy.TMEncoderLegacy{}
 
 const (
 	numBatchMsgPackets = 10
 	minReadBufferSize  = 1024
 	minWriteBufferSize = 65536
-	updateState        = 2 * time.Second
+	updateStats        = 2 * time.Second
 	pingTimeout        = 40 * time.Second
 
 	// some of these defaults are written in the user config
@@ -146,9 +150,8 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 	var channels = []*Channel{}
 
 	for _, desc := range chDescs {
-		descCopy := *desc // copy the desc else unsafe access across connections
-		channel := newChannel(mconn, &descCopy)
-		channelsIdx[channel.id] = channel
+		channel := newChannel(mconn, *desc)
+		channelsIdx[channel.desc.ID] = channel
 		channels = append(channels, channel)
 	}
 	mconn.channels = channels
@@ -159,13 +162,22 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 	return mconn
 }
 
+func (c *MConnection) SetLogger(l log.Logger) {
+	c.BaseService.SetLogger(l)
+	for _, ch := range c.channels {
+		ch.SetLogger(l)
+	}
+}
+
 // OnStart implements BaseService
 func (c *MConnection) OnStart() error {
-	c.BaseService.OnStart()
+	if err := c.BaseService.OnStart(); err != nil {
+		return err
+	}
 	c.quit = make(chan struct{})
 	c.flushTimer = cmn.NewThrottleTimer("flush", c.config.flushThrottle)
 	c.pingTimer = cmn.NewRepeatTimer("ping", pingTimeout)
-	c.chStatsTimer = cmn.NewRepeatTimer("chStats", updateState)
+	c.chStatsTimer = cmn.NewRepeatTimer("chStats", updateStats)
 	go c.sendRoutine()
 	go c.recvRoutine()
 	return nil
@@ -180,7 +192,7 @@ func (c *MConnection) OnStop() {
 	if c.quit != nil {
 		close(c.quit)
 	}
-	c.conn.Close()
+	c.conn.Close() // nolint: errcheck
 	// We can't close pong safely here because
 	// recvRoutine may write to it after we've stopped.
 	// Though it doesn't need to get closed at all,
@@ -302,18 +314,18 @@ FOR_LOOP:
 			// NOTE: flushTimer.Set() must be called every time
 			// something is written to .bufWriter.
 			c.flush()
-		case <-c.chStatsTimer.Ch:
+		case <-c.chStatsTimer.Chan():
 			for _, channel := range c.channels {
 				channel.updateStats()
 			}
-		case <-c.pingTimer.Ch:
+		case <-c.pingTimer.Chan():
 			c.Logger.Debug("Send Ping")
-			wire.WriteByte(packetTypePing, c.bufWriter, &n, &err)
+			legacy.WriteOctet(packetTypePing, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.pong:
 			c.Logger.Debug("Send Pong")
-			wire.WriteByte(packetTypePong, c.bufWriter, &n, &err)
+			legacy.WriteOctet(packetTypePong, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.quit:
@@ -372,7 +384,7 @@ func (c *MConnection) sendMsgPacket() bool {
 			continue
 		}
 		// Get ratio, and keep track of lowest ratio.
-		ratio := float32(channel.recentlySent) / float32(channel.priority)
+		ratio := float32(channel.recentlySent) / float32(channel.desc.Priority)
 		if ratio < leastRatio {
 			leastRatio = ratio
 			leastChannel = channel
@@ -413,7 +425,7 @@ FOR_LOOP:
 			// Peek into bufReader for debugging
 			if numBytes := c.bufReader.Buffered(); numBytes > 0 {
 				log.Info("Peek connection buffer", "numBytes", numBytes, "bytes", log15.Lazy{func() []byte {
-					bytes, err := c.bufReader.Peek(MinInt(numBytes, 100))
+					bytes, err := c.bufReader.Peek(cmn.MinInt(numBytes, 100))
 					if err == nil {
 						return bytes
 					} else {
@@ -459,8 +471,11 @@ FOR_LOOP:
 			}
 			channel, ok := c.channelsIdx[pkt.ChannelID]
 			if !ok || channel == nil {
-				cmn.PanicQ(cmn.Fmt("Unknown channel %X", pkt.ChannelID))
+				err := fmt.Errorf("Unknown channel %X", pkt.ChannelID)
+				c.Logger.Error("Connection failed @ recvRoutine", "conn", c, "err", err)
+				c.stopForError(err)
 			}
+
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {
 				if c.IsRunning() {
@@ -475,7 +490,9 @@ FOR_LOOP:
 				c.onReceive(pkt.ChannelID, msgBytes)
 			}
 		default:
-			cmn.PanicSanity(cmn.Fmt("Unknown message type %X", pktType))
+			err := fmt.Errorf("Unknown message type %X", pktType)
+			c.Logger.Error("Connection failed @ recvRoutine", "conn", c, "err", err)
+			c.stopForError(err)
 		}
 
 		// TODO: shouldn't this go in the sendRoutine?
@@ -511,10 +528,10 @@ func (c *MConnection) Status() ConnectionStatus {
 	status.Channels = make([]ChannelStatus, len(c.channels))
 	for i, channel := range c.channels {
 		status.Channels[i] = ChannelStatus{
-			ID:                channel.id,
+			ID:                channel.desc.ID,
 			SendQueueCapacity: cap(channel.sendQueue),
 			SendQueueSize:     int(channel.sendQueueSize), // TODO use atomic
-			Priority:          channel.priority,
+			Priority:          channel.desc.Priority,
 			RecentlySent:      channel.recentlySent,
 		}
 	}
@@ -531,7 +548,7 @@ type ChannelDescriptor struct {
 	RecvMessageCapacity int
 }
 
-func (chDesc *ChannelDescriptor) FillDefaults() {
+func (chDesc ChannelDescriptor) FillDefaults() (filled ChannelDescriptor) {
 	if chDesc.SendQueueCapacity == 0 {
 		chDesc.SendQueueCapacity = defaultSendQueueCapacity
 	}
@@ -541,38 +558,42 @@ func (chDesc *ChannelDescriptor) FillDefaults() {
 	if chDesc.RecvMessageCapacity == 0 {
 		chDesc.RecvMessageCapacity = defaultRecvMessageCapacity
 	}
+	filled = chDesc
+	return
 }
 
 // TODO: lowercase.
 // NOTE: not goroutine-safe.
 type Channel struct {
 	conn          *MConnection
-	desc          *ChannelDescriptor
-	id            byte
+	desc          ChannelDescriptor
 	sendQueue     chan []byte
 	sendQueueSize int32 // atomic.
 	recving       []byte
 	sending       []byte
-	priority      int
 	recentlySent  int64 // exponential moving average
 
 	maxMsgPacketPayloadSize int
+
+	Logger log.Logger
 }
 
-func newChannel(conn *MConnection, desc *ChannelDescriptor) *Channel {
-	desc.FillDefaults()
+func newChannel(conn *MConnection, desc ChannelDescriptor) *Channel {
+	desc = desc.FillDefaults()
 	if desc.Priority <= 0 {
-		cmn.PanicSanity("Channel default priority must be a postive integer")
+		cmn.PanicSanity("Channel default priority must be a positive integer")
 	}
 	return &Channel{
 		conn:                    conn,
 		desc:                    desc,
-		id:                      desc.ID,
 		sendQueue:               make(chan []byte, desc.SendQueueCapacity),
 		recving:                 make([]byte, 0, desc.RecvBufferCapacity),
-		priority:                desc.Priority,
 		maxMsgPacketPayloadSize: conn.config.maxMsgPacketPayloadSize,
 	}
+}
+
+func (ch *Channel) SetLogger(l log.Logger) {
+	ch.Logger = l
 }
 
 // Queues message to send to this channel.
@@ -629,7 +650,7 @@ func (ch *Channel) isSendPending() bool {
 // Not goroutine-safe
 func (ch *Channel) nextMsgPacket() msgPacket {
 	packet := msgPacket{}
-	packet.ChannelID = byte(ch.id)
+	packet.ChannelID = byte(ch.desc.ID)
 	maxSize := ch.maxMsgPacketPayloadSize
 	packet.Bytes = ch.sending[:cmn.MinInt(maxSize, len(ch.sending))]
 	if len(ch.sending) <= maxSize {
@@ -647,19 +668,23 @@ func (ch *Channel) nextMsgPacket() msgPacket {
 // Not goroutine-safe
 func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int, err error) {
 	packet := ch.nextMsgPacket()
-	// log.Debug("Write Msg Packet", "conn", ch.conn, "packet", packet)
-	wire.WriteByte(packetTypeMsg, w, &n, &err)
-	wire.WriteBinary(packet, w, &n, &err)
+	ch.Logger.Debug("Write Msg Packet", "conn", ch.conn, "packet", packet)
+	writeMsgPacketTo(packet, w, &n, &err)
 	if err == nil {
 		ch.recentlySent += int64(n)
 	}
 	return
 }
 
+func writeMsgPacketTo(packet msgPacket, w io.Writer, n *int, err *error) {
+	legacy.WriteOctet(packetTypeMsg, w, n, err)
+	wire.WriteBinary(packet, w, n, err)
+}
+
 // Handles incoming msgPackets. Returns a msg bytes if msg is complete.
 // Not goroutine-safe
 func (ch *Channel) recvMsgPacket(packet msgPacket) ([]byte, error) {
-	// log.Debug("Read Msg Packet", "conn", ch.conn, "packet", packet)
+	ch.Logger.Debug("Read Msg Packet", "conn", ch.conn, "packet", packet)
 	if ch.desc.RecvMessageCapacity < len(ch.recving)+len(packet.Bytes) {
 		return nil, wire.ErrBinaryReadOverflow
 	}

@@ -98,6 +98,7 @@ var mapper = data.NewMapper(Wrapper{}).
 //-----------------------------------------------------------------------------
 
 type (
+	// TODO: replace with sum-type struct like ResultEvent
 	Tx interface {
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 	}
@@ -115,44 +116,44 @@ type (
 	}
 
 	SendTx struct {
-		Inputs  []*TxInput  `json:"inputs"`
-		Outputs []*TxOutput `json:"outputs"`
+		Inputs  []*TxInput
+		Outputs []*TxOutput
 	}
 
 	// BroadcastTx or Transact
 	Receipt struct {
-		TxHash          []byte      `json:"tx_hash"`
-		CreatesContract bool        `json:"creates_contract"`
-		ContractAddr    acm.Address `json:"contract_addr"`
+		TxHash          []byte
+		CreatesContract bool
+		ContractAddr    acm.Address
 	}
 
 	NameTx struct {
-		Input *TxInput `json:"input"`
-		Name  string   `json:"name"`
-		Data  string   `json:"data"`
-		Fee   uint64   `json:"fee"`
+		Input *TxInput
+		Name  string
+		Data  string
+		Fee   uint64
 	}
 
 	CallTx struct {
-		Input *TxInput `json:"input"`
+		Input *TxInput
 		// Pointer since CallTx defines unset 'to' address as inducing account creation
-		Address  *acm.Address `json:"address"`
-		GasLimit uint64       `json:"gas_limit"`
-		Fee      uint64       `json:"fee"`
-		Data     []byte       `json:"data"`
+		Address  *acm.Address
+		GasLimit uint64
+		Fee      uint64
+		Data     []byte
 	}
 
 	TxInput struct {
-		Address   acm.Address   `json:"address"`   // Hash of the PublicKey
-		Amount    uint64        `json:"amount"`    // Must not exceed account balance
-		Sequence  uint64        `json:"sequence"`  // Must be 1 greater than the last committed TxInput
-		Signature acm.Signature `json:"signature"` // Depends on the PublicKey type and the whole Tx
-		PubKey    acm.PublicKey `json:"pub_key"`   // Must not be nil, may be nil
+		Address   acm.Address
+		Amount    uint64
+		Sequence  uint64
+		Signature acm.Signature
+		PubKey    acm.PublicKey
 	}
 
 	TxOutput struct {
-		Address acm.Address `json:"address"` // Hash of the PublicKey
-		Amount  uint64      `json:"amount"`  // The sum of all outputs must not exceed the inputs.
+		Address acm.Address
+		Amount  uint64
 	}
 )
 
@@ -305,10 +306,10 @@ func (tx *NameTx) String() string {
 //-----------------------------------------------------------------------------
 
 type BondTx struct {
-	PubKey    acm.PublicKey `json:"pub_key"` // NOTE: these don't have type byte
-	Signature acm.Signature `json:"signature"`
-	Inputs    []*TxInput    `json:"inputs"`
-	UnbondTo  []*TxOutput   `json:"unbond_to"`
+	PubKey    acm.PublicKey
+	Signature acm.Signature
+	Inputs    []*TxInput
+	UnbondTo  []*TxOutput
 }
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -339,9 +340,9 @@ func (tx *BondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type UnbondTx struct {
-	Address   acm.Address   `json:"address"`
-	Height    int           `json:"height"`
-	Signature acm.Signature `json:"signature"`
+	Address   acm.Address
+	Height    int
+	Signature acm.Signature
 }
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -356,9 +357,9 @@ func (tx *UnbondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type RebondTx struct {
-	Address   acm.Address   `json:"address"`
-	Height    int           `json:"height"`
-	Signature acm.Signature `json:"signature"`
+	Address   acm.Address
+	Height    int
+	Signature acm.Signature
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

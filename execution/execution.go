@@ -57,7 +57,7 @@ type executor struct {
 	runCall    bool
 	state      *State
 	blockCache *BlockCache
-	fireable   event.Fireable
+	publisher  event.Publisher
 	eventCache *event.Cache
 	logger     logging_types.InfoTraceLogger
 }
@@ -69,16 +69,16 @@ func NewBatchChecker(state *State,
 	chainID string,
 	tip bcm.Tip,
 	logger logging_types.InfoTraceLogger) BatchExecutor {
-	return newExecutor(false, state, chainID, tip, event.NewNoOpFireable(),
+	return newExecutor(false, state, chainID, tip, event.NewNoOpPublisher(),
 		logging.WithScope(logger, "NewBatchExecutor"))
 }
 
 func NewBatchCommitter(state *State,
 	chainID string,
 	tip bcm.Tip,
-	fireable event.Fireable,
+	publisher event.Publisher,
 	logger logging_types.InfoTraceLogger) BatchCommitter {
-	return newExecutor(true, state, chainID, tip, fireable,
+	return newExecutor(true, state, chainID, tip, publisher,
 		logging.WithScope(logger, "NewBatchCommitter"))
 }
 
@@ -86,7 +86,7 @@ func newExecutor(runCall bool,
 	state *State,
 	chainID string,
 	tip bcm.Tip,
-	eventFireable event.Fireable,
+	eventFireable event.Publisher,
 	logger logging_types.InfoTraceLogger) *executor {
 	return &executor{
 		chainID:    chainID,
@@ -94,7 +94,7 @@ func newExecutor(runCall bool,
 		runCall:    runCall,
 		state:      state,
 		blockCache: NewBlockCache(state),
-		fireable:   eventFireable,
+		publisher:  eventFireable,
 		eventCache: event.NewEventCache(eventFireable),
 		logger:     logger.With(structure.ComponentKey, "Execution"),
 	}
@@ -144,7 +144,7 @@ func (exe *executor) Commit() ([]byte, error) {
 
 func (exe *executor) Reset() error {
 	exe.blockCache = NewBlockCache(exe.state)
-	exe.eventCache = event.NewEventCache(exe.fireable)
+	exe.eventCache = event.NewEventCache(exe.publisher)
 	return nil
 }
 
@@ -207,12 +207,13 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 		// if the exe.eventCache is nil, nothing will happen
 		if exe.eventCache != nil {
+			txHash := txs.TxHash(exe.chainID, tx)
 			for _, i := range tx.Inputs {
-				exe.eventCache.Fire(events.EventStringAccInput(i.Address), events.EventDataTx{tx, nil, ""})
+				events.PublishAccountInput(exe.eventCache, i.Address, txHash, tx, nil, "")
 			}
 
 			for _, o := range tx.Outputs {
-				exe.eventCache.Fire(events.EventStringAccOutput(o.Address), events.EventDataTx{tx, nil, ""})
+				events.PublishAccountOutput(exe.eventCache, o.Address, txHash, tx, nil, "")
 			}
 		}
 		return nil
@@ -363,7 +364,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				txCache.UpdateAccount(callee)
 				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(),
 					txs.TxHash(exe.chainID, tx), logger)
-				vmach.SetFireable(exe.eventCache)
+				vmach.SetPublisher(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
 				if err != nil {
@@ -396,11 +397,10 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				if err != nil {
 					exception = err.Error()
 				}
-				exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address),
-					events.EventDataTx{tx, ret, exception})
+				txHash := txs.TxHash(exe.chainID, tx)
+				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, ret, exception)
 				if tx.Address != nil {
-					exe.eventCache.Fire(events.EventStringAccOutput(*tx.Address),
-						events.EventDataTx{tx, ret, exception})
+					events.PublishAccountOutput(exe.eventCache, *tx.Address, txHash, tx, ret, exception)
 				}
 			}
 		} else {
@@ -565,8 +565,9 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address), events.EventDataTx{tx, nil, ""})
-			exe.eventCache.Fire(events.EventStringNameReg(tx.Name), events.EventDataTx{tx, nil, ""})
+			txHash := txs.TxHash(exe.chainID, tx)
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
+			events.PublishNameReg(exe.eventCache, txHash, tx)
 		}
 
 		return nil
@@ -809,10 +810,9 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		}
 
 		if exe.eventCache != nil {
-			exe.eventCache.Fire(events.EventStringAccInput(tx.Input.Address),
-				events.EventDataTx{tx, nil, ""})
-			exe.eventCache.Fire(events.EventStringPermissions(permission.PermFlagToString(permFlag)),
-				events.EventDataTx{tx, nil, ""})
+			txHash := txs.TxHash(exe.chainID, tx)
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
+			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txHash, tx)
 		}
 
 		return nil

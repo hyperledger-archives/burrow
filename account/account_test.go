@@ -69,7 +69,8 @@ func TestAccountSerialise(t *testing.T) {
 	accStructOut := AccountContainingStruct{}
 
 	// We must pass in a value type to read from (accStruct), but provide a pointer type to write into (accStructout
-	wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
+	err := wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
+	require.NoError(t, err)
 
 	assert.Equal(t, accStruct, accStructOut)
 }
@@ -77,7 +78,8 @@ func TestAccountSerialise(t *testing.T) {
 func TestDecodeConcrete(t *testing.T) {
 	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	acc := concreteAcc.Account()
-	encodedAcc := acc.Encode()
+	encodedAcc, err := acc.Encode()
+	require.NoError(t, err)
 	concreteAccOut, err := DecodeConcrete(encodedAcc)
 	require.NoError(t, err)
 	assert.Equal(t, concreteAcc, *concreteAccOut)
@@ -88,12 +90,14 @@ func TestDecodeConcrete(t *testing.T) {
 func TestDecode(t *testing.T) {
 	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
 	acc := concreteAcc.Account()
-	accOut, err := Decode(acc.Encode())
-	assert.NoError(t, err)
+	encodedAcc, err := acc.Encode()
+	require.NoError(t, err)
+	accOut, err := Decode(encodedAcc)
+	require.NoError(t, err)
 	assert.Equal(t, concreteAcc, *AsConcreteAccount(accOut))
 
 	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, accOut)
 }
 

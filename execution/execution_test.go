@@ -16,6 +16,7 @@ package execution
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -35,6 +36,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -168,7 +170,8 @@ func TestSendFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -235,7 +238,8 @@ func TestName(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -270,7 +274,8 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//-------------------
@@ -339,7 +344,8 @@ func TestSendPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	// A single input, having the permission, should succeed
@@ -375,7 +381,8 @@ func TestCallPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//------------------------------
@@ -423,7 +430,7 @@ func TestCallPermission(t *testing.T) {
 	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -439,7 +446,7 @@ func TestCallPermission(t *testing.T) {
 	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception:", exception)
 	}
@@ -469,7 +476,7 @@ func TestCallPermission(t *testing.T) {
 	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -487,7 +494,7 @@ func TestCallPermission(t *testing.T) {
 	tx.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
@@ -498,7 +505,8 @@ func TestCreatePermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//------------------------------
@@ -557,7 +565,7 @@ func TestCreatePermission(t *testing.T) {
 	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 100, 100)
 	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(contractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(contractAddr)) //
 	if exception == "" {
 		t.Fatal("expected exception")
 	}
@@ -573,7 +581,7 @@ func TestCreatePermission(t *testing.T) {
 	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 100, 100)
 	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(contractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(contractAddr)) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
@@ -599,7 +607,7 @@ func TestCreatePermission(t *testing.T) {
 	tx, _ = txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &contractAddr, createCode, 100, 10000, 100)
 	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(acm.Address{})) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(acm.Address{})) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
@@ -613,7 +621,7 @@ func TestCreatePermission(t *testing.T) {
 func TestBondPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state",dbBackend,dbDir)
 	genDoc := newBaseGenDoc(PermsAllFalse, PermsAllFalse)
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
 	batchCommitter := makeExecutor(st)
 	var bondAcc *acm.Account
 
@@ -740,7 +748,8 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
@@ -852,7 +861,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCall.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception := execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception := execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception == "" {
 		t.Fatal("Expected exception")
 	}
@@ -867,7 +876,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCall.Sign(testChainID, users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccCall(caller1ContractAddr)) //
+	_, exception = execTxWaitEvent(t, batchCommitter, txCall, evm_events.EventStringAccountCall(caller1ContractAddr)) //
 	if exception != "" {
 		t.Fatal("Unexpected exception", exception)
 	}
@@ -888,7 +897,8 @@ func TestSNativeCALL(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
@@ -1023,7 +1033,8 @@ func TestSNativeTx(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st := MakeGenesisState(stateDB, &genDoc)
+	st, err := MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
 	//----------------------------------------------------------
@@ -1094,38 +1105,35 @@ var ExceptionTimeOut = "timed out waiting for event"
 // run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
 func execTxWaitEvent(t *testing.T, batchCommitter *executor, tx txs.Tx, eventid string) (interface{}, string) {
-	evsw := event.NewEmitter(logger)
-	ch := make(chan event.AnyEventData)
-	evsw.Subscribe("test", eventid, func(msg event.AnyEventData) {
-		ch <- msg
-	})
-	evc := event.NewEventCache(evsw)
+	emitter := event.NewEmitter(logger)
+	ch := make(chan interface{})
+	emitter.Subscribe(context.Background(), "test", event.QueryForEventID(eventid), ch)
+	evc := event.NewEventCache(emitter)
 	batchCommitter.eventCache = evc
 	go func() {
 		if err := batchCommitter.Execute(tx); err != nil {
-			errStr := err.Error()
-			ch <- event.AnyEventData{Err: &errStr}
+			ch <- err.Error()
 		}
 		evc.Flush()
 	}()
 	ticker := time.NewTicker(5 * time.Second)
-	var msg event.AnyEventData
+
 	select {
-	case msg = <-ch:
+	case msg := <-ch:
+		switch ev := msg.(type) {
+		case *exe_events.EventDataTx:
+			return ev, ev.Exception
+		case *evm_events.EventDataCall:
+			return ev, ev.Exception
+		case string:
+			return nil, ev
+		default:
+			return ev, ""
+		}
 	case <-ticker.C:
 		return nil, ExceptionTimeOut
 	}
 
-	switch ev := msg.Get().(type) {
-	case exe_events.EventDataTx:
-		return ev, ev.Exception
-	case evm_events.EventDataCall:
-		return ev, ev.Exception
-	case string:
-		return nil, ev
-	default:
-		return ev, ""
-	}
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
@@ -1152,8 +1160,8 @@ func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, do
 	batchCommitter.blockCache.UpdateAccount(doug)
 	tx, _ := txs.NewCallTx(batchCommitter.blockCache, users[0].PublicKey(), &dougAddress, data, 100, 10000, 100)
 	tx.Sign(testChainID, users[0])
-	fmt.Println("subscribing to", evm_events.EventStringAccCall(snativeAddress))
-	ev, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccCall(snativeAddress))
+	fmt.Println("subscribing to", evm_events.EventStringAccountCall(snativeAddress))
+	ev, exception := execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(snativeAddress))
 	if exception == ExceptionTimeOut {
 		t.Fatal("Timed out waiting for event")
 	}
@@ -1161,7 +1169,7 @@ func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, do
 		if exception != "" {
 			t.Fatal("Unexpected exception", exception)
 		}
-		evv := ev.(evm_events.EventDataCall)
+		evv := ev.(*evm_events.EventDataCall)
 		ret := evv.Return
 		if err := f(ret); err != nil {
 			t.Fatal(err)

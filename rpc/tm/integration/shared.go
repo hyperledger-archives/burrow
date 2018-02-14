@@ -35,6 +35,7 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
@@ -52,6 +53,9 @@ const (
 	websocketEndpoint = "/websocket"
 	testDir           = "./test_scratch/tm_test"
 )
+
+// Enable logger output during tests
+var debugLogging = false
 
 // global variables for use across all tests
 var (
@@ -75,13 +79,14 @@ func TestWrapper(runner func() int) int {
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
-	// Uncomment for logs
-	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := loggers.NewNoopInfoTraceLogger()
+	if debugLogging {
+		logger, _ = lifecycle.NewStdErrLogger()
+	}
 
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
 	genesisDoc = testGenesisDoc()
-	kernel, err := core.NewKernel(privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
+	kernel, err := core.NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
 	if err != nil {
 		panic(err)
 	}

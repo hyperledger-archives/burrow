@@ -1,43 +1,57 @@
 package event
 
+import (
+	"context"
+)
+
 // When exceeded we will trim the buffer's backing array capacity to avoid excessive
 // allocation
-
 const maximumBufferCapacityToLengthRatio = 2
 
-// An Cache buffers events for a Fireable
-// All events are cached. Filtering happens on Flush
+// A Cache buffers events for a Publisher.
 type Cache struct {
-	evsw   Fireable
-	events []eventInfo
+	publisher Publisher
+	events    []messageInfo
 }
 
-var _ Fireable = &Cache{}
+var _ Publisher = &Cache{}
 
 // Create a new Cache with an EventSwitch as backend
-func NewEventCache(evsw Fireable) *Cache {
+func NewEventCache(publisher Publisher) *Cache {
 	return &Cache{
-		evsw: evsw,
+		publisher: publisher,
 	}
 }
 
 // a cached event
-type eventInfo struct {
-	event string
-	data  AnyEventData
+type messageInfo struct {
+	// Hmm... might be unintended interactions with pushing a deadline into a cache - though usually we publish with an
+	// empty context
+	ctx     context.Context
+	message interface{}
+	tags    map[string]interface{}
 }
 
 // Cache an event to be fired upon finality.
-func (evc *Cache) Fire(event string, eventData interface{}) {
+func (evc *Cache) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
 	// append to list (go will grow our backing array exponentially)
-	evc.events = append(evc.events, eventInfo{event: event, data: MapToAnyEventData(eventData)})
+	evc.events = append(evc.events, messageInfo{
+		ctx:     ctx,
+		message: message,
+		tags:    tags,
+	})
+	return nil
 }
 
-// Fire events by running evsw.Fire on all cached events. Blocks.
-// Clears cached events
-func (evc *Cache) Flush() {
-	for _, ei := range evc.events {
-		evc.evsw.Fire(ei.event, ei.data)
+// Clears cached events by flushing them to Publisher
+func (evc *Cache) Flush() error {
+	var err error
+	for _, mi := range evc.events {
+		publishErr := evc.publisher.Publish(mi.ctx, mi.message, mi.tags)
+		// Capture first by try to flush the rest
+		if publishErr != nil && err == nil {
+			err = publishErr
+		}
 	}
 	// Clear the buffer by re-slicing its length to zero
 	if cap(evc.events) > len(evc.events)*maximumBufferCapacityToLengthRatio {
@@ -49,4 +63,5 @@ func (evc *Cache) Flush() {
 		// in previous cache round
 		evc.events = evc.events[:0]
 	}
+	return err
 }

@@ -31,10 +31,6 @@ import (
 // of replay attack between chains with the same name.
 const ShortHashSuffixBytes = 3
 
-// we store the GenesisDoc in the db under this key
-
-var GenDocKey = []byte("GenDocKey")
-
 //------------------------------------------------------------
 // core types for a genesis definition
 

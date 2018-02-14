@@ -4,7 +4,7 @@
 defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
-    - image: circleci/golang:1.8.1
+    - image: circleci/golang:1.9.3
 
 tag_filters: &tags_filters
   tags:
@@ -31,7 +31,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run: sudo apt-get install libgmp3-dev
       - run: make test
 
   test_integration:
@@ -39,8 +38,9 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
-      
+
   ensure_vendor:
     <<: *defaults
     steps:

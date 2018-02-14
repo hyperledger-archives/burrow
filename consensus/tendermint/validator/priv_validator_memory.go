@@ -9,7 +9,7 @@ import (
 
 type privValidatorMemory struct {
 	acm.Addressable
-	acm.Signer
+	tm_types.Signer
 	lastSignedInfo *LastSignedInfo
 }
 
@@ -20,8 +20,8 @@ var _ tm_types.PrivValidator = &privValidatorMemory{}
 func NewPrivValidatorMemory(addressable acm.Addressable, signer acm.Signer) *privValidatorMemory {
 	return &privValidatorMemory{
 		Addressable:    addressable,
-		Signer:         signer,
-		lastSignedInfo: new(LastSignedInfo),
+		Signer:         asTendermintSigner(signer),
+		lastSignedInfo: NewLastSignedInfo(),
 	}
 }
 
@@ -33,16 +33,19 @@ func (pvm *privValidatorMemory) GetPubKey() crypto.PubKey {
 	return pvm.PublicKey().PubKey
 }
 
+// TODO: consider persistence to disk/database to avoid double signing after a crash
 func (pvm *privValidatorMemory) SignVote(chainID string, vote *tm_types.Vote) error {
-	return pvm.lastSignedInfo.SignVote(asTendermintSigner(pvm.Signer), chainID, vote)
+	return pvm.lastSignedInfo.SignVote(pvm.Signer, chainID, vote)
 }
 
 func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tm_types.Proposal) error {
-	return pvm.lastSignedInfo.SignProposal(asTendermintSigner(pvm.Signer), chainID, proposal)
+	return pvm.lastSignedInfo.SignProposal(pvm.Signer, chainID, proposal)
 }
 
 func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tm_types.Heartbeat) error {
-	return pvm.lastSignedInfo.SignHeartbeat(asTendermintSigner(pvm.Signer), chainID, heartbeat)
+	var err error
+	heartbeat.Signature, err = pvm.Signer.Sign(tm_types.SignBytes(chainID, heartbeat))
+	return err
 }
 
 func asTendermintSigner(signer acm.Signer) tm_types.Signer {

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"sync"
 	"time"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/proxy"
 	sm "github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -34,32 +34,33 @@ const (
 type consensusReactor interface {
 	// for when we switch from blockchain reactor and fast sync to
 	// the consensus machine
-	SwitchToConsensus(*sm.State, int)
+	SwitchToConsensus(sm.State, int)
 }
 
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	state        *sm.State
-	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-	store        *BlockStore
-	pool         *BlockPool
-	fastSync     bool
-	requestsCh   chan BlockRequest
-	timeoutsCh   chan string
+	mtx    sync.Mutex
+	params types.ConsensusParams
 
-	evsw types.EventSwitch
+	// immutable
+	initialState sm.State
+
+	blockExec  *sm.BlockExecutor
+	store      *BlockStore
+	pool       *BlockPool
+	fastSync   bool
+	requestsCh chan BlockRequest
+	timeoutsCh chan string
 }
 
 // NewBlockchainReactor returns new reactor instance.
-func NewBlockchainReactor(state *sm.State, proxyAppConn proxy.AppConnConsensus, store *BlockStore, fastSync bool) *BlockchainReactor {
-	if state.LastBlockHeight == store.Height()-1 {
-		store.height-- // XXX HACK, make this better
-	}
+func NewBlockchainReactor(state sm.State, blockExec *sm.BlockExecutor, store *BlockStore, fastSync bool) *BlockchainReactor {
 	if state.LastBlockHeight != store.Height() {
 		cmn.PanicSanity(cmn.Fmt("state (%v) and store (%v) height mismatch", state.LastBlockHeight, store.Height()))
 	}
+
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -68,8 +69,9 @@ func NewBlockchainReactor(state *sm.State, proxyAppConn proxy.AppConnConsensus, 
 		timeoutsCh,
 	)
 	bcR := &BlockchainReactor{
-		state:        state,
-		proxyAppConn: proxyAppConn,
+		params:       state.ConsensusParams,
+		initialState: state,
+		blockExec:    blockExec,
 		store:        store,
 		pool:         pool,
 		fastSync:     fastSync,
@@ -88,9 +90,11 @@ func (bcR *BlockchainReactor) SetLogger(l log.Logger) {
 
 // OnStart implements cmn.Service.
 func (bcR *BlockchainReactor) OnStart() error {
-	bcR.BaseReactor.OnStart()
+	if err := bcR.BaseReactor.OnStart(); err != nil {
+		return err
+	}
 	if bcR.fastSync {
-		_, err := bcR.pool.Start()
+		err := bcR.pool.Start()
 		if err != nil {
 			return err
 		}
@@ -108,7 +112,7 @@ func (bcR *BlockchainReactor) OnStop() {
 // GetChannels implements Reactor
 func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
-		&p2p.ChannelDescriptor{
+		{
 			ID:                BlockchainChannel,
 			Priority:          10,
 			SendQueueCapacity: 1000,
@@ -121,6 +125,8 @@ func (bcR *BlockchainReactor) AddPeer(peer p2p.Peer) {
 	if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
 		// doing nothing, will try later in `poolRoutine`
 	}
+	// peer is added to the pool once we receive the first
+	// bcStatusResponseMessage from the peer and call pool.SetPeerHeight
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
@@ -182,7 +188,16 @@ func (bcR *BlockchainReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 // maxMsgSize returns the maximum allowable size of a
 // message on the blockchain reactor.
 func (bcR *BlockchainReactor) maxMsgSize() int {
-	return bcR.state.Params.BlockSizeParams.MaxBytes + 2
+	bcR.mtx.Lock()
+	defer bcR.mtx.Unlock()
+	return bcR.params.BlockSize.MaxBytes + 2
+}
+
+// updateConsensusParams updates the internal consensus params
+func (bcR *BlockchainReactor) updateConsensusParams(params types.ConsensusParams) {
+	bcR.mtx.Lock()
+	defer bcR.mtx.Unlock()
+	bcR.params = params
 }
 
 // Handle messages from the poolReactor telling the reactor what to do.
@@ -196,7 +211,8 @@ func (bcR *BlockchainReactor) poolRoutine() {
 
 	blocksSynced := 0
 
-	chainID := bcR.state.ChainID
+	chainID := bcR.initialState.ChainID
+	state := bcR.initialState
 
 	lastHundred := time.Now()
 	lastRate := 0.0
@@ -224,7 +240,7 @@ FOR_LOOP:
 			}
 		case <-statusUpdateTicker.C:
 			// ask for status updates
-			go bcR.BroadcastStatusRequest()
+			go bcR.BroadcastStatusRequest() // nolint: errcheck
 		case <-switchToConsensusTicker.C:
 			height, numPending, lenRequesters := bcR.pool.GetStatus()
 			outbound, inbound, _ := bcR.Switch.NumPeers()
@@ -235,7 +251,7 @@ FOR_LOOP:
 				bcR.pool.Stop()
 
 				conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
-				conR.SwitchToConsensus(bcR.state, blocksSynced)
+				conR.SwitchToConsensus(state, blocksSynced)
 
 				break FOR_LOOP
 			}
@@ -250,14 +266,15 @@ FOR_LOOP:
 					// We need both to sync the first block.
 					break SYNC_LOOP
 				}
-				firstParts := first.MakePartSet(bcR.state.Params.BlockPartSizeBytes)
+				firstParts := first.MakePartSet(state.ConsensusParams.BlockPartSizeBytes)
 				firstPartsHeader := firstParts.Header()
+				firstID := types.BlockID{first.Hash(), firstPartsHeader}
 				// Finally, verify the first block using the second's commit
 				// NOTE: we can probably make this more efficient, but note that calling
 				// first.Hash() doesn't verify the tx contents, so MakePartSet() is
 				// currently necessary.
-				err := bcR.state.Validators.VerifyCommit(
-					chainID, types.BlockID{first.Hash(), firstPartsHeader}, first.Height, second.LastCommit)
+				err := state.Validators.VerifyCommit(
+					chainID, firstID, first.Height, second.LastCommit)
 				if err != nil {
 					bcR.Logger.Error("Error in validation", "err", err)
 					bcR.pool.RedoRequest(first.Height)
@@ -267,16 +284,19 @@ FOR_LOOP:
 
 					bcR.store.SaveBlock(first, firstParts, second.LastCommit)
 
-					// TODO: should we be firing events? need to fire NewBlock events manually ...
 					// NOTE: we could improve performance if we
 					// didn't make the app commit to disk every block
 					// ... but we would need a way to get the hash without it persisting
-					err := bcR.state.ApplyBlock(bcR.evsw, bcR.proxyAppConn, first, firstPartsHeader, types.MockMempool{})
+					var err error
+					state, err = bcR.blockExec.ApplyBlock(state, firstID, first)
 					if err != nil {
 						// TODO This is bad, are we zombie?
 						cmn.PanicQ(cmn.Fmt("Failed to process committed block (%d:%X): %v", first.Height, first.Hash(), err))
 					}
 					blocksSynced += 1
+
+					// update the consensus params
+					bcR.updateConsensusParams(state.ConsensusParams)
 
 					if blocksSynced%100 == 0 {
 						lastRate = 0.9*lastRate + 0.1*(100/time.Since(lastHundred).Seconds())
@@ -297,11 +317,6 @@ FOR_LOOP:
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
 	return nil
-}
-
-// SetEventSwitch implements events.Eventable
-func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
-	bcR.evsw = evsw
 }
 
 //-----------------------------------------------------------------------------
@@ -343,7 +358,7 @@ func DecodeMessage(bz []byte, maxSize int) (msgType byte, msg BlockchainMessage,
 //-------------------------------------
 
 type bcBlockRequestMessage struct {
-	Height int
+	Height int64
 }
 
 func (m *bcBlockRequestMessage) String() string {
@@ -351,7 +366,7 @@ func (m *bcBlockRequestMessage) String() string {
 }
 
 type bcNoBlockResponseMessage struct {
-	Height int
+	Height int64
 }
 
 func (brm *bcNoBlockResponseMessage) String() string {
@@ -372,7 +387,7 @@ func (m *bcBlockResponseMessage) String() string {
 //-------------------------------------
 
 type bcStatusRequestMessage struct {
-	Height int
+	Height int64
 }
 
 func (m *bcStatusRequestMessage) String() string {
@@ -382,7 +397,7 @@ func (m *bcStatusRequestMessage) String() string {
 //-------------------------------------
 
 type bcStatusResponseMessage struct {
-	Height int
+	Height int64
 }
 
 func (m *bcStatusResponseMessage) String() string {

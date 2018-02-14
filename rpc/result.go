@@ -15,9 +15,13 @@
 package rpc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	exe_events "github.com/hyperledger/burrow/execution/events"
+	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
@@ -26,134 +30,187 @@ import (
 )
 
 type ResultGetStorage struct {
-	Key   []byte `json:"key"`
-	Value []byte `json:"value"`
+	Key   []byte
+	Value []byte
 }
 
 type ResultCall struct {
-	*execution.Call `json:"unwrap"`
+	execution.Call
+}
+
+func (rc ResultCall) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rc.Call)
+}
+
+func (rc *ResultCall) UnmarshalJSON(data []byte) (err error) {
+	return json.Unmarshal(data, &rc.Call)
 }
 
 type ResultListAccounts struct {
-	BlockHeight uint64                 `json:"block_height"`
-	Accounts    []*acm.ConcreteAccount `json:"accounts"`
+	BlockHeight uint64
+	Accounts    []*acm.ConcreteAccount
 }
 
 type ResultDumpStorage struct {
-	StorageRoot  []byte        `json:"storage_root"`
-	StorageItems []StorageItem `json:"storage_items"`
+	StorageRoot  []byte
+	StorageItems []StorageItem
 }
 
 type StorageItem struct {
-	Key   []byte `json:"key"`
-	Value []byte `json:"value"`
+	Key   []byte
+	Value []byte
 }
 
 type ResultListBlocks struct {
-	LastHeight uint64                `json:"last_height"`
-	BlockMetas []*tm_types.BlockMeta `json:"block_metas"`
+	LastHeight uint64
+	BlockMetas []*tm_types.BlockMeta
 }
 
 type ResultGetBlock struct {
-	BlockMeta *tm_types.BlockMeta `json:"block_meta"`
-	Block     *tm_types.Block     `json:"block"`
+	BlockMeta *tm_types.BlockMeta
+	Block     *tm_types.Block
 }
 
 type ResultStatus struct {
-	NodeInfo          *p2p.NodeInfo `json:"node_info"`
-	GenesisHash       []byte        `json:"genesis_hash"`
-	PubKey            acm.PublicKey `json:"pub_key"`
-	LatestBlockHash   []byte        `json:"latest_block_hash"`
-	LatestBlockHeight uint64        `json:"latest_block_height"`
-	LatestBlockTime   int64         `json:"latest_block_time"` // nano
-	NodeVersion       string        `json:"node_version"`      // nano
+	NodeInfo          *p2p.NodeInfo
+	GenesisHash       []byte
+	PubKey            acm.PublicKey
+	LatestBlockHash   []byte
+	LatestBlockHeight uint64
+	LatestBlockTime   int64
+	NodeVersion       string
 }
 
 type ResultChainId struct {
-	ChainName   string `json:"chain_name"`
-	ChainId     string `json:"chain_id"`
-	GenesisHash []byte `json:"genesis_hash"`
+	ChainName   string
+	ChainId     string
+	GenesisHash []byte
 }
 
 type ResultSubscribe struct {
-	EventID        string `json:"event"`
-	SubscriptionID string `json:"subscription_id"`
+	EventID        string
+	SubscriptionID string
 }
 
 type ResultUnsubscribe struct {
-	SubscriptionID string `json:"subscription_id"`
+	SubscriptionID string
 }
 
 type Peer struct {
-	NodeInfo   *p2p.NodeInfo `json:"node_info"`
-	IsOutbound bool          `json:"is_outbound"`
+	NodeInfo   *p2p.NodeInfo
+	IsOutbound bool
 }
 
 type ResultNetInfo struct {
-	Listening bool     `json:"listening"`
-	Listeners []string `json:"listeners"`
-	Peers     []*Peer  `json:"peers"`
+	Listening bool
+	Listeners []string
+	Peers     []*Peer
 }
 
 type ResultListValidators struct {
-	BlockHeight         uint64                   `json:"block_height"`
-	BondedValidators    []*acm.ConcreteValidator `json:"bonded_validators"`
-	UnbondingValidators []*acm.ConcreteValidator `json:"unbonding_validators"`
+	BlockHeight         uint64
+	BondedValidators    []*acm.ConcreteValidator
+	UnbondingValidators []*acm.ConcreteValidator
 }
 
 type ResultDumpConsensusState struct {
-	RoundState      *ctypes.RoundState       `json:"consensus_state"`
-	PeerRoundStates []*ctypes.PeerRoundState `json:"peer_round_states"`
+	RoundState      *ctypes.RoundState
+	PeerRoundStates []*ctypes.PeerRoundState
 }
 
 type ResultPeers struct {
-	Peers []*Peer `json:"peers"`
+	Peers []*Peer
 }
 
 type ResultListNames struct {
-	BlockHeight uint64                    `json:"block_height"`
-	Names       []*execution.NameRegEntry `json:"names"`
+	BlockHeight uint64
+	Names       []*execution.NameRegEntry
 }
 
 type ResultGeneratePrivateAccount struct {
-	PrivAccount *acm.ConcretePrivateAccount `json:"priv_account"`
+	PrivateAccount *acm.ConcretePrivateAccount
 }
 
 type ResultGetAccount struct {
-	Account *acm.ConcreteAccount `json:"account"`
+	Account *acm.ConcreteAccount
 }
 
 type ResultBroadcastTx struct {
-	*txs.Receipt `json:"unwrap"`
+	txs.Receipt
+}
+
+// Unwrap
+
+func (rbt ResultBroadcastTx) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rbt.Receipt)
+}
+
+func (rbt ResultBroadcastTx) UnmarshalJSON(data []byte) (err error) {
+	return json.Unmarshal(data, &rbt.Receipt)
 }
 
 type ResultListUnconfirmedTxs struct {
-	N   int           `json:"n_txs"`
-	Txs []txs.Wrapper `json:"txs"`
+	NumTxs int
+	Txs    []txs.Wrapper
 }
 
 type ResultGetName struct {
-	Entry *execution.NameRegEntry `json:"entry"`
+	Entry *execution.NameRegEntry
 }
 
 type ResultGenesis struct {
-	Genesis genesis.GenesisDoc `json:"genesis"`
+	Genesis genesis.GenesisDoc
 }
 
 type ResultSignTx struct {
-	Tx txs.Wrapper `json:"tx"`
+	Tx txs.Wrapper
 }
 
 type ResultEvent struct {
-	Event              string `json:"event"`
-	event.AnyEventData `json:"data"`
+	Event string
+	// TODO: move ResultEvent sum type here
+	TMEventData   *tm_types.TMEventData     `json:",omitempty"`
+	EventDataTx   *exe_events.EventDataTx   `json:",omitempty"`
+	EventDataCall *evm_events.EventDataCall `json:",omitempty"`
+	EventDataLog  *evm_events.EventDataLog  `json:",omitempty"`
 }
 
-// Type byte helper
-var nextByte byte = 1
+func (resultEvent ResultEvent) EventDataNewBlock() *tm_types.EventDataNewBlock {
+	if resultEvent.TMEventData != nil {
+		eventData, _ := resultEvent.TMEventData.Unwrap().(tm_types.EventDataNewBlock)
+		return &eventData
+	}
+	return nil
+}
 
-func biota() (b byte) {
-	b = nextByte
-	nextByte++
-	return
+// Map any supported event data element to our ResultEvent sum type
+func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
+	switch ed := eventData.(type) {
+	case tm_types.TMEventData:
+		return &ResultEvent{
+			Event:       event,
+			TMEventData: &ed,
+		}, nil
+
+	case exe_events.EventDataTx:
+		return &ResultEvent{
+			Event:       event,
+			EventDataTx: &ed,
+		}, nil
+
+	case evm_events.EventDataCall:
+		return &ResultEvent{
+			Event:         event,
+			EventDataCall: &ed,
+		}, nil
+
+	case evm_events.EventDataLog:
+		return &ResultEvent{
+			Event:        event,
+			EventDataLog: &ed,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
+	}
 }

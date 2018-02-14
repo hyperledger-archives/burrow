@@ -15,8 +15,8 @@ var (
 // conditional on the height/round/step in the timeoutInfo.
 // The timeoutInfo.Duration may be non-positive.
 type TimeoutTicker interface {
-	Start() (bool, error)
-	Stop() bool
+	Start() error
+	Stop() error
 	Chan() <-chan timeoutInfo       // on which to receive a timeout
 	ScheduleTimeout(ti timeoutInfo) // reset the timer
 
@@ -68,7 +68,7 @@ func (t *timeoutTicker) Chan() <-chan timeoutInfo {
 }
 
 // ScheduleTimeout schedules a new timeout by sending on the internal tickChan.
-// The timeoutRoutine is alwaya available to read from tickChan, so this won't block.
+// The timeoutRoutine is always available to read from tickChan, so this won't block.
 // The scheduling may fail if the timeoutRoutine has already scheduled a timeout for a later height/round/step.
 func (t *timeoutTicker) ScheduleTimeout(ti timeoutInfo) {
 	t.tickChan <- ti

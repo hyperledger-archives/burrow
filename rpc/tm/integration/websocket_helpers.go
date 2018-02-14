@@ -25,12 +25,11 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
-	rpcclient "github.com/tendermint/tendermint/rpc/lib/client"
+	"github.com/tendermint/tendermint/rpc/lib/client"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -42,11 +41,12 @@ const (
 //--------------------------------------------------------------------------------
 // Utilities for testing the websocket service
 type blockPredicate func(block *tm_types.Block) bool
+type resultEventChecker func(eventID string, resultEvent *rpc.ResultEvent) (bool, error)
 
 // create a new connection
 func newWSClient() *rpcclient.WSClient {
 	wsc := rpcclient.NewWSClient(websocketAddr, websocketEndpoint)
-	if _, err := wsc.Start(); err != nil {
+	if err := wsc.Start(); err != nil {
 		panic(err)
 	}
 	return wsc
@@ -74,10 +74,10 @@ func subscribeAndGetSubscriptionId(t *testing.T, wsc *rpcclient.WSClient, eventI
 		case <-timeout.C:
 			t.Fatal("Timeout waiting for subscription result")
 		case response := <-wsc.ResponsesCh:
-			require.Nil(t, response.Error, "got error response from websocket channel")
+			require.Nil(t, response.Error, "Got error response from websocket channel: %v", response.Error)
 			if response.ID == tm_client.SubscribeRequestID {
 				res := new(rpc.ResultSubscribe)
-				err := json.Unmarshal(*response.Result, res)
+				err := json.Unmarshal(response.Result, res)
 				if err == nil {
 					return res.SubscriptionID
 				}
@@ -107,7 +107,7 @@ func broadcastTxAndWaitForBlock(t *testing.T, client tm_client.RPCClient, wsc *r
 }
 
 func nextBlockPredicateFn() blockPredicate {
-	initialHeight := -1
+	initialHeight := int64(-1)
 	return func(block *tm_types.Block) bool {
 		if initialHeight <= 0 {
 			initialHeight = block.Height
@@ -134,22 +134,20 @@ func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
 }
 
 func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient, predicate blockPredicate, runner func()) {
-	eventDataChecker := func(event string, eventData event.AnyEventData) (bool, error) {
+	eventDataChecker := func(event string, eventData *rpc.ResultEvent) (bool, error) {
 		eventDataNewBlock := eventData.EventDataNewBlock()
 		if eventDataNewBlock == nil {
 			return false, fmt.Errorf("could not convert %#v to EventDataNewBlock", eventData)
 		}
 		return predicate(eventDataNewBlock.Block), nil
 	}
-	subscribeAndWaitForNext(t, wsc, tm_types.EventStringNewBlock(), runner, eventDataChecker)
+	subscribeAndWaitForNext(t, wsc, tm_types.EventNewBlock, runner, eventDataChecker)
 }
 
-func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(),
-	eventDataChecker func(string, event.AnyEventData) (bool, error)) {
-
+func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(), checker resultEventChecker) {
 	subId := subscribeAndGetSubscriptionId(t, wsc, event)
 	defer unsubscribe(t, wsc, subId)
-	waitForEvent(t, wsc, event, runner, eventDataChecker)
+	waitForEvent(t, wsc, event, runner, checker)
 }
 
 // waitForEvent executes runner that is expected to trigger events. It then
@@ -160,10 +158,10 @@ func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string
 // waitForEvent will keep listening for new events. If an error is returned
 // waitForEvent will fail the test.
 func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner func(),
-	eventDataChecker func(string, event.AnyEventData) (bool, error)) waitForEventResult {
+	checker resultEventChecker) waitForEventResult {
 
 	// go routine to wait for websocket msg
-	eventsCh := make(chan event.AnyEventData)
+	eventsCh := make(chan *rpc.ResultEvent)
 	shutdownEventsCh := make(chan bool, 1)
 	errCh := make(chan error)
 
@@ -172,26 +170,26 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 
 	// Read message
 	go func() {
-	LOOP:
 		for {
 			select {
 			case <-shutdownEventsCh:
-				break LOOP
+				return
 			case r := <-wsc.ResponsesCh:
 				if r.Error != nil {
 					errCh <- r.Error
-					break LOOP
+					return
 				}
 				if r.ID == tm_client.EventResponseID(eventID) {
-					fmt.Println(string(*r.Result))
 					resultEvent := new(rpc.ResultEvent)
-					err := json.Unmarshal(*r.Result, resultEvent)
-					if err == nil {
-						eventsCh <- resultEvent.AnyEventData
+					err := json.Unmarshal(r.Result, resultEvent)
+					if err != nil {
+						errCh <- err
+					} else {
+						eventsCh <- resultEvent
 					}
 				}
 			case <-wsc.Quit:
-				break LOOP
+				return
 			}
 		}
 	}()
@@ -206,7 +204,7 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 			return waitForEventResult{timeout: true}
 		case eventData := <-eventsCh:
 			// run the check
-			stopWaiting, err := eventDataChecker(eventID, eventData)
+			stopWaiting, err := checker(eventID, eventData)
 			require.NoError(t, err)
 			if stopWaiting {
 				return waitForEventResult{}
@@ -228,11 +226,11 @@ func (err waitForEventResult) Timeout() bool {
 
 //--------------------------------------------------------------------------------
 
-func unmarshalValidateSend(amt uint64, toAddr acm.Address) func(string, event.AnyEventData) (bool, error) {
-	return func(eid string, eventData event.AnyEventData) (bool, error) {
-		data := eventData.EventDataTx()
+func unmarshalValidateSend(amt uint64, toAddr acm.Address) resultEventChecker {
+	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+		data := resultEvent.EventDataTx
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", eventData)
+			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
@@ -253,11 +251,11 @@ func unmarshalValidateSend(amt uint64, toAddr acm.Address) func(string, event.An
 	}
 }
 
-func unmarshalValidateTx(amt uint64, returnCode []byte) func(string, event.AnyEventData) (bool, error) {
-	return func(eid string, eventData event.AnyEventData) (bool, error) {
-		data := eventData.EventDataTx()
+func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
+	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+		data := resultEvent.EventDataTx
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", eventData)
+			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
@@ -279,11 +277,11 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) func(string, event.AnyEv
 	}
 }
 
-func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) func(string, event.AnyEventData) (bool, error) {
-	return func(eid string, eventData event.AnyEventData) (bool, error) {
-		data := eventData.EventDataCall()
+func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) resultEventChecker {
+	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+		data := resultEvent.EventDataCall
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", eventData)
+			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)

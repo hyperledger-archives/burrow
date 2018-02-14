@@ -30,12 +30,12 @@ type RPCClient interface {
 }
 
 func BroadcastTx(client RPCClient, tx txs.Tx) (*txs.Receipt, error) {
-	res := new(rpc.ResultBroadcastTx)
+	res := new(txs.Receipt)
 	_, err := client.Call(tm.BroadcastTx, pmap("tx", txs.Wrap(tx)), res)
 	if err != nil {
 		return nil, err
 	}
-	return res.Receipt, nil
+	return res, nil
 }
 
 func Status(client RPCClient) (*rpc.ResultStatus, error) {

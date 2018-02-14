@@ -64,15 +64,14 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 }
 
 func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, acm.PrivateAccount) {
-	privKey, err := acm.GeneratePrivateKey(dg.random)
+	privateKey, err := acm.GeneratePrivateKey(dg.random)
 	if err != nil {
 		panic(fmt.Errorf("could not generate private key deterministically"))
 	}
-	pubKey := acm.PublicKeyFromGoCryptoPubKey(privKey.PubKey())
 	privAccount := &acm.ConcretePrivateAccount{
-		PublicKey:  pubKey,
-		PrivateKey: privKey,
-		Address:    pubKey.Address(),
+		PublicKey:  privateKey.PublicKey(),
+		PrivateKey: privateKey,
+		Address:    privateKey.PublicKey().Address(),
 	}
 	perms := permission.DefaultAccountPermissions
 	acc := &acm.ConcreteAccount{

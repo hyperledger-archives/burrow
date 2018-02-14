@@ -20,10 +20,24 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
 )
+
+// EventSubscribe
+type EventSub struct {
+	SubId string `json:"sub_id"`
+}
+
+// EventUnsubscribe
+type EventUnsub struct {
+	Result bool `json:"result"`
+}
+
+// EventPoll
+type PollResponse struct {
+	Events []interface{} `json:"events"`
+}
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
 type JsonRpcServer struct {
@@ -67,7 +81,7 @@ func (jrs *JsonRpcServer) handleFunc(c *gin.Context) {
 type JSONService struct {
 	codec           rpc.Codec
 	service         rpc.Service
-	eventSubs       *event.Subscriptions
+	eventSubs       *Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
 }
 
@@ -77,7 +91,7 @@ func NewJSONService(codec rpc.Codec, service rpc.Service) server.HttpService {
 	tmhttps := &JSONService{
 		codec:     codec,
 		service:   service,
-		eventSubs: event.NewSubscriptions(service),
+		eventSubs: NewSubscriptions(service),
 	}
 
 	dhMap := GetMethods(codec, service)
@@ -150,7 +164,7 @@ func (js *JSONService) writeResponse(id string, result interface{}, w http.Respo
 
 // *************************************** Events ************************************
 
-// Subscribe to an event.
+// Subscribe to an
 func (js *JSONService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
@@ -163,10 +177,10 @@ func (js *JSONService) EventSubscribe(request *rpc.RPCRequest,
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.EventSub{subId}, 0, nil
+	return &EventSub{subId}, 0, nil
 }
 
-// Un-subscribe from an event.
+// Un-subscribe from an
 func (js *JSONService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
@@ -175,11 +189,11 @@ func (js *JSONService) EventUnsubscribe(request *rpc.RPCRequest, requester inter
 	}
 	subId := param.SubId
 
-	err = js.service.Unsubscribe(subId)
+	err = js.service.Unsubscribe(context.Background(), subId)
 	if err != nil {
 		return nil, rpc.INTERNAL_ERROR, err
 	}
-	return &event.EventUnsub{true}, 0, nil
+	return &EventUnsub{true}, 0, nil
 }
 
 // Check subscription event cache for new data.
@@ -196,5 +210,5 @@ func (js *JSONService) EventPoll(request *rpc.RPCRequest,
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.PollResponse{result}, 0, nil
+	return &PollResponse{result}, 0, nil
 }

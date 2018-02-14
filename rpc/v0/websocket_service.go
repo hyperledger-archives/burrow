@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"context"
+
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
@@ -123,13 +125,13 @@ func (ws *WebsocketService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INTERNAL_ERROR, err
 	}
 
-	err = ws.service.Subscribe(subId, eventId, func(eventData event.AnyEventData) {
-		ws.writeResponse(subId, eventData.Get(), session)
+	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) {
+		ws.writeResponse(subId, resultEvent, session)
 	})
 	if err != nil {
 		return nil, rpc.INTERNAL_ERROR, err
 	}
-	return &event.EventSub{SubId: subId}, 0, nil
+	return &EventSub{SubId: subId}, 0, nil
 }
 
 func (ws *WebsocketService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
@@ -139,11 +141,11 @@ func (ws *WebsocketService) EventUnsubscribe(request *rpc.RPCRequest, requester 
 		return nil, rpc.INVALID_PARAMS, err
 	}
 
-	err = ws.service.Unsubscribe(param.SubId)
+	err = ws.service.Unsubscribe(context.Background(), param.SubId)
 	if err != nil {
 		return nil, rpc.INTERNAL_ERROR, err
 	}
-	return &event.EventUnsub{Result: true}, 0, nil
+	return &EventUnsub{Result: true}, 0, nil
 }
 
 func (ws *WebsocketService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {

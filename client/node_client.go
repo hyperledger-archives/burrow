@@ -106,7 +106,7 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 		"endpoint", "/websocket",
 	)
 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
-	if _, err = wsClient.Start(); err != nil {
+	if err = wsClient.Start(); err != nil {
 		return nil, err
 	}
 	derivedBurrowNodeWebsocketClient := &burrowNodeWebsocketClient{

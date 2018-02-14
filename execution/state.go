@@ -27,7 +27,6 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/util"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/merkleeyes/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -67,9 +66,9 @@ var _ acm.StateIterable = &State{}
 
 var _ acm.StateWriter = &State{}
 
-func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
+func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) (*State, error) {
 	if len(genDoc.Validators) == 0 {
-		util.Fatalf("The genesis file has no validators")
+		return nil, fmt.Errorf("the genesis file has no validators")
 	}
 
 	if genDoc.GenesisTime.IsZero() {
@@ -90,7 +89,11 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 			Balance:     genAcc.Amount,
 			Permissions: perm,
 		}
-		accounts.Set(acc.Address.Bytes(), acc.Encode())
+		encodedAcc, err := acc.Encode()
+		if err != nil {
+			return nil, err
+		}
+		accounts.Set(acc.Address.Bytes(), encodedAcc)
 	}
 
 	// global permissions are saved as the 0 address
@@ -106,7 +109,11 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	accounts.Set(permsAcc.Address.Bytes(), permsAcc.Encode())
+	encodedPermsAcc, err := permsAcc.Encode()
+	if err != nil {
+		return nil, err
+	}
+	accounts.Set(permsAcc.Address.Bytes(), encodedPermsAcc)
 
 	// Make validatorInfos state tree && validators slice
 	/*
@@ -158,7 +165,7 @@ func MakeGenesisState(db dbm.DB, genDoc *genesis.GenesisDoc) *State {
 		accounts: accounts,
 		//validatorInfos:       validatorInfos,
 		nameReg: nameReg,
-	}
+	}, nil
 }
 
 func LoadState(db dbm.DB) (*State, error) {
@@ -248,7 +255,11 @@ func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
 func (s *State) UpdateAccount(account acm.Account) error {
 	s.Lock()
 	defer s.Unlock()
-	s.accounts.Set(account.Address().Bytes(), account.Encode())
+	encodedAccount, err := account.Encode()
+	if err != nil {
+		return err
+	}
+	s.accounts.Set(account.Address().Bytes(), encodedAccount)
 	return nil
 }
 

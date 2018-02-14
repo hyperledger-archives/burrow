@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"path/filepath"
 	"time"
+
+	"github.com/pkg/errors"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/types"
@@ -14,12 +17,13 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
+const (
+	// must be greater than params.BlockGossip.BlockPartSizeBytes + a few bytes
+	maxMsgSizeBytes = 1024 * 1024 // 1MB
+)
+
 //--------------------------------------------------------
 // types and functions for savings consensus messages
-
-var (
-	walSeparator = []byte{55, 127, 6, 130} // 0x377f0682 - magic number
-)
 
 type TimedWALMessage struct {
 	Time time.Time  `json:"time"` // for debugging purposes
@@ -27,9 +31,9 @@ type TimedWALMessage struct {
 }
 
 // EndHeightMessage marks the end of the given height inside WAL.
-// @internal used by scripts/cutWALUntil util.
+// @internal used by scripts/wal2json util.
 type EndHeightMessage struct {
-	Height uint64 `json:"height"`
+	Height int64 `json:"height"`
 }
 
 type WALMessage interface{}
@@ -45,11 +49,22 @@ var _ = wire.RegisterInterface(
 //--------------------------------------------------------
 // Simple write-ahead logger
 
+// WAL is an interface for any write-ahead logger.
+type WAL interface {
+	Save(WALMessage)
+	Group() *auto.Group
+	SearchForEndHeight(height int64, options *WALSearchOptions) (gr *auto.GroupReader, found bool, err error)
+
+	Start() error
+	Stop() error
+	Wait()
+}
+
 // Write ahead logger writes msgs to disk before they are processed.
 // Can be used for crash-recovery and deterministic replay
 // TODO: currently the wal is overwritten during replay catchup
 //   give it a mode so it's either reading or appending - must read to end to start appending again
-type WAL struct {
+type baseWAL struct {
 	cmn.BaseService
 
 	group *auto.Group
@@ -58,38 +73,47 @@ type WAL struct {
 	enc *WALEncoder
 }
 
-func NewWAL(walFile string, light bool) (*WAL, error) {
+func NewWAL(walFile string, light bool) (*baseWAL, error) {
+	err := cmn.EnsureDir(filepath.Dir(walFile), 0700)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to ensure WAL directory is in place")
+	}
+
 	group, err := auto.OpenGroup(walFile)
 	if err != nil {
 		return nil, err
 	}
-	wal := &WAL{
+	wal := &baseWAL{
 		group: group,
 		light: light,
 		enc:   NewWALEncoder(group),
 	}
-	wal.BaseService = *cmn.NewBaseService(nil, "WAL", wal)
+	wal.BaseService = *cmn.NewBaseService(nil, "baseWAL", wal)
 	return wal, nil
 }
 
-func (wal *WAL) OnStart() error {
+func (wal *baseWAL) Group() *auto.Group {
+	return wal.group
+}
+
+func (wal *baseWAL) OnStart() error {
 	size, err := wal.group.Head.Size()
 	if err != nil {
 		return err
 	} else if size == 0 {
 		wal.Save(EndHeightMessage{0})
 	}
-	_, err = wal.group.Start()
+	err = wal.group.Start()
 	return err
 }
 
-func (wal *WAL) OnStop() {
+func (wal *baseWAL) OnStop() {
 	wal.BaseService.OnStop()
 	wal.group.Stop()
 }
 
 // called in newStep and for each pass in receiveRoutine
-func (wal *WAL) Save(msg WALMessage) {
+func (wal *baseWAL) Save(msg WALMessage) {
 	if wal == nil {
 		return
 	}
@@ -114,12 +138,18 @@ func (wal *WAL) Save(msg WALMessage) {
 	}
 }
 
+// WALSearchOptions are optional arguments to SearchForEndHeight.
+type WALSearchOptions struct {
+	// IgnoreDataCorruptionErrors set to true will result in skipping data corruption errors.
+	IgnoreDataCorruptionErrors bool
+}
+
 // SearchForEndHeight searches for the EndHeightMessage with the height and
 // returns an auto.GroupReader, whenever it was found or not and an error.
 // Group reader will be nil if found equals false.
 //
 // CONTRACT: caller must close group reader.
-func (wal *WAL) SearchForEndHeight(height uint64) (gr *auto.GroupReader, found bool, err error) {
+func (wal *baseWAL) SearchForEndHeight(height int64, options *WALSearchOptions) (gr *auto.GroupReader, found bool, err error) {
 	var msg *TimedWALMessage
 
 	// NOTE: starting from the last file in the group because we're usually
@@ -139,7 +169,9 @@ func (wal *WAL) SearchForEndHeight(height uint64) (gr *auto.GroupReader, found b
 				// check next file
 				break
 			}
-			if err != nil {
+			if options.IgnoreDataCorruptionErrors && IsDataCorruptionError(err) {
+				// do nothing
+			} else if err != nil {
 				gr.Close()
 				return nil, false, err
 			}
@@ -151,7 +183,6 @@ func (wal *WAL) SearchForEndHeight(height uint64) (gr *auto.GroupReader, found b
 				}
 			}
 		}
-
 		gr.Close()
 	}
 
@@ -173,7 +204,7 @@ func NewWALEncoder(wr io.Writer) *WALEncoder {
 }
 
 // Encode writes the custom encoding of v to the stream.
-func (enc *WALEncoder) Encode(v interface{}) error {
+func (enc *WALEncoder) Encode(v *TimedWALMessage) error {
 	data := wire.BinaryBytes(v)
 
 	crc := crc32.Checksum(data, crc32c)
@@ -187,15 +218,29 @@ func (enc *WALEncoder) Encode(v interface{}) error {
 
 	_, err := enc.wr.Write(msg)
 
-	if err == nil {
-		// TODO [Anton Kaliaev 23 Oct 2017]: remove separator
-		_, err = enc.wr.Write(walSeparator)
-	}
-
 	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// IsDataCorruptionError returns true if data has been corrupted inside WAL.
+func IsDataCorruptionError(err error) bool {
+	_, ok := err.(DataCorruptionError)
+	return ok
+}
+
+// DataCorruptionError is an error that occures if data on disk was corrupted.
+type DataCorruptionError struct {
+	cause error
+}
+
+func (e DataCorruptionError) Error() string {
+	return fmt.Sprintf("DataCorruptionError[%v]", e.cause)
+}
+
+func (e DataCorruptionError) Cause() error {
+	return e.cause
+}
 
 // A WALDecoder reads and decodes custom-encoded WAL messages from an input
 // stream. See WALEncoder for the format used.
@@ -215,7 +260,7 @@ func NewWALDecoder(rd io.Reader) *WALDecoder {
 func (dec *WALDecoder) Decode() (*TimedWALMessage, error) {
 	b := make([]byte, 4)
 
-	n, err := dec.rd.Read(b)
+	_, err := dec.rd.Read(b)
 	if err == io.EOF {
 		return nil, err
 	}
@@ -225,7 +270,7 @@ func (dec *WALDecoder) Decode() (*TimedWALMessage, error) {
 	crc := binary.BigEndian.Uint32(b)
 
 	b = make([]byte, 4)
-	n, err = dec.rd.Read(b)
+	_, err = dec.rd.Read(b)
 	if err == io.EOF {
 		return nil, err
 	}
@@ -234,46 +279,42 @@ func (dec *WALDecoder) Decode() (*TimedWALMessage, error) {
 	}
 	length := binary.BigEndian.Uint32(b)
 
+	if length > maxMsgSizeBytes {
+		return nil, DataCorruptionError{fmt.Errorf("length %d exceeded maximum possible value of %d bytes", length, maxMsgSizeBytes)}
+	}
+
 	data := make([]byte, length)
-	n, err = dec.rd.Read(data)
+	_, err = dec.rd.Read(data)
 	if err == io.EOF {
 		return nil, err
 	}
 	if err != nil {
-		return nil, fmt.Errorf("not enough bytes for data: %v (want: %d, read: %v)", err, length, n)
+		return nil, fmt.Errorf("failed to read data: %v", err)
 	}
 
 	// check checksum before decoding data
 	actualCRC := crc32.Checksum(data, crc32c)
 	if actualCRC != crc {
-		return nil, fmt.Errorf("checksums do not match: (read: %v, actual: %v)", crc, actualCRC)
+		return nil, DataCorruptionError{fmt.Errorf("checksums do not match: (read: %v, actual: %v)", crc, actualCRC)}
 	}
 
 	var nn int
-	var res *TimedWALMessage
+	var res *TimedWALMessage // nolint: gosimple
 	res = wire.ReadBinary(&TimedWALMessage{}, bytes.NewBuffer(data), int(length), &nn, &err).(*TimedWALMessage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode data: %v", err)
-	}
-
-	// TODO [Anton Kaliaev 23 Oct 2017]: remove separator
-	if err = readSeparator(dec.rd); err != nil {
-		return nil, err
+		return nil, DataCorruptionError{fmt.Errorf("failed to decode data: %v", err)}
 	}
 
 	return res, err
 }
 
-// readSeparator reads a separator from r. It returns any error from underlying
-// reader or if it's not a separator.
-func readSeparator(r io.Reader) error {
-	b := make([]byte, len(walSeparator))
-	_, err := r.Read(b)
-	if err != nil {
-		return fmt.Errorf("failed to read separator: %v", err)
-	}
-	if !bytes.Equal(b, walSeparator) {
-		return fmt.Errorf("not a separator: %v", b)
-	}
-	return nil
+type nilWAL struct{}
+
+func (nilWAL) Save(m WALMessage)  {}
+func (nilWAL) Group() *auto.Group { return nil }
+func (nilWAL) SearchForEndHeight(height int64, options *WALSearchOptions) (gr *auto.GroupReader, found bool, err error) {
+	return nil, false, nil
 }
+func (nilWAL) Start() error { return nil }
+func (nilWAL) Stop() error  { return nil }
+func (nilWAL) Wait()        {}

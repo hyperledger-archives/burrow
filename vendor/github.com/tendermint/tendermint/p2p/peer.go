@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/log"
 )
 
 // Peer is an interface representing a peer connected on a reactor.
@@ -47,7 +47,6 @@ type peer struct {
 	config     *PeerConfig
 
 	nodeInfo *NodeInfo
-	key      string
 	Data     *cmn.CMap // User data.
 }
 
@@ -87,7 +86,9 @@ func newOutboundPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []
 
 	peer, err := newPeerFromConnAndConfig(conn, true, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, config)
 	if err != nil {
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 	return peer, nil
@@ -112,7 +113,9 @@ func newPeerFromConnAndConfig(rawConn net.Conn, outbound bool, reactorsByCh map[
 
 	// Encrypt connection
 	if config.AuthEnc {
-		conn.SetDeadline(time.Now().Add(config.HandshakeTimeout * time.Second))
+		if err := conn.SetDeadline(time.Now().Add(config.HandshakeTimeout * time.Second)); err != nil {
+			return nil, errors.Wrap(err, "Error setting deadline while encrypting connection")
+		}
 
 		var err error
 		conn, err = MakeSecretConnection(conn, ourNodePrivKey)
@@ -136,9 +139,14 @@ func newPeerFromConnAndConfig(rawConn net.Conn, outbound bool, reactorsByCh map[
 	return p, nil
 }
 
+func (p *peer) SetLogger(l log.Logger) {
+	p.Logger = l
+	p.mconn.SetLogger(l)
+}
+
 // CloseConn should be used when the peer was created, but never started.
 func (p *peer) CloseConn() {
-	p.conn.Close()
+	p.conn.Close() // nolint: errcheck
 }
 
 // makePersistent marks the peer as persistent.
@@ -159,7 +167,9 @@ func (p *peer) IsPersistent() bool {
 // NOTE: blocking
 func (p *peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) error {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
-	p.conn.SetDeadline(time.Now().Add(timeout))
+	if err := p.conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return errors.Wrap(err, "Error setting deadline")
+	}
 
 	var peerNodeInfo = new(NodeInfo)
 	var err1 error
@@ -190,13 +200,13 @@ func (p *peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) er
 	}
 
 	// Remove deadline
-	p.conn.SetDeadline(time.Time{})
+	if err := p.conn.SetDeadline(time.Time{}); err != nil {
+		return errors.Wrap(err, "Error removing deadline")
+	}
 
 	peerNodeInfo.RemoteAddr = p.Addr().String()
 
 	p.nodeInfo = peerNodeInfo
-	p.key = peerNodeInfo.PubKey.KeyString()
-
 	return nil
 }
 
@@ -210,7 +220,7 @@ func (p *peer) PubKey() crypto.PubKeyEd25519 {
 	if p.config.AuthEnc {
 		return p.conn.(*SecretConnection).RemotePubKey()
 	}
-	if p.NodeInfo == nil {
+	if p.NodeInfo() == nil {
 		panic("Attempt to get peer's PubKey before calling Handshake")
 	}
 	return p.PubKey()
@@ -218,8 +228,10 @@ func (p *peer) PubKey() crypto.PubKeyEd25519 {
 
 // OnStart implements BaseService.
 func (p *peer) OnStart() error {
-	p.BaseService.OnStart()
-	_, err := p.mconn.Start()
+	if err := p.BaseService.OnStart(); err != nil {
+		return err
+	}
+	err := p.mconn.Start()
 	return err
 }
 
@@ -267,26 +279,18 @@ func (p *peer) CanSend(chID byte) bool {
 	return p.mconn.CanSend(chID)
 }
 
-// WriteTo writes the peer's public key to w.
-func (p *peer) WriteTo(w io.Writer) (int64, error) {
-	var n int
-	var err error
-	wire.WriteString(p.key, w, &n, &err)
-	return int64(n), err
-}
-
 // String representation.
 func (p *peer) String() string {
 	if p.outbound {
-		return fmt.Sprintf("Peer{%v %v out}", p.mconn, p.key[:12])
+		return fmt.Sprintf("Peer{%v %v out}", p.mconn, p.Key())
 	}
 
-	return fmt.Sprintf("Peer{%v %v in}", p.mconn, p.key[:12])
+	return fmt.Sprintf("Peer{%v %v in}", p.mconn, p.Key())
 }
 
 // Equals reports whenever 2 peers are actually represent the same node.
 func (p *peer) Equals(other Peer) bool {
-	return p.key == other.Key()
+	return p.Key() == other.Key()
 }
 
 // Get the data for a given key.
@@ -301,11 +305,14 @@ func (p *peer) Set(key string, data interface{}) {
 
 // Key returns the peer's id key.
 func (p *peer) Key() string {
-	return p.key
+	return p.nodeInfo.ListenAddr // XXX: should probably be PubKey.KeyString()
 }
 
 // NodeInfo returns a copy of the peer's NodeInfo.
 func (p *peer) NodeInfo() *NodeInfo {
+	if p.nodeInfo == nil {
+		return nil
+	}
 	n := *p.nodeInfo // copy
 	return &n
 }
