@@ -13,8 +13,9 @@ func TestSubscribeCallback(t *testing.T) {
 	ctx := context.Background()
 	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
 	ch := make(chan interface{})
-	SubscribeCallback(ctx, em, "TestSubscribeCallback", MatchAllQueryable(), func(msg interface{}) {
+	SubscribeCallback(ctx, em, "TestSubscribeCallback", MatchAllQueryable(), func(msg interface{}) bool {
 		ch <- msg
+		return true
 	})
 
 	sent := "FROTHY"

@@ -18,30 +18,32 @@ func TestEventCache_Flush(t *testing.T) {
 	flushed := false
 
 	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
-	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) {
+	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) bool {
 		// Check against sending a buffer of zeroed messages
 		if message == nil {
 			errCh <- fmt.Errorf("recevied empty message but none sent")
 		}
+		return false
 	})
 	evc := NewEventCache(em)
 	evc.Flush()
 	// Check after reset
 	evc.Flush()
-	SubscribeCallback(ctx, em, "somethingness", NewQueryBuilder().AndEquals("foo", "bar"), func(interface{}) {
-		if flushed {
-			errCh <- nil
-		} else {
-			errCh <- fmt.Errorf("callback was run before messages were flushed")
-		}
-	})
+	SubscribeCallback(ctx, em, "somethingness", NewQueryBuilder().AndEquals("foo", "bar"),
+		func(interface{}) bool {
+			if flushed {
+				errCh <- nil
+				return true
+			} else {
+				errCh <- fmt.Errorf("callback was run before messages were flushed")
+				return false
+			}
+		})
 
 	numMessages := 3
 	tags := map[string]interface{}{"foo": "bar"}
 	for i := 0; i < numMessages; i++ {
-		evc.Publish(ctx, "something", tags)
-		evc.Publish(ctx, "something", tags)
-		evc.Publish(ctx, "something", tags)
+		evc.Publish(ctx, fmt.Sprintf("something_%v", i), tags)
 	}
 	flushed = true
 	evc.Flush()

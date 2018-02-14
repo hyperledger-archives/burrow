@@ -1,14 +1,15 @@
 package tm
 
 import (
-	"fmt"
-
 	"context"
+	"fmt"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
@@ -57,7 +58,8 @@ const (
 
 const SubscriptionTimeoutSeconds = 5 * time.Second
 
-func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
+func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[string]*gorpc.RPCFunc {
+	logger = logging.WithScope(logger, "GetRoutes")
 	return map[string]*gorpc.RPCFunc{
 		// Transact
 		BroadcastTx: gorpc.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
@@ -101,9 +103,15 @@ func GetRoutes(service rpc.Service) map[string]*gorpc.RPCFunc {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
 			defer cancel()
-			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) {
-				wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(EventResponseID(wsCtx.Request.ID, eventID),
-					resultEvent))
+			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
+				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(
+					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
+				if !keepAlive {
+					logging.InfoMsg(logger, "dropping subscription because could not write to websocket",
+						"subscription_id", subscriptionID,
+						"event_id", eventID)
+				}
+				return keepAlive
 			})
 			if err != nil {
 				return nil, err

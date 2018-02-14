@@ -106,10 +106,11 @@ func (subs *Subscriptions) Add(eventId string) (string, error) {
 		return "", err
 	}
 	cache := newSubscriptionsCache()
-	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) {
+	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) bool {
 		cache.mtx.Lock()
 		defer cache.mtx.Unlock()
 		cache.events = append(cache.events, resultEvent)
+		return true
 	})
 	if err != nil {
 		return "", err

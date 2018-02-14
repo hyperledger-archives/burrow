@@ -38,7 +38,7 @@ const MaxBlockLookback = 100
 
 type SubscribableService interface {
 	// Events
-	Subscribe(ctx context.Context, subscriptionID string, eventID string, callback func(*ResultEvent)) error
+	Subscribe(ctx context.Context, subscriptionID string, eventID string, callback func(*ResultEvent) bool) error
 	Unsubscribe(ctx context.Context, subscriptionID string) error
 }
 
@@ -134,22 +134,24 @@ func (s *service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 }
 
 func (s *service) Subscribe(ctx context.Context, subscriptionID string, eventID string,
-	callback func(resultEvent *ResultEvent)) error {
+	callback func(resultEvent *ResultEvent) bool) error {
 
 	queryBuilder := event.QueryForEventID(eventID)
 	logging.InfoMsg(s.logger, "Subscribing to events",
 		"query", queryBuilder.String(),
-		"subscription_id", subscriptionID)
+		"subscription_id", subscriptionID,
+		"event_id", eventID)
 	return event.SubscribeCallback(ctx, s.subscribable, subscriptionID, queryBuilder,
-		func(message interface{}) {
+		func(message interface{}) bool {
 			resultEvent, err := NewResultEvent(eventID, message)
 			if err != nil {
 				logging.InfoMsg(s.logger, "Received event that could not be mapped to ResultEvent",
 					structure.ErrorKey, err,
+					"subscription_id", subscriptionID,
 					"event_id", eventID)
-				return
+				return true
 			}
-			callback(resultEvent)
+			return callback(resultEvent)
 		})
 }
 
