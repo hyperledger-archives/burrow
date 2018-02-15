@@ -43,12 +43,7 @@ func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscribe
 
 	out := make(chan interface{})
 	go func() {
-		for {
-			msg, ok := <-out
-			if !ok {
-				// Channel closed, no need to unsubscribe or drain
-				return
-			}
+		for msg := range out {
 			if !callback(msg) {
 				// Callback is requesting stop so unsubscribe and drain channel
 				subscribable.Unsubscribe(context.Background(), subscriber, query)
