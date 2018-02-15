@@ -125,8 +125,9 @@ func (ws *WebsocketService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INTERNAL_ERROR, err
 	}
 
-	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) {
+	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) bool {
 		ws.writeResponse(subId, resultEvent, session)
+		return true
 	})
 	if err != nil {
 		return nil, rpc.INTERNAL_ERROR, err

@@ -39,16 +39,24 @@ func PublishWithEventID(publisher Publisher, eventID string, eventData interface
 // Subscribe to messages matching query and launch a goroutine to run a callback for each one. The goroutine will exit
 // when the context is done or the subscription is removed.
 func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscriber string, query Queryable,
-	callback func(message interface{})) error {
+	callback func(message interface{}) bool) error {
 
 	out := make(chan interface{})
 	go func() {
 		for {
 			msg, ok := <-out
 			if !ok {
+				// Channel closed, no need to unsubscribe or drain
 				return
 			}
-			callback(msg)
+			if !callback(msg) {
+				// Callback is requesting stop so unsubscribe and drain channel
+				subscribable.Unsubscribe(context.Background(), subscriber, query)
+				// Not draining channel can starve other subscribers
+				for range out {
+				}
+				return
+			}
 		}
 	}()
 	err := subscribable.Subscribe(ctx, subscriber, query, out)
@@ -62,13 +70,13 @@ func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscribe
 func PublishAll(ctx context.Context, subscribable Subscribable, subscriber string, query Queryable,
 	publisher Publisher, extraTags map[string]interface{}) error {
 
-	return SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) {
+	return SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		tags := make(map[string]interface{})
 		for k, v := range extraTags {
 			tags[k] = v
 		}
-
 		// Help! I can't tell which tags the original publisher used - so I can't forward them on
 		publisher.Publish(ctx, message, tags)
+		return true
 	})
 }

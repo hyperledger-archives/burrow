@@ -67,12 +67,13 @@ func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscr
 	query := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
 		AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
 
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) {
+	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		if eventDataCall, ok := message.(*EventDataTx); ok {
 			if sendTx, ok := eventDataCall.Tx.(*txs.SendTx); ok {
 				ch <- sendTx
 			}
 		}
+		return true
 	})
 }
 

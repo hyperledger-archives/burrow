@@ -68,11 +68,12 @@ func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, 
 		query = query.AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
 	}
 
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) {
+	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		eventDataCall, ok := message.(*EventDataCall)
 		if ok {
 			ch <- eventDataCall
 		}
+		return true
 	})
 }
 
@@ -81,11 +82,12 @@ func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, sub
 
 	query := event.QueryForEventID(EventStringLogEvent(address))
 
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) {
+	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		eventDataLog, ok := message.(*EventDataLog)
 		if ok {
 			ch <- eventDataLog
 		}
+		return true
 	})
 }
 

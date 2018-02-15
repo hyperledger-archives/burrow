@@ -30,7 +30,7 @@ func StartServer(service rpc.Service, pattern, listenAddress string, emitter eve
 	logger logging_types.InfoTraceLogger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
-	routes := GetRoutes(service)
+	routes := GetRoutes(service, logger)
 	mux := http.NewServeMux()
 	wm := rpcserver.NewWebsocketManager(routes, rpcserver.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
 	mux.HandleFunc(pattern, wm.WebsocketHandler)

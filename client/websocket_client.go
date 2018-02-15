@@ -175,8 +175,9 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						confirmationChannel <- Confirmation{
 							BlockHash:   latestBlockHash,
 							EventDataTx: eventDataTx,
-							Exception:   fmt.Errorf("transaction confirmed with exception: %v", eventDataTx.Exception),
-							Error:       nil,
+							Exception: fmt.Errorf("transaction confirmed but execution gave exception: %v",
+								eventDataTx.Exception),
+							Error: nil,
 						}
 						return
 					}
