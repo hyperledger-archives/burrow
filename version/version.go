@@ -30,9 +30,9 @@ const (
 	// Major version component of the current release
 	versionMajor = 0
 	// Minor version component of the current release
-	versionMinor = 17
+	versionMinor = 18
 	// Patch version component of the current release
-	versionPatch = 1
+	versionPatch = 0
 )
 
 var burrowVersion *VersionIdentifier
