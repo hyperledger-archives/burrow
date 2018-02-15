@@ -192,22 +192,22 @@ func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
 			TMEventData: &ed,
 		}, nil
 
-	case exe_events.EventDataTx:
+	case *exe_events.EventDataTx:
 		return &ResultEvent{
 			Event:       event,
-			EventDataTx: &ed,
+			EventDataTx: ed,
 		}, nil
 
-	case evm_events.EventDataCall:
+	case *evm_events.EventDataCall:
 		return &ResultEvent{
 			Event:         event,
-			EventDataCall: &ed,
+			EventDataCall: ed,
 		}, nil
 
-	case evm_events.EventDataLog:
+	case *evm_events.EventDataLog:
 		return &ResultEvent{
 			Event:        event,
-			EventDataLog: &ed,
+			EventDataLog: ed,
 		}, nil
 
 	default:
