@@ -1,7 +1,6 @@
 package spec
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/keys"
@@ -80,12 +79,5 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	assert.Equal(t, genesisDoc.Accounts[0].PublicKey, genesisDoc.Validators[0].PublicKey)
 }
 
-func TestJSONRoundTrip(t *testing.T) {
-
-	var a []byte
-
-	b := []byte{1, 2, 3}
-
-	c := append(b, a...)
-	fmt.Println(c)
+func TestTemplateAccount_AccountPermissions(t *testing.T) {
 }

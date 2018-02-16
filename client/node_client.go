@@ -181,7 +181,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address,
 	// have a single address that is the contract to query.
 	callResult, err := tendermint_client.CallCode(client, address, code, data)
 	if err != nil {
-		err = fmt.Errorf("error connnecting to node (%s) to query contract code at (%s) with data (%X) and code (%X)",
+		err = fmt.Errorf("error connnecting to node (%s) to query contract code at (%s) with data (%X) and code (%X): %v",
 			burrowNodeClient.broadcastRPC, address, data, code, err.Error())
 		return nil, uint64(0), err
 	}
@@ -193,12 +193,12 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.A
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%s): %s",
+		err = fmt.Errorf("error connecting to node (%s) to fetch account (%s): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
 		return nil, err
 	}
 
@@ -225,7 +225,7 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Addres
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	entryResult, err := tendermint_client.GetName(client, name)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
+		err = fmt.Errorf("error connecting to node (%s) to get name registrar entry for name (%s)",
 			burrowNodeClient.broadcastRPC, name)
 		return acm.ZeroAddress, "", 0, err
 	}
@@ -244,7 +244,7 @@ func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
 		return
 	}
 	// unwrap return results

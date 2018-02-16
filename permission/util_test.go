@@ -13,4 +13,10 @@ func TestBasePermissionsFromStringList(t *testing.T) {
 	permFlag := HasRole | CreateContract | Send
 	assert.Equal(t, permFlag, basePerms.Perms)
 	assert.Equal(t, permFlag, basePerms.SetBit)
+
+	basePerms, err = BasePermissionsFromStringList([]string{AllString})
+	require.NoError(t, err)
+	permFlag = AllPermFlags
+	assert.Equal(t, permFlag, basePerms.Perms)
+	assert.Equal(t, permFlag, basePerms.SetBit)
 }

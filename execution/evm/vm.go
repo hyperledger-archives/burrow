@@ -433,10 +433,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			x := stack.Pop()
 			if x.IsZero() {
 				stack.Push64(1)
-				vm.Debugf(" %v == 0 = %v\n", x, 1)
+				vm.Debugf(" %X == 0 = %v\n", x, 1)
 			} else {
 				stack.Push(Zero256)
-				vm.Debugf(" %v == 0 = %v\n", x, 0)
+				vm.Debugf(" %X == 0 = %v\n", x, 0)
 			}
 
 		case AND: // 0x16
@@ -707,16 +707,19 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
 
 		case JUMP: // 0x56
-			if err = vm.jump(code, stack.Pop64(), &pc); err != nil {
-				return nil, err
+			jumpErr := vm.jump(code, stack.Pop64(), &pc)
+			if jumpErr != nil {
+				vm.Debugf(" => JUMP err: %s", jumpErr)
+				return nil, firstErr(err, jumpErr)
 			}
 			continue
 
 		case JUMPI: // 0x57
 			pos, cond := stack.Pop64(), stack.Pop()
 			if !cond.IsZero() {
-				if err = vm.jump(code, pos, &pc); err != nil {
-					return nil, err
+				jumpErr := vm.jump(code, pos, &pc)
+				if jumpErr != nil {
+					return nil, firstErr(err, jumpErr)
 				}
 				continue
 			}
@@ -854,26 +857,26 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 			// Begin execution
 			var ret []byte
-			var err error
+			var callErr error
 			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
-				ret, err = nativeContract(vm.state, callee, args, &gasLimit, vm.logger)
+				ret, callErr = nativeContract(vm.state, callee, args, &gasLimit, vm.logger)
 
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				var exception string
-				if err != nil {
-					exception = err.Error()
+				if callErr != nil {
+					exception = callErr.Error()
 				}
 				// NOTE: these fire call go_events and not particular go_events for eg name reg or permissions
 				vm.fireCallEvent(&exception, &ret, callee.Address(), acm.AddressFromWord256(addr), args, value, &gasLimit)
 			} else {
 				// EVM contract
-				if useGasNegative(gas, GasGetAccount, &err) {
-					return nil, err
+				if useGasNegative(gas, GasGetAccount, &callErr) {
+					return nil, callErr
 				}
 				acc, errAcc := acm.GetMutableAccount(vm.state, acm.AddressFromWord256(addr))
 				if errAcc != nil {
-					return nil, firstErr(err, errAcc)
+					return nil, firstErr(callErr, errAcc)
 				}
 				// since CALL is used also for sending funds,
 				// acc may not exist yet. This is an error for
@@ -881,14 +884,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				// ethereum actually cares
 				if op == CALLCODE {
 					if acc == nil {
-						return nil, firstErr(err, ErrUnknownAddress)
+						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
-					ret, err = vm.Call(callee, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.Call(callee, callee, acc.Code(), args, value, &gasLimit)
 				} else if op == DELEGATECALL {
 					if acc == nil {
-						return nil, firstErr(err, ErrUnknownAddress)
+						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
-					ret, err = vm.DelegateCall(caller, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.DelegateCall(caller, callee, acc.Code(), args, value, &gasLimit)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
@@ -899,13 +902,15 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 					}
 					// add account to the tx cache
 					vm.state.UpdateAccount(acc)
-					ret, err = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
 				}
 			}
 
 			// Push result
-			if err != nil {
-				vm.Debugf("error on call: %s\n", err.Error())
+			if callErr != nil {
+				vm.Debugf("error on call: %s\n", callErr.Error())
+				// TODO: we probably don't want to return the error - decide
+				//err = firstErr(err, callErr)
 				stack.Push(Zero256)
 			} else {
 				stack.Push(One256)
@@ -916,7 +921,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				memErr := memory.Write(retOffset, RightPadBytes(ret, int(retSize)))
 				if memErr != nil {
 					vm.Debugf(" => Memory err: %s", memErr)
-					return nil, firstErr(err, ErrMemoryOutOfBounds)
+					return nil, firstErr(callErr, ErrMemoryOutOfBounds)
 				}
 			}
 
@@ -983,7 +988,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 // zeroes. if offset > len(data) it returns a false
 func subslice(data []byte, offset, length int64) (ret []byte, ok bool) {
 	size := int64(len(data))
-	if size < offset {
+	if size < offset || offset < 0 || length < 0 {
 		return nil, false
 	} else if size < offset+length {
 		ret, ok = data[offset:], true

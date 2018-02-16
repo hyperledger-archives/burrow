@@ -723,6 +723,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			return txs.ErrTxInvalidAddress
 		}
 
+		err = tx.PermArgs.EnsureValid()
+		if err != nil {
+			return fmt.Errorf("PermissionsTx received containing invalid PermArgs: %v", err)
+		}
+
 		permFlag := tx.PermArgs.PermFlag
 		// check permission
 		if !HasPermission(exe.blockCache, inAcc, permFlag, logger) {
@@ -748,8 +753,7 @@ func (exe *executor) Execute(tx txs.Tx) error {
 		value := tx.Input.Amount
 
 		logging.TraceMsg(logger, "New PermissionsTx",
-			"perm_flag", permission.PermFlagToString(permFlag),
-			"perm_args", tx.PermArgs)
+			"perm_args", tx.PermArgs.String())
 
 		var permAcc acm.Account
 		switch tx.PermArgs.PermFlag {
@@ -757,35 +761,37 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			// this one doesn't make sense from txs
 			return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
 		case permission.SetBase:
-			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
+			permAcc, err = mutatePermissions(exe.blockCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Set(tx.PermArgs.Permission, tx.PermArgs.Value)
+					return perms.Base.Set(*tx.PermArgs.Permission, *tx.PermArgs.Value)
 				})
 		case permission.UnsetBase:
-			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
+			permAcc, err = mutatePermissions(exe.blockCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Unset(tx.PermArgs.Permission)
+					return perms.Base.Unset(*tx.PermArgs.Permission)
 				})
 		case permission.SetGlobal:
 			permAcc, err = mutatePermissions(exe.blockCache, permission.GlobalPermissionsAddress,
 				func(perms *ptypes.AccountPermissions) error {
-					return perms.Base.Set(tx.PermArgs.Permission, tx.PermArgs.Value)
+					return perms.Base.Set(*tx.PermArgs.Permission, *tx.PermArgs.Value)
 				})
 		case permission.HasRole:
 			return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
 		case permission.AddRole:
-			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
+			permAcc, err = mutatePermissions(exe.blockCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					if !perms.AddRole(tx.PermArgs.Role) {
-						return fmt.Errorf("role (%s) already exists for account %s", tx.PermArgs.Role, tx.PermArgs.Address)
+					if !perms.AddRole(*tx.PermArgs.Role) {
+						return fmt.Errorf("role (%s) already exists for account %s",
+							*tx.PermArgs.Role, *tx.PermArgs.Address)
 					}
 					return nil
 				})
 		case permission.RemoveRole:
-			permAcc, err = mutatePermissions(exe.blockCache, tx.PermArgs.Address,
+			permAcc, err = mutatePermissions(exe.blockCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
-					if !perms.RmRole(tx.PermArgs.Role) {
-						return fmt.Errorf("role (%s) does not exist for account %s", tx.PermArgs.Role, tx.PermArgs.Address)
+					if !perms.RmRole(*tx.PermArgs.Role) {
+						return fmt.Errorf("role (%s) does not exist for account %s",
+							*tx.PermArgs.Role, *tx.PermArgs.Address)
 					}
 					return nil
 				})

@@ -68,7 +68,10 @@ type SNativeFunctionDescription struct {
 
 func registerSNativeContracts() {
 	for _, contract := range SNativeContracts() {
-		registeredNativeContracts[contract.Address().Word256()] = contract.Dispatch
+		if !RegisterNativeContract(contract.Address().Word256(), contract.Dispatch) {
+			panic(fmt.Errorf("could not register SNative contract %s because address %s already registered",
+				contract.Address(), contract.Name))
+		}
 	}
 }
 
@@ -211,8 +214,7 @@ func NewSNativeContract(comment, name string,
 		fid := f.ID()
 		otherF, ok := functionsByID[fid]
 		if ok {
-			panic(fmt.Errorf("function with ID %x already defined: %s", fid,
-				otherF))
+			panic(fmt.Errorf("function with ID %x already defined: %s", fid, otherF.Signature()))
 		}
 		functionsByID[fid] = f
 	}
@@ -234,7 +236,7 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
-			"identifier but arguments are only %s bytes long", len(args))
+			"identifier but arguments are only %v bytes long", len(args))
 	}
 
 	function, err := contract.FunctionByID(firstFourBytes(args))
@@ -242,7 +244,9 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 		return nil, err
 	}
 
-	logging.TraceMsg(logger, "Dispatching to function", "function_name", function.Name)
+	logging.TraceMsg(logger, "Dispatching to function",
+		"caller", caller.Address(),
+		"function_name", function.Name)
 
 	remainingArgs := args[abi.FunctionSelectorLength:]
 
@@ -519,7 +523,7 @@ func (e ErrLacksSNativePermission) Error() string {
 
 // Checks if a permission flag is valid (a known base chain or snative permission)
 func ValidPermN(n ptypes.PermFlag) bool {
-	return n <= permission.TopPermFlag
+	return n <= permission.AllPermFlags
 }
 
 // Get the global BasePermissions

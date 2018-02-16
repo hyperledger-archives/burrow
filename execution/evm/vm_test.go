@@ -507,3 +507,24 @@ func TestConcat(t *testing.T) {
 		[]byte{0x01, 0x02, 0x03, 0x04},
 		Concat([]byte{0x01, 0x02}, []byte{0x03, 0x04}))
 }
+
+func TestSubslice(t *testing.T) {
+	const size = 10
+	data := make([]byte, size)
+	for i := 0; i < size; i++ {
+		data[i] = byte(i)
+	}
+	for n := int64(0); n < size; n++ {
+		data = data[:n]
+		for offset := int64(-size); offset < size; offset++ {
+			for length := int64(-size); length < size; length++ {
+				_, ok := subslice(data, offset, length)
+				if offset < 0 || length < 0 || n < offset {
+					assert.False(t, ok)
+				} else {
+					assert.True(t, ok)
+				}
+			}
+		}
+	}
+}

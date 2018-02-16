@@ -23,8 +23,6 @@ import (
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -76,18 +74,6 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, 
 	default:
 		return acm.ZeroAddress, nil, fmt.Errorf("unknown transaction type for signTx: %#v", tx_)
 	}
-}
-
-func decodeAddressPermFlag(addrS, permFlagS string) (addr acm.Address, pFlag ptypes.PermFlag, err error) {
-	var addrBytes []byte
-	if addrBytes, err = hex.DecodeString(addrS); err != nil {
-		copy(addr[:], addrBytes)
-		return
-	}
-	if pFlag, err = permission.PermStringToFlag(permFlagS); err != nil {
-		return
-	}
-	return
 }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,

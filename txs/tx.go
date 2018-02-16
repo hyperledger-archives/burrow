@@ -374,8 +374,8 @@ func (tx *RebondTx) String() string {
 //-----------------------------------------------------------------------------
 
 type PermissionsTx struct {
-	Input    *TxInput         `json:"input"`
-	PermArgs *ptypes.PermArgs `json:"args"`
+	Input    *TxInput
+	PermArgs ptypes.PermArgs
 }
 
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
@@ -422,9 +422,10 @@ func GenerateReceipt(chainId string, tx Tx) Receipt {
 
 // Contract: This function is deterministic and completely reversible.
 func jsonEscape(str string) string {
+	// TODO: escape without panic
 	escapedBytes, err := json.Marshal(str)
 	if err != nil {
-		panic(fmt.Sprintf("error json-escaping a string", str))
+		panic(fmt.Errorf("error json-escaping string: %s", str))
 	}
 	return string(escapedBytes)
 }
