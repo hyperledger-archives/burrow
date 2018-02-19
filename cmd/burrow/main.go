@@ -31,6 +31,9 @@ func main() {
 	burrow.Action = func() {
 		// We need to reflect on whether this obscures where values are coming from
 		conf := config.DefaultBurrowConfig()
+		// We treat logging a little differently in that if anything is set for logging we will not
+		// set default outputs
+		conf.Logging = nil
 		err := source.EachOf(
 			burrowConfigProvider(*configOpt),
 			source.FirstOf(
@@ -38,6 +41,10 @@ func main() {
 				// Try working directory
 				genesisDocProvider(config.DefaultGenesisDocJSONFileName, true)),
 		).Apply(conf)
+		// If no logging config was provided use the default
+		if conf.Logging == nil {
+			conf.Logging = logging_config.DefaultNodeLoggingConfig()
+		}
 		if err != nil {
 			fatalf("could not obtain config: %v", err)
 		}
