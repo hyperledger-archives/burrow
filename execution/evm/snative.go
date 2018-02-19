@@ -230,8 +230,7 @@ func NewSNativeContract(comment, name string,
 func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
 	args []byte, gas *uint64, logger logging_types.InfoTraceLogger) (output []byte, err error) {
 
-	logger = logger.WithPrefix(structure.ComponentKey, "SNatives").
-		With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
+	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
 
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+

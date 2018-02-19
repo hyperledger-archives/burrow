@@ -27,6 +27,24 @@ func TestValuesAndContext(t *testing.T) {
 	assert.Equal(t, []interface{}{"dog", 2, "fork", 5}, ctx)
 }
 
+func TestKeyValuesMap(t *testing.T) {
+	keyvals := []interface{}{
+		[][]interface{}{{2}}, 3,
+		"hello", 1,
+		"fish", 3,
+		"dog", 2,
+		"fork", 5,
+	}
+	vals := KeyValuesMap(keyvals)
+	assert.Equal(t, map[string]interface{}{
+		"[[2]]": 3,
+		"hello": 1,
+		"fish":  3,
+		"dog":   2,
+		"fork":  5,
+	}, vals)
+}
+
 func TestVectorise(t *testing.T) {
 	kvs := []interface{}{
 		"scope", "lawnmower",
@@ -41,12 +59,17 @@ func TestVectorise(t *testing.T) {
 	kvsVector := Vectorise(kvs, "occupation", "scope")
 	// Vectorise scope
 	assert.Equal(t, []interface{}{
-		"scope", []interface{}{"lawnmower", "hose pipe", "rake"},
+		"scope", Vector{"lawnmower", "hose pipe", "rake"},
 		"hub", "budub",
 		"occupation", "fish brewer",
-		"flub", []interface{}{"dub", "brub"},
+		"flub", Vector{"dub", "brub"},
 	},
 		kvsVector)
+}
+
+func TestVector_String(t *testing.T) {
+	vec := Vector{"one", "two", "grue"}
+	assert.Equal(t, "[one two grue]", vec.String())
 }
 
 func TestRemoveKeys(t *testing.T) {

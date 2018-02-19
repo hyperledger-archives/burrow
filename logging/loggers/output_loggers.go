@@ -1,9 +1,10 @@
 package loggers
 
 import (
+	"fmt"
 	"io"
-
 	"os"
+	"text/template"
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/term"
@@ -19,14 +20,21 @@ const (
 	defaultFormatName = TerminalFormat
 )
 
-func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
+const (
+	newline = '\n'
+)
+
+func NewStreamLogger(writer io.Writer, format string) (kitlog.Logger, error) {
 	var logger kitlog.Logger
-	switch formatName {
+	var err error
+	switch format {
+	case "":
+		return NewStreamLogger(writer, defaultFormatName)
 	case JSONFormat:
 		logger = kitlog.NewJSONLogger(writer)
 	case LogfmtFormat:
 		logger = kitlog.NewLogfmtLogger(writer)
-	default:
+	case TerminalFormat:
 		logger = term.NewLogger(writer, kitlog.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
 			switch structure.Value(keyvals, structure.ChannelKey) {
 			case types.TraceChannelName:
@@ -35,6 +43,12 @@ func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
 				return term.FgBgColor{Fg: term.Yellow}
 			}
 		})
+	default:
+		logger, err = NewTemplateLogger(writer, format, []byte{})
+		if err != nil {
+			return nil, fmt.Errorf("did not recognise format '%s' as named format and could not parse as "+
+				"template: %v", format, err)
+		}
 	}
 	// Don't log signals
 	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
@@ -42,7 +56,7 @@ func NewStreamLogger(writer io.Writer, formatName string) kitlog.Logger {
 			return nil
 		}
 		return logger.Log(keyvals...)
-	})
+	}), nil
 }
 
 func NewFileLogger(path string, formatName string) (kitlog.Logger, error) {
@@ -50,11 +64,29 @@ func NewFileLogger(path string, formatName string) (kitlog.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	streamLogger := NewStreamLogger(f, formatName)
+	streamLogger, err := NewStreamLogger(f, formatName)
+	if err != nil {
+		return nil, err
+	}
 	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
 		if logging.Signal(keyvals) == structure.SyncSignal {
 			return f.Sync()
 		}
 		return streamLogger.Log(keyvals...)
 	}), nil
+}
+
+func NewTemplateLogger(writer io.Writer, textTemplate string, recordSeparator []byte) (kitlog.Logger, error) {
+	tmpl, err := template.New("template-logger").Parse(textTemplate)
+	if err != nil {
+		return nil, err
+	}
+	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+		err := tmpl.Execute(writer, structure.KeyValuesMap(keyvals))
+		if err == nil {
+			_, err = writer.Write(recordSeparator)
+		}
+		return err
+	}), nil
+
 }

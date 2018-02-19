@@ -322,9 +322,9 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	case File:
 		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
 	case Stdout:
-		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format), nil
+		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format)
 	case Stderr:
-		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format), nil
+		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format)
 	default:
 		return nil, fmt.Errorf("could not build logger for output: '%s'",
 			outputConfig.OutputType)

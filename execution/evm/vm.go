@@ -27,7 +27,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
@@ -89,12 +88,12 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 		origin:         origin,
 		callDepth:      0,
 		txid:           txid,
-		logger:         logger.WithPrefix(structure.ComponentKey, "EVM"),
+		logger:         logging.WithScope(logger, "NewVM"),
 	}
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	logging.TraceMsg(vm.logger, fmt.Sprintf(format, a...))
+	logging.TraceMsg(vm.logger, fmt.Sprintf(format, a...), "tag", "vm_debug")
 }
 
 // satisfies go_events.Eventable

@@ -91,7 +91,8 @@ func TestIncludeAllFilterPredicate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, fp([]interface{}{"Foo", "bar", "Shoes", 42}))
 	// Don't filter, it has all the required key values
-	assert.False(t, fp([]interface{}{"Foo", "bar", "Planks", 0.2, "Shoes", 42, "Bosh", "Bish"}))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Planks", 0.2, "Shoes", 42, "imBoshy", "unBishy"}))
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Planks", 0.23, "Shoes", 42, "imBoshy", "unBishy"}))
 	assert.True(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
 }
 

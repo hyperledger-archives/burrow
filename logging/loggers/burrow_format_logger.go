@@ -41,21 +41,17 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 		return fmt.Errorf("log line contains an odd number of elements so "+
 			"was dropped: %v", keyvals)
 	}
-	return bfl.logger.Log(structure.MapKeyValues(keyvals, burrowFormatKeyValueMapper)...)
-}
-
-func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{}) {
-	switch key {
-	default:
-		switch v := value.(type) {
-		case []byte:
-			return key, fmt.Sprintf("%X", v)
-		case time.Time:
-			return key, v.Format(time.RFC3339Nano)
-		}
-
-	}
-	return key, fmt.Sprintf("%v", value)
+	return bfl.logger.Log(structure.MapKeyValues(keyvals,
+		func(key interface{}, value interface{}) (interface{}, interface{}) {
+			switch v := value.(type) {
+			case string:
+			case []byte:
+				value = fmt.Sprintf("%X", v)
+			case time.Time:
+				value = v.Format(time.RFC3339Nano)
+			}
+			return structure.StringifyKey(key), value
+		})...)
 }
 
 func BurrowFormatLogger(logger kitlog.Logger) *burrowFormatLogger {

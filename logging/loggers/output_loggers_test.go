@@ -32,12 +32,24 @@ func TestNewFileLogger(t *testing.T) {
 
 func TestNewStreamLogger(t *testing.T) {
 	buf := new(bytes.Buffer)
-	logger := NewStreamLogger(buf, LogfmtFormat)
-	err := logger.Log("oh", "my")
+	logger, err := NewStreamLogger(buf, LogfmtFormat)
+	require.NoError(t, err)
+	err = logger.Log("oh", "my")
 	require.NoError(t, err)
 
 	err = logging.Sync(logger)
 	require.NoError(t, err)
 
 	assert.Equal(t, "oh=my\n", string(buf.Bytes()))
+}
+
+func TestNewTemplateLogger(t *testing.T) {
+	buf := new(bytes.Buffer)
+	logger, err := NewTemplateLogger(buf, "Why Hello {{.name}}", []byte{'\n'})
+	require.NoError(t, err)
+	err = logger.Log("name", "Marjorie Stewart-Baxter", "fingertip_width_cm", float32(1.34))
+	require.NoError(t, err)
+	err = logger.Log("name", "Fred")
+	require.NoError(t, err)
+	assert.Equal(t, "Why Hello Marjorie Stewart-Baxter\nWhy Hello Fred\n", buf.String())
 }
