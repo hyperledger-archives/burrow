@@ -35,12 +35,12 @@ type PermArgs struct {
 
 func (pa PermArgs) String() string {
 	body := make([]string, 0, 5)
-	body = append(body, fmt.Sprintf("PermFlag: %s", PermFlagToString(pa.PermFlag)))
+	body = append(body, fmt.Sprintf("PermFlag: %s", PermissionsString(pa.PermFlag)))
 	if pa.Address != nil {
 		body = append(body, fmt.Sprintf("Address: %s", *pa.Address))
 	}
 	if pa.Permission != nil {
-		body = append(body, fmt.Sprintf("Permission: %s", PermFlagToString(*pa.Permission)))
+		body = append(body, fmt.Sprintf("Permission: %s", PermissionsString(*pa.Permission)))
 	}
 	if pa.Role != nil {
 		body = append(body, fmt.Sprintf("Role: %s", *pa.Role))

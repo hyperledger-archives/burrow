@@ -17,14 +17,13 @@ package evm
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-
-	"errors"
-
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -32,6 +31,7 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
@@ -527,4 +527,30 @@ func TestSubslice(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestHasPermission(t *testing.T) {
+	st := newAppState()
+	acc := acm.ConcreteAccount{
+		Permissions: ptypes.AccountPermissions{
+			Base: BasePermissionsFromStrings(t,
+				"00100001000111",
+				"11011110111000"),
+		},
+	}.Account()
+	// Ensure we are falling through to global permissions on those bits not set
+	assert.True(t, HasPermission(st, acc, PermFlagFromString(t, "100001000110")))
+}
+
+func BasePermissionsFromStrings(t *testing.T, perms, setBit string) ptypes.BasePermissions {
+	return ptypes.BasePermissions{
+		Perms:  PermFlagFromString(t, perms),
+		SetBit: PermFlagFromString(t, setBit),
+	}
+}
+
+func PermFlagFromString(t *testing.T, binaryString string) ptypes.PermFlag {
+	permFlag, err := strconv.ParseUint(binaryString, 2, 64)
+	require.NoError(t, err)
+	return ptypes.PermFlag(permFlag)
 }

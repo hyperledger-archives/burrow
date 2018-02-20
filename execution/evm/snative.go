@@ -359,8 +359,11 @@ func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 	}
 	hasPermission := HasPermission(state, acc, permN)
 	permInt := byteFromBool(hasPermission)
-	logger.Trace("function", "hasBase", "address", address.String(),
-		"perm_flag", fmt.Sprintf("%b", permN), "has_permission", hasPermission)
+	logger.Trace("function", "hasBase",
+		"address", address.String(),
+		"account_base_permissions", acc.Permissions().Base,
+		"perm_flag", fmt.Sprintf("%b", permN),
+		"has_permission", hasPermission)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 

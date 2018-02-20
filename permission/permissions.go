@@ -97,7 +97,8 @@ var (
 //--------------------------------------------------------------------------------
 // string utilities
 
-// PermFlagToString assumes the permFlag is valid, else returns "#-UNKNOWN-#"
+// Returns the string name of a single bit non-composite PermFlag, or otherwise UnknownString
+// See BasePermissionsToStringList to generate a string representation of a composite PermFlag
 func PermFlagToString(pf types.PermFlag) string {
 	switch pf {
 	case AllPermFlags:
@@ -184,5 +185,10 @@ func GlobalPermissionsAccount(state acm.Getter) acm.Account {
 
 // Get global permissions from the account at GlobalPermissionsAddress
 func GlobalAccountPermissions(state acm.Getter) types.AccountPermissions {
+	if state == nil {
+		return types.AccountPermissions{
+			Roles: []string{},
+		}
+	}
 	return GlobalPermissionsAccount(state).Permissions()
 }

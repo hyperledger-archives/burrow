@@ -108,15 +108,8 @@ func (vm *VM) SetPublisher(publisher event.Publisher) {
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
 func HasPermission(state acm.StateWriter, acc acm.Account, perm ptypes.PermFlag) bool {
-	v, err := acc.Permissions().Base.Get(perm)
-	if _, ok := err.(ptypes.ErrValueNotSet); ok {
-		if state == nil {
-			// In this case the permission is unknown
-			return false
-		}
-		return HasPermission(nil, permission.GlobalPermissionsAccount(state), perm)
-	}
-	return v
+	value, _ := acc.Permissions().Base.Compose(permission.GlobalAccountPermissions(state).Base).Get(perm)
+	return value
 }
 
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, calleeAddress acm.Address, input []byte, value uint64, gas *uint64) {

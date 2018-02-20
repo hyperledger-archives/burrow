@@ -165,6 +165,6 @@ func testPermissions(t *testing.T,
 
 	bs, err := json.Marshal(tx.PermArgs)
 	require.NoError(t, err)
-	expected := fmt.Sprintf(`{"PermFlag":256,"Address":"%s","Permission":256,"Value":true}`, permAddressString)
+	expected := fmt.Sprintf(`{"PermFlag":256,"Address":"%s","Permission":1,"Value":true}`, permAddressString)
 	assert.Equal(t, expected, string(bs))
 }

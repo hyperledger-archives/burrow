@@ -1155,26 +1155,24 @@ func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutp
 // Get permission on an account or fall back to global value
 func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag, logger logging_types.InfoTraceLogger) bool {
 	if perm > permission.AllPermFlags {
-		panic("Checking an unknown permission in state should never happen")
+		logging.InfoMsg(logger,
+			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
+				perm, permission.AllPermFlags),
+			"invalid_permission", perm,
+			"maximum_permission", permission.AllPermFlags)
+		return false
 	}
 
-	//if acc == nil {
-	// TODO
-	// this needs to fall back to global or do some other specific things
-	// eg. a bondAcc may be nil and so can only bond if global bonding is true
-	//}
-	permString := permission.PermFlagToString(perm)
+	permString := permission.PermissionsString(perm)
 
-	v, err := acc.Permissions().Base.Get(perm)
-	if _, ok := err.(ptypes.ErrValueNotSet); ok {
-		if accountGetter == nil {
-			panic("All known global permissions should be set!")
-		}
-		logging.TraceMsg(logger, "Permission for account is not set. Querying GlobalPermissionsAddres.",
-			"perm_flag", permString)
+	v, err := acc.Permissions().Base.Compose(permission.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	if err != nil {
+		logging.TraceMsg(logger, "Error obtaining permission value (will default to false/deny)",
+			"perm_flag", permString,
+			structure.ErrorKey, err)
+	}
 
-		return HasPermission(nil, permission.GlobalPermissionsAccount(accountGetter), perm, logger)
-	} else if v {
+	if v {
 		logging.TraceMsg(logger, "Account has permission",
 			"account_address", acc.Address,
 			"perm_flag", permString)
