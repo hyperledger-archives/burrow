@@ -3,8 +3,6 @@ package presets
 import (
 	"testing"
 
-	"fmt"
-
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"

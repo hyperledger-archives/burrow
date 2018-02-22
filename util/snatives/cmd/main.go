@@ -26,7 +26,6 @@ func main() {
 	contracts := evm.SNativeContracts()
 	// Index of next contract
 	i := 1
-	fmt.Print("pragma solidity >=0.0.0;\n\n")
 	for _, contract := range contracts {
 		solidity, err := templates.NewSolidityContract(contract).Solidity()
 		if err != nil {

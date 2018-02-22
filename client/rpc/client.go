@@ -103,67 +103,57 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 	return tx, nil
 }
 
-func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, sequenceS, permFunc string, argsS []string) (*txs.PermissionsTx, error) {
+func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, sequenceS string,
+	action, target, permissionFlag, role, value string) (*txs.PermissionsTx, error) {
+
 	pub, _, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", sequenceS)
 	if err != nil {
 		return nil, err
 	}
-	var args *ptypes.PermArgs
-	switch permFunc {
-	case "setBase":
-		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
-		if err != nil {
-			return nil, err
-		}
-		if len(argsS) != 3 {
-			return nil, fmt.Errorf("setBase also takes a value (true or false)")
-		}
-		var value bool
-		if argsS[2] == "true" {
-			value = true
-		} else if argsS[2] == "false" {
-			value = false
-		} else {
-			return nil, fmt.Errorf("Unknown value %s", argsS[2])
-		}
-		args = ptypes.SetBaseArgs(addr, pF, value)
-	case "unsetBase":
-		addr, pF, err := decodeAddressPermFlag(argsS[0], argsS[1])
-		if err != nil {
-			return nil, err
-		}
-		args = ptypes.UnsetBaseArgs(addr, pF)
-	case "setGlobal":
-		pF, err := ptypes.PermStringToFlag(argsS[0])
-		if err != nil {
-			return nil, err
-		}
-		var value bool
-		if argsS[1] == "true" {
-			value = true
-		} else if argsS[1] == "false" {
-			value = false
-		} else {
-			return nil, fmt.Errorf("Unknown value %s", argsS[1])
-		}
-		args = ptypes.SetGlobalArgs(pF, value)
-	case "addRole":
-		address, err := addressFromHexString(argsS[0])
-		if err != nil {
-			return nil, err
-		}
-		args = ptypes.AddRoleArgs(address, argsS[1])
-	case "removeRole":
-		address, err := addressFromHexString(argsS[0])
-		if err != nil {
-			return nil, err
-		}
-		args = ptypes.RemoveRoleArgs(address, argsS[1])
-	default:
-		return nil, fmt.Errorf("invalid permission function for use in PermissionsTx: %s", permFunc)
+	permFlag, err := ptypes.PermStringToFlag(action)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert action '%s' to PermFlag: %v", action, err)
 	}
-	// args := snativeArgs(
-	tx := txs.NewPermissionsTxWithSequence(pub, args, sequence)
+	permArgs := ptypes.PermArgs{
+		PermFlag: permFlag,
+	}
+
+	// Try and set each PermArg field for which a string has been provided we'll validate afterwards
+	if target != "" {
+		address, err := acm.AddressFromHexString(target)
+		if err != nil {
+			return nil, err
+		}
+		permArgs.Address = &address
+	}
+
+	if value != "" {
+		valueBool := value == "true"
+		permArgs.Value = &valueBool
+		if !valueBool && value != "false" {
+			return nil, fmt.Errorf("did not recognise value %s as boolean, use 'true' or 'false'", value)
+		}
+		permArgs.Value = &valueBool
+	}
+
+	if permissionFlag != "" {
+		permission, err := ptypes.PermStringToFlag(permissionFlag)
+		if err != nil {
+			return nil, err
+		}
+		permArgs.Permission = &permission
+	}
+
+	if role != "" {
+		permArgs.Role = &role
+	}
+
+	err = permArgs.EnsureValid()
+	if err != nil {
+		return nil, err
+	}
+
+	tx := txs.NewPermissionsTxWithSequence(pub, permArgs, sequence)
 	return tx, nil
 }
 

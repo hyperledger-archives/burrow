@@ -81,7 +81,7 @@ func TestWrapper(runner func() int) int {
 	tmConf := tm_config.DefaultConfig()
 	logger := loggers.NewNoopInfoTraceLogger()
 	if debugLogging {
-		logger, _ = lifecycle.NewStdErrLogger()
+		logger, _, _ = lifecycle.NewStdErrLogger()
 	}
 
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])

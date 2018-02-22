@@ -17,14 +17,13 @@ package evm
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-
-	"errors"
-
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -32,6 +31,7 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
@@ -506,4 +506,51 @@ func TestConcat(t *testing.T) {
 	assert.Equal(t,
 		[]byte{0x01, 0x02, 0x03, 0x04},
 		Concat([]byte{0x01, 0x02}, []byte{0x03, 0x04}))
+}
+
+func TestSubslice(t *testing.T) {
+	const size = 10
+	data := make([]byte, size)
+	for i := 0; i < size; i++ {
+		data[i] = byte(i)
+	}
+	for n := int64(0); n < size; n++ {
+		data = data[:n]
+		for offset := int64(-size); offset < size; offset++ {
+			for length := int64(-size); length < size; length++ {
+				_, ok := subslice(data, offset, length)
+				if offset < 0 || length < 0 || n < offset {
+					assert.False(t, ok)
+				} else {
+					assert.True(t, ok)
+				}
+			}
+		}
+	}
+}
+
+func TestHasPermission(t *testing.T) {
+	st := newAppState()
+	acc := acm.ConcreteAccount{
+		Permissions: ptypes.AccountPermissions{
+			Base: BasePermissionsFromStrings(t,
+				"00100001000111",
+				"11011110111000"),
+		},
+	}.Account()
+	// Ensure we are falling through to global permissions on those bits not set
+	assert.True(t, HasPermission(st, acc, PermFlagFromString(t, "100001000110")))
+}
+
+func BasePermissionsFromStrings(t *testing.T, perms, setBit string) ptypes.BasePermissions {
+	return ptypes.BasePermissions{
+		Perms:  PermFlagFromString(t, perms),
+		SetBit: PermFlagFromString(t, setBit),
+	}
+}
+
+func PermFlagFromString(t *testing.T, binaryString string) ptypes.PermFlag {
+	permFlag, err := strconv.ParseUint(binaryString, 2, 64)
+	require.NoError(t, err)
+	return ptypes.PermFlag(permFlag)
 }

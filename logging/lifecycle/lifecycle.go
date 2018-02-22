@@ -41,8 +41,12 @@ import (
 func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.InfoTraceLogger, error) {
 	var logger types.InfoTraceLogger
 	var errCh channels.Channel
+	var err error
 	if loggingConfig == nil {
-		logger, errCh = NewStdErrLogger()
+		logger, errCh, err = NewStdErrLogger()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
 		if err != nil {
@@ -74,9 +78,13 @@ func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 	return nil
 }
 
-func NewStdErrLogger() (types.InfoTraceLogger, channels.Channel) {
-	logger := loggers.NewStreamLogger(os.Stderr, "terminal")
-	return NewLogger(logger)
+func NewStdErrLogger() (types.InfoTraceLogger, channels.Channel, error) {
+	logger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
+	if err != nil {
+		return nil, nil, err
+	}
+	itLogger, errCh := NewLogger(logger)
+	return itLogger, errCh, nil
 }
 
 // Provided a standard logger that outputs to the supplied underlying outputLogger

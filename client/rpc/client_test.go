@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -22,19 +23,32 @@ import (
 
 	mockclient "github.com/hyperledger/burrow/client/mock"
 	mockkeys "github.com/hyperledger/burrow/keys/mock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test(t *testing.T) {
+func TestSend(t *testing.T) {
 	mockKeyClient := mockkeys.NewMockKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testSend(t, mockNodeClient, mockKeyClient)
+}
+
+func TestCall(t *testing.T) {
+	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockNodeClient := mockclient.NewMockNodeClient()
 	testCall(t, mockNodeClient, mockKeyClient)
+}
+
+func TestName(t *testing.T) {
+	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockNodeClient := mockclient.NewMockNodeClient()
 	testName(t, mockNodeClient, mockKeyClient)
+}
+
+func TestPermissions(t *testing.T) {
+	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockNodeClient := mockclient.NewMockNodeClient()
 	testPermissions(t, mockNodeClient, mockKeyClient)
-	// t.Run("BondTransaction", )
-	// t.Run("UnbondTransaction", )
-	// t.Run("RebondTransaction", )
 }
 
 func testSend(t *testing.T,
@@ -142,11 +156,15 @@ func testPermissions(t *testing.T,
 	// unset sequence so that we retrieve sequence from account
 	sequenceString := ""
 
-	_, err := Permissions(nodeClient, keyClient, publicKeyString, addressString,
-		sequenceString, "setBase", []string{permAddressString, "root", "true"})
+	tx, err := Permissions(nodeClient, keyClient, publicKeyString, addressString,
+		sequenceString, "setBase", permAddressString, "root", "", "true")
 	if err != nil {
 		t.Logf("Error in PermissionsTx: %s", err)
 		t.Fail()
 	}
-	// TODO: test content of Transaction
+
+	bs, err := json.Marshal(tx.PermArgs)
+	require.NoError(t, err)
+	expected := fmt.Sprintf(`{"PermFlag":256,"Address":"%s","Permission":1,"Value":true}`, permAddressString)
+	assert.Equal(t, expected, string(bs))
 }

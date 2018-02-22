@@ -14,6 +14,11 @@
 
 package structure
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 const (
 	// Log time (time.Time)
 	TimeKey = "time"
@@ -49,9 +54,9 @@ const (
 // Returns a map of the key-values from the requested keys and
 // the unmatched remainder keyvals as context as a slice of key-values.
 func ValuesAndContext(keyvals []interface{},
-	keys ...interface{}) (map[interface{}]interface{}, []interface{}) {
+	keys ...interface{}) (map[string]interface{}, []interface{}) {
 
-	vals := make(map[interface{}]interface{}, len(keys))
+	vals := make(map[string]interface{}, len(keys))
 	context := make([]interface{}, len(keyvals))
 	copy(context, keyvals)
 	deletions := 0
@@ -62,7 +67,7 @@ func ValuesAndContext(keyvals []interface{},
 		for k := 0; k < len(keys); k++ {
 			if keyvals[i] == keys[k] {
 				// Pull the matching key-value pair into vals to return
-				vals[keys[k]] = keyvals[i+1]
+				vals[StringifyKey(keys[k])] = keyvals[i+1]
 				// Delete the key once it's found
 				keys = DeleteAt(keys, k)
 				// And remove the key-value pair from context
@@ -77,19 +82,36 @@ func ValuesAndContext(keyvals []interface{},
 	return vals, context
 }
 
-// Drops all key value pairs where the key is in keys
-func RemoveKeys(keyvals []interface{}, keys ...interface{}) []interface{} {
-	keyvalsWithoutKeys := make([]interface{}, 0, len(keyvals))
-NEXT_KEYVAL:
-	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
-		for _, key := range keys {
-			if keyvals[i] == key {
-				continue NEXT_KEYVAL
+// Returns keyvals as a map from keys to vals
+func KeyValuesMap(keyvals []interface{}) map[string]interface{} {
+	length := len(keyvals) / 2
+	vals := make(map[string]interface{}, length)
+	for i := 0; i < 2*length; i += 2 {
+		vals[StringifyKey(keyvals[i])] = keyvals[i+1]
+	}
+	return vals
+}
+
+func RemoveKeys(keyvals []interface{}, dropKeys ...interface{}) []interface{} {
+	return DropKeys(keyvals, func(key, value interface{}) bool {
+		for _, dropKey := range dropKeys {
+			if key == dropKey {
+				return true
 			}
 		}
-		keyvalsWithoutKeys = append(keyvalsWithoutKeys, keyvals[i], keyvals[i+1])
+		return false
+	})
+}
+
+// Drops all key value pairs where the key is in keys
+func DropKeys(keyvals []interface{}, dropKeyValPredicate func(key, value interface{}) bool) []interface{} {
+	keyvalsDropped := make([]interface{}, 0, len(keyvals))
+	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
+		if !dropKeyValPredicate(keyvals[i], keyvals[i+1]) {
+			keyvalsDropped = append(keyvalsDropped, keyvals[i], keyvals[i+1])
+		}
 	}
-	return keyvalsWithoutKeys
+	return keyvalsDropped
 }
 
 // Stateful index that tracks the location of a possible vector value
@@ -98,6 +120,25 @@ type vectorValueindex struct {
 	valueIndex int
 	// Whether or not the value is currently a vector
 	vector bool
+}
+
+// To help with downstream serialisation
+type Vector []interface{}
+
+func (v Vector) Slice() []interface{} {
+	return v
+}
+
+func (v Vector) String() string {
+	return fmt.Sprintf("%v", v.Slice())
+}
+
+func (v Vector) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.Slice())
+}
+
+func (v Vector) MarshalText() ([]byte, error) {
+	return []byte(v.String()), nil
 }
 
 // 'Vectorises' values associated with repeated string keys member by collapsing many values into a single vector value.
@@ -128,11 +169,11 @@ func Vectorise(keyvals []interface{}, vectorKeys ...string) []interface{} {
 				vi := valueIndices[k]
 				if !vi.vector {
 					// This must be the only second occurrence of the key so now vectorise the value
-					outputKeyvals[vi.valueIndex] = []interface{}{outputKeyvals[vi.valueIndex]}
+					outputKeyvals[vi.valueIndex] = Vector([]interface{}{outputKeyvals[vi.valueIndex]})
 					vi.vector = true
 				}
 				// Grow the vector value
-				outputKeyvals[vi.valueIndex] = append(outputKeyvals[vi.valueIndex].([]interface{}), val)
+				outputKeyvals[vi.valueIndex] = append(outputKeyvals[vi.valueIndex].(Vector), val)
 				// We are now running two more elements behind the input keyvals because we have absorbed this key-value pair
 				elided += 2
 			}
@@ -187,4 +228,22 @@ func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
 		newSlice[elementsLength+i] = e
 	}
 	return newSlice
+}
+
+// Provides a canonical way to stringify keys
+func StringifyKey(key interface{}) string {
+	switch key {
+	// For named keys we want to handle explicitly
+
+	default:
+		// Stringify keys
+		switch k := key.(type) {
+		case string:
+			return k
+		case fmt.Stringer:
+			return k.String()
+		default:
+			return fmt.Sprintf("%v", key)
+		}
+	}
 }

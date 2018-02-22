@@ -68,7 +68,10 @@ type SNativeFunctionDescription struct {
 
 func registerSNativeContracts() {
 	for _, contract := range SNativeContracts() {
-		registeredNativeContracts[contract.Address().Word256()] = contract.Dispatch
+		if !RegisterNativeContract(contract.Address().Word256(), contract.Dispatch) {
+			panic(fmt.Errorf("could not register SNative contract %s because address %s already registered",
+				contract.Address(), contract.Name))
+		}
 	}
 }
 
@@ -211,8 +214,7 @@ func NewSNativeContract(comment, name string,
 		fid := f.ID()
 		otherF, ok := functionsByID[fid]
 		if ok {
-			panic(fmt.Errorf("function with ID %x already defined: %s", fid,
-				otherF))
+			panic(fmt.Errorf("function with ID %x already defined: %s", fid, otherF.Signature()))
 		}
 		functionsByID[fid] = f
 	}
@@ -230,12 +232,11 @@ func NewSNativeContract(comment, name string,
 func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
 	args []byte, gas *uint64, logger logging_types.InfoTraceLogger) (output []byte, err error) {
 
-	logger = logger.WithPrefix(structure.ComponentKey, "SNatives").
-		With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
+	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
 
 	if len(args) < abi.FunctionSelectorLength {
 		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
-			"identifier but arguments are only %s bytes long", len(args))
+			"identifier but arguments are only %v bytes long", len(args))
 	}
 
 	function, err := contract.FunctionByID(firstFourBytes(args))
@@ -243,7 +244,9 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 		return nil, err
 	}
 
-	logging.TraceMsg(logger, "Dispatching to function", "function_name", function.Name)
+	logging.TraceMsg(logger, "Dispatching to function",
+		"caller", caller.Address(),
+		"function_name", function.Name)
 
 	remainingArgs := args[abi.FunctionSelectorLength:]
 
@@ -356,8 +359,11 @@ func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 	}
 	hasPermission := HasPermission(state, acc, permN)
 	permInt := byteFromBool(hasPermission)
-	logger.Trace("function", "hasBase", "address", address.String(),
-		"perm_flag", fmt.Sprintf("%b", permN), "has_permission", hasPermission)
+	logger.Trace("function", "hasBase",
+		"address", address.String(),
+		"account_base_permissions", acc.Permissions().Base,
+		"perm_flag", fmt.Sprintf("%b", permN),
+		"has_permission", hasPermission)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
@@ -520,7 +526,7 @@ func (e ErrLacksSNativePermission) Error() string {
 
 // Checks if a permission flag is valid (a known base chain or snative permission)
 func ValidPermN(n ptypes.PermFlag) bool {
-	return n <= permission.TopPermFlag
+	return n <= permission.AllPermFlags
 }
 
 // Get the global BasePermissions

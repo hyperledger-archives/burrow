@@ -97,83 +97,82 @@ var (
 //--------------------------------------------------------------------------------
 // string utilities
 
-// PermFlagToString assumes the permFlag is valid, else returns "#-UNKNOWN-#"
-func PermFlagToString(pf types.PermFlag) (perm string) {
+// Returns the string name of a single bit non-composite PermFlag, or otherwise UnknownString
+// See BasePermissionsToStringList to generate a string representation of a composite PermFlag
+func PermFlagToString(pf types.PermFlag) string {
 	switch pf {
 	case AllPermFlags:
-		perm = AllString
+		return AllString
 	case Root:
-		perm = RootString
+		return RootString
 	case Send:
-		perm = SendString
+		return SendString
 	case Call:
-		perm = CallString
+		return CallString
 	case CreateContract:
-		perm = CreateContractString
+		return CreateContractString
 	case CreateAccount:
-		perm = CreateAccountString
+		return CreateAccountString
 	case Bond:
-		perm = BondString
+		return BondString
 	case Name:
-		perm = NameString
+		return NameString
 	case HasBase:
-		perm = HasBaseString
+		return HasBaseString
 	case SetBase:
-		perm = SetBaseString
+		return SetBaseString
 	case UnsetBase:
-		perm = UnsetBaseString
+		return UnsetBaseString
 	case SetGlobal:
-		perm = SetGlobalString
+		return SetGlobalString
 	case HasRole:
-		perm = HasRoleString
+		return HasRoleString
 	case AddRole:
-		perm = AddRoleString
+		return AddRoleString
 	case RemoveRole:
-		perm = RemoveRoleString
+		return RemoveRoleString
 	default:
-		perm = UnknownString
+		return UnknownString
 	}
-	return
 }
 
 // PermStringToFlag maps camel- and snake case strings to the
 // the corresponding permission flag.
-func PermStringToFlag(perm string) (pf types.PermFlag, err error) {
+func PermStringToFlag(perm string) (types.PermFlag, error) {
 	switch strings.ToLower(perm) {
 	case AllString:
-		pf = AllPermFlags
+		return AllPermFlags, nil
 	case RootString:
-		pf = Root
+		return Root, nil
 	case SendString:
-		pf = Send
+		return Send, nil
 	case CallString:
-		pf = Call
+		return Call, nil
 	case CreateContractString, "createcontract", "create_contract":
-		pf = CreateContract
+		return CreateContract, nil
 	case CreateAccountString, "createaccount", "create_account":
-		pf = CreateAccount
+		return CreateAccount, nil
 	case BondString:
-		pf = Bond
+		return Bond, nil
 	case NameString:
-		pf = Name
+		return Name, nil
 	case HasBaseString, "hasbase", "has_base":
-		pf = HasBase
+		return HasBase, nil
 	case SetBaseString, "setbase", "set_base":
-		pf = SetBase
+		return SetBase, nil
 	case UnsetBaseString, "unsetbase", "unset_base":
-		pf = UnsetBase
+		return UnsetBase, nil
 	case SetGlobalString, "setglobal", "set_global":
-		pf = SetGlobal
+		return SetGlobal, nil
 	case HasRoleString, "hasrole", "has_role":
-		pf = HasRole
+		return HasRole, nil
 	case AddRoleString, "addrole", "add_role":
-		pf = AddRole
+		return AddRole, nil
 	case RemoveRoleString, "removerole", "rmrole", "rm_role":
-		pf = RemoveRole
+		return RemoveRole, nil
 	default:
-		err = fmt.Errorf("unknown permission %s", perm)
+		return 0, fmt.Errorf("unknown permission %s", perm)
 	}
-	return
 }
 
 func GlobalPermissionsAccount(state acm.Getter) acm.Account {
@@ -186,5 +185,10 @@ func GlobalPermissionsAccount(state acm.Getter) acm.Account {
 
 // Get global permissions from the account at GlobalPermissionsAddress
 func GlobalAccountPermissions(state acm.Getter) types.AccountPermissions {
+	if state == nil {
+		return types.AccountPermissions{
+			Roles: []string{},
+		}
+	}
 	return GlobalPermissionsAccount(state).Permissions()
 }

@@ -237,7 +237,7 @@ func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 //----------------------------------------------------------------------------
 // PermissionsTx interface for creating tx
 
-func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args *ptypes.PermArgs) (*PermissionsTx, error) {
+func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (*PermissionsTx, error) {
 	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -251,7 +251,7 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args *ptypes.PermArgs) 
 	return NewPermissionsTxWithSequence(from, args, sequence), nil
 }
 
-func NewPermissionsTxWithSequence(from acm.PublicKey, args *ptypes.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithSequence(from acm.PublicKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
 		Address:  from.Address(),
 		Amount:   1, // NOTE: amounts can't be 0 ...

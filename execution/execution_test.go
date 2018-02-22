@@ -1195,7 +1195,7 @@ func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *executor, perm
 		acc.MutablePermissions().Base.Set(perm, true)
 		batchCommitter.blockCache.UpdateAccount(acc)
 	}
-	tx, _ := txs.NewPermissionsTx(batchCommitter.blockCache, users[0].PublicKey(), &snativeArgs)
+	tx, _ := txs.NewPermissionsTx(batchCommitter.blockCache, users[0].PublicKey(), snativeArgs)
 	tx.Sign(testChainID, users[0])
 	err := batchCommitter.Execute(tx)
 	if expectPass {
@@ -1254,13 +1254,13 @@ func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.
 func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag, val bool) (snativeArgs permission.PermArgs) {
 	switch name {
 	case "hasBase":
-		snativeArgs = *permission.HasBaseArgs(user.Address(), perm)
+		snativeArgs = permission.HasBaseArgs(user.Address(), perm)
 	case "unsetBase":
-		snativeArgs = *permission.UnsetBaseArgs(user.Address(), perm)
+		snativeArgs = permission.UnsetBaseArgs(user.Address(), perm)
 	case "setBase":
-		snativeArgs = *permission.SetBaseArgs(user.Address(), perm, val)
+		snativeArgs = permission.SetBaseArgs(user.Address(), perm, val)
 	case "setGlobal":
-		snativeArgs = *permission.SetGlobalArgs(perm, val)
+		snativeArgs = permission.SetGlobalArgs(perm, val)
 	}
 	return
 }
@@ -1282,11 +1282,11 @@ func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
 func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs permission.PermArgs) {
 	switch name {
 	case "hasRole":
-		snativeArgs = *permission.HasRoleArgs(user.Address(), role)
+		snativeArgs = permission.HasRoleArgs(user.Address(), role)
 	case "addRole":
-		snativeArgs = *permission.AddRoleArgs(user.Address(), role)
+		snativeArgs = permission.AddRoleArgs(user.Address(), role)
 	case "removeRole":
-		snativeArgs = *permission.RemoveRoleArgs(user.Address(), role)
+		snativeArgs = permission.RemoveRoleArgs(user.Address(), role)
 	}
 	return
 }
