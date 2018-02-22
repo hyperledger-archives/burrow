@@ -230,7 +230,7 @@ func unmarshalValidateSend(amt uint64, toAddr acm.Address) resultEventChecker {
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 		data := resultEvent.EventDataTx
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
+			return true, fmt.Errorf("event data %v is not EventDataTx", resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
@@ -238,14 +238,14 @@ func unmarshalValidateSend(amt uint64, toAddr acm.Address) resultEventChecker {
 		tx := data.Tx.(*txs.SendTx)
 		if tx.Inputs[0].Address != privateAccounts[0].Address() {
 			return true, fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address,
-				privateAccounts[0].Address)
+				privateAccounts[0].Address())
 		}
 		if tx.Inputs[0].Amount != amt {
 			return true, fmt.Errorf("amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
 		}
 		if tx.Outputs[0].Address != toAddr {
 			return true, fmt.Errorf("receivers do not match up! Got %s, expected %s", tx.Outputs[0].Address,
-				privateAccounts[0].Address)
+				privateAccounts[0].Address())
 		}
 		return true, nil
 	}
@@ -255,23 +255,23 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 		data := resultEvent.EventDataTx
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
+			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
 		}
 		tx := data.Tx.(*txs.CallTx)
 		if tx.Input.Address != privateAccounts[0].Address() {
-			return true, fmt.Errorf("Senders do not match up! Got %x, expected %x",
-				tx.Input.Address, privateAccounts[0].Address)
+			return true, fmt.Errorf("senders do not match up! Got %s, expected %s",
+				tx.Input.Address, privateAccounts[0].Address())
 		}
 		if tx.Input.Amount != amt {
-			return true, fmt.Errorf("Amt does not match up! Got %d, expected %d",
+			return true, fmt.Errorf("amount does not match up! Got %d, expected %d",
 				tx.Input.Amount, amt)
 		}
 		ret := data.Return
 		if !bytes.Equal(ret, returnCode) {
-			return true, fmt.Errorf("Tx did not return correctly. Got %x, expected %x", ret, returnCode)
+			return true, fmt.Errorf("tx did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
 		return true, nil
 	}
@@ -281,7 +281,7 @@ func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) 
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 		data := resultEvent.EventDataCall
 		if data == nil {
-			return true, fmt.Errorf("event data %s is not EventDataTx", resultEvent)
+			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
