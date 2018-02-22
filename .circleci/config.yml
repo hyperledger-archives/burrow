@@ -16,43 +16,29 @@ setup_docker: &setup_docker
 # Start of CircleCI 2.0 config
 version: 2
 jobs:
-  checkout_code:
-    <<: *defaults
-    steps:
-      - checkout
-
-      # Just persist the entire working dir (burrow checkout)
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
   test:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
       - run: make test
 
   test_integration:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
       - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
 
   ensure_vendor:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
       - run: make ensure_vendor
 
   build_docker:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
         # This allows us to perform our docker builds
       - setup_remote_docker:
           <<: *setup_docker
@@ -63,7 +49,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - db-images.tar
+            - .
 
   # Simple smoke test to ensure burrow binary has been provisioned to container
   test_docker_smoke:
@@ -94,35 +80,19 @@ workflows:
 
   test_and_release:
     jobs:
-      - checkout_code:
-          # Rather annoyingly we need to include tags_filters on all transitive
-          # dependencies if we want the deploy job to build against a version
-          # tag.
-          # In contract jobs build against all branches by default
-          filters:
-            <<: *tags_filters
-            
       - test:
-          requires:
-            - checkout_code
           filters:
             <<: *tags_filters
 
       - test_integration:
-          requires:
-            - checkout_code
           filters:
             <<: *tags_filters
 
       - ensure_vendor:
-          requires:
-            - checkout_code
           filters:
             <<: *tags_filters
 
       - build_docker:
-          requires:
-            - checkout_code
           filters:
             <<: *tags_filters
 
