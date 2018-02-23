@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/version"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire"
 )
@@ -50,7 +50,7 @@ func (app *abciApp) Info(info abci_types.RequestInfo) abci_types.ResponseInfo {
 	tip := app.blockchain.Tip()
 	return abci_types.ResponseInfo{
 		Data:             responseInfoName,
-		Version:          version.GetSemanticVersionString(),
+		Version:          project.History.CurrentVersion().String(),
 		LastBlockHeight:  int64(tip.LastBlockHeight()),
 		LastBlockAppHash: tip.AppHashAfterLastBlock(),
 	}

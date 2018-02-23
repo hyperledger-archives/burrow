@@ -170,6 +170,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  name = "github.com/monax/relic"
+  packages = ["."]
+  revision = "f24b36b5f6f7f5c6034c89a6a47de1bfbbf7787e"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -480,6 +486,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4269612536b67891e85fa038e9d6c0a41fd5fcdf61bf1056aedd331077efa173"
+  inputs-digest = "7de732c5f18fd5e9f0e3d92740cb3280da0d4ae86648dee9dd85ba2ecab47f06"
   solver-name = "gps-cdcl"
   solver-version = 1

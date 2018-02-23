@@ -10,20 +10,9 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
 PACKAGES_NOVENDOR := $(shell go list ./... | grep -vF /vendor/)
-VERSION := $(shell go run ./util/version/cmd/main.go)
-VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
 COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
 
 DOCKER_NAMESPACE := quay.io/monax
-
-
-.PHONY: greet
-greet:
-	@echo "Hi! I'm the marmot that will help you with burrow v${VERSION}"
-
-.PHONY: version
-version:
-	@echo "${VERSION}"
 
 ### Formatting, linting and vetting
 
@@ -124,6 +113,13 @@ build_race_db:
 build_race_client:
 	go build -race -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
 
+### Build docker images for github.com/hyperledger/burrow
+
+# build docker image for burrow
+.PHONY: build_docker_db
+build_docker_db: check
+	@scripts/build_tool.sh
+
 ### Testing github.com/hyperledger/burrow
 
 # test burrow
@@ -142,16 +138,34 @@ test_integration:
 test_race: build_race
 	@go test -race ${PACKAGES_NOVENDOR}
 
-### Build docker images for github.com/hyperledger/burrow
-
-# build docker image for burrow
-.PHONY: build_docker_db
-build_docker_db: check
-	@scripts/build_tool.sh
-
 ### Clean up
 
 # clean removes the target folder containing build artefacts
 .PHONY: clean
 clean:
-	-rm -r ./target 
+	-rm -r ./target
+
+### Release and versioning
+
+# Print version
+.PHONY: version
+version:
+	@go run ./project/cmd/version/main.go
+
+# Generate full changelog of all release notes
+CHANGELOG.md: project/history.go project/cmd/changelog/main.go
+	@go run ./project/cmd/changelog/main.go > CHANGELOG.md
+
+# Generated release note for this version
+NOTES.md: project/history.go project/cmd/notes/main.go
+	@go run ./project/cmd/notes/main.go > NOTES.md
+
+.PHONY: docs
+docs: CHANGELOG.md NOTES.md
+
+# Tag the current HEAD commit with the current release defined in
+# ./release/release.go
+.PHONY: tag_release
+tag_release: test check CHANGELOG.md NOTES.md build
+	@scripts/tag_release.sh
+

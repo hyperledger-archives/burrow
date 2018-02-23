@@ -1,9 +1,21 @@
-# Hyperledger Burrow Changelog
-## Version 0.17.1
-Minor tweaks to docker build file
+package project
 
-## Version 0.17.0
-This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
+import (
+	"github.com/monax/relic"
+)
+
+// The releases described by version string and changes, newest release first.
+// The current release is taken to be the first release in the slice, and its
+// version determines the single authoritative version for the next release.
+//
+// To cut a new release add a release to the front of this slice then run the
+// release tagging script: ./scripts/tag_release.sh
+var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
+	"0.17.1",
+	`Minor tweaks to docker build file`,
+
+	"0.17.0",
+	`This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
 
 - [Upgrade to use Tendermint v0.9.2](https://github.com/hyperledger/burrow/pull/595)
 - [Implemented dynamic memory](https://github.com/hyperledger/burrow/pull/607) assumed by the EVM bytecode produce by solidity, fixing various issues.
@@ -15,28 +27,28 @@ This is a service release with some significant ethereum/solidity compatibility 
 
 Known issues:
 
-- SELFDESTRUCT opcode causes a panic when an account is removed. A [fix](https://github.com/hyperledger/burrow/pull/605) was produced but was [reverted](https://github.com/hyperledger/burrow/pull/636) pending investigation of a possible regression.
+- SELFDESTRUCT opcode causes a panic when an account is removed. A [fix](https://github.com/hyperledger/burrow/pull/605) was produced but was [reverted](https://github.com/hyperledger/burrow/pull/636) pending investigation of a possible regression.`,
 
-## Version 0.16.3
-This release adds an stop-gap fix to the Transact method so that it never
+	"0.16.3",
+	`This release adds an stop-gap fix to the Transact method so that it never
 transfers value with the CallTx is generates.
 
 We hard-code amount = fee so that no value is transferred
 regardless of fee sent. This fixes an invalid jump destination error arising
 from transferring value to non-payable functions with newer versions of solidity.
 By doing this we can resolve some issues with users of the v0 RPC without making
-a breaking API change.
+a breaking API change.`,
 
-## Version 0.16.2
-This release finalises our accession to the Hyperledger project and updates our root package namespace to github.com/hyperledger/burrow.
+	"0.16.2",
+	`This release finalises our accession to the Hyperledger project and updates our root package namespace to github.com/hyperledger/burrow.
 
-It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any transaction type and various pieces of internal clean-up.
+It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any transaction type and various pieces of internal clean-up.`,
 
-## Version 0.16.1
-This release was an internal rename to 'Burrow' with some minor other attendant clean up.
+	"0.16.1",
+	`This release was an internal rename to 'Burrow' with some minor other attendant clean up.`,
 
-## Version 0.16.0
-This is a consolidation release that fixes various bugs and improves elements
+	"0.16.0",
+	`This is a consolidation release that fixes various bugs and improves elements
 of the architecture across the Monax Platform to support a quicker release
 cadence.
 
@@ -63,19 +75,19 @@ cadence.
 - [pull-465](https://github.com/hyperledger/burrow/pull/465) fix divergence from JSON-RPC spec for Response object
 - [pull-366](https://github.com/hyperledger/burrow/pull/366) correction to circle ci script
 - [pull-379](https://github.com/hyperledger/burrow/pull/379) more descriptive error message for eris-client
+`,
 
+	"0.15.0",
+	"This release was elided to synchronise release versions with tooling",
 
-## Version 0.15.0
-This release was elided to synchronise release versions with tooling
+	"0.14.0",
+	"This release was elided to synchronise release versions with tooling",
 
-## Version 0.14.0
-This release was elided to synchronise release versions with tooling
+	"0.13.0",
+	"This release was elided to synchronise release versions with tooling",
 
-## Version 0.13.0
-This release was elided to synchronise release versions with tooling
-
-## Version 0.12.0
-This release marks the start of Eris-DB as the full permissioned blockchain node
+	"0.12.0",
+	`This release marks the start of Eris-DB as the full permissioned blockchain node
  of the Eris platform with the Tendermint permissioned consensus engine.
  This involved significant refactoring of almost all parts of the code,
  but provides a solid foundation to build the next generation of advanced
@@ -110,5 +122,5 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [EVM] Fix calculation of child CALL gaslimit (allowing solidity library calls to work properly)
   - [RPC/v0] Fix blocking event subscription in transactAndHold (preventing return in Javascript libraries)
   - [Blockchain] Fix getBlocks to respect block height cap.
-
-
+`,
+)
