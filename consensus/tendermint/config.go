@@ -31,7 +31,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		// minimal
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.ListenAddress = btc.ListenAddress
-		conf.P2P.AddrBook = path.Join(btc.TendermintRoot, conf.Consensus.WalPath)
+		conf.P2P.AddrBook = path.Join(btc.TendermintRoot, conf.P2P.AddrBook)
 		conf.Moniker = btc.Moniker
 		conf.DBPath = path.Join(btc.TendermintRoot, conf.DBPath)
 		conf.Mempool.WalPath = path.Join(btc.TendermintRoot, conf.Mempool.WalPath)
