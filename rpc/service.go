@@ -27,8 +27,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/version"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -189,7 +189,7 @@ func (s *service) Status() (*ResultStatus, error) {
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime,
-		NodeVersion:       version.GetVersionString(),
+		NodeVersion:       project.History.CurrentVersion().String(),
 	}, nil
 }
 

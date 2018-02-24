@@ -21,6 +21,8 @@ jobs:
     steps:
       - checkout
       - run: make test
+      # In case we miss compile errors not pulled into test paths
+      - run: make build
 
   test_integration:
     <<: *defaults

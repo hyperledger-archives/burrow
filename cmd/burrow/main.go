@@ -14,6 +14,7 @@ import (
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
 	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/project"
 	"github.com/jawher/mow.cli"
 )
 
@@ -26,9 +27,15 @@ func main() {
 	configOpt := burrow.StringOpt("c config", "",
 		"Use the a specified burrow config TOML file")
 
-	burrow.Spec = "[--config=<config file>] [--genesis=<genesis json file>]"
+	versionOpt := burrow.BoolOpt("v version", false, "Print the Burrow version")
+
+	burrow.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [--version]"
 
 	burrow.Action = func() {
+		if *versionOpt {
+			fmt.Println(project.History.CurrentVersion().String())
+			os.Exit(0)
+		}
 		// We need to reflect on whether this obscures where values are coming from
 		conf := config.DefaultBurrowConfig()
 		// We treat logging a little differently in that if anything is set for logging we will not

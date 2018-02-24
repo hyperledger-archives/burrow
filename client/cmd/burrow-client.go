@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	"github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/version"
+	"github.com/hyperledger/burrow/project"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,8 @@ var BurrowClientCmd = &cobra.Command{
 Made with <3 by Monax Industries.
 
 Complete documentation is available at https://monax.io/docs
-` + "\nVERSION:\n " + version.GetSemanticVersionString(),
+
+VERSION: ` + project.History.CurrentVersion().String(),
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
