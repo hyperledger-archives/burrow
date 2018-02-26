@@ -15,12 +15,13 @@
 package v0
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
-	"context"
-
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
 )
@@ -30,15 +31,17 @@ type WebsocketService struct {
 	codec           rpc.Codec
 	service         rpc.Service
 	defaultHandlers map[string]RequestHandlerFunc
+	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new websocket service.
-func NewWebsocketService(codec rpc.Codec, service rpc.Service) server.WebSocketService {
+func NewWebsocketService(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) server.WebSocketService {
 	tmwss := &WebsocketService{
 		codec:   codec,
 		service: service,
+		logger:  logging.WithScope(logger, "NewWebsocketService"),
 	}
-	dhMap := GetMethods(codec, service)
+	dhMap := GetMethods(codec, service, tmwss.logger)
 	// Events
 	dhMap[EVENT_SUBSCRIBE] = tmwss.EventSubscribe
 	dhMap[EVENT_UNSUBSCRIBE] = tmwss.EventUnsubscribe

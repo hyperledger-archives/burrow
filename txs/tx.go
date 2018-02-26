@@ -124,7 +124,7 @@ type (
 	Receipt struct {
 		TxHash          []byte
 		CreatesContract bool
-		ContractAddr    acm.Address
+		ContractAddress acm.Address
 	}
 
 	NameTx struct {
@@ -410,9 +410,9 @@ func GenerateReceipt(chainId string, tx Tx) Receipt {
 	if callTx, ok := tx.(*CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
-			receipt.ContractAddr = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+			receipt.ContractAddress = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
 		} else {
-			receipt.ContractAddr = *callTx.Address
+			receipt.ContractAddress = *callTx.Address
 		}
 	}
 	return receipt

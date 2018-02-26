@@ -15,14 +15,28 @@ const AddressHexLength = 2 * binary.Word160Length
 
 var ZeroAddress = Address{}
 
-func AddressFromBytes(addr []byte) (address Address, err error) {
-	if len(addr) != binary.Word160Length {
-		err = fmt.Errorf("slice passed as address '%X' has %d bytes but should have %d bytes",
-			addr, len(addr), binary.Word160Length)
-		// It is caller's responsibility to check for errors. If they ignore the error we'll assume they want the
-		// best-effort mapping of the bytes passed to an  address so we don't return here
+// Returns a pointer to an Address that is nil iff len(bs) == 0 otherwise does the same as AddressFromBytes
+func MaybeAddressFromBytes(bs []byte) (*Address, error) {
+	if len(bs) == 0 {
+		return nil, nil
 	}
-	copy(address[:], addr)
+	address, err := AddressFromBytes(bs)
+	if err != nil {
+		return nil, err
+	}
+	return &address, nil
+}
+
+// Returns an address consisting of the first 20 bytes of bs, return an error if the bs does not have length exactly 20
+// but will still return either: the bytes in bs padded on the right or the first 20 bytes of bs truncated in any case.
+func AddressFromBytes(bs []byte) (address Address, err error) {
+	if len(bs) != binary.Word160Length {
+		err = fmt.Errorf("slice passed as address '%X' has %d bytes but should have %d bytes",
+			bs, len(bs), binary.Word160Length)
+		// It is caller's responsibility to check for errors. If they ignore the error we'll assume they want the
+		// best-effort mapping of the bytes passed to an address so we don't return here
+	}
+	copy(address[:], bs)
 	return
 }
 

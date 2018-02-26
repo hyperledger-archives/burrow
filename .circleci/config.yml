@@ -50,7 +50,6 @@ jobs:
         # This allows us to perform our docker builds
       - setup_remote_docker:
           <<: *setup_docker
-      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
         # build docker image and tag the docker image(s) depending on branch/tag
       - run: make build_docker_db
       - run: docker save quay.io/monax/db > db-images.tar
@@ -67,7 +66,6 @@ jobs:
           at: .
       - setup_remote_docker:
           <<: *setup_docker
-      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
       - run: docker load -i db-images.tar
       - run: docker run quay.io/monax/db:$(./scripts/local_version.sh) burrow -h
 

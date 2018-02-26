@@ -17,6 +17,7 @@ package v0
 import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/filters"
 	"github.com/hyperledger/burrow/txs"
@@ -62,7 +63,7 @@ const (
 type RequestHandlerFunc func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error)
 
 // Private. Create a method name -> method handler map.
-func GetMethods(codec rpc.Codec, service rpc.Service) map[string]RequestHandlerFunc {
+func GetMethods(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) map[string]RequestHandlerFunc {
 	accountFilterFactory := filters.NewAccountFilterFactory()
 	nameRegFilterFactory := filters.NewNameRegFilterFactory()
 
@@ -224,7 +225,7 @@ func GetMethods(codec rpc.Codec, service rpc.Service) map[string]RequestHandlerF
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := acm.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -240,7 +241,7 @@ func GetMethods(codec rpc.Codec, service rpc.Service) map[string]RequestHandlerF
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := acm.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}

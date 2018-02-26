@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	bcm "github.com/hyperledger/burrow/blockchain"
@@ -127,9 +128,9 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 			Name: "RPC/V0",
 			Launch: func() (server.Server, error) {
 				codec := v0.NewTCodec()
-				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service))
+				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
 				websocketServer := v0_server.NewWebSocketServer(rpcConfig.V0.Server.WebSocket.MaxWebSocketSessions,
-					v0.NewWebsocketService(codec, service), logger)
+					v0.NewWebsocketService(codec, service, logger), logger)
 
 				serveProcess, err := v0_server.NewServeProcess(rpcConfig.V0.Server, logger, jsonServer, websocketServer)
 				if err != nil {
@@ -179,8 +180,10 @@ func (kern *Kernel) supervise() {
 	// TODO: Consider capturing kernel panics from boot and sending them here via a channel where we could
 	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill)
-	<-signals
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	sig := <-signals
+	logging.InfoMsg(kern.logger, fmt.Sprintf("Caught %v signal so shutting down", sig),
+		"signal", sig.String())
 	kern.Shutdown(context.Background())
 }
 
