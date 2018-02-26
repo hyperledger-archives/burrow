@@ -10,7 +10,10 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
 PACKAGES_NOVENDOR := $(shell go list ./... | grep -vF /vendor/)
-COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
+# Bosmarmot integration testing
+BOSMARMOT_PROJECT := github.com/monax/bosmarmot
+BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
+BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 DOCKER_NAMESPACE := quay.io/monax
 
@@ -91,27 +94,36 @@ build:	check build_db build_client
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
-build_race:	check build_race_db build_race_client build_race_keys
+build_race:	check build_race_db build_race_clien
 
 # build burrow
 .PHONY: build_db
 build_db:
-	go build -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
+	go build -o ${REPO}/bin/burrow ./cmd/burrow
 
 # build burrow-client
 .PHONY: build_client
 build_client:
-	go build -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
+	go build -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
-	go build -race -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
+	go build -race -o ${REPO}/bin/burrow ./cmd/burrow
 
 # build burrow-client with checks for race conditions
 .PHONY: build_race_client
 build_race_client:
-	go build -race -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
+	go build -race -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
+
+
+# Get the Bosmarmot code
+.PHONY: bos
+bos: ./scripts/deps/bos.sh
+	scripts/git_get_revision.sh \
+	https://${BOSMARMOT_PROJECT}.git \
+	${BOSMARMOT_CHECKOUT} \
+	$(shell ./scripts/deps/bos.sh)
 
 ### Build docker images for github.com/hyperledger/burrow
 
@@ -133,6 +145,16 @@ test_integration:
 	@go test ./keys/integration -tags integration
 	@go test ./rpc/tm/integration -tags integration
 
+# Run integration test from bosmarmot (separated from other integration tests so we can
+# make exception when this test fails when we make a breaking change in Burrow)
+.PHONY: test_integration_bosmarmot
+test_integration_bosmarmot: bos build_db
+	cd "${BOSMARMOT_CHECKOUT}" &&\
+	GOPATH="${BOSMARMOT_GOPATH}" \
+	burrow_bin="${REPO}/bin/burrow" \
+	make test_integration_no_burrow
+
+
 # test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
@@ -143,7 +165,7 @@ test_race: build_race
 # clean removes the target folder containing build artefacts
 .PHONY: clean
 clean:
-	-rm -r ./target
+	-rm -r ./bin
 
 ### Release and versioning
 
