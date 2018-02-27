@@ -31,6 +31,12 @@ jobs:
       - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
 
+  test_integration_bosmarmot:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: make test_integration_bosmarmot
+
   ensure_vendor:
     <<: *defaults
     steps:
@@ -90,6 +96,10 @@ workflows:
           filters:
             <<: *tags_filters
 
+      - test_integration_bosmarmot:
+          filters:
+            <<: *tags_filters
+
       - ensure_vendor:
           filters:
             <<: *tags_filters
@@ -108,6 +118,7 @@ workflows:
           requires:
             - test
             - test_integration
+            - test_integration_bosmarmot
             - test_docker_smoke
           filters:
             # tags filters and branch filters are applied disjunctively, so we

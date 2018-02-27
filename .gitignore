@@ -12,3 +12,5 @@ test_scratch/
 debug
 .idea
 .vscode
+
+.gopath_bos
