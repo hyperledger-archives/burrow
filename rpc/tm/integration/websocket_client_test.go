@@ -167,7 +167,7 @@ func TestWSCallWait(t *testing.T) {
 	waitForEvent(t, wsc, eid1, func() {
 		tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 		receipt := broadcastTx(t, jsonRpcClient, tx)
-		contractAddr = receipt.ContractAddr
+		contractAddr = receipt.ContractAddress
 	}, unmarshalValidateTx(amt, returnCode))
 
 	// susbscribe to the new contract
@@ -182,7 +182,7 @@ func TestWSCallWait(t *testing.T) {
 	waitForEvent(t, wsc, eid2, func() {
 		tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr, data, amt, gasLim, fee)
 		receipt := broadcastTx(t, jsonRpcClient, tx)
-		contractAddr = receipt.ContractAddr
+		contractAddr = receipt.ContractAddress
 	}, unmarshalValidateTx(amt, returnVal))
 }
 
@@ -200,7 +200,7 @@ func TestWSCallNoWait(t *testing.T) {
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
 	require.NoError(t, err)
-	contractAddr := receipt.ContractAddr
+	contractAddr := receipt.ContractAddress
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
@@ -230,7 +230,7 @@ func TestWSCallCall(t *testing.T) {
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
 	require.NoError(t, err)
-	contractAddr1 := receipt.ContractAddr
+	contractAddr1 := receipt.ContractAddress
 
 	// subscribe to the new contracts
 	eid := evm_events.EventStringAccountCall(contractAddr1)
@@ -240,7 +240,7 @@ func TestWSCallCall(t *testing.T) {
 	code, _, _ = simpleCallContract(contractAddr1)
 	tx = makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 	receipt = broadcastTx(t, jsonRpcClient, tx)
-	contractAddr2 := receipt.ContractAddr
+	contractAddr2 := receipt.ContractAddress
 
 	// let the contract get created first
 	waitForEvent(t, wsc, eid,

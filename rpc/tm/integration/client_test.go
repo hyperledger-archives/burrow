@@ -108,7 +108,7 @@ func TestGetStorage(t *testing.T) {
 			" create a contract")
 		assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
 			" transaction hash")
-		contractAddr := receipt.ContractAddr
+		contractAddr := receipt.ContractAddress
 		assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
 			" created a contract but the contract address is empty")
 
@@ -165,7 +165,7 @@ func TestCallContract(t *testing.T) {
 			" create a contract")
 		assert.NotEqual(t, 0, len(receipt.TxHash), "Receipt should contain a"+
 			" transaction hash")
-		contractAddr := receipt.ContractAddr
+		contractAddr := receipt.ContractAddress
 		assert.NotEqual(t, 0, len(contractAddr), "Transactions claims to have"+
 			" created a contract but the contract address is empty")
 

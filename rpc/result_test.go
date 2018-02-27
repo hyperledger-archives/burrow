@@ -31,14 +31,14 @@ func TestResultBroadcastTx(t *testing.T) {
 	// Make sure these are unpacked as expected
 	res := ResultBroadcastTx{
 		Receipt: txs.Receipt{
-			ContractAddr:    acm.Address{0, 2, 3},
+			ContractAddress: acm.Address{0, 2, 3},
 			CreatesContract: true,
 			TxHash:          []byte("foo"),
 		},
 	}
 
 	js := string(wire.JSONBytes(res))
-	assert.Equal(t, `{"Receipt":{"TxHash":"666F6F","CreatesContract":true,"ContractAddr":"0002030000000000000000000000000000000000"}}`, js)
+	assert.Equal(t, `{"Receipt":{"TxHash":"666F6F","CreatesContract":true,"ContractAddress":"0002030000000000000000000000000000000000"}}`, js)
 
 	res2 := new(ResultBroadcastTx)
 	wire.ReadBinaryBytes(wire.BinaryBytes(res), res2)

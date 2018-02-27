@@ -20,6 +20,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hyperledger/burrow/logging"
+	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
 )
@@ -83,18 +85,20 @@ type JSONService struct {
 	service         rpc.Service
 	eventSubs       *Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
+	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new JSON-RPC 2.0 service for burrow (tendermint).
-func NewJSONService(codec rpc.Codec, service rpc.Service) server.HttpService {
+func NewJSONService(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) server.HttpService {
 
 	tmhttps := &JSONService{
 		codec:     codec,
 		service:   service,
 		eventSubs: NewSubscriptions(service),
+		logger:    logging.WithScope(logger, "NewJSONService"),
 	}
 
-	dhMap := GetMethods(codec, service)
+	dhMap := GetMethods(codec, service, tmhttps.logger)
 	// Events
 	dhMap[EVENT_SUBSCRIBE] = tmhttps.EventSubscribe
 	dhMap[EVENT_UNSUBSCRIBE] = tmhttps.EventUnsubscribe
@@ -128,6 +132,10 @@ func (js *JSONService) Process(r *http.Request, w http.ResponseWriter) {
 	mName := req.Method
 
 	if handler, ok := js.defaultHandlers[mName]; ok {
+		logging.TraceMsg(js.logger, "Request received",
+			"id", req.Id,
+			"method", req.Method,
+			"params", string(req.Params))
 		resp, errCode, err := handler(req, w)
 		if err != nil {
 			js.writeError(err.Error(), req.Id, errCode, w)

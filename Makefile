@@ -8,8 +8,8 @@
 
 SHELL := /bin/bash
 REPO := $(shell pwd)
-GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list ./... | grep -vF /vendor/)
+GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
+PACKAGES_NOVENDOR := $(shell go list ./...)
 # Bosmarmot integration testing
 BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
@@ -94,7 +94,7 @@ build:	check build_db build_client
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
-build_race:	check build_race_db build_race_clien
+build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db

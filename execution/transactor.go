@@ -48,8 +48,8 @@ type Transactor interface {
 	CallCode(fromAddress acm.Address, code, data []byte) (*Call, error)
 	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
 	BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error
-	Transact(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*txs.Receipt, error)
-	TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error)
+	Transact(privKey []byte, address *acm.Address, data []byte, gasLimit, fee uint64) (*txs.Receipt, error)
+	TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error)
 	Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
 	SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
 	TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error)
@@ -58,7 +58,7 @@ type Transactor interface {
 
 // Transactor is the controller/middleware for the v0 RPC
 type transactor struct {
-	txMtx            *sync.Mutex
+	txMtx            sync.Mutex
 	blockchain       blockchain.Blockchain
 	state            acm.StateReader
 	eventEmitter     event.Emitter
@@ -169,7 +169,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *transactor) Transact(privKey []byte, address acm.Address, data []byte, gasLimit,
+func (trans *transactor) Transact(privKey []byte, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
@@ -209,7 +209,7 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 	}
 	tx := &txs.CallTx{
 		Input:    txInput,
-		Address:  &address,
+		Address:  address,
 		GasLimit: gasLimit,
 		Fee:      fee,
 		Data:     data,
@@ -223,19 +223,14 @@ func (trans *transactor) Transact(privKey []byte, address acm.Address, data []by
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, data []byte, gasLimit,
+func (trans *transactor) TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
 	receipt, err := trans.Transact(privKey, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
-	var addr acm.Address
-	if receipt.CreatesContract {
-		addr = receipt.ContractAddr
-	} else {
-		addr = address
-	}
+
 	// We want non-blocking on the first event received (but buffer the value),
 	// after which we want to block (and then discard the value - see below)
 	wc := make(chan *evm_events.EventDataCall, 1)
@@ -245,7 +240,8 @@ func (trans *transactor) TransactAndHold(privKey []byte, address acm.Address, da
 		return nil, err
 	}
 
-	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, addr, receipt.TxHash, wc)
+	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, receipt.ContractAddress,
+		receipt.TxHash, wc)
 	if err != nil {
 		return nil, err
 	}
