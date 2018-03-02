@@ -425,7 +425,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasSha3, &err) {
 				return nil, err
 			}
-			offset, size := stack.Pop64(), stack.Pop64()
+			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			data, memErr := memory.Read(offset, size)
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
@@ -482,7 +482,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => %d\n", len(input))
 
 		case CALLDATACOPY: // 0x37
-			memOff := stack.Pop64()
+			memOff := stack.PopBigInt()
 			inputOff := stack.Pop64()
 			length := stack.Pop64()
 			data, ok := subslice(input, inputOff, length)
@@ -502,7 +502,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => %d\n", l)
 
 		case CODECOPY: // 0x39
-			memOff := stack.Pop64()
+			memOff := stack.PopBigInt()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
 			data, ok := subslice(code, codeOff, length)
@@ -558,7 +558,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, ErrUnknownAddress)
 			}
 			code := acc.Code()
-			memOff := stack.Pop64()
+			memOff := stack.PopBigInt()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
 			data, ok := subslice(code, codeOff, length)
@@ -599,8 +599,8 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => 0x%X\n", popped)
 
 		case MLOAD: // 0x51
-			offset := stack.Pop64()
-			data, memErr := memory.Read(offset, 32)
+			offset := stack.PopBigInt()
+			data, memErr := memory.Read(offset, BigWord256Length)
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
@@ -609,7 +609,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE: // 0x52
-			offset, data := stack.Pop64(), stack.Pop()
+			offset, data := stack.PopBigInt(), stack.Pop()
 			memErr := memory.Write(offset, data.Bytes())
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
@@ -618,7 +618,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE8: // 0x53
-			offset, val := stack.Pop64(), byte(stack.Pop64()&0xFF)
+			offset, val := stack.PopBigInt(), byte(stack.Pop64()&0xFF)
 			memErr := memory.Write(offset, []byte{val})
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
@@ -670,7 +670,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			// free memory to be allocated for it if a subsequent MSTORE is made to
 			// this offset.
 			capacity := memory.Capacity()
-			stack.Push64(capacity)
+			stack.PushBigInt(capacity)
 			vm.Debugf(" => 0x%X\n", capacity)
 
 		case GAS: // 0x5A
@@ -707,7 +707,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
 			n := int(op - LOG0)
 			topics := make([]Word256, n)
-			offset, size := stack.Pop64(), stack.Pop64()
+			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			for i := 0; i < n; i++ {
 				topics[i] = stack.Pop()
 			}
@@ -733,7 +733,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, ErrPermission{"create_contract"}
 			}
 			contractValue := stack.PopU64()
-			offset, size := stack.Pop64(), stack.Pop64()
+			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			input, memErr := memory.Read(offset, size)
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
@@ -773,8 +773,8 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if op != DELEGATECALL {
 				value = stack.PopU64()
 			}
-			inOffset, inSize := stack.Pop64(), stack.Pop64()   // inputs
-			retOffset, retSize := stack.Pop64(), stack.Pop64() // outputs
+			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt() // inputs
+			retOffset, retSize := stack.PopBigInt(), stack.Pop64()   // outputs
 			vm.Debugf(" => %X\n", addr)
 
 			// Get the arguments from the memory
@@ -868,7 +868,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf("resume %s (%v)\n", callee.Address(), gas)
 
 		case RETURN: // 0xF3
-			offset, size := stack.Pop64(), stack.Pop64()
+			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output, memErr := memory.Read(offset, size)
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
