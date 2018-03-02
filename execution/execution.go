@@ -150,8 +150,14 @@ func (exe *executor) Reset() error {
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func (exe *executor) Execute(tx txs.Tx) error {
+func (exe *executor) Execute(tx txs.Tx) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v", tx.String(), r)
+		}
+	}()
 	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)")
+	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
 	fees := uint64(0)
 
