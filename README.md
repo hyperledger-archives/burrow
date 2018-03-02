@@ -5,7 +5,7 @@
 | Master | [![Circle CI](https://circleci.com/gh/hyperledger/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/hyperledger/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/develop) |
 
-Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node built with <3 by Monax. It executes Ethereum smart contract code (Solidity) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
+Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node built with <3 by Monax. It executes Ethereum EVM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
 
 ## What is Burrow
 
@@ -30,7 +30,7 @@ cd github.com/hyperledger/burrow
 make build
 ```
 
-This will put the the `burrow` and `burrow-client` binaries in ...
+This will build the `burrow` and `burrow-client` binaries and put them in the `bin/` directory. They can be executed from there or put wherever is convenient.
 
 ## Usage
 
@@ -49,8 +49,8 @@ burrow spec -p1 -f1 | burrow configure -s- -v0
 which translates into:
 
 ```
-burrow spec --participant-accounts=1 --full-accounts=1 > accounts.json
-burrow configure --genesis-spec=accounts.json --validator-index=0 > burrow.toml
+burrow spec --participant-accounts=1 --full-accounts=1 > genesis-spec.json
+burrow configure --genesis-spec=genesis-spec.json --validator-index=0 > burrow.toml
 ```
 
 Once the `burrow.toml` has been created, we run:
@@ -109,6 +109,7 @@ We welcome any and all contributions. Read the [contributing file](.github/CONTR
 
 You can find us on:
 - [Hyperledger Chat](https://chat.hyperledger.org)
+- [Hyperledger Mailing List](https://lists.hyperledger.org/mailman/listinfo)
 - [here on Github](https://github.com/hyperledger/burrow/issues)
 
 ## Future work
