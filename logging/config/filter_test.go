@@ -115,5 +115,21 @@ func TestIncludeAnyFilterPredicate(t *testing.T) {
 	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 3427}))
 	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
 	assert.False(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
+}
 
+func TestKeyOnlyPredicate(t *testing.T) {
+
+	fc := &FilterConfig{
+		FilterMode: IncludeWhenAnyMatches,
+		Predicates: []*KeyValuePredicateConfig{
+			{
+				KeyRegex: "Bosh",
+			},
+		},
+	}
+	fp, err := BuildFilterPredicate(fc)
+	assert.NoError(t, err)
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Shoes", 3427}))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
+	assert.True(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
 }

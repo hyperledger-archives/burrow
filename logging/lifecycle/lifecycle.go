@@ -57,9 +57,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.Info
 	go func() {
 		err := <-errCh.Out()
 		if err != nil {
-			logger.Info("logging_error", err,
-				"logging_config", loggingConfig.RootTOMLString(),
-				"logger", fmt.Sprintf("%#v", logger))
+			fmt.Printf("Logging error: %v", err)
 		}
 	}()
 
