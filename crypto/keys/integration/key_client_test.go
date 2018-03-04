@@ -12,7 +12,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/crypto/keysto/keys"
+	"github.com/hyperledger/burrow/crypto/keys"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
