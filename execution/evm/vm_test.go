@@ -158,6 +158,28 @@ func TestSubcurrency(t *testing.T) {
 	}
 }
 
+//This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
+//it is meant to test the implementation of the REVERT opcode
+func TestRevert(t *testing.T) {
+	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)
+
+	start := time.Now()
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.Error(t, err, "Expected execution reverted error")
+	fmt.Printf("Output: %v Error: %v\n", output, err)
+	fmt.Println("Call took:", time.Since(start))
+}
+
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()

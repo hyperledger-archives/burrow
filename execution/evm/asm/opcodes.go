@@ -184,6 +184,7 @@ const (
 	DELEGATECALL
 
 	// 0x70 range - other
+	REVERT       = 0xfd
 	SELFDESTRUCT = 0xff
 )
 
@@ -336,6 +337,7 @@ var opCodeNames = map[OpCode]string{
 	DELEGATECALL: "DELEGATECALL",
 
 	// 0x70 range - other
+	REVERT:       "REVERT",
 	SELFDESTRUCT: "SELFDESTRUCT",
 }
 
