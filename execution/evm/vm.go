@@ -1028,7 +1028,6 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			return output, nil
 
 		case REVERT: // 0xFD
-			return nil, fmt.Errorf("REVERT not yet fully implemented")
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output, memErr := memory.Read(offset, size)
 			if memErr != nil {
