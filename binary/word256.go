@@ -16,15 +16,18 @@ package binary
 
 import (
 	"bytes"
+	"math/big"
 	"sort"
 )
 
 var (
 	Zero256 = Word256{}
-	One256  = Word256{1}
+	One256  = LeftPadWord256([]byte{1})
 )
 
 const Word256Length = 32
+
+var BigWord256Length = big.NewInt(Word256Length)
 
 var trimCutSet = string([]byte{0})
 

@@ -3,6 +3,7 @@ package evm
 import (
 	"fmt"
 	"math"
+	"math/big"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 // unlikely to make a lot of difference.
 var zeroBlock []byte = make([]byte, 32)
 
-// Interface for a bounded linear memory indexed by a single int64 parameter
+// Interface for a bounded linear memory indexed by a single *big.Int parameter
 // for each byte in the memory.
 type Memory interface {
 	// Read a value from the memory store starting at offset
@@ -26,20 +27,23 @@ type Memory interface {
 	//
 	// The value returned should be copy of any underlying memory, not a reference
 	// to the underlying store.
-	Read(offset, length int64) ([]byte, error)
+	Read(offset, length *big.Int) ([]byte, error)
 	// Write a value to the memory starting at offset (the index of the first byte
 	// written will equal offset). The value is provided as bytes to be written
 	// consecutively to the memory store. Return an error if the memory cannot be
 	// written or allocated.
-	Write(offset int64, value []byte) error
+	Write(offset *big.Int, value []byte) error
 	// Returns the current capacity of the memory. For dynamically allocating
 	// memory this capacity can be used as a write offset that is guaranteed to be
 	// unused. Solidity in particular makes this assumption when using MSIZE to
 	// get the current allocated memory.
-	Capacity() int64
+	Capacity() *big.Int
 }
 
-func NewDynamicMemory(initialCapacity, maximumCapacity int64) Memory {
+// Get a new DynamicMemory (note that although we take a maximumCapacity of uint64 we currently
+// limit the maximum to int32 at runtime because we are using a single slice which we cannot guarantee
+// to be indexable above int32 or all validators
+func NewDynamicMemory(initialCapacity, maximumCapacity uint64) Memory {
 	return &dynamicMemory{
 		slice:           make([]byte, initialCapacity),
 		maximumCapacity: maximumCapacity,
@@ -54,10 +58,22 @@ func DefaultDynamicMemoryProvider() Memory {
 // array allocation via a backing slice
 type dynamicMemory struct {
 	slice           []byte
-	maximumCapacity int64
+	maximumCapacity uint64
 }
 
-func (mem *dynamicMemory) Read(offset, length int64) ([]byte, error) {
+func (mem *dynamicMemory) Read(offset, length *big.Int) ([]byte, error) {
+	// Ensures positive and not too wide
+	if !offset.IsUint64() {
+		return nil, fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset)
+	}
+	// Ensures positive and not too wide
+	if !length.IsUint64() {
+		return nil, fmt.Errorf("length %v does not fit inside an unsigned 64-bit integer", offset)
+	}
+	return mem.read(offset.Uint64(), length.Uint64())
+}
+
+func (mem *dynamicMemory) read(offset, length uint64) ([]byte, error) {
 	capacity := offset + length
 	err := mem.ensureCapacity(capacity)
 	if err != nil {
@@ -68,8 +84,16 @@ func (mem *dynamicMemory) Read(offset, length int64) ([]byte, error) {
 	return value, nil
 }
 
-func (mem *dynamicMemory) Write(offset int64, value []byte) error {
-	capacity := offset + int64(len(value))
+func (mem *dynamicMemory) Write(offset *big.Int, value []byte) error {
+	// Ensures positive and not too wide
+	if !offset.IsUint64() {
+		return fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset)
+	}
+	return mem.write(offset.Uint64(), value)
+}
+
+func (mem *dynamicMemory) write(offset uint64, value []byte) error {
+	capacity := offset + uint64(len(value))
 	err := mem.ensureCapacity(capacity)
 	if err != nil {
 		return err
@@ -78,18 +102,21 @@ func (mem *dynamicMemory) Write(offset int64, value []byte) error {
 	return nil
 }
 
-func (mem *dynamicMemory) Capacity() int64 {
-	return int64(len(mem.slice))
+func (mem *dynamicMemory) Capacity() *big.Int {
+	return big.NewInt(int64(len(mem.slice)))
 }
 
 // Ensures the current memory store can hold newCapacity. Will only grow the
 // memory (will not shrink).
-func (mem *dynamicMemory) ensureCapacity(newCapacity int64) error {
+func (mem *dynamicMemory) ensureCapacity(newCapacity uint64) error {
+	// Maximum length of a slice that allocates memory is the same as the native int max size
+	// We could rethink this limit, but we don't want different validators to disagree on
+	// transaction validity so we pick the lowest common denominator
 	if newCapacity > math.MaxInt32 {
 		// If we ever did want more than an int32 of space then we would need to
 		// maintain multiple pages of memory
 		return fmt.Errorf("cannot address memory beyond a maximum index "+
-			"of Int32 type (%v bytes)", math.MaxInt32)
+			"with int32 width (%v bytes)", math.MaxInt32)
 	}
 	newCapacityInt := int(newCapacity)
 	// We're already big enough so return

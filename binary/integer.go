@@ -17,10 +17,14 @@ package binary
 import (
 	"encoding/binary"
 	"math"
+	"math/big"
 	"sort"
 )
 
-const Uint64TopBitMask = 1 << 63
+var big1 = big.NewInt(1)
+var tt256 = new(big.Int).Lsh(big1, 256)
+var tt256m1 = new(big.Int).Sub(new(big.Int).Lsh(big1, 256), big1)
+var tt255 = new(big.Int).Lsh(big1, 255)
 
 // Sort for []uint64
 
@@ -74,4 +78,43 @@ func GetInt64BE(src []byte) int64 {
 // Returns whether a + b would be a uint64 overflow
 func IsUint64SumOverflow(a, b uint64) bool {
 	return math.MaxUint64-a < b
+}
+
+//
+
+// Converts a possibly negative big int x into a positive big int encoding a twos complement representation of x
+// truncated to 32 bytes
+func U256(x *big.Int) *big.Int {
+	// Note that the And operation induces big.Int to hold a positive representation of a negative number
+	return new(big.Int).And(x, tt256m1)
+}
+
+// Interprets a positive big.Int as a 256-bit two's complement signed integer
+func S256(x *big.Int) *big.Int {
+	// Sign bit not set, value is its positive self
+	if x.Cmp(tt255) < 0 {
+		return x
+	} else {
+		// negative value is represented
+		return new(big.Int).Sub(x, tt256)
+	}
+}
+
+// Treats the positive big int x as if it contains an embedded a back + 1 byte signed integer in its least significant
+// bits and extends that sign
+func SignExtend(back uint64, x *big.Int) *big.Int {
+	// we assume x contains a signed integer of back + 1 bytes width
+	// most significant bit of the back'th byte,
+	signBit := back*8 + 7
+	// single bit set at sign bit position
+	mask := new(big.Int).Lsh(big1, uint(signBit))
+	// all bits below sign bit set to 1 all above (including sign bit) set to 0
+	mask.Sub(mask, big1)
+	if x.Bit(int(signBit)) == 1 {
+		// Number represented is negative - set all bits above sign bit (including sign bit)
+		return x.Or(x, mask.Not(mask))
+	} else {
+		// Number represented is positive - clear all bits above sign bit (including sign bit)
+		return x.And(x, mask)
+	}
 }

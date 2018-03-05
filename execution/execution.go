@@ -150,8 +150,14 @@ func (exe *executor) Reset() error {
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func (exe *executor) Execute(tx txs.Tx) error {
+func (exe *executor) Execute(tx txs.Tx) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v", tx.String(), r)
+		}
+	}()
 	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)")
+	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
 	fees := uint64(0)
 
@@ -301,7 +307,6 @@ func (exe *executor) Execute(tx txs.Tx) error {
 
 		// The logic in runCall MUST NOT return.
 		if exe.runCall {
-
 			// VM call variables
 			var (
 				gas     uint64             = tx.GasLimit
@@ -329,11 +334,11 @@ func (exe *executor) Execute(tx txs.Tx) error {
 				// that will take your fees
 				if outAcc == nil {
 					logging.InfoMsg(logger, "Call to address that does not exist",
-						"caller_address", inAcc.Address,
+						"caller_address", inAcc.Address(),
 						"callee_address", tx.Address)
 				} else {
 					logging.InfoMsg(logger, "Call to address that holds no code",
-						"caller_address", inAcc.Address,
+						"caller_address", inAcc.Address(),
 						"callee_address", tx.Address)
 				}
 				err = txs.ErrTxInvalidAddress
@@ -344,16 +349,17 @@ func (exe *executor) Execute(tx txs.Tx) error {
 			if createContract {
 				// We already checked for permission
 				callee = evm.DeriveNewAccount(caller, permission.GlobalAccountPermissions(exe.state))
-				logging.TraceMsg(logger, "Created new contract",
-					"contract_address", callee.Address,
-					"contract_code", callee.Code)
 				code = tx.Data
+				logging.TraceMsg(logger, "Creating new contract",
+					"contract_address", callee.Address(),
+					"init_code", code)
 			} else {
 				callee = acm.AsMutableAccount(outAcc)
-				logging.TraceMsg(logger, "Calling existing contract",
-					"contract_address", callee.Address,
-					"contract_code", callee.Code)
 				code = callee.Code()
+				logging.TraceMsg(logger, "Calling existing contract",
+					"contract_address", callee.Address(),
+					"input", tx.Data,
+					"contract_code", code)
 			}
 			logger.Trace("callee", callee.Address().String())
 

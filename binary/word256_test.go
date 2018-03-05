@@ -37,3 +37,7 @@ func TestLeftPadWord256(t *testing.T) {
 		},
 		LeftPadWord256([]byte{1, 2, 3}))
 }
+
+func TestOne256(t *testing.T) {
+	assert.Equal(t, Int64ToWord256(1), One256)
+}

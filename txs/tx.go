@@ -101,6 +101,7 @@ type (
 	// TODO: replace with sum-type struct like ResultEvent
 	Tx interface {
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
+		String() string
 	}
 
 	Wrapper struct {
