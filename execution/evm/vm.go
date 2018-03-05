@@ -48,6 +48,7 @@ var (
 	ErrDataStackUnderflow     = errors.New("Data stack underflow")
 	ErrInvalidContract        = errors.New("Invalid contract")
 	ErrNativeContractCodeCopy = errors.New("Tried to copy native contract code")
+	ErrExecutionReverted      = errors.New("Execution reverted")
 )
 
 type ErrPermission struct {
@@ -773,6 +774,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(newAccount.Address().Word256())
 			}
 
+			if err_ == ErrExecutionReverted {
+				return ret, nil
+			}
+
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
 			if !HasPermission(vm.state, callee, permission.Call) {
 				return nil, ErrPermission{"call"}
@@ -863,6 +868,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				// TODO: we probably don't want to return the error - decide
 				//err = firstErr(err, callErr)
 				stack.Push(Zero256)
+
+				if callErr == ErrExecutionReverted {
+					memory.Write(retOffset, RightPadBytes(ret, int(retSize)))
+				}
 			} else {
 				stack.Push(One256)
 
@@ -890,6 +899,17 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			}
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
 			return output, nil
+
+		case REVERT: // 0xFD
+			offset, size := stack.PopBigInt(), stack.PopBigInt()
+			output, memErr := memory.Read(offset, size)
+			if memErr != nil {
+				vm.Debugf(" => Memory err: %s", memErr)
+				return nil, firstErr(err, ErrMemoryOutOfBounds)
+			}
+
+			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
+			return output, ErrExecutionReverted
 
 		case SELFDESTRUCT: // 0xFF
 			addr := stack.Pop()
