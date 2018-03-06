@@ -26,16 +26,36 @@ import (
 
 // Base permission references are like unix (the index is already bit shifted)
 const (
-	// chain permissions
-	Root           types.PermFlag = 1 << iota // 1
-	Send                                      // 2
-	Call                                      // 4
-	CreateContract                            // 8
-	CreateAccount                             // 16
-	Bond                                      // 32
-	Name                                      // 64
+	// Chain permissions.
+	// These permissions grant the ability for accounts to perform certain transition within the execution package
+	// Root is a reserved permission currently unused that may be used in the future to grant super-user privileges
+	// for instance to a governance contract
+	Root types.PermFlag = 1 << iota // 1
+	// Send permits an account to issue a SendTx to transfer value from one account to another. Note that value can
+	// still be transferred with a CallTx by specifying an Amount in the InputTx. Funding an account is the basic
+	// prerequisite for an account to act in the system so is often used as a surrogate for 'account creation' when
+	// sending to a unknown account - in order for this to be permitted the input account needs the CreateAccount
+	// permission in addition.
+	Send // 2
+	// Call permits and account to issue a CallTx, which can be used to call (run) the code of an existing
+	// account/contract (these are synonymous in Burrow/EVM). A CallTx can be used to create an account if it points to
+	// a nil address - in order for an account to be permitted to do this the input (calling) account needs the
+	// CreateContract permission in addition.
+	Call // 4
+	// CreateContract permits the input account of a CallTx to create a new contract/account when CallTx.Address is nil
+	// and permits an executing contract in the EVM to create a new contract programmatically.
+	CreateContract // 8
+	// CreateAccount permits an input account of a SendTx to add value to non-existing (unfunded) accounts
+	CreateAccount // 16
+	// Bond is a reserved permission for making changes to the validator set - currently unused
+	Bond // 32
+	// Name permits manipulation of the name registry by allowing an account to issue a NameTx
+	Name // 64
 
-	// moderator permissions
+	// Moderator permissions.
+	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
+	// particular canonical permission mutation or query function. When an account is granted a moderation permission
+	// it is permitted to call that function. See snative.go for a marked-up description of what each function does.
 	HasBase
 	SetBase
 	UnsetBase
@@ -50,6 +70,7 @@ const (
 	AllPermFlags     types.PermFlag = TopPermFlag | (TopPermFlag - 1)
 	DefaultPermFlags types.PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole
 
+	// Chain permissions strings
 	RootString           string = "root"
 	SendString                  = "send"
 	CallString                  = "call"
@@ -58,7 +79,7 @@ const (
 	BondString                  = "bond"
 	NameString                  = "name"
 
-	// moderator permissions
+	// Moderator permissions strings
 	HasBaseString    = "hasBase"
 	SetBaseString    = "setBase"
 	UnsetBaseString  = "unsetBase"
