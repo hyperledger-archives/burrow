@@ -46,10 +46,10 @@ func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:  addr,
-		Amount:   amt,
-		Sequence: sequence,
-		PubKey:   pubkey,
+		Address:   addr,
+		Amount:    amt,
+		Sequence:  sequence,
+		PublicKey: pubkey,
 	})
 	return nil
 }
@@ -66,7 +66,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
-	tx.Inputs[i].PubKey = privAccount.PublicKey()
+	tx.Inputs[i].PublicKey = privAccount.PublicKey()
 	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
@@ -93,10 +93,10 @@ func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
 func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
-		Address:  from.Address(),
-		Amount:   amt,
-		Sequence: sequence,
-		PubKey:   from,
+		Address:   from.Address(),
+		Amount:    amt,
+		Sequence:  sequence,
+		PublicKey: from,
 	}
 
 	return &CallTx{
@@ -109,7 +109,7 @@ func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 }
 
 func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PublicKey()
+	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
@@ -132,10 +132,10 @@ func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee ui
 
 func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
-		Address:  from.Address(),
-		Amount:   amt,
-		Sequence: sequence,
-		PubKey:   from,
+		Address:   from.Address(),
+		Amount:    amt,
+		Sequence:  sequence,
+		PublicKey: from,
 	}
 
 	return &NameTx{
@@ -147,7 +147,7 @@ func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequ
 }
 
 func (tx *NameTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PublicKey()
+	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
@@ -176,10 +176,10 @@ func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) erro
 
 func (tx *BondTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:  pubkey.Address(),
-		Amount:   amt,
-		Sequence: sequence,
-		PubKey:   pubkey,
+		Address:   pubkey.Address(),
+		Amount:    amt,
+		Sequence:  sequence,
+		PublicKey: pubkey,
 	})
 	return nil
 }
@@ -201,7 +201,7 @@ func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
-	tx.Inputs[i].PubKey = privAccount.PublicKey()
+	tx.Inputs[i].PublicKey = privAccount.PublicKey()
 	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
@@ -253,10 +253,10 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (
 
 func NewPermissionsTxWithSequence(from acm.PublicKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
-		Address:  from.Address(),
-		Amount:   1, // NOTE: amounts can't be 0 ...
-		Sequence: sequence,
-		PubKey:   from,
+		Address:   from.Address(),
+		Amount:    1, // NOTE: amounts can't be 0 ...
+		Sequence:  sequence,
+		PublicKey: from,
 	}
 
 	return &PermissionsTx{
@@ -266,6 +266,6 @@ func NewPermissionsTxWithSequence(from acm.PublicKey, args ptypes.PermArgs, sequ
 }
 
 func (tx *PermissionsTx) Sign(chainID string, privAccount acm.PrivateAccount) {
-	tx.Input.PubKey = privAccount.PublicKey()
+	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }

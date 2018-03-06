@@ -1053,17 +1053,17 @@ func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.Mutable
 // for all time.
 func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
 	if acc.PublicKey().Unwrap() == nil {
-		if in.PubKey.Unwrap() == nil {
+		if in.PublicKey.Unwrap() == nil {
 			return txs.ErrTxUnknownPubKey
 		}
-		addressFromPubKey := in.PubKey.Address()
+		addressFromPubKey := in.PublicKey.Address()
 		addressFromAccount := acc.Address()
 		if addressFromPubKey != addressFromAccount {
 			return txs.ErrTxInvalidPubKey
 		}
-		acc.SetPublicKey(in.PubKey)
+		acc.SetPublicKey(in.PublicKey)
 	} else {
-		in.PubKey = acm.PublicKey{}
+		in.PublicKey = acm.PublicKey{}
 	}
 	return nil
 }

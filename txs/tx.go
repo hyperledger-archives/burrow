@@ -149,7 +149,7 @@ type (
 		Amount    uint64
 		Sequence  uint64
 		Signature acm.Signature
-		PubKey    acm.PublicKey
+		PublicKey acm.PublicKey
 	}
 
 	TxOutput struct {
@@ -205,7 +205,7 @@ func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int, err *error) {
 }
 
 func (txIn *TxInput) String() string {
-	return fmt.Sprintf("TxInput{%s,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PubKey)
+	return fmt.Sprintf("TxInput{%s,%v,%v,%v,%v}", txIn.Address, txIn.Amount, txIn.Sequence, txIn.Signature, txIn.PublicKey)
 }
 
 //-----------------------------------------------------------------------------

@@ -500,10 +500,10 @@ func TestCreates(t *testing.T) {
 	// call the pre-factory, triggering the factory to run a create
 	tx := &txs.CallTx{
 		Input: &txs.TxInput{
-			Address:  acc0.Address(),
-			Amount:   1,
-			Sequence: acc0.Sequence() + 1,
-			PubKey:   acc0PubKey,
+			Address:   acc0.Address(),
+			Amount:    1,
+			Sequence:  acc0.Sequence() + 1,
+			PublicKey: acc0PubKey,
 		},
 		Address:  addressPtr(acc1),
 		GasLimit: 10000,
@@ -524,10 +524,10 @@ func TestCreates(t *testing.T) {
 	// call the pre-factory, triggering the factory to run a create
 	tx = &txs.CallTx{
 		Input: &txs.TxInput{
-			Address:  acc0.Address(),
-			Amount:   1,
-			Sequence: acc0.Sequence() + 1,
-			PubKey:   acc0PubKey,
+			Address:   acc0.Address(),
+			Amount:    1,
+			Sequence:  acc0.Sequence() + 1,
+			PublicKey: acc0PubKey,
 		},
 		Address:  addressPtr(acc1),
 		GasLimit: 100000,
@@ -580,10 +580,10 @@ func TestContractSend(t *testing.T) {
 	// call the contract, triggering the send
 	tx := &txs.CallTx{
 		Input: &txs.TxInput{
-			Address:  acc0.Address(),
-			Amount:   sendAmt,
-			Sequence: acc0.Sequence() + 1,
-			PubKey:   acc0PubKey,
+			Address:   acc0.Address(),
+			Amount:    sendAmt,
+			Sequence:  acc0.Sequence() + 1,
+			PublicKey: acc0PubKey,
 		},
 		Address:  addressPtr(acc1),
 		GasLimit: 1000,
@@ -617,10 +617,10 @@ func TestMerklePanic(t *testing.T) {
 		tx := &txs.SendTx{
 			Inputs: []*txs.TxInput{
 				{
-					Address:  acc0.Address(),
-					Amount:   1,
-					Sequence: acc0.Sequence() + 1,
-					PubKey:   acc0PubKey,
+					Address:   acc0.Address(),
+					Amount:    1,
+					Sequence:  acc0.Sequence() + 1,
+					PublicKey: acc0PubKey,
 				},
 			},
 			Outputs: []*txs.TxOutput{
@@ -648,10 +648,10 @@ func TestMerklePanic(t *testing.T) {
 		stateCallTx.UpdateAccount(newAcc1)
 		tx := &txs.CallTx{
 			Input: &txs.TxInput{
-				Address:  acc0.Address(),
-				Amount:   1,
-				Sequence: acc0.Sequence() + 1,
-				PubKey:   acc0PubKey,
+				Address:   acc0.Address(),
+				Amount:    1,
+				Sequence:  acc0.Sequence() + 1,
+				PublicKey: acc0PubKey,
 			},
 			Address:  addressPtr(acc1),
 			GasLimit: 10,
@@ -684,10 +684,10 @@ func TestTxs(t *testing.T) {
 		tx := &txs.SendTx{
 			Inputs: []*txs.TxInput{
 				{
-					Address:  acc0.Address(),
-					Amount:   1,
-					Sequence: acc0.Sequence() + 1,
-					PubKey:   acc0PubKey,
+					Address:   acc0.Address(),
+					Amount:    1,
+					Sequence:  acc0.Sequence() + 1,
+					PublicKey: acc0PubKey,
 				},
 			},
 			Outputs: []*txs.TxOutput{
@@ -723,10 +723,10 @@ func TestTxs(t *testing.T) {
 		stateCallTx.UpdateAccount(newAcc1)
 		tx := &txs.CallTx{
 			Input: &txs.TxInput{
-				Address:  acc0.Address(),
-				Amount:   1,
-				Sequence: acc0.Sequence() + 1,
-				PubKey:   acc0PubKey,
+				Address:   acc0.Address(),
+				Amount:    1,
+				Sequence:  acc0.Sequence() + 1,
+				PublicKey: acc0PubKey,
 			},
 			Address:  addressPtr(acc1),
 			GasLimit: 10,
@@ -774,10 +774,10 @@ proof-of-work chain as proof of what happened while they were gone `
 		stateNameTx := state.Copy()
 		tx := &txs.NameTx{
 			Input: &txs.TxInput{
-				Address:  acc0.Address(),
-				Amount:   entryAmount,
-				Sequence: acc0.Sequence() + 1,
-				PubKey:   acc0PubKey,
+				Address:   acc0.Address(),
+				Amount:    entryAmount,
+				Sequence:  acc0.Sequence() + 1,
+				PublicKey: acc0PubKey,
 			},
 			Name: entryName,
 			Data: entryData,
