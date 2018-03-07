@@ -11,6 +11,8 @@ import (
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
+	"0.18.0",
+	`Prerelease`,
 	"0.17.1",
 	`Minor tweaks to docker build file`,
 
