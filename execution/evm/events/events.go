@@ -33,27 +33,27 @@ func EventStringLogEvent(addr acm.Address) string    { return fmt.Sprintf("Log/%
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract
 type EventDataCall struct {
-	CallData  *CallData   `json:"call_data"`
-	Origin    acm.Address `json:"origin"`
-	TxID      []byte      `json:"tx_id"`
-	Return    []byte      `json:"return"`
-	Exception string      `json:"exception"`
+	CallData  *CallData
+	Origin    acm.Address
+	TxID      []byte
+	Return    []byte
+	Exception string
 }
 
 type CallData struct {
-	Caller acm.Address `json:"caller"`
-	Callee acm.Address `json:"callee"`
-	Data   []byte      `json:"data"`
-	Value  uint64      `json:"value"`
-	Gas    uint64      `json:"gas"`
+	Caller acm.Address
+	Callee acm.Address
+	Data   []byte
+	Value  uint64
+	Gas    uint64
 }
 
 // EventDataLog fires when a contract executes the LOG opcode
 type EventDataLog struct {
-	Address acm.Address `json:"address"`
-	Topics  []Word256   `json:"topics"`
-	Data    []byte      `json:"data"`
-	Height  uint64      `json:"height"`
+	Address acm.Address
+	Topics  []Word256
+	Data    []byte
+	Height  uint64
 }
 
 // Publish/Subscribe

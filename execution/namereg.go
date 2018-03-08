@@ -29,8 +29,8 @@ type NameRegIterable interface {
 }
 
 type NameRegEntry struct {
-	Name    string          `json:"name"`    // registered name for the entry
-	Owner   account.Address `json:"owner"`   // address that created the entry
-	Data    string          `json:"data"`    // data to store under this name
-	Expires uint64          `json:"expires"` // block at which this entry expires
+	Name    string          // registered name for the entry
+	Owner   account.Address // address that created the entry
+	Data    string          // data to store under this name
+	Expires uint64          // block at which this entry expires
 }

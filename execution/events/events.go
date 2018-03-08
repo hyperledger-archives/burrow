@@ -22,9 +22,9 @@ func EventStringRebond() string                        { return "Rebond" }
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {
-	Tx        txs.Tx `json:"tx"`
-	Return    []byte `json:"return"`
-	Exception string `json:"exception"`
+	Tx        txs.Tx
+	Return    []byte
+	Exception string
 }
 
 // For re-use
@@ -33,9 +33,9 @@ var sendTxQuery = event.NewQueryBuilder().
 	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.SendTx{}).String())
 
 type eventDataTx struct {
-	Tx        txs.Wrapper `json:"tx"`
-	Return    []byte      `json:"return"`
-	Exception string      `json:"exception"`
+	Tx        txs.Wrapper
+	Return    []byte
+	Exception string
 }
 
 func (edTx EventDataTx) MarshalJSON() ([]byte, error) {

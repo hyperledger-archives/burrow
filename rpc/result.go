@@ -167,8 +167,7 @@ type ResultSignTx struct {
 }
 
 type ResultEvent struct {
-	Event string
-	// TODO: move ResultEvent sum type here
+	Event         string
 	TMEventData   *tm_types.TMEventData     `json:",omitempty"`
 	EventDataTx   *exe_events.EventDataTx   `json:",omitempty"`
 	EventDataCall *evm_events.EventDataCall `json:",omitempty"`
