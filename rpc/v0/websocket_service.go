@@ -21,6 +21,7 @@ import (
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
@@ -51,6 +52,15 @@ func NewWebsocketService(codec rpc.Codec, service rpc.Service, logger logging_ty
 
 // Process a request.
 func (ws *WebsocketService) Process(msg []byte, session *server.WSSession) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in WebsocketService.Process(): %v", r)
+			logging.InfoMsg(ws.logger, "Panic in WebsocketService.Process()", structure.ErrorKey, err)
+			if !session.Closed() {
+				ws.writeError(err.Error(), "", rpc.INTERNAL_ERROR, session)
+			}
+		}
+	}()
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
