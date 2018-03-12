@@ -141,7 +141,7 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-	@go get -u github.com/monax/keys/cmd/monax-keys
+	@go get -u github.com/monax/bosmarmot/keys/cmd/monax-keys
 	@go test ./keys/integration -tags integration
 	@go test ./rpc/tm/integration -tags integration
 
