@@ -1,7 +1,13 @@
+required = ["github.com/tendermint/iavl"]
+
 [prune]
   go-tests = true
   unused-packages = true
   non-go = true
+
+[[constraint]]
+  name = "github.com/tendermint/iavl"
+  version = "~0.2.0"
 
 [[constraint]]
   name = "github.com/BurntSushi/toml"
@@ -38,10 +44,6 @@
 [[constraint]]
   name = "github.com/jawher/mow.cli"
   version = "1.0.3"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/monax/keys"
 
 [[constraint]]
   name = "github.com/spf13/cobra"
