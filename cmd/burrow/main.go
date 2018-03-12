@@ -8,9 +8,9 @@ import (
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/crypto/keys"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
-	"github.com/hyperledger/burrow/keys"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
 	"github.com/hyperledger/burrow/logging/loggers"
@@ -163,7 +163,7 @@ func main() {
 				}
 
 				if *keysUrlOpt != "" {
-					conf.Keys.URL = *keysUrlOpt
+					conf.Crypto.KeysServer.URL = *keysUrlOpt
 				}
 
 				if *genesisSpecOpt != "" {
@@ -172,7 +172,7 @@ func main() {
 					if err != nil {
 						fatalf("could not read GenesisSpec: %v", err)
 					}
-					keyClient := keys.NewKeyClient(conf.Keys.URL, loggers.NewNoopInfoTraceLogger())
+					keyClient := keys.NewKeyClient(conf.Crypto.KeysServer.URL, loggers.NewNoopInfoTraceLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
 						fatalf("could not realise GenesisSpec: %v", err)
@@ -195,10 +195,10 @@ func main() {
 						fatalf("validator-index of %v given but only %v validators specified in GenesisDoc",
 							*validatorIndexOpt, len(conf.GenesisDoc.Validators))
 					}
-					conf.ValidatorAddress = &conf.GenesisDoc.Validators[*validatorIndexOpt].Address
+					conf.Crypto.KeysServer.ValidatorAddress = &conf.GenesisDoc.Validators[*validatorIndexOpt].Address
 				} else if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) > 0 {
 					// Pick first validator otherwise - might want to change this when we support non-validating node
-					conf.ValidatorAddress = &conf.GenesisDoc.Validators[0].Address
+					conf.Crypto.KeysServer.ValidatorAddress = &conf.GenesisDoc.Validators[0].Address
 				}
 
 				if *loggingOpt != "" {

@@ -19,7 +19,7 @@ import (
 
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/crypto/keys"
 )
 
 func Call(do *client.Do) error {

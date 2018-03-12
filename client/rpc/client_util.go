@@ -21,7 +21,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/crypto/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 )

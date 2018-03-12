@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
-	. "github.com/hyperledger/burrow/keys"
+	. "github.com/hyperledger/burrow/crypto/keys"
 	"github.com/tendermint/ed25519"
 	crypto "github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/ripemd160"

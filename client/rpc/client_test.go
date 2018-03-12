@@ -22,7 +22,7 @@ import (
 	// "github.com/stretchr/testify/assert"
 
 	mockclient "github.com/hyperledger/burrow/client/mock"
-	mockkeys "github.com/hyperledger/burrow/keys/mock"
+	mockkeys "github.com/hyperledger/burrow/crypto/keys/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

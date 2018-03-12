@@ -142,7 +142,7 @@ test: check
 .PHONY: test_integration
 test_integration:
 	@go get -u github.com/monax/keys/cmd/monax-keys
-	@go test ./keys/integration -tags integration
+	@go test ./crypto/keys/integration -tags integration
 	@go test ./rpc/tm/integration -tags integration
 
 # Run integration test from bosmarmot (separated from other integration tests so we can

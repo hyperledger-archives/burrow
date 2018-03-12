@@ -8,8 +8,8 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto/keys"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )

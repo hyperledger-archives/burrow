@@ -3,8 +3,8 @@ package spec
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/crypto/keys"
+	"github.com/hyperledger/burrow/crypto/keys/mock"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
