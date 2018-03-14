@@ -178,6 +178,8 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 			Log:  fmt.Sprintf("Could not commit block: %s", err),
 		}
 	}
+	// Just kill the cache - it is badly implemented
+	app.committer.Reset()
 
 	logging.InfoMsg(app.logger, "Resetting transaction check cache")
 	app.checker.Reset()
