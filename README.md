@@ -9,14 +9,14 @@ Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node bui
 
 ## Table of Contents
 
-- [What is burrow](#what-is-burrow)
+- [What is Burrow ?](#what-is-burrow-)
 - [Installation](#installation)
-- [For developers](#for-developers)
+- [For Developers](#for-developers)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Contribute](#contribute)
-- [License](#license)
 - [Future work](#future-work)
+- [License](#license)
 
 ## What is Burrow ?
 
