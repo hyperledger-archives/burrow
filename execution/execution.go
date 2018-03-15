@@ -320,7 +320,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				callee  acm.MutableAccount = nil // initialized below
 				code    []byte             = nil
 				ret     []byte             = nil
-				txCache                    = NewTxCache(exe.blockCache)
+				txCache                    = acm.NewStateCache(exe.blockCache)
 				params                     = evm.Params{
 					BlockHeight: exe.tip.LastBlockHeight(),
 					BlockHash:   binary.LeftPadWord256(exe.tip.LastBlockHash()),

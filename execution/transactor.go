@@ -98,7 +98,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
@@ -120,7 +120,7 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,

@@ -1,6 +1,7 @@
 package account
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -10,6 +11,19 @@ import (
 )
 
 type Address binary.Word160
+
+type Addresses []Address
+
+func (as Addresses) Len() int {
+	return len(as)
+}
+
+func (as Addresses) Less(i, j int) bool {
+	return bytes.Compare(as[i][:], as[j][:]) < 0
+}
+func (as Addresses) Swap(i, j int) {
+	as[i], as[j] = as[j], as[i]
+}
 
 const AddressHexLength = 2 * binary.Word160Length
 
