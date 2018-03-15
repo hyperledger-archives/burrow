@@ -31,7 +31,8 @@ func (gwc *goWireCodec) EncodeTx(tx Tx) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	// Tendermint mempool exhibits odd concurrency issues when using a mutable buffer
+	return copyBuffer(buf)
 }
 
 // panic on err
@@ -50,4 +51,13 @@ func (gwc *goWireCodec) DecodeTx(txBytes []byte) (Tx, error) {
 func (gwc *goWireCodec) recycle(buf *bytes.Buffer) {
 	buf.Reset()
 	gwc.bufferPool.Put(buf)
+}
+
+func copyBuffer(buf *bytes.Buffer) ([]byte, error) {
+	bs := make([]byte, buf.Len())
+	_, err := buf.Read(bs)
+	if err != nil {
+		return nil, err
+	}
+	return bs, nil
 }

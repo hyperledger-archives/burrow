@@ -150,40 +150,39 @@ func TestWSDoubleFire(t *testing.T) {
 
 // create a contract, wait for the event, and send it a msg, validate the return
 func TestWSCallWait(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 	wsc := newWSClient()
-	eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
-	subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
-	defer func() {
+	defer stopWSClient(wsc)
+	// Mini soak test
+	for i := 0; i < 20; i++ {
+		if testing.Short() {
+			t.Skip("skipping test in short mode.")
+		}
+		amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
+		code, returnCode, returnVal := simpleContract()
+		var contractAddr acm.Address
+		eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
+		subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
+		// wait for the contract to be created
+		waitForEvent(t, wsc, eid1, func() {
+			tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+			receipt := broadcastTx(t, jsonRpcClient, tx)
+			contractAddr = receipt.ContractAddress
+		}, unmarshalValidateTx(amt, returnCode))
 		unsubscribe(t, wsc, subId1)
-		stopWSClient(wsc)
-	}()
-	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
-	code, returnCode, returnVal := simpleContract()
-	var contractAddr acm.Address
-	// wait for the contract to be created
-	waitForEvent(t, wsc, eid1, func() {
-		tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-		receipt := broadcastTx(t, jsonRpcClient, tx)
-		contractAddr = receipt.ContractAddress
-	}, unmarshalValidateTx(amt, returnCode))
 
-	// susbscribe to the new contract
-	amt = uint64(10001)
-	eid2 := exe_events.EventStringAccountOutput(contractAddr)
-	subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
-	defer func() {
+		// susbscribe to the new contract
+		amt = uint64(10001)
+		eid2 := exe_events.EventStringAccountOutput(contractAddr)
+		subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
+		// get the return value from a call
+		data := []byte{0x1}
+		waitForEvent(t, wsc, eid2, func() {
+			tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr, data, amt, gasLim, fee)
+			receipt := broadcastTx(t, jsonRpcClient, tx)
+			contractAddr = receipt.ContractAddress
+		}, unmarshalValidateTx(amt, returnVal))
 		unsubscribe(t, wsc, subId2)
-	}()
-	// get the return value from a call
-	data := []byte{0x1}
-	waitForEvent(t, wsc, eid2, func() {
-		tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr, data, amt, gasLim, fee)
-		receipt := broadcastTx(t, jsonRpcClient, tx)
-		contractAddr = receipt.ContractAddress
-	}, unmarshalValidateTx(amt, returnVal))
+	}
 }
 
 // create a contract and send it a msg without waiting. wait for contract event

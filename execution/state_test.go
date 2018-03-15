@@ -37,7 +37,7 @@ import (
 )
 
 var deterministicGenesis = genesis.NewDeterministicGenesis(34059836243380576)
-var testGenesisDoc, testPrivAccounts = deterministicGenesis.
+var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, true, 1000, 1, true, 1000)
 var testChainID = testGenesisDoc.ChainID()
 
@@ -52,7 +52,7 @@ func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
 }
 
 func execTxWithState(state *State, tx txs.Tx) error {
-	return execTxWithStateAndBlockchain(state, bcm.NewBlockchain(testGenesisDoc), tx)
+	return execTxWithStateAndBlockchain(state, bcm.NewBlockchain(nil, testGenesisDoc), tx)
 }
 
 func commitNewBlock(state *State, blockchain bcm.MutableBlockchain) {
@@ -70,7 +70,7 @@ func execTxWithStateNewBlock(state *State, blockchain bcm.MutableBlockchain, tx 
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
 	minBonded int64) (*State, []acm.PrivateAccount) {
-	testGenesisDoc, privAccounts := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
+	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
 	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	if err != nil {
@@ -104,9 +104,9 @@ func TestCopyState(t *testing.T) {
 	}
 
 	// Check hash of copy
-	s0Copy := s0.Copy()
+	s0Copy := s0.copy()
 	assert.Equal(t, s0Hash, s0Copy.Hash(), "Expected state copy hash to be the same")
-	assert.Equal(t, s0Copy.Copy().Hash(), s0Copy.Hash(), "Expected COPY COPY COPY the same")
+	assert.Equal(t, s0Copy.copy().Hash(), s0Copy.Hash(), "Expected COPY COPY COPY the same")
 
 	// Mutate the original; hash should change.
 	acc0Address := privAccounts[0].Address()
@@ -250,7 +250,7 @@ func TestTxSequence(t *testing.T) {
 		tx.AddInputWithSequence(acc0PubKey, 1, sequence)
 		tx.AddOutput(acc1.Address(), 1)
 		tx.Inputs[0].Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
-		stateCopy := state.Copy()
+		stateCopy := state.copy()
 		err := execTxWithState(stateCopy, tx)
 		if i == 1 {
 			// Sequence is good.
@@ -284,7 +284,7 @@ func TestNameTxs(t *testing.T) {
 	state.Save()
 
 	txs.MinNameRegistrationPeriod = 5
-	blockchain := bcm.NewBlockchain(testGenesisDoc)
+	blockchain := bcm.NewBlockchain(nil, testGenesisDoc)
 	startingBlock := blockchain.LastBlockHeight()
 
 	// try some bad names. these should all fail
@@ -486,7 +486,7 @@ func TestCreates(t *testing.T) {
 	acc1 := getAccount(state, privAccounts[1].Address())
 	acc2 := getAccount(state, privAccounts[2].Address())
 
-	state = state.Copy()
+	state = state.copy()
 	newAcc1 := getAccount(state, acc1.Address())
 	newAcc1.SetCode(preFactoryCode)
 	newAcc2 := getAccount(state, acc2.Address())
@@ -568,7 +568,7 @@ func TestContractSend(t *testing.T) {
 	acc1 := getAccount(state, privAccounts[1].Address())
 	acc2 := getAccount(state, privAccounts[2].Address())
 
-	state = state.Copy()
+	state = state.copy()
 	newAcc1 := getAccount(state, acc1.Address())
 	newAcc1.SetCode(callerCode)
 	state.UpdateAccount(newAcc1)
@@ -613,7 +613,7 @@ func TestMerklePanic(t *testing.T) {
 	state.Save()
 	// SendTx.
 	{
-		stateSendTx := state.Copy()
+		stateSendTx := state.copy()
 		tx := &txs.SendTx{
 			Inputs: []*txs.TxInput{
 				{
@@ -642,7 +642,7 @@ func TestMerklePanic(t *testing.T) {
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx := state.Copy()
+		stateCallTx := state.copy()
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.UpdateAccount(newAcc1)
@@ -680,7 +680,7 @@ func TestTxs(t *testing.T) {
 
 	// SendTx.
 	{
-		stateSendTx := state.Copy()
+		stateSendTx := state.copy()
 		tx := &txs.SendTx{
 			Inputs: []*txs.TxInput{
 				{
@@ -717,7 +717,7 @@ func TestTxs(t *testing.T) {
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx := state.Copy()
+		stateCallTx := state.copy()
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.UpdateAccount(newAcc1)
@@ -771,7 +771,7 @@ basis,   and   nodes   can   leave  and   rejoin   the  network   at  will,  acc
 proof-of-work chain as proof of what happened while they were gone `
 		entryAmount := uint64(10000)
 
-		stateNameTx := state.Copy()
+		stateNameTx := state.copy()
 		tx := &txs.NameTx{
 			Input: &txs.TxInput{
 				Address:   acc0.Address(),
@@ -890,7 +890,7 @@ func TestSelfDestruct(t *testing.T) {
 	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}

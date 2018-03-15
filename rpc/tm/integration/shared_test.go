@@ -20,6 +20,7 @@ package integration
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 // Needs to be in a _test.go file to be picked up
@@ -28,5 +29,6 @@ func TestMain(m *testing.M) {
 		return m.Run()
 	})
 
+	time.Sleep(3 * time.Second)
 	os.Exit(returnValue)
 }

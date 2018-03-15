@@ -121,7 +121,7 @@ func makeUsers(n int) []acm.PrivateAccount {
 }
 
 func makeExecutor(state *State) *executor {
-	return newExecutor(true, state, testChainID, bcm.NewBlockchain(testGenesisDoc), event.NewEmitter(logger),
+	return newExecutor(true, state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger),
 		logger)
 }
 

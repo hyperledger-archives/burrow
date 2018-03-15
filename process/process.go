@@ -1,4 +1,4 @@
-package server
+package process
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 // Copies the signature from http.Server's graceful shutdown method
-type Server interface {
+type Process interface {
 	Shutdown(context.Context) error
 }
 
@@ -19,7 +19,7 @@ func (sf ShutdownFunc) Shutdown(ctx context.Context) error {
 
 type Launcher struct {
 	Name   string
-	Launch func() (Server, error)
+	Launch func() (Process, error)
 }
 
 type listenersServer struct {
@@ -27,8 +27,8 @@ type listenersServer struct {
 	listeners map[net.Listener]struct{}
 }
 
-// Providers a Server implementation from Listeners that are closed on shutdown
-func FromListeners(listeners ...net.Listener) Server {
+// Providers a Process implementation from Listeners that are closed on shutdown
+func FromListeners(listeners ...net.Listener) Process {
 	lns := make(map[net.Listener]struct{}, len(listeners))
 	for _, l := range listeners {
 		lns[l] = struct{}{}

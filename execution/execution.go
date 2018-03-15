@@ -96,7 +96,7 @@ func newExecutor(runCall bool,
 		blockCache: NewBlockCache(state),
 		publisher:  eventFireable,
 		eventCache: event.NewEventCache(eventFireable),
-		logger:     logger.With(structure.ComponentKey, "Execution"),
+		logger:     logger.With(structure.ComponentKey, "Executor"),
 	}
 }
 
@@ -136,10 +136,13 @@ func (exe *executor) Commit() ([]byte, error) {
 	// sync the cache
 	exe.blockCache.Sync()
 	// save state to disk
-	exe.state.Save()
+	err := exe.state.Save()
+	if err != nil {
+		return nil, err
+	}
 	// flush events to listeners (XXX: note issue with blocking)
 	exe.eventCache.Flush()
-	return exe.state.Hash(), nil
+	return exe.state.LastSavedHash(), nil
 }
 
 func (exe *executor) Reset() error {
@@ -156,7 +159,10 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v", tx.String(), r)
 		}
 	}()
-	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)")
+	txHash := txs.TxHash(exe.chainID, tx)
+	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)").With(
+		"run_call", exe.runCall,
+		"tx_hash", txHash)
 	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
 	fees := uint64(0)
@@ -213,7 +219,6 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		// if the exe.eventCache is nil, nothing will happen
 		if exe.eventCache != nil {
-			txHash := txs.TxHash(exe.chainID, tx)
 			for _, i := range tx.Inputs {
 				events.PublishAccountInput(exe.eventCache, i.Address, txHash, tx, nil, "")
 			}

@@ -175,7 +175,7 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 	if err != nil {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit block: %s", err),
+			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
 		}
 	}
 	// Just kill the cache - it is badly implemented
@@ -185,7 +185,13 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 	app.checker.Reset()
 
 	// Commit to our blockchain state
-	app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
+		}
+	}
 
 	// Perform a sanity check our block height
 	if app.blockchain.LastBlockHeight() != uint64(app.block.Header.Height) {
