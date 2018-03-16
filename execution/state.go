@@ -371,19 +371,19 @@ func (s *State) IterateStorage(address acm.Address,
 
 var _ NameRegIterable = &State{}
 
-func (s *State) GetNameRegEntry(name string) *NameRegEntry {
+func (s *State) GetNameRegEntry(name string) (*NameRegEntry, error) {
 	_, valueBytes, _ := s.nameReg.Get([]byte(name))
 	if valueBytes == nil {
-		return nil
+		return nil, nil
 	}
 
-	return DecodeNameRegEntry(valueBytes)
+	return DecodeNameRegEntry(valueBytes), nil
 }
 
-func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool) {
+func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool, err error) {
 	return s.nameReg.Iterate(func(key []byte, value []byte) (stop bool) {
 		return consumer(DecodeNameRegEntry(value))
-	})
+	}), nil
 }
 
 func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {
@@ -393,23 +393,23 @@ func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {
 	return value.(*NameRegEntry)
 }
 
-func (s *State) UpdateNameRegEntry(entry *NameRegEntry) bool {
+func (s *State) UpdateNameRegEntry(entry *NameRegEntry) error {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
 	NameRegEncode(entry, w, &n, &err)
-	return s.nameReg.Set([]byte(entry.Name), w.Bytes())
+	if err != nil {
+		return err
+	}
+	s.nameReg.Set([]byte(entry.Name), w.Bytes())
+	return nil
 }
 
-func (s *State) RemoveNameRegEntry(name string) bool {
-	_, removed := s.nameReg.Remove([]byte(name))
-	return removed
+func (s *State) RemoveNameRegEntry(name string) error {
+	s.nameReg.Remove([]byte(name))
+	return nil
 }
 
-// Set the name reg tree
-func (s *State) SetNameReg(nameReg merkle.Tree) {
-	s.nameReg = nameReg
-}
 func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
 	wire.WriteBinary(o.(*NameRegEntry), w, n, err)
 }

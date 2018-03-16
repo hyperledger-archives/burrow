@@ -21,10 +21,24 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
+// Serves as a wrapper around the Tendermint node's closeable resources (database connections)
 type Node struct {
 	*node.Node
 	closers []interface {
 		Close()
+	}
+}
+
+// Since Tendermint doesn't close its DB connections
+func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
+	db := dbm.NewDB(ctx.ID, ctx.Config.DBBackend, ctx.Config.DBDir())
+	n.closers = append(n.closers, db)
+	return db, nil
+}
+
+func (n *Node) Close() {
+	for _, closer := range n.closers {
+		closer.Close()
 	}
 }
 
@@ -71,19 +85,6 @@ func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx
 			return fmt.Errorf("error broadcasting transaction: %v", err)
 		}
 		return nil
-	}
-}
-
-// Since Tendermint doesn't close its DB connections
-func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
-	db := dbm.NewDB(ctx.ID, ctx.Config.DBBackend, ctx.Config.DBDir())
-	n.closers = append(n.closers, db)
-	return db, nil
-}
-
-func (n *Node) Close() {
-	for _, closer := range n.closers {
-		closer.Close()
 	}
 }
 

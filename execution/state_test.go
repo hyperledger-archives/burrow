@@ -46,7 +46,7 @@ func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
 	if err := exe.Execute(tx); err != nil {
 		return err
 	} else {
-		exe.blockCache.Sync()
+		exe.stateCache.Flush(exe.state)
 		return nil
 	}
 }
@@ -346,7 +346,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithState(state, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry := state.GetNameRegEntry(name)
+	entry, err := state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks)
 
 	// fail to update it as non-owner, in same block
@@ -363,7 +364,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks*2)
 
 	// update it as owner, just to increase expiry, in next block
@@ -372,7 +374,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks*3)
 
 	// fail to update it as non-owner
@@ -393,7 +396,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[1].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 
 	// update it as new owner, with new data (longer), but keep the expiry!
@@ -406,7 +410,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[1].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 
 	// test removal
@@ -417,7 +422,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	if entry != nil {
 		t.Fatal("Expected removed entry to be nil")
 	}
@@ -432,7 +438,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 	// Fast forward
 	for blockchain.Tip().LastBlockHeight() < entry.Expires {
@@ -446,7 +453,8 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, tx); err != nil {
 		t.Fatal(err)
 	}
-	entry = state.GetNameRegEntry(name)
+	entry, err = state.GetNameRegEntry(name)
+	require.NoError(t, err)
 	if entry != nil {
 		t.Fatal("Expected removed entry to be nil")
 	}
@@ -794,7 +802,8 @@ proof-of-work chain as proof of what happened while they were gone `
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
 				acc0.Balance()-entryAmount, newAcc0.Balance())
 		}
-		entry := stateNameTx.GetNameRegEntry(entryName)
+		entry, err := stateNameTx.GetNameRegEntry(entryName)
+		require.NoError(t, err)
 		if entry == nil {
 			t.Errorf("Expected an entry but got nil")
 		}

@@ -60,7 +60,7 @@ type Transactor interface {
 type transactor struct {
 	txMtx            sync.Mutex
 	blockchain       blockchain.Blockchain
-	state            acm.StateReader
+	state            acm.StateIterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           logging_types.InfoTraceLogger
@@ -68,7 +68,7 @@ type transactor struct {
 
 var _ Transactor = &transactor{}
 
-func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.Emitter,
+func NewTransactor(blockchain blockchain.Blockchain, state acm.StateIterable, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
 	logger logging_types.InfoTraceLogger) *transactor {
 

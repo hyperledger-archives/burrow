@@ -178,11 +178,6 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
 		}
 	}
-	// Just kill the cache - it is badly implemented
-	app.committer.Reset()
-
-	logging.InfoMsg(app.logger, "Resetting transaction check cache")
-	app.checker.Reset()
 
 	// Commit to our blockchain state
 	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
