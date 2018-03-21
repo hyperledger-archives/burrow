@@ -243,7 +243,9 @@ func (s *service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Trace("method", "GetAccount", "sequence", acc.Sequence())
+	s.logger.Trace("method", "GetAccount",
+		"address", address,
+		"sequence", acc.Sequence())
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 

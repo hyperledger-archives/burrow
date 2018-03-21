@@ -32,6 +32,9 @@ import (
 	"github.com/hyperledger/burrow/txs"
 )
 
+// TODO
+const GasLimit = uint64(1000000)
+
 type BatchExecutor interface {
 	acm.StateIterable
 	acm.Updater
@@ -132,11 +135,16 @@ func (exe *executor) IterateStorage(address acm.Address, consumer func(key, valu
 	return exe.stateCache.IterateStorage(address, consumer)
 }
 
-func (exe *executor) Commit() ([]byte, error) {
+func (exe *executor) Commit() (hash []byte, err error) {
 	exe.Lock()
 	defer exe.Unlock()
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic in executor.Commit(): %v", r)
+		}
+	}()
 	// flush the caches
-	err := exe.stateCache.Flush(exe.state)
+	err = exe.stateCache.Flush(exe.state)
 	if err != nil {
 		return nil, err
 	}
@@ -151,13 +159,12 @@ func (exe *executor) Commit() ([]byte, error) {
 	}
 	// flush events to listeners (XXX: note issue with blocking)
 	exe.eventCache.Flush()
-	return exe.state.LastSavedHash(), nil
+	return exe.state.Hash(), nil
 }
 
 func (exe *executor) Reset() error {
-	exe.stateCache = acm.NewStateCache(exe.state)
-	exe.nameRegCache = NewNameRegCache(exe.state)
-	exe.eventCache = event.NewEventCache(exe.publisher)
+	exe.stateCache.Reset(exe.state)
+	exe.nameRegCache.Reset(exe.state)
 	return nil
 }
 
@@ -169,9 +176,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v", tx.String(), r)
 		}
 	}()
-	txHash := txs.TxHash(exe.chainID, tx)
+
+	txHash := tx.Hash(exe.chainID)
 	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)").With(
 		"run_call", exe.runCall,
+		"tx", tx.String(),
 		"tx_hash", txHash)
 	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
@@ -213,7 +222,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		fees += fee
 
 		// Good! Adjust accounts
-		err = adjustByInputs(accounts, tx.Inputs)
+		err = adjustByInputs(accounts, tx.Inputs, logger)
 		if err != nil {
 			return err
 		}
@@ -308,7 +317,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// Good!
 		value := tx.Input.Amount - tx.Fee
 
-		logging.TraceMsg(logger, "Incrementing sequence number",
+		logging.TraceMsg(logger, "Incrementing sequence number for CallTx",
+			"tag", "sequence",
 			"account", inAcc.Address(),
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
@@ -363,7 +373,12 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			// get or create callee
 			if createContract {
 				// We already checked for permission
-				callee = evm.DeriveNewAccount(caller, permission.GlobalAccountPermissions(exe.state))
+				callee = evm.DeriveNewAccount(caller, permission.GlobalAccountPermissions(exe.state),
+					logger.With(
+						"tx", tx.String(),
+						"tx_hash", txHash,
+						"run_call", exe.runCall,
+					))
 				code = tx.Data
 				logging.TraceMsg(logger, "Creating new contract",
 					"contract_address", callee.Address(),
@@ -384,7 +399,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
 				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(),
-					txs.TxHash(exe.chainID, tx), logger)
+					tx.Hash(exe.chainID), logger)
 				vmach.SetPublisher(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
@@ -418,7 +433,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				if err != nil {
 					exception = err.Error()
 				}
-				txHash := txs.TxHash(exe.chainID, tx)
+				txHash := tx.Hash(exe.chainID)
 				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, ret, exception)
 				if tx.Address != nil {
 					events.PublishAccountOutput(exe.eventCache, *tx.Address, txHash, tx, ret, exception)
@@ -435,8 +450,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			}
 			if createContract {
 				// This is done by DeriveNewAccount when runCall == true
-
 				logging.TraceMsg(logger, "Incrementing sequence number since creates contract",
+					"tag", "sequence",
 					"account", inAcc.Address(),
 					"old_sequence", inAcc.Sequence(),
 					"new_sequence", inAcc.Sequence()+1)
@@ -588,6 +603,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO: something with the value sent?
 
 		// Good!
+		logging.TraceMsg(logger, "Incrementing sequence number for NameTx",
+			"tag", "sequence",
+			"account", inAcc.Address(),
+			"old_sequence", inAcc.Sequence(),
+			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
 		inAcc, err = inAcc.SubtractFromBalance(value)
 		if err != nil {
@@ -598,7 +618,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			txHash := txs.TxHash(exe.chainID, tx)
+			txHash := tx.Hash(exe.chainID)
 			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
 			events.PublishNameReg(exe.eventCache, txHash, tx)
 		}
@@ -838,6 +858,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		// Good!
+		logging.TraceMsg(logger, "Incrementing sequence number for PermissionsTx",
+			"tag", "sequence",
+			"account", inAcc.Address(),
+			"old_sequence", inAcc.Sequence(),
+			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
 		inAcc, err = inAcc.SubtractFromBalance(value)
 		if err != nil {
@@ -849,7 +874,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		if exe.eventCache != nil {
-			txHash := txs.TxHash(exe.chainID, tx)
+			txHash := tx.Hash(exe.chainID)
 			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
 			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txHash, tx)
 		}
@@ -1148,7 +1173,7 @@ func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput) error {
+func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput, logger logging_types.InfoTraceLogger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1163,6 +1188,11 @@ func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput)
 		if err != nil {
 			return err
 		}
+		logging.TraceMsg(logger, "Incrementing sequence number for SendTx (adjustByInputs)",
+			"tag", "sequence",
+			"account", acc.Address(),
+			"old_sequence", acc.Sequence(),
+			"new_sequence", acc.Sequence()+1)
 		acc.IncSequence()
 	}
 	return nil

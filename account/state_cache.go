@@ -95,6 +95,7 @@ func (cache *stateCache) RemoveAccount(address Address) error {
 	return nil
 }
 
+// Iterates over all accounts first in cache and then in backend until consumer returns true for 'stop'
 func (cache *stateCache) IterateAccounts(consumer func(Account) (stop bool)) (stopped bool, err error) {
 	// Try cache first for early exit
 	cache.RLock()
@@ -147,7 +148,9 @@ func (cache *stateCache) SetStorage(address Address, key binary.Word256, value b
 	return nil
 }
 
-func (cache *stateCache) IterateStorage(address Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+// Iterates over all storage items first in cache and then in backend until consumer returns true for 'stop'
+func (cache *stateCache) IterateStorage(address Address,
+	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return false, err

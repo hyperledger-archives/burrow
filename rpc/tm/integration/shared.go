@@ -56,7 +56,7 @@ const (
 )
 
 // Enable logger output during tests
-var debugLogging = false
+var debugLogging = true
 
 // global variables for use across all tests
 var (
@@ -89,13 +89,16 @@ func TestWrapper(runner func() int) int {
 				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
 					//"","",
 					"method", "GetAccount",
-					"message", "execution error",
-					"message", "Incrementing sequence number",
+					"method", "BroadcastTx",
+					"tag", "sequence",
+					"tag", "Commit",
+					"tag", "CheckTx",
+					"tag", "DeliverTx",
 				)).
-				AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
-					AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).
-						AddSinks(config.Sink().SetTransform(config.SortTransform("tx_hash", "time", "message", "method")).
-							SetOutput(config.StdoutOutput())))),
+				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
+				AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).
+					AddSinks(config.Sink().SetTransform(config.SortTransform("tx_hash", "time", "message", "method")).
+						SetOutput(config.StdoutOutput()))),
 		})
 		if err != nil {
 			panic(err)

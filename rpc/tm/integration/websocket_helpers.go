@@ -25,6 +25,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
@@ -94,14 +95,23 @@ func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWaitForBlock(t *testing.T, client tm_client.RPCClient, wsc *rpcclient.WSClient,
+func broadcastTxAndWait(t *testing.T, client tm_client.RPCClient, wsc *rpcclient.WSClient,
 	tx txs.Tx) (*txs.Receipt, error) {
+
+	inputs := tx.GetInputs()
+	if len(inputs) == 0 {
+		t.Fatalf("cannot broadcastAndWait fot Tx with no inputs")
+	}
+	address := inputs[0].Address
 
 	var rec *txs.Receipt
 	var err error
-	runThenWaitForBlock(t, wsc, nextBlockPredicateFn(),
+
+	subscribeAndWaitForNext(t, wsc, events.EventStringAccountInput(address),
 		func() {
 			rec, err = tm_client.BroadcastTx(client, tx)
+		}, func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+			return true, nil
 		})
 	return rec, err
 }
@@ -159,7 +169,6 @@ func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string
 // waitForEvent will fail the test.
 func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner func(),
 	checker resultEventChecker) waitForEventResult {
-
 	// go routine to wait for websocket msg
 	eventsCh := make(chan *rpc.ResultEvent)
 	shutdownEventsCh := make(chan bool, 1)

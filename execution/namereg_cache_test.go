@@ -18,6 +18,7 @@ import (
 	"testing"
 )
 
+// TODO: tests
 func TestNewNameRegCache(t *testing.T) {
 }
 

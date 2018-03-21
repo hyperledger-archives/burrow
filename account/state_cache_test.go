@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 )
 
+// TODO: write tests as part of feature branch
 type testStateReader struct {
 	Accounts map[Address]Account
 	Storage  map[Address]map[binary.Word256]binary.Word256

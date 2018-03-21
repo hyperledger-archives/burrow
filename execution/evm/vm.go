@@ -72,7 +72,7 @@ type VM struct {
 	memoryProvider func() Memory
 	params         Params
 	origin         acm.Address
-	txid           []byte
+	txHash         []byte
 	callDepth      int
 	publisher      event.Publisher
 	logger         logging_types.InfoTraceLogger
@@ -86,7 +86,7 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 		params:         params,
 		origin:         origin,
 		callDepth:      0,
-		txid:           txid,
+		txHash:         txid,
 		logger:         logging.WithScope(logger, "NewVM"),
 	}
 }
@@ -117,7 +117,7 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, ca
 		events.PublishAccountCall(vm.publisher, calleeAddress, &events.EventDataCall{
 			&events.CallData{Caller: callerAddress, Callee: calleeAddress, Data: input, Value: value, Gas: *gas},
 			vm.origin,
-			vm.txid,
+			vm.txHash,
 			*output,
 			*exception,
 		})
@@ -746,7 +746,8 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			}
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
-			newAccount := DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state))
+			newAccount := DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state),
+				vm.logger.With("tx_hash", vm.txHash))
 			vm.state.UpdateAccount(newAccount)
 
 			// Run the input to get the contract code.

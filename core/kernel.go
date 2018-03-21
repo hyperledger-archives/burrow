@@ -23,8 +23,6 @@ import (
 	"syscall"
 	"time"
 
-	"bytes"
-
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
@@ -64,22 +62,24 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger logging_types.InfoTraceLogger) (*Kernel, error) {
 
 	logger = logging.WithScope(logger, "NewKernel")
-
+	var err error
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
-	state, err := execution.LoadOrMakeGenesisState(stateDB, genesisDoc, logger)
-	if err != nil {
-		return nil, fmt.Errorf("error making or loading genesis state: %v", err)
-	}
 
 	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
 
+	var state *execution.State
 	// These should be in sync unless we are at the genesis block
-	if blockchain.LastBlockHeight() > 0 && !bytes.Equal(blockchain.AppHashAfterLastBlock(), state.LastSavedHash()) {
-		return nil, fmt.Errorf("blockchain app hash: 0x%X does not match execution state hash: 0x%X",
-			blockchain.AppHashAfterLastBlock(), state.LastSavedHash())
+	if blockchain.LastBlockHeight() > 0 {
+		state, err = execution.LoadState(stateDB, blockchain.AppHashAfterLastBlock())
+		if err != nil {
+			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
+				blockchain.AppHashAfterLastBlock(), err)
+		}
+	} else {
+		state, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)

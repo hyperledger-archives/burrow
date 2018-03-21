@@ -46,9 +46,11 @@ func TestBootShutdownResume(t *testing.T) {
 
 	i := int64(1)
 	// asserts we get a consecutive run of blocks
-	blockChecker := func(block *tm_types.EventDataNewBlock) {
+	blockChecker := func(block *tm_types.EventDataNewBlock) bool {
 		assert.Equal(t, i, block.Block.Height)
 		i++
+		// stop every third block
+		return i%3 != 0
 	}
 	// First run
 	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
@@ -61,7 +63,7 @@ func TestBootShutdownResume(t *testing.T) {
 
 func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
 	tmConf *tm_config.Config, logger logging_types.InfoTraceLogger,
-	blockChecker func(block *tm_types.EventDataNewBlock)) error {
+	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
 
 	kern, err := NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
 	if err != nil {
@@ -75,15 +77,18 @@ func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *ge
 
 	ch := make(chan *tm_types.EventDataNewBlock)
 	tendermint.SubscribeNewBlock(context.Background(), kern.Emitter, "TestBootShutdownResume", ch)
-	for i := 0; i < 2; i++ {
+	cont := true
+	for cont {
 		select {
 		case <-time.After(2 * time.Second):
 			if err != nil {
 				return fmt.Errorf("timed out waiting for block")
 			}
 		case ednb := <-ch:
-			if blockChecker != nil {
-				blockChecker(ednb)
+			if blockChecker == nil {
+				cont = false
+			} else {
+				cont = blockChecker(ednb)
 			}
 		}
 	}

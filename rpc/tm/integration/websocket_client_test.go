@@ -28,7 +28,6 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
-	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -150,13 +149,13 @@ func TestWSDoubleFire(t *testing.T) {
 
 // create a contract, wait for the event, and send it a msg, validate the return
 func TestWSCallWait(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	wsc := newWSClient()
 	defer stopWSClient(wsc)
 	// Mini soak test
 	for i := 0; i < 20; i++ {
-		if testing.Short() {
-			t.Skip("skipping test in short mode.")
-		}
 		amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 		code, returnCode, returnVal := simpleContract()
 		var contractAddr acm.Address
@@ -197,7 +196,7 @@ func TestWSCallNoWait(t *testing.T) {
 	code, _, returnVal := simpleContract()
 
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
+	receipt, err := broadcastTxAndWait(t, jsonRpcClient, wsc, tx)
 	require.NoError(t, err)
 	contractAddr := receipt.ContractAddress
 
@@ -223,11 +222,11 @@ func TestWSCallCall(t *testing.T) {
 	defer stopWSClient(wsc)
 	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 	code, _, returnVal := simpleContract()
-	txid := new([]byte)
+	TxHash := new([]byte)
 
 	// deploy the two contracts
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt, err := broadcastTxAndWaitForBlock(t, jsonRpcClient, wsc, tx)
+	receipt, err := broadcastTxAndWait(t, jsonRpcClient, wsc, tx)
 	require.NoError(t, err)
 	contractAddr1 := receipt.ContractAddress
 
@@ -256,10 +255,10 @@ func TestWSCallCall(t *testing.T) {
 		func() {
 			tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr2, nil, amt, gasLim, fee)
 			broadcastTx(t, jsonRpcClient, tx)
-			*txid = txs.TxHash(genesisDoc.ChainID(), tx)
+			*TxHash = tx.Hash(genesisDoc.ChainID())
 		},
 		// Event checker
-		unmarshalValidateCall(privateAccounts[0].Address(), returnVal, txid))
+		unmarshalValidateCall(privateAccounts[0].Address(), returnVal, TxHash))
 }
 
 func TestSubscribe(t *testing.T) {

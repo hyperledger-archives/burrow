@@ -124,6 +124,8 @@ func (cache *NameRegCache) Sync(state NameRegWriter) error {
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
 func (cache *NameRegCache) Reset(backend NameRegGetter) {
+	cache.Lock()
+	defer cache.Unlock()
 	cache.backend = backend
 	cache.names = make(map[string]*nameInfo)
 }

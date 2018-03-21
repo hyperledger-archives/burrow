@@ -140,6 +140,9 @@ func (trans *transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_typ
 
 // Broadcast a transaction.
 func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+	trans.logger.Trace("method", "BroadcastTx",
+		"tx_hash", tx.Hash(trans.blockchain.ChainID()),
+		"tx", tx.String())
 	responseCh := make(chan *abci_types.Response, 1)
 	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
 		responseCh <- res

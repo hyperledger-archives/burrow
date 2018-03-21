@@ -281,13 +281,7 @@
   name = "github.com/tendermint/iavl"
   packages = ["."]
   revision = "594cc0c062a7174475f0ab654384038d77067917"
-  version = "v0.2.0"
-
-[[projects]]
-  name = "github.com/tendermint/merkleeyes"
-  packages = ["iavl"]
-  revision = "102aaf5a8ffda1846413fb22805a94def2045b9f"
-  version = "v0.2.4"
+  version = "v0.5.0"
 
 [[projects]]
   name = "github.com/tendermint/tendermint"
@@ -462,8 +456,8 @@
 [[projects]]
   name = "gopkg.in/go-playground/validator.v9"
   packages = ["."]
-  revision = "3620d3c0694119b61c72071ff5a05a976e97b05a"
-  version = "v9.9.4"
+  revision = "8ce234ff024d85b3848e485decba806385d6e276"
+  version = "v9.13.0"
 
 [[projects]]
   name = "gopkg.in/tylerb/graceful.v1"
@@ -480,6 +474,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "305882cc35ee7345aa49517218d941e2892c5d418426973b9f9f73d9b8149330"
+  inputs-digest = "5db3ac43679cafd5f68104e93a248b62266d313aef2d8ba3bd7f3986a5a99834"
   solver-name = "gps-cdcl"
   solver-version = 1
