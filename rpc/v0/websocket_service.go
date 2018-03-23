@@ -30,13 +30,13 @@ import (
 // Used for Burrow. Implements WebSocketService.
 type WebsocketService struct {
 	codec           rpc.Codec
-	service         rpc.Service
+	service         *rpc.Service
 	defaultHandlers map[string]RequestHandlerFunc
 	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new websocket service.
-func NewWebsocketService(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) server.WebSocketService {
+func NewWebsocketService(codec rpc.Codec, service *rpc.Service, logger logging_types.InfoTraceLogger) server.WebSocketService {
 	tmwss := &WebsocketService{
 		codec:   codec,
 		service: service,

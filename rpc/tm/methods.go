@@ -18,6 +18,7 @@ import (
 
 // Method names
 const (
+	BroadcastTx = "broadcast_tx"
 	Subscribe   = "subscribe"
 	Unsubscribe = "unsubscribe"
 
@@ -26,10 +27,11 @@ const (
 	NetInfo = "net_info"
 
 	// Accounts
-	ListAccounts = "list_accounts"
-	GetAccount   = "get_account"
-	GetStorage   = "get_storage"
-	DumpStorage  = "dump_storage"
+	ListAccounts    = "list_accounts"
+	GetAccount      = "get_account"
+	GetStorage      = "get_storage"
+	DumpStorage     = "dump_storage"
+	GetAccountHuman = "get_account_human"
 
 	// Simulated call
 	Call     = "call"
@@ -38,7 +40,6 @@ const (
 	// Names
 	GetName     = "get_name"
 	ListNames   = "list_names"
-	BroadcastTx = "broadcast_tx"
 
 	// Blockchain
 	Genesis    = "genesis"
@@ -58,7 +59,7 @@ const (
 
 const SubscriptionTimeoutSeconds = 5 * time.Second
 
-func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[string]*gorpc.RPCFunc {
+func GetRoutes(service *rpc.Service, logger logging_types.InfoTraceLogger) map[string]*gorpc.RPCFunc {
 	logger = logging.WithScope(logger, "GetRoutes")
 	return map[string]*gorpc.RPCFunc{
 		// Transact
@@ -146,9 +147,10 @@ func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[st
 			})
 		}, ""),
 
-		GetAccount:  gorpc.NewRPCFunc(service.GetAccount, "address"),
-		GetStorage:  gorpc.NewRPCFunc(service.GetStorage, "address,key"),
-		DumpStorage: gorpc.NewRPCFunc(service.DumpStorage, "address"),
+		GetAccount:      gorpc.NewRPCFunc(service.GetAccount, "address"),
+		GetStorage:      gorpc.NewRPCFunc(service.GetStorage, "address,key"),
+		DumpStorage:     gorpc.NewRPCFunc(service.DumpStorage, "address"),
+		GetAccountHuman: gorpc.NewRPCFunc(service.GetAccountHumanReadable, "address"),
 
 		// Blockchain
 		Genesis:    gorpc.NewRPCFunc(service.Genesis, ""),

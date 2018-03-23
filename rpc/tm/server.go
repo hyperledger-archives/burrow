@@ -26,7 +26,7 @@ import (
 	"github.com/tendermint/tendermint/rpc/lib/server"
 )
 
-func StartServer(service rpc.Service, pattern, listenAddress string, emitter event.Emitter,
+func StartServer(service *rpc.Service, pattern, listenAddress string, emitter event.Emitter,
 	logger logging_types.InfoTraceLogger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "RPC_TM")

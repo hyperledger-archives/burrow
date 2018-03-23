@@ -62,12 +62,12 @@ func (subsCache *SubscriptionsCache) poll() []interface{} {
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type Subscriptions struct {
 	mtx     *sync.RWMutex
-	service rpc.Service
+	service *rpc.Service
 	subs    map[string]*SubscriptionsCache
 	reap    bool
 }
 
-func NewSubscriptions(service rpc.Service) *Subscriptions {
+func NewSubscriptions(service *rpc.Service) *Subscriptions {
 	es := &Subscriptions{
 		mtx:     &sync.RWMutex{},
 		service: service,

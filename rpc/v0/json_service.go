@@ -82,14 +82,14 @@ func (jrs *JsonRpcServer) handleFunc(c *gin.Context) {
 // Used for Burrow. Implements server.HttpService
 type JSONService struct {
 	codec           rpc.Codec
-	service         rpc.Service
+	service         *rpc.Service
 	eventSubs       *Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
 	logger          logging_types.InfoTraceLogger
 }
 
 // Create a new JSON-RPC 2.0 service for burrow (tendermint).
-func NewJSONService(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) server.HttpService {
+func NewJSONService(codec rpc.Codec, service *rpc.Service, logger logging_types.InfoTraceLogger) server.HttpService {
 
 	tmhttps := &JSONService{
 		codec:     codec,
