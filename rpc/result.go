@@ -135,6 +135,21 @@ type ResultGetAccount struct {
 	Account *acm.ConcreteAccount
 }
 
+type AccountHumanReadable struct {
+	Address     acm.Address
+	PublicKey   acm.PublicKey
+	Sequence    uint64
+	Balance     uint64
+	Code        []string
+	StorageRoot string
+	Permissions []string
+	Roles       []string
+}
+
+type ResultGetAccountHumanReadable struct {
+	Account *AccountHumanReadable
+}
+
 type ResultBroadcastTx struct {
 	txs.Receipt
 }

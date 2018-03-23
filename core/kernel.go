@@ -50,7 +50,7 @@ const ServerShutdownTimeoutMilliseconds = 1000
 type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
 	Emitter        event.Emitter
-	Service        rpc.Service
+	Service        *rpc.Service
 	Launchers      []process.Launcher
 	Logger         logging_types.InfoTraceLogger
 	processes      map[string]process.Process

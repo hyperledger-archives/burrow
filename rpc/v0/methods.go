@@ -63,7 +63,7 @@ const (
 type RequestHandlerFunc func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error)
 
 // Private. Create a method name -> method handler map.
-func GetMethods(codec rpc.Codec, service rpc.Service, logger logging_types.InfoTraceLogger) map[string]RequestHandlerFunc {
+func GetMethods(codec rpc.Codec, service *rpc.Service, logger logging_types.InfoTraceLogger) map[string]RequestHandlerFunc {
 	accountFilterFactory := filters.NewAccountFilterFactory()
 	nameRegFilterFactory := filters.NewNameRegFilterFactory()
 

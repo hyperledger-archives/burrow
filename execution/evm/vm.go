@@ -19,6 +19,9 @@ import (
 	"errors"
 	"fmt"
 
+	"io/ioutil"
+	"strings"
+
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
@@ -200,6 +203,16 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *error) bool {
 func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
+
+	tokens, err := acm.Bytecode(code).Tokens()
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, "")
+	err = ioutil.WriteFile(fmt.Sprintf("tokens-%x.txt", vm.txHash[:4]), []byte(strings.Join(tokens, "\n")), 0700)
+	if err != nil {
+		return nil, err
+	}
 
 	var (
 		pc     int64 = 0
