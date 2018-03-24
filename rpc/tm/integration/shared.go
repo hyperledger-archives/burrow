@@ -35,9 +35,9 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
@@ -80,7 +80,7 @@ func TestWrapper(runner func() int) int {
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
-	logger := loggers.NewNoopInfoTraceLogger()
+	logger := logging.NewNoopLogger()
 	if debugLogging {
 		var err error
 		// Change config as needed

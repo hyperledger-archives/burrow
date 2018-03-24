@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	kitlog "github.com/go-kit/kit/log"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
@@ -31,7 +32,6 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
@@ -43,8 +43,11 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
-const CooldownMilliseconds = 1000
-const ServerShutdownTimeoutMilliseconds = 1000
+const (
+	CooldownMilliseconds              = 1000
+	ServerShutdownTimeoutMilliseconds = 1000
+	LoggingCallerDepth                = 5
+)
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
@@ -52,17 +55,18 @@ type Kernel struct {
 	Emitter        event.Emitter
 	Service        *rpc.Service
 	Launchers      []process.Launcher
-	Logger         logging_types.InfoTraceLogger
+	Logger         *logging.Logger
 	processes      map[string]process.Process
 	shutdownNotify chan struct{}
 	shutdownOnce   sync.Once
 }
 
 func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
-	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger logging_types.InfoTraceLogger) (*Kernel, error) {
+	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger *logging.Logger) (*Kernel, error) {
 
-	logger = logging.WithScope(logger, "NewKernel")
-	var err error
+	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
+	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
+	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
 
 	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
@@ -87,7 +91,7 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, logger)
+	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
 		return nil, err
@@ -139,7 +143,7 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 					case <-ctx.Done():
 						return ctx.Err()
 					case <-tmNode.Quit:
-						logging.InfoMsg(logger, "Tendermint Node has quit, closing DB connections...")
+						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
 						// Close tendermint database connections using our wrapper
 						tmNode.Close()
 						return nil
@@ -216,7 +220,7 @@ func (kern *Kernel) supervise() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	sig := <-signals
-	logging.InfoMsg(kern.Logger, fmt.Sprintf("Caught %v signal so shutting down", sig),
+	kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
 		"signal", sig.String())
 	kern.Shutdown(context.Background())
 }
@@ -224,9 +228,9 @@ func (kern *Kernel) supervise() {
 // Stop the kernel allowing for a graceful shutdown of components in order
 func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 	kern.shutdownOnce.Do(func() {
-		logger := logging.WithScope(kern.Logger, "Shutdown")
-		logging.InfoMsg(logger, "Attempting graceful shutdown...")
-		logging.InfoMsg(logger, "Shutting down servers")
+		logger := kern.Logger.WithScope("Shutdown")
+		logger.InfoMsg("Attempting graceful shutdown...")
+		logger.InfoMsg("Shutting down servers")
 		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeoutMilliseconds*time.Millisecond)
 		defer cancel()
 		// Shutdown servers in reverse order to boot
@@ -234,10 +238,10 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 			name := kern.Launchers[i].Name
 			srvr, ok := kern.processes[name]
 			if ok {
-				logging.InfoMsg(logger, "Shutting down server", "server_name", name)
+				logger.InfoMsg("Shutting down server", "server_name", name)
 				sErr := srvr.Shutdown(ctx)
 				if sErr != nil {
-					logging.InfoMsg(logger, "Failed to shutdown server",
+					logger.InfoMsg("Failed to shutdown server",
 						"server_name", name,
 						structure.ErrorKey, sErr)
 					if err == nil {
@@ -246,8 +250,9 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 				}
 			}
 		}
-		logging.InfoMsg(logger, "Shutdown complete")
-		logging.Sync(kern.Logger)
+		logger.InfoMsg("Shutdown complete")
+		structure.Sync(kern.Logger.Info)
+		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush
 		// potentially interesting final output (e.g. log messages)
 		time.Sleep(time.Millisecond * CooldownMilliseconds)

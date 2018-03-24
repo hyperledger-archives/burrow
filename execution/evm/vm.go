@@ -26,9 +26,9 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
+	"math/big"
 )
 
 var (
@@ -48,6 +48,13 @@ var (
 	ErrExecutionReverted      = errors.New("Execution reverted")
 )
 
+const (
+	dataStackCapacity = 1024
+	callStackCapacity = 100 // TODO ensure usage.
+)
+
+var Debug = false
+
 type ErrPermission struct {
 	typ string
 }
@@ -56,10 +63,36 @@ func (err ErrPermission) Error() string {
 	return fmt.Sprintf("Contract does not have permission to %s", err.typ)
 }
 
-const (
-	dataStackCapacity = 1024
-	callStackCapacity = 100 // TODO ensure usage.
-)
+type ErrNestedCall struct {
+	NestedError error
+	Caller      acm.Address
+	Callee      acm.Address
+	StackDepth  int
+}
+
+func (err ErrNestedCall) Error() string {
+	return fmt.Sprintf("error in nested call at depth %v: %s (callee) -> %s (caller): %v",
+		err.StackDepth, err.Callee, err.Caller, err.NestedError)
+}
+
+type ErrCall struct {
+	CallError    error
+	NestedErrors []ErrNestedCall
+}
+
+func (err ErrCall) Error() string {
+	buf := new(bytes.Buffer)
+	buf.WriteString("call error: ")
+	buf.WriteString(err.CallError.Error())
+	if len(err.NestedErrors) > 0 {
+		buf.WriteString(", nested call errors:\n")
+		for _, nestedErr := range err.NestedErrors {
+			buf.WriteString(nestedErr.Error())
+			buf.WriteByte('\n')
+		}
+	}
+	return buf.String()
+}
 
 type Params struct {
 	BlockHeight uint64
@@ -69,31 +102,35 @@ type Params struct {
 }
 
 type VM struct {
-	state          acm.StateWriter
-	memoryProvider func() Memory
-	params         Params
-	origin         acm.Address
-	txHash         []byte
-	callDepth      int
-	publisher      event.Publisher
-	logger         logging_types.InfoTraceLogger
+	state            acm.StateWriter
+	memoryProvider   func() Memory
+	params           Params
+	origin           acm.Address
+	txHash           []byte
+	stackDepth       int
+	nestedCallErrors []ErrNestedCall
+	publisher        event.Publisher
+	logger           *logging.Logger
 }
 
 func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
-	logger logging_types.InfoTraceLogger) *VM {
+	logger *logging.Logger) *VM {
 	return &VM{
 		state:          state,
 		memoryProvider: memoryProvider,
 		params:         params,
 		origin:         origin,
-		callDepth:      0,
+		stackDepth:     0,
 		txHash:         txid,
-		logger:         logging.WithScope(logger, "NewVM"),
+		logger:         logger.WithScope("NewVM"),
 	}
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	logging.TraceMsg(vm.logger, fmt.Sprintf(format, a...), "tag", "vm_debug")
+	if Debug {
+		//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
+		fmt.Printf(format, a...)
+	}
 }
 
 // satisfies go_events.Eventable
@@ -143,16 +180,24 @@ func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value 
 	}
 
 	if len(code) > 0 {
-		vm.callDepth += 1
+		vm.stackDepth += 1
 		output, err = vm.call(caller, callee, code, input, value, gas)
-		vm.callDepth -= 1
+		vm.stackDepth -= 1
 		if err != nil {
-			*exception = err.Error()
-			err := transfer(callee, caller, value)
-			if err != nil {
-				// data has been corrupted in ram
-				panic("Could not return value to caller")
+			err = ErrCall{
+				CallError:    err,
+				NestedErrors: vm.nestedCallErrors,
 			}
+			*exception = err.Error()
+			transferErr := transfer(callee, caller, value)
+			if transferErr != nil {
+				return nil, fmt.Errorf("error transferring value %v %s (callee) -> %s (caller)",
+					value, callee, caller)
+			}
+		}
+		if vm.stackDepth == 0 {
+			// clean up ready for next call
+			vm.nestedCallErrors = nil
 		}
 	}
 
@@ -174,9 +219,9 @@ func (vm *VM) DelegateCall(caller, callee acm.MutableAccount, code, input []byte
 	// DelegateCall does not transfer the value to the callee.
 
 	if len(code) > 0 {
-		vm.callDepth += 1
+		vm.stackDepth += 1
 		output, err = vm.call(caller, callee, code, input, value, gas)
-		vm.callDepth -= 1
+		vm.stackDepth -= 1
 		if err != nil {
 			*exception = err.Error()
 		}
@@ -199,10 +244,24 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *error) bool {
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
 func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
-	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address().Bytes()[:4], callee.Address(),
+	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
 	logger := vm.logger.With("tx_hash", vm.txHash)
+
+	// TODO: provide this functionality via some debug flagging
+	//tokens, _ := acm.Bytecode(code).Tokens()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if len(vm.txHash) >= 4 {
+	//
+	//}
+	//err = ioutil.WriteFile(fmt.Sprintf("tokens-%X.txt", vm.txHash[:4]), []byte(strings.Join(tokens, "\n")), 0777)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	var (
 		pc     int64 = 0
 		stack        = NewStack(dataStackCapacity, gas, &err)
@@ -222,19 +281,19 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case ADD: // 0x01
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			sum := x.Add(x, y)
+			sum := new(big.Int).Add(x, y)
 			res := stack.PushBigInt(sum)
 			vm.Debugf(" %v + %v = %v (%X)\n", x, y, sum, res)
 
 		case MUL: // 0x02
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			prod := x.Mul(x, y)
+			prod := new(big.Int).Mul(x, y)
 			res := stack.PushBigInt(prod)
 			vm.Debugf(" %v * %v = %v (%X)\n", x, y, prod, res)
 
 		case SUB: // 0x03
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			diff := x.Sub(x, y)
+			diff := new(big.Int).Sub(x, y)
 			res := stack.PushBigInt(diff)
 			vm.Debugf(" %v - %v = %v (%X)\n", x, y, diff, res)
 
@@ -244,7 +303,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %x / %x = %v\n", x, y, 0)
 			} else {
-				div := x.Div(x, y)
+				div := new(big.Int).Div(x, y)
 				res := stack.PushBigInt(div)
 				vm.Debugf(" %v / %v = %v (%X)\n", x, y, div, res)
 			}
@@ -255,7 +314,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %x / %x = %v\n", x, y, 0)
 			} else {
-				div := x.Div(x, y)
+				div := new(big.Int).Div(x, y)
 				res := stack.PushBigInt(div)
 				vm.Debugf(" %v / %v = %v (%X)\n", x, y, div, res)
 			}
@@ -266,7 +325,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := x.Mod(x, y)
+				mod := new(big.Int).Mod(x, y)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v %% %v = %v (%X)\n", x, y, mod, res)
 			}
@@ -277,7 +336,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := x.Mod(x, y)
+				mod := new(big.Int).Mod(x, y)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v %% %v = %v (%X)\n", x, y, mod, res)
 			}
@@ -288,7 +347,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				add := x.Add(x, y)
+				add := new(big.Int).Add(x, y)
 				mod := add.Mod(add, z)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v + %v %% %v = %v (%X)\n", x, y, z, mod, res)
@@ -300,7 +359,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mul := x.Mul(x, y)
+				mul := new(big.Int).Mul(x, y)
 				mod := mul.Mod(mul, z)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v * %v %% %v = %v (%X)\n", x, y, z, mod, res)
@@ -308,7 +367,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case EXP: // 0x0A
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			pow := x.Exp(x, y, nil)
+			pow := new(big.Int).Exp(x, y, nil)
 			res := stack.PushBigInt(pow)
 			vm.Debugf(" %v ** %v = %v (%X)\n", x, y, pow, res)
 
@@ -668,7 +727,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, errSto)
 			}
 			stack.Push(data)
-			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
+			vm.Debugf("%s {0x%X = 0x%X}\n", callee.Address(), loc, data)
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
@@ -676,7 +735,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, err
 			}
 			vm.state.SetStorage(callee.Address(), loc, data)
-			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
+			vm.Debugf("%s {0x%X := 0x%X}\n", callee.Address(), loc, data)
 
 		case JUMP: // 0x56
 			to, popErr := stack.Pop64()
@@ -861,6 +920,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			// Begin execution
 			var ret []byte
 			var callErr error
+
 			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
 				ret, callErr = nativeContract(vm.state, callee, args, &gasLimit, vm.logger)
@@ -911,9 +971,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 			// Push result
 			if callErr != nil {
-				vm.Debugf("error on call: %s\n", callErr.Error())
-				// TODO: we probably don't want to return the error - decide
-				//err = firstErr(err, callErr)
+				vm.Debugf("error from nested sub-call (depth: %v): %s\n", vm.stackDepth, callErr.Error())
+				// So we can return nested error if the top level return is an error
+				vm.nestedCallErrors = append(vm.nestedCallErrors, ErrNestedCall{
+					NestedError: callErr,
+					StackDepth:  vm.stackDepth,
+					Caller:      caller.Address(),
+					Callee:      callee.Address(),
+				})
 				stack.Push(Zero256)
 
 				if callErr == ErrExecutionReverted {
@@ -997,7 +1062,6 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf("(pc) %-3v Invalid opcode %X\n", pc, op)
 			return nil, fmt.Errorf("invalid opcode %X", op)
 		}
-
 		pc++
 	}
 }

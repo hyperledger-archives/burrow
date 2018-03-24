@@ -9,7 +9,6 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
@@ -59,8 +58,8 @@ const (
 
 const SubscriptionTimeoutSeconds = 5 * time.Second
 
-func GetRoutes(service *rpc.Service, logger logging_types.InfoTraceLogger) map[string]*gorpc.RPCFunc {
-	logger = logging.WithScope(logger, "GetRoutes")
+func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.RPCFunc {
+	logger = logger.WithScope("GetRoutes")
 	return map[string]*gorpc.RPCFunc{
 		// Transact
 		BroadcastTx: gorpc.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
@@ -108,7 +107,7 @@ func GetRoutes(service *rpc.Service, logger logging_types.InfoTraceLogger) map[s
 				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
-					logging.InfoMsg(logger, "dropping subscription because could not write to websocket",
+					logger.InfoMsg("dropping subscription because could not write to websocket",
 						"subscription_id", subscriptionID,
 						"event_id", eventID)
 				}

@@ -24,7 +24,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
-	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
@@ -62,7 +62,7 @@ type State struct {
 	version uint64
 	// TODO:
 	tree   *iavl.VersionedTree
-	logger logging_types.InfoTraceLogger
+	logger *logging.Logger
 }
 
 func NewState(db dbm.DB) *State {

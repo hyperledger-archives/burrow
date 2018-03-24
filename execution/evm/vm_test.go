@@ -29,7 +29,7 @@ import (
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +39,7 @@ import (
 
 // Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below
 //var logger, _ = lifecycle.NewStdErrLogger()
-var logger = loggers.NewNoopInfoTraceLogger()
+var logger = logging.NewNoopLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -434,7 +434,7 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee a
 	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
-	emitter := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	emitter := event.NewEmitter(logging.NewNoopLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
 	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr, nil, eventCh)

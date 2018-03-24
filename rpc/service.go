@@ -26,7 +26,6 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
@@ -47,12 +46,12 @@ type Service struct {
 	blockchain   bcm.Blockchain
 	transactor   execution.Transactor
 	nodeView     query.NodeView
-	logger       logging_types.InfoTraceLogger
+	logger       *logging.Logger
 }
 
 func NewService(ctx context.Context, state acm.StateIterable, nameReg execution.NameRegIterable,
 	subscribable event.Subscribable, blockchain bcm.Blockchain, transactor execution.Transactor,
-	nodeView query.NodeView, logger logging_types.InfoTraceLogger) *Service {
+	nodeView query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		ctx:          ctx,
@@ -67,7 +66,7 @@ func NewService(ctx context.Context, state acm.StateIterable, nameReg execution.
 }
 
 // Provides a sub-service with only the subscriptions methods
-func NewSubscribableService(subscribable event.Subscribable, logger logging_types.InfoTraceLogger) *Service {
+func NewSubscribableService(subscribable event.Subscribable, logger *logging.Logger) *Service {
 	return &Service{
 		ctx:          context.Background(),
 		subscribable: subscribable,
@@ -101,7 +100,7 @@ func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID 
 	callback func(resultEvent *ResultEvent) bool) error {
 
 	queryBuilder := event.QueryForEventID(eventID)
-	logging.InfoMsg(s.logger, "Subscribing to events",
+	s.logger.InfoMsg("Subscribing to events",
 		"query", queryBuilder.String(),
 		"subscription_id", subscriptionID,
 		"event_id", eventID)
@@ -109,7 +108,7 @@ func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID 
 		func(message interface{}) bool {
 			resultEvent, err := NewResultEvent(eventID, message)
 			if err != nil {
-				logging.InfoMsg(s.logger, "Received event that could not be mapped to ResultEvent",
+				s.logger.InfoMsg("Received event that could not be mapped to ResultEvent",
 					structure.ErrorKey, err,
 					"subscription_id", subscriptionID,
 					"event_id", eventID)
@@ -120,7 +119,7 @@ func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID 
 }
 
 func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error {
-	logging.InfoMsg(s.logger, "Unsubscribing from events",
+	s.logger.InfoMsg("Unsubscribing from events",
 		"subscription_id", subscriptionID)
 	err := s.subscribable.UnsubscribeAll(ctx, subscriptionID)
 	if err != nil {
@@ -207,7 +206,7 @@ func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Trace("method", "GetAccount",
+	s.logger.Trace.Log("method", "GetAccount",
 		"address", address,
 		"sequence", acc.Sequence())
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil

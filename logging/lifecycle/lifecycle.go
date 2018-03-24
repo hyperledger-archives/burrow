@@ -30,7 +30,6 @@ import (
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/types"
 	"github.com/streadway/simpleuuid"
 )
 
@@ -38,8 +37,8 @@ import (
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.InfoTraceLogger, error) {
-	var logger types.InfoTraceLogger
+func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.Logger, error) {
+	var logger *logging.Logger
 	var errCh channels.Channel
 	var err error
 	if loggingConfig == nil {
@@ -66,8 +65,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (types.Info
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
-func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
-	loggingConfig *config.LoggingConfig) error {
+func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *config.LoggingConfig) error {
 	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return err
@@ -76,32 +74,32 @@ func SwapOutputLoggersFromLoggingConfig(logger types.InfoTraceLogger,
 	return nil
 }
 
-func NewStdErrLogger() (types.InfoTraceLogger, channels.Channel, error) {
-	logger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
+func NewStdErrLogger() (*logging.Logger, channels.Channel, error) {
+	outputLogger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
 	if err != nil {
 		return nil, nil, err
 	}
-	itLogger, errCh := NewLogger(logger)
-	return itLogger, errCh, nil
+	logger, errCh := NewLogger(outputLogger)
+	return logger, errCh, nil
 }
 
 // Provided a standard logger that outputs to the supplied underlying outputLogger
-func NewLogger(outputLogger kitlog.Logger) (types.InfoTraceLogger, channels.Channel) {
-	infoTraceLogger, errCh := loggers.NewInfoTraceLogger(outputLogger)
+func NewLogger(outputLogger kitlog.Logger) (*logging.Logger, channels.Channel) {
+	logger, errCh := logging.NewLogger(outputLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
 	if uuid != nil {
 		runId = uuid.String()
 	}
-	return logging.WithMetadata(infoTraceLogger.With(structure.RunId, runId)), errCh
+	return logger.With(structure.RunId, runId), errCh
 }
 
-func JustLogger(logger types.InfoTraceLogger, _ channels.Channel) types.InfoTraceLogger {
+func JustLogger(logger *logging.Logger, _ channels.Channel) *logging.Logger {
 	return logger
 }
 
-func CaptureStdlibLogOutput(infoTraceLogger types.InfoTraceLogger) {
+func CaptureStdlibLogOutput(infoTraceLogger *logging.Logger) {
 	stdlib.CaptureRootLogger(infoTraceLogger.
 		With(structure.CapturedLoggingSourceKey, "stdlib_log"))
 }

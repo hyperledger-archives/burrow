@@ -12,8 +12,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/logging/loggers"
-	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -28,7 +27,7 @@ func TestBootThenShutdown(t *testing.T) {
 	os.Chdir(testDir)
 	tmConf := tm_config.DefaultConfig()
 	//logger, _, _ := lifecycle.NewStdErrLogger()
-	logger := loggers.NewNoopInfoTraceLogger()
+	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 	privValidator := validator.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, nil))
@@ -40,7 +39,7 @@ func TestBootShutdownResume(t *testing.T) {
 	os.Chdir(testDir)
 	tmConf := tm_config.DefaultConfig()
 	//logger, _, _ := lifecycle.NewStdErrLogger()
-	logger := loggers.NewNoopInfoTraceLogger()
+	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 	privValidator := validator.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 
@@ -62,7 +61,7 @@ func TestBootShutdownResume(t *testing.T) {
 }
 
 func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
-	tmConf *tm_config.Config, logger logging_types.InfoTraceLogger,
+	tmConf *tm_config.Config, logger *logging.Logger,
 	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
 
 	kern, err := NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loggers
+package logging
 
 import (
 	"os"
@@ -23,11 +23,11 @@ import (
 
 func TestLogger(t *testing.T) {
 	stderrLogger := kitlog.NewLogfmtLogger(os.Stderr)
-	logger, _ := NewInfoTraceLogger(stderrLogger)
-	logger.Trace("hello", "barry")
+	logger, _ := NewLogger(stderrLogger)
+	logger.Trace.Log("hello", "barry")
 }
 
 func TestNewNoopInfoTraceLogger(t *testing.T) {
-	logger := NewNoopInfoTraceLogger()
-	logger.Trace("goodbye", "trevor")
+	logger := NewNoopLogger()
+	logger.Trace.Log("goodbye", "trevor")
 }

@@ -17,6 +17,8 @@ package structure
 import (
 	"encoding/json"
 	"fmt"
+
+	kitlog "github.com/go-kit/kit/log"
 )
 
 const (
@@ -46,7 +48,9 @@ const (
 	// Provides special instructions (that may be ignored) to downstream loggers
 	SignalKey = "__signal__"
 	// The sync signal instructs sync-able loggers to sync
-	SyncSignal = "__sync__"
+	SyncSignal       = "__sync__"
+	InfoChannelName  = "Info"
+	TraceChannelName = "Trace"
 )
 
 // Pull the specified values from a structured log line into a map.
@@ -246,4 +250,23 @@ func StringifyKey(key interface{}) string {
 			return fmt.Sprintf("%v", key)
 		}
 	}
+}
+
+// Sends the sync signal which causes any syncing loggers to sync.
+// loggers receiving the signal should drop the signal logline from output
+func Sync(logger kitlog.Logger) error {
+	return logger.Log(SignalKey, SyncSignal)
+}
+
+// Tried to interpret the logline as a signal by matching the last key-value pair as a signal, returns empty string if
+// no match
+func Signal(keyvals []interface{}) string {
+	last := len(keyvals) - 1
+	if last > 0 && keyvals[last-1] == SignalKey {
+		signal, ok := keyvals[last].(string)
+		if ok {
+			return signal
+		}
+	}
+	return ""
 }
