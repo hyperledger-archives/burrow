@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"runtime/debug"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
@@ -83,7 +85,7 @@ func NewTransactor(blockchain blockchain.Blockchain, state acm.StateIterable, ev
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (*Call, error) {
+func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (call *Call, err error) {
 	if evm.RegisteredNativeContract(toAddress.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
@@ -106,6 +108,11 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 	vmach.SetPublisher(trans.eventEmitter)
 
 	gas := params.GasLimit
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic from VM in simulated call: %v\n%s", r, debug.Stack())
+		}
+	}()
 	ret, err := vmach.Call(caller, callee, callee.Code(), data, 0, &gas)
 	if err != nil {
 		return nil, err

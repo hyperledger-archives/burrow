@@ -38,8 +38,8 @@ const (
 	CallCode = "call_code"
 
 	// Names
-	GetName     = "get_name"
-	ListNames   = "list_names"
+	GetName   = "get_name"
+	ListNames = "list_names"
 
 	// Blockchain
 	Genesis    = "genesis"

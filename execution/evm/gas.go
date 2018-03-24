@@ -17,9 +17,10 @@ package evm
 const (
 	GasSha3          uint64 = 1
 	GasGetAccount    uint64 = 1
+	GasCreateAccount uint64 = 1
 	GasStorageUpdate uint64 = 1
 
-	GasBaseOp  uint64 = 0 // TODO: make this 1
+	GasBaseOp  uint64 = 1
 	GasStackOp uint64 = 1
 
 	GasEcRecover     uint64 = 1
