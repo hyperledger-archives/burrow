@@ -180,7 +180,6 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 	txHash := tx.Hash(exe.chainID)
 	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)").With(
 		"run_call", exe.runCall,
-		"tx", tx.String(),
 		"tx_hash", txHash)
 	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
