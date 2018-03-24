@@ -19,9 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	"io/ioutil"
-	"strings"
-
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
@@ -205,16 +202,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
-	tokens, err := acm.Bytecode(code).Tokens()
-	if err != nil {
-		return nil, err
-	}
-	tokens = append(tokens, "")
-	err = ioutil.WriteFile(fmt.Sprintf("tokens-%x.txt", vm.txHash[:4]), []byte(strings.Join(tokens, "\n")), 0700)
-	if err != nil {
-		return nil, err
-	}
-
+	logger := vm.logger.With("tx_hash", vm.txHash)
 	var (
 		pc     int64 = 0
 		stack        = NewStack(dataStackCapacity, gas, &err)
@@ -325,7 +313,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" %v ** %v = %v (%X)\n", x, y, pow, res)
 
 		case SIGNEXTEND: // 0x0B
-			back := stack.PopU64()
+			back, popErr := stack.PopU64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			if back < Word256Length-1 {
 				stack.PushBigInt(SignExtend(back, stack.PopBigInt()))
 			}
@@ -427,7 +418,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" !%X = %X\n", x, z)
 
 		case BYTE: // 0x1A
-			idx, val := stack.Pop64(), stack.Pop()
+			idx, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			val := stack.Pop()
 			res := byte(0)
 			if idx < 32 {
 				res = val[idx]
@@ -482,7 +477,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => %v\n", value)
 
 		case CALLDATALOAD: // 0x35
-			offset := stack.Pop64()
+			offset, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			data, ok := subslice(input, offset, 32)
 			if !ok {
 				return nil, firstErr(err, ErrInputOutOfBounds)
@@ -497,8 +495,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case CALLDATACOPY: // 0x37
 			memOff := stack.PopBigInt()
-			inputOff := stack.Pop64()
-			length := stack.Pop64()
+			inputOff, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			length, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			data, ok := subslice(input, inputOff, length)
 			if !ok {
 				return nil, firstErr(err, ErrInputOutOfBounds)
@@ -517,8 +521,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case CODECOPY: // 0x39
 			memOff := stack.PopBigInt()
-			codeOff := stack.Pop64()
-			length := stack.Pop64()
+			codeOff, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			length, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			data, ok := subslice(code, codeOff, length)
 			if !ok {
 				return nil, firstErr(err, ErrCodeOutOfBounds)
@@ -573,8 +583,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			}
 			code := acc.Code()
 			memOff := stack.PopBigInt()
-			codeOff := stack.Pop64()
-			length := stack.Pop64()
+			codeOff, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			length, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			data, ok := subslice(code, codeOff, length)
 			if !ok {
 				return nil, firstErr(err, ErrCodeOutOfBounds)
@@ -632,7 +648,12 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE8: // 0x53
-			offset, val := stack.PopBigInt(), byte(stack.Pop64()&0xFF)
+			offset := stack.PopBigInt()
+			val64, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			val := byte(val64 & 0xFF)
 			memErr := memory.Write(offset, []byte{val})
 			if memErr != nil {
 				vm.Debugf(" => Memory err: %s", memErr)
@@ -658,7 +679,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
 
 		case JUMP: // 0x56
-			jumpErr := vm.jump(code, stack.Pop64(), &pc)
+			to, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			jumpErr := vm.jump(code, to, &pc)
 			if jumpErr != nil {
 				vm.Debugf(" => JUMP err: %s", jumpErr)
 				return nil, firstErr(err, jumpErr)
@@ -666,7 +691,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			continue
 
 		case JUMPI: // 0x57
-			pos, cond := stack.Pop64(), stack.Pop()
+			pos, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			cond := stack.Pop()
 			if !cond.IsZero() {
 				jumpErr := vm.jump(code, pos, &pc)
 				if jumpErr != nil {
@@ -746,7 +775,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if !HasPermission(vm.state, callee, permission.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
-			contractValue := stack.PopU64()
+			contractValue, popErr := stack.PopU64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			input, memErr := memory.Read(offset, size)
 			if memErr != nil {
@@ -760,8 +792,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			}
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
-			newAccount := DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state),
-				vm.logger.With("tx_hash", vm.txHash))
+			var gasErr error
+			if useGasNegative(gas, GasCreateAccount, &gasErr) {
+				return nil, firstErr(err, gasErr)
+			}
+			newAccount := DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state), logger)
 			vm.state.UpdateAccount(newAccount)
 
 			// Run the input to get the contract code.
@@ -782,7 +817,10 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if !HasPermission(vm.state, callee, permission.Call) {
 				return nil, ErrPermission{"call"}
 			}
-			gasLimit := stack.PopU64()
+			gasLimit, popErr := stack.PopU64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			addr := stack.Pop()
 			// NOTE: for DELEGATECALL value is preserved from the original
 			// caller, as such it is not stored on stack as an argument
@@ -790,10 +828,19 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			// caller value is used.  for CALL and CALLCODE value is stored
 			// on stack and needs to be overwritten from the given value.
 			if op != DELEGATECALL {
-				value = stack.PopU64()
+				value, popErr = stack.PopU64()
+				if popErr != nil {
+					return nil, firstErr(err, popErr)
+				}
 			}
-			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt() // inputs
-			retOffset, retSize := stack.PopBigInt(), stack.Pop64()   // outputs
+			// inputs
+			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
+			// outputs
+			retOffset := stack.PopBigInt()
+			retSize, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
 			vm.Debugf(" => %X\n", addr)
 
 			// Get the arguments from the memory
@@ -805,11 +852,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 			// Ensure that gasLimit is reasonable
 			if *gas < gasLimit {
-				return nil, firstErr(err, ErrInsufficientGas)
-			} else {
-				*gas -= gasLimit
-				// NOTE: we will return any used gas later.
+				// EIP150 - the 63/64 rule - rather than error we pass this specified fraction of the total available gas
+				gasLimit = *gas - *gas/64
 			}
+			// NOTE: we will return any used gas later.
+			*gas -= gasLimit
 
 			// Begin execution
 			var ret []byte
@@ -901,6 +948,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			return output, nil
 
 		case REVERT: // 0xFD
+			return nil, fmt.Errorf("REVERT not yet fully implemented")
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output, memErr := memory.Read(offset, size)
 			if memErr != nil {
@@ -916,14 +964,19 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			// TODO if the receiver is , then make it the fee. (?)
-			// TODO: create account if doesn't exist (no reason not to)
 			receiver, errAcc := acm.GetMutableAccount(vm.state, acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
 			if receiver == nil {
-				return nil, firstErr(err, ErrUnknownAddress)
+				var gasErr error
+				if useGasNegative(gas, GasCreateAccount, &gasErr) {
+					return nil, firstErr(err, gasErr)
+				}
+				if !HasPermission(vm.state, callee, permission.CreateContract) {
+					return nil, firstErr(err, ErrPermission{"create_contract"})
+				}
+				receiver = DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state), logger)
 			}
 
 			receiver, errAdd := receiver.AddToBalance(callee.Balance())
@@ -938,9 +991,11 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 		case STOP: // 0x00
 			return nil, nil
 
+		case STATICCALL, SHL, SHR, SAR, RETURNDATASIZE, RETURNDATACOPY:
+			return nil, fmt.Errorf("%s not yet implemented", op.Name())
 		default:
 			vm.Debugf("(pc) %-3v Invalid opcode %X\n", pc, op)
-			return nil, fmt.Errorf("Invalid opcode %X", op)
+			return nil, fmt.Errorf("invalid opcode %X", op)
 		}
 
 		pc++
