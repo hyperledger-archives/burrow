@@ -6,7 +6,6 @@ import (
 
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )
@@ -411,7 +410,7 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 
 func signalPassthroughLogger(ifSignalLogger kitlog.Logger, otherwiseLogger kitlog.Logger) kitlog.Logger {
 	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-		if logging.Signal(keyvals) != "" {
+		if structure.Signal(keyvals) != "" {
 			return ifSignalLogger.Log(keyvals...)
 		}
 		return otherwiseLogger.Log(keyvals...)

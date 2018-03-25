@@ -25,7 +25,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
@@ -230,7 +229,7 @@ func NewSNativeContract(comment, name string,
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
 func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, caller acm.Account,
-	args []byte, gas *uint64, logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	args []byte, gas *uint64, logger *logging.Logger) (output []byte, err error) {
 
 	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
 
@@ -244,7 +243,7 @@ func (contract *SNativeContractDescription) Dispatch(state acm.StateWriter, call
 		return nil, err
 	}
 
-	logging.TraceMsg(logger, "Dispatching to function",
+	logger.TraceMsg("Dispatching to function",
 		"caller", caller.Address(),
 		"function_name", function.Name)
 
@@ -342,7 +341,7 @@ func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
 func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -359,7 +358,7 @@ func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 	}
 	hasPermission := HasPermission(state, acc, permN)
 	permInt := byteFromBool(hasPermission)
-	logger.Trace("function", "hasBase",
+	logger.Trace.Log("function", "hasBase",
 		"address", address.String(),
 		"account_base_permissions", acc.Permissions().Base,
 		"perm_flag", fmt.Sprintf("%b", permN),
@@ -368,7 +367,7 @@ func hasBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 }
 
 func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum, permVal := returnThreeArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -388,14 +387,14 @@ func setBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	logger.Trace("function", "setBase", "address", address.String(),
+	logger.Trace.Log("function", "setBase", "address", address.String(),
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", permV)
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(state)), nil
 }
 
 func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -414,7 +413,7 @@ func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	logger.Trace("function", "unsetBase", "address", address.String(),
+	logger.Trace.Log("function", "unsetBase", "address", address.String(),
 		"perm_flag", fmt.Sprintf("%b", permN),
 		"permission_flag", fmt.Sprintf("%b", permN))
 
@@ -422,7 +421,7 @@ func unsetBase(state acm.StateWriter, caller acm.Account, args []byte, gas *uint
 }
 
 func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	permNum, permVal := returnTwoArgs(args)
 	acc, err := acm.GetMutableAccount(state, permission.GlobalPermissionsAddress)
@@ -441,14 +440,14 @@ func setGlobal(state acm.StateWriter, caller acm.Account, args []byte, gas *uint
 		return nil, err
 	}
 	state.UpdateAccount(acc)
-	logger.Trace("function", "setGlobal",
+	logger.Trace.Log("function", "setGlobal",
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", permV)
 	return permBytes(acc.Permissions().Base.ResultantPerms()), nil
 }
 
 func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -462,14 +461,14 @@ func hasRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 	roleS := string(role.Bytes())
 	hasRole := acc.Permissions().HasRole(roleS)
 	permInt := byteFromBool(hasRole)
-	logger.Trace("function", "hasRole", "address", address.String(),
+	logger.Trace.Log("function", "hasRole", "address", address.String(),
 		"role", roleS,
 		"has_role", hasRole)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
 func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -484,14 +483,14 @@ func addRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64
 	roleAdded := acc.MutablePermissions().AddRole(roleS)
 	permInt := byteFromBool(roleAdded)
 	state.UpdateAccount(acc)
-	logger.Trace("function", "addRole", "address", address.String(),
+	logger.Trace.Log("function", "addRole", "address", address.String(),
 		"role", roleS,
 		"role_added", roleAdded)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
 func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uint64,
-	logger logging_types.InfoTraceLogger) (output []byte, err error) {
+	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
 	address := acm.AddressFromWord256(addrWord256)
@@ -506,7 +505,7 @@ func removeRole(state acm.StateWriter, caller acm.Account, args []byte, gas *uin
 	roleRemoved := acc.MutablePermissions().RmRole(roleS)
 	permInt := byteFromBool(roleRemoved)
 	state.UpdateAccount(acc)
-	logger.Trace("function", "removeRole", "address", address.String(),
+	logger.Trace.Log("function", "removeRole", "address", address.String(),
 		"role", roleS,
 		"role_removed", roleRemoved)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil

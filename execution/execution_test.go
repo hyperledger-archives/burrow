@@ -33,7 +33,7 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
@@ -111,7 +111,7 @@ x 		- roles: has, add, rm
 
 // keys
 var users = makeUsers(10)
-var logger = loggers.NewNoopInfoTraceLogger()
+var logger = logging.NewNoopLogger()
 var deterministicGenesis = genesis.NewDeterministicGenesis(34059836243380576)
 var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, true, 1000, 1, true, 1000)

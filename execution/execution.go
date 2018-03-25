@@ -26,7 +26,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
@@ -63,7 +62,7 @@ type executor struct {
 	nameRegCache *NameRegCache
 	publisher    event.Publisher
 	eventCache   *event.Cache
-	logger       logging_types.InfoTraceLogger
+	logger       *logging.Logger
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -72,18 +71,18 @@ var _ BatchExecutor = (*executor)(nil)
 func NewBatchChecker(state *State,
 	chainID string,
 	tip bcm.Tip,
-	logger logging_types.InfoTraceLogger) BatchExecutor {
+	logger *logging.Logger) BatchExecutor {
 	return newExecutor(false, state, chainID, tip, event.NewNoOpPublisher(),
-		logging.WithScope(logger, "NewBatchExecutor"))
+		logger.WithScope("NewBatchExecutor"))
 }
 
 func NewBatchCommitter(state *State,
 	chainID string,
 	tip bcm.Tip,
 	publisher event.Publisher,
-	logger logging_types.InfoTraceLogger) BatchCommitter {
+	logger *logging.Logger) BatchCommitter {
 	return newExecutor(true, state, chainID, tip, publisher,
-		logging.WithScope(logger, "NewBatchCommitter"))
+		logger.WithScope("NewBatchCommitter"))
 }
 
 func newExecutor(runCall bool,
@@ -91,7 +90,7 @@ func newExecutor(runCall bool,
 	chainID string,
 	tip bcm.Tip,
 	eventFireable event.Publisher,
-	logger logging_types.InfoTraceLogger) *executor {
+	logger *logging.Logger) *executor {
 	return &executor{
 		chainID:      chainID,
 		tip:          tip,
@@ -178,10 +177,10 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 	}()
 
 	txHash := tx.Hash(exe.chainID)
-	logger := logging.WithScope(exe.logger, "executor.Execute(tx txs.Tx)").With(
+	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(
 		"run_call", exe.runCall,
 		"tx_hash", txHash)
-	logging.TraceMsg(logger, "Executing transaction", "tx", tx.String())
+	logger.TraceMsg("Executing transaction", "tx", tx.String())
 	// TODO: do something with fees
 	fees := uint64(0)
 
@@ -257,7 +256,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		if inAcc == nil {
-			logging.InfoMsg(logger, "Cannot find input account",
+			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
@@ -275,19 +274,19 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(logger, "Cannot find public key for input account",
+			logger.InfoMsg("Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(logger, "validateInput failed",
+			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			logging.InfoMsg(logger, "Sender did not send enough to cover the fee",
+			logger.InfoMsg("Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
 			return txs.ErrTxInsufficientFunds
 		}
@@ -311,12 +310,12 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			}
 		}
 
-		logger.Trace("output_account", outAcc)
+		logger.Trace.Log("output_account", outAcc)
 
 		// Good!
 		value := tx.Input.Amount - tx.Fee
 
-		logging.TraceMsg(logger, "Incrementing sequence number for CallTx",
+		logger.TraceMsg("Incrementing sequence number for CallTx",
 			"tag", "sequence",
 			"account", inAcc.Address(),
 			"old_sequence", inAcc.Sequence(),
@@ -357,11 +356,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// you have to wait a block to avoid a re-ordering attack
 				// that will take your fees
 				if outAcc == nil {
-					logging.InfoMsg(logger, "Call to address that does not exist",
+					logger.InfoMsg("Call to address that does not exist",
 						"caller_address", inAcc.Address(),
 						"callee_address", tx.Address)
 				} else {
-					logging.InfoMsg(logger, "Call to address that holds no code",
+					logger.InfoMsg("Call to address that holds no code",
 						"caller_address", inAcc.Address(),
 						"callee_address", tx.Address)
 				}
@@ -379,18 +378,18 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						"run_call", exe.runCall,
 					))
 				code = tx.Data
-				logging.TraceMsg(logger, "Creating new contract",
+				logger.TraceMsg("Creating new contract",
 					"contract_address", callee.Address(),
 					"init_code", code)
 			} else {
 				callee = acm.AsMutableAccount(outAcc)
 				code = callee.Code()
-				logging.TraceMsg(logger, "Calling existing contract",
+				logger.TraceMsg("Calling existing contract",
 					"contract_address", callee.Address(),
 					"input", tx.Data,
 					"contract_code", code)
 			}
-			logger.Trace("callee", callee.Address().String())
+			logger.Trace.Log("callee", callee.Address().String())
 
 			// Run VM call and sync txCache to exe.blockCache.
 			{ // Capture scope for goto.
@@ -404,12 +403,12 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-					logging.InfoMsg(logger, "Error on execution",
+					logger.InfoMsg("Error on execution",
 						structure.ErrorKey, err)
 					goto CALL_COMPLETE
 				}
 
-				logging.TraceMsg(logger, "Successful execution")
+				logger.TraceMsg("Successful execution")
 				if createContract {
 					callee.SetCode(ret)
 				}
@@ -419,7 +418,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		CALL_COMPLETE: // err may or may not be nil.
 
 			// Create a receipt from the ret and whether it erred.
-			logging.TraceMsg(logger, "VM call complete",
+			logger.TraceMsg("VM call complete",
 				"caller", caller,
 				"callee", callee,
 				"return", ret,
@@ -449,7 +448,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			}
 			if createContract {
 				// This is done by DeriveNewAccount when runCall == true
-				logging.TraceMsg(logger, "Incrementing sequence number since creates contract",
+				logger.TraceMsg("Incrementing sequence number since creates contract",
 					"tag", "sequence",
 					"account", inAcc.Address(),
 					"old_sequence", inAcc.Sequence(),
@@ -468,7 +467,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		if inAcc == nil {
-			logging.InfoMsg(logger, "Cannot find input account",
+			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
@@ -478,19 +477,19 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(logger, "Cannot find public key for input account",
+			logger.InfoMsg("Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(logger, "validateInput failed",
+			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
 			return err
 		}
 		if tx.Input.Amount < tx.Fee {
-			logging.InfoMsg(logger, "Sender did not send enough to cover the fee",
+			logger.InfoMsg("Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
 			return txs.ErrTxInsufficientFunds
 		}
@@ -507,7 +506,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		expiresIn := value / uint64(costPerBlock)
 		lastBlockHeight := exe.tip.LastBlockHeight()
 
-		logging.TraceMsg(logger, "New NameTx",
+		logger.TraceMsg("New NameTx",
 			"value", value,
 			"cost_per_block", costPerBlock,
 			"expires_in", expiresIn,
@@ -537,7 +536,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			if value == 0 && len(tx.Data) == 0 {
 				// maybe we reward you for telling us we can delete this crap
 				// (owners if not expired, anyone if expired)
-				logging.TraceMsg(logger, "Removing NameReg entry (no value and empty data in tx requests this)",
+				logger.TraceMsg("Removing NameReg entry (no value and empty data in tx requests this)",
 					"name", entry.Name)
 				err := exe.nameRegCache.RemoveNameRegEntry(entry.Name)
 				if err != nil {
@@ -552,7 +551,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
-					logging.TraceMsg(logger, "An old NameReg entry has expired and been reclaimed",
+					logger.TraceMsg("An old NameReg entry has expired and been reclaimed",
 						"name", entry.Name,
 						"expires_in", expiresIn,
 						"owner", entry.Owner)
@@ -566,7 +565,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						return fmt.Errorf("names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
-					logging.TraceMsg(logger, "Updated NameReg entry",
+					logger.TraceMsg("Updated NameReg entry",
 						"name", entry.Name,
 						"expires_in", expiresIn,
 						"old_credit", oldCredit,
@@ -590,7 +589,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				Data:    tx.Data,
 				Expires: lastBlockHeight + expiresIn,
 			}
-			logging.TraceMsg(logger, "Creating NameReg entry",
+			logger.TraceMsg("Creating NameReg entry",
 				"name", entry.Name,
 				"expires_in", expiresIn)
 			err := exe.nameRegCache.UpdateNameRegEntry(entry)
@@ -602,7 +601,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO: something with the value sent?
 
 		// Good!
-		logging.TraceMsg(logger, "Incrementing sequence number for NameTx",
+		logger.TraceMsg("Incrementing sequence number for NameTx",
 			"tag", "sequence",
 			"account", inAcc.Address(),
 			"old_sequence", inAcc.Sequence(),
@@ -770,7 +769,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		if inAcc == nil {
-			logging.InfoMsg(logger, "Cannot find input account",
+			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
 			return txs.ErrTxInvalidAddress
 		}
@@ -789,14 +788,14 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		// pubKey should be present in either "inAcc" or "tx.Input"
 		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logging.InfoMsg(logger, "Cannot find public key for input account",
+			logger.InfoMsg("Cannot find public key for input account",
 				"tx_input", tx.Input)
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
-			logging.InfoMsg(logger, "validateInput failed",
+			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input,
 				structure.ErrorKey, err)
 			return err
@@ -804,7 +803,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		value := tx.Input.Amount
 
-		logging.TraceMsg(logger, "New PermissionsTx",
+		logger.TraceMsg("New PermissionsTx",
 			"perm_args", tx.PermArgs.String())
 
 		var permAcc acm.Account
@@ -857,7 +856,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		// Good!
-		logging.TraceMsg(logger, "Incrementing sequence number for PermissionsTx",
+		logger.TraceMsg("Incrementing sequence number for PermissionsTx",
 			"tag", "sequence",
 			"account", inAcc.Address(),
 			"old_sequence", inAcc.Sequence(),
@@ -1060,7 +1059,7 @@ func getInputs(accountGetter acm.Getter,
 }
 
 func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
-	outs []*txs.TxOutput, logger logging_types.InfoTraceLogger) (map[acm.Address]acm.MutableAccount, error) {
+	outs []*txs.TxOutput, logger *logging.Logger) (map[acm.Address]acm.MutableAccount, error) {
 	if accs == nil {
 		accs = make(map[acm.Address]acm.MutableAccount)
 	}
@@ -1172,7 +1171,7 @@ func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput, logger logging_types.InfoTraceLogger) error {
+func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1187,7 +1186,7 @@ func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput,
 		if err != nil {
 			return err
 		}
-		logging.TraceMsg(logger, "Incrementing sequence number for SendTx (adjustByInputs)",
+		logger.TraceMsg("Incrementing sequence number for SendTx (adjustByInputs)",
 			"tag", "sequence",
 			"account", acc.Address(),
 			"old_sequence", acc.Sequence(),
@@ -1215,9 +1214,9 @@ func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutp
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag, logger logging_types.InfoTraceLogger) bool {
+func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
 	if perm > permission.AllPermFlags {
-		logging.InfoMsg(logger,
+		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
 				perm, permission.AllPermFlags),
 			"invalid_permission", perm,
@@ -1229,17 +1228,17 @@ func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFl
 
 	v, err := acc.Permissions().Base.Compose(permission.GlobalAccountPermissions(accountGetter).Base).Get(perm)
 	if err != nil {
-		logging.TraceMsg(logger, "Error obtaining permission value (will default to false/deny)",
+		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", permString,
 			structure.ErrorKey, err)
 	}
 
 	if v {
-		logging.TraceMsg(logger, "Account has permission",
+		logger.TraceMsg("Account has permission",
 			"account_address", acc.Address,
 			"perm_flag", permString)
 	} else {
-		logging.TraceMsg(logger, "Account does not have permission",
+		logger.TraceMsg("Account does not have permission",
 			"account_address", acc.Address,
 			"perm_flag", permString)
 	}
@@ -1248,7 +1247,7 @@ func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFl
 
 // TODO: for debug log the failed accounts
 func hasSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Send, logger) {
 			return false
@@ -1258,22 +1257,22 @@ func hasSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.Mutabl
 }
 
 func hasNamePermission(accountGetter acm.Getter, acc acm.Account,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
 func hasCallPermission(accountGetter acm.Getter, acc acm.Account,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
 func hasCreateContractPermission(accountGetter acm.Getter, acc acm.Account,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
 func hasCreateAccountPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
 			return false
@@ -1283,12 +1282,12 @@ func hasCreateAccountPermission(accountGetter acm.Getter, accs map[acm.Address]a
 }
 
 func hasBondPermission(accountGetter acm.Getter, acc acm.Account,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
 func hasBondOrSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.Account,
-	logger logging_types.InfoTraceLogger) bool {
+	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {
 			if !HasPermission(accountGetter, acc, permission.Send, logger) {

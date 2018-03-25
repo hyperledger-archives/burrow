@@ -20,7 +20,6 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/logging/types"
 )
 
 const (
@@ -36,8 +35,8 @@ var defaultTimestampUTCValuer kitlog.Valuer = func() interface{} {
 	return time.Now()
 }
 
-func WithMetadata(infoTraceLogger types.InfoTraceLogger) types.InfoTraceLogger {
-	return infoTraceLogger.With(structure.TimeKey, defaultTimestampUTCValuer,
+func WithMetadata(logger *Logger) *Logger {
+	return logger.With(structure.TimeKey, defaultTimestampUTCValuer,
 		structure.TraceKey, TraceValuer())
 }
 

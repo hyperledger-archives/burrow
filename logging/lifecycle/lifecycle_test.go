@@ -13,7 +13,7 @@ func TestNewLoggerFromLoggingConfig(t *testing.T) {
 	reader := CaptureStderr(t, func() {
 		logger, err := NewLoggerFromLoggingConfig(nil)
 		assert.NoError(t, err)
-		logger.Info("Quick", "Test")
+		logger.Info.Log("Quick", "Test")
 	})
 	line, _, err := reader.ReadLine()
 	assert.NoError(t, err)

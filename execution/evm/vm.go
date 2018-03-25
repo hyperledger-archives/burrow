@@ -26,7 +26,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
@@ -76,11 +75,11 @@ type VM struct {
 	txHash         []byte
 	callDepth      int
 	publisher      event.Publisher
-	logger         logging_types.InfoTraceLogger
+	logger         *logging.Logger
 }
 
 func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
-	logger logging_types.InfoTraceLogger) *VM {
+	logger *logging.Logger) *VM {
 	return &VM{
 		state:          state,
 		memoryProvider: memoryProvider,
@@ -88,12 +87,12 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 		origin:         origin,
 		callDepth:      0,
 		txHash:         txid,
-		logger:         logging.WithScope(logger, "NewVM"),
+		logger:         logger.WithScope("NewVM"),
 	}
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	logging.TraceMsg(vm.logger, fmt.Sprintf(format, a...), "tag", "vm_debug")
+	vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
 }
 
 // satisfies go_events.Eventable

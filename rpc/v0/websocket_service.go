@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/v0/server"
 )
@@ -32,15 +31,15 @@ type WebsocketService struct {
 	codec           rpc.Codec
 	service         *rpc.Service
 	defaultHandlers map[string]RequestHandlerFunc
-	logger          logging_types.InfoTraceLogger
+	logger          *logging.Logger
 }
 
 // Create a new websocket service.
-func NewWebsocketService(codec rpc.Codec, service *rpc.Service, logger logging_types.InfoTraceLogger) server.WebSocketService {
+func NewWebsocketService(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) server.WebSocketService {
 	tmwss := &WebsocketService{
 		codec:   codec,
 		service: service,
-		logger:  logging.WithScope(logger, "NewWebsocketService"),
+		logger:  logger.WithScope("NewWebsocketService"),
 	}
 	dhMap := GetMethods(codec, service, tmwss.logger)
 	// Events
@@ -55,7 +54,7 @@ func (ws *WebsocketService) Process(msg []byte, session *server.WSSession) {
 	defer func() {
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic in WebsocketService.Process(): %v", r)
-			logging.InfoMsg(ws.logger, "Panic in WebsocketService.Process()", structure.ErrorKey, err)
+			ws.logger.InfoMsg("Panic in WebsocketService.Process()", structure.ErrorKey, err)
 			if !session.Closed() {
 				ws.writeError(err.Error(), "", rpc.INTERNAL_ERROR, session)
 			}

@@ -24,7 +24,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/tommy351/gin-cors"
 	"gopkg.in/tylerb/graceful.v1"
 )
@@ -59,7 +58,7 @@ type ServeProcess struct {
 	startListenChans []chan struct{}
 	stopListenChans  []chan struct{}
 	srv              *graceful.Server
-	logger           logging_types.InfoTraceLogger
+	logger           *logging.Logger
 }
 
 // Initializes all the servers and starts listening for connections.
@@ -120,7 +119,7 @@ func (serveProcess *ServeProcess) Start() error {
 		lst = l
 	}
 	serveProcess.srv = srv
-	logging.InfoMsg(serveProcess.logger, "Server started.",
+	serveProcess.logger.InfoMsg("Server started.",
 		"chain_id", serveProcess.config.ChainId,
 		"address", serveProcess.config.Bind.Address,
 		"port", serveProcess.config.Bind.Port)
@@ -139,14 +138,14 @@ func (serveProcess *ServeProcess) Start() error {
 	// calls 'Stop' on the process.
 	go func() {
 		<-serveProcess.stopChan
-		logging.InfoMsg(serveProcess.logger, "Close signal sent to server.")
+		serveProcess.logger.InfoMsg("Close signal sent to server.")
 		serveProcess.srv.Stop(killTime)
 	}()
 	// Listen to the servers stop event. It is triggered when
 	// the server has been fully shut down.
 	go func() {
 		<-serveProcess.srv.StopChan()
-		logging.InfoMsg(serveProcess.logger, "Server stop event fired. Good bye.")
+		serveProcess.logger.InfoMsg("Server stop event fired. Good bye.")
 		for _, c := range serveProcess.stopListenChans {
 			c <- struct{}{}
 		}
@@ -198,7 +197,7 @@ func (serveProcess *ServeProcess) StopEventChannel() <-chan struct{} {
 }
 
 // Creates a new serve process.
-func NewServeProcess(config *ServerConfig, logger logging_types.InfoTraceLogger,
+func NewServeProcess(config *ServerConfig, logger *logging.Logger,
 	servers ...Server) (*ServeProcess, error) {
 	var scfg ServerConfig
 	if config == nil {
@@ -216,14 +215,14 @@ func NewServeProcess(config *ServerConfig, logger logging_types.InfoTraceLogger,
 		startListenChans: startListeners,
 		stopListenChans:  stopListeners,
 		srv:              nil,
-		logger:           logging.WithScope(logger, "ServeProcess"),
+		logger:           logger.WithScope("ServeProcess"),
 	}
 	return sp, nil
 }
 
 // Used to enable log15 logging instead of the default Gin logging.
-func logHandler(logger logging_types.InfoTraceLogger) gin.HandlerFunc {
-	logger = logging.WithScope(logger, "ginLogHandler")
+func logHandler(logger *logging.Logger) gin.HandlerFunc {
+	logger = logger.WithScope("ginLogHandler")
 	return func(c *gin.Context) {
 
 		path := c.Request.URL.Path
@@ -236,7 +235,7 @@ func logHandler(logger logging_types.InfoTraceLogger) gin.HandlerFunc {
 		statusCode := c.Writer.Status()
 		comment := c.Errors.String()
 
-		logger.Info("client_ip", clientIP,
+		logger.Info.Log("client_ip", clientIP,
 			"status_code", statusCode,
 			"method", method,
 			"path", path,

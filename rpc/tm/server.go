@@ -20,14 +20,14 @@ import (
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/tendermint/tendermint/rpc/lib/server"
 )
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, emitter event.Emitter,
-	logger logging_types.InfoTraceLogger) (net.Listener, error) {
+	logger *logging.Logger) (net.Listener, error) {
 
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
 	routes := GetRoutes(service, logger)

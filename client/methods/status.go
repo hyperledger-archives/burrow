@@ -36,7 +36,7 @@ func Status(do *client.Do) error {
 		return fmt.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
-	logger.Info("chain", do.NodeAddrFlag,
+	logger.Info.Log("chain", do.NodeAddrFlag,
 		"genesisHash", fmt.Sprintf("%X", genesisHash),
 		"chainName", chainName,
 		"chainId", chainId,
