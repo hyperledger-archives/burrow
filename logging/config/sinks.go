@@ -31,9 +31,10 @@ const (
 	// Remove key-val pairs from each log line
 	Prune transformType = "prune"
 	// Add key value pairs to each log line
-	Label   transformType = "label"
-	Capture transformType = "capture"
-	Sort    transformType = "sort"
+	Label     transformType = "label"
+	Capture   transformType = "capture"
+	Sort      transformType = "sort"
+	Vectorise transformType = "vectorise"
 
 	// TODO [Silas]: add 'flush on exit' transform which flushes the buffer of
 	// CaptureLogger to its OutputLogger a non-passthrough capture when an exit
@@ -198,6 +199,8 @@ func FileOutput(path string) *OutputConfig {
 	}
 }
 
+// Transforms
+
 func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformConfig {
 	return &TransformConfig{
 		TransformType: Capture,
@@ -271,6 +274,12 @@ func SortTransform(keys ...string) *TransformConfig {
 		SortConfig: &SortConfig{
 			Keys: keys,
 		},
+	}
+}
+
+func VectoriseTransform() *TransformConfig {
+	return &TransformConfig{
+		TransformType: Vectorise,
 	}
 }
 
@@ -403,6 +412,8 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 			return nil, nil, fmt.Errorf("sort transform specified but no SortConfig provided")
 		}
 		return loggers.SortLogger(outputLogger, transformConfig.SortConfig.Keys...), captures, nil
+	case Vectorise:
+		return loggers.VectorValuedLogger(outputLogger), captures, nil
 	default:
 		return nil, captures, fmt.Errorf("could not build logger for transform: '%s'", transformConfig.TransformType)
 	}

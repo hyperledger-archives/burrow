@@ -15,8 +15,6 @@
 package logging
 
 import (
-	"time"
-
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -31,15 +29,12 @@ const (
 	infoTraceLoggerCallDepth = 5
 )
 
-var defaultTimestampUTCValuer kitlog.Valuer = func() interface{} {
-	return time.Now()
-}
-
 func WithMetadata(logger *Logger) *Logger {
-	return logger.With(structure.TimeKey, defaultTimestampUTCValuer,
-		structure.TraceKey, TraceValuer())
+	return logger.With(structure.TimeKey, kitlog.DefaultTimestampUTC,
+		structure.TraceKey, TraceValuer(),
+		structure.CallerKey, kitlog.Caller(infoTraceLoggerCallDepth))
 }
 
 func TraceValuer() kitlog.Valuer {
-	return func() interface{} { return stack.Trace().TrimBelow(stack.Caller(infoTraceLoggerCallDepth - 1)) }
+	return func() interface{} { return stack.Trace() }
 }

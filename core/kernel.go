@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	kitlog "github.com/go-kit/kit/log"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
@@ -42,8 +43,11 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
-const CooldownMilliseconds = 1000
-const ServerShutdownTimeoutMilliseconds = 1000
+const (
+	CooldownMilliseconds              = 1000
+	ServerShutdownTimeoutMilliseconds = 1000
+	LoggingCallerDepth                = 5
+)
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
@@ -60,8 +64,9 @@ type Kernel struct {
 func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
 	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger *logging.Logger) (*Kernel, error) {
 
-	logger = logger.WithScope("NewKernel")
-	var err error
+	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
+	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
+	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
 
 	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
@@ -86,7 +91,7 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, logger)
+	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
 		return nil, err

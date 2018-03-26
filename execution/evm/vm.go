@@ -47,6 +47,11 @@ var (
 	ErrExecutionReverted      = errors.New("Execution reverted")
 )
 
+const (
+	dataStackCapacity = 1024
+	callStackCapacity = 100 // TODO ensure usage.
+)
+
 type ErrPermission struct {
 	typ string
 }
@@ -55,10 +60,36 @@ func (err ErrPermission) Error() string {
 	return fmt.Sprintf("Contract does not have permission to %s", err.typ)
 }
 
-const (
-	dataStackCapacity = 1024
-	callStackCapacity = 100 // TODO ensure usage.
-)
+type ErrNestedCall struct {
+	NestedError error
+	Caller      acm.Address
+	Callee      acm.Address
+	StackDepth  int
+}
+
+func (err ErrNestedCall) Error() string {
+	return fmt.Sprintf("error in nested call at depth %v: %s (callee) -> %s (caller): %v",
+		err.StackDepth, err.Callee, err.Caller, err.NestedError)
+}
+
+type ErrCall struct {
+	CallError    error
+	NestedErrors []ErrNestedCall
+}
+
+func (err ErrCall) Error() string {
+	buf := new(bytes.Buffer)
+	buf.WriteString("call error: ")
+	buf.WriteString(err.CallError.Error())
+	if len(err.NestedErrors) > 0 {
+		buf.WriteString(", nested call errors:\n")
+		for _, nestedErr := range err.NestedErrors {
+			buf.WriteString(nestedErr.Error())
+			buf.WriteByte('\n')
+		}
+	}
+	return buf.String()
+}
 
 type Params struct {
 	BlockHeight uint64
@@ -68,14 +99,15 @@ type Params struct {
 }
 
 type VM struct {
-	state          acm.StateWriter
-	memoryProvider func() Memory
-	params         Params
-	origin         acm.Address
-	txHash         []byte
-	callDepth      int
-	publisher      event.Publisher
-	logger         *logging.Logger
+	state            acm.StateWriter
+	memoryProvider   func() Memory
+	params           Params
+	origin           acm.Address
+	txHash           []byte
+	stackDepth       int
+	nestedCallErrors []ErrNestedCall
+	publisher        event.Publisher
+	logger           *logging.Logger
 }
 
 func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
@@ -85,7 +117,7 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 		memoryProvider: memoryProvider,
 		params:         params,
 		origin:         origin,
-		callDepth:      0,
+		stackDepth:     0,
 		txHash:         txid,
 		logger:         logger.WithScope("NewVM"),
 	}
@@ -142,16 +174,24 @@ func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value 
 	}
 
 	if len(code) > 0 {
-		vm.callDepth += 1
+		vm.stackDepth += 1
 		output, err = vm.call(caller, callee, code, input, value, gas)
-		vm.callDepth -= 1
+		vm.stackDepth -= 1
 		if err != nil {
-			*exception = err.Error()
-			err := transfer(callee, caller, value)
-			if err != nil {
-				// data has been corrupted in ram
-				panic("Could not return value to caller")
+			err = ErrCall{
+				CallError:    err,
+				NestedErrors: vm.nestedCallErrors,
 			}
+			*exception = err.Error()
+			transferErr := transfer(callee, caller, value)
+			if transferErr != nil {
+				return nil, fmt.Errorf("error transferring value %v %s (callee) -> %s (caller)",
+					value, callee, caller)
+			}
+		}
+		if vm.stackDepth == 0 {
+			// clean up ready for next call
+			vm.nestedCallErrors = nil
 		}
 	}
 
@@ -173,9 +213,9 @@ func (vm *VM) DelegateCall(caller, callee acm.MutableAccount, code, input []byte
 	// DelegateCall does not transfer the value to the callee.
 
 	if len(code) > 0 {
-		vm.callDepth += 1
+		vm.stackDepth += 1
 		output, err = vm.call(caller, callee, code, input, value, gas)
-		vm.callDepth -= 1
+		vm.stackDepth -= 1
 		if err != nil {
 			*exception = err.Error()
 		}
@@ -198,10 +238,24 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *error) bool {
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
 func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
-	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.callDepth, caller.Address().Bytes()[:4], callee.Address(),
+	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
 	logger := vm.logger.With("tx_hash", vm.txHash)
+
+	// TODO: provide this functionality via some debug flagging
+	//tokens, _ := acm.Bytecode(code).Tokens()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if len(vm.txHash) >= 4 {
+	//
+	//}
+	//err = ioutil.WriteFile(fmt.Sprintf("tokens-%X.txt", vm.txHash[:4]), []byte(strings.Join(tokens, "\n")), 0777)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	var (
 		pc     int64 = 0
 		stack        = NewStack(dataStackCapacity, gas, &err)
@@ -910,9 +964,14 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 			// Push result
 			if callErr != nil {
-				vm.Debugf("error on call: %s\n", callErr.Error())
-				// TODO: we probably don't want to return the error - decide
-				//err = firstErr(err, callErr)
+				vm.Debugf("error from nested sub-call (depth: %v): %s\n", vm.stackDepth, callErr.Error())
+				// So we can return nested error if the top level return is an error
+				vm.nestedCallErrors = append(vm.nestedCallErrors, ErrNestedCall{
+					NestedError: callErr,
+					StackDepth:  vm.stackDepth,
+					Caller:      caller.Address(),
+					Callee:      callee.Address(),
+				})
 				stack.Push(Zero256)
 
 				if callErr == ErrExecutionReverted {

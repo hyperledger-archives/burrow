@@ -85,6 +85,24 @@ func (l *Logger) With(keyvals ...interface{}) *Logger {
 	}
 }
 
+// Establish a context on the Info channel keeping Trace the same
+func (l *Logger) WithInfo(keyvals ...interface{}) *Logger {
+	return &Logger{
+		Output: l.Output,
+		Info:   kitlog.With(l.Info, keyvals...),
+		Trace:  l.Trace,
+	}
+}
+
+// Establish a context on the Trace channel keeping Info the same
+func (l *Logger) WithTrace(keyvals ...interface{}) *Logger {
+	return &Logger{
+		Output: l.Output,
+		Info:   l.Info,
+		Trace:  kitlog.With(l.Trace, keyvals...),
+	}
+}
+
 func (l *Logger) WithPrefix(keyvals ...interface{}) *Logger {
 	return &Logger{
 		Output: l.Output,

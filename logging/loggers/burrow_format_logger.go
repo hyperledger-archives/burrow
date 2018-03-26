@@ -45,6 +45,8 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 		func(key interface{}, value interface{}) (interface{}, interface{}) {
 			switch v := value.(type) {
 			case string:
+			case fmt.Stringer:
+				value = v.String()
 			case []byte:
 				value = fmt.Sprintf("%X", v)
 			case time.Time:

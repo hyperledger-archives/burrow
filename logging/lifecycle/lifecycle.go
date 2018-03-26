@@ -75,12 +75,12 @@ func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *c
 }
 
 func NewStdErrLogger() (*logging.Logger, channels.Channel, error) {
-	logger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
+	outputLogger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
 	if err != nil {
 		return nil, nil, err
 	}
-	itLogger, errCh := NewLogger(logger)
-	return itLogger, errCh, nil
+	logger, errCh := NewLogger(outputLogger)
+	return logger, errCh, nil
 }
 
 // Provided a standard logger that outputs to the supplied underlying outputLogger
@@ -92,7 +92,7 @@ func NewLogger(outputLogger kitlog.Logger) (*logging.Logger, channels.Channel) {
 	if uuid != nil {
 		runId = uuid.String()
 	}
-	return logging.WithMetadata(logger.With(structure.RunId, runId)), errCh
+	return logger.With(structure.RunId, runId), errCh
 }
 
 func JustLogger(logger *logging.Logger, _ channels.Channel) *logging.Logger {
