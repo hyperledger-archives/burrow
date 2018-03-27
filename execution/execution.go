@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
@@ -35,9 +36,9 @@ import (
 const GasLimit = uint64(1000000)
 
 type BatchExecutor interface {
-	acm.StateIterable
-	acm.Updater
-	acm.StorageSetter
+	state.Iterable
+	state.AccountUpdater
+	state.StorageSetter
 	// Execute transaction against block cache (i.e. block buffer)
 	Execute(tx txs.Tx) error
 	// Reset executor to underlying State
@@ -58,7 +59,7 @@ type executor struct {
 	tip          bcm.Tip
 	runCall      bool
 	state        *State
-	stateCache   acm.StateCache
+	stateCache   state.Cache
 	nameRegCache *NameRegCache
 	publisher    event.Publisher
 	eventCache   *event.Cache
@@ -86,7 +87,7 @@ func NewBatchCommitter(state *State,
 }
 
 func newExecutor(runCall bool,
-	state *State,
+	backend *State,
 	chainID string,
 	tip bcm.Tip,
 	eventFireable event.Publisher,
@@ -95,9 +96,9 @@ func newExecutor(runCall bool,
 		chainID:      chainID,
 		tip:          tip,
 		runCall:      runCall,
-		state:        state,
-		stateCache:   acm.NewStateCache(state),
-		nameRegCache: NewNameRegCache(state),
+		state:        backend,
+		stateCache:   state.NewCache(backend),
+		nameRegCache: NewNameRegCache(backend),
 		publisher:    eventFireable,
 		eventCache:   event.NewEventCache(eventFireable),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
@@ -251,7 +252,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		var outAcc acm.Account
 
 		// Validate input
-		inAcc, err := acm.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -338,7 +339,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				callee  acm.MutableAccount = nil // initialized below
 				code    []byte             = nil
 				ret     []byte             = nil
-				txCache                    = acm.NewStateCache(exe.stateCache)
+				txCache                    = state.NewCache(exe.stateCache)
 				params                     = evm.Params{
 					BlockHeight: exe.tip.LastBlockHeight(),
 					BlockHash:   binary.LeftPadWord256(exe.tip.LastBlockHash()),
@@ -371,7 +372,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			// get or create callee
 			if createContract {
 				// We already checked for permission
-				callee = evm.DeriveNewAccount(caller, permission.GlobalAccountPermissions(exe.state),
+				callee = evm.DeriveNewAccount(caller, state.GlobalAccountPermissions(exe.state),
 					logger.With(
 						"tx", tx.String(),
 						"tx_hash", txHash,
@@ -462,7 +463,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 	case *txs.NameTx:
 		// Validate input
-		inAcc, err := acm.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -764,7 +765,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 	case *txs.PermissionsTx:
 		// Validate input
-		inAcc, err := acm.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -822,7 +823,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 					return perms.Base.Unset(*tx.PermArgs.Permission)
 				})
 		case permission.SetGlobal:
-			permAcc, err = mutatePermissions(exe.stateCache, permission.GlobalPermissionsAddress,
+			permAcc, err = mutatePermissions(exe.stateCache, acm.GlobalPermissionsAddress,
 				func(perms *ptypes.AccountPermissions) error {
 					return perms.Base.Set(*tx.PermArgs.Permission, *tx.PermArgs.Value)
 				})
@@ -885,7 +886,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 	}
 }
 
-func mutatePermissions(stateReader acm.StateReader, address acm.Address,
+func mutatePermissions(stateReader state.Reader, address acm.Address,
 	mutator func(*ptypes.AccountPermissions) error) (acm.Account, error) {
 
 	account, err := stateReader.GetAccount(address)
@@ -1033,7 +1034,7 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 // acm.PublicKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
-func getInputs(accountGetter acm.Getter,
+func getInputs(accountGetter state.AccountGetter,
 	ins []*txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
 
 	accounts := map[acm.Address]acm.MutableAccount{}
@@ -1042,7 +1043,7 @@ func getInputs(accountGetter acm.Getter,
 		if _, ok := accounts[in.Address]; ok {
 			return nil, txs.ErrTxDuplicateAddress
 		}
-		acc, err := acm.GetMutableAccount(accountGetter, in.Address)
+		acc, err := state.GetMutableAccount(accountGetter, in.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -1058,7 +1059,7 @@ func getInputs(accountGetter acm.Getter,
 	return accounts, nil
 }
 
-func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
+func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
 	outs []*txs.TxOutput, logger *logging.Logger) (map[acm.Address]acm.MutableAccount, error) {
 	if accs == nil {
 		accs = make(map[acm.Address]acm.MutableAccount)
@@ -1071,7 +1072,7 @@ func getOrMakeOutputs(accountGetter acm.Getter, accs map[acm.Address]acm.Mutable
 		if _, ok := accs[out.Address]; ok {
 			return nil, txs.ErrTxDuplicateAddress
 		}
-		acc, err := acm.GetMutableAccount(accountGetter, out.Address)
+		acc, err := state.GetMutableAccount(accountGetter, out.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -1214,7 +1215,7 @@ func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutp
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
+func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
 	if perm > permission.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
@@ -1224,9 +1225,9 @@ func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFl
 		return false
 	}
 
-	permString := permission.PermissionsString(perm)
+	permString := permission.String(perm)
 
-	v, err := acc.Permissions().Base.Compose(permission.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	v, err := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(accountGetter).Base).Get(perm)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", permString,
@@ -1246,7 +1247,7 @@ func HasPermission(accountGetter acm.Getter, acc acm.Account, perm ptypes.PermFl
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
+func hasSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Send, logger) {
@@ -1256,22 +1257,22 @@ func hasSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.Mutabl
 	return true
 }
 
-func hasNamePermission(accountGetter acm.Getter, acc acm.Account,
+func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
-func hasCallPermission(accountGetter acm.Getter, acc acm.Account,
+func hasCallPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
-func hasCreateContractPermission(accountGetter acm.Getter, acc acm.Account,
+func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter acm.Getter, accs map[acm.Address]acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -1281,12 +1282,12 @@ func hasCreateAccountPermission(accountGetter acm.Getter, accs map[acm.Address]a
 	return true
 }
 
-func hasBondPermission(accountGetter acm.Getter, acc acm.Account,
+func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter acm.Getter, accs map[acm.Address]acm.Account,
+func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

@@ -25,6 +25,8 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
+var GlobalPermissionsAddress = Address(binary.Zero160)
+
 // Signable is an interface for all signable things.
 // It typically removes signatures before serializing.
 type Signable interface {
@@ -212,14 +214,6 @@ func AsMutableAccount(account Account) MutableAccount {
 		return nil
 	}
 	return AsConcreteAccount(account).MutableAccount()
-}
-
-func GetMutableAccount(getter Getter, address Address) (MutableAccount, error) {
-	acc, err := getter.GetAccount(address)
-	if err != nil {
-		return nil, err
-	}
-	return AsMutableAccount(acc), nil
 }
 
 //----------------------------------------------

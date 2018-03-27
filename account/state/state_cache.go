@@ -12,48 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package account
+package state
 
 import (
 	"fmt"
 	"sort"
 	"sync"
 
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 )
 
-type StateCache interface {
-	IterableStateWriter
-	Sync(state StateWriter) error
-	Reset(backend StateIterable)
-	Flush(state IterableStateWriter) error
-	Backend() StateIterable
+type Cache interface {
+	IterableWriter
+	Sync(state Writer) error
+	Reset(backend Iterable)
+	Flush(state IterableWriter) error
+	Backend() Iterable
 }
 
 type stateCache struct {
 	sync.RWMutex
-	backend  StateIterable
-	accounts map[Address]*accountInfo
+	backend  Iterable
+	accounts map[acm.Address]*accountInfo
 }
 
 type accountInfo struct {
 	sync.RWMutex
-	account Account
+	account acm.Account
 	storage map[binary.Word256]binary.Word256
 	removed bool
 	updated bool
 }
 
-// Returns a StateCache that wraps an underlying StateReader to use on a cache miss, can write to an output StateWriter
+// Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
-func NewStateCache(backend StateIterable) StateCache {
+func NewCache(backend Iterable) Cache {
 	return &stateCache{
 		backend:  backend,
-		accounts: make(map[Address]*accountInfo),
+		accounts: make(map[acm.Address]*accountInfo),
 	}
 }
 
-func (cache *stateCache) GetAccount(address Address) (Account, error) {
+func (cache *stateCache) GetAccount(address acm.Address) (acm.Account, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (cache *stateCache) GetAccount(address Address) (Account, error) {
 	return accInfo.account, nil
 }
 
-func (cache *stateCache) UpdateAccount(account Account) error {
+func (cache *stateCache) UpdateAccount(account acm.Account) error {
 	accInfo, err := cache.get(account.Address())
 	if err != nil {
 		return err
@@ -78,10 +79,11 @@ func (cache *stateCache) UpdateAccount(account Account) error {
 	}
 	accInfo.account = account
 	accInfo.updated = true
+
 	return nil
 }
 
-func (cache *stateCache) RemoveAccount(address Address) error {
+func (cache *stateCache) RemoveAccount(address acm.Address) error {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return err
@@ -96,7 +98,7 @@ func (cache *stateCache) RemoveAccount(address Address) error {
 }
 
 // Iterates over all accounts first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateAccounts(consumer func(Account) (stop bool)) (stopped bool, err error) {
+func (cache *stateCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
 	// Try cache first for early exit
 	cache.RLock()
 	for _, info := range cache.accounts {
@@ -108,7 +110,7 @@ func (cache *stateCache) IterateAccounts(consumer func(Account) (stop bool)) (st
 	return cache.backend.IterateAccounts(consumer)
 }
 
-func (cache *stateCache) GetStorage(address Address, key binary.Word256) (binary.Word256, error) {
+func (cache *stateCache) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return binary.Zero256, err
@@ -133,7 +135,7 @@ func (cache *stateCache) GetStorage(address Address, key binary.Word256) (binary
 }
 
 // NOTE: Set value to zero to remove.
-func (cache *stateCache) SetStorage(address Address, key binary.Word256, value binary.Word256) error {
+func (cache *stateCache) SetStorage(address acm.Address, key binary.Word256, value binary.Word256) error {
 	accInfo, err := cache.get(address)
 	accInfo.Lock()
 	defer accInfo.Unlock()
@@ -149,7 +151,7 @@ func (cache *stateCache) SetStorage(address Address, key binary.Word256, value b
 }
 
 // Iterates over all storage items first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateStorage(address Address,
+func (cache *stateCache) IterateStorage(address acm.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -168,10 +170,10 @@ func (cache *stateCache) IterateStorage(address Address,
 
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating
 // the account they belong so that storage values can be taken account of in the update.
-func (cache *stateCache) Sync(state StateWriter) error {
+func (cache *stateCache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
-	var addresses Addresses
+	var addresses acm.Addresses
 	for address := range cache.accounts {
 		addresses = append(addresses, address)
 	}
@@ -212,15 +214,15 @@ func (cache *stateCache) Sync(state StateWriter) error {
 }
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
-func (cache *stateCache) Reset(backend StateIterable) {
+func (cache *stateCache) Reset(backend Iterable) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
-	cache.accounts = make(map[Address]*accountInfo, len(cache.accounts))
+	cache.accounts = make(map[acm.Address]*accountInfo, len(cache.accounts))
 }
 
-// Syncs the StateCache and Resets it to use as the backend StateReader
-func (cache *stateCache) Flush(state IterableStateWriter) error {
+// Syncs the Cache and Resets it to use as the backend Reader
+func (cache *stateCache) Flush(state IterableWriter) error {
 	err := cache.Sync(state)
 	if err != nil {
 		return err
@@ -229,12 +231,12 @@ func (cache *stateCache) Flush(state IterableStateWriter) error {
 	return nil
 }
 
-func (cache *stateCache) Backend() StateIterable {
+func (cache *stateCache) Backend() Iterable {
 	return cache.backend
 }
 
 // Get the cache accountInfo item creating it if necessary
-func (cache *stateCache) get(address Address) (*accountInfo, error) {
+func (cache *stateCache) get(address acm.Address) (*accountInfo, error) {
 	cache.RLock()
 	accInfo := cache.accounts[address]
 	cache.RUnlock()

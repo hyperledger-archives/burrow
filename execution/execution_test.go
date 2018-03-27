@@ -23,6 +23,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
@@ -35,6 +36,7 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/permission/snatives"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
@@ -165,8 +167,8 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 	}
 }
 
-//func getAccount(state acm.Getter, address acm.Address) acm.MutableAccount {
-//	acc, _ := acm.GetMutableAccount(state, address)
+//func getAccount(state state.AccountGetter, address acm.Address) acm.MutableAccount {
+//	acc, _ := state.GetMutableAccount(state, address)
 //	return acc
 //}
 
@@ -961,7 +963,7 @@ func TestSNativeTx(t *testing.T) {
 	snativeArgs = snativePermTestInputTx("setGlobal", users[3], permission.CreateContract, true)
 	testSNativeTxExpectFail(t, batchCommitter, snativeArgs)
 	testSNativeTxExpectPass(t, batchCommitter, permission.SetGlobal, snativeArgs)
-	acc = getAccount(batchCommitter.stateCache, permission.GlobalPermissionsAddress)
+	acc = getAccount(batchCommitter.stateCache, acm.GlobalPermissionsAddress)
 	if v, _ := acc.MutablePermissions().Base.Get(permission.CreateContract); !v {
 		t.Fatal("expected permission to be set true")
 	}
@@ -1717,8 +1719,8 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	return s0, privAccounts
 }
 
-func getAccount(state acm.Getter, address acm.Address) acm.MutableAccount {
-	acc, _ := acm.GetMutableAccount(state, address)
+func getAccount(accountGetter state.AccountGetter, address acm.Address) acm.MutableAccount {
+	acc, _ := state.GetMutableAccount(accountGetter, address)
 	return acc
 }
 
@@ -1814,15 +1816,17 @@ func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, do
 	}
 }
 
-func testSNativeTxExpectFail(t *testing.T, batchCommitter *executor, snativeArgs permission.PermArgs) {
+func testSNativeTxExpectFail(t *testing.T, batchCommitter *executor, snativeArgs snatives.PermArgs) {
 	testSNativeTx(t, false, batchCommitter, 0, snativeArgs)
 }
 
-func testSNativeTxExpectPass(t *testing.T, batchCommitter *executor, perm ptypes.PermFlag, snativeArgs permission.PermArgs) {
+func testSNativeTxExpectPass(t *testing.T, batchCommitter *executor, perm ptypes.PermFlag,
+	snativeArgs snatives.PermArgs) {
 	testSNativeTx(t, true, batchCommitter, perm, snativeArgs)
 }
 
-func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *executor, perm ptypes.PermFlag, snativeArgs permission.PermArgs) {
+func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *executor, perm ptypes.PermFlag,
+	snativeArgs snatives.PermArgs) {
 	if expectPass {
 		acc := getAccount(batchCommitter.stateCache, users[0].Address())
 		acc.MutablePermissions().Base.Set(perm, true)
@@ -1884,16 +1888,18 @@ func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.
 	return
 }
 
-func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag, val bool) (snativeArgs permission.PermArgs) {
+func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+	val bool) (snativeArgs snatives.PermArgs) {
+
 	switch name {
 	case "hasBase":
-		snativeArgs = permission.HasBaseArgs(user.Address(), perm)
+		snativeArgs = snatives.HasBaseArgs(user.Address(), perm)
 	case "unsetBase":
-		snativeArgs = permission.UnsetBaseArgs(user.Address(), perm)
+		snativeArgs = snatives.UnsetBaseArgs(user.Address(), perm)
 	case "setBase":
-		snativeArgs = permission.SetBaseArgs(user.Address(), perm, val)
+		snativeArgs = snatives.SetBaseArgs(user.Address(), perm, val)
 	case "setGlobal":
-		snativeArgs = permission.SetGlobalArgs(perm, val)
+		snativeArgs = snatives.SetGlobalArgs(perm, val)
 	}
 	return
 }
@@ -1912,14 +1918,14 @@ func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
 	return
 }
 
-func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs permission.PermArgs) {
+func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs snatives.PermArgs) {
 	switch name {
 	case "hasRole":
-		snativeArgs = permission.HasRoleArgs(user.Address(), role)
+		snativeArgs = snatives.HasRoleArgs(user.Address(), role)
 	case "addRole":
-		snativeArgs = permission.AddRoleArgs(user.Address(), role)
+		snativeArgs = snatives.AddRoleArgs(user.Address(), role)
 	case "removeRole":
-		snativeArgs = permission.RemoveRoleArgs(user.Address(), role)
+		snativeArgs = snatives.RemoveRoleArgs(user.Address(), role)
 	}
 	return
 }

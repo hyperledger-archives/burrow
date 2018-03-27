@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -99,7 +100,7 @@ type Params struct {
 }
 
 type VM struct {
-	state            acm.StateWriter
+	stateWriter      state.Writer
 	memoryProvider   func() Memory
 	params           Params
 	origin           acm.Address
@@ -110,10 +111,10 @@ type VM struct {
 	logger           *logging.Logger
 }
 
-func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
+func NewVM(stateWriter state.Writer, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
 	logger *logging.Logger) *VM {
 	return &VM{
-		state:          state,
+		stateWriter:    stateWriter,
 		memoryProvider: memoryProvider,
 		params:         params,
 		origin:         origin,
@@ -124,7 +125,7 @@ func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, o
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
+	//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
 }
 
 // satisfies go_events.Eventable
@@ -138,8 +139,8 @@ func (vm *VM) SetPublisher(publisher event.Publisher) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(state acm.StateWriter, acc acm.Account, perm ptypes.PermFlag) bool {
-	value, _ := acc.Permissions().Base.Compose(permission.GlobalAccountPermissions(state).Base).Get(perm)
+func HasPermission(stateWriter state.Writer, acc acm.Account, perm ptypes.PermFlag) bool {
+	value, _ := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(stateWriter).Base).Get(perm)
 	return value
 }
 
@@ -506,7 +507,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.state.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -602,7 +603,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.state.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -623,7 +624,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.state.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -716,7 +717,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data, errSto := vm.state.GetStorage(callee.Address(), loc)
+			data, errSto := vm.stateWriter.GetStorage(callee.Address(), loc)
 			if errSto != nil {
 				return nil, firstErr(err, errSto)
 			}
@@ -728,7 +729,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
 			}
-			vm.state.SetStorage(callee.Address(), loc, data)
+			vm.stateWriter.SetStorage(callee.Address(), loc, data)
 			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
 
 		case JUMP: // 0x56
@@ -813,8 +814,6 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			if vm.publisher != nil {
-				eventID := events.EventStringLogEvent(callee.Address())
-				fmt.Printf("eventID: %s\n", eventID)
 				events.PublishLogEvent(vm.publisher, callee.Address(), &events.EventDataLog{
 					Address: callee.Address(),
 					Topics:  topics,
@@ -825,7 +824,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
-			if !HasPermission(vm.state, callee, permission.CreateContract) {
+			if !HasPermission(vm.stateWriter, callee, permission.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
 			contractValue, popErr := stack.PopU64()
@@ -849,8 +848,8 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasCreateAccount, &gasErr) {
 				return nil, firstErr(err, gasErr)
 			}
-			newAccount := DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state), logger)
-			vm.state.UpdateAccount(newAccount)
+			newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(vm.stateWriter), logger)
+			vm.stateWriter.UpdateAccount(newAccount)
 
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
@@ -867,7 +866,15 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			}
 
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
-			if !HasPermission(vm.state, callee, permission.Call) {
+			upErr := vm.stateWriter.UpdateAccount(caller)
+			if upErr != nil {
+				return nil, firstErr(err, upErr)
+			}
+			upErr = vm.stateWriter.UpdateAccount(callee)
+			if upErr != nil {
+				return nil, firstErr(err, upErr)
+			}
+			if !HasPermission(vm.stateWriter, callee, permission.Call) {
 				return nil, ErrPermission{"call"}
 			}
 			gasLimit, popErr := stack.PopU64()
@@ -916,7 +923,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			var callErr error
 			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
-				ret, callErr = nativeContract(vm.state, callee, args, &gasLimit, vm.logger)
+				ret, callErr = nativeContract(vm.stateWriter, callee, args, &gasLimit, vm.logger)
 
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				var exception string
@@ -930,7 +937,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				if useGasNegative(gas, GasGetAccount, &callErr) {
 					return nil, callErr
 				}
-				acc, errAcc := acm.GetMutableAccount(vm.state, acm.AddressFromWord256(addr))
+				acc, errAcc := state.GetMutableAccount(vm.stateWriter, acm.AddressFromWord256(addr))
 				if errAcc != nil {
 					return nil, firstErr(callErr, errAcc)
 				}
@@ -951,13 +958,13 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
-						if !HasPermission(vm.state, caller, permission.CreateAccount) {
+						if !HasPermission(vm.stateWriter, caller, permission.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
 						acc = (&acm.ConcreteAccount{Address: acm.AddressFromWord256(addr)}).MutableAccount()
 					}
 					// add account to the tx cache
-					vm.state.UpdateAccount(acc)
+					vm.stateWriter.UpdateAccount(acc)
 					ret, callErr = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
 				}
 			}
@@ -993,6 +1000,17 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			// Handle remaining gas.
 			*gas += gasLimit
 
+			// In case the SNative has altered either of the accounts which we hold a mutable pointer we need access
+			// to fresh state in subsequent iterations of this call frame's EVM loop
+			var getErr error
+			caller, getErr = state.GetMutableAccount(vm.stateWriter, caller.Address())
+			if getErr != nil {
+				return nil, firstErr(err, getErr)
+			}
+			callee, getErr = state.GetMutableAccount(vm.stateWriter, callee.Address())
+			if getErr != nil {
+				return nil, firstErr(err, getErr)
+			}
 			vm.Debugf("resume %s (%v)\n", callee.Address(), gas)
 
 		case RETURN: // 0xF3
@@ -1022,7 +1040,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			receiver, errAcc := acm.GetMutableAccount(vm.state, acm.AddressFromWord256(addr))
+			receiver, errAcc := state.GetMutableAccount(vm.stateWriter, acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -1031,18 +1049,18 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				if useGasNegative(gas, GasCreateAccount, &gasErr) {
 					return nil, firstErr(err, gasErr)
 				}
-				if !HasPermission(vm.state, callee, permission.CreateContract) {
+				if !HasPermission(vm.stateWriter, callee, permission.CreateContract) {
 					return nil, firstErr(err, ErrPermission{"create_contract"})
 				}
-				receiver = DeriveNewAccount(callee, permission.GlobalAccountPermissions(vm.state), logger)
+				receiver = DeriveNewAccount(callee, state.GlobalAccountPermissions(vm.stateWriter), logger)
 			}
 
 			receiver, errAdd := receiver.AddToBalance(callee.Balance())
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
-			vm.state.UpdateAccount(receiver)
-			vm.state.RemoveAccount(callee.Address())
+			vm.stateWriter.UpdateAccount(receiver)
+			vm.stateWriter.RemoveAccount(callee.Address())
 			vm.Debugf(" => (%X) %v\n", addr[:4], callee.Balance())
 			fallthrough
 

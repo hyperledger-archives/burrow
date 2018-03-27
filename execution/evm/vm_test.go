@@ -24,6 +24,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -47,7 +48,7 @@ func newAppState() *FakeAppState {
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[permission.GlobalPermissionsAddress] = acm.ConcreteAccount{
+	fas.accounts[acm.GlobalPermissionsAddress] = acm.ConcreteAccount{
 		Permissions: permission.DefaultAccountPermissions,
 	}.Account()
 	return fas
@@ -395,7 +396,7 @@ func returnWord() []byte {
 	return MustSplice(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
-func makeAccountWithCode(state acm.Updater, name string,
+func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 	code []byte) (acm.MutableAccount, acm.Address) {
 	address, _ := acm.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
@@ -404,7 +405,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 		Code:     code,
 		Sequence: 0,
 	}.MutableAccount()
-	state.UpdateAccount(account)
+	accountUpdater.UpdateAccount(account)
 	return account, account.Address()
 }
 

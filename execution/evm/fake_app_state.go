@@ -20,6 +20,7 @@ import (
 	"bytes"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 )
 
@@ -28,7 +29,7 @@ type FakeAppState struct {
 	storage  map[string]Word256
 }
 
-var _ acm.StateWriter = &FakeAppState{}
+var _ state.Writer = &FakeAppState{}
 
 func (fas *FakeAppState) GetAccount(addr acm.Address) (acm.Account, error) {
 	account := fas.accounts[addr]

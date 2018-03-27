@@ -18,7 +18,8 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/permission/snatives"
 )
 
 //----------------------------------------------------------------------------
@@ -31,7 +32,7 @@ func NewSendTx() *SendTx {
 	}
 }
 
-func (tx *SendTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
+func (tx *SendTx) AddInput(st state.AccountGetter, pubkey acm.PublicKey, amt uint64) error {
 	addr := pubkey.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -74,7 +75,7 @@ func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccoun
 //----------------------------------------------------------------------------
 // CallTx interface for creating tx
 
-func NewCallTx(st acm.Getter, from acm.PublicKey, to *acm.Address, data []byte,
+func NewCallTx(st state.AccountGetter, from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
 	addr := from.Address()
@@ -116,7 +117,7 @@ func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 //----------------------------------------------------------------------------
 // NameTx interface for creating tx
 
-func NewNameTx(st acm.Getter, from acm.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
+func NewNameTx(st state.AccountGetter, from acm.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -162,7 +163,7 @@ func NewBondTx(pubkey acm.PublicKey) (*BondTx, error) {
 	}, nil
 }
 
-func (tx *BondTx) AddInput(st acm.Getter, pubkey acm.PublicKey, amt uint64) error {
+func (tx *BondTx) AddInput(st state.AccountGetter, pubkey acm.PublicKey, amt uint64) error {
 	addr := pubkey.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -237,7 +238,7 @@ func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
 //----------------------------------------------------------------------------
 // PermissionsTx interface for creating tx
 
-func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (*PermissionsTx, error) {
+func NewPermissionsTx(st state.AccountGetter, from acm.PublicKey, args snatives.PermArgs) (*PermissionsTx, error) {
 	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -251,7 +252,7 @@ func NewPermissionsTx(st acm.Getter, from acm.PublicKey, args ptypes.PermArgs) (
 	return NewPermissionsTxWithSequence(from, args, sequence), nil
 }
 
-func NewPermissionsTxWithSequence(from acm.PublicKey, args ptypes.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithSequence(from acm.PublicKey, args snatives.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
 		Address:   from.Address(),
 		Amount:    1, // NOTE: amounts can't be 0 ...
