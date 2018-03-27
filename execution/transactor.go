@@ -23,6 +23,7 @@ import (
 	"runtime/debug"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
@@ -61,7 +62,7 @@ type Transactor interface {
 type transactor struct {
 	txMtx            sync.Mutex
 	blockchain       blockchain.Blockchain
-	state            acm.StateIterable
+	state            state.Iterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           *logging.Logger
@@ -69,7 +70,7 @@ type transactor struct {
 
 var _ Transactor = &transactor{}
 
-func NewTransactor(blockchain blockchain.Blockchain, state acm.StateIterable, eventEmitter event.Emitter,
+func NewTransactor(blockchain blockchain.Blockchain, state state.Iterable, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
 	logger *logging.Logger) *transactor {
 
@@ -91,7 +92,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 			"contract that calls the native function instead", toAddress)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := acm.GetMutableAccount(trans.state, toAddress)
+	callee, err := state.GetMutableAccount(trans.state, toAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := acm.NewStateCache(trans.state)
+	txCache := state.NewCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("Call"))
@@ -125,7 +126,7 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := acm.NewStateCache(trans.state)
+	txCache := state.NewCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("CallCode"))

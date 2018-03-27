@@ -24,6 +24,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -38,7 +39,8 @@ import (
 )
 
 // Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below
-//var logger, _ = lifecycle.NewStdErrLogger()
+//var logger, _, _ = lifecycle.NewStdErrLogger()
+//
 var logger = logging.NewNoopLogger()
 
 func newAppState() *FakeAppState {
@@ -47,7 +49,7 @@ func newAppState() *FakeAppState {
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[permission.GlobalPermissionsAddress] = acm.ConcreteAccount{
+	fas.accounts[acm.GlobalPermissionsAddress] = acm.ConcreteAccount{
 		Permissions: permission.DefaultAccountPermissions,
 	}.Account()
 	return fas
@@ -211,7 +213,7 @@ func TestSendCall(t *testing.T) {
 	account2, err = newAccount(2).AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
-	assert.Error(t, err, "Expected insufficient gas error")
+	assert.NoError(t, err, "Expected insufficient gas error")
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
@@ -220,8 +222,8 @@ func TestSendCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	state := newAppState()
-	ourVm := NewVM(state, newParams(), acm.ZeroAddress, nil, logger)
+	appState := newAppState()
+	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -241,7 +243,7 @@ func TestDelegateCallGas(t *testing.T) {
 	costBetweenGasAndDelegateCall := gasCost + subCost + delegateCallCost + pushCost
 
 	// Do a simple operation using 1 gas unit
-	calleeAccount, calleeAddress := makeAccountWithCode(state, "callee",
+	calleeAccount, calleeAddress := makeAccountWithCode(appState, "callee",
 		MustSplice(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
@@ -254,7 +256,7 @@ func TestDelegateCallGas(t *testing.T) {
 	callerCodeSuffix := MustSplice(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
-	callerAccount, _ := makeAccountWithCode(state, "caller",
+	callerAccount, _ := makeAccountWithCode(appState, "caller",
 		MustSplice(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
@@ -274,17 +276,17 @@ func TestDelegateCallGas(t *testing.T) {
 	// Should fail
 	_, err = runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
 		callerAccount.Code(), 100)
-	assert.Error(t, err, "Should have insufficient funds for call")
+	assert.Error(t, err, "Should have insufficient gas for call")
 }
 
 func TestMemoryBounds(t *testing.T) {
-	state := newAppState()
+	appState := newAppState()
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(state, newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
-	caller, _ := makeAccountWithCode(state, "caller", nil)
-	callee, _ := makeAccountWithCode(state, "callee", nil)
+	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
+	caller, _ := makeAccountWithCode(appState, "caller", nil)
+	callee, _ := makeAccountWithCode(appState, "callee", nil)
 	gas := uint64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
@@ -395,7 +397,7 @@ func returnWord() []byte {
 	return MustSplice(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
-func makeAccountWithCode(state acm.Updater, name string,
+func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 	code []byte) (acm.MutableAccount, acm.Address) {
 	address, _ := acm.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
@@ -404,7 +406,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 		Code:     code,
 		Sequence: 0,
 	}.MutableAccount()
-	state.UpdateAccount(account)
+	accountUpdater.UpdateAccount(account)
 	return account, account.Address()
 }
 

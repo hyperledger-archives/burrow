@@ -22,11 +22,11 @@ func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPerm
 	addr := acm.NewContractAddress(creator.Address(), sequence)
 
 	// Create account from address.
-	return (&acm.ConcreteAccount{
+	return acm.ConcreteAccount{
 		Address:     addr,
 		Balance:     0,
 		Code:        nil,
 		Sequence:    0,
 		Permissions: permissions,
-	}).MutableAccount()
+	}.MutableAccount()
 }

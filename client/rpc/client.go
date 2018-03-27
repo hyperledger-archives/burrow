@@ -24,6 +24,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/permission/snatives"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -114,7 +115,7 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 	if err != nil {
 		return nil, fmt.Errorf("could not convert action '%s' to PermFlag: %v", action, err)
 	}
-	permArgs := ptypes.PermArgs{
+	permArgs := snatives.PermArgs{
 		PermFlag: permFlag,
 	}
 
