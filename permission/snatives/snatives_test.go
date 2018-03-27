@@ -1,18 +1,19 @@
-package permission
+package snatives
 
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPermArgs_String(t *testing.T) {
 	role := "foo"
 	value := true
-	permission := AddRole | RemoveRole
+	permFlag := permission.AddRole | permission.RemoveRole
 	permArgs := PermArgs{
-		PermFlag:   SetBase,
-		Permission: &permission,
+		PermFlag:   permission.SetBase,
+		Permission: &permFlag,
 		Role:       &role,
 		Value:      &value,
 	}

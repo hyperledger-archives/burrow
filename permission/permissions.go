@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/permission/types"
 )
 
@@ -194,22 +193,4 @@ func PermStringToFlag(perm string) (types.PermFlag, error) {
 	default:
 		return 0, fmt.Errorf("unknown permission %s", perm)
 	}
-}
-
-func GlobalPermissionsAccount(state acm.Getter) acm.Account {
-	acc, err := state.GetAccount(GlobalPermissionsAddress)
-	if err != nil {
-		panic("Could not get global permission account, but this must exist")
-	}
-	return acc
-}
-
-// Get global permissions from the account at GlobalPermissionsAddress
-func GlobalAccountPermissions(state acm.Getter) types.AccountPermissions {
-	if state == nil {
-		return types.AccountPermissions{
-			Roles: []string{},
-		}
-	}
-	return GlobalPermissionsAccount(state).Permissions()
 }

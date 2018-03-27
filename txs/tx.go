@@ -21,7 +21,7 @@ import (
 	"io"
 
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/permission/snatives"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/go-wire/data"
 	"golang.org/x/crypto/ripemd160"
@@ -166,7 +166,7 @@ type (
 
 	PermissionsTx struct {
 		Input    *TxInput
-		PermArgs ptypes.PermArgs
+		PermArgs snatives.PermArgs
 		txHashMemoizer
 	}
 
