@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
+	"math/big"
 )
 
 var (
@@ -126,6 +127,7 @@ func NewVM(stateWriter state.Writer, memoryProvider func() Memory, params Params
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
 	//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
+	fmt.Printf(format, a...)
 }
 
 // satisfies go_events.Eventable
@@ -276,19 +278,19 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case ADD: // 0x01
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			sum := x.Add(x, y)
+			sum := new(big.Int).Add(x, y)
 			res := stack.PushBigInt(sum)
 			vm.Debugf(" %v + %v = %v (%X)\n", x, y, sum, res)
 
 		case MUL: // 0x02
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			prod := x.Mul(x, y)
+			prod := new(big.Int).Mul(x, y)
 			res := stack.PushBigInt(prod)
 			vm.Debugf(" %v * %v = %v (%X)\n", x, y, prod, res)
 
 		case SUB: // 0x03
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			diff := x.Sub(x, y)
+			diff := new(big.Int).Sub(x, y)
 			res := stack.PushBigInt(diff)
 			vm.Debugf(" %v - %v = %v (%X)\n", x, y, diff, res)
 
@@ -298,7 +300,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %x / %x = %v\n", x, y, 0)
 			} else {
-				div := x.Div(x, y)
+				div := new(big.Int).Div(x, y)
 				res := stack.PushBigInt(div)
 				vm.Debugf(" %v / %v = %v (%X)\n", x, y, div, res)
 			}
@@ -309,7 +311,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %x / %x = %v\n", x, y, 0)
 			} else {
-				div := x.Div(x, y)
+				div := new(big.Int).Div(x, y)
 				res := stack.PushBigInt(div)
 				vm.Debugf(" %v / %v = %v (%X)\n", x, y, div, res)
 			}
@@ -320,7 +322,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := x.Mod(x, y)
+				mod := new(big.Int).Mod(x, y)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v %% %v = %v (%X)\n", x, y, mod, res)
 			}
@@ -331,7 +333,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := x.Mod(x, y)
+				mod := new(big.Int).Mod(x, y)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v %% %v = %v (%X)\n", x, y, mod, res)
 			}
@@ -342,7 +344,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				add := x.Add(x, y)
+				add := new(big.Int).Add(x, y)
 				mod := add.Mod(add, z)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v + %v %% %v = %v (%X)\n", x, y, z, mod, res)
@@ -354,7 +356,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				stack.Push(Zero256)
 				vm.Debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mul := x.Mul(x, y)
+				mul := new(big.Int).Mul(x, y)
 				mod := mul.Mod(mul, z)
 				res := stack.PushBigInt(mod)
 				vm.Debugf(" %v * %v %% %v = %v (%X)\n", x, y, z, mod, res)
@@ -362,7 +364,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 		case EXP: // 0x0A
 			x, y := stack.PopBigInt(), stack.PopBigInt()
-			pow := x.Exp(x, y, nil)
+			pow := new(big.Int).Exp(x, y, nil)
 			res := stack.PushBigInt(pow)
 			vm.Debugf(" %v ** %v = %v (%X)\n", x, y, pow, res)
 
@@ -722,7 +724,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, firstErr(err, errSto)
 			}
 			stack.Push(data)
-			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
+			vm.Debugf("%s {0x%X = 0x%X}\n", callee.Address(), loc, data)
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
@@ -730,7 +732,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, err
 			}
 			vm.stateWriter.SetStorage(callee.Address(), loc, data)
-			vm.Debugf(" {0x%X : 0x%X}\n", loc, data)
+			vm.Debugf("%s {0x%X := 0x%X}\n", callee.Address(), loc, data)
 
 		case JUMP: // 0x56
 			to, popErr := stack.Pop64()
@@ -921,6 +923,7 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			// Begin execution
 			var ret []byte
 			var callErr error
+
 			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
 				ret, callErr = nativeContract(vm.stateWriter, callee, args, &gasLimit, vm.logger)
@@ -1073,7 +1076,6 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 			vm.Debugf("(pc) %-3v Invalid opcode %X\n", pc, op)
 			return nil, fmt.Errorf("invalid opcode %X", op)
 		}
-
 		pc++
 	}
 }
