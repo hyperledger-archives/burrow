@@ -10,6 +10,7 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 PACKAGES_NOVENDOR := $(shell go list ./...)
+COMMIT := $(shell git rev-parse --short HEAD)
 # Bosmarmot integration testing
 BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
@@ -99,7 +100,7 @@ build_race:	check build_race_db build_race_client
 # build burrow
 .PHONY: build_db
 build_db:
-	go build -o ${REPO}/bin/burrow ./cmd/burrow
+	go build -ldflags "-X github.com/hyperledger/burrow/project.commit=${COMMIT}" -o ${REPO}/bin/burrow ./cmd/burrow
 
 # build burrow-client
 .PHONY: build_client

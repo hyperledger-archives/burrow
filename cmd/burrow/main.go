@@ -34,7 +34,7 @@ func main() {
 
 	burrow.Action = func() {
 		if *versionOpt {
-			fmt.Println(project.History.CurrentVersion().String())
+			fmt.Println(project.FullVersion())
 			os.Exit(0)
 		}
 		// We need to reflect on whether this obscures where values are coming from
