@@ -68,6 +68,8 @@ type Account interface {
 	// Obtain a deterministic serialisation of this account
 	// (i.e. update order and Go runtime independent)
 	Encode() ([]byte, error)
+	// String representation of the account
+	String() string
 }
 
 type MutableAccount interface {
@@ -258,6 +260,10 @@ func (caw concreteAccountWrapper) Permissions() ptypes.AccountPermissions {
 
 func (caw concreteAccountWrapper) Encode() ([]byte, error) {
 	return caw.ConcreteAccount.Encode()
+}
+
+func (caw concreteAccountWrapper) String() string {
+	return caw.ConcreteAccount.String()
 }
 
 func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {

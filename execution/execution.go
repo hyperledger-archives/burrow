@@ -359,11 +359,13 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				if outAcc == nil {
 					logger.InfoMsg("Call to address that does not exist",
 						"caller_address", inAcc.Address(),
-						"callee_address", tx.Address)
+						"callee_address", tx.Address,
+						"out_acc", outAcc.String())
 				} else {
 					logger.InfoMsg("Call to address that holds no code",
 						"caller_address", inAcc.Address(),
-						"callee_address", tx.Address)
+						"callee_address", tx.Address,
+						"out_acc", outAcc.String())
 				}
 				err = txs.ErrTxInvalidAddress
 				goto CALL_COMPLETE
