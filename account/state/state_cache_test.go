@@ -22,14 +22,14 @@ func TestStateCache_GetAccount(t *testing.T) {
 	accOut, err := cache.GetAccount(acc.Address())
 	require.NoError(t, err)
 	cache.UpdateAccount(accOut)
-	assert.Equal(t, acc, *acm.AsConcreteAccount(accOut))
+	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
 
 	err = cache.Sync(writeBackend)
 	require.NoError(t, err)
 	accOut, err = writeBackend.GetAccount(acc.Address())
 	require.NotNil(t, accOut)
 	assert.NoError(t, err)
-	assert.Equal(t, acc, *acm.AsConcreteAccount(accOut))
+	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
 }
 
 func TestStateCache_UpdateAccount(t *testing.T) {
