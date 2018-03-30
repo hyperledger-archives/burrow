@@ -55,6 +55,8 @@ const (
 	callStackCapacity = 100 // TODO ensure usage.
 )
 
+var Debug = false
+
 type ErrPermission struct {
 	typ string
 }
@@ -127,8 +129,10 @@ func NewVM(stateWriter state.Writer, memoryProvider func() Memory, params Params
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
-	fmt.Printf(format, a...)
+	if Debug {
+		//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
+		fmt.Printf(format, a...)
+	}
 }
 
 // satisfies go_events.Eventable
