@@ -4,6 +4,23 @@ import (
 	"github.com/monax/relic"
 )
 
+// Can be used to set the commit hash version of the binary at build time with:
+// `go build -ldflags "-X github.com/hyperledger/burrow/project.commit=$(git rev-parse --short HEAD)" ./cmd/burrow`
+
+var commit = ""
+
+func Commit() string {
+	return commit
+}
+
+func FullVersion() string {
+	version := History.CurrentVersion().String()
+	if commit != "" {
+		return version + "+commit." + commit
+	}
+	return version
+}
+
 // The releases described by version string and changes, newest release first.
 // The current release is taken to be the first release in the slice, and its
 // version determines the single authoritative version for the next release.
