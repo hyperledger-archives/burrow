@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 
+	"math/big"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
@@ -29,7 +31,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"math/big"
 )
 
 var (
