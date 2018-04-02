@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdlib
+package execution
 
 import (
-	"io"
-	"log"
-
-	kitlog "github.com/go-kit/kit/log"
-	"github.com/hyperledger/burrow/logging"
+	"testing"
 )
 
-func Capture(stdLibLogger log.Logger, logger *logging.Logger) io.Writer {
-	adapter := newAdapter(logger)
-	stdLibLogger.SetOutput(adapter)
-	return adapter
+// TODO: tests
+func TestNewNameRegCache(t *testing.T) {
 }
 
-func CaptureRootLogger(logger *logging.Logger) io.Writer {
-	adapter := newAdapter(logger)
-	log.SetOutput(adapter)
-	return adapter
+func TestNameRegCache_GetNameRegEntry(t *testing.T) {
 }
 
-func newAdapter(logger *logging.Logger) io.Writer {
-	return kitlog.NewStdlibAdapter(logger.Trace)
+func TestNameRegCache_UpdateNameRegEntry(t *testing.T) {
+}
+
+func TestNameRegCache_RemoveNameRegEntry(t *testing.T) {
+}
+
+func TestNameRegCache_Sync(t *testing.T) {
+
+}
+
+func TestNameRegCache_get(t *testing.T) {
 }

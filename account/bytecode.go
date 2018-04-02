@@ -75,8 +75,8 @@ func (bc Bytecode) Tokens() ([]string, error) {
 			return tokens, fmt.Errorf("did not recognise byte %#x at position %v as an OpCode:\n %s",
 				bc[i], i, lexingPositionString(bc, i, tokens))
 		}
-		tokens = append(tokens, op.Name())
 		pushes := op.Pushes()
+		tokens = append(tokens, op.Name())
 		if pushes > 0 {
 			// This is a PUSH<N> OpCode so consume N bytes from the input, render them as hex, and skip to next OpCode
 			if i+pushes >= len(bc) {

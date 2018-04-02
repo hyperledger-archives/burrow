@@ -20,7 +20,10 @@ import (
 	"sync"
 	"time"
 
+	"runtime/debug"
+
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
@@ -30,7 +33,6 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire"
@@ -60,17 +62,17 @@ type Transactor interface {
 type transactor struct {
 	txMtx            sync.Mutex
 	blockchain       blockchain.Blockchain
-	state            acm.StateReader
+	state            state.Iterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
-	logger           logging_types.InfoTraceLogger
+	logger           *logging.Logger
 }
 
 var _ Transactor = &transactor{}
 
-func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.Emitter,
+func NewTransactor(blockchain blockchain.Blockchain, state state.Iterable, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
-	logger logging_types.InfoTraceLogger) *transactor {
+	logger *logging.Logger) *transactor {
 
 	return &transactor{
 		blockchain:       blockchain,
@@ -83,14 +85,14 @@ func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, even
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (*Call, error) {
+func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (call *Call, err error) {
 	if evm.RegisteredNativeContract(toAddress.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
 			"contract that calls the native function instead", toAddress)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := acm.GetMutableAccount(trans.state, toAddress)
+	callee, err := state.GetMutableAccount(trans.state, toAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -98,14 +100,19 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := state.NewCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
-		logging.WithScope(trans.logger, "Call"))
+		trans.logger.WithScope("Call"))
 	vmach.SetPublisher(trans.eventEmitter)
 
 	gas := params.GasLimit
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic from VM in simulated call: %v\n%s", r, debug.Stack())
+		}
+	}()
 	ret, err := vmach.Call(caller, callee, callee.Code(), data, 0, &gas)
 	if err != nil {
 		return nil, err
@@ -120,11 +127,11 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := state.NewCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
-		logging.WithScope(trans.logger, "CallCode"))
+		trans.logger.WithScope("CallCode"))
 	gas := params.GasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {
@@ -140,6 +147,9 @@ func (trans *transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_typ
 
 // Broadcast a transaction.
 func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+	trans.logger.Trace.Log("method", "BroadcastTx",
+		"tx_hash", tx.Hash(trans.blockchain.ChainID()),
+		"tx", tx.String())
 	responseCh := make(chan *abci_types.Response, 1)
 	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
 		responseCh <- res

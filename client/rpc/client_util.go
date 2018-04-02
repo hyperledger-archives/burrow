@@ -22,7 +22,6 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -89,7 +88,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return
 	} else if pubkey != "" {
 		if addr != "" {
-			logging.InfoMsg(nodeClient.Logger(), "Both a public key and an address have been specified. The public key takes precedent.",
+			nodeClient.Logger().InfoMsg("Both a public key and an address have been specified. The public key takes precedent.",
 				"public_key", pubkey,
 				"address", addr,
 			)
@@ -141,7 +140,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			return pub, amt, sequence, err2
 		}
 		sequence = account.Sequence() + 1
-		logging.TraceMsg(nodeClient.Logger(), "Fetch sequence from node",
+		nodeClient.Logger().TraceMsg("Fetch sequence from node",
 			"sequence", sequence,
 			"account address", address,
 		)

@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
@@ -30,19 +29,19 @@ type abciApp struct {
 	// Utility
 	txDecoder txs.Decoder
 	// Logging
-	logger logging_types.InfoTraceLogger
+	logger *logging.Logger
 }
 
 func NewApp(blockchain bcm.MutableBlockchain,
 	checker execution.BatchExecutor,
 	committer execution.BatchCommitter,
-	logger logging_types.InfoTraceLogger) abci_types.Application {
+	logger *logging.Logger) abci_types.Application {
 	return &abciApp{
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
 		txDecoder:  txs.NewGoWireCodec(),
-		logger:     logging.WithScope(logger.With(structure.ComponentKey, "ABCI_App"), "abci.NewApp"),
+		logger:     logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App"),
 	}
 }
 
@@ -73,7 +72,8 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 	defer app.mtx.Unlock()
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
-		logging.TraceMsg(app.logger, "CheckTx decoding error",
+		app.logger.TraceMsg("CheckTx decoding error",
+			"tag", "CheckTx",
 			structure.ErrorKey, err)
 		return abci_types.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
@@ -85,8 +85,9 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 
 	err = app.checker.Execute(tx)
 	if err != nil {
-		logging.TraceMsg(app.logger, "CheckTx execution error",
+		app.logger.TraceMsg("CheckTx execution error",
 			structure.ErrorKey, err,
+			"tag", "CheckTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseCheckTx{
@@ -96,7 +97,8 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 	}
 
 	receiptBytes := wire.BinaryBytes(receipt)
-	logging.TraceMsg(app.logger, "CheckTx success",
+	app.logger.TraceMsg("CheckTx success",
+		"tag", "CheckTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
 	return abci_types.ResponseCheckTx{
@@ -121,7 +123,8 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 	defer app.mtx.Unlock()
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
-		logging.TraceMsg(app.logger, "DeliverTx decoding error",
+		app.logger.TraceMsg("DeliverTx decoding error",
+			"tag", "DeliverTx",
 			structure.ErrorKey, err)
 		return abci_types.ResponseDeliverTx{
 			Code: codes.EncodingErrorCode,
@@ -132,8 +135,9 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 	receipt := txs.GenerateReceipt(app.blockchain.ChainID(), tx)
 	err = app.committer.Execute(tx)
 	if err != nil {
-		logging.TraceMsg(app.logger, "DeliverTx execution error",
+		app.logger.TraceMsg("DeliverTx execution error",
 			structure.ErrorKey, err,
+			"tag", "DeliverTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseDeliverTx{
@@ -142,7 +146,8 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 		}
 	}
 
-	logging.TraceMsg(app.logger, "DeliverTx success",
+	app.logger.TraceMsg("DeliverTx success",
+		"tag", "DeliverTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
 	receiptBytes := wire.BinaryBytes(receipt)
@@ -162,34 +167,43 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 	app.mtx.Lock()
 	defer app.mtx.Unlock()
 	tip := app.blockchain.Tip()
-	logging.InfoMsg(app.logger, "Committing block",
+	app.logger.InfoMsg("Committing block",
+		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
-		"block_height", tip.LastBlockHeight(),
+		"block_height", app.block.Header.Height,
 		"block_hash", app.block.Hash,
 		"block_time", app.block.Header.Time,
 		"num_txs", app.block.Header.NumTxs,
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
+	err := app.checker.Reset()
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
+		}
+	}
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit block: %s", err),
+			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
 		}
 	}
-	// Just kill the cache - it is badly implemented
-	app.committer.Reset()
-
-	logging.InfoMsg(app.logger, "Resetting transaction check cache")
-	app.checker.Reset()
 
 	// Commit to our blockchain state
-	app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
+		}
+	}
 
 	// Perform a sanity check our block height
 	if app.blockchain.LastBlockHeight() != uint64(app.block.Header.Height) {
-		logging.InfoMsg(app.logger, "Burrow block height disagrees with Tendermint block height",
+		app.logger.InfoMsg("Burrow block height disagrees with Tendermint block height",
 			structure.ScopeKey, "Commit()",
 			"burrow_height", app.blockchain.LastBlockHeight(),
 			"tendermint_height", app.block.Header.Height)

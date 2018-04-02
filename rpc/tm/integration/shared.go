@@ -35,8 +35,9 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
@@ -55,7 +56,7 @@ const (
 )
 
 // Enable logger output during tests
-var debugLogging = false
+var debugLogging = true
 
 // global variables for use across all tests
 var (
@@ -72,16 +73,36 @@ var (
 
 // We use this to wrap tests
 func TestWrapper(runner func() int) int {
-	fmt.Println("Running with integration TestWrapper (rpc/tm/client/shared.go)...")
+	fmt.Println("Running with integration TestWrapper (rpc/tm/integration/shared.go)...")
 
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
-	logger := loggers.NewNoopInfoTraceLogger()
+	logger := logging.NewNoopLogger()
 	if debugLogging {
-		logger, _, _ = lifecycle.NewStdErrLogger()
+		var err error
+		// Change config as needed
+		logger, err = lifecycle.NewLoggerFromLoggingConfig(&config.LoggingConfig{
+			RootSink: config.Sink().
+				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
+					//"","",
+					"method", "GetAccount",
+					"method", "BroadcastTx",
+					"tag", "sequence",
+					"tag", "Commit",
+					"tag", "CheckTx",
+					"tag", "DeliverTx",
+				)).
+				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
+				AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).
+					AddSinks(config.Sink().SetTransform(config.SortTransform("tx_hash", "time", "message", "method")).
+						SetOutput(config.StdoutOutput()))),
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
@@ -90,7 +111,10 @@ func TestWrapper(runner func() int) int {
 	if err != nil {
 		panic(err)
 	}
-	defer kernel.Shutdown(context.Background())
+	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
+	defer func() {
+		//kernel.Shutdown(context.Background())
+	}()
 
 	err = kernel.Boot()
 	if err != nil {
@@ -165,7 +189,6 @@ func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value str
 
 // get an account's sequence number
 func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uint64 {
-
 	acc, err := tm_client.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)

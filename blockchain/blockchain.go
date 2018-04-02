@@ -15,13 +15,19 @@
 package blockchain
 
 import (
-	"time"
-
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"sync"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
+	dbm "github.com/tendermint/tmlibs/db"
 )
+
+var stateKey = []byte("BlockchainState")
 
 // Immutable Root of blockchain
 type Root interface {
@@ -56,7 +62,7 @@ type Blockchain interface {
 
 type MutableBlockchain interface {
 	Blockchain
-	CommitBlock(blockTime time.Time, blockHash, appHash []byte)
+	CommitBlock(blockTime time.Time, blockHash, appHash []byte) error
 }
 
 type root struct {
@@ -74,6 +80,7 @@ type tip struct {
 
 type blockchain struct {
 	sync.RWMutex
+	db dbm.DB
 	*root
 	*tip
 	validators []acm.Validator
@@ -84,8 +91,38 @@ var _ Tip = &blockchain{}
 var _ Blockchain = &blockchain{}
 var _ MutableBlockchain = &blockchain{}
 
+type PersistedState struct {
+	AppHashAfterLastBlock []byte
+	LastBlockHeight       uint64
+	GenesisDoc            genesis.GenesisDoc
+}
+
+func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
+	logger *logging.Logger) (*blockchain, error) {
+
+	logger = logger.WithScope("LoadOrNewBlockchain")
+	logger.InfoMsg("Trying to load blockchain state from database",
+		"database_key", stateKey)
+	blockchain, err := LoadBlockchain(db)
+	if err != nil {
+		return nil, fmt.Errorf("error loading blockchain state from database: %v", err)
+	}
+	if blockchain != nil {
+		dbHash := blockchain.genesisDoc.Hash()
+		argHash := genesisDoc.Hash()
+		if !bytes.Equal(dbHash, argHash) {
+			return nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
+				"match the one found in database: 0x%X", argHash, dbHash)
+		}
+		return blockchain, nil
+	}
+
+	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
+	return NewBlockchain(db, genesisDoc), nil
+}
+
 // Pointer to blockchain state initialised from genesis
-func NewBlockchain(genesisDoc *genesis.GenesisDoc) *blockchain {
+func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
 	var validators []acm.Validator
 	for _, gv := range genesisDoc.Validators {
 		validators = append(validators, acm.ConcreteValidator{
@@ -95,6 +132,7 @@ func NewBlockchain(genesisDoc *genesis.GenesisDoc) *blockchain {
 	}
 	root := NewRoot(genesisDoc)
 	return &blockchain{
+		db:   db,
 		root: root,
 		tip: &tip{
 			lastBlockTime:         root.genesisDoc.GenesisTime,
@@ -102,6 +140,21 @@ func NewBlockchain(genesisDoc *genesis.GenesisDoc) *blockchain {
 		},
 		validators: validators,
 	}
+}
+
+func LoadBlockchain(db dbm.DB) (*blockchain, error) {
+	buf := db.Get(stateKey)
+	if len(buf) == 0 {
+		return nil, nil
+	}
+	persistedState, err := Decode(buf)
+	if err != nil {
+		return nil, err
+	}
+	blockchain := NewBlockchain(db, &persistedState.GenesisDoc)
+	blockchain.lastBlockHeight = persistedState.LastBlockHeight
+	blockchain.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
+	return blockchain, nil
 }
 
 func NewRoot(genesisDoc *genesis.GenesisDoc) *root {
@@ -122,13 +175,25 @@ func NewTip(lastBlockHeight uint64, lastBlockTime time.Time, lastBlockHash []byt
 	}
 }
 
-func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) {
+func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
 	bc.Lock()
 	defer bc.Unlock()
 	bc.lastBlockHeight += 1
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
+	return bc.save()
+}
+
+func (bc *blockchain) save() error {
+	if bc.db != nil {
+		encodedState, err := bc.Encode()
+		if err != nil {
+			return err
+		}
+		bc.db.SetSync(stateKey, encodedState)
+	}
+	return nil
 }
 
 func (bc *blockchain) Root() Root {
@@ -150,6 +215,28 @@ func (bc *blockchain) Validators() []acm.Validator {
 		vs[i] = v
 	}
 	return vs
+}
+
+func (bc *blockchain) Encode() ([]byte, error) {
+	persistedState := &PersistedState{
+		GenesisDoc:            bc.genesisDoc,
+		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
+		LastBlockHeight:       bc.lastBlockHeight,
+	}
+	encodedState, err := json.Marshal(persistedState)
+	if err != nil {
+		return nil, err
+	}
+	return encodedState, nil
+}
+
+func Decode(encodedState []byte) (*PersistedState, error) {
+	persistedState := new(PersistedState)
+	err := json.Unmarshal(encodedState, persistedState)
+	if err != nil {
+		return nil, err
+	}
+	return persistedState, nil
 }
 
 func (r *root) ChainID() string {

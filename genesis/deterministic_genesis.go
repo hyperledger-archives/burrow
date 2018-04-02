@@ -21,7 +21,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 }
 
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
-	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount) {
+	randBonded bool, minBonded int64) (*GenesisDoc, []acm.PrivateAccount, []acm.PrivateAccount) {
 
 	accounts := make([]Account, numAccounts)
 	privAccounts := make([]acm.PrivateAccount, numAccounts)
@@ -38,8 +38,10 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		privAccounts[i] = privAccount
 	}
 	validators := make([]Validator, numValidators)
+	privValidators := make([]acm.PrivateAccount, numValidators)
 	for i := 0; i < numValidators; i++ {
 		validator := acm.GeneratePrivateAccountFromSecret(fmt.Sprintf("val_%v", i))
+		privValidators[i] = validator
 		validators[i] = Validator{
 			BasicAccount: BasicAccount{
 				Address:   validator.Address(),
@@ -59,7 +61,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		GenesisTime: time.Unix(1506172037, 0),
 		Accounts:    accounts,
 		Validators:  validators,
-	}, privAccounts
+	}, privAccounts, privValidators
 
 }
 

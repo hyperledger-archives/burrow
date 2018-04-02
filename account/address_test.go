@@ -1,9 +1,9 @@
 package account
 
 import (
-	"testing"
-
 	"encoding/json"
+	"sort"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,4 +69,20 @@ func TestAddress_Length(t *testing.T) {
 
 	err = addrOut.UnmarshalText(([]byte)("49EA30FCAE731BDE36742F85901549F515EA1A1020"))
 	assert.Error(t, err, "address too long")
+}
+
+func TestAddress_Sort(t *testing.T) {
+	addresses := Addresses{
+		{2, 3, 4},
+		{3, 1, 2},
+		{2, 1, 2},
+	}
+	sorted := make(Addresses, len(addresses))
+	copy(sorted, addresses)
+	sort.Stable(sorted)
+	assert.Equal(t, Addresses{
+		{2, 1, 2},
+		{2, 3, 4},
+		{3, 1, 2},
+	}, sorted)
 }

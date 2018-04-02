@@ -6,7 +6,6 @@ import (
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/logging/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,11 +15,11 @@ func TestBuildSinkConfig(t *testing.T) {
 	require.NoError(t, err)
 	expectedSink := config.Sink().
 		SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
-			structure.ChannelKey, types.InfoChannelName)).SetOutput(config.StdoutOutput().SetFormat(loggers.TerminalFormat)).AddSinks(
+			structure.ChannelKey, structure.InfoChannelName)).SetOutput(config.StdoutOutput().SetFormat(loggers.TerminalFormat)).AddSinks(
 		config.Sink().SetTransform(config.FilterTransform(config.NoFilterMode,
-			structure.ChannelKey, types.InfoChannelName)).SetOutput(config.StderrOutput()).AddSinks(
+			structure.ChannelKey, structure.InfoChannelName)).SetOutput(config.StderrOutput()).AddSinks(
 			config.Sink().SetTransform(config.FilterTransform(config.NoFilterMode,
-				structure.ChannelKey, types.InfoChannelName)).SetOutput(config.StdoutOutput())))
+				structure.ChannelKey, structure.InfoChannelName)).SetOutput(config.StdoutOutput())))
 
 	//fmt.Println(config.JSONString(expectedSink), "\n", config.JSONString(builtSink))
 	assert.Equal(t, config.JSONString(expectedSink), config.JSONString(builtSink))
@@ -32,7 +31,7 @@ func TestMinimalPreset(t *testing.T) {
 	expectedSink := config.Sink().
 		AddSinks(config.Sink().SetTransform(config.PruneTransform(structure.TraceKey, structure.RunId)).
 			AddSinks(config.Sink().SetTransform(config.FilterTransform(config.IncludeWhenAllMatch,
-				structure.ChannelKey, types.InfoChannelName)).
+				structure.ChannelKey, structure.InfoChannelName)).
 				AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches,
 					structure.ComponentKey, "Tendermint",
 					"module", "p2p",

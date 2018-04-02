@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/logging"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/project"
 	"github.com/jawher/mow.cli"
 )
@@ -33,9 +33,12 @@ func main() {
 
 	burrow.Action = func() {
 		if *versionOpt {
-			fmt.Println(project.History.CurrentVersion().String())
+			fmt.Println(project.FullVersion())
 			os.Exit(0)
 		}
+		//go func() {
+		//	log.Println(http.ListenAndServe("localhost:6060", nil))
+		//}()
 		// We need to reflect on whether this obscures where values are coming from
 		conf := config.DefaultBurrowConfig()
 		// We treat logging a little differently in that if anything is set for logging we will not
@@ -172,7 +175,7 @@ func main() {
 					if err != nil {
 						fatalf("could not read GenesisSpec: %v", err)
 					}
-					keyClient := keys.NewKeyClient(conf.Keys.URL, loggers.NewNoopInfoTraceLogger())
+					keyClient := keys.NewKeyClient(conf.Keys.URL, logging.NewNoopLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
 						fatalf("could not realise GenesisSpec: %v", err)

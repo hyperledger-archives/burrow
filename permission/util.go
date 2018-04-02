@@ -115,7 +115,7 @@ func BasePermissionsString(basePermissions types.BasePermissions) string {
 	return strings.Join(permStrings, " | ")
 }
 
-func PermissionsString(permFlag types.PermFlag) string {
+func String(permFlag types.PermFlag) string {
 	permStrings, err := PermFlagToStringList(permFlag)
 	if err != nil {
 		return UnknownString

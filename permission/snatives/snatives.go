@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package permission
+package snatives
 
 import (
 	"fmt"
 	"strings"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/permission/types"
 )
 
@@ -35,12 +36,12 @@ type PermArgs struct {
 
 func (pa PermArgs) String() string {
 	body := make([]string, 0, 5)
-	body = append(body, fmt.Sprintf("PermFlag: %s", PermissionsString(pa.PermFlag)))
+	body = append(body, fmt.Sprintf("PermFlag: %s", permission.String(pa.PermFlag)))
 	if pa.Address != nil {
 		body = append(body, fmt.Sprintf("Address: %s", *pa.Address))
 	}
 	if pa.Permission != nil {
-		body = append(body, fmt.Sprintf("Permission: %s", PermissionsString(*pa.Permission)))
+		body = append(body, fmt.Sprintf("Permission: %s", permission.String(*pa.Permission)))
 	}
 	if pa.Role != nil {
 		body = append(body, fmt.Sprintf("Role: %s", *pa.Role))
@@ -54,10 +55,10 @@ func (pa PermArgs) String() string {
 func (pa PermArgs) EnsureValid() error {
 	pf := pa.PermFlag
 	// Address
-	if pa.Address == nil && pf != SetGlobal {
+	if pa.Address == nil && pf != permission.SetGlobal {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Address to be provided but was nil", pf)
 	}
-	if pf == HasRole || pf == AddRole || pf == RemoveRole {
+	if pf == permission.HasRole || pf == permission.AddRole || pf == permission.RemoveRole {
 		// Role
 		if pa.Role == nil {
 			return fmt.Errorf("PermArgs for PermFlag %v requires Role to be provided but was nil", pf)
@@ -66,48 +67,48 @@ func (pa PermArgs) EnsureValid() error {
 	} else if pa.Permission == nil {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Permission to be provided but was nil", pf)
 		// Value
-	} else if (pf == SetBase || pf == SetGlobal) && pa.Value == nil {
+	} else if (pf == permission.SetBase || pf == permission.SetGlobal) && pa.Value == nil {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Value to be provided but was nil", pf)
 	}
 	return nil
 }
 
-func HasBaseArgs(address acm.Address, permission types.PermFlag) PermArgs {
+func HasBaseArgs(address acm.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   HasBase,
+		PermFlag:   permission.HasBase,
 		Address:    &address,
-		Permission: &permission,
+		Permission: &permFlag,
 	}
 }
 
-func SetBaseArgs(address acm.Address, permission types.PermFlag, value bool) PermArgs {
+func SetBaseArgs(address acm.Address, permFlag types.PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   SetBase,
+		PermFlag:   permission.SetBase,
 		Address:    &address,
-		Permission: &permission,
+		Permission: &permFlag,
 		Value:      &value,
 	}
 }
 
-func UnsetBaseArgs(address acm.Address, permission types.PermFlag) PermArgs {
+func UnsetBaseArgs(address acm.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   UnsetBase,
+		PermFlag:   permission.UnsetBase,
 		Address:    &address,
-		Permission: &permission,
+		Permission: &permFlag,
 	}
 }
 
-func SetGlobalArgs(permission types.PermFlag, value bool) PermArgs {
+func SetGlobalArgs(permFlag types.PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   SetGlobal,
-		Permission: &permission,
+		PermFlag:   permission.SetGlobal,
+		Permission: &permFlag,
 		Value:      &value,
 	}
 }
 
 func HasRoleArgs(address acm.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: HasRole,
+		PermFlag: permission.HasRole,
 		Address:  &address,
 		Role:     &role,
 	}
@@ -115,7 +116,7 @@ func HasRoleArgs(address acm.Address, role string) PermArgs {
 
 func AddRoleArgs(address acm.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: AddRole,
+		PermFlag: permission.AddRole,
 		Address:  &address,
 		Role:     &role,
 	}
@@ -123,7 +124,7 @@ func AddRoleArgs(address acm.Address, role string) PermArgs {
 
 func RemoveRoleArgs(address acm.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: RemoveRole,
+		PermFlag: permission.RemoveRole,
 		Address:  &address,
 		Role:     &role,
 	}

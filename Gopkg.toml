@@ -1,13 +1,25 @@
-required = ["github.com/tendermint/iavl"]
 
-[prune]
-  go-tests = true
-  unused-packages = true
-  non-go = true
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#  name = "github.com/x/y"
+#  version = "2.4.0"
 
-[[constraint]]
-  name = "github.com/tendermint/iavl"
-  version = "~0.2.0"
 
 [[constraint]]
   name = "github.com/BurntSushi/toml"
@@ -39,15 +51,23 @@ required = ["github.com/tendermint/iavl"]
 
 [[constraint]]
   name = "github.com/imdario/mergo"
-  version = "0.3.2"
+  version = "0.2.4"
 
 [[constraint]]
   name = "github.com/jawher/mow.cli"
   version = "1.0.3"
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/monax/keys"
+
+[[constraint]]
   name = "github.com/spf13/cobra"
   version = "0.0.1"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "1.0.0"
 
 [[constraint]]
   branch = "master"
@@ -55,11 +75,11 @@ required = ["github.com/tendermint/iavl"]
 
 [[constraint]]
   name = "github.com/stretchr/testify"
-  version = "1.2.1"
+  version = "1.1.4"
 
 [[constraint]]
   name = "github.com/tendermint/abci"
-  version = "~0.9.0"
+  version = "0.7.1"
 
 [[constraint]]
   branch = "master"
@@ -67,23 +87,23 @@ required = ["github.com/tendermint/iavl"]
 
 [[constraint]]
   name = "github.com/tendermint/go-crypto"
-  version = "~0.4.1"
+  version = "0.4.1"
 
 [[constraint]]
   name = "github.com/tendermint/go-wire"
-  version = "~0.7.2"
+  version = "0.7.1"
 
 [[constraint]]
   name = "github.com/tendermint/merkleeyes"
-  version = "~0.2.4"
+  version = "0.2.4"
 
 [[constraint]]
   name = "github.com/tendermint/tendermint"
-  version = "~0.15.0"
+  version = "0.12.0"
 
 [[constraint]]
   name = "github.com/tendermint/tmlibs"
-  version = "~0.6.0"
+  version = "0.4.0"
 
 [[constraint]]
   branch = "master"
@@ -96,6 +116,10 @@ required = ["github.com/tendermint/iavl"]
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "gopkg.in/fatih/set.v0"
+  version = "0.1.0"
 
 [[constraint]]
   name = "gopkg.in/tylerb/graceful.v1"

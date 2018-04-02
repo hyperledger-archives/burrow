@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/events"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,7 +54,7 @@ func TestLog4(t *testing.T) {
 
 	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
 
-	emitter := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	emitter := event.NewEmitter(logging.NewNoopLogger())
 
 	ch := make(chan *events.EventDataLog)
 

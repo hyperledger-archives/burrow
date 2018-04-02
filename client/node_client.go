@@ -19,7 +19,6 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
@@ -41,7 +40,7 @@ type NodeClient interface {
 	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
 
 	// Logging context for this NodeClient
-	Logger() logging_types.InfoTraceLogger
+	Logger() *logging.Logger
 }
 
 type NodeWebsocketClient interface {
@@ -59,15 +58,15 @@ var _ NodeClient = (*burrowNodeClient)(nil)
 // burrow-client is a simple struct exposing the client rpc methods
 type burrowNodeClient struct {
 	broadcastRPC string
-	logger       logging_types.InfoTraceLogger
+	logger       *logging.Logger
 }
 
 // BurrowKeyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewBurrowNodeClient(rpcString string, logger logging_types.InfoTraceLogger) *burrowNodeClient {
+func NewBurrowNodeClient(rpcString string, logger *logging.Logger) *burrowNodeClient {
 	return &burrowNodeClient{
 		broadcastRPC: rpcString,
-		logger:       logging.WithScope(logger, "BurrowNodeClient"),
+		logger:       logger.WithScope("BurrowNodeClient"),
 	}
 }
 
@@ -101,7 +100,7 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 	// }
 	// wsAddr = "ws://" + wsAddr
 	wsAddr = nodeAddr
-	logging.TraceMsg(burrowNodeClient.logger, "Subscribing to websocket address",
+	burrowNodeClient.logger.TraceMsg("Subscribing to websocket address",
 		"websocket address", wsAddr,
 		"endpoint", "/websocket",
 	)
@@ -111,7 +110,7 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 	}
 	derivedBurrowNodeWebsocketClient := &burrowNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
-		logger:              logging.WithScope(burrowNodeClient.logger, "BurrowNodeWebsocketClient"),
+		logger:              burrowNodeClient.logger.WithScope("BurrowNodeWebsocketClient"),
 	}
 	return derivedBurrowNodeWebsocketClient, nil
 }
@@ -260,6 +259,6 @@ func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
 	return
 }
 
-func (burrowNodeClient *burrowNodeClient) Logger() logging_types.InfoTraceLogger {
+func (burrowNodeClient *burrowNodeClient) Logger() *logging.Logger {
 	return burrowNodeClient.logger
 }

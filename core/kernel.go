@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	kitlog "github.com/go-kit/kit/log"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
@@ -31,52 +32,66 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/rpc/v0"
 	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
-	"github.com/hyperledger/burrow/server"
 	"github.com/hyperledger/burrow/txs"
 	tm_config "github.com/tendermint/tendermint/config"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
-const CooldownMilliseconds = 1000
-const ServerShutdownTimeoutMilliseconds = 1000
+const (
+	CooldownMilliseconds              = 1000
+	ServerShutdownTimeoutMilliseconds = 1000
+	LoggingCallerDepth                = 5
+)
 
 // Kernel is the root structure of Burrow
 type Kernel struct {
-	emitter         event.Emitter
-	service         rpc.Service
-	serverLaunchers []server.Launcher
-	servers         map[string]server.Server
-	logger          logging_types.InfoTraceLogger
-	shutdownNotify  chan struct{}
-	shutdownOnce    sync.Once
+	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
+	Emitter        event.Emitter
+	Service        *rpc.Service
+	Launchers      []process.Launcher
+	Logger         *logging.Logger
+	processes      map[string]process.Process
+	shutdownNotify chan struct{}
+	shutdownOnce   sync.Once
 }
 
-func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config,
-	rpcConfig *rpc.RPCConfig, logger logging_types.InfoTraceLogger) (*Kernel, error) {
+func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
+	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger *logging.Logger) (*Kernel, error) {
 
-	logger = logging.WithScope(logger, "NewKernel")
-
+	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
+	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
+	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
-	state, err := execution.MakeGenesisState(stateDB, genesisDoc)
-	if err != nil {
-		return nil, fmt.Errorf("could not make genesis state: %v", err)
-	}
-	state.Save()
 
-	blockchain := bcm.NewBlockchain(genesisDoc)
+	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
+	}
+
+	var state *execution.State
+	// These should be in sync unless we are at the genesis block
+	if blockchain.LastBlockHeight() > 0 {
+		state, err = execution.LoadState(stateDB, blockchain.AppHashAfterLastBlock())
+		if err != nil {
+			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
+				blockchain.AppHashAfterLastBlock(), err)
+		}
+	} else {
+		state, err = execution.MakeGenesisState(stateDB, genesisDoc)
+	}
 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
 	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain, logger)
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, logger)
+	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
 		return nil, err
@@ -93,10 +108,20 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	// which increments the creator's account Sequence and SendTxs
 	service := rpc.NewService(ctx, state, state, emitter, blockchain, transactor, query.NewNodeView(tmNode, txCodec), logger)
 
-	launchers := []server.Launcher{
+	launchers := []process.Launcher{
+		{
+			Name: "Database",
+			Launch: func() (process.Process, error) {
+				// Just close database
+				return process.ShutdownFunc(func(ctx context.Context) error {
+					stateDB.Close()
+					return nil
+				}), nil
+			},
+		},
 		{
 			Name: "Tendermint",
-			Launch: func() (server.Server, error) {
+			Launch: func() (process.Process, error) {
 				err := tmNode.Start()
 				if err != nil {
 					return nil, fmt.Errorf("error starting Tendermint node: %v", err)
@@ -109,24 +134,37 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 				if err != nil {
 					return nil, fmt.Errorf("could not subscribe to Tendermint events: %v", err)
 				}
-				return server.ShutdownFunc(func(ctx context.Context) error {
-					return tmNode.Stop()
+				return process.ShutdownFunc(func(ctx context.Context) error {
+					err := tmNode.Stop()
+					if err != nil {
+						return err
+					}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-tmNode.Quit:
+						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
+						// Close tendermint database connections using our wrapper
+						tmNode.Close()
+						return nil
+					}
+					return err
 				}), nil
 			},
 		},
 		{
 			Name: "RPC/tm",
-			Launch: func() (server.Server, error) {
+			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
 					return nil, err
 				}
-				return server.FromListeners(listener), nil
+				return process.FromListeners(listener), nil
 			},
 		},
 		{
 			Name: "RPC/V0",
-			Launch: func() (server.Server, error) {
+			Launch: func() (process.Process, error) {
 				codec := v0.NewTCodec()
 				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
 				websocketServer := v0_server.NewWebSocketServer(rpcConfig.V0.Server.WebSocket.MaxWebSocketSessions,
@@ -146,24 +184,24 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	}
 
 	return &Kernel{
-		emitter:         emitter,
-		service:         service,
-		serverLaunchers: launchers,
-		servers:         make(map[string]server.Server),
-		logger:          logger,
-		shutdownNotify:  make(chan struct{}),
+		Emitter:        emitter,
+		Service:        service,
+		Launchers:      launchers,
+		processes:      make(map[string]process.Process),
+		Logger:         logger,
+		shutdownNotify: make(chan struct{}),
 	}, nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() error {
-	for _, launcher := range kern.serverLaunchers {
+	for _, launcher := range kern.Launchers {
 		srvr, err := launcher.Launch()
 		if err != nil {
 			return fmt.Errorf("error launching %s server: %v", launcher.Name, err)
 		}
 
-		kern.servers[launcher.Name] = srvr
+		kern.processes[launcher.Name] = srvr
 	}
 	go kern.supervise()
 	return nil
@@ -182,7 +220,7 @@ func (kern *Kernel) supervise() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	sig := <-signals
-	logging.InfoMsg(kern.logger, fmt.Sprintf("Caught %v signal so shutting down", sig),
+	kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
 		"signal", sig.String())
 	kern.Shutdown(context.Background())
 }
@@ -190,20 +228,20 @@ func (kern *Kernel) supervise() {
 // Stop the kernel allowing for a graceful shutdown of components in order
 func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 	kern.shutdownOnce.Do(func() {
-		logger := logging.WithScope(kern.logger, "Shutdown")
-		logging.InfoMsg(logger, "Attempting graceful shutdown...")
-		logging.InfoMsg(logger, "Shutting down servers")
+		logger := kern.Logger.WithScope("Shutdown")
+		logger.InfoMsg("Attempting graceful shutdown...")
+		logger.InfoMsg("Shutting down servers")
 		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeoutMilliseconds*time.Millisecond)
 		defer cancel()
 		// Shutdown servers in reverse order to boot
-		for i := len(kern.serverLaunchers) - 1; i >= 0; i-- {
-			name := kern.serverLaunchers[i].Name
-			srvr, ok := kern.servers[name]
+		for i := len(kern.Launchers) - 1; i >= 0; i-- {
+			name := kern.Launchers[i].Name
+			srvr, ok := kern.processes[name]
 			if ok {
-				logging.InfoMsg(logger, "Shutting down server", "server_name", name)
+				logger.InfoMsg("Shutting down server", "server_name", name)
 				sErr := srvr.Shutdown(ctx)
 				if sErr != nil {
-					logging.InfoMsg(logger, "Failed to shutdown server",
+					logger.InfoMsg("Failed to shutdown server",
 						"server_name", name,
 						structure.ErrorKey, sErr)
 					if err == nil {
@@ -212,8 +250,9 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 				}
 			}
 		}
-		logging.InfoMsg(logger, "Shutdown complete")
-		logging.Sync(kern.logger)
+		logger.InfoMsg("Shutdown complete")
+		structure.Sync(kern.Logger.Info)
+		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush
 		// potentially interesting final output (e.g. log messages)
 		time.Sleep(time.Millisecond * CooldownMilliseconds)

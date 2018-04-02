@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ func TestNewFileLogger(t *testing.T) {
 	err = fileLogger.Log("foo", "bar")
 	require.NoError(t, err)
 
-	err = logging.Sync(fileLogger)
+	err = structure.Sync(fileLogger)
 	require.NoError(t, err)
 
 	bs, err := ioutil.ReadFile(logPath)
@@ -37,7 +37,7 @@ func TestNewStreamLogger(t *testing.T) {
 	err = logger.Log("oh", "my")
 	require.NoError(t, err)
 
-	err = logging.Sync(logger)
+	err = structure.Sync(logger)
 	require.NoError(t, err)
 
 	assert.Equal(t, "oh=my\n", string(buf.Bytes()))

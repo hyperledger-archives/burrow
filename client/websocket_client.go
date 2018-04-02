@@ -25,7 +25,6 @@ import (
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
@@ -51,7 +50,7 @@ var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
 type burrowNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
-	logger              logging_types.InfoTraceLogger
+	logger              *logging.Logger
 }
 
 // Subscribe to an eventid
@@ -107,7 +106,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 
 			case response := <-burrowNodeWebsocketClient.tendermintWebsocket.ResponsesCh:
 				if response.Error != nil {
-					logging.InfoMsg(burrowNodeWebsocketClient.logger,
+					burrowNodeWebsocketClient.logger.InfoMsg(
 						"Error received on websocket channel", structure.ErrorKey, err)
 					continue
 				}
@@ -117,12 +116,12 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 					resultSubscribe := new(rpc.ResultSubscribe)
 					err = json.Unmarshal(response.Result, resultSubscribe)
 					if err != nil {
-						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultSubscribe",
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultSubscribe",
 							structure.ErrorKey, err)
 						continue
 					}
 					// TODO: collect subscription IDs, push into channel and on completion
-					logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received confirmation for event",
+					burrowNodeWebsocketClient.logger.InfoMsg("Received confirmation for event",
 						"event", resultSubscribe.EventID,
 						"subscription_id", resultSubscribe.SubscriptionID)
 
@@ -130,14 +129,14 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 					resultEvent := new(rpc.ResultEvent)
 					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
-						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultEvent",
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultEvent",
 							structure.ErrorKey, err)
 						continue
 					}
 					blockData := resultEvent.EventDataNewBlock()
 					if blockData != nil {
 						latestBlockHash = blockData.Block.Hash()
-						logging.TraceMsg(burrowNodeWebsocketClient.logger, "Registered new block",
+						burrowNodeWebsocketClient.logger.TraceMsg("Registered new block",
 							"block", blockData.Block,
 							"latest_block_hash", latestBlockHash,
 						)
@@ -147,7 +146,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 					resultEvent := new(rpc.ResultEvent)
 					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
-						logging.InfoMsg(burrowNodeWebsocketClient.logger, "Unable to unmarshal ResultEvent",
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultEvent",
 							structure.ErrorKey, err)
 						continue
 					}
@@ -164,10 +163,10 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						return
 					}
 
-					if !bytes.Equal(txs.TxHash(chainId, eventDataTx.Tx), txs.TxHash(chainId, tx)) {
-						logging.TraceMsg(burrowNodeWebsocketClient.logger, "Received different event",
+					if !bytes.Equal(eventDataTx.Tx.Hash(chainId), tx.Hash(chainId)) {
+						burrowNodeWebsocketClient.logger.TraceMsg("Received different event",
 							// TODO: consider re-implementing TxID again, or other more clear debug
-							"received transaction event", txs.TxHash(chainId, eventDataTx.Tx))
+							"received transaction event", eventDataTx.Tx.Hash(chainId))
 						continue
 					}
 
@@ -191,7 +190,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 					return
 
 				default:
-					logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received unsolicited response",
+					burrowNodeWebsocketClient.logger.InfoMsg("Received unsolicited response",
 						"response_id", response.ID,
 						"expected_response_id", tm_client.EventResponseID(eventID))
 				}

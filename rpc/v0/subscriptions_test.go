@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,8 +36,8 @@ func TestSubReaping(t *testing.T) {
 	reaperThreshold = 200 * time.Millisecond
 	reaperTimeout = 100 * time.Millisecond
 
-	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
-	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
+	mee := event.NewEmitter(logging.NewNoopLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, logging.NewNoopLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -80,8 +80,8 @@ func TestSubManualClose(t *testing.T) {
 	reaperThreshold = 10000 * time.Millisecond
 	reaperTimeout = 10000 * time.Millisecond
 
-	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
-	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
+	mee := event.NewEmitter(logging.NewNoopLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, logging.NewNoopLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {
@@ -128,8 +128,8 @@ func TestSubFlooding(t *testing.T) {
 	reaperTimeout = 10000 * time.Millisecond
 	// Crank it up. Now pressure is 10 times higher on each sub.
 	mockInterval = 1 * time.Millisecond
-	mee := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
-	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, loggers.NewNoopInfoTraceLogger()))
+	mee := event.NewEmitter(logging.NewNoopLogger())
+	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, logging.NewNoopLogger()))
 	doneChan := make(chan error)
 	go func() {
 		for i := 0; i < NUM_SUBS; i++ {

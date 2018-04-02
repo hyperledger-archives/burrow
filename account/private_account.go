@@ -68,6 +68,10 @@ func (cpaw concretePrivateAccountWrapper) PrivateKey() PrivateKey {
 	return cpaw.ConcretePrivateAccount.PrivateKey
 }
 
+func (cpaw concretePrivateAccountWrapper) String() string {
+	return cpaw.ConcretePrivateAccount.String()
+}
+
 // ConcretePrivateAccount
 
 func (pa ConcretePrivateAccount) PrivateAccount() PrivateAccount {
