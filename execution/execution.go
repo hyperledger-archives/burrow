@@ -63,6 +63,7 @@ type executor struct {
 	publisher    event.Publisher
 	eventCache   *event.Cache
 	logger       *logging.Logger
+	vmOptions    []func(*evm.VM)
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -71,18 +72,21 @@ var _ BatchExecutor = (*executor)(nil)
 func NewBatchChecker(state *State,
 	chainID string,
 	tip bcm.Tip,
-	logger *logging.Logger) BatchExecutor {
+	logger *logging.Logger,
+	options ...ExecutionOption) BatchExecutor {
 	return newExecutor(false, state, chainID, tip, event.NewNoOpPublisher(),
-		logger.WithScope("NewBatchExecutor"))
+		logger.WithScope("NewBatchExecutor"), options...)
 }
 
 func NewBatchCommitter(state *State,
 	chainID string,
 	tip bcm.Tip,
 	publisher event.Publisher,
-	logger *logging.Logger) BatchCommitter {
+	logger *logging.Logger,
+	options ...ExecutionOption) BatchCommitter {
+
 	return newExecutor(true, state, chainID, tip, publisher,
-		logger.WithScope("NewBatchCommitter"))
+		logger.WithScope("NewBatchCommitter"), options...)
 }
 
 func newExecutor(runCall bool,
@@ -90,8 +94,9 @@ func newExecutor(runCall bool,
 	chainID string,
 	tip bcm.Tip,
 	eventFireable event.Publisher,
-	logger *logging.Logger) *executor {
-	return &executor{
+	logger *logging.Logger,
+	options ...ExecutionOption) *executor {
+	exe := &executor{
 		chainID:      chainID,
 		tip:          tip,
 		runCall:      runCall,
@@ -102,6 +107,10 @@ func newExecutor(runCall bool,
 		eventCache:   event.NewEventCache(eventFireable),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
+	for _, option := range options {
+		option(exe)
+	}
+	return exe
 }
 
 // Accounts
@@ -398,8 +407,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(),
-					tx.Hash(exe.chainID), logger)
+				vmach := evm.NewVM(txCache, params, caller.Address(), tx.Hash(exe.chainID), logger, exe.vmOptions...)
 				vmach.SetPublisher(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)

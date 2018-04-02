@@ -47,11 +47,14 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.L
 			return nil, err
 		}
 	} else {
-		outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
+		outputLogger, err := loggerFromLoggingConfig(loggingConfig)
 		if err != nil {
 			return nil, err
 		}
 		logger, errCh = NewLogger(outputLogger)
+		if loggingConfig.ExcludeTrace {
+			logger.Trace = kitlog.NewNopLogger()
+		}
 	}
 	go func() {
 		err := <-errCh.Out()
@@ -66,7 +69,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.L
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
 func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *config.LoggingConfig) error {
-	outputLogger, err := infoTraceLoggerFromLoggingConfig(loggingConfig)
+	outputLogger, err := loggerFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return err
 	}
@@ -105,7 +108,7 @@ func CaptureStdlibLogOutput(infoTraceLogger *logging.Logger) {
 }
 
 // Helpers
-func infoTraceLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, error) {
+func loggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, error) {
 	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
 	if err != nil {
 		return nil, err

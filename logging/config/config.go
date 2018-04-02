@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 
 	"github.com/BurntSushi/toml"
+	"github.com/hyperledger/burrow/logging/loggers"
 )
 
 type LoggingConfig struct {
-	RootSink *SinkConfig `toml:",omitempty"`
+	RootSink     *SinkConfig `toml:",omitempty"`
+	ExcludeTrace bool
 }
 
 // For encoding a top-level '[logging]' TOML table
@@ -22,7 +24,7 @@ type LoggingConfigWrapper struct {
 
 func DefaultNodeLoggingConfig() *LoggingConfig {
 	return &LoggingConfig{
-		RootSink: Sink().SetOutput(StderrOutput()),
+		RootSink: Sink().SetOutput(StderrOutput().SetFormat(loggers.JSONFormat)),
 	}
 }
 
@@ -51,28 +53,6 @@ func (lc *LoggingConfig) RootJSONString() string {
 
 func (lc *LoggingConfig) JSONString() string {
 	return JSONString(lc)
-}
-
-func LoggingConfigFromMap(loggingRootMap map[string]interface{}) (*LoggingConfig, error) {
-	lc := new(LoggingConfig)
-	buf := new(bytes.Buffer)
-	enc := toml.NewEncoder(buf)
-	// TODO: [Silas] consider using strongly typed config/struct mapping everywhere
-	// (!! unfortunately the way we are using viper
-	// to pass around a untyped bag of config means that we don't get keys mapped
-	// according to their metadata `toml:"Name"` tags. So we are re-encoding to toml
-	// and then decoding into the strongly type struct as a work-around)
-	// Encode the map back to TOML
-	err := enc.Encode(loggingRootMap)
-	if err != nil {
-		return nil, err
-	}
-	// Decode into struct into the LoggingConfig struct
-	_, err = toml.Decode(buf.String(), lc)
-	if err != nil {
-		return nil, err
-	}
-	return lc, nil
 }
 
 func TOMLString(v interface{}) string {

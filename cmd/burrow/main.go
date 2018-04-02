@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"strings"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
@@ -39,9 +37,6 @@ func main() {
 			fmt.Println(project.History.CurrentVersion().String())
 			os.Exit(0)
 		}
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
 		// We need to reflect on whether this obscures where values are coming from
 		conf := config.DefaultBurrowConfig()
 		// We treat logging a little differently in that if anything is set for logging we will not
@@ -143,8 +138,13 @@ func main() {
 			describeLoggingOpt := cmd.BoolOpt("describe-logging", false,
 				"Print an exhaustive list of logging instructions available with the --logging option")
 
+			debugOpt := cmd.BoolOpt("d debug", false, "Include maximal debug options in config "+
+				"including logging opcodes and dumping EVM tokens to disk these can be later pruned from the "+
+				"generated config.")
+
 			cmd.Spec = "[--keys-url=<keys URL>] [--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
-				"[--validator-index=<index>] [--toml-in] [--json-out] [--logging=<logging program>] [--describe-logging]"
+				"[--validator-index=<index>] [--toml-in] [--json-out] [--logging=<logging program>] " +
+				"[--describe-logging] [--debug]"
 
 			cmd.Action = func() {
 				conf := config.DefaultBurrowConfig()
@@ -216,6 +216,12 @@ func main() {
 					}
 					conf.Logging = &logging_config.LoggingConfig{
 						RootSink: sinkConfig,
+					}
+				}
+
+				if *debugOpt {
+					conf.Execution = &execution.ExecutionConfig{
+						VMOptions: []execution.VMOption{execution.DumpTokens, execution.DebugOpcodes},
 					}
 				}
 

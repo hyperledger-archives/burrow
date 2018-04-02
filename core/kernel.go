@@ -17,6 +17,8 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -62,7 +64,8 @@ type Kernel struct {
 }
 
 func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
-	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, logger *logging.Logger) (*Kernel, error) {
+	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, exeOptions []execution.ExecutionOption,
+	logger *logging.Logger) (*Kernel, error) {
 
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
@@ -90,7 +93,7 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain, logger)
 
 	emitter := event.NewEmitter(logger)
-	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger)
+	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger, exeOptions...)
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
@@ -100,15 +103,25 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	transactor := execution.NewTransactor(blockchain, state, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
 		logger)
 
-	// TODO: consider whether we need to be more explicit about pre-commit (check cache) versus committed (state) values
-	// Note we pass the checker as the StateIterable to NewService which means the RPC layers will query the check
-	// cache state. This is in line with previous behaviour of Burrow and chiefly serves to get provide a pre-commit
-	// view of sequence values on the node that a client is communicating with.
-	// Since we don't currently execute EVM code in the checker possible conflicts are limited to account creation
-	// which increments the creator's account Sequence and SendTxs
 	service := rpc.NewService(ctx, state, state, emitter, blockchain, transactor, query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{
+		{
+			Name:     "Profiling Server",
+			Disabled: rpcConfig.Profiler.Disabled,
+			Launch: func() (process.Process, error) {
+				debugServer := &http.Server{
+					Addr: ":6060",
+				}
+				go func() {
+					err := debugServer.ListenAndServe()
+					if err != nil {
+						logger.InfoMsg("Error from pprof debug server", structure.ErrorKey, err)
+					}
+				}()
+				return debugServer, nil
+			},
+		},
 		{
 			Name: "Database",
 			Launch: func() (process.Process, error) {
@@ -153,7 +166,8 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 			},
 		},
 		{
-			Name: "RPC/tm",
+			Name:     "RPC/tm",
+			Disabled: rpcConfig.TM.Disabled,
 			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
@@ -163,7 +177,8 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 			},
 		},
 		{
-			Name: "RPC/V0",
+			Name:     "RPC/V0",
+			Disabled: rpcConfig.V0.Disabled,
 			Launch: func() (process.Process, error) {
 				codec := v0.NewTCodec()
 				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))

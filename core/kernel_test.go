@@ -64,7 +64,7 @@ func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *ge
 	tmConf *tm_config.Config, logger *logging.Logger,
 	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
 
-	kern, err := NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
+	kern, err := NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), nil, logger)
 	if err != nil {
 		return err
 	}

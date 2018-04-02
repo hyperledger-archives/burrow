@@ -107,7 +107,8 @@ func TestWrapper(runner func() int) int {
 
 	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
 	genesisDoc = testGenesisDoc()
-	kernel, err := core.NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), logger)
+	kernel, err := core.NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
+		nil, logger)
 	if err != nil {
 		panic(err)
 	}

@@ -52,7 +52,7 @@ func TestLog4(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
 
 	emitter := event.NewEmitter(logging.NewNoopLogger())
 

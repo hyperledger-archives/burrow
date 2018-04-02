@@ -102,8 +102,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
-		trans.logger.WithScope("Call"))
+	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("Call"))
 	vmach.SetPublisher(trans.eventEmitter)
 
 	gas := params.GasLimit
@@ -129,8 +128,7 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
-	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
-		trans.logger.WithScope("CallCode"))
+	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
 	gas := params.GasLimit
 	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
 	if err != nil {

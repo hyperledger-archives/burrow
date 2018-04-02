@@ -18,6 +18,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"strings"
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
@@ -28,7 +31,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"math/big"
 )
 
 var (
@@ -52,8 +54,6 @@ const (
 	dataStackCapacity = 1024
 	callStackCapacity = 100 // TODO ensure usage.
 )
-
-var Debug = false
 
 type ErrPermission struct {
 	typ string
@@ -111,25 +111,30 @@ type VM struct {
 	nestedCallErrors []ErrNestedCall
 	publisher        event.Publisher
 	logger           *logging.Logger
+	debugOpcodes     bool
+	dumpTokens       bool
 }
 
-func NewVM(state acm.StateWriter, memoryProvider func() Memory, params Params, origin acm.Address, txid []byte,
-	logger *logging.Logger) *VM {
-	return &VM{
+func NewVM(state acm.StateWriter, params Params, origin acm.Address, txid []byte,
+	logger *logging.Logger, options ...func(*VM)) *VM {
+	vm := &VM{
 		state:          state,
-		memoryProvider: memoryProvider,
+		memoryProvider: DefaultDynamicMemoryProvider,
 		params:         params,
 		origin:         origin,
 		stackDepth:     0,
 		txHash:         txid,
 		logger:         logger.WithScope("NewVM"),
 	}
+	for _, option := range options {
+		option(vm)
+	}
+	return vm
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	if Debug {
-		//vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "vm_debug")
-		fmt.Printf(format, a...)
+	if vm.debugOpcodes {
+		vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "DebugOpcodes")
 	}
 }
 
@@ -249,18 +254,9 @@ func (vm *VM) call(caller, callee acm.MutableAccount, code, input []byte, value 
 
 	logger := vm.logger.With("tx_hash", vm.txHash)
 
-	// TODO: provide this functionality via some debug flagging
-	//tokens, _ := acm.Bytecode(code).Tokens()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if len(vm.txHash) >= 4 {
-	//
-	//}
-	//err = ioutil.WriteFile(fmt.Sprintf("tokens-%X.txt", vm.txHash[:4]), []byte(strings.Join(tokens, "\n")), 0777)
-	//if err != nil {
-	//	return nil, err
-	//}
+	if vm.dumpTokens {
+		dumpTokens(vm.txHash, caller, callee, code)
+	}
 
 	var (
 		pc     int64 = 0
@@ -1127,4 +1123,29 @@ func transfer(from, to acm.MutableAccount, amount uint64) error {
 		}
 	}
 	return nil
+}
+
+// Dump the bytecode being sent to the EVM in the current working directory
+func dumpTokens(txHash []byte, caller, callee acm.Account, code []byte) {
+	var tokensString string
+	tokens, err := acm.Bytecode(code).Tokens()
+	if err != nil {
+		tokensString = fmt.Sprintf("error generating tokens from bytecode: %v", err)
+	} else {
+		tokensString = strings.Join(tokens, "\n")
+	}
+	txHashString := "tx-none"
+	if len(txHash) >= 4 {
+		txHashString = fmt.Sprintf("tx-%X", txHash[:4])
+	}
+	callerString := "caller-none"
+	if caller != nil {
+		callerString = fmt.Sprintf("caller-%v", caller.Address())
+	}
+	calleeString := "callee-none"
+	if callee != nil {
+		calleeString = fmt.Sprintf("callee-%s", caller.Address())
+	}
+	ioutil.WriteFile(fmt.Sprintf("tokens_%s_%s_%s.asm", txHashString, callerString, calleeString),
+		[]byte(tokensString), 0777)
 }

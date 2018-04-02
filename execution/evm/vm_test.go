@@ -72,7 +72,7 @@ func newAccount(seed ...byte) acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -95,7 +95,7 @@ func TestVM(t *testing.T) {
 
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -132,7 +132,7 @@ func TestSubcurrency(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
 
@@ -161,7 +161,7 @@ func TestSubcurrency(t *testing.T) {
 //This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -183,7 +183,7 @@ func TestRevert(t *testing.T) {
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(fakeAppState, newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -221,7 +221,7 @@ func TestSendCall(t *testing.T) {
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
 	state := newAppState()
-	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(state, newParams(), acm.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -282,7 +282,7 @@ func TestMemoryBounds(t *testing.T) {
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(state, memoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(state, newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
 	caller, _ := makeAccountWithCode(state, "caller", nil)
 	callee, _ := makeAccountWithCode(state, "callee", nil)
 	gas := uint64(100000)
@@ -329,7 +329,7 @@ func TestMsgSender(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 100000
 
