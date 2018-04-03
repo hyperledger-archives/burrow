@@ -119,8 +119,8 @@ var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, true, 1000, 1, true, 1000)
 var testChainID = testGenesisDoc.ChainID()
 
-func makeUsers(n int) []acm.PrivateAccount {
-	users := make([]acm.PrivateAccount, n)
+func makeUsers(n int) []acm.SigningAccount {
+	users := make([]acm.SigningAccount, n)
 	for i := 0; i < n; i++ {
 		secret := "mysecret" + strconv.Itoa(i)
 		users[i] = acm.GeneratePrivateAccountFromSecret(secret)
@@ -1708,7 +1708,7 @@ func execTxWithStateNewBlock(state *State, blockchain bcm.MutableBlockchain, tx 
 }
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
-	minBonded int64) (*State, []acm.PrivateAccount) {
+	minBonded int64) (*State, []acm.SigningAccount) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
 	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
@@ -1865,7 +1865,7 @@ func permNameToFuncID(name string) []byte {
 	return id[:]
 }
 
-func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+func snativePermTestInputCALL(name string, user acm.SigningAccount, perm ptypes.PermFlag,
 	val bool) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	switch name {
@@ -1888,7 +1888,7 @@ func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.
 	return
 }
 
-func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+func snativePermTestInputTx(name string, user acm.SigningAccount, perm ptypes.PermFlag,
 	val bool) (snativeArgs snatives.PermArgs) {
 
 	switch name {
@@ -1904,7 +1904,7 @@ func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.Pe
 	return
 }
 
-func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
+func snativeRoleTestInputCALL(name string, user acm.SigningAccount,
 	role string) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	data = user.Address().Word256().Bytes()
@@ -1918,7 +1918,7 @@ func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
 	return
 }
 
-func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs snatives.PermArgs) {
+func snativeRoleTestInputTx(name string, user acm.SigningAccount, role string) (snativeArgs snatives.PermArgs) {
 	switch name {
 	case "hasRole":
 		snativeArgs = snatives.HasRoleArgs(user.Address(), role)

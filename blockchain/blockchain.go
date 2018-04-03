@@ -31,8 +31,6 @@ var stateKey = []byte("BlockchainState")
 
 // Immutable Root of blockchain
 type Root interface {
-	// ChainID precomputed from GenesisDoc
-	ChainID() string
 	// GenesisHash precomputed from GenesisDoc
 	GenesisHash() []byte
 	GenesisDoc() genesis.GenesisDoc
@@ -40,6 +38,8 @@ type Root interface {
 
 // Immutable pointer to the current tip of the blockchain
 type Tip interface {
+	// ChainID precomputed from GenesisDoc
+	ChainID() string
 	// All Last* references are to the block last committed
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
@@ -66,12 +66,12 @@ type MutableBlockchain interface {
 }
 
 type root struct {
-	chainID     string
 	genesisHash []byte
 	genesisDoc  genesis.GenesisDoc
 }
 
 type tip struct {
+	chainID               string
 	lastBlockHeight       uint64
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
@@ -159,15 +159,15 @@ func LoadBlockchain(db dbm.DB) (*blockchain, error) {
 
 func NewRoot(genesisDoc *genesis.GenesisDoc) *root {
 	return &root{
-		chainID:     genesisDoc.ChainID(),
 		genesisHash: genesisDoc.Hash(),
 		genesisDoc:  *genesisDoc,
 	}
 }
 
 // Create
-func NewTip(lastBlockHeight uint64, lastBlockTime time.Time, lastBlockHash []byte, appHashAfterLastBlock []byte) *tip {
+func NewTip(chainID string, lastBlockHeight uint64, lastBlockTime time.Time, lastBlockHash []byte, appHashAfterLastBlock []byte) *tip {
 	return &tip{
+		chainID:               chainID,
 		lastBlockHeight:       lastBlockHeight,
 		lastBlockTime:         lastBlockTime,
 		lastBlockHash:         lastBlockHash,
@@ -239,16 +239,16 @@ func Decode(encodedState []byte) (*PersistedState, error) {
 	return persistedState, nil
 }
 
-func (r *root) ChainID() string {
-	return r.chainID
-}
-
 func (r *root) GenesisHash() []byte {
 	return r.genesisHash
 }
 
 func (r *root) GenesisDoc() genesis.GenesisDoc {
 	return r.genesisDoc
+}
+
+func (t *tip) ChainID() string {
+	return t.chainID
 }
 
 func (t *tip) LastBlockHeight() uint64 {

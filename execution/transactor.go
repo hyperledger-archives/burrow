@@ -45,37 +45,22 @@ type Call struct {
 	GasUsed uint64
 }
 
-type Transactor interface {
-	Call(fromAddress, toAddress acm.Address, data []byte) (*Call, error)
-	CallCode(fromAddress acm.Address, code, data []byte) (*Call, error)
-	BroadcastTx(tx txs.Tx) (*txs.Receipt, error)
-	BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error
-	Transact(privKey []byte, address *acm.Address, data []byte, gasLimit, fee uint64) (*txs.Receipt, error)
-	TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error)
-	Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
-	SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error)
-	TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error)
-	SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (txs.Tx, error)
-}
-
 // Transactor is the controller/middleware for the v0 RPC
-type transactor struct {
+type Transactor struct {
 	txMtx            sync.Mutex
-	blockchain       blockchain.Blockchain
+	tip              blockchain.Tip
 	state            state.Iterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           *logging.Logger
 }
 
-var _ Transactor = &transactor{}
-
-func NewTransactor(blockchain blockchain.Blockchain, state state.Iterable, eventEmitter event.Emitter,
+func NewTransactor(tip blockchain.Tip, state state.Iterable, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
-	logger *logging.Logger) *transactor {
+	logger *logging.Logger) *Transactor {
 
-	return &transactor{
-		blockchain:       blockchain,
+	return &Transactor{
+		tip:              tip,
 		state:            state,
 		eventEmitter:     eventEmitter,
 		broadcastTxAsync: broadcastTxAsync,
@@ -85,7 +70,7 @@ func NewTransactor(blockchain blockchain.Blockchain, state state.Iterable, event
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (call *Call, err error) {
+func (trans *Transactor) Call(fromAddress, toAddress acm.Address, data []byte) (call *Call, err error) {
 	if evm.RegisteredNativeContract(toAddress.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
@@ -101,7 +86,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := state.NewCache(trans.state)
-	params := vmParams(trans.blockchain)
+	params := vmParams(trans.tip)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("Call"))
 	vmach.SetPublisher(trans.eventEmitter)
@@ -122,12 +107,12 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*Call, error) {
+func (trans *Transactor) CallCode(fromAddress acm.Address, code, data []byte) (*Call, error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := state.NewCache(trans.state)
-	params := vmParams(trans.blockchain)
+	params := vmParams(trans.tip)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
 	gas := params.GasLimit
@@ -139,14 +124,14 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	return &Call{Return: ret, GasUsed: gasUsed}, nil
 }
 
-func (trans *transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error {
+func (trans *Transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error {
 	return trans.broadcastTxAsync(tx, callback)
 }
 
 // Broadcast a transaction.
-func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "BroadcastTx",
-		"tx_hash", tx.Hash(trans.blockchain.ChainID()),
+		"tx_hash", tx.Hash(trans.tip.ChainID()),
 		"tx", tx.String())
 	responseCh := make(chan *abci_types.Response, 1)
 	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
@@ -177,7 +162,7 @@ func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *transactor) Transact(privKey []byte, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) Transact(privKey []byte, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
@@ -198,6 +183,7 @@ func (trans *transactor) Transact(privKey []byte, address *acm.Address, data []b
 	if acc != nil {
 		sequence = acc.Sequence() + uint64(1)
 	}
+
 	// TODO: [Silas] we should consider revising this method and removing fee, or
 	// possibly adding an amount parameter. It is non-sensical to just be able to
 	// set the fee. Our support of fees in general is questionable since at the
@@ -224,14 +210,14 @@ func (trans *transactor) Transact(privKey []byte, address *acm.Address, data []b
 	}
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
 	receipt, err := trans.Transact(privKey, address, data, gasLimit, fee)
@@ -271,7 +257,7 @@ func (trans *transactor) TransactAndHold(privKey []byte, address *acm.Address, d
 	}
 }
 
-func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
+func (trans *Transactor) Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n",
 			len(privKey))
@@ -311,14 +297,14 @@ func (trans *transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 	tx.Outputs = append(tx.Outputs, txOutput)
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
 	return trans.BroadcastTx(txS)
 }
 
-func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
+func (trans *Transactor) SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	receipt, err := trans.Send(privKey, toAddress, amount)
 	if err != nil {
 		return nil, err
@@ -359,7 +345,7 @@ func (trans *transactor) SendAndHold(privKey []byte, toAddress acm.Address, amou
 	}
 }
 
-func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error) {
+func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
@@ -381,7 +367,7 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 	}
 	tx := txs.NewNameTxWithSequence(pa.PublicKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.PrivateAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
 	if errS != nil {
 		return nil, errS
 	}
@@ -389,15 +375,10 @@ func (trans *transactor) TransactNameReg(privKey []byte, name, data string, amou
 }
 
 // Sign a transaction
-func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (txs.Tx, error) {
+func (trans *Transactor) SignTx(tx txs.Tx, privAccounts []acm.SigningAccount) (txs.Tx, error) {
 	// more checks?
 
-	for i, privAccount := range privAccounts {
-		if privAccount == nil || privAccount.PrivateKey().Unwrap() == nil {
-			return nil, fmt.Errorf("invalid (empty) privAccount @%v", i)
-		}
-	}
-	chainID := trans.blockchain.ChainID()
+	chainID := trans.tip.ChainID()
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
@@ -434,8 +415,7 @@ func (trans *transactor) SignTx(tx txs.Tx, privAccounts []acm.PrivateAccount) (t
 	return tx, nil
 }
 
-func vmParams(blockchain blockchain.Blockchain) evm.Params {
-	tip := blockchain.Tip()
+func vmParams(tip blockchain.Tip) evm.Params {
 	return evm.Params{
 		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),

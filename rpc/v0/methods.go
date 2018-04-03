@@ -213,7 +213,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			txRet, err := service.Transactor().SignTx(param.Tx, acm.PrivateAccounts(param.PrivAccounts))
+			txRet, err := service.Transactor().SignTx(param.Tx, acm.SigningAccounts(param.PrivAccounts))
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}

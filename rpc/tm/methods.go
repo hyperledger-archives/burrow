@@ -73,7 +73,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 		}, "tx"),
 
 		SignTx: gorpc.NewRPCFunc(func(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
-			tx, err := service.Transactor().SignTx(tx, acm.PrivateAccounts(concretePrivateAccounts))
+			tx, err := service.Transactor().SignTx(tx, acm.SigningAccounts(concretePrivateAccounts))
 			return &rpc.ResultSignTx{Tx: txs.Wrap(tx)}, err
 
 		}, "tx,privAccounts"),

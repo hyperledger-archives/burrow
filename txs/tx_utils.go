@@ -63,7 +63,7 @@ func (tx *SendTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.PrivateAccount) error {
+func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.SigningAccount) error {
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
@@ -109,7 +109,7 @@ func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	}
 }
 
-func (tx *CallTx) Sign(chainID string, privAccount acm.PrivateAccount) {
+func (tx *CallTx) Sign(chainID string, privAccount acm.SigningAccount) {
 	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
@@ -147,7 +147,7 @@ func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequ
 	}
 }
 
-func (tx *NameTx) Sign(chainID string, privAccount acm.PrivateAccount) {
+func (tx *NameTx) Sign(chainID string, privAccount acm.SigningAccount) {
 	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
@@ -193,12 +193,12 @@ func (tx *BondTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *BondTx) SignBond(chainID string, privAccount acm.PrivateAccount) error {
+func (tx *BondTx) SignBond(chainID string, privAccount acm.SigningAccount) error {
 	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 	return nil
 }
 
-func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.PrivateAccount) error {
+func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.SigningAccount) error {
 	if i >= len(tx.Inputs) {
 		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
 	}
@@ -217,7 +217,7 @@ func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
 	}
 }
 
-func (tx *UnbondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
+func (tx *UnbondTx) Sign(chainID string, privAccount acm.SigningAccount) {
 	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
@@ -231,7 +231,7 @@ func NewRebondTx(addr acm.Address, height int) *RebondTx {
 	}
 }
 
-func (tx *RebondTx) Sign(chainID string, privAccount acm.PrivateAccount) {
+func (tx *RebondTx) Sign(chainID string, privAccount acm.SigningAccount) {
 	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
 }
 
@@ -266,7 +266,7 @@ func NewPermissionsTxWithSequence(from acm.PublicKey, args snatives.PermArgs, se
 	}
 }
 
-func (tx *PermissionsTx) Sign(chainID string, privAccount acm.PrivateAccount) {
+func (tx *PermissionsTx) Sign(chainID string, privAccount acm.SigningAccount) {
 	tx.Input.PublicKey = privAccount.PublicKey()
 	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
 }

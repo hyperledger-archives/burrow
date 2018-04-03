@@ -20,10 +20,14 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
-type PrivateAccount interface {
+type SigningAccount interface {
 	Addressable
-	PrivateKey() PrivateKey
 	Signer
+}
+
+type PrivateAccount interface {
+	SigningAccount
+	PrivateKey() PrivateKey
 }
 
 //
@@ -82,8 +86,8 @@ func (pa ConcretePrivateAccount) Sign(msg []byte) (Signature, error) {
 	return pa.PrivateKey.Sign(msg)
 }
 
-func ChainSign(pa PrivateAccount, chainID string, o Signable) Signature {
-	sig, err := pa.Sign(SignBytes(chainID, o))
+func ChainSign(signer Signer, chainID string, o Signable) Signature {
+	sig, err := signer.Sign(SignBytes(chainID, o))
 	if err != nil {
 		panic(err)
 	}
@@ -94,13 +98,13 @@ func (pa *ConcretePrivateAccount) String() string {
 	return fmt.Sprintf("ConcretePrivateAccount{%s}", pa.Address)
 }
 
-// Convert slice of ConcretePrivateAccounts to slice of PrivateAccounts
-func PrivateAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []PrivateAccount {
-	privateAccounts := make([]PrivateAccount, len(concretePrivateAccounts))
+// Convert slice of ConcretePrivateAccounts to slice of SigningAccounts
+func SigningAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []SigningAccount {
+	signingAccounts := make([]SigningAccount, len(concretePrivateAccounts))
 	for i, cpa := range concretePrivateAccounts {
-		privateAccounts[i] = cpa.PrivateAccount()
+		signingAccounts[i] = cpa.PrivateAccount()
 	}
-	return privateAccounts
+	return signingAccounts
 }
 
 // Generates a new account with private key.

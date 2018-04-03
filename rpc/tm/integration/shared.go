@@ -144,8 +144,8 @@ func testGenesisDoc() *genesis.GenesisDoc {
 }
 
 // Deterministic account generation helper. Pass number of accounts to make
-func makePrivateAccounts(n int) []acm.PrivateAccount {
-	accounts := make([]acm.PrivateAccount, n)
+func makePrivateAccounts(n int) []acm.SigningAccount {
+	accounts := make([]acm.SigningAccount, n)
 	for i := 0; i < n; i++ {
 		accounts[i] = acm.GeneratePrivateAccountFromSecret("mysecret" + strconv.Itoa(i))
 	}
