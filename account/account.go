@@ -25,6 +25,8 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
+var GlobalPermissionsAddress = Address(binary.Zero160)
+
 // Signable is an interface for all signable things.
 // It typically removes signatures before serializing.
 type Signable interface {
@@ -66,6 +68,8 @@ type Account interface {
 	// Obtain a deterministic serialisation of this account
 	// (i.e. update order and Go runtime independent)
 	Encode() ([]byte, error)
+	// String representation of the account
+	String() string
 }
 
 type MutableAccount interface {
@@ -214,14 +218,6 @@ func AsMutableAccount(account Account) MutableAccount {
 	return AsConcreteAccount(account).MutableAccount()
 }
 
-func GetMutableAccount(getter Getter, address Address) (MutableAccount, error) {
-	acc, err := getter.GetAccount(address)
-	if err != nil {
-		return nil, err
-	}
-	return AsMutableAccount(acc), nil
-}
-
 //----------------------------------------------
 // concreteAccount Wrapper
 
@@ -264,6 +260,10 @@ func (caw concreteAccountWrapper) Permissions() ptypes.AccountPermissions {
 
 func (caw concreteAccountWrapper) Encode() ([]byte, error) {
 	return caw.ConcreteAccount.Encode()
+}
+
+func (caw concreteAccountWrapper) String() string {
+	return caw.ConcreteAccount.String()
 }
 
 func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {

@@ -17,8 +17,7 @@ package mock
 import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/logging/loggers"
-	logging_types "github.com/hyperledger/burrow/logging/types"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-crypto"
@@ -100,6 +99,6 @@ func (mock *MockNodeClient) ListValidators() (blockHeight uint64, bondedValidato
 	return
 }
 
-func (mock *MockNodeClient) Logger() logging_types.InfoTraceLogger {
-	return loggers.NewNoopInfoTraceLogger()
+func (mock *MockNodeClient) Logger() *logging.Logger {
+	return logging.NewNoopLogger()
 }

@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEmitter(t *testing.T) {
-	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
+	em := NewEmitter(logging.NewNoopLogger())
 	ctx := context.Background()
 	out := make(chan interface{})
 

@@ -24,7 +24,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // TODO too much fluff. Should probably phase gorilla out and move closer
@@ -55,7 +54,7 @@ type WebSocketServer struct {
 	sessionManager *SessionManager
 	config         *ServerConfig
 	allOrigins     bool
-	logger         logging_types.InfoTraceLogger
+	logger         *logging.Logger
 }
 
 // Create a new server.
@@ -64,11 +63,11 @@ type WebSocketServer struct {
 // upgraded to websockets. Requesting a websocket connection will fail with a 503 if
 // the server is at capacity.
 func NewWebSocketServer(maxSessions uint16, service WebSocketService,
-	logger logging_types.InfoTraceLogger) *WebSocketServer {
+	logger *logging.Logger) *WebSocketServer {
 	return &WebSocketServer{
 		maxSessions:    maxSessions,
 		sessionManager: NewSessionManager(maxSessions, service, logger),
-		logger:         logging.WithScope(logger, "WebSocketServer"),
+		logger:         logger.WithScope("WebSocketServer"),
 	}
 }
 
@@ -114,7 +113,7 @@ func (wsServer *WebSocketServer) handleFunc(c *gin.Context) {
 	if uErr != nil {
 		errMsg := "Failed to upgrade to websocket connection"
 		http.Error(w, fmt.Sprintf("%s: %s", errMsg, uErr.Error()), 400)
-		logging.InfoMsg(wsServer.logger, errMsg, "error", uErr)
+		wsServer.logger.InfoMsg(errMsg, "error", uErr)
 		return
 	}
 
@@ -123,12 +122,12 @@ func (wsServer *WebSocketServer) handleFunc(c *gin.Context) {
 	if cErr != nil {
 		errMsg := "Failed to establish websocket connection"
 		http.Error(w, fmt.Sprintf("%s: %s", errMsg, cErr.Error()), 503)
-		logging.InfoMsg(wsServer.logger, errMsg, "error", cErr)
+		wsServer.logger.InfoMsg(errMsg, "error", cErr)
 		return
 	}
 
 	// Start the connection.
-	logging.InfoMsg(wsServer.logger, "New websocket connection",
+	wsServer.logger.InfoMsg("New websocket connection",
 		"session_id", session.id)
 	session.Open()
 }
@@ -152,13 +151,13 @@ type WSSession struct {
 	service        WebSocketService
 	opened         bool
 	closed         bool
-	logger         logging_types.InfoTraceLogger
+	logger         *logging.Logger
 }
 
 // Write a text message to the client.
 func (wsSession *WSSession) Write(msg []byte) error {
 	if wsSession.closed {
-		logging.InfoMsg(wsSession.logger, "Attempting to write to closed session.")
+		wsSession.logger.InfoMsg("Attempting to write to closed session.")
 		return fmt.Errorf("Session is closed")
 	}
 	wsSession.writeChan <- msg
@@ -191,7 +190,7 @@ func (wsSession *WSSession) Close() {
 		wsSession.closed = true
 		wsSession.wsConn.Close()
 		wsSession.sessionManager.removeSession(wsSession.id)
-		logging.InfoMsg(wsSession.logger, "Closing websocket connection.",
+		wsSession.logger.InfoMsg("Closing websocket connection.",
 			"remaining_active_sessions", len(wsSession.sessionManager.activeSessions))
 		wsSession.sessionManager.notifyClosed(wsSession)
 	}
@@ -240,14 +239,14 @@ func (wsSession *WSSession) readPump() {
 		// Read error.
 		if err != nil {
 			// Socket could have been gracefully closed, so not really an error.
-			logging.InfoMsg(wsSession.logger,
+			wsSession.logger.InfoMsg(
 				"Socket closed. Removing.", "error", err)
 			wsSession.writeCloseChan <- struct{}{}
 			return
 		}
 
 		if msgType != websocket.TextMessage {
-			logging.InfoMsg(wsSession.logger,
+			wsSession.logger.InfoMsg(
 				"Receiving non text-message from client, closing.")
 			wsSession.writeCloseChan <- struct{}{}
 			return
@@ -292,7 +291,7 @@ func (wsSession *WSSession) writePump() {
 			err := wsSession.wsConn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				// Could be due to the socket being closed so not really an error.
-				logging.InfoMsg(wsSession.logger,
+				wsSession.logger.InfoMsg(
 					"Writing to socket failed. Closing.")
 				return
 			}
@@ -320,12 +319,12 @@ type SessionManager struct {
 	service         WebSocketService
 	openEventChans  []chan *WSSession
 	closeEventChans []chan *WSSession
-	logger          logging_types.InfoTraceLogger
+	logger          *logging.Logger
 }
 
 // Create a new WebsocketManager.
 func NewSessionManager(maxSessions uint16, wss WebSocketService,
-	logger logging_types.InfoTraceLogger) *SessionManager {
+	logger *logging.Logger) *SessionManager {
 	return &SessionManager{
 		maxSessions:     maxSessions,
 		activeSessions:  make(map[uint]*WSSession),
@@ -334,7 +333,7 @@ func NewSessionManager(maxSessions uint16, wss WebSocketService,
 		service:         wss,
 		openEventChans:  []chan *WSSession{},
 		closeEventChans: []chan *WSSession{},
-		logger:          logging.WithScope(logger, "SessionManager"),
+		logger:          logger.WithScope("SessionManager"),
 	}
 }
 
@@ -417,8 +416,7 @@ func (sessionManager *SessionManager) createSession(wsConn *websocket.Conn) (*WS
 		writeChan:      make(chan []byte, maxMessageSize),
 		writeCloseChan: make(chan struct{}),
 		service:        sessionManager.service,
-		logger: logging.WithScope(sessionManager.logger, "WSSession").
-			With("session_id", newId),
+		logger:         sessionManager.logger.WithScope("WSSession").With("session_id", newId),
 	}
 	sessionManager.activeSessions[conn.id] = conn
 	return conn, nil

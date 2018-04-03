@@ -13,13 +13,13 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 //var logger, _ = lifecycle.NewStdErrLogger()
-var logger = loggers.NewNoopInfoTraceLogger()
+var logger = logging.NewNoopLogger()
 
 const monaxKeysBin = "monax-keys"
 const keysHost = "localhost"

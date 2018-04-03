@@ -16,13 +16,12 @@ type CaptureLogger struct {
 
 var _ kitlog.Logger = (*CaptureLogger)(nil)
 
-// Capture logger captures output set to it into a buffer logger and retains
-// a reference to an output logger (the logger whose input it is capturing).
-// It can optionally passthrough logs to the output logger.
+// Capture logger captures output sent to it in a buffer retaining
+// a reference to its output logger (the logger whose input it is capturing).
+// It can optionally pass logs through to the output logger.
 // Because it holds a reference to its output it can also be used to coordinate
-// Flushing of the buffer to the output logger in exceptional circumstances only
-func NewCaptureLogger(outputLogger kitlog.Logger, bufferCap channels.BufferCap,
-	passthrough bool) *CaptureLogger {
+// Flushing of the buffer to the output logger in special circumstances.
+func NewCaptureLogger(outputLogger kitlog.Logger, bufferCap channels.BufferCap, passthrough bool) *CaptureLogger {
 	return &CaptureLogger{
 		bufferLogger: NewChannelLogger(bufferCap),
 		outputLogger: outputLogger,
@@ -41,17 +40,17 @@ func (cl *CaptureLogger) Log(keyvals ...interface{}) error {
 // Sets whether the CaptureLogger is forwarding log lines sent to it through
 // to its output logger. Concurrently safe.
 func (cl *CaptureLogger) SetPassthrough(passthrough bool) {
-	cl.RWMutex.Lock()
+	cl.Lock()
 	cl.passthrough = passthrough
-	cl.RWMutex.Unlock()
+	cl.Unlock()
 }
 
 // Gets whether the CaptureLogger is forwarding log lines sent to through to its
 // OutputLogger. Concurrently Safe.
 func (cl *CaptureLogger) Passthrough() bool {
-	cl.RWMutex.RLock()
+	cl.RLock()
 	passthrough := cl.passthrough
-	cl.RWMutex.RUnlock()
+	cl.RUnlock()
 	return passthrough
 }
 

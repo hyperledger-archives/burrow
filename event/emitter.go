@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/process"
 	"github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/pubsub"
@@ -52,10 +52,10 @@ type Emitter interface {
 type emitter struct {
 	common.BaseService
 	pubsubServer *pubsub.Server
-	logger       logging_types.InfoTraceLogger
+	logger       *logging.Logger
 }
 
-func NewEmitter(logger logging_types.InfoTraceLogger) Emitter {
+func NewEmitter(logger *logging.Logger) Emitter {
 	pubsubServer := pubsub.NewServer(pubsub.BufferCapacity(DefaultEventBufferCapacity))
 	pubsubServer.BaseService = *common.NewBaseService(nil, "Emitter", pubsubServer)
 	pubsubServer.Start()

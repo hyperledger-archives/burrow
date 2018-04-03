@@ -22,10 +22,10 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
-	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
@@ -52,9 +52,9 @@ var (
 )
 
 // Implements account and blockchain state
-var _ acm.Updater = &State{}
-var _ acm.StateIterable = &State{}
-var _ acm.StateWriter = &State{}
+var _ state.AccountUpdater = &State{}
+var _ state.Iterable = &State{}
+var _ state.Writer = &State{}
 
 type State struct {
 	sync.RWMutex
@@ -62,7 +62,7 @@ type State struct {
 	version uint64
 	// TODO:
 	tree   *iavl.VersionedTree
-	logger logging_types.InfoTraceLogger
+	logger *logging.Logger
 }
 
 func NewState(db dbm.DB) *State {
@@ -112,7 +112,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	globalPerms.Base.SetBit = ptypes.AllPermFlags
 
 	permsAcc := &acm.ConcreteAccount{
-		Address:     permission.GlobalPermissionsAddress,
+		Address:     acm.GlobalPermissionsAddress,
 		Balance:     1337,
 		Permissions: globalPerms,
 	}

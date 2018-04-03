@@ -103,14 +103,20 @@ func (st *Stack) PopBytes() []byte {
 	return st.Pop().Bytes()
 }
 
-func (st *Stack) Pop64() int64 {
+func (st *Stack) Pop64() (int64, error) {
 	d := st.Pop()
-	return Int64FromWord256(d)
+	if Is64BitOverflow(d) {
+		return 0, fmt.Errorf("int64 overflow from word: %v", d)
+	}
+	return Int64FromWord256(d), nil
 }
 
-func (st *Stack) PopU64() uint64 {
+func (st *Stack) PopU64() (uint64, error) {
 	d := st.Pop()
-	return Uint64FromWord256(d)
+	if Is64BitOverflow(d) {
+		return 0, fmt.Errorf("uint64 overflow from word: %v", d)
+	}
+	return Uint64FromWord256(d), nil
 }
 
 func (st *Stack) PopBigIntSigned() *big.Int {
@@ -168,4 +174,13 @@ func (st *Stack) Print(n int) {
 		fmt.Println("-- empty --")
 	}
 	fmt.Println("#############")
+}
+
+func Is64BitOverflow(word Word256) bool {
+	for i := 0; i < len(word)-8; i++ {
+		if word[i] != 0 {
+			return true
+		}
+	}
+	return false
 }

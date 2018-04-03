@@ -9,7 +9,6 @@ test_scratch/
 
 # Temporary / cached
 *.swp
-debug
 .idea
 .vscode
 

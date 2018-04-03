@@ -20,7 +20,6 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 type KeyClient interface {
@@ -61,7 +60,7 @@ var _ KeyClient = (*keyClient)(nil)
 
 type keyClient struct {
 	requester Requester
-	logger    logging_types.InfoTraceLogger
+	logger    *logging.Logger
 }
 
 type signer struct {
@@ -71,8 +70,8 @@ type signer struct {
 
 // keyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewKeyClient(rpcAddress string, logger logging_types.InfoTraceLogger) *keyClient {
-	logger = logging.WithScope(logger, "NewKeyClient")
+func NewKeyClient(rpcAddress string, logger *logging.Logger) *keyClient {
+	logger = logger.WithScope("NewKeyClient")
 	return &keyClient{
 		requester: DefaultRequester(rpcAddress, logger),
 		logger:    logger,

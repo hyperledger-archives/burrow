@@ -8,12 +8,13 @@ import (
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/logging"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/project"
 	"github.com/jawher/mow.cli"
 )
@@ -33,7 +34,7 @@ func main() {
 
 	burrow.Action = func() {
 		if *versionOpt {
-			fmt.Println(project.History.CurrentVersion().String())
+			fmt.Println(project.FullVersion())
 			os.Exit(0)
 		}
 		// We need to reflect on whether this obscures where values are coming from
@@ -137,8 +138,13 @@ func main() {
 			describeLoggingOpt := cmd.BoolOpt("describe-logging", false,
 				"Print an exhaustive list of logging instructions available with the --logging option")
 
+			debugOpt := cmd.BoolOpt("d debug", false, "Include maximal debug options in config "+
+				"including logging opcodes and dumping EVM tokens to disk these can be later pruned from the "+
+				"generated config.")
+
 			cmd.Spec = "[--keys-url=<keys URL>] [--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
-				"[--validator-index=<index>] [--toml-in] [--json-out] [--logging=<logging program>] [--describe-logging]"
+				"[--validator-index=<index>] [--toml-in] [--json-out] [--logging=<logging program>] " +
+				"[--describe-logging] [--debug]"
 
 			cmd.Action = func() {
 				conf := config.DefaultBurrowConfig()
@@ -172,7 +178,7 @@ func main() {
 					if err != nil {
 						fatalf("could not read GenesisSpec: %v", err)
 					}
-					keyClient := keys.NewKeyClient(conf.Keys.URL, loggers.NewNoopInfoTraceLogger())
+					keyClient := keys.NewKeyClient(conf.Keys.URL, logging.NewNoopLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
 						fatalf("could not realise GenesisSpec: %v", err)
@@ -210,6 +216,12 @@ func main() {
 					}
 					conf.Logging = &logging_config.LoggingConfig{
 						RootSink: sinkConfig,
+					}
+				}
+
+				if *debugOpt {
+					conf.Execution = &execution.ExecutionConfig{
+						VMOptions: []execution.VMOption{execution.DumpTokens, execution.DebugOpcodes},
 					}
 				}
 

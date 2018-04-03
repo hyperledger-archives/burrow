@@ -20,10 +20,9 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
-func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTraceLogger) {
+func unpackSignAndBroadcast(result *rpc.TxResult, logger *logging.Logger) {
 	if result == nil {
 		// if we don't provide --sign or --broadcast
 		return
@@ -42,15 +41,15 @@ func unpackSignAndBroadcast(result *rpc.TxResult, logger logging_types.InfoTrace
 		)
 	}
 
-	logging.InfoMsg(logger, "SignAndBroadcast result")
+	logger.InfoMsg("SignAndBroadcast result")
 }
 
-func loggerFromClientDo(do *client.Do, scope string) (logging_types.InfoTraceLogger, error) {
+func loggerFromClientDo(do *client.Do, scope string) (*logging.Logger, error) {
 	logger, err := lifecycle.NewLoggerFromLoggingConfig(config.DefaultClientLoggingConfig())
 	if err != nil {
 		return nil, err
 	}
-	logger = logging.WithScope(logger, scope)
+	logger = logger.WithScope(scope)
 	lifecycle.CaptureStdlibLogOutput(logger)
 	return logger, nil
 }

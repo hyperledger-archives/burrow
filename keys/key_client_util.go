@@ -22,7 +22,6 @@ import (
 	"net/http"
 
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 )
 
 // Monax-Keys server connects over http request-response structures
@@ -34,14 +33,14 @@ type HTTPResponse struct {
 
 type Requester func(method string, args map[string]string) (response string, err error)
 
-func DefaultRequester(rpcAddress string, logger logging_types.InfoTraceLogger) Requester {
+func DefaultRequester(rpcAddress string, logger *logging.Logger) Requester {
 	return func(method string, args map[string]string) (string, error) {
 		body, err := json.Marshal(args)
 		if err != nil {
 			return "", err
 		}
 		endpoint := fmt.Sprintf("%s/%s", rpcAddress, method)
-		logging.TraceMsg(logger, "Sending request to key server",
+		logger.TraceMsg("Sending request to key server",
 			"key_server_endpoint", endpoint,
 			"request_body", string(body),
 		)
@@ -57,7 +56,7 @@ func DefaultRequester(rpcAddress string, logger logging_types.InfoTraceLogger) R
 		if res.Error != "" {
 			return "", fmt.Errorf("response error when calling monax-keys at %s: %s", endpoint, res.Error)
 		}
-		logging.TraceMsg(logger, "Received response from key server",
+		logger.TraceMsg("Received response from key server",
 			"endpoint", endpoint,
 			"request_body", string(body),
 			"response", res,
