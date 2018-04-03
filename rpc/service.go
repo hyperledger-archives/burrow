@@ -243,6 +243,9 @@ func (s *service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.logger.Trace("method", "GetAccount",
+		"address", address,
+		"sequence", acc.Sequence())
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 
@@ -301,7 +304,10 @@ func (s *service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 
 // Name registry
 func (s *service) GetName(name string) (*ResultGetName, error) {
-	entry := s.nameReg.GetNameRegEntry(name)
+	entry, err := s.nameReg.GetNameRegEntry(name)
+	if err != nil {
+		return nil, err
+	}
 	if entry == nil {
 		return nil, fmt.Errorf("name %s not found", name)
 	}

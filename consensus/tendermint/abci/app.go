@@ -74,6 +74,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		logging.TraceMsg(app.logger, "CheckTx decoding error",
+			"tag", "CheckTx",
 			structure.ErrorKey, err)
 		return abci_types.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
@@ -87,6 +88,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 	if err != nil {
 		logging.TraceMsg(app.logger, "CheckTx execution error",
 			structure.ErrorKey, err,
+			"tag", "CheckTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseCheckTx{
@@ -97,6 +99,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 
 	receiptBytes := wire.BinaryBytes(receipt)
 	logging.TraceMsg(app.logger, "CheckTx success",
+		"tag", "CheckTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
 	return abci_types.ResponseCheckTx{
@@ -122,6 +125,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		logging.TraceMsg(app.logger, "DeliverTx decoding error",
+			"tag", "DeliverTx",
 			structure.ErrorKey, err)
 		return abci_types.ResponseDeliverTx{
 			Code: codes.EncodingErrorCode,
@@ -134,6 +138,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 	if err != nil {
 		logging.TraceMsg(app.logger, "DeliverTx execution error",
 			structure.ErrorKey, err,
+			"tag", "DeliverTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseDeliverTx{
@@ -143,6 +148,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 	}
 
 	logging.TraceMsg(app.logger, "DeliverTx success",
+		"tag", "DeliverTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
 	receiptBytes := wire.BinaryBytes(receipt)
@@ -163,29 +169,38 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 	defer app.mtx.Unlock()
 	tip := app.blockchain.Tip()
 	logging.InfoMsg(app.logger, "Committing block",
+		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
-		"block_height", tip.LastBlockHeight(),
+		"block_height", app.block.Header.Height,
 		"block_hash", app.block.Hash,
 		"block_time", app.block.Header.Time,
 		"num_txs", app.block.Header.NumTxs,
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
+	err := app.checker.Reset()
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
+		}
+	}
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit block: %s", err),
+			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
 		}
 	}
-	// Just kill the cache - it is badly implemented
-	app.committer.Reset()
-
-	logging.InfoMsg(app.logger, "Resetting transaction check cache")
-	app.checker.Reset()
 
 	// Commit to our blockchain state
-	app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
+		}
+	}
 
 	// Perform a sanity check our block height
 	if app.blockchain.LastBlockHeight() != uint64(app.block.Header.Height) {

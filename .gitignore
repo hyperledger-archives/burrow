@@ -14,3 +14,5 @@ debug
 .vscode
 
 .gopath_bos
+burrow.toml
+

@@ -55,7 +55,7 @@ func TestBroadcastTx(t *testing.T) {
 		amt := hashString(clientName) % 1000
 		toAddr := privateAccounts[1].Address()
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
-		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
 		require.NoError(t, err)
 		assert.False(t, receipt.CreatesContract, "This tx should not create a contract")
 		assert.NotEmpty(t, receipt.TxHash, "Failed to compute tx hash")
@@ -102,7 +102,7 @@ func TestGetStorage(t *testing.T) {
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
-		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, true, receipt.CreatesContract, "This transaction should"+
 			" create a contract")
@@ -156,7 +156,7 @@ func TestCallContract(t *testing.T) {
 		amt, gasLim, fee := uint64(6969), uint64(1000), uint64(1000)
 		code, _, _ := simpleContract()
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
-		receipt, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
 		assert.NoError(t, err)
 		if err != nil {
 			t.Fatalf("Problem broadcasting transaction: %v", err)
@@ -197,7 +197,7 @@ func TestNameReg(t *testing.T) {
 		// verify the name by both using the event and by checking get_name
 		subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
 			func() {
-				broadcastTxAndWaitForBlock(t, client, wsc, tx)
+				broadcastTxAndWait(t, client, wsc, tx)
 			},
 			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 
@@ -224,7 +224,7 @@ func TestNameReg(t *testing.T) {
 		amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*
 			txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 		tx = makeDefaultNameTx(t, client, name, updatedData, amt, fee)
-		broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		broadcastTxAndWait(t, client, wsc, tx)
 		entry = getNameRegEntry(t, client, name)
 
 		assert.Equal(t, updatedData, entry.Data)
@@ -234,7 +234,7 @@ func TestNameReg(t *testing.T) {
 			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 
-		_, err := broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		_, err := broadcastTxAndWait(t, client, wsc, tx)
 		assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 			" name registry entry")
 		if err != nil {
@@ -250,7 +250,7 @@ func TestNameReg(t *testing.T) {
 		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, data2, amt, fee,
 			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
-		_, err = broadcastTxAndWaitForBlock(t, client, wsc, tx)
+		_, err = broadcastTxAndWait(t, client, wsc, tx)
 		assert.NoError(t, err, "Should be able to update a previously expired name"+
 			" registry entry as a different address")
 		entry = getNameRegEntry(t, client, name)

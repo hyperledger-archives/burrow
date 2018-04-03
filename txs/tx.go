@@ -102,6 +102,8 @@ type (
 	Tx interface {
 		WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 		String() string
+		GetInputs() []TxInput
+		Hash(chainID string) []byte
 	}
 
 	Wrapper struct {
@@ -116,34 +118,6 @@ type (
 		DecodeTx(txBytes []byte) (Tx, error)
 	}
 
-	SendTx struct {
-		Inputs  []*TxInput
-		Outputs []*TxOutput
-	}
-
-	// BroadcastTx or Transact
-	Receipt struct {
-		TxHash          []byte
-		CreatesContract bool
-		ContractAddress acm.Address
-	}
-
-	NameTx struct {
-		Input *TxInput
-		Name  string
-		Data  string
-		Fee   uint64
-	}
-
-	CallTx struct {
-		Input *TxInput
-		// Pointer since CallTx defines unset 'to' address as inducing account creation
-		Address  *acm.Address
-		GasLimit uint64
-		Fee      uint64
-		Data     []byte
-	}
-
 	TxInput struct {
 		Address   acm.Address
 		Amount    uint64
@@ -155,6 +129,68 @@ type (
 	TxOutput struct {
 		Address acm.Address
 		Amount  uint64
+	}
+
+	// BroadcastTx or Transact
+	Receipt struct {
+		TxHash          []byte
+		CreatesContract bool
+		ContractAddress acm.Address
+	}
+
+	//-------------------
+	// Transaction Types
+	SendTx struct {
+		Inputs  []*TxInput
+		Outputs []*TxOutput
+		txHashMemoizer
+	}
+
+	NameTx struct {
+		Input *TxInput
+		Name  string
+		Data  string
+		Fee   uint64
+		txHashMemoizer
+	}
+
+	CallTx struct {
+		Input *TxInput
+		// Pointer since CallTx defines unset 'to' address as inducing account creation
+		Address  *acm.Address
+		GasLimit uint64
+		Fee      uint64
+		Data     []byte
+		txHashMemoizer
+	}
+
+	PermissionsTx struct {
+		Input    *TxInput
+		PermArgs ptypes.PermArgs
+		txHashMemoizer
+	}
+
+	// Out of service
+	BondTx struct {
+		PubKey    acm.PublicKey
+		Signature acm.Signature
+		Inputs    []*TxInput
+		UnbondTo  []*TxOutput
+		txHashMemoizer
+	}
+
+	UnbondTx struct {
+		Address   acm.Address
+		Height    int
+		Signature acm.Signature
+		txHashMemoizer
+	}
+
+	RebondTx struct {
+		Address   acm.Address
+		Height    int
+		Signature acm.Signature
+		txHashMemoizer
 	}
 )
 
@@ -249,8 +285,16 @@ func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(`]}]}`), w, n, err)
 }
 
+func (tx *SendTx) GetInputs() []TxInput {
+	return copyInputs(tx.Inputs)
+}
+
 func (tx *SendTx) String() string {
 	return fmt.Sprintf("SendTx{%v -> %v}", tx.Inputs, tx.Outputs)
+}
+
+func (tx *SendTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
 
 //-----------------------------------------------------------------------------
@@ -263,8 +307,16 @@ func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
+func (tx *CallTx) GetInputs() []TxInput {
+	return []TxInput{*tx.Input}
+}
+
 func (tx *CallTx) String() string {
 	return fmt.Sprintf("CallTx{%v -> %s: %X}", tx.Input, tx.Address, tx.Data)
+}
+
+func (tx *CallTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
 
 //-----------------------------------------------------------------------------
@@ -276,6 +328,10 @@ func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	tx.Input.WriteSignBytes(w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"name":%s`, jsonEscape(tx.Name))), w, n, err)
 	wire.WriteTo([]byte(`}]}`), w, n, err)
+}
+
+func (tx *NameTx) GetInputs() []TxInput {
+	return []TxInput{*tx.Input}
 }
 
 func (tx *NameTx) ValidateStrings() error {
@@ -304,14 +360,11 @@ func (tx *NameTx) String() string {
 	return fmt.Sprintf("NameTx{%v -> %s: %s}", tx.Input, tx.Name, tx.Data)
 }
 
-//-----------------------------------------------------------------------------
-
-type BondTx struct {
-	PubKey    acm.PublicKey
-	Signature acm.Signature
-	Inputs    []*TxInput
-	UnbondTo  []*TxOutput
+func (tx *NameTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
+
+//-----------------------------------------------------------------------------
 
 func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -334,50 +387,57 @@ func (tx *BondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error
 	wire.WriteTo([]byte(`]}]}`), w, n, err)
 }
 
+func (tx *BondTx) GetInputs() []TxInput {
+	return copyInputs(tx.Inputs)
+}
+
 func (tx *BondTx) String() string {
 	return fmt.Sprintf("BondTx{%v: %v -> %v}", tx.PubKey, tx.Inputs, tx.UnbondTo)
 }
 
-//-----------------------------------------------------------------------------
-
-type UnbondTx struct {
-	Address   acm.Address
-	Height    int
-	Signature acm.Signature
+func (tx *BondTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
+
+//-----------------------------------------------------------------------------
 
 func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
 }
 
+func (tx *UnbondTx) GetInputs() []TxInput {
+	return nil
+}
+
 func (tx *UnbondTx) String() string {
 	return fmt.Sprintf("UnbondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
-//-----------------------------------------------------------------------------
-
-type RebondTx struct {
-	Address   acm.Address
-	Height    int
-	Signature acm.Signature
+func (tx *UnbondTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
+
+//-----------------------------------------------------------------------------
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
 	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeRebond, tx.Address, tx.Height)), w, n, err)
 }
 
+func (tx *RebondTx) GetInputs() []TxInput {
+	return nil
+}
+
 func (tx *RebondTx) String() string {
 	return fmt.Sprintf("RebondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
 }
 
-//-----------------------------------------------------------------------------
-
-type PermissionsTx struct {
-	Input    *TxInput
-	PermArgs ptypes.PermArgs
+func (tx *RebondTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
+
+//-----------------------------------------------------------------------------
 
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
 	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
@@ -388,11 +448,33 @@ func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err
 	wire.WriteTo([]byte(`}]}`), w, n, err)
 }
 
+func (tx *PermissionsTx) GetInputs() []TxInput {
+	return []TxInput{*tx.Input}
+}
+
 func (tx *PermissionsTx) String() string {
 	return fmt.Sprintf("PermissionsTx{%v -> %v}", tx.Input, tx.PermArgs)
 }
 
+func (tx *PermissionsTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
+}
+
 //-----------------------------------------------------------------------------
+
+// Avoid re-hashing the same in-memory Tx
+type txHashMemoizer struct {
+	txHashBytes []byte
+	chainID     string
+}
+
+func (thm *txHashMemoizer) hash(chainID string, tx Tx) []byte {
+	if thm.txHashBytes == nil || thm.chainID != chainID {
+		thm.chainID = chainID
+		thm.txHashBytes = TxHash(chainID, tx)
+	}
+	return thm.txHashBytes
+}
 
 func TxHash(chainID string, tx Tx) []byte {
 	signBytes := acm.SignBytes(chainID, tx)
@@ -402,11 +484,9 @@ func TxHash(chainID string, tx Tx) []byte {
 	return hasher.Sum(nil)
 }
 
-//-----------------------------------------------------------------------------
-
 func GenerateReceipt(chainId string, tx Tx) Receipt {
 	receipt := Receipt{
-		TxHash: TxHash(chainId, tx),
+		TxHash: tx.Hash(chainId),
 	}
 	if callTx, ok := tx.(*CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
@@ -420,6 +500,14 @@ func GenerateReceipt(chainId string, tx Tx) Receipt {
 }
 
 //--------------------------------------------------------------------------------
+
+func copyInputs(inputs []*TxInput) []TxInput {
+	inputsCopy := make([]TxInput, len(inputs))
+	for i, input := range inputs {
+		inputsCopy[i] = *input
+	}
+	return inputsCopy
+}
 
 // Contract: This function is deterministic and completely reversible.
 func jsonEscape(str string) string {

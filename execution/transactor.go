@@ -60,7 +60,7 @@ type Transactor interface {
 type transactor struct {
 	txMtx            sync.Mutex
 	blockchain       blockchain.Blockchain
-	state            acm.StateReader
+	state            acm.StateIterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           logging_types.InfoTraceLogger
@@ -68,7 +68,7 @@ type transactor struct {
 
 var _ Transactor = &transactor{}
 
-func NewTransactor(blockchain blockchain.Blockchain, state acm.StateReader, eventEmitter event.Emitter,
+func NewTransactor(blockchain blockchain.Blockchain, state acm.StateIterable, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
 	logger logging_types.InfoTraceLogger) *transactor {
 
@@ -98,7 +98,7 @@ func (trans *transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
@@ -120,7 +120,7 @@ func (trans *transactor) CallCode(fromAddress acm.Address, code, data []byte) (*
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := NewTxCache(trans.state)
+	txCache := acm.NewStateCache(trans.state)
 	params := vmParams(trans.blockchain)
 
 	vmach := evm.NewVM(txCache, evm.DefaultDynamicMemoryProvider, params, caller.Address(), nil,
@@ -140,6 +140,9 @@ func (trans *transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_typ
 
 // Broadcast a transaction.
 func (trans *transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+	trans.logger.Trace("method", "BroadcastTx",
+		"tx_hash", tx.Hash(trans.blockchain.ChainID()),
+		"tx", tx.String())
 	responseCh := make(chan *abci_types.Response, 1)
 	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
 		responseCh <- res

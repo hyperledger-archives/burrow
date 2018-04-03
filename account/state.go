@@ -63,3 +63,11 @@ type StateWriter interface {
 	Updater
 	StorageSetter
 }
+
+type IterableStateWriter interface {
+	StateReader
+	Updater
+	StorageSetter
+	Iterable
+	StorageIterable
+}

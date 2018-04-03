@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
-	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/types"
 )
@@ -35,11 +35,11 @@ type NodeView interface {
 }
 
 type nodeView struct {
-	tmNode    *node.Node
+	tmNode    *tendermint.Node
 	txDecoder txs.Decoder
 }
 
-func NewNodeView(tmNode *node.Node, txDecoder txs.Decoder) NodeView {
+func NewNodeView(tmNode *tendermint.Node, txDecoder txs.Decoder) NodeView {
 	return &nodeView{
 		tmNode:    tmNode,
 		txDecoder: txDecoder,

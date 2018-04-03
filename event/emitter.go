@@ -23,7 +23,7 @@ import (
 
 	"github.com/hyperledger/burrow/logging/structure"
 	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/hyperledger/burrow/server"
+	"github.com/hyperledger/burrow/process"
 	"github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/pubsub"
 )
@@ -45,7 +45,7 @@ type Publisher interface {
 type Emitter interface {
 	Subscribable
 	Publisher
-	server.Server
+	process.Process
 }
 
 // The events struct has methods for working with events.

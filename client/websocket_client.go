@@ -164,10 +164,10 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						return
 					}
 
-					if !bytes.Equal(txs.TxHash(chainId, eventDataTx.Tx), txs.TxHash(chainId, tx)) {
+					if !bytes.Equal(eventDataTx.Tx.Hash(chainId), tx.Hash(chainId)) {
 						logging.TraceMsg(burrowNodeWebsocketClient.logger, "Received different event",
 							// TODO: consider re-implementing TxID again, or other more clear debug
-							"received transaction event", txs.TxHash(chainId, eventDataTx.Tx))
+							"received transaction event", eventDataTx.Tx.Hash(chainId))
 						continue
 					}
 

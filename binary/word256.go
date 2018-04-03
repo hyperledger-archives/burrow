@@ -114,6 +114,20 @@ func Int64FromWord256(word Word256) int64 {
 
 //-------------------------------------
 
+type Words256 []Word256
+
+func (ws Words256) Len() int {
+	return len(ws)
+}
+
+func (ws Words256) Less(i, j int) bool {
+	return ws[i].Compare(ws[j]) < 0
+}
+
+func (ws Words256) Swap(i, j int) {
+	ws[i], ws[j] = ws[j], ws[i]
+}
+
 type Tuple256 struct {
 	First  Word256
 	Second Word256
