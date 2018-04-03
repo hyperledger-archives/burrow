@@ -375,40 +375,40 @@ func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amou
 }
 
 // Sign a transaction
-func (trans *Transactor) SignTx(tx txs.Tx, privAccounts []acm.SigningAccount) (txs.Tx, error) {
+func (trans *Transactor) SignTx(tx txs.Tx, signingAccounts []acm.SigningAccount) (txs.Tx, error) {
 	// more checks?
 
 	chainID := trans.tip.ChainID()
 	switch tx.(type) {
 	case *txs.NameTx:
 		nameTx := tx.(*txs.NameTx)
-		nameTx.Input.PublicKey = privAccounts[0].PublicKey()
-		nameTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, nameTx)
+		nameTx.Input.PublicKey = signingAccounts[0].PublicKey()
+		nameTx.Input.Signature = acm.ChainSign(signingAccounts[0], chainID, nameTx)
 	case *txs.SendTx:
 		sendTx := tx.(*txs.SendTx)
 		for i, input := range sendTx.Inputs {
-			input.PublicKey = privAccounts[i].PublicKey()
-			input.Signature = acm.ChainSign(privAccounts[i], chainID, sendTx)
+			input.PublicKey = signingAccounts[i].PublicKey()
+			input.Signature = acm.ChainSign(signingAccounts[i], chainID, sendTx)
 		}
 	case *txs.CallTx:
 		callTx := tx.(*txs.CallTx)
-		callTx.Input.PublicKey = privAccounts[0].PublicKey()
-		callTx.Input.Signature = acm.ChainSign(privAccounts[0], chainID, callTx)
+		callTx.Input.PublicKey = signingAccounts[0].PublicKey()
+		callTx.Input.Signature = acm.ChainSign(signingAccounts[0], chainID, callTx)
 	case *txs.BondTx:
 		bondTx := tx.(*txs.BondTx)
 		// the first privaccount corresponds to the BondTx pub key.
 		// the rest to the inputs
-		bondTx.Signature = acm.ChainSign(privAccounts[0], chainID, bondTx)
+		bondTx.Signature = acm.ChainSign(signingAccounts[0], chainID, bondTx)
 		for i, input := range bondTx.Inputs {
-			input.PublicKey = privAccounts[i+1].PublicKey()
-			input.Signature = acm.ChainSign(privAccounts[i+1], chainID, bondTx)
+			input.PublicKey = signingAccounts[i+1].PublicKey()
+			input.Signature = acm.ChainSign(signingAccounts[i+1], chainID, bondTx)
 		}
 	case *txs.UnbondTx:
 		unbondTx := tx.(*txs.UnbondTx)
-		unbondTx.Signature = acm.ChainSign(privAccounts[0], chainID, unbondTx)
+		unbondTx.Signature = acm.ChainSign(signingAccounts[0], chainID, unbondTx)
 	case *txs.RebondTx:
 		rebondTx := tx.(*txs.RebondTx)
-		rebondTx.Signature = acm.ChainSign(privAccounts[0], chainID, rebondTx)
+		rebondTx.Signature = acm.ChainSign(signingAccounts[0], chainID, rebondTx)
 	default:
 		return nil, fmt.Errorf("Object is not a proper transaction: %v\n", tx)
 	}
