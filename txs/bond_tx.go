@@ -90,16 +90,22 @@ func (tx *BondTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *BondTx) SignBond(chainID string, privAccount acm.SigningAccount) error {
-	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
-	return nil
-}
-
-func (tx *BondTx) SignInput(chainID string, i int, privAccount acm.SigningAccount) error {
-	if i >= len(tx.Inputs) {
-		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
+func (tx *BondTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+	if len(signingAccounts) != len(tx.Inputs)+1 {
+		return fmt.Errorf("BondTx expects %v SigningAccounts but got %v", len(tx.Inputs)+1,
+			len(signingAccounts))
 	}
-	tx.Inputs[i].PublicKey = privAccount.PublicKey()
-	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
+	var err error
+	tx.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	if err != nil {
+		return fmt.Errorf("could not sign %v: %v", tx, err)
+	}
+	for i := 1; i <= len(signingAccounts); i++ {
+		tx.Inputs[i].PublicKey = signingAccounts[i].PublicKey()
+		tx.Inputs[i].Signature, err = acm.ChainSign(signingAccounts[i], chainID, tx)
+		if err != nil {
+			return fmt.Errorf("could not sign tx %v input %v: %v", tx, tx.Inputs[i], err)
+		}
+	}
 	return nil
 }

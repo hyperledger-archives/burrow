@@ -24,8 +24,17 @@ func NewRebondTx(addr acm.Address, height int) *RebondTx {
 	}
 }
 
-func (tx *RebondTx) Sign(chainID string, privAccount acm.SigningAccount) {
-	tx.Signature = acm.ChainSign(privAccount, chainID, tx)
+func (tx *RebondTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+	if len(signingAccounts) != 1 {
+		return fmt.Errorf("RebondTx expects a single SigningAccount for its signature but %v were provieded",
+			len(signingAccounts))
+	}
+	var err error
+	tx.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	if err != nil {
+		return fmt.Errorf("could not sign %v: %v", tx, err)
+	}
+	return nil
 }
 
 func (tx *RebondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

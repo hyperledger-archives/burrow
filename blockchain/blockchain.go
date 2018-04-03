@@ -132,12 +132,9 @@ func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
 	}
 	root := NewRoot(genesisDoc)
 	return &blockchain{
-		db:   db,
-		root: root,
-		tip: &tip{
-			lastBlockTime:         root.genesisDoc.GenesisTime,
-			appHashAfterLastBlock: root.genesisHash,
-		},
+		db:         db,
+		root:       root,
+		tip:        NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash),
 		validators: validators,
 	}
 }
@@ -164,14 +161,12 @@ func NewRoot(genesisDoc *genesis.GenesisDoc) *root {
 	}
 }
 
-// Create
-func NewTip(chainID string, lastBlockHeight uint64, lastBlockTime time.Time, lastBlockHash []byte, appHashAfterLastBlock []byte) *tip {
+// Create genesis Tip
+func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *tip {
 	return &tip{
 		chainID:               chainID,
-		lastBlockHeight:       lastBlockHeight,
-		lastBlockTime:         lastBlockTime,
-		lastBlockHash:         lastBlockHash,
-		appHashAfterLastBlock: appHashAfterLastBlock,
+		lastBlockTime:         genesisTime,
+		appHashAfterLastBlock: genesisHash,
 	}
 }
 

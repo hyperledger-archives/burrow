@@ -86,11 +86,18 @@ func (tx *SendTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *SendTx) SignInput(chainID string, i int, privAccount acm.SigningAccount) error {
-	if i >= len(tx.Inputs) {
-		return fmt.Errorf("Index %v is greater than number of inputs (%v)", i, len(tx.Inputs))
+func (tx *SendTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+	if len(signingAccounts) != len(tx.Inputs) {
+		return fmt.Errorf("SendTx has %v Inputs but was provided with %v SigningAccounts", len(tx.Inputs),
+			len(signingAccounts))
 	}
-	tx.Inputs[i].PublicKey = privAccount.PublicKey()
-	tx.Inputs[i].Signature = acm.ChainSign(privAccount, chainID, tx)
+	var err error
+	for i, signingAccount := range signingAccounts {
+		tx.Inputs[i].PublicKey = signingAccount.PublicKey()
+		tx.Inputs[i].Signature, err = acm.ChainSign(signingAccount, chainID, tx)
+		if err != nil {
+			return fmt.Errorf("could not sign tx %v input %v: %v", tx, tx.Inputs[i], err)
+		}
+	}
 	return nil
 }

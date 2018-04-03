@@ -56,9 +56,18 @@ func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequ
 	}
 }
 
-func (tx *NameTx) Sign(chainID string, signingAccount acm.SigningAccount) {
-	tx.Input.PublicKey = signingAccount.PublicKey()
-	tx.Input.Signature = acm.ChainSign(signingAccount, chainID, tx)
+func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+	if len(signingAccounts) != 1 {
+		return fmt.Errorf("NameTx expects a single SigningAccount for its single Input but %v were provieded",
+			len(signingAccounts))
+	}
+	var err error
+	tx.Input.PublicKey = signingAccounts[0].PublicKey()
+	tx.Input.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	if err != nil {
+		return fmt.Errorf("could not sign %v: %v", tx, err)
+	}
+	return nil
 }
 
 func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {

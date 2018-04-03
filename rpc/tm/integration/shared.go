@@ -56,7 +56,7 @@ const (
 )
 
 // Enable logger output during tests
-var debugLogging = true
+var debugLogging = false
 
 // global variables for use across all tests
 var (
@@ -165,7 +165,7 @@ func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Addres
 
 func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
-	tx.SignInput(genesisDoc.ChainID(), 0, privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 
@@ -174,14 +174,14 @@ func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *acm.Addre
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
 		sequence+1)
-	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 
 func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
-	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 

@@ -86,12 +86,12 @@ func (pa ConcretePrivateAccount) Sign(msg []byte) (Signature, error) {
 	return pa.PrivateKey.Sign(msg)
 }
 
-func ChainSign(signer Signer, chainID string, o Signable) Signature {
+func ChainSign(signer Signer, chainID string, o Signable) (Signature, error) {
 	sig, err := signer.Sign(SignBytes(chainID, o))
 	if err != nil {
-		panic(err)
+		return Signature{}, err
 	}
-	return sig
+	return sig, nil
 }
 
 func (pa *ConcretePrivateAccount) String() string {

@@ -55,9 +55,18 @@ func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	}
 }
 
-func (tx *CallTx) Sign(chainID string, privAccount acm.SigningAccount) {
-	tx.Input.PublicKey = privAccount.PublicKey()
-	tx.Input.Signature = acm.ChainSign(privAccount, chainID, tx)
+func (tx *CallTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+	if len(signingAccounts) != 1 {
+		return fmt.Errorf("CallTx expects a single SigningAccount for its single Input but %v were provieded",
+			len(signingAccounts))
+	}
+	var err error
+	tx.Input.PublicKey = signingAccounts[0].PublicKey()
+	tx.Input.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	if err != nil {
+		return fmt.Errorf("could not sign %v: %v", tx, err)
+	}
+	return nil
 }
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
