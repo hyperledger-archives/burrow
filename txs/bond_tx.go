@@ -90,7 +90,7 @@ func (tx *BondTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *BondTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+func (tx *BondTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
 	if len(signingAccounts) != len(tx.Inputs)+1 {
 		return fmt.Errorf("BondTx expects %v SigningAccounts but got %v", len(tx.Inputs)+1,
 			len(signingAccounts))

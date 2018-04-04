@@ -185,6 +185,9 @@ func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
 func (s *State) UpdateAccount(account acm.Account) error {
 	s.Lock()
 	defer s.Unlock()
+	if account == nil {
+		return fmt.Errorf("UpdateAccount passed nil account in execution.State")
+	}
 	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
 	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
 	// Alternatively just abandon and

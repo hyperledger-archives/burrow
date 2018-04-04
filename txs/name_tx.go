@@ -56,9 +56,9 @@ func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequ
 	}
 }
 
-func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
 	if len(signingAccounts) != 1 {
-		return fmt.Errorf("NameTx expects a single SigningAccount for its single Input but %v were provieded",
+		return fmt.Errorf("NameTx expects a single AddressableSigner for its single Input but %v were provieded",
 			len(signingAccounts))
 	}
 	var err error

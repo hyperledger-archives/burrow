@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -15,7 +14,7 @@ import (
 func TestStateCache_GetAccount(t *testing.T) {
 	// Build backend states for read and write
 	readBackend := testAccounts()
-	writeBackend := NewCache(newTestState())
+	writeBackend := NewCache(NewMemoryState())
 	cache := NewCache(readBackend)
 
 	acc := readBackend.Accounts[addressOf("acc1")]
@@ -34,7 +33,7 @@ func TestStateCache_GetAccount(t *testing.T) {
 
 func TestStateCache_UpdateAccount(t *testing.T) {
 	// Build backend states for read and write
-	backend := NewCache(newTestState())
+	backend := NewCache(NewMemoryState())
 	cache := NewCache(backend)
 	// Create acccount
 	accNew := acm.NewConcreteAccountFromSecret("accNew")
@@ -102,7 +101,7 @@ func TestStateCache_Sync(t *testing.T) {
 func TestStateCache_get(t *testing.T) {
 }
 
-func testAccounts() *testState {
+func testAccounts() *MemoryState {
 	acc1 := acm.NewConcreteAccountFromSecret("acc1")
 	acc1.Permissions.Base.Perms = permission.AddRole | permission.Send
 	acc1.Permissions.Base.SetBit = acc1.Permissions.Base.Perms
@@ -124,22 +123,8 @@ func addressOf(secret string) acm.Address {
 	return acm.NewConcreteAccountFromSecret(secret).Address
 }
 
-// testState StateIterable
-
-type testState struct {
-	Accounts map[acm.Address]acm.Account
-	Storage  map[acm.Address]map[binary.Word256]binary.Word256
-}
-
-func newTestState() *testState {
-	return &testState{
-		Accounts: make(map[acm.Address]acm.Account),
-		Storage:  make(map[acm.Address]map[binary.Word256]binary.Word256),
-	}
-}
-
-func account(acc acm.Account, keyvals ...string) *testState {
-	ts := newTestState()
+func account(acc acm.Account, keyvals ...string) *MemoryState {
+	ts := NewMemoryState()
 	ts.Accounts[acc.Address()] = acc
 	ts.Storage[acc.Address()] = make(map[binary.Word256]binary.Word256)
 	for i := 0; i < len(keyvals); i += 2 {
@@ -148,8 +133,8 @@ func account(acc acm.Account, keyvals ...string) *testState {
 	return ts
 }
 
-func combine(states ...*testState) *testState {
-	ts := newTestState()
+func combine(states ...*MemoryState) *MemoryState {
+	ts := NewMemoryState()
 	for _, state := range states {
 		for _, acc := range state.Accounts {
 			ts.Accounts[acc.Address()] = acc
@@ -161,20 +146,4 @@ func combine(states ...*testState) *testState {
 
 func word(str string) binary.Word256 {
 	return binary.LeftPadWord256([]byte(str))
-}
-
-func (tsr *testState) GetAccount(address acm.Address) (acm.Account, error) {
-	return tsr.Accounts[address], nil
-}
-
-func (tsr *testState) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
-	storage, ok := tsr.Storage[address]
-	if !ok {
-		return binary.Zero256, fmt.Errorf("could not find storage for account %s", address)
-	}
-	value, ok := storage[key]
-	if !ok {
-		return binary.Zero256, fmt.Errorf("could not find key %x for account %s", key, address)
-	}
-	return value, nil
 }

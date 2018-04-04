@@ -20,13 +20,13 @@ import (
 	"github.com/tendermint/go-wire"
 )
 
-type SigningAccount interface {
+type AddressableSigner interface {
 	Addressable
 	Signer
 }
 
 type PrivateAccount interface {
-	SigningAccount
+	AddressableSigner
 	PrivateKey() PrivateKey
 }
 
@@ -99,8 +99,8 @@ func (pa *ConcretePrivateAccount) String() string {
 }
 
 // Convert slice of ConcretePrivateAccounts to slice of SigningAccounts
-func SigningAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []SigningAccount {
-	signingAccounts := make([]SigningAccount, len(concretePrivateAccounts))
+func SigningAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []AddressableSigner {
+	signingAccounts := make([]AddressableSigner, len(concretePrivateAccounts))
 	for i, cpa := range concretePrivateAccounts {
 		signingAccounts[i] = cpa.PrivateAccount()
 	}

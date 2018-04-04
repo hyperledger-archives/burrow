@@ -84,7 +84,7 @@ type Tx interface {
 	String() string
 	GetInputs() []TxInput
 	Hash(chainID string) []byte
-	Sign(chainID string, signingAccounts ...acm.SigningAccount) error
+	Sign(chainID string, signingAccounts ...acm.AddressableSigner) error
 }
 
 type Encoder interface {

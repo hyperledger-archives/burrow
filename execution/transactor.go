@@ -17,10 +17,9 @@ package execution
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
-
-	"runtime/debug"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
@@ -45,9 +44,14 @@ type Call struct {
 	GasUsed uint64
 }
 
+type SequencedAddressableSigner interface {
+	acm.AddressableSigner
+	Sequence() uint64
+}
+
 // Transactor is the controller/middleware for the v0 RPC
 type Transactor struct {
-	txMtx            sync.Mutex
+	sync.Mutex
 	tip              blockchain.Tip
 	state            state.Iterable
 	eventEmitter     event.Emitter
@@ -162,19 +166,56 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
+func (trans *Transactor) Transact2(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
+	fee uint64) (*txs.Receipt, error) {
+	trans.Lock()
+	defer trans.Unlock()
+	// TODO: [Silas] we should consider revising this method and removing fee, or
+	// possibly adding an amount parameter. It is non-sensical to just be able to
+	// set the fee. Our support of fees in general is questionable since at the
+	// moment all we do is deduct the fee effectively leaking token. It is possible
+	// someone may be using the sending of native token to payable functions but
+	// they can be served by broadcasting a token.
+
+	// We hard-code the amount to be equal to the fee which means the CallTx we
+	// generate transfers 0 value, which is the most sensible default since in
+	// recent solidity compilers the EVM generated will throw an error if value
+	// is transferred to a non-payable function.
+	txInput := &txs.TxInput{
+		Address:   inputAccount.Address(),
+		Amount:    fee,
+		Sequence:  inputAccount.Sequence() + 1,
+		PublicKey: inputAccount.PublicKey(),
+	}
+	tx := &txs.CallTx{
+		Input:    txInput,
+		Address:  address,
+		GasLimit: gasLimit,
+		Fee:      fee,
+		Data:     data,
+	}
+
+	// Got ourselves a tx.
+	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, err
+	}
+	return trans.BroadcastTx(tx)
+}
+
+// Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *Transactor) Transact(privKey []byte, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
 
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	trans.txMtx.Lock()
-	defer trans.txMtx.Unlock()
+	trans.Lock()
+	defer trans.Unlock()
 	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	if err != nil {
 		return nil, err
 	}
-	// [Silas] This is puzzling, if the account doesn't exist the CallTx will fail, so what's the point in this?
 	acc, err := trans.state.GetAccount(pa.Address())
 	if err != nil {
 		return nil, err
@@ -210,7 +251,7 @@ func (trans *Transactor) Transact(privKey []byte, address *acm.Address, data []b
 	}
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
 	if errS != nil {
 		return nil, errS
 	}
@@ -265,14 +306,13 @@ func (trans *Transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 
 	pk := &[64]byte{}
 	copy(pk[:], privKey)
-	trans.txMtx.Lock()
-	defer trans.txMtx.Unlock()
+	trans.Lock()
+	defer trans.Unlock()
 	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	if err != nil {
 		return nil, err
 	}
-	cache := trans.state
-	acc, err := cache.GetAccount(pa.Address())
+	acc, err := trans.state.GetAccount(pa.Address())
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +337,7 @@ func (trans *Transactor) Send(privKey []byte, toAddress acm.Address, amount uint
 	tx.Outputs = append(tx.Outputs, txOutput)
 
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
 	if errS != nil {
 		return nil, errS
 	}
@@ -349,14 +389,13 @@ func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amou
 	if len(privKey) != 64 {
 		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
 	}
-	trans.txMtx.Lock()
-	defer trans.txMtx.Unlock()
+	trans.Lock()
+	defer trans.Unlock()
 	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
 	if err != nil {
 		return nil, err
 	}
-	cache := trans.state // XXX: DON'T MUTATE THIS CACHE (used internally for CheckTx)
-	acc, err := cache.GetAccount(pa.Address())
+	acc, err := trans.state.GetAccount(pa.Address())
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +405,7 @@ func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amou
 	}
 	tx := txs.NewNameTxWithSequence(pa.PublicKey(), name, data, amount, fee, sequence)
 	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.SigningAccount{pa})
+	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
 	if errS != nil {
 		return nil, errS
 	}
@@ -374,7 +413,7 @@ func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amou
 }
 
 // Sign a transaction
-func (trans *Transactor) SignTx(tx txs.Tx, signingAccounts []acm.SigningAccount) (txs.Tx, error) {
+func (trans *Transactor) SignTx(tx txs.Tx, signingAccounts []acm.AddressableSigner) (txs.Tx, error) {
 	// more checks?
 	err := tx.Sign(trans.tip.ChainID(), signingAccounts...)
 	if err != nil {

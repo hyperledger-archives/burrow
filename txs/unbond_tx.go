@@ -24,9 +24,9 @@ func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
 	}
 }
 
-func (tx *UnbondTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+func (tx *UnbondTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
 	if len(signingAccounts) != 1 {
-		return fmt.Errorf("UnbondTx expects a single SigningAccount for its signature but %v were provieded",
+		return fmt.Errorf("UnbondTx expects a single AddressableSigner for its signature but %v were provieded",
 			len(signingAccounts))
 	}
 	var err error

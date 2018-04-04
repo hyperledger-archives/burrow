@@ -86,7 +86,7 @@ func (tx *SendTx) AddOutput(addr acm.Address, amt uint64) error {
 	return nil
 }
 
-func (tx *SendTx) Sign(chainID string, signingAccounts ...acm.SigningAccount) error {
+func (tx *SendTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
 	if len(signingAccounts) != len(tx.Inputs) {
 		return fmt.Errorf("SendTx has %v Inputs but was provided with %v SigningAccounts", len(tx.Inputs),
 			len(signingAccounts))
