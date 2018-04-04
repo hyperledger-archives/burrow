@@ -33,9 +33,9 @@ type GenesisSpec struct {
 
 type TemplateAccount struct {
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address *acm.Address   `json:",omitempty"`
-	PubKey  *acm.PublicKey `json:",omitempty"`
-	Amount  *uint64        `json:",omitempty"`
+	Address   *acm.Address   `json:",omitempty"`
+	PublicKey *acm.PublicKey `json:",omitempty"`
+	Amount    *uint64        `json:",omitempty"`
 	// If any bonded amount then this account is also a Validator
 	AmountBonded *uint64  `json:",omitempty"`
 	Name         string   `json:",omitempty"`
@@ -111,7 +111,7 @@ func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
 func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey acm.PublicKey, address acm.Address, err error) {
-	if ta.PubKey == nil {
+	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one
 			address, err = keyClient.Generate(ta.Name, keys.KeyTypeEd25519Ripemd160)
@@ -127,10 +127,10 @@ func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pub
 			return
 		}
 	} else {
-		address := ta.PubKey.Address()
+		address := ta.PublicKey.Address()
 		if ta.Address != nil && *ta.Address != address {
 			err = fmt.Errorf("template address %s does not match public key derived address %s", ta.Address,
-				ta.PubKey)
+				ta.PublicKey)
 		}
 	}
 	return
