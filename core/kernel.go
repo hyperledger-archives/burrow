@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
@@ -63,9 +64,9 @@ type Kernel struct {
 	shutdownOnce   sync.Once
 }
 
-func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
-	tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, exeOptions []execution.ExecutionOption,
-	logger *logging.Logger) (*Kernel, error) {
+func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator,
+	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig,
+	exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
@@ -103,7 +104,8 @@ func NewKernel(ctx context.Context, privValidator tm_types.PrivValidator, genesi
 	transactor := execution.NewTransactor(blockchain, state, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
 		logger)
 
-	service := rpc.NewService(ctx, state, state, emitter, blockchain, transactor, query.NewNodeView(tmNode, txCodec), logger)
+	service := rpc.NewService(ctx, state, checker, state, emitter, blockchain, keyClient, transactor,
+		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{
 		{
