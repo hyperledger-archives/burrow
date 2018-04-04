@@ -24,12 +24,13 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
@@ -38,8 +39,9 @@ import (
 )
 
 // Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below
-//var logger, _ = lifecycle.NewStdErrLogger()
-var logger = loggers.NewNoopInfoTraceLogger()
+//var logger, _, _ = lifecycle.NewStdErrLogger()
+//
+var logger = logging.NewNoopLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -47,7 +49,7 @@ func newAppState() *FakeAppState {
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[permission.GlobalPermissionsAddress] = acm.ConcreteAccount{
+	fas.accounts[acm.GlobalPermissionsAddress] = acm.ConcreteAccount{
 		Permissions: permission.DefaultAccountPermissions,
 	}.Account()
 	return fas
@@ -72,7 +74,7 @@ func newAccount(seed ...byte) acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -95,7 +97,7 @@ func TestVM(t *testing.T) {
 
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -132,7 +134,7 @@ func TestSubcurrency(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
 
@@ -158,16 +160,41 @@ func TestSubcurrency(t *testing.T) {
 	}
 }
 
+//This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
+//it is meant to test the implementation of the REVERT opcode
+func TestRevert(t *testing.T) {
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)
+
+	start := time.Now()
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.Error(t, err, "Expected execution reverted error")
+	fmt.Printf("Output: %v Error: %v\n", output, err)
+	fmt.Println("Call took:", time.Since(start))
+}
+
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(fakeAppState, newParams(), acm.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
 	account2 := newAccount(2)
 	account3 := newAccount(3)
 
+	fakeAppState.UpdateAccount(account1)
+	fakeAppState.UpdateAccount(account2)
+	fakeAppState.UpdateAccount(account3)
 	// account1 will call account2 which will trigger CALL opcode to account3
 	addr := account3.Address()
 	contractCode := callContractCode(addr)
@@ -189,7 +216,7 @@ func TestSendCall(t *testing.T) {
 	account2, err = newAccount(2).AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
-	assert.Error(t, err, "Expected insufficient gas error")
+	assert.NoError(t, err, "Expected insufficient gas error")
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
@@ -198,8 +225,8 @@ func TestSendCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	state := newAppState()
-	ourVm := NewVM(state, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	appState := newAppState()
+	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -219,7 +246,7 @@ func TestDelegateCallGas(t *testing.T) {
 	costBetweenGasAndDelegateCall := gasCost + subCost + delegateCallCost + pushCost
 
 	// Do a simple operation using 1 gas unit
-	calleeAccount, calleeAddress := makeAccountWithCode(state, "callee",
+	calleeAccount, calleeAddress := makeAccountWithCode(appState, "callee",
 		MustSplice(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
@@ -232,7 +259,7 @@ func TestDelegateCallGas(t *testing.T) {
 	callerCodeSuffix := MustSplice(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
-	callerAccount, _ := makeAccountWithCode(state, "caller",
+	callerAccount, _ := makeAccountWithCode(appState, "caller",
 		MustSplice(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
@@ -252,17 +279,17 @@ func TestDelegateCallGas(t *testing.T) {
 	// Should fail
 	_, err = runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
 		callerAccount.Code(), 100)
-	assert.Error(t, err, "Should have insufficient funds for call")
+	assert.Error(t, err, "Should have insufficient gas for call")
 }
 
 func TestMemoryBounds(t *testing.T) {
-	state := newAppState()
+	appState := newAppState()
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(state, memoryProvider, newParams(), acm.ZeroAddress, nil, logger)
-	caller, _ := makeAccountWithCode(state, "caller", nil)
-	callee, _ := makeAccountWithCode(state, "callee", nil)
+	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
+	caller, _ := makeAccountWithCode(appState, "caller", nil)
+	callee, _ := makeAccountWithCode(appState, "callee", nil)
 	gas := uint64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
@@ -307,7 +334,7 @@ func TestMsgSender(t *testing.T) {
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, DefaultDynamicMemoryProvider, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
 
 	var gas uint64 = 100000
 
@@ -373,7 +400,7 @@ func returnWord() []byte {
 	return MustSplice(PUSH1, 32, PUSH1, 0, RETURN)
 }
 
-func makeAccountWithCode(state acm.Updater, name string,
+func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 	code []byte) (acm.MutableAccount, acm.Address) {
 	address, _ := acm.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
@@ -382,7 +409,7 @@ func makeAccountWithCode(state acm.Updater, name string,
 		Code:     code,
 		Sequence: 0,
 	}.MutableAccount()
-	state.UpdateAccount(account)
+	accountUpdater.UpdateAccount(account)
 	return account, account.Address()
 }
 
@@ -412,7 +439,7 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee a
 	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
-	emitter := event.NewEmitter(loggers.NewNoopInfoTraceLogger())
+	emitter := event.NewEmitter(logging.NewNoopLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
 	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr, nil, eventCh)

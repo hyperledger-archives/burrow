@@ -6,7 +6,6 @@ import (
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/logging/types"
 )
 
 // Function to generate part of a tree of Sinks (e.g. append a single child node, or an entire subtree).
@@ -64,7 +63,7 @@ var instructions = []Instruction{
 			return push(stack,
 					config.Sink().SetTransform(config.PruneTransform(structure.TraceKey, structure.RunId)),
 					config.Sink().SetTransform(config.FilterTransform(config.IncludeWhenAllMatch,
-						structure.ChannelKey, types.InfoChannelName)),
+						structure.ChannelKey, structure.InfoChannelName)),
 					config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches,
 						structure.ComponentKey, "Tendermint",
 						"module", "p2p",
@@ -88,7 +87,7 @@ var instructions = []Instruction{
 		builder: func(stack []*config.SinkConfig, ops []string) ([]*config.SinkConfig, []string, error) {
 			sink := peek(stack)
 			ensureFilter(sink)
-			sink.Transform.FilterConfig.AddPredicate(structure.ChannelKey, types.InfoChannelName)
+			sink.Transform.FilterConfig.AddPredicate(structure.ChannelKey, structure.InfoChannelName)
 			return stack, ops, nil
 		},
 	},

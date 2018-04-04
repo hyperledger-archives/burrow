@@ -24,7 +24,6 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -99,10 +98,10 @@ type PersistedState struct {
 }
 
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
-	logger logging_types.InfoTraceLogger) (*blockchain, error) {
+	logger *logging.Logger) (*blockchain, error) {
 
-	logger = logging.WithScope(logger, "LoadOrNewBlockchain")
-	logging.InfoMsg(logger, "Trying to load blockchain state from database",
+	logger = logger.WithScope("LoadOrNewBlockchain")
+	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
 	blockchain, err := LoadBlockchain(db)
 	if err != nil {
@@ -118,7 +117,7 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 		return blockchain, nil
 	}
 
-	logging.InfoMsg(logger, "No existing blockchain state found in database, making new blockchain")
+	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
 	return NewBlockchain(db, genesisDoc), nil
 }
 

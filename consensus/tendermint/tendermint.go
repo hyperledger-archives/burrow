@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/tendermint/config"
@@ -49,7 +49,7 @@ func NewNode(
 	blockchain bcm.MutableBlockchain,
 	checker execution.BatchExecutor,
 	committer execution.BatchCommitter,
-	logger logging_types.InfoTraceLogger) (*Node, error) {
+	logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC

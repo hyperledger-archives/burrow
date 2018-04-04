@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ func TestEventCache_Flush(t *testing.T) {
 	errCh := make(chan error)
 	flushed := false
 
-	em := NewEmitter(loggers.NewNoopInfoTraceLogger())
+	em := NewEmitter(logging.NewNoopLogger())
 	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) bool {
 		// Check against sending a buffer of zeroed messages
 		if message == nil {
@@ -60,7 +60,7 @@ func TestEventCache_Flush(t *testing.T) {
 }
 
 func TestEventCacheGrowth(t *testing.T) {
-	evc := NewEventCache(NewEmitter(loggers.NewNoopInfoTraceLogger()))
+	evc := NewEventCache(NewEmitter(logging.NewNoopLogger()))
 
 	fireNEvents(evc, 100)
 	c := cap(evc.events)

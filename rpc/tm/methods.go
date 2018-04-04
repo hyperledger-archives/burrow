@@ -9,7 +9,6 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
@@ -18,6 +17,7 @@ import (
 
 // Method names
 const (
+	BroadcastTx = "broadcast_tx"
 	Subscribe   = "subscribe"
 	Unsubscribe = "unsubscribe"
 
@@ -26,19 +26,19 @@ const (
 	NetInfo = "net_info"
 
 	// Accounts
-	ListAccounts = "list_accounts"
-	GetAccount   = "get_account"
-	GetStorage   = "get_storage"
-	DumpStorage  = "dump_storage"
+	ListAccounts    = "list_accounts"
+	GetAccount      = "get_account"
+	GetStorage      = "get_storage"
+	DumpStorage     = "dump_storage"
+	GetAccountHuman = "get_account_human"
 
 	// Simulated call
 	Call     = "call"
 	CallCode = "call_code"
 
 	// Names
-	GetName     = "get_name"
-	ListNames   = "list_names"
-	BroadcastTx = "broadcast_tx"
+	GetName   = "get_name"
+	ListNames = "list_names"
 
 	// Blockchain
 	Genesis    = "genesis"
@@ -58,8 +58,8 @@ const (
 
 const SubscriptionTimeoutSeconds = 5 * time.Second
 
-func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[string]*gorpc.RPCFunc {
-	logger = logging.WithScope(logger, "GetRoutes")
+func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.RPCFunc {
+	logger = logger.WithScope("GetRoutes")
 	return map[string]*gorpc.RPCFunc{
 		// Transact
 		BroadcastTx: gorpc.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
@@ -107,7 +107,7 @@ func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[st
 				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
-					logging.InfoMsg(logger, "dropping subscription because could not write to websocket",
+					logger.InfoMsg("dropping subscription because could not write to websocket",
 						"subscription_id", subscriptionID,
 						"event_id", eventID)
 				}
@@ -146,9 +146,10 @@ func GetRoutes(service rpc.Service, logger logging_types.InfoTraceLogger) map[st
 			})
 		}, ""),
 
-		GetAccount:  gorpc.NewRPCFunc(service.GetAccount, "address"),
-		GetStorage:  gorpc.NewRPCFunc(service.GetStorage, "address,key"),
-		DumpStorage: gorpc.NewRPCFunc(service.DumpStorage, "address"),
+		GetAccount:      gorpc.NewRPCFunc(service.GetAccount, "address"),
+		GetStorage:      gorpc.NewRPCFunc(service.GetStorage, "address,key"),
+		DumpStorage:     gorpc.NewRPCFunc(service.DumpStorage, "address"),
+		GetAccountHuman: gorpc.NewRPCFunc(service.GetAccountHumanReadable, "address"),
 
 		// Blockchain
 		Genesis:    gorpc.NewRPCFunc(service.Genesis, ""),

@@ -8,9 +8,7 @@ import (
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/term"
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/logging/types"
 )
 
 const (
@@ -37,7 +35,7 @@ func NewStreamLogger(writer io.Writer, format string) (kitlog.Logger, error) {
 	case TerminalFormat:
 		logger = term.NewLogger(writer, kitlog.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
 			switch structure.Value(keyvals, structure.ChannelKey) {
-			case types.TraceChannelName:
+			case structure.TraceChannelName:
 				return term.FgBgColor{Fg: term.DarkGreen}
 			default:
 				return term.FgBgColor{Fg: term.Yellow}
@@ -52,7 +50,7 @@ func NewStreamLogger(writer io.Writer, format string) (kitlog.Logger, error) {
 	}
 	// Don't log signals
 	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-		if logging.Signal(keyvals) != "" {
+		if structure.Signal(keyvals) != "" {
 			return nil
 		}
 		return logger.Log(keyvals...)
@@ -69,7 +67,7 @@ func NewFileLogger(path string, formatName string) (kitlog.Logger, error) {
 		return nil, err
 	}
 	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-		if logging.Signal(keyvals) == structure.SyncSignal {
+		if structure.Signal(keyvals) == structure.SyncSignal {
 			return f.Sync()
 		}
 		return streamLogger.Log(keyvals...)

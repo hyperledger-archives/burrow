@@ -49,6 +49,9 @@ const (
 	XOR
 	NOT
 	BYTE
+	SHL
+	SHR
+	SAR
 
 	SHA3 = 0x20
 )
@@ -68,6 +71,8 @@ const (
 	GASPRICE_DEPRECATED
 	EXTCODESIZE
 	EXTCODECOPY
+	RETURNDATASIZE
+	RETURNDATACOPY
 )
 
 const (
@@ -182,6 +187,8 @@ const (
 	DELEGATECALL
 
 	// 0x70 range - other
+	STATICCALL   = 0xfa
+	REVERT       = 0xfd
 	SELFDESTRUCT = 0xff
 )
 
@@ -210,6 +217,9 @@ var opCodeNames = map[OpCode]string{
 	OR:     "OR",
 	XOR:    "XOR",
 	BYTE:   "BYTE",
+	SHL:    "SHL",
+	SHR:    "SHR",
+	SAR:    "SAR",
 	ADDMOD: "ADDMOD",
 	MULMOD: "MULMOD",
 
@@ -238,6 +248,8 @@ var opCodeNames = map[OpCode]string{
 	GASLIMIT:              "GASLIMIT",
 	EXTCODESIZE:           "EXTCODESIZE",
 	EXTCODECOPY:           "EXTCODECOPY",
+	RETURNDATASIZE:        "RETURNDATASIZE",
+	RETURNDATACOPY:        "RETURNDATACOPY",
 
 	// 0x50 range - 'storage' and execution
 	POP:      "POP",
@@ -332,8 +344,9 @@ var opCodeNames = map[OpCode]string{
 	RETURN:       "RETURN",
 	CALLCODE:     "CALLCODE",
 	DELEGATECALL: "DELEGATECALL",
-
+	STATICCALL:   "STATICCALL",
 	// 0x70 range - other
+	REVERT:       "REVERT",
 	SELFDESTRUCT: "SELFDESTRUCT",
 }
 

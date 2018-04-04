@@ -22,6 +22,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/permission/snatives"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -189,7 +190,7 @@ func TestPermissionsTxSignable(t *testing.T) {
 			Amount:   12345,
 			Sequence: 250,
 		},
-		PermArgs: ptypes.SetBaseArgs(makeAddress("address1"), 1, true),
+		PermArgs: snatives.SetBaseArgs(makeAddress("address1"), 1, true),
 	}
 
 	signBytes := acm.SignBytes(chainID, permsTx)
@@ -220,7 +221,7 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 func TestNewPermissionsTxWithSequence(t *testing.T) {
 	privateKey := acm.PrivateKeyFromSecret("Shhh...")
 
-	args := ptypes.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
+	args := snatives.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
 	permTx := NewPermissionsTxWithSequence(privateKey.PublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 }
