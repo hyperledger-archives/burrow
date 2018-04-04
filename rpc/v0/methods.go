@@ -229,6 +229,11 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
+			//inputAccount, err := service.Mempool().SigningAccountFromPrivateKey(param.PrivKey)
+			//if err != nil {
+			//	return nil, rpc.INVALID_PARAMS, err
+			//}
+			//receipt, err := service.Transactor().Transact2(inputAccount, address, param.Data, param.GasLimit, param.Fee)
 			receipt, err := service.Transactor().Transact(param.PrivKey, address, param.Data, param.GasLimit, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err

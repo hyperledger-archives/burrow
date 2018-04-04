@@ -48,7 +48,6 @@ var (
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
-	// Initialised in initGlobalVariables
 	genesisDoc = integration.TestGenesisDoc(privateAccounts)
 )
 

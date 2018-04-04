@@ -40,3 +40,7 @@ func newTestTransactor(txProcessor func(tx txs.Tx) (*types.Response, error)) tes
 		Transactor:     trans,
 	}
 }
+
+func TestTransactor_Transact(t *testing.T) {
+	//trans := newTestTransactor()
+}

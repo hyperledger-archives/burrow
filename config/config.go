@@ -61,15 +61,14 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 
 	var exeOptions []execution.ExecutionOption
 	if conf.Execution != nil {
-		var err error
 		exeOptions, err = conf.Execution.ExecutionOptions()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return core.NewKernel(ctx, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, exeOptions,
-		logger)
+	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
+		exeOptions, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

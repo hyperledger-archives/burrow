@@ -46,7 +46,7 @@ const (
 var debugLogging = false
 
 // We use this to wrap tests
-func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.GenesisDoc, runner func() int) int {
+func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.GenesisDoc, runner func(*core.Kernel) int) int {
 	fmt.Println("Running with integration TestWrapper (core/integration/test_wrapper.go)...")
 
 	os.RemoveAll(testDir)
@@ -97,7 +97,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 		panic(err)
 	}
 
-	return runner()
+	return runner(kernel)
 }
 
 func TestGenesisDoc(addressables []acm.PrivateAccount) *genesis.GenesisDoc {
