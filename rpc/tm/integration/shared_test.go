@@ -21,11 +21,13 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hyperledger/burrow/core/integration"
 )
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	returnValue := TestWrapper(func() int {
+	returnValue := integration.TestWrapper(privateAccounts, genesisDoc, func() int {
 		return m.Run()
 	})
 

@@ -59,6 +59,19 @@ func newMockKey() (*MockKey, error) {
 	return key, nil
 }
 
+func mockKeyFromPrivateAccount(privateAccount acm.PrivateAccount) *MockKey {
+	_, ok := privateAccount.PrivateKey().Unwrap().(crypto.PrivKeyEd25519)
+	if !ok {
+		panic(fmt.Errorf("mock key client only supports ed25519 private keys at present"))
+	}
+	key := &MockKey{
+		Address:   privateAccount.Address(),
+		PublicKey: privateAccount.PublicKey().RawBytes(),
+	}
+	copy(key.PrivateKey[:], privateAccount.PrivateKey().RawBytes())
+	return key
+}
+
 func (mockKey *MockKey) Sign(message []byte) (acm.Signature, error) {
 	return acm.SignatureFromBytes(ed25519.Sign(&mockKey.PrivateKey, message)[:])
 }
@@ -73,10 +86,14 @@ type MockKeyClient struct {
 	knownKeys map[acm.Address]*MockKey
 }
 
-func NewMockKeyClient() *MockKeyClient {
-	return &MockKeyClient{
+func NewMockKeyClient(privateAccounts ...acm.PrivateAccount) *MockKeyClient {
+	client := &MockKeyClient{
 		knownKeys: make(map[acm.Address]*MockKey),
 	}
+	for _, pa := range privateAccounts {
+		client.knownKeys[pa.Address()] = mockKeyFromPrivateAccount(pa)
+	}
+	return client
 }
 
 func (mock *MockKeyClient) NewKey() acm.Address {
