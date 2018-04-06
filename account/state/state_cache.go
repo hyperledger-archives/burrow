@@ -103,6 +103,7 @@ func (cache *stateCache) IterateAccounts(consumer func(acm.Account) (stop bool))
 	cache.RLock()
 	for _, info := range cache.accounts {
 		if consumer(info.account) {
+			cache.RUnlock()
 			return true, nil
 		}
 	}
@@ -119,19 +120,20 @@ func (cache *stateCache) GetStorage(address acm.Address, key binary.Word256) (bi
 	accInfo.RLock()
 	value, ok := accInfo.storage[key]
 	accInfo.RUnlock()
-	if ok {
-		return value, nil
-	} else {
-		// Load from backend
-		value, err := cache.backend.GetStorage(address, key)
-		if err != nil {
-			return binary.Zero256, err
-		}
+	if !ok {
 		accInfo.Lock()
-		accInfo.storage[key] = value
-		accInfo.Unlock()
-		return value, nil
+		defer accInfo.Unlock()
+		value, ok = accInfo.storage[key]
+		if !ok {
+			// Load from backend
+			value, err = cache.backend.GetStorage(address, key)
+			if err != nil {
+				return binary.Zero256, err
+			}
+			accInfo.storage[key] = value
+		}
 	}
+	return value, nil
 }
 
 // NOTE: Set value to zero to remove.
@@ -161,6 +163,7 @@ func (cache *stateCache) IterateStorage(address acm.Address,
 	// Try cache first for early exit
 	for key, value := range accInfo.storage {
 		if consumer(key, value) {
+			accInfo.RUnlock()
 			return true, nil
 		}
 	}
@@ -241,17 +244,20 @@ func (cache *stateCache) get(address acm.Address) (*accountInfo, error) {
 	accInfo := cache.accounts[address]
 	cache.RUnlock()
 	if accInfo == nil {
-		account, err := cache.backend.GetAccount(address)
-		if err != nil {
-			return nil, err
-		}
-		accInfo = &accountInfo{
-			account: account,
-			storage: make(map[binary.Word256]binary.Word256),
-		}
 		cache.Lock()
-		cache.accounts[address] = accInfo
-		cache.Unlock()
+		defer cache.Unlock()
+		accInfo = cache.accounts[address]
+		if accInfo == nil {
+			account, err := cache.backend.GetAccount(address)
+			if err != nil {
+				return nil, err
+			}
+			accInfo = &accountInfo{
+				account: account,
+				storage: make(map[binary.Word256]binary.Word256),
+			}
+			cache.accounts[address] = accInfo
+		}
 	}
 	return accInfo, nil
 }

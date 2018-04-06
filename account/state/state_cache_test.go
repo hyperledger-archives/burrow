@@ -78,6 +78,16 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 }
 
 func TestStateCache_RemoveAccount(t *testing.T) {
+	// Build backend states for read and write
+	readBackend := testAccounts()
+	cache := NewCache(readBackend)
+
+	acc := readBackend.Accounts[addressOf("acc1")]
+	err := cache.RemoveAccount(acc.Address())
+	require.NoError(t, err)
+
+	dead, err := cache.GetAccount(acc.Address())
+	assert.Nil(t, dead, err)
 }
 
 func TestStateCache_GetStorage(t *testing.T) {
