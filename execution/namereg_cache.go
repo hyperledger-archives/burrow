@@ -109,11 +109,13 @@ func (cache *NameRegCache) Sync(state NameRegWriter) error {
 		if nameInfo.removed {
 			err := state.RemoveNameRegEntry(name)
 			if err != nil {
+				nameInfo.RUnlock()
 				return err
 			}
 		} else if nameInfo.updated {
 			err := state.UpdateNameRegEntry(nameInfo.entry)
 			if err != nil {
+				nameInfo.RUnlock()
 				return err
 			}
 		}
@@ -150,16 +152,19 @@ func (cache *NameRegCache) get(name string) (*nameInfo, error) {
 	nmeInfo := cache.names[name]
 	cache.RUnlock()
 	if nmeInfo == nil {
-		entry, err := cache.backend.GetNameRegEntry(name)
-		if err != nil {
-			return nil, err
-		}
-		nmeInfo = &nameInfo{
-			entry: entry,
-		}
 		cache.Lock()
-		cache.names[name] = nmeInfo
-		cache.Unlock()
+		defer cache.Unlock()
+		nmeInfo = cache.names[name]
+		if nmeInfo == nil {
+			entry, err := cache.backend.GetNameRegEntry(name)
+			if err != nil {
+				return nil, err
+			}
+			nmeInfo = &nameInfo{
+				entry: entry,
+			}
+			cache.names[name] = nmeInfo
+		}
 	}
 	return nmeInfo, nil
 }

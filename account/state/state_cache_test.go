@@ -78,6 +78,16 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 }
 
 func TestStateCache_RemoveAccount(t *testing.T) {
+	// Build backend states for read and write
+	readBackend := testAccounts()
+	cache := NewCache(readBackend)
+
+	acc := readBackend.Accounts[addressOf("acc1")]
+	err := cache.RemoveAccount(acc.Address())
+	require.NoError(t, err)
+
+	dead, err := cache.GetAccount(acc.Address())
+	assert.Nil(t, dead, err)
 }
 
 func TestStateCache_GetStorage(t *testing.T) {
@@ -121,8 +131,6 @@ type testState struct {
 	Storage  map[acm.Address]map[binary.Word256]binary.Word256
 }
 
-var _ Iterable = &testState{}
-
 func newTestState() *testState {
 	return &testState{
 		Accounts: make(map[acm.Address]acm.Account),
@@ -153,24 +161,6 @@ func combine(states ...*testState) *testState {
 
 func word(str string) binary.Word256 {
 	return binary.LeftPadWord256([]byte(str))
-}
-
-func (tsr *testState) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
-	for _, acc := range tsr.Accounts {
-		if consumer(acc) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (tsr *testState) IterateStorage(address acm.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
-	for key, value := range tsr.Storage[address] {
-		if consumer(key, value) {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 func (tsr *testState) GetAccount(address acm.Address) (acm.Account, error) {
