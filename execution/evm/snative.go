@@ -248,7 +248,7 @@ func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller 
 			"identifier but arguments are only %v bytes long", len(args))
 	}
 
-	function, err := contract.FunctionByID(firstFourBytes(args))
+	function, err := contract.FunctionByID(abi.FirstFourBytes(args))
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func (function *SNativeFunctionDescription) Signature() string {
 
 // Get function calling identifier FunctionSelector
 func (function *SNativeFunctionDescription) ID() abi.FunctionSelector {
-	return firstFourBytes(sha3.Sha3([]byte(function.Signature())))
+	return abi.FunctionID(function.Signature())
 }
 
 // Get number of function arguments
@@ -565,10 +565,4 @@ func byteFromBool(b bool) byte {
 		return 0x1
 	}
 	return 0x0
-}
-
-func firstFourBytes(byteSlice []byte) [4]byte {
-	var bs [4]byte
-	copy(bs[:], byteSlice[:4])
-	return bs
 }

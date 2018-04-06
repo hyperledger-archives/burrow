@@ -166,7 +166,7 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *Transactor) Transact2(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) Transact(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
 	trans.Lock()
 	defer trans.Unlock()
@@ -203,65 +203,11 @@ func (trans *Transactor) Transact2(inputAccount SequencedAddressableSigner, addr
 	return trans.BroadcastTx(tx)
 }
 
-// Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *Transactor) Transact(privKey []byte, address *acm.Address, data []byte, gasLimit,
-	fee uint64) (*txs.Receipt, error) {
 
-	if len(privKey) != 64 {
-		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
-	}
-	trans.Lock()
-	defer trans.Unlock()
-	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
-	if err != nil {
-		return nil, err
-	}
-	acc, err := trans.state.GetAccount(pa.Address())
-	if err != nil {
-		return nil, err
-	}
-	sequence := uint64(1)
-	if acc != nil {
-		sequence = acc.Sequence() + uint64(1)
-	}
-
-	// TODO: [Silas] we should consider revising this method and removing fee, or
-	// possibly adding an amount parameter. It is non-sensical to just be able to
-	// set the fee. Our support of fees in general is questionable since at the
-	// moment all we do is deduct the fee effectively leaking token. It is possible
-	// someone may be using the sending of native token to payable functions but
-	// they can be served by broadcasting a token.
-
-	// We hard-code the amount to be equal to the fee which means the CallTx we
-	// generate transfers 0 value, which is the most sensible default since in
-	// recent solidity compilers the EVM generated will throw an error if value
-	// is transferred to a non-payable function.
-	txInput := &txs.TxInput{
-		Address:   pa.Address(),
-		Amount:    fee,
-		Sequence:  sequence,
-		PublicKey: pa.PublicKey(),
-	}
-	tx := &txs.CallTx{
-		Input:    txInput,
-		Address:  address,
-		GasLimit: gasLimit,
-		Fee:      fee,
-		Data:     data,
-	}
-
-	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
-	if errS != nil {
-		return nil, errS
-	}
-	return trans.BroadcastTx(txS)
-}
-
-func (trans *Transactor) TransactAndHold(privKey []byte, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) TransactAndHold(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
-	receipt, err := trans.Transact(privKey, address, data, gasLimit, fee)
+	receipt, err := trans.Transact(inputAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}

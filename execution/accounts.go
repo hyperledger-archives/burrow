@@ -59,6 +59,7 @@ func (accs *Accounts) SigningAccountFromPrivateKey(privateKeyBytes []byte) (*Sig
 	if account != nil {
 		account = acm.ConcreteAccount{
 			Address: privateAccount.Address(),
+			PublicKey: privateAccount.PublicKey(),
 		}.Account()
 	}
 	return &SigningAccount{

@@ -44,6 +44,15 @@ func (vc *V0Client) Transact(param TransactParam) (*txs.Receipt, error) {
 	return receipt, nil
 }
 
+func (vc *V0Client) TransactAndHold2(param TransactParam) (*events.EventDataCall, error) {
+	eventDataCall := new(events.EventDataCall)
+	err := vc.Call(TRANSACT_AND_HOLD+"2", param, eventDataCall)
+	if err != nil {
+		return nil, err
+	}
+	return eventDataCall, nil
+}
+
 func (vc *V0Client) TransactAndHold(param TransactParam) (*events.EventDataCall, error) {
 	eventDataCall := new(events.EventDataCall)
 	err := vc.Call(TRANSACT_AND_HOLD, param, eventDataCall)
@@ -82,7 +91,7 @@ func (vc *V0Client) Call(method string, param interface{}, result interface{}) e
 	if rpcResponse.Error != nil {
 		return rpcResponse.Error
 	}
-	err = json.Unmarshal(rpcResponse.Result, result)
+	vc.codec.DecodeBytes(result, rpcResponse.Result)
 	if err != nil {
 		return err
 	}

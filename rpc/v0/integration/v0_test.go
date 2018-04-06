@@ -20,9 +20,13 @@ package integration
 import (
 	"testing"
 
+	"encoding/hex"
+
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/rpc/v0"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/hyperledger/burrow/binary"
 )
 
 func TestTransact(t *testing.T) {
@@ -44,13 +48,28 @@ func TestTransact(t *testing.T) {
 func TestTransactAndHold(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
-	call, err := cli.TransactAndHold(v0.TransactParam{
+	bc, err := hex.DecodeString(strangeLoopBytecode)
+	require.NoError(t, err)
+	create, err := cli.TransactAndHold(v0.TransactParam{
 		PrivKey:  privateAccounts[0].PrivateKey().RawBytes(),
 		Address:  nil,
-		Data:     []byte{},
+		Data:     bc,
 		Fee:      2,
 		GasLimit: 10000,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, call.StackDepth)
+	assert.Equal(t, 0, create.StackDepth)
+	functionID := abi.FunctionID("UpsieDownsie()")
+	call, err := cli.TransactAndHold2(v0.TransactParam{
+		PrivKey:  privateAccounts[0].PrivateKey().RawBytes(),
+		Address:  create.CallData.Callee.Bytes(),
+		Data:     functionID[:],
+		Fee:      2,
+		GasLimit: 10000,
+	})
+	require.NoError(t, err)
+	depth := binary.Uint64FromWord256(binary.LeftPadWord256(call.Return))
+	// Would give 23 if taken from wrong frame
+	assert.Equal(t, 18, int(depth))
 }
+

@@ -32,6 +32,10 @@ var sendTxQuery = event.NewQueryBuilder().
 	AndEquals(event.MessageTypeKey, reflect.TypeOf(EventDataTx{}).String()).
 	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.SendTx{}).String())
 
+var callTxQuery = event.NewQueryBuilder().
+	AndEquals(event.MessageTypeKey, reflect.TypeOf(EventDataTx{}).String()).
+	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.CallTx{}).String())
+
 type eventDataTx struct {
 	Tx        txs.Wrapper
 	Return    []byte
@@ -60,7 +64,6 @@ func (edTx *EventDataTx) UnmarshalJSON(data []byte) error {
 }
 
 // Publish/Subscribe
-
 func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
 	address acm.Address, txHash []byte, ch chan<- *txs.SendTx) error {
 
