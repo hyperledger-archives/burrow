@@ -82,8 +82,9 @@ func main() {
 			rootOpt := cmd.IntOpt("r root-accounts", 0, "Number of preset Root type accounts")
 			developerOpt := cmd.IntOpt("d developer-accounts", 0, "Number of preset Developer type accounts")
 			participantsOpt := cmd.IntOpt("p participant-accounts", 1, "Number of preset Participant type accounts")
+			chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-			cmd.Spec = "[--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] [--participant-accounts] [--toml]"
+			cmd.Spec = "[--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] [--participant-accounts] [--chain-name] [--toml]"
 
 			cmd.Action = func() {
 				specs := make([]spec.GenesisSpec, 0, *participantsOpt+*fullOpt)
@@ -103,6 +104,7 @@ func main() {
 					specs = append(specs, spec.ParticipantAccount(i))
 				}
 				genesisSpec := spec.MergeGenesisSpecs(specs...)
+				genesisSpec.ChainName = *chainNameOpt
 				if *tomlOpt {
 					os.Stdout.WriteString(source.TOMLString(genesisSpec))
 				} else {
@@ -142,9 +144,11 @@ func main() {
 				"including logging opcodes and dumping EVM tokens to disk these can be later pruned from the "+
 				"generated config.")
 
+			chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
+
 			cmd.Spec = "[--keys-url=<keys URL>] [--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
-				"[--validator-index=<index>] [--toml-in] [--json-out] [--logging=<logging program>] " +
-				"[--describe-logging] [--debug]"
+				"[--validator-index=<index>] [--chain-name] [--toml-in] [--json-out] " +
+				"[--logging=<logging program>] [--describe-logging] [--debug]"
 
 			cmd.Action = func() {
 				conf := config.DefaultBurrowConfig()
@@ -224,6 +228,8 @@ func main() {
 						VMOptions: []execution.VMOption{execution.DumpTokens, execution.DebugOpcodes},
 					}
 				}
+
+				conf.GenesisDoc.ChainName = *chainNameOpt
 
 				if *jsonOutOpt {
 					os.Stdout.WriteString(conf.JSONString())
