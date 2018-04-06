@@ -3,7 +3,6 @@ package config
 import (
 	"testing"
 
-	. "github.com/hyperledger/burrow/util/slice"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +15,7 @@ func TestBuildKeyValuesPredicateMatchAll(t *testing.T) {
 	}
 	kvp, err := BuildKeyValuesPredicate(conf, true)
 	assert.NoError(t, err)
-	assert.True(t, kvp(Slice("Foo", "bar", "Bosh", "Bish")))
+	assert.True(t, kvp([]interface{}{"Foo", "bar", "Bosh", "Bish"}))
 }
 
 func TestBuildKeyValuesPredicateMatchAny(t *testing.T) {
@@ -28,7 +27,7 @@ func TestBuildKeyValuesPredicateMatchAny(t *testing.T) {
 	}
 	kvp, err := BuildKeyValuesPredicate(conf, false)
 	assert.NoError(t, err)
-	assert.True(t, kvp(Slice("Foo", "bar", "Bosh", "Bish")))
+	assert.True(t, kvp([]interface{}{"Foo", "bar", "Bosh", "Bish"}))
 }
 
 func TestExcludeAllFilterPredicate(t *testing.T) {
@@ -47,9 +46,9 @@ func TestExcludeAllFilterPredicate(t *testing.T) {
 	}
 	fp, err := BuildFilterPredicate(fc)
 	assert.NoError(t, err)
-	assert.False(t, fp(Slice("Bosh", "Bash", "Shoes", 42)))
-	assert.True(t, fp(Slice("Bosh", "Bash", "Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
-	assert.False(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+	assert.False(t, fp([]interface{}{"Bosh", "Bash", "Shoes", 42}))
+	assert.True(t, fp([]interface{}{"Bosh", "Bash", "Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
+	assert.False(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
 
 }
 func TestExcludeAnyFilterPredicate(t *testing.T) {
@@ -68,9 +67,9 @@ func TestExcludeAnyFilterPredicate(t *testing.T) {
 	}
 	fp, err := BuildFilterPredicate(fc)
 	assert.NoError(t, err)
-	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 42)))
-	assert.True(t, fp(Slice("Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
-	assert.True(t, fp(Slice("Food", 0.2, "Shoes", 42, "Bosh", "Bish")))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 42}))
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
+	assert.True(t, fp([]interface{}{"Food", 0.2, "Shoes", 42, "Bosh", "Bish"}))
 
 }
 
@@ -90,10 +89,11 @@ func TestIncludeAllFilterPredicate(t *testing.T) {
 	}
 	fp, err := BuildFilterPredicate(fc)
 	assert.NoError(t, err)
-	assert.True(t, fp(Slice("Foo", "bar", "Shoes", 42)))
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Shoes", 42}))
 	// Don't filter, it has all the required key values
-	assert.False(t, fp(Slice("Foo", "bar", "Planks", 0.2, "Shoes", 42, "Bosh", "Bish")))
-	assert.True(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Planks", 0.2, "Shoes", 42, "imBoshy", "unBishy"}))
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Planks", 0.23, "Shoes", 42, "imBoshy", "unBishy"}))
+	assert.True(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
 }
 
 func TestIncludeAnyFilterPredicate(t *testing.T) {
@@ -112,8 +112,24 @@ func TestIncludeAnyFilterPredicate(t *testing.T) {
 	}
 	fp, err := BuildFilterPredicate(fc)
 	assert.NoError(t, err)
-	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 3427)))
-	assert.False(t, fp(Slice("Foo", "bar", "Shoes", 42, "Bosh", "Bish")))
-	assert.False(t, fp(Slice("Food", 0.2, "Shoes", 42)))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 3427}))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
+	assert.False(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
+}
 
+func TestKeyOnlyPredicate(t *testing.T) {
+
+	fc := &FilterConfig{
+		FilterMode: IncludeWhenAnyMatches,
+		Predicates: []*KeyValuePredicateConfig{
+			{
+				KeyRegex: "Bosh",
+			},
+		},
+	}
+	fp, err := BuildFilterPredicate(fc)
+	assert.NoError(t, err)
+	assert.True(t, fp([]interface{}{"Foo", "bar", "Shoes", 3427}))
+	assert.False(t, fp([]interface{}{"Foo", "bar", "Shoes", 42, "Bosh", "Bish"}))
+	assert.True(t, fp([]interface{}{"Food", 0.2, "Shoes", 42}))
 }

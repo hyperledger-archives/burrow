@@ -16,19 +16,13 @@ package client
 
 import (
 	"fmt"
-	// "strings"
 
-	"github.com/tendermint/go-rpc/client"
-
-	acc "github.com/hyperledger/burrow/account"
-	consensus_types "github.com/hyperledger/burrow/consensus/types"
-	core_types "github.com/hyperledger/burrow/core/types"
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
-	logging_types "github.com/hyperledger/burrow/logging/types"
-	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
-	tendermint_types "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/rpc"
+	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
-	tmLog15 "github.com/tendermint/log15"
+	"github.com/tendermint/tendermint/rpc/lib/client"
 )
 
 type NodeClient interface {
@@ -36,24 +30,24 @@ type NodeClient interface {
 	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
-		LatestBlockHeight int, LatestBlockTime int64, err error)
-	GetAccount(address []byte) (*acc.Account, error)
-	QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error)
-	QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error)
+		LatestBlockHeight uint64, LatestBlockTime int64, err error)
+	GetAccount(address acm.Address) (acm.Account, error)
+	QueryContract(callerAddress, calleeAddress acm.Address, data []byte) (ret []byte, gasUsed uint64, err error)
+	QueryContractCode(address acm.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
 
-	DumpStorage(address []byte) (storage *core_types.Storage, err error)
-	GetName(name string) (owner []byte, data string, expirationBlock int, err error)
-	ListValidators() (blockHeight int, bondedValidators, unbondingValidators []consensus_types.Validator, err error)
+	DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error)
+	GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error)
+	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
 
 	// Logging context for this NodeClient
-	Logger() logging_types.InfoTraceLogger
+	Logger() *logging.Logger
 }
 
 type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
 
-	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error)
+	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr acm.Address) (chan Confirmation, error)
 	Close()
 }
 
@@ -64,23 +58,16 @@ var _ NodeClient = (*burrowNodeClient)(nil)
 // burrow-client is a simple struct exposing the client rpc methods
 type burrowNodeClient struct {
 	broadcastRPC string
-	logger       logging_types.InfoTraceLogger
+	logger       *logging.Logger
 }
 
 // BurrowKeyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewBurrowNodeClient(rpcString string, logger logging_types.InfoTraceLogger) *burrowNodeClient {
+func NewBurrowNodeClient(rpcString string, logger *logging.Logger) *burrowNodeClient {
 	return &burrowNodeClient{
 		broadcastRPC: rpcString,
-		logger:       logging.WithScope(logger, "BurrowNodeClient"),
+		logger:       logger.WithScope("BurrowNodeClient"),
 	}
-}
-
-// Note [Ben]: This is a hack to silence Tendermint logger from tendermint/go-rpc
-// it needs to be initialised before go-rpc, hence it's placement here.
-func init() {
-	h := tmLog15.LvlFilterHandler(tmLog15.LvlWarn, tmLog15.StdoutHandler)
-	tmLog15.Root().SetHandler(h)
 }
 
 //------------------------------------------------------------------------------------
@@ -92,7 +79,7 @@ func (burrowNodeClient *burrowNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, er
 	if err != nil {
 		return nil, err
 	}
-	return &receipt, nil
+	return receipt, nil
 }
 
 func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error) {
@@ -113,17 +100,17 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 	// }
 	// wsAddr = "ws://" + wsAddr
 	wsAddr = nodeAddr
-	logging.TraceMsg(burrowNodeClient.logger, "Subscribing to websocket address",
+	burrowNodeClient.logger.TraceMsg("Subscribing to websocket address",
 		"websocket address", wsAddr,
 		"endpoint", "/websocket",
 	)
 	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
-	if _, err = wsClient.Start(); err != nil {
+	if err = wsClient.Start(); err != nil {
 		return nil, err
 	}
 	derivedBurrowNodeWebsocketClient := &burrowNodeWebsocketClient{
 		tendermintWebsocket: wsClient,
-		logger:              logging.WithScope(burrowNodeClient.logger, "BurrowNodeWebsocketClient"),
+		logger:              burrowNodeClient.logger.WithScope("BurrowNodeWebsocketClient"),
 	}
 	return derivedBurrowNodeWebsocketClient, nil
 }
@@ -133,13 +120,15 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
-func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte, LatestBlockHash []byte, LatestBlockHeight int, LatestBlockTime int64, err error) {
+func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte,
+	LatestBlockHash []byte, LatestBlockHeight uint64, LatestBlockTime int64, err error) {
+
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get status: %s",
+		err = fmt.Errorf("error connecting to node (%s) to get status: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
-		return nil, nil, nil, int(0), int64(0), err
+		return
 	}
 
 	// unwrap return results
@@ -155,7 +144,7 @@ func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	chainIdResult, err := tendermint_client.ChainId(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get chain id: %s",
+		err = fmt.Errorf("error connecting to node (%s) to get chain id: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
 		return "", "", nil, err
 	}
@@ -169,74 +158,75 @@ func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, 
 
 // QueryContract executes the contract code at address with the given data
 // NOTE: there is no check on the caller;
-func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress, data []byte) (ret []byte, gasUsed int64, err error) {
+func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress acm.Address,
+	data []byte) (ret []byte, gasUsed uint64, err error) {
+
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
-		err = fmt.Errorf("Error (%v) connnecting to node (%s) to query contract at (%X) with data (%X)",
+		err = fmt.Errorf("error (%v) connnecting to node (%s) to query contract at (%s) with data (%X)",
 			err.Error(), burrowNodeClient.broadcastRPC, calleeAddress, data)
-		return nil, int64(0), err
+		return
 	}
 	return callResult.Return, callResult.GasUsed, nil
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (burrowNodeClient *burrowNodeClient) QueryContractCode(address, code, data []byte) (ret []byte, gasUsed int64, err error) {
+func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address, code,
+	data []byte) (ret []byte, gasUsed uint64, err error) {
+
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	// TODO: [ben] Call and CallCode have an inconsistent signature; it makes sense for both to only
 	// have a single address that is the contract to query.
 	callResult, err := tendermint_client.CallCode(client, address, code, data)
 	if err != nil {
-		err = fmt.Errorf("Error connnecting to node (%s) to query contract code at (%X) with data (%X) and code (%X)",
+		err = fmt.Errorf("error connnecting to node (%s) to query contract code at (%s) with data (%X) and code (%X): %v",
 			burrowNodeClient.broadcastRPC, address, data, code, err.Error())
-		return nil, int64(0), err
+		return nil, uint64(0), err
 	}
 	return callResult.Return, callResult.GasUsed, nil
 }
 
 // GetAccount returns a copy of the account
-func (burrowNodeClient *burrowNodeClient) GetAccount(address []byte) (*acc.Account, error) {
+func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to fetch account (%X): %s",
+		err = fmt.Errorf("error connecting to node (%s) to fetch account (%s): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("Unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
 		return nil, err
 	}
 
-	return account.Copy(), nil
+	return account, nil
 }
 
-// DumpStorage returns the full storage for an account.
-func (burrowNodeClient *burrowNodeClient) DumpStorage(address []byte) (storage *core_types.Storage, err error) {
+// DumpStorage returns the full storage for an acm.
+func (burrowNodeClient *burrowNodeClient) DumpStorage(address acm.Address) (*rpc.ResultDumpStorage, error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	resultStorage, err := tendermint_client.DumpStorage(client, address)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get storage for account (%X): %s",
+		return nil, fmt.Errorf("error connecting to node (%s) to get storage for account (%X): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
-		return nil, err
 	}
-	// UnwrapResultDumpStorage is an inefficient full deep copy,
-	// to transform the type to /core/types.Storage
-	// TODO: removing go-wire and go-rpc allows us to collapse these types
-	storage = tendermint_types.UnwrapResultDumpStorage(resultStorage)
-	return
+	return resultStorage, nil
 }
 
 //--------------------------------------------------------------------------------------------
 // Name registry
 
-func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner []byte, data string, expirationBlock int, err error) {
+func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Address, data string,
+	expirationBlock uint64, err error) {
+
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	entryResult, err := tendermint_client.GetName(client, name)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get name registrar entry for name (%s)",
+		err = fmt.Errorf("error connecting to node (%s) to get name registrar entry for name (%s)",
 			burrowNodeClient.broadcastRPC, name)
-		return nil, "", 0, err
+		return acm.ZeroAddress, "", 0, err
 	}
 	// unwrap return results
 	owner = entryResult.Owner
@@ -247,22 +237,28 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner []byte, da
 
 //--------------------------------------------------------------------------------------------
 
-func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight int,
-	bondedValidators []consensus_types.Validator, unbondingValidators []consensus_types.Validator, err error) {
+func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
+	bondedValidators, unbondingValidators []acm.Validator, err error) {
+
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	validatorsResult, err := tendermint_client.ListValidators(client)
 	if err != nil {
-		err = fmt.Errorf("Error connecting to node (%s) to get validators",
-			burrowNodeClient.broadcastRPC)
-		return 0, nil, nil, err
+		err = fmt.Errorf("error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
+		return
 	}
 	// unwrap return results
 	blockHeight = validatorsResult.BlockHeight
-	bondedValidators = validatorsResult.BondedValidators
-	unbondingValidators = validatorsResult.UnbondingValidators
+	bondedValidators = make([]acm.Validator, len(validatorsResult.BondedValidators))
+	for i, cv := range validatorsResult.BondedValidators {
+		bondedValidators[i] = cv.Validator()
+	}
+	unbondingValidators = make([]acm.Validator, len(validatorsResult.UnbondingValidators))
+	for i, cv := range validatorsResult.UnbondingValidators {
+		unbondingValidators[i] = cv.Validator()
+	}
 	return
 }
 
-func (burrowNodeClient *burrowNodeClient) Logger() logging_types.InfoTraceLogger {
+func (burrowNodeClient *burrowNodeClient) Logger() *logging.Logger {
 	return burrowNodeClient.logger
 }

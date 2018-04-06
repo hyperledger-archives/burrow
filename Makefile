@@ -8,22 +8,15 @@
 
 SHELL := /bin/bash
 REPO := $(shell pwd)
-GOFILES_NOVENDOR := $(shell find ${REPO} -type f -name '*.go' -not -path "${REPO}/vendor/*")
-PACKAGES_NOVENDOR := $(shell go list github.com/hyperledger/burrow/... | grep -v /vendor/)
-VERSION := $(shell go run ./util/version/cmd/main.go)
-VERSION_MIN := $(shell echo ${VERSION} | cut -d . -f 1-2)
-COMMIT_SHA := $(shell echo `git rev-parse --short --verify HEAD`)
+GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
+PACKAGES_NOVENDOR := $(shell go list ./...)
+COMMIT := $(shell git rev-parse --short HEAD)
+# Bosmarmot integration testing
+BOSMARMOT_PROJECT := github.com/monax/bosmarmot
+BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
+BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 DOCKER_NAMESPACE := quay.io/monax
-
-
-.PHONY: greet
-greet:
-	@echo "Hi! I'm the marmot that will help you with burrow v${VERSION}"
-
-.PHONY: version
-version:
-	@echo "${VERSION}"
 
 ### Formatting, linting and vetting
 
@@ -76,13 +69,20 @@ megacheck:
 erase_vendor:
 	rm -rf ${REPO}/vendor/
 
-# install vendor uses glide to install vendored dependencies
-.PHONY: install_vendor
-install_vendor:
-	go get github.com/Masterminds/glide
-	glide install
+# install vendor uses dep to install vendored dependencies
+.PHONY: reinstall_vendor
+reinstall_vendor: erase_vendor
+	@go get -u github.com/golang/dep/cmd/dep
+	@dep ensure -v
 
-# Dumps Solidity interface contracts for SNatives
+# delete the vendor directy and pull back using dep lock and constraints file
+# will exit with an error if the working directory is not clean (any missing files or new
+# untracked ones)
+.PHONY: ensure_vendor
+ensure_vendor: reinstall_vendor
+	@scripts/is_checkout_dirty.sh
+
+# dumps Solidity interface contracts for SNatives
 .PHONY: snatives
 snatives:
 	@go run ./util/snatives/cmd/main.go
@@ -95,27 +95,43 @@ build:	check build_db build_client
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
-build_race:	check build_race_db build_race_client build_race_keys
+build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db
 build_db:
-	go build -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
+	go build -ldflags "-X github.com/hyperledger/burrow/project.commit=${COMMIT}" -o ${REPO}/bin/burrow ./cmd/burrow
 
 # build burrow-client
 .PHONY: build_client
 build_client:
-	go build -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
+	go build -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
-	go build -race -o ${REPO}/target/burrow-${COMMIT_SHA} ./cmd/burrow
+	go build -race -o ${REPO}/bin/burrow ./cmd/burrow
 
 # build burrow-client with checks for race conditions
 .PHONY: build_race_client
 build_race_client:
-	go build -race -o ${REPO}/target/burrow-client-${COMMIT_SHA} ./client/cmd/burrow-client
+	go build -race -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
+
+
+# Get the Bosmarmot code
+.PHONY: bos
+bos: ./scripts/deps/bos.sh
+	scripts/git_get_revision.sh \
+	https://${BOSMARMOT_PROJECT}.git \
+	${BOSMARMOT_CHECKOUT} \
+	$(shell ./scripts/deps/bos.sh)
+
+### Build docker images for github.com/hyperledger/burrow
+
+# build docker image for burrow
+.PHONY: build_docker_db
+build_docker_db: check
+	@scripts/build_tool.sh
 
 ### Testing github.com/hyperledger/burrow
 
@@ -126,23 +142,53 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-	@go test ./rpc/tendermint/test -tags integration
+	@go get github.com/monax/bosmarmot/keys/cmd/monax-keys
+	@go test ./keys/integration -tags integration
+	@go test ./rpc/tm/integration -tags integration
+
+# Run integration test from bosmarmot (separated from other integration tests so we can
+# make exception when this test fails when we make a breaking change in Burrow)
+.PHONY: test_integration_bosmarmot
+test_integration_bosmarmot: bos build_db
+	cd "${BOSMARMOT_CHECKOUT}" &&\
+	GOPATH="${BOSMARMOT_GOPATH}" \
+	burrow_bin="${REPO}/bin/burrow" \
+	make test_integration_no_burrow
+
 
 # test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
 	@go test -race ${PACKAGES_NOVENDOR}
 
-### Build docker images for github.com/hyperledger/burrow
-
-# build docker image for burrow
-.PHONY: build_docker_db
-build_docker_db: check
-	@scripts/build_tool.sh
-
 ### Clean up
 
 # clean removes the target folder containing build artefacts
 .PHONY: clean
 clean:
-	-rm -r ./target 
+	-rm -r ./bin
+
+### Release and versioning
+
+# Print version
+.PHONY: version
+version:
+	@go run ./project/cmd/version/main.go
+
+# Generate full changelog of all release notes
+CHANGELOG.md: project/history.go project/cmd/changelog/main.go
+	@go run ./project/cmd/changelog/main.go > CHANGELOG.md
+
+# Generated release note for this version
+NOTES.md: project/history.go project/cmd/notes/main.go
+	@go run ./project/cmd/notes/main.go > NOTES.md
+
+.PHONY: docs
+docs: CHANGELOG.md NOTES.md
+
+# Tag the current HEAD commit with the current release defined in
+# ./release/release.go
+.PHONY: tag_release
+tag_release: test check CHANGELOG.md NOTES.md build
+	@scripts/tag_release.sh
+

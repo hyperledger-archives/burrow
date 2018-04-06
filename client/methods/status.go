@@ -18,13 +18,12 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/client"
-	"github.com/hyperledger/burrow/definitions"
 )
 
-func Status(do *definitions.ClientDo) error {
+func Status(do *client.Do) error {
 	logger, err := loggerFromClientDo(do, "Status")
 	if err != nil {
-		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)
 	genesisHash, validatorPublicKey, latestBlockHash, latestBlockHeight, latestBlockTime, err := burrowNodeClient.Status()
@@ -37,7 +36,7 @@ func Status(do *definitions.ClientDo) error {
 		return fmt.Errorf("Error requesting chainId from chain at (%s): %s", do.NodeAddrFlag, err)
 	}
 
-	logger.Info("chain", do.NodeAddrFlag,
+	logger.Info.Log("chain", do.NodeAddrFlag,
 		"genesisHash", fmt.Sprintf("%X", genesisHash),
 		"chainName", chainName,
 		"chainId", chainId,

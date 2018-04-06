@@ -15,30 +15,33 @@
 package v0
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
-	definitions "github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/event"
-	rpc "github.com/hyperledger/burrow/rpc"
-	server "github.com/hyperledger/burrow/server"
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/v0/server"
 )
 
 // Used for Burrow. Implements WebSocketService.
-type BurrowWsService struct {
+type WebsocketService struct {
 	codec           rpc.Codec
-	pipe            definitions.Pipe
+	service         *rpc.Service
 	defaultHandlers map[string]RequestHandlerFunc
+	logger          *logging.Logger
 }
 
 // Create a new websocket service.
-func NewBurrowWsService(codec rpc.Codec,
-	pipe definitions.Pipe) server.WebSocketService {
-	tmwss := &BurrowWsService{codec: codec, pipe: pipe}
-	mtds := NewBurrowMethods(codec, pipe)
-
-	dhMap := mtds.getMethods()
+func NewWebsocketService(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) server.WebSocketService {
+	tmwss := &WebsocketService{
+		codec:   codec,
+		service: service,
+		logger:  logger.WithScope("NewWebsocketService"),
+	}
+	dhMap := GetMethods(codec, service, tmwss.logger)
 	// Events
 	dhMap[EVENT_SUBSCRIBE] = tmwss.EventSubscribe
 	dhMap[EVENT_UNSUBSCRIBE] = tmwss.EventUnsubscribe
@@ -47,45 +50,54 @@ func NewBurrowWsService(codec rpc.Codec,
 }
 
 // Process a request.
-func (this *BurrowWsService) Process(msg []byte, session *server.WSSession) {
+func (ws *WebsocketService) Process(msg []byte, session *server.WSSession) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in WebsocketService.Process(): %v", r)
+			ws.logger.InfoMsg("Panic in WebsocketService.Process()", structure.ErrorKey, err)
+			if !session.Closed() {
+				ws.writeError(err.Error(), "", rpc.INTERNAL_ERROR, session)
+			}
+		}
+	}()
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
 	errU := json.Unmarshal(msg, req)
 
 	// Error when unmarshaling.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg),
+		ws.writeError("Failed to parse request: "+errU.Error()+" . Raw: "+string(msg),
 			"", rpc.PARSE_ERROR, session)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
+		ws.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
 			rpc.INVALID_REQUEST, session)
 		return
 	}
 
 	mName := req.Method
 
-	if handler, ok := this.defaultHandlers[mName]; ok {
+	if handler, ok := ws.defaultHandlers[mName]; ok {
 		resp, errCode, err := handler(req, session)
 		if err != nil {
-			this.writeError(err.Error(), req.Id, errCode, session)
+			ws.writeError(err.Error(), req.Id, errCode, session)
 		} else {
-			this.writeResponse(req.Id, resp, session)
+			ws.writeResponse(req.Id, resp, session)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id,
+		ws.writeError("Method not found: "+mName, req.Id,
 			rpc.METHOD_NOT_FOUND, session)
 	}
 }
 
 // Convenience method for writing error responses.
-func (this *BurrowWsService) writeError(msg, id string, code int,
+func (ws *WebsocketService) writeError(msg, id string, code int,
 	session *server.WSSession) {
 	response := rpc.NewRPCErrorResponse(id, code, msg)
-	bts, err := this.codec.EncodeBytes(response)
+	bts, err := ws.codec.EncodeBytes(response)
 	// If there's an error here all bets are off.
 	if err != nil {
 		panic("Failed to marshal standard error response." + err.Error())
@@ -94,12 +106,12 @@ func (this *BurrowWsService) writeError(msg, id string, code int,
 }
 
 // Convenience method for writing responses.
-func (this *BurrowWsService) writeResponse(id string, result interface{},
+func (ws *WebsocketService) writeResponse(id string, result interface{},
 	session *server.WSSession) error {
 	response := rpc.NewRPCResponse(id, result)
-	bts, err := this.codec.EncodeBytes(response)
+	bts, err := ws.codec.EncodeBytes(response)
 	if err != nil {
-		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
+		ws.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, session)
 		return err
 	}
 	return session.Write(bts)
@@ -107,7 +119,7 @@ func (this *BurrowWsService) writeResponse(id string, result interface{},
 
 // *************************************** Events ************************************
 
-func (this *BurrowWsService) EventSubscribe(request *rpc.RPCRequest,
+func (ws *WebsocketService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	session, ok := requester.(*server.WSSession)
 	if !ok {
@@ -115,41 +127,40 @@ func (this *BurrowWsService) EventSubscribe(request *rpc.RPCRequest,
 			fmt.Errorf("Passing wrong object to websocket events")
 	}
 	param := &EventIdParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+	err := ws.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	eventId := param.EventId
-	subId, errSID := event.GenerateSubId()
-	if errSID != nil {
-		return nil, rpc.INTERNAL_ERROR, errSID
+	subId, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, rpc.INTERNAL_ERROR, err
 	}
 
-	callback := func(ret txs.EventData) {
-		this.writeResponse(subId, ret, session)
+	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) bool {
+		ws.writeResponse(subId, resultEvent, session)
+		return true
+	})
+	if err != nil {
+		return nil, rpc.INTERNAL_ERROR, err
 	}
-	errC := this.pipe.Events().Subscribe(subId, eventId, callback)
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
-	}
-	return &event.EventSub{subId}, 0, nil
+	return &EventSub{SubId: subId}, 0, nil
 }
 
-func (this *BurrowWsService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-	param := &EventIdParam{}
-	err := this.codec.DecodeBytes(param, request.Params)
+func (ws *WebsocketService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+	param := &SubIdParam{}
+	err := ws.codec.DecodeBytes(param, request.Params)
 	if err != nil {
 		return nil, rpc.INVALID_PARAMS, err
 	}
-	eventId := param.EventId
 
-	errC := this.pipe.Events().Unsubscribe(eventId)
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
+	err = ws.service.Unsubscribe(context.Background(), param.SubId)
+	if err != nil {
+		return nil, rpc.INTERNAL_ERROR, err
 	}
-	return &event.EventUnsub{true}, 0, nil
+	return &EventUnsub{Result: true}, 0, nil
 }
 
-func (this *BurrowWsService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+func (ws *WebsocketService) EventPoll(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	return nil, rpc.INTERNAL_ERROR, fmt.Errorf("Cannot poll with websockets")
 }

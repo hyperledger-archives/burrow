@@ -14,7 +14,12 @@
 
 package structure
 
-import . "github.com/hyperledger/burrow/util/slice"
+import (
+	"encoding/json"
+	"fmt"
+
+	kitlog "github.com/go-kit/kit/log"
+)
 
 const (
 	// Log time (time.Time)
@@ -29,6 +34,8 @@ const (
 	ChannelKey = "log_channel"
 	// Log message (string)
 	MessageKey = "message"
+	// Error key
+	ErrorKey = "error"
 	// Captured logging source (like tendermint_log15, stdlib_log)
 	CapturedLoggingSourceKey = "captured_logging_source"
 	// Top-level component (choose one) name
@@ -38,6 +45,12 @@ const (
 	// Globally unique identifier persisting while a single instance (root process)
 	// of this program/service is running
 	RunId = "run_id"
+	// Provides special instructions (that may be ignored) to downstream loggers
+	SignalKey = "__signal__"
+	// The sync signal instructs sync-able loggers to sync
+	SyncSignal       = "__sync__"
+	InfoChannelName  = "Info"
+	TraceChannelName = "Trace"
 )
 
 // Pull the specified values from a structured log line into a map.
@@ -45,9 +58,9 @@ const (
 // Returns a map of the key-values from the requested keys and
 // the unmatched remainder keyvals as context as a slice of key-values.
 func ValuesAndContext(keyvals []interface{},
-	keys ...interface{}) (map[interface{}]interface{}, []interface{}) {
+	keys ...interface{}) (map[string]interface{}, []interface{}) {
 
-	vals := make(map[interface{}]interface{}, len(keys))
+	vals := make(map[string]interface{}, len(keys))
 	context := make([]interface{}, len(keyvals))
 	copy(context, keyvals)
 	deletions := 0
@@ -58,7 +71,7 @@ func ValuesAndContext(keyvals []interface{},
 		for k := 0; k < len(keys); k++ {
 			if keyvals[i] == keys[k] {
 				// Pull the matching key-value pair into vals to return
-				vals[keys[k]] = keyvals[i+1]
+				vals[StringifyKey(keys[k])] = keyvals[i+1]
 				// Delete the key once it's found
 				keys = DeleteAt(keys, k)
 				// And remove the key-value pair from context
@@ -73,19 +86,36 @@ func ValuesAndContext(keyvals []interface{},
 	return vals, context
 }
 
-// Drops all key value pairs where the key is in keys
-func RemoveKeys(keyvals []interface{}, keys ...interface{}) []interface{} {
-	keyvalsWithoutKeys := make([]interface{}, 0, len(keyvals))
-NEXT_KEYVAL:
-	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
-		for _, key := range keys {
-			if keyvals[i] == key {
-				continue NEXT_KEYVAL
+// Returns keyvals as a map from keys to vals
+func KeyValuesMap(keyvals []interface{}) map[string]interface{} {
+	length := len(keyvals) / 2
+	vals := make(map[string]interface{}, length)
+	for i := 0; i < 2*length; i += 2 {
+		vals[StringifyKey(keyvals[i])] = keyvals[i+1]
+	}
+	return vals
+}
+
+func RemoveKeys(keyvals []interface{}, dropKeys ...interface{}) []interface{} {
+	return DropKeys(keyvals, func(key, value interface{}) bool {
+		for _, dropKey := range dropKeys {
+			if key == dropKey {
+				return true
 			}
 		}
-		keyvalsWithoutKeys = append(keyvalsWithoutKeys, keyvals[i], keyvals[i+1])
+		return false
+	})
+}
+
+// Drops all key value pairs where the key is in keys
+func DropKeys(keyvals []interface{}, dropKeyValPredicate func(key, value interface{}) bool) []interface{} {
+	keyvalsDropped := make([]interface{}, 0, len(keyvals))
+	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
+		if !dropKeyValPredicate(keyvals[i], keyvals[i+1]) {
+			keyvalsDropped = append(keyvalsDropped, keyvals[i], keyvals[i+1])
+		}
 	}
-	return keyvalsWithoutKeys
+	return keyvalsDropped
 }
 
 // Stateful index that tracks the location of a possible vector value
@@ -94,6 +124,25 @@ type vectorValueindex struct {
 	valueIndex int
 	// Whether or not the value is currently a vector
 	vector bool
+}
+
+// To help with downstream serialisation
+type Vector []interface{}
+
+func (v Vector) Slice() []interface{} {
+	return v
+}
+
+func (v Vector) String() string {
+	return fmt.Sprintf("%v", v.Slice())
+}
+
+func (v Vector) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.Slice())
+}
+
+func (v Vector) MarshalText() ([]byte, error) {
+	return []byte(v.String()), nil
 }
 
 // 'Vectorises' values associated with repeated string keys member by collapsing many values into a single vector value.
@@ -124,11 +173,11 @@ func Vectorise(keyvals []interface{}, vectorKeys ...string) []interface{} {
 				vi := valueIndices[k]
 				if !vi.vector {
 					// This must be the only second occurrence of the key so now vectorise the value
-					outputKeyvals[vi.valueIndex] = []interface{}{outputKeyvals[vi.valueIndex]}
+					outputKeyvals[vi.valueIndex] = Vector([]interface{}{outputKeyvals[vi.valueIndex]})
 					vi.vector = true
 				}
 				// Grow the vector value
-				outputKeyvals[vi.valueIndex] = append(outputKeyvals[vi.valueIndex].([]interface{}), val)
+				outputKeyvals[vi.valueIndex] = append(outputKeyvals[vi.valueIndex].(Vector), val)
 				// We are now running two more elements behind the input keyvals because we have absorbed this key-value pair
 				elided += 2
 			}
@@ -159,4 +208,65 @@ func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (inte
 		mappedKeyvals[i], mappedKeyvals[i+1] = fn(key, val)
 	}
 	return mappedKeyvals
+}
+
+// Deletes n elements starting with the ith from a slice by splicing.
+// Beware uses append so the underlying backing array will be modified!
+func Delete(slice []interface{}, i int, n int) []interface{} {
+	return append(slice[:i], slice[i+n:]...)
+}
+
+// Delete an element at a specific index and return the contracted list
+func DeleteAt(slice []interface{}, i int) []interface{} {
+	return Delete(slice, i, 1)
+}
+
+// Prepend elements to slice in the order they appear
+func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
+	elementsLength := len(elements)
+	newSlice := make([]interface{}, len(slice)+elementsLength)
+	for i, e := range elements {
+		newSlice[i] = e
+	}
+	for i, e := range slice {
+		newSlice[elementsLength+i] = e
+	}
+	return newSlice
+}
+
+// Provides a canonical way to stringify keys
+func StringifyKey(key interface{}) string {
+	switch key {
+	// For named keys we want to handle explicitly
+
+	default:
+		// Stringify keys
+		switch k := key.(type) {
+		case string:
+			return k
+		case fmt.Stringer:
+			return k.String()
+		default:
+			return fmt.Sprintf("%v", key)
+		}
+	}
+}
+
+// Sends the sync signal which causes any syncing loggers to sync.
+// loggers receiving the signal should drop the signal logline from output
+func Sync(logger kitlog.Logger) error {
+	return logger.Log(SignalKey, SyncSignal)
+}
+
+// Tried to interpret the logline as a signal by matching the last key-value pair as a signal, returns empty string if
+// no match
+func Signal(keyvals []interface{}) string {
+	last := len(keyvals) - 1
+	if last > 0 && keyvals[last-1] == SignalKey {
+		signal, ok := keyvals[last].(string)
+		if ok {
+			return signal
+		}
+	}
+	return ""
 }

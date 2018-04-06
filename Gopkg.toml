@@ -1,0 +1,100 @@
+[prune]
+  go-tests = true
+  unused-packages = true
+  non-go = true
+
+[[constraint]]
+  name = "github.com/BurntSushi/toml"
+  version = "0.3.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cep21/xdgbasedir"
+
+[[constraint]]
+  name = "github.com/eapache/channels"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/gin-gonic/gin"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/go-kit/kit"
+  version = "0.6.0"
+
+[[constraint]]
+  name = "github.com/go-stack/stack"
+  version = "1.7.0"
+
+[[constraint]]
+  name = "github.com/gorilla/websocket"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "0.3.2"
+
+[[constraint]]
+  name = "github.com/jawher/mow.cli"
+  version = "1.0.3"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "0.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/streadway/simpleuuid"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "1.2.1"
+
+[[constraint]]
+  name = "github.com/tendermint/abci"
+  version = "~0.9.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/tendermint/ed25519"
+
+[[constraint]]
+  name = "github.com/tendermint/go-crypto"
+  version = "~0.4.1"
+
+[[constraint]]
+  name = "github.com/tendermint/go-wire"
+  version = "~0.7.2"
+
+[[constraint]]
+  name = "github.com/tendermint/iavl"
+  version = "~0.5.0"
+
+[[constraint]]
+  name = "github.com/tendermint/merkleeyes"
+  version = "~0.2.4"
+
+[[constraint]]
+  name = "github.com/tendermint/tendermint"
+  version = "~0.15.0"
+
+[[constraint]]
+  name = "github.com/tendermint/tmlibs"
+  version = "~0.6.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/tmthrgd/go-hex"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/tommy351/gin-cors"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "gopkg.in/tylerb/graceful.v1"
+  version = "1.2.15"
