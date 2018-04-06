@@ -24,16 +24,15 @@ import (
 )
 
 type Cache interface {
-	IterableWriter
+	Writer
 	Sync(state Writer) error
 	Reset(backend Iterable)
 	Flush(state IterableWriter) error
-	Backend() Iterable
 }
 
 type stateCache struct {
 	sync.RWMutex
-	backend  Iterable
+	backend  Reader
 	accounts map[acm.Address]*accountInfo
 }
 
@@ -47,7 +46,7 @@ type accountInfo struct {
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
-func NewCache(backend Iterable) Cache {
+func NewCache(backend Reader) Cache {
 	return &stateCache{
 		backend:  backend,
 		accounts: make(map[acm.Address]*accountInfo),
@@ -97,8 +96,8 @@ func (cache *stateCache) RemoveAccount(address acm.Address) error {
 	return nil
 }
 
-// Iterates over all accounts first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+// Iterates over all cached accounts first in cache and then in backend until consumer returns true for 'stop'
+func (cache *stateCache) IterateCachedAccount(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
 	// Try cache first for early exit
 	cache.RLock()
 	for _, info := range cache.accounts {
@@ -108,7 +107,7 @@ func (cache *stateCache) IterateAccounts(consumer func(acm.Account) (stop bool))
 		}
 	}
 	cache.RUnlock()
-	return cache.backend.IterateAccounts(consumer)
+	return false, nil
 }
 
 func (cache *stateCache) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
@@ -152,8 +151,8 @@ func (cache *stateCache) SetStorage(address acm.Address, key binary.Word256, val
 	return nil
 }
 
-// Iterates over all storage items first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateStorage(address acm.Address,
+// Iterates over all cached storage items first in cache and then in backend until consumer returns true for 'stop'
+func (cache *stateCache) IterateCachedStorage(address acm.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -168,7 +167,7 @@ func (cache *stateCache) IterateStorage(address acm.Address,
 		}
 	}
 	accInfo.RUnlock()
-	return cache.backend.IterateStorage(address, consumer)
+	return false, nil
 }
 
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating
@@ -232,10 +231,6 @@ func (cache *stateCache) Flush(state IterableWriter) error {
 	}
 	cache.Reset(state)
 	return nil
-}
-
-func (cache *stateCache) Backend() Iterable {
-	return cache.backend
 }
 
 // Get the cache accountInfo item creating it if necessary
