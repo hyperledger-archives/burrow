@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs"
 )
 
 type V0Client struct {
@@ -31,6 +33,24 @@ func NewV0Client(url string) *V0Client {
 			Timeout: 10 * time.Second,
 		},
 	}
+}
+
+func (vc *V0Client) Transact(param TransactParam) (*txs.Receipt, error) {
+	receipt := new(txs.Receipt)
+	err := vc.Call(TRANSACT, param, receipt)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
+
+func (vc *V0Client) TransactAndHold(param TransactParam) (*events.EventDataCall, error) {
+	eventDataCall := new(events.EventDataCall)
+	err := vc.Call(TRANSACT_AND_HOLD, param, eventDataCall)
+	if err != nil {
+		return nil, err
+	}
+	return eventDataCall, nil
 }
 
 func (vc *V0Client) Call(method string, param interface{}, result interface{}) error {

@@ -159,11 +159,18 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, ca
 	// fire the post call event (including exception if applicable)
 	if vm.publisher != nil {
 		events.PublishAccountCall(vm.publisher, calleeAddress, &events.EventDataCall{
-			&events.CallData{Caller: callerAddress, Callee: calleeAddress, Data: input, Value: value, Gas: *gas},
-			vm.origin,
-			vm.txHash,
-			*output,
-			*exception,
+			CallData: &events.CallData{
+				Caller: callerAddress,
+				Callee: calleeAddress,
+				Data:   input,
+				Value:  value,
+				Gas:    *gas,
+			},
+			Origin:    vm.origin,
+			TxHash:    vm.txHash,
+			StackDepth: vm.stackDepth,
+			Return:    *output,
+			Exception: *exception,
 		})
 	}
 }

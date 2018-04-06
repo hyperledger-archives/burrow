@@ -276,7 +276,7 @@ func (trans *Transactor) TransactAndHold(privKey []byte, address *acm.Address, d
 	}
 
 	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, receipt.ContractAddress,
-		receipt.TxHash, wc)
+		receipt.TxHash, 0, wc)
 	if err != nil {
 		return nil, err
 	}

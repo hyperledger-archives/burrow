@@ -442,7 +442,8 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee a
 	emitter := event.NewEmitter(logging.NewNoopLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
-	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr, nil, eventCh)
+	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr,
+		nil, -1, eventCh)
 	if err != nil {
 		return nil, err
 	}

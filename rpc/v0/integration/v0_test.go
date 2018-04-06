@@ -21,25 +21,36 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/rpc/v0"
-	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransact(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
-	receipt := new(txs.Receipt)
 
 	address := privateAccounts[1].Address()
-	param := v0.TransactParam{
+	receipt, err := cli.Transact(v0.TransactParam{
 		PrivKey:  privateAccounts[0].PrivateKey().RawBytes(),
 		Address:  address.Bytes(),
 		Data:     []byte{},
 		Fee:      2,
 		GasLimit: 10000,
-	}
-	err := cli.Call(v0.TRANSACT, param, receipt)
+	})
 	require.NoError(t, err)
 	assert.False(t, receipt.CreatesContract)
 	assert.Equal(t, address, receipt.ContractAddress)
+}
+
+func TestTransactAndHold(t *testing.T) {
+	cli := v0.NewV0Client("http://localhost:1337/rpc")
+
+	call, err := cli.TransactAndHold(v0.TransactParam{
+		PrivKey:  privateAccounts[0].PrivateKey().RawBytes(),
+		Address:  nil,
+		Data:     []byte{},
+		Fee:      2,
+		GasLimit: 10000,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, call.StackDepth)
 }

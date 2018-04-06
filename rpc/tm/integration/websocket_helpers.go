@@ -302,9 +302,9 @@ func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) 
 		if !bytes.Equal(ret, returnCode) {
 			return true, fmt.Errorf("call did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
-		if !bytes.Equal(data.TxID, *txid) {
+		if !bytes.Equal(data.TxHash, *txid) {
 			return true, fmt.Errorf("TxIDs do not match up! Got %x, expected %x",
-				data.TxID, *txid)
+				data.TxHash, *txid)
 		}
 		return true, nil
 	}

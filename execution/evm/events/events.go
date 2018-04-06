@@ -33,11 +33,12 @@ func EventStringLogEvent(addr acm.Address) string    { return fmt.Sprintf("Log/%
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract
 type EventDataCall struct {
-	CallData  *CallData
-	Origin    acm.Address
-	TxID      []byte
-	Return    []byte
-	Exception string
+	CallData   *CallData
+	Origin     acm.Address
+	TxHash     []byte
+	StackDepth int
+	Return     []byte
+	Exception  string
 }
 
 type CallData struct {
@@ -58,14 +59,20 @@ type EventDataLog struct {
 
 // Publish/Subscribe
 
-// Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all
+// Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all, if
+// stackDepth is greater than or equal to 0 captures calls at a specific stack depth (useful for capturing the return
+// of the root call over recursive calls
 func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, subscriber string, address acm.Address,
-	txHash []byte, ch chan<- *EventDataCall) error {
+	txHash []byte, stackDepth int, ch chan<- *EventDataCall) error {
 
 	query := event.QueryForEventID(EventStringAccountCall(address))
 
 	if len(txHash) > 0 {
 		query = query.AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
+	}
+
+	if stackDepth >= 0 {
+		query = query.AndEquals(event.StackDepthKey, stackDepth)
 	}
 
 	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
@@ -93,7 +100,11 @@ func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, sub
 
 func PublishAccountCall(publisher event.Publisher, address acm.Address, eventDataCall *EventDataCall) error {
 	return event.PublishWithEventID(publisher, EventStringAccountCall(address), eventDataCall,
-		map[string]interface{}{"address": address, event.TxHashKey: hex.EncodeUpperToString(eventDataCall.TxID)})
+		map[string]interface{}{
+			"address":           address,
+			event.TxHashKey:     hex.EncodeUpperToString(eventDataCall.TxHash),
+			event.StackDepthKey: eventDataCall.StackDepth,
+		})
 }
 
 func PublishLogEvent(publisher event.Publisher, address acm.Address, eventDataLog *EventDataLog) error {
