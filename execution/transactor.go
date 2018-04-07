@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"sync"
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -51,21 +50,18 @@ type SequencedAddressableSigner interface {
 
 // Transactor is the controller/middleware for the v0 RPC
 type Transactor struct {
-	sync.Mutex
 	tip              blockchain.Tip
-	state            state.Iterable
 	eventEmitter     event.Emitter
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
 	logger           *logging.Logger
 }
 
-func NewTransactor(tip blockchain.Tip, state state.Iterable, eventEmitter event.Emitter,
+func NewTransactor(tip blockchain.Tip, eventEmitter event.Emitter,
 	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		tip:              tip,
-		state:            state,
 		eventEmitter:     eventEmitter,
 		broadcastTxAsync: broadcastTxAsync,
 		logger:           logger.With(structure.ComponentKey, "Transactor"),
@@ -74,14 +70,16 @@ func NewTransactor(tip blockchain.Tip, state state.Iterable, eventEmitter event.
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *Transactor) Call(fromAddress, toAddress acm.Address, data []byte) (call *Call, err error) {
+func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress acm.Address,
+	data []byte) (call *Call, err error) {
+
 	if evm.RegisteredNativeContract(toAddress.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
 			"contract that calls the native function instead", toAddress)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := state.GetMutableAccount(trans.state, toAddress)
+	callee, err := state.GetMutableAccount(reader, toAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +87,7 @@ func (trans *Transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := state.NewCache(trans.state)
+	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("Call"))
@@ -111,11 +109,11 @@ func (trans *Transactor) Call(fromAddress, toAddress acm.Address, data []byte) (
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (trans *Transactor) CallCode(fromAddress acm.Address, code, data []byte) (*Call, error) {
+func (trans *Transactor) CallCode(reader state.Reader, fromAddress acm.Address, code, data []byte) (*Call, error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := state.NewCache(trans.state)
+	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
 	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
@@ -168,8 +166,6 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *Transactor) Transact(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*txs.Receipt, error) {
-	trans.Lock()
-	defer trans.Unlock()
 	// TODO: [Silas] we should consider revising this method and removing fee, or
 	// possibly adding an amount parameter. It is non-sensical to just be able to
 	// set the fee. Our support of fees in general is questionable since at the
@@ -202,7 +198,6 @@ func (trans *Transactor) Transact(inputAccount SequencedAddressableSigner, addre
 	}
 	return trans.BroadcastTx(tx)
 }
-
 
 func (trans *Transactor) TransactAndHold(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
@@ -244,54 +239,28 @@ func (trans *Transactor) TransactAndHold(inputAccount SequencedAddressableSigner
 	}
 }
 
-func (trans *Transactor) Send(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	if len(privKey) != 64 {
-		return nil, fmt.Errorf("Private key is not of the right length: %d\n",
-			len(privKey))
-	}
-
-	pk := &[64]byte{}
-	copy(pk[:], privKey)
-	trans.Lock()
-	defer trans.Unlock()
-	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
-	if err != nil {
-		return nil, err
-	}
-	acc, err := trans.state.GetAccount(pa.Address())
-	if err != nil {
-		return nil, err
-	}
-	sequence := uint64(1)
-	if acc != nil {
-		sequence = acc.Sequence() + uint64(1)
-	}
-
+func (trans *Transactor) Send(inputAccount SequencedAddressableSigner, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	tx := txs.NewSendTx()
 
 	txInput := &txs.TxInput{
-		Address:   pa.Address(),
+		Address:   inputAccount.Address(),
 		Amount:    amount,
-		Sequence:  sequence,
-		PublicKey: pa.PublicKey(),
+		Sequence:  inputAccount.Sequence() + 1,
+		PublicKey: inputAccount.PublicKey(),
 	}
-
 	tx.Inputs = append(tx.Inputs, txInput)
-
 	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
-
 	tx.Outputs = append(tx.Outputs, txOutput)
 
-	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
-	if errS != nil {
-		return nil, errS
+	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, err
 	}
-	return trans.BroadcastTx(txS)
+	return trans.BroadcastTx(tx)
 }
 
-func (trans *Transactor) SendAndHold(privKey []byte, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	receipt, err := trans.Send(privKey, toAddress, amount)
+func (trans *Transactor) SendAndHold(inputAccount SequencedAddressableSigner, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
+	receipt, err := trans.Send(inputAccount, toAddress, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -313,17 +282,12 @@ func (trans *Transactor) SendAndHold(privKey []byte, toAddress acm.Address, amou
 	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
 	defer timer.Stop()
 
-	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
-	if err != nil {
-		return nil, err
-	}
-
 	select {
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
 	case sendTx := <-wc:
 		// This is a double check - we subscribed to this tx's hash so something has gone wrong if the amounts don't match
-		if sendTx.Inputs[0].Address == pa.Address() && sendTx.Inputs[0].Amount == amount {
+		if sendTx.Inputs[0].Address == inputAccount.Address() && sendTx.Inputs[0].Amount == amount {
 			return receipt, nil
 		}
 		return nil, fmt.Errorf("received SendTx but hash doesn't seem to match what we subscribed to, "+
@@ -331,31 +295,16 @@ func (trans *Transactor) SendAndHold(privKey []byte, toAddress acm.Address, amou
 	}
 }
 
-func (trans *Transactor) TransactNameReg(privKey []byte, name, data string, amount, fee uint64) (*txs.Receipt, error) {
-	if len(privKey) != 64 {
-		return nil, fmt.Errorf("Private key is not of the right length: %d\n", len(privKey))
-	}
-	trans.Lock()
-	defer trans.Unlock()
-	pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(privKey)
+func (trans *Transactor) TransactNameReg(inputAccount SequencedAddressableSigner, name, data string, amount,
+	fee uint64) (*txs.Receipt, error) {
+
+	// Formulate and sign
+	tx := txs.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)
+	err := tx.Sign(trans.tip.ChainID(), inputAccount)
 	if err != nil {
 		return nil, err
 	}
-	acc, err := trans.state.GetAccount(pa.Address())
-	if err != nil {
-		return nil, err
-	}
-	sequence := uint64(1)
-	if acc == nil {
-		sequence = acc.Sequence() + uint64(1)
-	}
-	tx := txs.NewNameTxWithSequence(pa.PublicKey(), name, data, amount, fee, sequence)
-	// Got ourselves a tx.
-	txS, errS := trans.SignTx(tx, []acm.AddressableSigner{pa})
-	if errS != nil {
-		return nil, errS
-	}
-	return trans.BroadcastTx(txS)
+	return trans.BroadcastTx(tx)
 }
 
 // Sign a transaction

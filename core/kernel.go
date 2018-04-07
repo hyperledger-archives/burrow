@@ -101,10 +101,11 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		return nil, err
 	}
 	txCodec := txs.NewGoWireCodec()
-	transactor := execution.NewTransactor(blockchain, state, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
+	transactor := execution.NewTransactor(blockchain, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
 		logger)
 
-	service := rpc.NewService(ctx, state, checker, state, emitter, blockchain, keyClient, transactor,
+	nameReg := state
+	service := rpc.NewService(ctx, state, nameReg, checker, emitter, blockchain, keyClient, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{

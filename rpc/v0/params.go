@@ -88,18 +88,20 @@ type (
 	// Used when sending a transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactParam struct {
-		PrivKey  []byte `json:"priv_key"`
-		Data     []byte `json:"data"`
-		Address  []byte `json:"address"`
-		Fee      uint64 `json:"fee"`
-		GasLimit uint64 `json:"gas_limit"`
+		PrivKey      []byte `json:"priv_key"`
+		InputAddress []byte `json:"input_account"`
+		Data         []byte `json:"data"`
+		Address      []byte `json:"address"`
+		Fee          uint64 `json:"fee"`
+		GasLimit     uint64 `json:"gas_limit"`
 	}
 
 	// Used when sending a 'Send' transaction.
 	SendParam struct {
-		PrivKey   []byte `json:"priv_key"`
-		ToAddress []byte `json:"to_address"`
-		Amount    uint64 `json:"amount"`
+		PrivKey      []byte `json:"priv_key"`
+		InputAddress []byte `json:"input_account"`
+		ToAddress    []byte `json:"to_address"`
+		Amount       uint64 `json:"amount"`
 	}
 
 	NameRegEntryParam struct {
@@ -109,10 +111,11 @@ type (
 	// Used when sending a namereg transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactNameRegParam struct {
-		PrivKey []byte `json:"priv_key"`
-		Name    string `json:"name"`
-		Data    string `json:"data"`
-		Fee     uint64 `json:"fee"`
-		Amount  uint64 `json:"amount"`
+		PrivKey      []byte `json:"priv_key"`
+		InputAddress []byte `json:"input_account"`
+		Name         string `json:"name"`
+		Data         string `json:"data"`
+		Fee          uint64 `json:"fee"`
+		Amount       uint64 `json:"amount"`
 	}
 )

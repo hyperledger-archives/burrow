@@ -92,7 +92,7 @@ func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
-			Log:  fmt.Sprintf("Could not execute transaction: %s, error: %v", tx, err),
+			Log:  fmt.Sprintf("CheckTx could not execute transaction: %s, error: %v", tx, err),
 		}
 	}
 
@@ -142,7 +142,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 			"creates_contract", receipt.CreatesContract)
 		return abci_types.ResponseDeliverTx{
 			Code: codes.TxExecutionErrorCode,
-			Log:  fmt.Sprintf("Could not execute transaction: %s, error: %s", tx, err),
+			Log:  fmt.Sprintf("DeliverTx could not execute transaction: %s, error: %s", tx, err),
 		}
 	}
 
@@ -177,18 +177,21 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
-	err := app.checker.Reset()
-	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
-		}
-	}
+	// Commit state before resetting check cache so that the emptied cache servicing some RPC requests will fall through
+	// to committed state
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
 			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
+		}
+	}
+
+	err = app.checker.Reset()
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
 		}
 	}
 

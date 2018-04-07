@@ -53,7 +53,7 @@ type BatchCommitter interface {
 }
 
 type executor struct {
-	sync.Mutex
+	sync.RWMutex
 	chainID      string
 	tip          bcm.Tip
 	runCall      bool
@@ -115,11 +115,15 @@ func newExecutor(runCall bool,
 
 // Accounts
 func (exe *executor) GetAccount(address acm.Address) (acm.Account, error) {
+	exe.RLock()
+	defer exe.RUnlock()
 	return exe.stateCache.GetAccount(address)
 }
 
 // Storage
 func (exe *executor) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+	exe.RLock()
+	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)
 }
 
@@ -151,6 +155,8 @@ func (exe *executor) Commit() (hash []byte, err error) {
 }
 
 func (exe *executor) Reset() error {
+	exe.Lock()
+	defer exe.Unlock()
 	exe.stateCache.Reset(exe.state)
 	exe.nameRegCache.Reset(exe.state)
 	return nil
@@ -224,7 +230,6 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			exe.stateCache.UpdateAccount(acc)
 		}
 
-		// if the exe.eventCache is nil, nothing will happen
 		if exe.eventCache != nil {
 			for _, i := range tx.Inputs {
 				events.PublishAccountInput(exe.eventCache, i.Address, txHash, tx, nil, "")
@@ -251,6 +256,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return txs.ErrTxInvalidAddress
 		}
 
+		// Calling a nil destination is defined as requesting contract creation
 		createContract := tx.Address == nil
 		if createContract {
 			if !hasCreateContractPermission(exe.stateCache, inAcc, logger) {

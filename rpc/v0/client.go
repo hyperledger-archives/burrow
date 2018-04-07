@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
@@ -30,39 +31,66 @@ func NewV0Client(url string) *V0Client {
 		url:   url,
 		codec: NewTCodec(),
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 1000 * time.Second,
 		},
 	}
 }
 
 func (vc *V0Client) Transact(param TransactParam) (*txs.Receipt, error) {
 	receipt := new(txs.Receipt)
-	err := vc.Call(TRANSACT, param, receipt)
+	err := vc.CallMethod(TRANSACT, param, receipt)
 	if err != nil {
 		return nil, err
 	}
 	return receipt, nil
 }
 
-func (vc *V0Client) TransactAndHold2(param TransactParam) (*events.EventDataCall, error) {
-	eventDataCall := new(events.EventDataCall)
-	err := vc.Call(TRANSACT_AND_HOLD+"2", param, eventDataCall)
-	if err != nil {
-		return nil, err
-	}
-	return eventDataCall, nil
-}
-
 func (vc *V0Client) TransactAndHold(param TransactParam) (*events.EventDataCall, error) {
 	eventDataCall := new(events.EventDataCall)
-	err := vc.Call(TRANSACT_AND_HOLD, param, eventDataCall)
+	err := vc.CallMethod(TRANSACT_AND_HOLD, param, eventDataCall)
 	if err != nil {
 		return nil, err
 	}
 	return eventDataCall, nil
 }
 
-func (vc *V0Client) Call(method string, param interface{}, result interface{}) error {
+func (vc *V0Client) Send(param SendParam) (*txs.Receipt, error) {
+	receipt := new(txs.Receipt)
+	err := vc.CallMethod(SEND, param, receipt)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
+
+func (vc *V0Client) SendAndHold(param SendParam) (*txs.Receipt, error) {
+	receipt := new(txs.Receipt)
+	err := vc.CallMethod(SEND_AND_HOLD, param, receipt)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
+
+func (vc *V0Client) Call(param CallParam) (*execution.Call, error) {
+	call := new(execution.Call)
+	err := vc.CallMethod(CALL, param, call)
+	if err != nil {
+		return nil, err
+	}
+	return call, nil
+}
+
+func (vc *V0Client) CallCode(param CallCodeParam) (*execution.Call, error) {
+	call := new(execution.Call)
+	err := vc.CallMethod(CALL_CODE, param, call)
+	if err != nil {
+		return nil, err
+	}
+	return call, nil
+}
+
+func (vc *V0Client) CallMethod(method string, param interface{}, result interface{}) error {
 	// Marhsal into JSONRPC request object
 	bs, err := vc.codec.EncodeBytes(param)
 	if err != nil {

@@ -156,8 +156,6 @@ func HasPermission(stateWriter state.Writer, acc acm.Account, perm ptypes.PermFl
 }
 
 func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, calleeAddress acm.Address, input []byte, value uint64, gas *uint64) {
-	ret := make([]byte, len(*output))
-	copy(ret, *output)
 	// fire the post call event (including exception if applicable)
 	if vm.publisher != nil {
 		events.PublishAccountCall(vm.publisher, calleeAddress, &events.EventDataCall{
@@ -168,11 +166,11 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, ca
 				Value:  value,
 				Gas:    *gas,
 			},
-			Origin:    vm.origin,
-			TxHash:    vm.txHash,
+			Origin:     vm.origin,
+			TxHash:     vm.txHash,
 			StackDepth: vm.stackDepth,
-			Return:    ret,
-			Exception: *exception,
+			Return:     *output,
+			Exception:  *exception,
 		})
 	}
 }

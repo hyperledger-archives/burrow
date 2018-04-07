@@ -3,6 +3,8 @@ package state
 import (
 	"testing"
 
+	"fmt"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm/asm"
@@ -29,6 +31,22 @@ func TestStateCache_GetAccount(t *testing.T) {
 	require.NotNil(t, accOut)
 	assert.NoError(t, err)
 	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
+}
+
+func TestStateCache_Miss(t *testing.T) {
+	readBackend := testAccounts()
+	cache := NewCache(readBackend)
+
+	acc1Address := addressOf("acc1")
+	acc1, err := cache.GetAccount(acc1Address)
+	require.NoError(t, err)
+	fmt.Println(acc1)
+
+	acc1Exp := readBackend.Accounts[acc1Address]
+	assert.Equal(t, acc1Exp, acc1)
+	acc8, err := cache.GetAccount(addressOf("acc8"))
+	require.NoError(t, err)
+	assert.Nil(t, acc8)
 }
 
 func TestStateCache_UpdateAccount(t *testing.T) {

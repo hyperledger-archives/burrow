@@ -15,6 +15,8 @@
 package v0
 
 import (
+	"fmt"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
@@ -172,7 +174,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			call, err := service.Transactor().Call(from, address, param.Data)
+			call, err := service.Transactor().Call(service.MempoolAccounts(), from, address, param.Data)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -188,7 +190,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			call, err := service.Transactor().CallCode(from, param.Code, param.Data)
+			call, err := service.Transactor().CallCode(service.MempoolAccounts(), from, param.Code, param.Data)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -229,7 +231,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := service.Mempool().SigningAccountFromPrivateKey(param.PrivKey)
+			// Use mempool state so that transact can generate a run of sequence numbers when formulating transactions
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -249,7 +252,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := service.Mempool().SigningAccountFromPrivateKey(param.PrivKey)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -269,7 +272,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			receipt, err := service.Transactor().Send(param.PrivKey, toAddress, param.Amount)
+			// Run Send against mempool state
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			receipt, err := service.Transactor().Send(inputAccount, toAddress, param.Amount)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -285,7 +293,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			rec, err := service.Transactor().SendAndHold(param.PrivKey, toAddress, param.Amount)
+			// Run Send against mempool state
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			rec, err := service.Transactor().SendAndHold(inputAccount, toAddress, param.Amount)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -297,7 +310,11 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			receipt, err := service.Transactor().TransactNameReg(param.PrivKey, param.Name, param.Data, param.Amount, param.Fee)
+			inputAccount, err := service.MempoolAccounts().SigningAccountFromPrivateKey(param.PrivKey)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			receipt, err := service.Transactor().TransactNameReg(inputAccount, param.Name, param.Data, param.Amount, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -425,4 +442,20 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return resultPeers, 0, nil
 		},
 	}
+}
+
+// Gets signing account from onr of private key or address - failing if both are provided
+func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) (*execution.SigningAccount, error) {
+	if len(addressBytes) > 0 {
+		if len(privKey) > 0 {
+			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
+		}
+		address, err := acm.AddressFromBytes(addressBytes)
+		if err != nil {
+			return nil, err
+		}
+		return accounts.SigningAccount(address)
+	}
+
+	return accounts.SigningAccountFromPrivateKey(privKey)
 }

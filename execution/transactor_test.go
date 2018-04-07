@@ -24,7 +24,7 @@ type testTransactor struct {
 func newTestTransactor(txProcessor func(tx txs.Tx) (*types.Response, error)) testTransactor {
 	st := state.NewMemoryState()
 	emitter := event.NewEmitter(logger)
-	trans := NewTransactor(blockchain.NewTip(testChainID, time.Time{}, nil), st,
+	trans := NewTransactor(blockchain.NewTip(testChainID, time.Time{}, nil),
 		emitter, func(tx txs.Tx, callback func(res *types.Response)) error {
 			res, err := txProcessor(tx)
 			if err != nil {

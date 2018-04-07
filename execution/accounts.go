@@ -9,7 +9,7 @@ import (
 )
 
 type Accounts struct {
-	state.Iterable
+	state.Reader
 	keyClient keys.KeyClient
 }
 
@@ -18,25 +18,30 @@ type SigningAccount struct {
 	acm.Signer
 }
 
-func NewAccounts(iterable state.Iterable, keyClient keys.KeyClient) *Accounts {
+func NewAccounts(reader state.Reader, keyClient keys.KeyClient) *Accounts {
 	return &Accounts{
-		Iterable:  iterable,
+		Reader:    reader,
 		keyClient: keyClient,
 	}
 }
 
 func (accs *Accounts) SigningAccount(address acm.Address) (*SigningAccount, error) {
 	signer := keys.Signer(accs.keyClient, address)
-	account, err := accs.GetAccount(address)
+	account, err := state.GetMutableAccount(accs.Reader, address)
 	if err != nil {
 		return nil, err
 	}
 	// If the account is unknown to us return a zeroed account
-	if account != nil {
+	if account == nil {
 		account = acm.ConcreteAccount{
 			Address: address,
-		}.Account()
+		}.MutableAccount()
 	}
+	pubKey, err := accs.keyClient.PublicKey(address)
+	if err != nil {
+		return nil, err
+	}
+	account.SetPublicKey(pubKey)
 	return &SigningAccount{
 		Account: account,
 		Signer:  signer,
@@ -51,17 +56,18 @@ func (accs *Accounts) SigningAccountFromPrivateKey(privateKeyBytes []byte) (*Sig
 	if err != nil {
 		return nil, err
 	}
-	account, err := accs.GetAccount(privateAccount.Address())
+	account, err := state.GetMutableAccount(accs, privateAccount.Address())
 	if err != nil {
 		return nil, err
 	}
-	// If the account is unknown to us return a zeroed account
-	if account != nil {
+	// If the account is unknown to us return zeroed account for the address derived from the private key
+	if account == nil {
 		account = acm.ConcreteAccount{
 			Address: privateAccount.Address(),
-			PublicKey: privateAccount.PublicKey(),
-		}.Account()
+		}.MutableAccount()
 	}
+	// Set the public key in case it was not known previously (needed for signing with an unseen account)
+	account.SetPublicKey(privateAccount.PublicKey())
 	return &SigningAccount{
 		Account: account,
 		Signer:  privateAccount,

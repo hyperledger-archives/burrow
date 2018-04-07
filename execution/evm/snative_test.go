@@ -123,7 +123,7 @@ func funcIDFromHex(t *testing.T, hexString string) abi.FunctionSelector {
 		t.Fatalf("FunctionSelector must be 4 bytes but '%s' is %v bytes", hexString,
 			len(bs))
 	}
-	return firstFourBytes(bs)
+	return abi.FirstFourBytes(bs)
 }
 
 func permFlagToWord256(permFlag ptypes.PermFlag) Word256 {

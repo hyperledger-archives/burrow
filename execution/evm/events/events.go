@@ -99,7 +99,6 @@ func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, sub
 }
 
 func PublishAccountCall(publisher event.Publisher, address acm.Address, eventDataCall *EventDataCall) error {
-	fmt.Printf("%v: %v\n", eventDataCall.StackDepth, eventDataCall.Return[31])
 	return event.PublishWithEventID(publisher, EventStringAccountCall(address), eventDataCall,
 		map[string]interface{}{
 			"address":           address,

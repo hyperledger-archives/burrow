@@ -72,10 +72,6 @@
   version = "~0.5.0"
 
 [[constraint]]
-  name = "github.com/tendermint/merkleeyes"
-  version = "~0.2.4"
-
-[[constraint]]
   name = "github.com/tendermint/tendermint"
   version = "~0.15.0"
 
@@ -98,11 +94,3 @@
 [[constraint]]
   name = "gopkg.in/tylerb/graceful.v1"
   version = "1.2.15"
-
-[[constraint]]
-  name = "github.com/powerman/rpc-codec"
-  version = "1.0.0"
-
-[[constraint]]
-  name = "github.com/ybbus/jsonrpc"
-  version = "2.1.2"

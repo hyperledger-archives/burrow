@@ -29,11 +29,11 @@ type EventDataTx struct {
 
 // For re-use
 var sendTxQuery = event.NewQueryBuilder().
-	AndEquals(event.MessageTypeKey, reflect.TypeOf(EventDataTx{}).String()).
+	AndEquals(event.MessageTypeKey, reflect.TypeOf(&EventDataTx{}).String()).
 	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.SendTx{}).String())
 
 var callTxQuery = event.NewQueryBuilder().
-	AndEquals(event.MessageTypeKey, reflect.TypeOf(EventDataTx{}).String()).
+	AndEquals(event.MessageTypeKey, reflect.TypeOf(&EventDataTx{}).String()).
 	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.CallTx{}).String())
 
 type eventDataTx struct {

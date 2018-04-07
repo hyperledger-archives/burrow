@@ -188,12 +188,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/powerman/rpc-codec"
-  packages = ["jsonrpc2"]
-  revision = "3e1ab3b635b7b0d5f771028cd45aa9a827fd9f31"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
@@ -361,12 +355,6 @@
   version = "v1.1"
 
 [[projects]]
-  name = "github.com/ybbus/jsonrpc"
-  packages = ["."]
-  revision = "dd866631e904a5df2067d934985c5def68f391ac"
-  version = "v2.1.2"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -486,6 +474,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "658b10b4a49260c9ee26dcf77b0dcbe9e39d5c1604e234c69e9db99c01ba2d0d"
+  inputs-digest = "5db3ac43679cafd5f68104e93a248b62266d313aef2d8ba3bd7f3986a5a99834"
   solver-name = "gps-cdcl"
   solver-version = 1
