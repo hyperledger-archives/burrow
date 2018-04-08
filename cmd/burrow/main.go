@@ -229,7 +229,12 @@ func main() {
 					}
 				}
 
-				conf.GenesisDoc.ChainName = *chainNameOpt
+				if *chainNameOpt != ""{
+					if conf.GenesisDoc == nil {
+						fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
+					}
+					conf.GenesisDoc.ChainName = *chainNameOpt
+				}
 
 				if *jsonOutOpt {
 					os.Stdout.WriteString(conf.JSONString())
