@@ -32,8 +32,7 @@ type Cache interface {
 
 type stateCache struct {
 	sync.RWMutex
-	name string
-
+	name     string
 	backend  Reader
 	accounts map[acm.Address]*accountInfo
 }

@@ -2,7 +2,6 @@ package abci
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	bcm "github.com/hyperledger/burrow/blockchain"
@@ -19,7 +18,6 @@ import (
 const responseInfoName = "Burrow"
 
 type abciApp struct {
-	mtx sync.Mutex
 	// State
 	blockchain bcm.MutableBlockchain
 	checker    execution.BatchExecutor
@@ -68,8 +66,6 @@ func (app *abciApp) Query(reqQuery abci_types.RequestQuery) (respQuery abci_type
 }
 
 func (app *abciApp) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("CheckTx decoding error",
@@ -119,8 +115,6 @@ func (app *abciApp) BeginBlock(block abci_types.RequestBeginBlock) (respBeginBlo
 }
 
 func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("DeliverTx decoding error",
@@ -164,8 +158,6 @@ func (app *abciApp) EndBlock(reqEndBlock abci_types.RequestEndBlock) (respEndBlo
 }
 
 func (app *abciApp) Commit() abci_types.ResponseCommit {
-	app.mtx.Lock()
-	defer app.mtx.Unlock()
 	tip := app.blockchain.Tip()
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
@@ -178,20 +170,12 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 		"last_block_hash", tip.LastBlockHash())
 
 	// Commit state before resetting check cache so that the emptied cache servicing some RPC requests will fall through
-	// to committed state
+	// to committed state when check state is reset
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
 			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
-		}
-	}
-
-	err = app.checker.Reset()
-	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
 		}
 	}
 
@@ -201,6 +185,14 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
 			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
+		}
+	}
+
+	err = app.checker.Reset()
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
 		}
 	}
 
@@ -217,6 +209,7 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 				app.blockchain.LastBlockHeight(), app.block.Header.Height),
 		}
 	}
+
 	return abci_types.ResponseCommit{
 		Code: codes.TxExecutionSuccessCode,
 		Data: appHash,

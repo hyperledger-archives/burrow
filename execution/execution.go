@@ -69,42 +69,32 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(state *State,
-	chainID string,
-	tip bcm.Tip,
-	logger *logging.Logger,
+func NewBatchChecker(backend *State, chainID string, tip bcm.Tip, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
-	return newExecutor(false, state, chainID, tip, event.NewNoOpPublisher(),
+
+	return newExecutor("CheckCache", false, backend, chainID, tip, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(state *State,
-	chainID string,
-	tip bcm.Tip,
-	publisher event.Publisher,
-	logger *logging.Logger,
+func NewBatchCommitter(backend *State, chainID string, tip bcm.Tip, publisher event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
-	return newExecutor(true, state, chainID, tip, publisher,
+	return newExecutor("CommitCache", true, backend, chainID, tip, publisher,
 		logger.WithScope("NewBatchCommitter"), options...)
 }
 
-func newExecutor(runCall bool,
-	backend *State,
-	chainID string,
-	tip bcm.Tip,
-	eventFireable event.Publisher,
-	logger *logging.Logger,
-	options ...ExecutionOption) *executor {
+func newExecutor(name string, runCall bool, backend *State, chainID string, tip bcm.Tip, publisher event.Publisher,
+	logger *logging.Logger, options ...ExecutionOption) *executor {
+
 	exe := &executor{
 		chainID:      chainID,
 		tip:          tip,
 		runCall:      runCall,
 		state:        backend,
-		stateCache:   state.NewCache(backend),
+		stateCache:   state.NewCache(backend, state.Name(name)),
 		nameRegCache: NewNameRegCache(backend),
-		publisher:    eventFireable,
-		eventCache:   event.NewEventCache(eventFireable),
+		publisher:    publisher,
+		eventCache:   event.NewEventCache(publisher),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
 	for _, option := range options {
@@ -132,7 +122,7 @@ func (exe *executor) Commit() (hash []byte, err error) {
 	defer exe.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from panic in executor.Commit(): %v", r)
+			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%v", r, debug.Stack())
 		}
 	}()
 	// flush the caches
@@ -334,7 +324,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				callee  acm.MutableAccount = nil // initialized below
 				code    []byte             = nil
 				ret     []byte             = nil
-				txCache                    = state.NewCache(exe.stateCache)
+				txCache                    = state.NewCache(exe.stateCache, state.Name("TxCache"))
 				params                     = evm.Params{
 					BlockHeight: exe.tip.LastBlockHeight(),
 					BlockHash:   binary.LeftPadWord256(exe.tip.LastBlockHash()),

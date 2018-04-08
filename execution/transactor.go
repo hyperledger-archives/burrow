@@ -43,11 +43,6 @@ type Call struct {
 	GasUsed uint64
 }
 
-type SequencedAddressableSigner interface {
-	acm.AddressableSigner
-	Sequence() uint64
-}
-
 // Transactor is the controller/middleware for the v0 RPC
 type Transactor struct {
 	tip              blockchain.Tip
@@ -130,7 +125,8 @@ func (trans *Transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_typ
 	return trans.broadcastTxAsync(tx, callback)
 }
 
-// Broadcast a transaction.
+// Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
+// various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
 func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "BroadcastTx",
 		"tx_hash", tx.Hash(trans.tip.ChainID()),
@@ -164,19 +160,16 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *Transactor) Transact(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
-	fee uint64) (*txs.Receipt, error) {
-	// TODO: [Silas] we should consider revising this method and removing fee, or
-	// possibly adding an amount parameter. It is non-sensical to just be able to
-	// set the fee. Our support of fees in general is questionable since at the
-	// moment all we do is deduct the fee effectively leaking token. It is possible
-	// someone may be using the sending of native token to payable functions but
-	// they can be served by broadcasting a token.
+func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte,
+	gasLimit, fee uint64) (*txs.Receipt, error) {
+	// Note we rely on back pressure from BroadcastTx when serialising access to from a particular input account while
+	// the mempool rechecks (and so the checker, having just be reset does not yet have the latest sequence numbers
+	// for some accounts). BroadcastTx will block when the mempool is rechecking or during a commit so provided
+	// subsequent Transacts from the same input account block on those ahead of it we are able to stream transactions
+	// continuously with sequential sequence numbers. By taking this lock we ensure this.
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	defer unlock()
 
-	// We hard-code the amount to be equal to the fee which means the CallTx we
-	// generate transfers 0 value, which is the most sensible default since in
-	// recent solidity compilers the EVM generated will throw an error if value
-	// is transferred to a non-payable function.
 	txInput := &txs.TxInput{
 		Address:   inputAccount.Address(),
 		Amount:    fee,
@@ -192,17 +185,17 @@ func (trans *Transactor) Transact(inputAccount SequencedAddressableSigner, addre
 	}
 
 	// Got ourselves a tx.
-	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	err = tx.Sign(trans.tip.ChainID(), inputAccount)
 	if err != nil {
 		return nil, err
 	}
 	return trans.BroadcastTx(tx)
 }
 
-func (trans *Transactor) TransactAndHold(inputAccount SequencedAddressableSigner, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
-	receipt, err := trans.Transact(inputAccount, address, data, gasLimit, fee)
+	receipt, err := trans.Transact(sequentialSigningAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +232,11 @@ func (trans *Transactor) TransactAndHold(inputAccount SequencedAddressableSigner
 	}
 }
 
-func (trans *Transactor) Send(inputAccount SequencedAddressableSigner, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
+func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
 	tx := txs.NewSendTx()
 
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	defer unlock()
 	txInput := &txs.TxInput{
 		Address:   inputAccount.Address(),
 		Amount:    amount,
@@ -252,15 +247,15 @@ func (trans *Transactor) Send(inputAccount SequencedAddressableSigner, toAddress
 	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
 	tx.Outputs = append(tx.Outputs, txOutput)
 
-	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	err = tx.Sign(trans.tip.ChainID(), inputAccount)
 	if err != nil {
 		return nil, err
 	}
 	return trans.BroadcastTx(tx)
 }
 
-func (trans *Transactor) SendAndHold(inputAccount SequencedAddressableSigner, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	receipt, err := trans.Send(inputAccount, toAddress, amount)
+func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
+	receipt, err := trans.Send(sequentialSigningAccount, toAddress, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +282,7 @@ func (trans *Transactor) SendAndHold(inputAccount SequencedAddressableSigner, to
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
 	case sendTx := <-wc:
 		// This is a double check - we subscribed to this tx's hash so something has gone wrong if the amounts don't match
-		if sendTx.Inputs[0].Address == inputAccount.Address() && sendTx.Inputs[0].Amount == amount {
+		if sendTx.Inputs[0].Amount == amount {
 			return receipt, nil
 		}
 		return nil, fmt.Errorf("received SendTx but hash doesn't seem to match what we subscribed to, "+
@@ -295,12 +290,14 @@ func (trans *Transactor) SendAndHold(inputAccount SequencedAddressableSigner, to
 	}
 }
 
-func (trans *Transactor) TransactNameReg(inputAccount SequencedAddressableSigner, name, data string, amount,
+func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSigningAccount, name, data string, amount,
 	fee uint64) (*txs.Receipt, error) {
 
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	defer unlock()
 	// Formulate and sign
 	tx := txs.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)
-	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	err = tx.Sign(trans.tip.ChainID(), inputAccount)
 	if err != nil {
 		return nil, err
 	}

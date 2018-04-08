@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"sync"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -38,11 +40,13 @@ import (
 // Magic! Should probably be configurable, but not shouldn't be so huge we
 // end up DoSing ourselves.
 const MaxBlockLookback = 1000
+const AccountsRingMutexCount = 100
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
 	ctx             context.Context
 	committedState  state.Iterable
+	commitLocker    sync.Locker
 	nameReg         execution.NameRegIterable
 	accounts        *execution.Accounts
 	mempoolAccounts *execution.Accounts
@@ -54,14 +58,14 @@ type Service struct {
 }
 
 func NewService(ctx context.Context, committedState state.Iterable, nameReg execution.NameRegIterable,
-	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
-	transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
+	checker state.Reader, committer execution.BatchCommitter, subscribable event.Subscribable, blockchain bcm.Blockchain,
+	keyClient keys.KeyClient, transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		ctx:             ctx,
 		committedState:  committedState,
-		accounts:        execution.NewAccounts(committedState, keyClient),
-		mempoolAccounts: execution.NewAccounts(checker, keyClient),
+		accounts:        execution.NewAccounts(committedState, keyClient, AccountsRingMutexCount),
+		mempoolAccounts: execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
 		nameReg:         nameReg,
 		subscribable:    subscribable,
 		blockchain:      blockchain,
@@ -101,6 +105,10 @@ func (s *Service) Accounts() *execution.Accounts {
 // Get pending account state residing in the mempool
 func (s *Service) MempoolAccounts() *execution.Accounts {
 	return s.mempoolAccounts
+}
+
+func (s *Service) CommitLocker() sync.Locker {
+	return s.commitLocker
 }
 
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {

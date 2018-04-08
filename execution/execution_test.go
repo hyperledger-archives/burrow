@@ -129,12 +129,12 @@ func makeUsers(n int) []acm.AddressableSigner {
 }
 
 func makeExecutor(state *State) *executor {
-	return newExecutor(true, state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger),
-		logger)
+	return newExecutor("makeExecutorCache", true, state, testChainID,
+		bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger), logger)
 }
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
-	genAccounts := []genesis.Account{}
+	var genAccounts []genesis.Account
 	for _, user := range users[:5] {
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
 		genAccounts = append(genAccounts, genesis.Account{
@@ -1676,7 +1676,8 @@ func TestSelfDestruct(t *testing.T) {
 }
 
 func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
-	exe := newExecutor(true, state, testChainID, tip, event.NewNoOpPublisher(), logger)
+	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, testChainID, tip,
+		event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		return err
 	} else {

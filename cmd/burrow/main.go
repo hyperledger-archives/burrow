@@ -229,7 +229,7 @@ func main() {
 					}
 				}
 
-				if *chainNameOpt != ""{
+				if *chainNameOpt != "" {
 					if conf.GenesisDoc == nil {
 						fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
 					}

@@ -59,6 +59,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 		var err error
 		// Change config as needed
 		logger, err = lifecycle.NewLoggerFromLoggingConfig(&config.LoggingConfig{
+			ExcludeTrace: false,
 			RootSink: config.Sink().
 				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
 					//"","",

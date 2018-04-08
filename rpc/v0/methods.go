@@ -68,7 +68,6 @@ type RequestHandlerFunc func(request *rpc.RPCRequest, requester interface{}) (in
 func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) map[string]RequestHandlerFunc {
 	accountFilterFactory := filters.NewAccountFilterFactory()
 	nameRegFilterFactory := filters.NewNameRegFilterFactory()
-
 	return map[string]RequestHandlerFunc{
 		// Accounts
 		GET_ACCOUNTS: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
@@ -310,7 +309,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := service.MempoolAccounts().SigningAccountFromPrivateKey(param.PrivKey)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -445,7 +444,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 }
 
 // Gets signing account from onr of private key or address - failing if both are provided
-func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) (*execution.SigningAccount, error) {
+func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) (*execution.SequentialSigningAccount, error) {
 	if len(addressBytes) > 0 {
 		if len(privKey) > 0 {
 			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
@@ -454,8 +453,8 @@ func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) 
 		if err != nil {
 			return nil, err
 		}
-		return accounts.SigningAccount(address)
+		return accounts.SequentialSigningAccount(address), nil
 	}
 
-	return accounts.SigningAccountFromPrivateKey(privKey)
+	return accounts.SequentialSigningAccountFromPrivateKey(privKey)
 }
