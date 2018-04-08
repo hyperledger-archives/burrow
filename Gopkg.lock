@@ -8,6 +8,12 @@
   version = "v0.3.0"
 
 [[projects]]
+  name = "github.com/OneOfOne/xxhash"
+  packages = ["."]
+  revision = "4e9e81466dc37c9fd94ce9ecf42020ef54112203"
+  version = "v1.2.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
@@ -474,6 +480,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5db3ac43679cafd5f68104e93a248b62266d313aef2d8ba3bd7f3986a5a99834"
+  inputs-digest = "f8f72aa18c801bd7e61464decf6e8108d2f38410ec921a8e7015a1e5b8878db3"
   solver-name = "gps-cdcl"
   solver-version = 1
