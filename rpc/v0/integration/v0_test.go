@@ -19,6 +19,7 @@ package integration
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"context"
@@ -42,7 +43,9 @@ func TestTransactCallNoCode(t *testing.T) {
 	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 	toAddress := privateAccounts[2].Address()
 
-	for i := 0; i < 1000; i++ {
+	numCreates := 1000
+	countCh := committedTxCount(t)
+	for i := 0; i < numCreates; i++ {
 		receipt, err := cli.Transact(v0.TransactParam{
 			PrivKey:      privKey(i),
 			InputAddress: inputAddress(i),
@@ -55,6 +58,7 @@ func TestTransactCallNoCode(t *testing.T) {
 		assert.False(t, receipt.CreatesContract)
 		assert.Equal(t, toAddress, receipt.ContractAddress)
 	}
+	require.Equal(t, numCreates, <-countCh)
 }
 
 func TestTransactCreate(t *testing.T) {
@@ -88,7 +92,7 @@ func TestTransactCreate(t *testing.T) {
 	}
 	wg.Wait()
 
-	assert.Equal(t, numGoroutines*numCreates, <-countCh)
+	require.Equal(t, numGoroutines*numCreates, <-countCh)
 }
 
 func BenchmarkTransactCreateContract(b *testing.B) {
@@ -147,14 +151,16 @@ func TestTransactAndHold(t *testing.T) {
 			assert.Equal(t, 18, int(depth))
 		}
 	}
-	assert.Equal(t, numGoroutines*numRuns*2, <-countCh)
+	require.Equal(t, numGoroutines*numRuns*2, <-countCh)
 }
 
 func TestSend(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
+	numSends := 1000
 	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
-	for i := 0; i < 1000; i++ {
+	countCh := committedTxCount(t)
+	for i := 0; i < numSends; i++ {
 		send, err := cli.Send(v0.SendParam{
 			PrivKey:      privKey(i),
 			InputAddress: inputAddress(i),
@@ -164,6 +170,7 @@ func TestSend(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, false, send.CreatesContract)
 	}
+	require.Equal(t, numSends, <-countCh)
 }
 
 func TestSendAndHold(t *testing.T) {
@@ -183,14 +190,18 @@ func TestSendAndHold(t *testing.T) {
 	}
 }
 
+var committedTxCountIndex = 0
+
 func committedTxCount(t *testing.T) chan int {
 	var numTxs int64
 	emptyBlocks := 0
-	maxEmptyBlocks := 1
+	maxEmptyBlocks := 2
 	outCh := make(chan int)
 	ch := make(chan *types.EventDataNewBlock)
-	ctx, cancel := context.WithCancel(context.Background())
-	tendermint.SubscribeNewBlock(ctx, kernel.Emitter, "TestThings", ch)
+	ctx := context.Background()
+	subscriber := fmt.Sprintf("committedTxCount_%v", committedTxCountIndex)
+	committedTxCountIndex++
+	require.NoError(t, tendermint.SubscribeNewBlock(ctx, kernel.Emitter, subscriber, ch))
 
 	go func() {
 		for ed := range ch {
@@ -205,8 +216,8 @@ func committedTxCount(t *testing.T) chan int {
 			numTxs += ed.Block.NumTxs
 			t.Logf("Total TXs committed at block %v: %v (+%v)\n", ed.Block.Height, numTxs, ed.Block.NumTxs)
 		}
+		require.NoError(t, kernel.Emitter.UnsubscribeAll(ctx, subscriber))
 		outCh <- int(numTxs)
-		cancel()
 	}()
 	return outCh
 }
