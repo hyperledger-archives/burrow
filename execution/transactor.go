@@ -168,6 +168,9 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	// subsequent Transacts from the same input account block on those ahead of it we are able to stream transactions
 	// continuously with sequential sequence numbers. By taking this lock we ensure this.
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
 	defer unlock()
 
 	txInput := &txs.TxInput{
@@ -236,6 +239,9 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	tx := txs.NewSendTx()
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
 	defer unlock()
 	txInput := &txs.TxInput{
 		Address:   inputAccount.Address(),
@@ -294,6 +300,9 @@ func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSig
 	fee uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
 	defer unlock()
 	// Formulate and sign
 	tx := txs.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)

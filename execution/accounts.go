@@ -28,7 +28,8 @@ type SequentialSigningAccount struct {
 
 func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
 	return &Accounts{
-		RingMutex: *burrow_sync.NewRingMutex(mutexCount),
+		// TODO: use the no hash variant of RingMutex after it has a test
+		RingMutex: *burrow_sync.NewRingMutexXXHash(mutexCount),
 		Reader:    reader,
 		keyClient: keyClient,
 	}
@@ -86,5 +87,9 @@ type UnlockFunc func()
 func (ssa *SequentialSigningAccount) Lock() (*SigningAccount, UnlockFunc, error) {
 	ssa.accountLocker.Lock()
 	account, err := ssa.getter()
+	if err != nil {
+		ssa.accountLocker.Unlock()
+		return nil, nil, err
+	}
 	return account, ssa.accountLocker.Unlock, err
 }

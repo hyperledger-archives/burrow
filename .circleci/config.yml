@@ -4,7 +4,7 @@
 defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
-    - image: circleci/golang:1.9.3
+    - image: circleci/golang:1.10.1
 
 tag_filters: &tags_filters
   tags:

@@ -3,12 +3,16 @@ package sync
 import (
 	"sync"
 
+	"hash"
+
+	"encoding/binary"
+
 	"github.com/OneOfOne/xxhash"
 )
 
 type RingMutex struct {
 	mtxs       []sync.RWMutex
-	hasherPool sync.Pool
+	hash       func(address []byte) uint64
 	mutexCount uint64
 }
 
@@ -18,17 +22,44 @@ type RingMutex struct {
 // hash function // modulo size. If some addresses collide modulo size they will be unnecessary
 // contention between those addresses, but you can trade space against contention
 // as desired.
-func NewRingMutex(mutexCount int) *RingMutex {
-	return &RingMutex{
+func NewRingMutex(mutexCount int, hashMaker func() hash.Hash64) *RingMutex {
+	ringMutex := &RingMutex{
+		mutexCount: uint64(mutexCount),
 		// max slice length is bounded by max(int) thus the argument type
 		mtxs: make([]sync.RWMutex, mutexCount, mutexCount),
-		hasherPool: sync.Pool{
-			New: func() interface{} {
-				return xxhash.New64()
-			},
+		hash: func(address []byte) uint64 {
+			buf := make([]byte, 8)
+			copy(buf, address)
+			return binary.LittleEndian.Uint64(buf)
 		},
-		mutexCount: uint64(mutexCount),
 	}
+	if hashMaker != nil {
+		hasherPool := &sync.Pool{
+			New: func() interface{} {
+				return hashMaker()
+			},
+		}
+		ringMutex.hash = func(address []byte) uint64 {
+			h := hasherPool.Get().(hash.Hash64)
+			defer func() {
+				h.Reset()
+				hasherPool.Put(h)
+			}()
+			h.Write(address)
+			return h.Sum64()
+		}
+	}
+	return ringMutex
+}
+
+func NewRingMutexNoHash(mutexCount int) *RingMutex {
+	return NewRingMutex(mutexCount, nil)
+}
+
+func NewRingMutexXXHash(mutexCount int) *RingMutex {
+	return NewRingMutex(mutexCount, func() hash.Hash64 {
+		return xxhash.New64()
+	})
 }
 
 func (mtx *RingMutex) Lock(address []byte) {
@@ -58,14 +89,4 @@ func (mtx *RingMutex) Mutex(address []byte) *sync.RWMutex {
 
 func (mtx *RingMutex) index(address []byte) uint64 {
 	return mtx.hash(address) % mtx.mutexCount
-}
-
-func (mtx *RingMutex) hash(address []byte) uint64 {
-	h := mtx.hasherPool.Get().(*xxhash.XXHash64)
-	defer func() {
-		h.Reset()
-		mtx.hasherPool.Put(h)
-	}()
-	h.Write(address)
-	return h.Sum64()
 }

@@ -171,6 +171,10 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 
 	// Commit state before resetting check cache so that the emptied cache servicing some RPC requests will fall through
 	// to committed state when check state is reset
+	// TODO: determine why the ordering of updates does not experience invalid sequence number during recheck. It
+	// seems there is nothing to stop a Transact transaction from querying the checker cache before it has been replayed
+	// all transactions and so would formulate a transaction with the same sequence number as one in mempool.
+	// However this is not observed in v0_tests.go - we need to understand why or create a test that exposes this
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{
