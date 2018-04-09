@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"sync"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -45,10 +43,8 @@ const AccountsRingMutexCount = 100
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
 	ctx             context.Context
-	committedState  state.Iterable
-	commitLocker    sync.Locker
+	state           state.Iterable
 	nameReg         execution.NameRegIterable
-	accounts        *execution.Accounts
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
 	blockchain      bcm.Blockchain
@@ -57,14 +53,13 @@ type Service struct {
 	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, committedState state.Iterable, nameReg execution.NameRegIterable,
-	checker state.Reader, committer execution.BatchCommitter, subscribable event.Subscribable, blockchain bcm.Blockchain,
-	keyClient keys.KeyClient, transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
+func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable,
+	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
+	transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		ctx:             ctx,
-		committedState:  committedState,
-		accounts:        execution.NewAccounts(committedState, keyClient, AccountsRingMutexCount),
+		state:           state,
 		mempoolAccounts: execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
 		nameReg:         nameReg,
 		subscribable:    subscribable,
@@ -97,18 +92,13 @@ func (s *Service) Transactor() *execution.Transactor {
 // for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
 // concurrent within a new block window.
 
-// Get the latest committed account state and signing accounts
-func (s *Service) Accounts() *execution.Accounts {
-	return s.accounts
-}
-
 // Get pending account state residing in the mempool
 func (s *Service) MempoolAccounts() *execution.Accounts {
 	return s.mempoolAccounts
 }
 
-func (s *Service) CommitLocker() sync.Locker {
-	return s.commitLocker
+func (s *Service) State() state.Reader {
+	return s.state
 }
 
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
@@ -233,7 +223,7 @@ func (s *Service) Genesis() (*ResultGenesis, error) {
 
 // Accounts
 func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
-	acc, err := s.accounts.GetAccount(address)
+	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +235,7 @@ func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 
 func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error) {
 	accounts := make([]*acm.ConcreteAccount, 0)
-	s.committedState.IterateAccounts(func(account acm.Account) (stop bool) {
+	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
 		if predicate(account) {
 			accounts = append(accounts, acm.AsConcreteAccount(account))
 		}
@@ -259,7 +249,7 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 }
 
 func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error) {
-	account, err := s.accounts.GetAccount(address)
+	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +257,7 @@ func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage
 		return nil, fmt.Errorf("UnknownAddress: %s", address)
 	}
 
-	value, err := s.accounts.GetStorage(address, binary.LeftPadWord256(key))
+	value, err := s.state.GetStorage(address, binary.LeftPadWord256(key))
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +268,7 @@ func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage
 }
 
 func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
-	account, err := s.accounts.GetAccount(address)
+	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +276,7 @@ func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	s.committedState.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
+	s.state.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
 		return
 	})
@@ -297,7 +287,7 @@ func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 }
 
 func (s *Service) GetAccountHumanReadable(address acm.Address) (*ResultGetAccountHumanReadable, error) {
-	acc, err := s.accounts.GetAccount(address)
+	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}

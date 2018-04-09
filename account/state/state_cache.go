@@ -91,7 +91,6 @@ func (cache *stateCache) UpdateAccount(account acm.Account) error {
 	}
 	accInfo.account = account
 	accInfo.updated = true
-
 	return nil
 }
 

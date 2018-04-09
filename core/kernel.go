@@ -105,7 +105,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		logger)
 
 	nameReg := state
-	service := rpc.NewService(ctx, state, nameReg, checker, committer, emitter, blockchain, keyClient, transactor,
+	service := rpc.NewService(ctx, state, nameReg, checker, emitter, blockchain, keyClient, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{

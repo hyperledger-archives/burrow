@@ -80,7 +80,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 
 		// Simulated call
 		Call: gorpc.NewRPCFunc(func(fromAddress, toAddress acm.Address, data []byte) (*rpc.ResultCall, error) {
-			call, err := service.Transactor().Call(service.Accounts(), fromAddress, toAddress, data)
+			call, err := service.Transactor().Call(service.State(), fromAddress, toAddress, data)
 			if err != nil {
 				return nil, err
 			}
@@ -88,7 +88,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 		}, "fromAddress,toAddress,data"),
 
 		CallCode: gorpc.NewRPCFunc(func(fromAddress acm.Address, code, data []byte) (*rpc.ResultCall, error) {
-			call, err := service.Transactor().CallCode(service.Accounts(), fromAddress, code, data)
+			call, err := service.Transactor().CallCode(service.State(), fromAddress, code, data)
 			if err != nil {
 				return nil, err
 			}

@@ -55,8 +55,8 @@ func NewNode(
 	// disable Tendermint's RPC
 	conf.RPC.ListenAddress = ""
 
-	app := abci.NewApp(blockchain, checker, committer, logger)
 	nde := &Node{}
+	app := abci.NewApp(blockchain, checker, committer, logger)
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
 		func() (*tm_types.GenesisDoc, error) {
@@ -68,6 +68,7 @@ func NewNode(
 	if err != nil {
 		return nil, err
 	}
+	app.SetMempoolLocker(nde.MempoolReactor().Mempool)
 	return nde, nil
 }
 
