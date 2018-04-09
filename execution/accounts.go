@@ -2,6 +2,7 @@ package execution
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -13,7 +14,8 @@ import (
 type Accounts struct {
 	burrow_sync.RingMutex
 	state.Reader
-	keyClient keys.KeyClient
+	keyClient  keys.KeyClient
+	watermarks map[acm.Address]uint64
 }
 
 type SigningAccount struct {
@@ -29,9 +31,10 @@ type SequentialSigningAccount struct {
 func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
 	return &Accounts{
 		// TODO: use the no hash variant of RingMutex after it has a test
-		RingMutex: *burrow_sync.NewRingMutexXXHash(mutexCount),
-		Reader:    reader,
-		keyClient: keyClient,
+		RingMutex:  *burrow_sync.NewRingMutexXXHash(mutexCount),
+		watermarks: make(map[acm.Address]uint64),
+		Reader:     reader,
+		keyClient:  keyClient,
 	}
 }
 func (accs *Accounts) SigningAccount(address acm.Address, signer acm.Signer) (*SigningAccount, error) {
@@ -48,6 +51,17 @@ func (accs *Accounts) SigningAccount(address acm.Address, signer acm.Signer) (*S
 	pubKey, err := accs.keyClient.PublicKey(address)
 	if err != nil {
 		return nil, err
+	}
+	if account.Address() != acm.ZeroAddress {
+		sequence := account.Sequence()
+		watermark := accs.watermarks[address]
+		if sequence < watermark {
+			fmt.Fprintf(os.Stderr, "ACCOUNTS: account %s retrieved with sequence %v but high watermark was %v\n",
+				address, sequence, watermark)
+		} else {
+			accs.watermarks[address] = sequence
+		}
+
 	}
 	account.SetPublicKey(pubKey)
 	return &SigningAccount{

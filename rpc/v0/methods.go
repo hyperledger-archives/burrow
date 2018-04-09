@@ -16,6 +16,7 @@ package v0
 
 import (
 	"fmt"
+	"os"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/execution"
@@ -221,6 +222,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return txRet, 0, nil
 		},
 		TRANSACT: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+			fmt.Fprintf(os.Stderr, "Got transact\n")
 			param := &TransactParam{}
 			err := codec.DecodeBytes(param, request.Params)
 			if err != nil {
