@@ -21,11 +21,19 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/core/integration"
 )
+
+var privateAccounts = integration.MakePrivateAccounts(5) // make keys
+var genesisDoc = integration.TestGenesisDoc(privateAccounts)
+var kernel *core.Kernel
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	returnValue := TestWrapper(func() int {
+	returnValue := integration.TestWrapper(privateAccounts, genesisDoc, func(kern *core.Kernel) int {
+		kernel = kern
 		return m.Run()
 	})
 

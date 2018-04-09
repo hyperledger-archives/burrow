@@ -11,6 +11,7 @@ const (
 	MessageTypeKey = "MessageType"
 	TxTypeKey      = "TxType"
 	TxHashKey      = "TxHash"
+	StackDepthKey  = "StackDepth"
 )
 
 // Get a query that matches events with a specific eventID

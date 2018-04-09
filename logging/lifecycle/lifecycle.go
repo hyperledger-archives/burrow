@@ -38,64 +38,56 @@ import (
 
 // Obtain a logger from a LoggingConfig
 func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.Logger, error) {
-	var logger *logging.Logger
-	var errCh channels.Channel
-	var err error
 	if loggingConfig == nil {
-		logger, errCh, err = NewStdErrLogger()
-		if err != nil {
-			return nil, err
-		}
+		return NewStdErrLogger()
 	} else {
-		outputLogger, err := loggerFromLoggingConfig(loggingConfig)
+		outputLogger, errCh, err := loggerFromLoggingConfig(loggingConfig)
 		if err != nil {
 			return nil, err
 		}
-		logger, errCh = NewLogger(outputLogger)
+		logger := NewLogger(outputLogger)
 		if loggingConfig.ExcludeTrace {
 			logger.Trace = kitlog.NewNopLogger()
 		}
+		go func() {
+			err := <-errCh.Out()
+			if err != nil {
+				fmt.Printf("Logging error: %v", err)
+			}
+		}()
+		return logger, nil
 	}
-	go func() {
-		err := <-errCh.Out()
-		if err != nil {
-			fmt.Printf("Logging error: %v", err)
-		}
-	}()
-
-	return logger, nil
 }
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
-func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *config.LoggingConfig) error {
-	outputLogger, err := loggerFromLoggingConfig(loggingConfig)
+func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *config.LoggingConfig) (error, channels.Channel) {
+	outputLogger, errCh, err := loggerFromLoggingConfig(loggingConfig)
 	if err != nil {
-		return err
+		return err, channels.NewDeadChannel()
 	}
 	logger.SwapOutput(outputLogger)
-	return nil
+	return nil, errCh
 }
 
-func NewStdErrLogger() (*logging.Logger, channels.Channel, error) {
+func NewStdErrLogger() (*logging.Logger, error) {
 	outputLogger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	logger, errCh := NewLogger(outputLogger)
-	return logger, errCh, nil
+	return NewLogger(outputLogger), nil
 }
 
 // Provided a standard logger that outputs to the supplied underlying outputLogger
-func NewLogger(outputLogger kitlog.Logger) (*logging.Logger, channels.Channel) {
-	logger, errCh := logging.NewLogger(outputLogger)
+func NewLogger(outputLogger kitlog.Logger) *logging.Logger {
+	logger := logging.NewLogger(outputLogger)
 	// Create a random ID based on start time
 	uuid, _ := simpleuuid.NewTime(time.Now())
 	var runId string
 	if uuid != nil {
 		runId = uuid.String()
 	}
-	return logger.With(structure.RunId, runId), errCh
+	return logger.With(structure.RunId, runId)
 }
 
 func JustLogger(logger *logging.Logger, _ channels.Channel) *logging.Logger {
@@ -103,15 +95,19 @@ func JustLogger(logger *logging.Logger, _ channels.Channel) *logging.Logger {
 }
 
 func CaptureStdlibLogOutput(infoTraceLogger *logging.Logger) {
-	stdlib.CaptureRootLogger(infoTraceLogger.
-		With(structure.CapturedLoggingSourceKey, "stdlib_log"))
+	stdlib.CaptureRootLogger(infoTraceLogger.With(structure.CapturedLoggingSourceKey, "stdlib_log"))
 }
 
 // Helpers
-func loggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, error) {
+func loggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, channels.Channel, error) {
 	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return outputLogger, nil
+	var errCh channels.Channel = channels.NewDeadChannel()
+	var logger kitlog.Logger = loggers.BurrowFormatLogger(outputLogger)
+	if loggingConfig.NonBlocking {
+		logger, errCh = loggers.NonBlockingLogger(logger)
+	}
+	return logger, errCh, err
 }

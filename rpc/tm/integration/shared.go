@@ -19,138 +19,37 @@ package integration
 
 import (
 	"bytes"
-	"context"
-	"fmt"
 	"hash/fnv"
-	"strconv"
 	"testing"
-
-	"os"
-
-	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/consensus/tendermint/validator"
-	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/core/integration"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/config"
-	"github.com/hyperledger/burrow/logging/lifecycle"
-	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
-	tm_config "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/rpc/lib/client"
 )
 
 const (
-	chainName         = "RPC_Test_Chain"
 	rpcAddr           = "0.0.0.0:46657"
 	websocketAddr     = rpcAddr
 	websocketEndpoint = "/websocket"
-	testDir           = "./test_scratch/tm_test"
 )
-
-// Enable logger output during tests
-var debugLogging = true
 
 // global variables for use across all tests
 var (
-	privateAccounts = makePrivateAccounts(5) // make keys
+	privateAccounts = integration.MakePrivateAccounts(5) // make keys
 	jsonRpcClient   = rpcclient.NewJSONRPCClient(rpcAddr)
 	httpClient      = rpcclient.NewURIClient(rpcAddr)
 	clients         = map[string]tm_client.RPCClient{
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
-	// Initialised in initGlobalVariables
-	genesisDoc = new(genesis.GenesisDoc)
+	genesisDoc = integration.TestGenesisDoc(privateAccounts)
 )
-
-// We use this to wrap tests
-func TestWrapper(runner func() int) int {
-	fmt.Println("Running with integration TestWrapper (rpc/tm/integration/shared.go)...")
-
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0777)
-	os.Chdir(testDir)
-
-	tmConf := tm_config.DefaultConfig()
-	logger := logging.NewNoopLogger()
-	if debugLogging {
-		var err error
-		// Change config as needed
-		logger, err = lifecycle.NewLoggerFromLoggingConfig(&config.LoggingConfig{
-			RootSink: config.Sink().
-				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
-					//"","",
-					"method", "GetAccount",
-					"method", "BroadcastTx",
-					"tag", "sequence",
-					"tag", "Commit",
-					"tag", "CheckTx",
-					"tag", "DeliverTx",
-				)).
-				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
-				AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).
-					AddSinks(config.Sink().SetTransform(config.SortTransform("tx_hash", "time", "message", "method")).
-						SetOutput(config.StdoutOutput()))),
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	privValidator := validator.NewPrivValidatorMemory(privateAccounts[0], privateAccounts[0])
-	genesisDoc = testGenesisDoc()
-	kernel, err := core.NewKernel(context.Background(), privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
-		nil, logger)
-	if err != nil {
-		panic(err)
-	}
-	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
-	defer func() {
-		//kernel.Shutdown(context.Background())
-	}()
-
-	err = kernel.Boot()
-	if err != nil {
-		panic(err)
-	}
-
-	return runner()
-}
-
-func testGenesisDoc() *genesis.GenesisDoc {
-	accounts := make(map[string]acm.Account, len(privateAccounts))
-	for i, pa := range privateAccounts {
-		account := acm.FromAddressable(pa)
-		account.AddToBalance(1 << 32)
-		account.SetPermissions(permission.AllAccountPermissions.Clone())
-		accounts[fmt.Sprintf("user_%v", i)] = account
-	}
-	genesisTime, err := time.Parse("02-01-2006", "27-10-2017")
-	if err != nil {
-		panic("could not parse test genesis time")
-	}
-	return genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, accounts,
-		map[string]acm.Validator{
-			"genesis_validator": acm.AsValidator(accounts["user_0"]),
-		})
-}
-
-// Deterministic account generation helper. Pass number of accounts to make
-func makePrivateAccounts(n int) []acm.PrivateAccount {
-	accounts := make([]acm.PrivateAccount, n)
-	for i := 0; i < n; i++ {
-		accounts[i] = acm.GeneratePrivateAccountFromSecret("mysecret" + strconv.Itoa(i))
-	}
-	return accounts
-}
 
 //-------------------------------------------------------------------------------
 // some default transaction functions
@@ -165,7 +64,7 @@ func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Addres
 
 func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
-	tx.SignInput(genesisDoc.ChainID(), 0, privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 
@@ -174,14 +73,14 @@ func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *acm.Addre
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
 		sequence+1)
-	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 
 func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
-	tx.Sign(genesisDoc.ChainID(), privateAccounts[0])
+	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"sync"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -25,6 +27,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -36,33 +39,39 @@ import (
 
 // Magic! Should probably be configurable, but not shouldn't be so huge we
 // end up DoSing ourselves.
-const MaxBlockLookback = 100
+const MaxBlockLookback = 1000
+const AccountsRingMutexCount = 100
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
-	ctx          context.Context
-	iterable     state.Iterable
-	subscribable event.Subscribable
-	nameReg      execution.NameRegIterable
-	blockchain   bcm.Blockchain
-	transactor   execution.Transactor
-	nodeView     query.NodeView
-	logger       *logging.Logger
+	ctx             context.Context
+	committedState  state.Iterable
+	commitLocker    sync.Locker
+	nameReg         execution.NameRegIterable
+	accounts        *execution.Accounts
+	mempoolAccounts *execution.Accounts
+	subscribable    event.Subscribable
+	blockchain      bcm.Blockchain
+	transactor      *execution.Transactor
+	nodeView        query.NodeView
+	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, iterable state.Iterable, nameReg execution.NameRegIterable,
-	subscribable event.Subscribable, blockchain bcm.Blockchain, transactor execution.Transactor,
-	nodeView query.NodeView, logger *logging.Logger) *Service {
+func NewService(ctx context.Context, committedState state.Iterable, nameReg execution.NameRegIterable,
+	checker state.Reader, committer execution.BatchCommitter, subscribable event.Subscribable, blockchain bcm.Blockchain,
+	keyClient keys.KeyClient, transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
-		ctx:          ctx,
-		iterable:     iterable,
-		nameReg:      nameReg,
-		subscribable: subscribable,
-		blockchain:   blockchain,
-		transactor:   transactor,
-		nodeView:     nodeView,
-		logger:       logger.With(structure.ComponentKey, "Service"),
+		ctx:             ctx,
+		committedState:  committedState,
+		accounts:        execution.NewAccounts(committedState, keyClient, AccountsRingMutexCount),
+		mempoolAccounts: execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+		nameReg:         nameReg,
+		subscribable:    subscribable,
+		blockchain:      blockchain,
+		transactor:      transactor,
+		nodeView:        nodeView,
+		logger:          logger.With(structure.ComponentKey, "Service"),
 	}
 }
 
@@ -75,10 +84,31 @@ func NewSubscribableService(subscribable event.Subscribable, logger *logging.Log
 	}
 }
 
-// Transacting...
-
-func (s *Service) Transactor() execution.Transactor {
+// Get a Transactor providing methods for delegating signing and the core BroadcastTx function for publishing
+// transactions to the network
+func (s *Service) Transactor() *execution.Transactor {
 	return s.transactor
+}
+
+// By providing certain methods on the Transactor (such as Transact, Send, etc) with the (non-final) MempoolAccounts
+// rather than the committed (final) Accounts state the transactor can assign a sequence number based on all of the txs
+// it has seen since the last block - provided these transactions are successfully committed (via DeliverTx) then
+// subsequent transactions will have valid sequence numbers. This allows Burrow to coordinate sequencing and signing
+// for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
+// concurrent within a new block window.
+
+// Get the latest committed account state and signing accounts
+func (s *Service) Accounts() *execution.Accounts {
+	return s.accounts
+}
+
+// Get pending account state residing in the mempool
+func (s *Service) MempoolAccounts() *execution.Accounts {
+	return s.mempoolAccounts
+}
+
+func (s *Service) CommitLocker() sync.Locker {
+	return s.commitLocker
 }
 
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
@@ -180,7 +210,7 @@ func (s *Service) Peers() (*ResultPeers, error) {
 
 func (s *Service) NetInfo() (*ResultNetInfo, error) {
 	listening := s.nodeView.IsListening()
-	listeners := []string{}
+	var listeners []string
 	for _, listener := range s.nodeView.Listeners() {
 		listeners = append(listeners, listener.String())
 	}
@@ -203,7 +233,7 @@ func (s *Service) Genesis() (*ResultGenesis, error) {
 
 // Accounts
 func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
-	acc, err := s.iterable.GetAccount(address)
+	acc, err := s.accounts.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +245,7 @@ func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
 
 func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error) {
 	accounts := make([]*acm.ConcreteAccount, 0)
-	s.iterable.IterateAccounts(func(account acm.Account) (stop bool) {
+	s.committedState.IterateAccounts(func(account acm.Account) (stop bool) {
 		if predicate(account) {
 			accounts = append(accounts, acm.AsConcreteAccount(account))
 		}
@@ -229,7 +259,7 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 }
 
 func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error) {
-	account, err := s.iterable.GetAccount(address)
+	account, err := s.accounts.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +267,7 @@ func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage
 		return nil, fmt.Errorf("UnknownAddress: %s", address)
 	}
 
-	value, err := s.iterable.GetStorage(address, binary.LeftPadWord256(key))
+	value, err := s.accounts.GetStorage(address, binary.LeftPadWord256(key))
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +278,7 @@ func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage
 }
 
 func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
-	account, err := s.iterable.GetAccount(address)
+	account, err := s.accounts.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +286,7 @@ func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	s.iterable.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
+	s.committedState.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
 		return
 	})
@@ -267,7 +297,7 @@ func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 }
 
 func (s *Service) GetAccountHumanReadable(address acm.Address) (*ResultGetAccountHumanReadable, error) {
-	acc, err := s.iterable.GetAccount(address)
+	acc, err := s.accounts.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}

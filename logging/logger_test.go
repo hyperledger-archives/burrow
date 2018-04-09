@@ -23,7 +23,7 @@ import (
 
 func TestLogger(t *testing.T) {
 	stderrLogger := kitlog.NewLogfmtLogger(os.Stderr)
-	logger, _ := NewLogger(stderrLogger)
+	logger := NewLogger(stderrLogger)
 	logger.Trace.Log("hello", "barry")
 }
 

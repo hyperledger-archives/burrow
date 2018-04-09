@@ -72,10 +72,6 @@
   version = "~0.5.0"
 
 [[constraint]]
-  name = "github.com/tendermint/merkleeyes"
-  version = "~0.2.4"
-
-[[constraint]]
   name = "github.com/tendermint/tendermint"
   version = "~0.15.0"
 

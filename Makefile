@@ -147,8 +147,9 @@ test: check
 .PHONY: test_integration
 test_integration:
 	@go get github.com/monax/bosmarmot/keys/cmd/monax-keys
-	@go test ./keys/integration -tags integration
-	@go test ./rpc/tm/integration -tags integration
+	@go test -tags integration ./keys/integration
+	@go test -tags integration ./rpc/v0/integration
+	@go test -tags integration ./rpc/tm/integration
 
 # Run integration test from bosmarmot (separated from other integration tests so we can
 # make exception when this test fails when we make a breaking change in Burrow)

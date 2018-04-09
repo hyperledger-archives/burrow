@@ -14,6 +14,8 @@
 
 package abi
 
+import "github.com/hyperledger/burrow/execution/evm/sha3"
+
 // Ethereum defines types and calling conventions for the ABI
 // (application binary interface) here: https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
 // We make a start of representing them here
@@ -51,3 +53,13 @@ type (
 	Address          [AddressLength]byte
 	FunctionSelector [FunctionSelectorLength]byte
 )
+
+func FunctionID(signature string) FunctionSelector {
+	return FirstFourBytes(sha3.Sha3([]byte(signature)))
+}
+
+func FirstFourBytes(byteSlice []byte) [4]byte {
+	var bs [4]byte
+	copy(bs[:], byteSlice[:4])
+	return bs
+}

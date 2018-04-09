@@ -15,9 +15,7 @@
 package logging
 
 import (
-	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )
 
@@ -43,22 +41,21 @@ type Logger struct {
 }
 
 // Create an InfoTraceLogger by passing the initial outputLogger.
-func NewLogger(outputLogger kitlog.Logger) (*Logger, channels.Channel) {
+func NewLogger(outputLogger kitlog.Logger) *Logger {
 	// We will never halt the progress of a log emitter. If log output takes too
 	// long will start dropping log lines by using a ring buffer.
 	swapLogger := new(kitlog.SwapLogger)
 	swapLogger.Swap(outputLogger)
-	wrappedOutputLogger, errCh := wrapOutputLogger(swapLogger)
 	return &Logger{
 		Output: swapLogger,
 		// logging contexts
-		Info: kitlog.With(wrappedOutputLogger,
+		Info: kitlog.With(swapLogger,
 			structure.ChannelKey, structure.InfoChannelName,
 		),
-		Trace: kitlog.With(wrappedOutputLogger,
+		Trace: kitlog.With(swapLogger,
 			structure.ChannelKey, structure.TraceChannelName,
 		),
-	}, errCh
+	}
 }
 
 func NewNoopLogger() *Logger {
@@ -139,11 +136,4 @@ func (l *Logger) WithScope(scopeName string) *Logger {
 func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
 	prepended := structure.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
-}
-
-// Wrap the output loggers with a a set of standard transforms, a non-blocking
-// ChannelLogger and an outer context
-func wrapOutputLogger(outputLogger kitlog.Logger) (kitlog.Logger, channels.Channel) {
-	//return loggers.NonBlockingLogger(loggers.BurrowFormatLogger(outputLogger))
-	return loggers.BurrowFormatLogger(outputLogger), channels.NewDeadChannel()
 }

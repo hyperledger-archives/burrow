@@ -119,8 +119,8 @@ var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, true, 1000, 1, true, 1000)
 var testChainID = testGenesisDoc.ChainID()
 
-func makeUsers(n int) []acm.PrivateAccount {
-	users := make([]acm.PrivateAccount, n)
+func makeUsers(n int) []acm.AddressableSigner {
+	users := make([]acm.AddressableSigner, n)
 	for i := 0; i < n; i++ {
 		secret := "mysecret" + strconv.Itoa(i)
 		users[i] = acm.GeneratePrivateAccountFromSecret(secret)
@@ -129,12 +129,12 @@ func makeUsers(n int) []acm.PrivateAccount {
 }
 
 func makeExecutor(state *State) *executor {
-	return newExecutor(true, state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger),
-		logger)
+	return newExecutor("makeExecutorCache", true, state, testChainID,
+		bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger), logger)
 }
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
-	genAccounts := []genesis.Account{}
+	var genAccounts []genesis.Account
 	for _, user := range users[:5] {
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
 		genAccounts = append(genAccounts, genesis.Account{
@@ -192,7 +192,7 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[1].Address(), 5)
-	tx.SignInput(testChainID, 0, users[0])
+	require.NoError(t, tx.Sign(testChainID, users[0]))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -205,7 +205,7 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[4].Address(), 5)
-	tx.SignInput(testChainID, 0, users[2])
+	require.NoError(t, tx.Sign(testChainID, users[2]))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -218,7 +218,7 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[4].Address(), 5)
-	tx.SignInput(testChainID, 0, users[3])
+	require.NoError(t, tx.Sign(testChainID, users[3]))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -234,7 +234,7 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[6].Address(), 5)
-	tx.SignInput(testChainID, 0, users[3])
+	require.NoError(t, tx.Sign(testChainID, users[3]))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -366,7 +366,7 @@ func TestSendPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[1].Address(), 5)
-	tx.SignInput(testChainID, 0, users[0])
+	require.NoError(t, tx.Sign(testChainID, users[0]))
 	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
@@ -380,8 +380,7 @@ func TestSendPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[2].Address(), 10)
-	tx.SignInput(testChainID, 0, users[0])
-	tx.SignInput(testChainID, 1, users[1])
+	require.NoError(t, tx.Sign(testChainID, users[:2]...))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -651,7 +650,7 @@ func TestCreateAccountPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[6].Address(), 5)
-	tx.SignInput(testChainID, 0, users[0])
+	require.NoError(t, tx.Sign(testChainID, users[0]))
 	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Transaction failed", err)
 	}
@@ -665,8 +664,7 @@ func TestCreateAccountPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 10)
-	tx.SignInput(testChainID, 0, users[0])
-	tx.SignInput(testChainID, 1, users[1])
+	require.NoError(t, tx.Sign(testChainID, users[:2]...))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -683,8 +681,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	}
 	tx.AddOutput(users[7].Address(), 4)
 	tx.AddOutput(users[4].Address(), 6)
-	tx.SignInput(testChainID, 0, users[0])
-	tx.SignInput(testChainID, 1, users[1])
+	require.NoError(t, tx.Sign(testChainID, users[:2]...))
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
@@ -703,8 +700,7 @@ func TestCreateAccountPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 10)
-	tx.SignInput(testChainID, 0, users[0])
-	tx.SignInput(testChainID, 1, users[1])
+	require.NoError(t, tx.Sign(testChainID, users[:2]...))
 	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
@@ -719,8 +715,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	}
 	tx.AddOutput(users[7].Address(), 7)
 	tx.AddOutput(users[4].Address(), 3)
-	tx.SignInput(testChainID, 0, users[0])
-	tx.SignInput(testChainID, 1, users[1])
+	require.NoError(t, tx.Sign(testChainID, users[:2]...))
 	if err := batchCommitter.Execute(tx); err != nil {
 		t.Fatal("Unexpected error", err)
 	}
@@ -1002,7 +997,7 @@ func TestTxSequence(t *testing.T) {
 		tx := txs.NewSendTx()
 		tx.AddInputWithSequence(acc0PubKey, 1, sequence)
 		tx.AddOutput(acc1.Address(), 1)
-		tx.Inputs[0].Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		stateCopy := state.Copy(dbm.NewMemDB())
 		err := execTxWithState(stateCopy, tx)
 		if i == 1 {
@@ -1216,19 +1211,19 @@ func TestNameTxs(t *testing.T) {
 // Test creating a contract from futher down the call stack
 /*
 contract Factory {
-    address a;
-    function create() returns (address){
-        a = new PreFactory();
-        return a;
-    }
+   address a;
+   function create() returns (address){
+       a = new PreFactory();
+       return a;
+   }
 }
 
 contract PreFactory{
-    address a;
-    function create(Factory c) returns (address) {
-    	a = c.create();
-    	return a;
-    }
+   address a;
+   function create(Factory c) returns (address) {
+   	a = c.create();
+   	return a;
+   }
 }
 */
 
@@ -1270,7 +1265,7 @@ func TestCreates(t *testing.T) {
 		Data:     createData,
 	}
 
-	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 	err := execTxWithState(state, tx)
 	if err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
@@ -1294,7 +1289,7 @@ func TestCreates(t *testing.T) {
 		Data:     createData,
 	}
 
-	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 	err = execTxWithState(state, tx)
 	if err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
@@ -1311,9 +1306,9 @@ func TestCreates(t *testing.T) {
 
 /*
 contract Caller {
-    function send(address x){
-        x.send(msg.value);
-    }
+   function send(address x){
+       x.send(msg.value);
+   }
 }
 */
 var callerCode, _ = hex.DecodeString("60606040526000357c0100000000000000000000000000000000000000000000000000000000900480633e58c58c146037576035565b005b604b6004808035906020019091905050604d565b005b8073ffffffffffffffffffffffffffffffffffffffff16600034604051809050600060405180830381858888f19350505050505b5056")
@@ -1349,7 +1344,7 @@ func TestContractSend(t *testing.T) {
 		Data:     sendData,
 	}
 
-	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 	err := execTxWithState(state, tx)
 	if err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
@@ -1391,7 +1386,7 @@ func TestMerklePanic(t *testing.T) {
 			},
 		}
 
-		tx.Inputs[0].Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		err := execTxWithState(stateSendTx, tx)
 		if err != nil {
 			t.Errorf("Got error in executing send transaction, %v", err)
@@ -1417,7 +1412,7 @@ func TestMerklePanic(t *testing.T) {
 			GasLimit: 10,
 		}
 
-		tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		err := execTxWithState(stateCallTx, tx)
 		if err != nil {
 			t.Errorf("Got error in executing call transaction, %v", err)
@@ -1458,7 +1453,7 @@ func TestTxs(t *testing.T) {
 			},
 		}
 
-		tx.Inputs[0].Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		err := execTxWithState(stateSendTx, tx)
 		if err != nil {
 			t.Errorf("Got error in executing send transaction, %v", err)
@@ -1492,7 +1487,7 @@ func TestTxs(t *testing.T) {
 			GasLimit: 10,
 		}
 
-		tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		err := execTxWithState(stateCallTx, tx)
 		if err != nil {
 			t.Errorf("Got error in executing call transaction, %v", err)
@@ -1543,7 +1538,7 @@ proof-of-work chain as proof of what happened while they were gone `
 			Data: entryData,
 		}
 
-		tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 
 		err := execTxWithState(stateNameTx, tx)
 		if err != nil {
@@ -1566,7 +1561,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		// test a bad string
 		tx.Data = string([]byte{0, 1, 2, 3, 127, 128, 129, 200, 251})
 		tx.Input.Sequence += 1
-		tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+		require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 		err = execTxWithState(stateNameTx, tx)
 		if _, ok := err.(txs.ErrTxInvalidString); !ok {
 			t.Errorf("Expected invalid string error. Got: %s", err.Error())
@@ -1648,7 +1643,7 @@ func TestSelfDestruct(t *testing.T) {
 
 	// send call tx with no data, cause self-destruct
 	tx := txs.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
-	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 
 	// we use cache instead of execTxWithState so we can run the tx twice
 	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewNoOpPublisher(), logger)
@@ -1659,7 +1654,7 @@ func TestSelfDestruct(t *testing.T) {
 	// if we do it again, we won't get an error, but the self-destruct
 	// shouldn't happen twice and the caller should lose fee
 	tx.Input.Sequence += 1
-	tx.Input.Signature = acm.ChainSign(privAccounts[0], testChainID, tx)
+	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 	if err := exe.Execute(tx); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
@@ -1681,7 +1676,8 @@ func TestSelfDestruct(t *testing.T) {
 }
 
 func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
-	exe := newExecutor(true, state, testChainID, tip, event.NewNoOpPublisher(), logger)
+	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, testChainID, tip,
+		event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		return err
 	} else {
@@ -1708,7 +1704,7 @@ func execTxWithStateNewBlock(state *State, blockchain bcm.MutableBlockchain, tx 
 }
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
-	minBonded int64) (*State, []acm.PrivateAccount) {
+	minBonded int64) (*State, []acm.AddressableSigner) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
 	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
@@ -1865,7 +1861,7 @@ func permNameToFuncID(name string) []byte {
 	return id[:]
 }
 
-func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+func snativePermTestInputCALL(name string, user acm.AddressableSigner, perm ptypes.PermFlag,
 	val bool) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	switch name {
@@ -1888,7 +1884,7 @@ func snativePermTestInputCALL(name string, user acm.PrivateAccount, perm ptypes.
 	return
 }
 
-func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.PermFlag,
+func snativePermTestInputTx(name string, user acm.AddressableSigner, perm ptypes.PermFlag,
 	val bool) (snativeArgs snatives.PermArgs) {
 
 	switch name {
@@ -1904,7 +1900,7 @@ func snativePermTestInputTx(name string, user acm.PrivateAccount, perm ptypes.Pe
 	return
 }
 
-func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
+func snativeRoleTestInputCALL(name string, user acm.AddressableSigner,
 	role string) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	data = user.Address().Word256().Bytes()
@@ -1918,7 +1914,7 @@ func snativeRoleTestInputCALL(name string, user acm.PrivateAccount,
 	return
 }
 
-func snativeRoleTestInputTx(name string, user acm.PrivateAccount, role string) (snativeArgs snatives.PermArgs) {
+func snativeRoleTestInputTx(name string, user acm.AddressableSigner, role string) (snativeArgs snatives.PermArgs) {
 	switch name {
 	case "hasRole":
 		snativeArgs = snatives.HasRoleArgs(user.Address(), role)

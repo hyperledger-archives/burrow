@@ -15,6 +15,7 @@ import (
 type LoggingConfig struct {
 	RootSink     *SinkConfig `toml:",omitempty"`
 	ExcludeTrace bool
+	NonBlocking  bool
 }
 
 // For encoding a top-level '[logging]' TOML table

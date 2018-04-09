@@ -14,10 +14,6 @@
 
 package txs
 
-import (
-	"regexp"
-)
-
 var (
 	MinNameRegistrationPeriod uint64 = 5
 
@@ -31,21 +27,7 @@ var (
 
 	MaxNameLength = 64
 	MaxDataLength = 1 << 16
-
-	// Name should be file system lik
-	// Data should be anything permitted in JSON
-	regexpAlphaNum = regexp.MustCompile("^[a-zA-Z0-9._/-@]*$")
-	regexpJSON     = regexp.MustCompile(`^[a-zA-Z0-9_/ \-+"':,\n\t.{}()\[\]]*$`)
 )
-
-// filter strings
-func validateNameRegEntryName(name string) bool {
-	return regexpAlphaNum.Match([]byte(name))
-}
-
-func validateNameRegEntryData(data string) bool {
-	return regexpJSON.Match([]byte(data))
-}
 
 // base cost is "effective" number of bytes
 func NameBaseCost(name, data string) uint64 {

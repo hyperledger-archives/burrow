@@ -59,14 +59,15 @@ func TestBroadcastTx(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, receipt.CreatesContract, "This tx should not create a contract")
 		assert.NotEmpty(t, receipt.TxHash, "Failed to compute tx hash")
-		n, errp := new(int), new(error)
-		buf := new(bytes.Buffer)
+
+		buf, n, errp := new(bytes.Buffer), new(int), new(error)
 		hasher := ripemd160.New()
 		tx.WriteSignBytes(genesisDoc.ChainID(), buf, n, errp)
 		assert.NoError(t, *errp)
 		txSignBytes := buf.Bytes()
 		hasher.Write(txSignBytes)
 		txHashExpected := hasher.Sum(nil)
+
 		if bytes.Compare(receipt.TxHash, txHashExpected) != 0 {
 			t.Fatalf("The receipt hash '%x' does not equal the ripemd160 hash of the "+
 				"transaction signed bytes calculated in the test: '%x'",

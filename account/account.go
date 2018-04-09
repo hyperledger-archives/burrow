@@ -156,8 +156,8 @@ func (acc *ConcreteAccount) String() string {
 		return "Account{nil}"
 	}
 
-	return fmt.Sprintf("Account{Address: %s; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
-		acc.Address, acc.PublicKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
+	return fmt.Sprintf("Account{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
+		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.Code), acc.StorageRoot, acc.Permissions)
 }
 
 // ConcreteAccount

@@ -16,6 +16,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // JSON-RPC 2.0 error codes.
@@ -65,6 +66,10 @@ type (
 		// Data  interface{} `json:"data"`
 	}
 )
+
+func (err RPCError) Error() string {
+	return fmt.Sprintf("Error %v: %s", err.Code, err.Message)
+}
 
 // Create a new RPC request. This is the generic struct that is passed to RPC
 // methods

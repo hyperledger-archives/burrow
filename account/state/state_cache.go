@@ -32,6 +32,7 @@ type Cache interface {
 
 type stateCache struct {
 	sync.RWMutex
+	name     string
 	backend  Reader
 	accounts map[acm.Address]*accountInfo
 }
@@ -44,12 +45,24 @@ type accountInfo struct {
 	updated bool
 }
 
+type CacheOption func(*stateCache)
+
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
-func NewCache(backend Reader) Cache {
-	return &stateCache{
+func NewCache(backend Reader, options ...CacheOption) Cache {
+	cache := &stateCache{
 		backend:  backend,
 		accounts: make(map[acm.Address]*accountInfo),
+	}
+	for _, option := range options {
+		option(cache)
+	}
+	return cache
+}
+
+func Name(name string) CacheOption {
+	return func(cache *stateCache) {
+		cache.name = name
 	}
 }
 
@@ -231,6 +244,13 @@ func (cache *stateCache) Flush(state IterableWriter) error {
 	}
 	cache.Reset(state)
 	return nil
+}
+
+func (cache *stateCache) String() string {
+	if cache.name == "" {
+		return fmt.Sprintf("StateCache{Length: %v}", len(cache.accounts))
+	}
+	return fmt.Sprintf("StateCache{Name: %v; Length: %v}", cache.name, len(cache.accounts))
 }
 
 // Get the cache accountInfo item creating it if necessary
