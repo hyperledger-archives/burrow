@@ -43,9 +43,9 @@ type TemplateAccount struct {
 	Roles        []string `json:",omitempty"`
 }
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.GenValidator, error) {
 	var err error
-	gv := new(genesis.Validator)
+	gv := new(genesis.GenValidator)
 	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err

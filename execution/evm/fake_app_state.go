@@ -25,40 +25,40 @@ import (
 )
 
 type FakeAppState struct {
-	accounts map[acm.Address]acm.Account
-	storage  map[string]Word256
+	Accounts map[acm.Address]acm.Account
+	Storage  map[string]Word256
 }
 
 var _ state.Writer = &FakeAppState{}
 
 func (fas *FakeAppState) GetAccount(addr acm.Address) (acm.Account, error) {
-	account := fas.accounts[addr]
+	account := fas.Accounts[addr]
 	return account, nil
 }
 
 func (fas *FakeAppState) UpdateAccount(account acm.Account) error {
-	fas.accounts[account.Address()] = account
+	fas.Accounts[account.Address()] = account
 	return nil
 }
 
 func (fas *FakeAppState) RemoveAccount(address acm.Address) error {
-	_, ok := fas.accounts[address]
+	_, ok := fas.Accounts[address]
 	if !ok {
 		panic(fmt.Sprintf("Invalid account addr: %s", address))
 	} else {
 		// Remove account
-		delete(fas.accounts, address)
+		delete(fas.Accounts, address)
 	}
 	return nil
 }
 
 func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) (Word256, error) {
-	_, ok := fas.accounts[addr]
+	_, ok := fas.Accounts[addr]
 	if !ok {
 		panic(fmt.Sprintf("Invalid account addr: %s", addr))
 	}
 
-	value, ok := fas.storage[addr.String()+key.String()]
+	value, ok := fas.Storage[addr.String()+key.String()]
 	if ok {
 		return value, nil
 	} else {
@@ -67,21 +67,21 @@ func (fas *FakeAppState) GetStorage(addr acm.Address, key Word256) (Word256, err
 }
 
 func (fas *FakeAppState) SetStorage(addr acm.Address, key Word256, value Word256) error {
-	_, ok := fas.accounts[addr]
+	_, ok := fas.Accounts[addr]
 	if !ok {
 
 		fmt.Println("\n\n", fas.accountsDump())
 		panic(fmt.Sprintf("Invalid account addr: %s", addr))
 	}
 
-	fas.storage[addr.String()+key.String()] = value
+	fas.Storage[addr.String()+key.String()] = value
 	return nil
 }
 
 func (fas *FakeAppState) accountsDump() string {
 	buf := new(bytes.Buffer)
 	fmt.Fprint(buf, "Dumping accounts...", "\n")
-	for _, acc := range fas.accounts {
+	for _, acc := range fas.Accounts {
 		fmt.Fprint(buf, acc.Address().String(), "\n")
 	}
 	return buf.String()

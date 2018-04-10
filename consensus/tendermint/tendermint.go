@@ -31,7 +31,7 @@ type Node struct {
 
 // Since Tendermint doesn't close its DB connections
 func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
-	db := dbm.NewDB(ctx.ID, ctx.Config.DBBackend, ctx.Config.DBDir())
+	db := dbm.NewDB(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
 	n.closers = append(n.closers, db)
 	return db, nil
 }

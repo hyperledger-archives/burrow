@@ -71,7 +71,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
 	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
-	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackendStr, tmConf.DBDir())
+	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackend, tmConf.DBDir())
 
 	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
 	if err != nil {
@@ -158,7 +158,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					select {
 					case <-ctx.Done():
 						return ctx.Err()
-					case <-tmNode.Quit:
+
+					//case <-tmNode.Quit: //// MOSTAFA: why it got error!!!
+					case <-tmNode.Quit():
 						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
 						// Close tendermint database connections using our wrapper
 						tmNode.Close()

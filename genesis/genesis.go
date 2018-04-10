@@ -36,33 +36,33 @@ const ShortHashSuffixBytes = 3
 
 type BasicAccount struct {
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address   acm.Address
-	PublicKey acm.PublicKey
-	Amount    uint64
+	Address   acm.Address   `json:"address,omitempty"`
+	PublicKey acm.PublicKey `json:"pub_key"`
+	Amount    uint64        `json:"amount"`
 }
 
 type Account struct {
 	BasicAccount
-	Name        string
-	Permissions ptypes.AccountPermissions
+	Name        string                    `json:"name"`
+	Permissions ptypes.AccountPermissions `json:"permissions"`
 }
 
-type Validator struct {
+type GenValidator struct {
 	BasicAccount
-	Name     string
-	UnbondTo []BasicAccount
+	Name     string         `json:"name"`
+	UnbondTo []BasicAccount `json:"unbond_to"`
 }
 
 //------------------------------------------------------------
 // GenesisDoc is stored in the state database
 
 type GenesisDoc struct {
-	GenesisTime       time.Time
-	ChainName         string
-	Salt              []byte `json:",omitempty"`
-	GlobalPermissions ptypes.AccountPermissions
-	Accounts          []Account
-	Validators        []Validator
+	GenesisTime       time.Time                 `json:"genesis_time"`
+	ChainName         string                    `json:"chain_name"`
+	Salt              []byte                    `json:",omitempty"`
+	GlobalPermissions ptypes.AccountPermissions `json:"params" json:"global_permissions"`
+	Accounts          []Account                 `json:"accounts"`
+	Validators        []GenValidator            `json:"validators"`
 }
 
 // JSONBytes returns the JSON (not-yet) canonical bytes for a given
@@ -130,9 +130,9 @@ func (genesisAccount *Account) Clone() Account {
 }
 
 //------------------------------------------------------------
-// Validator methods
+// GenValidator methods
 
-func (gv *Validator) Validator() acm.Validator {
+func (gv *GenValidator) GenValidator() acm.Validator {
 	return acm.ConcreteValidator{
 		Address:   gv.PublicKey.Address(),
 		PublicKey: gv.PublicKey,
@@ -141,13 +141,13 @@ func (gv *Validator) Validator() acm.Validator {
 }
 
 // Clone clones the genesis validator
-func (gv *Validator) Clone() Validator {
+func (gv *GenValidator) Clone() GenValidator {
 	// clone the addresses to unbond to
 	unbondToClone := make([]BasicAccount, len(gv.UnbondTo))
 	for i, basicAccount := range gv.UnbondTo {
 		unbondToClone[i] = basicAccount.Clone()
 	}
-	return Validator{
+	return GenValidator{
 		BasicAccount: BasicAccount{
 			PublicKey: gv.PublicKey,
 			Amount:    gv.Amount,
@@ -169,7 +169,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 }
 
 // MakeGenesisDocFromAccounts takes a chainName and a slice of pointers to Account,
-// and a slice of pointers to Validator to construct a GenesisDoc, or returns an error on
+// and a slice of pointers to GenValidator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
 func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
@@ -194,10 +194,10 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 	}
 	sort.Strings(names)
 	// copy slice of pointers to validators into slice of validators
-	genesisValidators := make([]Validator, 0, len(validators))
+	genesisValidators := make([]GenValidator, 0, len(validators))
 	for _, name := range names {
 		val := validators[name]
-		genesisValidators = append(genesisValidators, Validator{
+		genesisValidators = append(genesisValidators, GenValidator{
 			Name: name,
 			BasicAccount: BasicAccount{
 				Address:   val.Address(),

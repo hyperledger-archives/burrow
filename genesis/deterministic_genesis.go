@@ -37,12 +37,12 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		}
 		privAccounts[i] = privAccount
 	}
-	validators := make([]Validator, numValidators)
+	genValidators := make([]GenValidator, numValidators)
 	privValidators := make([]acm.AddressableSigner, numValidators)
 	for i := 0; i < numValidators; i++ {
 		validator := acm.GeneratePrivateAccountFromSecret(fmt.Sprintf("val_%v", i))
 		privValidators[i] = validator
-		validators[i] = Validator{
+		genValidators[i] = GenValidator{
 			BasicAccount: BasicAccount{
 				Address:   validator.Address(),
 				PublicKey: validator.PublicKey(),
@@ -60,7 +60,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		ChainName:   "TestChain",
 		GenesisTime: time.Unix(1506172037, 0),
 		Accounts:    accounts,
-		Validators:  validators,
+		Validators:  genValidators,
 	}, privAccounts, privValidators
 
 }

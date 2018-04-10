@@ -59,7 +59,7 @@ var _ state.Writer = &State{}
 type State struct {
 	sync.RWMutex
 	db      dbm.DB
-	version uint64
+	version int64
 	// TODO:
 	tree   *iavl.VersionedTree
 	logger *logging.Logger
@@ -68,7 +68,7 @@ type State struct {
 func NewState(db dbm.DB) *State {
 	return &State{
 		db:   db,
-		tree: iavl.NewVersionedTree(defaultCacheCapacity, db),
+		tree: iavl.NewVersionedTree(db, defaultCacheCapacity),
 	}
 }
 
@@ -137,15 +137,15 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 		return nil, fmt.Errorf("could not retrieve version corresponding to state hash '%X' in database", hash)
 	}
 	state := NewState(db)
-	state.version = binary.GetUint64BE(versionBytes)
-	err := state.tree.Load()
+	state.version = binary.GetInt64BE(versionBytes)
+	version, err := state.tree.Load()
 	if err != nil {
 		return nil, fmt.Errorf("could not load versioned state tree")
 	}
 
-	if state.tree.LatestVersion() != state.version {
+	if version != state.version {
 		return nil, fmt.Errorf("state tree version %v expected for state hash %X but latest state tree version "+
-			"loaded is %v", state.version, hash, state.tree.LatestVersion())
+			"loaded is %v", state.version, hash, version)
 	}
 	return state, nil
 }
@@ -153,13 +153,13 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 func (s *State) Save() error {
 	s.Lock()
 	defer s.Unlock()
-	s.version++
-	hash, err := s.tree.SaveVersion(s.version)
+	hash, version, err := s.tree.SaveVersion()
 	if err != nil {
 		return err
 	}
+	s.version = version
 	versionBytes := make([]byte, 8)
-	binary.PutUint64BE(versionBytes, s.version)
+	binary.PutInt64BE(versionBytes, s.version)
 	s.db.SetSync(prefixedKey(versionPrefix, hash), versionBytes)
 	return nil
 }

@@ -56,8 +56,6 @@ type Blockchain interface {
 	Tip
 	// Returns an immutable copy of the tip
 	Tip() Tip
-	// Returns a copy of the current validator set
-	Validators() []acm.Validator
 }
 
 type MutableBlockchain interface {
@@ -83,7 +81,6 @@ type blockchain struct {
 	db dbm.DB
 	*root
 	*tip
-	validators []acm.Validator
 }
 
 var _ Root = &blockchain{}
@@ -132,10 +129,10 @@ func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
 	}
 	root := NewRoot(genesisDoc)
 	return &blockchain{
-		db:         db,
-		root:       root,
-		tip:        NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash),
-		validators: validators,
+		db:   db,
+		root: root,
+		tip:  NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash),
+		//validators: validators,
 	}
 }
 
@@ -200,16 +197,6 @@ func (bc *blockchain) Tip() Tip {
 	defer bc.RUnlock()
 	t := *bc.tip
 	return &t
-}
-
-func (bc *blockchain) Validators() []acm.Validator {
-	bc.RLock()
-	defer bc.RUnlock()
-	vs := make([]acm.Validator, len(bc.validators))
-	for i, v := range bc.validators {
-		vs[i] = v
-	}
-	return vs
 }
 
 func (bc *blockchain) Encode() ([]byte, error) {

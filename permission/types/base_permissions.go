@@ -23,10 +23,10 @@ func (e ErrValueNotSet) Error() string {
 // Base chain permissions struct
 type BasePermissions struct {
 	// bit array with "has"/"doesn't have" for each permission
-	Perms PermFlag
+	Perms PermFlag `json:"perms"`
 
 	// bit array with "set"/"not set" for each permission (not-set should fall back to global)
-	SetBit PermFlag
+	SetBit PermFlag `json:"set"`
 }
 
 // Gets the permission value.
