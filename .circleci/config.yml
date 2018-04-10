@@ -20,6 +20,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: make reinstall_vendor
       - run: make test
       # In case we miss compile errors not pulled into test paths
       - run: make build
@@ -28,6 +29,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: make reinstall_vendor
       - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
 
@@ -35,6 +37,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: make reinstall_vendor
       - run: make test_integration_bosmarmot
 
   ensure_vendor:
@@ -51,6 +54,7 @@ jobs:
       - setup_remote_docker:
           <<: *setup_docker
         # build docker image and tag the docker image(s) depending on branch/tag
+      - run: make reinstall_vendor
       - run: make build_docker_db
       - run: docker save quay.io/monax/db > db-images.tar
       - persist_to_workspace:
