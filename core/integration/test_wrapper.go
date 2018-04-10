@@ -39,7 +39,7 @@ import (
 
 const (
 	chainName = "Integration_Test_Chain"
-	testDir   = "./test_scratch/tm_test"
+	testDir   = "/tmp/test_scratch/tm_test"
 )
 
 // Enable logger output during tests
@@ -51,6 +51,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
+	os.MkdirAll(testDir+"/config", 0777)
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()

@@ -23,13 +23,13 @@ const DefaultBurrowConfigJSONEnvironmentVariable = "BURROW_CONFIG_JSON"
 const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
-	ValidatorAddress *acm.Address                       `json:",omitempty" toml:",omitempty"`
-	GenesisDoc       *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
-	Tendermint       *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
-	Execution        *execution.ExecutionConfig         `json:",omitempty" toml:",omitempty"`
-	Keys             *keys.KeysConfig                   `json:",omitempty" toml:",omitempty"`
-	RPC              *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
-	Logging          *logging_config.LoggingConfig      `json:",omitempty" toml:",omitempty"`
+	ValidatorAddress *acm.Address
+	GenesisDoc       *genesis.GenesisDoc
+	Tendermint       *tendermint.BurrowTendermintConfig
+	Execution        *execution.ExecutionConfig
+	Keys             *keys.KeysConfig
+	RPC              *rpc.RPCConfig
+	Logging          *logging_config.LoggingConfig
 }
 
 func DefaultBurrowConfig() *BurrowConfig {

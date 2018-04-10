@@ -17,7 +17,7 @@ type NodeView interface {
 	// PrivValidator public key
 	PrivValidatorPublicKey() (acm.PublicKey, error)
 	// NodeInfo for this node broadcast to other nodes (including ephemeral STS ED25519 public key)
-	NodeInfo() *p2p.NodeInfo
+	NodeInfo() p2p.NodeInfo
 	// Whether the Tendermint node is listening
 	IsListening() bool
 	// Current listeners
@@ -50,7 +50,7 @@ func (nv *nodeView) PrivValidatorPublicKey() (acm.PublicKey, error) {
 	return acm.PublicKeyFromGoCryptoPubKey(nv.tmNode.PrivValidator().GetPubKey())
 }
 
-func (nv *nodeView) NodeInfo() *p2p.NodeInfo {
+func (nv *nodeView) NodeInfo() p2p.NodeInfo {
 	return nv.tmNode.NodeInfo()
 }
 

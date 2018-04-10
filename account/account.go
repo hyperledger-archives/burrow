@@ -225,7 +225,7 @@ func AsMutableAccount(account Account) MutableAccount {
 // via its implementation of Account and a mutable implementation via its implementation of
 // MutableAccount
 type concreteAccountWrapper struct {
-	*ConcreteAccount `json:"unwrap"`
+	*ConcreteAccount
 }
 
 var _ Account = concreteAccountWrapper{}

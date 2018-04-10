@@ -103,7 +103,7 @@ type Receipt struct {
 }
 
 type Wrapper struct {
-	Tx `json:"unwrap"`
+	Tx
 }
 
 // Wrap the Tx in a struct that allows for go-wire JSON serialisation

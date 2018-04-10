@@ -72,7 +72,7 @@ type ResultGetBlock struct {
 }
 
 type ResultStatus struct {
-	NodeInfo          *p2p.NodeInfo
+	NodeInfo          p2p.NodeInfo
 	GenesisHash       []byte
 	PubKey            acm.PublicKey
 	LatestBlockHash   []byte
@@ -97,7 +97,7 @@ type ResultUnsubscribe struct {
 }
 
 type Peer struct {
-	NodeInfo   *p2p.NodeInfo
+	NodeInfo   p2p.NodeInfo
 	IsOutbound bool
 }
 
@@ -183,10 +183,10 @@ type ResultSignTx struct {
 
 type ResultEvent struct {
 	Event         string
-	TMEventData   *tm_types.TMEventData     `json:",omitempty"`
-	EventDataTx   *exe_events.EventDataTx   `json:",omitempty"`
-	EventDataCall *evm_events.EventDataCall `json:",omitempty"`
-	EventDataLog  *evm_events.EventDataLog  `json:",omitempty"`
+	TMEventData   *tm_types.TMEventData
+	EventDataTx   *exe_events.EventDataTx
+	EventDataCall *evm_events.EventDataCall
+	EventDataLog  *evm_events.EventDataLog
 }
 
 func (resultEvent ResultEvent) EventDataNewBlock() *tm_types.EventDataNewBlock {

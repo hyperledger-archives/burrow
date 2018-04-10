@@ -28,10 +28,10 @@ import (
 
 type PermArgs struct {
 	PermFlag   types.PermFlag
-	Address    *acm.Address    `json:",omitempty"`
-	Permission *types.PermFlag `json:",omitempty"`
-	Role       *string         `json:",omitempty"`
-	Value      *bool           `json:",omitempty"`
+	Address    *acm.Address
+	Permission *types.PermFlag
+	Role       *string
+	Value      *bool
 }
 
 func (pa PermArgs) String() string {

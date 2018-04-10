@@ -3,9 +3,9 @@ package rpc
 import "github.com/hyperledger/burrow/rpc/v0/server"
 
 type RPCConfig struct {
-	V0       *V0Config       `json:",omitempty" toml:",omitempty"`
-	TM       *TMConfig       `json:",omitempty" toml:",omitempty"`
-	Profiler *ProfilerConfig `json:",omitempty" toml:",omitempty"`
+	V0       *V0Config
+	TM       *TMConfig
+	Profiler *ProfilerConfig
 }
 
 type TMConfig struct {
@@ -38,7 +38,7 @@ func DefaultV0Config() *V0Config {
 
 func DefaultTMConfig() *TMConfig {
 	return &TMConfig{
-		ListenAddress: ":46657",
+		ListenAddress: "tcp://0.0.0.0:46657",
 	}
 }
 

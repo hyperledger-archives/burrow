@@ -141,7 +141,7 @@ func TestBondTxSignable(t *testing.T) {
 	expected := fmt.Sprintf(`{"chain_id":"%s",`+
 		`"tx":[17,{"inputs":[{"address":"%s",`+
 		`"amount":12345,"sequence":67890},{"address":"%s",`+
-		`"amount":111,"sequence":222}],"pub_key":[1,"%X"],`+
+		`"amount":111,"sequence":222}],"pub_key":{"PubKey":[1,"%X"]},`+
 		`"unbond_to":[{"address":"%s",`+
 		`"amount":333},{"address":"%s",`+
 		`"amount":444}]}]}`,
@@ -195,7 +195,7 @@ func TestPermissionsTxSignable(t *testing.T) {
 
 	signBytes := acm.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[31,{"args":"{"PermFlag":%v,"Address":"%s","Permission":1,"Value":true}","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
+	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[31,{"args":"{"PermFlag":%v,"Address":"%s","Permission":1,"Role":null,"Value":true}","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
 		chainID, ptypes.SetBase, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)

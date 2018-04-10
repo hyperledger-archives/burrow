@@ -47,7 +47,7 @@ type Account struct {
 	Permissions ptypes.AccountPermissions
 }
 
-type Validator struct {
+type GenValidator struct {
 	BasicAccount
 	Name     string
 	UnbondTo []BasicAccount
@@ -59,10 +59,10 @@ type Validator struct {
 type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
-	Salt              []byte `json:",omitempty"`
+	Salt              []byte
 	GlobalPermissions ptypes.AccountPermissions
 	Accounts          []Account
-	Validators        []Validator
+	Validators        []GenValidator
 }
 
 // JSONBytes returns the JSON (not-yet) canonical bytes for a given
@@ -130,9 +130,9 @@ func (genesisAccount *Account) Clone() Account {
 }
 
 //------------------------------------------------------------
-// Validator methods
+// GenValidator methods
 
-func (gv *Validator) Validator() acm.Validator {
+func (gv *GenValidator) GenValidator() acm.Validator {
 	return acm.ConcreteValidator{
 		Address:   gv.PublicKey.Address(),
 		PublicKey: gv.PublicKey,
@@ -141,13 +141,13 @@ func (gv *Validator) Validator() acm.Validator {
 }
 
 // Clone clones the genesis validator
-func (gv *Validator) Clone() Validator {
+func (gv *GenValidator) Clone() GenValidator {
 	// clone the addresses to unbond to
 	unbondToClone := make([]BasicAccount, len(gv.UnbondTo))
 	for i, basicAccount := range gv.UnbondTo {
 		unbondToClone[i] = basicAccount.Clone()
 	}
-	return Validator{
+	return GenValidator{
 		BasicAccount: BasicAccount{
 			PublicKey: gv.PublicKey,
 			Amount:    gv.Amount,
@@ -169,7 +169,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 }
 
 // MakeGenesisDocFromAccounts takes a chainName and a slice of pointers to Account,
-// and a slice of pointers to Validator to construct a GenesisDoc, or returns an error on
+// and a slice of pointers to GenValidator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
 func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
@@ -194,10 +194,10 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 	}
 	sort.Strings(names)
 	// copy slice of pointers to validators into slice of validators
-	genesisValidators := make([]Validator, 0, len(validators))
+	genesisValidators := make([]GenValidator, 0, len(validators))
 	for _, name := range names {
 		val := validators[name]
-		genesisValidators = append(genesisValidators, Validator{
+		genesisValidators = append(genesisValidators, GenValidator{
 			Name: name,
 			BasicAccount: BasicAccount{
 				Address:   val.Address(),

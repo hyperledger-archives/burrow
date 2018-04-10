@@ -154,6 +154,7 @@ func (app *abciApp) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 
 func (app *abciApp) EndBlock(reqEndBlock abci_types.RequestEndBlock) (respEndBlock abci_types.ResponseEndBlock) {
 	// Validator mutation goes here
+
 	return
 }
 
@@ -177,46 +178,33 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 	// However this is not observed in v0_tests.go - we need to understand why or create a test that exposes this
 	appHash, err := app.committer.Commit()
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
-		}
+		app.logger.InfoMsg(fmt.Sprintf("Could not commit transactions in block to execution state: %s", err))
+		return abci_types.ResponseCommit{}
 	}
 
 	// Commit to our blockchain state
 	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
-		}
+		app.logger.InfoMsg(fmt.Sprintf("Could not commit block to blockchain state: %s", err))
+		return abci_types.ResponseCommit{}
 	}
 
 	err = app.checker.Reset()
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
-		}
+		app.logger.InfoMsg(fmt.Sprintf("Could not reset check cache during commit: %s", err))
+		return abci_types.ResponseCommit{}
 	}
 
 	// Perform a sanity check our block height
 	if app.blockchain.LastBlockHeight() != uint64(app.block.Header.Height) {
-		app.logger.InfoMsg("Burrow block height disagrees with Tendermint block height",
-			structure.ScopeKey, "Commit()",
-			"burrow_height", app.blockchain.LastBlockHeight(),
-			"tendermint_height", app.block.Header.Height)
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log: fmt.Sprintf("Burrow has recorded a block height of %v, "+
-				"but Tendermint reports a block height of %v, and the two should agree.",
-				app.blockchain.LastBlockHeight(), app.block.Header.Height),
-		}
+		app.logger.InfoMsg(fmt.Sprintf("Burrow has recorded a block height of %v, "+
+			"but Tendermint reports a block height of %v, and the two should agree.",
+			app.blockchain.LastBlockHeight(), app.block.Header.Height))
+		return abci_types.ResponseCommit{}
 	}
 
+	app.logger.InfoMsg("Success - AppHash in data")
 	return abci_types.ResponseCommit{
-		Code: codes.TxExecutionSuccessCode,
 		Data: appHash,
-		Log:  "Success - AppHash in data",
 	}
 }

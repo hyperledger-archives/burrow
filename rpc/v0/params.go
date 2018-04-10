@@ -23,99 +23,99 @@ import (
 type (
 	// Used to send an address. The address should be hex and properly formatted.
 	AddressParam struct {
-		Address []byte `json:"address"`
+		Address []byte
 	}
 
 	// Used to send an address
 	FilterListParam struct {
-		Filters []*filters.FilterData `json:"filters"`
+		Filters []*filters.FilterData
 	}
 
 	PrivKeyParam struct {
-		PrivKey []byte `json:"priv_key"`
+		PrivKey []byte
 	}
 
 	// StorageAt
 	StorageAtParam struct {
-		Address []byte `json:"address"`
-		Key     []byte `json:"key"`
+		Address []byte
+		Key     []byte
 	}
 
 	// Get a block
 	HeightParam struct {
-		Height uint64 `json:"height"`
+		Height uint64
 	}
 
 	BlocksParam struct {
-		MinHeight uint64 `json:"min_height"`
-		MaxHeight uint64 `json:"max_height"`
+		MinHeight uint64
+		MaxHeight uint64
 	}
 
 	// Event Id
 	EventIdParam struct {
-		EventId string `json:"event_id"`
+		EventId string
 	}
 
 	// Event Id
 	SubIdParam struct {
-		SubId string `json:"sub_id"`
+		SubId string
 	}
 
 	PeerParam struct {
-		Address string `json:"address"`
+		Address string
 	}
 
 	// Used when doing calls
 	CallParam struct {
-		Address []byte `json:"address"`
-		From    []byte `json:"from"`
-		Data    []byte `json:"data"`
+		Address []byte
+		From    []byte
+		Data    []byte
 	}
 
 	// Used when doing code calls
 	CallCodeParam struct {
-		From []byte `json:"from"`
-		Code []byte `json:"code"`
-		Data []byte `json:"data"`
+		From []byte
+		Code []byte
+		Data []byte
 	}
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx           *txs.CallTx                   `json:"tx"`
-		PrivAccounts []*acm.ConcretePrivateAccount `json:"priv_accounts"`
+		Tx           *txs.CallTx
+		PrivAccounts []*acm.ConcretePrivateAccount
 	}
 
 	// Used when sending a transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactParam struct {
-		PrivKey      []byte `json:"priv_key"`
-		InputAddress []byte `json:"input_account"`
-		Data         []byte `json:"data"`
-		Address      []byte `json:"address"`
-		Fee          uint64 `json:"fee"`
-		GasLimit     uint64 `json:"gas_limit"`
+		PrivKey      []byte
+		InputAddress []byte
+		Data         []byte
+		Address      []byte
+		Fee          uint64
+		GasLimit     uint64
 	}
 
 	// Used when sending a 'Send' transaction.
 	SendParam struct {
-		PrivKey      []byte `json:"priv_key"`
-		InputAddress []byte `json:"input_account"`
-		ToAddress    []byte `json:"to_address"`
-		Amount       uint64 `json:"amount"`
+		PrivKey      []byte
+		InputAddress []byte
+		ToAddress    []byte
+		Amount       uint64
 	}
 
 	NameRegEntryParam struct {
-		Name string `json:"name"`
+		Name string
 	}
 
 	// Used when sending a namereg transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactNameRegParam struct {
-		PrivKey      []byte `json:"priv_key"`
-		InputAddress []byte `json:"input_account"`
-		Name         string `json:"name"`
-		Data         string `json:"data"`
-		Fee          uint64 `json:"fee"`
-		Amount       uint64 `json:"amount"`
+		PrivKey      []byte
+		InputAddress []byte
+		Name         string
+		Data         string
+		Fee          uint64
+		Amount       uint64
 	}
 )

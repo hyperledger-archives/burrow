@@ -39,9 +39,9 @@ type ConfigurableFilter interface {
 // The usual relative operators: <, >, <=, >=, ==, != (where applicable)
 // A range parameter (see: https://help.github.com/articles/search-syntax/)
 type FilterData struct {
-	Field string `json:"field"`
-	Op    string `json:"op"`
-	Value string `json:"value"`
+	Field string
+	Op    string
+	Value string
 }
 
 // Filter made up of many filters.

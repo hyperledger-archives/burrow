@@ -38,7 +38,7 @@ type ConcretePrivateAccount struct {
 }
 
 type concretePrivateAccountWrapper struct {
-	*ConcretePrivateAccount `json:"unwrap"`
+	*ConcretePrivateAccount
 }
 
 var _ PrivateAccount = concretePrivateAccountWrapper{}
