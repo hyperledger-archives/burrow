@@ -187,8 +187,10 @@ func (mem *Mempool) TxsFrontWait() *clist.CElement {
 //     It gets called from another goroutine.
 // CONTRACT: Either cb will get called, or err returned.
 func (mem *Mempool) CheckTx(tx types.Tx, cb func(*abci.Response)) (err error) {
+	fmt.Printf("Wait for CheckTx lock: %v\n", time.Now())
 	mem.proxyMtx.Lock()
 	defer mem.proxyMtx.Unlock()
+	fmt.Printf("got CheckTx lock: %v\n", time.Now())
 
 	// CACHE
 	if mem.cache.Exists(tx) {

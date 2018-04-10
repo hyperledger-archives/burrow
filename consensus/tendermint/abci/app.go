@@ -169,6 +169,14 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
+
+	err := app.checker.Reset()
+	if err != nil {
+		return abci_types.ResponseCommit{
+			Code: codes.CommitErrorCode,
+			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
+		}
+	}
 	// Commit state before resetting check cache so that the emptied cache servicing some RPC requests will fall through
 	// to committed state when check state is reset
 	// TODO: determine why the ordering of updates does not experience invalid sequence number during recheck. It
@@ -189,14 +197,6 @@ func (app *abciApp) Commit() abci_types.ResponseCommit {
 		return abci_types.ResponseCommit{
 			Code: codes.CommitErrorCode,
 			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
-		}
-	}
-
-	err = app.checker.Reset()
-	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
 		}
 	}
 

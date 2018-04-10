@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -43,7 +44,7 @@ const (
 )
 
 // Enable logger output during tests
-var debugLogging = false
+var debugLogging = true
 
 // We use this to wrap tests
 func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.GenesisDoc, runner func(*core.Kernel) int) int {
@@ -62,13 +63,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 			ExcludeTrace: false,
 			RootSink: config.Sink().
 				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
-					//"","",
-					"method", "GetAccount",
-					"method", "BroadcastTx",
-					"tag", "sequence",
-					"tag", "Commit",
-					"tag", "CheckTx",
-					"tag", "DeliverTx",
+					structure.ComponentKey, "Tendermint",
 				)).
 				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
 				AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).

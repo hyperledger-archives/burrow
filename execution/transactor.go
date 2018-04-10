@@ -198,11 +198,10 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
-	receipt, err := trans.Transact(sequentialSigningAccount, address, data, gasLimit, fee)
+	callTx, receipt, err := trans.formulateCallTx(sequentialSigningAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
-
 	// We want non-blocking on the first event received (but buffer the value),
 	// after which we want to block (and then discard the value - see below)
 	wc := make(chan *evm_events.EventDataCall, 1)
@@ -220,6 +219,11 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	// Will clean up callback goroutine and subscription in pubsub
 	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
 
+	_, err = trans.BroadcastTx(callTx)
+	if err != nil {
+		return nil, err
+	}
+
 	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
 	defer timer.Stop()
 
@@ -233,6 +237,41 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 			return eventDataCall, nil
 		}
 	}
+}
+func (trans *Transactor) formulateCallTx(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte,
+	gasLimit, fee uint64) (*txs.CallTx, *txs.Receipt, error) {
+	// Note we rely on back pressure from BroadcastTx when serialising access to from a particular input account while
+	// the mempool rechecks (and so the checker, having just be reset does not yet have the latest sequence numbers
+	// for some accounts). BroadcastTx will block when the mempool is rechecking or during a commit so provided
+	// subsequent Transacts from the same input account block on those ahead of it we are able to stream transactions
+	// continuously with sequential sequence numbers. By taking this lock we ensure this.
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer unlock()
+
+	txInput := &txs.TxInput{
+		Address:   inputAccount.Address(),
+		Amount:    fee,
+		Sequence:  inputAccount.Sequence() + 1,
+		PublicKey: inputAccount.PublicKey(),
+	}
+	tx := &txs.CallTx{
+		Input:    txInput,
+		Address:  address,
+		GasLimit: gasLimit,
+		Fee:      fee,
+		Data:     data,
+	}
+
+	// Got ourselves a tx.
+	err = tx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, nil, err
+	}
+	receipt := txs.GenerateReceipt(trans.tip.ChainID(), tx)
+	return tx, &receipt, nil
 }
 
 func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {

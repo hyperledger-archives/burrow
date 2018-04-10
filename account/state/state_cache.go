@@ -16,6 +16,7 @@ package state
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 
@@ -32,9 +33,10 @@ type Cache interface {
 
 type stateCache struct {
 	sync.RWMutex
-	name     string
-	backend  Reader
-	accounts map[acm.Address]*accountInfo
+	name       string
+	backend    Reader
+	watermarks map[acm.Address]uint64
+	accounts   map[acm.Address]*accountInfo
 }
 
 type accountInfo struct {
@@ -51,8 +53,9 @@ type CacheOption func(*stateCache)
 // via Sync. Goroutine safe for concurrent access.
 func NewCache(backend Reader, options ...CacheOption) Cache {
 	cache := &stateCache{
-		backend:  backend,
-		accounts: make(map[acm.Address]*accountInfo),
+		backend:    backend,
+		watermarks: make(map[acm.Address]uint64),
+		accounts:   make(map[acm.Address]*accountInfo),
 	}
 	for _, option := range options {
 		option(cache)
@@ -76,6 +79,14 @@ func (cache *stateCache) GetAccount(address acm.Address) (acm.Account, error) {
 	if accInfo.removed {
 		return nil, nil
 	}
+	if accInfo.account != nil && accInfo.account.Address() != acm.ZeroAddress {
+		sequence := accInfo.account.Sequence()
+		watermark := cache.watermarks[address]
+		if sequence < watermark {
+			fmt.Fprintf(os.Stderr, "STATE_CACHE: account %s retrieved with sequence %v but high watermark was %v\n",
+				address, sequence, watermark)
+		}
+	}
 	return accInfo.account, nil
 }
 
@@ -91,7 +102,9 @@ func (cache *stateCache) UpdateAccount(account acm.Account) error {
 	}
 	accInfo.account = account
 	accInfo.updated = true
-
+	if account.Sequence() > cache.watermarks[account.Address()] {
+		cache.watermarks[account.Address()] = account.Sequence()
+	}
 	return nil
 }
 
