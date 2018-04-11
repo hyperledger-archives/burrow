@@ -392,16 +392,11 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 func (s *Service) ListValidators() (*ResultListValidators, error) {
 	// TODO: when we reintroduce support for bonding and unbonding update this
 	// to reflect the mutable bonding state
-	validators := s.blockchain.Validators()
-	concreteValidators := make([]*acm.ConcreteValidator, len(validators))
-	for i, validator := range validators {
-		concreteValidators[i] = acm.AsConcreteValidator(validator)
-	}
-	return &ResultListValidators{
-		BlockHeight:         s.blockchain.Tip().LastBlockHeight(),
-		BondedValidators:    concreteValidators,
-		UnbondingValidators: nil,
-	}, nil
+
+	/// MOSTAFA:
+	/// This method should be removed. we need list of validators for each round.
+
+	return nil, nil
 }
 
 func (s *Service) DumpConsensusState() (*ResultDumpConsensusState, error) {

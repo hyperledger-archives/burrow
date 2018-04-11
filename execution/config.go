@@ -14,7 +14,7 @@ const (
 )
 
 type ExecutionConfig struct {
-	VMOptions []VMOption `json:",omitempty" toml:",omitempty"`
+	VMOptions []VMOption
 }
 
 func DefaultExecutionConfig() *ExecutionConfig {

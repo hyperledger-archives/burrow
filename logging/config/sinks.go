@@ -91,10 +91,10 @@ type (
 	}
 
 	OutputConfig struct {
-		OutputType    outputType
-		Format        string
-		*FileConfig   `json:",omitempty" toml:",omitempty"`
-		*SyslogConfig `json:",omitempty" toml:",omitempty"`
+		OutputType outputType
+		Format     string
+		*FileConfig
+		*SyslogConfig
 	}
 
 	// Transforms
@@ -135,11 +135,11 @@ type (
 
 	TransformConfig struct {
 		TransformType transformType
-		LabelConfig   *LabelConfig   `json:",omitempty" toml:",omitempty"`
-		PruneConfig   *PruneConfig   `json:",omitempty" toml:",omitempty"`
-		CaptureConfig *CaptureConfig `json:",omitempty" toml:",omitempty"`
-		FilterConfig  *FilterConfig  `json:",omitempty" toml:",omitempty"`
-		SortConfig    *SortConfig    `json:",omitempty" toml:",omitempty"`
+		LabelConfig   *LabelConfig
+		PruneConfig   *PruneConfig
+		CaptureConfig *CaptureConfig
+		FilterConfig  *FilterConfig
+		SortConfig    *SortConfig
 	}
 
 	// Sink
@@ -147,9 +147,9 @@ type (
 	// before transmitting its log it applies zero or one transforms to the stream of log lines.
 	// by chaining together many Sinks arbitrary transforms to and multi
 	SinkConfig struct {
-		Transform *TransformConfig `json:",omitempty" toml:",omitempty"`
-		Sinks     []*SinkConfig    `json:",omitempty" toml:",omitempty"`
-		Output    *OutputConfig    `json:",omitempty" toml:",omitempty"`
+		Transform *TransformConfig
+		Sinks     []*SinkConfig
+		Output    *OutputConfig
 	}
 )
 

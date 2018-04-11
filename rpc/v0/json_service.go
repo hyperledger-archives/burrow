@@ -27,17 +27,17 @@ import (
 
 // EventSubscribe
 type EventSub struct {
-	SubId string `json:"sub_id"`
+	SubId string
 }
 
 // EventUnsubscribe
 type EventUnsub struct {
-	Result bool `json:"result"`
+	Result bool
 }
 
 // EventPoll
 type PollResponse struct {
-	Events []interface{} `json:"events"`
+	Events []interface{}
 }
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server

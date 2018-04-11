@@ -21,7 +21,7 @@ type ConcreteValidator struct {
 }
 
 type concreteValidatorWrapper struct {
-	*ConcreteValidator `json:"unwrap"`
+	*ConcreteValidator
 }
 
 var _ Validator = concreteValidatorWrapper{}

@@ -20,10 +20,10 @@ type V0Client struct {
 }
 
 type RPCResponse struct {
-	Result  json.RawMessage `json:"result"`
-	Error   *rpc.RPCError   `json:"error"`
-	Id      string          `json:"id"`
-	JSONRPC string          `json:"jsonrpc"`
+	Result  json.RawMessage
+	Error   *rpc.RPCError
+	Id      string
+	JSONRPC string
 }
 
 func NewV0Client(url string) *V0Client {

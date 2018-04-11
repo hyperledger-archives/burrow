@@ -20,7 +20,7 @@ type Signer interface {
 
 // PublicKey
 type PublicKey struct {
-	crypto.PubKey `json:"unwrap"`
+	crypto.PubKey
 }
 
 func PublicKeyFromGoCryptoPubKey(pubKey crypto.PubKey) (PublicKey, error) {
@@ -93,7 +93,7 @@ func (pk *PublicKey) UnmarshalText(text []byte) error {
 // PrivateKey
 
 type PrivateKey struct {
-	crypto.PrivKey `json:"unwrap"`
+	crypto.PrivKey
 }
 
 func PrivateKeyFromGoCryptoPrivKey(privKey crypto.PrivKey) (PrivateKey, error) {
@@ -207,7 +207,7 @@ func (pk *PrivateKey) UnmarshalText(text []byte) error {
 // Signature
 
 type Signature struct {
-	crypto.Signature `json:"unwrap"`
+	crypto.Signature
 }
 
 func SignatureFromGoCryptoSignature(signature crypto.Signature) Signature {

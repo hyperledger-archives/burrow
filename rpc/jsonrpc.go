@@ -32,10 +32,10 @@ const (
 // Refer to JSON-RPC specification http://www.jsonrpc.org/specification
 type (
 	RPCRequest struct {
-		JSONRPC string          `json:"jsonrpc"`
-		Method  string          `json:"method"`
-		Params  json.RawMessage `json:"params"`
-		Id      string          `json:"id"`
+		JSONRPC string
+		Method  string
+		Params  json.RawMessage
+		Id      string
 	}
 
 	// RPCResponse MUST follow the JSON-RPC specification for Response object
@@ -46,24 +46,24 @@ type (
 
 	// RPCResultResponse MUST NOT contain the error member if no error occurred
 	RPCResultResponse struct {
-		Result  interface{} `json:"result"`
-		Id      string      `json:"id"`
-		JSONRPC string      `json:"jsonrpc"`
+		Result  interface{}
+		Id      string
+		JSONRPC string
 	}
 
 	// RPCErrorResponse MUST NOT contain the result member if an error occured
 	RPCErrorResponse struct {
-		Error   *RPCError `json:"error"`
-		Id      string    `json:"id"`
-		JSONRPC string    `json:"jsonrpc"`
+		Error   *RPCError
+		Id      string
+		JSONRPC string
 	}
 
 	// RPCError MUST be included in the Response object if an error occured
 	RPCError struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    int
+		Message string
 		// Note: Data is currently unused, and the data member may be omitted
-		// Data  interface{} `json:"data"`
+		// Data  interface{}
 	}
 )
 

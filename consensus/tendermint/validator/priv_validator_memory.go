@@ -3,7 +3,6 @@ package validator
 import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire/data"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -25,7 +24,7 @@ func NewPrivValidatorMemory(addressable acm.Addressable, signer acm.Signer) *pri
 	}
 }
 
-func (pvm *privValidatorMemory) GetAddress() data.Bytes {
+func (pvm *privValidatorMemory) GetAddress() tm_types.Address {
 	return pvm.Address().Bytes()
 }
 
@@ -44,7 +43,7 @@ func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tm_types.
 
 func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tm_types.Heartbeat) error {
 	var err error
-	heartbeat.Signature, err = pvm.Signer.Sign(tm_types.SignBytes(chainID, heartbeat))
+	heartbeat.Signature, err = pvm.Signer.Sign(heartbeat.SignBytes(chainID))
 	return err
 }
 

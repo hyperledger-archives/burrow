@@ -45,7 +45,7 @@ import (
 )
 
 var (
-	dbBackend           = dbm.MemDBBackendStr
+	dbBackend           = dbm.MemDBBackend
 	dbDir               = ""
 	permissionsContract = evm.SNativeContracts()["Permissions"]
 )
@@ -151,7 +151,7 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 		ChainName:         testGenesisDoc.ChainName,
 		GlobalPermissions: globalPerm,
 		Accounts:          genAccounts,
-		Validators: []genesis.Validator{
+		Validators: []genesis.GenValidator{
 			{
 				BasicAccount: genesis.BasicAccount{
 					PublicKey: users[0].PublicKey(),

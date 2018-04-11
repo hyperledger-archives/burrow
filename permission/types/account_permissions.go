@@ -4,7 +4,7 @@ import "github.com/hyperledger/burrow/binary"
 
 type AccountPermissions struct {
 	Base  BasePermissions
-	Roles []string
+	Roles []string `array:"roles"`
 }
 
 // Returns true if the role is found

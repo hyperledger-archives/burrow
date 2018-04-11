@@ -24,28 +24,28 @@ const DefaultAmountBonded uint64 = 10000
 // by interacting with the KeysClient it is passed and other information not known at
 // specification time
 type GenesisSpec struct {
-	GenesisTime       *time.Time        `json:",omitempty"`
-	ChainName         string            `json:",omitempty"`
-	Salt              []byte            `json:",omitempty"`
-	GlobalPermissions []string          `json:",omitempty"`
-	Accounts          []TemplateAccount `json:",omitempty"`
+	GenesisTime       *time.Time
+	ChainName         string
+	Salt              []byte
+	GlobalPermissions []string
+	Accounts          []TemplateAccount
 }
 
 type TemplateAccount struct {
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address   *acm.Address   `json:",omitempty"`
-	PublicKey *acm.PublicKey `json:",omitempty"`
-	Amount    *uint64        `json:",omitempty"`
+	Address   *acm.Address
+	PublicKey *acm.PublicKey
+	Amount    *uint64
 	// If any bonded amount then this account is also a Validator
-	AmountBonded *uint64  `json:",omitempty"`
-	Name         string   `json:",omitempty"`
-	Permissions  []string `json:",omitempty"`
-	Roles        []string `json:",omitempty"`
+	AmountBonded *uint64
+	Name         string
+	Permissions  []string
+	Roles        []string
 }
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.GenValidator, error) {
 	var err error
-	gv := new(genesis.Validator)
+	gv := new(genesis.GenValidator)
 	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
