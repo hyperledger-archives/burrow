@@ -10,7 +10,7 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 PACKAGES_NOVENDOR := $(shell go list ./...)
-COMMIT := $(shell ./scripts/commit_hash.sh)
+LDFLAGS :=
 # Bosmarmot integration testing
 BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
@@ -89,6 +89,11 @@ snatives:
 
 ### Building github.com/hyperledger/burrow
 
+# Output commit_hash but only if we have the git repo (e.g. not in docker build
+.PHONY: commit_hash
+commit_hash:
+	@git status &> /dev/null && scripts/commit_hash.sh > commit_hash.txt || true
+
 # build all targets in github.com/hyperledger/burrow
 .PHONY: build
 build:	check build_db build_client
@@ -99,8 +104,9 @@ build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db
-build_db:
-	go build -ldflags "-X github.com/hyperledger/burrow/project.commit=${COMMIT}" -o ${REPO}/bin/burrow ./cmd/burrow
+build_db: commit_hash
+	go build -ldflags "-extldflags '-static' -X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)"\
+	 -o ${REPO}/bin/burrow ./cmd/burrow
 
 .PHONY: install_db
 install_db: build_db
@@ -108,8 +114,9 @@ install_db: build_db
 
 # build burrow-client
 .PHONY: build_client
-build_client:
-	go build -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
+build_client: commit_hash
+	go build -ldflags "-extldflags '-static' -X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)"\
+	 -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
@@ -133,8 +140,8 @@ bos: ./scripts/deps/bos.sh
 ### Build docker images for github.com/hyperledger/burrow
 
 # build docker image for burrow
-.PHONY: build_docker_db
-build_docker_db: check
+.PHONY: docker_build
+docker_build: check commit_hash
 	@scripts/build_tool.sh
 
 ### Testing github.com/hyperledger/burrow
