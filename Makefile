@@ -163,6 +163,7 @@ test_integration:
 .PHONY: test_integration_bosmarmot
 test_integration_bosmarmot: bos build_db
 	cd "${BOSMARMOT_CHECKOUT}" &&\
+	make npm_install && \
 	GOPATH="${BOSMARMOT_GOPATH}" \
 	burrow_bin="${REPO}/bin/burrow" \
 	make test_integration_no_burrow

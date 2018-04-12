@@ -68,7 +68,7 @@ type State struct {
 func NewState(db dbm.DB) *State {
 	return &State{
 		db:   db,
-		tree: iavl.NewVersionedTree(defaultCacheCapacity, db),
+		tree: iavl.NewVersionedTree(db, defaultCacheCapacity),
 	}
 }
 
@@ -136,27 +136,31 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	if versionBytes == nil {
 		return nil, fmt.Errorf("could not retrieve version corresponding to state hash '%X' in database", hash)
 	}
-	state := NewState(db)
-	state.version = binary.GetUint64BE(versionBytes)
-	err := state.tree.Load()
+	s := NewState(db)
+	s.version = binary.GetUint64BE(versionBytes)
+	treeVersion, err := s.tree.Load()
 	if err != nil {
 		return nil, fmt.Errorf("could not load versioned state tree")
 	}
 
-	if state.tree.LatestVersion() != state.version {
-		return nil, fmt.Errorf("state tree version %v expected for state hash %X but latest state tree version "+
-			"loaded is %v", state.version, hash, state.tree.LatestVersion())
+	if uint64(treeVersion) != s.version {
+		return nil, fmt.Errorf("LoadState expects tree version %v for state hash %X but latest state tree version "+
+			"loaded is %v", s.version, hash, treeVersion)
 	}
-	return state, nil
+	return s, nil
 }
 
 func (s *State) Save() error {
 	s.Lock()
 	defer s.Unlock()
 	s.version++
-	hash, err := s.tree.SaveVersion(s.version)
+	hash, treeVersion, err := s.tree.SaveVersion()
 	if err != nil {
 		return err
+	}
+	if uint64(treeVersion) != s.version {
+		return fmt.Errorf("Save expects state tree version %v for state hash %X tree saved as version %v",
+			s.version, hash, treeVersion)
 	}
 	versionBytes := make([]byte, 8)
 	binary.PutUint64BE(versionBytes, s.version)

@@ -72,7 +72,7 @@ type ResultGetBlock struct {
 }
 
 type ResultStatus struct {
-	NodeInfo          *p2p.NodeInfo
+	NodeInfo          p2p.NodeInfo
 	GenesisHash       []byte
 	PubKey            acm.PublicKey
 	LatestBlockHash   []byte
@@ -97,7 +97,7 @@ type ResultUnsubscribe struct {
 }
 
 type Peer struct {
-	NodeInfo   *p2p.NodeInfo
+	NodeInfo   p2p.NodeInfo
 	IsOutbound bool
 }
 

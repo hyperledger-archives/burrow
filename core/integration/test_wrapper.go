@@ -55,6 +55,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
+	os.MkdirAll("config", 0777)
 	logger := logging.NewNoopLogger()
 	if debugLogging {
 		var err error

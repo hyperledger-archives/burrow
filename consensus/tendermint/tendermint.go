@@ -5,6 +5,9 @@ import (
 
 	"context"
 
+	"os"
+	"path"
+
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/event"
@@ -31,7 +34,7 @@ type Node struct {
 
 // Since Tendermint doesn't close its DB connections
 func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
-	db := dbm.NewDB(ctx.ID, ctx.Config.DBBackend, ctx.Config.DBDir())
+	db := dbm.NewDB(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
 	n.closers = append(n.closers, db)
 	return db, nil
 }
@@ -55,8 +58,14 @@ func NewNode(
 	// disable Tendermint's RPC
 	conf.RPC.ListenAddress = ""
 
+	err = os.MkdirAll(path.Dir(conf.NodeKeyFile()), 0777)
+	if err != nil {
+		return nil, err
+	}
+
 	nde := &Node{}
 	app := abci.NewApp(blockchain, checker, committer, logger)
+	conf.NodeKeyFile()
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
 		func() (*tm_types.GenesisDoc, error) {

@@ -49,13 +49,13 @@ type Service struct {
 	subscribable    event.Subscribable
 	blockchain      bcm.Blockchain
 	transactor      *execution.Transactor
-	nodeView        query.NodeView
+	nodeView        *query.NodeView
 	logger          *logging.Logger
 }
 
 func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable,
 	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
-	transactor *execution.Transactor, nodeView query.NodeView, logger *logging.Logger) *Service {
+	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		ctx:             ctx,

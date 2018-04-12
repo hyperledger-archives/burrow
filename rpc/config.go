@@ -38,13 +38,13 @@ func DefaultV0Config() *V0Config {
 
 func DefaultTMConfig() *TMConfig {
 	return &TMConfig{
-		ListenAddress: ":46657",
+		ListenAddress: "tcp://localhost:46657",
 	}
 }
 
 func DefaultProfilerConfig() *ProfilerConfig {
 	return &ProfilerConfig{
 		Disabled:      true,
-		ListenAddress: ":6060",
+		ListenAddress: "tcp://localhost:6060",
 	}
 }

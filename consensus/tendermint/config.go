@@ -1,8 +1,6 @@
 package tendermint
 
 import (
-	"path"
-
 	tm_config "github.com/tendermint/tendermint/config"
 )
 
@@ -29,13 +27,13 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 	if btc != nil {
 		// We may need to expose more of the P2P/Consensus/Mempool options, but I'd like to keep the configuration
 		// minimal
+		conf.RootDir = btc.TendermintRoot
+		conf.Consensus.RootDir = btc.TendermintRoot
+		conf.Mempool.RootDir = btc.TendermintRoot
+		conf.P2P.RootDir = btc.TendermintRoot
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.ListenAddress = btc.ListenAddress
-		conf.P2P.AddrBook = path.Join(btc.TendermintRoot, conf.P2P.AddrBook)
 		conf.Moniker = btc.Moniker
-		conf.DBPath = path.Join(btc.TendermintRoot, conf.DBPath)
-		conf.Mempool.WalPath = path.Join(btc.TendermintRoot, conf.Mempool.WalPath)
-		conf.Consensus.WalPath = path.Join(btc.TendermintRoot, conf.Consensus.WalPath)
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""

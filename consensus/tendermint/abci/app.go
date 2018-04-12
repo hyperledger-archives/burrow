@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/pkg/errors"
 	abci_types "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire"
 )
@@ -206,27 +207,19 @@ func (app *App) Commit() abci_types.ResponseCommit {
 
 	appHash, err := app.committer.Commit()
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit transactions in block to execution state: %s", err),
-		}
+		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
+
 	}
 
 	// Commit to our blockchain state
 	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not commit block to blockchain state: %s", err),
-		}
+		panic(errors.Wrap(err, "could not commit block to blockchain state"))
 	}
 
 	err = app.checker.Reset()
 	if err != nil {
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log:  fmt.Sprintf("Could not reset check cache during commit: %s", err),
-		}
+		panic(errors.Wrap(err, "could not reset check cache during commit"))
 	}
 
 	// Perform a sanity check our block height
@@ -235,16 +228,12 @@ func (app *App) Commit() abci_types.ResponseCommit {
 			structure.ScopeKey, "Commit()",
 			"burrow_height", app.blockchain.LastBlockHeight(),
 			"tendermint_height", app.block.Header.Height)
-		return abci_types.ResponseCommit{
-			Code: codes.CommitErrorCode,
-			Log: fmt.Sprintf("Burrow has recorded a block height of %v, "+
-				"but Tendermint reports a block height of %v, and the two should agree.",
-				app.blockchain.LastBlockHeight(), app.block.Header.Height),
-		}
+
+		panic(fmt.Errorf("burrow has recorded a block height of %v, "+
+			"but Tendermint reports a block height of %v, and the two should agree",
+			app.blockchain.LastBlockHeight(), app.block.Header.Height))
 	}
 	return abci_types.ResponseCommit{
-		Code: codes.TxExecutionSuccessCode,
 		Data: appHash,
-		Log:  "Success - AppHash in data",
 	}
 }
