@@ -3,23 +3,23 @@ package types
 import (
 	"time"
 
-	wire "github.com/tendermint/go-wire"
-	"github.com/tendermint/go-wire/data"
+	wire "github.com/tendermint/tendermint/wire"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
-// canonical json is go-wire's json for structs with fields in alphabetical order
+// canonical json is wire's json for structs with fields in alphabetical order
 
-// timeFormat is used for generating the sigs
-const timeFormat = wire.RFC3339Millis
+// TimeFormat is used for generating the sigs
+const TimeFormat = wire.RFC3339Millis
 
 type CanonicalJSONBlockID struct {
-	Hash        data.Bytes                 `json:"hash,omitempty"`
+	Hash        cmn.HexBytes               `json:"hash,omitempty"`
 	PartsHeader CanonicalJSONPartSetHeader `json:"parts,omitempty"`
 }
 
 type CanonicalJSONPartSetHeader struct {
-	Hash  data.Bytes `json:"hash"`
-	Total int        `json:"total"`
+	Hash  cmn.HexBytes `json:"hash"`
+	Total int          `json:"total"`
 }
 
 type CanonicalJSONProposal struct {
@@ -40,11 +40,11 @@ type CanonicalJSONVote struct {
 }
 
 type CanonicalJSONHeartbeat struct {
-	Height           int64      `json:"height"`
-	Round            int        `json:"round"`
-	Sequence         int        `json:"sequence"`
-	ValidatorAddress data.Bytes `json:"validator_address"`
-	ValidatorIndex   int        `json:"validator_index"`
+	Height           int64   `json:"height"`
+	Round            int     `json:"round"`
+	Sequence         int     `json:"sequence"`
+	ValidatorAddress Address `json:"validator_address"`
+	ValidatorIndex   int     `json:"validator_index"`
 }
 
 //------------------------------------
@@ -114,8 +114,8 @@ func CanonicalHeartbeat(heartbeat *Heartbeat) CanonicalJSONHeartbeat {
 }
 
 func CanonicalTime(t time.Time) string {
-	// note that sending time over go-wire resets it to
+	// note that sending time over wire resets it to
 	// local time, we need to force UTC here, so the
 	// signatures match
-	return t.UTC().Format(timeFormat)
+	return t.UTC().Format(TimeFormat)
 }

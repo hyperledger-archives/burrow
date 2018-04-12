@@ -11,6 +11,12 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
+// UNSTABLE
+// XXX: duplicate of p2p.ID to avoid dependence between packages.
+// Perhaps we can have a minimal types package containing this (and other things?)
+// that both `types` and `p2p` import ?
+type P2PID string
+
 /*
 	VoteSet helps collect signatures from validators at each height+round for a
 	predefined vote type.
@@ -58,7 +64,7 @@ type VoteSet struct {
 	sum           int64                  // Sum of voting power for seen votes, discounting conflicts
 	maj23         *BlockID               // First 2/3 majority seen
 	votesByBlock  map[string]*blockVotes // string(blockHash|blockParts) -> blockVotes
-	peerMaj23s    map[string]BlockID     // Maj23 for each peer
+	peerMaj23s    map[P2PID]BlockID      // Maj23 for each peer
 }
 
 // Constructs a new VoteSet struct used to accumulate votes for given height/round.
@@ -77,7 +83,7 @@ func NewVoteSet(chainID string, height int64, round int, type_ byte, valSet *Val
 		sum:           0,
 		maj23:         nil,
 		votesByBlock:  make(map[string]*blockVotes, valSet.Size()),
-		peerMaj23s:    make(map[string]BlockID),
+		peerMaj23s:    make(map[P2PID]BlockID),
 	}
 }
 
@@ -88,33 +94,29 @@ func (voteSet *VoteSet) ChainID() string {
 func (voteSet *VoteSet) Height() int64 {
 	if voteSet == nil {
 		return 0
-	} else {
-		return voteSet.height
 	}
+	return voteSet.height
 }
 
 func (voteSet *VoteSet) Round() int {
 	if voteSet == nil {
 		return -1
-	} else {
-		return voteSet.round
 	}
+	return voteSet.round
 }
 
 func (voteSet *VoteSet) Type() byte {
 	if voteSet == nil {
 		return 0x00
-	} else {
-		return voteSet.type_
 	}
+	return voteSet.type_
 }
 
 func (voteSet *VoteSet) Size() int {
 	if voteSet == nil {
 		return 0
-	} else {
-		return voteSet.valSet.Size()
 	}
+	return voteSet.valSet.Size()
 }
 
 // Returns added=true if vote is valid and new.
@@ -171,7 +173,7 @@ func (voteSet *VoteSet) addVote(vote *Vote) (added bool, err error) {
 	// Ensure that the signer has the right address
 	if !bytes.Equal(valAddr, lookupAddr) {
 		return false, errors.Wrapf(ErrVoteInvalidValidatorAddress,
-			"vote.ValidatorAddress (%X) does not match address (%X) for vote.ValidatorIndex (%d)",
+			"vote.ValidatorAddress (%X) does not match address (%X) for vote.ValidatorIndex (%d)\nEnsure the genesis file is correct across all validators.",
 			valAddr, lookupAddr, valIndex)
 	}
 
@@ -179,9 +181,8 @@ func (voteSet *VoteSet) addVote(vote *Vote) (added bool, err error) {
 	if existing, ok := voteSet.getVote(valIndex, blockKey); ok {
 		if existing.Signature.Equals(vote.Signature) {
 			return false, nil // duplicate
-		} else {
-			return false, errors.Wrapf(ErrVoteNonDeterministicSignature, "Existing vote: %v; New vote: %v", existing, vote)
 		}
+		return false, errors.Wrapf(ErrVoteNonDeterministicSignature, "Existing vote: %v; New vote: %v", existing, vote)
 	}
 
 	// Check signature.
@@ -193,13 +194,11 @@ func (voteSet *VoteSet) addVote(vote *Vote) (added bool, err error) {
 	added, conflicting := voteSet.addVerifiedVote(vote, blockKey, val.VotingPower)
 	if conflicting != nil {
 		return added, NewConflictingVoteError(val, conflicting, vote)
-	} else {
-		if !added {
-			cmn.PanicSanity("Expected to add non-conflicting vote")
-		}
-		return added, nil
 	}
-
+	if !added {
+		cmn.PanicSanity("Expected to add non-conflicting vote")
+	}
+	return added, nil
 }
 
 // Returns (vote, true) if vote exists for valIndex and blockKey
@@ -251,13 +250,12 @@ func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower
 			// ... and there's a conflicting vote.
 			// We're not even tracking this blockKey, so just forget it.
 			return false, conflicting
-		} else {
-			// ... and there's no conflicting vote.
-			// Start tracking this blockKey
-			votesByBlock = newBlockVotes(false, voteSet.valSet.Size())
-			voteSet.votesByBlock[blockKey] = votesByBlock
-			// We'll add the vote in a bit.
 		}
+		// ... and there's no conflicting vote.
+		// Start tracking this blockKey
+		votesByBlock = newBlockVotes(false, voteSet.valSet.Size())
+		voteSet.votesByBlock[blockKey] = votesByBlock
+		// We'll add the vote in a bit.
 	}
 
 	// Before adding to votesByBlock, see if we'll exceed quorum
@@ -290,7 +288,7 @@ func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower
 // this can cause memory issues.
 // TODO: implement ability to remove peers too
 // NOTE: VoteSet must not be nil
-func (voteSet *VoteSet) SetPeerMaj23(peerID string, blockID BlockID) {
+func (voteSet *VoteSet) SetPeerMaj23(peerID P2PID, blockID BlockID) error {
 	if voteSet == nil {
 		cmn.PanicSanity("SetPeerMaj23() on nil VoteSet")
 	}
@@ -302,10 +300,10 @@ func (voteSet *VoteSet) SetPeerMaj23(peerID string, blockID BlockID) {
 	// Make sure peer hasn't already told us something.
 	if existing, ok := voteSet.peerMaj23s[peerID]; ok {
 		if existing.Equals(blockID) {
-			return // Nothing to do
-		} else {
-			return // TODO bad peer!
+			return nil // Nothing to do
 		}
+		return fmt.Errorf("SetPeerMaj23: Received conflicting blockID from peer %v. Got %v, expected %v",
+			peerID, blockID, existing)
 	}
 	voteSet.peerMaj23s[peerID] = blockID
 
@@ -313,16 +311,16 @@ func (voteSet *VoteSet) SetPeerMaj23(peerID string, blockID BlockID) {
 	votesByBlock, ok := voteSet.votesByBlock[blockKey]
 	if ok {
 		if votesByBlock.peerMaj23 {
-			return // Nothing to do
-		} else {
-			votesByBlock.peerMaj23 = true
-			// No need to copy votes, already there.
+			return nil // Nothing to do
 		}
+		votesByBlock.peerMaj23 = true
+		// No need to copy votes, already there.
 	} else {
 		votesByBlock = newBlockVotes(true, voteSet.valSet.Size())
 		voteSet.votesByBlock[blockKey] = votesByBlock
 		// No need to copy votes, no votes to copy over.
 	}
+	return nil
 }
 
 func (voteSet *VoteSet) BitArray() *cmn.BitArray {
@@ -414,9 +412,8 @@ func (voteSet *VoteSet) TwoThirdsMajority() (blockID BlockID, ok bool) {
 	defer voteSet.mtx.Unlock()
 	if voteSet.maj23 != nil {
 		return *voteSet.maj23, true
-	} else {
-		return BlockID{}, false
 	}
+	return BlockID{}, false
 }
 
 func (voteSet *VoteSet) String() string {

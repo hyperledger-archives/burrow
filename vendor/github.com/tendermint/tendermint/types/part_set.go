@@ -9,8 +9,6 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/tendermint/go-wire"
-	"github.com/tendermint/go-wire/data"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/merkle"
 )
@@ -22,7 +20,7 @@ var (
 
 type Part struct {
 	Index int                `json:"index"`
-	Bytes data.Bytes         `json:"bytes"`
+	Bytes cmn.HexBytes       `json:"bytes"`
 	Proof merkle.SimpleProof `json:"proof"`
 
 	// Cache
@@ -32,12 +30,11 @@ type Part struct {
 func (part *Part) Hash() []byte {
 	if part.hash != nil {
 		return part.hash
-	} else {
-		hasher := ripemd160.New()
-		hasher.Write(part.Bytes) // nolint: errcheck, gas
-		part.hash = hasher.Sum(nil)
-		return part.hash
 	}
+	hasher := ripemd160.New()
+	hasher.Write(part.Bytes) // nolint: errcheck, gas
+	part.hash = hasher.Sum(nil)
+	return part.hash
 }
 
 func (part *Part) String() string {
@@ -58,8 +55,8 @@ func (part *Part) StringIndented(indent string) string {
 //-------------------------------------
 
 type PartSetHeader struct {
-	Total int        `json:"total"`
-	Hash  data.Bytes `json:"hash"`
+	Total int          `json:"total"`
+	Hash  cmn.HexBytes `json:"hash"`
 }
 
 func (psh PartSetHeader) String() string {
@@ -72,10 +69,6 @@ func (psh PartSetHeader) IsZero() bool {
 
 func (psh PartSetHeader) Equals(other PartSetHeader) bool {
 	return psh.Total == other.Total && bytes.Equal(psh.Hash, other.Hash)
-}
-
-func (psh PartSetHeader) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteJSON(CanonicalPartSetHeader(psh), w, n, err)
 }
 
 //-------------------------------------
@@ -96,7 +89,7 @@ func NewPartSetFromData(data []byte, partSize int) *PartSet {
 	// divide data into 4kb parts.
 	total := (len(data) + partSize - 1) / partSize
 	parts := make([]*Part, total)
-	parts_ := make([]merkle.Hashable, total)
+	parts_ := make([]merkle.Hasher, total)
 	partsBitArray := cmn.NewBitArray(total)
 	for i := 0; i < total; i++ {
 		part := &Part{
@@ -108,7 +101,7 @@ func NewPartSetFromData(data []byte, partSize int) *PartSet {
 		partsBitArray.SetIndex(i, true)
 	}
 	// Compute merkle proofs
-	root, proofs := merkle.SimpleProofsFromHashables(parts_)
+	root, proofs := merkle.SimpleProofsFromHashers(parts_)
 	for i := 0; i < total; i++ {
 		parts[i].Proof = *proofs[i]
 	}
@@ -135,20 +128,18 @@ func NewPartSetFromHeader(header PartSetHeader) *PartSet {
 func (ps *PartSet) Header() PartSetHeader {
 	if ps == nil {
 		return PartSetHeader{}
-	} else {
-		return PartSetHeader{
-			Total: ps.total,
-			Hash:  ps.hash,
-		}
+	}
+	return PartSetHeader{
+		Total: ps.total,
+		Hash:  ps.hash,
 	}
 }
 
 func (ps *PartSet) HasHeader(header PartSetHeader) bool {
 	if ps == nil {
 		return false
-	} else {
-		return ps.Header().Equals(header)
 	}
+	return ps.Header().Equals(header)
 }
 
 func (ps *PartSet) BitArray() *cmn.BitArray {
@@ -257,7 +248,7 @@ func (psr *PartSetReader) Read(p []byte) (n int, err error) {
 		return n1 + n2, err
 	}
 
-	psr.i += 1
+	psr.i++
 	if psr.i >= len(psr.parts) {
 		return 0, io.EOF
 	}
@@ -268,9 +259,8 @@ func (psr *PartSetReader) Read(p []byte) (n int, err error) {
 func (ps *PartSet) StringShort() string {
 	if ps == nil {
 		return "nil-PartSet"
-	} else {
-		ps.mtx.Lock()
-		defer ps.mtx.Unlock()
-		return fmt.Sprintf("(%v of %v)", ps.Count(), ps.Total())
 	}
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+	return fmt.Sprintf("(%v of %v)", ps.Count(), ps.Total())
 }

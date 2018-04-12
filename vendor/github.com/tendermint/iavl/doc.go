@@ -4,7 +4,7 @@
 //  import "github.com/tendermint/tmlibs/db"
 //  ...
 //
-//  tree := iavl.NewVersionedTree(128, db.NewMemDB())
+//  tree := iavl.NewVersionedTree(db.NewMemDB(), 128)
 //
 //  tree.IsEmpty() // true
 //

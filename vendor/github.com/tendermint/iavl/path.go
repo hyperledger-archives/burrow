@@ -23,8 +23,8 @@ func (p *PathToKey) String() string {
 
 // verify check that the leafNode's hash matches the path's LeafHash and that
 // the root is the merkle hash of all the inner nodes.
-func (p *PathToKey) verify(leafNode proofLeafNode, root []byte) error {
-	hash := leafNode.Hash()
+func (p *PathToKey) verify(leafHash []byte, root []byte) error {
+	hash := leafHash
 	for _, branch := range p.InnerNodes {
 		hash = branch.Hash(hash)
 	}
@@ -92,7 +92,7 @@ type pathWithNode struct {
 }
 
 func (p *pathWithNode) verify(root []byte) error {
-	return p.Path.verify(p.Node, root)
+	return p.Path.verify(p.Node.Hash(), root)
 }
 
 // verifyPaths verifies the left and right paths individually, and makes sure
