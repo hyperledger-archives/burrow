@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/tendermint/go-wire/data"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 // KeyInRangeProof is an interface which covers both first-in-range and last-in-range proofs.
@@ -120,8 +120,8 @@ func (proof *KeyLastInRangeProof) Verify(startKey, endKey, key, value []byte, ro
 
 // KeyRangeProof is proof that a range of keys does or does not exist.
 type KeyRangeProof struct {
-	RootHash   data.Bytes   `json:"root_hash"`
-	Version    uint64       `json:"version"`
+	RootHash   cmn.HexBytes `json:"root_hash"`
+	Versions   []int64      `json:"versions"`
 	PathToKeys []*PathToKey `json:"paths"`
 
 	Left  *pathWithNode `json:"left"`
@@ -134,11 +134,11 @@ type KeyRangeProof struct {
 func (proof *KeyRangeProof) Verify(
 	startKey, endKey []byte, limit int, keys, values [][]byte, root []byte,
 ) error {
-	if len(proof.PathToKeys) != len(keys) || len(values) != len(keys) {
-		return ErrInvalidInputs
+	if len(proof.PathToKeys) != len(keys) || len(values) != len(keys) || len(proof.Versions) != len(keys) {
+		return errors.WithStack(ErrInvalidInputs)
 	}
 	if limit > 0 && len(keys) > limit {
-		return ErrInvalidInputs
+		return errors.WithStack(ErrInvalidInputs)
 	}
 
 	// If startKey > endKey, reverse the keys and values, since our proofs are
@@ -177,8 +177,12 @@ func (proof *KeyRangeProof) Verify(
 	// If we've reached this point, it means our range isn't empty, and we have
 	// a list of keys.
 	for i, path := range proof.PathToKeys {
-		leafNode := proofLeafNode{KeyBytes: keys[i], ValueBytes: values[i]}
-		if err := path.verify(leafNode, root); err != nil {
+		leafNode := proofLeafNode{
+			KeyBytes:   keys[i],
+			ValueBytes: values[i],
+			Version:    proof.Versions[i],
+		}
+		if err := path.verify(leafNode.Hash(), root); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -238,20 +242,25 @@ func (t *Tree) getRangeWithProof(keyStart, keyEnd []byte, limit int) (
 		rangeStart, rangeEnd = rangeEnd, rangeStart
 	}
 
-	limited := t.IterateRangeInclusive(rangeStart, rangeEnd, ascending, func(k, v []byte) bool {
+	versions := []int64{}
+	limited := t.IterateRangeInclusive(rangeStart, rangeEnd, ascending, func(k, v []byte, version int64) bool {
 		keys = append(keys, k)
 		values = append(values, v)
+		versions = append(versions, version)
 		return len(keys) == limit
 	})
 
 	// Construct the paths such that they are always in ascending order.
 	rangeProof.PathToKeys = make([]*PathToKey, len(keys))
+	rangeProof.Versions = make([]int64, len(keys))
 	for i, k := range keys {
 		path, _, _ := t.root.pathToKey(t, k)
 		if ascending {
 			rangeProof.PathToKeys[i] = path
+			rangeProof.Versions[i] = versions[i]
 		} else {
 			rangeProof.PathToKeys[len(keys)-i-1] = path
+			rangeProof.Versions[len(keys)-i-1] = versions[i]
 		}
 	}
 
@@ -294,12 +303,12 @@ func (t *Tree) getRangeWithProof(keyStart, keyEnd []byte, limit int) (
 	if needsLeft {
 		// Find index of first key to the left, and include proof if it isn't the
 		// leftmost key.
-		if idx, _ := t.Get(rangeStart); idx > 0 {
-			lkey, lval := t.GetByIndex(idx - 1)
-			path, _, _ := t.root.pathToKey(t, lkey)
+		if idx, _ := t.Get64(rangeStart); idx > 0 {
+			lkey, lval := t.GetByIndex64(idx - 1)
+			path, node, _ := t.root.pathToKey(t, lkey)
 			rangeProof.Left = &pathWithNode{
 				Path: path,
-				Node: proofLeafNode{KeyBytes: lkey, ValueBytes: lval},
+				Node: proofLeafNode{lkey, lval, node.version},
 			}
 		}
 	}
@@ -310,12 +319,12 @@ func (t *Tree) getRangeWithProof(keyStart, keyEnd []byte, limit int) (
 	if needsRight {
 		// Find index of first key to the right, and include proof if it isn't the
 		// rightmost key.
-		if idx, _ := t.Get(rangeEnd); idx <= t.Size()-1 {
-			rkey, rval := t.GetByIndex(idx)
-			path, _, _ := t.root.pathToKey(t, rkey)
+		if idx, _ := t.Get64(rangeEnd); idx <= t.Size64()-1 {
+			rkey, rval := t.GetByIndex64(idx)
+			path, node, _ := t.root.pathToKey(t, rkey)
 			rangeProof.Right = &pathWithNode{
 				Path: path,
-				Node: proofLeafNode{KeyBytes: rkey, ValueBytes: rval},
+				Node: proofLeafNode{rkey, rval, node.version},
 			}
 		}
 	}
@@ -332,9 +341,10 @@ func (t *Tree) getFirstInRangeWithProof(keyStart, keyEnd []byte) (
 	t.root.hashWithCount() // Ensure that all hashes are calculated.
 	proof = &KeyFirstInRangeProof{}
 	proof.RootHash = t.root.hash
+	proof.Version = t.root.version
 
 	// Get the first value in the range.
-	t.IterateRangeInclusive(keyStart, keyEnd, true, func(k, v []byte) bool {
+	t.IterateRangeInclusive(keyStart, keyEnd, true, func(k, v []byte, _ int64) bool {
 		key, value = k, v
 		return true
 	})
@@ -344,8 +354,8 @@ func (t *Tree) getFirstInRangeWithProof(keyStart, keyEnd []byte) (
 	}
 
 	if !bytes.Equal(key, keyStart) {
-		if idx, _ := t.Get(keyStart); idx-1 >= 0 && idx-1 <= t.Size()-1 {
-			k, v := t.GetByIndex(idx - 1)
+		if idx, _ := t.Get64(keyStart); idx-1 >= 0 && idx-1 <= t.Size64()-1 {
+			k, v := t.GetByIndex64(idx - 1)
 			path, node, _ := t.root.pathToKey(t, k)
 			proof.Left = &pathWithNode{
 				Path: path,
@@ -355,8 +365,8 @@ func (t *Tree) getFirstInRangeWithProof(keyStart, keyEnd []byte) (
 	}
 
 	if !bytes.Equal(key, keyEnd) {
-		if idx, val := t.Get(keyEnd); idx <= t.Size()-1 && val == nil {
-			k, v := t.GetByIndex(idx)
+		if idx, val := t.Get64(keyEnd); idx <= t.Size64()-1 && val == nil {
+			k, v := t.GetByIndex64(idx)
 			path, node, _ := t.root.pathToKey(t, k)
 			proof.Right = &pathWithNode{
 				Path: path,
@@ -378,9 +388,10 @@ func (t *Tree) getLastInRangeWithProof(keyStart, keyEnd []byte) (
 
 	proof = &KeyLastInRangeProof{}
 	proof.RootHash = t.root.hash
+	proof.Version = t.root.version
 
 	// Get the last value in the range.
-	t.IterateRangeInclusive(keyStart, keyEnd, false, func(k, v []byte) bool {
+	t.IterateRangeInclusive(keyStart, keyEnd, false, func(k, v []byte, _ int64) bool {
 		key, value = k, v
 		return true
 	})
@@ -390,8 +401,8 @@ func (t *Tree) getLastInRangeWithProof(keyStart, keyEnd []byte) (
 	}
 
 	if !bytes.Equal(key, keyEnd) {
-		if idx, _ := t.Get(keyEnd); idx <= t.Size()-1 {
-			k, v := t.GetByIndex(idx)
+		if idx, _ := t.Get64(keyEnd); idx <= t.Size64()-1 {
+			k, v := t.GetByIndex64(idx)
 			path, node, _ := t.root.pathToKey(t, k)
 			proof.Right = &pathWithNode{
 				Path: path,
@@ -401,8 +412,8 @@ func (t *Tree) getLastInRangeWithProof(keyStart, keyEnd []byte) (
 	}
 
 	if !bytes.Equal(key, keyStart) {
-		if idx, _ := t.Get(keyStart); idx-1 >= 0 && idx-1 <= t.Size()-1 {
-			k, v := t.GetByIndex(idx - 1)
+		if idx, _ := t.Get64(keyStart); idx-1 >= 0 && idx-1 <= t.Size64()-1 {
+			k, v := t.GetByIndex64(idx - 1)
 			path, node, _ := t.root.pathToKey(t, k)
 			proof.Left = &pathWithNode{
 				Path: path,

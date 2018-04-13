@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 
-	abci "github.com/tendermint/abci/types"
 	wire "github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tmlibs/pubsub/query"
+
 	"github.com/tendermint/tendermint/state/txindex"
 	"github.com/tendermint/tendermint/types"
-	cmn "github.com/tendermint/tmlibs/common"
-	db "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/pubsub/query"
 )
 
 const (
@@ -27,13 +28,13 @@ var _ txindex.TxIndexer = (*TxIndex)(nil)
 
 // TxIndex is the simplest possible indexer, backed by key-value storage (levelDB).
 type TxIndex struct {
-	store        db.DB
+	store        dbm.DB
 	tagsToIndex  []string
 	indexAllTags bool
 }
 
 // NewTxIndex creates new KV indexer.
-func NewTxIndex(store db.DB, options ...func(*TxIndex)) *TxIndex {
+func NewTxIndex(store dbm.DB, options ...func(*TxIndex)) *TxIndex {
 	txi := &TxIndex{store: store, tagsToIndex: make([]string, 0), indexAllTags: false}
 	for _, o := range options {
 		o(txi)
@@ -67,10 +68,8 @@ func (txi *TxIndex) Get(hash []byte) (*types.TxResult, error) {
 		return nil, nil
 	}
 
-	r := bytes.NewReader(rawBytes)
-	var n int
-	var err error
-	txResult := wire.ReadBinary(&types.TxResult{}, r, 0, &n, &err).(*types.TxResult)
+	txResult := new(types.TxResult)
+	err := wire.UnmarshalBinary(rawBytes, &txResult)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading TxResult: %v", err)
 	}
@@ -87,13 +86,16 @@ func (txi *TxIndex) AddBatch(b *txindex.Batch) error {
 
 		// index tx by tags
 		for _, tag := range result.Result.Tags {
-			if txi.indexAllTags || cmn.StringInSlice(tag.Key, txi.tagsToIndex) {
+			if txi.indexAllTags || cmn.StringInSlice(string(tag.Key), txi.tagsToIndex) {
 				storeBatch.Set(keyForTag(tag, result), hash)
 			}
 		}
 
 		// index tx by hash
-		rawBytes := wire.BinaryBytes(result)
+		rawBytes, err := wire.MarshalBinary(result)
+		if err != nil {
+			return err
+		}
 		storeBatch.Set(hash, rawBytes)
 	}
 
@@ -109,13 +111,16 @@ func (txi *TxIndex) Index(result *types.TxResult) error {
 
 	// index tx by tags
 	for _, tag := range result.Result.Tags {
-		if txi.indexAllTags || cmn.StringInSlice(tag.Key, txi.tagsToIndex) {
+		if txi.indexAllTags || cmn.StringInSlice(string(tag.Key), txi.tagsToIndex) {
 			b.Set(keyForTag(tag, result), hash)
 		}
 	}
 
 	// index tx by hash
-	rawBytes := wire.BinaryBytes(result)
+	rawBytes, err := wire.MarshalBinary(result)
+	if err != nil {
+		return err
+	}
 	b.Set(hash, rawBytes)
 
 	b.Write()
@@ -143,9 +148,8 @@ func (txi *TxIndex) Search(q *query.Query) ([]*types.TxResult, error) {
 		res, err := txi.Get(hash)
 		if res == nil {
 			return []*types.TxResult{}, nil
-		} else {
-			return []*types.TxResult{res}, errors.Wrap(err, "error while retrieving the result")
 		}
+		return []*types.TxResult{res}, errors.Wrap(err, "error while retrieving the result")
 	}
 
 	// conditions to skip because they're handled before "everything else"
@@ -166,10 +170,10 @@ func (txi *TxIndex) Search(q *query.Query) ([]*types.TxResult, error) {
 
 		for _, r := range ranges {
 			if !hashesInitialized {
-				hashes = txi.matchRange(r, startKeyForRange(r, height))
+				hashes = txi.matchRange(r, []byte(r.key))
 				hashesInitialized = true
 			} else {
-				hashes = intersect(hashes, txi.matchRange(r, startKeyForRange(r, height)))
+				hashes = intersect(hashes, txi.matchRange(r, []byte(r.key)))
 			}
 		}
 	}
@@ -197,6 +201,11 @@ func (txi *TxIndex) Search(q *query.Query) ([]*types.TxResult, error) {
 		}
 		i++
 	}
+
+	// sort by height by default
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Height < results[j].Height
+	})
 
 	return results, nil
 }
@@ -230,6 +239,52 @@ type queryRange struct {
 	includeLowerBound bool
 	upperBound        interface{} // int || time.Time
 	includeUpperBound bool
+}
+
+func (r queryRange) lowerBoundValue() interface{} {
+	if r.lowerBound == nil {
+		return nil
+	}
+
+	if r.includeLowerBound {
+		return r.lowerBound
+	} else {
+		switch t := r.lowerBound.(type) {
+		case int64:
+			return t + 1
+		case time.Time:
+			return t.Unix() + 1
+		default:
+			panic("not implemented")
+		}
+	}
+}
+
+func (r queryRange) AnyBound() interface{} {
+	if r.lowerBound != nil {
+		return r.lowerBound
+	} else {
+		return r.upperBound
+	}
+}
+
+func (r queryRange) upperBoundValue() interface{} {
+	if r.upperBound == nil {
+		return nil
+	}
+
+	if r.includeUpperBound {
+		return r.upperBound
+	} else {
+		switch t := r.upperBound.(type) {
+		case int64:
+			return t - 1
+		case time.Time:
+			return t.Unix() - 1
+		default:
+			panic("not implemented")
+		}
+	}
 }
 
 func lookForRanges(conditions []query.Condition) (ranges queryRanges, indexes []int) {
@@ -270,18 +325,18 @@ func isRangeOperation(op query.Operator) bool {
 
 func (txi *TxIndex) match(c query.Condition, startKey []byte) (hashes [][]byte) {
 	if c.Op == query.OpEqual {
-		it := txi.store.IteratorPrefix(startKey)
-		defer it.Release()
-		for it.Next() {
+		it := dbm.IteratePrefix(txi.store, startKey)
+		defer it.Close()
+		for ; it.Valid(); it.Next() {
 			hashes = append(hashes, it.Value())
 		}
 	} else if c.Op == query.OpContains {
 		// XXX: doing full scan because startKey does not apply here
 		// For example, if startKey = "account.owner=an" and search query = "accoutn.owner CONSISTS an"
 		// we can't iterate with prefix "account.owner=an" because we might miss keys like "account.owner=Ulan"
-		it := txi.store.Iterator()
-		defer it.Release()
-		for it.Next() {
+		it := txi.store.Iterator(nil, nil)
+		defer it.Close()
+		for ; it.Valid(); it.Next() {
 			if !isTagKey(it.Key()) {
 				continue
 			}
@@ -295,34 +350,49 @@ func (txi *TxIndex) match(c query.Condition, startKey []byte) (hashes [][]byte) 
 	return
 }
 
-func (txi *TxIndex) matchRange(r queryRange, startKey []byte) (hashes [][]byte) {
-	it := txi.store.IteratorPrefix(startKey)
-	defer it.Release()
+func (txi *TxIndex) matchRange(r queryRange, prefix []byte) (hashes [][]byte) {
+	// create a map to prevent duplicates
+	hashesMap := make(map[string][]byte)
+
+	lowerBound := r.lowerBoundValue()
+	upperBound := r.upperBoundValue()
+
+	it := dbm.IteratePrefix(txi.store, prefix)
+	defer it.Close()
 LOOP:
-	for it.Next() {
+	for ; it.Valid(); it.Next() {
 		if !isTagKey(it.Key()) {
 			continue
 		}
-		if r.upperBound != nil {
-			// no other way to stop iterator other than checking for upperBound
-			switch (r.upperBound).(type) {
-			case int64:
-				v, err := strconv.ParseInt(extractValueFromKey(it.Key()), 10, 64)
-				if err == nil && v == r.upperBound {
-					if r.includeUpperBound {
-						hashes = append(hashes, it.Value())
-					}
-					break LOOP
-				}
-				// XXX: passing time in a ABCI Tags is not yet implemented
-				// case time.Time:
-				// 	v := strconv.ParseInt(extractValueFromKey(it.Key()), 10, 64)
-				// 	if v == r.upperBound {
-				// 		break
-				// 	}
+		switch r.AnyBound().(type) {
+		case int64:
+			v, err := strconv.ParseInt(extractValueFromKey(it.Key()), 10, 64)
+			if err != nil {
+				continue LOOP
 			}
+			include := true
+			if lowerBound != nil && v < lowerBound.(int64) {
+				include = false
+			}
+			if upperBound != nil && v > upperBound.(int64) {
+				include = false
+			}
+			if include {
+				hashesMap[fmt.Sprintf("%X", it.Value())] = it.Value()
+			}
+			// XXX: passing time in a ABCI Tags is not yet implemented
+			// case time.Time:
+			// 	v := strconv.ParseInt(extractValueFromKey(it.Key()), 10, 64)
+			// 	if v == r.upperBound {
+			// 		break
+			// 	}
 		}
-		hashes = append(hashes, it.Value())
+	}
+	hashes = make([][]byte, len(hashesMap))
+	i := 0
+	for _, h := range hashesMap {
+		hashes[i] = h
+		i++
 	}
 	return
 }
@@ -340,33 +410,6 @@ func startKey(c query.Condition, height int64) []byte {
 	return []byte(key)
 }
 
-func startKeyForRange(r queryRange, height int64) []byte {
-	if r.lowerBound == nil {
-		return []byte(r.key)
-	}
-
-	var lowerBound interface{}
-	if r.includeLowerBound {
-		lowerBound = r.lowerBound
-	} else {
-		switch t := r.lowerBound.(type) {
-		case int64:
-			lowerBound = t + 1
-		case time.Time:
-			lowerBound = t.Unix() + 1
-		default:
-			panic("not implemented")
-		}
-	}
-	var key string
-	if height > 0 {
-		key = fmt.Sprintf("%s/%v/%d", r.key, lowerBound, height)
-	} else {
-		key = fmt.Sprintf("%s/%v", r.key, lowerBound)
-	}
-	return []byte(key)
-}
-
 func isTagKey(key []byte) bool {
 	return strings.Count(string(key), tagKeySeparator) == 3
 }
@@ -376,17 +419,8 @@ func extractValueFromKey(key []byte) string {
 	return parts[1]
 }
 
-func keyForTag(tag *abci.KVPair, result *types.TxResult) []byte {
-	switch tag.ValueType {
-	case abci.KVPair_STRING:
-		return []byte(fmt.Sprintf("%s/%v/%d/%d", tag.Key, tag.ValueString, result.Height, result.Index))
-	case abci.KVPair_INT:
-		return []byte(fmt.Sprintf("%s/%v/%d/%d", tag.Key, tag.ValueInt, result.Height, result.Index))
-	// case abci.KVPair_TIME:
-	// 	return []byte(fmt.Sprintf("%s/%d/%d/%d", tag.Key, tag.ValueTime.Unix(), result.Height, result.Index))
-	default:
-		panic(fmt.Sprintf("Undefined value type: %v", tag.ValueType))
-	}
+func keyForTag(tag cmn.KVPair, result *types.TxResult) []byte {
+	return []byte(fmt.Sprintf("%s/%s/%d/%d", tag.Key, tag.Value, result.Height, result.Index))
 }
 
 ///////////////////////////////////////////////////////////////////////////////

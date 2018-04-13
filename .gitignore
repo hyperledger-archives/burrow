@@ -15,3 +15,4 @@ test_scratch/
 .gopath_bos
 burrow.toml
 
+commit_hash.txt

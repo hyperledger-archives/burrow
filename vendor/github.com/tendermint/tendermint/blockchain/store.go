@@ -8,9 +8,11 @@ import (
 	"sync"
 
 	wire "github.com/tendermint/go-wire"
-	"github.com/tendermint/tendermint/types"
+
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/tendermint/tendermint/types"
 )
 
 /*
@@ -74,7 +76,7 @@ func (bs *BlockStore) LoadBlock(height int64) *types.Block {
 	}
 	blockMeta := wire.ReadBinary(&types.BlockMeta{}, r, 0, &n, &err).(*types.BlockMeta)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading block meta: %v", err))
+		panic(fmt.Sprintf("Error reading block meta: %v", err))
 	}
 	bytez := []byte{}
 	for i := 0; i < blockMeta.BlockID.PartsHeader.Total; i++ {
@@ -83,7 +85,7 @@ func (bs *BlockStore) LoadBlock(height int64) *types.Block {
 	}
 	block := wire.ReadBinary(&types.Block{}, bytes.NewReader(bytez), 0, &n, &err).(*types.Block)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading block: %v", err))
+		panic(fmt.Sprintf("Error reading block: %v", err))
 	}
 	return block
 }
@@ -100,7 +102,7 @@ func (bs *BlockStore) LoadBlockPart(height int64, index int) *types.Part {
 	}
 	part := wire.ReadBinary(&types.Part{}, r, 0, &n, &err).(*types.Part)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading block part: %v", err))
+		panic(fmt.Sprintf("Error reading block part: %v", err))
 	}
 	return part
 }
@@ -116,7 +118,7 @@ func (bs *BlockStore) LoadBlockMeta(height int64) *types.BlockMeta {
 	}
 	blockMeta := wire.ReadBinary(&types.BlockMeta{}, r, 0, &n, &err).(*types.BlockMeta)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading block meta: %v", err))
+		panic(fmt.Sprintf("Error reading block meta: %v", err))
 	}
 	return blockMeta
 }
@@ -134,7 +136,7 @@ func (bs *BlockStore) LoadBlockCommit(height int64) *types.Commit {
 	}
 	commit := wire.ReadBinary(&types.Commit{}, r, 0, &n, &err).(*types.Commit)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading commit: %v", err))
+		panic(fmt.Sprintf("Error reading commit: %v", err))
 	}
 	return commit
 }
@@ -151,7 +153,7 @@ func (bs *BlockStore) LoadSeenCommit(height int64) *types.Commit {
 	}
 	commit := wire.ReadBinary(&types.Commit{}, r, 0, &n, &err).(*types.Commit)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Error reading commit: %v", err))
+		panic(fmt.Sprintf("Error reading commit: %v", err))
 	}
 	return commit
 }
@@ -252,7 +254,7 @@ func (bsj BlockStoreStateJSON) Save(db dbm.DB) {
 // If no BlockStoreStateJSON was previously persisted, it returns the zero value.
 func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 	bytes := db.Get(blockStoreKey)
-	if bytes == nil {
+	if len(bytes) == 0 {
 		return BlockStoreStateJSON{
 			Height: 0,
 		}
@@ -260,7 +262,7 @@ func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 	bsj := BlockStoreStateJSON{}
 	err := json.Unmarshal(bytes, &bsj)
 	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Could not unmarshal bytes: %X", bytes))
+		panic(fmt.Sprintf("Could not unmarshal bytes: %X", bytes))
 	}
 	return bsj
 }

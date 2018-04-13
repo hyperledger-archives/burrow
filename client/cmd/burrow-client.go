@@ -18,6 +18,8 @@ import (
 	"os"
 	"strconv"
 
+	"fmt"
+
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/project"
 	"github.com/spf13/cobra"
@@ -35,7 +37,7 @@ Made with <3 by Monax Industries.
 
 Complete documentation is available at https://monax.io/docs
 
-VERSION: ` + project.History.CurrentVersion().String(),
+VERSION: ` + project.FullVersion(),
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
@@ -57,8 +59,12 @@ func AddGlobalFlags() {
 }
 
 func AddClientCommands() {
-	BurrowClientCmd.AddCommand(buildTransactionCommand())
-	BurrowClientCmd.AddCommand(buildStatusCommand())
+	BurrowClientCmd.AddCommand(buildTransactionCommand(), buildStatusCommand())
+	BurrowClientCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print full version",
+		Run:   func(cmd *cobra.Command, args []string) { fmt.Println(project.FullVersion()) },
+	})
 }
 
 //------------------------------------------------------------------------------

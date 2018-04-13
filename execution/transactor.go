@@ -20,6 +20,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"bytes"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -162,16 +164,83 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte,
 	gasLimit, fee uint64) (*txs.Receipt, error) {
-	// Note we rely on back pressure from BroadcastTx when serialising access to from a particular input account while
-	// the mempool rechecks (and so the checker, having just be reset does not yet have the latest sequence numbers
-	// for some accounts). BroadcastTx will block when the mempool is rechecking or during a commit so provided
-	// subsequent Transacts from the same input account block on those ahead of it we are able to stream transactions
-	// continuously with sequential sequence numbers. By taking this lock we ensure this.
+
+	// Use the get the freshest sequence numbers from mempool state and hold the lock until we get a response from
+	// CheckTx
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
+
+	callTx, _, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	if err != nil {
+		return nil, err
+	}
+	// Got ourselves a tx.
+	err = callTx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, err
+	}
+	return trans.BroadcastTx(callTx)
+}
+
+func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte, gasLimit,
+	fee uint64) (*evm_events.EventDataCall, error) {
+
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
+	callTx, expectedReceipt, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	if err != nil {
+		return nil, err
+	}
+
+	subID, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, err
+	}
+
+	// We want non-blocking on the first event received (but buffer the value),
+	// after which we want to block (and then discard the value - see below)
+	ch := make(chan *evm_events.EventDataCall, 1)
+
+	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, expectedReceipt.ContractAddress,
+		expectedReceipt.TxHash, 0, ch)
+	if err != nil {
+		return nil, err
+	}
+	// Will clean up callback goroutine and subscription in pubsub
+	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
+
+	receipt, err := trans.BroadcastTx(callTx)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(receipt.TxHash, expectedReceipt.TxHash) {
+		return nil, fmt.Errorf("BroadcastTx received TxHash %X but %X was expected",
+			receipt.TxHash, expectedReceipt.TxHash)
+	}
+
+	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
+	case eventDataCall := <-ch:
+		if eventDataCall.Exception != "" {
+			return nil, fmt.Errorf("error when transacting: " + eventDataCall.Exception)
+		} else {
+			return eventDataCall, nil
+		}
+	}
+}
+func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *acm.Address, data []byte,
+	gasLimit, fee uint64) (*txs.CallTx, *txs.Receipt, error) {
 
 	txInput := &txs.TxInput{
 		Address:   inputAccount.Address(),
@@ -188,112 +257,104 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	}
 
 	// Got ourselves a tx.
-	err = tx.Sign(trans.tip.ChainID(), inputAccount)
+	err := tx.Sign(trans.tip.ChainID(), inputAccount)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return trans.BroadcastTx(tx)
+	receipt := txs.GenerateReceipt(trans.tip.ChainID(), tx)
+	return tx, &receipt, nil
 }
 
-func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte, gasLimit,
-	fee uint64) (*evm_events.EventDataCall, error) {
-
-	receipt, err := trans.Transact(sequentialSigningAccount, address, data, gasLimit, fee)
-	if err != nil {
-		return nil, err
-	}
-
-	// We want non-blocking on the first event received (but buffer the value),
-	// after which we want to block (and then discard the value - see below)
-	wc := make(chan *evm_events.EventDataCall, 1)
-
-	subID, err := event.GenerateSubscriptionID()
-	if err != nil {
-		return nil, err
-	}
-
-	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, receipt.ContractAddress,
-		receipt.TxHash, 0, wc)
-	if err != nil {
-		return nil, err
-	}
-	// Will clean up callback goroutine and subscription in pubsub
-	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
-
-	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
-	defer timer.Stop()
-
-	select {
-	case <-timer.C:
-		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
-	case eventDataCall := <-wc:
-		if eventDataCall.Exception != "" {
-			return nil, fmt.Errorf("error when transacting: " + eventDataCall.Exception)
-		} else {
-			return eventDataCall, nil
-		}
-	}
-}
-
-func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	tx := txs.NewSendTx()
+func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+	amount uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
-	txInput := &txs.TxInput{
-		Address:   inputAccount.Address(),
-		Amount:    amount,
-		Sequence:  inputAccount.Sequence() + 1,
-		PublicKey: inputAccount.PublicKey(),
-	}
-	tx.Inputs = append(tx.Inputs, txInput)
-	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
-	tx.Outputs = append(tx.Outputs, txOutput)
 
-	err = tx.Sign(trans.tip.ChainID(), inputAccount)
+	sendTx, _, err := trans.formulateSendTx(inputAccount, toAddress, amount)
 	if err != nil {
 		return nil, err
 	}
-	return trans.BroadcastTx(tx)
+
+	return trans.BroadcastTx(sendTx)
 }
 
-func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address, amount uint64) (*txs.Receipt, error) {
-	receipt, err := trans.Send(sequentialSigningAccount, toAddress, amount)
+func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+	amount uint64) (*txs.Receipt, error) {
+
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
 		return nil, err
 	}
+	defer unlock()
 
-	wc := make(chan *txs.SendTx)
+	sendTx, expectedReceipt, err := trans.formulateSendTx(inputAccount, toAddress, amount)
+	if err != nil {
+		return nil, err
+	}
 
 	subID, err := event.GenerateSubscriptionID()
 	if err != nil {
 		return nil, err
 	}
 
+	wc := make(chan *txs.SendTx)
 	err = exe_events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
-		receipt.TxHash, wc)
+		expectedReceipt.TxHash, wc)
 	if err != nil {
 		return nil, err
 	}
 	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
+
+	receipt, err := trans.BroadcastTx(sendTx)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(receipt.TxHash, expectedReceipt.TxHash) {
+		return nil, fmt.Errorf("BroadcastTx received TxHash %X but %X was expected",
+			receipt.TxHash, expectedReceipt.TxHash)
+	}
 
 	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
 	defer timer.Stop()
 
 	select {
 	case <-timer.C:
-		return nil, fmt.Errorf("transaction timed out TxHash: %X", receipt.TxHash)
+		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case sendTx := <-wc:
 		// This is a double check - we subscribed to this tx's hash so something has gone wrong if the amounts don't match
 		if sendTx.Inputs[0].Amount == amount {
-			return receipt, nil
+			return expectedReceipt, nil
 		}
 		return nil, fmt.Errorf("received SendTx but hash doesn't seem to match what we subscribed to, "+
-			"received SendTx: %v which does not match receipt on sending: %v", sendTx, receipt)
+			"received SendTx: %v which does not match receipt on sending: %v", sendTx, expectedReceipt)
 	}
+}
+
+func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress acm.Address,
+	amount uint64) (*txs.SendTx, *txs.Receipt, error) {
+
+	sendTx := txs.NewSendTx()
+	txInput := &txs.TxInput{
+		Address:   inputAccount.Address(),
+		Amount:    amount,
+		Sequence:  inputAccount.Sequence() + 1,
+		PublicKey: inputAccount.PublicKey(),
+	}
+	sendTx.Inputs = append(sendTx.Inputs, txInput)
+	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
+	sendTx.Outputs = append(sendTx.Outputs, txOutput)
+
+	err := sendTx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	receipt := txs.GenerateReceipt(trans.tip.ChainID(), sendTx)
+	return sendTx, &receipt, nil
 }
 
 func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSigningAccount, name, data string, amount,

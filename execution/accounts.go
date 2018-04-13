@@ -10,6 +10,8 @@ import (
 	burrow_sync "github.com/hyperledger/burrow/sync"
 )
 
+// Accounts pairs an underlying state.Reader with a KeyClient to provide a signing variant of an account
+// it also maintains a lock over addresses to provide a linearisation of signing events using SequentialSigningAccount
 type Accounts struct {
 	burrow_sync.RingMutex
 	state.Reader
@@ -35,7 +37,7 @@ func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) 
 	}
 }
 func (accs *Accounts) SigningAccount(address acm.Address, signer acm.Signer) (*SigningAccount, error) {
-	account, err := state.GetMutableAccount(accs.Reader, address)
+	account, err := state.GetMutableAccount(accs, address)
 	if err != nil {
 		return nil, err
 	}

@@ -45,7 +45,7 @@ import (
 )
 
 var (
-	dbBackend           = dbm.MemDBBackendStr
+	dbBackend           = dbm.MemDBBackend
 	dbDir               = ""
 	permissionsContract = evm.SNativeContracts()["Permissions"]
 )

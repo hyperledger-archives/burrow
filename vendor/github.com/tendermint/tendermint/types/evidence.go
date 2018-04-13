@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	wire "github.com/tendermint/tendermint/wire"
 	"github.com/tendermint/tmlibs/merkle"
 )
 
@@ -120,7 +120,7 @@ func (dve *DuplicateVoteEvidence) Index() int {
 
 // Hash returns the hash of the evidence.
 func (dve *DuplicateVoteEvidence) Hash() []byte {
-	return merkle.SimpleHashFromBinary(dve)
+	return wireHasher(dve).Hash()
 }
 
 // Verify returns an error if the two votes aren't conflicting.
@@ -144,14 +144,14 @@ func (dve *DuplicateVoteEvidence) Verify(chainID string) error {
 
 	// BlockIDs must be different
 	if dve.VoteA.BlockID.Equals(dve.VoteB.BlockID) {
-		return fmt.Errorf("DuplicateVoteEvidence Error: BlockIDs are the same (%v) - not a real duplicate vote!", dve.VoteA.BlockID)
+		return fmt.Errorf("DuplicateVoteEvidence Error: BlockIDs are the same (%v) - not a real duplicate vote", dve.VoteA.BlockID)
 	}
 
 	// Signatures must be valid
-	if !dve.PubKey.VerifyBytes(SignBytes(chainID, dve.VoteA), dve.VoteA.Signature) {
+	if !dve.PubKey.VerifyBytes(dve.VoteA.SignBytes(chainID), dve.VoteA.Signature) {
 		return fmt.Errorf("DuplicateVoteEvidence Error verifying VoteA: %v", ErrVoteInvalidSignature)
 	}
-	if !dve.PubKey.VerifyBytes(SignBytes(chainID, dve.VoteB), dve.VoteB.Signature) {
+	if !dve.PubKey.VerifyBytes(dve.VoteB.SignBytes(chainID), dve.VoteB.Signature) {
 		return fmt.Errorf("DuplicateVoteEvidence Error verifying VoteB: %v", ErrVoteInvalidSignature)
 	}
 
@@ -165,7 +165,9 @@ func (dve *DuplicateVoteEvidence) Equal(ev Evidence) bool {
 	}
 
 	// just check their hashes
-	return bytes.Equal(merkle.SimpleHashFromBinary(dve), merkle.SimpleHashFromBinary(ev))
+	dveHash := wireHasher(dve).Hash()
+	evHash := wireHasher(ev).Hash()
+	return bytes.Equal(dveHash, evHash)
 }
 
 //-----------------------------------------------------------------

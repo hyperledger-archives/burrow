@@ -197,7 +197,7 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 						eventsCh <- resultEvent
 					}
 				}
-			case <-wsc.Quit:
+			case <-wsc.Quit():
 				return
 			}
 		}

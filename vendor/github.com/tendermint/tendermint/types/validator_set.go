@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -20,7 +21,6 @@ import (
 // upon calling .IncrementAccum().
 // NOTE: Not goroutine-safe.
 // NOTE: All get/set to validators should copy the value for safety.
-// TODO: consider validator Accum overflow
 type ValidatorSet struct {
 	// NOTE: persisted via reflect, must be exported.
 	Validators []*Validator `json:"validators"`
@@ -48,13 +48,13 @@ func NewValidatorSet(vals []*Validator) *ValidatorSet {
 }
 
 // incrementAccum and update the proposer
-// TODO: mind the overflow when times and votingPower shares too large.
 func (valSet *ValidatorSet) IncrementAccum(times int) {
 	// Add VotingPower * times to each validator and order into heap.
 	validatorsHeap := cmn.NewHeap()
 	for _, val := range valSet.Validators {
-		val.Accum += val.VotingPower * int64(times) // TODO: mind overflow
-		validatorsHeap.Push(val, accumComparable{val})
+		// check for overflow both multiplication and sum
+		val.Accum = safeAddClip(val.Accum, safeMulClip(val.VotingPower, int64(times)))
+		validatorsHeap.PushComparable(val, accumComparable{val})
 	}
 
 	// Decrement the validator with most accum times times
@@ -63,7 +63,9 @@ func (valSet *ValidatorSet) IncrementAccum(times int) {
 		if i == times-1 {
 			valSet.Proposer = mostest
 		}
-		mostest.Accum -= int64(valSet.TotalVotingPower())
+
+		// mind underflow
+		mostest.Accum = safeSubClip(mostest.Accum, valSet.TotalVotingPower())
 		validatorsHeap.Update(mostest, accumComparable{mostest})
 	}
 }
@@ -81,27 +83,30 @@ func (valSet *ValidatorSet) Copy() *ValidatorSet {
 	}
 }
 
+// HasAddress returns true if address given is in the validator set, false -
+// otherwise.
 func (valSet *ValidatorSet) HasAddress(address []byte) bool {
 	idx := sort.Search(len(valSet.Validators), func(i int) bool {
 		return bytes.Compare(address, valSet.Validators[i].Address) <= 0
 	})
-	return idx != len(valSet.Validators) && bytes.Equal(valSet.Validators[idx].Address, address)
+	return idx < len(valSet.Validators) && bytes.Equal(valSet.Validators[idx].Address, address)
 }
 
+// GetByAddress returns an index of the validator with address and validator
+// itself if found. Otherwise, -1 and nil are returned.
 func (valSet *ValidatorSet) GetByAddress(address []byte) (index int, val *Validator) {
 	idx := sort.Search(len(valSet.Validators), func(i int) bool {
 		return bytes.Compare(address, valSet.Validators[i].Address) <= 0
 	})
-	if idx != len(valSet.Validators) && bytes.Equal(valSet.Validators[idx].Address, address) {
+	if idx < len(valSet.Validators) && bytes.Equal(valSet.Validators[idx].Address, address) {
 		return idx, valSet.Validators[idx].Copy()
-	} else {
-		return 0, nil
 	}
+	return -1, nil
 }
 
-// GetByIndex returns the validator by index.
-// It returns nil values if index < 0 or
-// index >= len(ValidatorSet.Validators)
+// GetByIndex returns the validator's address and validator itself by index.
+// It returns nil values if index is less than 0 or greater or equal to
+// len(ValidatorSet.Validators).
 func (valSet *ValidatorSet) GetByIndex(index int) (address []byte, val *Validator) {
 	if index < 0 || index >= len(valSet.Validators) {
 		return nil, nil
@@ -110,19 +115,24 @@ func (valSet *ValidatorSet) GetByIndex(index int) (address []byte, val *Validato
 	return val.Address, val.Copy()
 }
 
+// Size returns the length of the validator set.
 func (valSet *ValidatorSet) Size() int {
 	return len(valSet.Validators)
 }
 
+// TotalVotingPower returns the sum of the voting powers of all validators.
 func (valSet *ValidatorSet) TotalVotingPower() int64 {
 	if valSet.totalVotingPower == 0 {
 		for _, val := range valSet.Validators {
-			valSet.totalVotingPower += val.VotingPower
+			// mind overflow
+			valSet.totalVotingPower = safeAddClip(valSet.totalVotingPower, val.VotingPower)
 		}
 	}
 	return valSet.totalVotingPower
 }
 
+// GetProposer returns the current proposer. If the validator set is empty, nil
+// is returned.
 func (valSet *ValidatorSet) GetProposer() (proposer *Validator) {
 	if len(valSet.Validators) == 0 {
 		return nil
@@ -143,23 +153,27 @@ func (valSet *ValidatorSet) findProposer() *Validator {
 	return proposer
 }
 
+// Hash returns the Merkle root hash build using validators (as leaves) in the
+// set.
 func (valSet *ValidatorSet) Hash() []byte {
 	if len(valSet.Validators) == 0 {
 		return nil
 	}
-	hashables := make([]merkle.Hashable, len(valSet.Validators))
+	hashers := make([]merkle.Hasher, len(valSet.Validators))
 	for i, val := range valSet.Validators {
-		hashables[i] = val
+		hashers[i] = val
 	}
-	return merkle.SimpleHashFromHashables(hashables)
+	return merkle.SimpleHashFromHashers(hashers)
 }
 
+// Add adds val to the validator set and returns true. It returns false if val
+// is already in the set.
 func (valSet *ValidatorSet) Add(val *Validator) (added bool) {
 	val = val.Copy()
 	idx := sort.Search(len(valSet.Validators), func(i int) bool {
 		return bytes.Compare(val.Address, valSet.Validators[i].Address) <= 0
 	})
-	if idx == len(valSet.Validators) {
+	if idx >= len(valSet.Validators) {
 		valSet.Validators = append(valSet.Validators, val)
 		// Invalidate cache
 		valSet.Proposer = nil
@@ -180,39 +194,42 @@ func (valSet *ValidatorSet) Add(val *Validator) (added bool) {
 	}
 }
 
+// Update updates val and returns true. It returns false if val is not present
+// in the set.
 func (valSet *ValidatorSet) Update(val *Validator) (updated bool) {
 	index, sameVal := valSet.GetByAddress(val.Address)
 	if sameVal == nil {
 		return false
-	} else {
-		valSet.Validators[index] = val.Copy()
-		// Invalidate cache
-		valSet.Proposer = nil
-		valSet.totalVotingPower = 0
-		return true
 	}
+	valSet.Validators[index] = val.Copy()
+	// Invalidate cache
+	valSet.Proposer = nil
+	valSet.totalVotingPower = 0
+	return true
 }
 
+// Remove deletes the validator with address. It returns the validator removed
+// and true. If returns nil and false if validator is not present in the set.
 func (valSet *ValidatorSet) Remove(address []byte) (val *Validator, removed bool) {
 	idx := sort.Search(len(valSet.Validators), func(i int) bool {
 		return bytes.Compare(address, valSet.Validators[i].Address) <= 0
 	})
-	if idx == len(valSet.Validators) || !bytes.Equal(valSet.Validators[idx].Address, address) {
+	if idx >= len(valSet.Validators) || !bytes.Equal(valSet.Validators[idx].Address, address) {
 		return nil, false
-	} else {
-		removedVal := valSet.Validators[idx]
-		newValidators := valSet.Validators[:idx]
-		if idx+1 < len(valSet.Validators) {
-			newValidators = append(newValidators, valSet.Validators[idx+1:]...)
-		}
-		valSet.Validators = newValidators
-		// Invalidate cache
-		valSet.Proposer = nil
-		valSet.totalVotingPower = 0
-		return removedVal, true
 	}
+	removedVal := valSet.Validators[idx]
+	newValidators := valSet.Validators[:idx]
+	if idx+1 < len(valSet.Validators) {
+		newValidators = append(newValidators, valSet.Validators[idx+1:]...)
+	}
+	valSet.Validators = newValidators
+	// Invalidate cache
+	valSet.Proposer = nil
+	valSet.totalVotingPower = 0
+	return removedVal, true
 }
 
+// Iterate will run the given function over the set.
 func (valSet *ValidatorSet) Iterate(fn func(index int, val *Validator) bool) {
 	for i, val := range valSet.Validators {
 		stop := fn(i, val.Copy())
@@ -250,7 +267,7 @@ func (valSet *ValidatorSet) VerifyCommit(chainID string, blockID BlockID, height
 		}
 		_, val := valSet.GetByIndex(idx)
 		// Validate signature
-		precommitSignBytes := SignBytes(chainID, precommit)
+		precommitSignBytes := precommit.SignBytes(chainID)
 		if !val.PubKey.VerifyBytes(precommitSignBytes, precommit.Signature) {
 			return fmt.Errorf("Invalid commit -- invalid signature: %v", precommit)
 		}
@@ -263,10 +280,9 @@ func (valSet *ValidatorSet) VerifyCommit(chainID string, blockID BlockID, height
 
 	if talliedVotingPower > valSet.TotalVotingPower()*2/3 {
 		return nil
-	} else {
-		return fmt.Errorf("Invalid commit -- insufficient voting power: got %v, needed %v",
-			talliedVotingPower, (valSet.TotalVotingPower()*2/3 + 1))
 	}
+	return fmt.Errorf("Invalid commit -- insufficient voting power: got %v, needed %v",
+		talliedVotingPower, (valSet.TotalVotingPower()*2/3 + 1))
 }
 
 // VerifyCommitAny will check to see if the set would
@@ -324,7 +340,7 @@ func (valSet *ValidatorSet) VerifyCommitAny(newSet *ValidatorSet, chainID string
 		seen[vi] = true
 
 		// Validate signature old school
-		precommitSignBytes := SignBytes(chainID, precommit)
+		precommitSignBytes := precommit.SignBytes(chainID)
 		if !ov.PubKey.VerifyBytes(precommitSignBytes, precommit.Signature) {
 			return errors.Errorf("Invalid commit -- invalid signature: %v", precommit)
 		}
@@ -424,4 +440,75 @@ func RandValidatorSet(numValidators int, votingPower int64) (*ValidatorSet, []*P
 	valSet := NewValidatorSet(vals)
 	sort.Sort(PrivValidatorsByAddress(privValidators))
 	return valSet, privValidators
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Safe multiplication and addition/subtraction
+
+func safeMul(a, b int64) (int64, bool) {
+	if a == 0 || b == 0 {
+		return 0, false
+	}
+	if a == 1 {
+		return b, false
+	}
+	if b == 1 {
+		return a, false
+	}
+	if a == math.MinInt64 || b == math.MinInt64 {
+		return -1, true
+	}
+	c := a * b
+	return c, c/b != a
+}
+
+func safeAdd(a, b int64) (int64, bool) {
+	if b > 0 && a > math.MaxInt64-b {
+		return -1, true
+	} else if b < 0 && a < math.MinInt64-b {
+		return -1, true
+	}
+	return a + b, false
+}
+
+func safeSub(a, b int64) (int64, bool) {
+	if b > 0 && a < math.MinInt64+b {
+		return -1, true
+	} else if b < 0 && a > math.MaxInt64+b {
+		return -1, true
+	}
+	return a - b, false
+}
+
+func safeMulClip(a, b int64) int64 {
+	c, overflow := safeMul(a, b)
+	if overflow {
+		if (a < 0 || b < 0) && !(a < 0 && b < 0) {
+			return math.MinInt64
+		}
+		return math.MaxInt64
+	}
+	return c
+}
+
+func safeAddClip(a, b int64) int64 {
+	c, overflow := safeAdd(a, b)
+	if overflow {
+		if b < 0 {
+			return math.MinInt64
+		}
+		return math.MaxInt64
+	}
+	return c
+}
+
+func safeSubClip(a, b int64) int64 {
+	c, overflow := safeSub(a, b)
+	if overflow {
+		if b > 0 {
+			return math.MinInt64
+		}
+		return math.MaxInt64
+	}
+	return c
 }

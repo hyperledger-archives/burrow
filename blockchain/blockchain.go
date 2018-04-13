@@ -52,6 +52,8 @@ type Tip interface {
 
 // Burrow's portion of the Blockchain state
 type Blockchain interface {
+	// Read locker
+	sync.Locker
 	Root
 	Tip
 	// Returns an immutable copy of the tip

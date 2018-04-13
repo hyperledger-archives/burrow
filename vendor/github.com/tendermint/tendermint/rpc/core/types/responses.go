@@ -6,7 +6,8 @@ import (
 
 	abci "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire/data"
+	cmn "github.com/tendermint/tmlibs/common"
+
 	cstypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/state"
@@ -53,18 +54,23 @@ func NewResultCommit(header *types.Header, commit *types.Commit,
 	}
 }
 
+type ValidatorStatus struct {
+	VotingPower int64 `json:"voting_power"`
+}
+
 type ResultStatus struct {
-	NodeInfo          *p2p.NodeInfo `json:"node_info"`
-	PubKey            crypto.PubKey `json:"pub_key"`
-	LatestBlockHash   data.Bytes    `json:"latest_block_hash"`
-	LatestAppHash     data.Bytes    `json:"latest_app_hash"`
-	LatestBlockHeight int64         `json:"latest_block_height"`
-	LatestBlockTime   time.Time     `json:"latest_block_time"`
-	Syncing           bool          `json:"syncing"`
+	NodeInfo          p2p.NodeInfo    `json:"node_info"`
+	PubKey            crypto.PubKey   `json:"pub_key"`
+	LatestBlockHash   cmn.HexBytes    `json:"latest_block_hash"`
+	LatestAppHash     cmn.HexBytes    `json:"latest_app_hash"`
+	LatestBlockHeight int64           `json:"latest_block_height"`
+	LatestBlockTime   time.Time       `json:"latest_block_time"`
+	Syncing           bool            `json:"syncing"`
+	ValidatorStatus   ValidatorStatus `json:"validator_status,omitempty"`
 }
 
 func (s *ResultStatus) TxIndexEnabled() bool {
-	if s == nil || s.NodeInfo == nil {
+	if s == nil {
 		return false
 	}
 	for _, s := range s.NodeInfo.Other {
@@ -86,8 +92,13 @@ type ResultDialSeeds struct {
 	Log string `json:"log"`
 }
 
+type ResultDialPeers struct {
+	Log string `json:"log"`
+}
+
 type Peer struct {
 	p2p.NodeInfo     `json:"node_info"`
+	p2p.ID           `json:"node_id"`
 	IsOutbound       bool                 `json:"is_outbound"`
 	ConnectionStatus p2p.ConnectionStatus `json:"connection_status"`
 }
@@ -99,25 +110,26 @@ type ResultValidators struct {
 
 type ResultDumpConsensusState struct {
 	RoundState      *cstypes.RoundState                `json:"round_state"`
-	PeerRoundStates map[string]*cstypes.PeerRoundState `json:"peer_round_states"`
+	PeerRoundStates map[p2p.ID]*cstypes.PeerRoundState `json:"peer_round_states"`
 }
 
 type ResultBroadcastTx struct {
-	Code uint32     `json:"code"`
-	Data data.Bytes `json:"data"`
-	Log  string     `json:"log"`
+	Code uint32       `json:"code"`
+	Data cmn.HexBytes `json:"data"`
+	Log  string       `json:"log"`
 
-	Hash data.Bytes `json:"hash"`
+	Hash cmn.HexBytes `json:"hash"`
 }
 
 type ResultBroadcastTxCommit struct {
 	CheckTx   abci.ResponseCheckTx   `json:"check_tx"`
 	DeliverTx abci.ResponseDeliverTx `json:"deliver_tx"`
-	Hash      data.Bytes             `json:"hash"`
+	Hash      cmn.HexBytes           `json:"hash"`
 	Height    int64                  `json:"height"`
 }
 
 type ResultTx struct {
+	Hash     cmn.HexBytes           `json:"hash"`
 	Height   int64                  `json:"height"`
 	Index    uint32                 `json:"index"`
 	TxResult abci.ResponseDeliverTx `json:"tx_result"`
@@ -150,3 +162,5 @@ type ResultEvent struct {
 	Query string            `json:"query"`
 	Data  types.TMEventData `json:"data"`
 }
+
+type ResultHealth struct{}

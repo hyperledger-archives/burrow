@@ -33,10 +33,12 @@ import (
 	"github.com/hyperledger/burrow/txs"
 )
 
-// TODO
+// TODO: make configurable
 const GasLimit = uint64(1000000)
 
 type BatchExecutor interface {
+	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
+	sync.Locker
 	state.Reader
 	// Execute transaction against block cache (i.e. block buffer)
 	Execute(tx txs.Tx) error
@@ -103,6 +105,11 @@ func newExecutor(name string, runCall bool, backend *State, chainID string, tip 
 	return exe
 }
 
+// executor exposes access to the underlying state cache protected by a RWMutex that prevents access while locked
+// (during an ABCI commit). while access can occur (and needs to continue for CheckTx/DeliverTx to make progress)
+// through calls to Execute() external readers will be blocked until the executor is unlocked that allows the Transactor
+// to always access the freshest mempool state as needed by accounts.SequentialSigningAccount
+//
 // Accounts
 func (exe *executor) GetAccount(address acm.Address) (acm.Account, error) {
 	exe.RLock()
@@ -118,8 +125,8 @@ func (exe *executor) GetStorage(address acm.Address, key binary.Word256) (binary
 }
 
 func (exe *executor) Commit() (hash []byte, err error) {
-	exe.Lock()
-	defer exe.Unlock()
+	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
+	// deadlock
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%v", r, debug.Stack())
@@ -145,8 +152,7 @@ func (exe *executor) Commit() (hash []byte, err error) {
 }
 
 func (exe *executor) Reset() error {
-	exe.Lock()
-	defer exe.Unlock()
+	// As with Commit() we do not take the write lock here
 	exe.stateCache.Reset(exe.state)
 	exe.nameRegCache.Reset(exe.state)
 	return nil

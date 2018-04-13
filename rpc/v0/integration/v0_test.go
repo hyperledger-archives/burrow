@@ -63,7 +63,7 @@ func TestTransactCallNoCode(t *testing.T) {
 
 func TestTransactCreate(t *testing.T) {
 	numGoroutines := 100
-	numCreates := 10
+	numCreates := 50
 	wg := new(sync.WaitGroup)
 	wg.Add(numGoroutines)
 	cli := v0.NewV0Client("http://localhost:1337/rpc")

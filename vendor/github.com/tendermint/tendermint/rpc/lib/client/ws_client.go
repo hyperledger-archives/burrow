@@ -254,10 +254,8 @@ func (c *WSClient) reconnect() error {
 		c.mtx.Unlock()
 	}()
 
-	// 1s == (1e9 ns) == (1 Billion ns)
-	billionNs := float64(time.Second.Nanoseconds())
 	for {
-		jitterSeconds := time.Duration(rand.Float64() * billionNs)
+		jitterSeconds := time.Duration(rand.Float64() * float64(time.Second)) // 1s == (1e9 ns)
 		backoffDuration := jitterSeconds + ((1 << uint(attempt)) * time.Second)
 
 		c.Logger.Info("reconnecting", "attempt", attempt+1, "backoff_duration", backoffDuration)
@@ -320,22 +318,22 @@ func (c *WSClient) reconnectRoutine() {
 				c.Logger.Error("failed to reconnect", "err", err, "original_err", originalError)
 				c.Stop()
 				return
-			} else {
-				// drain reconnectAfter
-			LOOP:
-				for {
-					select {
-					case <-c.reconnectAfter:
-					default:
-						break LOOP
-					}
-				}
-				err = c.processBacklog()
-				if err == nil {
-					c.startReadWriteRoutines()
+			}
+			// drain reconnectAfter
+		LOOP:
+			for {
+				select {
+				case <-c.reconnectAfter:
+				default:
+					break LOOP
 				}
 			}
-		case <-c.Quit:
+			err := c.processBacklog()
+			if err == nil {
+				c.startReadWriteRoutines()
+			}
+
+		case <-c.Quit():
 			return
 		}
 	}
@@ -394,7 +392,7 @@ func (c *WSClient) writeRoutine() {
 			c.Logger.Debug("sent ping")
 		case <-c.readRoutineQuit:
 			return
-		case <-c.Quit:
+		case <-c.Quit():
 			if err := c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
 				c.Logger.Error("failed to write message", "err", err)
 			}
@@ -455,7 +453,7 @@ func (c *WSClient) readRoutine() {
 		// c.wg.Wait() in c.Stop(). Note we rely on Quit being closed so that it sends unlimited Quit signals to stop
 		// both readRoutine and writeRoutine
 		select {
-		case <-c.Quit:
+		case <-c.Quit():
 		case c.ResponsesCh <- response:
 		}
 	}

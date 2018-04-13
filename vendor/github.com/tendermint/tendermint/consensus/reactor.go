@@ -27,6 +27,8 @@ const (
 	VoteSetBitsChannel = byte(0x23)
 
 	maxConsensusMessageSize = 1048576 // 1MB; NOTE/TODO: keep in sync with types.PartSet sizes.
+
+	blocksToContributeToBecomeGoodPeer = 10000
 )
 
 //-----------------------------------------------------------------------------
@@ -179,7 +181,7 @@ func (conR *ConsensusReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
 		conR.Logger.Error("Error decoding message", "src", src, "chId", chID, "msg", msg, "err", err, "bytes", msgBytes)
-		// TODO punish peer?
+		conR.Switch.StopPeerForError(src, err)
 		return
 	}
 	conR.Logger.Debug("Receive", "src", src, "chId", chID, "msg", msg)
@@ -205,7 +207,11 @@ func (conR *ConsensusReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 				return
 			}
 			// Peer claims to have a maj23 for some BlockID at H,R,S,
-			votes.SetPeerMaj23(msg.Round, msg.Type, ps.Peer.Key(), msg.BlockID)
+			err := votes.SetPeerMaj23(msg.Round, msg.Type, ps.Peer.ID(), msg.BlockID)
+			if err != nil {
+				conR.Switch.StopPeerForError(src, err)
+				return
+			}
 			// Respond with a VoteSetBitsMessage showing which votes we have.
 			// (and consequently shows which we don't have)
 			var ourVotes *cmn.BitArray
@@ -242,12 +248,15 @@ func (conR *ConsensusReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 		switch msg := msg.(type) {
 		case *ProposalMessage:
 			ps.SetHasProposal(msg.Proposal)
-			conR.conS.peerMsgQueue <- msgInfo{msg, src.Key()}
+			conR.conS.peerMsgQueue <- msgInfo{msg, src.ID()}
 		case *ProposalPOLMessage:
 			ps.ApplyProposalPOLMessage(msg)
 		case *BlockPartMessage:
 			ps.SetHasProposalBlockPart(msg.Height, msg.Round, msg.Part.Index)
-			conR.conS.peerMsgQueue <- msgInfo{msg, src.Key()}
+			if numBlocks := ps.RecordBlockPart(msg); numBlocks%blocksToContributeToBecomeGoodPeer == 0 {
+				conR.Switch.MarkPeerAsGood(src)
+			}
+			conR.conS.peerMsgQueue <- msgInfo{msg, src.ID()}
 		default:
 			conR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 		}
@@ -266,8 +275,11 @@ func (conR *ConsensusReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 			ps.EnsureVoteBitArrays(height, valSize)
 			ps.EnsureVoteBitArrays(height-1, lastCommitSize)
 			ps.SetHasVote(msg.Vote)
+			if blocks := ps.RecordVote(msg.Vote); blocks%blocksToContributeToBecomeGoodPeer == 0 {
+				conR.Switch.MarkPeerAsGood(src)
+			}
 
-			cs.peerMsgQueue <- msgInfo{msg, src.Key()}
+			cs.peerMsgQueue <- msgInfo{msg, src.ID()}
 
 		default:
 			// don't punish (leave room for soft upgrades)
@@ -359,24 +371,30 @@ func (conR *ConsensusReactor) startBroadcastRoutine() error {
 	}
 
 	go func() {
+		var data interface{}
+		var ok bool
 		for {
 			select {
-			case data, ok := <-stepsCh:
+			case data, ok = <-stepsCh:
 				if ok { // a receive from a closed channel returns the zero value immediately
 					edrs := data.(types.TMEventData).Unwrap().(types.EventDataRoundState)
 					conR.broadcastNewRoundStep(edrs.RoundState.(*cstypes.RoundState))
 				}
-			case data, ok := <-votesCh:
+			case data, ok = <-votesCh:
 				if ok {
 					edv := data.(types.TMEventData).Unwrap().(types.EventDataVote)
 					conR.broadcastHasVoteMessage(edv.Vote)
 				}
-			case data, ok := <-heartbeatsCh:
+			case data, ok = <-heartbeatsCh:
 				if ok {
 					edph := data.(types.TMEventData).Unwrap().(types.EventDataProposalHeartbeat)
 					conR.broadcastProposalHeartbeatMessage(edph)
 				}
-			case <-conR.Quit:
+			case <-conR.Quit():
+				conR.eventBus.UnsubscribeAll(ctx, subscriber)
+				return
+			}
+			if !ok {
 				conR.eventBus.UnsubscribeAll(ctx, subscriber)
 				return
 			}
@@ -590,11 +608,9 @@ func (conR *ConsensusReactor) gossipDataForCatchup(logger log.Logger, rs *cstype
 			logger.Debug("Sending block part for catchup failed")
 		}
 		return
-	} else {
-		//logger.Info("No parts to send in catch-up, sleeping")
-		time.Sleep(conR.conS.config.PeerGossipSleep())
-		return
 	}
+	//logger.Info("No parts to send in catch-up, sleeping")
+	time.Sleep(conR.conS.config.PeerGossipSleep())
 }
 
 func (conR *ConsensusReactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
@@ -827,6 +843,21 @@ type PeerState struct {
 
 	mtx sync.Mutex
 	cstypes.PeerRoundState
+
+	stats *peerStateStats
+}
+
+// peerStateStats holds internal statistics for a peer.
+type peerStateStats struct {
+	lastVoteHeight int64
+	votes          int
+
+	lastBlockPartHeight int64
+	blockParts          int
+}
+
+func (pss peerStateStats) String() string {
+	return fmt.Sprintf("peerStateStats{votes: %d, blockParts: %d}", pss.votes, pss.blockParts)
 }
 
 // NewPeerState returns a new PeerState for the given Peer
@@ -840,6 +871,7 @@ func NewPeerState(peer p2p.Peer) *PeerState {
 			LastCommitRound:    -1,
 			CatchupCommitRound: -1,
 		},
+		stats: &peerStateStats{},
 	}
 }
 
@@ -1051,6 +1083,56 @@ func (ps *PeerState) ensureVoteBitArrays(height int64, numValidators int) {
 	}
 }
 
+// RecordVote updates internal statistics for this peer by recording the vote.
+// It returns the total number of votes (1 per block). This essentially means
+// the number of blocks for which peer has been sending us votes.
+func (ps *PeerState) RecordVote(vote *types.Vote) int {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	if ps.stats.lastVoteHeight >= vote.Height {
+		return ps.stats.votes
+	}
+	ps.stats.lastVoteHeight = vote.Height
+	ps.stats.votes++
+	return ps.stats.votes
+}
+
+// VotesSent returns the number of blocks for which peer has been sending us
+// votes.
+func (ps *PeerState) VotesSent() int {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	return ps.stats.votes
+}
+
+// RecordBlockPart updates internal statistics for this peer by recording the
+// block part. It returns the total number of block parts (1 per block). This
+// essentially means the number of blocks for which peer has been sending us
+// block parts.
+func (ps *PeerState) RecordBlockPart(bp *BlockPartMessage) int {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	if ps.stats.lastBlockPartHeight >= bp.Height {
+		return ps.stats.blockParts
+	}
+
+	ps.stats.lastBlockPartHeight = bp.Height
+	ps.stats.blockParts++
+	return ps.stats.blockParts
+}
+
+// BlockPartsSent returns the number of blocks for which peer has been sending
+// us block parts.
+func (ps *PeerState) BlockPartsSent() int {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	return ps.stats.blockParts
+}
+
 // SetHasVote sets the given vote as known by the peer
 func (ps *PeerState) SetHasVote(vote *types.Vote) {
 	ps.mtx.Lock()
@@ -1197,11 +1279,13 @@ func (ps *PeerState) StringIndented(indent string) string {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 	return fmt.Sprintf(`PeerState{
-%s  Key %v
-%s  PRS %v
+%s  Key   %v
+%s  PRS   %v
+%s  Stats %v
 %s}`,
-		indent, ps.Peer.Key(),
+		indent, ps.Peer.ID(),
 		indent, ps.PeerRoundState.StringIndented(indent+"  "),
+		indent, ps.stats,
 		indent)
 }
 

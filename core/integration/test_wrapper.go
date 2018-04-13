@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -54,6 +55,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
+	os.MkdirAll("config", 0777)
 	logger := logging.NewNoopLogger()
 	if debugLogging {
 		var err error
@@ -62,13 +64,8 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 			ExcludeTrace: false,
 			RootSink: config.Sink().
 				SetTransform(config.FilterTransform(config.IncludeWhenAnyMatches,
-					//"","",
-					"method", "GetAccount",
-					"method", "BroadcastTx",
-					"tag", "sequence",
-					"tag", "Commit",
-					"tag", "CheckTx",
-					"tag", "DeliverTx",
+					structure.ComponentKey, "Tendermint",
+					structure.ScopeKey, "executor.Execute\\(tx txs.Tx\\)",
 				)).
 				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
 				AddSinks(config.Sink().SetTransform(config.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).

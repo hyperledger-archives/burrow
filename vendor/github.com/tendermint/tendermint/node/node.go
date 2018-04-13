@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 
 	abci "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
@@ -18,10 +17,11 @@ import (
 
 	bc "github.com/tendermint/tendermint/blockchain"
 	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/consensus"
+	cs "github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/evidence"
 	mempl "github.com/tendermint/tendermint/mempool"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/p2p/pex"
 	"github.com/tendermint/tendermint/p2p/trust"
 	"github.com/tendermint/tendermint/proxy"
 	rpccore "github.com/tendermint/tendermint/rpc/core"
@@ -33,6 +33,7 @@ import (
 	"github.com/tendermint/tendermint/state/txindex/kv"
 	"github.com/tendermint/tendermint/state/txindex/null"
 	"github.com/tendermint/tendermint/types"
+	priv_val "github.com/tendermint/tendermint/types/priv_validator"
 	"github.com/tendermint/tendermint/version"
 
 	_ "net/http/pprof"
@@ -52,7 +53,8 @@ type DBProvider func(*DBContext) (dbm.DB, error)
 // DefaultDBProvider returns a database using the DBBackend and DBDir
 // specified in the ctx.Config.
 func DefaultDBProvider(ctx *DBContext) (dbm.DB, error) {
-	return dbm.NewDB(ctx.ID, ctx.Config.DBBackend, ctx.Config.DBDir()), nil
+	dbType := dbm.DBBackendType(ctx.Config.DBBackend)
+	return dbm.NewDB(ctx.ID, dbType, ctx.Config.DBDir()), nil
 }
 
 // GenesisDocProvider returns a GenesisDoc.
@@ -80,7 +82,8 @@ func DefaultNewNode(config *cfg.Config, logger log.Logger) (*Node, error) {
 		proxy.DefaultClientCreator(config.ProxyApp, config.ABCI, config.DBDir()),
 		DefaultGenesisDocProviderFunc(config),
 		DefaultDBProvider,
-		logger)
+		logger,
+	)
 }
 
 //------------------------------------------------------------------------------
@@ -96,22 +99,21 @@ type Node struct {
 	privValidator types.PrivValidator // local node's validator key
 
 	// network
-	privKey          crypto.PrivKeyEd25519   // local node's p2p key
 	sw               *p2p.Switch             // p2p connections
-	addrBook         *p2p.AddrBook           // known peers
+	addrBook         pex.AddrBook            // known peers
 	trustMetricStore *trust.TrustMetricStore // trust metrics for all peers
 
 	// services
 	eventBus         *types.EventBus // pub/sub for services
 	stateDB          dbm.DB
-	blockStore       *bc.BlockStore              // store the blockchain to disk
-	bcReactor        *bc.BlockchainReactor       // for fast-syncing
-	mempoolReactor   *mempl.MempoolReactor       // for gossipping transactions
-	consensusState   *consensus.ConsensusState   // latest consensus state
-	consensusReactor *consensus.ConsensusReactor // for participating in the consensus
-	evidencePool     *evidence.EvidencePool      // tracking evidence
-	proxyApp         proxy.AppConns              // connection to the application
-	rpcListeners     []net.Listener              // rpc servers
+	blockStore       *bc.BlockStore         // store the blockchain to disk
+	bcReactor        *bc.BlockchainReactor  // for fast-syncing
+	mempoolReactor   *mempl.MempoolReactor  // for gossipping transactions
+	consensusState   *cs.ConsensusState     // latest consensus state
+	consensusReactor *cs.ConsensusReactor   // for participating in the consensus
+	evidencePool     *evidence.EvidencePool // tracking evidence
+	proxyApp         proxy.AppConns         // connection to the application
+	rpcListeners     []net.Listener         // rpc servers
 	txIndexer        txindex.TxIndexer
 	indexerService   *txindex.IndexerService
 }
@@ -159,7 +161,7 @@ func NewNode(config *cfg.Config,
 	// and sync tendermint and the app by performing a handshake
 	// and replaying any necessary blocks
 	consensusLogger := logger.With("module", "consensus")
-	handshaker := consensus.NewHandshaker(stateDB, state, blockStore)
+	handshaker := cs.NewHandshaker(stateDB, state, blockStore, genDoc.AppState())
 	handshaker.SetLogger(consensusLogger)
 	proxyApp := proxy.NewAppConns(clientCreator, handshaker)
 	proxyApp.SetLogger(logger.With("module", "proxy"))
@@ -170,8 +172,26 @@ func NewNode(config *cfg.Config,
 	// reload the state (it may have been updated by the handshake)
 	state = sm.LoadState(stateDB)
 
-	// Generate node PrivKey
-	privKey := crypto.GenPrivKeyEd25519()
+	// If an address is provided, listen on the socket for a
+	// connection from an external signing process.
+	if config.PrivValidatorListenAddr != "" {
+		var (
+			// TODO: persist this key so external signer
+			// can actually authenticate us
+			privKey = crypto.GenPrivKeyEd25519()
+			pvsc    = priv_val.NewSocketClient(
+				logger.With("module", "priv_val"),
+				config.PrivValidatorListenAddr,
+				privKey,
+			)
+		)
+
+		if err := pvsc.Start(); err != nil {
+			return nil, fmt.Errorf("Error starting private validator client: %v", err)
+		}
+
+		privValidator = pvsc
+	}
 
 	// Decide whether to fast-sync or not
 	// We don't fast-sync when the only validator is us.
@@ -185,14 +205,15 @@ func NewNode(config *cfg.Config,
 
 	// Log whether this node is a validator or an observer
 	if state.Validators.HasAddress(privValidator.GetAddress()) {
-		consensusLogger.Info("This node is a validator")
+		consensusLogger.Info("This node is a validator", "addr", privValidator.GetAddress(), "pubKey", privValidator.GetPubKey())
 	} else {
-		consensusLogger.Info("This node is not a validator")
+		consensusLogger.Info("This node is not a validator", "addr", privValidator.GetAddress(), "pubKey", privValidator.GetPubKey())
 	}
 
 	// Make MempoolReactor
 	mempoolLogger := logger.With("module", "mempool")
 	mempool := mempl.NewMempool(config.Mempool, proxyApp.Mempool(), state.LastBlockHeight)
+	mempool.InitWAL() // no need to have the mempool wal during tests
 	mempool.SetLogger(mempoolLogger)
 	mempoolReactor := mempl.NewMempoolReactor(config.Mempool, mempool)
 	mempoolReactor.SetLogger(mempoolLogger)
@@ -222,13 +243,13 @@ func NewNode(config *cfg.Config,
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 
 	// Make ConsensusReactor
-	consensusState := consensus.NewConsensusState(config.Consensus, state.Copy(),
+	consensusState := cs.NewConsensusState(config.Consensus, state.Copy(),
 		blockExec, blockStore, mempool, evidencePool)
 	consensusState.SetLogger(consensusLogger)
 	if privValidator != nil {
 		consensusState.SetPrivValidator(privValidator)
 	}
-	consensusReactor := consensus.NewConsensusReactor(consensusState, fastSync)
+	consensusReactor := cs.NewConsensusReactor(consensusState, fastSync)
 	consensusReactor.SetLogger(consensusLogger)
 
 	p2pLogger := logger.With("module", "p2p")
@@ -241,10 +262,10 @@ func NewNode(config *cfg.Config,
 	sw.AddReactor("EVIDENCE", evidenceReactor)
 
 	// Optionally, start the pex reactor
-	var addrBook *p2p.AddrBook
+	var addrBook pex.AddrBook
 	var trustMetricStore *trust.TrustMetricStore
 	if config.P2P.PexReactor {
-		addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
+		addrBook = pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
 		addrBook.SetLogger(p2pLogger.With("book", config.P2P.AddrBookFile()))
 
 		// Get the trust metric history data
@@ -255,10 +276,16 @@ func NewNode(config *cfg.Config,
 		trustMetricStore = trust.NewTrustMetricStore(trustHistoryDB, trust.DefaultConfig())
 		trustMetricStore.SetLogger(p2pLogger)
 
-		pexReactor := p2p.NewPEXReactor(addrBook)
+		pexReactor := pex.NewPEXReactor(addrBook,
+			&pex.PEXReactorConfig{
+				Seeds:          cmn.SplitAndTrim(config.P2P.Seeds, ",", " "),
+				SeedMode:       config.P2P.SeedMode,
+				PrivatePeerIDs: cmn.SplitAndTrim(config.P2P.PrivatePeerIDs, ",", " ")})
 		pexReactor.SetLogger(p2pLogger)
 		sw.AddReactor("PEX", pexReactor)
 	}
+
+	sw.SetAddrBook(addrBook)
 
 	// Filter peers by addr or pubkey with an ABCI query.
 	// If the query return code is OK, add peer.
@@ -271,17 +298,17 @@ func NewNode(config *cfg.Config,
 				return err
 			}
 			if resQuery.IsErr() {
-				return resQuery
+				return fmt.Errorf("Error querying abci app: %v", resQuery)
 			}
 			return nil
 		})
-		sw.SetPubKeyFilter(func(pubkey crypto.PubKeyEd25519) error {
-			resQuery, err := proxyApp.Query().QuerySync(abci.RequestQuery{Path: cmn.Fmt("/p2p/filter/pubkey/%X", pubkey.Bytes())})
+		sw.SetIDFilter(func(id p2p.ID) error {
+			resQuery, err := proxyApp.Query().QuerySync(abci.RequestQuery{Path: cmn.Fmt("/p2p/filter/pubkey/%s", id)})
 			if err != nil {
 				return err
 			}
 			if resQuery.IsErr() {
-				return resQuery
+				return fmt.Errorf("Error querying abci app: %v", resQuery)
 			}
 			return nil
 		})
@@ -303,7 +330,7 @@ func NewNode(config *cfg.Config,
 			return nil, err
 		}
 		if config.TxIndex.IndexTags != "" {
-			txIndexer = kv.NewTxIndex(store, kv.IndexTags(strings.Split(config.TxIndex.IndexTags, ",")))
+			txIndexer = kv.NewTxIndex(store, kv.IndexTags(cmn.SplitAndTrim(config.TxIndex.IndexTags, ",", " ")))
 		} else if config.TxIndex.IndexAllTags {
 			txIndexer = kv.NewTxIndex(store, kv.IndexAllTags())
 		} else {
@@ -328,7 +355,6 @@ func NewNode(config *cfg.Config,
 		genesisDoc:    genDoc,
 		privValidator: privValidator,
 
-		privKey:          privKey,
 		sw:               sw,
 		addrBook:         addrBook,
 		trustMetricStore: trustMetricStore,
@@ -371,19 +397,31 @@ func (n *Node) OnStart() error {
 	l := p2p.NewDefaultListener(protocol, address, n.config.P2P.SkipUPNP, n.Logger.With("module", "p2p"))
 	n.sw.AddListener(l)
 
+	// Generate node PrivKey
+	// TODO: pass in like privValidator
+	nodeKey, err := p2p.LoadOrGenNodeKey(n.config.NodeKeyFile())
+	if err != nil {
+		return err
+	}
+	n.Logger.Info("P2P Node ID", "ID", nodeKey.ID(), "file", n.config.NodeKeyFile())
+
+	nodeInfo := n.makeNodeInfo(nodeKey.PubKey())
+	n.sw.SetNodeInfo(nodeInfo)
+	n.sw.SetNodeKey(nodeKey)
+
+	// Add ourselves to addrbook to prevent dialing ourselves
+	n.addrBook.AddOurAddress(nodeInfo.NetAddress())
+
 	// Start the switch
-	n.sw.SetNodeInfo(n.makeNodeInfo())
-	n.sw.SetNodePrivKey(n.privKey)
 	err = n.sw.Start()
 	if err != nil {
 		return err
 	}
 
-	// If seeds exist, add them to the address book and dial out
-	if n.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(n.config.P2P.Seeds, ",")
-		if err := n.DialSeeds(seeds); err != nil {
+	// Always connect to persistent peers
+	if n.config.P2P.PersistentPeers != "" {
+		err = n.sw.DialPeersAsync(n.addrBook, cmn.SplitAndTrim(n.config.P2P.PersistentPeers, ",", " "), true)
+		if err != nil {
 			return err
 		}
 	}
@@ -408,8 +446,13 @@ func (n *Node) OnStop() {
 	}
 
 	n.eventBus.Stop()
-
 	n.indexerService.Stop()
+
+	if pvsc, ok := n.privValidator.(*priv_val.SocketClient); ok {
+		if err := pvsc.Stop(); err != nil {
+			n.Logger.Error("Error stopping priv validator socket client", "err", err)
+		}
+	}
 }
 
 // RunForever waits for an interrupt signal and stops the node.
@@ -448,7 +491,7 @@ func (n *Node) ConfigureRPC() {
 
 func (n *Node) startRPC() ([]net.Listener, error) {
 	n.ConfigureRPC()
-	listenAddrs := strings.Split(n.config.RPC.ListenAddress, ",")
+	listenAddrs := cmn.SplitAndTrim(n.config.RPC.ListenAddress, ",", " ")
 
 	if n.config.RPC.Unsafe {
 		rpccore.AddUnsafeRoutes()
@@ -494,12 +537,12 @@ func (n *Node) BlockStore() *bc.BlockStore {
 }
 
 // ConsensusState returns the Node's ConsensusState.
-func (n *Node) ConsensusState() *consensus.ConsensusState {
+func (n *Node) ConsensusState() *cs.ConsensusState {
 	return n.consensusState
 }
 
 // ConsensusReactor returns the Node's ConsensusReactor.
-func (n *Node) ConsensusReactor() *consensus.ConsensusReactor {
+func (n *Node) ConsensusReactor() *cs.ConsensusReactor {
 	return n.consensusReactor
 }
 
@@ -534,23 +577,33 @@ func (n *Node) ProxyApp() proxy.AppConns {
 	return n.proxyApp
 }
 
-func (n *Node) makeNodeInfo() *p2p.NodeInfo {
+func (n *Node) makeNodeInfo(pubKey crypto.PubKey) p2p.NodeInfo {
 	txIndexerStatus := "on"
 	if _, ok := n.txIndexer.(*null.TxIndex); ok {
 		txIndexerStatus = "off"
 	}
-	nodeInfo := &p2p.NodeInfo{
-		PubKey:  n.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker: n.config.Moniker,
+	nodeInfo := p2p.NodeInfo{
+		PubKey:  pubKey,
 		Network: n.genesisDoc.ChainID,
 		Version: version.Version,
+		Channels: []byte{
+			bc.BlockchainChannel,
+			cs.StateChannel, cs.DataChannel, cs.VoteChannel, cs.VoteSetBitsChannel,
+			mempl.MempoolChannel,
+			evidence.EvidenceChannel,
+		},
+		Moniker: n.config.Moniker,
 		Other: []string{
 			cmn.Fmt("wire_version=%v", wire.Version),
 			cmn.Fmt("p2p_version=%v", p2p.Version),
-			cmn.Fmt("consensus_version=%v", consensus.Version),
+			cmn.Fmt("consensus_version=%v", cs.Version),
 			cmn.Fmt("rpc_version=%v/%v", rpc.Version, rpccore.Version),
 			cmn.Fmt("tx_index=%v", txIndexerStatus),
 		},
+	}
+
+	if n.config.P2P.PexReactor {
+		nodeInfo.Channels = append(nodeInfo.Channels, pex.PexChannel)
 	}
 
 	rpcListenAddr := n.config.RPC.ListenAddress
@@ -571,13 +624,8 @@ func (n *Node) makeNodeInfo() *p2p.NodeInfo {
 //------------------------------------------------------------------------------
 
 // NodeInfo returns the Node's Info from the Switch.
-func (n *Node) NodeInfo() *p2p.NodeInfo {
+func (n *Node) NodeInfo() p2p.NodeInfo {
 	return n.sw.NodeInfo()
-}
-
-// DialSeeds dials the given seeds on the Switch.
-func (n *Node) DialSeeds(seeds []string) error {
-	return n.sw.DialSeeds(n.addrBook, seeds)
 }
 
 //------------------------------------------------------------------------------
@@ -591,14 +639,13 @@ func loadGenesisDoc(db dbm.DB) (*types.GenesisDoc, error) {
 	bytes := db.Get(genesisDocKey)
 	if len(bytes) == 0 {
 		return nil, errors.New("Genesis doc not found")
-	} else {
-		var genDoc *types.GenesisDoc
-		err := json.Unmarshal(bytes, &genDoc)
-		if err != nil {
-			cmn.PanicCrisis(fmt.Sprintf("Failed to load genesis doc due to unmarshaling error: %v (bytes: %X)", err, bytes))
-		}
-		return genDoc, nil
 	}
+	var genDoc *types.GenesisDoc
+	err := json.Unmarshal(bytes, &genDoc)
+	if err != nil {
+		cmn.PanicCrisis(fmt.Sprintf("Failed to load genesis doc due to unmarshaling error: %v (bytes: %X)", err, bytes))
+	}
+	return genDoc, nil
 }
 
 // panics if failed to marshal the given genesis document

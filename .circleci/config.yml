@@ -4,14 +4,14 @@
 defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
-    - image: circleci/golang:1.10.1
+    - image: quay.io/monax/burrow:ci
 
 tag_filters: &tags_filters
   tags:
     only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
 
 setup_docker: &setup_docker
-  version: 17.06.1-ce
+  version: 17.11.0-ce
 
 # Start of CircleCI 2.0 config
 version: 2
@@ -28,7 +28,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: sudo apt-get install libgmp3-dev
       - run: make test_integration
 
   test_integration_bosmarmot:
@@ -51,7 +50,7 @@ jobs:
       - setup_remote_docker:
           <<: *setup_docker
         # build docker image and tag the docker image(s) depending on branch/tag
-      - run: make build_docker_db
+      - run: make docker_build
       - run: docker save quay.io/monax/db > db-images.tar
       - persist_to_workspace:
           root: .

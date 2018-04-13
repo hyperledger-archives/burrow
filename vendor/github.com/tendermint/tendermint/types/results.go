@@ -2,8 +2,8 @@ package types
 
 import (
 	abci "github.com/tendermint/abci/types"
-	wire "github.com/tendermint/go-wire"
-	"github.com/tendermint/go-wire/data"
+	wire "github.com/tendermint/tendermint/wire"
+	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/merkle"
 )
 
@@ -12,13 +12,13 @@ import (
 // ABCIResult is the deterministic component of a ResponseDeliverTx.
 // TODO: add Tags
 type ABCIResult struct {
-	Code uint32     `json:"code"`
-	Data data.Bytes `json:"data"`
+	Code uint32       `json:"code"`
+	Data cmn.HexBytes `json:"data"`
 }
 
 // Hash returns the canonical hash of the ABCIResult
 func (a ABCIResult) Hash() []byte {
-	return wire.BinaryRipemd160(a)
+	return tmHash(a)
 }
 
 // ABCIResults wraps the deliver tx results to return a proof
@@ -40,27 +40,31 @@ func NewResultFromResponse(response *abci.ResponseDeliverTx) ABCIResult {
 	}
 }
 
-// Bytes serializes the ABCIResponse using go-wire
+// Bytes serializes the ABCIResponse using wire
 func (a ABCIResults) Bytes() []byte {
-	return wire.BinaryBytes(a)
+	bz, err := wire.MarshalBinary(a)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // Hash returns a merkle hash of all results
 func (a ABCIResults) Hash() []byte {
-	return merkle.SimpleHashFromHashables(a.toHashables())
+	return merkle.SimpleHashFromHashers(a.toHashers())
 }
 
 // ProveResult returns a merkle proof of one result from the set
 func (a ABCIResults) ProveResult(i int) merkle.SimpleProof {
-	_, proofs := merkle.SimpleProofsFromHashables(a.toHashables())
+	_, proofs := merkle.SimpleProofsFromHashers(a.toHashers())
 	return *proofs[i]
 }
 
-func (a ABCIResults) toHashables() []merkle.Hashable {
+func (a ABCIResults) toHashers() []merkle.Hasher {
 	l := len(a)
-	hashables := make([]merkle.Hashable, l)
+	hashers := make([]merkle.Hasher, l)
 	for i := 0; i < l; i++ {
-		hashables[i] = a[i]
+		hashers[i] = a[i]
 	}
-	return hashables
+	return hashers
 }
