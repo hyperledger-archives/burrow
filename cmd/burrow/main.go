@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"io/ioutil"
+
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution"
@@ -130,6 +132,8 @@ func main() {
 
 			genesisDocOpt := cmd.StringOpt("g genesis-doc", "", "GenesisDoc JSON to embed in config")
 
+			separateGenesisDoc := cmd.StringOpt("s separate-genesis-doc", "", "Emit a separate genesis doc as JSON")
+
 			validatorIndexOpt := cmd.IntOpt("v validator-index", -1,
 				"Validator index (in validators list - GenesisSpec or GenesisDoc) from which to set ValidatorAddress")
 
@@ -147,6 +151,7 @@ func main() {
 			chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
 			cmd.Spec = "[--keys-url=<keys URL>] [--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
+				"[--separate-genesis-doc=<genesis JSON file>]" +
 				"[--validator-index=<index>] [--chain-name] [--toml-in] [--json-out] " +
 				"[--logging=<logging program>] [--describe-logging] [--debug]"
 
@@ -236,6 +241,20 @@ func main() {
 					conf.GenesisDoc.ChainName = *chainNameOpt
 				}
 
+				if *separateGenesisDoc != "" {
+					if conf.GenesisDoc == nil {
+						fatalf("Cannot write separate genesis doc since no GenesisDoc/GenesisSpec provided.")
+					}
+					genesisDocJSON, err := conf.GenesisDoc.JSONBytes()
+					if err != nil {
+						fatalf("Could not form GenesisDoc JSON: %v", err)
+					}
+					err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0700)
+					if err != nil {
+						fatalf("Could not write GenesisDoc JSON: %v", err)
+					}
+					conf.GenesisDoc = nil
+				}
 				if *jsonOutOpt {
 					os.Stdout.WriteString(conf.JSONString())
 				} else {
