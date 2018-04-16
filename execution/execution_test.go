@@ -127,10 +127,16 @@ func makeUsers(n int) []acm.AddressableSigner {
 	}
 	return users
 }
+func newBlockchain(genesisDoc *genesis.GenesisDoc) bcm.MutableBlockchain {
+	testDB := dbm.NewDB("test", dbBackend, ".")
+	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
+
+	return bc
+}
 
 func makeExecutor(state *State) *executor {
 	return newExecutor("makeExecutorCache", true, state, testChainID,
-		bcm.NewBlockchain(nil, testGenesisDoc), event.NewEmitter(logger), logger)
+		newBlockchain(testGenesisDoc), event.NewEmitter(logger), logger)
 }
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
@@ -1032,7 +1038,7 @@ func TestNameTxs(t *testing.T) {
 	state.Save()
 
 	txs.MinNameRegistrationPeriod = 5
-	blockchain := bcm.NewBlockchain(nil, testGenesisDoc)
+	blockchain := newBlockchain(testGenesisDoc)
 	startingBlock := blockchain.LastBlockHeight()
 
 	// try some bad names. these should all fail
@@ -1646,7 +1652,7 @@ func TestSelfDestruct(t *testing.T) {
 	require.NoError(t, tx.Sign(testChainID, privAccounts[0]))
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(state, testChainID, bcm.NewBlockchain(nil, testGenesisDoc), event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(state, testChainID, newBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(tx); err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
@@ -1687,7 +1693,7 @@ func execTxWithStateAndBlockchain(state *State, tip bcm.Tip, tx txs.Tx) error {
 }
 
 func execTxWithState(state *State, tx txs.Tx) error {
-	return execTxWithStateAndBlockchain(state, bcm.NewBlockchain(nil, testGenesisDoc), tx)
+	return execTxWithStateAndBlockchain(state, newBlockchain(testGenesisDoc), tx)
 }
 
 func commitNewBlock(state *State, blockchain bcm.MutableBlockchain) {
