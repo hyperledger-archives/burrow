@@ -100,7 +100,7 @@ type PersistedState struct {
 }
 
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
-	logger *logging.Logger) (MutableBlockchain, error) {
+	logger *logging.Logger) (*blockchain, error) {
 
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
