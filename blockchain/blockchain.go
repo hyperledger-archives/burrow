@@ -105,7 +105,7 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
-	blockchain, err := LoadBlockchain(db)
+	blockchain, err := loadBlockchain(db)
 	if err != nil {
 		return nil, fmt.Errorf("error loading blockchain state from database: %v", err)
 	}
@@ -120,11 +120,11 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 	}
 
 	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
-	return NewBlockchain(db, genesisDoc), nil
+	return newBlockchain(db, genesisDoc), nil
 }
 
 // Pointer to blockchain state initialised from genesis
-func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
+func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
 	var validators []acm.Validator
 	for _, gv := range genesisDoc.Validators {
 		validators = append(validators, acm.ConcreteValidator{
@@ -141,7 +141,7 @@ func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
 	}
 }
 
-func LoadBlockchain(db dbm.DB) (*blockchain, error) {
+func loadBlockchain(db dbm.DB) (*blockchain, error) {
 	buf := db.Get(stateKey)
 	if len(buf) == 0 {
 		return nil, nil
@@ -150,7 +150,7 @@ func LoadBlockchain(db dbm.DB) (*blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockchain := NewBlockchain(db, &persistedState.GenesisDoc)
+	blockchain := newBlockchain(db, &persistedState.GenesisDoc)
 	blockchain.lastBlockHeight = persistedState.LastBlockHeight
 	blockchain.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
 	return blockchain, nil
