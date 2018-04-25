@@ -19,17 +19,27 @@ func TestStateCache_GetAccount(t *testing.T) {
 	writeBackend := NewCache(NewMemoryState())
 	cache := NewCache(readBackend)
 
+	//Create account
 	acc := readBackend.Accounts[addressOf("acc1")]
+
+	//Get account from cache
 	accOut, err := cache.GetAccount(acc.Address())
 	require.NoError(t, err)
 	cache.UpdateAccount(accOut)
+
+	//Check that cache account matches original account
 	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
 
+	//Sync account to backend
 	err = cache.Sync(writeBackend)
 	require.NoError(t, err)
+
+	//Get account from backend
 	accOut, err = writeBackend.GetAccount(acc.Address())
 	require.NotNil(t, accOut)
 	assert.NoError(t, err)
+
+	//Check that backend account matches original account
 	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
 }
 
@@ -96,27 +106,185 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 
 func TestStateCache_RemoveAccount(t *testing.T) {
 	// Build backend states for read and write
-	readBackend := testAccounts()
-	cache := NewCache(readBackend)
+	backend := NewCache(NewMemoryState())
+	cache := NewCache(backend)
 
-	acc := readBackend.Accounts[addressOf("acc1")]
-	err := cache.RemoveAccount(acc.Address())
+	//Create new account
+	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+	err := cache.UpdateAccount(newAcc.Account())
 	require.NoError(t, err)
 
-	dead, err := cache.GetAccount(acc.Address())
-	assert.Nil(t, dead, err)
+	//Sync account to backend
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Check for account in cache
+	newAccOut, err := cache.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.NotNil(t, newAccOut)
+
+	//Check for account in backend
+	newAccOut, err = backend.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.NotNil(t, newAccOut)
+
+	//Remove account from cache and backend
+	err = cache.RemoveAccount(newAcc.Address)
+	require.NoError(t, err)
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Check that account is removed from cache
+	newAccOut, err = cache.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.Nil(t, newAccOut)
+
+	//Check that account is removed from backend
+	newAccOut, err = backend.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.Nil(t, newAccOut)
 }
 
 func TestStateCache_GetStorage(t *testing.T) {
+	// Build backend states for read and write
+	readBackend := testAccounts()
+	writeBackend := NewCache(NewMemoryState())
+	cache := NewCache(readBackend)
+
+	//Create account
+	acc := readBackend.Accounts[addressOf("acc1")]
+
+	//Get storage from cache
+	accStorage, err := cache.GetStorage(acc.Address(), word("I AM A KEY"))
+	require.NoError(t, err)
+	cache.UpdateAccount(acc)
+
+	//Check for correct cache storage value
+	assert.Equal(t, word("NO YOU ARE A KEY"), accStorage)
+
+	//Sync account to backend
+	err = cache.Sync(writeBackend)
+	require.NoError(t, err)
+
+	//Get storage from backend
+	accStorage, err = writeBackend.GetStorage(acc.Address(), word("I AM A KEY"))
+	assert.NoError(t, err)
+	require.NotNil(t, accStorage)
+
+	//Check for correct backend storage value
+	assert.Equal(t, word("NO YOU ARE A KEY"), accStorage)
 }
 
 func TestStateCache_SetStorage(t *testing.T) {
+	// Build backend states for read and write
+	backend := NewCache(NewMemoryState())
+	cache := NewCache(backend)
+
+	//Create new account and set its storage in cache
+	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+	err := cache.SetStorage(newAcc.Address, word("What?"), word("Huh?"))
+	require.NoError(t, err)
+	err = cache.UpdateAccount(newAcc.Account())
+	require.NoError(t, err)
+
+	//Check for correct cache storage value
+	newAccStorage, err := cache.GetStorage(newAcc.Address, word("What?"))
+	require.NoError(t, err)
+	assert.Equal(t, word("Huh?"), newAccStorage)
+
+	//Sync account to backend
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Check for correct backend storage value
+	newAccStorage, err = backend.GetStorage(newAcc.Address, word("What?"))
+	require.NoError(t, err)
+	assert.Equal(t, word("Huh?"), newAccStorage)
 }
 
 func TestStateCache_Sync(t *testing.T) {
+	// Build backend states for read and write
+	backend := NewCache(NewMemoryState())
+	cache := NewCache(backend)
+
+	//Create new account
+	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+
+	//Set balance for account
+	balance := uint64(24)
+	newAcc.Balance = balance
+
+	//Set storage for account
+	err := cache.SetStorage(newAcc.Address, word("God save"), word("the queen!"))
+	require.NoError(t, err)
+
+	//Update cache with account changes
+	err = cache.UpdateAccount(newAcc.Account())
+	require.NoError(t, err)
+
+	//Confirm changes to account balance in cache
+	newAccOut, err := cache.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	assert.Equal(t, balance, newAccOut.Balance())
+
+	//Confirm changes to account storage in cache
+	newAccStorage, err := cache.GetStorage(newAcc.Address, word("God save"))
+	require.NoError(t, err)
+	assert.Equal(t, word("the queen!"), newAccStorage)
+
+	//Sync account to backend
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Confirm changes to account balance synced correctly to backend
+	newAccOut, err = backend.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	assert.Equal(t, balance, newAccOut.Balance())
+
+	//Confirm changes to account storage synced correctly to backend
+	newAccStorage, err = cache.GetStorage(newAcc.Address, word("God save"))
+	require.NoError(t, err)
+	assert.Equal(t, word("the queen!"), newAccStorage)
+
+	//Remove account from cache
+	err = cache.RemoveAccount(newAcc.Address)
+	require.NoError(t, err)
+
+	//Sync account removal to backend
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Check that account removal synced correctly to backend
+	newAccOut, err = backend.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.Nil(t, newAccOut)
 }
 
 func TestStateCache_get(t *testing.T) {
+	backend := NewCache(NewMemoryState())
+	cache := NewCache(backend)
+
+	//Create new account
+	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+
+	//Add new account to cache
+	err := cache.UpdateAccount(newAcc.Account())
+	require.NoError(t, err)
+
+	//Check that get returns an account from cache
+	newAccOut, err := cache.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.NotNil(t, newAccOut)
+
+	//Sync account to backend
+	err = cache.Sync(backend)
+	require.NoError(t, err)
+
+	//Check that get returns an account from backend
+	newAccOut, err = backend.GetAccount(newAcc.Address)
+	require.NoError(t, err)
+	require.NotNil(t, newAccOut)
+
 }
 
 func testAccounts() *MemoryState {
