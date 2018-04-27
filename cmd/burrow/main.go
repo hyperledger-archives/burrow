@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
@@ -144,6 +145,15 @@ func main() {
 
 			genesisDocOpt := cmd.StringOpt("g genesis-doc", "", "GenesisDoc in JSON or TOML to embed in config")
 
+			generateKeysOpt := cmd.StringOpt("x generate-keys", "",
+				"File to output containing secret keys as JSON or according to a custom template (see --keys-template). "+
+					"Note that using this options means the keys will not be generated in the default keys instance")
+
+			keysTemplateOpt := cmd.StringOpt("z keys-template", mock.DefaultDumpKeysFormat,
+				fmt.Sprintf("Go text/template template (left delim: %s right delim: %s) to generate secret keys "+
+					"file specified with --generate-keys. Default:\n%s", mock.LeftTemplateDelim, mock.RightTemplateDelim,
+					mock.DefaultDumpKeysFormat))
+
 			separateGenesisDoc := cmd.StringOpt("s separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
 			validatorIndexOpt := cmd.IntOpt("v validator-index", -1,
@@ -162,7 +172,8 @@ func main() {
 
 			chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-			cmd.Spec = "[--keys-url=<keys URL>] [--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
+			cmd.Spec = "[--keys-url=<keys URL> | (--generate-keys=<secret keys files> [--keys-template=<text template for each key>])] " +
+				"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 				"[--separate-genesis-doc=<genesis JSON file>] [--validator-index=<index>] [--chain-name] [--json-out] " +
 				"[--logging=<logging program>] [--describe-logging] [--debug]"
 
@@ -192,14 +203,28 @@ func main() {
 					conf.Keys.URL = *keysUrlOpt
 				}
 
+				// Genesis Spec
 				if *genesisSpecOpt != "" {
 					genesisSpec := new(spec.GenesisSpec)
 					err := source.FromFile(*genesisSpecOpt, genesisSpec)
 					if err != nil {
 						fatalf("could not read GenesisSpec: %v", err)
 					}
-					keyClient := keys.NewKeyClient(conf.Keys.URL, logging.NewNoopLogger())
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					if *generateKeysOpt != "" {
+						keyClient := mock.NewMockKeyClient()
+						conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+
+						secretKeysString, err := keyClient.DumpKeys(*keysTemplateOpt)
+						if err != nil {
+							fatalf("Could not dump keys: %v", err)
+						}
+						err = ioutil.WriteFile(*generateKeysOpt, []byte(secretKeysString), 0700)
+						if err != nil {
+							fatalf("Could not write secret keys: %v", err)
+						}
+					} else {
+						conf.GenesisDoc, err = genesisSpec.GenesisDoc(keys.NewKeyClient(conf.Keys.URL, logging.NewNoopLogger()))
+					}
 					if err != nil {
 						fatalf("could not realise GenesisSpec: %v", err)
 					}
@@ -212,6 +237,7 @@ func main() {
 					conf.GenesisDoc = genesisDoc
 				}
 
+				// Which validator am I?
 				if *validatorIndexOpt > -1 {
 					if conf.GenesisDoc == nil {
 						fatalf("Unable to set ValidatorAddress from provided validator-index since no " +
@@ -227,6 +253,7 @@ func main() {
 					conf.ValidatorAddress = &conf.GenesisDoc.Validators[0].Address
 				}
 
+				// Logging
 				if *loggingOpt != "" {
 					ops := strings.Split(*loggingOpt, ",")
 					sinkConfig, err := presets.BuildSinkConfig(ops...)
