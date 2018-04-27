@@ -81,8 +81,6 @@ func IsUint64SumOverflow(a, b uint64) bool {
 	return math.MaxUint64-a < b
 }
 
-//
-
 // Converts a possibly negative big int x into a positive big int encoding a twos complement representation of x
 // truncated to 32 bytes
 func U256(x *big.Int) *big.Int {

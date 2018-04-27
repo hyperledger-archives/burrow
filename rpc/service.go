@@ -48,14 +48,14 @@ type Service struct {
 	nameReg         execution.NameRegIterable
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
-	blockchain      bcm.Blockchain
+	blockchain      *bcm.Blockchain
 	transactor      *execution.Transactor
 	nodeView        *query.NodeView
 	logger          *logging.Logger
 }
 
 func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable,
-	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
+	checker state.Reader, subscribable event.Subscribable, blockchain *bcm.Blockchain, keyClient keys.KeyClient,
 	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
@@ -151,7 +151,7 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error 
 }
 
 func (s *Service) Status() (*ResultStatus, error) {
-	tip := s.blockchain.Tip()
+	tip := s.blockchain.Tip
 	latestHeight := tip.LastBlockHeight()
 	var (
 		latestBlockMeta *tm_types.BlockMeta
@@ -241,7 +241,7 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 	})
 
 	return &ResultListAccounts{
-		BlockHeight: s.blockchain.Tip().LastBlockHeight(),
+		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
 		Accounts:    accounts,
 	}, nil
 }
@@ -353,7 +353,7 @@ func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
 func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
-	latestHeight := s.blockchain.Tip().LastBlockHeight()
+	latestHeight := s.blockchain.Tip.LastBlockHeight()
 
 	if minHeight == 0 {
 		minHeight = 1
@@ -378,15 +378,17 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 }
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
-	// TODO: when we reintroduce support for bonding and unbonding update this
-	// to reflect the mutable bonding state
-	validators := s.blockchain.Validators()
-	concreteValidators := make([]*acm.ConcreteValidator, len(validators))
-	for i, validator := range validators {
-		concreteValidators[i] = acm.AsConcreteValidator(validator)
-	}
+	concreteValidators := make([]*acm.ConcreteValidator, 0, s.blockchain.NumValidators())
+	s.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
+		concreteValidators = append(concreteValidators, &acm.ConcreteValidator{
+			Address:   publicKey.Address(),
+			PublicKey: publicKey,
+			Power:     power,
+		})
+		return
+	})
 	return &ResultListValidators{
-		BlockHeight:         s.blockchain.Tip().LastBlockHeight(),
+		BlockHeight:         s.blockchain.Tip.LastBlockHeight(),
 		BondedValidators:    concreteValidators,
 		UnbondingValidators: nil,
 	}, nil

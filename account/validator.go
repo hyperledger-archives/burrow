@@ -10,9 +10,6 @@ type Validator interface {
 	Addressable
 	// The validator's voting power
 	Power() uint64
-	// Alter the validator's voting power by amount that can be negative or positive.
-	// A power of 0 effectively unbonds the validator
-	WithNewPower(uint64) Validator
 }
 
 // Neither abci_types or tm_types has quite the representation we want

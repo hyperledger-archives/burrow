@@ -7,13 +7,14 @@ import (
 
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
-	abci_types "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire"
 )
 
@@ -21,21 +22,21 @@ const responseInfoName = "Burrow"
 
 type App struct {
 	// State
-	blockchain    bcm.MutableBlockchain
+	blockchain    *bcm.Blockchain
 	checker       execution.BatchExecutor
 	committer     execution.BatchCommitter
 	mempoolLocker sync.Locker
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
-	block *abci_types.RequestBeginBlock
+	block *abciTypes.RequestBeginBlock
 	// Utility
 	txDecoder txs.Decoder
 	// Logging
 	logger *logging.Logger
 }
 
-var _ abci_types.Application = &App{}
+var _ abciTypes.Application = &App{}
 
-func NewApp(blockchain bcm.MutableBlockchain,
+func NewApp(blockchain *bcm.Blockchain,
 	checker execution.BatchExecutor,
 	committer execution.BatchCommitter,
 	logger *logging.Logger) *App {
@@ -55,9 +56,9 @@ func (app *App) SetMempoolLocker(mempoolLocker sync.Locker) {
 	app.mempoolLocker = mempoolLocker
 }
 
-func (app *App) Info(info abci_types.RequestInfo) abci_types.ResponseInfo {
-	tip := app.blockchain.Tip()
-	return abci_types.ResponseInfo{
+func (app *App) Info(info abciTypes.RequestInfo) abciTypes.ResponseInfo {
+	tip := app.blockchain.Tip
+	return abciTypes.ResponseInfo{
 		Data:             responseInfoName,
 		Version:          project.History.CurrentVersion().String(),
 		LastBlockHeight:  int64(tip.LastBlockHeight()),
@@ -65,25 +66,25 @@ func (app *App) Info(info abci_types.RequestInfo) abci_types.ResponseInfo {
 	}
 }
 
-func (app *App) SetOption(option abci_types.RequestSetOption) (respSetOption abci_types.ResponseSetOption) {
+func (app *App) SetOption(option abciTypes.RequestSetOption) (respSetOption abciTypes.ResponseSetOption) {
 	respSetOption.Log = "SetOption not supported"
 	respSetOption.Code = codes.UnsupportedRequestCode
 	return
 }
 
-func (app *App) Query(reqQuery abci_types.RequestQuery) (respQuery abci_types.ResponseQuery) {
+func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.ResponseQuery) {
 	respQuery.Log = "Query not supported"
 	respQuery.Code = codes.UnsupportedRequestCode
 	return
 }
 
-func (app *App) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
+func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("CheckTx decoding error",
 			"tag", "CheckTx",
 			structure.ErrorKey, err)
-		return abci_types.ResponseCheckTx{
+		return abciTypes.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
 			Log:  fmt.Sprintf("Encoding error: %s", err),
 		}
@@ -97,7 +98,7 @@ func (app *App) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 			"tag", "CheckTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
-		return abci_types.ResponseCheckTx{
+		return abciTypes.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
 			Log:  fmt.Sprintf("CheckTx could not execute transaction: %s, error: %v", tx, err),
 		}
@@ -108,30 +109,30 @@ func (app *App) CheckTx(txBytes []byte) abci_types.ResponseCheckTx {
 		"tag", "CheckTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
-	return abci_types.ResponseCheckTx{
+	return abciTypes.ResponseCheckTx{
 		Code: codes.TxExecutionSuccessCode,
 		Log:  "CheckTx success - receipt in data",
 		Data: receiptBytes,
 	}
 }
 
-func (app *App) InitChain(chain abci_types.RequestInitChain) (respInitChain abci_types.ResponseInitChain) {
+func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciTypes.ResponseInitChain) {
 	// Could verify agreement on initial validator set here
 	return
 }
 
-func (app *App) BeginBlock(block abci_types.RequestBeginBlock) (respBeginBlock abci_types.ResponseBeginBlock) {
+func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock abciTypes.ResponseBeginBlock) {
 	app.block = &block
 	return
 }
 
-func (app *App) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
+func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 	tx, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("DeliverTx decoding error",
 			"tag", "DeliverTx",
 			structure.ErrorKey, err)
-		return abci_types.ResponseDeliverTx{
+		return abciTypes.ResponseDeliverTx{
 			Code: codes.EncodingErrorCode,
 			Log:  fmt.Sprintf("Encoding error: %s", err),
 		}
@@ -145,7 +146,7 @@ func (app *App) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 			"tag", "DeliverTx",
 			"tx_hash", receipt.TxHash,
 			"creates_contract", receipt.CreatesContract)
-		return abci_types.ResponseDeliverTx{
+		return abciTypes.ResponseDeliverTx{
 			Code: codes.TxExecutionErrorCode,
 			Log:  fmt.Sprintf("DeliverTx could not execute transaction: %s, error: %s", tx, err),
 		}
@@ -156,20 +157,30 @@ func (app *App) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
 	receiptBytes := wire.BinaryBytes(receipt)
-	return abci_types.ResponseDeliverTx{
+	return abciTypes.ResponseDeliverTx{
 		Code: codes.TxExecutionSuccessCode,
 		Log:  "DeliverTx success - receipt in data",
 		Data: receiptBytes,
 	}
 }
 
-func (app *App) EndBlock(reqEndBlock abci_types.RequestEndBlock) (respEndBlock abci_types.ResponseEndBlock) {
+func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
 	// Validator mutation goes here
-	return
+	var validatorUpdates abciTypes.Validators
+	app.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
+		validatorUpdates = append(validatorUpdates, abciTypes.Validator{
+			Address: publicKey.Address().Bytes(),
+			PubKey:  publicKey.ABCIPubKey(),
+			Power:   int64(power),
+		})
+		return
+	})
+	return abciTypes.ResponseEndBlock{
+		ValidatorUpdates: validatorUpdates,
+	}
 }
 
-func (app *App) Commit() abci_types.ResponseCommit {
-	tip := app.blockchain.Tip()
+func (app *App) Commit() abciTypes.ResponseCommit {
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
@@ -177,8 +188,8 @@ func (app *App) Commit() abci_types.ResponseCommit {
 		"hash", app.block.Hash,
 		"txs", app.block.Header.NumTxs,
 		"block_time", app.block.Header.Time, // [CSK] this sends a fairly non-sensical number; should be human readable
-		"last_block_time", tip.LastBlockTime(),
-		"last_block_hash", tip.LastBlockHash())
+		"last_block_time", app.blockchain.Tip.LastBlockTime(),
+		"last_block_hash", app.blockchain.Tip.LastBlockHash())
 
 	// Lock the checker while we reset it and possibly while recheckTxs replays transactions
 	app.checker.Lock()
@@ -233,7 +244,7 @@ func (app *App) Commit() abci_types.ResponseCommit {
 			"but Tendermint reports a block height of %v, and the two should agree",
 			app.blockchain.LastBlockHeight(), app.block.Header.Height))
 	}
-	return abci_types.ResponseCommit{
+	return abciTypes.ResponseCommit{
 		Data: appHash,
 	}
 }
