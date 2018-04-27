@@ -39,3 +39,13 @@ func TestMinimalPreset(t *testing.T) {
 	//fmt.Println(config.TOMLString(expectedSink), "\n", config.TOMLString(builtSink))
 	assert.Equal(t, config.TOMLString(expectedSink), config.TOMLString(builtSink))
 }
+
+func TestFileOutput(t *testing.T) {
+	path := "foo.log"
+	builtSink, err := BuildSinkConfig(Down, File, path, JSON)
+	require.NoError(t, err)
+	expectedSink := config.Sink().
+		AddSinks(config.Sink().SetOutput(config.FileOutput(path).SetFormat(loggers.JSONFormat)))
+	//fmt.Println(config.TOMLString(expectedSink), "\n", config.TOMLString(builtSink))
+	assert.Equal(t, config.TOMLString(expectedSink), config.TOMLString(builtSink))
+}
