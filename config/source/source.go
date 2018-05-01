@@ -13,6 +13,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/cep21/xdgbasedir"
 	"github.com/imdario/mergo"
+	"regexp"
 )
 
 // If passed this identifier try to read config from STDIN
@@ -30,6 +31,16 @@ type ConfigProvider interface {
 }
 
 var _ ConfigProvider = &configSource{}
+
+type Format string
+
+const (
+	JSON    Format = "JSON"
+	TOML    Format = "TOML"
+	Unknown Format = ""
+)
+
+var jsonRegex = regexp.MustCompile(`\s*{`)
 
 type configSource struct {
 	from  string
@@ -116,26 +127,14 @@ func EachOf(providers ...ConfigProvider) *configSource {
 	return Cascade(os.Stderr, false, providers...)
 }
 
-// Try to source config from provided JSON file, is skipNonExistent is true then the provider will fall-through (skip)
-// when the file doesn't exist, rather than returning an error
-func JSONFile(configFile string, skipNonExistent bool) *configSource {
+// Try to source config from provided file detecting the file format, is skipNonExistent is true then the provider will
+// fall-through (skip) when the file doesn't exist, rather than returning an error
+func File(configFile string, skipNonExistent bool) *configSource {
 	return &configSource{
 		skip: ShouldSkipFile(configFile, skipNonExistent),
 		from: fmt.Sprintf("JSON config file at '%s'", configFile),
 		apply: func(baseConfig interface{}) error {
-			return FromJSONFile(configFile, baseConfig)
-		},
-	}
-}
-
-// Try to source config from provided TOML file, is skipNonExistent is true then the provider will fall-through (skip)
-// when the file doesn't exist, rather than returning an error
-func TOMLFile(configFile string, skipNonExistent bool) *configSource {
-	return &configSource{
-		skip: ShouldSkipFile(configFile, skipNonExistent),
-		from: fmt.Sprintf("TOML config file at '%s'", configFile),
-		apply: func(baseConfig interface{}) error {
-			return FromTOMLFile(configFile, baseConfig)
+			return FromFile(configFile, baseConfig)
 		},
 	}
 }
@@ -157,7 +156,7 @@ func XDGBaseDir(configFileName string) *configSource {
 			if err != nil {
 				return err
 			}
-			return FromTOMLFile(configFile, baseConfig)
+			return FromFile(configFile, baseConfig)
 		},
 	}
 }
@@ -183,22 +182,13 @@ func Default(defaultConfig interface{}) *configSource {
 	}
 }
 
-func FromJSONFile(configFile string, conf interface{}) error {
+func FromFile(configFile string, conf interface{}) error {
 	bs, err := ReadFile(configFile)
 	if err != nil {
 		return err
 	}
 
-	return FromJSONString(string(bs), conf)
-}
-
-func FromTOMLFile(configFile string, conf interface{}) error {
-	bs, err := ReadFile(configFile)
-	if err != nil {
-		return err
-	}
-
-	return FromTOMLString(string(bs), conf)
+	return FromString(string(bs), conf)
 }
 
 func FromTOMLString(tomlString string, conf interface{}) error {
@@ -207,6 +197,24 @@ func FromTOMLString(tomlString string, conf interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func FromString(configString string, conf interface{}) error {
+	switch DetectFormat(configString) {
+	case JSON:
+		return FromJSONString(configString, conf)
+	case TOML:
+		return FromTOMLString(configString, conf)
+	default:
+		return fmt.Errorf("unknown configuration format:\n%s", configString)
+	}
+}
+
+func DetectFormat(configString string) Format {
+	if jsonRegex.MatchString(configString) {
+		return JSON
+	}
+	return TOML
 }
 
 func FromJSONString(jsonString string, conf interface{}) error {
