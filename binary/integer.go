@@ -22,6 +22,7 @@ import (
 )
 
 var big1 = big.NewInt(1)
+var Big256 = big.NewInt(256)
 var tt256 = new(big.Int).Lsh(big1, 256)
 var tt256m1 = new(big.Int).Sub(new(big.Int).Lsh(big1, 256), big1)
 var tt255 = new(big.Int).Lsh(big1, 255)
