@@ -116,6 +116,9 @@ You can find us on:
 
 For some (slightly outdated) ideas on future work, see the [proposals document](./docs/PROPOSALS.md).
 
+Roadmap, future plans and other information about the project can be found at
+<https://wiki.hyperledger.org/projects/burrow>
+
 ## License
 
 [Apache 2.0](LICENSE.md)
