@@ -27,6 +27,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -67,7 +68,7 @@ func NewTransactor(tip blockchain.Tip, eventEmitter event.Emitter,
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress acm.Address,
+func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress crypto.Address,
 	data []byte) (call *Call, err error) {
 
 	if evm.RegisteredNativeContract(toAddress.Word256()) {
@@ -106,7 +107,7 @@ func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress acm.Ad
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func (trans *Transactor) CallCode(reader state.Reader, fromAddress acm.Address, code, data []byte) (*Call, error) {
+func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Address, code, data []byte) (*Call, error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
 	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
@@ -162,7 +163,7 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 }
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte,
+func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte,
 	gasLimit, fee uint64) (*txs.Receipt, error) {
 
 	// Use the get the freshest sequence numbers from mempool state and hold the lock until we get a response from
@@ -185,7 +186,7 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	return trans.BroadcastTx(callTx)
 }
 
-func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *acm.Address, data []byte, gasLimit,
+func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte, gasLimit,
 	fee uint64) (*evm_events.EventDataCall, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
@@ -239,7 +240,7 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 		}
 	}
 }
-func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *acm.Address, data []byte,
+func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *crypto.Address, data []byte,
 	gasLimit, fee uint64) (*txs.CallTx, *txs.Receipt, error) {
 
 	txInput := &txs.TxInput{
@@ -265,7 +266,7 @@ func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *
 	return tx, &receipt, nil
 }
 
-func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
 	amount uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
@@ -282,7 +283,7 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	return trans.BroadcastTx(sendTx)
 }
 
-func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
 	amount uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
@@ -334,7 +335,7 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 	}
 }
 
-func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress acm.Address,
+func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress crypto.Address,
 	amount uint64) (*txs.SendTx, *txs.Receipt, error) {
 
 	sendTx := txs.NewSendTx()

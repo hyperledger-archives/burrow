@@ -21,7 +21,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -69,7 +69,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscrip
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string,
-	inputAddr account.Address) (chan Confirmation, error) {
+	inputAddr crypto.Address) (chan Confirmation, error) {
 
 	// Setup the confirmation channel to be returned
 	confirmationChannel := make(chan Confirmation, 1)

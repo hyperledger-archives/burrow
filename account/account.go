@@ -18,36 +18,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/go-wire"
 )
 
-var GlobalPermissionsAddress = Address(binary.Zero160)
-
-// Signable is an interface for all signable things.
-// It typically removes signatures before serializing.
-type Signable interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
-}
-
-// SignBytes is a convenience method for getting the bytes to sign of a Signable.
-func SignBytes(chainID string, o Signable) []byte {
-	buf, n, err := new(bytes.Buffer), new(int), new(error)
-	o.WriteSignBytes(chainID, buf, n, err)
-	if *err != nil {
-		panic(fmt.Sprintf("could not write sign bytes for a signable: %s", *err))
-	}
-	return buf.Bytes()
-}
+var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
 
 type Addressable interface {
 	// Get the 20 byte EVM address of this account
-	Address() Address
+	Address() crypto.Address
 	// Public key from which the Address is derived
-	PublicKey() PublicKey
+	PublicKey() crypto.PublicKey
 }
 
 // The default immutable interface to an account
@@ -75,7 +59,7 @@ type Account interface {
 type MutableAccount interface {
 	Account
 	// Set public key (needed for lazy initialisation), should also set the dependent address
-	SetPublicKey(pubKey PublicKey) MutableAccount
+	SetPublicKey(pubKey crypto.PublicKey) MutableAccount
 	// Subtract amount from account balance (will panic if amount is greater than balance)
 	SubtractFromBalance(amount uint64) (MutableAccount, error)
 	// Add amount to balance (will panic if amount plus balance is a uint64 overflow)
@@ -99,8 +83,8 @@ type MutableAccount interface {
 
 // ConcreteAccount is the canonical serialisation and bash-in-place object for an Account
 type ConcreteAccount struct {
-	Address     Address
-	PublicKey   PublicKey
+	Address     crypto.Address
+	PublicKey   crypto.PublicKey
 	Sequence    uint64
 	Balance     uint64
 	Code        Bytecode
@@ -108,7 +92,7 @@ type ConcreteAccount struct {
 	Permissions ptypes.AccountPermissions
 }
 
-func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
+func NewConcreteAccount(pubKey crypto.PublicKey) ConcreteAccount {
 	return ConcreteAccount{
 		Address:   pubKey.Address(),
 		PublicKey: pubKey,
@@ -122,7 +106,7 @@ func NewConcreteAccount(pubKey PublicKey) ConcreteAccount {
 }
 
 func NewConcreteAccountFromSecret(secret string) ConcreteAccount {
-	return NewConcreteAccount(PrivateKeyFromSecret(secret).PublicKey())
+	return NewConcreteAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519).GetPublicKey())
 }
 
 // Return as immutable Account
@@ -230,11 +214,11 @@ type concreteAccountWrapper struct {
 
 var _ Account = concreteAccountWrapper{}
 
-func (caw concreteAccountWrapper) Address() Address {
+func (caw concreteAccountWrapper) Address() crypto.Address {
 	return caw.ConcreteAccount.Address
 }
 
-func (caw concreteAccountWrapper) PublicKey() PublicKey {
+func (caw concreteAccountWrapper) PublicKey() crypto.PublicKey {
 	return caw.ConcreteAccount.PublicKey
 }
 
@@ -273,7 +257,7 @@ func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {
 // Account mutation via MutableAccount interface
 var _ MutableAccount = concreteAccountWrapper{}
 
-func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount {
+func (caw concreteAccountWrapper) SetPublicKey(pubKey crypto.PublicKey) MutableAccount {
 	caw.ConcreteAccount.PublicKey = pubKey
 	addressFromPubKey := pubKey.Address()
 	// We don't want the wrong public key to take control of an account so we panic here

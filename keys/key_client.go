@@ -19,18 +19,19 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 )
 
 type KeyClient interface {
 	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress acm.Address, message []byte) (signature acm.Signature, err error)
+	Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error)
 
 	// PublicKey returns the public key associated with a given address
-	PublicKey(address acm.Address) (publicKey acm.PublicKey, err error)
+	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
 
 	// Generate requests that a key be generate within the keys instance and returns the address
-	Generate(keyName string, keyType KeyType) (keyAddress acm.Address, err error)
+	Generate(keyName string, keyType KeyType) (keyAddress crypto.Address, err error)
 
 	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
@@ -65,7 +66,7 @@ type keyClient struct {
 
 type signer struct {
 	keyClient KeyClient
-	address   acm.Address
+	address   crypto.Address
 }
 
 // keyClient.New returns a new monax-keys client for provided rpc location
@@ -79,7 +80,7 @@ func NewKeyClient(rpcAddress string, logger *logging.Logger) *keyClient {
 }
 
 // Creates a Signer that assumes the address holds an Ed25519 key
-func Signer(keyClient KeyClient, address acm.Address) acm.Signer {
+func Signer(keyClient KeyClient, address crypto.Address) crypto.Signer {
 	// TODO: we can do better than this and return a typed signature when we reform the keys service
 	return &signer{
 		keyClient: keyClient,
@@ -88,19 +89,19 @@ func Signer(keyClient KeyClient, address acm.Address) acm.Signer {
 }
 
 type keyAddressable struct {
-	publicKey acm.PublicKey
-	address   acm.Address
+	publicKey crypto.PublicKey
+	address   crypto.Address
 }
 
-func (ka *keyAddressable) Address() acm.Address {
+func (ka *keyAddressable) Address() crypto.Address {
 	return ka.address
 }
 
-func (ka *keyAddressable) PublicKey() acm.PublicKey {
+func (ka *keyAddressable) PublicKey() crypto.PublicKey {
 	return ka.publicKey
 }
 
-func Addressable(keyClient KeyClient, address acm.Address) (acm.Addressable, error) {
+func Addressable(keyClient KeyClient, address crypto.Address) (acm.Addressable, error) {
 	pubKey, err := keyClient.PublicKey(address)
 	if err != nil {
 		return nil, err
@@ -111,65 +112,65 @@ func Addressable(keyClient KeyClient, address acm.Address) (acm.Addressable, err
 	}, nil
 }
 
-func (ms *signer) Sign(messsage []byte) (acm.Signature, error) {
+func (ms *signer) Sign(messsage []byte) (crypto.Signature, error) {
 	signature, err := ms.keyClient.Sign(ms.address, messsage)
 	if err != nil {
-		return acm.Signature{}, err
+		return crypto.Signature{}, err
 	}
 	return signature, nil
 }
 
 // Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
 // bytes to be signed and the address to sign them with.
-func (kc *keyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
+func (kc *keyClient) Sign(signAddress crypto.Address, message []byte) (crypto.Signature, error) {
 	sigS, err := kc.requester("sign", map[string]string{
 		"msg":  hex.EncodeToString(message),
 		"addr": signAddress.String(),
 	})
 	if err != nil {
-		return acm.Signature{}, err
+		return crypto.Signature{}, err
 	}
 	sigBytes, err := hex.DecodeString(sigS)
 	if err != nil {
-		return acm.Signature{}, err
+		return crypto.Signature{}, err
 	}
-	return acm.SignatureFromBytes(sigBytes)
+	return crypto.SignatureFromBytes(sigBytes)
 }
 
 // Monax-keys client PublicKey requests the public key associated with an address from
 // the monax-keys server.
-func (kc *keyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
+func (kc *keyClient) PublicKey(address crypto.Address) (crypto.PublicKey, error) {
 	pubS, err := kc.requester("pub", map[string]string{
 		"addr": address.String(),
 	})
 	if err != nil {
-		return acm.PublicKey{}, err
+		return crypto.PublicKey{}, err
 	}
 	pubKeyBytes, err := hex.DecodeString(pubS)
 	if err != nil {
-		return acm.PublicKey{}, err
+		return crypto.PublicKey{}, err
 	}
-	publicKey, err := acm.PublicKeyFromBytes(pubKeyBytes)
+	publicKey, err := crypto.PublicKeyFromBytes(pubKeyBytes)
 	if err != nil {
-		return acm.PublicKey{}, err
+		return crypto.PublicKey{}, err
 	}
 	if address != publicKey.Address() {
-		return acm.PublicKey{}, fmt.Errorf("public key %s maps to address %s but was returned for address %s",
+		return crypto.PublicKey{}, fmt.Errorf("public key %s maps to address %s but was returned for address %s",
 			publicKey, publicKey.Address(), address)
 	}
 	return publicKey, nil
 }
 
-func (kc *keyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
+func (kc *keyClient) Generate(keyName string, keyType KeyType) (crypto.Address, error) {
 	addr, err := kc.requester("gen", map[string]string{
 		//"auth": auth,
 		"name": keyName,
 		"type": keyType.String(),
 	})
 	if err != nil {
-		return acm.ZeroAddress, err
+		return crypto.ZeroAddress, err
 	}
-	return acm.AddressFromHexString(addr)
+	return crypto.AddressFromHexString(addr)
 }
 
 func (kc *keyClient) HealthCheck() error {

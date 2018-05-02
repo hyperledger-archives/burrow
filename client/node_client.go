@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
@@ -31,12 +32,12 @@ type NodeClient interface {
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight uint64, LatestBlockTime int64, err error)
-	GetAccount(address acm.Address) (acm.Account, error)
-	QueryContract(callerAddress, calleeAddress acm.Address, data []byte) (ret []byte, gasUsed uint64, err error)
-	QueryContractCode(address acm.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
+	GetAccount(address crypto.Address) (acm.Account, error)
+	QueryContract(callerAddress, calleeAddress crypto.Address, data []byte) (ret []byte, gasUsed uint64, err error)
+	QueryContractCode(address crypto.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
 
-	DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error)
-	GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error)
+	DumpStorage(address crypto.Address) (storage *rpc.ResultDumpStorage, err error)
+	GetName(name string) (owner crypto.Address, data string, expirationBlock uint64, err error)
 	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
 
 	// Logging context for this NodeClient
@@ -47,7 +48,7 @@ type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
 
-	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr acm.Address) (chan Confirmation, error)
+	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr crypto.Address) (chan Confirmation, error)
 	Close()
 }
 
@@ -133,7 +134,7 @@ func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, Validato
 
 	// unwrap return results
 	GenesisHash = res.GenesisHash
-	ValidatorPublicKey = res.PubKey.Bytes()
+	ValidatorPublicKey = res.PubKey.RawBytes()
 	LatestBlockHash = res.LatestBlockHash
 	LatestBlockHeight = res.LatestBlockHeight
 	LatestBlockTime = res.LatestBlockTime
@@ -158,7 +159,7 @@ func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, 
 
 // QueryContract executes the contract code at address with the given data
 // NOTE: there is no check on the caller;
-func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress acm.Address,
+func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress crypto.Address,
 	data []byte) (ret []byte, gasUsed uint64, err error) {
 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
@@ -172,7 +173,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAdd
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address, code,
+func (burrowNodeClient *burrowNodeClient) QueryContractCode(address crypto.Address, code,
 	data []byte) (ret []byte, gasUsed uint64, err error) {
 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
@@ -188,7 +189,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address,
 }
 
 // GetAccount returns a copy of the account
-func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
+func (burrowNodeClient *burrowNodeClient) GetAccount(address crypto.Address) (acm.Account, error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tendermint_client.GetAccount(client, address)
 	if err != nil {
@@ -205,7 +206,7 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.A
 }
 
 // DumpStorage returns the full storage for an acm.
-func (burrowNodeClient *burrowNodeClient) DumpStorage(address acm.Address) (*rpc.ResultDumpStorage, error) {
+func (burrowNodeClient *burrowNodeClient) DumpStorage(address crypto.Address) (*rpc.ResultDumpStorage, error) {
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	resultStorage, err := tendermint_client.DumpStorage(client, address)
 	if err != nil {
@@ -218,7 +219,7 @@ func (burrowNodeClient *burrowNodeClient) DumpStorage(address acm.Address) (*rpc
 //--------------------------------------------------------------------------------------------
 // Name registry
 
-func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Address, data string,
+func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner crypto.Address, data string,
 	expirationBlock uint64, err error) {
 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
@@ -226,7 +227,7 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Addres
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to get name registrar entry for name (%s)",
 			burrowNodeClient.broadcastRPC, name)
-		return acm.ZeroAddress, "", 0, err
+		return crypto.ZeroAddress, "", 0, err
 	}
 	// unwrap return results
 	owner = entryResult.Owner

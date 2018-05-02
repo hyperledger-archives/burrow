@@ -6,6 +6,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -55,7 +56,7 @@ func (tx *SendTx) Hash(chainID string) []byte {
 	return tx.txHashMemoizer.hash(chainID, tx)
 }
 
-func (tx *SendTx) AddInput(st state.AccountGetter, pubkey acm.PublicKey, amt uint64) error {
+func (tx *SendTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
 	addr := pubkey.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -67,7 +68,7 @@ func (tx *SendTx) AddInput(st state.AccountGetter, pubkey acm.PublicKey, amt uin
 	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence()+1)
 }
 
-func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
+func (tx *SendTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
 		Address:   addr,
@@ -78,7 +79,7 @@ func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequenc
 	return nil
 }
 
-func (tx *SendTx) AddOutput(addr acm.Address, amt uint64) error {
+func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) error {
 	tx.Outputs = append(tx.Outputs, &TxOutput{
 		Address: addr,
 		Amount:  amt,
@@ -94,7 +95,7 @@ func (tx *SendTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner)
 	var err error
 	for i, signingAccount := range signingAccounts {
 		tx.Inputs[i].PublicKey = signingAccount.PublicKey()
-		tx.Inputs[i].Signature, err = acm.ChainSign(signingAccount, chainID, tx)
+		tx.Inputs[i].Signature, err = crypto.ChainSign(signingAccount, chainID, tx)
 		if err != nil {
 			return fmt.Errorf("could not sign tx %v input %v: %v", tx, tx.Inputs[i], err)
 		}

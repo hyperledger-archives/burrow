@@ -6,6 +6,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission/snatives"
 	"github.com/tendermint/go-wire"
 )
@@ -18,7 +19,7 @@ type PermissionsTx struct {
 
 var _ Tx = &PermissionsTx{}
 
-func NewPermissionsTx(st state.AccountGetter, from acm.PublicKey, args snatives.PermArgs) (*PermissionsTx, error) {
+func NewPermissionsTx(st state.AccountGetter, from crypto.PublicKey, args snatives.PermArgs) (*PermissionsTx, error) {
 	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -32,7 +33,7 @@ func NewPermissionsTx(st state.AccountGetter, from acm.PublicKey, args snatives.
 	return NewPermissionsTxWithSequence(from, args, sequence), nil
 }
 
-func NewPermissionsTxWithSequence(from acm.PublicKey, args snatives.PermArgs, sequence uint64) *PermissionsTx {
+func NewPermissionsTxWithSequence(from crypto.PublicKey, args snatives.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
 		Address:   from.Address(),
 		Amount:    1, // NOTE: amounts can't be 0 ...
@@ -53,7 +54,7 @@ func (tx *PermissionsTx) Sign(chainID string, signingAccounts ...acm.Addressable
 	}
 	var err error
 	tx.Input.PublicKey = signingAccounts[0].PublicKey()
-	tx.Input.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	tx.Input.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
 	if err != nil {
 		return fmt.Errorf("could not sign %v: %v", tx, err)
 	}

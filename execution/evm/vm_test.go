@@ -26,6 +26,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
@@ -45,7 +46,7 @@ var logger = logging.NewNoopLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
-		accounts: make(map[acm.Address]acm.Account),
+		accounts: make(map[crypto.Address]acm.Account),
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
@@ -68,14 +69,14 @@ func newAccount(seed ...byte) acm.MutableAccount {
 	hasher := ripemd160.New()
 	hasher.Write(seed)
 	return acm.ConcreteAccount{
-		Address: acm.MustAddressFromBytes(hasher.Sum(nil)),
+		Address: crypto.MustAddressFromBytes(hasher.Sum(nil)),
 	}.MutableAccount()
 }
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -98,7 +99,7 @@ func TestVM(t *testing.T) {
 
 func TestSHL(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
 	account2 := newAccount(1, 0, 1)
 
@@ -247,7 +248,7 @@ func TestSHL(t *testing.T) {
 
 func TestSHR(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
 	account2 := newAccount(1, 0, 1)
 
@@ -400,7 +401,7 @@ func TestSHR(t *testing.T) {
 
 func TestSAR(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
 	account2 := newAccount(1, 0, 1)
 
@@ -572,7 +573,7 @@ func TestSAR(t *testing.T) {
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -612,7 +613,7 @@ func TestSubcurrency(t *testing.T) {
 	//st.accounts[account1.Address()] = account1
 	//st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
 
@@ -642,7 +643,7 @@ func TestSubcurrency(t *testing.T) {
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -675,7 +676,7 @@ func TestRevert(t *testing.T) {
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -716,7 +717,7 @@ func TestSendCall(t *testing.T) {
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -777,7 +778,7 @@ func TestMemoryBounds(t *testing.T) {
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
 	caller, _ := makeAccountWithCode(cache, "caller", nil)
 	callee, _ := makeAccountWithCode(cache, "callee", nil)
 	gas := uint64(100000)
@@ -828,7 +829,7 @@ func TestMsgSender(t *testing.T) {
 	//st.accounts[account1.Address()] = account1
 	//st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	var gas uint64 = 100000
 
@@ -870,7 +871,7 @@ func TestMsgSender(t *testing.T) {
 
 func TestInvalid(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -891,7 +892,7 @@ func TestInvalid(t *testing.T) {
 
 func TestReturnDataSize(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	accountName := "account2addresstests"
 
@@ -930,7 +931,7 @@ func TestReturnDataSize(t *testing.T) {
 
 func TestReturnDataCopy(t *testing.T) {
 	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	accountName := "account2addresstests"
 
@@ -995,8 +996,8 @@ func returnWord() []byte {
 }
 
 func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
-	code []byte) (acm.MutableAccount, acm.Address) {
-	address, _ := acm.AddressFromBytes([]byte(name))
+	code []byte) (acm.MutableAccount, crypto.Address) {
+	address, _ := crypto.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
 		Address:  address,
 		Balance:  9999999,
@@ -1011,7 +1012,7 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
+func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
 	eventCh := make(chan *evm_events.EventDataCall)
 	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
@@ -1030,7 +1031,7 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAc
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
 func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
-	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
+	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
 	emitter := event.NewEmitter(logging.NewNoopLogger())
@@ -1052,7 +1053,7 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm 
 }
 
 // this is code to call another contract (hardcoded as addr)
-func callContractCode(addr acm.Address) []byte {
+func callContractCode(addr crypto.Address) []byte {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
@@ -1109,7 +1110,7 @@ func TestBytecode(t *testing.T) {
 		[]byte{},
 		MustSplice(MustSplice(MustSplice())))
 
-	contractAccount := &acm.ConcreteAccount{Address: acm.AddressFromWord256(Int64ToWord256(102))}
+	contractAccount := &acm.ConcreteAccount{Address: crypto.AddressFromWord256(Int64ToWord256(102))}
 	addr := contractAccount.Address
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)

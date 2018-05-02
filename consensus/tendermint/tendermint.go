@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
+	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
@@ -101,8 +102,10 @@ func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx
 func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
 	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
+		tm := tm_crypto.PubKeyEd25519{}
+		copy(tm[:], validator.PublicKey.RawBytes())
 		validators[i] = tm_types.GenesisValidator{
-			PubKey: validator.PublicKey.PubKey,
+			PubKey: tm_crypto.PubKey{tm},
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}

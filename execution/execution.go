@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -111,14 +112,14 @@ func newExecutor(name string, runCall bool, backend *State, chainID string, tip 
 // to always access the freshest mempool state as needed by accounts.SequentialSigningAccount
 //
 // Accounts
-func (exe *executor) GetAccount(address acm.Address) (acm.Account, error) {
+func (exe *executor) GetAccount(address crypto.Address) (acm.Account, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetAccount(address)
 }
 
 // Storage
-func (exe *executor) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)
@@ -196,7 +197,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 
-		signBytes := acm.SignBytes(exe.chainID, tx)
+		signBytes := crypto.SignBytes(exe.chainID, tx)
 		inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
 		if err != nil {
 			return err
@@ -270,7 +271,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				"tx_input", tx.Input)
 			return err
 		}
-		signBytes := acm.SignBytes(exe.chainID, tx)
+		signBytes := crypto.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
@@ -472,7 +473,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				"tx_input", tx.Input)
 			return err
 		}
-		signBytes := acm.SignBytes(exe.chainID, tx)
+		signBytes := crypto.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
@@ -783,7 +784,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				"tx_input", tx.Input)
 			return err
 		}
-		signBytes := acm.SignBytes(exe.chainID, tx)
+		signBytes := crypto.SignBytes(exe.chainID, tx)
 		err = validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
@@ -876,7 +877,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 	}
 }
 
-func mutatePermissions(stateReader state.Reader, address acm.Address,
+func mutatePermissions(stateReader state.Reader, address crypto.Address,
 	mutator func(*ptypes.AccountPermissions) error) (acm.Account, error) {
 
 	account, err := stateReader.GetAccount(address)
@@ -1025,9 +1026,9 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
 func getInputs(accountGetter state.AccountGetter,
-	ins []*txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
+	ins []*txs.TxInput) (map[crypto.Address]acm.MutableAccount, error) {
 
-	accounts := map[acm.Address]acm.MutableAccount{}
+	accounts := map[crypto.Address]acm.MutableAccount{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
@@ -1049,10 +1050,10 @@ func getInputs(accountGetter state.AccountGetter,
 	return accounts, nil
 }
 
-func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
-	outs []*txs.TxOutput, logger *logging.Logger) (map[acm.Address]acm.MutableAccount, error) {
+func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
+	outs []*txs.TxOutput, logger *logging.Logger) (map[crypto.Address]acm.MutableAccount, error) {
 	if accs == nil {
-		accs = make(map[acm.Address]acm.MutableAccount)
+		accs = make(map[crypto.Address]acm.MutableAccount)
 	}
 
 	// we should err if an account is being created but the inputs don't have permission
@@ -1093,8 +1094,8 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]ac
 // If it does then we will associate the public key with the stub account already registered in the system once and
 // for all time.
 func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
-	if acc.PublicKey().Unwrap() == nil {
-		if in.PublicKey.Unwrap() == nil {
+	if !acc.PublicKey().IsValid() {
+		if !in.PublicKey.IsValid() {
 			return txs.ErrTxUnknownPubKey
 		}
 		addressFromPubKey := in.PublicKey.Address()
@@ -1104,12 +1105,12 @@ func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
 		}
 		acc.SetPublicKey(in.PublicKey)
 	} else {
-		in.PublicKey = acm.PublicKey{}
+		in.PublicKey = crypto.PublicKey{}
 	}
 	return nil
 }
 
-func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (uint64, error) {
+func validateInputs(accs map[crypto.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (uint64, error) {
 	total := uint64(0)
 	for _, in := range ins {
 		acc := accs[in.Address]
@@ -1132,7 +1133,7 @@ func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) er
 		return err
 	}
 	// Check signatures
-	if !acc.PublicKey().VerifyBytes(signBytes, in.Signature) {
+	if !acc.PublicKey().Verify(signBytes, in.Signature) {
 		return txs.ErrTxInvalidSignature
 	}
 	// Check sequences
@@ -1162,7 +1163,7 @@ func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*txs.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1187,7 +1188,7 @@ func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput,
 	return nil
 }
 
-func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutput) error {
+func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*txs.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
@@ -1237,7 +1238,7 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptyp
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
+func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Send, logger) {
@@ -1262,7 +1263,7 @@ func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Acco
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -1277,7 +1278,7 @@ func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.Account,
+func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
@@ -97,7 +98,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -113,7 +114,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -129,7 +130,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -165,11 +166,11 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			from, err := acm.AddressFromBytes(param.From)
+			from, err := crypto.AddressFromBytes(param.From)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -185,7 +186,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			from, err := acm.AddressFromBytes(param.From)
+			from, err := crypto.AddressFromBytes(param.From)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -226,7 +227,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.MaybeAddressFromBytes(param.Address)
+			address, err := crypto.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -247,7 +248,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.MaybeAddressFromBytes(param.Address)
+			address, err := crypto.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -267,7 +268,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			toAddress, err := crypto.AddressFromBytes(param.ToAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -288,7 +289,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			toAddress, err := crypto.AddressFromBytes(param.ToAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -449,7 +450,7 @@ func signingAccount(accounts *execution.Accounts, inputAccount InputAccount) (*e
 		if len(inputAccount.PrivateKey) > 0 {
 			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
 		}
-		address, err := acm.AddressFromBytes(inputAccount.Address)
+		address, err := crypto.AddressFromBytes(inputAccount.Address)
 		if err != nil {
 			return nil, err
 		}

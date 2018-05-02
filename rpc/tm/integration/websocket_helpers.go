@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
@@ -245,7 +245,7 @@ func readResponse(r rpctypes.RPCResponse) (*rpc.ResultEvent, error) {
 
 //--------------------------------------------------------------------------------
 
-func unmarshalValidateSend(amt uint64, toAddr acm.Address, resultEvent *rpc.ResultEvent) error {
+func unmarshalValidateSend(amt uint64, toAddr crypto.Address, resultEvent *rpc.ResultEvent) error {
 	data := resultEvent.EventDataTx
 	if data == nil {
 		return fmt.Errorf("event data %v is not EventDataTx", resultEvent)
@@ -294,7 +294,7 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 	}
 }
 
-func unmarshalValidateCall(origin acm.Address, returnCode []byte, txid *[]byte) resultEventChecker {
+func unmarshalValidateCall(origin crypto.Address, returnCode []byte, txid *[]byte) resultEventChecker {
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 		data := resultEvent.EventDataCall
 		if data == nil {

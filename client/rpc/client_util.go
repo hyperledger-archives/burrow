@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -30,8 +30,8 @@ import (
 
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
-func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, txs.Tx, error) {
-	signBytes := acm.SignBytes(chainID, tx_)
+func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (crypto.Address, txs.Tx, error) {
+	signBytes := crypto.SignBytes(chainID, tx_)
 	var err error
 	switch tx := tx_.(type) {
 	case *txs.SendTx:
@@ -71,12 +71,12 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, 
 		return signAddress, tx, err
 
 	default:
-		return acm.ZeroAddress, nil, fmt.Errorf("unknown transaction type for signTx: %#v", tx_)
+		return crypto.ZeroAddress, nil, fmt.Errorf("unknown transaction type for signTx: %#v", tx_)
 	}
 }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,
-	sequenceS string) (pub acm.PublicKey, amt uint64, sequence uint64, err error) {
+	sequenceS string) (pub crypto.PublicKey, amt uint64, sequence uint64, err error) {
 
 	if amtS == "" {
 		err = fmt.Errorf("input must specify an amount with the --amt flag")
@@ -99,7 +99,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			err = fmt.Errorf("pubkey is bad hex: %v", err)
 			return
 		}
-		pub, err = acm.PublicKeyFromBytes(pubKeyBytes)
+		pub, err = crypto.PublicKeyFromBytes(pubKeyBytes, crypto.CurveTypeEd25519)
 		if err != nil {
 			return
 		}
@@ -110,7 +110,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 			err = fmt.Errorf("Bad hex string for address (%s): %v", addr, err)
 			return
 		}
-		address, err2 := acm.AddressFromBytes(addressBytes)
+		address, err2 := crypto.AddressFromBytes(addressBytes)
 		if err2 != nil {
 			err = fmt.Errorf("Could not convert bytes (%X) to address: %v", addressBytes, err2)
 		}
@@ -121,7 +121,7 @@ func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		}
 	}
 
-	var address acm.Address
+	var address crypto.Address
 	address = pub.Address()
 
 	amt, err = strconv.ParseUint(amtS, 10, 64)

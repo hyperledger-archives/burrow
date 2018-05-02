@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
@@ -74,7 +75,7 @@ type ResultGetBlock struct {
 type ResultStatus struct {
 	NodeInfo          p2p.NodeInfo
 	GenesisHash       []byte
-	PubKey            acm.PublicKey
+	PubKey            crypto.PublicKey
 	LatestBlockHash   []byte
 	LatestBlockHeight uint64
 	LatestBlockTime   int64
@@ -136,8 +137,8 @@ type ResultGetAccount struct {
 }
 
 type AccountHumanReadable struct {
-	Address     acm.Address
-	PublicKey   acm.PublicKey
+	Address     crypto.Address
+	PublicKey   crypto.PublicKey
 	Sequence    uint64
 	Balance     uint64
 	Code        []string

@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
@@ -171,7 +171,7 @@ func TestWSCallWait(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 		code, returnCode, returnVal := simpleContract()
-		var contractAddr acm.Address
+		var contractAddr crypto.Address
 		eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
 		subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 		// wait for the contract to be created

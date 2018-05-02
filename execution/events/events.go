@@ -6,19 +6,19 @@ import (
 	"fmt"
 	"reflect"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tmthrgd/go-hex"
 )
 
-func EventStringAccountInput(addr acm.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
-func EventStringAccountOutput(addr acm.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
-func EventStringNameReg(name string) string            { return fmt.Sprintf("NameReg/%s", name) }
-func EventStringPermissions(name string) string        { return fmt.Sprintf("Permissions/%s", name) }
-func EventStringBond() string                          { return "Bond" }
-func EventStringUnbond() string                        { return "Unbond" }
-func EventStringRebond() string                        { return "Rebond" }
+func EventStringAccountInput(addr crypto.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
+func EventStringAccountOutput(addr crypto.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
+func EventStringNameReg(name string) string               { return fmt.Sprintf("NameReg/%s", name) }
+func EventStringPermissions(name string) string           { return fmt.Sprintf("Permissions/%s", name) }
+func EventStringBond() string                             { return "Bond" }
+func EventStringUnbond() string                           { return "Unbond" }
+func EventStringRebond() string                           { return "Rebond" }
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {
@@ -65,7 +65,7 @@ func (edTx *EventDataTx) UnmarshalJSON(data []byte) error {
 
 // Publish/Subscribe
 func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
-	address acm.Address, txHash []byte, ch chan<- *txs.SendTx) error {
+	address crypto.Address, txHash []byte, ch chan<- *txs.SendTx) error {
 
 	query := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
 		AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
@@ -80,7 +80,7 @@ func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscr
 	})
 }
 
-func PublishAccountOutput(publisher event.Publisher, address acm.Address, txHash []byte,
+func PublishAccountOutput(publisher event.Publisher, address crypto.Address, txHash []byte,
 	tx txs.Tx, ret []byte, exception string) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountOutput(address),
@@ -96,7 +96,7 @@ func PublishAccountOutput(publisher event.Publisher, address acm.Address, txHash
 		})
 }
 
-func PublishAccountInput(publisher event.Publisher, address acm.Address, txHash []byte,
+func PublishAccountInput(publisher event.Publisher, address crypto.Address, txHash []byte,
 	tx txs.Tx, ret []byte, exception string) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountInput(address),

@@ -125,6 +125,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/howeyc/gopass"
+  packages = ["."]
+  revision = "bf9dde6d0d2c004a008c27aaee91170c786f6db8"
+
+[[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
   revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
@@ -350,22 +356,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  name = "github.com/wayn3h0/go-uuid"
-  packages = [
-    ".",
-    "internal/dcesecurity",
-    "internal/layout",
-    "internal/namebased",
-    "internal/namebased/md5",
-    "internal/namebased/sha1",
-    "internal/random",
-    "internal/timebased",
-    "internal/version"
-  ]
-  revision = "1622016a49b50139b1ac263e6ef2804226b3dec6"
-  version = "v2.2.1"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -376,9 +366,12 @@
     "nacl/secretbox",
     "openpgp/armor",
     "openpgp/errors",
+    "pbkdf2",
     "poly1305",
     "ripemd160",
-    "salsa20/salsa"
+    "salsa20/salsa",
+    "scrypt",
+    "ssh/terminal"
   ]
   revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
 
@@ -399,7 +392,10 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
 
 [[projects]]
@@ -474,6 +470,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a434dee26127011ec236d80b300051d321f012ce49cd77b1112034c15e54ac3e"
+  inputs-digest = "2a58c6e6ec7d2792452873c5cb57032cc6d1a4750345647f562a8c9e8bc1e0b4"
   solver-name = "gps-cdcl"
   solver-version = 1

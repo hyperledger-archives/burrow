@@ -6,13 +6,14 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
 type CallTx struct {
 	Input *TxInput
 	// Pointer since CallTx defines unset 'to' address as inducing account creation
-	Address  *acm.Address
+	Address  *crypto.Address
 	GasLimit uint64
 	Fee      uint64
 	Data     []byte
@@ -21,7 +22,7 @@ type CallTx struct {
 
 var _ Tx = &CallTx{}
 
-func NewCallTx(st state.AccountGetter, from acm.PublicKey, to *acm.Address, data []byte,
+func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
 	addr := from.Address()
@@ -37,7 +38,7 @@ func NewCallTx(st state.AccountGetter, from acm.PublicKey, to *acm.Address, data
 	return NewCallTxWithSequence(from, to, data, amt, gasLimit, fee, sequence), nil
 }
 
-func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
+func NewCallTxWithSequence(from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
 		Address:   from.Address(),
@@ -62,7 +63,7 @@ func (tx *CallTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner)
 	}
 	var err error
 	tx.Input.PublicKey = signingAccounts[0].PublicKey()
-	tx.Input.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	tx.Input.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
 	if err != nil {
 		return fmt.Errorf("could not sign %v: %v", tx, err)
 	}

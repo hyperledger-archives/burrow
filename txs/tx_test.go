@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/permission/snatives"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,7 @@ import (
 
 var chainID = "myChainID"
 
-func makeAddress(str string) (address acm.Address) {
+func makeAddress(str string) (address crypto.Address) {
 	copy(address[:], ([]byte)(str))
 	return
 }
@@ -59,7 +60,7 @@ func TestSendTxSignable(t *testing.T) {
 			},
 		},
 	}
-	signBytes := acm.SignBytes(chainID, sendTx)
+	signBytes := crypto.SignBytes(chainID, sendTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"outputs":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
 		chainID, sendTx.Inputs[0].Address.String(), sendTx.Inputs[1].Address.String(), sendTx.Outputs[0].Address.String(), sendTx.Outputs[1].Address.String())
@@ -82,7 +83,7 @@ func TestCallTxSignable(t *testing.T) {
 		Fee:      222,
 		Data:     []byte("data1"),
 	}
-	signBytes := acm.SignBytes(chainID, callTx)
+	signBytes := crypto.SignBytes(chainID, callTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[2,{"address":"%s","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"%s","amount":12345,"sequence":67890}}]}`,
 		chainID, callTx.Address.String(), callTx.Input.Address.String())
@@ -102,7 +103,7 @@ func TestNameTxSignable(t *testing.T) {
 		Data: "secretly.not.google.com",
 		Fee:  1000,
 	}
-	signBytes := acm.SignBytes(chainID, nameTx)
+	signBytes := crypto.SignBytes(chainID, nameTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"%s","amount":12345,"sequence":250},"name":"google.com"}]}`,
 		chainID, nameTx.Input.Address.String())
@@ -141,7 +142,7 @@ func TestBondTxSignable(t *testing.T) {
 	expected := fmt.Sprintf(`{"chain_id":"%s",`+
 		`"tx":[17,{"inputs":[{"address":"%s",`+
 		`"amount":12345,"sequence":67890},{"address":"%s",`+
-		`"amount":111,"sequence":222}],"pub_key":[1,"%X"],`+
+		`"amount":111,"sequence":222}],"pub_key":{"CurveType":1,"PublicKey":"%X"},`+
 		`"unbond_to":[{"address":"%s",`+
 		`"amount":333},{"address":"%s",`+
 		`"amount":444}]}]}`,
@@ -152,7 +153,7 @@ func TestBondTxSignable(t *testing.T) {
 		bondTx.UnbondTo[0].Address.String(),
 		bondTx.UnbondTo[1].Address.String())
 
-	assert.Equal(t, expected, string(acm.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
+	assert.Equal(t, expected, string(crypto.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
 }
 
 func TestUnbondTxSignable(t *testing.T) {
@@ -160,7 +161,7 @@ func TestUnbondTxSignable(t *testing.T) {
 		Address: makeAddress("address1"),
 		Height:  111,
 	}
-	signBytes := acm.SignBytes(chainID, unbondTx)
+	signBytes := crypto.SignBytes(chainID, unbondTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[18,{"address":"%s","height":111}]}`,
 		chainID, unbondTx.Address.String())
@@ -174,7 +175,7 @@ func TestRebondTxSignable(t *testing.T) {
 		Address: makeAddress("address1"),
 		Height:  111,
 	}
-	signBytes := acm.SignBytes(chainID, rebondTx)
+	signBytes := crypto.SignBytes(chainID, rebondTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[19,{"address":"%s","height":111}]}`,
 		chainID, rebondTx.Address.String())
@@ -193,7 +194,7 @@ func TestPermissionsTxSignable(t *testing.T) {
 		PermArgs: snatives.SetBaseArgs(makeAddress("address1"), 1, true),
 	}
 
-	signBytes := acm.SignBytes(chainID, permsTx)
+	signBytes := crypto.SignBytes(chainID, permsTx)
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[31,{"args":"{"PermFlag":%v,"Address":"%s","Permission":1,"Value":true}","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
 		chainID, ptypes.SetBase, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
@@ -219,10 +220,10 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 }
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {
-	privateKey := acm.PrivateKeyFromSecret("Shhh...")
+	privateKey := crypto.PrivateKeyFromSecret("Shhh...", crypto.CurveTypeEd25519)
 
-	args := snatives.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
-	permTx := NewPermissionsTxWithSequence(privateKey.PublicKey(), args, 1)
+	args := snatives.SetBaseArgs(privateKey.GetPublicKey().Address(), ptypes.HasRole, true)
+	permTx := NewPermissionsTxWithSequence(privateKey.GetPublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 }
 

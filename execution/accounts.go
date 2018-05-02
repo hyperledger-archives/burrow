@@ -6,6 +6,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	burrow_sync "github.com/hyperledger/burrow/sync"
 )
@@ -20,7 +21,7 @@ type Accounts struct {
 
 type SigningAccount struct {
 	acm.Account
-	acm.Signer
+	crypto.Signer
 }
 
 type SequentialSigningAccount struct {
@@ -36,7 +37,7 @@ func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) 
 		keyClient: keyClient,
 	}
 }
-func (accs *Accounts) SigningAccount(address acm.Address, signer acm.Signer) (*SigningAccount, error) {
+func (accs *Accounts) SigningAccount(address crypto.Address, signer crypto.Signer) (*SigningAccount, error) {
 	account, err := state.GetMutableAccount(accs, address)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (accs *Accounts) SigningAccount(address acm.Address, signer acm.Signer) (*S
 	}, nil
 }
 
-func (accs *Accounts) SequentialSigningAccount(address acm.Address) *SequentialSigningAccount {
+func (accs *Accounts) SequentialSigningAccount(address crypto.Address) *SequentialSigningAccount {
 	signer := keys.Signer(accs.keyClient, address)
 	return &SequentialSigningAccount{
 		accountLocker: accs.Mutex(address.Bytes()),

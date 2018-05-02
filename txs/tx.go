@@ -21,6 +21,7 @@ import (
 	"io"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire/data"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -99,7 +100,7 @@ type Decoder interface {
 type Receipt struct {
 	TxHash          []byte
 	CreatesContract bool
-	ContractAddress acm.Address
+	ContractAddress crypto.Address
 }
 
 type Wrapper struct {
@@ -153,7 +154,7 @@ func (thm *txHashMemoizer) hash(chainID string, tx Tx) []byte {
 }
 
 func TxHash(chainID string, tx Tx) []byte {
-	signBytes := acm.SignBytes(chainID, tx)
+	signBytes := crypto.SignBytes(chainID, tx)
 	hasher := ripemd160.New()
 	hasher.Write(signBytes)
 	// Calling Sum(nil) just gives us the digest with nothing prefixed
@@ -167,7 +168,7 @@ func GenerateReceipt(chainId string, tx Tx) Receipt {
 	if callTx, ok := tx.(*CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
-			receipt.ContractAddress = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
 		} else {
 			receipt.ContractAddress = *callTx.Address
 		}

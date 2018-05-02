@@ -14,7 +14,7 @@
 
 package execution
 
-import "github.com/hyperledger/burrow/account"
+import "github.com/hyperledger/burrow/crypto"
 
 // NameReg provides a global key value store based on Name, Data pairs that are subject to expiry and ownership by an
 // account.
@@ -22,7 +22,7 @@ type NameRegEntry struct {
 	// registered name for the entry
 	Name string
 	// address that created the entry
-	Owner account.Address
+	Owner crypto.Address
 	// data to store under this name
 	Data string
 	// block at which this entry expires

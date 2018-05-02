@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -408,7 +409,7 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### SIMPLE CONTRACT")
 
 	// create simple contract
-	simpleContractAddr := acm.NewContractAddress(users[0].Address(), 100)
+	simpleContractAddr := crypto.NewContractAddress(users[0].Address(), 100)
 	simpleAcc := acm.ConcreteAccount{
 		Address:     simpleContractAddr,
 		Balance:     0,
@@ -432,7 +433,7 @@ func TestCallPermission(t *testing.T) {
 
 	// create contract that calls the simple contract
 	contractCode := callContractCode(simpleContractAddr)
-	caller1ContractAddr := acm.NewContractAddress(users[0].Address(), 101)
+	caller1ContractAddr := crypto.NewContractAddress(users[0].Address(), 101)
 	caller1Acc := acm.ConcreteAccount{
 		Address:     caller1ContractAddr,
 		Balance:     10000,
@@ -476,7 +477,7 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (FAIL)")
 
 	contractCode2 := callContractCode(caller1ContractAddr)
-	caller2ContractAddr := acm.NewContractAddress(users[0].Address(), 102)
+	caller2ContractAddr := crypto.NewContractAddress(users[0].Address(), 102)
 	caller2Acc := acm.ConcreteAccount{
 		Address:     caller2ContractAddr,
 		Balance:     1000,
@@ -542,7 +543,7 @@ func TestCreatePermission(t *testing.T) {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
-	contractAddr := acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAddr := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
 	contractAcc := getAccount(batchCommitter.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -567,7 +568,7 @@ func TestCreatePermission(t *testing.T) {
 		t.Fatal("Transaction failed", err)
 	}
 	// ensure the contract is there
-	contractAddr = acm.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAddr = crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
 	contractAcc = getAccount(batchCommitter.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -607,9 +608,9 @@ func TestCreatePermission(t *testing.T) {
 
 	//--------------------------------
 	fmt.Println("\n##### CALL to empty address")
-	code := callContractCode(acm.Address{})
+	code := callContractCode(crypto.Address{})
 
-	contractAddr = acm.NewContractAddress(users[0].Address(), 110)
+	contractAddr = crypto.NewContractAddress(users[0].Address(), 110)
 	contractAcc = acm.ConcreteAccount{
 		Address:     contractAddr,
 		Balance:     1000,
@@ -626,11 +627,11 @@ func TestCreatePermission(t *testing.T) {
 	tx, _ = txs.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), &contractAddr, createCode, 100, 10000, 100)
 	tx.Sign(testChainID, users[0])
 	// we need to subscribe to the Call event to detect the exception
-	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(acm.Address{})) //
+	_, exception = execTxWaitEvent(t, batchCommitter, tx, evm_events.EventStringAccountCall(crypto.Address{})) //
 	if exception != "" {
 		t.Fatal("unexpected exception", exception)
 	}
-	zeroAcc := getAccount(batchCommitter.stateCache, acm.Address{})
+	zeroAcc := getAccount(batchCommitter.stateCache, crypto.Address{})
 	if len(zeroAcc.Code()) != 0 {
 		t.Fatal("the zero account was given code from a CALL!")
 	}
@@ -736,7 +737,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	// call to contract that calls unknown account - without create_account perm
 	// create contract that calls the simple contract
 	contractCode := callContractCode(users[9].Address())
-	caller1ContractAddr := acm.NewContractAddress(users[4].Address(), 101)
+	caller1ContractAddr := crypto.NewContractAddress(users[4].Address(), 101)
 	caller1Acc := acm.ConcreteAccount{
 		Address:     caller1ContractAddr,
 		Balance:     0,
@@ -775,7 +776,7 @@ func TestCreateAccountPermission(t *testing.T) {
 }
 
 // holla at my boy
-var DougAddress acm.Address
+var DougAddress crypto.Address
 
 func init() {
 	copy(DougAddress[:], ([]byte)("THISISDOUG"))
@@ -1072,7 +1073,7 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *NameRegEntry, name, data string, addr acm.Address, expires uint64) {
+	validateEntry := func(t *testing.T, entry *NameRegEntry, name, data string, addr crypto.Address, expires uint64) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
@@ -1721,12 +1722,12 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	return s0, privAccounts
 }
 
-func getAccount(accountGetter state.AccountGetter, address acm.Address) acm.MutableAccount {
+func getAccount(accountGetter state.AccountGetter, address crypto.Address) acm.MutableAccount {
 	acc, _ := state.GetMutableAccount(accountGetter, address)
 	return acc
 }
 
-func addressPtr(account acm.Account) *acm.Address {
+func addressPtr(account acm.Account) *crypto.Address {
 	if account == nil {
 		return nil
 	}
@@ -1775,18 +1776,18 @@ func execTxWaitEvent(t *testing.T, batchCommitter *executor, tx txs.Tx, eventid 
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
 func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, doug acm.MutableAccount,
-	snativeAddress acm.Address, data []byte) {
+	snativeAddress crypto.Address, data []byte) {
 	testSNativeCALL(t, false, batchCommitter, doug, 0, snativeAddress, data, nil)
 }
 
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
 func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
-	snativeAddress acm.Address, data []byte, f func([]byte) error) {
+	snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	testSNativeCALL(t, true, batchCommitter, doug, snativePerm, snativeAddress, data, f)
 }
 
 func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, doug acm.MutableAccount,
-	snativePerm ptypes.PermFlag, snativeAddress acm.Address, data []byte, f func([]byte) error) {
+	snativePerm ptypes.PermFlag, snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	if expectPass {
 		doug.MutablePermissions().Base.Set(snativePerm, true)
 	}
@@ -1868,7 +1869,7 @@ func permNameToFuncID(name string) []byte {
 }
 
 func snativePermTestInputCALL(name string, user acm.AddressableSigner, perm ptypes.PermFlag,
-	val bool) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
+	val bool) (addr crypto.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	switch name {
 	case "hasBase", "unsetBase":
@@ -1907,7 +1908,7 @@ func snativePermTestInputTx(name string, user acm.AddressableSigner, perm ptypes
 }
 
 func snativeRoleTestInputCALL(name string, user acm.AddressableSigner,
-	role string) (addr acm.Address, pF ptypes.PermFlag, data []byte) {
+	role string) (addr crypto.Address, pF ptypes.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	data = user.Address().Word256().Bytes()
 	data = append(data, RightPadBytes([]byte(role), 32)...)
@@ -1933,7 +1934,7 @@ func snativeRoleTestInputTx(name string, user acm.AddressableSigner, role string
 }
 
 // convenience function for contract that calls a given address
-func callContractCode(contractAddr acm.Address) []byte {
+func callContractCode(contractAddr crypto.Address) []byte {
 	// calldatacopy into mem and use as input to call
 	memOff, inputOff := byte(0x0), byte(0x0)
 	value := byte(0x1)

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
@@ -36,8 +37,8 @@ const ShortHashSuffixBytes = 3
 
 type BasicAccount struct {
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address   acm.Address
-	PublicKey acm.PublicKey
+	Address   crypto.Address
+	PublicKey crypto.PublicKey
 	Amount    uint64
 }
 

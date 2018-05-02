@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
@@ -35,13 +35,12 @@ type TemplateAccount struct {
 	// Template accounts sharing a name will be merged when merging genesis specs
 	Name string `json:",omitempty" toml:",omitempty"`
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address   *acm.Address   `json:",omitempty" toml:",omitempty"`
-	PublicKey *acm.PublicKey `json:",omitempty" toml:",omitempty"`
-	Amount    *uint64        `json:",omitempty" toml:",omitempty"`
-	// If any bonded amount then this account is also a Validator
-	AmountBonded *uint64  `json:",omitempty" toml:",omitempty"`
-	Permissions  []string `json:",omitempty" toml:",omitempty"`
-	Roles        []string `json:",omitempty" toml:",omitempty"`
+	Address      *crypto.Address   `json:",omitempty" toml:",omitempty"`
+	PublicKey    *crypto.PublicKey `json:",omitempty" toml:",omitempty"`
+	Amount       *uint64           `json:",omitempty" toml:",omitempty"`
+	AmountBonded *uint64           `json:",omitempty" toml:",omitempty"`
+	Permissions  []string          `json:",omitempty" toml:",omitempty"`
+	Roles        []string          `json:",omitempty" toml:",omitempty"`
 }
 
 func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
@@ -111,11 +110,11 @@ func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey acm.PublicKey, address acm.Address, err error) {
+func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one
-			address, err = keyClient.Generate(ta.Name, keys.KeyTypeEd25519Ripemd160)
+			address, err = keyClient.Generate(ta.Name, crypto.CurveTypeEd25519)
 			if err != nil {
 				return
 			}
@@ -128,7 +127,7 @@ func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pub
 			return
 		}
 	} else {
-		address = ta.PublicKey.Address()
+		address = (*ta.PublicKey).Address()
 		if ta.Address != nil && *ta.Address != address {
 			err = fmt.Errorf("template address %s does not match public key derived address %s", ta.Address,
 				ta.PublicKey)

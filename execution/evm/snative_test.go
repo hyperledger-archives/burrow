@@ -22,6 +22,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
@@ -66,10 +67,10 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	contract := SNativeContracts()["Permissions"]
 	state := newAppState()
 	caller := acm.ConcreteAccount{
-		Address: acm.Address{1, 1, 1},
+		Address: crypto.Address{1, 1, 1},
 	}.MutableAccount()
 	grantee := acm.ConcreteAccount{
-		Address: acm.Address{2, 2, 2},
+		Address: crypto.Address{2, 2, 2},
 	}.MutableAccount()
 	state.UpdateAccount(grantee)
 

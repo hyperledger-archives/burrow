@@ -2,6 +2,7 @@ package evm
 
 import (
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
@@ -19,7 +20,7 @@ func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPerm
 		"new_sequence", sequence+1)
 	creator.IncSequence()
 
-	addr := acm.NewContractAddress(creator.Address(), sequence)
+	addr := crypto.NewContractAddress(creator.Address(), sequence)
 
 	// Create account from address.
 	return acm.ConcreteAccount{
