@@ -13,7 +13,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/cep21/xdgbasedir"
 	"github.com/imdario/mergo"
-	"regexp"
 )
 
 // If passed this identifier try to read config from STDIN
@@ -39,8 +38,6 @@ const (
 	TOML    Format = "TOML"
 	Unknown Format = ""
 )
-
-var jsonRegex = regexp.MustCompile(`\s*{`)
 
 type configSource struct {
 	from  string
@@ -211,7 +208,8 @@ func FromString(configString string, conf interface{}) error {
 }
 
 func DetectFormat(configString string) Format {
-	if jsonRegex.MatchString(configString) {
+	trimmed := strings.TrimSpace(configString)
+	if len(trimmed) > 0 && trimmed[0] == '{' {
 		return JSON
 	}
 	return TOML
