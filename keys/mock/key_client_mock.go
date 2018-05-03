@@ -25,11 +25,11 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
+	"github.com/pkg/errors"
 	"github.com/tendermint/ed25519"
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/pkg/errors"
 )
 
 //---------------------------------------------------------------------
