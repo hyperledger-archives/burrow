@@ -10,10 +10,11 @@ import (
 	"reflect"
 	"strings"
 
+	"regexp"
+
 	"github.com/BurntSushi/toml"
 	"github.com/cep21/xdgbasedir"
 	"github.com/imdario/mergo"
-	"regexp"
 )
 
 // If passed this identifier try to read config from STDIN
@@ -40,7 +41,7 @@ const (
 	Unknown Format = ""
 )
 
-var jsonRegex = regexp.MustCompile(`\s*{`)
+var jsonRegex = regexp.MustCompile(`^\s*{`)
 
 type configSource struct {
 	from  string
@@ -130,9 +131,15 @@ func EachOf(providers ...ConfigProvider) *configSource {
 // Try to source config from provided file detecting the file format, is skipNonExistent is true then the provider will
 // fall-through (skip) when the file doesn't exist, rather than returning an error
 func File(configFile string, skipNonExistent bool) *configSource {
+	var from string
+	if configFile == STDINFileIdentifier {
+		from = "Config from STDIN"
+	} else {
+		from = fmt.Sprintf("Config file at '%s'", configFile)
+	}
 	return &configSource{
 		skip: ShouldSkipFile(configFile, skipNonExistent),
-		from: fmt.Sprintf("JSON config file at '%s'", configFile),
+		from: from,
 		apply: func(baseConfig interface{}) error {
 			return FromFile(configFile, baseConfig)
 		},

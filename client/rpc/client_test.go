@@ -55,7 +55,7 @@ func testSend(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
-	addressString := keyClient.NewKey().String()
+	addressString := keyClient.NewKey("").String()
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
@@ -63,7 +63,7 @@ func testSend(t *testing.T,
 	// to address in generated transation.
 	publicKeyString := ""
 	// generate an additional address to send amount to
-	toAddressString := keyClient.NewKey().String()
+	toAddressString := keyClient.NewKey("").String()
 	// set an amount to transfer
 	amountString := "1000"
 	// unset sequence so that we retrieve sequence from account
@@ -80,7 +80,7 @@ func testCall(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
-	addressString := keyClient.NewKey().String()
+	addressString := keyClient.NewKey("").String()
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
@@ -88,7 +88,7 @@ func testCall(t *testing.T,
 	// to address in generated transation.
 	publicKeyString := ""
 	// generate an additional address to send amount to
-	toAddressString := keyClient.NewKey().String()
+	toAddressString := keyClient.NewKey("").String()
 	// set an amount to transfer
 	amountString := "1000"
 	// unset sequence so that we retrieve sequence from account
@@ -113,7 +113,7 @@ func testName(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
-	addressString := keyClient.NewKey().String()
+	addressString := keyClient.NewKey("").String()
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
@@ -144,7 +144,7 @@ func testPermissions(t *testing.T,
 	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
-	addressString := keyClient.NewKey().String()
+	addressString := keyClient.NewKey("").String()
 	// Public key can be queried from mockKeyClient.PublicKey(address)
 	// but here we let the transaction factory retrieve the public key
 	// which will then also overwrite the address we provide the function.
@@ -152,7 +152,7 @@ func testPermissions(t *testing.T,
 	// to address in generated transation.
 	publicKeyString := ""
 	// generate an additional address to set permissions for
-	permAddressString := keyClient.NewKey().String()
+	permAddressString := keyClient.NewKey("").String()
 	// unset sequence so that we retrieve sequence from account
 	sequenceString := ""
 

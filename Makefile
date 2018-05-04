@@ -105,8 +105,9 @@ build_race:	check build_race_db build_race_client
 # build burrow
 .PHONY: build_db
 build_db: commit_hash
-	go build -ldflags "-extldflags '-static' -X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)"\
-	 -o ${REPO}/bin/burrow ./cmd/burrow
+	go build -ldflags "-extldflags '-static' \
+	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
+	-o ${REPO}/bin/burrow ./cmd/burrow
 
 .PHONY: install_db
 install_db: build_db
@@ -115,8 +116,9 @@ install_db: build_db
 # build burrow-client
 .PHONY: build_client
 build_client: commit_hash
-	go build -ldflags "-extldflags '-static' -X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)"\
-	 -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
+	go build -ldflags "-extldflags '-static' \
+	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
+	-o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db

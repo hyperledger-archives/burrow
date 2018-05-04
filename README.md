@@ -18,8 +18,11 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 - **Application Binary Interface (ABI):** transactions need to be formulated in a binary format that can be processed by the blockchain node. Current tooling provides functionality to compile, deploy and link solidity smart contracts and formulate transactions to call smart contracts on the chain.
 - **API Gateway:** Burrow exposes REST and JSON-RPC endpoints to interact with the blockchain network and the application state through broadcasting transactions, or querying the current state of the application. Websockets allow to subscribe to events, which is particularly valuable as the consensus engine and smart contract application can give unambiguously finalised results to transactions within one blocktime of about one second.
 
-## Installation
+## Project documentation and Roadmap
 
+Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/projects/burrow).
+
+## Installation
 
 - [Install go](https://golang.org/doc/install) and have `$GOPATH` set
 - Ensure you have `gmp` installed (`sudo apt-get install libgmp3-dev || brew install gmp`)
@@ -32,34 +35,53 @@ make build
 
 This will build the `burrow` and `burrow-client` binaries and put them in the `bin/` directory. They can be executed from there or put wherever is convenient.
 
+You can also install `burrow` into `$GOPATH/bin` with `make install_db`,
+
 ## Usage
 
 The end result will be a `burrow.toml` that will be read in from your current working directory when starting `burrow`.
 
 ### Configuration
 
-Note: here we'll need `monax-keys` to start the keys server (TODO, where?)
+#### Install monax-keys
+Monax-keys is our key-signing daemon. In a future release this will be merged with Burrow and will support a GPG backend
+in addition to the development mode that monax-keys currently supplies.
 
+We need to run monax-keys so that `burrow configure` can generate keys for us in the following step.
+```shell
+# Install monax-keys
+go get -u github.com/monax/bosmarmot/keys/cmd/monax-keys
+# run monax-keys server in background
+monax-keys server &
+```
+
+#### Configure Burrow
 The quick-and-dirty one-liner looks like:
 
-```
-burrow spec -p1 -f1 | burrow configure -s- -v0
+```shell
+# Read spec on stdin
+burrow spec -p1 -f1 | burrow configure -s- > burrow.toml
 ```
 
 which translates into:
 
-```
+```shell
+# This is a place we can store config files and burrow's working directory '.burrow'
+mkdir chain_dir && cd chain_dir
 burrow spec --participant-accounts=1 --full-accounts=1 > genesis-spec.json
 burrow configure --genesis-spec=genesis-spec.json --validator-index=0 > burrow.toml
 ```
-
+#### Run Burrow
 Once the `burrow.toml` has been created, we run:
 
 ```
-burrow
+burrow serve
 ```
 
 and the logs will start streaming through.
+
+If you would like to reset your node you can just delete its working directory with `rm -rf .burrow`. In the context of a
+multi-node chain it will resync with peers, otherwise it will restart from height 0.
 
 ### Logging
 
