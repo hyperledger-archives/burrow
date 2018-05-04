@@ -25,11 +25,11 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
+	"github.com/pkg/errors"
 	"github.com/tendermint/ed25519"
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/pkg/errors"
 )
 
 //---------------------------------------------------------------------
@@ -83,6 +83,9 @@ func newMockKey(name string) (*MockKey, error) {
 	key.Address, err = acm.AddressFromBytes(hasher.Sum(nil))
 	if err != nil {
 		return nil, err
+	}
+	if key.Name == "" {
+		key.Name = key.Address.String()
 	}
 	return key, nil
 }

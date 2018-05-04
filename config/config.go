@@ -23,13 +23,16 @@ const DefaultBurrowConfigJSONEnvironmentVariable = "BURROW_CONFIG_JSON"
 const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
-	ValidatorAddress *acm.Address                       `json:",omitempty" toml:",omitempty"`
-	GenesisDoc       *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
-	Tendermint       *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
-	Execution        *execution.ExecutionConfig         `json:",omitempty" toml:",omitempty"`
-	Keys             *keys.KeysConfig                   `json:",omitempty" toml:",omitempty"`
-	RPC              *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
-	Logging          *logging_config.LoggingConfig      `json:",omitempty" toml:",omitempty"`
+	// Set on startup
+	ValidatorAddress    *acm.Address `json:",omitempty" toml:",omitempty"`
+	ValidatorPassphrase *string      `json:",omitempty" toml:",omitempty"`
+	// From config file
+	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
+	Tendermint *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
+	Execution  *execution.ExecutionConfig         `json:",omitempty" toml:",omitempty"`
+	Keys       *keys.KeysConfig                   `json:",omitempty" toml:",omitempty"`
+	RPC        *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
+	Logging    *logging_config.LoggingConfig      `json:",omitempty" toml:",omitempty"`
 }
 
 func DefaultBurrowConfig() *BurrowConfig {
@@ -46,7 +49,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		return nil, fmt.Errorf("no GenesisDoc defined in config, cannot make Kernel")
 	}
 	if conf.ValidatorAddress == nil {
-		return nil, fmt.Errorf("no validator address in config, cannot make Kernel")
+		return nil, fmt.Errorf("no validator address provided, cannot make Kernel")
 	}
 	logger, err := lifecycle.NewLoggerFromLoggingConfig(conf.Logging)
 	if err != nil {
