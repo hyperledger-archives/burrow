@@ -65,7 +65,13 @@ func burrow() *cli.Cli {
 				EnvVar: "BURROW_VALIDATOR_PASSPHRASE",
 			})
 
-			cmd.Spec = "[--config=<config file>] " +
+			validatorMonikerOpt := cmd.String(cli.StringOpt{
+				Name:   "m validator-moniker",
+				Desc:   "An optional human-readable moniker to identify this validator amongst Tendermint peers in logs and status queries",
+				EnvVar: "BURROW_VALIDATOR_MONIKER",
+			})
+
+			cmd.Spec = "[--config=<config file>] [--validator-moniker=<human readable moniker>] " +
 				"[--validator-index=<index of validator in GenesisDoc> | --validator-address=<address of validator signing key>] " +
 				"[--genesis=<genesis json file>]"
 
@@ -114,6 +120,10 @@ func burrow() *cli.Cli {
 
 				if *validatorPassphraseOpt != "" {
 					conf.ValidatorPassphrase = validatorPassphraseOpt
+				}
+
+				if *validatorMonikerOpt != "" {
+					conf.Tendermint.Moniker = *validatorMonikerOpt
 				}
 
 				ctx, cancel := context.WithCancel(context.Background())

@@ -24,8 +24,7 @@ Project information generally updated on a quarterly basis can be found on the [
 
 ## Installation
 
-- [Install go](https://golang.org/doc/install) and have `$GOPATH` set
-- Ensure you have `gmp` installed (`sudo apt-get install libgmp3-dev || brew install gmp`)
+- [Install go](https://golang.org/doc/install) version 1.10 or above and have `$GOPATH` set
 
 ```
 go get github.com/hyperledger/burrow
@@ -69,13 +68,16 @@ which translates into:
 # This is a place we can store config files and burrow's working directory '.burrow'
 mkdir chain_dir && cd chain_dir
 burrow spec --participant-accounts=1 --full-accounts=1 > genesis-spec.json
-burrow configure --genesis-spec=genesis-spec.json --validator-index=0 > burrow.toml
+burrow configure --genesis-spec=genesis-spec.json > burrow.toml
 ```
 #### Run Burrow
 Once the `burrow.toml` has been created, we run:
 
 ```
-burrow serve
+# To select our validator address by index in the GenesisDoc
+burrow serve --validator-index=0 
+# Or to select based on address directly (substituting the example address below with your validator's):
+burrow serve --validator-address=BE584820DC904A55449D7EB0C97607B40224B96E
 ```
 
 and the logs will start streaming through.
