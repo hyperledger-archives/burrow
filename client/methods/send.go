@@ -19,18 +19,17 @@ import (
 
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
-	"github.com/hyperledger/burrow/definitions"
 	"github.com/hyperledger/burrow/keys"
 )
 
-func Send(do *definitions.ClientDo) error {
+func Send(do *client.Do) error {
 	// construct two clients to call out to keys server and
 	// blockchain node.
 	logger, err := loggerFromClientDo(do, "Send")
 	if err != nil {
-		return fmt.Errorf("Could not generate logging config from ClientDo: %s", err)
+		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
-	burrowKeyClient := keys.NewBurrowKeyClient(do.SignAddrFlag, logger)
+	burrowKeyClient := keys.NewKeyClient(do.SignAddrFlag, logger)
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)
 	// form the send transaction
 	sendTransaction, err := rpc.Send(burrowNodeClient, burrowKeyClient,
@@ -38,10 +37,14 @@ func Send(do *definitions.ClientDo) error {
 	if err != nil {
 		fmt.Errorf("Failed on forming Send Transaction: %s", err)
 	}
+	_, chainID, _, err := burrowNodeClient.ChainId()
+	if err != nil {
+		return err
+	}
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
-	txResult, err := rpc.SignAndBroadcast(do.ChainidFlag, burrowNodeClient, burrowKeyClient,
+	txResult, err := rpc.SignAndBroadcast(chainID, burrowNodeClient, burrowKeyClient,
 		sendTransaction, true, do.BroadcastFlag, do.WaitFlag)
 	if err != nil {
 		return fmt.Errorf("Failed on signing (and broadcasting) transaction: %s", err)

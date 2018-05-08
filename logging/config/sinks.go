@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"net/url"
-
 	"github.com/eapache/channels"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/loggers"
@@ -22,11 +20,9 @@ type filterMode string
 const (
 	// OutputType
 	NoOutput outputType = ""
-	Graylog  outputType = "graylog"
-	Syslog   outputType = "syslog"
-	File     outputType = "file"
 	Stdout   outputType = "stdout"
 	Stderr   outputType = "stderr"
+	File     outputType = "file"
 
 	// TransformType
 	NoTransform transformType = ""
@@ -35,16 +31,20 @@ const (
 	// Remove key-val pairs from each log line
 	Prune transformType = "prune"
 	// Add key value pairs to each log line
-	Label   transformType = "label"
-	Capture transformType = "capture"
+	Label     transformType = "label"
+	Capture   transformType = "capture"
+	Sort      transformType = "sort"
+	Vectorise transformType = "vectorise"
+
 	// TODO [Silas]: add 'flush on exit' transform which flushes the buffer of
 	// CaptureLogger to its OutputLogger a non-passthrough capture when an exit
 	// signal is detected or some other exceptional thing happens
 
+	NoFilterMode          filterMode = ""
 	IncludeWhenAllMatch   filterMode = "include_when_all_match"
-	IncludeWhenAnyMatches filterMode = "include_when_any_matches"
+	IncludeWhenAnyMatches filterMode = "include_when_any_match"
 	ExcludeWhenAllMatch   filterMode = "exclude_when_all_match"
-	ExcludeWhenAnyMatches filterMode = "exclude_when_any_matches"
+	ExcludeWhenAnyMatches filterMode = "exclude_when_any_match"
 )
 
 // Only include log lines matching the filter so negate the predicate in filter
@@ -80,63 +80,66 @@ func (mode filterMode) MatchAny() bool {
 // Sink configuration types
 type (
 	// Outputs
-	GraylogConfig struct {
-	}
-
+	// TODO: reintroduce syslog removed when we dropped log15 dependency
 	SyslogConfig struct {
-		Url string `toml:"url"`
-		Tag string `toml:"tag"`
+		Url string
+		Tag string
 	}
 
 	FileConfig struct {
-		Path string `toml:"path"`
+		Path string
 	}
 
 	OutputConfig struct {
-		OutputType outputType `toml:"output_type"`
-		Format     string     `toml:"format,omitempty"`
-		*GraylogConfig
-		*FileConfig
-		*SyslogConfig
+		OutputType    outputType
+		Format        string
+		*FileConfig   `json:",omitempty" toml:",omitempty"`
+		*SyslogConfig `json:",omitempty" toml:",omitempty"`
 	}
 
 	// Transforms
 	LabelConfig struct {
-		Labels map[string]string `toml:"labels"`
-		Prefix bool              `toml:"prefix"`
+		Labels map[string]string
+		Prefix bool
 	}
 
 	PruneConfig struct {
-		Keys []string `toml:"keys"`
+		Keys []string
 	}
 
 	CaptureConfig struct {
-		Name        string `toml:"name"`
-		BufferCap   int    `toml:"buffer_cap"`
-		Passthrough bool   `toml:"passthrough"`
+		Name        string
+		BufferCap   int
+		Passthrough bool
 	}
 
 	// Generates true if KeyRegex matches a log line key and ValueRegex matches that key's value.
 	// If ValueRegex is empty then returns true if any key matches
 	// If KeyRegex is empty then returns true if any value matches
 	KeyValuePredicateConfig struct {
-		KeyRegex   string `toml:"key_regex"`
-		ValueRegex string `toml:"value_regex"`
+		KeyRegex   string
+		ValueRegex string
 	}
 
 	// Filter types
 	FilterConfig struct {
-		FilterMode filterMode `toml:"filter_mode"`
+		FilterMode filterMode
 		// Predicates to match a log line against using FilterMode
-		Predicates []*KeyValuePredicateConfig `toml:"predicates"`
+		Predicates []*KeyValuePredicateConfig
+	}
+
+	SortConfig struct {
+		// Sort keys-values with keys in this list first
+		Keys []string
 	}
 
 	TransformConfig struct {
-		TransformType transformType `toml:"transform_type"`
-		*LabelConfig
-		*PruneConfig
-		*CaptureConfig
-		*FilterConfig
+		TransformType transformType
+		LabelConfig   *LabelConfig   `json:",omitempty" toml:",omitempty"`
+		PruneConfig   *PruneConfig   `json:",omitempty" toml:",omitempty"`
+		CaptureConfig *CaptureConfig `json:",omitempty" toml:",omitempty"`
+		FilterConfig  *FilterConfig  `json:",omitempty" toml:",omitempty"`
+		SortConfig    *SortConfig    `json:",omitempty" toml:",omitempty"`
 	}
 
 	// Sink
@@ -144,9 +147,9 @@ type (
 	// before transmitting its log it applies zero or one transforms to the stream of log lines.
 	// by chaining together many Sinks arbitrary transforms to and multi
 	SinkConfig struct {
-		Transform *TransformConfig `toml:"transform"`
-		Sinks     []*SinkConfig    `toml:"sinks"`
-		Output    *OutputConfig    `toml:"output"`
+		Transform *TransformConfig `json:",omitempty" toml:",omitempty"`
+		Sinks     []*SinkConfig    `json:",omitempty" toml:",omitempty"`
+		Output    *OutputConfig    `json:",omitempty" toml:",omitempty"`
 	}
 )
 
@@ -187,10 +190,6 @@ func StderrOutput() *OutputConfig {
 	}
 }
 
-func SyslogOutput(tag string) *OutputConfig {
-	return RemoteSyslogOutput(tag, "")
-}
-
 func FileOutput(path string) *OutputConfig {
 	return &OutputConfig{
 		OutputType: File,
@@ -200,15 +199,7 @@ func FileOutput(path string) *OutputConfig {
 	}
 }
 
-func RemoteSyslogOutput(tag, remoteUrl string) *OutputConfig {
-	return &OutputConfig{
-		OutputType: Syslog,
-		SyslogConfig: &SyslogConfig{
-			Url: remoteUrl,
-			Tag: tag,
-		},
-	}
-}
+// Transforms
 
 func CaptureTransform(name string, bufferCap int, passthrough bool) *TransformConfig {
 	return &TransformConfig{
@@ -264,13 +255,42 @@ func FilterTransform(fmode filterMode, keyvalueRegexes ...string) *TransformConf
 	}
 }
 
+func (filterConfig *FilterConfig) SetFilterMode(filterMode filterMode) *FilterConfig {
+	filterConfig.FilterMode = filterMode
+	return filterConfig
+}
+
+func (filterConfig *FilterConfig) AddPredicate(keyRegex, valueRegex string) *FilterConfig {
+	filterConfig.Predicates = append(filterConfig.Predicates, &KeyValuePredicateConfig{
+		KeyRegex:   keyRegex,
+		ValueRegex: valueRegex,
+	})
+	return filterConfig
+}
+
+func SortTransform(keys ...string) *TransformConfig {
+	return &TransformConfig{
+		TransformType: Sort,
+		SortConfig: &SortConfig{
+			Keys: keys,
+		},
+	}
+}
+
+func VectoriseTransform() *TransformConfig {
+	return &TransformConfig{
+		TransformType: Vectorise,
+	}
+}
+
 // Logger formation
 func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
 	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
 }
 
-func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
-	captures map[string]*loggers.CaptureLogger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*loggers.CaptureLogger) (kitlog.Logger,
+	map[string]*loggers.CaptureLogger, error) {
+
 	if sinkConfig == nil {
 		return kitlog.NewNopLogger(), captures, nil
 	}
@@ -279,11 +299,11 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	// We need a depth-first post-order over the output loggers so we'll keep
 	// recurring into children sinks we reach a terminal sink (with no children)
 	for i, sc := range sinkConfig.Sinks {
-		l, captures, err := BuildLoggerFromSinkConfig(sc, captures)
+		var err error
+		outputLoggers[i], captures, err = BuildLoggerFromSinkConfig(sc, captures)
 		if err != nil {
-			return nil, captures, err
+			return nil, nil, err
 		}
-		outputLoggers[i] = l
 	}
 
 	// Grab the outputs after we have terminated any children sinks above
@@ -298,7 +318,7 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig,
 	outputLogger := loggers.NewMultipleOutputLogger(outputLoggers...)
 
 	if sinkConfig.Transform != nil && sinkConfig.Transform.TransformType != NoTransform {
-		return BuildTransformLogger(sinkConfig.Transform, captures, outputLogger)
+		return BuildTransformLoggerPassthrough(sinkConfig.Transform, captures, outputLogger)
 	}
 	return outputLogger, captures, nil
 }
@@ -307,41 +327,39 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 	switch outputConfig.OutputType {
 	case NoOutput:
 		return kitlog.NewNopLogger(), nil
-	//case Graylog:
-	case Syslog:
-		urlString := outputConfig.SyslogConfig.Url
-		if urlString != "" {
-			remoteUrl, err := url.Parse(urlString)
-			if err != nil {
-				return nil, fmt.Errorf("Error parsing remote syslog URL: %s, "+
-					"error: %s",
-					urlString, err)
-			}
-			return loggers.NewRemoteSyslogLogger(remoteUrl,
-				outputConfig.SyslogConfig.Tag, outputConfig.Format)
-		}
-		return loggers.NewSyslogLogger(outputConfig.SyslogConfig.Tag,
-			outputConfig.Format)
-	case Stdout:
-		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format), nil
-	case Stderr:
-		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format), nil
 	case File:
 		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
+	case Stdout:
+		return loggers.NewStreamLogger(os.Stdout, outputConfig.Format)
+	case Stderr:
+		return loggers.NewStreamLogger(os.Stderr, outputConfig.Format)
 	default:
-		return nil, fmt.Errorf("Could not build logger for output: '%s'",
+		return nil, fmt.Errorf("could not build logger for output: '%s'",
 			outputConfig.OutputType)
 	}
 }
 
-func BuildTransformLogger(transformConfig *TransformConfig,
-	captures map[string]*loggers.CaptureLogger,
+func BuildTransformLoggerPassthrough(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
 	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+
+	transformThenOutputLogger, captures, err := BuildTransformLogger(transformConfig, captures, outputLogger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return signalPassthroughLogger(outputLogger, transformThenOutputLogger), captures, nil
+}
+
+func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
+	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+
 	switch transformConfig.TransformType {
 	case NoTransform:
 		return outputLogger, captures, nil
 	case Label:
-		keyvals := make([]interface{}, 0, len(transformConfig.Labels)*2)
+		if transformConfig.LabelConfig == nil {
+			return nil, nil, fmt.Errorf("label transform specified but no LabelConfig provided")
+		}
+		keyvals := make([]interface{}, 0, len(transformConfig.LabelConfig.Labels)*2)
 		for k, v := range transformConfig.LabelConfig.Labels {
 			keyvals = append(keyvals, k, v)
 		}
@@ -351,6 +369,9 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 			return kitlog.With(outputLogger, keyvals...), captures, nil
 		}
 	case Prune:
+		if transformConfig.PruneConfig == nil {
+			return nil, nil, fmt.Errorf("prune transform specified but no PruneConfig provided")
+		}
 		keys := make([]interface{}, len(transformConfig.PruneConfig.Keys))
 		for i, k := range transformConfig.PruneConfig.Keys {
 			keys[i] = k
@@ -360,9 +381,12 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 		}), captures, nil
 
 	case Capture:
+		if transformConfig.CaptureConfig == nil {
+			return nil, nil, fmt.Errorf("capture transform specified but no CaptureConfig provided")
+		}
 		name := transformConfig.CaptureConfig.Name
 		if _, ok := captures[name]; ok {
-			return nil, captures, fmt.Errorf("Could not register new logging capture since name '%s' already "+
+			return nil, captures, fmt.Errorf("could not register new logging capture since name '%s' already "+
 				"registered", name)
 		}
 		// Create a capture logger according to configuration (it may tee the output)
@@ -375,12 +399,31 @@ func BuildTransformLogger(transformConfig *TransformConfig,
 		// Pass it upstream to be logged to
 		return captureLogger, captures, nil
 	case Filter:
+		if transformConfig.FilterConfig == nil {
+			return nil, nil, fmt.Errorf("filter transform specified but no FilterConfig provided")
+		}
 		predicate, err := BuildFilterPredicate(transformConfig.FilterConfig)
 		if err != nil {
-			return nil, captures, fmt.Errorf("Could not build filter predicate: '%s'", err)
+			return nil, captures, fmt.Errorf("could not build filter predicate: '%s'", err)
 		}
-		return loggers.NewFilterLogger(outputLogger, predicate), captures, nil
+		return loggers.FilterLogger(outputLogger, predicate), captures, nil
+	case Sort:
+		if transformConfig.SortConfig == nil {
+			return nil, nil, fmt.Errorf("sort transform specified but no SortConfig provided")
+		}
+		return loggers.SortLogger(outputLogger, transformConfig.SortConfig.Keys...), captures, nil
+	case Vectorise:
+		return loggers.VectorValuedLogger(outputLogger), captures, nil
 	default:
-		return nil, captures, fmt.Errorf("Could not build logger for transform: '%s'", transformConfig.TransformType)
+		return nil, captures, fmt.Errorf("could not build logger for transform: '%s'", transformConfig.TransformType)
 	}
+}
+
+func signalPassthroughLogger(ifSignalLogger kitlog.Logger, otherwiseLogger kitlog.Logger) kitlog.Logger {
+	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+		if structure.Signal(keyvals) != "" {
+			return ifSignalLogger.Log(keyvals...)
+		}
+		return otherwiseLogger.Log(keyvals...)
+	})
 }

@@ -18,14 +18,15 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/spf13/cobra"
+	"fmt"
 
-	"github.com/hyperledger/burrow/definitions"
-	"github.com/hyperledger/burrow/version"
+	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/project"
+	"github.com/spf13/cobra"
 )
 
 // Global flags for persistent flags
-var clientDo *definitions.ClientDo
+var clientDo *client.Do
 
 var BurrowClientCmd = &cobra.Command{
 	Use:   "burrow-client",
@@ -35,7 +36,8 @@ var BurrowClientCmd = &cobra.Command{
 Made with <3 by Monax Industries.
 
 Complete documentation is available at https://monax.io/docs
-` + "\nVERSION:\n " + version.GetSemanticVersionString(),
+
+VERSION: ` + project.FullVersion(),
 	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
 }
 
@@ -47,8 +49,8 @@ func Execute() {
 }
 
 func InitBurrowClientInit() {
-	// initialise an empty ClientDo struct for command execution
-	clientDo = definitions.NewClientDo()
+	// initialise an empty Do struct for command execution
+	clientDo = client.NewClientDo()
 }
 
 func AddGlobalFlags() {
@@ -57,12 +59,12 @@ func AddGlobalFlags() {
 }
 
 func AddClientCommands() {
-	BurrowClientCmd.AddCommand(buildTransactionCommand())
-	BurrowClientCmd.AddCommand(buildStatusCommand())
-
-	buildGenesisGenCommand()
-	BurrowClientCmd.AddCommand(GenesisGenCmd)
-
+	BurrowClientCmd.AddCommand(buildTransactionCommand(), buildStatusCommand())
+	BurrowClientCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print full version",
+		Run:   func(cmd *cobra.Command, args []string) { fmt.Println(project.FullVersion()) },
+	})
 }
 
 //------------------------------------------------------------------------------

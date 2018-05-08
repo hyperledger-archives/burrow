@@ -25,7 +25,7 @@ import (
 
 func buildTransactionCommand() *cobra.Command {
 	// Transaction command has subcommands send, name, call, bond,
-	// unbond, rebond, permissions. Dupeout transaction is not accessible through the command line.
+	// unbond, rebond, permissions.
 	transactionCmd := &cobra.Command{
 		Use:   "tx",
 		Short: "burrow-client tx formulates and signs a transaction to a chain",
@@ -145,8 +145,7 @@ func addTransactionPersistentFlags(transactionCmd *cobra.Command) {
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.NodeAddrFlag, "node-addr", "", defaultNodeRpcAddress(), "set the burrow node rpc server address (default respects $BURROW_CLIENT_NODE_ADDRESS)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.PubkeyFlag, "pubkey", "", defaultPublicKey(), "specify the public key to sign with (defaults to $BURROW_CLIENT_PUBLIC_KEY)")
 	transactionCmd.PersistentFlags().StringVarP(&clientDo.AddrFlag, "addr", "", defaultAddress(), "specify the account address (for which the public key can be found at monax-keys) (default respects $BURROW_CLIENT_ADDRESS)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.ChainidFlag, "chain-id", "", defaultChainId(), "specify the chainID (default respects $CHAIN_ID)")
-	transactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "nonce", "", "", "specify the nonce to use for the transaction (should equal the sender account's nonce + 1)")
+	transactionCmd.PersistentFlags().StringVarP(&clientDo.NonceFlag, "sequence", "", "", "specify the sequence to use for the transaction (should equal the sender account's sequence + 1)")
 
 	// transactionCmd.PersistentFlags().BoolVarP(&clientDo.SignFlag, "sign", "s", false, "sign the transaction using the monax-keys daemon")
 	transactionCmd.PersistentFlags().BoolVarP(&clientDo.BroadcastFlag, "broadcast", "b", true, "broadcast the transaction to the blockchain")
@@ -155,10 +154,6 @@ func addTransactionPersistentFlags(transactionCmd *cobra.Command) {
 
 //------------------------------------------------------------------------------
 // Defaults
-
-func defaultChainId() string {
-	return setDefaultString("CHAIN_ID", "")
-}
 
 func defaultKeyDaemonAddress() string {
 	return setDefaultString("BURROW_CLIENT_SIGN_ADDRESS", "http://127.0.0.1:4767")
@@ -180,10 +175,6 @@ func defaultAddress() string {
 // Helper functions
 
 func assertParameters(cmd *cobra.Command, args []string) {
-	if clientDo.ChainidFlag == "" {
-		util.Fatalf(`Please provide a chain id either through the flag --chain-id or environment variable $CHAIN_ID.`)
-	}
-
 	if !strings.HasPrefix(clientDo.NodeAddrFlag, "tcp://") &&
 		!strings.HasPrefix(clientDo.NodeAddrFlag, "unix://") {
 		// TODO: [ben] go-rpc will deprecate reformatting; also it is bad practice to auto-correct for this;

@@ -18,12 +18,12 @@ Burrow allows remote access to its functionality over http and websocket. It cur
 <a name="http-requests"></a>
 ## HTTP Requests
 
-The only data format supported is JSON. All post requests needs to use `Content-Type: application/json`. The charset flag is not supported (json is utf-8 encoded by default).
+The only data format supported is JSON. All post requests need to use `Content-Type: application/json`. The charset flag is not supported (json is utf-8 encoded by default).
 
 <a name="json-rpc"></a>
 ## JSON RPC 2.0
 
-The default endpoints for JSON-RPC (2.0) is `/rpc` for http based, and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `burrow`.
+The default endpoints for JSON-RPC (2.0) are `/rpc` for http based and `/socketrpc` for websocket. The namespace for the JSON-RPC service is `burrow`.
 
 It does not yet support notifications or batched requests.
 
@@ -70,7 +70,7 @@ INTERNAL_ERROR   = -32603
 }
 ```
 
-Id can be any string value. Parameters are named, and wrapped in objects. Also, params, result and error params may be `null`.
+Id can be any string value. Parameters are named, and wrapped in objects. Also, the params, result and error elements may be `null`.
 
 ##### Example
 
@@ -101,7 +101,7 @@ Response:
 <a name="rest-like"></a>
 ## REST-like HTTP
 
-The REST-like API provides the typical endpoint structure i.e. endpoints are named as resources, parameters can be put in the path, and queries are used for filtering and such. It is not fully compatible with REST; partly because some GET requests can contain sizable input so POST is used instead. There are also some modeling issues but those will most likely be resolved before version 1.0.
+The REST-like API provides the typical endpoint structure--i.e. endpoints are named as resources, parameters can be put in the path, and queries are used for filtering and such. It is not fully compatible with REST partly because some GET requests can contain sizable input, so POST is used instead. There are also some modeling issues, but those will most likely be resolved before version 1.0.
 
 <a name="formatting-conventions"></a>
 ## Common objects and formatting
@@ -110,9 +110,7 @@ This section contains some common objects and explanations of how they work.
 
 ### Numbers and strings
 
-Numbers are always numbers, and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays.
-
-Hex strings are never prefixed.
+Numbers are always numbers and never strings. This is different from Ethereum where currency values are so high they need string representations. The only thing hex strings are used for is to represent byte arrays. Hex strings are never prefixed.
 
 ##### Examples
 
@@ -124,7 +122,7 @@ Hex strings are never prefixed.
 
 ### Keys and addresses
 
-Public and Private keys in JSON data are either null, or on the form: `[type, hex]`, where `type` is the [public](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go), or [private](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go) key type, and `hex` is the hex-string representation of the key bytes.
+Public and Private keys in JSON data are either null, or on the form: `[type, hex]`, where `type` is the [public](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go) or [private](https://github.com/tendermint/tendermint/blob/master/account/pub_key.go) key type, and `hex` is the hex-string representation of the key bytes.
 
 - A `public address` is a 20 byte hex string.
 - A `public key` is a 32 byte hex string.
@@ -132,7 +130,7 @@ Public and Private keys in JSON data are either null, or on the form: `[type, he
 
 ##### WARNING
 
-**When using a client-server setup, do NOT send public keys over non-secure connections. The only time this is fine is during development when the keys are nothing but test data and does not protect anything of value. Normally they should either be kept locally and used to sign transactions locally, held on the server where the blockchain client is running, or be passed over secure channels.**
+**When using a client-server setup, do NOT send private keys over non-secure connections. The only time this is fine is during development when the keys are nothing but test data and does not protect anything of value. Normally they should either be kept locally and used to sign transactions locally, held on the server where the blockchain client is running, or be passed over secure channels.**
 
 ##### Examples
 
@@ -211,16 +209,6 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-#### DupeoutTx
-
-```
-{
-	address: <string>
-	vote_a:  <Vote>
-	vote_b:  <Vote>
-}
-```
-
 These are the support types that are referenced in the transactions:
 
 #### TxInput
@@ -266,7 +254,7 @@ Tendermint events can be subscribed to regardless of what connection type is use
 
 - [EventSubscribe](#event-subscribe) is used to subscribe to a given event, using an event-id string as argument. The response will contain a `subscription ID`, which can be used to close down the subscription later, or poll for new events if using HTTP. More on event-ids below.
 - [EventUnsubscribe](#event-unsubscribe) is used to unsubscribe to an event. It requires you to pass the `subscription ID` as an argument.
-- [EventPoll](#event-poll) is used to get all the events that has accumulated since the last time the subscription was polled. It takes the `subscription ID` as a parameter. NOTE: This only works over HTTP. Websocket connections will automatically receive events as they happen. They are sent as regular JSON-RPC 2.0 responses with the `subscriber ID` as response id.
+- [EventPoll](#event-poll) is used to get all the events that have accumulated since the last time the subscription was polled. It takes the `subscription ID` as a parameter. NOTE: This only works over HTTP. Websocket connections will automatically receive events as they happen. They are sent as regular JSON-RPC 2.0 responses with the `subscriber ID` as response id.
 
 There is another slight difference between polling and websocket, and that is the data you receive. If using sockets, it will always be one event at a time, whereas polling will give you an array of events.
 
@@ -276,9 +264,9 @@ These are the type of events you can subscribe to.
 
 The "Account" events are triggered when someone transacts with the given account, and can be used to keep track of account activity.
 
-NewBlock and Fork happens when a new block is committed or a fork happens, respectively.
+NewBlock and Fork happen when a new block is committed or when a fork occurs, respectively.
 
-The other events are directly related to consensus. You can find out more about the Tendermint consensus system in the Tendermint [white paper](http://tendermint.com/docs/tendermint.pdf). There is also information in the consensus [sources](https://github.com/tendermint/tendermint/blob/master/consensus/state.go), although a normal user would not be concerned with the consensus mechanisms, but would mostly just listen to account- and perhaps block-events.
+The other events are directly related to consensus. You can find out more about the Tendermint consensus system in the Tendermint [white paper](http://tendermint.com/docs/tendermint.pdf). There is also information in the consensus [sources](https://github.com/tendermint/tendermint/blob/master/consensus/state.go), although a normal user would not be concerned with the consensus mechanisms, but would mostly just listen to account-events and perhaps block-events.
 
 #### Account Input
 
@@ -316,7 +304,7 @@ Event object:
 
 This notifies you when an account is the target of a call. This event is emitted when `CallTx`s (transactions) that target the given account has been finalized. It is possible to listen to this event when creating new contracts as well; it will fire when the transaction is committed (or not, in which case the 'exception' field will explain why it failed).
 
-**NOTE: The naming here is a bit unfortunate. Ethereum uses 'transaction' for (state-changing) transactions to a contract account, and 'call' for read-only calls like is used for accessor functions and such. Tendermint on the other hand, which uses many types of transactions uses 'CallTx' for a transaction made to a contract account, since it calls the code in that contract, and refers to these simply as 'calls'. Read-only calls is normally referred to as 'simulated calls'.**
+**NOTE: The naming here is a bit unfortunate. Ethereum uses 'transaction' for (state-changing) transactions to a contract account, and 'call' for read-only calls like those used for accessor functions and such. Tendermint, on the other hand, uses 'CallTx' for a transaction made to a contract account, since it calls the code in that contract, and refers to these simply as 'calls'. Read-only calls is normally referred to as 'simulated calls'.**
 
 Event ID: `Acc/<address>/Call`
 
@@ -369,7 +357,7 @@ Event object:
 
 `topics` is the parameters listed as topics. In a (named) Solidity event they would be the hash of the event name, followed by each param with the `indexed` modifier.
 
-`data` the data. In a Solidity event these would be the params without the `indexed` modifier.
+`data` is data. In a Solidity event these would be the params without the `indexed` modifier.
 
 `height` is the current block-height.
 
@@ -434,22 +422,10 @@ Event object:
 <Tx>
 ```
 
-#### Dupeout
-
-This notifies you when a dupeout event happens.
-
-Event ID: `Dupeout`
-
-Event object:
-
-```
-<Tx>
-```
-
 <a name="namereg">
 ### Name-registry
 
-The name-registry is a built-in key-value store that allow you to store bulk data in a different storage. It is currently regulated by the use of Tendermint tokens. The cost of storing some `Data` in the name-registry is this:
+The name-registry is a built-in key-value store that allows you to store bulk data in a different storage. It is currently regulated by the use of Tendermint tokens. The cost of storing some `Data` in the name-registry is this:
 
 ```
 TotalCost = Cost*NumberOfBlocks
@@ -465,7 +441,7 @@ length(Data) = the number of bytes in 'Data'.
 
 To pay this cost you use the `amount` field in the namereg transaction. If you want to store a 3 kb document for 10 blocks, the total cost would be `1*1*(3000 + 32)*10 = 30320` tendermint tokens.
 
-See the [TransactNameReg](#transact-name-reg) method for more info about adding entries to the name-registry, and the methods in the [Name-registry](#name-registry) for accessing them.
+See the [TransactNameReg](#transact-name-reg) method for more info about adding entries to the name-registry and the methods in the [Name-registry](#name-registry) for accessing them.
 
 <a name="methods"></a>
 ## Methods
@@ -539,7 +515,7 @@ NOTE: Get peer is not fully implemented.
 | [Transact](#transact) | burrow.transact | POST | `/unsafe/txpool` |
 | [Transact](#transact-and-hold) | burrow.transactAndHold | POST | `/unsafe/txpool?hold=true` |
 | [TransactNameReg](#transact-name-reg) | burrow.transactNameReg | POST | `/unsafe/namereg/txpool` |
-| [GenPrivAccount](#gen-priv-account) | burrow.genPrivAccount | GET | `/unsafe/pa_generator` |
+| [GenPrivAccount](#gen-priv-account) | burrow.genPrivAccount | POST | `/unsafe/pa_generator` |
 
 Here are the catagories.
 
@@ -555,9 +531,9 @@ Here are the catagories.
 
 In the case of **JSON-RPC**, the parameters are wrapped in a request object, and the return value is wrapped in a response object.
 
-In the case of **REST-like HTTP** GET requests, the params (and query) is provided in the url. If it's a POST, PATCH or PUT request, the parameter object should be written to the body of the request as JSON. It is normally the same params object as in JSON-RPC.
+In the case of **REST-like HTTP** GET requests, the params (and query) are provided in the url. If it's a POST, PATCH or PUT request, the parameter object should be written to the body of the request as JSON. It is normally the same params object as in JSON-RPC.
 
-**Unsafe** is methods that require a private key to be sent either to or from the client, and should therefore be used only during development/testing, or with extreme care. They may be phased out entirely.
+**Unsafe** are methods that require a private key to be sent either to or from the client and should therefore be used only during development/testing, or with extreme care. They may be phased out entirely.
 
 <a name="accounts"></a>
 ### Accounts
@@ -654,16 +630,14 @@ Parameter:
 
 ##### Additional info
 
-Sequence is sometimes referred to as the "nonce".
-
-There are two types of objects used to represent accounts, one is public accounts (like the one here), the other is private accounts, which only holds information about an accounts address, public and private key.
+There are two types of objects used to represent accounts: public accounts (like the one here) and private accounts that only hold information about an account's address, and public and private keys.
 
 ***
 
 <a name="get-storage"></a>
 #### GetStorage
 
-Get the complete storage of a contract account. Non-contract accounts has no storage.
+Get the complete storage of a contract account. Non-contract accounts have no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
@@ -705,7 +679,7 @@ See `GetStorageAt` below for more info on the `StorageItem` object.
 <a name="get-storage-at"></a>
 #### GetStorageAt
 
-Get a particular entry in the storage of a contract account. Non-contract accounts has no storage.
+Get a particular entry in the storage of a contract account. Non-contract accounts have no storage.
 
 NOTE: This is mainly used for debugging. In most cases the storage of an account would be accessed via public accessor functions defined in the contracts ABI.
 
@@ -972,7 +946,7 @@ TODO
 
 See the section on [Filters](#queries-filters) for info on the `FilterData` object.
 
-`min_height` and `max_height` is the two actual values used for min and max height when fetching the blocks. The reason they are included is because the heights might have been modified, like for example when the blockchain height is lower then the max height provided in the query.
+`min_height` and `max_height` are the two actual values used for min and max height when fetching the blocks. The reason they are included is because the heights might have been modified, like for example when the blockchain height is lower than the max height provided in the query.
 
 See [GetBlock](#get-block) for more info on the `BlockMeta` type.
 
@@ -1234,7 +1208,7 @@ For more information about events and the event system, see the [Event system](#
 <a name="event-poll"></a>
 #### EventPoll
 
-Poll a subscription. Note this cannot be done if using websockets, because then the events will be passed automatically over the socket.
+Poll a subscription. Note, this cannot be done if using websockets because the events will be passed automatically over the socket.
 
 ##### HTTP
 
@@ -1642,7 +1616,7 @@ See [The transaction types](#the-transaction-types) for more info on the `Tx` ty
 <a name="get-unconfirmed-txs"></a>
 #### GetUnconfirmedTxs
 
-Get a list of transactions currently residing in the transaction pool. These have been admitted to the pool, but has not yet been committed.
+Get a list of transactions currently residing in the transaction pool. These have been admitted to the pool but have not yet been committed.
 
 ##### HTTP
 
@@ -1713,7 +1687,7 @@ Parameters:
 
 ##### Additional info
 
-`data` is a string of data formatted in accordance with the.
+`data` is a string of data formatted in accordance with the [contract ABI](https://github.com/monax/legacy-contracts.js)
 
 ***
 
@@ -1833,7 +1807,7 @@ Convenience method for sending a transaction and holding until it's been committ
 * Broadcast the transaction.
 * Wait until the transaction is fully processed.
 
-When holding, the request will eventually timeout if the transaction is not processed nor produce an error. The response will then be an error that includes the transaction hash (which can be used for further investigation).
+When holding, the request will eventually timeout if the transaction is not processed or if it produces an error. The response will then be an error that includes the transaction hash (which can be used for further investigation).
 
 ##### HTTP
 
@@ -1982,7 +1956,7 @@ Filters are used in searches. The structure is similar to that of the [Github ap
 
 ### JSON-RPC
 
-Filters are added as objects in the request parameter. Methods that supports filtering includes an array of filters somewhere in their params object.
+Filters are added as objects in the request parameter. Methods that support filtering include an array of filters somewhere in their params object.
 
 Filter:
 
@@ -2001,7 +1975,7 @@ Filter:
 
 ##### Examples
 
-We want an account filter that only includes accounts that has code in them (i.e. contract accounts):
+We want an account filter that only includes accounts that have code in them (i.e. contract accounts):
 
 ```
 {
@@ -2054,13 +2028,13 @@ The structure of a normal query is: `q=field:[op]value+field2:[op2]value2+ ... `
 - `op` is the relational operator, `>, <, >=, <=, ==, !=`.
 - `value` is the value to compare against, e.g. `balance:>=5` or `language:==golang`.
 
-There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are number-strings. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive; if it is put on the left-hand side it is the minimum value, and on the right-hand side it means the maximum value. Let `height` be an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
+There is also support for [range queries](https://help.github.com/articles/search-syntax/): `A..B`, where `A` and `B` are number-strings. You may use the wildcard `*` instead of a number. The wildcard is context-sensitive; if it is put on the left-hand side, it is the minimum value, and, if on the right-hand side, it is the maximum value. Let `height` be an unsigned byte with no additional restrictions. `height:*..55` would then be the same as `height:0..55`, and `height:*..*` would be the same as `height:0..255`.
 
 NOTE: URL encoding applies as usual. Omitting it here for clarity.
 
 `op` will default to (`==`) if left out, meaning `balance:5` is the same as `balance:==5`
 
-`value` may be left out if the field accepts the empty string as input. This means if `code` is a supported string type,  `code:==` would check if the code field is empty. We could also use the inferred `==` meaning this would be equivalent: `code:`.  The system may be extended so that the empty string is automatically converted to the null-type of the underlying field, no matter what that type is. If balance is a number then `balance:` would be the same as `balance:==0` (and `balance:0`).
+`value` may be left out if the field accepts the empty string as input. This means if `code` is a supported string type,  `code:==` would check if the code field is empty. We could also use the inferred `==` meaning this would be equivalent: `code:`.  The system may be extended so that the empty string is automatically converted to the null-type of the underlying field, no matter what that type is. If balance is a number, then `balance:` would be the same as `balance:==0` (and `balance:0`).
 
 ##### Example
 

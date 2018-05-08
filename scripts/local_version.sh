@@ -12,7 +12,7 @@ REPO=${REPO:-"$GOPATH/src/github.com/hyperledger/burrow"}
 VERSION_REGEX="^v[0-9]+\.[0-9]+\.[0-9]+$"
 
 
-version=$(go run "$REPO/util/version/cmd/main.go")
+version=$(go run "$REPO/project/cmd/version/main.go")
 tag=$(git tag --points-at HEAD)
 
 function log() {

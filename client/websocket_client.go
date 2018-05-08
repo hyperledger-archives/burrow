@@ -19,14 +19,17 @@ import (
 	"fmt"
 	"time"
 
-	logging_types "github.com/hyperledger/burrow/logging/types"
-	"github.com/tendermint/go-rpc/client"
-	"github.com/tendermint/go-wire"
+	"encoding/json"
 
+	"github.com/hyperledger/burrow/account"
+	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
-	tendermint_client "github.com/hyperledger/burrow/rpc/tendermint/client"
-	ctypes "github.com/hyperledger/burrow/rpc/tendermint/core/types"
+	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/rpc"
+	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/tendermint/rpc/lib/client"
+	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -34,10 +37,10 @@ const (
 )
 
 type Confirmation struct {
-	BlockHash []byte
-	Event     txs.EventData
-	Exception error
-	Error     error
+	BlockHash   []byte
+	EventDataTx *exe_events.EventDataTx
+	Exception   error
+	Error       error
 }
 
 // NOTE [ben] Compiler check to ensure burrowNodeClient successfully implements
@@ -47,173 +50,160 @@ var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
 type burrowNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
-	logger              logging_types.InfoTraceLogger
+	logger              *logging.Logger
 }
 
 // Subscribe to an eventid
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Subscribe(eventId string) error {
 	// TODO we can in the background listen to the subscription id and remember it to ease unsubscribing later.
-	return tendermint_client.Subscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+	return tm_client.Subscribe(burrowNodeWebsocketClient.tendermintWebsocket,
 		eventId)
 }
 
 // Unsubscribe from an eventid
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
-	return tendermint_client.Unsubscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+	return tm_client.Unsubscribe(burrowNodeWebsocketClient.tendermintWebsocket,
 		subscriptionId)
 }
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
-	// check no errors are reported on the websocket
-	if err := burrowNodeWebsocketClient.assertNoErrors(); err != nil {
-		return nil, err
-	}
+func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string,
+	inputAddr account.Address) (chan Confirmation, error) {
 
 	// Setup the confirmation channel to be returned
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
 
-	eid := txs.EventStringAccInput(inputAddr)
-	if err := burrowNodeWebsocketClient.Subscribe(eid); err != nil {
-		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
+	eventID := exe_events.EventStringAccountInput(inputAddr)
+	if err := burrowNodeWebsocketClient.Subscribe(eventID); err != nil {
+		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eventID, err)
 	}
-	if err := burrowNodeWebsocketClient.Subscribe(txs.EventStringNewBlock()); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(tm_types.EventNewBlock); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
 	go func() {
 		var err error
+
+		timeoutTimer := time.NewTimer(time.Duration(MaxCommitWaitTimeSeconds) * time.Second)
+		defer func() {
+			if !timeoutTimer.Stop() {
+				<-timeoutTimer.C
+			}
+		}()
+
 		for {
-			resultBytes := <-burrowNodeWebsocketClient.tendermintWebsocket.ResultsCh
-			result := new(ctypes.BurrowResult)
-			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
-				// keep calm and carry on
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Failed to unmarshal json bytes for websocket event",
-					"error", err)
-				continue
-			}
-
-			subscription, ok := (*result).(*ctypes.ResultSubscribe)
-			if ok {
-				// Received confirmation of subscription to event streams
-				// TODO: collect subscription IDs, push into channel and on completion
-				// unsubscribe
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received confirmation for event",
-					"event", subscription.Event,
-					"subscription_id", subscription.SubscriptionId)
-				continue
-			}
-
-			event, ok := (*result).(*ctypes.ResultEvent)
-			if !ok {
-				// keep calm and carry on
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Failed to cast to ResultEvent for websocket event",
-					"event", event.Event)
-				continue
-			}
-
-			blockData, ok := event.Data.(txs.EventDataNewBlock)
-			if ok {
-				latestBlockHash = blockData.Block.Hash()
-				logging.TraceMsg(burrowNodeWebsocketClient.logger, "Registered new block",
-					"block", blockData.Block,
-					"latest_block_hash", latestBlockHash,
-				)
-				continue
-			}
-
-			// NOTE: [ben] hotfix on 0.16.1 because NewBlock events to arrive seemingly late
-			// we now miss events because of this redundant check;  This check is safely removed
-			// because for CallTx on checking the transaction is not run in the EVM and no false
-			// positive event can be sent; neither is this check a good check for that.
-
-			// we don't accept events unless they came after a new block (ie. in)
-			// if latestBlockHash == nil {
-			// 	logging.InfoMsg(burrowNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
-			// 		"event", event.Event)
-			// 	continue
-			// }
-
-			if event.Event != eid {
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received unsolicited event",
-					"event_received", event.Event,
-					"event_expected", eid)
-				continue
-			}
-
-			data, ok := event.Data.(txs.EventDataTx)
-			if !ok {
-				// We are on the lookout for EventDataTx
+			select {
+			case <-timeoutTimer.C:
 				confirmationChannel <- Confirmation{
-					BlockHash: latestBlockHash,
-					Event:     nil,
-					Exception: fmt.Errorf("response error: expected result.Data to be *types.EventDataTx"),
-					Error:     nil,
+					BlockHash:   nil,
+					EventDataTx: nil,
+					Exception:   nil,
+					Error:       fmt.Errorf("timed out waiting for event"),
 				}
 				return
-			}
 
-			if !bytes.Equal(txs.TxHash(chainId, data.Tx), txs.TxHash(chainId, tx)) {
-				logging.TraceMsg(burrowNodeWebsocketClient.logger, "Received different event",
-					// TODO: consider re-implementing TxID again, or other more clear debug
-					"received transaction event", txs.TxHash(chainId, data.Tx))
-				continue
-			}
-
-			if data.Exception != "" {
-				confirmationChannel <- Confirmation{
-					BlockHash: latestBlockHash,
-					Event:     &data,
-					Exception: fmt.Errorf("Transaction confirmed with exception: %v", data.Exception),
-					Error:     nil,
+			case response := <-burrowNodeWebsocketClient.tendermintWebsocket.ResponsesCh:
+				if response.Error != nil {
+					burrowNodeWebsocketClient.logger.InfoMsg(
+						"Error received on websocket channel", structure.ErrorKey, err)
+					continue
 				}
-				return
+
+				switch response.ID {
+				case tm_client.SubscribeRequestID:
+					resultSubscribe := new(rpc.ResultSubscribe)
+					err = json.Unmarshal(response.Result, resultSubscribe)
+					if err != nil {
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultSubscribe",
+							structure.ErrorKey, err)
+						continue
+					}
+					// TODO: collect subscription IDs, push into channel and on completion
+					burrowNodeWebsocketClient.logger.InfoMsg("Received confirmation for event",
+						"event", resultSubscribe.EventID,
+						"subscription_id", resultSubscribe.SubscriptionID)
+
+				case tm_client.EventResponseID(tm_types.EventNewBlock):
+					resultEvent := new(rpc.ResultEvent)
+					err = json.Unmarshal(response.Result, resultEvent)
+					if err != nil {
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultEvent",
+							structure.ErrorKey, err)
+						continue
+					}
+					blockData := resultEvent.EventDataNewBlock()
+					if blockData != nil {
+						latestBlockHash = blockData.Block.Hash()
+						burrowNodeWebsocketClient.logger.TraceMsg("Registered new block",
+							"block", blockData.Block,
+							"latest_block_hash", latestBlockHash,
+						)
+					}
+
+				case tm_client.EventResponseID(eventID):
+					resultEvent := new(rpc.ResultEvent)
+					err = json.Unmarshal(response.Result, resultEvent)
+					if err != nil {
+						burrowNodeWebsocketClient.logger.InfoMsg("Unable to unmarshal ResultEvent",
+							structure.ErrorKey, err)
+						continue
+					}
+
+					eventDataTx := resultEvent.EventDataTx
+					if eventDataTx == nil {
+						// We are on the lookout for EventDataTx
+						confirmationChannel <- Confirmation{
+							BlockHash:   latestBlockHash,
+							EventDataTx: nil,
+							Exception:   fmt.Errorf("response error: expected result.Data to be *types.EventDataTx"),
+							Error:       nil,
+						}
+						return
+					}
+
+					if !bytes.Equal(eventDataTx.Tx.Hash(chainId), tx.Hash(chainId)) {
+						burrowNodeWebsocketClient.logger.TraceMsg("Received different event",
+							// TODO: consider re-implementing TxID again, or other more clear debug
+							"received transaction event", eventDataTx.Tx.Hash(chainId))
+						continue
+					}
+
+					if eventDataTx.Exception != "" {
+						confirmationChannel <- Confirmation{
+							BlockHash:   latestBlockHash,
+							EventDataTx: eventDataTx,
+							Exception: fmt.Errorf("transaction confirmed but execution gave exception: %v",
+								eventDataTx.Exception),
+							Error: nil,
+						}
+						return
+					}
+					// success, return the full event and blockhash and exit go-routine
+					confirmationChannel <- Confirmation{
+						BlockHash:   latestBlockHash,
+						EventDataTx: eventDataTx,
+						Exception:   nil,
+						Error:       nil,
+					}
+					return
+
+				default:
+					burrowNodeWebsocketClient.logger.InfoMsg("Received unsolicited response",
+						"response_id", response.ID,
+						"expected_response_id", tm_client.EventResponseID(eventID))
+				}
 			}
-			// success, return the full event and blockhash and exit go-routine
-			confirmationChannel <- Confirmation{
-				BlockHash: latestBlockHash,
-				Event:     &data,
-				Exception: nil,
-				Error:     nil,
-			}
-			return
 		}
 
 	}()
 
-	// TODO: [ben] this is a draft implementation as resources on time.After can not be
-	// recovered before the timeout.  Close-down timeout at success properly.
-	timeout := time.After(time.Duration(MaxCommitWaitTimeSeconds) * time.Second)
-
-	go func() {
-		<-timeout
-		confirmationChannel <- Confirmation{
-			BlockHash: nil,
-			Event:     nil,
-			Exception: nil,
-			Error:     fmt.Errorf("timed out waiting for event"),
-		}
-	}()
 	return confirmationChannel, nil
 }
 
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Close() {
 	if burrowNodeWebsocketClient.tendermintWebsocket != nil {
 		burrowNodeWebsocketClient.tendermintWebsocket.Stop()
-	}
-}
-
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) assertNoErrors() error {
-	if burrowNodeWebsocketClient.tendermintWebsocket != nil {
-		select {
-		case err := <-burrowNodeWebsocketClient.tendermintWebsocket.ErrorsCh:
-			return err
-		default:
-			return nil
-		}
-	} else {
-		return fmt.Errorf("burrow-client has no websocket initialised.")
 	}
 }

@@ -15,16 +15,30 @@
 package v0
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	definitions "github.com/hyperledger/burrow/definitions"
-	event "github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/rpc"
-	server "github.com/hyperledger/burrow/server"
-
 	"github.com/gin-gonic/gin"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/v0/server"
 )
+
+// EventSubscribe
+type EventSub struct {
+	SubId string `json:"sub_id"`
+}
+
+// EventUnsubscribe
+type EventUnsub struct {
+	Result bool `json:"result"`
+}
+
+// EventPoll
+type PollResponse struct {
+	Events []interface{} `json:"events"`
+}
 
 // Server used to handle JSON-RPC 2.0 requests. Implements server.Server
 type JsonRpcServer struct {
@@ -33,52 +47,56 @@ type JsonRpcServer struct {
 }
 
 // Create a new JsonRpcServer
-func NewJsonRpcServer(service server.HttpService) *JsonRpcServer {
+func NewJSONServer(service server.HttpService) *JsonRpcServer {
 	return &JsonRpcServer{service: service}
 }
 
 // Start adds the rpc path to the router.
-func (this *JsonRpcServer) Start(config *server.ServerConfig,
-	router *gin.Engine) {
-	router.POST(config.HTTP.JsonRpcEndpoint, this.handleFunc)
-	this.running = true
+func (jrs *JsonRpcServer) Start(config *server.ServerConfig, router *gin.Engine) {
+	router.POST(config.HTTP.JsonRpcEndpoint, jrs.handleFunc)
+	jrs.running = true
 }
 
 // Is the server currently running?
-func (this *JsonRpcServer) Running() bool {
-	return this.running
+func (jrs *JsonRpcServer) Running() bool {
+	return jrs.running
 }
 
 // Shut the server down. Does nothing.
-func (this *JsonRpcServer) ShutDown() {
-	this.running = false
+func (jrs *JsonRpcServer) Shutdown(ctx context.Context) error {
+	jrs.running = false
+	return nil
 }
 
 // Handler passes message on directly to the service which expects
 // a normal http request and response writer.
-func (this *JsonRpcServer) handleFunc(c *gin.Context) {
+func (jrs *JsonRpcServer) handleFunc(c *gin.Context) {
 	r := c.Request
 	w := c.Writer
 
-	this.service.Process(r, w)
+	jrs.service.Process(r, w)
 }
 
 // Used for Burrow. Implements server.HttpService
-type BurrowJsonService struct {
+type JSONService struct {
 	codec           rpc.Codec
-	pipe            definitions.Pipe
-	eventSubs       *event.EventSubscriptions
+	service         *rpc.Service
+	eventSubs       *Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
+	logger          *logging.Logger
 }
 
 // Create a new JSON-RPC 2.0 service for burrow (tendermint).
-func NewBurrowJsonService(codec rpc.Codec, pipe definitions.Pipe,
-	eventSubs *event.EventSubscriptions) server.HttpService {
+func NewJSONService(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) server.HttpService {
 
-	tmhttps := &BurrowJsonService{codec: codec, pipe: pipe, eventSubs: eventSubs}
-	mtds := NewBurrowMethods(codec, pipe)
+	tmhttps := &JSONService{
+		codec:     codec,
+		service:   service,
+		eventSubs: NewSubscriptions(service),
+		logger:    logger.WithScope("NewJSONService"),
+	}
 
-	dhMap := mtds.getMethods()
+	dhMap := GetMethods(codec, service, tmhttps.logger)
 	// Events
 	dhMap[EVENT_SUBSCRIBE] = tmhttps.EventSubscribe
 	dhMap[EVENT_UNSUBSCRIBE] = tmhttps.EventUnsubscribe
@@ -88,7 +106,7 @@ func NewBurrowJsonService(codec rpc.Codec, pipe definitions.Pipe,
 }
 
 // Process a request.
-func (this *BurrowJsonService) Process(r *http.Request, w http.ResponseWriter) {
+func (js *JSONService) Process(r *http.Request, w http.ResponseWriter) {
 
 	// Create new request object and unmarshal.
 	req := &rpc.RPCRequest{}
@@ -97,36 +115,40 @@ func (this *BurrowJsonService) Process(r *http.Request, w http.ResponseWriter) {
 
 	// Error when decoding.
 	if errU != nil {
-		this.writeError("Failed to parse request: "+errU.Error(), "",
+		js.writeError("Failed to parse request: "+errU.Error(), "",
 			rpc.PARSE_ERROR, w)
 		return
 	}
 
 	// Wrong protocol version.
 	if req.JSONRPC != "2.0" {
-		this.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
+		js.writeError("Wrong protocol version: "+req.JSONRPC, req.Id,
 			rpc.INVALID_REQUEST, w)
 		return
 	}
 
 	mName := req.Method
 
-	if handler, ok := this.defaultHandlers[mName]; ok {
+	if handler, ok := js.defaultHandlers[mName]; ok {
+		js.logger.TraceMsg("Request received",
+			"id", req.Id,
+			"method", req.Method,
+			"params", string(req.Params))
 		resp, errCode, err := handler(req, w)
 		if err != nil {
-			this.writeError(err.Error(), req.Id, errCode, w)
+			js.writeError(err.Error(), req.Id, errCode, w)
 		} else {
-			this.writeResponse(req.Id, resp, w)
+			js.writeResponse(req.Id, resp, w)
 		}
 	} else {
-		this.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, w)
+		js.writeError("Method not found: "+mName, req.Id, rpc.METHOD_NOT_FOUND, w)
 	}
 }
 
 // Helper for writing error responses.
-func (this *BurrowJsonService) writeError(msg, id string, code int, w http.ResponseWriter) {
+func (js *JSONService) writeError(msg, id string, code int, w http.ResponseWriter) {
 	response := rpc.NewRPCErrorResponse(id, code, msg)
-	err := this.codec.Encode(response, w)
+	err := js.codec.Encode(response, w)
 	// If there's an error here all bets are off.
 	if err != nil {
 		http.Error(w, "Failed to marshal standard error response: "+err.Error(), 500)
@@ -136,11 +158,11 @@ func (this *BurrowJsonService) writeError(msg, id string, code int, w http.Respo
 }
 
 // Helper for writing responses.
-func (this *BurrowJsonService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
+func (js *JSONService) writeResponse(id string, result interface{}, w http.ResponseWriter) {
 	response := rpc.NewRPCResponse(id, result)
-	err := this.codec.Encode(response, w)
+	err := js.codec.Encode(response, w)
 	if err != nil {
-		this.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
+		js.writeError("Internal error: "+err.Error(), id, rpc.INTERNAL_ERROR, w)
 		return
 	}
 	w.WriteHeader(200)
@@ -148,8 +170,8 @@ func (this *BurrowJsonService) writeResponse(id string, result interface{}, w ht
 
 // *************************************** Events ************************************
 
-// Subscribe to an event.
-func (this *BurrowJsonService) EventSubscribe(request *rpc.RPCRequest,
+// Subscribe to an
+func (js *JSONService) EventSubscribe(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &EventIdParam{}
 	err := json.Unmarshal(request.Params, param)
@@ -157,16 +179,15 @@ func (this *BurrowJsonService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INVALID_PARAMS, err
 	}
 	eventId := param.EventId
-	subId, errC := this.eventSubs.Add(eventId)
+	subId, errC := js.eventSubs.Add(eventId)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.EventSub{subId}, 0, nil
+	return &EventSub{subId}, 0, nil
 }
 
-// Un-subscribe from an event.
-func (this *BurrowJsonService) EventUnsubscribe(request *rpc.RPCRequest,
-	requester interface{}) (interface{}, int, error) {
+// Un-subscribe from an
+func (js *JSONService) EventUnsubscribe(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
 	if err != nil {
@@ -174,15 +195,15 @@ func (this *BurrowJsonService) EventUnsubscribe(request *rpc.RPCRequest,
 	}
 	subId := param.SubId
 
-	errC := this.pipe.Events().Unsubscribe(subId)
-	if errC != nil {
-		return nil, rpc.INTERNAL_ERROR, errC
+	err = js.service.Unsubscribe(context.Background(), subId)
+	if err != nil {
+		return nil, rpc.INTERNAL_ERROR, err
 	}
-	return &event.EventUnsub{true}, 0, nil
+	return &EventUnsub{true}, 0, nil
 }
 
 // Check subscription event cache for new data.
-func (this *BurrowJsonService) EventPoll(request *rpc.RPCRequest,
+func (js *JSONService) EventPoll(request *rpc.RPCRequest,
 	requester interface{}) (interface{}, int, error) {
 	param := &SubIdParam{}
 	err := json.Unmarshal(request.Params, param)
@@ -191,9 +212,9 @@ func (this *BurrowJsonService) EventPoll(request *rpc.RPCRequest,
 	}
 	subId := param.SubId
 
-	result, errC := this.eventSubs.Poll(subId)
+	result, errC := js.eventSubs.Poll(subId)
 	if errC != nil {
 		return nil, rpc.INTERNAL_ERROR, errC
 	}
-	return &event.PollResponse{result}, 0, nil
+	return &PollResponse{result}, 0, nil
 }
