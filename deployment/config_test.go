@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,9 +13,9 @@ import (
 
 func TestMockKeyClient_DumpKeys(t *testing.T) {
 	keyClient := mock.NewKeyClient()
-	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
+	_, err := keyClient.Generate("foo", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
-	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
+	_, err = keyClient.Generate("foobar", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 	pkg := Package{Keys: keyClient.Keys()}
 	dump, err := pkg.Dump(DefaultDumpKeysFormat)
@@ -32,9 +32,9 @@ func TestMockKeyClient_DumpKeys(t *testing.T) {
 
 func TestMockKeyClient_DumpKeysKubernetes(t *testing.T) {
 	keyClient := mock.NewKeyClient()
-	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
+	_, err := keyClient.Generate("foo", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
-	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
+	_, err = keyClient.Generate("foobar", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 	pkg := Package{Keys: keyClient.Keys()}
 	dump, err := pkg.Dump(KubernetesKeyDumpFormat)
@@ -44,9 +44,9 @@ func TestMockKeyClient_DumpKeysKubernetes(t *testing.T) {
 
 func TestMockKeyClient_DumpKeysHelm(t *testing.T) {
 	keyClient := mock.NewKeyClient()
-	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
+	_, err := keyClient.Generate("foo", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
-	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
+	_, err = keyClient.Generate("foobar", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 	pkg := Package{Keys: keyClient.Keys()}
 	dump, err := pkg.Dump(HelmDumpKeysFormat)

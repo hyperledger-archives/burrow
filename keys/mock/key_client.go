@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/tendermint/go-crypto"
 )
 
 //---------------------------------------------------------------------
@@ -29,12 +29,12 @@ import (
 var _ keys.KeyClient = (*KeyClient)(nil)
 
 type KeyClient struct {
-	knownKeys map[acm.Address]*Key
+	knownKeys map[crypto.Address]*Key
 }
 
 func NewKeyClient(privateAccounts ...acm.PrivateAccount) *KeyClient {
 	client := &KeyClient{
-		knownKeys: make(map[acm.Address]*Key),
+		knownKeys: make(map[crypto.Address]*Key),
 	}
 	for _, pa := range privateAccounts {
 		client.knownKeys[pa.Address()] = mockKeyFromPrivateAccount(pa)
@@ -42,7 +42,7 @@ func NewKeyClient(privateAccounts ...acm.PrivateAccount) *KeyClient {
 	return client
 }
 
-func (mkc *KeyClient) NewKey(name string) acm.Address {
+func (mkc *KeyClient) NewKey(name string) crypto.Address {
 	// Only tests ED25519 curve and ripemd160.
 	key, err := newKey(name)
 	if err != nil {
@@ -52,25 +52,23 @@ func (mkc *KeyClient) NewKey(name string) acm.Address {
 	return key.Address
 }
 
-func (mkc *KeyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
+func (mkc *KeyClient) Sign(signAddress crypto.Address, message []byte) (crypto.Signature, error) {
 	key := mkc.knownKeys[signAddress]
 	if key == nil {
-		return acm.Signature{}, fmt.Errorf("unknown address (%s)", signAddress)
+		return crypto.Signature{}, fmt.Errorf("unknown address (%s)", signAddress)
 	}
 	return key.Sign(message)
 }
 
-func (mkc *KeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
+func (mkc *KeyClient) PublicKey(address crypto.Address) (crypto.PublicKey, error) {
 	key := mkc.knownKeys[address]
 	if key == nil {
-		return acm.PublicKey{}, fmt.Errorf("unknown address (%s)", address)
+		return crypto.PublicKey{}, fmt.Errorf("unknown address (%s)", address)
 	}
-	pubKeyEd25519 := crypto.PubKeyEd25519{}
-	copy(pubKeyEd25519[:], key.PublicKey)
-	return acm.PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap())
+	return crypto.PublicKeyFromBytes(key.PublicKey, crypto.CurveTypeEd25519)
 }
 
-func (mkc *KeyClient) Generate(keyName string, keyType keys.KeyType) (acm.Address, error) {
+func (mkc *KeyClient) Generate(keyName string, curve crypto.CurveType) (crypto.Address, error) {
 	return mkc.NewKey(keyName), nil
 }
 

@@ -42,18 +42,6 @@ The end result will be a `burrow.toml` that will be read in from your current wo
 
 ### Configuration
 
-#### Install monax-keys
-Monax-keys is our key-signing daemon. In a future release this will be merged with Burrow and will support a GPG backend
-in addition to the development mode that monax-keys currently supplies.
-
-We need to run monax-keys so that `burrow configure` can generate keys for us in the following step.
-```shell
-# Install monax-keys
-go get -u github.com/monax/bosmarmot/keys/cmd/monax-keys
-# run monax-keys server in background
-monax-keys server &
-```
-
 #### Configure Burrow
 The quick-and-dirty one-liner looks like:
 

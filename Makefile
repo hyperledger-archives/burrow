@@ -62,6 +62,9 @@ megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
 	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
 
+keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
+	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
+
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory
@@ -155,8 +158,6 @@ test: check
 
 .PHONY: test_integration
 test_integration:
-	@go get github.com/monax/bosmarmot/keys/cmd/monax-keys
-	@go test -tags integration ./keys/integration
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

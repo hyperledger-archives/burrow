@@ -137,7 +137,7 @@ func (p PublicKey) Verify(msg []byte, signature Signature) bool {
 		}
 		return sig.Verify(msg, pub)
 	default:
-		return false
+		panic(fmt.Sprintf("invalid curve type"))
 	}
 }
 

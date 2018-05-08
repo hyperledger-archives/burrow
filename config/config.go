@@ -70,7 +70,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		}
 	}
 
-	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
+	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, conf.Keys,
 		exeOptions, logger)
 }
 

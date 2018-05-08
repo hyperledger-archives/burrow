@@ -52,7 +52,7 @@ func DefaultTMConfig() *TMConfig {
 
 func DefaultGRPCConfig() *GRPCConfig {
 	return &GRPCConfig{
-		ListenAddress: "localhost:46659",
+		ListenAddress: "localhost:10997",
 	}
 }
 

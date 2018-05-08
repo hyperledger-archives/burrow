@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
@@ -66,7 +67,7 @@ func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *ge
 	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
 
 	kern, err := NewKernel(context.Background(), mock.NewKeyClient(), privValidator, genesisDoc, tmConf,
-		rpc.DefaultRPCConfig(), nil, logger)
+		rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(), nil, logger)
 	if err != nil {
 		return err
 	}

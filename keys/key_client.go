@@ -15,53 +15,169 @@
 package keys
 
 import (
-	"encoding/hex"
+	"context"
 	"fmt"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
+	"google.golang.org/grpc"
 )
 
 type KeyClient interface {
-	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error)
+	// Sign returns the signature bytes for given hash signed with the key associated with signAddress
+	Sign(signAddress crypto.Address, hash []byte) (signature crypto.Signature, err error)
 
 	// PublicKey returns the public key associated with a given address
 	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
 
 	// Generate requests that a key be generate within the keys instance and returns the address
-	Generate(keyName string, keyType KeyType) (keyAddress crypto.Address, err error)
+	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
 
 	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
 }
 
-// This mirrors "github.com/monax/keys/crypto/KeyType" but since we have no use for the struct here it seems simpler
-// to replicate rather than cop an import
-type KeyType string
+var _ KeyClient = (*localKeyClient)(nil)
+var _ KeyClient = (*remoteKeyClient)(nil)
 
-func (kt KeyType) String() string {
-	return string(kt)
+type localKeyClient struct {
+	logger *logging.Logger
 }
 
-const (
-	KeyTypeEd25519Ripemd160         KeyType = "ed25519,ripemd160"
-	KeyTypeEd25519Ripemd160sha256           = "ed25519,ripemd160sha256"
-	KeyTypeEd25519Ripemd160sha3             = "ed25519,sha3"
-	KeyTypeSecp256k1Ripemd160               = "secp256k1,ripemd160"
-	KeyTypeSecp256k1Ripemd160sha256         = "secp256k1,ripemd160sha256"
-	KeyTypeSecp256k1Ripemd160sha3           = "secp256k1,sha3"
-	KeyTypeDefault                          = KeyTypeEd25519Ripemd160
-)
+type remoteKeyClient struct {
+	rpcAddress string
+	kc         pbkeys.KeysClient
+	logger     *logging.Logger
+}
 
-// NOTE [ben] Compiler check to ensure keyClient successfully implements
-// burrow/keys.KeyClient
-var _ KeyClient = (*keyClient)(nil)
+func (l localKeyClient) Sign(signAddress crypto.Address, hash []byte) (signature crypto.Signature, err error) {
+	resp, err := GlobalKeyServer.Sign(nil, &pbkeys.SignRequest{Address: signAddress.String(), Hash: hash})
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+}
 
-type keyClient struct {
-	requester Requester
-	logger    *logging.Logger
+func (l localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+	resp, err := GlobalKeyServer.PublicKey(nil, &pbkeys.PubRequest{Address: address.String()})
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
+	return crypto.PublicKeyFromBytes(resp.GetPub(), curveType)
+}
+
+// Generate requests that a key be generate within the keys instance and returns the address
+func (l localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
+	resp, err := GlobalKeyServer.GenerateKey(nil, &pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()})
+	if err != nil {
+		return crypto.Address{}, err
+	}
+	return crypto.AddressFromHexString(resp.GetAddress())
+}
+
+// Returns nil if the keys instance is healthy, error otherwise
+func (l localKeyClient) HealthCheck() error {
+	return nil
+}
+
+func (l remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req := pbkeys.SignRequest{Address: signAddress.String(), Hash: message}
+	l.logger.TraceMsg("Sending Sign request to remote key server: ", fmt.Sprintf("%v", req))
+	resp, err := l.kc.Sign(ctx, &req)
+	if err != nil {
+		l.logger.TraceMsg("Received Sign request error response: ", err)
+		return crypto.Signature{}, err
+	}
+	l.logger.TraceMsg("Received Sign response to remote key server: %v", resp)
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+}
+
+func (l remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req := pbkeys.PubRequest{Address: address.String()}
+	l.logger.TraceMsg("Sending PublicKey request to remote key server: ", fmt.Sprintf("%v", req))
+	resp, err := l.kc.PublicKey(ctx, &req)
+	if err != nil {
+		l.logger.TraceMsg("Received PublicKey error response: ", err)
+		return crypto.PublicKey{}, err
+	}
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
+	l.logger.TraceMsg("Received PublicKey response to remote key server: ", fmt.Sprintf("%v", resp))
+	return crypto.PublicKeyFromBytes(resp.GetPub(), curveType)
+}
+
+// Generate requests that a key be generate within the keys instance and returns the address
+func (l remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req := pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()}
+	l.logger.TraceMsg("Sending Generate request to remote key server: ", fmt.Sprintf("%v", req))
+	resp, err := l.kc.GenerateKey(ctx, &req)
+	if err != nil {
+		l.logger.TraceMsg("Received Generate error response: ", err)
+		return crypto.Address{}, err
+	}
+	l.logger.TraceMsg("Received Generate response to remote key server: ", fmt.Sprintf("%v", resp))
+	return crypto.AddressFromHexString(resp.GetAddress())
+}
+
+// Returns nil if the keys instance is healthy, error otherwise
+func (l remoteKeyClient) HealthCheck() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := l.kc.List(ctx, &pbkeys.Name{""})
+	return err
+}
+
+// keyClient.New returns a new monax-keys client for provided rpc location
+// Monax-keys connects over http request-responses
+func NewKeyClient(rpcAddress string, logger *logging.Logger) KeyClient {
+	logger = logger.WithScope("NewKeyClient")
+	var client KeyClient
+	if rpcAddress != "" {
+		var opts []grpc.DialOption
+		opts = append(opts, grpc.WithInsecure())
+		conn, err := grpc.Dial(rpcAddress, opts...)
+		if err != nil {
+			// FIXME: we should return error, or handle this when the
+			// key client is used for the first time
+			panic("Failed to connect to grpc server")
+		}
+		kc := pbkeys.NewKeysClient(conn)
+
+		client = remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}
+	} else {
+		ks, err := newKeyStore()
+		if err != nil {
+			panic("Failed to start keys store")
+		}
+
+		GlobalKeystore = ks
+
+		client = localKeyClient{logger: logger}
+	}
+	return client
 }
 
 type signer struct {
@@ -69,14 +185,12 @@ type signer struct {
 	address   crypto.Address
 }
 
-// keyClient.New returns a new monax-keys client for provided rpc location
-// Monax-keys connects over http request-responses
-func NewKeyClient(rpcAddress string, logger *logging.Logger) *keyClient {
-	logger = logger.WithScope("NewKeyClient")
-	return &keyClient{
-		requester: DefaultRequester(rpcAddress, logger),
-		logger:    logger,
+func (ms *signer) Sign(messsage []byte) (crypto.Signature, error) {
+	signature, err := ms.keyClient.Sign(ms.address, messsage)
+	if err != nil {
+		return crypto.Signature{}, err
 	}
+	return signature, nil
 }
 
 // Creates a Signer that assumes the address holds an Ed25519 key
@@ -110,70 +224,4 @@ func Addressable(keyClient KeyClient, address crypto.Address) (acm.Addressable, 
 		address:   address,
 		publicKey: pubKey,
 	}, nil
-}
-
-func (ms *signer) Sign(messsage []byte) (crypto.Signature, error) {
-	signature, err := ms.keyClient.Sign(ms.address, messsage)
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return signature, nil
-}
-
-// Monax-keys client Sign requests the signature from BurrowKeysClient over rpc for the given
-// bytes to be signed and the address to sign them with.
-func (kc *keyClient) Sign(signAddress crypto.Address, message []byte) (crypto.Signature, error) {
-	sigS, err := kc.requester("sign", map[string]string{
-		"msg":  hex.EncodeToString(message),
-		"addr": signAddress.String(),
-	})
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	sigBytes, err := hex.DecodeString(sigS)
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return crypto.SignatureFromBytes(sigBytes)
-}
-
-// Monax-keys client PublicKey requests the public key associated with an address from
-// the monax-keys server.
-func (kc *keyClient) PublicKey(address crypto.Address) (crypto.PublicKey, error) {
-	pubS, err := kc.requester("pub", map[string]string{
-		"addr": address.String(),
-	})
-	if err != nil {
-		return crypto.PublicKey{}, err
-	}
-	pubKeyBytes, err := hex.DecodeString(pubS)
-	if err != nil {
-		return crypto.PublicKey{}, err
-	}
-	publicKey, err := crypto.PublicKeyFromBytes(pubKeyBytes)
-	if err != nil {
-		return crypto.PublicKey{}, err
-	}
-	if address != publicKey.Address() {
-		return crypto.PublicKey{}, fmt.Errorf("public key %s maps to address %s but was returned for address %s",
-			publicKey, publicKey.Address(), address)
-	}
-	return publicKey, nil
-}
-
-func (kc *keyClient) Generate(keyName string, keyType KeyType) (crypto.Address, error) {
-	addr, err := kc.requester("gen", map[string]string{
-		//"auth": auth,
-		"name": keyName,
-		"type": keyType.String(),
-	})
-	if err != nil {
-		return crypto.ZeroAddress, err
-	}
-	return crypto.AddressFromHexString(addr)
-}
-
-func (kc *keyClient) HealthCheck() error {
-	_, err := kc.requester("name/ls", nil)
-	return err
 }

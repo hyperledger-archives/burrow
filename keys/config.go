@@ -1,12 +1,14 @@
 package keys
 
 type KeysConfig struct {
-	URL string
+	ServerEnabled bool
+	URL           string
 }
 
 func DefaultKeysConfig() *KeysConfig {
 	return &KeysConfig{
 		// Default Monax keys port
-		URL: "http://localhost:4767",
+		ServerEnabled: true,
+		URL:           "",
 	}
 }
