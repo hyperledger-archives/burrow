@@ -49,13 +49,12 @@ func TestStatus(t *testing.T) {
 }
 
 func TestBroadcastTx(t *testing.T) {
-	wsc := newWSClient()
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
 		toAddr := privateAccounts[1].Address()
 		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
-		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, tx)
 		require.NoError(t, err)
 		assert.False(t, receipt.CreatesContract, "This tx should not create a contract")
 		assert.NotEmpty(t, receipt.TxHash, "Failed to compute tx hash")
@@ -96,14 +95,12 @@ func TestGetStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient()
-	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
-		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, true, receipt.CreatesContract, "This transaction should"+
 			" create a contract")
@@ -150,14 +147,12 @@ func TestCallContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	wsc := newWSClient()
-	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
 		// create the contract
 		amt, gasLim, fee := uint64(6969), uint64(1000), uint64(1000)
 		code, _, _ := simpleContract()
 		tx := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
-		receipt, err := broadcastTxAndWait(t, client, wsc, tx)
+		receipt, err := broadcastTxAndWait(t, client, tx)
 		assert.NoError(t, err)
 		if err != nil {
 			t.Fatalf("Problem broadcasting transaction: %v", err)
@@ -198,7 +193,7 @@ func TestNameReg(t *testing.T) {
 		// verify the name by both using the event and by checking get_name
 		subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
 			func() {
-				broadcastTxAndWait(t, client, wsc, tx)
+				broadcastTx(t, client, tx)
 			},
 			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 
@@ -225,7 +220,7 @@ func TestNameReg(t *testing.T) {
 		amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*
 			txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
 		tx = makeDefaultNameTx(t, client, name, updatedData, amt, fee)
-		broadcastTxAndWait(t, client, wsc, tx)
+		broadcastTxAndWait(t, client, tx)
 		entry = getNameRegEntry(t, client, name)
 
 		assert.Equal(t, updatedData, entry.Data)
@@ -235,7 +230,7 @@ func TestNameReg(t *testing.T) {
 			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
 
-		_, err := broadcastTxAndWait(t, client, wsc, tx)
+		_, err := tm_client.BroadcastTx(client, tx)
 		assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 			" name registry entry")
 		if err != nil {
@@ -244,16 +239,24 @@ func TestNameReg(t *testing.T) {
 		}
 
 		// Wait a couple of blocks to make sure name registration expires
-		waitNBlocks(t, wsc, 3)
+		waitNBlocks(t, wsc, 5)
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
 		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, data2, amt, fee,
 			getSequence(t, client, privateAccounts[1].Address())+1)
 		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
-		_, err = broadcastTxAndWait(t, client, wsc, tx)
-		assert.NoError(t, err, "Should be able to update a previously expired name"+
-			" registry entry as a different address")
+
+		//_, err = tm_client.BroadcastTx(client, tx)
+		require.NoError(t, subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
+			func() {
+				_, err = tm_client.BroadcastTx(client, tx)
+				assert.NoError(t, err, "Should be able to update a previously expired name"+
+					" registry entry as a different address")
+			},
+			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
+				return true, nil
+			}))
 		entry = getNameRegEntry(t, client, name)
 		assert.Equal(t, data2, entry.Data)
 		assert.Equal(t, privateAccounts[1].Address(), entry.Owner)
