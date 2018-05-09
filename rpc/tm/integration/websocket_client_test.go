@@ -28,6 +28,7 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -162,11 +163,12 @@ func TestWSCallWait(t *testing.T) {
 		eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
 		subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 		// wait for the contract to be created
-		waitForEvent(t, wsc, eid1, func() {
+		assert.False(t, waitForEvent(t, wsc, eid1, func() {
 			tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
 			receipt := broadcastTx(t, jsonRpcClient, tx)
 			contractAddr = receipt.ContractAddress
-		}, unmarshalValidateTx(amt, returnCode))
+		}, unmarshalValidateTx(amt, returnCode)).Timeout(), "waitForEvent timed out")
+
 		unsubscribe(t, wsc, subId1)
 
 		// susbscribe to the new contract
@@ -175,11 +177,11 @@ func TestWSCallWait(t *testing.T) {
 		subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
 		// get the return value from a call
 		data := []byte{0x1}
-		waitForEvent(t, wsc, eid2, func() {
+		assert.False(t, waitForEvent(t, wsc, eid2, func() {
 			tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr, data, amt, gasLim, fee)
 			receipt := broadcastTx(t, jsonRpcClient, tx)
 			contractAddr = receipt.ContractAddress
-		}, unmarshalValidateTx(amt, returnVal))
+		}, unmarshalValidateTx(amt, returnVal)).Timeout(), "waitForEvent timed out")
 		unsubscribe(t, wsc, subId2)
 	}
 }
@@ -195,9 +197,9 @@ func TestWSCallNoWait(t *testing.T) {
 	amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 	code, _, returnVal := simpleContract()
 
+	sequence := getSequence(t, jsonRpcClient, privateAccounts[0].Address())
 	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt, err := broadcastTxAndWait(t, jsonRpcClient, wsc, tx)
-	require.NoError(t, err)
+	receipt := broadcastTx(t, jsonRpcClient, tx)
 	contractAddr := receipt.ContractAddress
 
 	// susbscribe to the new contract
@@ -205,12 +207,14 @@ func TestWSCallNoWait(t *testing.T) {
 	eid := exe_events.EventStringAccountOutput(contractAddr)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
-	// get the return value from a call
+
 	data := []byte{0x1}
-	waitForEvent(t, wsc, eid, func() {
-		tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr, data, amt, gasLim, fee)
+	assert.False(t, waitForEvent(t, wsc, eid, func() {
+		tx = txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), &contractAddr, data, amt, gasLim, fee,
+			sequence+3)
+		require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 		broadcastTx(t, jsonRpcClient, tx)
-	}, unmarshalValidateTx(amt, returnVal))
+	}, unmarshalValidateTx(amt, returnVal)).Timeout(), "waitForEvent timed out")
 }
 
 // create two contracts, one of which calls the other
