@@ -18,15 +18,12 @@
 package integration
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"testing"
 
-	"context"
-
-	"sync"
-
-	"github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -40,15 +37,13 @@ func TestTransactCallNoCode(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
 	// Flip flops between sending private key and input address to test private key and address based signing
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 	toAddress := privateAccounts[2].Address()
 
 	numCreates := 1000
 	countCh := committedTxCount(t)
 	for i := 0; i < numCreates; i++ {
 		receipt, err := cli.Transact(v0.TransactParam{
-			PrivKey:      privKey(i),
-			InputAddress: inputAddress(i),
+			InputAccount: inputAccount(i),
 			Address:      toAddress.Bytes(),
 			Data:         []byte{},
 			Fee:          2,
@@ -68,7 +63,6 @@ func TestTransactCreate(t *testing.T) {
 	wg.Add(numGoroutines)
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 	// Flip flops between sending private key and input address to test private key and address based signing
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 	bc, err := hex.DecodeString(strangeLoopBytecode)
 	require.NoError(t, err)
 	countCh := committedTxCount(t)
@@ -76,8 +70,7 @@ func TestTransactCreate(t *testing.T) {
 		go func() {
 			for j := 0; j < numCreates; j++ {
 				create, err := cli.Transact(v0.TransactParam{
-					PrivKey:      privKey(j),
-					InputAddress: inputAddress(j),
+					InputAccount: inputAccount(i),
 					Address:      nil,
 					Data:         bc,
 					Fee:          2,
@@ -98,13 +91,11 @@ func TestTransactCreate(t *testing.T) {
 func BenchmarkTransactCreateContract(b *testing.B) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 	bc, err := hex.DecodeString(strangeLoopBytecode)
 	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		create, err := cli.Transact(v0.TransactParam{
-			PrivKey:      privKey(i),
-			InputAddress: inputAddress(i),
+			InputAccount: inputAccount(i),
 			Address:      nil,
 			Data:         bc,
 			Fee:          2,
@@ -119,7 +110,6 @@ func TestTransactAndHold(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 	bc, err := hex.DecodeString(strangeLoopBytecode)
 	require.NoError(t, err)
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 
 	numGoroutines := 5
 	numRuns := 2
@@ -127,8 +117,7 @@ func TestTransactAndHold(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		for j := 0; j < numRuns; j++ {
 			create, err := cli.TransactAndHold(v0.TransactParam{
-				PrivKey:      privKey(j),
-				InputAddress: inputAddress(j),
+				InputAccount: inputAccount(i),
 				Address:      nil,
 				Data:         bc,
 				Fee:          2,
@@ -138,8 +127,7 @@ func TestTransactAndHold(t *testing.T) {
 			assert.Equal(t, 0, create.StackDepth)
 			functionID := abi.FunctionID("UpsieDownsie()")
 			call, err := cli.TransactAndHold(v0.TransactParam{
-				PrivKey:      privKey(j),
-				InputAddress: inputAddress(j),
+				InputAccount: inputAccount(i),
 				Address:      create.CallData.Callee.Bytes(),
 				Data:         functionID[:],
 				Fee:          2,
@@ -158,12 +146,10 @@ func TestSend(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
 	numSends := 1000
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
 	countCh := committedTxCount(t)
 	for i := 0; i < numSends; i++ {
 		send, err := cli.Send(v0.SendParam{
-			PrivKey:      privKey(i),
-			InputAddress: inputAddress(i),
+			InputAccount: inputAccount(i),
 			Amount:       2003,
 			ToAddress:    privateAccounts[3].Address().Bytes(),
 		})
@@ -176,12 +162,9 @@ func TestSend(t *testing.T) {
 func TestSendAndHold(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
-	privKey, inputAddress := privKeyInputAddressAlternator(privateAccounts[0])
-
 	for i := 0; i < 2; i++ {
 		send, err := cli.SendAndHold(v0.SendParam{
-			PrivKey:      privKey(i),
-			InputAddress: inputAddress(i),
+			InputAccount: inputAccount(i),
 			Amount:       2003,
 			ToAddress:    privateAccounts[3].Address().Bytes(),
 		})
@@ -189,6 +172,8 @@ func TestSendAndHold(t *testing.T) {
 		assert.Equal(t, false, send.CreatesContract)
 	}
 }
+
+// Helpers
 
 var committedTxCountIndex = 0
 
@@ -222,19 +207,15 @@ func committedTxCount(t *testing.T) chan int {
 	return outCh
 }
 
-// Returns a pair of functions that mutually exclusively return the private key bytes or input address bytes of a
-// private account in the same iteration of a loop indexed by an int
-func privKeyInputAddressAlternator(privateAccount account.PrivateAccount) (func(int) []byte, func(int) []byte) {
-	privKey := privateAccount.PrivateKey().RawBytes()
-	inputAddress := privateAccount.Address().Bytes()
-	return alternator(privKey, 0), alternator(inputAddress, 1)
-}
+var inputPrivateKey = privateAccounts[0].PrivateKey().RawBytes()
+var inputAddress = privateAccounts[0].Address().Bytes()
 
-func alternator(ret []byte, res int) func(int) []byte {
-	return func(i int) []byte {
-		if i%2 == res {
-			return ret
-		}
-		return nil
+func inputAccount(i int) v0.InputAccount {
+	ia := v0.InputAccount{}
+	if i%2 == 0 {
+		ia.PrivateKey = inputPrivateKey
+	} else {
+		ia.Address = inputAddress
 	}
+	return ia
 }

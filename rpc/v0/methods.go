@@ -147,12 +147,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return acm.AsConcretePrivateAccount(pa), 0, nil
 		},
 		GEN_PRIV_ACCOUNT_FROM_KEY: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-			param := &PrivKeyParam{}
+			param := &PrivateKeyParam{}
 			err := codec.DecodeBytes(param, request.Params)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(param.PrivKey)
+			pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(param.PrivateKey)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -214,7 +214,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			txRet, err := service.Transactor().SignTx(param.Tx, acm.SigningAccounts(param.PrivAccounts))
+			txRet, err := service.Transactor().SignTx(param.Tx, acm.SigningAccounts(param.PrivateAccounts))
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -231,7 +231,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Use mempool state so that transact can generate a run of sequence numbers when formulating transactions
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -251,7 +251,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -272,7 +272,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -293,7 +293,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -309,7 +309,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -444,17 +444,17 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 }
 
 // Gets signing account from onr of private key or address - failing if both are provided
-func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) (*execution.SequentialSigningAccount, error) {
-	if len(addressBytes) > 0 {
-		if len(privKey) > 0 {
+func signingAccount(accounts *execution.Accounts, inputAccount InputAccount) (*execution.SequentialSigningAccount, error) {
+	if len(inputAccount.Address) > 0 {
+		if len(inputAccount.PrivateKey) > 0 {
 			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
 		}
-		address, err := acm.AddressFromBytes(addressBytes)
+		address, err := acm.AddressFromBytes(inputAccount.Address)
 		if err != nil {
 			return nil, err
 		}
 		return accounts.SequentialSigningAccount(address), nil
 	}
 
-	return accounts.SequentialSigningAccountFromPrivateKey(privKey)
+	return accounts.SequentialSigningAccountFromPrivateKey(inputAccount.PrivateKey)
 }
