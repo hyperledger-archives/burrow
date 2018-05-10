@@ -101,8 +101,10 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 			if err != nil {
 				return nil, err
 			}
+
 			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
 			defer cancel()
+
 			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
 				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
