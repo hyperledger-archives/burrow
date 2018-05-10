@@ -24,6 +24,7 @@ const (
 	GasStackOp uint64 = 1
 
 	GasEcRecover     uint64 = 1
+	GasEdVerify      uint64 = 1
 	GasSha256Word    uint64 = 1
 	GasSha256Base    uint64 = 1
 	GasRipemd160Word uint64 = 1

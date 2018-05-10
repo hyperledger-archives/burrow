@@ -20,11 +20,16 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/secp256k1"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ripemd160"
 )
 
 var registeredNativeContracts = make(map[Word256]NativeContract)
+var true32Byte = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+var false32Byte = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func RegisteredNativeContract(address Word256) bool {
 	_, ok := registeredNativeContracts[address]
@@ -46,10 +51,11 @@ func init() {
 }
 
 func registerNativeContracts() {
-	// registeredNativeContracts[Int64ToWord256(1)] = ecrecoverFunc
+	registeredNativeContracts[Int64ToWord256(1)] = ecrecoverFunc
 	registeredNativeContracts[Int64ToWord256(2)] = sha256Func
 	registeredNativeContracts[Int64ToWord256(3)] = ripemd160Func
 	registeredNativeContracts[Int64ToWord256(4)] = identityFunc
+	registeredNativeContracts[Int64ToWord256(5)] = edverifyFunc
 }
 
 //-----------------------------------------------------------------------------
@@ -57,8 +63,8 @@ func registerNativeContracts() {
 type NativeContract func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error)
 
-/* Removed due to C dependency
-func ecrecoverFunc(state State, caller *acm.Account, input []byte, gas *int64) (output []byte, err error) {
+func ecrecoverFunc(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+	logger *logging.Logger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := GasEcRecover
 	if *gas < gasRequired {
@@ -66,7 +72,8 @@ func ecrecoverFunc(state State, caller *acm.Account, input []byte, gas *int64) (
 	} else {
 		*gas -= gasRequired
 	}
-	// Recover
+
+	// SECP256K1 Recovery
 	hash := input[:32]
 	v := byte(input[32] - 27) // ignore input[33:64], v is small.
 	sig := append(input[64:], v)
@@ -74,12 +81,34 @@ func ecrecoverFunc(state State, caller *acm.Account, input []byte, gas *int64) (
 	recovered, err := secp256k1.RecoverPubkey(hash, sig)
 	if err != nil {
 		return nil, err
-OH NO STOCASTIC CAT CODING!!!!
 	}
 	hashed := sha3.Sha3(recovered[1:])
 	return LeftPadBytes(hashed, 32), nil
 }
-*/
+
+func edverifyFunc(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+	logger *logging.Logger) (output []byte, err error) {
+	// Deduct gas
+	gasRequired := GasEdVerify
+	if *gas < gasRequired {
+		return nil, ErrInsufficientGas
+	} else {
+		*gas -= gasRequired
+	}
+
+	// ED25519 Sig Verify
+	// https://github.com/ethereum/go-ethereum/pull/16453/files
+	message := GetData(input, 0, 32)
+	publicKey := GetData(input, 32, 32)
+	edsig := GetData(input, 64, 64)
+
+	// Verify the Ed25519 signature against the public key and message and return result
+	// https://godoc.org/golang.org/x/crypto/ed25519#Verify
+	if ed25519.Verify(publicKey, message, edsig) {
+		return true32Byte, nil
+	}
+	return false32Byte, nil
+}
 
 func sha256Func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
