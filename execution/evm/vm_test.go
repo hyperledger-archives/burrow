@@ -374,6 +374,26 @@ func TestMsgSender(t *testing.T) {
 
 }
 
+func TestInvalid(t *testing.T) {
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
+
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+	expected := "call error: " + ErrExecutionAborted.Error()
+	assert.EqualError(t, err, expected)
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+}
+
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
 // both of the memory operations. Each MSTORE is done on the memory boundary
 // (at MSIZE) which Solidity uses to find guaranteed unallocated memory.

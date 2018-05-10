@@ -189,6 +189,7 @@ const (
 	// 0x70 range - other
 	STATICCALL   = 0xfa
 	REVERT       = 0xfd
+	INVALID      = 0xfe
 	SELFDESTRUCT = 0xff
 )
 
@@ -347,6 +348,7 @@ var opCodeNames = map[OpCode]string{
 	STATICCALL:   "STATICCALL",
 	// 0x70 range - other
 	REVERT:       "REVERT",
+	INVALID:      "INVALID",
 	SELFDESTRUCT: "SELFDESTRUCT",
 }
 

@@ -48,6 +48,7 @@ var (
 	ErrDataStackUnderflow     = errors.New("Data stack underflow")
 	ErrInvalidContract        = errors.New("Invalid contract")
 	ErrNativeContractCodeCopy = errors.New("Tried to copy native contract code")
+	ErrExecutionAborted       = errors.New("Execution aborted")
 	ErrExecutionReverted      = errors.New("Execution reverted")
 )
 
@@ -1039,6 +1040,9 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
 			return output, ErrExecutionReverted
 
+		case INVALID: //0xFE
+			return nil, ErrExecutionAborted
+
 		case SELFDESTRUCT: // 0xFF
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
@@ -1079,8 +1083,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case STATICCALL, SHL, SHR, SAR, RETURNDATASIZE, RETURNDATACOPY:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
 		default:
-			vm.Debugf("(pc) %-3v Invalid opcode %X\n", pc, op)
-			return nil, fmt.Errorf("invalid opcode %X", op)
+			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
+			return nil, fmt.Errorf("unknown opcode %X", op)
 		}
 		pc++
 	}
