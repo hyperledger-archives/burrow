@@ -374,6 +374,103 @@ func TestMsgSender(t *testing.T) {
 
 }
 
+func TestInvalid(t *testing.T) {
+	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
+
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+	expected := "call error: " + ErrExecutionAborted.Error()
+	assert.EqualError(t, err, expected)
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+}
+
+func TestReturnDataSize(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(cache, newParams(), acm.ZeroAddress, nil, logger)
+
+	accountName := "account2addresstests"
+
+	callcode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, RETURN)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2, _ := makeAccountWithCode(cache, accountName, callcode)
+
+	var gas uint64 = 100000
+
+	gas1, gas2 := byte(0x1), byte(0x1)
+	value := byte(0x69)
+	inOff, inSize := byte(0x0), byte(0x0) // no call data
+	retOff, retSize := byte(0x0), byte(0x0E)
+
+	bytecode := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1, inOff, PUSH1, value, PUSH20,
+		0x61, 0x63, 0x63, 0x6F, 0x75, 0x6E, 0x74, 0x32, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x74, 0x65,
+		0x73, 0x74, 0x73, PUSH2, gas1, gas2, CALL, RETURNDATASIZE, PUSH1, 0x00, MSTORE, PUSH1, 0x20, PUSH1, 0x00, RETURN)
+
+	expected := LeftPadBytes([]byte{0x0E}, 32)
+
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReturnDataCopy(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(cache, newParams(), acm.ZeroAddress, nil, logger)
+
+	accountName := "account2addresstests"
+
+	callcode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, RETURN)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2, _ := makeAccountWithCode(cache, accountName, callcode)
+
+	var gas uint64 = 100000
+
+	gas1, gas2 := byte(0x1), byte(0x1)
+	value := byte(0x69)
+	inOff, inSize := byte(0x0), byte(0x0) // no call data
+	retOff, retSize := byte(0x0), byte(0x0E)
+
+	bytecode := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1, inOff, PUSH1, value, PUSH20,
+		0x61, 0x63, 0x63, 0x6F, 0x75, 0x6E, 0x74, 0x32, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x74, 0x65,
+		0x73, 0x74, 0x73, PUSH2, gas1, gas2, CALL, RETURNDATASIZE, PUSH1, 0x00, PUSH1, 0x00, RETURNDATACOPY,
+		RETURNDATASIZE, PUSH1, 0x00, RETURN)
+
+	expected := []byte{0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65}
+
+	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
 // both of the memory operations. Each MSTORE is done on the memory boundary
 // (at MSIZE) which Solidity uses to find guaranteed unallocated memory.
