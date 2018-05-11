@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -31,11 +32,12 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/rpc/lib/client"
+	"github.com/tendermint/tendermint/rpc/lib/types"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
 const (
-	timeoutSeconds       = 2
+	timeoutSeconds       = 4
 	expectBlockInSeconds = 2
 )
 
@@ -95,9 +97,9 @@ func unsubscribe(t *testing.T, wsc *rpcclient.WSClient, subscriptionId string) {
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWait(t *testing.T, client tm_client.RPCClient, wsc *rpcclient.WSClient,
-	tx txs.Tx) (*txs.Receipt, error) {
-
+func broadcastTxAndWait(t *testing.T, client tm_client.RPCClient, tx txs.Tx) (*txs.Receipt, error) {
+	wsc := newWSClient()
+	defer stopWSClient(wsc)
 	inputs := tx.GetInputs()
 	if len(inputs) == 0 {
 		t.Fatalf("cannot broadcastAndWait fot Tx with no inputs")
@@ -154,10 +156,12 @@ func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient, predicate blockP
 	subscribeAndWaitForNext(t, wsc, tm_types.EventNewBlock, runner, eventDataChecker)
 }
 
-func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(), checker resultEventChecker) {
+func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(),
+	checker resultEventChecker) error {
+
 	subId := subscribeAndGetSubscriptionId(t, wsc, event)
 	defer unsubscribe(t, wsc, subId)
-	waitForEvent(t, wsc, event, runner, checker)
+	return waitForEvent(t, wsc, event, runner, checker)
 }
 
 // waitForEvent executes runner that is expected to trigger events. It then
@@ -168,7 +172,8 @@ func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string
 // waitForEvent will keep listening for new events. If an error is returned
 // waitForEvent will fail the test.
 func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner func(),
-	checker resultEventChecker) waitForEventResult {
+	checker resultEventChecker) error {
+
 	// go routine to wait for websocket msg
 	eventsCh := make(chan *rpc.ResultEvent)
 	shutdownEventsCh := make(chan bool, 1)
@@ -189,8 +194,7 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 					return
 				}
 				if r.ID == tm_client.EventResponseID(eventID) {
-					resultEvent := new(rpc.ResultEvent)
-					err := json.Unmarshal(r.Result, resultEvent)
+					resultEvent, err := readResponse(r)
 					if err != nil {
 						errCh <- err
 					} else {
@@ -210,54 +214,58 @@ func waitForEvent(t *testing.T, wsc *rpcclient.WSClient, eventID string, runner 
 		select {
 		// wait for an event or timeout
 		case <-time.After(timeoutSeconds * time.Second):
-			return waitForEventResult{timeout: true}
+			t.Fatalf("waitForEvent timed out: %s", debug.Stack())
 		case eventData := <-eventsCh:
 			// run the check
 			stopWaiting, err := checker(eventID, eventData)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 			if stopWaiting {
-				return waitForEventResult{}
+				return nil
 			}
 		case err := <-errCh:
-			t.Fatal(err)
+			return err
 		}
 	}
+	return nil
 }
 
-type waitForEventResult struct {
-	error
-	timeout bool
-}
-
-func (err waitForEventResult) Timeout() bool {
-	return err.timeout
+func readResponse(r rpctypes.RPCResponse) (*rpc.ResultEvent, error) {
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	resultEvent := new(rpc.ResultEvent)
+	err := json.Unmarshal(r.Result, resultEvent)
+	if err != nil {
+		return nil, err
+	}
+	return resultEvent, nil
 }
 
 //--------------------------------------------------------------------------------
 
-func unmarshalValidateSend(amt uint64, toAddr acm.Address) resultEventChecker {
-	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
-		data := resultEvent.EventDataTx
-		if data == nil {
-			return true, fmt.Errorf("event data %v is not EventDataTx", resultEvent)
-		}
-		if data.Exception != "" {
-			return true, fmt.Errorf(data.Exception)
-		}
-		tx := data.Tx.(*txs.SendTx)
-		if tx.Inputs[0].Address != privateAccounts[0].Address() {
-			return true, fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address,
-				privateAccounts[0].Address())
-		}
-		if tx.Inputs[0].Amount != amt {
-			return true, fmt.Errorf("amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
-		}
-		if tx.Outputs[0].Address != toAddr {
-			return true, fmt.Errorf("receivers do not match up! Got %s, expected %s", tx.Outputs[0].Address,
-				privateAccounts[0].Address())
-		}
-		return true, nil
+func unmarshalValidateSend(amt uint64, toAddr acm.Address, resultEvent *rpc.ResultEvent) error {
+	data := resultEvent.EventDataTx
+	if data == nil {
+		return fmt.Errorf("event data %v is not EventDataTx", resultEvent)
 	}
+	if data.Exception != "" {
+		return fmt.Errorf(data.Exception)
+	}
+	tx := data.Tx.(*txs.SendTx)
+	if tx.Inputs[0].Address != privateAccounts[0].Address() {
+		return fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address,
+			privateAccounts[0].Address())
+	}
+	if tx.Inputs[0].Amount != amt {
+		return fmt.Errorf("amt does not match up! Got %d, expected %d", tx.Inputs[0].Amount, amt)
+	}
+	if tx.Outputs[0].Address != toAddr {
+		return fmt.Errorf("receivers do not match up! Got %s, expected %s", tx.Outputs[0].Address,
+			privateAccounts[0].Address())
+	}
+	return nil
 }
 
 func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {

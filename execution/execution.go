@@ -147,7 +147,7 @@ func (exe *executor) Commit() (hash []byte, err error) {
 		return nil, err
 	}
 	// flush events to listeners
-	exe.eventCache.Flush()
+	defer exe.eventCache.Flush()
 	return exe.state.Hash(), nil
 }
 

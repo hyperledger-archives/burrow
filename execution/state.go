@@ -235,7 +235,11 @@ func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word
 func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
 	s.Lock()
 	defer s.Unlock()
-	s.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
+	if value == binary.Zero256 {
+		s.tree.Remove(key.Bytes())
+	} else {
+		s.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
+	}
 	return nil
 }
 

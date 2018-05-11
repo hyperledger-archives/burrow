@@ -18,10 +18,17 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"bytes"
+	"text/template"
+
+	"encoding/base64"
+
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
+	"github.com/pkg/errors"
 	"github.com/tendermint/ed25519"
 	crypto "github.com/tendermint/go-crypto"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -30,14 +37,35 @@ import (
 
 // Simple ed25519 key structure for mock purposes with ripemd160 address
 type MockKey struct {
+	Name       string
 	Address    acm.Address
-	PrivateKey [ed25519.PrivateKeySize]byte
 	PublicKey  []byte
+	PrivateKey []byte
 }
 
-func newMockKey() (*MockKey, error) {
+const DefaultDumpKeysFormat = `{
+  "Keys": [<< range $index, $key := . >><< if $index>>,<< end >>
+    {
+      "Name": "<< $key.Name >>",
+      "Address": "<< $key.Address >>",
+      "PublicKey": "<< $key.PublicKeyBase64 >>",
+      "PrivateKey": "<< $key.PrivateKeyBase64 >>"
+    }<< end >>
+  ]
+}`
+
+const LeftTemplateDelim = "<<"
+const RightTemplateDelim = ">>"
+
+var DefaultDumpKeysTemplate = template.Must(template.New("MockKeyClient_DumpKeys").
+	Delims(LeftTemplateDelim, RightTemplateDelim).
+	Parse(DefaultDumpKeysFormat))
+
+func newMockKey(name string) (*MockKey, error) {
 	key := &MockKey{
-		PublicKey: make([]byte, ed25519.PublicKeySize),
+		Name:       name,
+		PublicKey:  make([]byte, ed25519.PublicKeySize),
+		PrivateKey: make([]byte, ed25519.PrivateKeySize),
 	}
 	// this is a mock key, so the entropy of the source is purely
 	// for testing
@@ -56,6 +84,9 @@ func newMockKey() (*MockKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	if key.Name == "" {
+		key.Name = key.Address.String()
+	}
 	return key, nil
 }
 
@@ -65,15 +96,34 @@ func mockKeyFromPrivateAccount(privateAccount acm.PrivateAccount) *MockKey {
 		panic(fmt.Errorf("mock key client only supports ed25519 private keys at present"))
 	}
 	key := &MockKey{
-		Address:   privateAccount.Address(),
-		PublicKey: privateAccount.PublicKey().RawBytes(),
+		Name:       privateAccount.Address().String(),
+		Address:    privateAccount.Address(),
+		PublicKey:  privateAccount.PublicKey().RawBytes(),
+		PrivateKey: privateAccount.PrivateKey().RawBytes(),
 	}
-	copy(key.PrivateKey[:], privateAccount.PrivateKey().RawBytes())
 	return key
 }
 
 func (mockKey *MockKey) Sign(message []byte) (acm.Signature, error) {
-	return acm.SignatureFromBytes(ed25519.Sign(&mockKey.PrivateKey, message)[:])
+	var privateKey [ed25519.PrivateKeySize]byte
+	copy(privateKey[:], mockKey.PrivateKey)
+	return acm.SignatureFromBytes(ed25519.Sign(&privateKey, message)[:])
+}
+
+func (mockKey *MockKey) PrivateKeyBase64() string {
+	return base64.StdEncoding.EncodeToString(mockKey.PrivateKey[:])
+}
+
+func (mockKey *MockKey) PrivateKeyHex() string {
+	return hex.EncodeUpperToString(mockKey.PrivateKey[:])
+}
+
+func (mockKey *MockKey) PublicKeyBase64() string {
+	return base64.StdEncoding.EncodeToString(mockKey.PublicKey)
+}
+
+func (mockKey *MockKey) PublicKeyHex() string {
+	return hex.EncodeUpperToString(mockKey.PublicKey)
 }
 
 //---------------------------------------------------------------------
@@ -96,26 +146,26 @@ func NewMockKeyClient(privateAccounts ...acm.PrivateAccount) *MockKeyClient {
 	return client
 }
 
-func (mock *MockKeyClient) NewKey() acm.Address {
+func (mkc *MockKeyClient) NewKey(name string) acm.Address {
 	// Only tests ED25519 curve and ripemd160.
-	key, err := newMockKey()
+	key, err := newMockKey(name)
 	if err != nil {
 		panic(fmt.Sprintf("Mocked key client failed on key generation: %s", err))
 	}
-	mock.knownKeys[key.Address] = key
+	mkc.knownKeys[key.Address] = key
 	return key.Address
 }
 
-func (mock *MockKeyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
-	key := mock.knownKeys[signAddress]
+func (mkc *MockKeyClient) Sign(signAddress acm.Address, message []byte) (acm.Signature, error) {
+	key := mkc.knownKeys[signAddress]
 	if key == nil {
 		return acm.Signature{}, fmt.Errorf("Unknown address (%s)", signAddress)
 	}
 	return key.Sign(message)
 }
 
-func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
-	key := mock.knownKeys[address]
+func (mkc *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error) {
+	key := mkc.knownKeys[address]
 	if key == nil {
 		return acm.PublicKey{}, fmt.Errorf("Unknown address (%s)", address)
 	}
@@ -124,10 +174,27 @@ func (mock *MockKeyClient) PublicKey(address acm.Address) (acm.PublicKey, error)
 	return acm.PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap())
 }
 
-func (mock *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
-	return mock.NewKey(), nil
+func (mkc *MockKeyClient) Generate(keyName string, keyType KeyType) (acm.Address, error) {
+	return mkc.NewKey(keyName), nil
 }
 
-func (mock *MockKeyClient) HealthCheck() error {
+func (mkc *MockKeyClient) HealthCheck() error {
 	return nil
+}
+
+func (mkc *MockKeyClient) DumpKeys(templateString string) (string, error) {
+	tmpl, err := template.New("DumpKeys").Delims(LeftTemplateDelim, RightTemplateDelim).Parse(templateString)
+	if err != nil {
+		errors.Wrap(err, "could not dump keys to template")
+	}
+	buf := new(bytes.Buffer)
+	keys := make([]*MockKey, 0, len(mkc.knownKeys))
+	for _, k := range mkc.knownKeys {
+		keys = append(keys, k)
+	}
+	err = tmpl.Execute(buf, keys)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }

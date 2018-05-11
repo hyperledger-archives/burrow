@@ -20,7 +20,7 @@ notes=$(go run ./project/cmd/notes/main.go)
 echo "This command will tag the current commit $(git rev-parse --short HEAD) as version $version"
 echo "defined programmatically in project/releases.go with release notes:"
 echo
-echo "$notes" | xargs -L1 echo "> "
+echo "$notes" | sed 's/^/> /'
 echo
 echo "It will then push the version tag to origin."
 echo
