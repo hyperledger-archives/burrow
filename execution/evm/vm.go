@@ -42,6 +42,7 @@ var (
 	ErrMemoryOutOfBounds      = errors.New("Memory out of bounds")
 	ErrCodeOutOfBounds        = errors.New("Code out of bounds")
 	ErrInputOutOfBounds       = errors.New("Input out of bounds")
+	ErrReturnDataOutOfBounds  = errors.New("Return data out of bounds")
 	ErrCallStackOverflow      = errors.New("Call stack overflow")
 	ErrCallStackUnderflow     = errors.New("Call stack underflow")
 	ErrDataStackOverflow      = errors.New("Data stack overflow")
@@ -113,6 +114,7 @@ type VM struct {
 	nestedCallErrors []ErrNestedCall
 	publisher        event.Publisher
 	logger           *logging.Logger
+	returnData       []byte
 	debugOpcodes     bool
 	dumpTokens       bool
 }
@@ -143,6 +145,14 @@ func (vm *VM) Debugf(format string, a ...interface{}) {
 // satisfies go_events.Eventable
 func (vm *VM) SetPublisher(publisher event.Publisher) {
 	vm.publisher = publisher
+}
+
+func (vm *VM) setReturnDataBuffer(ret []byte) {
+	vm.returnData = ret
+}
+
+func (vm *VM) getReturnDataBuffer() (ret []byte) {
+	return vm.returnData
 }
 
 // CONTRACT: it is the duty of the contract writer to call known permissions
@@ -494,6 +504,48 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			stack.Push64(int64(res))
 			vm.Debugf(" => 0x%X\n", res)
 
+		case SHL: //0x1B
+			shift, x := stack.PopBigInt(), stack.PopBigInt()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Lsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
+		case SHR: //0x1C
+			shift, x := stack.PopBigInt(), stack.PopBigInt()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Rsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
+		case SAR: //0x1D
+			shift, x := stack.PopBigInt(), stack.PopBigIntSigned()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				if x.Sign() < 0 {
+					reset.SetInt64(-1)
+				}
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Rsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
 		case SHA3: // 0x20
 			if useGasNegative(gas, GasSha3, &err) {
 				return nil, err
@@ -665,6 +717,38 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 				return nil, firstErr(err, ErrMemoryOutOfBounds)
 			}
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
+
+		case RETURNDATASIZE: // 0x3D
+			stack.Push64(int64(len(vm.getReturnDataBuffer())))
+			vm.Debugf(" => %d\n", len(vm.getReturnDataBuffer()))
+
+		case RETURNDATACOPY: // 0x3E
+			memOff := stack.PopBigInt()
+			outputOff, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+			length, popErr := stack.Pop64()
+			if popErr != nil {
+				return nil, firstErr(err, popErr)
+			}
+
+			bigOff := big.NewInt(outputOff)
+			bigLength := big.NewInt(length)
+			end := new(big.Int).Add(bigOff, bigLength)
+
+			if end.BitLen() > 64 || uint64(len(vm.getReturnDataBuffer())) < end.Uint64() {
+				return nil, ErrReturnDataOutOfBounds
+			}
+
+			data := vm.getReturnDataBuffer()
+
+			memErr := memory.Write(memOff, data)
+			if memErr != nil {
+				vm.Debugf(" => Memory err: %s", memErr)
+				return nil, firstErr(err, ErrMemoryOutOfBounds)
+			}
+			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, data)
 
 		case BLOCKHASH: // 0x40
 			stack.Push(Zero256)
@@ -871,6 +955,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			} else {
 				newAccount.SetCode(ret) // Set the code (ret need not be copied as per Call contract)
 				stack.Push(newAccount.Address().Word256())
+				emptyBuffer := []byte{}
+				vm.setReturnDataBuffer(emptyBuffer)
 			}
 
 			if err_ == ErrExecutionReverted {
@@ -955,11 +1041,13 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
 					ret, callErr = vm.Call(callee, callee, acc.Code(), args, value, &gasLimit)
+					vm.setReturnDataBuffer(ret)
 				} else if op == DELEGATECALL {
 					if acc == nil {
 						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
 					ret, callErr = vm.DelegateCall(caller, callee, acc.Code(), args, value, &gasLimit)
+					vm.setReturnDataBuffer(ret)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
@@ -971,6 +1059,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 					// add account to the tx cache
 					vm.stateWriter.UpdateAccount(acc)
 					ret, callErr = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
+					vm.setReturnDataBuffer(ret)
 				}
 			}
 			// In case any calls deeper in the stack (particularly SNatives) has altered either of two accounts to which
@@ -1029,7 +1118,6 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			return output, nil
 
 		case REVERT: // 0xFD
-			return nil, fmt.Errorf("REVERT not yet fully implemented")
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output, memErr := memory.Read(offset, size)
 			if memErr != nil {
@@ -1080,8 +1168,9 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case STOP: // 0x00
 			return nil, nil
 
-		case STATICCALL, SHL, SHR, SAR, RETURNDATASIZE, RETURNDATACOPY:
+		case STATICCALL:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
+
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
 			return nil, fmt.Errorf("unknown opcode %X", op)
