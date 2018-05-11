@@ -152,14 +152,14 @@ func burrow() *cli.Cli {
 				"additional GenesisSpec presets specified by other flags will be merged. GenesisSpecs appearing "+
 				"later take precedent over those appearing early if multiple --base flags are provided")
 
-			fullOpt := cmd.IntOpt("f full-accounts", 1, "Number of preset Full type accounts")
+			fullOpt := cmd.IntOpt("f full-accounts", 0, "Number of preset Full type accounts")
 			validatorOpt := cmd.IntOpt("v validator-accounts", 0, "Number of preset Validator type accounts")
 			rootOpt := cmd.IntOpt("r root-accounts", 0, "Number of preset Root type accounts")
 			developerOpt := cmd.IntOpt("d developer-accounts", 0, "Number of preset Developer type accounts")
-			participantsOpt := cmd.IntOpt("p participant-accounts", 1, "Number of preset Participant type accounts")
+			participantsOpt := cmd.IntOpt("p participant-accounts", 0, "Number of preset Participant type accounts")
 			chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-			cmd.Spec = "[--base][--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] " +
+			cmd.Spec = "[--base] [--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] " +
 				"[--participant-accounts] [--chain-name] [--toml]"
 
 			cmd.Action = func() {
