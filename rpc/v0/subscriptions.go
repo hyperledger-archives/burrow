@@ -25,15 +25,36 @@ import (
 )
 
 var (
-	reaperTimeout   = 5 * time.Second
-	reaperThreshold = 10 * time.Second
+	reaperPeriod    = 5 * time.Second
+	reaperThreshold = 20 * time.Second
 )
+
+// Catches events that callers subscribe to and adds them to an array ready to be polled.
+type Subscriptions struct {
+	mtx     *sync.RWMutex
+	service *rpc.Service
+	subs    map[string]*SubscriptionsCache
+	reap    bool
+}
 
 type SubscriptionsCache struct {
 	mtx    *sync.Mutex
 	events []interface{}
 	ts     time.Time
 	subId  string
+}
+
+func NewSubscriptions(service *rpc.Service) *Subscriptions {
+	es := &Subscriptions{
+		mtx:     &sync.RWMutex{},
+		service: service,
+		subs:    make(map[string]*SubscriptionsCache),
+		reap:    true,
+	}
+	if es.reap {
+		go reap(es)
+	}
+	return es
 }
 
 func newSubscriptionsCache() *SubscriptionsCache {
@@ -59,40 +80,19 @@ func (subsCache *SubscriptionsCache) poll() []interface{} {
 	return evts
 }
 
-// Catches events that callers subscribe to and adds them to an array ready to be polled.
-type Subscriptions struct {
-	mtx     *sync.RWMutex
-	service *rpc.Service
-	subs    map[string]*SubscriptionsCache
-	reap    bool
-}
-
-func NewSubscriptions(service *rpc.Service) *Subscriptions {
-	es := &Subscriptions{
-		mtx:     &sync.RWMutex{},
-		service: service,
-		subs:    make(map[string]*SubscriptionsCache),
-		reap:    true,
-	}
-	go reap(es)
-	return es
-}
-
+// Remove old subscriptions not recently polled
 func reap(es *Subscriptions) {
-	if !es.reap {
-		return
-	}
-	time.Sleep(reaperTimeout)
-	es.mtx.Lock()
-	defer es.mtx.Unlock()
-	for id, sub := range es.subs {
-		if time.Since(sub.ts) > reaperThreshold {
-			// Seems like Go is ok with this..
-			delete(es.subs, id)
-			es.service.Unsubscribe(context.Background(), id)
+	for {
+		time.Sleep(reaperPeriod)
+		for id, sub := range es.subs {
+			if time.Since(sub.ts) > reaperThreshold {
+				es.mtx.Lock()
+				delete(es.subs, id)
+				es.service.Unsubscribe(context.Background(), id)
+				es.mtx.Unlock()
+			}
 		}
 	}
-	go reap(es)
 }
 
 // Add a subscription and return the generated id. Note event dispatcher
@@ -136,7 +136,6 @@ func (subs *Subscriptions) Poll(subId string) ([]interface{}, error) {
 func (subs *Subscriptions) Remove(subId string) error {
 	subs.mtx.Lock()
 	defer subs.mtx.Unlock()
-	// TODO Check this.
 	_, ok := subs.subs[subId]
 	if !ok {
 		return fmt.Errorf("Subscription not active. ID: " + subId)

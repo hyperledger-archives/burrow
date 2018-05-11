@@ -17,7 +17,6 @@ package v0
 import (
 	"encoding/hex"
 	"fmt"
-	"runtime"
 	"testing"
 	"time"
 
@@ -31,10 +30,9 @@ var mockInterval = 20 * time.Millisecond
 
 // Test that event subscriptions can be added manually and then automatically reaped.
 func TestSubReaping(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	NUM_SUBS := 100
 	reaperThreshold = 200 * time.Millisecond
-	reaperTimeout = 100 * time.Millisecond
+	reaperPeriod = 100 * time.Millisecond
 
 	mee := event.NewEmitter(logging.NewNoopLogger())
 	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, logging.NewNoopLogger()))
@@ -78,7 +76,7 @@ func TestSubManualClose(t *testing.T) {
 	NUM_SUBS := 100
 	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
-	reaperTimeout = 10000 * time.Millisecond
+	reaperPeriod = 10000 * time.Millisecond
 
 	mee := event.NewEmitter(logging.NewNoopLogger())
 	eSubs := NewSubscriptions(rpc.NewSubscribableService(mee, logging.NewNoopLogger()))
@@ -125,7 +123,7 @@ func TestSubFlooding(t *testing.T) {
 	NUM_SUBS := 100
 	// Keep the reaper out of this.
 	reaperThreshold = 10000 * time.Millisecond
-	reaperTimeout = 10000 * time.Millisecond
+	reaperPeriod = 10000 * time.Millisecond
 	// Crank it up. Now pressure is 10 times higher on each sub.
 	mockInterval = 1 * time.Millisecond
 	mee := event.NewEmitter(logging.NewNoopLogger())
