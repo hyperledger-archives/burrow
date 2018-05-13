@@ -39,8 +39,7 @@ func Configure(cmd *cli.Cmd) {
 
 	keysTemplateOpt := cmd.StringOpt("z keys-template", mock.DefaultDumpKeysFormat,
 		fmt.Sprintf("Go text/template template (left delim: %s right delim: %s) to generate secret keys "+
-			"file specified with --generate-keys. Default:\n%s", mock.LeftTemplateDelim, mock.RightTemplateDelim,
-			mock.DefaultDumpKeysFormat))
+			"file specified with --generate-keys.", mock.LeftTemplateDelim, mock.RightTemplateDelim))
 
 	separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 

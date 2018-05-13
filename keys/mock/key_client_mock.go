@@ -15,20 +15,23 @@
 package mock
 
 import (
-	"crypto/rand"
-	"fmt"
-
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"text/template"
 
-	"encoding/base64"
+	"encoding/json"
+
+	"reflect"
 
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/keys"
 	"github.com/pkg/errors"
 	"github.com/tendermint/ed25519"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
 	"github.com/tmthrgd/go-hex"
+	"github.com/wayn3h0/go-uuid"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -48,16 +51,33 @@ const DefaultDumpKeysFormat = `{
     {
       "Name": "<< $key.Name >>",
       "Address": "<< $key.Address >>",
-      "PublicKey": "<< $key.PublicKeyBase64 >>",
-      "PrivateKey": "<< $key.PrivateKeyBase64 >>"
+      "PublicKey": "<< base64 $key.PublicKey >>",
+      "PrivateKey": "<< base64 $key.PrivateKey >>"
     }<< end >>
   ]
 }`
 
+const KubernetesKeyDumpFormat = `keysFiles:<< range $index, $key := . >>
+  key-<< printf "%03d" $index >>: << base64 $key.MonaxKeyJSON >><< end >>
+keysAddresses:<< range $index, $key := . >>
+  key-<< printf "%03d" $index >>: << $key.Address >><< end >>
+validatorAddresses:<< range $index, $key := . >>
+  - << $key.Address >><< end >>
+`
+
 const LeftTemplateDelim = "<<"
 const RightTemplateDelim = ">>"
 
-var DefaultDumpKeysTemplate = template.Must(template.New("MockKeyClient_DumpKeys").
+var templateFuncs template.FuncMap = map[string]interface{}{
+	"base64": func(rv reflect.Value) string {
+		return encode(rv, base64.StdEncoding.EncodeToString)
+	},
+	"hex": func(rv reflect.Value) string {
+		return encode(rv, hex.EncodeUpperToString)
+	},
+}
+
+var DefaultDumpKeysTemplate = template.Must(template.New("MockKeyClient_DumpKeys").Funcs(templateFuncs).
 	Delims(LeftTemplateDelim, RightTemplateDelim).
 	Parse(DefaultDumpKeysFormat))
 
@@ -110,20 +130,31 @@ func (mockKey *MockKey) Sign(message []byte) (acm.Signature, error) {
 	return acm.SignatureFromBytes(ed25519.Sign(&privateKey, message)[:])
 }
 
-func (mockKey *MockKey) PrivateKeyBase64() string {
-	return base64.StdEncoding.EncodeToString(mockKey.PrivateKey[:])
+// TODO: remove after merging keys taken from there to match serialisation
+type plainKeyJSON struct {
+	Id         []byte
+	Type       string
+	Address    string
+	PrivateKey []byte
 }
 
-func (mockKey *MockKey) PrivateKeyHex() string {
-	return hex.EncodeUpperToString(mockKey.PrivateKey[:])
-}
-
-func (mockKey *MockKey) PublicKeyBase64() string {
-	return base64.StdEncoding.EncodeToString(mockKey.PublicKey)
-}
-
-func (mockKey *MockKey) PublicKeyHex() string {
-	return hex.EncodeUpperToString(mockKey.PublicKey)
+// Returns JSON string compatible with that stored by monax-keys
+func (mockKey *MockKey) MonaxKeyJSON() string {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return errors.Wrap(err, "could not create monax key json").Error()
+	}
+	jsonKey := plainKeyJSON{
+		Id:         []byte(id.String()),
+		Address:    mockKey.Address.String(),
+		Type:       string(KeyTypeEd25519Ripemd160),
+		PrivateKey: mockKey.PrivateKey,
+	}
+	bs, err := json.Marshal(jsonKey)
+	if err != nil {
+		return errors.Wrap(err, "could not create monax key json").Error()
+	}
+	return string(bs)
 }
 
 //---------------------------------------------------------------------
@@ -183,9 +214,10 @@ func (mkc *MockKeyClient) HealthCheck() error {
 }
 
 func (mkc *MockKeyClient) DumpKeys(templateString string) (string, error) {
-	tmpl, err := template.New("DumpKeys").Delims(LeftTemplateDelim, RightTemplateDelim).Parse(templateString)
+	tmpl, err := template.New("DumpKeys").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
+		Parse(templateString)
 	if err != nil {
-		errors.Wrap(err, "could not dump keys to template")
+		return "", errors.Wrap(err, "could not dump keys to template")
 	}
 	buf := new(bytes.Buffer)
 	keys := make([]*MockKey, 0, len(mkc.knownKeys))
@@ -197,4 +229,15 @@ func (mkc *MockKeyClient) DumpKeys(templateString string) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func encode(rv reflect.Value, encoder func([]byte) string) string {
+	switch rv.Kind() {
+	case reflect.Slice:
+		return encoder(rv.Bytes())
+	case reflect.String:
+		return encoder([]byte(rv.String()))
+	default:
+		panic(fmt.Errorf("could not convert %#v to bytes to encode", rv))
+	}
 }
