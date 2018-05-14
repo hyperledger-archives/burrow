@@ -9,7 +9,7 @@ import (
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
 	// Initial peers we connect to for peer exchange
-	Seeds           string
+	Seeds string
 	// Peers to which we automatically connect
 	PersistentPeers string
 	ListenAddress   string
