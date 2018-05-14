@@ -8,10 +8,13 @@ import (
 // are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
-	Seeds          string
-	ListenAddress  string
-	Moniker        string
-	TendermintRoot string
+	// Initial peers we connect to for peer exchange
+	Seeds           string
+	// Peers to which we automatically connect
+	PersistentPeers string
+	ListenAddress   string
+	Moniker         string
+	TendermintRoot  string
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -32,6 +35,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.Mempool.RootDir = btc.TendermintRoot
 		conf.P2P.RootDir = btc.TendermintRoot
 		conf.P2P.Seeds = btc.Seeds
+		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.P2P.AuthEnc = false
 		conf.Moniker = btc.Moniker
