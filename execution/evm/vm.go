@@ -42,6 +42,7 @@ var (
 	ErrMemoryOutOfBounds      = errors.New("Memory out of bounds")
 	ErrCodeOutOfBounds        = errors.New("Code out of bounds")
 	ErrInputOutOfBounds       = errors.New("Input out of bounds")
+	ErrReturnDataOutOfBounds  = errors.New("Return data out of bounds")
 	ErrCallStackOverflow      = errors.New("Call stack overflow")
 	ErrCallStackUnderflow     = errors.New("Call stack underflow")
 	ErrDataStackOverflow      = errors.New("Data stack overflow")
@@ -113,6 +114,7 @@ type VM struct {
 	nestedCallErrors []ErrNestedCall
 	publisher        event.Publisher
 	logger           *logging.Logger
+	returnData       []byte
 	debugOpcodes     bool
 	dumpTokens       bool
 }
@@ -666,6 +668,28 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			}
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
+		case RETURNDATASIZE: // 0x3D
+			stack.Push64(int64(len(vm.returnData)))
+			vm.Debugf(" => %d\n", len(vm.returnData))
+
+		case RETURNDATACOPY: // 0x3E
+			memOff, outputOff, length := stack.PopBigInt(), stack.PopBigInt(), stack.PopBigInt()
+
+			end := new(big.Int).Add(outputOff, length)
+
+			if end.BitLen() > 64 || uint64(len(vm.returnData)) < end.Uint64() {
+				return nil, ErrReturnDataOutOfBounds
+			}
+
+			data := vm.returnData
+
+			memErr := memory.Write(memOff, data)
+			if memErr != nil {
+				vm.Debugf(" => Memory err: %s", memErr)
+				return nil, firstErr(err, ErrMemoryOutOfBounds)
+			}
+			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, data)
+
 		case BLOCKHASH: // 0x40
 			stack.Push(Zero256)
 			vm.Debugf(" => 0x%X (NOT SUPPORTED)\n", stack.Peek().Bytes())
@@ -834,6 +858,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
+			vm.returnData = nil
+
 			if !HasPermission(vm.stateWriter, callee, permission.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
@@ -868,6 +894,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			ret, err_ := vm.Call(callee, newAccount, input, input, contractValue, gas)
 			if err_ != nil {
 				stack.Push(Zero256)
+				vm.returnData = ret
 			} else {
 				newAccount.SetCode(ret) // Set the code (ret need not be copied as per Call contract)
 				stack.Push(newAccount.Address().Word256())
@@ -878,6 +905,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			}
 
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
+			vm.returnData = nil
+
 			if !HasPermission(vm.stateWriter, callee, permission.Call) {
 				return nil, ErrPermission{"call"}
 			}
@@ -973,6 +1002,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 					ret, callErr = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
 				}
 			}
+			vm.returnData = ret
+
 			// In case any calls deeper in the stack (particularly SNatives) has altered either of two accounts to which
 			// we hold a reference, we need to freshen our state for subsequent iterations of this call frame's EVM loop
 			var getErr error
@@ -1080,7 +1111,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case STOP: // 0x00
 			return nil, nil
 
-		case STATICCALL, SHL, SHR, SAR, RETURNDATASIZE, RETURNDATACOPY:
+		case STATICCALL, SHL, SHR, SAR:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
