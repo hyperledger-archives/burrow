@@ -24,23 +24,24 @@ const DefaultAmountBonded uint64 = 10000
 // by interacting with the KeysClient it is passed and other information not known at
 // specification time
 type GenesisSpec struct {
-	GenesisTime       *time.Time        `json:",omitempty"`
-	ChainName         string            `json:",omitempty"`
-	Salt              []byte            `json:",omitempty"`
-	GlobalPermissions []string          `json:",omitempty"`
-	Accounts          []TemplateAccount `json:",omitempty"`
+	GenesisTime       *time.Time        `json:",omitempty" toml:",omitempty"`
+	ChainName         string            `json:",omitempty" toml:",omitempty"`
+	Salt              []byte            `json:",omitempty" toml:",omitempty"`
+	GlobalPermissions []string          `json:",omitempty" toml:",omitempty"`
+	Accounts          []TemplateAccount `json:",omitempty" toml:",omitempty"`
 }
 
 type TemplateAccount struct {
+	// Template accounts sharing a name will be merged when merging genesis specs
+	Name string `json:",omitempty" toml:",omitempty"`
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address   *acm.Address   `json:",omitempty"`
-	PublicKey *acm.PublicKey `json:",omitempty"`
-	Amount    *uint64        `json:",omitempty"`
+	Address   *acm.Address   `json:",omitempty" toml:",omitempty"`
+	PublicKey *acm.PublicKey `json:",omitempty" toml:",omitempty"`
+	Amount    *uint64        `json:",omitempty" toml:",omitempty"`
 	// If any bonded amount then this account is also a Validator
-	AmountBonded *uint64  `json:",omitempty"`
-	Name         string   `json:",omitempty"`
-	Permissions  []string `json:",omitempty"`
-	Roles        []string `json:",omitempty"`
+	AmountBonded *uint64  `json:",omitempty" toml:",omitempty"`
+	Permissions  []string `json:",omitempty" toml:",omitempty"`
+	Roles        []string `json:",omitempty" toml:",omitempty"`
 }
 
 func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {

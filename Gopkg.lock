@@ -350,6 +350,22 @@
   version = "v1.1.1"
 
 [[projects]]
+  name = "github.com/wayn3h0/go-uuid"
+  packages = [
+    ".",
+    "internal/dcesecurity",
+    "internal/layout",
+    "internal/namebased",
+    "internal/namebased/md5",
+    "internal/namebased/sha1",
+    "internal/random",
+    "internal/timebased",
+    "internal/version"
+  ]
+  revision = "1622016a49b50139b1ac263e6ef2804226b3dec6"
+  version = "v2.2.1"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -458,6 +474,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0618ffbeb3a7333a1d9e7b24f256ac5b7719f25957d07cfd935156b355b2e5e2"
+  inputs-digest = "ecec019d5ac7140b4607333907f5a4b211fb3551f7cfe51b92e6cc8e3c515488"
   solver-name = "gps-cdcl"
   solver-version = 1
