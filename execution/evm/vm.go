@@ -496,6 +496,48 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			stack.Push64(int64(res))
 			vm.Debugf(" => 0x%X\n", res)
 
+		case SHL: //0x1B
+			shift, x := stack.PopBigInt(), stack.PopBigInt()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Lsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
+		case SHR: //0x1C
+			shift, x := stack.PopBigInt(), stack.PopBigInt()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Rsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
+		case SAR: //0x1D
+			shift, x := stack.PopBigInt(), stack.PopBigIntSigned()
+
+			if shift.Cmp(Big256) >= 0 {
+				reset := big.NewInt(0)
+				if x.Sign() < 0 {
+					reset.SetInt64(-1)
+				}
+				stack.PushBigInt(reset)
+				vm.Debugf(" %v << %v = %v\n", x, shift, reset)
+			} else {
+				shiftedValue := x.Rsh(x, uint(shift.Uint64()))
+				stack.PushBigInt(shiftedValue)
+				vm.Debugf(" %v << %v = %v\n", x, shift, shiftedValue)
+			}
+
 		case SHA3: // 0x20
 			if useGasNegative(gas, GasSha3, &err) {
 				return nil, err
@@ -1111,7 +1153,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case STOP: // 0x00
 			return nil, nil
 
-		case STATICCALL, SHL, SHR, SAR:
+		case STATICCALL:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
