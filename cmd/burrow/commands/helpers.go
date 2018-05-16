@@ -2,21 +2,16 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/genesis"
 )
 
-// Print informational output to Stderr
-func printf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-}
-
-func fatalf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
+type Output interface {
+	Printf(format string, args ...interface{})
+	Logf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
 }
 
 func burrowConfigProvider(configFile string) source.ConfigProvider {
