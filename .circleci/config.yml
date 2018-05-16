@@ -35,6 +35,10 @@ jobs:
     steps:
       - checkout
       - run: make test_integration_bosmarmot
+      - store_artifacts:
+          path: ./.gopath_bos/src/github.com/monax/bosmarmot/monax/tests/burrow.log
+      - store_artifacts:
+          path: ./.gopath_bos/src/github.com/monax/bosmarmot/monax/tests/keys.log
 
   ensure_vendor:
     <<: *defaults
