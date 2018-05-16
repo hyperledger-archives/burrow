@@ -10,7 +10,7 @@ import (
 )
 
 func TestMergeGenesisSpecAccounts(t *testing.T) {
-	keyClient := mock.NewMockKeyClient()
+	keyClient := mock.NewKeyClient()
 	gs := MergeGenesisSpecs(FullAccount("0"), ParticipantAccount("1"), ParticipantAccount("2"))
 	gd, err := gs.GenesisDoc(keyClient)
 	require.NoError(t, err)

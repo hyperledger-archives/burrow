@@ -28,31 +28,31 @@ import (
 )
 
 func TestSend(t *testing.T) {
-	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockKeyClient := mockkeys.NewKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testSend(t, mockNodeClient, mockKeyClient)
 }
 
 func TestCall(t *testing.T) {
-	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockKeyClient := mockkeys.NewKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testCall(t, mockNodeClient, mockKeyClient)
 }
 
 func TestName(t *testing.T) {
-	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockKeyClient := mockkeys.NewKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testName(t, mockNodeClient, mockKeyClient)
 }
 
 func TestPermissions(t *testing.T) {
-	mockKeyClient := mockkeys.NewMockKeyClient()
+	mockKeyClient := mockkeys.NewKeyClient()
 	mockNodeClient := mockclient.NewMockNodeClient()
 	testPermissions(t, mockNodeClient, mockKeyClient)
 }
 
 func testSend(t *testing.T,
-	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.KeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
 	addressString := keyClient.NewKey("").String()
@@ -77,7 +77,7 @@ func testSend(t *testing.T,
 }
 
 func testCall(t *testing.T,
-	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.KeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
 	addressString := keyClient.NewKey("").String()
@@ -110,7 +110,7 @@ func testCall(t *testing.T,
 }
 
 func testName(t *testing.T,
-	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.KeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
 	addressString := keyClient.NewKey("").String()
@@ -141,7 +141,7 @@ func testName(t *testing.T,
 }
 
 func testPermissions(t *testing.T,
-	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.MockKeyClient) {
+	nodeClient *mockclient.MockNodeClient, keyClient *mockkeys.KeyClient) {
 
 	// generate an ED25519 key and ripemd160 address
 	addressString := keyClient.NewKey("").String()

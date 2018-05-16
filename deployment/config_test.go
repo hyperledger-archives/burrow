@@ -1,28 +1,28 @@
-package mock
+package deployment
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
-	"encoding/json"
-
-	"fmt"
-
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockKeyClient_DumpKeys(t *testing.T) {
-	keyClient := NewMockKeyClient()
+	keyClient := mock.NewKeyClient()
 	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
 	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
-	dump, err := keyClient.DumpKeys(DefaultDumpKeysFormat)
+	pkg := Package{Keys: keyClient.Keys()}
+	dump, err := pkg.Dump(DefaultDumpKeysFormat)
 	require.NoError(t, err)
 
 	// Check JSON equal
-	var keys struct{ Keys []*MockKey }
+	var keys struct{ Keys []*mock.Key }
 	err = json.Unmarshal([]byte(dump), &keys)
 	require.NoError(t, err)
 	bs, err := json.MarshalIndent(keys, "", "  ")
@@ -31,27 +31,25 @@ func TestMockKeyClient_DumpKeys(t *testing.T) {
 }
 
 func TestMockKeyClient_DumpKeysKubernetes(t *testing.T) {
-	keyClient := NewMockKeyClient()
+	keyClient := mock.NewKeyClient()
 	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
 	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
-	dump, err := keyClient.DumpKeys(KubernetesKeyDumpFormat)
+	pkg := Package{Keys: keyClient.Keys()}
+	dump, err := pkg.Dump(KubernetesKeyDumpFormat)
 	require.NoError(t, err)
 	fmt.Println(dump)
 }
 
-func TestMockKey_MonaxKeyJSON(t *testing.T) {
-	key, err := newMockKey("monax-key-test")
+func TestMockKeyClient_DumpKeysHelm(t *testing.T) {
+	keyClient := mock.NewKeyClient()
+	_, err := keyClient.Generate("foo", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
-	monaxKey := key.MonaxKeyJSON()
-	t.Logf("key is: %v", monaxKey)
-	keyJSON := &plainKeyJSON{}
-	err = json.Unmarshal([]byte(monaxKey), keyJSON)
+	_, err = keyClient.Generate("foobar", keys.KeyTypeEd25519Ripemd160)
 	require.NoError(t, err)
-	// byte length of UUID string = 16 * 2 + 4 = 36
-	assert.Len(t, keyJSON.Id, 36)
-	assert.Equal(t, key.Address.String(), keyJSON.Address)
-	assert.Equal(t, key.PrivateKey, keyJSON.PrivateKey)
-	assert.Equal(t, string(keys.KeyTypeEd25519Ripemd160), keyJSON.Type)
+	pkg := Package{Keys: keyClient.Keys()}
+	dump, err := pkg.Dump(HelmDumpKeysFormat)
+	require.NoError(t, err)
+	fmt.Println(dump)
 }

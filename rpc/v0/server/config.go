@@ -16,7 +16,6 @@ package server
 
 type (
 	ServerConfig struct {
-		ChainId   string
 		Bind      Bind      `toml:"bind"`
 		TLS       TLS       `toml:"TLS"`
 		CORS      CORS      `toml:"CORS"`

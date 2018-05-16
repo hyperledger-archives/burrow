@@ -138,6 +138,16 @@ func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pub
 	return
 }
 
+func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
+	for _, templateAccount := range gs.Accounts {
+		_, _, err := templateAccount.RealisePubKeyAndAddress(keyClient)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
 func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)

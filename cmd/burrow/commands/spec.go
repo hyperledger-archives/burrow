@@ -17,7 +17,7 @@ func Spec(cmd *cli.Cmd) {
 		"additional GenesisSpec presets specified by other flags will be merged. GenesisSpecs appearing "+
 		"later take precedent over those appearing early if multiple --base flags are provided")
 
-	accountNamePrefixOpt := cmd.StringOpt("name-prefix", "", "Prefix added to the names of accounts in GenesisSpec")
+	accountNamePrefixOpt := cmd.StringOpt("x name-prefix", "", "Prefix added to the names of accounts in GenesisSpec")
 	fullOpt := cmd.IntOpt("f full-accounts", 0, "Number of preset Full type accounts")
 	validatorOpt := cmd.IntOpt("v validator-accounts", 0, "Number of preset Validator type accounts")
 	rootOpt := cmd.IntOpt("r root-accounts", 0, "Number of preset Root type accounts")
@@ -25,8 +25,8 @@ func Spec(cmd *cli.Cmd) {
 	participantsOpt := cmd.IntOpt("p participant-accounts", 0, "Number of preset Participant type accounts")
 	chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-	cmd.Spec = "[--full-accounts] [--validator-accounts] [--root-accounts] [--developer-accounts] " +
-		"[--participant-accounts] [--chain-name] [--toml] [BASE...]"
+	cmd.Spec = "[--name-prexix=<prefix for account names>][--full-accounts] [--validator-accounts] [--root-accounts] " +
+		"[--developer-accounts] [--participant-accounts] [--chain-name] [--toml] [BASE...]"
 
 	cmd.Action = func() {
 		specs := make([]spec.GenesisSpec, 0, *participantsOpt+*fullOpt)

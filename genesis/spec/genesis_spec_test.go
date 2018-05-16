@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenesisSpec_GenesisDoc(t *testing.T) {
-	keyClient := mock.NewMockKeyClient()
+	keyClient := mock.NewKeyClient()
 
 	// Try a spec with a single account/validator
 	amtBonded := uint64(100)

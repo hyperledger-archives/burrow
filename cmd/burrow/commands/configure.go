@@ -8,6 +8,7 @@ import (
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/deployment"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
@@ -37,9 +38,9 @@ func Configure(cmd *cli.Cmd) {
 		"File to output containing secret keys as JSON or according to a custom template (see --keys-template). "+
 			"Note that using this options means the keys will not be generated in the default keys instance")
 
-	keysTemplateOpt := cmd.StringOpt("z keys-template", mock.DefaultDumpKeysFormat,
+	keysTemplateOpt := cmd.StringOpt("z keys-template", deployment.DefaultDumpKeysFormat,
 		fmt.Sprintf("Go text/template template (left delim: %s right delim: %s) to generate secret keys "+
-			"file specified with --generate-keys.", mock.LeftTemplateDelim, mock.RightTemplateDelim))
+			"file specified with --generate-keys.", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
 
 	separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -95,13 +96,14 @@ func Configure(cmd *cli.Cmd) {
 				fatalf("Could not read GenesisSpec: %v", err)
 			}
 			if *generateKeysOpt != "" {
-				keyClient := mock.NewMockKeyClient()
+				keyClient := mock.NewKeyClient()
 				conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 				if err != nil {
 					fatalf("Could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 				}
 
-				secretKeysString, err := keyClient.DumpKeys(*keysTemplateOpt)
+				pkg := deployment.Package{Keys: keyClient.Keys()}
+				secretKeysString, err := pkg.Dump(*keysTemplateOpt)
 				if err != nil {
 					fatalf("Could not dump keys: %v", err)
 				}
