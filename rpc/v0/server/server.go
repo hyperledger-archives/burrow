@@ -120,7 +120,6 @@ func (serveProcess *ServeProcess) Start() error {
 	}
 	serveProcess.srv = srv
 	serveProcess.logger.InfoMsg("Server started.",
-		"chain_id", serveProcess.config.ChainId,
 		"address", serveProcess.config.Bind.Address,
 		"port", serveProcess.config.Bind.Port)
 	for _, c := range serveProcess.startListenChans {

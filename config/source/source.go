@@ -170,12 +170,12 @@ func XDGBaseDir(configFileName string) *configSource {
 
 // Source from a single environment variable with config embedded in JSON
 func Environment(key string) *configSource {
-	jsonString := os.Getenv(key)
+	configString := os.Getenv(key)
 	return &configSource{
-		skip: jsonString == "",
-		from: fmt.Sprintf("'%s' environment variable (as JSON)", key),
+		skip: configString == "",
+		from: fmt.Sprintf("'%s' environment variable", key),
 		apply: func(baseConfig interface{}) error {
-			return FromJSONString(jsonString, baseConfig)
+			return FromString(configString, baseConfig)
 		},
 	}
 }

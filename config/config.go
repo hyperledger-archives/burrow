@@ -19,7 +19,7 @@ import (
 )
 
 const DefaultBurrowConfigTOMLFileName = "burrow.toml"
-const DefaultBurrowConfigJSONEnvironmentVariable = "BURROW_CONFIG_JSON"
+const DefaultBurrowConfigEnvironmentVariable = "BURROW_CONFIG_JSON"
 const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {

@@ -23,7 +23,7 @@ func burrowConfigProvider(configFile string) source.ConfigProvider {
 	return source.FirstOf(
 		// Will fail if file doesn't exist, but still skipped it configFile == ""
 		source.File(configFile, false),
-		source.Environment(config.DefaultBurrowConfigJSONEnvironmentVariable),
+		source.Environment(config.DefaultBurrowConfigEnvironmentVariable),
 		// Try working directory
 		source.File(config.DefaultBurrowConfigTOMLFileName, true),
 		source.Default(config.DefaultBurrowConfig()))
