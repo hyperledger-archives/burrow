@@ -87,7 +87,7 @@ func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress acm.Ad
 	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
-	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("Call"))
+	vmach := evm.NewVM(params, caller.Address(), nil, trans.logger.WithScope("Call"))
 	vmach.SetPublisher(trans.eventEmitter)
 
 	gas := params.GasLimit
@@ -96,7 +96,7 @@ func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress acm.Ad
 			err = fmt.Errorf("panic from VM in simulated call: %v\n%s", r, debug.Stack())
 		}
 	}()
-	ret, err := vmach.Call(caller, callee, callee.Code(), data, 0, &gas)
+	ret, err := vmach.Call(txCache, caller, callee, callee.Code(), data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
@@ -113,9 +113,9 @@ func (trans *Transactor) CallCode(reader state.Reader, fromAddress acm.Address, 
 	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
-	vmach := evm.NewVM(txCache, params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
+	vmach := evm.NewVM(params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
 	gas := params.GasLimit
-	ret, err := vmach.Call(caller, callee, code, data, 0, &gas)
+	ret, err := vmach.Call(txCache, caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err
 	}
