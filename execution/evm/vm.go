@@ -1153,7 +1153,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case STOP: // 0x00
 			return nil, nil
 
-		case STATICCALL:
+		case STATICCALL, CREATE2:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)

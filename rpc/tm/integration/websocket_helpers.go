@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	timeoutSeconds       = 4
+	timeoutSeconds       = 8
 	expectBlockInSeconds = 2
 )
 
