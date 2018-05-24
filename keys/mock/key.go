@@ -11,7 +11,6 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/wayn3h0/go-uuid"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ripemd160"
 )
 
 // Mock ed25510 key for mock keys client
@@ -38,11 +37,14 @@ func newKey(name string) (*Key, error) {
 	copy(key.PrivateKey[:], privateKey[:])
 	copy(key.PublicKey[:], publicKey[:])
 
-	// prepend 0x01 for ed25519 public key
-	typedPublicKeyBytes := append([]byte{0x01}, key.PublicKey...)
-	hasher := ripemd160.New()
-	hasher.Write(typedPublicKeyBytes)
-	key.Address, err = acm.AddressFromBytes(hasher.Sum(nil))
+	var ed25519 crypto.PubKeyEd25519
+	copy(ed25519[:], publicKey[:])
+
+	key.Address, err = acm.AddressFromBytes(ed25519.Address())
+	if err != nil {
+		return nil, err
+	}
+
 	if err != nil {
 		return nil, err
 	}
