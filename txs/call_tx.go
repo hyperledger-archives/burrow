@@ -10,12 +10,12 @@ import (
 )
 
 type CallTx struct {
-	Input *TxInput
+	Input TxInput `json:"input"`
 	// Pointer since CallTx defines unset 'to' address as inducing account creation
-	Address  *acm.Address
-	GasLimit uint64
-	Fee      uint64
-	Data     []byte
+	Address  *acm.Address `json:"address"`
+	GasLimit uint64       `json:"gas_limit"`
+	Fee      uint64       `json:"fee"`
+	Data     []byte       `json:"data"`
 	txHashMemoizer
 }
 
@@ -39,15 +39,14 @@ func NewCallTx(st state.AccountGetter, from acm.PublicKey, to *acm.Address, data
 
 func NewCallTxWithSequence(from acm.PublicKey, to *acm.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
-	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: from,
-	}
 
 	return &CallTx{
-		Input:    input,
+		Input: TxInput{
+			Address:   from.Address(),
+			Amount:    amt,
+			Sequence:  sequence,
+			PublicKey: from,
+		},
 		Address:  to,
 		GasLimit: gasLimit,
 		Fee:      fee,
@@ -70,15 +69,14 @@ func (tx *CallTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner)
 }
 
 func (tx *CallTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","data":"%X"`, TxTypeCall, tx.Address, tx.Data)), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"fee":%v,"gas_limit":%v,"input":`, tx.Fee, tx.GasLimit)), w, n, err)
-	tx.Input.WriteSignBytes(w, n, err)
-	wire.WriteTo([]byte(`}]}`), w, n, err)
+	signJson := fmt.Sprintf(`{"chain_id":%s,"tx":[%v,{"address":"%s","data":"%X","fee":%v,"gas_limit":%v,"input":%s}]}`,
+		jsonEscape(chainID), TxTypeCall, tx.Address, tx.Data, tx.Fee, tx.GasLimit, tx.Input.SignString())
+
+	wire.WriteTo([]byte(signJson), w, n, err)
 }
 
 func (tx *CallTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+	return []TxInput{tx.Input}
 }
 
 func (tx *CallTx) String() string {

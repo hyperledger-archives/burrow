@@ -1141,7 +1141,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 
 			}
 
-			receiver, errAdd := receiver.AddToBalance(callee.Balance())
+			errAdd := receiver.AddToBalance(callee.Balance())
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
@@ -1231,7 +1231,7 @@ func transfer(from, to acm.MutableAccount, amount uint64) error {
 		return ErrInsufficientBalance
 	} else {
 		from.SubtractFromBalance(amount)
-		_, err := to.AddToBalance(amount)
+		err := to.AddToBalance(amount)
 		if err != nil {
 			return err
 		}

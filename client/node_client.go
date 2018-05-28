@@ -16,6 +16,7 @@ package client
 
 import (
 	"fmt"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/logging"
@@ -30,14 +31,14 @@ type NodeClient interface {
 	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
-		LatestBlockHeight uint64, LatestBlockTime int64, err error)
+		LatestBlockHeight uint64, LatestBlockTime time.Time, err error)
 	GetAccount(address acm.Address) (acm.Account, error)
 	QueryContract(callerAddress, calleeAddress acm.Address, data []byte) (ret []byte, gasUsed uint64, err error)
 	QueryContractCode(address acm.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
 
 	DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error)
 	GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error)
-	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
+	ListValidators() (blockHeight uint64, validators []string, err error)
 
 	// Logging context for this NodeClient
 	Logger() *logging.Logger
@@ -121,7 +122,7 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 // Status returns the ChainId (GenesisHash), validator's PublicKey, latest block hash
 // the block height and the latest block time.
 func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte,
-	LatestBlockHash []byte, LatestBlockHeight uint64, LatestBlockTime int64, err error) {
+	LatestBlockHash []byte, LatestBlockHeight uint64, LatestBlockTime time.Time, err error) {
 
 	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	res, err := tendermint_client.Status(client)
@@ -135,7 +136,7 @@ func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, Validato
 	GenesisHash = res.GenesisHash
 	ValidatorPublicKey = res.PubKey.Bytes()
 	LatestBlockHash = res.LatestBlockHash
-	LatestBlockHeight = res.LatestBlockHeight
+	LatestBlockHeight = uint64(res.LatestBlockHeight)
 	LatestBlockTime = res.LatestBlockTime
 	return
 }
@@ -238,24 +239,26 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Addres
 //--------------------------------------------------------------------------------------------
 
 func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
-	bondedValidators, unbondingValidators []acm.Validator, err error) {
+	validators []string, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	validatorsResult, err := tendermint_client.ListValidators(client)
-	if err != nil {
-		err = fmt.Errorf("error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
-		return
-	}
-	// unwrap return results
-	blockHeight = validatorsResult.BlockHeight
-	bondedValidators = make([]acm.Validator, len(validatorsResult.BondedValidators))
-	for i, cv := range validatorsResult.BondedValidators {
-		bondedValidators[i] = cv.Validator()
-	}
-	unbondingValidators = make([]acm.Validator, len(validatorsResult.UnbondingValidators))
-	for i, cv := range validatorsResult.UnbondingValidators {
-		unbondingValidators[i] = cv.Validator()
-	}
+	/*
+		client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+		validatorsResult, err := tendermint_client.ListValidators(client)
+		if err != nil {
+			err = fmt.Errorf("error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
+			return
+		}
+		// unwrap return results
+		blockHeight = validatorsResult.BlockHeight
+		bondedValidators = make([]acm.Validator, len(validatorsResult.BondedValidators))
+		for i, cv := range validatorsResult.BondedValidators {
+			bondedValidators[i] = cv.Validator()
+		}
+		unbondingValidators = make([]acm.Validator, len(validatorsResult.UnbondingValidators))
+		for i, cv := range validatorsResult.UnbondingValidators {
+			unbondingValidators[i] = cv.Validator()
+		}
+	*/
 	return
 }
 

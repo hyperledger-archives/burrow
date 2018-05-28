@@ -32,13 +32,13 @@ type Node struct {
 	}
 }
 
-// Since Tendermint doesn't close its DB connections
 func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
 	db := dbm.NewDB(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
 	n.closers = append(n.closers, db)
 	return db, nil
 }
 
+// Since Tendermint doesn't close its DB connections
 func (n *Node) Close() {
 	for _, closer := range n.closers {
 		closer.Close()
@@ -55,8 +55,6 @@ func NewNode(
 	logger *logging.Logger) (*Node, error) {
 
 	var err error
-	// disable Tendermint's RPC
-	conf.RPC.ListenAddress = ""
 
 	err = os.MkdirAll(path.Dir(conf.NodeKeyFile()), 0777)
 	if err != nil {
@@ -98,20 +96,21 @@ func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx
 	}
 }
 
-func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
-	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
-	for i, validator := range burrowGenesisDoc.Validators {
-		validators[i] = tm_types.GenesisValidator{
-			PubKey: validator.PublicKey.PubKey,
-			Name:   validator.Name,
-			Power:  int64(validator.Amount),
+func DeriveGenesisDoc(genesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
+
+	validators := genesisDoc.Validators()
+	tm_validators := make([]tm_types.GenesisValidator, len(validators))
+	for i, validator := range validators {
+		tm_validators[i] = tm_types.GenesisValidator{
+			PubKey: validator.PublicKey().PubKey,
+			Power:  validator.Power(),
 		}
 	}
 	return &tm_types.GenesisDoc{
-		ChainID:     burrowGenesisDoc.ChainID(),
-		GenesisTime: burrowGenesisDoc.GenesisTime,
-		Validators:  validators,
-		AppHash:     burrowGenesisDoc.Hash(),
+		ChainID:     genesisDoc.ChainID(),
+		GenesisTime: genesisDoc.GenesisTime,
+		Validators:  tm_validators,
+		AppHash:     genesisDoc.Hash(),
 	}
 }
 

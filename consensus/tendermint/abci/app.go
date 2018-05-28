@@ -121,6 +121,9 @@ func (app *App) InitChain(chain abci_types.RequestInitChain) (respInitChain abci
 }
 
 func (app *App) BeginBlock(block abci_types.RequestBeginBlock) (respBeginBlock abci_types.ResponseBeginBlock) {
+	nextHeigth := uint64(block.Header.GetHeight() + 1)
+	app.blockchain.EvaluateSortition(nextHeigth, block.Hash)
+
 	app.block = &block
 	return
 }
@@ -165,6 +168,24 @@ func (app *App) DeliverTx(txBytes []byte) abci_types.ResponseDeliverTx {
 
 func (app *App) EndBlock(reqEndBlock abci_types.RequestEndBlock) (respEndBlock abci_types.ResponseEndBlock) {
 	// Validator mutation goes here
+	validatorSet := app.blockchain.Tip().ValidatorSet()
+	validatorSet.AdjustPower(reqEndBlock.GetHeight())
+	validators := validatorSet.Validators()
+	setLeavers := validatorSet.SetLeavers()
+
+	updates := make([]abci_types.Validator, len(validators)+len(setLeavers))
+
+	for i, validator := range validators {
+		updates[i].Power = validator.Power()
+		updates[i].PubKey = validator.PublicKey().Bytes()
+	}
+
+	for i, validator := range setLeavers {
+		updates[i+len(validators)].Power = 0
+		updates[i+len(validators)].PubKey = validator.PublicKey().Bytes()
+	}
+
+	respEndBlock.ValidatorUpdates = updates
 	return
 }
 

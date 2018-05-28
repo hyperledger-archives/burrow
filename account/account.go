@@ -75,23 +75,25 @@ type Account interface {
 type MutableAccount interface {
 	Account
 	// Set public key (needed for lazy initialisation), should also set the dependent address
-	SetPublicKey(pubKey PublicKey) MutableAccount
+	SetPublicKey(pubKey PublicKey)
 	// Subtract amount from account balance (will panic if amount is greater than balance)
-	SubtractFromBalance(amount uint64) (MutableAccount, error)
+	SubtractFromBalance(amount uint64) error
 	// Add amount to balance (will panic if amount plus balance is a uint64 overflow)
-	AddToBalance(amount uint64) (MutableAccount, error)
+	AddToBalance(amount uint64) error
 	// Set EVM byte code associated with account
-	SetCode(code []byte) MutableAccount
+	SetCode(code []byte)
 	// Increment Sequence number by 1 (capturing the current Sequence number as the index for any pending mutations)
-	IncSequence() MutableAccount
+	IncSequence()
 	// Set the storage root hash
-	SetStorageRoot(storageRoot []byte) MutableAccount
+	SetStorageRoot(storageRoot []byte)
 	// Set account permissions
-	SetPermissions(permissions ptypes.AccountPermissions) MutableAccount
+	SetPermissions(permissions ptypes.AccountPermissions)
 	// Get a pointer this account's AccountPermissions in order to mutate them
 	MutablePermissions() *ptypes.AccountPermissions
 	// Create a complete copy of this MutableAccount that is itself mutable
 	Copy() MutableAccount
+	// Convert to immutable account
+	ToAccount() Account
 }
 
 // -------------------------------------------------
@@ -132,7 +134,7 @@ func (acc ConcreteAccount) Account() Account {
 
 // Return as mutable MutableAccount
 func (acc ConcreteAccount) MutableAccount() MutableAccount {
-	return concreteAccountWrapper{&acc}
+	return &concreteAccountWrapper{&acc}
 }
 
 func (acc *ConcreteAccount) Encode() ([]byte, error) {
@@ -271,9 +273,9 @@ func (caw concreteAccountWrapper) MarshalJSON() ([]byte, error) {
 }
 
 // Account mutation via MutableAccount interface
-var _ MutableAccount = concreteAccountWrapper{}
+var _ MutableAccount = &concreteAccountWrapper{}
 
-func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount {
+func (caw *concreteAccountWrapper) SetPublicKey(pubKey PublicKey) {
 	caw.ConcreteAccount.PublicKey = pubKey
 	addressFromPubKey := pubKey.Address()
 	// We don't want the wrong public key to take control of an account so we panic here
@@ -282,45 +284,40 @@ func (caw concreteAccountWrapper) SetPublicKey(pubKey PublicKey) MutableAccount 
 			"but that public key has address %s",
 			caw.ConcreteAccount.Address, pubKey, addressFromPubKey))
 	}
-	return caw
 }
 
-func (caw concreteAccountWrapper) SubtractFromBalance(amount uint64) (MutableAccount, error) {
+func (caw *concreteAccountWrapper) SubtractFromBalance(amount uint64) error {
 	if amount > caw.Balance() {
-		return nil, fmt.Errorf("insufficient funds: attempt to subtract %v from the balance of %s",
+		return fmt.Errorf("insufficient funds: attempt to subtract %v from the balance of %s",
 			amount, caw.ConcreteAccount)
 	}
 	caw.ConcreteAccount.Balance -= amount
-	return caw, nil
+	return nil
 }
 
-func (caw concreteAccountWrapper) AddToBalance(amount uint64) (MutableAccount, error) {
+func (caw *concreteAccountWrapper) AddToBalance(amount uint64) error {
 	if binary.IsUint64SumOverflow(caw.Balance(), amount) {
-		return nil, fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
+		return fmt.Errorf("uint64 overflow: attempt to add %v to the balance of %s",
 			amount, caw.ConcreteAccount)
 	}
 	caw.ConcreteAccount.Balance += amount
-	return caw, nil
+	return nil
 }
 
-func (caw concreteAccountWrapper) SetCode(code []byte) MutableAccount {
+func (caw *concreteAccountWrapper) SetCode(code []byte) {
 	caw.ConcreteAccount.Code = code
-	return caw
 }
 
-func (caw concreteAccountWrapper) IncSequence() MutableAccount {
+func (caw *concreteAccountWrapper) IncSequence() {
 	caw.ConcreteAccount.Sequence += 1
-	return caw
 }
 
-func (caw concreteAccountWrapper) SetStorageRoot(storageRoot []byte) MutableAccount {
+func (caw *concreteAccountWrapper) SetStorageRoot(storageRoot []byte) {
 	caw.ConcreteAccount.StorageRoot = storageRoot
-	return caw
 }
 
-func (caw concreteAccountWrapper) SetPermissions(permissions ptypes.AccountPermissions) MutableAccount {
+func (caw *concreteAccountWrapper) SetPermissions(permissions ptypes.AccountPermissions) {
 	caw.ConcreteAccount.Permissions = permissions
-	return caw
 }
 
 func (caw concreteAccountWrapper) MutablePermissions() *ptypes.AccountPermissions {
@@ -328,7 +325,11 @@ func (caw concreteAccountWrapper) MutablePermissions() *ptypes.AccountPermission
 }
 
 func (caw concreteAccountWrapper) Copy() MutableAccount {
-	return concreteAccountWrapper{caw.ConcreteAccount.Copy()}
+	return &concreteAccountWrapper{caw.ConcreteAccount.Copy()}
+}
+
+func (caw concreteAccountWrapper) ToAccount() Account {
+	return caw
 }
 
 var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})

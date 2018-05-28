@@ -10,8 +10,8 @@ import (
 )
 
 type SendTx struct {
-	Inputs  []*TxInput
-	Outputs []*TxOutput
+	Inputs  []TxInput  `json:"inputs"`
+	Outputs []TxOutput `json:"outputs"`
 	txHashMemoizer
 }
 
@@ -19,28 +19,32 @@ var _ Tx = &SendTx{}
 
 func NewSendTx() *SendTx {
 	return &SendTx{
-		Inputs:  []*TxInput{},
-		Outputs: []*TxOutput{},
+		Inputs:  []TxInput{},
+		Outputs: []TxOutput{},
 	}
 }
 
 func (tx *SendTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"inputs":[`, TxTypeSend)), w, n, err)
+
+	var inputs, outputs string
 	for i, in := range tx.Inputs {
-		in.WriteSignBytes(w, n, err)
+		inputs += in.SignString()
 		if i != len(tx.Inputs)-1 {
-			wire.WriteTo([]byte(","), w, n, err)
+			inputs += ","
 		}
 	}
-	wire.WriteTo([]byte(`],"outputs":[`), w, n, err)
+
 	for i, out := range tx.Outputs {
-		out.WriteSignBytes(w, n, err)
-		if i != len(tx.Outputs)-1 {
-			wire.WriteTo([]byte(","), w, n, err)
+		outputs += out.SignString()
+		if i != len(tx.Inputs)-1 {
+			outputs += ","
 		}
 	}
-	wire.WriteTo([]byte(`]}]}`), w, n, err)
+
+	signJson := fmt.Sprintf(`{"chain_id":%s,"tx":[%v,{"inputs":[%s],"outputs":[%s]}]}`,
+		jsonEscape(chainID), TxTypeSend, inputs, outputs)
+
+	wire.WriteTo([]byte(signJson), w, n, err)
 }
 
 func (tx *SendTx) GetInputs() []TxInput {
@@ -69,7 +73,7 @@ func (tx *SendTx) AddInput(st state.AccountGetter, pubkey acm.PublicKey, amt uin
 
 func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
-	tx.Inputs = append(tx.Inputs, &TxInput{
+	tx.Inputs = append(tx.Inputs, TxInput{
 		Address:   addr,
 		Amount:    amt,
 		Sequence:  sequence,
@@ -79,7 +83,7 @@ func (tx *SendTx) AddInputWithSequence(pubkey acm.PublicKey, amt uint64, sequenc
 }
 
 func (tx *SendTx) AddOutput(addr acm.Address, amt uint64) error {
-	tx.Outputs = append(tx.Outputs, &TxOutput{
+	tx.Outputs = append(tx.Outputs, TxOutput{
 		Address: addr,
 		Amount:  amt,
 	})

@@ -17,10 +17,10 @@ var regexpAlphaNum = regexp.MustCompile("^[a-zA-Z0-9._/-@]*$")
 var regexpJSON = regexp.MustCompile(`^[a-zA-Z0-9_/ \-+"':,\n\t.{}()\[\]]*$`)
 
 type NameTx struct {
-	Input *TxInput
-	Name  string
-	Data  string
-	Fee   uint64
+	Input TxInput `json:"input"`
+	Name  string  `json:"name"`
+	Data  string  `json:"data"`
+	Fee   uint64  `json:"fee"`
 	txHashMemoizer
 }
 
@@ -41,18 +41,16 @@ func NewNameTx(st state.AccountGetter, from acm.PublicKey, name, data string, am
 }
 
 func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
-	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: from,
-	}
-
 	return &NameTx{
-		Input: input,
-		Name:  name,
-		Data:  data,
-		Fee:   fee,
+		Input: TxInput{
+			Address:   from.Address(),
+			Amount:    amt,
+			Sequence:  sequence,
+			PublicKey: from,
+		},
+		Name: name,
+		Data: data,
+		Fee:  fee,
 	}
 }
 
@@ -71,16 +69,14 @@ func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner)
 }
 
 func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"data":%s,"fee":%v`, TxTypeName, jsonEscape(tx.Data), tx.Fee)), w, n, err)
-	wire.WriteTo([]byte(`,"input":`), w, n, err)
-	tx.Input.WriteSignBytes(w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"name":%s`, jsonEscape(tx.Name))), w, n, err)
-	wire.WriteTo([]byte(`}]}`), w, n, err)
+	signJson := fmt.Sprintf(`{"chain_id":%s,"tx":[%v,{"name":"%s","data":"%s","fee":%v,"input":%s}]}`,
+		jsonEscape(chainID), TxTypeName, tx.Name, tx.Data, tx.Fee, tx.Input.SignString())
+
+	wire.WriteTo([]byte(signJson), w, n, err)
 }
 
 func (tx *NameTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+	return []TxInput{tx.Input}
 }
 
 func (tx *NameTx) ValidateStrings() error {

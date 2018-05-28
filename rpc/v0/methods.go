@@ -39,8 +39,9 @@ const (
 	GET_LATEST_BLOCK          = SERVICE_NAME + ".getLatestBlock"
 	GET_BLOCKS                = SERVICE_NAME + ".getBlocks"
 	GET_BLOCK                 = SERVICE_NAME + ".getBlock"
-	GET_CONSENSUS_STATE       = SERVICE_NAME + ".getConsensusState" // Consensus
 	GET_VALIDATORS            = SERVICE_NAME + ".getValidators"
+	GET_CONSENSUS_STATE       = SERVICE_NAME + ".getConsensusState" // Consensus
+	LIST_VALIDATORS           = SERVICE_NAME + ".listValidators"
 	GET_NETWORK_INFO          = SERVICE_NAME + ".getNetworkInfo" // Net
 	GET_CHAIN_ID              = SERVICE_NAME + ".getChainId"
 	GET_PEERS                 = SERVICE_NAME + ".getPeers"
@@ -54,6 +55,8 @@ const (
 	SEND                      = SERVICE_NAME + ".send"
 	SEND_AND_HOLD             = SERVICE_NAME + ".sendAndHold"
 	TRANSACT_NAMEREG          = SERVICE_NAME + ".transactNameReg"
+	BOND                      = SERVICE_NAME + ".bond"
+	UNBOND                    = SERVICE_NAME + ".unbond"
 	EVENT_SUBSCRIBE           = SERVICE_NAME + ".eventSubscribe" // Events
 	EVENT_UNSUBSCRIBE         = SERVICE_NAME + ".eventUnsubscribe"
 	EVENT_POLL                = SERVICE_NAME + ".eventPoll"
@@ -282,6 +285,52 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			}
 			return receipt, 0, nil
 		},
+		BOND: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+			param := &BondParam{}
+			err := codec.DecodeBytes(param, request.Params)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			publicKey, err := acm.PublicKeyFromBytes(param.PublicKey)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			// Run Send against mempool state
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			receipt, err := service.Transactor().Bond(inputAccount, toAddress, param.Amount, param.Fee, publicKey)
+			if err != nil {
+				return nil, rpc.INTERNAL_ERROR, err
+			}
+			return receipt, 0, nil
+		},
+		UNBOND: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+			param := &UnbondParam{}
+			err := codec.DecodeBytes(param, request.Params)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			// Run Send against mempool state
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			if err != nil {
+				return nil, rpc.INVALID_PARAMS, err
+			}
+			receipt, err := service.Transactor().Unbond(inputAccount, toAddress, param.Amount, param.Fee)
+			if err != nil {
+				return nil, rpc.INTERNAL_ERROR, err
+			}
+			return receipt, 0, nil
+		},
 		SEND_AND_HOLD: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			param := &SendParam{}
 			err := codec.DecodeBytes(param, request.Params)
@@ -366,7 +415,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
-			resultGetBlock, err := service.GetBlock(stat.LatestBlockHeight)
+			resultGetBlock, err := service.GetBlock(uint64(stat.LatestBlockHeight))
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -411,7 +460,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			}
 			return resultDumpConsensusState, 0, nil
 		},
-		GET_VALIDATORS: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
+
+		LIST_VALIDATORS: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			resultListValidators, err := service.ListValidators()
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err

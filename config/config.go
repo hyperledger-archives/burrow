@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/finterra"
+
 	"context"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -60,7 +62,9 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-	privValidator := validator.NewPrivValidatorMemory(val, keys.Signer(keyClient, val.Address()))
+	signer := keys.Signer(keyClient, val.Address())
+	privValidator := validator.NewPrivValidatorMemory(val, signer)
+	sortition := finterra.NewSortition(val, signer, conf.GenesisDoc.ChainID(), logger)
 
 	var exeOptions []execution.ExecutionOption
 	if conf.Execution != nil {
@@ -70,7 +74,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		}
 	}
 
-	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
+	return core.NewKernel(ctx, keyClient, privValidator, sortition, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
 		exeOptions, logger)
 }
 

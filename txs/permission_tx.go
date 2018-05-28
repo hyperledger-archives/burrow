@@ -11,8 +11,8 @@ import (
 )
 
 type PermissionsTx struct {
-	Input    *TxInput
-	PermArgs snatives.PermArgs
+	Input    TxInput           `json:"input"`
+	PermArgs snatives.PermArgs `json:"args`
 	txHashMemoizer
 }
 
@@ -33,15 +33,14 @@ func NewPermissionsTx(st state.AccountGetter, from acm.PublicKey, args snatives.
 }
 
 func NewPermissionsTxWithSequence(from acm.PublicKey, args snatives.PermArgs, sequence uint64) *PermissionsTx {
-	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    1, // NOTE: amounts can't be 0 ...
-		Sequence:  sequence,
-		PublicKey: from,
-	}
 
 	return &PermissionsTx{
-		Input:    input,
+		Input: TxInput{
+			Address:   from.Address(),
+			Amount:    1, // NOTE: amounts can't be 0 ...
+			Sequence:  sequence,
+			PublicKey: from,
+		},
 		PermArgs: args,
 	}
 }
@@ -61,16 +60,14 @@ func (tx *PermissionsTx) Sign(chainID string, signingAccounts ...acm.Addressable
 }
 
 func (tx *PermissionsTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"args":"`, TxTypePermissions)), w, n, err)
-	wire.WriteJSON(&tx.PermArgs, w, n, err)
-	wire.WriteTo([]byte(`","input":`), w, n, err)
-	tx.Input.WriteSignBytes(w, n, err)
-	wire.WriteTo([]byte(`}]}`), w, n, err)
+	signJson := fmt.Sprintf(`{"chain_id":%s,"tx":[%v,{"args":%s,"input":%s}]}`,
+		jsonEscape(chainID), TxTypePermissions, tx.PermArgs, tx.Input.SignString())
+
+	wire.WriteTo([]byte(signJson), w, n, err)
 }
 
 func (tx *PermissionsTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+	return []TxInput{tx.Input}
 }
 
 func (tx *PermissionsTx) String() string {

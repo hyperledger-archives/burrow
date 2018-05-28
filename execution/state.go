@@ -43,12 +43,15 @@ const (
 	accountsPrefix = "a/"
 	storagePrefix  = "s/"
 	nameRegPrefix  = "n/"
+
+	validatorPrefix = "i/"
 )
 
 var (
-	accountsStart, accountsEnd []byte = prefixKeyRange(accountsPrefix)
-	storageStart, storageEnd   []byte = prefixKeyRange(storagePrefix)
-	nameRegStart, nameRegEnd   []byte = prefixKeyRange(nameRegPrefix)
+	accountsStart, accountsEnd   []byte = prefixKeyRange(accountsPrefix)
+	storageStart, storageEnd     []byte = prefixKeyRange(storagePrefix)
+	nameRegStart, nameRegEnd     []byte = prefixKeyRange(nameRegPrefix)
+	validatorStart, validatorEnd []byte = prefixKeyRange(validatorPrefix)
 )
 
 // Implements account and blockchain state
@@ -74,7 +77,10 @@ func NewState(db dbm.DB) *State {
 
 // Make genesis state from GenesisDoc and save to DB
 func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error) {
-	if len(genesisDoc.Validators) == 0 {
+	accounts := genesisDoc.Accounts()
+	validators := genesisDoc.Validators()
+
+	if len(validators) == 0 {
 		return nil, fmt.Errorf("the genesis file has no validators")
 	}
 
@@ -90,14 +96,17 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	}
 
 	// Make accounts state tree
-	for _, genAcc := range genesisDoc.Accounts {
-		perm := genAcc.Permissions
-		acc := &acm.ConcreteAccount{
-			Address:     genAcc.Address,
-			Balance:     genAcc.Amount,
-			Permissions: perm,
+	for _, account := range accounts {
+		err := state.UpdateAccount(account)
+
+		if err != nil {
+			return nil, err
 		}
-		err := state.UpdateAccount(acc.Account())
+	}
+
+	for _, validator := range validators {
+		err := state.UpdateValidator(validator)
+
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +204,8 @@ func (s *State) UpdateAccount(account acm.Account) error {
 	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
 	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
 	// Alternatively just abandon and
-	accountWithStorageRoot := acm.AsMutableAccount(account).SetStorageRoot(nil)
+	accountWithStorageRoot := acm.AsMutableAccount(account)
+	accountWithStorageRoot.SetStorageRoot(nil)
 	encodedAccount, err := accountWithStorageRoot.Encode()
 	if err != nil {
 		return err
@@ -350,4 +360,55 @@ func prefixKeyRange(prefix string) (start, end []byte) {
 		}
 	}
 	return
+}
+
+// State.storage
+//-------------------------------------
+// State.validator
+
+func (s *State) GetValidator(address acm.Address) acm.Validator {
+	_, valueBytes := s.tree.Get(prefixedKey(validatorPrefix, address.Bytes()))
+	if valueBytes == nil {
+		return nil
+	}
+
+	return DecodeValidator(valueBytes)
+}
+
+func (s *State) GetMutableValidator(address acm.Address) acm.MutableValidator {
+	return acm.AsMutableValidator(s.GetValidator(address))
+}
+
+func (s *State) IterateValidator(consumer func(acm.Validator) (stop bool)) (stopped bool, err error) {
+	return s.tree.IterateRange(validatorStart, validatorEnd, true, func(key []byte, value []byte) (stop bool) {
+		return consumer(DecodeValidator(value))
+	}), nil
+}
+
+func (s *State) UpdateValidator(validator acm.Validator) error {
+	bytes, err := validator.Bytes()
+	if err != nil {
+		return err
+	}
+	s.tree.Set(prefixedKey(validatorPrefix, validator.Address().Bytes()), bytes)
+	return nil
+}
+
+func (s *State) RemoveValidator(validator acm.Validator) error {
+	s.tree.Remove(prefixedKey(validatorPrefix, validator.Address().Bytes()))
+	return nil
+}
+
+func DecodeValidator(validatorBytes []byte) acm.Validator {
+	return acm.LoadValidator(validatorBytes)
+}
+
+func (s *State) ValidatorCount() int {
+	count := 0
+	s.IterateValidator(func(validator acm.Validator) (stop bool) {
+		count++
+		return false
+	})
+
+	return count
 }

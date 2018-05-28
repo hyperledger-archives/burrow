@@ -24,8 +24,8 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/rpc/core/types"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
@@ -67,18 +67,13 @@ type ResultListBlocks struct {
 }
 
 type ResultGetBlock struct {
-	BlockMeta *tm_types.BlockMeta
-	Block     *tm_types.Block
+	*core_types.ResultBlock
 }
 
 type ResultStatus struct {
-	NodeInfo          p2p.NodeInfo
-	GenesisHash       []byte
-	PubKey            acm.PublicKey
-	LatestBlockHash   []byte
-	LatestBlockHeight uint64
-	LatestBlockTime   int64
-	NodeVersion       string
+	*core_types.ResultStatus `json:"result"`
+	GenesisHash              []byte
+	NodeVersion              string
 }
 
 type ResultChainId struct {
@@ -88,34 +83,38 @@ type ResultChainId struct {
 }
 
 type ResultSubscribe struct {
+	*core_types.ResultSubscribe
 	EventID        string
 	SubscriptionID string
 }
 
 type ResultUnsubscribe struct {
+	*core_types.ResultUnsubscribe
 	SubscriptionID string
 }
 
 type Peer struct {
+	*core_types.Peer
 	NodeInfo   p2p.NodeInfo
 	IsOutbound bool
 }
 
 type ResultNetInfo struct {
+	*core_types.ResultNetInfo
 	Listening bool
 	Listeners []string
 	Peers     []*Peer
 }
 
 type ResultListValidators struct {
-	BlockHeight         uint64
-	BondedValidators    []*acm.ConcreteValidator
-	UnbondingValidators []*acm.ConcreteValidator
+	BlockHeight   uint64
+	TotalStake    uint64
+	ValidatorSet  []string
+	ValidatorPool []string
 }
 
 type ResultDumpConsensusState struct {
-	RoundState      *ctypes.RoundState
-	PeerRoundStates []*ctypes.PeerRoundState
+	*core_types.ResultDumpConsensusState
 }
 
 type ResultPeers struct {

@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
+	rpc_core "github.com/tendermint/tendermint/rpc/core"
 	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
 	"github.com/tendermint/tendermint/rpc/lib/types"
 )
@@ -158,6 +159,22 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 		ChainID:    gorpc.NewRPCFunc(service.ChainId, ""),
 		ListBlocks: gorpc.NewRPCFunc(service.ListBlocks, "minHeight,maxHeight"),
 		GetBlock:   gorpc.NewRPCFunc(service.GetBlock, "height"),
+
+		// Tendermint RPCs
+		"health": gorpc.NewRPCFunc(rpc_core.Health, ""),
+		//"status":               gorpc.NewRPCFunc(rpc_core.Status, ""),
+		//"net_info":             gorpc.NewRPCFunc(rpc_core.NetInfo, ""),
+		"blockchain": gorpc.NewRPCFunc(rpc_core.BlockchainInfo, "minHeight,maxHeight"),
+		//"genesis":              gorpc.NewRPCFunc(rpc_core.Genesis, ""),
+		"block":         gorpc.NewRPCFunc(rpc_core.Block, "height"),
+		"block_results": gorpc.NewRPCFunc(rpc_core.BlockResults, "height"),
+		"commit":        gorpc.NewRPCFunc(rpc_core.Commit, "height"),
+		"tx":            gorpc.NewRPCFunc(rpc_core.Tx, "hash,prove"),
+		"tx_search":     gorpc.NewRPCFunc(rpc_core.TxSearch, "query,prove"),
+		"validators":    gorpc.NewRPCFunc(rpc_core.Validators, "height"),
+		//"dump_consensus_state": gorpc.NewRPCFunc(rpc_core.DumpConsensusState, ""),
+		"unconfirmed_txs":     gorpc.NewRPCFunc(rpc_core.UnconfirmedTxs, ""),
+		"num_unconfirmed_txs": gorpc.NewRPCFunc(rpc_core.NumUnconfirmedTxs, ""),
 
 		// Consensus
 		ListUnconfirmedTxs: gorpc.NewRPCFunc(service.ListUnconfirmedTxs, "maxTxs"),

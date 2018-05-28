@@ -20,6 +20,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: make reinstall_vendor
       - run: make test
       # In case we miss compile errors not pulled into test paths
       - run: make build
@@ -34,6 +35,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: make reinstall_vendor
       - run: make test_integration_bosmarmot
       - store_artifacts:
           path: ./.gopath_bos/src/github.com/monax/bosmarmot/monax/tests/burrow.log

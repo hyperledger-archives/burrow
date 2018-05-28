@@ -15,6 +15,8 @@
 package mock
 
 import (
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/logging"
@@ -59,13 +61,13 @@ func (mock *MockNodeClient) MockAddAccount(account *acm.ConcreteAccount) {
 }
 
 func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
-	BlockHeight uint64, LatestBlockTime int64, err error) {
+	BlockHeight uint64, LatestBlockTime time.Time, err error) {
 	// fill return values
 	ChainId = make([]byte, 64)
 	LatestBlockHash = make([]byte, 64)
 	ValidatorPublicKey = crypto.PubKeyEd25519{}.Wrap().Bytes()
 	BlockHeight = 0
-	LatestBlockTime = 0
+	LatestBlockTime = time.Time{}
 	return
 }
 
@@ -94,8 +96,7 @@ func (mock *MockNodeClient) GetName(name string) (owner acm.Address, data string
 	return
 }
 
-func (mock *MockNodeClient) ListValidators() (blockHeight uint64, bondedValidators,
-	unbondingValidators []acm.Validator, err error) {
+func (mock *MockNodeClient) ListValidators() (blockHeight uint64, validators []string, err error) {
 	return
 }
 

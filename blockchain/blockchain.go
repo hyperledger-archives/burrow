@@ -16,8 +16,10 @@ package blockchain
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -48,6 +50,11 @@ type Tip interface {
 	// and so lastBlock.Header.AppHash will be one block older than our AppHashAfterLastBlock (i.e. Tendermint closes
 	// the AppHash we return from ABCI Commit into the _next_ block)
 	AppHashAfterLastBlock() []byte
+
+	// Returns the instance of the current validator set
+	ValidatorSet() ValidatorSet
+	EvaluateSortition(blockHeight uint64, prevBlockHash []byte)
+	VerifySortition(prevBlockHash []byte, publicKey acm.PublicKey, info uint64, proof []byte) bool
 }
 
 // Burrow's portion of the Blockchain state
@@ -58,8 +65,6 @@ type Blockchain interface {
 	Tip
 	// Returns an immutable copy of the tip
 	Tip() Tip
-	// Returns a copy of the current validator set
-	Validators() []acm.Validator
 }
 
 type MutableBlockchain interface {
@@ -78,6 +83,9 @@ type tip struct {
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
 	appHashAfterLastBlock []byte
+
+	validatorSet ValidatorSet
+	sortition    acm.Sortition
 }
 
 type blockchain struct {
@@ -85,7 +93,6 @@ type blockchain struct {
 	db dbm.DB
 	*root
 	*tip
-	validators []acm.Validator
 }
 
 var _ Root = &blockchain{}
@@ -93,14 +100,8 @@ var _ Tip = &blockchain{}
 var _ Blockchain = &blockchain{}
 var _ MutableBlockchain = &blockchain{}
 
-type PersistedState struct {
-	AppHashAfterLastBlock []byte
-	LastBlockHeight       uint64
-	GenesisDoc            genesis.GenesisDoc
-}
-
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
-	logger *logging.Logger) (*blockchain, error) {
+	sortition acm.Sortition, logger *logging.Logger) (*blockchain, error) {
 
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
@@ -116,28 +117,23 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 			return nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
 				"match the one found in database: 0x%X", argHash, dbHash)
 		}
-		return blockchain, nil
+	} else {
+		logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
+		blockchain = newBlockchain(db, genesisDoc)
+		blockchain.validatorSet = newValidatorSet(genesisDoc.GetMaximumPower(), genesisDoc.Validators())
 	}
 
-	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
-	return newBlockchain(db, genesisDoc), nil
+	blockchain.sortition = sortition
+	return blockchain, nil
 }
 
 // Pointer to blockchain state initialised from genesis
 func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
-	var validators []acm.Validator
-	for _, gv := range genesisDoc.Validators {
-		validators = append(validators, acm.ConcreteValidator{
-			PublicKey: gv.PublicKey,
-			Power:     uint64(gv.Amount),
-		}.Validator())
-	}
-	root := NewRoot(genesisDoc)
+
 	return &blockchain{
-		db:         db,
-		root:       root,
-		tip:        NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash),
-		validators: validators,
+		db:   db,
+		root: NewRoot(genesisDoc),
+		tip:  NewTip(genesisDoc.ChainID(), genesisDoc.GenesisTime, genesisDoc.Hash()),
 	}
 }
 
@@ -146,13 +142,37 @@ func loadBlockchain(db dbm.DB) (*blockchain, error) {
 	if len(buf) == 0 {
 		return nil, nil
 	}
-	persistedState, err := Decode(buf)
+	u := map[string]string{}
+	err := json.Unmarshal(buf, &u)
 	if err != nil {
 		return nil, err
 	}
-	blockchain := newBlockchain(db, &persistedState.GenesisDoc)
-	blockchain.lastBlockHeight = persistedState.LastBlockHeight
-	blockchain.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
+
+	genesisDoc, err := genesis.GenesisDocFromJSON([]byte(u["genesisDoc"]))
+	if err != nil {
+		return nil, err
+	}
+
+	validatorSet, err := ValidatorSetFromJSON([]byte(u["validatorSet"]))
+	if err != nil {
+		return nil, err
+	}
+
+	lastBlockHeight, err := strconv.ParseUint(u["lastBlockHeight"], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	appHashAfterLastBlock, err := hex.DecodeString(u["appHashAfterLastBlock"])
+	if err != nil {
+		return nil, err
+	}
+
+	blockchain := newBlockchain(db, genesisDoc)
+	blockchain.lastBlockHeight = lastBlockHeight
+	blockchain.appHashAfterLastBlock = appHashAfterLastBlock
+	blockchain.validatorSet = validatorSet
+
 	return blockchain, nil
 }
 
@@ -184,10 +204,27 @@ func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte
 
 func (bc *blockchain) save() error {
 	if bc.db != nil {
-		encodedState, err := bc.Encode()
+		genesisJSON, err := bc.genesisDoc.JSONBytes()
 		if err != nil {
 			return err
 		}
+
+		validatorSetJSON, err := bc.validatorSet.JSONBytes()
+		if err != nil {
+			return err
+		}
+
+		u := map[string]string{}
+		u["genesisDoc"] = string(genesisJSON)
+		u["validatorSet"] = string(validatorSetJSON)
+		u["lastBlockHeight"] = strconv.FormatUint(bc.lastBlockHeight, 10)
+		u["appHashAfterLastBlock"] = hex.EncodeToString(bc.appHashAfterLastBlock)
+
+		encodedState, err := json.Marshal(u)
+		if err != nil {
+			return err
+		}
+
 		bc.db.SetSync(stateKey, encodedState)
 	}
 	return nil
@@ -202,38 +239,6 @@ func (bc *blockchain) Tip() Tip {
 	defer bc.RUnlock()
 	t := *bc.tip
 	return &t
-}
-
-func (bc *blockchain) Validators() []acm.Validator {
-	bc.RLock()
-	defer bc.RUnlock()
-	vs := make([]acm.Validator, len(bc.validators))
-	for i, v := range bc.validators {
-		vs[i] = v
-	}
-	return vs
-}
-
-func (bc *blockchain) Encode() ([]byte, error) {
-	persistedState := &PersistedState{
-		GenesisDoc:            bc.genesisDoc,
-		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
-		LastBlockHeight:       bc.lastBlockHeight,
-	}
-	encodedState, err := json.Marshal(persistedState)
-	if err != nil {
-		return nil, err
-	}
-	return encodedState, nil
-}
-
-func Decode(encodedState []byte) (*PersistedState, error) {
-	persistedState := new(PersistedState)
-	err := json.Unmarshal(encodedState, persistedState)
-	if err != nil {
-		return nil, err
-	}
-	return persistedState, nil
 }
 
 func (r *root) GenesisHash() []byte {
@@ -262,4 +267,28 @@ func (t *tip) LastBlockHash() []byte {
 
 func (t *tip) AppHashAfterLastBlock() []byte {
 	return t.appHashAfterLastBlock
+}
+
+func (t *tip) ValidatorSet() ValidatorSet {
+	return t.validatorSet
+}
+
+func (t *tip) EvaluateSortition(blockHeight uint64, prevBlockHash []byte) {
+
+	// Check if sortition is set
+	if t.sortition == nil {
+		return
+	}
+
+	// check if this validator is in set or not
+	if t.validatorSet.IsValidatorInSet(t.sortition.Address()) {
+		return
+	}
+
+	// this validator is not in the set
+	go t.sortition.Evaluate(blockHeight, prevBlockHash)
+}
+
+func (t *tip) VerifySortition(prevBlockHash []byte, publicKey acm.PublicKey, info uint64, proof []byte) bool {
+	return t.sortition.Verify(prevBlockHash, publicKey, info, proof)
 }

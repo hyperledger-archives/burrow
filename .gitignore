@@ -9,10 +9,13 @@ test_scratch/
 
 # Temporary / cached
 *.swp
+debug*
 .idea
 .vscode
 
 .gopath_bos
 burrow.toml
+vendor/*
 
 commit_hash.txt
+

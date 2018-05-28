@@ -1,6 +1,8 @@
 package tendermint
 
 import (
+	"os"
+
 	tm_config "github.com/tendermint/tendermint/config"
 )
 
@@ -30,17 +32,14 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 	if btc != nil {
 		// We may need to expose more of the P2P/Consensus/Mempool options, but I'd like to keep the configuration
 		// minimal
-		conf.RootDir = btc.TendermintRoot
-		conf.Consensus.RootDir = btc.TendermintRoot
-		conf.Mempool.RootDir = btc.TendermintRoot
-		conf.P2P.RootDir = btc.TendermintRoot
+		os.MkdirAll(btc.TendermintRoot+"/config", 0755) /// Create directory for tendermint config files
+		conf.SetRoot(btc.TendermintRoot)                /// set tendermint root file (--home)
+
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
-		conf.P2P.AuthEnc = false
 		conf.Moniker = btc.Moniker
 	}
-	// Disable Tendermint RPC
-	conf.RPC.ListenAddress = ""
+	conf.RPC.ListenAddress = "tcp://localhost:0"
 	return conf
 }

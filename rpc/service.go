@@ -17,6 +17,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"time"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
@@ -25,12 +26,15 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/finterra"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
+	rpc_core "github.com/tendermint/tendermint/rpc/core"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	tm_types "github.com/tendermint/tendermint/types"
 	"github.com/tmthrgd/go-hex"
 )
@@ -45,6 +49,7 @@ type Service struct {
 	ctx             context.Context
 	state           state.Iterable
 	nameReg         execution.NameRegIterable
+	validatorPool   finterra.ValidatorPoolIterable
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
 	blockchain      bcm.Blockchain
@@ -53,7 +58,7 @@ type Service struct {
 	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable,
+func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable, validatorPool finterra.ValidatorPoolIterable,
 	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
 	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
@@ -62,6 +67,7 @@ func NewService(ctx context.Context, state state.Iterable, nameReg execution.Nam
 		state:           state,
 		mempoolAccounts: execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
 		nameReg:         nameReg,
+		validatorPool:   validatorPool,
 		subscribable:    subscribable,
 		blockchain:      blockchain,
 		transactor:      transactor,
@@ -167,13 +173,15 @@ func (s *Service) Status() (*ResultStatus, error) {
 		return nil, err
 	}
 	return &ResultStatus{
-		NodeInfo:          s.nodeView.NodeInfo(),
-		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            publicKey,
-		LatestBlockHash:   latestBlockHash,
-		LatestBlockHeight: latestHeight,
-		LatestBlockTime:   latestBlockTime,
-		NodeVersion:       project.History.CurrentVersion().String(),
+		ResultStatus: &core_types.ResultStatus{
+			NodeInfo:          s.nodeView.NodeInfo(),
+			PubKey:            publicKey.PubKey,
+			LatestBlockHash:   latestBlockHash,
+			LatestBlockHeight: int64(latestHeight),
+			LatestBlockTime:   time.Unix(0, latestBlockTime),
+		},
+		NodeVersion: project.History.CurrentVersion().String(),
+		GenesisHash: s.blockchain.GenesisHash(),
 	}, nil
 }
 
@@ -343,10 +351,12 @@ func (s *Service) ListNames(predicate func(*execution.NameRegEntry) bool) (*Resu
 }
 
 func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
+	_height := int64(height)
+	r, e := rpc_core.Block(&_height)
+
 	return &ResultGetBlock{
-		Block:     s.nodeView.BlockStore().LoadBlock(int64(height)),
-		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int64(height)),
-	}, nil
+		ResultBlock: r,
+	}, e
 }
 
 // Returns the current blockchain height and metadata for a range of blocks
@@ -380,29 +390,34 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 }
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
-	// TODO: when we reintroduce support for bonding and unbonding update this
-	// to reflect the mutable bonding state
-	validators := s.blockchain.Validators()
-	concreteValidators := make([]*acm.ConcreteValidator, len(validators))
-	for i, validator := range validators {
-		concreteValidators[i] = acm.AsConcreteValidator(validator)
+	var validatorSet, validatorPool []string
+
+	for _, validator := range s.blockchain.Tip().ValidatorSet().Validators() {
+		validatorSet = append(validatorSet, validator.String())
 	}
+
+	var totalStake uint64
+	s.validatorPool.IterateValidator(func(validator acm.Validator) (stop bool) {
+		totalStake += validator.Stake()
+		validatorPool = append(validatorPool, validator.String())
+
+		return false
+	})
+
 	return &ResultListValidators{
-		BlockHeight:         s.blockchain.Tip().LastBlockHeight(),
-		BondedValidators:    concreteValidators,
-		UnbondingValidators: nil,
+		BlockHeight:   s.blockchain.Tip().LastBlockHeight(),
+		TotalStake:    totalStake,
+		ValidatorSet:  validatorSet,
+		ValidatorPool: validatorPool,
 	}, nil
 }
 
 func (s *Service) DumpConsensusState() (*ResultDumpConsensusState, error) {
-	peerRoundState, err := s.nodeView.PeerRoundStates()
-	if err != nil {
-		return nil, err
-	}
+	r, e := rpc_core.DumpConsensusState()
+
 	return &ResultDumpConsensusState{
-		RoundState:      s.nodeView.RoundState(),
-		PeerRoundStates: peerRoundState,
-	}, nil
+		ResultDumpConsensusState: r,
+	}, e
 }
 
 func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {

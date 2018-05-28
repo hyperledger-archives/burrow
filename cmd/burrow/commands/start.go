@@ -81,11 +81,12 @@ func Start(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Unable to set ValidatorAddress from provided validator-index since no " +
 						"GenesisDoc/GenesisSpec provided.")
 				}
-				if *validatorIndexOpt >= len(conf.GenesisDoc.Validators) {
+				if *validatorIndexOpt >= len(conf.GenesisDoc.Validators()) {
 					output.Fatalf("validator-index of %v given but only %v validators specified in GenesisDoc",
-						*validatorIndexOpt, len(conf.GenesisDoc.Validators))
+						*validatorIndexOpt, len(conf.GenesisDoc.Validators()))
 				}
-				conf.ValidatorAddress = &conf.GenesisDoc.Validators[*validatorIndexOpt].Address
+				addr := conf.GenesisDoc.Validators()[*validatorIndexOpt].Address()
+				conf.ValidatorAddress = &addr
 				output.Logf("Using validator index %v (address: %s)", *validatorIndexOpt, *conf.ValidatorAddress)
 			}
 

@@ -2,15 +2,13 @@ package txs
 
 import (
 	"fmt"
-	"io"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/tendermint/go-wire"
 )
 
 type TxOutput struct {
-	Address acm.Address
-	Amount  uint64
+	Address acm.Address `json:"address"`
+	Amount  uint64      `json:"amount"`
 }
 
 func (txOut *TxOutput) ValidateBasic() error {
@@ -23,8 +21,8 @@ func (txOut *TxOutput) ValidateBasic() error {
 	return nil
 }
 
-func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
+func (txOut *TxOutput) SignString() string {
+	return fmt.Sprintf(`{"address":"%s","amount":%v}`, txOut.Address, txOut.Amount)
 }
 
 func (txOut *TxOutput) String() string {

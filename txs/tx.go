@@ -61,10 +61,11 @@ const (
 	// Validation transactions
 	TxTypeBond   = byte(0x11)
 	TxTypeUnbond = byte(0x12)
-	TxTypeRebond = byte(0x13)
 
 	// Admin transactions
 	TxTypePermissions = byte(0x1f)
+
+	TxTypeSortition = byte(0x2f)
 )
 
 var mapper = data.NewMapper(Wrapper{}).
@@ -73,8 +74,8 @@ var mapper = data.NewMapper(Wrapper{}).
 	RegisterImplementation(&NameTx{}, "name_tx", TxTypeName).
 	RegisterImplementation(&BondTx{}, "bond_tx", TxTypeBond).
 	RegisterImplementation(&UnbondTx{}, "unbond_tx", TxTypeUnbond).
-	RegisterImplementation(&RebondTx{}, "rebond_tx", TxTypeRebond).
-	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions)
+	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions).
+	RegisterImplementation(&SortitionTx{}, "sortition_tx", TxTypeSortition)
 
 	//-----------------------------------------------------------------------------
 
@@ -194,10 +195,10 @@ func (e ErrTxInvalidSequence) Error() string {
 
 //--------------------------------------------------------------------------------
 
-func copyInputs(inputs []*TxInput) []TxInput {
+func copyInputs(inputs []TxInput) []TxInput {
 	inputsCopy := make([]TxInput, len(inputs))
 	for i, input := range inputs {
-		inputsCopy[i] = *input
+		inputsCopy[i] = input
 	}
 	return inputsCopy
 }

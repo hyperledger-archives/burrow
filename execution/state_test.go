@@ -34,5 +34,5 @@ func TestState_UpdateAccount(t *testing.T) {
 	require.NoError(t, err)
 	accountOut, err := state.GetAccount(account.Address())
 	require.NoError(t, err)
-	assert.Equal(t, account, accountOut)
+	assert.Equal(t, account.ToAccount(), accountOut)
 }

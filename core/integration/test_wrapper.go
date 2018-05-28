@@ -40,7 +40,7 @@ import (
 
 const (
 	chainName = "Integration_Test_Chain"
-	testDir   = "./test_scratch/tm_test"
+	testDir   = "/tmp/test_scratch/tm_test"
 )
 
 // Enable logger output during tests
@@ -52,10 +52,13 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
+	os.MkdirAll(testDir+"/config", 0777)
 	os.Chdir(testDir)
 
 	tmConf := tm_config.DefaultConfig()
-	os.MkdirAll("config", 0777)
+	tmConf.RPC.ListenAddress = "tcp://localhost:0"
+	tmConf.SetRoot(testDir)
+
 	logger := logging.NewNoopLogger()
 	if debugLogging {
 		var err error
@@ -80,7 +83,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 	validatorAccount := privateAccounts[0]
 	privValidator := validator.NewPrivValidatorMemory(validatorAccount, validatorAccount)
 	keyClient := mock.NewKeyClient(privateAccounts...)
-	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
+	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, nil, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
 		nil, logger)
 	if err != nil {
 		panic(err)
@@ -99,21 +102,24 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 }
 
 func TestGenesisDoc(addressables []acm.PrivateAccount) *genesis.GenesisDoc {
-	accounts := make(map[string]acm.Account, len(addressables))
+	accounts := make([]acm.Account, len(addressables))
 	for i, pa := range addressables {
 		account := acm.FromAddressable(pa)
 		account.AddToBalance(1 << 32)
 		account.SetPermissions(permission.AllAccountPermissions.Clone())
-		accounts[fmt.Sprintf("user_%v", i)] = account
+		accounts[i] = account
 	}
+	validators := make([]acm.Validator, 1)
+	validators[0] = acm.NewValidator(accounts[0].PublicKey(), 1000, 1)
+
 	genesisTime, err := time.Parse("02-01-2006", "27-10-2017")
 	if err != nil {
 		panic("could not parse test genesis time")
 	}
-	return genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, accounts,
-		map[string]acm.Validator{
-			"genesis_validator": acm.AsValidator(accounts["user_0"]),
-		})
+	genesisDoc := genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, permission.DefaultAccountPermissions.Clone(),
+		accounts, validators)
+	return &genesisDoc
+
 }
 
 // Deterministic account generation helper. Pass number of accounts to make

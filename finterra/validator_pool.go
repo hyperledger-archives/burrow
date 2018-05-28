@@ -21,25 +21,29 @@
 // SOFTWARE.
 //
 
-package account
+package finterra
 
-import (
-	"testing"
+import acm "github.com/hyperledger/burrow/account"
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestAlterPower(t *testing.T) {
-	NewConcreteAccountFromSecret("seeeeecret")
-	val := AsMutableValidator(NewValidator(PrivateKeyFromSecret("seeeeecret").PublicKey(), 100, 1))
-	val.AddStake(100)
-	assert.Equal(t, int64(1), val.Power())
-	assert.Equal(t, uint64(200), val.Stake())
+type ValidatorPoolGetter interface {
+	ValidatorCount() int
+	GetValidator(address acm.Address) acm.Validator
+	GetMutableValidator(address acm.Address) acm.MutableValidator
 }
 
-func TestEncoding(t *testing.T) {
-	val1 := NewValidator(PrivateKeyFromSecret("seeeeecret").PublicKey(), 100, 1)
-	bytes, _ := val1.Bytes()
-	val2 := LoadValidator(bytes)
-	assert.Equal(t, val1, val2)
+type ValidatorPoolUpdater interface {
+	// Updates the name  creating it if it does not exist
+	UpdateValidator(validator acm.Validator) error
+	// Remove the name
+	RemoveValidator(validator acm.Validator) error
+}
+
+type ValidatorPoolWriter interface {
+	ValidatorPoolGetter
+	ValidatorPoolUpdater
+}
+
+type ValidatorPoolIterable interface {
+	ValidatorPoolGetter
+	IterateValidator(consumer func(acm.Validator) (stop bool)) (stopped bool, err error)
 }

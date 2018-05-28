@@ -27,29 +27,29 @@ import (
 // PermissionsTx.PermArgs interface and argument encoding
 
 type PermArgs struct {
-	PermFlag   types.PermFlag
-	Address    *acm.Address    `json:",omitempty"`
-	Permission *types.PermFlag `json:",omitempty"`
-	Role       *string         `json:",omitempty"`
-	Value      *bool           `json:",omitempty"`
+	PermFlag   types.PermFlag  `json:"perm_flag,omitempty"`
+	Address    *acm.Address    `json:"address,omitempty"`
+	Permission *types.PermFlag `json:"permission,omitempty"`
+	Role       *string         `json:"role,omitempty"`
+	Value      *bool           `json:"value,omitempty"`
 }
 
 func (pa PermArgs) String() string {
 	body := make([]string, 0, 5)
-	body = append(body, fmt.Sprintf("PermFlag: %s", permission.String(pa.PermFlag)))
+	body = append(body, fmt.Sprintf(`"perm_flag":%v`, pa.PermFlag))
 	if pa.Address != nil {
-		body = append(body, fmt.Sprintf("Address: %s", *pa.Address))
+		body = append(body, fmt.Sprintf(`"address":"%s"`, *pa.Address))
 	}
 	if pa.Permission != nil {
-		body = append(body, fmt.Sprintf("Permission: %s", permission.String(*pa.Permission)))
+		body = append(body, fmt.Sprintf(`"permission":%v`, *pa.Permission))
 	}
 	if pa.Role != nil {
-		body = append(body, fmt.Sprintf("Role: %s", *pa.Role))
+		body = append(body, fmt.Sprintf(`"role":%s`, *pa.Role))
 	}
 	if pa.Value != nil {
-		body = append(body, fmt.Sprintf("Value: %v", *pa.Value))
+		body = append(body, fmt.Sprintf(`"value":%v`, *pa.Value))
 	}
-	return fmt.Sprintf("PermArgs{%s}", strings.Join(body, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(body, ","))
 }
 
 func (pa PermArgs) EnsureValid() error {

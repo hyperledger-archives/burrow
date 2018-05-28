@@ -17,7 +17,7 @@ var _ tm_types.PrivValidator = &privValidatorMemory{}
 
 // Create a PrivValidator with in-memory state that takes an addressable representing the validator identity
 // and a signer providing private signing for that identity.
-func NewPrivValidatorMemory(addressable acm.Addressable, signer acm.Signer) *privValidatorMemory {
+func NewPrivValidatorMemory(addressable acm.Addressable, signer acm.Signer) tm_types.PrivValidator {
 	return &privValidatorMemory{
 		Addressable:    addressable,
 		Signer:         asTendermintSigner(signer),

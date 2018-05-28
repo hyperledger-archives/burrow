@@ -45,9 +45,6 @@ func newKey(name string) (*Key, error) {
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	if key.Name == "" {
 		key.Name = key.Address.String()
 	}

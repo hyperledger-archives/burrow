@@ -107,6 +107,21 @@ type (
 		Amount       uint64       `json:"amount"`
 	}
 
+	BondParam struct {
+		InputAccount InputAccount `json:"inputAccount"`
+		ToAddress    []byte       `json:"toAddress"`
+		Amount       uint64       `json:"amount"`
+		Fee          uint64       `json:"fee"`
+		PublicKey    []byte       `json:"publicKey"`
+	}
+
+	UnbondParam struct {
+		InputAccount InputAccount `json:"inputAccount"`
+		ToAddress    []byte       `json:"toAddress"`
+		Amount       uint64       `json:"amount"`
+		Fee          uint64       `json:"fee"`
+	}
+
 	NameRegEntryParam struct {
 		Name string `json:"name"`
 	}

@@ -14,12 +14,12 @@ func TestEncodeTxDecodeTx(t *testing.T) {
 	amount := uint64(2)
 	sequence := uint64(3)
 	tx := &SendTx{
-		Inputs: []*TxInput{{
+		Inputs: []TxInput{{
 			Address:  inputAddress,
 			Amount:   amount,
 			Sequence: sequence,
 		}},
-		Outputs: []*TxOutput{{
+		Outputs: []TxOutput{{
 			Address: outputAddress,
 			Amount:  amount,
 		}},
@@ -39,7 +39,7 @@ func TestEncodeTxDecodeTx_CallTx(t *testing.T) {
 	amount := uint64(2)
 	sequence := uint64(3)
 	tx := &CallTx{
-		Input: &TxInput{
+		Input: TxInput{
 			Address:  inputAddress,
 			Amount:   amount,
 			Sequence: sequence,

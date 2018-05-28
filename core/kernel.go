@@ -26,11 +26,13 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
+	acm "github.com/hyperledger/burrow/account"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	finterra "github.com/hyperledger/burrow/finterra"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
@@ -64,7 +66,7 @@ type Kernel struct {
 	shutdownOnce   sync.Once
 }
 
-func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator,
+func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator, sortition acm.Sortition,
 	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig,
 	exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
@@ -73,7 +75,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackend, tmConf.DBDir())
 
-	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
+	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, sortition, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
@@ -91,10 +93,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	}
 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain, logger)
+	checker := execution.NewBatchChecker(state, genesisDoc.ChainID(), blockchain, logger)
 
 	emitter := event.NewEmitter(logger)
-	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger, exeOptions...)
+	committer := execution.NewBatchCommitter(state, genesisDoc.ChainID(), blockchain, emitter, logger, exeOptions...)
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
@@ -104,8 +106,14 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	transactor := execution.NewTransactor(blockchain, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
 		logger)
 
+	original, ok := sortition.(*finterra.Sortition)
+	if ok {
+		original.SetTransactor(transactor)
+		original.SetValidaorPool(state)
+	}
+
 	nameReg := state
-	service := rpc.NewService(ctx, state, nameReg, checker, emitter, blockchain, keyClient, transactor,
+	service := rpc.NewService(ctx, state, nameReg, state, checker, emitter, blockchain, keyClient, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{

@@ -25,7 +25,7 @@ import (
 
 func buildTransactionCommand() *cobra.Command {
 	// Transaction command has subcommands send, name, call, bond,
-	// unbond, rebond, permissions.
+	// unbond, permissions.
 	transactionCmd := &cobra.Command{
 		Use:   "tx",
 		Short: "burrow-client tx formulates and signs a transaction to a chain",
@@ -112,19 +112,6 @@ func buildTransactionCommand() *cobra.Command {
 	unbondCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
 	unbondCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
 
-	// RebondTx
-	var rebondCmd = &cobra.Command{
-		Use:   "rebond",
-		Short: "burrow-client tx rebond --addr <address> --height <block_height>",
-		Long:  "burrow-client tx rebond --addr <address> --height <block_height>",
-		Run: func(cmd *cobra.Command, args []string) {
-			// transaction.Rebond(clientDo)
-		},
-		PreRun: assertParameters,
-	}
-	rebondCmd.Flags().StringVarP(&clientDo.AddrFlag, "addr", "a", "", "specify an address")
-	rebondCmd.Flags().StringVarP(&clientDo.HeightFlag, "height", "n", "", "specify a height to unbond at")
-
 	// PermissionsTx
 	permissionsCmd := &cobra.Command{
 		Use:   "permission",
@@ -136,7 +123,7 @@ func buildTransactionCommand() *cobra.Command {
 		PreRun: assertParameters,
 	}
 
-	transactionCmd.AddCommand(sendCmd, nameCmd, callCmd, bondCmd, unbondCmd, rebondCmd, permissionsCmd)
+	transactionCmd.AddCommand(sendCmd, nameCmd, callCmd, bondCmd, unbondCmd, permissionsCmd)
 	return transactionCmd
 }
 

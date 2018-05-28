@@ -55,18 +55,17 @@ func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (acm.Address, 
 		return signAddress, tx, err
 
 	case *txs.BondTx:
-		signAddress := tx.Inputs[0].Address
-		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
-		tx.Inputs[0].Signature = tx.Signature
+		signAddress := tx.From.Address
+		tx.From.Signature, err = keyClient.Sign(signAddress, signBytes)
 		return signAddress, tx, err
 
 	case *txs.UnbondTx:
-		signAddress := tx.Address
-		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
+		signAddress := tx.From.Address
+		tx.From.Signature, err = keyClient.Sign(signAddress, signBytes)
 		return signAddress, tx, err
 
-	case *txs.RebondTx:
-		signAddress := tx.Address
+	case *txs.SortitionTx:
+		signAddress := tx.PublicKey.Address()
 		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
 		return signAddress, tx, err
 

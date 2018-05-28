@@ -39,6 +39,7 @@ import (
 	"github.com/hyperledger/burrow/permission/snatives"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tmthrgd/go-hex"
@@ -129,7 +130,7 @@ func makeUsers(n int) []acm.AddressableSigner {
 }
 func newBlockchain(genesisDoc *genesis.GenesisDoc) bcm.MutableBlockchain {
 	testDB := dbm.NewDB("test", dbBackend, ".")
-	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
+	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, nil, logger)
 
 	return bc
 }
@@ -139,38 +140,30 @@ func makeExecutor(state *State) *executor {
 		newBlockchain(testGenesisDoc), event.NewEmitter(logger), logger)
 }
 
-func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
-	var genAccounts []genesis.Account
-	for _, user := range users[:5] {
-		accountPermCopy := accountPerm // Create new instance for custom overridability.
-		genAccounts = append(genAccounts, genesis.Account{
-			BasicAccount: genesis.BasicAccount{
-				Address: user.Address(),
-				Amount:  1000000,
-			},
-			Permissions: accountPermCopy,
-		})
+func newBaseGenDoc(globalPerm ptypes.AccountPermissions, accountPerms [5]ptypes.AccountPermissions) genesis.GenesisDoc {
+	var accounts = make([]acm.Account, 5)
+	var validators = make([]acm.Validator, 5)
+
+	for index, user := range users[:5] {
+		account := acm.NewConcreteAccount(user.PublicKey()).MutableAccount()
+		account.SetPermissions(accountPerms[index])
+		account.AddToBalance(1000000)
+
+		accounts[index] = account
 	}
 
-	return genesis.GenesisDoc{
-		GenesisTime:       time.Now(),
-		ChainName:         testGenesisDoc.ChainName,
-		GlobalPermissions: globalPerm,
-		Accounts:          genAccounts,
-		Validators: []genesis.Validator{
-			{
-				BasicAccount: genesis.BasicAccount{
-					PublicKey: users[0].PublicKey(),
-					Amount:    10,
-				},
-				UnbondTo: []genesis.BasicAccount{
-					{
-						Address: users[0].Address(),
-					},
-				},
-			},
-		},
+	for index, user := range users[5:] {
+		account := acm.NewConcreteAccount(user.PublicKey()).MutableAccount()
+
+		validator := acm.NewValidator(account.PublicKey(), account.Balance(), 1)
+
+		validators[index] = validator
 	}
+
+	genDoc := genesis.MakeGenesisDocFromAccounts("test-chain", nil, time.Now(),
+		globalPerm, accounts, validators)
+
+	return genDoc
 }
 
 //func getAccount(state state.AccountGetter, address acm.Address) acm.MutableAccount {
@@ -181,10 +174,12 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 func TestSendFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
-	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
-	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
+
+	var perms [5]ptypes.AccountPermissions
+	perms[1].Base.Set(permission.Send, true)
+	perms[2].Base.Set(permission.Call, true)
+	perms[3].Base.Set(permission.CreateContract, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -251,9 +246,12 @@ func TestSendFails(t *testing.T) {
 func TestName(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)
-	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Send, true)
+	perms[1].Base.Set(permission.Name, true)
+	assert.Equal(t, perms[0].Base.IsSet(permission.Send), true)
+	assert.Equal(t, perms[1].Base.IsSet(permission.Name), true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -270,7 +268,7 @@ func TestName(t *testing.T) {
 	if err := batchCommitter.Execute(tx); err == nil {
 		t.Fatal("Expected error")
 	} else {
-		fmt.Println(err)
+		/// fmt.Println(err)
 	}
 
 	// simple name tx with perm should pass
@@ -287,10 +285,12 @@ func TestName(t *testing.T) {
 func TestCallFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
-	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
-	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
+	var perms [5]ptypes.AccountPermissions
+	perms[1].Base.Set(permission.Send, true)
+	perms[2].Base.Set(permission.Call, true)
+	perms[3].Base.Set(permission.CreateAccount, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
+
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -360,8 +360,10 @@ func TestCallFails(t *testing.T) {
 func TestSendPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Send, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
+	acm.AsMutableAccount(genDoc.Accounts()[0]).MutablePermissions().Base.Set(permission.Send, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -397,8 +399,9 @@ func TestSendPermission(t *testing.T) {
 func TestCallPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Call, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -521,9 +524,10 @@ func TestCallPermission(t *testing.T) {
 func TestCreatePermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.CreateContract, true) // give the 0 account permission
+	perms[0].Base.Set(permission.Call, true)           // give the 0 account permission
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -639,10 +643,11 @@ func TestCreatePermission(t *testing.T) {
 func TestCreateAccountPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
-	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
-	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Send, true)
+	perms[1].Base.Set(permission.Send, true)
+	perms[0].Base.Set(permission.CreateAccount, true)
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -784,11 +789,12 @@ func init() {
 func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
-	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
-	genDoc.Accounts[3].Permissions.AddRole("bumble")
-	genDoc.Accounts[3].Permissions.AddRole("bee")
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Call, true)
+	perms[3].Base.Set(permission.Bond, true)
+	perms[3].AddRole("bumble")
+	perms[3].AddRole("bee")
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -921,11 +927,12 @@ func TestSNativeCALL(t *testing.T) {
 func TestSNativeTx(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
-	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
-	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
-	genDoc.Accounts[3].Permissions.AddRole("bumble")
-	genDoc.Accounts[3].Permissions.AddRole("bee")
+	var perms [5]ptypes.AccountPermissions
+	perms[0].Base.Set(permission.Call, true)
+	perms[3].Base.Set(permission.Bond, true)
+	perms[3].AddRole("bumble")
+	perms[3].AddRole("bee")
+	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, perms)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
@@ -1260,7 +1267,7 @@ func TestCreates(t *testing.T) {
 
 	// call the pre-factory, triggering the factory to run a create
 	tx := &txs.CallTx{
-		Input: &txs.TxInput{
+		Input: txs.TxInput{
 			Address:   acc0.Address(),
 			Amount:    1,
 			Sequence:  acc0.Sequence() + 1,
@@ -1284,7 +1291,7 @@ func TestCreates(t *testing.T) {
 	acc0 = getAccount(state, acc0.Address())
 	// call the pre-factory, triggering the factory to run a create
 	tx = &txs.CallTx{
-		Input: &txs.TxInput{
+		Input: txs.TxInput{
 			Address:   acc0.Address(),
 			Amount:    1,
 			Sequence:  acc0.Sequence() + 1,
@@ -1339,7 +1346,7 @@ func TestContractSend(t *testing.T) {
 
 	// call the contract, triggering the send
 	tx := &txs.CallTx{
-		Input: &txs.TxInput{
+		Input: txs.TxInput{
 			Address:   acc0.Address(),
 			Amount:    sendAmt,
 			Sequence:  acc0.Sequence() + 1,
@@ -1376,7 +1383,7 @@ func TestMerklePanic(t *testing.T) {
 	{
 		stateSendTx := state.Copy(dbm.NewMemDB())
 		tx := &txs.SendTx{
-			Inputs: []*txs.TxInput{
+			Inputs: []txs.TxInput{
 				{
 					Address:   acc0.Address(),
 					Amount:    1,
@@ -1384,7 +1391,7 @@ func TestMerklePanic(t *testing.T) {
 					PublicKey: acc0PubKey,
 				},
 			},
-			Outputs: []*txs.TxOutput{
+			Outputs: []txs.TxOutput{
 				{
 					Address: acc1.Address(),
 					Amount:  1,
@@ -1408,7 +1415,7 @@ func TestMerklePanic(t *testing.T) {
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.UpdateAccount(newAcc1)
 		tx := &txs.CallTx{
-			Input: &txs.TxInput{
+			Input: txs.TxInput{
 				Address:   acc0.Address(),
 				Amount:    1,
 				Sequence:  acc0.Sequence() + 1,
@@ -1443,7 +1450,7 @@ func TestTxs(t *testing.T) {
 	{
 		stateSendTx := state.Copy(dbm.NewMemDB())
 		tx := &txs.SendTx{
-			Inputs: []*txs.TxInput{
+			Inputs: []txs.TxInput{
 				{
 					Address:   acc0.Address(),
 					Amount:    1,
@@ -1451,7 +1458,7 @@ func TestTxs(t *testing.T) {
 					PublicKey: acc0PubKey,
 				},
 			},
-			Outputs: []*txs.TxOutput{
+			Outputs: []txs.TxOutput{
 				{
 					Address: acc1.Address(),
 					Amount:  1,
@@ -1483,7 +1490,7 @@ func TestTxs(t *testing.T) {
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.UpdateAccount(newAcc1)
 		tx := &txs.CallTx{
-			Input: &txs.TxInput{
+			Input: txs.TxInput{
 				Address:   acc0.Address(),
 				Amount:    1,
 				Sequence:  acc0.Sequence() + 1,
@@ -1534,7 +1541,7 @@ proof-of-work chain as proof of what happened while they were gone `
 
 		stateNameTx := state
 		tx := &txs.NameTx{
-			Input: &txs.TxInput{
+			Input: txs.TxInput{
 				Address:   acc0.Address(),
 				Amount:    entryAmount,
 				Sequence:  acc0.Sequence() + 1,

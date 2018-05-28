@@ -98,6 +98,13 @@ commit_hash:
 .PHONY: build
 build:	check build_db build_client
 
+# install burrow
+.PHONY: install
+install: check build_db build_client 
+	cp ./bin/burrow ${GOPATH}/bin
+	cp ./bin/burrow-client ${GOPATH}/bin
+
+
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
 build_race:	check build_race_db build_race_client

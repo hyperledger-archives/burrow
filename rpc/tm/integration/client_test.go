@@ -373,9 +373,9 @@ func TestListValidators(t *testing.T) {
 		waitNBlocks(t, wsc, 3)
 		resp, err := tm_client.ListValidators(client)
 		assert.NoError(t, err)
-		assert.Len(t, resp.BondedValidators, 1)
-		validator := resp.BondedValidators[0]
-		assert.Equal(t, genesisDoc.Validators[0].PublicKey, validator.PublicKey)
+		assert.Len(t, resp.ValidatorSet, 1)
+		validator := resp.ValidatorSet[0]
+		assert.Equal(t, genesisDoc.Validators()[0].String(), validator)
 	})
 }
 

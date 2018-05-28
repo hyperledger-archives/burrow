@@ -18,7 +18,6 @@ func EventStringNameReg(name string) string            { return fmt.Sprintf("Nam
 func EventStringPermissions(name string) string        { return fmt.Sprintf("Permissions/%s", name) }
 func EventStringBond() string                          { return "Bond" }
 func EventStringUnbond() string                        { return "Unbond" }
-func EventStringRebond() string                        { return "Rebond" }
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {

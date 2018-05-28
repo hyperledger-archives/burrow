@@ -23,23 +23,11 @@
 
 package account
 
-import (
-	"testing"
+type Sortition interface {
+	Addressable
+	Signer
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestAlterPower(t *testing.T) {
-	NewConcreteAccountFromSecret("seeeeecret")
-	val := AsMutableValidator(NewValidator(PrivateKeyFromSecret("seeeeecret").PublicKey(), 100, 1))
-	val.AddStake(100)
-	assert.Equal(t, int64(1), val.Power())
-	assert.Equal(t, uint64(200), val.Stake())
-}
-
-func TestEncoding(t *testing.T) {
-	val1 := NewValidator(PrivateKeyFromSecret("seeeeecret").PublicKey(), 100, 1)
-	bytes, _ := val1.Bytes()
-	val2 := LoadValidator(bytes)
-	assert.Equal(t, val1, val2)
+	GetAddress() Address
+	Evaluate(blockHeight uint64, prevBlockHash []byte)
+	Verify(prevBlockHash []byte, publicKey PublicKey, info uint64, proof []byte) bool
 }

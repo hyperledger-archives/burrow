@@ -50,6 +50,7 @@ func registerNativeContracts() {
 	registeredNativeContracts[Int64ToWord256(2)] = sha256Func
 	registeredNativeContracts[Int64ToWord256(3)] = ripemd160Func
 	registeredNativeContracts[Int64ToWord256(4)] = identityFunc
+
 }
 
 //-----------------------------------------------------------------------------

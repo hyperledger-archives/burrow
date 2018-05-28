@@ -211,28 +211,6 @@ func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
 	// }, nil
 }
 
-func Rebond(addrS, heightS string) (*txs.RebondTx, error) {
-	return nil, fmt.Errorf("Rebond Transaction formation to be implemented on 0.12.0")
-	// 	if addrS == "" {
-	// 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
-	// 	}
-
-	// 	addrBytes, err := hex.DecodeString(addrS)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("addr is bad hex: %v", err)
-	// 	}
-
-	// 	height, err := strconv.ParseInt(heightS, 10, 32)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("height is misformatted: %v", err)
-	// 	}
-
-	// 	return &types.RebondTx{
-	// 		Address: addrBytes,
-	// 		Height:  int(height),
-	// 	}, nil
-}
-
 type TxResult struct {
 	BlockHash []byte // all txs get in a block
 	Hash      []byte // all txs get a hash

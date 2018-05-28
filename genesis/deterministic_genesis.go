@@ -23,44 +23,36 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
 	randBonded bool, minBonded int64) (*GenesisDoc, []acm.AddressableSigner, []acm.AddressableSigner) {
 
-	accounts := make([]Account, numAccounts)
+	genAccounts := make([]genAccount, numAccounts)
 	privAccounts := make([]acm.AddressableSigner, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := dg.Account(randBalance, minBalance)
-		accounts[i] = Account{
-			BasicAccount: BasicAccount{
-				Address: account.Address(),
-				Amount:  account.Balance(),
-			},
+		genAccounts[i] = genAccount{
+			PublicKey:   account.PublicKey(),
+			Address:     account.Address(),
+			Amount:      account.Balance(),
 			Permissions: defaultPerms.Clone(), // This will get copied into each state.Account.
 		}
 		privAccounts[i] = privAccount
 	}
-	validators := make([]Validator, numValidators)
+	genValidators := make([]genValidator, numValidators)
 	privValidators := make([]acm.AddressableSigner, numValidators)
 	for i := 0; i < numValidators; i++ {
 		validator := acm.GeneratePrivateAccountFromSecret(fmt.Sprintf("val_%v", i))
 		privValidators[i] = validator
-		validators[i] = Validator{
-			BasicAccount: BasicAccount{
-				Address:   validator.Address(),
-				PublicKey: validator.PublicKey(),
-				Amount:    uint64(dg.random.Int63()),
-			},
-			UnbondTo: []BasicAccount{
-				{
-					Address: validator.Address(),
-					Amount:  uint64(dg.random.Int63()),
-				},
-			},
+		genValidators[i] = genValidator{
+			PublicKey: validator.PublicKey(),
+			Address:   validator.Address(),
+			Stake:     uint64(dg.random.Int63()),
 		}
 	}
 	return &GenesisDoc{
-		ChainName:   "TestChain",
-		GenesisTime: time.Unix(1506172037, 0),
-		Accounts:    accounts,
-		Validators:  validators,
+		ChainName:     "TestChain",
+		GenesisTime:   time.Unix(1506172037, 0),
+		GenAccounts:   genAccounts,
+		GenValidators: genValidators,
+		MaximumPower:  4,
 	}, privAccounts, privValidators
 
 }

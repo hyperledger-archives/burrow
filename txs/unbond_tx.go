@@ -9,19 +9,44 @@ import (
 )
 
 type UnbondTx struct {
-	Address   acm.Address
-	Height    int
-	Signature acm.Signature
+	From TxInput  `json:"from_validator"`
+	To   TxOutput `json:"to_account"`
 	txHashMemoizer
 }
 
 var _ Tx = &UnbondTx{}
 
-func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
+func NewUnbondTx(from, to acm.Address, amount uint64, sequence uint64, fee uint64) (*UnbondTx, error) {
 	return &UnbondTx{
-		Address: addr,
-		Height:  height,
-	}
+		From: TxInput{
+			Address:  from,
+			Amount:   amount + fee,
+			Sequence: sequence,
+		},
+		To: TxOutput{
+			Address: to,
+			Amount:  amount,
+		},
+	}, nil
+}
+
+func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
+	signJson := fmt.Sprintf(`{"chain_id":%s,"tx":[%v,{"from":"%v","to":%s}]}`,
+		jsonEscape(chainID), TxTypeUnbond, tx.From.SignString(), tx.To.SignString())
+
+	wire.WriteTo([]byte(signJson), w, n, err)
+}
+
+func (tx *UnbondTx) GetInputs() []TxInput {
+	return []TxInput{tx.From}
+}
+
+func (tx *UnbondTx) String() string {
+	return fmt.Sprintf("UnbondTx{%v: %v -> %v}", tx.From.Amount, tx.From.Address, tx.To.Address)
+}
+
+func (tx *UnbondTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
 }
 
 func (tx *UnbondTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
@@ -30,26 +55,10 @@ func (tx *UnbondTx) Sign(chainID string, signingAccounts ...acm.AddressableSigne
 			len(signingAccounts))
 	}
 	var err error
-	tx.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	tx.From.PublicKey = signingAccounts[0].PublicKey()
+	tx.From.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
 	if err != nil {
 		return fmt.Errorf("could not sign %v: %v", tx, err)
 	}
 	return nil
-}
-
-func (tx *UnbondTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"address":"%s","height":%v}]}`, TxTypeUnbond, tx.Address, tx.Height)), w, n, err)
-}
-
-func (tx *UnbondTx) GetInputs() []TxInput {
-	return nil
-}
-
-func (tx *UnbondTx) String() string {
-	return fmt.Sprintf("UnbondTx{%s,%v,%v}", tx.Address, tx.Height, tx.Signature)
-}
-
-func (tx *UnbondTx) Hash(chainID string) []byte {
-	return tx.txHashMemoizer.hash(chainID, tx)
 }

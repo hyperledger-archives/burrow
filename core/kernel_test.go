@@ -20,13 +20,16 @@ import (
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
-const testDir = "./test_scratch/kernel_test"
+const testDir = "/tmp/test_scratch/kernel_test"
 
 func TestBootThenShutdown(t *testing.T) {
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
+	os.MkdirAll(testDir+"/config", 0777)
 	os.Chdir(testDir)
 	tmConf := tm_config.DefaultConfig()
+	tmConf.RPC.ListenAddress = "tcp://localhost:0"
+	tmConf.SetRoot(testDir)
 	//logger, _, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
@@ -37,8 +40,11 @@ func TestBootThenShutdown(t *testing.T) {
 func TestBootShutdownResume(t *testing.T) {
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
+	os.MkdirAll(testDir+"/config", 0777)
 	os.Chdir(testDir)
 	tmConf := tm_config.DefaultConfig()
+	tmConf.RPC.ListenAddress = "tcp://localhost:0"
+	tmConf.SetRoot(testDir)
 	//logger, _, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
@@ -54,8 +60,10 @@ func TestBootShutdownResume(t *testing.T) {
 	}
 	// First run
 	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+
 	// Resume and check we pick up where we left off
 	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+
 	// Resuming with mismatched genesis should fail
 	genesisDoc.Salt = []byte("foo")
 	assert.Error(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
@@ -65,7 +73,7 @@ func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *ge
 	tmConf *tm_config.Config, logger *logging.Logger,
 	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
 
-	kern, err := NewKernel(context.Background(), mock.NewKeyClient(), privValidator, genesisDoc, tmConf,
+	kern, err := NewKernel(context.Background(), mock.NewKeyClient(), privValidator, nil, genesisDoc, tmConf,
 		rpc.DefaultRPCConfig(), nil, logger)
 	if err != nil {
 		return err

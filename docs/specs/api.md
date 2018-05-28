@@ -199,16 +199,6 @@ These are the types of transactions. Note that in DApp programming you would onl
 }
 ```
 
-#### RebondTx
-
-```
-{
-	address:   <string>
-	height:    <number>
-	signature: <string>
-}
-```
-
 These are the support types that are referenced in the transactions:
 
 #### TxInput
@@ -403,18 +393,6 @@ Event object:
 This notifies you when an unbond event happens.
 
 Event ID: `Unbond`
-
-Event object:
-
-```
-<Tx>
-```
-
-#### Rebond
-
-This notifies you when a rebond event happens.
-
-Event ID: `Rebond`
 
 Event object:
 

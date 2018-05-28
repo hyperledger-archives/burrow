@@ -14,8 +14,8 @@ func TestMergeGenesisSpecAccounts(t *testing.T) {
 	gs := MergeGenesisSpecs(FullAccount("0"), ParticipantAccount("1"), ParticipantAccount("2"))
 	gd, err := gs.GenesisDoc(keyClient)
 	require.NoError(t, err)
-	assert.Len(t, gd.Validators, 1)
-	assert.Len(t, gd.Accounts, 3)
+	assert.Len(t, gd.Validators(), 1)
+	assert.Len(t, gd.Accounts(), 3)
 }
 
 func TestMergeGenesisSpecGlobalPermissions(t *testing.T) {

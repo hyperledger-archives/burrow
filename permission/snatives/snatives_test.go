@@ -1,6 +1,7 @@
 package snatives
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/permission"
@@ -17,6 +18,6 @@ func TestPermArgs_String(t *testing.T) {
 		Role:       &role,
 		Value:      &value,
 	}
-	assert.Equal(t, "PermArgs{PermFlag: setBase, Permission: addRole | removeRole, Role: foo, Value: true}",
-		permArgs.String())
+	assert.Equal(t, fmt.Sprintf(`{"perm_flag":%v,"permission":%v,"role":foo,"value":true}`,
+		permission.SetBase, permFlag), permArgs.String())
 }

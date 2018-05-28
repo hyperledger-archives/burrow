@@ -676,16 +676,16 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2, err = newAccount(2).AddToBalance(100000)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2, err = newAccount(2).AddToBalance(100000)
+	err = account3.AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
+	_, err = runVMWaitError(ourVm, account1, account3, addr, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
 }
 

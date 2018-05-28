@@ -15,9 +15,12 @@
 package execution
 
 import (
+	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
+
+	"github.com/hyperledger/burrow/finterra"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
@@ -31,6 +34,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	rpc_core "github.com/tendermint/tendermint/rpc/core"
 )
 
 // TODO: make configurable
@@ -66,6 +70,7 @@ type executor struct {
 	eventCache   *event.Cache
 	logger       *logging.Logger
 	vmOptions    []func(*evm.VM)
+	valPoolCache *finterra.ValidatorPoolCache
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -98,6 +103,7 @@ func newExecutor(name string, runCall bool, backend *State, chainID string, tip 
 		publisher:    publisher,
 		eventCache:   event.NewEventCache(publisher),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
+		valPoolCache: finterra.NewValidatorPoolCache(backend),
 	}
 	for _, option := range options {
 		option(exe)
@@ -141,6 +147,12 @@ func (exe *executor) Commit() (hash []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+	/// update validator-set
+	err = exe.valPoolCache.Flush(exe.state, exe.tip.ValidatorSet())
+	if err != nil {
+		return nil, err
+	}
+	exe.valPoolCache.Reset()
 	// save state to disk
 	err = exe.state.Save()
 	if err != nil {
@@ -155,6 +167,7 @@ func (exe *executor) Reset() error {
 	// As with Commit() we do not take the write lock here
 	exe.stateCache.Reset(exe.state)
 	exe.nameRegCache.Reset(exe.state)
+	exe.valPoolCache.Reset() /// TODO: MOSTAFA: do we need to pass ValidatorPoolGetter again for reset object!
 	return nil
 }
 
@@ -179,7 +192,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 	// Exec tx
 	switch tx := tx.(type) {
 	case *txs.SendTx:
-		accounts, err := getInputs(exe.stateCache, tx.Inputs)
+		accounts, err := getInputAccounts(exe.stateCache, tx.Inputs)
 		if err != nil {
 			return err
 		}
@@ -227,12 +240,12 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		if exe.eventCache != nil {
-			for _, i := range tx.Inputs {
-				events.PublishAccountInput(exe.eventCache, i.Address, txHash, tx, nil, "")
+			for _, input := range tx.Inputs {
+				events.PublishAccountInput(exe.eventCache, input.Address, txHash, tx, nil, "")
 			}
 
-			for _, o := range tx.Outputs {
-				events.PublishAccountOutput(exe.eventCache, o.Address, txHash, tx, nil, "")
+			for _, output := range tx.Outputs {
+				events.PublishAccountOutput(exe.eventCache, output.Address, txHash, tx, nil, "")
 			}
 		}
 		return nil
@@ -271,7 +284,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		amount, err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
@@ -305,7 +318,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		logger.Trace.Log("output_account", outAcc)
 
 		// Good!
-		value := tx.Input.Amount - tx.Fee
+		value := amount - tx.Fee
 
 		logger.TraceMsg("Incrementing sequence number for CallTx",
 			"tag", "sequence",
@@ -313,7 +326,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 
-		inAcc, err = inAcc.IncSequence().SubtractFromBalance(tx.Fee)
+		inAcc.IncSequence()
+		inAcc.SubtractFromBalance(tx.Fee)
 		if err != nil {
 			return err
 		}
@@ -383,7 +397,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			}
 			logger.Trace.Log("callee", callee.Address().String())
 
-			// Run VM call and sync txCache to exe.blockCache.
+			// Run VM call and sync txCache to exe. .
 			{ // Capture scope for goto.
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
@@ -433,7 +447,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			// the proposer determines the order of txs.
 			// So mempool will skip the actual .Call(),
 			// and only deduct from the caller's balance.
-			inAcc, err = inAcc.SubtractFromBalance(value)
+			err = inAcc.SubtractFromBalance(value)
 			if err != nil {
 				return err
 			}
@@ -473,13 +487,13 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		amount, err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
 			return err
 		}
-		if tx.Input.Amount < tx.Fee {
+		if amount < tx.Fee {
 			logger.InfoMsg("Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
 			return txs.ErrTxInsufficientFunds
@@ -490,7 +504,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 
-		value := tx.Input.Amount - tx.Fee
+		value := amount - tx.Fee
 
 		// let's say cost of a name for one block is len(data) + 32
 		costPerBlock := txs.NameCostPerBlock(txs.NameBaseCost(tx.Name, tx.Data))
@@ -598,7 +612,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
-		inAcc, err = inAcc.SubtractFromBalance(value)
+		err = inAcc.SubtractFromBalance(value)
 		if err != nil {
 			return err
 		}
@@ -615,143 +629,143 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		return nil
 
 		// Consensus related Txs inactivated for now
-		// TODO!
-		/*
-			case *txs.BondTx:
-						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PublicKey().Address())
-						if valInfo != nil {
-							// TODO: In the future, check that the validator wasn't destroyed,
-							// add funds, merge UnbondTo outputs, and unbond validator.
-							return errors.New("Adding coins to existing validators not yet supported")
-						}
 
-						accounts, err := getInputs(exe.blockCache, tx.Inputs)
-						if err != nil {
-							return err
-						}
+	case *txs.BondTx:
+		from, err := getInputAccount(exe.stateCache, tx.From)
+		if err != nil {
+			return err
+		}
 
-						// add outputs to accounts map
-						// if any outputs don't exist, all inputs must have CreateAccount perm
-						// though outputs aren't created until unbonding/release time
-						canCreate := hasCreateAccountPermission(exe.blockCache, accounts)
-						for _, out := range tx.UnbondTo {
-							acc := exe.blockCache.GetAccount(out.Address)
-							if acc == nil && !canCreate {
-								return fmt.Errorf("At least one input does not have permission to create accounts")
-							}
-						}
+		if !hasBondPermission(exe.stateCache, from, logger) {
+			return fmt.Errorf("The bonder does not have permission to bond")
+		}
 
-						bondAcc := exe.blockCache.GetAccount(tx.PublicKey().Address())
-						if !hasBondPermission(exe.blockCache, bondAcc) {
-							return fmt.Errorf("The bonder does not have permission to bond")
-						}
+		signBytes := acm.SignBytes(exe.chainID, tx)
+		inTotal, err := validateInput(from, signBytes, tx.From)
+		if err != nil {
+			return err
+		}
 
-						if !hasBondOrSendPermission(exe.blockCache, accounts) {
-							return fmt.Errorf("At least one input lacks permission to bond")
-						}
+		outTotal, err := validateOutput(tx.To)
+		if err != nil {
+			return err
+		}
 
-						signBytes := acm.SignBytes(exe.chainID, tx)
-						inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
-						if err != nil {
-							return err
-						}
-						if !tx.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
-						outTotal, err := validateOutputs(tx.UnbondTo)
-						if err != nil {
-							return err
-						}
-						if outTotal > inTotal {
-							return txs.ErrTxInsufficientFunds
-						}
-						fee := inTotal - outTotal
-						fees += fee
+		if outTotal > inTotal {
+			return txs.ErrTxInsufficientFunds
+		}
 
-						// Good! Adjust accounts
-						adjustByInputs(accounts, tx.Inputs)
-						for _, acc := range accounts {
-							exe.blockCache.UpdateAccount(acc)
-						}
-						// Add ValidatorInfo
-						_s.SetValidatorInfo(&txs.ValidatorInfo{
-							Address:         tx.PublicKey().Address(),
-							PublicKey:          tx.PublicKey(),
-							UnbondTo:        tx.UnbondTo,
-							FirstBondHeight: _s.lastBlockHeight + 1,
-							FirstBondAmount: outTotal,
-						})
-						// Add Validator
-						added := _s.BondedValidators.Add(&txs.Validator{
-							Address:     tx.PublicKey().Address(),
-							PublicKey:      tx.PublicKey(),
-							BondHeight:  _s.lastBlockHeight + 1,
-							VotingPower: outTotal,
-							Accum:       0,
-						})
-						if !added {
-							PanicCrisis("Failed to add validator")
-						}
-						if exe.eventCache != nil {
-							// TODO: fire for all inputs
-							exe.eventCache.Fire(txs.EventStringBond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+		fee := inTotal - outTotal
+		fees += fee
 
-					case *txs.UnbondTx:
-						// The validator must be active
-						_, val := _s.BondedValidators.GetByAddress(tx.Address)
-						if val == nil {
-							return txs.ErrTxInvalidAddress
-						}
+		err = adjustByInput(from, tx.From, logger)
+		if err != nil {
+			return err
+		}
 
-						// Verify the signature
-						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
+		validator := exe.valPoolCache.GetMutableValidator(tx.To.Address)
 
-						// tx.Height must be greater than val.LastCommitHeight
-						if tx.Height <= val.LastCommitHeight {
-							return errors.New("Invalid unbond height")
-						}
+		if validator == nil {
+			// if bonding don't exist, sender must have CreateAccount perm
+			canCreate := hasCreateAccountPermission(exe.stateCache, from, logger)
 
-						// Good!
-						_s.unbondValidator(val)
-						if exe.eventCache != nil {
-							exe.eventCache.Fire(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+			if canCreate == false {
+				return fmt.Errorf("Sender does not have permission to create accounts")
+			}
 
-					case *txs.RebondTx:
-						// The validator must be inactive
-						_, val := _s.UnbondingValidators.GetByAddress(tx.Address)
-						if val == nil {
-							return txs.ErrTxInvalidAddress
-						}
+			curBlockHeight := exe.tip.LastBlockHeight() + 1
+			validator = acm.AsMutableValidator(acm.NewValidator(tx.BondTo, outTotal, curBlockHeight))
 
-						// Verify the signature
-						signBytes := acm.SignBytes(exe.chainID, tx)
-						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
-						}
+			err = exe.valPoolCache.AddToPool(validator)
+			if err != nil {
+				return err
+			}
+		} else {
+			validator.AddStake(outTotal)
 
-						// tx.Height must be in a suitable range
-						minRebondHeight := _s.lastBlockHeight - (validatorTimeoutBlocks / 2)
-						maxRebondHeight := _s.lastBlockHeight + 2
-						if !((minRebondHeight <= tx.Height) && (tx.Height <= maxRebondHeight)) {
-							return errors.New(Fmt("Rebond height not in range.  Expected %v <= %v <= %v",
-								minRebondHeight, tx.Height, maxRebondHeight))
-						}
+			err = exe.valPoolCache.UpdateValidator(validator)
+			if err != nil {
+				return err
+			}
+		}
 
-						// Good!
-						_s.rebondValidator(val)
-						if exe.eventCache != nil {
-							exe.eventCache.Fire(txs.EventStringRebond(), txs.EventDataTx{tx, nil, ""})
-						}
-						return nil
+		// Good! Adjust accounts
+		err = exe.stateCache.UpdateAccount(from)
+		if err != nil {
+			return err
+		}
 
-		*/
+		/// TODO: MOSTAFA
+		///event....
+		return nil
+
+	case *txs.UnbondTx:
+		validator := exe.valPoolCache.GetMutableValidator(tx.From.Address)
+		if validator == nil {
+			return txs.ErrTxInvalidAddress
+		}
+
+		to, err := state.GetMutableAccount(exe.stateCache, tx.To.Address)
+		if err != nil {
+			return err
+		}
+
+		// PublicKey should be present in either "account" or "input"
+		if err := checkInputPubKey2(validator, tx.From); err != nil {
+			return err
+		}
+
+		signBytes := acm.SignBytes(exe.chainID, tx)
+		inTotal, err := validateInput2(signBytes, tx.From, validator.Sequence(), validator.Stake())
+		if err != nil {
+			return err
+		}
+
+		outTotal, err := validateOutput(tx.To)
+		if err != nil {
+			return err
+		}
+
+		if outTotal > inTotal {
+			return txs.ErrTxInsufficientFunds
+		}
+
+		/// TODO:CHECK minimum stake
+		if validator.MinimumStakeToUnbond() < inTotal {
+			///var lastSignHeight uint64 = 0 /// TODO:MOSTAFA
+			///if exe.tip.LastBlockHeight() <= lastSignHeight {
+			///	return errors.New("Invalid unbond height")
+			///}
+		}
+
+		fee := inTotal - outTotal
+		fees += fee
+
+		validator.IncSequence()
+		validator.SubtractStake(inTotal)
+
+		err = to.AddToBalance(outTotal)
+		if err != nil {
+			return err
+		}
+
+		err = exe.valPoolCache.UpdateValidator(validator)
+		if err != nil {
+			return err
+		}
+
+		// Good! Adjust accounts
+		err = exe.stateCache.UpdateAccount(to)
+		if err != nil {
+			return err
+		}
+
+		/// TODO:MOSTAFA
+		// Good!
+		/////if exe.eventCache != nil {
+		/////	exe.eventCache.Fire(txs.EventStringUnbond(), txs.EventDataTx{tx, nil, ""})
+		/////}
+		return nil
 
 	case *txs.PermissionsTx:
 		// Validate input
@@ -784,7 +798,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		signBytes := acm.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		amount, err := validateInput(inAcc, signBytes, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input,
@@ -792,7 +806,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 
-		value := tx.Input.Amount
+		value := amount
 
 		logger.TraceMsg("New PermissionsTx",
 			"perm_args", tx.PermArgs.String())
@@ -853,7 +867,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
-		inAcc, err = inAcc.SubtractFromBalance(value)
+		err = inAcc.SubtractFromBalance(value)
 		if err != nil {
 			return err
 		}
@@ -867,6 +881,57 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
 			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txHash, tx)
 		}
+
+		return nil
+
+	case *txs.SortitionTx:
+		const sortitionThreshold uint64 = 10
+
+		/// Check if sortition tx belongs to next height, otherwise disard it
+		curBlockHeight := exe.tip.LastBlockHeight() + 1
+		if tx.Height < curBlockHeight-sortitionThreshold {
+			return errors.New("Invalid block height")
+		}
+
+		validator := exe.valPoolCache.GetMutableValidator(tx.PublicKey.Address())
+		if validator == nil {
+			return errors.New("This address is not a validator")
+		}
+
+		/// validators should not submit sortition before first 10 round after bonding
+		if tx.Height < validator.BondingHeight()+sortitionThreshold {
+			return errors.New("Invalid block height")
+		}
+
+		isInSet := exe.tip.ValidatorSet().IsValidatorInSet(tx.PublicKey.Address())
+		if isInSet == true {
+			return errors.New("This validator is already in set")
+		}
+
+		/// Check if the tx is signed by transmitter and it is valid
+		signBytes := acm.SignBytes(exe.chainID, tx)
+		if !tx.PublicKey.VerifyBytes(signBytes, tx.Signature) {
+			return txs.ErrTxInvalidSignature
+		}
+
+		/// TODO:Check bonding_height to prevent attack
+
+		/// Verify the sortition
+		var prevBlockHeight = int64(tx.Height) - 1
+		result, err := rpc_core.Block(&prevBlockHeight)
+		if err != nil {
+			return errors.New("Invalid block height")
+		}
+
+		prevBlockHash := result.Block.Hash()
+		isValid := exe.tip.VerifySortition(prevBlockHash, tx.PublicKey, tx.Index, tx.Proof)
+		if isValid == false {
+			return errors.New("Sortition transaction is invalid")
+		}
+
+		validator.IncSequence()
+
+		exe.valPoolCache.AddToSet(validator)
 
 		return nil
 
@@ -891,166 +956,49 @@ func mutatePermissions(stateReader state.Reader, address acm.Address,
 	return mutableAccount, mutator(mutableAccount.MutablePermissions())
 }
 
-// ExecBlock stuff is now taken care of by the consensus engine.
-// But we leave here for now for reference when we have to do validator updates
-
-/*
-
-// NOTE: If an error occurs during block execution, state will be left
-// at an invalid state.  Copy the state before calling ExecBlock!
-func ExecBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) error {
-	err := execBlock(s, block, blockPartsHeader)
-	if err != nil {
-		return err
-	}
-	// State.Hash should match block.StateHash
-	stateHash := s.Hash()
-	if !bytes.Equal(stateHash, block.StateHash) {
-		return errors.New(Fmt("Invalid state hash. Expected %X, got %X",
-			stateHash, block.StateHash))
-	}
-	return nil
-}
-
-// executes transactions of a block, does not check block.StateHash
-// NOTE: If an error occurs during block execution, state will be left
-// at an invalid state.  Copy the state before calling execBlock!
-func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) error {
-	// Basic block validation.
-	err := block.ValidateBasic(s.chainID, s.lastBlockHeight, s.lastBlockAppHash, s.LastBlockParts, s.lastBlockTime)
-	if err != nil {
-		return err
-	}
-
-	// Validate block LastValidation.
-	if block.Height == 1 {
-		if len(block.LastValidation.Precommits) != 0 {
-			return errors.New("Block at height 1 (first block) should have no LastValidation precommits")
-		}
-	} else {
-		if len(block.LastValidation.Precommits) != s.LastBondedValidators.Size() {
-			return errors.New(Fmt("Invalid block validation size. Expected %v, got %v",
-				s.LastBondedValidators.Size(), len(block.LastValidation.Precommits)))
-		}
-		err := s.LastBondedValidators.VerifyValidation(
-			s.chainID, s.lastBlockAppHash, s.LastBlockParts, block.Height-1, block.LastValidation)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Update Validator.LastCommitHeight as necessary.
-	for i, precommit := range block.LastValidation.Precommits {
-		if precommit == nil {
-			continue
-		}
-		_, val := s.LastBondedValidators.GetByIndex(i)
-		if val == nil {
-			PanicCrisis(Fmt("Failed to fetch validator at index %v", i))
-		}
-		if _, val_ := s.BondedValidators.GetByAddress(val.Address); val_ != nil {
-			val_.LastCommitHeight = block.Height - 1
-			updated := s.BondedValidators.Update(val_)
-			if !updated {
-				PanicCrisis("Failed to update bonded validator LastCommitHeight")
-			}
-		} else if _, val_ := s.UnbondingValidators.GetByAddress(val.Address); val_ != nil {
-			val_.LastCommitHeight = block.Height - 1
-			updated := s.UnbondingValidators.Update(val_)
-			if !updated {
-				PanicCrisis("Failed to update unbonding validator LastCommitHeight")
-			}
-		} else {
-			PanicCrisis("Could not find validator")
-		}
-	}
-
-	// Remember LastBondedValidators
-	s.LastBondedValidators = s.BondedValidators.Copy()
-
-	// Create BlockCache to cache changes to state.
-	blockCache := NewBlockCache(s)
-
-	// Execute each tx
-	for _, tx := range block.Data.Txs {
-		err := ExecTx(blockCache, tx, true, s.eventCache)
-		if err != nil {
-			return InvalidTxError{tx, err}
-		}
-	}
-
-	// Now sync the BlockCache to the backend.
-	blockCache.Sync()
-
-	// If any unbonding periods are over,
-	// reward account with bonded coins.
-	toRelease := []*txs.Validator{}
-	s.UnbondingValidators.Iterate(func(index int, val *txs.Validator) bool {
-		if val.UnbondHeight+unbondingPeriodBlocks < block.Height {
-			toRelease = append(toRelease, val)
-		}
-		return false
-	})
-	for _, val := range toRelease {
-		s.releaseValidator(val)
-	}
-
-	// If any validators haven't signed in a while,
-	// unbond them, they have timed out.
-	toTimeout := []*txs.Validator{}
-	s.BondedValidators.Iterate(func(index int, val *txs.Validator) bool {
-		lastActivityHeight := MaxInt(val.BondHeight, val.LastCommitHeight)
-		if lastActivityHeight+validatorTimeoutBlocks < block.Height {
-			log.Notice("Validator timeout", "validator", val, "height", block.Height)
-			toTimeout = append(toTimeout, val)
-		}
-		return false
-	})
-	for _, val := range toTimeout {
-		s.unbondValidator(val)
-	}
-
-	// Increment validator AccumPowers
-	s.BondedValidators.IncrementAccum(1)
-	s.lastBlockHeight = block.Height
-	s.lastBlockAppHash = block.Hash()
-	s.LastBlockParts = blockPartsHeader
-	s.lastBlockTime = block.Time
-	return nil
-}
-*/
-
 // The accounts from the TxInputs must either already have
 // acm.PublicKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
-// the TxInput is modified and input.PublicKey() set to nil.
-func getInputs(accountGetter state.AccountGetter,
-	ins []*txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
+// the TxInput is modified and input.PublicKey set to nil.
+func getInputAccounts(accountGetter state.AccountGetter,
+	inputs []txs.TxInput) (map[acm.Address]acm.MutableAccount, error) {
 
 	accounts := map[acm.Address]acm.MutableAccount{}
-	for _, in := range ins {
+	for _, input := range inputs {
 		// Account shouldn't be duplicated
-		if _, ok := accounts[in.Address]; ok {
+		if _, ok := accounts[input.Address]; ok {
 			return nil, txs.ErrTxDuplicateAddress
 		}
-		acc, err := state.GetMutableAccount(accountGetter, in.Address)
+
+		account, err := getInputAccount(accountGetter, input)
 		if err != nil {
 			return nil, err
 		}
-		if acc == nil {
-			return nil, txs.ErrTxInvalidAddress
-		}
-		// PublicKey should be present in either "account" or "in"
-		if err := checkInputPubKey(acc, in); err != nil {
-			return nil, err
-		}
-		accounts[in.Address] = acc
+		accounts[input.Address] = account
 	}
 	return accounts, nil
 }
 
+func getInputAccount(accountGetter state.AccountGetter,
+	input txs.TxInput) (acm.MutableAccount, error) {
+
+	account, err := state.GetMutableAccount(accountGetter, input.Address)
+	if err != nil {
+		return nil, err
+	}
+	if account == nil {
+		return nil, txs.ErrTxInvalidAddress
+	}
+	// PublicKey should be present in either "account" or "input"
+	if err := checkInputPubKey(account, input); err != nil {
+		return nil, err
+	}
+
+	return account, nil
+}
+
 func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
-	outs []*txs.TxOutput, logger *logging.Logger) (map[acm.Address]acm.MutableAccount, error) {
+	outs []txs.TxOutput, logger *logging.Logger) (map[acm.Address]acm.MutableAccount, error) {
 	if accs == nil {
 		accs = make(map[acm.Address]acm.MutableAccount)
 	}
@@ -1069,7 +1017,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]ac
 		// output account may be nil (new)
 		if acc == nil {
 			if !checkedCreatePerms {
-				if !hasCreateAccountPermission(accountGetter, accs, logger) {
+				if !haveCreateAccountPermission(accountGetter, accs, logger) {
 					return nil, fmt.Errorf("at least one input does not have permission to create accounts")
 				}
 				checkedCreatePerms = true
@@ -1092,113 +1040,185 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[acm.Address]ac
 // transaction acting on behalf of that account we will be given a public key that we can check matches the address.
 // If it does then we will associate the public key with the stub account already registered in the system once and
 // for all time.
-func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
-	if acc.PublicKey().Unwrap() == nil {
-		if in.PublicKey.Unwrap() == nil {
+func checkInputPubKey(account acm.MutableAccount, input txs.TxInput) error {
+	if account.PublicKey().Unwrap() == nil {
+		if input.PublicKey.Unwrap() == nil {
 			return txs.ErrTxUnknownPubKey
 		}
-		addressFromPubKey := in.PublicKey.Address()
-		addressFromAccount := acc.Address()
+		addressFromPubKey := input.PublicKey.Address()
+		addressFromAccount := account.Address()
 		if addressFromPubKey != addressFromAccount {
 			return txs.ErrTxInvalidPubKey
 		}
-		acc.SetPublicKey(in.PublicKey)
+		account.SetPublicKey(input.PublicKey)
 	} else {
-		in.PublicKey = acm.PublicKey{}
+		input.PublicKey = acm.PublicKey{}
 	}
 	return nil
 }
 
-func validateInputs(accs map[acm.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (uint64, error) {
+/// TODO: MOSTAFA => remove above method
+func checkInputPubKey2(account acm.Addressable, input txs.TxInput) error {
+	if input.PublicKey.Unwrap() == nil {
+		return txs.ErrTxUnknownPubKey
+	}
+	addressFromPubKey := input.PublicKey.Address()
+	addressFromAccount := account.Address()
+	if addressFromPubKey != addressFromAccount {
+		return txs.ErrTxInvalidPubKey
+	}
+	return nil
+}
+
+func validateInputs(accounts map[acm.Address]acm.MutableAccount, signBytes []byte, inputs []txs.TxInput) (uint64, error) {
 	total := uint64(0)
-	for _, in := range ins {
-		acc := accs[in.Address]
-		if acc == nil {
-			return 0, fmt.Errorf("validateInputs() expects account in accounts, but account %s not found", in.Address)
+	for _, input := range inputs {
+		account := accounts[input.Address]
+		if account == nil {
+			return 0, fmt.Errorf("validateInputs() expects account in accounts, but account %s not found", input.Address)
 		}
-		err := validateInput(acc, signBytes, in)
+		amount, err := validateInput(account, signBytes, input)
 		if err != nil {
 			return 0, err
 		}
 		// Good. Add amount to total
-		total += in.Amount
+		total += amount
 	}
 	return total, nil
 }
 
-func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) error {
+func validateInput(account acm.MutableAccount, signBytes []byte, input txs.TxInput) (uint64, error) {
 	// Check TxInput basic
-	if err := in.ValidateBasic(); err != nil {
-		return err
+	if err := input.ValidateBasic(); err != nil {
+		return 0, err
 	}
 	// Check signatures
-	if !acc.PublicKey().VerifyBytes(signBytes, in.Signature) {
-		return txs.ErrTxInvalidSignature
+	if !account.PublicKey().VerifyBytes(signBytes, input.Signature) {
+		return 0, txs.ErrTxInvalidSignature
 	}
 	// Check sequences
-	if acc.Sequence()+1 != uint64(in.Sequence) {
-		return txs.ErrTxInvalidSequence{
-			Got:      in.Sequence,
-			Expected: acc.Sequence() + uint64(1),
+	if account.Sequence()+1 != uint64(input.Sequence) {
+		return 0, txs.ErrTxInvalidSequence{
+			Got:      input.Sequence,
+			Expected: input.Sequence + uint64(1),
 		}
 	}
 	// Check amount
-	if acc.Balance() < uint64(in.Amount) {
-		return txs.ErrTxInsufficientFunds
+	if account.Balance() < uint64(input.Amount) {
+		return 0, txs.ErrTxInsufficientFunds
 	}
-	return nil
+	return input.Amount, nil
 }
 
-func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
+/// TODO: MOSTAFA => remove above method
+func validateInput2(signBytes []byte, input txs.TxInput, sequence, balance uint64) (uint64, error) {
+	// Check TxInput basic
+	if err := input.ValidateBasic(); err != nil {
+		return 0, err
+	}
+	// Check signatures
+	if !input.PublicKey.VerifyBytes(signBytes, input.Signature) {
+		return 0, txs.ErrTxInvalidSignature
+	}
+	// Check sequences
+	if sequence+1 != uint64(input.Sequence) {
+		return 0, txs.ErrTxInvalidSequence{
+			Got:      input.Sequence,
+			Expected: input.Sequence + uint64(1),
+		}
+	}
+	// Check amount
+	if balance < uint64(input.Amount) {
+		return 0, txs.ErrTxInsufficientFunds
+	}
+	return input.Amount, nil
+}
+
+func validateOutputs(outputs []txs.TxOutput) (uint64, error) {
 	total := uint64(0)
-	for _, out := range outs {
+	for _, output := range outputs {
 		// Check TxOutput basic
-		if err := out.ValidateBasic(); err != nil {
+		amount, err := validateOutput(output)
+		if err != nil {
 			return 0, err
 		}
 		// Good. Add amount to total
-		total += out.Amount
+		total += amount
 	}
 	return total, nil
 }
 
-func adjustByInputs(accs map[acm.Address]acm.MutableAccount, ins []*txs.TxInput, logger *logging.Logger) error {
-	for _, in := range ins {
-		acc := accs[in.Address]
-		if acc == nil {
-			return fmt.Errorf("adjustByInputs() expects account in accounts, but account %s not found", in.Address)
-		}
-		if acc.Balance() < in.Amount {
-			panic("adjustByInputs() expects sufficient funds")
-			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
-				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
-		}
-		acc, err := acc.SubtractFromBalance(in.Amount)
+func validateOutput(output txs.TxOutput) (uint64, error) {
+	// Check TxOutput basic
+	if err := output.ValidateBasic(); err != nil {
+		return 0, err
+	}
+
+	return output.Amount, nil
+}
+
+func adjustByInputs(accounts map[acm.Address]acm.MutableAccount, inputs []txs.TxInput, logger *logging.Logger) error {
+	for _, input := range inputs {
+		account := accounts[input.Address]
+		err := adjustByInput(account, input, logger)
+
 		if err != nil {
 			return err
 		}
-		logger.TraceMsg("Incrementing sequence number for SendTx (adjustByInputs)",
-			"tag", "sequence",
-			"account", acc.Address(),
-			"old_sequence", acc.Sequence(),
-			"new_sequence", acc.Sequence()+1)
-		acc.IncSequence()
 	}
 	return nil
 }
 
-func adjustByOutputs(accs map[acm.Address]acm.MutableAccount, outs []*txs.TxOutput) error {
-	for _, out := range outs {
-		acc := accs[out.Address]
-		if acc == nil {
+func adjustByInput(account acm.MutableAccount, input txs.TxInput, logger *logging.Logger) error {
+	if account.Address() != input.Address {
+		return fmt.Errorf("Invalid Input data")
+	}
+
+	if account.Balance() < input.Amount {
+		return fmt.Errorf("No sufficient funds for account %s, only has balance %v and "+
+			"we are deducting %v", input.Address, account.Balance(), input.Amount)
+	}
+	err := account.SubtractFromBalance(input.Amount)
+	if err != nil {
+		return err
+	}
+	logger.TraceMsg("Incrementing sequence number for SendTx (adjustByInputs)",
+		"tag", "sequence",
+		"account", account.Address(),
+		"old_sequence", account.Sequence(),
+		"new_sequence", account.Sequence()+1)
+	account.IncSequence()
+
+	return nil
+}
+
+func adjustByOutputs(accounts map[acm.Address]acm.MutableAccount, outputs []txs.TxOutput) error {
+	for _, output := range outputs {
+
+		account := accounts[output.Address]
+		if account == nil {
 			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
-				out.Address)
+				output.Address)
 		}
-		_, err := acc.AddToBalance(out.Amount)
+
+		err := adjustByOutput(account, output)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func adjustByOutput(account acm.MutableAccount, output txs.TxOutput) error {
+	if account.Address() != output.Address {
+		return fmt.Errorf("Invalid Input data")
+	}
+
+	err := account.AddToBalance(output.Amount)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1262,10 +1282,15 @@ func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Acco
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, acc acm.Account,
+	logger *logging.Logger) bool {
+	return HasPermission(accountGetter, acc, permission.CreateAccount, logger)
+}
+
+func haveCreateAccountPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
+		if !hasCreateAccountPermission(accountGetter, acc, logger) {
 			return false
 		}
 	}
@@ -1277,7 +1302,7 @@ func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.Account,
+func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[acm.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

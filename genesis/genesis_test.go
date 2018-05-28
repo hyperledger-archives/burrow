@@ -10,41 +10,57 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var genesisTime, _ = time.Parse("02-01-2006", "27-10-2017")
-
 func TestMakeGenesisDocFromAccounts(t *testing.T) {
+	var genesisTime = time.Now()
+
 	genDoc := MakeGenesisDocFromAccounts("test-chain", nil, genesisTime,
-		accountMap("Tinkie-winkie", "Lala", "Po", "Dipsy"),
-		validatorMap("Foo", "Bar", "Baz"),
+		permission.DefaultAccountPermissions.Clone(),
+		accountList("Tinkie-winkie", "Lala", "Po", "Dipsy"),
+		validatorList("Foo", "Bar", "Baz"),
+	)
+
+	genDoc2 := MakeGenesisDocFromAccounts("test-chain", nil, genesisTime,
+		permission.DefaultAccountPermissions.Clone(),
+		accountList("Lala", "Po", "Tinkie-winkie", "Dipsy"),
+		validatorList("Bar", "Baz", "Foo"),
+	)
+
+	genDoc4 := MakeGenesisDocFromAccounts("test-chain1", nil, genesisTime,
+		permission.DefaultAccountPermissions.Clone(),
+		accountList("Lala", "Po", "Tinkie-winkie", "Dipsy"),
+		validatorList("Bar", "Baz", "Foo"),
 	)
 
 	// Check we have matching serialisation after a round trip
 	bs, err := genDoc.JSONBytes()
 	assert.NoError(t, err)
 
-	genDocOut, err := GenesisDocFromJSON(bs)
+	genDoc3, err := GenesisDocFromJSON(bs)
 	assert.NoError(t, err)
 
-	bsOut, err := genDocOut.JSONBytes()
+	bsOut, err := genDoc3.JSONBytes()
 	assert.NoError(t, err)
 
 	assert.Equal(t, bs, bsOut)
-	assert.Equal(t, genDoc.Hash(), genDocOut.Hash())
+	assert.Equal(t, genDoc.Hash(), genDoc2.Hash())
+	assert.Equal(t, genDoc.Hash(), genDoc3.Hash())
+	assert.NotEqual(t, genDoc.Hash(), genDoc4.Hash())
 	fmt.Println(string(bs))
 }
 
-func accountMap(names ...string) map[string]acm.Account {
-	accounts := make(map[string]acm.Account, len(names))
-	for _, name := range names {
-		accounts[name] = accountFromName(name)
+func accountList(names ...string) []acm.Account {
+	accounts := make([]acm.Account, len(names))
+	for i, name := range names {
+		accounts[i] = accountFromName(name)
 	}
 	return accounts
 }
 
-func validatorMap(names ...string) map[string]acm.Validator {
-	validators := make(map[string]acm.Validator, len(names))
-	for _, name := range names {
-		validators[name] = acm.AsValidator(accountFromName(name))
+func validatorList(names ...string) []acm.Validator {
+	validators := make([]acm.Validator, len(names))
+	for i, name := range names {
+		account := accountFromName(name)
+		validators[i] = acm.NewValidator(account.PublicKey(), account.Balance(), 1)
 	}
 	return validators
 }

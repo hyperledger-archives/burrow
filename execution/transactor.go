@@ -242,14 +242,13 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *acm.Address, data []byte,
 	gasLimit, fee uint64) (*txs.CallTx, *txs.Receipt, error) {
 
-	txInput := &txs.TxInput{
-		Address:   inputAccount.Address(),
-		Amount:    fee,
-		Sequence:  inputAccount.Sequence() + 1,
-		PublicKey: inputAccount.PublicKey(),
-	}
 	tx := &txs.CallTx{
-		Input:    txInput,
+		Input: txs.TxInput{
+			Address:   inputAccount.Address(),
+			Amount:    fee,
+			Sequence:  inputAccount.Sequence() + 1,
+			PublicKey: inputAccount.PublicKey(),
+		},
 		Address:  address,
 		GasLimit: gasLimit,
 		Fee:      fee,
@@ -280,6 +279,40 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	}
 
 	return trans.BroadcastTx(sendTx)
+}
+
+func (trans *Transactor) Bond(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+	amount uint64, fee uint64, pubKey acm.PublicKey) (*txs.Receipt, error) {
+
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
+	bondTx, _, err := trans.formulateBondTx(inputAccount, toAddress, amount, fee, pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return trans.BroadcastTx(bondTx)
+}
+
+func (trans *Transactor) Unbond(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
+	amount uint64, fee uint64) (*txs.Receipt, error) {
+
+	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
+	unbondTx, _, err := trans.formulateUnbondTx(inputAccount, toAddress, amount, fee)
+	if err != nil {
+		return nil, err
+	}
+
+	return trans.BroadcastTx(unbondTx)
 }
 
 func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress acm.Address,
@@ -338,14 +371,14 @@ func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress
 	amount uint64) (*txs.SendTx, *txs.Receipt, error) {
 
 	sendTx := txs.NewSendTx()
-	txInput := &txs.TxInput{
+	txInput := txs.TxInput{
 		Address:   inputAccount.Address(),
 		Amount:    amount,
 		Sequence:  inputAccount.Sequence() + 1,
 		PublicKey: inputAccount.PublicKey(),
 	}
 	sendTx.Inputs = append(sendTx.Inputs, txInput)
-	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
+	txOutput := txs.TxOutput{Address: toAddress, Amount: amount}
 	sendTx.Outputs = append(sendTx.Outputs, txOutput)
 
 	err := sendTx.Sign(trans.tip.ChainID(), inputAccount)
@@ -355,6 +388,40 @@ func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress
 
 	receipt := txs.GenerateReceipt(trans.tip.ChainID(), sendTx)
 	return sendTx, &receipt, nil
+}
+
+func (trans *Transactor) formulateBondTx(inputAccount *SigningAccount, toAddress acm.Address,
+	amount uint64, fee uint64, pubKey acm.PublicKey) (*txs.BondTx, *txs.Receipt, error) {
+
+	bondTx, err := txs.NewBondTx(inputAccount.Address(), pubKey, amount, inputAccount.Sequence()+1, fee)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = bondTx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	receipt := txs.GenerateReceipt(trans.tip.ChainID(), bondTx)
+	return bondTx, &receipt, nil
+}
+
+func (trans *Transactor) formulateUnbondTx(inputAccount *SigningAccount, toAddress acm.Address,
+	amount uint64, fee uint64) (*txs.UnbondTx, *txs.Receipt, error) {
+
+	unbondTx, err := txs.NewUnbondTx(inputAccount.Address(), toAddress, amount, inputAccount.Sequence()+1, fee)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = unbondTx.Sign(trans.tip.ChainID(), inputAccount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	receipt := txs.GenerateReceipt(trans.tip.ChainID(), unbondTx)
+	return unbondTx, &receipt, nil
 }
 
 func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSigningAccount, name, data string, amount,

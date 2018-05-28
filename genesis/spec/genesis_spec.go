@@ -44,30 +44,14 @@ type TemplateAccount struct {
 	Roles        []string `json:",omitempty" toml:",omitempty"`
 }
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
-	var err error
-	gv := new(genesis.Validator)
-	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (acm.Validator, error) {
+
+	publicKey, _, err := ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
-	if ta.AmountBonded == nil {
-		gv.Amount = DefaultAmountBonded
-	} else {
-		gv.Amount = *ta.AmountBonded
-	}
-	if ta.Name == "" {
-		gv.Name = accountNameFromIndex(index)
-	} else {
-		gv.Name = ta.Name
-	}
-
-	gv.UnbondTo = []genesis.BasicAccount{{
-		Address:   gv.Address,
-		PublicKey: gv.PublicKey,
-		Amount:    gv.Amount,
-	}}
-	return gv, nil
+	validator := acm.NewValidator(publicKey, 100, 1)
+	return validator, nil
 }
 
 func (ta TemplateAccount) AccountPermissions() (ptypes.AccountPermissions, error) {
@@ -81,32 +65,28 @@ func (ta TemplateAccount) AccountPermissions() (ptypes.AccountPermissions, error
 	}, nil
 }
 
-func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
-	var err error
-	ga := new(genesis.Account)
-	ga.PublicKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (acm.Account, error) {
+	publicKey, _, err := ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
+	account := acm.NewConcreteAccount(publicKey)
+
 	if ta.Amount == nil {
-		ga.Amount = DefaultAmount
+		account.Balance = DefaultAmount
 	} else {
-		ga.Amount = *ta.Amount
+		account.Balance = *ta.Amount
 	}
-	if ta.Name == "" {
-		ga.Name = accountNameFromIndex(index)
-	} else {
-		ga.Name = ta.Name
-	}
+
 	if ta.Permissions == nil {
-		ga.Permissions = permission.DefaultAccountPermissions.Clone()
+		account.Permissions = permission.DefaultAccountPermissions.Clone()
 	} else {
-		ga.Permissions, err = ta.AccountPermissions()
+		account.Permissions, err = ta.AccountPermissions()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return ga, nil
+	return account.Account(), nil
 }
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
@@ -150,27 +130,29 @@ func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
 
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
 func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
-	genesisDoc := new(genesis.GenesisDoc)
+	var genesisTime time.Time
 	if gs.GenesisTime == nil {
-		genesisDoc.GenesisTime = time.Now()
+		genesisTime = time.Now()
 	} else {
-		genesisDoc.GenesisTime = *gs.GenesisTime
+		genesisTime = *gs.GenesisTime
 	}
 
+	var chainName string
 	if gs.ChainName == "" {
-		genesisDoc.ChainName = fmt.Sprintf("BurrowChain_%X", gs.ShortHash())
+		chainName = fmt.Sprintf("BurrowChain_%X", gs.ShortHash())
 	} else {
-		genesisDoc.ChainName = gs.ChainName
+		chainName = gs.ChainName
 	}
 
+	var globalPermissions ptypes.AccountPermissions
 	if len(gs.GlobalPermissions) == 0 {
-		genesisDoc.GlobalPermissions = permission.DefaultAccountPermissions.Clone()
+		globalPermissions = permission.DefaultAccountPermissions.Clone()
 	} else {
 		basePerms, err := permission.BasePermissionsFromStringList(gs.GlobalPermissions)
 		if err != nil {
 			return nil, err
 		}
-		genesisDoc.GlobalPermissions = ptypes.AccountPermissions{
+		globalPermissions = ptypes.AccountPermissions{
 			Base: basePerms,
 		}
 	}
@@ -183,25 +165,31 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 		})
 	}
 
+	var accounts []acm.Account
+	var validators []acm.Validator
+
 	for i, templateAccount := range templateAccounts {
 		account, err := templateAccount.Account(keyClient, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not create Account from template: %v", err)
 		}
-		genesisDoc.Accounts = append(genesisDoc.Accounts, *account)
+		accounts = append(accounts, account)
 		// Create a corresponding validator
 		if templateAccount.AmountBonded != nil {
 			// Note this does not modify the input template
-			templateAccount.Address = &account.Address
+			addr := account.Address()
+			templateAccount.Address = &addr
 			validator, err := templateAccount.Validator(keyClient, i)
 			if err != nil {
 				return nil, fmt.Errorf("could not create Validator from template: %v", err)
 			}
-			genesisDoc.Validators = append(genesisDoc.Validators, *validator)
+			validators = append(validators, validator)
 		}
 	}
 
-	return genesisDoc, nil
+	genesisDoc := genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, globalPermissions, accounts, validators)
+
+	return &genesisDoc, nil
 }
 
 func (gs *GenesisSpec) JSONBytes() ([]byte, error) {
