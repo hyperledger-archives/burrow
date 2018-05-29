@@ -388,10 +388,10 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := evm.NewVM(txCache, params, caller.Address(), tx.Hash(exe.chainID), logger, exe.vmOptions...)
+				vmach := evm.NewVM(params, caller.Address(), tx.Hash(exe.chainID), logger, exe.vmOptions...)
 				vmach.SetPublisher(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
-				ret, err = vmach.Call(caller, callee, code, tx.Data, value, &gas)
+				ret, err = vmach.Call(txCache, caller, callee, code, tx.Data, value, &gas)
 				if err != nil {
 					// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 					logger.InfoMsg("Error on execution",

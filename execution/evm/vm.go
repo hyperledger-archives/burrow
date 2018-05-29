@@ -105,7 +105,6 @@ type Params struct {
 }
 
 type VM struct {
-	stateWriter      state.Writer
 	memoryProvider   func() Memory
 	params           Params
 	origin           acm.Address
@@ -119,10 +118,9 @@ type VM struct {
 	dumpTokens       bool
 }
 
-func NewVM(stateWriter state.Writer, params Params, origin acm.Address, txid []byte,
+func NewVM(params Params, origin acm.Address, txid []byte,
 	logger *logging.Logger, options ...func(*VM)) *VM {
 	vm := &VM{
-		stateWriter:    stateWriter,
 		memoryProvider: DefaultDynamicMemoryProvider,
 		params:         params,
 		origin:         origin,
@@ -184,7 +182,7 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, ca
 // value: To be transferred from caller to callee. Refunded upon error.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -194,10 +192,12 @@ func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value 
 		*exception = err.Error()
 		return
 	}
+	//childCallState
+	childCallState := state.NewCache(callState)
 
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.call(caller, callee, code, input, value, gas)
+		output, err = vm.call(childCallState, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
 			err = ErrCall{
@@ -210,6 +210,9 @@ func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value 
 				return nil, fmt.Errorf("error transferring value %v %s (callee) -> %s (caller)",
 					value, callee, caller)
 			}
+		} else {
+			// Copy any state updates from child call frame into current call frame
+			childCallState.Sync(callState)
 		}
 		if vm.stackDepth == 0 {
 			// clean up ready for next call
@@ -224,7 +227,7 @@ func (vm *VM) Call(caller, callee acm.MutableAccount, code, input []byte, value 
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) DelegateCall(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -234,12 +237,17 @@ func (vm *VM) DelegateCall(caller acm.Account, callee acm.MutableAccount, code, 
 
 	// DelegateCall does not transfer the value to the callee.
 
+	childCallState := state.NewCache(callState)
+
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.call(caller, callee, code, input, value, gas)
+		output, err = vm.call(childCallState, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
 			*exception = err.Error()
+		} else {
+			// Copy any state updates from child call frame into current call frame
+			childCallState.Sync(callState)
 		}
 	}
 
@@ -259,7 +267,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *error) bool {
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
@@ -561,7 +569,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := callState.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -657,7 +665,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := callState.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -678,7 +686,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := vm.stateWriter.GetAccount(acm.AddressFromWord256(addr))
+			acc, errAcc := callState.GetAccount(acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -793,7 +801,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data, errSto := vm.stateWriter.GetStorage(callee.Address(), loc)
+			data, errSto := callState.GetStorage(callee.Address(), loc)
 			if errSto != nil {
 				return nil, firstErr(err, errSto)
 			}
@@ -805,7 +813,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
 			}
-			vm.stateWriter.SetStorage(callee.Address(), loc, data)
+			callState.SetStorage(callee.Address(), loc, data)
 			vm.Debugf("%s {0x%X := 0x%X}\n", callee.Address(), loc, data)
 
 		case JUMP: // 0x56
@@ -902,7 +910,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 		case CREATE: // 0xF0
 			vm.returnData = nil
 
-			if !HasPermission(vm.stateWriter, callee, permission.CreateContract) {
+			if !HasPermission(callState, callee, permission.CreateContract) {
 				return nil, ErrPermission{"create_contract"}
 			}
 			contractValue, popErr := stack.PopU64()
@@ -926,14 +934,14 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasCreateAccount, &gasErr) {
 				return nil, firstErr(err, gasErr)
 			}
-			newAccount, createErr := vm.createAccount(callee, logger)
+			newAccount, createErr := vm.createAccount(callState, callee, logger)
 			if createErr != nil {
 				return nil, firstErr(err, createErr)
 			}
 
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
-			ret, err_ := vm.Call(callee, newAccount, input, input, contractValue, gas)
+			ret, err_ := vm.Call(callState, callee, newAccount, input, input, contractValue, gas)
 			if err_ != nil {
 				stack.Push(Zero256)
 				vm.returnData = ret
@@ -943,13 +951,13 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			}
 
 			if err_ == ErrExecutionReverted {
-				return ret, nil
+				return nil, ErrExecutionReverted
 			}
 
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
 			vm.returnData = nil
 
-			if !HasPermission(vm.stateWriter, callee, permission.Call) {
+			if !HasPermission(callState, callee, permission.Call) {
 				return nil, ErrPermission{"call"}
 			}
 			gasLimit, popErr := stack.PopU64()
@@ -999,7 +1007,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 
 			if nativeContract := registeredNativeContracts[addr]; nativeContract != nil {
 				// Native contract
-				ret, callErr = nativeContract(vm.stateWriter, callee, args, &gasLimit, logger)
+				ret, callErr = nativeContract(callState, callee, args, &gasLimit, logger)
 
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				var exception string
@@ -1013,7 +1021,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 				if useGasNegative(gas, GasGetAccount, &callErr) {
 					return nil, callErr
 				}
-				acc, errAcc := state.GetMutableAccount(vm.stateWriter, acm.AddressFromWord256(addr))
+				acc, errAcc := state.GetMutableAccount(callState, acm.AddressFromWord256(addr))
 				if errAcc != nil {
 					return nil, firstErr(callErr, errAcc)
 				}
@@ -1025,23 +1033,23 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 					if acc == nil {
 						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
-					ret, callErr = vm.Call(callee, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.Call(callState, callee, callee, acc.Code(), args, value, &gasLimit)
 				} else if op == DELEGATECALL {
 					if acc == nil {
 						return nil, firstErr(callErr, ErrUnknownAddress)
 					}
-					ret, callErr = vm.DelegateCall(caller, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.DelegateCall(callState, caller, callee, acc.Code(), args, value, &gasLimit)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
-						if !HasPermission(vm.stateWriter, caller, permission.CreateAccount) {
+						if !HasPermission(callState, caller, permission.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
 						acc = acm.ConcreteAccount{Address: acm.AddressFromWord256(addr)}.MutableAccount()
 					}
 					// add account to the tx cache
-					vm.stateWriter.UpdateAccount(acc)
-					ret, callErr = vm.Call(callee, acc, acc.Code(), args, value, &gasLimit)
+					callState.UpdateAccount(acc)
+					ret, callErr = vm.Call(callState, callee, acc, acc.Code(), args, value, &gasLimit)
 				}
 			}
 			vm.returnData = ret
@@ -1049,11 +1057,11 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			// In case any calls deeper in the stack (particularly SNatives) has altered either of two accounts to which
 			// we hold a reference, we need to freshen our state for subsequent iterations of this call frame's EVM loop
 			var getErr error
-			caller, getErr = vm.stateWriter.GetAccount(caller.Address())
+			caller, getErr = callState.GetAccount(caller.Address())
 			if getErr != nil {
 				return nil, firstErr(err, getErr)
 			}
-			callee, getErr = state.GetMutableAccount(vm.stateWriter, callee.Address())
+			callee, getErr = state.GetMutableAccount(callState, callee.Address())
 			if getErr != nil {
 				return nil, firstErr(err, getErr)
 			}
@@ -1102,7 +1110,6 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			return output, nil
 
 		case REVERT: // 0xFD
-			return nil, fmt.Errorf("REVERT not yet fully implemented")
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output, memErr := memory.Read(offset, size)
 			if memErr != nil {
@@ -1121,7 +1128,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			receiver, errAcc := state.GetMutableAccount(vm.stateWriter, acm.AddressFromWord256(addr))
+			receiver, errAcc := state.GetMutableAccount(callState, acm.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -1130,11 +1137,11 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 				if useGasNegative(gas, GasCreateAccount, &gasErr) {
 					return nil, firstErr(err, gasErr)
 				}
-				if !HasPermission(vm.stateWriter, callee, permission.CreateContract) {
+				if !HasPermission(callState, callee, permission.CreateContract) {
 					return nil, firstErr(err, ErrPermission{"create_contract"})
 				}
 				var createErr error
-				receiver, createErr = vm.createAccount(callee, logger)
+				receiver, createErr = vm.createAccount(callState, callee, logger)
 				if createErr != nil {
 					return nil, firstErr(err, createErr)
 				}
@@ -1145,8 +1152,8 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
-			vm.stateWriter.UpdateAccount(receiver)
-			vm.stateWriter.RemoveAccount(callee.Address())
+			callState.UpdateAccount(receiver)
+			callState.RemoveAccount(callee.Address())
 			vm.Debugf(" => (%X) %v\n", addr[:4], callee.Balance())
 			fallthrough
 
@@ -1155,6 +1162,7 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 
 		case STATICCALL, CREATE2:
 			return nil, fmt.Errorf("%s not yet implemented", op.Name())
+
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
 			return nil, fmt.Errorf("unknown opcode %X", op)
@@ -1163,13 +1171,13 @@ func (vm *VM) call(caller acm.Account, callee acm.MutableAccount, code, input []
 	}
 }
 
-func (vm *VM) createAccount(callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, error) {
-	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(vm.stateWriter), logger)
-	err := vm.stateWriter.UpdateAccount(newAccount)
+func (vm *VM) createAccount(callState state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, error) {
+	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
+	err := callState.UpdateAccount(newAccount)
 	if err != nil {
 		return nil, err
 	}
-	err = vm.stateWriter.UpdateAccount(callee)
+	err = callState.UpdateAccount(callee)
 	if err != nil {
 		return nil, err
 	}
