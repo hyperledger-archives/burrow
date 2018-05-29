@@ -14,6 +14,16 @@
 
 package binary
 
+import "math/big"
+
+// From go-ethereum/common/math/big.go
+const (
+	// number of bits in a big.Word
+	wordBits = 32 << (uint64(^big.Word(0)) >> 63)
+	// number of bytes in a big.Word
+	wordBytes = wordBits / 8
+)
+
 func Fingerprint(slice []byte) []byte {
 	fingerprint := make([]byte, 6)
 	copy(fingerprint, slice)
@@ -45,4 +55,32 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	padded := make([]byte, l)
 	copy(padded[l-len(slice):], slice)
 	return padded
+}
+
+// ReadBits encodes the absolute value of bigint as big-endian bytes. Callers must ensure that buf has enough space.
+// If buf is too short the result will be incomplete.
+// From go-ethereum/common/math/big.go
+func ReadBits(bigint *big.Int, buf []byte) {
+	i := len(buf)
+	for _, d := range bigint.Bits() {
+		for j := 0; j < wordBytes && i > 0; j++ {
+			i--
+			buf[i] = byte(d)
+			d >>= 8
+		}
+	}
+}
+
+// GetData returns a slice from the data based on the start and size and pads up to size with zero's and is overflow safe.
+// From go-ethereum/core/vm/common.go
+func GetData(data []byte, start uint64, size uint64) []byte {
+	length := uint64(len(data))
+	if start > length {
+		start = length
+	}
+	end := start + size
+	if end > length {
+		end = length
+	}
+	return RightPadBytes(data[start:end], int(size))
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/hyperledger/burrow/secp256k1"
 	"github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/ed25519"
 )
@@ -45,6 +46,16 @@ func PublicKeyFromBytes(bs []byte) (PublicKey, error) {
 	}
 	copy(pubKeyEd25519[:], bs)
 	return PublicKeyFromGoCryptoPubKey(pubKeyEd25519.Wrap())
+}
+
+// EcRecover returns the uncompressed public key that created the given signature.
+func EcRecover(hash, sig []byte) ([]byte, error) {
+	return secp256k1.RecoverPubkey(hash, sig)
+}
+
+// EdVerify reports whether sig is valid signature of message by public key
+func EdVerify(publicKey ed25519.PublicKey, message, sig []byte) bool {
+	return ed25519.Verify(publicKey, message, sig)
 }
 
 // Returns a copy of the raw untyped public key bytes
