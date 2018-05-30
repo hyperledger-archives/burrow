@@ -1,7 +1,6 @@
 package keys
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,27 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger/burrow/keys/common"
-
 	tmint_crypto "github.com/hyperledger/burrow/crypto/helpers"
 	wire "github.com/tendermint/go-wire"
 )
 
-var (
-	DefaultKeyType  = "ed25519"
-	DefaultDir      = common.KeysPath
+const (
+	DefaultHost     = "localhost"
+	DefaultPort     = "10997"
 	DefaultHashType = "sha256"
-
-	DefaultHost = "localhost"
-	DefaultPort = "10997"
-	TestPort    = "7674"
-	TestAddr    = DefaultHost + ":" + TestPort
-
-	KeysDir string = ".monax-keys"
-	KeyHost string
-	KeyPort string
-
-	GlobalKeystore KeyStore
+	DefaultKeysDir  = ".keys"
+	TestPort        = "7674"
 )
 
 func returnDataDir(dir string) (string, error) {
@@ -52,12 +40,8 @@ func returnNamesDir(dir string) (string, error) {
 
 //-----
 
-func newKeyStore() (KeyStore, error) {
-	dir, err := returnDataDir(KeysDir)
-	if err != nil {
-		return nil, err
-	}
-	return NewKeyStoreFile(dir), nil
+func NewKeyStore(dir string) KeyStore {
+	return KeyStore{keysDirPath: dir}
 }
 
 //----------------------------------------------------------------
@@ -72,7 +56,7 @@ func writeKey(keyDir string, addr, keyJson []byte) ([]byte, error) {
 	return addr, nil
 }
 
-func coreExport(passphrase, addr string) ([]byte, error) {
+func coreExport(key *Key) ([]byte, error) {
 	type privValidator struct {
 		Address    []byte        `json:"address"`
 		PubKey     []interface{} `json:"pub_key"`
@@ -82,19 +66,8 @@ func coreExport(passphrase, addr string) ([]byte, error) {
 		LastStep   int           `json:"last_step"`
 	}
 
-	addrB, err := hex.DecodeString(addr)
-	if err != nil {
-		return nil, fmt.Errorf("addr is invalid hex: %s", err.Error())
-	}
-	key, err := GlobalKeystore.GetKey(passphrase, addrB)
-	if err != nil {
-		return nil, err
-	}
-
 	pub := key.Pubkey()
-	if err != nil {
-		return nil, err
-	}
+
 	var pubKeyWithType []interface{}
 	var pubKey tmint_crypto.PubKeyEd25519
 	copy(pubKey[:], pub)
@@ -108,7 +81,7 @@ func coreExport(passphrase, addr string) ([]byte, error) {
 	privKeyWithType = append(privKeyWithType, privKey)
 
 	privVal := &privValidator{
-		Address: addrB,
+		Address: key.Address[:],
 		PubKey:  pubKeyWithType,
 		PrivKey: privKeyWithType,
 	}
@@ -119,23 +92,23 @@ func coreExport(passphrase, addr string) ([]byte, error) {
 //----------------------------------------------------------------
 // manage names for keys
 
-func coreNameAdd(name, addr string) error {
-	namesDir, err := returnNamesDir(KeysDir)
+func coreNameAdd(keysDir, name, addr string) error {
+	namesDir, err := returnNamesDir(keysDir)
 	if err != nil {
 		return err
 	}
-	keysDir, err := returnDataDir(KeysDir)
+	dataDir, err := returnDataDir(keysDir)
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(path.Join(keysDir, addr)); err != nil {
+	if _, err := os.Stat(path.Join(dataDir, addr+".json")); err != nil {
 		return fmt.Errorf("Unknown key %s", addr)
 	}
 	return ioutil.WriteFile(path.Join(namesDir, name), []byte(addr), 0600)
 }
 
-func coreNameList() (map[string]string, error) {
-	dir, err := returnNamesDir(KeysDir)
+func coreNameList(keysDir string) (map[string]string, error) {
+	dir, err := returnNamesDir(keysDir)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +127,8 @@ func coreNameList() (map[string]string, error) {
 	return names, nil
 }
 
-func coreAddrList() (map[int]string, error) {
-	dir, err := returnDataDir(KeysDir)
+func coreAddrList(keysDir string) (map[int]string, error) {
+	dir, err := returnDataDir(keysDir)
 	if err != nil {
 		return nil, err
 	}
@@ -170,16 +143,16 @@ func coreAddrList() (map[int]string, error) {
 	return addrs, nil
 }
 
-func coreNameRm(name string) error {
-	dir, err := returnNamesDir(KeysDir)
+func coreNameRm(keysDir string, name string) error {
+	dir, err := returnNamesDir(keysDir)
 	if err != nil {
 		return err
 	}
 	return os.Remove(path.Join(dir, name))
 }
 
-func coreNameGet(name string) (string, error) {
-	dir, err := returnNamesDir(KeysDir)
+func coreNameGet(keysDir, name string) (string, error) {
+	dir, err := returnNamesDir(keysDir)
 	if err != nil {
 		return "", err
 	}
@@ -201,7 +174,7 @@ func checkMakeDataDir(dir string) error {
 }
 
 // return addr from name or addr
-func getNameAddr(name, addr string) (string, error) {
+func getNameAddr(keysDir, name, addr string) (string, error) {
 	if name == "" && addr == "" {
 		return "", fmt.Errorf("at least one of name or addr must be provided")
 	}
@@ -209,7 +182,7 @@ func getNameAddr(name, addr string) (string, error) {
 	// name takes precedent if both are given
 	var err error
 	if name != "" {
-		addr, err = coreNameGet(name)
+		addr, err = coreNameGet(keysDir, name)
 		if err != nil {
 			return "", err
 		}

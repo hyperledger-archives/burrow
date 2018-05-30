@@ -82,7 +82,7 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 	privValidator := validator.NewPrivValidatorMemory(validatorAccount, validatorAccount)
 	keyClient := mock.NewKeyClient(privateAccounts...)
 	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(),
-		nil, logger)
+		nil, nil, logger)
 	if err != nil {
 		panic(err)
 	}

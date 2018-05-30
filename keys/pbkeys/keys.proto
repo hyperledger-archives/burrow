@@ -11,9 +11,9 @@ service Keys {
     rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
     rpc Export(ExportRequest) returns (ExportResponse);
     rpc Hash(HashRequest) returns (HashResponse);
-    rpc Remove(Name) returns (Empty);
+    rpc RemoveName(Name) returns (Empty);
     rpc List(Name) returns (ListResponse);
-    rpc Add(AddRequest) returns (Empty);
+    rpc AddName(AddNameRequest) returns (Empty);
 }
 
 message Name {
@@ -73,7 +73,8 @@ message ExportResponse {
 message SignRequest {
     string passphrase = 1;
     string address = 2;
-    bytes hash = 3;
+    string name = 3;
+    bytes message = 4;
 }
 
 message SignResponse {
@@ -84,7 +85,7 @@ message SignResponse {
 message VerifyRequest {
     string curvetype = 1;
     bytes pub = 2;
-    bytes hash = 3;
+    bytes message = 3;
     bytes signature = 4;
 }
 
@@ -106,7 +107,7 @@ message ListResponse {
     repeated Key key = 1;
 }
 
-message AddRequest {
+message AddNameRequest {
     string keyname = 1;
     string address = 2;
 }

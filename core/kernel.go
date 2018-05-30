@@ -34,6 +34,7 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
@@ -68,7 +69,7 @@ type Kernel struct {
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
@@ -211,14 +212,25 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				}
 
 				grpcServer := grpc.NewServer()
-				err = keys.StartGRPCServer(grpcServer, keyConfig)
-				if err != nil {
-					return nil, err
+				var ks keys.KeyStore
+				if keyStore != nil {
+					ks = *keyStore
+				}
+
+				if keyConfig.GRPCServiceEnabled {
+					if keyStore == nil {
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory)
+					}
+					pbkeys.RegisterKeysServer(grpcServer, &ks)
 				}
 
 				go grpcServer.Serve(listen)
 
-				return process.FromListeners(listen), nil
+				return process.ShutdownFunc(func(ctx context.Context) error {
+					grpcServer.Stop()
+					// listener is closed for us
+					return nil
+				}), nil
 			},
 		},
 	}

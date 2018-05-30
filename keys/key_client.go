@@ -27,8 +27,8 @@ import (
 )
 
 type KeyClient interface {
-	// Sign returns the signature bytes for given hash signed with the key associated with signAddress
-	Sign(signAddress crypto.Address, hash []byte) (signature crypto.Signature, err error)
+	// Sign returns the signature bytes for given message signed with the key associated with signAddress
+	Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error)
 
 	// PublicKey returns the public key associated with a given address
 	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
@@ -44,6 +44,7 @@ var _ KeyClient = (*localKeyClient)(nil)
 var _ KeyClient = (*remoteKeyClient)(nil)
 
 type localKeyClient struct {
+	ks     KeyStore
 	logger *logging.Logger
 }
 
@@ -53,8 +54,8 @@ type remoteKeyClient struct {
 	logger     *logging.Logger
 }
 
-func (l localKeyClient) Sign(signAddress crypto.Address, hash []byte) (signature crypto.Signature, err error) {
-	resp, err := GlobalKeyServer.Sign(nil, &pbkeys.SignRequest{Address: signAddress.String(), Hash: hash})
+func (l localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+	resp, err := l.ks.Sign(nil, &pbkeys.SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
 		return crypto.Signature{}, err
 	}
@@ -66,7 +67,7 @@ func (l localKeyClient) Sign(signAddress crypto.Address, hash []byte) (signature
 }
 
 func (l localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
-	resp, err := GlobalKeyServer.PublicKey(nil, &pbkeys.PubRequest{Address: address.String()})
+	resp, err := l.ks.PublicKey(nil, &pbkeys.PubRequest{Address: address.String()})
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
@@ -79,7 +80,7 @@ func (l localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.Publ
 
 // Generate requests that a key be generate within the keys instance and returns the address
 func (l localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
-	resp, err := GlobalKeyServer.GenerateKey(nil, &pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()})
+	resp, err := l.ks.GenerateKey(nil, &pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()})
 	if err != nil {
 		return crypto.Address{}, err
 	}
@@ -94,7 +95,7 @@ func (l localKeyClient) HealthCheck() error {
 func (l remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req := pbkeys.SignRequest{Address: signAddress.String(), Hash: message}
+	req := pbkeys.SignRequest{Address: signAddress.String(), Message: message}
 	l.logger.TraceMsg("Sending Sign request to remote key server: ", fmt.Sprintf("%v", req))
 	resp, err := l.kc.Sign(ctx, &req)
 	if err != nil {
@@ -152,32 +153,22 @@ func (l remoteKeyClient) HealthCheck() error {
 
 // keyClient.New returns a new monax-keys client for provided rpc location
 // Monax-keys connects over http request-responses
-func NewKeyClient(rpcAddress string, logger *logging.Logger) KeyClient {
-	logger = logger.WithScope("NewKeyClient")
-	var client KeyClient
-	if rpcAddress != "" {
-		var opts []grpc.DialOption
-		opts = append(opts, grpc.WithInsecure())
-		conn, err := grpc.Dial(rpcAddress, opts...)
-		if err != nil {
-			// FIXME: we should return error, or handle this when the
-			// key client is used for the first time
-			panic("Failed to connect to grpc server")
-		}
-		kc := pbkeys.NewKeysClient(conn)
-
-		client = remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}
-	} else {
-		ks, err := newKeyStore()
-		if err != nil {
-			panic("Failed to start keys store")
-		}
-
-		GlobalKeystore = ks
-
-		client = localKeyClient{logger: logger}
+func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, error) {
+	logger = logger.WithScope("RemoteKeyClient")
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithInsecure())
+	conn, err := grpc.Dial(rpcAddress, opts...)
+	if err != nil {
+		return nil, err
 	}
-	return client
+	kc := pbkeys.NewKeysClient(conn)
+
+	return remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}, nil
+}
+
+func NewLocalKeyClient(ks KeyStore, logger *logging.Logger) KeyClient {
+	logger = logger.WithScope("LocalKeyClient")
+	return localKeyClient{ks: ks, logger: logger}
 }
 
 type signer struct {

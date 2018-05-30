@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"time"
+
+	"io/ioutil"
 
 	"github.com/howeyc/gopass"
 	"github.com/hyperledger/burrow/crypto"
@@ -17,34 +18,37 @@ import (
 	"google.golang.org/grpc"
 )
 
-func grpcKeysClient(output Output) pbkeys.KeysClient {
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial(keys.KeyHost+":"+keys.KeyPort, opts...)
-	if err != nil {
-		output.Fatalf("Failed to connect to grpc server: %v", err)
-	}
-	return pbkeys.NewKeysClient(conn)
-}
-
 func Keys(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		if keysHost := os.Getenv("MONAX_KEYS_HOST"); keysHost != "" {
-			keys.DefaultHost = keysHost
-		}
-		if keysPort := os.Getenv("MONAX_KEYS_PORT"); keysPort != "" {
-			keys.DefaultPort = keysPort
-		}
+		keysHost := cmd.String(cli.StringOpt{
+			Name:   "host",
+			Desc:   "set the host for talking to the key daemon",
+			Value:  keys.DefaultHost,
+			EnvVar: "MONAX_KEYS_HOST",
+		})
 
-		keys.KeyHost = *cmd.StringOpt("host", keys.DefaultHost, "set the host for talking to the key daemon")
+		keysPort := cmd.String(cli.StringOpt{
+			Name:   "host",
+			Desc:   "set the port for key daemon",
+			Value:  keys.DefaultPort,
+			EnvVar: "MONAX_KEYS_PORT",
+		})
 
-		keys.KeyPort = *cmd.StringOpt("port", keys.DefaultPort, "set the port for key daemon")
+		grpcKeysClient := func(output Output) pbkeys.KeysClient {
+			var opts []grpc.DialOption
+			opts = append(opts, grpc.WithInsecure())
+			conn, err := grpc.Dial(*keysHost+":"+*keysPort, opts...)
+			if err != nil {
+				output.Fatalf("Failed to connect to grpc server: %v", err)
+			}
+			return pbkeys.NewKeysClient(conn)
+		}
 
 		cmd.Command("server", "run keys server", func(cmd *cli.Cmd) {
-			keys.KeysDir = *cmd.StringOpt("dir", keys.DefaultDir, "specify the location of the directory containing key files")
+			keysDir := cmd.StringOpt("dir", keys.DefaultKeysDir, "specify the location of the directory containing key files")
 
 			cmd.Action = func() {
-				err := keys.StartStandAloneServer(keys.KeyHost, keys.KeyPort)
+				err := keys.StartStandAloneServer(*keysDir, *keysHost, *keysPort)
 				if err != nil {
 					output.Fatalf("Failed to start server: %v", err)
 				}
@@ -137,16 +141,24 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 
 		cmd.Command("import", "import <priv key> | /path/to/keyfile | <key json>", func(cmd *cli.Cmd) {
 			curveType := cmd.StringOpt("t curvetype", "ed25519", "specify the curve type of key to create. Supports 'secp256k1' (ethereum),  'ed25519' (tendermint)")
+			noPassword := cmd.BoolOpt("n no-password", false, "don't use a password for this key")
 			key := cmd.StringArg("KEY", "", "private key, filename, or raw json")
 
 			cmd.Action = func() {
-				var privKeyBytes []byte
-				var err error
-				if _, err := os.Stat(*key); err == nil {
-					privKeyBytes, err = ioutil.ReadFile(*key)
+				var password string
+				if !*noPassword {
+					fmt.Printf("Enter Password:")
+					pwd, err := gopass.GetPasswdMasked()
 					if err != nil {
-						output.Fatalf("Failed to read file %s: %v", *key, err)
+						os.Exit(1)
 					}
+					password = string(pwd)
+				}
+
+				var privKeyBytes []byte
+				fileContents, err := ioutil.ReadFile(*key)
+				if err == nil {
+					*key = string(fileContents)
 				}
 
 				c := grpcKeysClient(output)
@@ -159,18 +171,18 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("failed to import json key: %v", err)
 					}
 
-					fmt.Printf("%X\n", resp.GetAddress())
+					fmt.Printf("%s\n", resp.GetAddress())
 				} else {
 					privKeyBytes, err = hex.DecodeString(*key)
 					if err != nil {
-						output.Fatalf("failed to hex decode key")
+						output.Fatalf("failed to hex decode key: %s", *key)
 					}
-					resp, err := c.Import(ctx, &pbkeys.ImportRequest{Keybytes: privKeyBytes, Curvetype: *curveType})
+					resp, err := c.Import(ctx, &pbkeys.ImportRequest{Passphrase: password, Keybytes: privKeyBytes, Curvetype: *curveType})
 					if err != nil {
 						output.Fatalf("failed to import json key: %v", err)
 					}
 
-					fmt.Printf("%X\n", resp.GetAddress())
+					fmt.Printf("%s\n", resp.GetAddress())
 
 				}
 			}
@@ -194,8 +206,9 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		})
 
 		cmd.Command("sign", "sign <some data>", func(cmd *cli.Cmd) {
+			name := cmd.StringOpt("name", "", "name of key to use")
 			addr := cmd.StringOpt("addr", "", "address of key to use")
-			msg := cmd.StringArg("HASH", "", "hash to sign")
+			msg := cmd.StringArg("MSG", "", "message to sign")
 			passphrase := cmd.StringOpt("passphrase", "", "passphrase for encrypted key")
 
 			cmd.Action = func() {
@@ -207,7 +220,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				resp, err := c.Sign(ctx, &pbkeys.SignRequest{Passphrase: *passphrase, Address: *addr, Hash: message})
+				resp, err := c.Sign(ctx, &pbkeys.SignRequest{Passphrase: *passphrase, Name: *name, Address: *addr, Message: message})
 				if err != nil {
 					output.Fatalf("failed to get public key: %v", err)
 				}
@@ -241,22 +254,23 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_, err = c.Verify(ctx, &pbkeys.VerifyRequest{Curvetype: *curveType, Pub: publickey, Signature: signature, Hash: message})
+				_, err = c.Verify(ctx, &pbkeys.VerifyRequest{Curvetype: *curveType, Pub: publickey, Signature: signature, Message: message})
 				if err != nil {
 					output.Fatalf("failed to verify: %v", err)
 				}
+				output.Printf("true\n")
 			}
 		})
 
-		cmd.Command("add", "add key by name or addr", func(cmd *cli.Cmd) {
-			name := cmd.StringArg("name", "", "name of key to use")
-			addr := cmd.StringArg("addr", "", "address of key to use")
+		cmd.Command("name", "add key name to addr", func(cmd *cli.Cmd) {
+			keyname := cmd.StringArg("NAME", "", "name of key to use")
+			addr := cmd.StringArg("ADDR", "", "address of key to use")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_, err := c.Add(ctx, &pbkeys.AddRequest{Keyname: *name, Address: *addr})
+				_, err := c.AddName(ctx, &pbkeys.AddNameRequest{Keyname: *keyname, Address: *addr})
 				if err != nil {
 					output.Fatalf("failed to add name to addr: %v", err)
 				}
@@ -274,20 +288,28 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("failed to list key names: %v", err)
 				}
-				for _, k := range resp.Key {
-					fmt.Printf("key: %v\n", k)
+				if *name != "" {
+					for _, k := range resp.Key {
+						if k.Keyname == *name {
+							output.Printf("%s\n", k.Address)
+						}
+					}
+				} else {
+					for _, k := range resp.Key {
+						fmt.Printf("%v\n", k)
+					}
 				}
 			}
 		})
 
-		cmd.Command("rm", "rm key by name", func(cmd *cli.Cmd) {
+		cmd.Command("rm", "rm key name", func(cmd *cli.Cmd) {
 			name := cmd.StringArg("NAME", "", "key to remove")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_, err := c.Remove(ctx, &pbkeys.Name{*name})
+				_, err := c.RemoveName(ctx, &pbkeys.Name{*name})
 				if err != nil {
 					output.Fatalf("failed to remove key: %v", err)
 				}

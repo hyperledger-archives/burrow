@@ -10,76 +10,45 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys/pbkeys"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 	"google.golang.org/grpc"
 )
 
 //------------------------------------------------------------------------
-// all cli commands pass through the http server
-// the server process also maintains the unlocked accounts
+// all cli commands pass through the http KeyStore
+// the KeyStore process also maintains the unlocked accounts
 
-type server struct{}
-
-var GlobalKeyServer server
-
-func startServer() error {
-	if GlobalKeystore == nil {
-		ks, err := newKeyStore()
-		if err != nil {
-			return err
-		}
-
-		GlobalKeystore = ks
-	}
-	GlobalKeyServer = server{}
-
-	return nil
-}
-
-func StartGRPCServer(grpcserver *grpc.Server, keyConfig *KeysConfig) error {
-	err := startServer()
-	if err != nil {
-		return err
-	}
-	if keyConfig.ServerEnabled {
-		pbkeys.RegisterKeysServer(grpcserver, &GlobalKeyServer)
-	}
-	return nil
-}
-
-func StartStandAloneServer(host, port string) error {
-	err := startServer()
-	if err != nil {
-		return err
-	}
-
+func StartStandAloneServer(keysDir, host, port string) error {
 	listen, err := net.Listen("tcp", host+":"+port)
 	if err != nil {
 		return err
 	}
 
+	ks := NewKeyStore(keysDir)
+
 	grpcServer := grpc.NewServer()
-	pbkeys.RegisterKeysServer(grpcServer, &server{})
+	pbkeys.RegisterKeysServer(grpcServer, &ks)
 	return grpcServer.Serve(listen)
 }
 
 //------------------------------------------------------------------------
 // handlers
 
-func (k *server) GenerateKey(ctx context.Context, in *pbkeys.GenRequest) (*pbkeys.GenResponse, error) {
+func (k *KeyStore) GenerateKey(ctx context.Context, in *pbkeys.GenRequest) (*pbkeys.GenResponse, error) {
 	curveT, err := crypto.CurveTypeFromString(in.Curvetype)
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := GlobalKeystore.GenerateKey(in.Passphrase, curveT)
+	key, err := k.Gen(in.Passphrase, curveT)
 	if err != nil {
 		return nil, fmt.Errorf("error generating key %s %s", curveT, err)
 	}
 
 	addrH := key.Address.String()
 	if in.Keyname != "" {
-		err = coreNameAdd(in.Keyname, addrH)
+		err = coreNameAdd(k.keysDirPath, in.Keyname, addrH)
 		if err != nil {
 			return nil, err
 		}
@@ -88,23 +57,9 @@ func (k *server) GenerateKey(ctx context.Context, in *pbkeys.GenRequest) (*pbkey
 	return &pbkeys.GenResponse{Address: addrH}, nil
 }
 
-func (k *server) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkeys.ExportResponse, error) {
-	addr, err := getNameAddr(in.GetName(), in.GetAddress())
+func (k *KeyStore) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkeys.ExportResponse, error) {
+	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := coreExport(in.GetPassphrase(), addr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pbkeys.ExportResponse{Export: string(resp)}, nil
-}
-
-func (k *server) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.PubResponse, error) {
-	addr, err := getNameAddr(in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +70,31 @@ func (k *server) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.
 	}
 
 	// No phrase needed for public key. I hope.
-	key, err := GlobalKeystore.GetKey("", addrB.Bytes())
+	key, err := k.GetKey(in.GetPassphrase(), addrB.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := coreExport(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbkeys.ExportResponse{Export: string(resp)}, nil
+}
+
+func (k *KeyStore) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.PubResponse, error) {
+	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
+	if err != nil {
+		return nil, err
+	}
+
+	addrB, err := crypto.AddressFromHexString(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// No phrase needed for public key. I hope.
+	key, err := k.GetKey("", addrB.Bytes())
 	if key == nil {
 		return nil, err
 	}
@@ -123,27 +102,32 @@ func (k *server) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.
 	return &pbkeys.PubResponse{Curvetype: key.CurveType.String(), Pub: key.Pubkey()}, nil
 }
 
-func (k *server) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.SignResponse, error) {
-	addr, err := crypto.AddressFromHexString(in.Address)
+func (k *KeyStore) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.SignResponse, error) {
+	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := GlobalKeystore.GetKey(in.GetPassphrase(), addr[:])
+	addrB, err := crypto.AddressFromHexString(addr)
 	if err != nil {
 		return nil, err
 	}
 
-	sig, err := key.Sign(in.GetHash())
+	key, err := k.GetKey(in.GetPassphrase(), addrB[:])
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := key.Sign(in.GetMessage())
 
 	return &pbkeys.SignResponse{Signature: sig}, nil
 }
 
-func (k *server) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.Empty, error) {
+func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.Empty, error) {
 	if in.GetPub() == nil {
 		return nil, fmt.Errorf("must provide a pubkey")
 	}
-	if in.GetHash() == nil {
+	if in.GetMessage() == nil {
 		return nil, fmt.Errorf("must provide a message")
 	}
 	if in.GetSignature() == nil {
@@ -162,7 +146,7 @@ func (k *server) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.
 	if err != nil {
 		return nil, err
 	}
-	match := pubkey.Verify(in.GetHash(), sig)
+	match := pubkey.Verify(in.GetMessage(), sig)
 	if !match {
 		return nil, fmt.Errorf("Signature does not match")
 	}
@@ -170,7 +154,7 @@ func (k *server) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.
 	return &pbkeys.Empty{}, nil
 }
 
-func (k *server) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.HashResponse, error) {
+func (k *KeyStore) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.HashResponse, error) {
 	var hasher hash.Hash
 	switch in.GetHashtype() {
 	case "ripemd160":
@@ -184,25 +168,25 @@ func (k *server) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.Hash
 
 	hasher.Write(in.GetMessage())
 
-	return &pbkeys.HashResponse{Hash: fmt.Sprintf("%X", hasher.Sum(nil))}, nil
+	return &pbkeys.HashResponse{Hash: hex.EncodeUpperToString(hasher.Sum(nil))}, nil
 }
 
-func (k *server) ImportJSON(ctx context.Context, in *pbkeys.ImportJSONRequest) (*pbkeys.ImportResponse, error) {
+func (k *KeyStore) ImportJSON(ctx context.Context, in *pbkeys.ImportJSONRequest) (*pbkeys.ImportResponse, error) {
 	keyJSON := []byte(in.GetJSON())
 	var err error
 	addr := IsValidKeyJson(keyJSON)
 	if addr != nil {
-		_, err = writeKey(KeysDir, addr, keyJSON)
+		_, err = writeKey(k.keysDirPath, addr, keyJSON)
 	} else {
 		err = fmt.Errorf("invalid json key passed on command line")
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &pbkeys.ImportResponse{Address: fmt.Sprintf("%X", addr)}, nil
+	return &pbkeys.ImportResponse{Address: hex.EncodeUpperToString(addr)}, nil
 }
 
-func (k *server) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkeys.ImportResponse, error) {
+func (k *KeyStore) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkeys.ImportResponse, error) {
 	curveT, err := crypto.CurveTypeFromString(in.GetCurvetype())
 	if err != nil {
 		return nil, err
@@ -213,20 +197,20 @@ func (k *server) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkeys.
 	}
 
 	// store the new key
-	if err = GlobalKeystore.StoreKey(in.GetPassphrase(), key); err != nil {
+	if err = k.StoreKey(in.GetPassphrase(), key); err != nil {
 		return nil, err
 	}
 
 	if in.GetName() != "" {
-		if err := coreNameAdd(in.GetName(), key.Address.String()); err != nil {
+		if err := coreNameAdd(k.keysDirPath, in.GetName(), key.Address.String()); err != nil {
 			return nil, err
 		}
 	}
-	return &pbkeys.ImportResponse{Address: fmt.Sprintf("%X", key.Address)}, nil
+	return &pbkeys.ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
 }
 
-func (k *server) List(ctx context.Context, in *pbkeys.Name) (*pbkeys.ListResponse, error) {
-	names, err := coreNameList()
+func (k *KeyStore) List(ctx context.Context, in *pbkeys.Name) (*pbkeys.ListResponse, error) {
+	names, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -240,15 +224,15 @@ func (k *server) List(ctx context.Context, in *pbkeys.Name) (*pbkeys.ListRespons
 	return &pbkeys.ListResponse{Key: list}, nil
 }
 
-func (k *server) Remove(ctx context.Context, in *pbkeys.Name) (*pbkeys.Empty, error) {
+func (k *KeyStore) RemoveName(ctx context.Context, in *pbkeys.Name) (*pbkeys.Empty, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
 
-	return &pbkeys.Empty{}, coreNameRm(in.GetKeyname())
+	return &pbkeys.Empty{}, coreNameRm(k.keysDirPath, in.GetKeyname())
 }
 
-func (k *server) Add(ctx context.Context, in *pbkeys.AddRequest) (*pbkeys.Empty, error) {
+func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbkeys.Empty, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
@@ -257,5 +241,5 @@ func (k *server) Add(ctx context.Context, in *pbkeys.AddRequest) (*pbkeys.Empty,
 		return nil, fmt.Errorf("please specify an address")
 	}
 
-	return &pbkeys.Empty{}, coreNameAdd(in.GetKeyname(), strings.ToUpper(in.GetAddress()))
+	return &pbkeys.Empty{}, coreNameAdd(k.keysDirPath, in.GetKeyname(), strings.ToUpper(in.GetAddress()))
 }

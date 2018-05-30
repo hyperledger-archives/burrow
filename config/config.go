@@ -55,7 +55,18 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not generate logger from logging config: %v", err)
 	}
-	keyClient := keys.NewKeyClient(conf.Keys.URL, logger)
+	var keyClient keys.KeyClient
+	var keyStore *keys.KeyStore
+	if conf.Keys.RemoteAddress != "" {
+		keyClient, err = keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logger)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		*keyStore = keys.NewKeyStore(conf.Keys.KeysDirectory)
+		keyClient = keys.NewLocalKeyClient(*keyStore, logger)
+	}
+
 	val, err := keys.Addressable(keyClient, *conf.ValidatorAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
@@ -71,7 +82,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	}
 
 	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, conf.Keys,
-		exeOptions, logger)
+		keyStore, exeOptions, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

@@ -6,16 +6,6 @@ import (
 	"runtime"
 )
 
-var (
-	// Convenience directories.
-	MonaxRoot          = ResolveMonaxRoot()
-	MonaxContainerRoot = "/home/monax/.monax"
-
-	// Major directories.
-	KeysPath    = filepath.Join(MonaxRoot, "keys")
-	ScratchPath = filepath.Join(MonaxRoot, "scratch")
-)
-
 func HomeDir() string {
 	if runtime.GOOS == "windows" {
 		drive := os.Getenv("HOMEDRIVE")

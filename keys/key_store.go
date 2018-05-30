@@ -59,14 +59,6 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 	}, nil
 }
 
-type KeyStore interface {
-	GenerateKey(passphrase string, curveType crypto.CurveType) (*Key, error)
-	GetKey(passphrase string, addr []byte) (*Key, error)
-	GetAllAddresses() ([][]byte, error)
-	StoreKey(passphrase string, key *Key) error
-	DeleteKey(passphrase string, addr []byte) error
-}
-
 func (k *Key) Sign(hash []byte) ([]byte, error) {
 	signature, err := k.PrivateKey.Sign(hash)
 	if err != nil {

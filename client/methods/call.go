@@ -29,7 +29,10 @@ func Call(do *client.Do) error {
 	if err != nil {
 		return fmt.Errorf("Could not generate logging config from Do: %s", err)
 	}
-	burrowKeyClient := keys.NewKeyClient(do.SignAddrFlag, logger)
+	burrowKeyClient, err := keys.NewRemoteKeyClient(do.SignAddrFlag, logger)
+	if err != nil {
+		return fmt.Errorf("Could not create remote key client: %s", err)
+	}
 	burrowNodeClient := client.NewBurrowNodeClient(do.NodeAddrFlag, logger)
 	// form the call transaction
 	callTransaction, err := rpc.Call(burrowNodeClient, burrowKeyClient,

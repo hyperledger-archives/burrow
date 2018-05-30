@@ -156,8 +156,12 @@ docker_build: check commit_hash
 test: check
 	@go test ${PACKAGES_NOVENDOR}
 
+.PHONY: test_keys
+test_keys: build_db
+	burrow_bin="${REPO}/bin/burrow" keys/test.sh
+
 .PHONY: test_integration
-test_integration:
+test_integration: test_keys
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

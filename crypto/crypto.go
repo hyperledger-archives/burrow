@@ -4,16 +4,15 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/ripemd160"
-
 	"github.com/btcsuite/btcd/btcec"
 	tm_crypto "github.com/tendermint/go-crypto"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/ripemd160"
 )
 
 type CurveType int8
@@ -43,6 +42,17 @@ func CurveTypeFromString(s string) (CurveType, error) {
 	default:
 		var k CurveType
 		return k, ErrInvalidCurve(s)
+	}
+}
+
+func (p PublicKey) AddressHashType() string {
+	switch p.CurveType {
+	case CurveTypeEd25519:
+		return "go-crypto-0.5.0"
+	case CurveTypeSecp256k1:
+		return "btc"
+	default:
+		return ""
 	}
 }
 
@@ -79,7 +89,7 @@ type PublicKeyJSON struct {
 func (p PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
 		Type: p.CurveType.String(),
-		Data: fmt.Sprintf("%X", p.PublicKey),
+		Data: hex.EncodeUpperToString(p.PublicKey),
 	}
 	txt, err := json.Marshal(jStruct)
 	return txt, err
@@ -167,7 +177,7 @@ func (p PublicKey) RawBytes() []byte {
 }
 
 func (p PublicKey) String() string {
-	return fmt.Sprintf("%X", p.PublicKey[:])
+	return hex.EncodeUpperToString(p.PublicKey)
 }
 
 // Signable is an interface for all signable things.

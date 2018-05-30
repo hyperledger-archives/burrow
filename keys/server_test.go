@@ -37,7 +37,7 @@ var (
 func init() {
 	failedCh := make(chan error)
 	go func() {
-		err := StartStandAloneServer(DefaultHost, TestPort)
+		err := StartStandAloneServer(DefaultKeysDir, DefaultHost, TestPort)
 		failedCh <- err
 	}()
 	tick := time.NewTicker(time.Second)
@@ -126,12 +126,12 @@ func testServerSignAndVerify(t *testing.T, typ string) {
 	}
 	hash := sha3.Sha3([]byte("the hash of something!"))
 
-	sig, err := c.Sign(ctx, &pbkeys.SignRequest{Address: addr, Hash: hash})
+	sig, err := c.Sign(ctx, &pbkeys.SignRequest{Address: addr, Message: hash})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = c.Verify(ctx, &pbkeys.VerifyRequest{Signature: sig.GetSignature(), Pub: resp.GetPub(), Hash: hash, Curvetype: typ})
+	_, err = c.Verify(ctx, &pbkeys.VerifyRequest{Signature: sig.GetSignature(), Pub: resp.GetPub(), Message: hash, Curvetype: typ})
 	if err != nil {
 		t.Fatal(err)
 	}

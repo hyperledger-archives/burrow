@@ -3,13 +3,13 @@ package rpc
 import "github.com/hyperledger/burrow/rpc/v0/server"
 
 type RPCConfig struct {
-	V0       *V0Config       `json:",omitempty" toml:",omitempty"`
-	TM       *TMConfig       `json:",omitempty" toml:",omitempty"`
-	Profiler *ProfilerConfig `json:",omitempty" toml:",omitempty"`
-	GRPC     *GRPCConfig     `json:",omitempty" toml:",omitempty"`
+	V0       *V0Config     `json:",omitempty" toml:",omitempty"`
+	TM       *ServerConfig `json:",omitempty" toml:",omitempty"`
+	Profiler *ServerConfig `json:",omitempty" toml:",omitempty"`
+	GRPC     *ServerConfig `json:",omitempty" toml:",omitempty"`
 }
 
-type TMConfig struct {
+type ServerConfig struct {
 	Enabled       bool
 	ListenAddress string
 }
@@ -45,22 +45,22 @@ func DefaultV0Config() *V0Config {
 	}
 }
 
-func DefaultTMConfig() *TMConfig {
-	return &TMConfig{
+func DefaultTMConfig() *ServerConfig {
+	return &ServerConfig{
 		Enabled:       true,
 		ListenAddress: "tcp://localhost:46657",
 	}
 }
 
-func DefaultGRPCConfig() *GRPCConfig {
-	return &GRPCConfig{
+func DefaultGRPCConfig() *ServerConfig {
+	return &ServerConfig{
 		Enabled:       true,
 		ListenAddress: "localhost:10997",
 	}
 }
 
-func DefaultProfilerConfig() *ProfilerConfig {
-	return &ProfilerConfig{
+func DefaultProfilerConfig() *ServerConfig {
+	return &ServerConfig{
 		Enabled:       false,
 		ListenAddress: "tcp://localhost:6060",
 	}
