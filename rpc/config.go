@@ -10,22 +10,22 @@ type RPCConfig struct {
 }
 
 type TMConfig struct {
-	Disabled      bool
+	Enabled       bool
 	ListenAddress string
 }
 
 type V0Config struct {
-	Disabled bool
-	Server   *server.ServerConfig
+	Enabled bool
+	Server  *server.ServerConfig
 }
 
 type ProfilerConfig struct {
-	Disabled      bool
+	Enabled       bool
 	ListenAddress string
 }
 
 type GRPCConfig struct {
-	Disabled      bool
+	Enabled       bool
 	ListenAddress string
 }
 
@@ -40,25 +40,28 @@ func DefaultRPCConfig() *RPCConfig {
 
 func DefaultV0Config() *V0Config {
 	return &V0Config{
-		Server: server.DefaultServerConfig(),
+		Enabled: true,
+		Server:  server.DefaultServerConfig(),
 	}
 }
 
 func DefaultTMConfig() *TMConfig {
 	return &TMConfig{
+		Enabled:       true,
 		ListenAddress: "tcp://localhost:46657",
 	}
 }
 
 func DefaultGRPCConfig() *GRPCConfig {
 	return &GRPCConfig{
+		Enabled:       true,
 		ListenAddress: "localhost:10997",
 	}
 }
 
 func DefaultProfilerConfig() *ProfilerConfig {
 	return &ProfilerConfig{
-		Disabled:      true,
+		Enabled:       false,
 		ListenAddress: "tcp://localhost:6060",
 	}
 }

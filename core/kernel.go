@@ -113,7 +113,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	launchers := []process.Launcher{
 		{
 			Name:     "Profiling Server",
-			Disabled: rpcConfig.Profiler.Disabled,
+			Disabled: !rpcConfig.Profiler.Enabled,
 			Launch: func() (process.Process, error) {
 				debugServer := &http.Server{
 					Addr: ":6060",
@@ -172,7 +172,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 		{
 			Name:     "RPC/tm",
-			Disabled: rpcConfig.TM.Disabled,
+			Disabled: !rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
@@ -183,7 +183,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 		{
 			Name:     "RPC/V0",
-			Disabled: rpcConfig.V0.Disabled,
+			Disabled: !rpcConfig.V0.Enabled,
 			Launch: func() (process.Process, error) {
 				codec := v0.NewTCodec()
 				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
@@ -203,7 +203,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 		{
 			Name:     "grpc service",
-			Disabled: rpcConfig.GRPC.Disabled,
+			Disabled: !rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
 				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
 				if err != nil {
