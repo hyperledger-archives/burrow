@@ -118,7 +118,7 @@ func TestMarshalJSON(t *testing.T) {
 	acc := concreteAcc.Account()
 	bs, err := json.Marshal(acc)
 
-	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"type":"ed25519","data":"%s"},`+
+	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
 		`"Sequence":0,"Balance":0,"Code":"3C172D","StorageRoot":"",`+
 		`"Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":[]}}`,
 		concreteAcc.Address, concreteAcc.PublicKey)

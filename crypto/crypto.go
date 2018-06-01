@@ -82,14 +82,14 @@ type PrivateKey struct {
 }
 
 type PublicKeyJSON struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
+	CurveType string
+	PublicKey string
 }
 
 func (p PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
-		Type: p.CurveType.String(),
-		Data: hex.EncodeUpperToString(p.PublicKey),
+		CurveType: p.CurveType.String(),
+		PublicKey: hex.EncodeUpperToString(p.PublicKey),
 	}
 	txt, err := json.Marshal(jStruct)
 	return txt, err
@@ -105,11 +105,11 @@ func (p *PublicKey) UnmarshalJSON(text []byte) error {
 	if err != nil {
 		return err
 	}
-	CurveType, err := CurveTypeFromString(jStruct.Type)
+	CurveType, err := CurveTypeFromString(jStruct.CurveType)
 	if err != nil {
 		return err
 	}
-	bs, err := hex.DecodeString(jStruct.Data)
+	bs, err := hex.DecodeString(jStruct.PublicKey)
 	if err != nil {
 		return err
 	}
