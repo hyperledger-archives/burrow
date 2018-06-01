@@ -24,10 +24,8 @@
 package account
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 type Validator interface {
@@ -68,59 +66,41 @@ func NewValidator(publicKey PublicKey, stake, bondingHeight uint64) Validator {
 	}
 }
 
-func LoadValidator(bytes []byte) Validator {
-	u := map[string]string{}
-	err := json.Unmarshal(bytes, &u)
-	if err != nil {
-		return nil
-	}
+type persistedValidator struct {
+	PublicKey     PublicKey
+	Stake         uint64
+	BondingHeight uint64
+	Sequence      uint64
+}
 
-	publicKeyBytes, err := hex.DecodeString(u["publicKey"])
+func LoadValidator(bytes []byte) (Validator, error) {
+	pv := new(persistedValidator)
+	err := json.Unmarshal(bytes, pv)
 	if err != nil {
-		return nil
+		// Don't swallow deserialisation errors
+		return nil, err
 	}
-
-	publicKey, err := PublicKeyFromBytes(publicKeyBytes[1:])
-	if err != nil {
-		return nil
-	}
-
-	stake, err := strconv.ParseUint(u["stake"], 10, 64)
-	if err != nil {
-		return nil
-	}
-
-	bondingHeight, err := strconv.ParseUint(u["bondingHeight"], 10, 64)
-	if err != nil {
-		return nil
-	}
-
-	sequence, err := strconv.ParseUint(u["sequence"], 10, 64)
-	if err != nil {
-		return nil
-	}
-
 	return validator{
-		publicKey:     publicKey,
-		stake:         stake,
-		bondingHeight: bondingHeight,
-		sequence:      sequence,
-	}
+		publicKey:     pv.PublicKey,
+		stake:         pv.Stake,
+		bondingHeight: pv.BondingHeight,
+		sequence:      pv.Sequence,
+	}, nil
 }
 
 func (val validator) Bytes() ([]byte, error) {
-	u := map[string]string{}
-	u["publicKey"] = hex.EncodeToString(val.publicKey.Bytes())
-	u["stake"] = strconv.FormatUint(val.stake, 10)
-	u["bondingHeight"] = strconv.FormatUint(val.bondingHeight, 10)
-	u["sequence"] = strconv.FormatUint(val.sequence, 10)
-
-	bytes, err := json.Marshal(u)
+	pv := persistedValidator{
+		PublicKey:     val.publicKey,
+		Stake:         val.stake,
+		BondingHeight: val.bondingHeight,
+		Sequence:      val.sequence,
+	}
+	bs, err := json.Marshal(pv)
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes, nil
+	return bs, nil
 }
 
 func (val validator) String() string {
