@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
@@ -65,7 +66,7 @@ func GenPrivAccount(client RPCClient) (*rpc.ResultGeneratePrivateAccount, error)
 	return res, nil
 }
 
-func GetAccount(client RPCClient, address acm.Address) (acm.Account, error) {
+func GetAccount(client RPCClient, address crypto.Address) (acm.Account, error) {
 	res := new(rpc.ResultGetAccount)
 	_, err := client.Call(tm.GetAccount, pmap("address", address), res)
 	if err != nil {
@@ -87,7 +88,7 @@ func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAcco
 	return res.Tx, nil
 }
 
-func DumpStorage(client RPCClient, address acm.Address) (*rpc.ResultDumpStorage, error) {
+func DumpStorage(client RPCClient, address crypto.Address) (*rpc.ResultDumpStorage, error) {
 	res := new(rpc.ResultDumpStorage)
 	_, err := client.Call(tm.DumpStorage, pmap("address", address), res)
 	if err != nil {
@@ -96,7 +97,7 @@ func DumpStorage(client RPCClient, address acm.Address) (*rpc.ResultDumpStorage,
 	return res, nil
 }
 
-func GetStorage(client RPCClient, address acm.Address, key []byte) ([]byte, error) {
+func GetStorage(client RPCClient, address crypto.Address, key []byte) ([]byte, error) {
 	res := new(rpc.ResultGetStorage)
 	_, err := client.Call(tm.GetStorage, pmap("address", address, "key", key), res)
 	if err != nil {
@@ -105,7 +106,7 @@ func GetStorage(client RPCClient, address acm.Address, key []byte) ([]byte, erro
 	return res.Value, nil
 }
 
-func CallCode(client RPCClient, fromAddress acm.Address, code, data []byte) (*rpc.ResultCall, error) {
+func CallCode(client RPCClient, fromAddress crypto.Address, code, data []byte) (*rpc.ResultCall, error) {
 	res := new(rpc.ResultCall)
 	_, err := client.Call(tm.CallCode, pmap("fromAddress", fromAddress, "code", code, "data", data), res)
 	if err != nil {
@@ -114,7 +115,7 @@ func CallCode(client RPCClient, fromAddress acm.Address, code, data []byte) (*rp
 	return res, nil
 }
 
-func Call(client RPCClient, fromAddress, toAddress acm.Address, data []byte) (*rpc.ResultCall, error) {
+func Call(client RPCClient, fromAddress, toAddress crypto.Address, data []byte) (*rpc.ResultCall, error) {
 	res := new(rpc.ResultCall)
 	_, err := client.Call(tm.Call, pmap("fromAddress", fromAddress, "toAddress", toAddress,
 		"data", data), res)

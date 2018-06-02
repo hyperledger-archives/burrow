@@ -25,6 +25,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core/integration"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
@@ -54,7 +55,7 @@ var (
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr crypto.Address, amt uint64) *txs.SendTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewSendTx()
 	tx.AddInputWithSequence(privateAccounts[0].PublicKey(), amt, sequence+1)
@@ -62,13 +63,13 @@ func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Addres
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr crypto.Address, amt uint64) *txs.SendTx {
 	tx := makeDefaultSendTx(t, client, addr, amt)
 	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
 	return tx
 }
 
-func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *acm.Address, code []byte, amt, gasLim,
+func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.CallTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
 	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
@@ -88,7 +89,7 @@ func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value str
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uint64 {
+func getSequence(t *testing.T, client tm_client.RPCClient, addr crypto.Address) uint64 {
 	acc, err := tm_client.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -100,7 +101,7 @@ func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uin
 }
 
 // get the account
-func getAccount(t *testing.T, client tm_client.RPCClient, addr acm.Address) acm.Account {
+func getAccount(t *testing.T, client tm_client.RPCClient, addr crypto.Address) acm.Account {
 	ac, err := tm_client.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +127,7 @@ func broadcastTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx) *txs.Recei
 }
 
 // dump all storage for an account. currently unused
-func dumpStorage(t *testing.T, addr acm.Address) *rpc.ResultDumpStorage {
+func dumpStorage(t *testing.T, addr crypto.Address) *rpc.ResultDumpStorage {
 	client := clients["HTTP"]
 	resp, err := tm_client.DumpStorage(client, addr)
 	if err != nil {
@@ -135,7 +136,7 @@ func dumpStorage(t *testing.T, addr acm.Address) *rpc.ResultDumpStorage {
 	return resp
 }
 
-func getStorage(t *testing.T, client tm_client.RPCClient, addr acm.Address, key []byte) []byte {
+func getStorage(t *testing.T, client tm_client.RPCClient, addr crypto.Address, key []byte) []byte {
 	resp, err := tm_client.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +144,7 @@ func getStorage(t *testing.T, client tm_client.RPCClient, addr acm.Address, key 
 	return resp
 }
 
-func callCode(t *testing.T, client tm_client.RPCClient, fromAddress acm.Address, code, data,
+func callCode(t *testing.T, client tm_client.RPCClient, fromAddress crypto.Address, code, data,
 	expected []byte) {
 	resp, err := tm_client.CallCode(client, fromAddress, code, data)
 	if err != nil {
@@ -156,7 +157,7 @@ func callCode(t *testing.T, client tm_client.RPCClient, fromAddress acm.Address,
 	}
 }
 
-func callContract(t *testing.T, client tm_client.RPCClient, fromAddress, toAddress acm.Address,
+func callContract(t *testing.T, client tm_client.RPCClient, fromAddress, toAddress crypto.Address,
 	data, expected []byte) {
 	resp, err := tm_client.Call(client, fromAddress, toAddress, data)
 	if err != nil {
@@ -209,7 +210,7 @@ func simpleContract() ([]byte, []byte, []byte) {
 }
 
 // simple call contract calls another contract
-func simpleCallContract(addr acm.Address) ([]byte, []byte, []byte) {
+func simpleCallContract(addr crypto.Address) ([]byte, []byte, []byte) {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x1)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data

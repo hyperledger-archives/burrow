@@ -3,8 +3,10 @@ package query
 import (
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/crypto"
+	tm_crypto "github.com/tendermint/go-crypto"
+
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
@@ -24,8 +26,10 @@ func NewNodeView(tmNode *tendermint.Node, txDecoder txs.Decoder) *NodeView {
 	}
 }
 
-func (nv *NodeView) PrivValidatorPublicKey() (acm.PublicKey, error) {
-	return acm.PublicKeyFromGoCryptoPubKey(nv.tmNode.PrivValidator().GetPubKey())
+func (nv *NodeView) PrivValidatorPublicKey() (crypto.PublicKey, error) {
+	pub := nv.tmNode.PrivValidator().GetPubKey().Unwrap().(tm_crypto.PubKeyEd25519)
+
+	return crypto.PublicKeyFromBytes(pub[:], crypto.CurveTypeEd25519)
 }
 
 func (nv *NodeView) NodeInfo() p2p.NodeInfo {

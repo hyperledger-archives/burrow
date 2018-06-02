@@ -22,6 +22,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
@@ -227,7 +228,7 @@ func NewSNativeContract(comment, name string,
 }
 
 type ErrLacksSNativePermission struct {
-	Address acm.Address
+	Address crypto.Address
 	SNative string
 }
 
@@ -276,7 +277,7 @@ func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller 
 
 // We define the address of an SNative contact as the last 20 bytes of the sha3
 // hash of its name
-func (contract *SNativeContractDescription) Address() (address acm.Address) {
+func (contract *SNativeContractDescription) Address() (address crypto.Address) {
 	hash := sha3.Sha3([]byte(contract.Name))
 	copy(address[:], hash[len(hash)-abi.AddressLength:])
 	return
@@ -354,7 +355,7 @@ func hasBase(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -380,7 +381,7 @@ func setBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum, permVal := returnThreeArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -407,7 +408,7 @@ func unsetBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *u
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -460,7 +461,7 @@ func hasRole(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -481,7 +482,7 @@ func addRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -503,7 +504,7 @@ func removeRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err

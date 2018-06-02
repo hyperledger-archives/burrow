@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission/snatives"
@@ -60,7 +60,7 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, err
 	}
 
-	var toAddress *acm.Address
+	var toAddress *crypto.Address
 
 	if toAddr != "" {
 		address, err := addressFromHexString(toAddr)
@@ -121,7 +121,7 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 
 	// Try and set each PermArg field for which a string has been provided we'll validate afterwards
 	if target != "" {
-		address, err := acm.AddressFromHexString(target)
+		address, err := crypto.AddressFromHexString(target)
 		if err != nil {
 			return nil, err
 		}
@@ -238,7 +238,7 @@ type TxResult struct {
 	Hash      []byte // all txs get a hash
 
 	// only CallTx
-	Address   *acm.Address // only for new contracts
+	Address   *crypto.Address // only for new contracts
 	Return    []byte
 	Exception string
 
@@ -250,7 +250,7 @@ type TxResult struct {
 func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign,
 	broadcast, wait bool) (txResult *TxResult, err error) {
 
-	var inputAddr acm.Address
+	var inputAddr crypto.Address
 	if sign {
 		inputAddr, tx, err = signTx(keyClient, chainID, tx)
 		if err != nil {
@@ -312,7 +312,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		// the benefit is that the we don't need to trust the chain node
 		if tx_, ok := tx.(*txs.CallTx); ok {
 			if tx_.Address == nil {
-				address := acm.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
+				address := crypto.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
 				txResult.Address = &address
 			}
 		}
@@ -320,10 +320,10 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 	return
 }
 
-func addressFromHexString(addrString string) (acm.Address, error) {
+func addressFromHexString(addrString string) (crypto.Address, error) {
 	addrBytes, err := hex.DecodeString(addrString)
 	if err != nil {
-		return acm.Address{}, err
+		return crypto.Address{}, err
 	}
-	return acm.AddressFromBytes(addrBytes)
+	return crypto.AddressFromBytes(addrBytes)
 }

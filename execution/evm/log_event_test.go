@@ -24,6 +24,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/events"
@@ -46,15 +47,15 @@ func TestLog4(t *testing.T) {
 	cache := state.NewCache(st)
 	// Create accounts
 	account1 := acm.ConcreteAccount{
-		Address: acm.Address{1, 3, 5, 7, 9},
+		Address: crypto.Address{1, 3, 5, 7, 9},
 	}.MutableAccount()
 	account2 := acm.ConcreteAccount{
-		Address: acm.Address{2, 4, 6, 8, 10},
+		Address: crypto.Address{2, 4, 6, 8, 10},
 	}.MutableAccount()
 	st.accounts[account1.Address()] = account1
 	st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	emitter := event.NewEmitter(logging.NewNoopLogger())
 

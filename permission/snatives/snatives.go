@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/permission/types"
 )
@@ -28,7 +28,7 @@ import (
 
 type PermArgs struct {
 	PermFlag   types.PermFlag
-	Address    *acm.Address    `json:",omitempty"`
+	Address    *crypto.Address `json:",omitempty"`
 	Permission *types.PermFlag `json:",omitempty"`
 	Role       *string         `json:",omitempty"`
 	Value      *bool           `json:",omitempty"`
@@ -73,7 +73,7 @@ func (pa PermArgs) EnsureValid() error {
 	return nil
 }
 
-func HasBaseArgs(address acm.Address, permFlag types.PermFlag) PermArgs {
+func HasBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
 		PermFlag:   permission.HasBase,
 		Address:    &address,
@@ -81,7 +81,7 @@ func HasBaseArgs(address acm.Address, permFlag types.PermFlag) PermArgs {
 	}
 }
 
-func SetBaseArgs(address acm.Address, permFlag types.PermFlag, value bool) PermArgs {
+func SetBaseArgs(address crypto.Address, permFlag types.PermFlag, value bool) PermArgs {
 	return PermArgs{
 		PermFlag:   permission.SetBase,
 		Address:    &address,
@@ -90,7 +90,7 @@ func SetBaseArgs(address acm.Address, permFlag types.PermFlag, value bool) PermA
 	}
 }
 
-func UnsetBaseArgs(address acm.Address, permFlag types.PermFlag) PermArgs {
+func UnsetBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
 		PermFlag:   permission.UnsetBase,
 		Address:    &address,
@@ -106,7 +106,7 @@ func SetGlobalArgs(permFlag types.PermFlag, value bool) PermArgs {
 	}
 }
 
-func HasRoleArgs(address acm.Address, role string) PermArgs {
+func HasRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
 		PermFlag: permission.HasRole,
 		Address:  &address,
@@ -114,7 +114,7 @@ func HasRoleArgs(address acm.Address, role string) PermArgs {
 	}
 }
 
-func AddRoleArgs(address acm.Address, role string) PermArgs {
+func AddRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
 		PermFlag: permission.AddRole,
 		Address:  &address,
@@ -122,7 +122,7 @@ func AddRoleArgs(address acm.Address, role string) PermArgs {
 	}
 }
 
-func RemoveRoleArgs(address acm.Address, role string) PermArgs {
+func RemoveRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
 		PermFlag: permission.RemoveRole,
 		Address:  &address,

@@ -62,6 +62,9 @@ megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
 	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
 
+keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
+	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
+
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory
@@ -153,10 +156,12 @@ docker_build: check commit_hash
 test: check
 	@go test ${PACKAGES_NOVENDOR}
 
+.PHONY: test_keys
+test_keys: build_db
+	burrow_bin="${REPO}/bin/burrow" keys/test.sh
+
 .PHONY: test_integration
-test_integration:
-	@go get github.com/monax/bosmarmot/keys/cmd/monax-keys
-	@go test -tags integration ./keys/integration
+test_integration: test_keys
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

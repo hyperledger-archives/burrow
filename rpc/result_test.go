@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestResultBroadcastTx(t *testing.T) {
 	// Make sure these are unpacked as expected
 	res := ResultBroadcastTx{
 		Receipt: txs.Receipt{
-			ContractAddress: acm.Address{0, 2, 3},
+			ContractAddress: crypto.Address{0, 2, 3},
 			CreatesContract: true,
 			TxHash:          []byte("foo"),
 		},
@@ -50,7 +51,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		NumTxs: 3,
 		Txs: []txs.Wrapper{
 			txs.Wrap(&txs.CallTx{
-				Address: &acm.Address{1},
+				Address: &crypto.Address{1},
 			}),
 		},
 	}

@@ -6,10 +6,9 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/crypto"
+
 	"github.com/pkg/errors"
-	"github.com/tendermint/go-crypto"
-	"github.com/wayn3h0/go-uuid"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -17,7 +16,7 @@ import (
 // Simple ed25519 key structure for mock purposes with ripemd160 address
 type Key struct {
 	Name       string
-	Address    acm.Address
+	Address    crypto.Address
 	PublicKey  []byte
 	PrivateKey []byte
 }
@@ -37,10 +36,12 @@ func newKey(name string) (*Key, error) {
 	copy(key.PrivateKey[:], privateKey[:])
 	copy(key.PublicKey[:], publicKey[:])
 
-	var ed25519 crypto.PubKeyEd25519
-	copy(ed25519[:], publicKey[:])
+	pk, err := crypto.PublicKeyFromBytes(publicKey, crypto.CurveTypeEd25519)
+	if err != nil {
+		return nil, err
+	}
 
-	key.Address, err = acm.AddressFromBytes(ed25519.Address())
+	key.Address, err = crypto.AddressFromBytes(pk.Address().Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +56,7 @@ func newKey(name string) (*Key, error) {
 }
 
 func mockKeyFromPrivateAccount(privateAccount acm.PrivateAccount) *Key {
-	_, ok := privateAccount.PrivateKey().Unwrap().(crypto.PrivKeyEd25519)
-	if !ok {
+	if privateAccount.PrivateKey().CurveType != crypto.CurveTypeEd25519 {
 		panic(fmt.Errorf("mock key client only supports ed25519 private keys at present"))
 	}
 	key := &Key{
@@ -68,29 +68,27 @@ func mockKeyFromPrivateAccount(privateAccount acm.PrivateAccount) *Key {
 	return key
 }
 
-func (key *Key) Sign(message []byte) (acm.Signature, error) {
-	return acm.SignatureFromBytes(ed25519.Sign(key.PrivateKey, message))
+func (key *Key) Sign(message []byte) (crypto.Signature, error) {
+	return crypto.SignatureFromBytes(ed25519.Sign(key.PrivateKey, message), crypto.CurveTypeEd25519)
+}
+
+type PrivateKeyplainKeyJSON struct {
+	Plain []byte
 }
 
 // TODO: remove after merging keys taken from there to match serialisation
 type plainKeyJSON struct {
-	Id         []byte
 	Type       string
 	Address    string
-	PrivateKey []byte
+	PrivateKey PrivateKeyplainKeyJSON
 }
 
 // Returns JSON string compatible with that stored by monax-keys
 func (key *Key) MonaxKeysJSON() string {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return errors.Wrap(err, "could not create monax key json").Error()
-	}
 	jsonKey := plainKeyJSON{
-		Id:         []byte(id.String()),
 		Address:    key.Address.String(),
-		Type:       string(keys.KeyTypeEd25519Ripemd160),
-		PrivateKey: key.PrivateKey,
+		Type:       "ed25519",
+		PrivateKey: PrivateKeyplainKeyJSON{Plain: key.PrivateKey},
 	}
 	bs, err := json.Marshal(jsonKey)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
@@ -26,7 +27,7 @@ type NameTx struct {
 
 var _ Tx = &NameTx{}
 
-func NewNameTx(st state.AccountGetter, from acm.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
+func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := from.Address()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -40,7 +41,7 @@ func NewNameTx(st state.AccountGetter, from acm.PublicKey, name, data string, am
 	return NewNameTxWithSequence(from, name, data, amt, fee, sequence), nil
 }
 
-func NewNameTxWithSequence(from acm.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
+func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
 		Address:   from.Address(),
 		Amount:    amt,
@@ -63,7 +64,7 @@ func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner)
 	}
 	var err error
 	tx.Input.PublicKey = signingAccounts[0].PublicKey()
-	tx.Input.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	tx.Input.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
 	if err != nil {
 		return fmt.Errorf("could not sign %v: %v", tx, err)
 	}

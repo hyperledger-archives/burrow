@@ -3,9 +3,9 @@ package commands
 import (
 	"context"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/crypto"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/jawher/mow.cli"
 )
@@ -71,7 +71,7 @@ func Start(output Output) func(cmd *cli.Cmd) {
 
 			// Which validator am I?
 			if *validatorAddressOpt != "" {
-				address, err := acm.AddressFromHexString(*validatorAddressOpt)
+				address, err := crypto.AddressFromHexString(*validatorAddressOpt)
 				if err != nil {
 					output.Fatalf("could not read address for validator in '%s'", *validatorAddressOpt)
 				}

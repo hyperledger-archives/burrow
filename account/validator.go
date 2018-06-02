@@ -2,6 +2,8 @@ package account
 
 import (
 	"encoding/json"
+
+	"github.com/hyperledger/burrow/crypto"
 )
 
 type Validator interface {
@@ -15,8 +17,8 @@ type Validator interface {
 
 // Neither abci_types or tm_types has quite the representation we want
 type ConcreteValidator struct {
-	Address   Address
-	PublicKey PublicKey
+	Address   crypto.Address
+	PublicKey crypto.PublicKey
 	Power     uint64
 }
 
@@ -48,11 +50,11 @@ func AsConcreteValidator(validator Validator) *ConcreteValidator {
 	}
 }
 
-func (cvw concreteValidatorWrapper) Address() Address {
+func (cvw concreteValidatorWrapper) Address() crypto.Address {
 	return cvw.ConcreteValidator.Address
 }
 
-func (cvw concreteValidatorWrapper) PublicKey() PublicKey {
+func (cvw concreteValidatorWrapper) PublicKey() crypto.PublicKey {
 	return cvw.ConcreteValidator.PublicKey
 }
 

@@ -24,6 +24,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission"
@@ -176,7 +177,7 @@ func (s *State) Hash() []byte {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
+func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 	s.RLock()
 	defer s.RUnlock()
 	_, accBytes := s.tree.Get(prefixedKey(accountsPrefix, address.Bytes()))
@@ -204,7 +205,7 @@ func (s *State) UpdateAccount(account acm.Account) error {
 	return nil
 }
 
-func (s *State) RemoveAccount(address acm.Address) error {
+func (s *State) RemoveAccount(address crypto.Address) error {
 	s.Lock()
 	defer s.Unlock()
 	s.tree.Remove(prefixedKey(accountsPrefix, address.Bytes()))
@@ -225,14 +226,14 @@ func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped
 	return
 }
 
-func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	s.RLock()
 	defer s.RUnlock()
 	_, value := s.tree.Get(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
 	return binary.LeftPadWord256(value), nil
 }
 
-func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
+func (s *State) SetStorage(address crypto.Address, key, value binary.Word256) error {
 	s.Lock()
 	defer s.Unlock()
 	if value == binary.Zero256 {
@@ -243,7 +244,7 @@ func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error
 	return nil
 }
 
-func (s *State) IterateStorage(address acm.Address,
+func (s *State) IterateStorage(address crypto.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	s.RLock()
 	defer s.RUnlock()

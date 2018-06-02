@@ -5,19 +5,20 @@ import (
 	"io"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
 type UnbondTx struct {
-	Address   acm.Address
+	Address   crypto.Address
 	Height    int
-	Signature acm.Signature
+	Signature crypto.Signature
 	txHashMemoizer
 }
 
 var _ Tx = &UnbondTx{}
 
-func NewUnbondTx(addr acm.Address, height int) *UnbondTx {
+func NewUnbondTx(addr crypto.Address, height int) *UnbondTx {
 	return &UnbondTx{
 		Address: addr,
 		Height:  height,
@@ -30,7 +31,7 @@ func (tx *UnbondTx) Sign(chainID string, signingAccounts ...acm.AddressableSigne
 			len(signingAccounts))
 	}
 	var err error
-	tx.Signature, err = acm.ChainSign(signingAccounts[0], chainID, tx)
+	tx.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
 	if err != nil {
 		return fmt.Errorf("could not sign %v: %v", tx, err)
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
@@ -27,8 +26,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		jsonOutOpt := cmd.BoolOpt("j json", false, "Emit config in JSON rather than TOML "+
 			"suitable for further processing")
 
-		keysUrlOpt := cmd.StringOpt("k keys-url", "", fmt.Sprintf("Provide keys URL, default: %s",
-			keys.DefaultKeysConfig().URL))
+		keysUrlOpt := cmd.StringOpt("k keys-url", "", fmt.Sprintf("Provide keys GRPC address, default: %s",
+			keys.DefaultKeysConfig().RemoteAddress))
 
 		configOpt := cmd.StringOpt("c base-config", "", "Use the a specified burrow config file as a base")
 
@@ -85,7 +84,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 			}
 
 			if *keysUrlOpt != "" {
-				conf.Keys.URL = *keysUrlOpt
+				conf.Keys.RemoteAddress = *keysUrlOpt
 			}
 
 			// Genesis Spec
@@ -95,14 +94,22 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
 				}
+				keyStore := keys.NewKeyStore(conf.Keys.KeysDirectory)
 				if *generateKeysOpt != "" {
-					keyClient := mock.NewKeyClient()
+					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
 						output.Fatalf("Could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 					}
 
-					pkg := deployment.Package{Keys: keyClient.Keys()}
+					allKeys, err := keyStore.AllKeys()
+					if err != nil {
+						output.Fatalf("could get all keys: %v", err)
+					}
+					pkg := deployment.Package{Keys: allKeys}
+					if err != nil {
+						output.Fatalf("Could not dump keys: %v", err)
+					}
 					secretKeysString, err := pkg.Dump(*keysTemplateOpt)
 					if err != nil {
 						output.Fatalf("Could not dump keys: %v", err)
@@ -112,8 +119,18 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("Could not write secret keys: %v", err)
 					}
 				} else {
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keys.NewKeyClient(conf.Keys.URL, logging.NewNoopLogger()))
+					var keyClient keys.KeyClient
+					if conf.Keys.RemoteAddress != "" {
+						keyClient, err = keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logging.NewNoopLogger())
+						if err != nil {
+							output.Fatalf("Could not create remote key client: %v", err)
+						}
+					} else {
+						keyClient = keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
+					}
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 				}
+
 				if err != nil {
 					output.Fatalf("could not realise GenesisSpec: %v", err)
 				}

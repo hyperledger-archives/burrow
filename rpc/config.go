@@ -3,23 +3,29 @@ package rpc
 import "github.com/hyperledger/burrow/rpc/v0/server"
 
 type RPCConfig struct {
-	V0       *V0Config       `json:",omitempty" toml:",omitempty"`
-	TM       *TMConfig       `json:",omitempty" toml:",omitempty"`
-	Profiler *ProfilerConfig `json:",omitempty" toml:",omitempty"`
+	V0       *V0Config     `json:",omitempty" toml:",omitempty"`
+	TM       *ServerConfig `json:",omitempty" toml:",omitempty"`
+	Profiler *ServerConfig `json:",omitempty" toml:",omitempty"`
+	GRPC     *ServerConfig `json:",omitempty" toml:",omitempty"`
 }
 
-type TMConfig struct {
-	Disabled      bool
+type ServerConfig struct {
+	Enabled       bool
 	ListenAddress string
 }
 
 type V0Config struct {
-	Disabled bool
-	Server   *server.ServerConfig
+	Enabled bool
+	Server  *server.ServerConfig
 }
 
 type ProfilerConfig struct {
-	Disabled      bool
+	Enabled       bool
+	ListenAddress string
+}
+
+type GRPCConfig struct {
+	Enabled       bool
 	ListenAddress string
 }
 
@@ -28,23 +34,34 @@ func DefaultRPCConfig() *RPCConfig {
 		TM:       DefaultTMConfig(),
 		V0:       DefaultV0Config(),
 		Profiler: DefaultProfilerConfig(),
-	}
-}
-func DefaultV0Config() *V0Config {
-	return &V0Config{
-		Server: server.DefaultServerConfig(),
+		GRPC:     DefaultGRPCConfig(),
 	}
 }
 
-func DefaultTMConfig() *TMConfig {
-	return &TMConfig{
+func DefaultV0Config() *V0Config {
+	return &V0Config{
+		Enabled: true,
+		Server:  server.DefaultServerConfig(),
+	}
+}
+
+func DefaultTMConfig() *ServerConfig {
+	return &ServerConfig{
+		Enabled:       true,
 		ListenAddress: "tcp://localhost:46657",
 	}
 }
 
-func DefaultProfilerConfig() *ProfilerConfig {
-	return &ProfilerConfig{
-		Disabled:      true,
+func DefaultGRPCConfig() *ServerConfig {
+	return &ServerConfig{
+		Enabled:       true,
+		ListenAddress: "localhost:10997",
+	}
+}
+
+func DefaultProfilerConfig() *ServerConfig {
+	return &ServerConfig{
+		Enabled:       false,
 		ListenAddress: "tcp://localhost:6060",
 	}
 }

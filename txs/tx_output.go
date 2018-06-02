@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
 type TxOutput struct {
-	Address acm.Address
+	Address crypto.Address
 	Amount  uint64
 }
 

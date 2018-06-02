@@ -63,8 +63,8 @@ type ServeProcess struct {
 
 // Initializes all the servers and starts listening for connections.
 func (serveProcess *ServeProcess) Start() error {
-	router := gin.New()
 	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
 	config := serveProcess.config
 
 	ch := NewCORSMiddleware(config.CORS)

@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"io"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
 type TxInput struct {
-	Address   acm.Address
+	Address   crypto.Address
 	Amount    uint64
 	Sequence  uint64
-	Signature acm.Signature
-	PublicKey acm.PublicKey
+	Signature crypto.Signature
+	PublicKey crypto.PublicKey
 }
 
 func (txIn *TxInput) ValidateBasic() error {

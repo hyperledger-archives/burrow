@@ -36,6 +36,9 @@ func burrow(output commands.Output) *cli.Cli {
 		"Create Burrow configuration by consuming a GenesisDoc or GenesisSpec, creating keys, and emitting the config",
 		commands.Configure(output))
 
+	app.Command("keys", "A tool for doing a bunch of cool stuff with keys",
+		commands.Keys(output))
+
 	return app
 }
 

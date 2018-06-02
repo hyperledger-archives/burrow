@@ -8,13 +8,13 @@ import (
 	"text/template"
 
 	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/pkg/errors"
 	"github.com/tmthrgd/go-hex"
 )
 
 type Package struct {
-	Keys         []*mock.Key
+	Keys         []*keys.Key
 	BurrowConfig *config.BurrowConfig
 }
 

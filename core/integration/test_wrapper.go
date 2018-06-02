@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
@@ -80,8 +81,8 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 	validatorAccount := privateAccounts[0]
 	privValidator := validator.NewPrivValidatorMemory(validatorAccount, validatorAccount)
 	keyClient := mock.NewKeyClient(privateAccounts...)
-	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
-		nil, logger)
+	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(),
+		nil, nil, logger)
 	if err != nil {
 		panic(err)
 	}

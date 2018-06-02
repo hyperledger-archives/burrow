@@ -3,12 +3,13 @@ package state
 import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 type AccountGetter interface {
 	// Get an account by its address return nil if it does not exist (which should not be an error)
-	GetAccount(address acm.Address) (acm.Account, error)
+	GetAccount(address crypto.Address) (acm.Account, error)
 }
 
 type AccountIterable interface {
@@ -23,25 +24,25 @@ type AccountUpdater interface {
 	// if it does not exist
 	UpdateAccount(updatedAccount acm.Account) error
 	// Remove the account at address
-	RemoveAccount(address acm.Address) error
+	RemoveAccount(address crypto.Address) error
 }
 
 type StorageGetter interface {
 	// Retrieve a 32-byte value stored at key for the account at address, return Zero256 if key does not exist but
 	// error if address does not
-	GetStorage(address acm.Address, key binary.Word256) (value binary.Word256, err error)
+	GetStorage(address crypto.Address, key binary.Word256) (value binary.Word256, err error)
 }
 
 type StorageSetter interface {
 	// Store a 32-byte value at key for the account at address, setting to Zero256 removes the key
-	SetStorage(address acm.Address, key, value binary.Word256) error
+	SetStorage(address crypto.Address, key, value binary.Word256) error
 }
 
 type StorageIterable interface {
 	// Iterates through the storage of account ad address calling the passed function once per account,
 	// if the iterator function returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateStorage(address acm.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error)
+	IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error)
 }
 
 // Compositions
@@ -74,7 +75,7 @@ type IterableWriter interface {
 	StorageIterable
 }
 
-func GetMutableAccount(getter AccountGetter, address acm.Address) (acm.MutableAccount, error) {
+func GetMutableAccount(getter AccountGetter, address crypto.Address) (acm.MutableAccount, error) {
 	acc, err := getter.GetAccount(address)
 	if err != nil {
 		return nil, err

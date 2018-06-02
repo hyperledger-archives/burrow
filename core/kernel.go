@@ -17,6 +17,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
@@ -44,6 +46,7 @@ import (
 	tm_config "github.com/tendermint/tendermint/config"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -65,8 +68,8 @@ type Kernel struct {
 }
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator,
-	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig,
-	exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
+	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
@@ -111,7 +114,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	launchers := []process.Launcher{
 		{
 			Name:     "Profiling Server",
-			Disabled: rpcConfig.Profiler.Disabled,
+			Disabled: !rpcConfig.Profiler.Enabled,
 			Launch: func() (process.Process, error) {
 				debugServer := &http.Server{
 					Addr: ":6060",
@@ -170,7 +173,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 		{
 			Name:     "RPC/tm",
-			Disabled: rpcConfig.TM.Disabled,
+			Disabled: !rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
@@ -181,7 +184,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 		{
 			Name:     "RPC/V0",
-			Disabled: rpcConfig.V0.Disabled,
+			Disabled: !rpcConfig.V0.Enabled,
 			Launch: func() (process.Process, error) {
 				codec := v0.NewTCodec()
 				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
@@ -197,6 +200,37 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					return nil, err
 				}
 				return serveProcess, nil
+			},
+		},
+		{
+			Name:     "grpc service",
+			Disabled: !rpcConfig.GRPC.Enabled,
+			Launch: func() (process.Process, error) {
+				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
+				if err != nil {
+					return nil, err
+				}
+
+				grpcServer := grpc.NewServer()
+				var ks keys.KeyStore
+				if keyStore != nil {
+					ks = *keyStore
+				}
+
+				if keyConfig.GRPCServiceEnabled {
+					if keyStore == nil {
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory)
+					}
+					pbkeys.RegisterKeysServer(grpcServer, &ks)
+				}
+
+				go grpcServer.Serve(listen)
+
+				return process.ShutdownFunc(func(ctx context.Context) error {
+					grpcServer.Stop()
+					// listener is closed for us
+					return nil
+				}), nil
 			},
 		},
 	}
