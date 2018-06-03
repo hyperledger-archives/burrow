@@ -33,7 +33,7 @@ func EventResponseID(eventID string) string {
 }
 
 func Subscribe(wsc WebsocketClient, eventID string) error {
-	req, err := rpctypes.MapToRequest(SubscribeRequestID,
+	req, err := rpctypes.MapToRequest(tm.AminoCodec, SubscribeRequestID,
 		"subscribe", map[string]interface{}{"eventID": eventID})
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func Subscribe(wsc WebsocketClient, eventID string) error {
 }
 
 func Unsubscribe(websocketClient WebsocketClient, subscriptionID string) error {
-	req, err := rpctypes.MapToRequest(UnsubscribeRequestID,
+	req, err := rpctypes.MapToRequest(tm.AminoCodec, UnsubscribeRequestID,
 		"unsubscribe", map[string]interface{}{"subscriptionID": subscriptionID})
 	if err != nil {
 		return err

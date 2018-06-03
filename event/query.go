@@ -7,8 +7,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/tendermint/tmlibs/pubsub"
-	"github.com/tendermint/tmlibs/pubsub/query"
+	"github.com/tendermint/tendermint/libs/pubsub"
+	"github.com/tendermint/tendermint/libs/pubsub/query"
 )
 
 const (

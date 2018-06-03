@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
-	tm_crypto "github.com/tendermint/go-crypto"
 )
 
 var _ NodeClient = (*MockNodeClient)(nil)
@@ -64,7 +63,6 @@ func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte,
 	// fill return values
 	ChainId = make([]byte, 64)
 	LatestBlockHash = make([]byte, 64)
-	ValidatorPublicKey = tm_crypto.PubKeyEd25519{}.Wrap().Bytes()
 	BlockHeight = 0
 	LatestBlockTime = 0
 	return

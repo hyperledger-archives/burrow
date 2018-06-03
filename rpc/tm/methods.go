@@ -107,7 +107,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 			defer cancel()
 
 			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
-				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(
+				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(AminoCodec,
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
 					logger.InfoMsg("dropping subscription because could not write to websocket",

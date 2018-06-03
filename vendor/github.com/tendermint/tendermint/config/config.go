@@ -270,7 +270,7 @@ type P2PConfig struct {
 	FlushThrottleTimeout int `mapstructure:"flush_throttle_timeout"`
 
 	// Maximum size of a message packet payload, in bytes
-	MaxMsgPacketPayloadSize int `mapstructure:"max_msg_packet_payload_size"`
+	MaxPacketMsgPayloadSize int `mapstructure:"max_packet_msg_payload_size"`
 
 	// Rate at which packets can be sent, in bytes/second
 	SendRate int64 `mapstructure:"send_rate"`
@@ -287,11 +287,11 @@ type P2PConfig struct {
 	// Does not work if the peer-exchange reactor is disabled.
 	SeedMode bool `mapstructure:"seed_mode"`
 
-	// Authenticated encryption
-	AuthEnc bool `mapstructure:"auth_enc"`
-
 	// Comma separated list of peer IDs to keep private (will not be gossiped to other peers)
 	PrivatePeerIDs string `mapstructure:"private_peer_ids"`
+
+	// Toggle to disable guard against peers connecting from the same ip.
+	AllowDuplicateIP bool `mapstructure:"allow_duplicate_ip"`
 }
 
 // DefaultP2PConfig returns a default configuration for the peer-to-peer layer
@@ -302,12 +302,12 @@ func DefaultP2PConfig() *P2PConfig {
 		AddrBookStrict:          true,
 		MaxNumPeers:             50,
 		FlushThrottleTimeout:    100,
-		MaxMsgPacketPayloadSize: 1024,   // 1 kB
+		MaxPacketMsgPayloadSize: 1024,   // 1 kB
 		SendRate:                512000, // 500 kB/s
 		RecvRate:                512000, // 500 kB/s
 		PexReactor:              true,
 		SeedMode:                false,
-		AuthEnc:                 true,
+		AllowDuplicateIP:        true, // so non-breaking yet
 	}
 }
 
@@ -317,6 +317,7 @@ func TestP2PConfig() *P2PConfig {
 	cfg.ListenAddress = "tcp://0.0.0.0:36656"
 	cfg.SkipUPNP = true
 	cfg.FlushThrottleTimeout = 10
+	cfg.AllowDuplicateIP = true
 	return cfg
 }
 
@@ -335,6 +336,7 @@ type MempoolConfig struct {
 	RecheckEmpty bool   `mapstructure:"recheck_empty"`
 	Broadcast    bool   `mapstructure:"broadcast"`
 	WalPath      string `mapstructure:"wal_dir"`
+	Size         int    `mapstructure:"size"`
 	CacheSize    int    `mapstructure:"cache_size"`
 }
 
@@ -345,6 +347,7 @@ func DefaultMempoolConfig() *MempoolConfig {
 		RecheckEmpty: true,
 		Broadcast:    true,
 		WalPath:      filepath.Join(defaultDataDir, "mempool.wal"),
+		Size:         100000,
 		CacheSize:    100000,
 	}
 }
@@ -367,10 +370,9 @@ func (cfg *MempoolConfig) WalDir() string {
 // ConsensusConfig defines the confuguration for the Tendermint consensus service,
 // including timeouts and details about the WAL and the block structure.
 type ConsensusConfig struct {
-	RootDir  string `mapstructure:"home"`
-	WalPath  string `mapstructure:"wal_file"`
-	WalLight bool   `mapstructure:"wal_light"`
-	walFile  string // overrides WalPath if set
+	RootDir string `mapstructure:"home"`
+	WalPath string `mapstructure:"wal_file"`
+	walFile string // overrides WalPath if set
 
 	// All timeouts are in milliseconds
 	TimeoutPropose        int `mapstructure:"timeout_propose"`
@@ -401,7 +403,6 @@ type ConsensusConfig struct {
 func DefaultConsensusConfig() *ConsensusConfig {
 	return &ConsensusConfig{
 		WalPath:                     filepath.Join(defaultDataDir, "cs.wal", "wal"),
-		WalLight:                    false,
 		TimeoutPropose:              3000,
 		TimeoutProposeDelta:         500,
 		TimeoutPrevote:              1000,

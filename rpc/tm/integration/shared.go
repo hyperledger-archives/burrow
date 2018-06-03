@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/tm"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,11 @@ var (
 	}
 	genesisDoc = integration.TestGenesisDoc(privateAccounts)
 )
+
+func init() {
+	jsonRpcClient.SetCodec(tm.AminoCodec)
+	httpClient.SetCodec(tm.AminoCodec)
+}
 
 //-------------------------------------------------------------------------------
 // some default transaction functions

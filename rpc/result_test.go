@@ -105,8 +105,8 @@ func TestResultEvent(t *testing.T) {
 		},
 	}
 	res := ResultEvent{
-		TMEventData: &tm_types.TMEventData{
-			TMEventDataInner: eventDataNewBlock,
+		Tendermint: &ResultTendermintEvent{
+			EventDataNewBlock: &eventDataNewBlock,
 		},
 	}
 	bs, err := json.Marshal(res)
@@ -117,4 +117,6 @@ func TestResultEvent(t *testing.T) {
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
+	//fmt.Println(string(bs))
+	//fmt.Println(string(bsOut))
 }

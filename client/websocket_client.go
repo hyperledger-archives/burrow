@@ -133,7 +133,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 							structure.ErrorKey, err)
 						continue
 					}
-					blockData := resultEvent.EventDataNewBlock()
+					blockData := resultEvent.Tendermint.EventDataNewBlock
 					if blockData != nil {
 						latestBlockHash = blockData.Block.Hash()
 						burrowNodeWebsocketClient.logger.TraceMsg("Registered new block",

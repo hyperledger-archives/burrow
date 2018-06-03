@@ -5,6 +5,13 @@ import (
 	"fmt"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/jawher/mow.cli/internal/container"
+	"github.com/jawher/mow.cli/internal/flow"
+	"github.com/jawher/mow.cli/internal/fsm"
+	"github.com/jawher/mow.cli/internal/lexer"
+	"github.com/jawher/mow.cli/internal/parser"
+	"github.com/jawher/mow.cli/internal/values"
 )
 
 /*
@@ -32,14 +39,14 @@ type Cmd struct {
 	desc    string
 
 	commands   []*Cmd
-	options    []*opt
-	optionsIdx map[string]*opt
-	args       []*arg
-	argsIdx    map[string]*arg
+	options    []*container.Container
+	optionsIdx map[string]*container.Container
+	args       []*container.Container
+	argsIdx    map[string]*container.Container
 
 	parents []string
 
-	fsm *state
+	fsm *fsm.State
 }
 
 /*
@@ -111,10 +118,10 @@ func (c *Cmd) Command(name, desc string, init CmdInitializer) {
 		desc:          desc,
 		init:          init,
 		commands:      []*Cmd{},
-		options:       []*opt{},
-		optionsIdx:    map[string]*opt{},
-		args:          []*arg{},
-		argsIdx:       map[string]*arg{},
+		options:       []*container.Container{},
+		optionsIdx:    map[string]*container.Container{},
+		args:          []*container.Container{},
+		argsIdx:       map[string]*container.Container{},
 	})
 }
 
@@ -126,13 +133,13 @@ The result should be stored in a variable (a pointer to a bool) which will be po
 */
 func (c *Cmd) Bool(p BoolParam) *bool {
 	into := new(bool)
-	value := newBoolValue(into, p.value())
+	value := values.NewBool(into, p.value())
 
 	switch x := p.(type) {
 	case BoolOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	case BoolArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -148,13 +155,13 @@ The result should be stored in a variable (a pointer to a string) which will be 
 */
 func (c *Cmd) String(p StringParam) *string {
 	into := new(string)
-	value := newStringValue(into, p.value())
+	value := values.NewString(into, p.value())
 
 	switch x := p.(type) {
 	case StringOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	case StringArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -170,13 +177,13 @@ The result should be stored in a variable (a pointer to an int) which will be po
 */
 func (c *Cmd) Int(p IntParam) *int {
 	into := new(int)
-	value := newIntValue(into, p.value())
+	value := values.NewInt(into, p.value())
 
 	switch x := p.(type) {
 	case IntOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	case IntArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -192,13 +199,13 @@ The result should be stored in a variable (a pointer to a string slice) which wi
 */
 func (c *Cmd) Strings(p StringsParam) *[]string {
 	into := new([]string)
-	value := newStringsValue(into, p.value())
+	value := values.NewStrings(into, p.value())
 
 	switch x := p.(type) {
 	case StringsOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	case StringsArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -214,13 +221,13 @@ The result should be stored in a variable (a pointer to an int slice) which will
 */
 func (c *Cmd) Ints(p IntsParam) *[]int {
 	into := new([]int)
-	value := newIntsValue(into, p.value())
+	value := values.NewInts(into, p.value())
 
 	switch x := p.(type) {
 	case IntsOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	case IntsArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: value, valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: value, ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -238,9 +245,9 @@ Instead, the VarOpt or VarOptArg structs hold the said value.
 func (c *Cmd) Var(p VarParam) {
 	switch x := p.(type) {
 	case VarOpt:
-		c.mkOpt(opt{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: p.value(), valueSetByUser: x.SetByUser})
+		c.mkOpt(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: p.value(), ValueSetByUser: x.SetByUser})
 	case VarArg:
-		c.mkArg(arg{name: x.Name, desc: x.Desc, envVar: x.EnvVar, hideValue: x.HideValue, value: p.value(), valueSetByUser: x.SetByUser})
+		c.mkArg(container.Container{Name: x.Name, Desc: x.Desc, EnvVar: x.EnvVar, HideValue: x.HideValue, Value: p.value(), ValueSetByUser: x.SetByUser})
 	default:
 		panic(fmt.Sprintf("Unhandled param %v", p))
 	}
@@ -262,14 +269,27 @@ func (c *Cmd) doInit() error {
 			c.Spec = "[OPTIONS] "
 		}
 		for _, arg := range c.args {
-			c.Spec += arg.name + " "
+			c.Spec += arg.Name + " "
 		}
 	}
-	fsm, err := uParse(c)
+
+	tokens, err := lexer.Tokenize(c.Spec)
 	if err != nil {
 		return err
 	}
-	c.fsm = fsm
+
+	params := parser.Params{
+		Spec:       c.Spec,
+		Options:    c.options,
+		OptionsIdx: c.optionsIdx,
+		Args:       c.args,
+		ArgsIdx:    c.argsIdx,
+	}
+	s, err := parser.Parse(tokens, params)
+	if err != nil {
+		return err
+	}
+	c.fsm = s
 	return nil
 }
 
@@ -338,10 +358,10 @@ func (c *Cmd) printHelp(longDesc bool) {
 
 		for _, arg := range c.args {
 			var (
-				env   = formatEnvVarsForHelp(arg.envVar)
-				value = formatValueForHelp(arg.hideValue, arg.value)
+				env   = formatEnvVarsForHelp(arg.EnvVar)
+				value = formatValueForHelp(arg.HideValue, arg.Value)
 			)
-			fmt.Fprintf(w, "  %s\t%s\n", arg.name, joinStrings(arg.desc, env, value))
+			fmt.Fprintf(w, "  %s\t%s\n", arg.Name, joinStrings(arg.Desc, env, value))
 		}
 	}
 
@@ -351,10 +371,10 @@ func (c *Cmd) printHelp(longDesc bool) {
 		for _, opt := range c.options {
 			var (
 				optNames = formatOptNamesForHelp(opt)
-				env      = formatEnvVarsForHelp(opt.envVar)
-				value    = formatValueForHelp(opt.hideValue, opt.value)
+				env      = formatEnvVarsForHelp(opt.EnvVar)
+				value    = formatValueForHelp(opt.HideValue, opt.Value)
 			)
-			fmt.Fprintf(w, "  %s\t%s\n", optNames, joinStrings(opt.desc, env, value))
+			fmt.Fprintf(w, "  %s\t%s\n", optNames, joinStrings(opt.Desc, env, value))
 		}
 	}
 
@@ -373,10 +393,10 @@ func (c *Cmd) printHelp(longDesc bool) {
 	w.Flush()
 }
 
-func formatOptNamesForHelp(o *opt) string {
+func formatOptNamesForHelp(o *container.Container) string {
 	short, long := "", ""
 
-	for _, n := range o.names {
+	for _, n := range o.Names {
 		if len(n) == 2 && short == "" {
 			short = n
 		}
@@ -404,7 +424,7 @@ func formatValueForHelp(hide bool, v flag.Value) string {
 		return ""
 	}
 
-	if dv, ok := v.(defaultValued); ok {
+	if dv, ok := v.(values.DefaultValued); ok {
 		if dv.IsDefault() {
 			return ""
 		}
@@ -430,7 +450,7 @@ func formatEnvVarsForHelp(envVars string) string {
 	return res
 }
 
-func (c *Cmd) parse(args []string, entry, inFlow, outFlow *step) error {
+func (c *Cmd) parse(args []string, entry, inFlow, outFlow *flow.Step) error {
 	if c.helpRequested(args) {
 		c.PrintLongHelp()
 		c.onError(errHelpRequested)
@@ -439,38 +459,41 @@ func (c *Cmd) parse(args []string, entry, inFlow, outFlow *step) error {
 
 	nargsLen := c.getOptsAndArgs(args)
 
-	if err := c.fsm.parse(args[:nargsLen]); err != nil {
+	if err := c.fsm.Parse(args[:nargsLen]); err != nil {
 		fmt.Fprintf(stdErr, "Error: %s\n", err.Error())
 		c.PrintHelp()
 		c.onError(err)
 		return err
 	}
 
-	newInFlow := &step{
-		do:    c.Before,
-		error: outFlow,
-		desc:  fmt.Sprintf("%s.Before", c.name),
+	newInFlow := &flow.Step{
+		Do:     c.Before,
+		Error:  outFlow,
+		Desc:   fmt.Sprintf("%s.Before", c.name),
+		Exiter: exiter,
 	}
-	inFlow.success = newInFlow
+	inFlow.Success = newInFlow
 
-	newOutFlow := &step{
-		do:      c.After,
-		success: outFlow,
-		error:   outFlow,
-		desc:    fmt.Sprintf("%s.After", c.name),
+	newOutFlow := &flow.Step{
+		Do:      c.After,
+		Success: outFlow,
+		Error:   outFlow,
+		Desc:    fmt.Sprintf("%s.After", c.name),
+		Exiter:  exiter,
 	}
 
 	args = args[nargsLen:]
 	if len(args) == 0 {
 		if c.Action != nil {
-			newInFlow.success = &step{
-				do:      c.Action,
-				success: newOutFlow,
-				error:   newOutFlow,
-				desc:    fmt.Sprintf("%s.Action", c.name),
+			newInFlow.Success = &flow.Step{
+				Do:      c.Action,
+				Success: newOutFlow,
+				Error:   newOutFlow,
+				Desc:    fmt.Sprintf("%s.Action", c.name),
+				Exiter:  exiter,
 			}
 
-			entry.run(nil)
+			entry.Run(nil)
 			return nil
 		}
 		c.PrintHelp()
@@ -542,4 +565,19 @@ func (c *Cmd) isAlias(arg string) bool {
 		}
 	}
 	return false
+}
+
+func joinStrings(parts ...string) string {
+	res := ""
+	for _, part := range parts {
+		s := strings.TrimSpace(part)
+		if s == "" {
+			continue
+		}
+		if res != "" {
+			res += " "
+		}
+		res += part
+	}
+	return res
 }

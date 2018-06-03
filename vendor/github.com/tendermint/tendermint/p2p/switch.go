@@ -3,12 +3,9 @@ package p2p
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/p2p/conn"
@@ -29,6 +26,10 @@ const (
 	// ie. 3**10 = 16hrs
 	reconnectBackOffAttempts    = 10
 	reconnectBackOffBaseSeconds = 3
+
+	// keep at least this many outbound peers
+	// TODO: move to config
+	DefaultMinNumOutboundPeers = 10
 )
 
 //-----------------------------------------------------------------------------
@@ -62,6 +63,7 @@ type Switch struct {
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
+	reconnecting *cmn.CMap
 	nodeInfo     NodeInfo // our node info
 	nodeKey      *NodeKey // our node privkey
 	addrBook     AddrBook
@@ -69,7 +71,7 @@ type Switch struct {
 	filterConnByAddr func(net.Addr) error
 	filterConnByID   func(ID) error
 
-	rng *rand.Rand // seed for randomizing dial times and orders
+	rng *cmn.Rand // seed for randomizing dial times and orders
 }
 
 // NewSwitch creates a new Switch with the given config.
@@ -82,18 +84,17 @@ func NewSwitch(config *cfg.P2PConfig) *Switch {
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
+		reconnecting: cmn.NewCMap(),
 	}
 
-	// Ensure we have a completely undeterministic PRNG. cmd.RandInt64() draws
-	// from a seed that's initialized with OS entropy on process start.
-	sw.rng = rand.New(rand.NewSource(cmn.RandInt64()))
+	// Ensure we have a completely undeterministic PRNG.
+	sw.rng = cmn.NewRand()
 
 	// TODO: collapse the peerConfig into the config ?
 	sw.peerConfig.MConfig.FlushThrottle = time.Duration(config.FlushThrottleTimeout) * time.Millisecond
 	sw.peerConfig.MConfig.SendRate = config.SendRate
 	sw.peerConfig.MConfig.RecvRate = config.RecvRate
-	sw.peerConfig.MConfig.MaxMsgPacketPayloadSize = config.MaxMsgPacketPayloadSize
-	sw.peerConfig.AuthEnc = config.AuthEnc
+	sw.peerConfig.MConfig.MaxPacketMsgPayloadSize = config.MaxPacketMsgPayloadSize
 
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	return sw
@@ -178,7 +179,7 @@ func (sw *Switch) OnStart() error {
 	for _, reactor := range sw.reactors {
 		err := reactor.Start()
 		if err != nil {
-			return errors.Wrapf(err, "failed to start %v", reactor)
+			return cmn.ErrorWrap(err, "failed to start %v", reactor)
 		}
 	}
 	// Start listeners
@@ -213,18 +214,18 @@ func (sw *Switch) OnStop() {
 // Broadcast runs a go routine for each attempted send, which will block trying
 // to send for defaultSendTimeoutSeconds. Returns a channel which receives
 // success values for each attempted send (false if times out). Channel will be
-// closed once msg send to all peers.
+// closed once msg bytes are sent to all peers (or time out).
 //
 // NOTE: Broadcast uses goroutines, so order of broadcast may not be preserved.
-func (sw *Switch) Broadcast(chID byte, msg interface{}) chan bool {
+func (sw *Switch) Broadcast(chID byte, msgBytes []byte) chan bool {
 	successChan := make(chan bool, len(sw.peers.List()))
-	sw.Logger.Debug("Broadcast", "channel", chID, "msg", msg)
+	sw.Logger.Debug("Broadcast", "channel", chID, "msgBytes", fmt.Sprintf("%X", msgBytes))
 	var wg sync.WaitGroup
 	for _, peer := range sw.peers.List() {
 		wg.Add(1)
 		go func(peer Peer) {
 			defer wg.Done()
-			success := peer.Send(chID, msg)
+			success := peer.Send(chID, msgBytes)
 			successChan <- success
 		}(peer)
 	}
@@ -262,7 +263,8 @@ func (sw *Switch) StopPeerForError(peer Peer, reason interface{}) {
 	sw.stopAndRemovePeer(peer, reason)
 
 	if peer.IsPersistent() {
-		go sw.reconnectToPeer(peer)
+		// NOTE: this is the self-reported addr, not the original we dialed
+		go sw.reconnectToPeer(peer.NodeInfo().NetAddress())
 	}
 }
 
@@ -281,34 +283,41 @@ func (sw *Switch) stopAndRemovePeer(peer Peer, reason interface{}) {
 	}
 }
 
-// reconnectToPeer tries to reconnect to the peer, first repeatedly
+// reconnectToPeer tries to reconnect to the addr, first repeatedly
 // with a fixed interval, then with exponential backoff.
 // If no success after all that, it stops trying, and leaves it
-// to the PEX/Addrbook to find the peer again
-func (sw *Switch) reconnectToPeer(peer Peer) {
-	// NOTE this will connect to the self reported address,
-	// not necessarily the original we dialed
-	netAddr := peer.NodeInfo().NetAddress()
+// to the PEX/Addrbook to find the peer with the addr again
+// NOTE: this will keep trying even if the handshake or auth fails.
+// TODO: be more explicit with error types so we only retry on certain failures
+//  - ie. if we're getting ErrDuplicatePeer we can stop
+//  	because the addrbook got us the peer back already
+func (sw *Switch) reconnectToPeer(addr *NetAddress) {
+	if sw.reconnecting.Has(string(addr.ID)) {
+		return
+	}
+	sw.reconnecting.Set(string(addr.ID), addr)
+	defer sw.reconnecting.Delete(string(addr.ID))
+
 	start := time.Now()
-	sw.Logger.Info("Reconnecting to peer", "peer", peer)
+	sw.Logger.Info("Reconnecting to peer", "addr", addr)
 	for i := 0; i < reconnectAttempts; i++ {
 		if !sw.IsRunning() {
 			return
 		}
 
-		err := sw.DialPeerWithAddress(netAddr, true)
-		if err != nil {
-			sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "peer", peer)
-			// sleep a set amount
-			sw.randomSleep(reconnectInterval)
-			continue
-		} else {
-			return
+		err := sw.DialPeerWithAddress(addr, true)
+		if err == nil {
+			return // success
 		}
+
+		sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "addr", addr)
+		// sleep a set amount
+		sw.randomSleep(reconnectInterval)
+		continue
 	}
 
 	sw.Logger.Error("Failed to reconnect to peer. Beginning exponential backoff",
-		"peer", peer, "elapsed", time.Since(start))
+		"addr", addr, "elapsed", time.Since(start))
 	for i := 0; i < reconnectBackOffAttempts; i++ {
 		if !sw.IsRunning() {
 			return
@@ -317,13 +326,13 @@ func (sw *Switch) reconnectToPeer(peer Peer) {
 		// sleep an exponentially increasing amount
 		sleepIntervalSeconds := math.Pow(reconnectBackOffBaseSeconds, float64(i))
 		sw.randomSleep(time.Duration(sleepIntervalSeconds) * time.Second)
-		err := sw.DialPeerWithAddress(netAddr, true)
+		err := sw.DialPeerWithAddress(addr, true)
 		if err == nil {
 			return // success
 		}
-		sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "peer", peer)
+		sw.Logger.Info("Error reconnecting to peer. Trying again", "tries", i, "err", err, "addr", addr)
 	}
-	sw.Logger.Error("Failed to reconnect to peer. Giving up", "peer", peer, "elapsed", time.Since(start))
+	sw.Logger.Error("Failed to reconnect to peer. Giving up", "addr", addr, "elapsed", time.Since(start))
 }
 
 // SetAddrBook allows to set address book on Switch.
@@ -348,6 +357,8 @@ func (sw *Switch) IsDialing(id ID) bool {
 }
 
 // DialPeersAsync dials a list of peers asynchronously in random order (optionally, making them persistent).
+// Used to dial peers from config on startup or from unsafe-RPC (trusted sources).
+// TODO: remove addrBook arg since it's now set on the switch
 func (sw *Switch) DialPeersAsync(addrBook AddrBook, peers []string, persistent bool) error {
 	netAddrs, errs := NewNetAddressStrings(peers)
 	// only log errors, dial correct addresses
@@ -357,13 +368,18 @@ func (sw *Switch) DialPeersAsync(addrBook AddrBook, peers []string, persistent b
 
 	ourAddr := sw.nodeInfo.NetAddress()
 
-	// TODO: move this out of here ?
+	// TODO: this code feels like it's in the wrong place.
+	// The integration tests depend on the addrBook being saved
+	// right away but maybe we can change that. Recall that
+	// the addrBook is only written to disk every 2min
 	if addrBook != nil {
 		// add peers to `addrBook`
 		for _, netAddr := range netAddrs {
 			// do not add our address or ID
 			if !netAddr.Same(ourAddr) {
-				addrBook.AddAddress(netAddr, ourAddr)
+				if err := addrBook.AddAddress(netAddr, ourAddr); err != nil {
+					sw.Logger.Error("Can't add peer's address to addrbook", "err", err)
+				}
 			}
 		}
 		// Persist some peers to disk right away.
@@ -377,15 +393,21 @@ func (sw *Switch) DialPeersAsync(addrBook AddrBook, peers []string, persistent b
 		go func(i int) {
 			j := perm[i]
 
+			addr := netAddrs[j]
 			// do not dial ourselves
-			if netAddrs[j].Same(ourAddr) {
+			if addr.Same(ourAddr) {
 				return
 			}
 
 			sw.randomSleep(0)
-			err := sw.DialPeerWithAddress(netAddrs[j], persistent)
+			err := sw.DialPeerWithAddress(addr, persistent)
 			if err != nil {
-				sw.Logger.Error("Error dialing peer", "err", err)
+				switch err.(type) {
+				case ErrSwitchConnectToSelf, ErrSwitchDuplicatePeerID:
+					sw.Logger.Debug("Error dialing peer", "err", err)
+				default:
+					sw.Logger.Error("Error dialing peer", "err", err)
+				}
 			}
 		}(i)
 	}
@@ -446,7 +468,8 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		}
 
 		// ignore connection if we already have enough
-		maxPeers := sw.config.MaxNumPeers
+		// leave room for MinNumOutboundPeers
+		maxPeers := sw.config.MaxNumPeers - DefaultMinNumOutboundPeers
 		if maxPeers <= sw.peers.Size() {
 			sw.Logger.Info("Ignoring inbound connection: already have enough peers", "address", inConn.RemoteAddr().String(), "numPeers", sw.peers.Size(), "max", maxPeers)
 			continue
@@ -479,16 +502,19 @@ func (sw *Switch) addInboundPeerWithConfig(conn net.Conn, config *PeerConfig) er
 
 // dial the peer; make secret connection; authenticate against the dialed ID;
 // add the peer.
+// if dialing fails, start the reconnect loop. If handhsake fails, its over.
+// If peer is started succesffuly, reconnectLoop will start when StopPeerForError is called
 func (sw *Switch) addOutboundPeerWithConfig(addr *NetAddress, config *PeerConfig, persistent bool) error {
 	sw.Logger.Info("Dialing peer", "address", addr)
 	peerConn, err := newOutboundPeerConn(addr, config, persistent, sw.nodeKey.PrivKey)
 	if err != nil {
-		sw.Logger.Error("Failed to dial peer", "address", addr, "err", err)
+		if persistent {
+			go sw.reconnectToPeer(addr)
+		}
 		return err
 	}
 
 	if err := sw.addPeer(peerConn); err != nil {
-		sw.Logger.Error("Failed to add peer", "address", addr, "err", err)
 		peerConn.CloseConn()
 		return err
 	}
@@ -507,26 +533,23 @@ func (sw *Switch) addPeer(pc peerConn) error {
 		return err
 	}
 
-	// NOTE: if AuthEnc==false, we don't have a peerID until after the handshake.
-	// If AuthEnc==true then we already know the ID and could do the checks first before the handshake,
-	// but it's simple to just deal with both cases the same after the handshake.
-
 	// Exchange NodeInfo on the conn
 	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout*time.Second))
 	if err != nil {
 		return err
 	}
 
-	peerID := peerNodeInfo.ID()
+	peerID := peerNodeInfo.ID
 
 	// ensure connection key matches self reported key
-	if pc.config.AuthEnc {
-		connID := pc.ID()
+	connID := pc.ID()
 
-		if peerID != connID {
-			return fmt.Errorf("nodeInfo.ID() (%v) doesn't match conn.ID() (%v)",
-				peerID, connID)
-		}
+	if peerID != connID {
+		return fmt.Errorf(
+			"nodeInfo.ID() (%v) doesn't match conn.ID() (%v)",
+			peerID,
+			connID,
+		)
 	}
 
 	// Validate the peers nodeInfo
@@ -537,20 +560,23 @@ func (sw *Switch) addPeer(pc peerConn) error {
 	// Avoid self
 	if sw.nodeKey.ID() == peerID {
 		addr := peerNodeInfo.NetAddress()
-
-		// remove the given address from the address book if we're added it earlier
+		// remove the given address from the address book
+		// and add to our addresses to avoid dialing again
 		sw.addrBook.RemoveAddress(addr)
-
-		// add the given address to the address book to avoid dialing ourselves
-		// again this is our public address
 		sw.addrBook.AddOurAddress(addr)
-
-		return ErrSwitchConnectToSelf
+		return ErrSwitchConnectToSelf{addr}
 	}
 
 	// Avoid duplicate
 	if sw.peers.Has(peerID) {
-		return ErrSwitchDuplicatePeer
+		return ErrSwitchDuplicatePeerID{peerID}
+	}
+
+	// Check for duplicate connection or peer info IP.
+	if !sw.config.AllowDuplicateIP &&
+		(sw.peers.HasIP(pc.RemoteIP()) ||
+			sw.peers.HasIP(peerNodeInfo.NetAddress().IP)) {
+		return ErrSwitchDuplicatePeerIP{pc.RemoteIP()}
 	}
 
 	// Filter peer against ID white list

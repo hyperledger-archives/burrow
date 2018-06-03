@@ -182,50 +182,74 @@ type ResultSignTx struct {
 	Tx txs.Wrapper
 }
 
+type ResultEventDataNewBlock struct {
+	tm_types.EventDataNewBlock `json:"unwrap"`
+}
+
+type ResultTendermintEvent struct {
+	EventDataNewBlock          *ResultEventDataNewBlock              `json:",omitempty"`
+	EventDataNewBlockHeader    *tm_types.EventDataNewBlockHeader    `json:",omitempty"`
+	EventDataTx                *tm_types.EventDataTx                `json:",omitempty"`
+	EventDataRoundState        *tm_types.EventDataRoundState        `json:",omitempty"`
+	EventDataVote              *tm_types.EventDataVote              `json:",omitempty"`
+	EventDataProposalHeartbeat *tm_types.EventDataProposalHeartbeat `json:",omitempty"`
+	EventDataString            *tm_types.EventDataString            `json:",omitempty"`
+}
+
+func (nb ResultEventDataNewBlock) MarshalJSON() ([]byte, error) {
+	return cdc.MarshalJSON(nb.EventDataNewBlock)
+}
+
+func (nb *ResultEventDataNewBlock) UnmarshalJSON(data []byte) (err error) {
+	return cdc.UnmarshalJSON(data, &nb.EventDataNewBlock)
+}
+
 type ResultEvent struct {
-	Event         string
-	TMEventData   *tm_types.TMEventData     `json:",omitempty"`
+	Event string
+	//TMEventData   tm_types.TMEventData      `json:",omitempty"`
+	Tendermint    *ResultTendermintEvent    `json:",omitempty"`
 	EventDataTx   *exe_events.EventDataTx   `json:",omitempty"`
 	EventDataCall *evm_events.EventDataCall `json:",omitempty"`
 	EventDataLog  *evm_events.EventDataLog  `json:",omitempty"`
 }
 
-func (resultEvent ResultEvent) EventDataNewBlock() *tm_types.EventDataNewBlock {
-	if resultEvent.TMEventData != nil {
-		eventData, _ := resultEvent.TMEventData.Unwrap().(tm_types.EventDataNewBlock)
-		return &eventData
-	}
-	return nil
-}
-
 // Map any supported event data element to our ResultEvent sum type
 func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
+	res := &ResultEvent{
+		Event: event,
+	}
 	switch ed := eventData.(type) {
 	case tm_types.TMEventData:
-		return &ResultEvent{
-			Event:       event,
-			TMEventData: &ed,
-		}, nil
-
+		//res.TMEventData = ed
+		res.Tendermint = &ResultTendermintEvent{}
+		switch ted := ed.(type) {
+		case tm_types.EventDataNewBlock:
+			res.Tendermint.EventDataNewBlock = &ResultEventDataNewBlock{ted}
+		case tm_types.EventDataNewBlockHeader:
+			res.Tendermint.EventDataNewBlockHeader = &ted
+		case tm_types.EventDataTx:
+			res.Tendermint.EventDataTx = &ted
+		case tm_types.EventDataRoundState:
+			res.Tendermint.EventDataRoundState = &ted
+		case tm_types.EventDataVote:
+			res.Tendermint.EventDataVote = &ted
+		case tm_types.EventDataProposalHeartbeat:
+			res.Tendermint.EventDataProposalHeartbeat = &ted
+		case tm_types.EventDataString:
+			res.Tendermint.EventDataString = &ted
+		default:
+			return nil, fmt.Errorf("unsupported Tendermint event: %#v", ted)
+		}
 	case *exe_events.EventDataTx:
-		return &ResultEvent{
-			Event:       event,
-			EventDataTx: ed,
-		}, nil
+		res.EventDataTx = ed
 
 	case *evm_events.EventDataCall:
-		return &ResultEvent{
-			Event:         event,
-			EventDataCall: ed,
-		}, nil
+		res.EventDataCall = ed
 
 	case *evm_events.EventDataLog:
-		return &ResultEvent{
-			Event:        event,
-			EventDataLog: ed,
-		}, nil
-
+		res.EventDataLog = ed
 	default:
 		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
 	}
+	return res, nil
 }

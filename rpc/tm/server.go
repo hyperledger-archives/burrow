@@ -32,10 +32,10 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, emitter ev
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
 	routes := GetRoutes(service, logger)
 	mux := http.NewServeMux()
-	wm := rpcserver.NewWebsocketManager(routes, rpcserver.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
+	wm := rpcserver.NewWebsocketManager(routes, AminoCodec, rpcserver.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
 	mux.HandleFunc(pattern, wm.WebsocketHandler)
 	tmLogger := tendermint.NewLogger(logger)
-	rpcserver.RegisterRPCFuncs(mux, routes, tmLogger)
+	rpcserver.RegisterRPCFuncs(mux, routes, AminoCodec, tmLogger)
 	listener, err := rpcserver.StartHTTPServer(listenAddress, mux, tmLogger)
 	if err != nil {
 		return nil, err

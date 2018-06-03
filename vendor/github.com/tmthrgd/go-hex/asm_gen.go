@@ -173,7 +173,7 @@ func encodeASM(a *asm.Asm) {
 	a.Cmpq(asm.Constant(16), e.cx)
 	a.Jb(tail)
 
-	a.Cmpb(asm.Constant(1), asm.Data("runtime·support_avx"))
+	a.Cmpb(asm.Constant(1), asm.Data("·support_avx"))
 	a.Jne(bigloop_sse)
 
 	e.BigLoop(bigloop_avx, a.Vpand, a.Vpunpckhbw, a.Vpshufb)
@@ -242,7 +242,8 @@ func encodeASM(a *asm.Asm) {
 
 	for i := 7; i >= 5; i-- {
 		a.Label(tailOut[i])
-		a.Pextrw(asm.Address(e.di, (i-1)*2), asm.X1, asm.Constant(i-1))
+		a.Pextrb(asm.Address(e.di, (i-1)*2+1), asm.X1, asm.Constant((i-1)*2+1))
+		a.Pextrb(asm.Address(e.di, (i-1)*2+0), asm.X1, asm.Constant((i-1)*2+0))
 	}
 
 	a.Label(tailOut[4])
@@ -251,7 +252,8 @@ func encodeASM(a *asm.Asm) {
 
 	for i := 3; i >= 1; i-- {
 		a.Label(tailOut[i])
-		a.Pextrw(asm.Address(e.di, (i-1)*2), asm.X1, asm.Constant(i-1))
+		a.Pextrb(asm.Address(e.di, (i-1)*2+1), asm.X1, asm.Constant((i-1)*2+1))
+		a.Pextrb(asm.Address(e.di, (i-1)*2+0), asm.X1, asm.Constant((i-1)*2+0))
 	}
 
 	a.Label(ret)
@@ -432,7 +434,7 @@ func decodeASM(a *asm.Asm) {
 	a.Cmpq(asm.Constant(16), d.cx)
 	a.Jb(tail)
 
-	a.Cmpb(asm.Constant(1), asm.Data("runtime·support_avx"))
+	a.Cmpb(asm.Constant(1), asm.Data("·support_avx"))
 	a.Jne(bigloop_sse)
 
 	d.BigLoop(bigloop_avx, a.Vpxor, a.Vpcmpgtb, a.Vpshufb)

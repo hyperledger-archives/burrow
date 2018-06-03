@@ -45,7 +45,9 @@ const (
 )
 
 // Enable logger output during tests
+//var debugLogging = true
 var debugLogging = false
+
 
 // We use this to wrap tests
 func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.GenesisDoc, runner func(*core.Kernel) int) int {

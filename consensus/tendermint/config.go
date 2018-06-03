@@ -37,7 +37,6 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
-		conf.P2P.AuthEnc = false
 		conf.Moniker = btc.Moniker
 	}
 	// Disable Tendermint RPC

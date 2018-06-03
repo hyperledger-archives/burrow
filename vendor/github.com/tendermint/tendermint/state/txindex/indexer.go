@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/pubsub/query"
+	"github.com/tendermint/tendermint/libs/pubsub/query"
 )
 
 // TxIndexer interface defines methods to index and search transactions.
@@ -34,7 +34,7 @@ type Batch struct {
 }
 
 // NewBatch creates a new Batch.
-func NewBatch(n int) *Batch {
+func NewBatch(n int64) *Batch {
 	return &Batch{
 		Ops: make([]*types.TxResult, n),
 	}

@@ -662,7 +662,7 @@ func Do(file, header string, run func(*Asm)) error {
 	return a.Flush()
 }
 
-//go:generate go run ./opcode_gen.go -i $GOROOT/src/cmd/internal/obj/x86/a.out.go -o opcode.go -p asm
+//go:generate go run ./opcode_gen.go -i $GOROOT/src/cmd/internal/obj/x86/aenum.go -o opcode.go -p asm
 //go:generate gofmt -w opcode.go
 
 // general opcodes
@@ -693,36 +693,14 @@ func (o Opcodes) JC(ops ...Operand)  { o.a.op("JC", ops...) }
 
 // faulty/incomplete opcodes
 
+// TODO: remove when go1.11 lands (see https://github.com/golang/go/commit/b80b4a23d1)
 func (o Opcodes) Pextrw(ops ...Operand) { o.a.unsupOp("PEXTRW", ops...) }
 func (o Opcodes) PEXTRW(ops ...Operand) { o.a.unsupOp("PEXTRW", ops...) }
 
 // unsupported opcodes
 
-func (o Opcodes) Ptest(ops ...Operand)       { o.a.unsupOp("PTEST", ops...) }
-func (o Opcodes) PTEST(ops ...Operand)       { o.a.unsupOp("PTEST", ops...) }
-func (o Opcodes) Vpunpckhbw(ops ...Operand)  { o.a.unsupOp("VPUNPCKHBW", ops...) }
-func (o Opcodes) VPUNPCKHBW(ops ...Operand)  { o.a.unsupOp("VPUNPCKHBW", ops...) }
-func (o Opcodes) Vpunpcklqdq(ops ...Operand) { o.a.unsupOp("VPUNPCKLQDQ", ops...) }
-func (o Opcodes) VPUNPCKLQDQ(ops ...Operand) { o.a.unsupOp("VPUNPCKLQDQ", ops...) }
-func (o Opcodes) Vpunpckhqdq(ops ...Operand) { o.a.unsupOp("VPUNPCKHQDQ", ops...) }
-func (o Opcodes) VPUNPCKHQDQ(ops ...Operand) { o.a.unsupOp("VPUNPCKHQDQ", ops...) }
-func (o Opcodes) Vpcmpgtb(ops ...Operand)    { o.a.unsupOp("VPCMPGTB", ops...) }
-func (o Opcodes) VPCMPGTB(ops ...Operand)    { o.a.unsupOp("VPCMPGTB", ops...) }
-func (o Opcodes) Vpcmpeqq(ops ...Operand)    { o.a.unsupOp("VPCMPEQQ", ops...) }
-func (o Opcodes) VPCMPEQQ(ops ...Operand)    { o.a.unsupOp("VPCMPEQQ", ops...) }
-func (o Opcodes) Pblendvb(ops ...Operand)    { o.a.unsupOp("PBLENDVB", ops...) }
-func (o Opcodes) PBLENDVB(ops ...Operand)    { o.a.unsupOp("PBLENDVB", ops...) }
-func (o Opcodes) Vinsertf128(ops ...Operand) { o.a.unsupOp("VINSERTF128", ops...) }
-func (o Opcodes) VINSERTF128(ops ...Operand) { o.a.unsupOp("VINSERTF128", ops...) }
-func (o Opcodes) Vpblendvb(ops ...Operand)   { o.a.unsupOp("VPBLENDVB", ops...) }
-func (o Opcodes) VPBLENDVB(ops ...Operand)   { o.a.unsupOp("VPBLENDVB", ops...) }
-func (o Opcodes) Vpsrad(ops ...Operand)      { o.a.unsupOp("VPSRAD", ops...) }
-func (o Opcodes) VPSRAD(ops ...Operand)      { o.a.unsupOp("VPSRAD", ops...) }
-func (o Opcodes) Pmaddubsw(ops ...Operand)   { o.a.unsupOp("PMADDUBSW", ops...) }
-func (o Opcodes) PMADDUBSW(ops ...Operand)   { o.a.unsupOp("PMADDUBSW", ops...) }
-func (o Opcodes) Vpsubb(ops ...Operand)      { o.a.unsupOp("VPSUBB", ops...) }
-func (o Opcodes) VPSUBB(ops ...Operand)      { o.a.unsupOp("VPSUBB", ops...) }
-func (o Opcodes) Pcmpeqq(ops ...Operand)     { o.a.unsupOp("PCMPEQQ", ops...) }
-func (o Opcodes) PCMPEQQ(ops ...Operand)     { o.a.unsupOp("PCMPEQQ", ops...) }
-func (o Opcodes) Cmpxchg16b(ops ...Operand)  { o.a.unsupOp("CMPXCHG16B", ops...) }
-func (o Opcodes) CMPXCHG16B(ops ...Operand)  { o.a.unsupOp("CMPXCHG16B", ops...) }
+// TODO: remove when go1.11 lands (see https://github.com/golang/go/commit/b80b4a23d1)
+func (o Opcodes) Pblendvb(ops ...Operand)   { o.a.unsupOp("PBLENDVB", ops...) }
+func (o Opcodes) PBLENDVB(ops ...Operand)   { o.a.unsupOp("PBLENDVB", ops...) }
+func (o Opcodes) Cmpxchg16b(ops ...Operand) { o.a.unsupOp("CMPXCHG16B", ops...) }
+func (o Opcodes) CMPXCHG16B(ops ...Operand) { o.a.unsupOp("CMPXCHG16B", ops...) }

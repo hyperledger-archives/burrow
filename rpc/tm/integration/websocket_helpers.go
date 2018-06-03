@@ -109,12 +109,15 @@ func broadcastTxAndWait(t *testing.T, client tm_client.RPCClient, tx txs.Tx) (*t
 	var rec *txs.Receipt
 	var err error
 
-	subscribeAndWaitForNext(t, wsc, events.EventStringAccountInput(address),
+	err = subscribeAndWaitForNext(t, wsc, events.EventStringAccountInput(address),
 		func() {
 			rec, err = tm_client.BroadcastTx(client, tx)
 		}, func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 			return true, nil
 		})
+	if err != nil {
+		return nil, err
+	}
 	return rec, err
 }
 
@@ -137,23 +140,23 @@ func nextBlockPredicateFn() blockPredicate {
 
 func waitNBlocks(t *testing.T, wsc *rpcclient.WSClient, n int) {
 	i := 0
-	runThenWaitForBlock(t, wsc,
+	require.NoError(t, runThenWaitForBlock(t, wsc,
 		func(block *tm_types.Block) bool {
 			i++
 			return i >= n
 		},
-		func() {})
+		func() {}))
 }
 
-func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient, predicate blockPredicate, runner func()) {
+func runThenWaitForBlock(t *testing.T, wsc *rpcclient.WSClient, predicate blockPredicate, runner func()) error {
 	eventDataChecker := func(event string, eventData *rpc.ResultEvent) (bool, error) {
-		eventDataNewBlock := eventData.EventDataNewBlock()
+		eventDataNewBlock := eventData.Tendermint.EventDataNewBlock
 		if eventDataNewBlock == nil {
 			return false, fmt.Errorf("could not convert %#v to EventDataNewBlock", eventData)
 		}
 		return predicate(eventDataNewBlock.Block), nil
 	}
-	subscribeAndWaitForNext(t, wsc, tm_types.EventNewBlock, runner, eventDataChecker)
+	return subscribeAndWaitForNext(t, wsc, tm_types.EventNewBlock, runner, eventDataChecker)
 }
 
 func subscribeAndWaitForNext(t *testing.T, wsc *rpcclient.WSClient, event string, runner func(),
@@ -236,6 +239,8 @@ func readResponse(r rpctypes.RPCResponse) (*rpc.ResultEvent, error) {
 		return nil, r.Error
 	}
 	resultEvent := new(rpc.ResultEvent)
+	//fmt.Println(string(r.Result))
+	//err := tm.AminoCodec.UnmarshalJSON(r.Result, resultEvent)
 	err := json.Unmarshal(r.Result, resultEvent)
 	if err != nil {
 		return nil, err

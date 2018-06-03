@@ -27,7 +27,7 @@ func NewNodeView(tmNode *tendermint.Node, txDecoder txs.Decoder) *NodeView {
 }
 
 func (nv *NodeView) PrivValidatorPublicKey() (crypto.PublicKey, error) {
-	pub := nv.tmNode.PrivValidator().GetPubKey().Unwrap().(tm_crypto.PubKeyEd25519)
+	pub := nv.tmNode.PrivValidator().GetPubKey().(tm_crypto.PubKeyEd25519)
 
 	return crypto.PublicKeyFromBytes(pub[:], crypto.CurveTypeEd25519)
 }

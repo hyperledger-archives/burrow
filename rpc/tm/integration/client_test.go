@@ -342,7 +342,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 			}
 		}()
 
-		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
+		require.NoError(t, runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
 			broadcastTx(t, client, tx)
 			select {
 			case <-time.After(time.Second * timeoutSeconds * 10):
@@ -352,7 +352,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 					"mempool during this test (previous txs should have made it into a block)")
 				assert.Contains(t, transactions, tx, "Transaction should be returned by ListUnconfirmedTxs")
 			}
-		})
+		}))
 	})
 }
 
