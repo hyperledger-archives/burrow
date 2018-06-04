@@ -8,9 +8,11 @@
 
 burrow_bin=${burrow_bin:-burrow}
 
+keys_dir=./keys/test_scratch/.keys
+
 echo "-----------------------------"
 echo "starting the server"
-$burrow_bin keys server &
+$burrow_bin keys server --dir $keys_dir &
 keys_pid=$!
 sleep 1
 echo "-----------------------------"
@@ -88,7 +90,7 @@ do
 	echo "... $CURVETYPE"
 	# create a key, get its address and priv, backup the json, delete the key
 	ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE --no-password`
-	DIR=.keys/data
+	DIR=$keys_dir/data
 	FILE=$DIR/$ADDR.json
 	PRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
 	HEXPRIV=`echo -n "$PRIV" | base64 -d | xxd -p -u -c 256`

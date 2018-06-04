@@ -11,9 +11,11 @@ import (
 	"io/ioutil"
 
 	"github.com/howeyc/gopass"
+	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/pbkeys"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
 )
@@ -45,10 +47,34 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		}
 
 		cmd.Command("server", "run keys server", func(cmd *cli.Cmd) {
-			keysDir := cmd.StringOpt("dir", keys.DefaultKeysDir, "specify the location of the directory containing key files")
+			keysDir := cmd.StringOpt("dir", "", "specify the location of the directory containing key files")
+			badPerm := cmd.BoolOpt("allow-bad-perm", false, "Allow unix key file permissions to be readable other than user")
+			configOpt := cmd.StringOpt("c config", "", "Use the a specified burrow config file")
+
+			var conf *config.BurrowConfig
+
+			cmd.Before = func() {
+				var err error
+				conf, err = obtainBurrowConfig(*configOpt, "")
+				if err != nil {
+					output.Fatalf("Could not obtain config: %v", err)
+				}
+			}
 
 			cmd.Action = func() {
-				err := keys.StartStandAloneServer(*keysDir, *keysHost, *keysPort)
+				logger, err := lifecycle.NewLoggerFromLoggingConfig(conf.Logging)
+				if err != nil {
+					output.Fatalf("could not generate logger from logging config: %v", err)
+				}
+
+				if badPerm != nil {
+					conf.Keys.AllowBadFilePermissions = *badPerm
+				}
+				if keysDir != nil {
+					conf.Keys.KeysDirectory = *keysDir
+				}
+
+				err = keys.StartStandAloneServer(conf.Keys.KeysDirectory, *keysHost, *keysPort, conf.Keys.AllowBadFilePermissions, logger)
 				if err != nil {
 					output.Fatalf("Failed to start server: %v", err)
 				}

@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tmthrgd/go-hex"
 
 	"golang.org/x/crypto/scrypt"
@@ -99,9 +101,19 @@ func IsValidKeyJson(j []byte) []byte {
 	return nil
 }
 
+func NewKeyStore(dir string, AllowBadFilePermissions bool, logger *logging.Logger) KeyStore {
+	return KeyStore{
+		keysDirPath:             dir,
+		AllowBadFilePermissions: AllowBadFilePermissions,
+		logger:                  logger.With(structure.ComponentKey, "keys").WithScope("NewKeyStore"),
+	}
+}
+
 type KeyStore struct {
 	sync.Mutex
-	keysDirPath string
+	AllowBadFilePermissions bool
+	keysDirPath             string
+	logger                  *logging.Logger
 }
 
 func (ks KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key, err error) {
@@ -125,7 +137,7 @@ func (ks KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileContent, err := GetKeyFile(dataDirPath, keyAddr)
+	fileContent, err := ks.GetKeyFile(dataDirPath, keyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -303,9 +315,19 @@ func (ks KeyStore) DeleteKey(passphrase string, keyAddr []byte) (err error) {
 	return os.Remove(keyDirPath)
 }
 
-func GetKeyFile(dataDirPath string, keyAddr []byte) (fileContent []byte, err error) {
-	fileName := strings.ToUpper(hex.EncodeToString(keyAddr))
-	return ioutil.ReadFile(path.Join(dataDirPath, fileName+".json"))
+func (ks *KeyStore) GetKeyFile(dataDirPath string, keyAddr []byte) (fileContent []byte, err error) {
+	filename := path.Join(dataDirPath, strings.ToUpper(hex.EncodeToString(keyAddr))+".json")
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		return nil, err
+	}
+	if (uint32(fileInfo.Mode()) & 0077) != 0 {
+		ks.logger.InfoMsg("file should be accessible by user only", filename)
+		if !ks.AllowBadFilePermissions {
+			return nil, fmt.Errorf("file %s should be accessible by user only", filename)
+		}
+	}
+	return ioutil.ReadFile(filename)
 }
 
 func WriteKeyFile(addr []byte, dataDirPath string, content []byte) (err error) {

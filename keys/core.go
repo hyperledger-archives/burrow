@@ -38,12 +38,6 @@ func returnNamesDir(dir string) (string, error) {
 	return dir, checkMakeDataDir(dir)
 }
 
-//-----
-
-func NewKeyStore(dir string) KeyStore {
-	return KeyStore{keysDirPath: dir}
-}
-
 //----------------------------------------------------------------
 func writeKey(keyDir string, addr, keyJson []byte) ([]byte, error) {
 	dir, err := returnDataDir(keyDir)

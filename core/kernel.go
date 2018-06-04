@@ -219,7 +219,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
-						ks = keys.NewKeyStore(keyConfig.KeysDirectory)
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, logger)
 					}
 					pbkeys.RegisterKeysServer(grpcServer, &ks)
 				}

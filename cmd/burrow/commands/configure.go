@@ -94,7 +94,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
 				}
-				keyStore := keys.NewKeyStore(conf.Keys.KeysDirectory)
+				keyStore := keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions, logging.NewNoopLogger())
 				if *generateKeysOpt != "" {
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
