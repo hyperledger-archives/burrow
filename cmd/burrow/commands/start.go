@@ -3,10 +3,7 @@ package commands
 import (
 	"context"
 
-	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
-	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/jawher/mow.cli"
 )
 
@@ -47,24 +44,7 @@ func Start(output Output) func(cmd *cli.Cmd) {
 			"[--genesis=<genesis json file>]"
 
 		cmd.Action = func() {
-
-			// We need to reflect on whether this obscures where values are coming from
-			conf := config.DefaultBurrowConfig()
-			// We treat logging a little differently in that if anything is set for logging we will not
-			// set default outputs
-			conf.Logging = nil
-			err := source.EachOf(
-				burrowConfigProvider(*configOpt),
-				source.FirstOf(
-					genesisDocProvider(*genesisOpt, false),
-					// Try working directory
-					genesisDocProvider(config.DefaultGenesisDocJSONFileName, true)),
-			).Apply(conf)
-
-			// If no logging config was provided use the default
-			if conf.Logging == nil {
-				conf.Logging = logging_config.DefaultNodeLoggingConfig()
-			}
+			conf, err := obtainBurrowConfig(*configOpt, *genesisOpt)
 			if err != nil {
 				output.Fatalf("could not obtain config: %v", err)
 			}

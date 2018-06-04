@@ -39,6 +39,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("keys", "A tool for doing a bunch of cool stuff with keys",
 		commands.Keys(output))
 
+	app.Command("dump", "Dump objects from an offline Burrow .burrow directory",
+		commands.Dump(output))
+
 	return app
 }
 
