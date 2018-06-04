@@ -173,10 +173,10 @@ func (app *App) Commit() abci_types.ResponseCommit {
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
-		"block_height", app.block.Header.Height,
-		"block_hash", app.block.Hash,
-		"block_time", app.block.Header.Time,
-		"num_txs", app.block.Header.NumTxs,
+		"height", app.block.Header.Height,
+		"hash", app.block.Hash,
+		"txs", app.block.Header.NumTxs,
+		"block_time", app.block.Header.Time, // [CSK] this sends a fairly non-sensical number; should be human readable
 		"last_block_time", tip.LastBlockTime(),
 		"last_block_hash", tip.LastBlockHash())
 
