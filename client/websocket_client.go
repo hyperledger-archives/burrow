@@ -22,14 +22,14 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger/burrow/crypto"
-	exe_events "github.com/hyperledger/burrow/execution/events"
+	exeEvents "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
-	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
+	"github.com/hyperledger/burrow/rpc/tm/client"
+	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/tendermint/rpc/lib/client"
-	tm_types "github.com/tendermint/tendermint/types"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const (
@@ -38,7 +38,7 @@ const (
 
 type Confirmation struct {
 	BlockHash   []byte
-	EventDataTx *exe_events.EventDataTx
+	EventDataTx *exeEvents.EventDataTx
 	Exception   error
 	Error       error
 }
@@ -49,20 +49,20 @@ var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
 
 type burrowNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
-	tendermintWebsocket *rpcclient.WSClient
+	tendermintWebsocket *rpcClient.WSClient
 	logger              *logging.Logger
 }
 
 // Subscribe to an eventid
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Subscribe(eventId string) error {
 	// TODO we can in the background listen to the subscription id and remember it to ease unsubscribing later.
-	return tm_client.Subscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+	return client.Subscribe(burrowNodeWebsocketClient.tendermintWebsocket,
 		eventId)
 }
 
 // Unsubscribe from an eventid
 func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
-	return tm_client.Unsubscribe(burrowNodeWebsocketClient.tendermintWebsocket,
+	return client.Unsubscribe(burrowNodeWebsocketClient.tendermintWebsocket,
 		subscriptionId)
 }
 
@@ -75,11 +75,11 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	confirmationChannel := make(chan Confirmation, 1)
 	var latestBlockHash []byte
 
-	eventID := exe_events.EventStringAccountInput(inputAddr)
+	eventID := exeEvents.EventStringAccountInput(inputAddr)
 	if err := burrowNodeWebsocketClient.Subscribe(eventID); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eventID, err)
 	}
-	if err := burrowNodeWebsocketClient.Subscribe(tm_types.EventNewBlock); err != nil {
+	if err := burrowNodeWebsocketClient.Subscribe(tmTypes.EventNewBlock); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
@@ -112,7 +112,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				}
 
 				switch response.ID {
-				case tm_client.SubscribeRequestID:
+				case client.SubscribeRequestID:
 					resultSubscribe := new(rpc.ResultSubscribe)
 					err = json.Unmarshal(response.Result, resultSubscribe)
 					if err != nil {
@@ -125,7 +125,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						"event", resultSubscribe.EventID,
 						"subscription_id", resultSubscribe.SubscriptionID)
 
-				case tm_client.EventResponseID(tm_types.EventNewBlock):
+				case client.EventResponseID(tmTypes.EventNewBlock):
 					resultEvent := new(rpc.ResultEvent)
 					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
@@ -133,7 +133,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 							structure.ErrorKey, err)
 						continue
 					}
-					blockData := resultEvent.Tendermint.EventDataNewBlock
+					blockData := resultEvent.Tendermint.EventDataNewBlock()
 					if blockData != nil {
 						latestBlockHash = blockData.Block.Hash()
 						burrowNodeWebsocketClient.logger.TraceMsg("Registered new block",
@@ -142,7 +142,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						)
 					}
 
-				case tm_client.EventResponseID(eventID):
+				case client.EventResponseID(eventID):
 					resultEvent := new(rpc.ResultEvent)
 					err = json.Unmarshal(response.Result, resultEvent)
 					if err != nil {
@@ -192,7 +192,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				default:
 					burrowNodeWebsocketClient.logger.InfoMsg("Received unsolicited response",
 						"response_id", response.ID,
-						"expected_response_id", tm_client.EventResponseID(eventID))
+						"expected_response_id", client.EventResponseID(eventID))
 				}
 			}
 		}

@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	goCrypto "github.com/tendermint/go-crypto"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
@@ -25,7 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/go-wire"
-	tm_types "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/consensus/types"
+	tmTypes "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tmlibs/common"
 )
 
 func TestResultBroadcastTx(t *testing.T) {
@@ -96,27 +100,73 @@ func TestResultCall_MarshalJSON(t *testing.T) {
 }
 
 func TestResultEvent(t *testing.T) {
-	eventDataNewBlock := tm_types.EventDataNewBlock{
-		Block: &tm_types.Block{
-			Header: &tm_types.Header{
+	eventDataNewBlock := tmTypes.EventDataNewBlock{
+		Block: &tmTypes.Block{
+			Header: &tmTypes.Header{
 				ChainID: "chainy",
 				NumTxs:  30,
+			},
+			LastCommit: &tmTypes.Commit{
+				Precommits: []*tmTypes.Vote{
+					{
+						Signature: goCrypto.SignatureEd25519{1, 2, 3},
+					},
+				},
 			},
 		},
 	}
 	res := ResultEvent{
-		Tendermint: &ResultTendermintEvent{
-			EventDataNewBlock: &eventDataNewBlock,
+		Tendermint: &TendermintEvent{
+			TMEventData: &eventDataNewBlock,
 		},
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
 
 	resOut := new(ResultEvent)
-	json.Unmarshal(bs, resOut)
+	require.NoError(t, json.Unmarshal(bs, resOut))
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
 	//fmt.Println(string(bs))
 	//fmt.Println(string(bsOut))
+}
+
+func TestResultGetBlock(t *testing.T) {
+	res := &ResultGetBlock{
+		Block: &Block{&tmTypes.Block{
+			LastCommit: &tmTypes.Commit{
+				Precommits: []*tmTypes.Vote{
+					{
+						Signature: goCrypto.SignatureEd25519{1, 2, 3},
+					},
+				},
+			},
+		},
+		},
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	resOut := new(ResultGetBlock)
+	require.NoError(t, json.Unmarshal([]byte(bs), resOut))
+	bsOut, err := json.Marshal(resOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
+}
+
+func TestResultDumpConsensusState(t *testing.T) {
+	res := &ResultDumpConsensusState{
+		RoundState: types.RoundStateSimple{
+			HeightRoundStep: "34/0/3",
+			Votes:           json.RawMessage(`[{"i'm a json": "32"}]`),
+			LockedBlockHash: common.HexBytes{'b', 'y', 't', 'e', 's'},
+		},
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	resOut := new(ResultDumpConsensusState)
+	require.NoError(t, json.Unmarshal([]byte(bs), resOut))
+	bsOut, err := json.Marshal(resOut)
+	require.NoError(t, err)
+	assert.Equal(t, string(bs), string(bsOut))
 }

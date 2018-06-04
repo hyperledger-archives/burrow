@@ -18,11 +18,11 @@ import (
 	"context"
 
 	"github.com/hyperledger/burrow/rpc/tm"
-	"github.com/tendermint/tendermint/rpc/lib/types"
+	"github.com/hyperledger/burrow/rpc/tm/lib/types"
 )
 
 type WebsocketClient interface {
-	Send(ctx context.Context, request rpctypes.RPCRequest) error
+	Send(ctx context.Context, request types.RPCRequest) error
 }
 
 const SubscribeRequestID = "Subscribe"
@@ -33,7 +33,7 @@ func EventResponseID(eventID string) string {
 }
 
 func Subscribe(wsc WebsocketClient, eventID string) error {
-	req, err := rpctypes.MapToRequest(tm.AminoCodec, SubscribeRequestID,
+	req, err := types.MapToRequest(SubscribeRequestID,
 		"subscribe", map[string]interface{}{"eventID": eventID})
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func Subscribe(wsc WebsocketClient, eventID string) error {
 }
 
 func Unsubscribe(websocketClient WebsocketClient, subscriptionID string) error {
-	req, err := rpctypes.MapToRequest(tm.AminoCodec, UnsubscribeRequestID,
+	req, err := types.MapToRequest(UnsubscribeRequestID,
 		"unsubscribe", map[string]interface{}{"subscriptionID": subscriptionID})
 	if err != nil {
 		return err

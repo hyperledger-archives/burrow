@@ -41,46 +41,6 @@ func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Lo
 	return listener, nil
 }
 
-func StartHTTPAndTLSServer(listenAddr string, handler http.Handler, certFile, keyFile string,
-	logger *logging.Logger) (listener net.Listener, err error) {
-
-	var proto, addr string
-	parts := strings.SplitN(listenAddr, "://", 2)
-	if len(parts) != 2 {
-		return nil, errors.Errorf("Invalid listening address %s (use fully formed addresses, including the tcp:// or unix:// prefix)", listenAddr)
-	}
-	proto, addr = parts[0], parts[1]
-
-	logger.InfoMsg("Starting RPC HTTPS server", "listen_address", listenAddr, "cert_file", certFile,
-		"key_file", keyFile)
-	listener, err = net.Listen(proto, addr)
-	if err != nil {
-		return nil, errors.Errorf("Failed to listen on %v: %v", listenAddr, err)
-	}
-
-	go func() {
-		err := http.ServeTLS(
-			listener,
-			RecoverAndLogHandler(handler, logger),
-			certFile,
-			keyFile,
-		)
-		logger.TraceMsg("RPC HTTPS server stopped", structure.ErrorKey, err)
-	}()
-	return listener, nil
-}
-
-func WriteRPCResponseHTTPError(w http.ResponseWriter, httpCode int, res types.RPCResponse) {
-	jsonBytes, err := json.MarshalIndent(res, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpCode)
-	w.Write(jsonBytes) // nolint: errcheck, gas
-}
-
 func WriteRPCResponseHTTP(w http.ResponseWriter, res types.RPCResponse) {
 	jsonBytes, err := json.MarshalIndent(res, "", "  ")
 	if err != nil {

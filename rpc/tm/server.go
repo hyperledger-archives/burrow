@@ -23,7 +23,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/tendermint/tendermint/rpc/lib/server"
+	"github.com/hyperledger/burrow/rpc/tm/lib/server"
 )
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, emitter event.Emitter,
@@ -32,11 +32,10 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, emitter ev
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
 	routes := GetRoutes(service, logger)
 	mux := http.NewServeMux()
-	wm := rpcserver.NewWebsocketManager(routes, AminoCodec, rpcserver.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
+	wm := server.NewWebsocketManager(routes, logger, server.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
 	mux.HandleFunc(pattern, wm.WebsocketHandler)
-	tmLogger := tendermint.NewLogger(logger)
-	rpcserver.RegisterRPCFuncs(mux, routes, AminoCodec, tmLogger)
-	listener, err := rpcserver.StartHTTPServer(listenAddress, mux, tmLogger)
+	server.RegisterRPCFuncs(mux, routes, logger)
+	listener, err := server.StartHTTPServer(listenAddress, mux, logger)
 	if err != nil {
 		return nil, err
 	}

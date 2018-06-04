@@ -11,9 +11,9 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/tm/lib/server"
+	"github.com/hyperledger/burrow/rpc/tm/lib/types"
 	"github.com/hyperledger/burrow/txs"
-	gorpc "github.com/tendermint/tendermint/rpc/lib/server"
-	"github.com/tendermint/tendermint/rpc/lib/types"
 )
 
 // Method names
@@ -57,13 +57,13 @@ const (
 	SignTx                 = "unsafe/sign_tx"
 )
 
-const SubscriptionTimeoutSeconds = 5 * time.Second
+const SubscriptionTimeout = 5 * time.Second
 
-func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.RPCFunc {
+func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.RPCFunc {
 	logger = logger.WithScope("GetRoutes")
-	return map[string]*gorpc.RPCFunc{
+	return map[string]*server.RPCFunc{
 		// Transact
-		BroadcastTx: gorpc.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
+		BroadcastTx: server.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
 			receipt, err := service.Transactor().BroadcastTx(tx.Unwrap())
 			if err != nil {
 				return nil, err
@@ -73,14 +73,14 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 			}, nil
 		}, "tx"),
 
-		SignTx: gorpc.NewRPCFunc(func(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
+		SignTx: server.NewRPCFunc(func(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
 			tx, err := service.Transactor().SignTx(tx, acm.SigningAccounts(concretePrivateAccounts))
 			return &rpc.ResultSignTx{Tx: txs.Wrap(tx)}, err
 
 		}, "tx,privAccounts"),
 
 		// Simulated call
-		Call: gorpc.NewRPCFunc(func(fromAddress, toAddress crypto.Address, data []byte) (*rpc.ResultCall, error) {
+		Call: server.NewRPCFunc(func(fromAddress, toAddress crypto.Address, data []byte) (*rpc.ResultCall, error) {
 			call, err := service.Transactor().Call(service.State(), fromAddress, toAddress, data)
 			if err != nil {
 				return nil, err
@@ -88,7 +88,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 			return &rpc.ResultCall{Call: *call}, nil
 		}, "fromAddress,toAddress,data"),
 
-		CallCode: gorpc.NewRPCFunc(func(fromAddress crypto.Address, code, data []byte) (*rpc.ResultCall, error) {
+		CallCode: server.NewRPCFunc(func(fromAddress crypto.Address, code, data []byte) (*rpc.ResultCall, error) {
 			call, err := service.Transactor().CallCode(service.State(), fromAddress, code, data)
 			if err != nil {
 				return nil, err
@@ -97,17 +97,17 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 		}, "fromAddress,code,data"),
 
 		// Events
-		Subscribe: gorpc.NewWSRPCFunc(func(wsCtx rpctypes.WSRPCContext, eventID string) (*rpc.ResultSubscribe, error) {
+		Subscribe: server.NewWSRPCFunc(func(wsCtx types.WSRPCContext, eventID string) (*rpc.ResultSubscribe, error) {
 			subscriptionID, err := event.GenerateSubscriptionID()
 			if err != nil {
 				return nil, err
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
 			defer cancel()
 
 			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
-				keepAlive := wsCtx.TryWriteRPCResponse(rpctypes.NewRPCSuccessResponse(AminoCodec,
+				keepAlive := wsCtx.TryWriteRPCResponse(types.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
 					logger.InfoMsg("dropping subscription because could not write to websocket",
@@ -125,8 +125,8 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 			}, nil
 		}, "eventID"),
 
-		Unsubscribe: gorpc.NewWSRPCFunc(func(wsCtx rpctypes.WSRPCContext, subscriptionID string) (*rpc.ResultUnsubscribe, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeoutSeconds*time.Second)
+		Unsubscribe: server.NewWSRPCFunc(func(wsCtx types.WSRPCContext, subscriptionID string) (*rpc.ResultUnsubscribe, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
 			defer cancel()
 			// Since our model uses a random subscription ID per request we just drop all matching requests
 			err := service.Unsubscribe(ctx, subscriptionID)
@@ -139,42 +139,42 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*gorpc.R
 		}, "subscriptionID"),
 
 		// Status
-		Status:  gorpc.NewRPCFunc(service.Status, ""),
-		NetInfo: gorpc.NewRPCFunc(service.NetInfo, ""),
+		Status:  server.NewRPCFunc(service.Status, ""),
+		NetInfo: server.NewRPCFunc(service.NetInfo, ""),
 
 		// Accounts
-		ListAccounts: gorpc.NewRPCFunc(func() (*rpc.ResultListAccounts, error) {
+		ListAccounts: server.NewRPCFunc(func() (*rpc.ResultListAccounts, error) {
 			return service.ListAccounts(func(acm.Account) bool {
 				return true
 			})
 		}, ""),
 
-		GetAccount:      gorpc.NewRPCFunc(service.GetAccount, "address"),
-		GetStorage:      gorpc.NewRPCFunc(service.GetStorage, "address,key"),
-		DumpStorage:     gorpc.NewRPCFunc(service.DumpStorage, "address"),
-		GetAccountHuman: gorpc.NewRPCFunc(service.GetAccountHumanReadable, "address"),
+		GetAccount:      server.NewRPCFunc(service.GetAccount, "address"),
+		GetStorage:      server.NewRPCFunc(service.GetStorage, "address,key"),
+		DumpStorage:     server.NewRPCFunc(service.DumpStorage, "address"),
+		GetAccountHuman: server.NewRPCFunc(service.GetAccountHumanReadable, "address"),
 
 		// Blockchain
-		Genesis:    gorpc.NewRPCFunc(service.Genesis, ""),
-		ChainID:    gorpc.NewRPCFunc(service.ChainId, ""),
-		ListBlocks: gorpc.NewRPCFunc(service.ListBlocks, "minHeight,maxHeight"),
-		GetBlock:   gorpc.NewRPCFunc(service.GetBlock, "height"),
+		Genesis:    server.NewRPCFunc(service.Genesis, ""),
+		ChainID:    server.NewRPCFunc(service.ChainId, ""),
+		ListBlocks: server.NewRPCFunc(service.ListBlocks, "minHeight,maxHeight"),
+		GetBlock:   server.NewRPCFunc(service.GetBlock, "height"),
 
 		// Consensus
-		ListUnconfirmedTxs: gorpc.NewRPCFunc(service.ListUnconfirmedTxs, "maxTxs"),
-		ListValidators:     gorpc.NewRPCFunc(service.ListValidators, ""),
-		DumpConsensusState: gorpc.NewRPCFunc(service.DumpConsensusState, ""),
+		ListUnconfirmedTxs: server.NewRPCFunc(service.ListUnconfirmedTxs, "maxTxs"),
+		ListValidators:     server.NewRPCFunc(service.ListValidators, ""),
+		DumpConsensusState: server.NewRPCFunc(service.DumpConsensusState, ""),
 
 		// Names
-		GetName: gorpc.NewRPCFunc(service.GetName, "name"),
-		ListNames: gorpc.NewRPCFunc(func() (*rpc.ResultListNames, error) {
+		GetName: server.NewRPCFunc(service.GetName, "name"),
+		ListNames: server.NewRPCFunc(func() (*rpc.ResultListNames, error) {
 			return service.ListNames(func(*execution.NameRegEntry) bool {
 				return true
 			})
 		}, ""),
 
 		// Private account
-		GeneratePrivateAccount: gorpc.NewRPCFunc(service.GeneratePrivateAccount, ""),
+		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
 	}
 }
 
