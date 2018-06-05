@@ -22,6 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+	"strings"
+
 	"github.com/hyperledger/burrow/binary"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
@@ -342,7 +345,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 			}
 		}()
 
-		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
+		require.NoError(t, runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
 			broadcastTx(t, client, tx)
 			select {
 			case <-time.After(time.Second * timeoutSeconds * 10):
@@ -352,7 +355,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 					"mempool during this test (previous txs should have made it into a block)")
 				assert.Contains(t, transactions, tx, "Transaction should be returned by ListUnconfirmedTxs")
 			}
-		})
+		}))
 	})
 }
 
@@ -386,11 +389,8 @@ func TestDumpConsensusState(t *testing.T) {
 		waitNBlocks(t, wsc, 3)
 		resp, err := tm_client.DumpConsensusState(client)
 		assert.NoError(t, err)
-		commitTime := resp.RoundState.CommitTime
 		assert.NotZero(t, startTime)
-		assert.NotZero(t, commitTime)
-		assert.True(t, commitTime.Unix() > startTime.Unix(),
-			"Commit time %v should be later than start time %v", commitTime, startTime)
-		assert.Equal(t, types.RoundStepNewHeight, resp.RoundState.Step)
+		assert.Equal(t, fmt.Sprintf("/0/%d", types.RoundStepNewHeight),
+			strings.TrimLeft(resp.RoundState.HeightRoundStep, "0123456789"))
 	})
 }

@@ -3,9 +3,8 @@ package core
 import (
 	"time"
 
-	"github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus"
-	cstypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/proxy"
 	sm "github.com/tendermint/tendermint/state"
@@ -13,6 +12,12 @@ import (
 	"github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
+)
+
+const (
+	// see README
+	defaultPerPage = 30
+	maxPerPage     = 100
 )
 
 var subscribeTimeout = 5 * time.Second
@@ -23,7 +28,8 @@ var subscribeTimeout = 5 * time.Second
 type Consensus interface {
 	GetState() sm.State
 	GetValidators() (int64, []*types.Validator)
-	GetRoundState() *cstypes.RoundState
+	GetRoundStateJSON() ([]byte, error)
+	GetRoundStateSimpleJSON() ([]byte, error)
 }
 
 type P2P interface {
@@ -116,4 +122,22 @@ func SetLogger(l log.Logger) {
 
 func SetEventBus(b *types.EventBus) {
 	eventBus = b
+}
+
+func validatePage(page, perPage, totalCount int) int {
+	pages := ((totalCount - 1) / perPage) + 1
+	if page < 1 {
+		page = 1
+	} else if page > pages {
+		page = pages
+	}
+
+	return page
+}
+
+func validatePerPage(perPage int) int {
+	if perPage < 1 || perPage > maxPerPage {
+		return defaultPerPage
+	}
+	return perPage
 }

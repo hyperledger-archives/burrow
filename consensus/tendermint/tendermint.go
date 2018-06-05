@@ -109,7 +109,7 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc
 		tm := tm_crypto.PubKeyEd25519{}
 		copy(tm[:], validator.PublicKey.RawBytes())
 		validators[i] = tm_types.GenesisValidator{
-			PubKey: tm_crypto.PubKey{tm},
+			PubKey: tm,
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}
@@ -129,7 +129,7 @@ func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable, sub
 	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		tmEventData, ok := message.(tm_types.TMEventData)
 		if ok {
-			eventDataNewBlock, ok := tmEventData.Unwrap().(tm_types.EventDataNewBlock)
+			eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
 			if ok {
 				ch <- &eventDataNewBlock
 			}

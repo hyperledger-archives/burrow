@@ -189,7 +189,7 @@ func BroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	timer := time.NewTimer(60 * 2 * time.Second)
 	select {
 	case deliverTxResMsg := <-deliverTxResCh:
-		deliverTxRes := deliverTxResMsg.(types.TMEventData).Unwrap().(types.EventDataTx)
+		deliverTxRes := deliverTxResMsg.(types.EventDataTx)
 		// The tx was included in a block.
 		deliverTxR := deliverTxRes.Result
 		logger.Info("DeliverTx passed ", "tx", cmn.HexBytes(tx), "response", deliverTxR)
@@ -209,7 +209,7 @@ func BroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	}
 }
 
-// Get unconfirmed transactions including their number.
+// Get unconfirmed transactions (maximum ?limit entries) including their number.
 //
 // ```shell
 // curl 'localhost:46657/unconfirmed_txs'
@@ -232,9 +232,18 @@ func BroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 //   "id": "",
 //   "jsonrpc": "2.0"
 // }
+//
+// ### Query Parameters
+//
+// | Parameter | Type | Default | Required | Description                          |
+// |-----------+------+---------+----------+--------------------------------------|
+// | limit     | int  | 30      | false    | Maximum number of entries (max: 100) |
 // ```
-func UnconfirmedTxs() (*ctypes.ResultUnconfirmedTxs, error) {
-	txs := mempool.Reap(-1)
+func UnconfirmedTxs(limit int) (*ctypes.ResultUnconfirmedTxs, error) {
+	// reuse per_page validator
+	limit = validatePerPage(limit)
+
+	txs := mempool.Reap(limit)
 	return &ctypes.ResultUnconfirmedTxs{len(txs), txs}, nil
 }
 

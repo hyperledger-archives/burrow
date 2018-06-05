@@ -345,8 +345,8 @@ func (s *Service) ListNames(predicate func(*execution.NameRegEntry) bool) (*Resu
 
 func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 	return &ResultGetBlock{
-		Block:     s.nodeView.BlockStore().LoadBlock(int64(height)),
-		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int64(height)),
+		Block:     &Block{s.nodeView.BlockStore().LoadBlock(int64(height))},
+		BlockMeta: &BlockMeta{s.nodeView.BlockStore().LoadBlockMeta(int64(height))},
 	}, nil
 }
 
@@ -401,7 +401,7 @@ func (s *Service) DumpConsensusState() (*ResultDumpConsensusState, error) {
 		return nil, err
 	}
 	return &ResultDumpConsensusState{
-		RoundState:      s.nodeView.RoundState(),
+		RoundState:      s.nodeView.RoundState().RoundStateSimple(),
 		PeerRoundStates: peerRoundState,
 	}, nil
 }

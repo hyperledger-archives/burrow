@@ -5,6 +5,6 @@ import (
 )
 
 var (
-	errHelpRequested    = errors.New("Help requested")
-	errVersionRequested = errors.New("Version requested")
+	errHelpRequested    = errors.New("help requested")
+	errVersionRequested = errors.New("version requested")
 )

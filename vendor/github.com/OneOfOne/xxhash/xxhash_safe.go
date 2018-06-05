@@ -1,4 +1,4 @@
-// +build appengine safe
+// +build appengine safe ppc64le ppc64be mipsle mipsbe
 
 package xxhash
 

@@ -176,7 +176,7 @@ func (ps *PartSet) Total() int {
 	return ps.total
 }
 
-func (ps *PartSet) AddPart(part *Part, verify bool) (bool, error) {
+func (ps *PartSet) AddPart(part *Part) (bool, error) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 
@@ -191,10 +191,8 @@ func (ps *PartSet) AddPart(part *Part, verify bool) (bool, error) {
 	}
 
 	// Check hash proof
-	if verify {
-		if !part.Proof.Verify(part.Index, ps.total, part.Hash(), ps.Hash()) {
-			return false, ErrPartSetInvalidProof
-		}
+	if !part.Proof.Verify(part.Index, ps.total, part.Hash(), ps.Hash()) {
+		return false, ErrPartSetInvalidProof
 	}
 
 	// Add part
@@ -263,4 +261,21 @@ func (ps *PartSet) StringShort() string {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 	return fmt.Sprintf("(%v of %v)", ps.Count(), ps.Total())
+}
+
+func (ps *PartSet) MarshalJSON() ([]byte, error) {
+	if ps == nil {
+		return []byte("{}"), nil
+	}
+
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	return cdc.MarshalJSON(struct {
+		CountTotal    string        `json:"count/total"`
+		PartsBitArray *cmn.BitArray `json:"parts_bit_array"`
+	}{
+		fmt.Sprintf("%d/%d", ps.Count(), ps.Total()),
+		ps.partsBitArray,
+	})
 }

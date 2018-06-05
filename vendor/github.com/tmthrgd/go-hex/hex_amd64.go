@@ -7,6 +7,10 @@
 
 package hex
 
+import "golang.org/x/sys/cpu"
+
+var support_avx = cpu.X86.HasAVX
+
 // RawEncode encodes src into EncodedLen(len(src))
 // bytes of dst.  As a convenience, it returns the number
 // of bytes written to dst, but this value is always EncodedLen(len(src)).

@@ -3,30 +3,31 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"sync/atomic"
 	"time"
 
-	"github.com/pkg/errors"
-
 	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 
 	tmconn "github.com/tendermint/tendermint/p2p/conn"
 )
 
+var testIPSuffix uint32 = 0
+
 // Peer is an interface representing a peer connected on a reactor.
 type Peer interface {
 	cmn.Service
 
 	ID() ID             // peer's cryptographic ID
+	RemoteIP() net.IP   // remote IP of the connection
 	IsOutbound() bool   // did we dial the peer
 	IsPersistent() bool // do we redial this peer when we disconnect
 	NodeInfo() NodeInfo // peer's info
 	Status() tmconn.ConnectionStatus
 
-	Send(byte, interface{}) bool
-	TrySend(byte, interface{}) bool
+	Send(byte, []byte) bool
+	TrySend(byte, []byte) bool
 
 	Set(string, interface{})
 	Get(string) interface{}
@@ -40,12 +41,42 @@ type peerConn struct {
 	persistent bool
 	config     *PeerConfig
 	conn       net.Conn // source connection
+	ip         net.IP
 }
 
 // ID only exists for SecretConnection.
 // NOTE: Will panic if conn is not *SecretConnection.
 func (pc peerConn) ID() ID {
 	return PubKeyToID(pc.conn.(*tmconn.SecretConnection).RemotePubKey())
+}
+
+// Return the IP from the connection RemoteAddr
+func (pc peerConn) RemoteIP() net.IP {
+	if pc.ip != nil {
+		return pc.ip
+	}
+
+	// In test cases a conn could not be present at all or be an in-memory
+	// implementation where we want to return a fake ip.
+	if pc.conn == nil || pc.conn.RemoteAddr().String() == "pipe" {
+		pc.ip = net.IP{172, 16, 0, byte(atomic.AddUint32(&testIPSuffix, 1))}
+
+		return pc.ip
+	}
+
+	host, _, err := net.SplitHostPort(pc.conn.RemoteAddr().String())
+	if err != nil {
+		panic(err)
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		panic(err)
+	}
+
+	pc.ip = ips[0]
+
+	return pc.ip
 }
 
 // peer implements Peer.
@@ -85,25 +116,24 @@ func newPeer(pc peerConn, nodeInfo NodeInfo,
 
 // PeerConfig is a Peer configuration.
 type PeerConfig struct {
-	AuthEnc bool `mapstructure:"auth_enc"` // authenticated encryption
-
 	// times are in seconds
 	HandshakeTimeout time.Duration `mapstructure:"handshake_timeout"`
 	DialTimeout      time.Duration `mapstructure:"dial_timeout"`
 
 	MConfig *tmconn.MConnConfig `mapstructure:"connection"`
 
-	Fuzz       bool            `mapstructure:"fuzz"` // fuzz connection (for testing)
+	DialFail   bool            `mapstructure:"dial_fail"` // for testing
+	Fuzz       bool            `mapstructure:"fuzz"`      // fuzz connection (for testing)
 	FuzzConfig *FuzzConnConfig `mapstructure:"fuzz_config"`
 }
 
 // DefaultPeerConfig returns the default config.
 func DefaultPeerConfig() *PeerConfig {
 	return &PeerConfig{
-		AuthEnc:          true,
 		HandshakeTimeout: 20, // * time.Second,
 		DialTimeout:      3,  // * time.Second,
 		MConfig:          tmconn.DefaultMConnConfig(),
+		DialFail:         false,
 		Fuzz:             false,
 		FuzzConfig:       DefaultFuzzConnConfig(),
 	}
@@ -114,21 +144,21 @@ func newOutboundPeerConn(addr *NetAddress, config *PeerConfig, persistent bool, 
 
 	conn, err := dial(addr, config)
 	if err != nil {
-		return pc, errors.Wrap(err, "Error creating peer")
+		return pc, cmn.ErrorWrap(err, "Error creating peer")
 	}
 
 	pc, err = newPeerConn(conn, config, true, persistent, ourNodePrivKey)
 	if err != nil {
 		if err2 := conn.Close(); err2 != nil {
-			return pc, errors.Wrap(err, err2.Error())
+			return pc, cmn.ErrorWrap(err, err2.Error())
 		}
 		return pc, err
 	}
 
 	// ensure dialed ID matches connection ID
-	if config.AuthEnc && addr.ID != pc.ID() {
+	if addr.ID != pc.ID() {
 		if err2 := conn.Close(); err2 != nil {
-			return pc, errors.Wrap(err, err2.Error())
+			return pc, cmn.ErrorWrap(err, err2.Error())
 		}
 		return pc, ErrSwitchAuthenticationFailure{addr, pc.ID()}
 	}
@@ -154,17 +184,15 @@ func newPeerConn(rawConn net.Conn,
 		conn = FuzzConnAfterFromConfig(conn, 10*time.Second, config.FuzzConfig)
 	}
 
-	if config.AuthEnc {
-		// Set deadline for secret handshake
-		if err := conn.SetDeadline(time.Now().Add(config.HandshakeTimeout * time.Second)); err != nil {
-			return pc, errors.Wrap(err, "Error setting deadline while encrypting connection")
-		}
+	// Set deadline for secret handshake
+	if err := conn.SetDeadline(time.Now().Add(config.HandshakeTimeout * time.Second)); err != nil {
+		return pc, cmn.ErrorWrap(err, "Error setting deadline while encrypting connection")
+	}
 
-		// Encrypt connection
-		conn, err = tmconn.MakeSecretConnection(conn, ourNodePrivKey)
-		if err != nil {
-			return pc, errors.Wrap(err, "Error creating peer")
-		}
+	// Encrypt connection
+	conn, err = tmconn.MakeSecretConnection(conn, ourNodePrivKey)
+	if err != nil {
+		return pc, cmn.ErrorWrap(err, "Error creating peer")
 	}
 
 	// Only the information we already have
@@ -205,7 +233,7 @@ func (p *peer) OnStop() {
 
 // ID returns the peer's ID - the hex encoded hash of its pubkey.
 func (p *peer) ID() ID {
-	return p.nodeInfo.ID()
+	return p.nodeInfo.ID
 }
 
 // IsOutbound returns true if the connection is outbound, false otherwise.
@@ -228,9 +256,9 @@ func (p *peer) Status() tmconn.ConnectionStatus {
 	return p.mconn.Status()
 }
 
-// Send msg to the channel identified by chID byte. Returns false if the send
-// queue is full after timeout, specified by MConnection.
-func (p *peer) Send(chID byte, msg interface{}) bool {
+// Send msg bytes to the channel identified by chID byte. Returns false if the
+// send queue is full after timeout, specified by MConnection.
+func (p *peer) Send(chID byte, msgBytes []byte) bool {
 	if !p.IsRunning() {
 		// see Switch#Broadcast, where we fetch the list of peers and loop over
 		// them - while we're looping, one peer may be removed and stopped.
@@ -238,18 +266,18 @@ func (p *peer) Send(chID byte, msg interface{}) bool {
 	} else if !p.hasChannel(chID) {
 		return false
 	}
-	return p.mconn.Send(chID, msg)
+	return p.mconn.Send(chID, msgBytes)
 }
 
-// TrySend msg to the channel identified by chID byte. Immediately returns
+// TrySend msg bytes to the channel identified by chID byte. Immediately returns
 // false if the send queue is full.
-func (p *peer) TrySend(chID byte, msg interface{}) bool {
+func (p *peer) TrySend(chID byte, msgBytes []byte) bool {
 	if !p.IsRunning() {
 		return false
 	} else if !p.hasChannel(chID) {
 		return false
 	}
-	return p.mconn.TrySend(chID, msg)
+	return p.mconn.TrySend(chID, msgBytes)
 }
 
 // Get the data for a given key.
@@ -290,28 +318,26 @@ func (pc *peerConn) CloseConn() {
 func (pc *peerConn) HandshakeTimeout(ourNodeInfo NodeInfo, timeout time.Duration) (peerNodeInfo NodeInfo, err error) {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
 	if err := pc.conn.SetDeadline(time.Now().Add(timeout)); err != nil {
-		return peerNodeInfo, errors.Wrap(err, "Error setting deadline")
+		return peerNodeInfo, cmn.ErrorWrap(err, "Error setting deadline")
 	}
 
 	var trs, _ = cmn.Parallel(
 		func(_ int) (val interface{}, err error, abort bool) {
-			var n int
-			wire.WriteBinary(&ourNodeInfo, pc.conn, &n, &err)
+			_, err = cdc.MarshalBinaryWriter(pc.conn, ourNodeInfo)
 			return
 		},
 		func(_ int) (val interface{}, err error, abort bool) {
-			var n int
-			wire.ReadBinary(&peerNodeInfo, pc.conn, MaxNodeInfoSize(), &n, &err)
+			_, err = cdc.UnmarshalBinaryReader(pc.conn, &peerNodeInfo, int64(MaxNodeInfoSize()))
 			return
 		},
 	)
 	if err := trs.FirstError(); err != nil {
-		return peerNodeInfo, errors.Wrap(err, "Error during handshake")
+		return peerNodeInfo, cmn.ErrorWrap(err, "Error during handshake")
 	}
 
 	// Remove deadline
 	if err := pc.conn.SetDeadline(time.Time{}); err != nil {
-		return peerNodeInfo, errors.Wrap(err, "Error removing deadline")
+		return peerNodeInfo, cmn.ErrorWrap(err, "Error removing deadline")
 	}
 
 	return peerNodeInfo, nil
@@ -343,6 +369,10 @@ func (p *peer) String() string {
 // helper funcs
 
 func dial(addr *NetAddress, config *PeerConfig) (net.Conn, error) {
+	if config.DialFail {
+		return nil, fmt.Errorf("dial err (peerConfig.DialFail == true)")
+	}
+
 	conn, err := addr.DialTimeout(config.DialTimeout * time.Second)
 	if err != nil {
 		return nil, err

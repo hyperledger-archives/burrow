@@ -45,6 +45,7 @@ const (
 )
 
 // Enable logger output during tests
+//var debugLogging = true
 var debugLogging = false
 
 // We use this to wrap tests

@@ -54,7 +54,7 @@ func TestWSNewBlock(t *testing.T) {
 	}()
 	waitForEvent(t, wsc, eid, func() {},
 		func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
-			fmt.Println("Check: ", resultEvent.EventDataNewBlock().Block)
+			fmt.Println("Check: ", resultEvent.Tendermint.EventDataNewBlock().Block)
 			return true, nil
 		})
 }
@@ -76,7 +76,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 	for i := int64(0); i < 2; i++ {
 		waitForEvent(t, wsc, eid, func() {},
 			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
-				eventDataNewBlock := resultEvent.EventDataNewBlock()
+				eventDataNewBlock := resultEvent.Tendermint.EventDataNewBlock()
 				if eventDataNewBlock == nil {
 					t.Fatalf("Was expecting EventDataNewBlock but got %v", resultEvent)
 				}
@@ -318,7 +318,7 @@ Subscribe:
 			if response.ID == tm_client.EventResponseID(tm_types.EventNewBlock) {
 				res := new(rpc.ResultEvent)
 				json.Unmarshal(response.Result, res)
-				enb := res.EventDataNewBlock()
+				enb := res.Tendermint.EventDataNewBlock()
 				if enb != nil {
 					assert.Equal(t, genesisDoc.ChainID(), enb.Block.ChainID)
 					if blocksSeen > 1 {

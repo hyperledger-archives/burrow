@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/tendermint/tendermint/proxy"
 	sm "github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
+	pvm "github.com/tendermint/tendermint/types/priv_validator"
 	auto "github.com/tendermint/tmlibs/autofile"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/db"
@@ -40,7 +40,7 @@ func WALWithNBlocks(numBlocks int) (data []byte, err error) {
 	// COPY PASTE FROM node.go WITH A FEW MODIFICATIONS
 	// NOTE: we can't import node package because of circular dependency
 	privValidatorFile := config.PrivValidatorFile()
-	privValidator := types.LoadOrGenPrivValidatorFS(privValidatorFile)
+	privValidator := pvm.LoadOrGenFilePV(privValidatorFile)
 	genDoc, err := types.GenesisDocFromFile(config.GenesisFile())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read genesis file")
@@ -52,7 +52,7 @@ func WALWithNBlocks(numBlocks int) (data []byte, err error) {
 		return nil, errors.Wrap(err, "failed to make genesis state")
 	}
 	blockStore := bc.NewBlockStore(blockStoreDB)
-	handshaker := NewHandshaker(stateDB, state, blockStore, genDoc.AppState())
+	handshaker := NewHandshaker(stateDB, state, blockStore, genDoc)
 	proxyApp := proxy.NewAppConns(proxy.NewLocalClientCreator(app), handshaker)
 	proxyApp.SetLogger(logger.With("module", "proxy"))
 	if err := proxyApp.Start(); err != nil {
@@ -83,7 +83,7 @@ func WALWithNBlocks(numBlocks int) (data []byte, err error) {
 	numBlocksWritten := make(chan struct{})
 	wal := newByteBufferWAL(logger, NewWALEncoder(wr), int64(numBlocks), numBlocksWritten)
 	// see wal.go#103
-	wal.Save(EndHeightMessage{0})
+	wal.Write(EndHeightMessage{0})
 	consensusState.wal = wal
 
 	if err := consensusState.Start(); err != nil {
@@ -116,7 +116,7 @@ func makePathname() string {
 func randPort() int {
 	// returns between base and base + spread
 	base, spread := 20000, 20000
-	return base + rand.Intn(spread)
+	return base + cmn.RandIntn(spread)
 }
 
 func makeAddrs() (string, string, string) {
@@ -166,7 +166,7 @@ func newByteBufferWAL(logger log.Logger, enc *WALEncoder, nBlocks int64, signalS
 // Save writes message to the internal buffer except when heightToStop is
 // reached, in which case it will signal the caller via signalWhenStopsTo and
 // skip writing.
-func (w *byteBufferWAL) Save(m WALMessage) {
+func (w *byteBufferWAL) Write(m WALMessage) {
 	if w.stopped {
 		w.logger.Debug("WAL already stopped. Not writing message", "msg", m)
 		return
@@ -187,6 +187,10 @@ func (w *byteBufferWAL) Save(m WALMessage) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to encode the msg %v", m))
 	}
+}
+
+func (w *byteBufferWAL) WriteSync(m WALMessage) {
+	w.Write(m)
 }
 
 func (w *byteBufferWAL) Group() *auto.Group {
