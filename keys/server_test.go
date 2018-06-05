@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/keys/pbkeys"
+	"github.com/hyperledger/burrow/logging"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"google.golang.org/grpc"
 )
@@ -36,8 +37,10 @@ var (
 // start the server
 func init() {
 	failedCh := make(chan error)
+	testDir := "test_scratch/" + DefaultKeysDir
+	os.RemoveAll(testDir)
 	go func() {
-		err := StartStandAloneServer(DefaultKeysDir, DefaultHost, TestPort)
+		err := StartStandAloneServer(testDir, DefaultHost, TestPort, false, logging.NewNoopLogger())
 		failedCh <- err
 	}()
 	tick := time.NewTicker(time.Second)

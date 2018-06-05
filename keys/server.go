@@ -10,6 +10,7 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys/pbkeys"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 	"google.golang.org/grpc"
@@ -19,13 +20,13 @@ import (
 // all cli commands pass through the http KeyStore
 // the KeyStore process also maintains the unlocked accounts
 
-func StartStandAloneServer(keysDir, host, port string) error {
+func StartStandAloneServer(keysDir, host, port string, AllowBadFilePermissions bool, logger *logging.Logger) error {
 	listen, err := net.Listen("tcp", host+":"+port)
 	if err != nil {
 		return err
 	}
 
-	ks := NewKeyStore(keysDir)
+	ks := NewKeyStore(keysDir, AllowBadFilePermissions, logger)
 
 	grpcServer := grpc.NewServer()
 	pbkeys.RegisterKeysServer(grpcServer, &ks)
