@@ -3,7 +3,12 @@
   unused-packages = true
   non-go = true
 
+[[constraint]]
+  name = "github.com/tendermint/tendermint"
+  version = "=v0.20.0-rc3"
+
 # Because Tendermint did this, we have to...
 [[override]]
   name = "google.golang.org/genproto"
   revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
+
