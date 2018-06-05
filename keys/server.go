@@ -121,7 +121,7 @@ func (k *KeyStore) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.Si
 
 	sig, err := key.Sign(in.GetMessage())
 
-	return &pbkeys.SignResponse{Signature: sig}, nil
+	return &pbkeys.SignResponse{Signature: sig, Curvetype: key.CurveType.String()}, nil
 }
 
 func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.Empty, error) {
