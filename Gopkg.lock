@@ -326,8 +326,8 @@
     "types/priv_validator",
     "version"
   ]
-  revision = "cb35c6378fe28aaa67998314f0996cd6cd4f30ff"
-  version = "v0.20.0-rc2"
+  revision = "b5baab0238c9ec26e3b2d229b0243f9ff9220bdb"
+  version = "v0.20.0-rc3"
 
 [[projects]]
   name = "github.com/tendermint/tmlibs"
@@ -482,6 +482,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3d26d13f94ec6b8d225fefdd181e9f6cf73f028cc3bdd8d2234e1db66028d836"
+  inputs-digest = "4333a5c33daf11f580ca293a5fe773ddadb2f42e3a9c1fcb10fe0cfa6e02aa2e"
   solver-name = "gps-cdcl"
   solver-version = 1
