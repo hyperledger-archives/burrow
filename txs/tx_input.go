@@ -2,22 +2,20 @@ package txs
 
 import (
 	"fmt"
-	"io"
-
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tendermint/go-wire"
+	"bytes"
 )
 
 type TxInput struct {
 	Address   crypto.Address
+	PublicKey crypto.PublicKey
+	Signature crypto.Signature
 	Amount    uint64
 	Sequence  uint64
-	Signature crypto.Signature
-	PublicKey crypto.PublicKey
 }
 
 func (txIn *TxInput) ValidateBasic() error {
-	if len(txIn.Address) != 20 {
+	if txIn.Address == crypto.ZeroAddress {
 		return ErrTxInvalidAddress
 	}
 	if txIn.Amount == 0 {
@@ -26,8 +24,10 @@ func (txIn *TxInput) ValidateBasic() error {
 	return nil
 }
 
-func (txIn *TxInput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence)), w, n, err)
+func (txIn *TxInput) SignBytes() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	buf.WriteString(fmt.Sprintf(`{"address":"%s","amount":%v,"sequence":%v}`, txIn.Address, txIn.Amount, txIn.Sequence))
+	return buf.Bytes(), nil
 }
 
 func (txIn *TxInput) String() string {

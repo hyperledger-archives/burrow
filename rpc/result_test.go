@@ -53,7 +53,7 @@ func TestResultBroadcastTx(t *testing.T) {
 func TestListUnconfirmedTxs(t *testing.T) {
 	res := &ResultListUnconfirmedTxs{
 		NumTxs: 3,
-		Txs: []txs.Wrapper{
+		Txs: []txs.Body{
 			txs.Wrap(&txs.CallTx{
 				Address: &crypto.Address{1},
 			}),

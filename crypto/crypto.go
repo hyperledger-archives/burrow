@@ -1,9 +1,9 @@
 package crypto
 
 import (
-	"bytes"
 	"fmt"
-	"io"
+
+	"github.com/pkg/errors"
 )
 
 type CurveType int8
@@ -57,15 +57,15 @@ type Signer interface {
 // Signable is an interface for all signable things.
 // It typically removes signatures before serializing.
 type Signable interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
+	SignBytes(chainID string) ([]byte, error)
 }
 
-// SignBytes is a convenience method for getting the bytes to sign of a Signable.
-func SignBytes(chainID string, o Signable) []byte {
-	buf, n, err := new(bytes.Buffer), new(int), new(error)
-	o.WriteSignBytes(chainID, buf, n, err)
-	if *err != nil {
-		panic(fmt.Sprintf("could not write sign bytes for a signable: %s", *err))
+// SignBytes is a convenience method for getting the bytes to sign of a Signable. Will panic if there is an error
+// generating SignBytes.
+func SignBytes(chainID string, signable Signable) []byte {
+	bs, err := signable.SignBytes(chainID)
+	if err != nil {
+		panic(errors.Wrap(err, "could not write sign bytes for a signable"))
 	}
-	return buf.Bytes()
+	return bs
 }

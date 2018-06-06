@@ -2,14 +2,10 @@ package txs
 
 import (
 	"fmt"
-	"io"
-
 	"regexp"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tendermint/go-wire"
 )
 
 // Name should be file system lik
@@ -57,27 +53,8 @@ func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, s
 	}
 }
 
-func (tx *NameTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
-	if len(signingAccounts) != 1 {
-		return fmt.Errorf("NameTx expects a single AddressableSigner for its single Input but %v were provieded",
-			len(signingAccounts))
-	}
-	var err error
-	tx.Input.PublicKey = signingAccounts[0].PublicKey()
-	tx.Input.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
-	if err != nil {
-		return fmt.Errorf("could not sign %v: %v", tx, err)
-	}
-	return nil
-}
-
-func (tx *NameTx) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"chain_id":%s`, jsonEscape(chainID))), w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"tx":[%v,{"data":%s,"fee":%v`, TxTypeName, jsonEscape(tx.Data), tx.Fee)), w, n, err)
-	wire.WriteTo([]byte(`,"input":`), w, n, err)
-	tx.Input.WriteSignBytes(w, n, err)
-	wire.WriteTo([]byte(fmt.Sprintf(`,"name":%s`, jsonEscape(tx.Name))), w, n, err)
-	wire.WriteTo([]byte(`}]}`), w, n, err)
+func (tx *NameTx) Type() TxType {
+	return TxTypeName
 }
 
 func (tx *NameTx) GetInputs() []TxInput {
@@ -108,10 +85,6 @@ func (tx *NameTx) ValidateStrings() error {
 
 func (tx *NameTx) String() string {
 	return fmt.Sprintf("NameTx{%v -> %s: %s}", tx.Input, tx.Name, tx.Data)
-}
-
-func (tx *NameTx) Hash(chainID string) []byte {
-	return tx.txHashMemoizer.hash(chainID, tx)
 }
 
 // filter strings

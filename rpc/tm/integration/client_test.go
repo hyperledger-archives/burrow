@@ -323,7 +323,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
 		tx := txs.Wrap(makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee))
-		txChan := make(chan []txs.Wrapper)
+		txChan := make(chan []txs.Body)
 
 		// We want to catch the Tx in mempool before it gets reaped by tendermint
 		// consensus. We should be able to do this almost always if we broadcast our

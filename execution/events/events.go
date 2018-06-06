@@ -37,7 +37,7 @@ var callTxQuery = event.NewQueryBuilder().
 	AndEquals(event.TxTypeKey, reflect.TypeOf(&txs.CallTx{}).String())
 
 type eventDataTx struct {
-	Tx        txs.Wrapper
+	Tx        txs.Body
 	Return    []byte
 	Exception string
 }

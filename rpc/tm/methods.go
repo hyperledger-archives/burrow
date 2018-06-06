@@ -63,7 +63,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 	logger = logger.WithScope("GetRoutes")
 	return map[string]*server.RPCFunc{
 		// Transact
-		BroadcastTx: server.NewRPCFunc(func(tx txs.Wrapper) (*rpc.ResultBroadcastTx, error) {
+		BroadcastTx: server.NewRPCFunc(func(tx txs.Body) (*rpc.ResultBroadcastTx, error) {
 			receipt, err := service.Transactor().BroadcastTx(tx.Unwrap())
 			if err != nil {
 				return nil, err

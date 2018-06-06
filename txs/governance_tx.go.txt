@@ -1,0 +1,77 @@
+package txs
+
+import (
+	"fmt"
+	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/genesis/spec"
+	"bytes"
+)
+
+type GovernanceTx struct {
+	GovTxPayload
+	txHashMemoizer
+}
+
+type GovTxPayload struct {
+	AccountUpdates []spec.TemplateAccount
+}
+
+var _ Tx = &GovernanceTx{}
+
+func NewGovTx(st state.AccountGetter, from crypto.PublicKey, accounts ...spec.TemplateAccount) (*GovernanceTx, error) {
+	addr := from.Address()
+	acc, err := st.GetAccount(addr)
+	if err != nil {
+		return nil, err
+	}
+	if acc == nil {
+		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
+	}
+
+	sequence := acc.Sequence() + 1
+	return NewGovTxWithSequence(from, sequence, accounts), nil
+}
+
+func NewGovTxWithSequence(from crypto.PublicKey, sequence uint64, accounts []spec.TemplateAccount) *GovernanceTx {
+	return &GovernanceTx{
+		TxHeader: TxHeader{
+			PublicKey: from,
+			Sequence:  sequence,
+		},
+		GovTxPayload: GovTxPayload{
+			AccountUpdates: accounts,
+		},
+	}
+}
+
+func (tx *GovernanceTx) Sign(chainID string, signingAccounts ...acm.AddressableSigner) error {
+	if len(signingAccounts) != 1 {
+		return fmt.Errorf("GovernanceTx expects a single AddressableSigner for its single Input but %v were provieded",
+			len(signingAccounts))
+	}
+	var err error
+	tx.Input.PublicKey = signingAccounts[0].PublicKey()
+	tx.Input.Signature, err = crypto.ChainSign(signingAccounts[0], chainID, tx)
+	if err != nil {
+		return fmt.Errorf("could not sign %v: %v", tx, err)
+	}
+	return nil
+}
+
+func (tx *GovernanceTx) SignBytes(chainID string) ([]byte, error) {
+	buf := new(bytes.Buffer)
+}
+
+func (tx *GovernanceTx) GetInputs() []TxInput {
+	return []TxInput{*tx.Input}
+}
+
+func (tx *GovernanceTx) String() string {
+	return fmt.Sprintf("GovernanceTx{%v -> %s: %X}", tx.Input, tx.Address, tx.Data)
+}
+
+func (tx *GovernanceTx) Hash(chainID string) []byte {
+	return tx.txHashMemoizer.hash(chainID, tx)
+}

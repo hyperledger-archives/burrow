@@ -108,7 +108,7 @@ func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 	if err != nil {
 		return nil, err
 	}
-	wrappedTxs := make([]txs.Wrapper, len(transactions))
+	wrappedTxs := make([]txs.Body, len(transactions))
 	for i, tx := range transactions {
 		wrappedTxs[i] = txs.Wrap(tx)
 	}

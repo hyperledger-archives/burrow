@@ -168,6 +168,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				debug.Stack())
 		}
 	}()
+	body = txs.ChainWrap(exe.chainID, tx)
 
 	txHash := tx.Hash(exe.chainID)
 	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(

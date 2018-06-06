@@ -60,7 +60,7 @@ func TestSendTxSignable(t *testing.T) {
 			},
 		},
 	}
-	signBytes := crypto.SignBytes(chainID, sendTx)
+	signBytes := ChainWrap(chainID, sendTx).MustSignBytes()
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"outputs":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
 		chainID, sendTx.Inputs[0].Address.String(), sendTx.Inputs[1].Address.String(), sendTx.Outputs[0].Address.String(), sendTx.Outputs[1].Address.String())
@@ -83,7 +83,7 @@ func TestCallTxSignable(t *testing.T) {
 		Fee:      222,
 		Data:     []byte("data1"),
 	}
-	signBytes := crypto.SignBytes(chainID, callTx)
+	signBytes := ChainWrap(chainID, callTx).MustSignBytes()
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[2,{"address":"%s","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"%s","amount":12345,"sequence":67890}}]}`,
 		chainID, callTx.Address.String(), callTx.Input.Address.String())
@@ -103,7 +103,7 @@ func TestNameTxSignable(t *testing.T) {
 		Data: "secretly.not.google.com",
 		Fee:  1000,
 	}
-	signBytes := crypto.SignBytes(chainID, nameTx)
+	signBytes := ChainWrap(chainID, nameTx).MustSignBytes()
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"%s","amount":12345,"sequence":250},"name":"google.com"}]}`,
 		chainID, nameTx.Input.Address.String())
@@ -153,7 +153,8 @@ func TestBondTxSignable(t *testing.T) {
 		bondTx.UnbondTo[0].Address.String(),
 		bondTx.UnbondTo[1].Address.String())
 
-	assert.Equal(t, expected, string(crypto.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
+	signBytes := ChainWrap(chainID, bondTx).MustSignBytes()
+	assert.Equal(t, expected, string(signBytes), "Unexpected sign string for BondTx")
 }
 
 func TestUnbondTxSignable(t *testing.T) {
@@ -161,26 +162,12 @@ func TestUnbondTxSignable(t *testing.T) {
 		Address: makeAddress("address1"),
 		Height:  111,
 	}
-	signBytes := crypto.SignBytes(chainID, unbondTx)
+	signBytes := ChainWrap(chainID, unbondTx).MustSignBytes()
 	signStr := string(signBytes)
 	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[18,{"address":"%s","height":111}]}`,
 		chainID, unbondTx.Address.String())
 	if signStr != expected {
 		t.Errorf("Got unexpected sign string for UnbondTx")
-	}
-}
-
-func TestRebondTxSignable(t *testing.T) {
-	rebondTx := &RebondTx{
-		Address: makeAddress("address1"),
-		Height:  111,
-	}
-	signBytes := crypto.SignBytes(chainID, rebondTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[19,{"address":"%s","height":111}]}`,
-		chainID, rebondTx.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for RebondTx")
 	}
 }
 
@@ -194,13 +181,18 @@ func TestPermissionsTxSignable(t *testing.T) {
 		PermArgs: snatives.SetBaseArgs(makeAddress("address1"), 1, true),
 	}
 
-	signBytes := crypto.SignBytes(chainID, permsTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[31,{"args":"{"PermFlag":%v,"Address":"%s","Permission":1,"Value":true}","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
-		chainID, ptypes.SetBase, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
+	body := ChainWrap(chainID, permsTx)
+	env := Envelope{
+		Body: *body,
 	}
+	signBytes := body.MustSignBytes()
+	bodyOut := new(Body)
+
+	bs, err := json.MarshalIndent(env, "", "  ")
+	require.NoError(t, err)
+	fmt.Println(string(bs))
+	require.NoError(t, json.Unmarshal(signBytes, bodyOut))
+	assert.Equal(t, signBytes, body.MustSignBytes())
 }
 
 func TestTxWrapper_MarshalJSON(t *testing.T) {
@@ -228,24 +220,13 @@ func TestNewPermissionsTxWithSequence(t *testing.T) {
 }
 
 func testTxMarshalJSON(t *testing.T, tx Tx) {
-	txw := &Wrapper{Tx: tx}
+	txw := &Body{Tx: tx}
 	bs, err := json.Marshal(txw)
 	require.NoError(t, err)
-	txwOut := new(Wrapper)
+	txwOut := new(Body)
 	err = json.Unmarshal(bs, txwOut)
 	require.NoError(t, err)
 	bsOut, err := json.Marshal(txwOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
-}
-
-func TestTxHashMemoizer(t *testing.T) {
-	tx := &CallTx{
-		Input: &TxInput{
-			Sequence: 4,
-		},
-	}
-	hsh := tx.Hash("foo")
-	assert.Equal(t, hsh, tx.txHashMemoizer.txHashBytes)
-	assert.Equal(t, "foo", tx.txHashMemoizer.chainID)
 }

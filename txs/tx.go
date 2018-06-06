@@ -18,11 +18,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tendermint/go-wire/data"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -52,40 +50,50 @@ Admin Txs:
  - PermissionsTx
 */
 
+type TxType int8
+
 // Types of Tx implementations
 const (
+	TxTypeUnknown = TxType(0x00)
 	// Account transactions
-	TxTypeSend = byte(0x01)
-	TxTypeCall = byte(0x02)
-	TxTypeName = byte(0x03)
+	TxTypeSend = TxType(0x01)
+	TxTypeCall = TxType(0x02)
+	TxTypeName = TxType(0x03)
 
 	// Validation transactions
-	TxTypeBond   = byte(0x11)
-	TxTypeUnbond = byte(0x12)
-	TxTypeRebond = byte(0x13)
+	TxTypeBond   = TxType(0x11)
+	TxTypeUnbond = TxType(0x12)
 
 	// Admin transactions
-	TxTypePermissions = byte(0x1f)
+	TxTypePermissions = TxType(0x21)
+	TxTypeGovernance  = TxType(0x22)
 )
 
-var mapper = data.NewMapper(Wrapper{}).
-	RegisterImplementation(&SendTx{}, "send_tx", TxTypeSend).
-	RegisterImplementation(&CallTx{}, "call_tx", TxTypeCall).
-	RegisterImplementation(&NameTx{}, "name_tx", TxTypeName).
-	RegisterImplementation(&BondTx{}, "bond_tx", TxTypeBond).
-	RegisterImplementation(&UnbondTx{}, "unbond_tx", TxTypeUnbond).
-	RegisterImplementation(&RebondTx{}, "rebond_tx", TxTypeRebond).
-	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions)
+var txNameFromType = map[TxType]string{
+	TxTypeUnknown:     "UnknownTx",
+	TxTypeSend:        "SendTx",
+	TxTypeCall:        "CallTx",
+	TxTypeName:        "NameTx",
+	TxTypeBond:        "BondTx",
+	TxTypeUnbond:      "UnbondTx",
+	TxTypePermissions: "PermissionsTx",
+	TxTypeGovernance:  "GovernanceTx",
+}
 
-	//-----------------------------------------------------------------------------
+var txTypeFromName = make(map[string]TxType)
 
-// TODO: replace with sum-type struct like ResultEvent
+func init() {
+	for t, n := range txNameFromType {
+		txTypeFromName[n] = t
+	}
+}
+
+//-----------------------------------------------------------------------------
+
 type Tx interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
 	String() string
 	GetInputs() []TxInput
-	Hash(chainID string) []byte
-	Sign(chainID string, signingAccounts ...acm.AddressableSigner) error
+	Type() TxType
 }
 
 type Encoder interface {
@@ -96,6 +104,45 @@ type Decoder interface {
 	DecodeTx(txBytes []byte) (Tx, error)
 }
 
+func NewTx(txType TxType) Tx {
+	switch txType {
+	case TxTypeSend:
+		return &SendTx{}
+	case TxTypeCall:
+		return &CallTx{}
+	case TxTypeName:
+		return &NameTx{}
+	case TxTypeBond:
+		return &BondTx{}
+	case TxTypeUnbond:
+		return &UnbondTx{}
+	case TxTypePermissions:
+		return &PermissionsTx{}
+	}
+	return nil
+}
+
+func (txType TxType) String() string {
+	name, ok := txNameFromType[txType]
+	if ok {
+		return name
+	}
+	return "UnknownTx"
+}
+
+func TxTypeFromString(name string) TxType {
+	return txTypeFromName[name]
+}
+
+func (txType TxType) MarshalText() ([]byte, error) {
+	return []byte(txType.String()), nil
+}
+
+func (txType *TxType) UnmarshalText(data []byte) error {
+	*txType = TxTypeFromString(string(data))
+	return nil
+}
+
 // BroadcastTx or Transact
 type Receipt struct {
 	TxHash          []byte
@@ -103,40 +150,132 @@ type Receipt struct {
 	ContractAddress crypto.Address
 }
 
-type Wrapper struct {
-	Tx `json:"unwrap"`
+type Envelope struct {
+	Signatures []crypto.Signature
+	Body
 }
 
-// Wrap the Tx in a struct that allows for go-wire JSON serialisation
-func Wrap(tx Tx) Wrapper {
-	if txWrapped, ok := tx.(Wrapper); ok {
-		return txWrapped
+func (env *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
+	signBytes, err := env.Body.SignBytes()
+	if err != nil {
+		return err
 	}
-	return Wrapper{
-		Tx: tx,
+	for _, sa := range signingAccounts {
+		sig, err := sa.Sign(signBytes)
+		if err != nil {
+			return err
+		}
+		env.Signatures = append(env.Signatures, sig)
+	}
+	return nil
+}
+
+func SignTx(chainID string, tx Tx, signingAccounts ...acm.AddressableSigner) (*Envelope, error) {
+	env := &Envelope{
+		Body: Body{
+			ChainID: chainID,
+			Tx:      tx,
+		},
+	}
+	err := env.Sign(signingAccounts...)
+	if err != nil {
+		return nil, err
+	}
+	return env, nil
+}
+
+// The
+type Body struct {
+	ChainID string
+	TxType  TxType
+	Tx
+	txHash []byte
+}
+
+// Wrap the Tx in Body required for signing and serialisation
+func Wrap(tx Tx) *Body {
+	switch t := tx.(type) {
+	case Body:
+		return &t
+	case *Body:
+		return t
+	}
+	return &Body{
+		TxType: tx.Type(),
+		Tx:     tx,
 	}
 }
 
-// A serialisation wrapper that is itself a Tx
-func (txw Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	txw.Tx.WriteSignBytes(chainID, w, n, err)
+func ChainWrap(chainID string, tx Tx) *Body {
+	body := Wrap(tx)
+	body.ChainID = chainID
+	return body
 }
 
-func (txw Wrapper) MarshalJSON() ([]byte, error) {
-	return mapper.ToJSON(txw.Tx)
-}
-
-func (txw *Wrapper) UnmarshalJSON(data []byte) (err error) {
-	parsed, err := mapper.FromJSON(data)
-	if err == nil && parsed != nil {
-		txw.Tx = parsed.(Tx)
+func (body *Body) MustSignBytes() []byte {
+	bs, err := body.SignBytes()
+	if err != nil {
+		panic(err)
 	}
-	return err
+	return bs
+}
+
+func (body *Body) SignBytes() ([]byte, error) {
+	bs, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate canonical SignBytes for tx %v: %v", body.Tx, err)
+	}
+	return bs, nil
+}
+
+// Serialisation intermediate for switching on type
+type wrapper struct {
+	ChainID string
+	TxType  TxType
+	Tx      json.RawMessage
+}
+
+func (body Body) MarshalJSON() ([]byte, error) {
+	bs, err := json.Marshal(body.Tx)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(wrapper{
+		ChainID: body.ChainID,
+		TxType:  body.Type(),
+		Tx:      bs,
+	})
+}
+
+func (body *Body) UnmarshalJSON(data []byte) error {
+	w := new(wrapper)
+	err := json.Unmarshal(data, w)
+	if err != nil {
+		return err
+	}
+	body.ChainID = w.ChainID
+	body.TxType = w.TxType
+	body.Tx = NewTx(w.TxType)
+	return json.Unmarshal(w.Tx, body.Tx)
 }
 
 // Get the inner Tx that this Wrapper wraps
-func (txw *Wrapper) Unwrap() Tx {
-	return txw.Tx
+func (body *Body) Unwrap() Tx {
+	return body.Tx
+}
+
+func (body *Body) Hash() []byte {
+	if body.txHash == nil {
+		return body.Rehash()
+	}
+	return body.txHash
+}
+
+func (body *Body) Rehash() []byte {
+	hasher := ripemd160.New()
+	hasher.Write(body.MustSignBytes())
+	body.txHash = hasher.Sum(nil)
+	return body.txHash
 }
 
 // Avoid re-hashing the same in-memory Tx
@@ -145,27 +284,11 @@ type txHashMemoizer struct {
 	chainID     string
 }
 
-func (thm *txHashMemoizer) hash(chainID string, tx Tx) []byte {
-	if thm.txHashBytes == nil || thm.chainID != chainID {
-		thm.chainID = chainID
-		thm.txHashBytes = TxHash(chainID, tx)
-	}
-	return thm.txHashBytes
-}
-
-func TxHash(chainID string, tx Tx) []byte {
-	signBytes := crypto.SignBytes(chainID, tx)
-	hasher := ripemd160.New()
-	hasher.Write(signBytes)
-	// Calling Sum(nil) just gives us the digest with nothing prefixed
-	return hasher.Sum(nil)
-}
-
-func GenerateReceipt(chainId string, tx Tx) Receipt {
+func (body *Body) GenerateReceipt() Receipt {
 	receipt := Receipt{
-		TxHash: tx.Hash(chainId),
+		TxHash: body.Hash(),
 	}
-	if callTx, ok := tx.(*CallTx); ok {
+	if callTx, ok := body.Tx.(*CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
 			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
@@ -201,14 +324,4 @@ func copyInputs(inputs []*TxInput) []TxInput {
 		inputsCopy[i] = *input
 	}
 	return inputsCopy
-}
-
-// Contract: This function is deterministic and completely reversible.
-func jsonEscape(str string) string {
-	// TODO: escape without panic
-	escapedBytes, err := json.Marshal(str)
-	if err != nil {
-		panic(fmt.Errorf("error json-escaping string: %s", str))
-	}
-	return string(escapedBytes)
 }
