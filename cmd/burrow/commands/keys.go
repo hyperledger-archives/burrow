@@ -30,7 +30,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		})
 
 		keysPort := cmd.String(cli.StringOpt{
-			Name:   "host",
+			Name:   "port",
 			Desc:   "set the port for key daemon",
 			Value:  keys.DefaultPort,
 			EnvVar: "MONAX_KEYS_PORT",
