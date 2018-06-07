@@ -228,9 +228,6 @@ func (s *Service) GetAccount(address crypto.Address) (*ResultGetAccount, error) 
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Trace.Log("method", "GetAccount",
-		"address", address,
-		"sequence", acc.Sequence())
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 

@@ -198,7 +198,7 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address crypto.Address) (ac
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("unknown account %s at node (%s)", address, burrowNodeClient.broadcastRPC)
 		return nil, err
 	}
 
