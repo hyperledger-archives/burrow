@@ -20,6 +20,7 @@ import (
 	"math/big"
 
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/execution/errors"
 )
 
 // Not goroutine safe
@@ -28,10 +29,10 @@ type Stack struct {
 	ptr  int
 
 	gas *uint64
-	err *error
+	err *errors.CodedError
 }
 
-func NewStack(capacity int, gas *uint64, err *error) *Stack {
+func NewStack(capacity int, gas *uint64, err *errors.CodedError) *Stack {
 	return &Stack{
 		data: make([]Word256, capacity),
 		ptr:  0,
@@ -44,11 +45,11 @@ func (st *Stack) useGas(gasToUse uint64) {
 	if *st.gas > gasToUse {
 		*st.gas -= gasToUse
 	} else {
-		st.setErr(ErrInsufficientGas)
+		st.setErr(errors.ErrorCodeInsufficientGas)
 	}
 }
 
-func (st *Stack) setErr(err error) {
+func (st *Stack) setErr(err errors.CodedError) {
 	if *st.err == nil {
 		*st.err = err
 	}
@@ -57,7 +58,7 @@ func (st *Stack) setErr(err error) {
 func (st *Stack) Push(d Word256) {
 	st.useGas(GasStackOp)
 	if st.ptr == cap(st.data) {
-		st.setErr(ErrDataStackOverflow)
+		st.setErr(errors.ErrorCodeDataStackOverflow)
 		return
 	}
 	st.data[st.ptr] = d
@@ -92,7 +93,7 @@ func (st *Stack) PushBigInt(bigInt *big.Int) Word256 {
 func (st *Stack) Pop() Word256 {
 	st.useGas(GasStackOp)
 	if st.ptr == 0 {
-		st.setErr(ErrDataStackUnderflow)
+		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
 	}
 	st.ptr--
@@ -103,18 +104,18 @@ func (st *Stack) PopBytes() []byte {
 	return st.Pop().Bytes()
 }
 
-func (st *Stack) Pop64() (int64, error) {
+func (st *Stack) Pop64() (int64, errors.CodedError) {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		return 0, fmt.Errorf("int64 overflow from word: %v", d)
+		return 0, errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d)
 	}
 	return Int64FromWord256(d), nil
 }
 
-func (st *Stack) PopU64() (uint64, error) {
+func (st *Stack) PopU64() (uint64, errors.CodedError) {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		return 0, fmt.Errorf("uint64 overflow from word: %v", d)
+		return 0, errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d)
 	}
 	return Uint64FromWord256(d), nil
 }
@@ -135,7 +136,7 @@ func (st *Stack) Len() int {
 func (st *Stack) Swap(n int) {
 	st.useGas(GasStackOp)
 	if st.ptr < n {
-		st.setErr(ErrDataStackUnderflow)
+		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
 	st.data[st.ptr-n], st.data[st.ptr-1] = st.data[st.ptr-1], st.data[st.ptr-n]
@@ -144,7 +145,7 @@ func (st *Stack) Swap(n int) {
 func (st *Stack) Dup(n int) {
 	st.useGas(GasStackOp)
 	if st.ptr < n {
-		st.setErr(ErrDataStackUnderflow)
+		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
 	st.Push(st.data[st.ptr-n])
@@ -153,7 +154,7 @@ func (st *Stack) Dup(n int) {
 // Not an opcode, costs no gas.
 func (st *Stack) Peek() Word256 {
 	if st.ptr == 0 {
-		st.setErr(ErrDataStackUnderflow)
+		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
 	}
 	return st.data[st.ptr-1]

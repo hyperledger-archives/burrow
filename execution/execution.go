@@ -25,6 +25,7 @@ import (
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/names"
@@ -235,11 +236,11 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 
 		if exe.eventCache != nil {
 			for _, i := range tx.Inputs {
-				events.PublishAccountInput(exe.eventCache, i.Address, txEnv.Tx, nil, "")
+				events.PublishAccountInput(exe.eventCache, i.Address, txEnv.Tx, nil, nil)
 			}
 
 			for _, o := range tx.Outputs {
-				events.PublishAccountOutput(exe.eventCache, o.Address, txEnv.Tx, nil, "")
+				events.PublishAccountOutput(exe.eventCache, o.Address, txEnv.Tx, nil, nil)
 			}
 		}
 		return nil
@@ -285,7 +286,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 
 		if !createContract {
 			// check if its a native contract
-			if evm.RegisteredNativeContract(tx.Address.Word256()) {
+			if evm.IsRegisteredNativeContract(tx.Address.Word256()) {
 				return fmt.Errorf("attempt to call a native contract at %s, "+
 					"but native contracts cannot be called using CallTx. Use a "+
 					"contract that calls the native contract or the appropriate tx "+
@@ -418,13 +419,9 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 			// Fire Events for sender and receiver
 			// a separate event will be fired from vm for each additional call
 			if exe.eventCache != nil {
-				exception := ""
-				if err != nil {
-					exception = err.Error()
-				}
-				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, ret, exception)
+				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, ret, errors.AsCodedError(err))
 				if tx.Address != nil {
-					events.PublishAccountOutput(exe.eventCache, *tx.Address, txEnv.Tx, ret, exception)
+					events.PublishAccountOutput(exe.eventCache, *tx.Address, txEnv.Tx, ret, errors.AsCodedError(err))
 				}
 			}
 		} else {
@@ -599,7 +596,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, "")
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, nil)
 			events.PublishNameReg(exe.eventCache, txEnv.Tx)
 		}
 
@@ -765,7 +762,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		// check permission
 		if !HasPermission(exe.stateCache, inAcc, permFlag, logger) {
 			return fmt.Errorf("account %s does not have moderator permission %s (%b)", tx.Input.Address,
-				permission.PermFlagToString(permFlag), permFlag)
+				permFlag.String(), permFlag)
 		}
 
 		err = validateInput(inAcc, tx.Input)
@@ -783,27 +780,27 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 
 		var permAcc acm.Account
 		switch tx.PermArgs.PermFlag {
-		case permission.HasBase:
+		case ptypes.HasBase:
 			// this one doesn't make sense from txs
 			return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
-		case permission.SetBase:
+		case ptypes.SetBase:
 			permAcc, err = mutatePermissions(exe.stateCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
 					return perms.Base.Set(*tx.PermArgs.Permission, *tx.PermArgs.Value)
 				})
-		case permission.UnsetBase:
+		case ptypes.UnsetBase:
 			permAcc, err = mutatePermissions(exe.stateCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
 					return perms.Base.Unset(*tx.PermArgs.Permission)
 				})
-		case permission.SetGlobal:
+		case ptypes.SetGlobal:
 			permAcc, err = mutatePermissions(exe.stateCache, acm.GlobalPermissionsAddress,
 				func(perms *ptypes.AccountPermissions) error {
 					return perms.Base.Set(*tx.PermArgs.Permission, *tx.PermArgs.Value)
 				})
-		case permission.HasRole:
+		case ptypes.HasRole:
 			return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
-		case permission.AddRole:
+		case ptypes.AddRole:
 			permAcc, err = mutatePermissions(exe.stateCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
 					if !perms.AddRole(*tx.PermArgs.Role) {
@@ -812,7 +809,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 					}
 					return nil
 				})
-		case permission.RemoveRole:
+		case ptypes.RemoveRole:
 			permAcc, err = mutatePermissions(exe.stateCache, *tx.PermArgs.Address,
 				func(perms *ptypes.AccountPermissions) error {
 					if !perms.RmRole(*tx.PermArgs.Role) {
@@ -822,7 +819,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 					return nil
 				})
 		default:
-			return fmt.Errorf("invalid permission function: %s", permission.PermFlagToString(permFlag))
+			return fmt.Errorf("invalid permission function: %v", permFlag)
 		}
 
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
@@ -847,8 +844,8 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		}
 
 		if exe.eventCache != nil {
-			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, "")
-			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txEnv.Tx)
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, nil)
+			events.PublishPermissions(exe.eventCache, permFlag, txEnv.Tx)
 		}
 
 		return nil
@@ -1158,32 +1155,30 @@ func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload
 
 // Get permission on an account or fall back to global value
 func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
-	if perm > permission.AllPermFlags {
+	if perm > ptypes.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
-				perm, permission.AllPermFlags),
+				perm, ptypes.AllPermFlags),
 			"invalid_permission", perm,
-			"maximum_permission", permission.AllPermFlags)
+			"maximum_permission", ptypes.AllPermFlags)
 		return false
 	}
-
-	permString := permission.String(perm)
 
 	v, err := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(accountGetter).Base).Get(perm)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
-			"perm_flag", permString,
+			"perm_flag", perm.String(),
 			structure.ErrorKey, err)
 	}
 
 	if v {
 		logger.TraceMsg("Account has permission",
 			"account_address", acc.Address,
-			"perm_flag", permString)
+			"perm_flag", perm.String())
 	} else {
 		logger.TraceMsg("Account does not have permission",
 			"account_address", acc.Address,
-			"perm_flag", permString)
+			"perm_flag", perm.String())
 	}
 	return v
 }
@@ -1192,7 +1187,7 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptyp
 func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, permission.Send, logger) {
+		if !HasPermission(accountGetter, acc, ptypes.Send, logger) {
 			return false
 		}
 	}
@@ -1201,23 +1196,23 @@ func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Addres
 
 func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, permission.Name, logger)
+	return HasPermission(accountGetter, acc, ptypes.Name, logger)
 }
 
 func hasCallPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, permission.Call, logger)
+	return HasPermission(accountGetter, acc, ptypes.Call, logger)
 }
 
 func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
+	return HasPermission(accountGetter, acc, ptypes.CreateContract, logger)
 }
 
 func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
+		if !HasPermission(accountGetter, acc, ptypes.CreateAccount, logger) {
 			return false
 		}
 	}
@@ -1226,14 +1221,14 @@ func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[cryp
 
 func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, permission.Bond, logger)
+	return HasPermission(accountGetter, acc, ptypes.Bond, logger)
 }
 
 func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, permission.Bond, logger) {
-			if !HasPermission(accountGetter, acc, permission.Send, logger) {
+		if !HasPermission(accountGetter, acc, ptypes.Bond, logger) {
+			if !HasPermission(accountGetter, acc, ptypes.Send, logger) {
 				return false
 			}
 		}

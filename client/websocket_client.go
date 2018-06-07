@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	exeEvents "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -170,12 +171,12 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						continue
 					}
 
-					if eventDataTx.Exception != "" {
+					if eventDataTx.Exception != nil {
 						confirmationChannel <- Confirmation{
 							BlockHash:   latestBlockHash,
 							EventDataTx: eventDataTx,
-							Exception: fmt.Errorf("transaction confirmed but execution gave exception: %v",
-								eventDataTx.Exception),
+							Exception: errors.Wrap(eventDataTx.Exception,
+								"transaction confirmed but execution gave exception: %v"),
 							Error: nil,
 						}
 						return

@@ -23,10 +23,11 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
-	"github.com/hyperledger/burrow/permission"
+	permission "github.com/hyperledger/burrow/permission/types"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -87,7 +88,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
-	assert.IsType(t, err, ErrLacksSNativePermission{})
+	assert.IsType(t, err, errors.LacksSNativePermission{})
 
 	// Grant all permissions and dispatch should success
 	caller.SetPermissions(allAccountPermissions())

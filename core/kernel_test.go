@@ -2,12 +2,10 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
-
 	"time"
-
-	"fmt"
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
@@ -16,8 +14,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
-	tm_config "github.com/tendermint/tendermint/config"
-	tm_types "github.com/tendermint/tendermint/types"
+	tmConfig "github.com/tendermint/tendermint/config"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const testDir = "./test_scratch/kernel_test"
@@ -26,7 +24,7 @@ func TestBootThenShutdown(t *testing.T) {
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
-	tmConf := tm_config.DefaultConfig()
+	tmConf := tmConfig.DefaultConfig()
 	//logger, _, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
@@ -38,7 +36,7 @@ func TestBootShutdownResume(t *testing.T) {
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
-	tmConf := tm_config.DefaultConfig()
+	tmConf := tmConfig.DefaultConfig()
 	//logger, _, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
@@ -46,7 +44,7 @@ func TestBootShutdownResume(t *testing.T) {
 
 	i := int64(1)
 	// asserts we get a consecutive run of blocks
-	blockChecker := func(block *tm_types.EventDataNewBlock) bool {
+	blockChecker := func(block *tmTypes.EventDataNewBlock) bool {
 		assert.Equal(t, i, block.Block.Height)
 		i++
 		// stop every third block
@@ -61,9 +59,9 @@ func TestBootShutdownResume(t *testing.T) {
 	assert.Error(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
 }
 
-func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *genesis.GenesisDoc,
-	tmConf *tm_config.Config, logger *logging.Logger,
-	blockChecker func(block *tm_types.EventDataNewBlock) (cont bool)) error {
+func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *genesis.GenesisDoc,
+	tmConf *tmConfig.Config, logger *logging.Logger,
+	blockChecker func(block *tmTypes.EventDataNewBlock) (cont bool)) error {
 
 	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
 	keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
@@ -78,7 +76,7 @@ func bootWaitBlocksShutdown(privValidator tm_types.PrivValidator, genesisDoc *ge
 		return err
 	}
 
-	ch := make(chan *tm_types.EventDataNewBlock)
+	ch := make(chan *tmTypes.EventDataNewBlock)
 	tendermint.SubscribeNewBlock(context.Background(), kern.Emitter, "TestBootShutdownResume", ch)
 	cont := true
 	for cont {

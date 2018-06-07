@@ -3,7 +3,7 @@ package snatives
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/permission"
+	permission "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 )
 
