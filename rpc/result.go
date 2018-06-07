@@ -201,7 +201,7 @@ func (rbt ResultBroadcastTx) UnmarshalJSON(data []byte) (err error) {
 
 type ResultListUnconfirmedTxs struct {
 	NumTxs int
-	Txs    []txs.Body
+	Txs    []*txs.Envelope
 }
 
 type ResultGetName struct {
@@ -213,7 +213,7 @@ type ResultGenesis struct {
 }
 
 type ResultSignTx struct {
-	Tx txs.Body
+	Tx *txs.Envelope
 }
 
 type TendermintEvent struct {

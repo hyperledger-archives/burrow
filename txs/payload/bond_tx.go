@@ -1,39 +1,35 @@
-package txs
+package payload
 
 import (
 	"fmt"
+
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
 )
 
 type BondTx struct {
-	PubKey    crypto.PublicKey
-	Signature crypto.Signature
-	Inputs    []*TxInput
-	UnbondTo  []*TxOutput
-	txHashMemoizer
+	// At least one should have bond permission (even if 0 amount transfer)
+	Inputs   []*TxInput
+	UnbondTo []*TxOutput
 }
-
-var _ Tx = &BondTx{}
 
 func NewBondTx(pubkey crypto.PublicKey) (*BondTx, error) {
 	return &BondTx{
-		PubKey:   pubkey,
 		Inputs:   []*TxInput{},
 		UnbondTo: []*TxOutput{},
 	}, nil
 }
 
-func (tx *BondTx) Type() TxType {
-	return TxTypeBond
+func (tx *BondTx) Type() Type {
+	return TypeBond
 }
 
-func (tx *BondTx) GetInputs() []TxInput {
-	return copyInputs(tx.Inputs)
+func (tx *BondTx) GetInputs() []*TxInput {
+	return tx.Inputs
 }
 
 func (tx *BondTx) String() string {
-	return fmt.Sprintf("BondTx{%v: %v -> %v}", tx.PubKey, tx.Inputs, tx.UnbondTo)
+	return fmt.Sprintf("BondTx{%v -> %v}", tx.Inputs, tx.UnbondTo)
 }
 
 func (tx *BondTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
@@ -50,10 +46,9 @@ func (tx *BondTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt 
 
 func (tx *BondTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:   pubkey.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: pubkey,
+		Address:  pubkey.Address(),
+		Amount:   amt,
+		Sequence: sequence,
 	})
 	return nil
 }

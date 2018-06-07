@@ -102,15 +102,19 @@ func (s *Service) State() state.Reader {
 	return s.state
 }
 
+func (s *Service) BlockchainInfo() bcm.BlockchainInfo {
+	return s.blockchain
+}
+
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
 	// Get all transactions for now
 	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
 	if err != nil {
 		return nil, err
 	}
-	wrappedTxs := make([]txs.Body, len(transactions))
+	wrappedTxs := make([]*txs.Envelope, len(transactions))
 	for i, tx := range transactions {
-		wrappedTxs[i] = txs.Wrap(tx)
+		wrappedTxs[i] = tx
 	}
 	return &ResultListUnconfirmedTxs{
 		NumTxs: len(transactions),
@@ -178,7 +182,7 @@ func (s *Service) Status() (*ResultStatus, error) {
 	}, nil
 }
 
-func (s *Service) ChainId() (*ResultChainId, error) {
+func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
 	return &ResultChainId{
 		ChainName:   s.blockchain.GenesisDoc().ChainName,
 		ChainId:     s.blockchain.ChainID(),
@@ -335,7 +339,7 @@ func (s *Service) ListNames(predicate func(*execution.NameRegEntry) bool) (*Resu
 		return
 	})
 	return &ResultListNames{
-		BlockHeight: s.blockchain.Tip().LastBlockHeight(),
+		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
 		Names:       names,
 	}, nil
 }

@@ -27,11 +27,13 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 )
 
 // TODO: make configurable
@@ -42,7 +44,7 @@ type BatchExecutor interface {
 	sync.Locker
 	state.Reader
 	// Execute transaction against block cache (i.e. block buffer)
-	Execute(tx txs.Tx) error
+	Execute(txEnv *txs.Envelope) error
 	// Reset executor to underlying State
 	Reset() error
 }
@@ -58,7 +60,7 @@ type BatchCommitter interface {
 type executor struct {
 	sync.RWMutex
 	chainID      string
-	tip          bcm.Tip
+	tip          *bcm.Tip
 	runCall      bool
 	state        *State
 	stateCache   state.Cache
@@ -72,21 +74,21 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend *State, chainID string, tip bcm.Tip, logger *logging.Logger,
+func NewBatchChecker(backend *State, chainID string, tip *bcm.Tip, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
 	return newExecutor("CheckCache", false, backend, chainID, tip, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend *State, chainID string, tip bcm.Tip, publisher event.Publisher, logger *logging.Logger,
+func NewBatchCommitter(backend *State, chainID string, tip *bcm.Tip, publisher event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
 	return newExecutor("CommitCache", true, backend, chainID, tip, publisher,
 		logger.WithScope("NewBatchCommitter"), options...)
 }
 
-func newExecutor(name string, runCall bool, backend *State, chainID string, tip bcm.Tip, publisher event.Publisher,
+func newExecutor(name string, runCall bool, backend *State, chainID string, tip *bcm.Tip, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 
 	exe := &executor{
@@ -161,26 +163,30 @@ func (exe *executor) Reset() error {
 
 // If the tx is invalid, an error will be returned.
 // Unlike ExecBlock(), state will not be altered.
-func (exe *executor) Execute(tx txs.Tx) (err error) {
+func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", tx.String(), r,
+			err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
 				debug.Stack())
 		}
 	}()
-	body = txs.ChainWrap(exe.chainID, tx)
 
-	txHash := tx.Hash(exe.chainID)
 	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(
 		"run_call", exe.runCall,
-		"tx_hash", txHash)
-	logger.TraceMsg("Executing transaction", "tx", tx.String())
+		"tx_hash", txEnv.Tx.Hash())
+	logger.TraceMsg("Executing transaction", "tx", txEnv.String())
 	// TODO: do something with fees
 	fees := uint64(0)
 
+	// Verify transaction signature against inputs
+	err = txEnv.Verify(exe.stateCache)
+	if err != nil {
+		return err
+	}
+
 	// Exec tx
-	switch tx := tx.(type) {
-	case *txs.SendTx:
+	switch tx := txEnv.Tx.Payload.(type) {
+	case *payload.SendTx:
 		accounts, err := getInputs(exe.stateCache, tx.Inputs)
 		if err != nil {
 			return err
@@ -198,8 +204,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 
-		signBytes := crypto.SignBytes(exe.chainID, tx)
-		inTotal, err := validateInputs(accounts, signBytes, tx.Inputs)
+		inTotal, err := validateInputs(accounts, tx.Inputs)
 		if err != nil {
 			return err
 		}
@@ -208,7 +213,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			return err
 		}
 		if outTotal > inTotal {
-			return txs.ErrTxInsufficientFunds
+			return payload.ErrTxInsufficientFunds
 		}
 		fee := inTotal - outTotal
 		fees += fee
@@ -230,16 +235,16 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		if exe.eventCache != nil {
 			for _, i := range tx.Inputs {
-				events.PublishAccountInput(exe.eventCache, i.Address, txHash, tx, nil, "")
+				events.PublishAccountInput(exe.eventCache, i.Address, txEnv.Tx, nil, "")
 			}
 
 			for _, o := range tx.Outputs {
-				events.PublishAccountOutput(exe.eventCache, o.Address, txHash, tx, nil, "")
+				events.PublishAccountOutput(exe.eventCache, o.Address, txEnv.Tx, nil, "")
 			}
 		}
 		return nil
 
-	case *txs.CallTx:
+	case *payload.CallTx:
 		var inAcc acm.MutableAccount
 		var outAcc acm.Account
 
@@ -251,7 +256,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		if inAcc == nil {
 			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
-			return txs.ErrTxInvalidAddress
+			return payload.ErrTxInvalidAddress
 		}
 
 		// Calling a nil destination is defined as requesting contract creation
@@ -266,14 +271,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 			}
 		}
 
-		// pubKey should be present in either "inAcc" or "tx.Input"
-		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logger.InfoMsg("Cannot find public key for input account",
-				"tx_input", tx.Input)
-			return err
-		}
-		signBytes := crypto.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		err = validateInput(inAcc, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
@@ -282,7 +280,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		if tx.Input.Amount < tx.Fee {
 			logger.InfoMsg("Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
-			return txs.ErrTxInsufficientFunds
+			return payload.ErrTxInsufficientFunds
 		}
 
 		if !createContract {
@@ -358,7 +356,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						"caller_address", inAcc.Address(),
 						"callee_address", tx.Address)
 				}
-				err = txs.ErrTxInvalidAddress
+				err = payload.ErrTxInvalidAddress
 				goto CALL_COMPLETE
 			}
 
@@ -368,7 +366,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				callee = evm.DeriveNewAccount(caller, state.GlobalAccountPermissions(exe.state),
 					logger.With(
 						"tx", tx.String(),
-						"tx_hash", txHash,
+						"tx_hash", txEnv.Tx.Hash(),
 						"run_call", exe.runCall,
 					))
 				code = tx.Data
@@ -390,7 +388,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// Write caller/callee to txCache.
 				txCache.UpdateAccount(caller)
 				txCache.UpdateAccount(callee)
-				vmach := evm.NewVM(params, caller.Address(), tx.Hash(exe.chainID), logger, exe.vmOptions...)
+				vmach := evm.NewVM(params, caller.Address(), txEnv.Tx.Hash(), logger, exe.vmOptions...)
 				vmach.SetPublisher(exe.eventCache)
 				// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 				ret, err = vmach.Call(txCache, caller, callee, code, tx.Data, value, &gas)
@@ -424,10 +422,9 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				if err != nil {
 					exception = err.Error()
 				}
-				txHash := tx.Hash(exe.chainID)
-				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, ret, exception)
+				events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, ret, exception)
 				if tx.Address != nil {
-					events.PublishAccountOutput(exe.eventCache, *tx.Address, txHash, tx, ret, exception)
+					events.PublishAccountOutput(exe.eventCache, *tx.Address, txEnv.Tx, ret, exception)
 				}
 			}
 		} else {
@@ -453,7 +450,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		return nil
 
-	case *txs.NameTx:
+	case *payload.NameTx:
 		// Validate input
 		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
@@ -462,20 +459,13 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		if inAcc == nil {
 			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
-			return txs.ErrTxInvalidAddress
+			return payload.ErrTxInvalidAddress
 		}
 		// check permission
 		if !hasNamePermission(exe.stateCache, inAcc, logger) {
 			return fmt.Errorf("account %s does not have Name permission", tx.Input.Address)
 		}
-		// pubKey should be present in either "inAcc" or "tx.Input"
-		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logger.InfoMsg("Cannot find public key for input account",
-				"tx_input", tx.Input)
-			return err
-		}
-		signBytes := crypto.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		err = validateInput(inAcc, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input, structure.ErrorKey, err)
@@ -484,7 +474,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		if tx.Input.Amount < tx.Fee {
 			logger.InfoMsg("Sender did not send enough to cover the fee",
 				"tx_input", tx.Input)
-			return txs.ErrTxInsufficientFunds
+			return payload.ErrTxInsufficientFunds
 		}
 
 		// validate the input strings
@@ -495,7 +485,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		value := tx.Input.Amount - tx.Fee
 
 		// let's say cost of a name for one block is len(data) + 32
-		costPerBlock := txs.NameCostPerBlock(txs.NameBaseCost(tx.Name, tx.Data))
+		costPerBlock := names.NameCostPerBlock(names.NameBaseCost(tx.Name, tx.Data))
 		expiresIn := value / uint64(costPerBlock)
 		lastBlockHeight := exe.tip.LastBlockHeight()
 
@@ -539,8 +529,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				// update the entry by bumping the expiry
 				// and changing the data
 				if expired {
-					if expiresIn < txs.MinNameRegistrationPeriod {
-						return fmt.Errorf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
+					if expiresIn < names.MinNameRegistrationPeriod {
+						return fmt.Errorf("Names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					entry.Owner = tx.Input.Address
@@ -551,11 +541,11 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				} else {
 					// since the size of the data may have changed
 					// we use the total amount of "credit"
-					oldCredit := (entry.Expires - lastBlockHeight) * txs.NameBaseCost(entry.Name, entry.Data)
+					oldCredit := (entry.Expires - lastBlockHeight) * names.NameBaseCost(entry.Name, entry.Data)
 					credit := oldCredit + value
 					expiresIn = uint64(credit / costPerBlock)
-					if expiresIn < txs.MinNameRegistrationPeriod {
-						return fmt.Errorf("names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
+					if expiresIn < names.MinNameRegistrationPeriod {
+						return fmt.Errorf("names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 					}
 					entry.Expires = lastBlockHeight + expiresIn
 					logger.TraceMsg("Updated NameReg entry",
@@ -572,8 +562,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				}
 			}
 		} else {
-			if expiresIn < txs.MinNameRegistrationPeriod {
-				return fmt.Errorf("Names must be registered for at least %d blocks", txs.MinNameRegistrationPeriod)
+			if expiresIn < names.MinNameRegistrationPeriod {
+				return fmt.Errorf("Names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 			}
 			// entry does not exist, so create it
 			entry = &NameRegEntry{
@@ -609,9 +599,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 		if exe.eventCache != nil {
-			txHash := tx.Hash(exe.chainID)
-			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
-			events.PublishNameReg(exe.eventCache, txHash, tx)
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, "")
+			events.PublishNameReg(exe.eventCache, txEnv.Tx)
 		}
 
 		return nil
@@ -619,7 +608,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		// Consensus related Txs inactivated for now
 		// TODO!
 		/*
-			case *txs.BondTx:
+			case *payload.BondTx:
 						valInfo := exe.blockCache.State().GetValidatorInfo(tx.PublicKey().Address())
 						if valInfo != nil {
 							// TODO: In the future, check that the validator wasn't destroyed,
@@ -658,14 +647,14 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 							return err
 						}
 						if !tx.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
+							return payload.ErrTxInvalidSignature
 						}
 						outTotal, err := validateOutputs(tx.UnbondTo)
 						if err != nil {
 							return err
 						}
 						if outTotal > inTotal {
-							return txs.ErrTxInsufficientFunds
+							return payload.ErrTxInsufficientFunds
 						}
 						fee := inTotal - outTotal
 						fees += fee
@@ -700,17 +689,17 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						}
 						return nil
 
-					case *txs.UnbondTx:
+					case *payload.UnbondTx:
 						// The validator must be active
 						_, val := _s.BondedValidators.GetByAddress(tx.Address)
 						if val == nil {
-							return txs.ErrTxInvalidAddress
+							return payload.ErrTxInvalidAddress
 						}
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
 						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
+							return payload.ErrTxInvalidSignature
 						}
 
 						// tx.Height must be greater than val.LastCommitHeight
@@ -729,13 +718,13 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 						// The validator must be inactive
 						_, val := _s.UnbondingValidators.GetByAddress(tx.Address)
 						if val == nil {
-							return txs.ErrTxInvalidAddress
+							return payload.ErrTxInvalidAddress
 						}
 
 						// Verify the signature
 						signBytes := acm.SignBytes(exe.chainID, tx)
 						if !val.PublicKey().VerifyBytes(signBytes, tx.Signature) {
-							return txs.ErrTxInvalidSignature
+							return payload.ErrTxInvalidSignature
 						}
 
 						// tx.Height must be in a suitable range
@@ -755,7 +744,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 
 		*/
 
-	case *txs.PermissionsTx:
+	case *payload.PermissionsTx:
 		// Validate input
 		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
@@ -764,7 +753,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		if inAcc == nil {
 			logger.InfoMsg("Cannot find input account",
 				"tx_input", tx.Input)
-			return txs.ErrTxInvalidAddress
+			return payload.ErrTxInvalidAddress
 		}
 
 		err = tx.PermArgs.EnsureValid()
@@ -779,14 +768,7 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 				permission.PermFlagToString(permFlag), permFlag)
 		}
 
-		// pubKey should be present in either "inAcc" or "tx.Input"
-		if err := checkInputPubKey(inAcc, tx.Input); err != nil {
-			logger.InfoMsg("Cannot find public key for input account",
-				"tx_input", tx.Input)
-			return err
-		}
-		signBytes := crypto.SignBytes(exe.chainID, tx)
-		err = validateInput(inAcc, signBytes, tx.Input)
+		err = validateInput(inAcc, tx.Input)
 		if err != nil {
 			logger.InfoMsg("validateInput failed",
 				"tx_input", tx.Input,
@@ -865,9 +847,8 @@ func (exe *executor) Execute(tx txs.Tx) (err error) {
 		}
 
 		if exe.eventCache != nil {
-			txHash := tx.Hash(exe.chainID)
-			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txHash, tx, nil, "")
-			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txHash, tx)
+			events.PublishAccountInput(exe.eventCache, tx.Input.Address, txEnv.Tx, nil, "")
+			events.PublishPermissions(exe.eventCache, permission.PermFlagToString(permFlag), txEnv.Tx)
 		}
 
 		return nil
@@ -1027,24 +1008,20 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
 func getInputs(accountGetter state.AccountGetter,
-	ins []*txs.TxInput) (map[crypto.Address]acm.MutableAccount, error) {
+	ins []*payload.TxInput) (map[crypto.Address]acm.MutableAccount, error) {
 
 	accounts := map[crypto.Address]acm.MutableAccount{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
-			return nil, txs.ErrTxDuplicateAddress
+			return nil, payload.ErrTxDuplicateAddress
 		}
 		acc, err := state.GetMutableAccount(accountGetter, in.Address)
 		if err != nil {
 			return nil, err
 		}
 		if acc == nil {
-			return nil, txs.ErrTxInvalidAddress
-		}
-		// PublicKey should be present in either "account" or "in"
-		if err := checkInputPubKey(acc, in); err != nil {
-			return nil, err
+			return nil, payload.ErrTxInvalidAddress
 		}
 		accounts[in.Address] = acc
 	}
@@ -1052,7 +1029,7 @@ func getInputs(accountGetter state.AccountGetter,
 }
 
 func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
-	outs []*txs.TxOutput, logger *logging.Logger) (map[crypto.Address]acm.MutableAccount, error) {
+	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]acm.MutableAccount, error) {
 	if accs == nil {
 		accs = make(map[crypto.Address]acm.MutableAccount)
 	}
@@ -1062,7 +1039,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	for _, out := range outs {
 		// Account shouldn't be duplicated
 		if _, ok := accs[out.Address]; ok {
-			return nil, txs.ErrTxDuplicateAddress
+			return nil, payload.ErrTxDuplicateAddress
 		}
 		acc, err := state.GetMutableAccount(accountGetter, out.Address)
 		if err != nil {
@@ -1088,37 +1065,14 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	return accs, nil
 }
 
-// Since all ethereum accounts implicitly exist we sometimes lazily create an Account object to represent them
-// only when needed. Sometimes we need to create an unknown Account knowing only its address (which is expected to
-// be a deterministic hash of its associated public key) and not its public key. When we eventually receive a
-// transaction acting on behalf of that account we will be given a public key that we can check matches the address.
-// If it does then we will associate the public key with the stub account already registered in the system once and
-// for all time.
-func checkInputPubKey(acc acm.MutableAccount, in *txs.TxInput) error {
-	if !acc.PublicKey().IsValid() {
-		if !in.PublicKey.IsValid() {
-			return txs.ErrTxUnknownPubKey
-		}
-		addressFromPubKey := in.PublicKey.Address()
-		addressFromAccount := acc.Address()
-		if addressFromPubKey != addressFromAccount {
-			return txs.ErrTxInvalidPubKey
-		}
-		acc.SetPublicKey(in.PublicKey)
-	} else {
-		in.PublicKey = crypto.PublicKey{}
-	}
-	return nil
-}
-
-func validateInputs(accs map[crypto.Address]acm.MutableAccount, signBytes []byte, ins []*txs.TxInput) (uint64, error) {
+func validateInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput) (uint64, error) {
 	total := uint64(0)
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
 			return 0, fmt.Errorf("validateInputs() expects account in accounts, but account %s not found", in.Address)
 		}
-		err := validateInput(acc, signBytes, in)
+		err := validateInput(acc, in)
 		if err != nil {
 			return 0, err
 		}
@@ -1128,30 +1082,26 @@ func validateInputs(accs map[crypto.Address]acm.MutableAccount, signBytes []byte
 	return total, nil
 }
 
-func validateInput(acc acm.MutableAccount, signBytes []byte, in *txs.TxInput) error {
+func validateInput(acc acm.MutableAccount, in *payload.TxInput) error {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
 	}
-	// Check signatures
-	if !acc.PublicKey().Verify(signBytes, in.Signature) {
-		return txs.ErrTxInvalidSignature
-	}
 	// Check sequences
 	if acc.Sequence()+1 != uint64(in.Sequence) {
-		return txs.ErrTxInvalidSequence{
+		return payload.ErrTxInvalidSequence{
 			Got:      in.Sequence,
 			Expected: acc.Sequence() + uint64(1),
 		}
 	}
 	// Check amount
 	if acc.Balance() < uint64(in.Amount) {
-		return txs.ErrTxInsufficientFunds
+		return payload.ErrTxInsufficientFunds
 	}
 	return nil
 }
 
-func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
+func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	total := uint64(0)
 	for _, out := range outs {
 		// Check TxOutput basic
@@ -1164,7 +1114,7 @@ func validateOutputs(outs []*txs.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*txs.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1189,7 +1139,7 @@ func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*txs.TxInp
 	return nil
 }
 
-func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*txs.TxOutput) error {
+func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {

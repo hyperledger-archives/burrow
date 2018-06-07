@@ -94,17 +94,17 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	}
 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain, logger)
+	checker := execution.NewBatchChecker(state, tmGenesisDoc.ChainID, blockchain.Tip, logger)
 
 	emitter := event.NewEmitter(logger)
-	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain, emitter, logger, exeOptions...)
+	committer := execution.NewBatchCommitter(state, tmGenesisDoc.ChainID, blockchain.Tip, emitter, logger, exeOptions...)
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
 
 	if err != nil {
 		return nil, err
 	}
-	txCodec := txs.NewGoWireCodec()
-	transactor := execution.NewTransactor(blockchain, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
+	txCodec := txs.NewJSONCodec()
+	transactor := execution.NewTransactor(blockchain.Tip, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
 		logger)
 
 	nameReg := state

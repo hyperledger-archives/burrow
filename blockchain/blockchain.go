@@ -22,7 +22,6 @@ import (
 
 	"sync"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
@@ -33,6 +32,16 @@ import (
 const DefaultValidatorsWindowSize = 10
 
 var stateKey = []byte("BlockchainState")
+
+type BlockchainInfo interface {
+	GenesisHash() []byte
+	GenesisDoc() genesis.GenesisDoc
+	ChainID() string
+	LastBlockHeight() uint64
+	LastBlockTime() time.Time
+	LastBlockHash() []byte
+	AppHashAfterLastBlock() []byte
+}
 
 type Root struct {
 	genesisHash []byte
@@ -50,8 +59,8 @@ type Tip struct {
 }
 
 type Blockchain struct {
-	Root
-	Tip
+	*Root
+	*Tip
 	sync.RWMutex
 	db dbm.DB
 }
@@ -88,19 +97,15 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 
 // Pointer to blockchain state initialised from genesis
 func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
-	var validators []acm.Validator
-	for _, gv := range genesisDoc.Validators {
-		validators = append(validators, acm.ConcreteValidator{
-			PublicKey: gv.PublicKey,
-			Power:     uint64(gv.Amount),
-		}.Validator())
-	}
-	rt := NewRoot(genesisDoc)
-	return &Blockchain{
+	bc := &Blockchain{
 		db:   db,
-		Root: rt,
-		Tip:  NewTip(genesisDoc.ChainID(), rt.genesisDoc.GenesisTime, rt.genesisHash),
+		Root: NewRoot(genesisDoc),
+		Tip:  NewTip(genesisDoc.ChainID(), NewRoot(genesisDoc).genesisDoc.GenesisTime, NewRoot(genesisDoc).genesisHash),
 	}
+	for _, gv := range genesisDoc.Validators {
+		bc.validators.AlterPower(gv.PublicKey, gv.Amount)
+	}
+	return bc
 }
 
 func loadBlockchain(db dbm.DB) (*Blockchain, error) {
@@ -118,16 +123,16 @@ func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	return bc, nil
 }
 
-func NewRoot(genesisDoc *genesis.GenesisDoc) Root {
-	return Root{
+func NewRoot(genesisDoc *genesis.GenesisDoc) *Root {
+	return &Root{
 		genesisHash: genesisDoc.Hash(),
 		genesisDoc:  *genesisDoc,
 	}
 }
 
 // Create genesis Tip
-func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) Tip {
-	return Tip{
+func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *Tip {
+	return &Tip{
 		chainID:               chainID,
 		lastBlockTime:         genesisTime,
 		appHashAfterLastBlock: genesisHash,

@@ -10,6 +10,15 @@ type Signature struct {
 	Signature []byte
 }
 
+//
+//func (sig *Signature) MarshalJSON() ([]byte, error) {
+//
+//}
+//
+//func (sig *Signature) UnmarshalJSON(data []byte) error {
+//
+//}
+
 // Currently this is a stub that reads the raw bytes returned by key_client and returns
 // an ed25519 signature.
 func SignatureFromBytes(bs []byte, curveType CurveType) (Signature, error) {
@@ -35,12 +44,4 @@ func SignatureFromBytes(bs []byte, curveType CurveType) (Signature, error) {
 
 func (sig Signature) RawBytes() []byte {
 	return sig.Signature
-}
-
-func ChainSign(signer Signer, chainID string, o Signable) (Signature, error) {
-	sig, err := signer.Sign(SignBytes(chainID, o))
-	if err != nil {
-		return Signature{}, err
-	}
-	return sig, nil
 }

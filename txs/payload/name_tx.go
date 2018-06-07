@@ -1,4 +1,4 @@
-package txs
+package payload
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/names"
 )
 
 // Name should be file system lik
@@ -18,10 +19,7 @@ type NameTx struct {
 	Name  string
 	Data  string
 	Fee   uint64
-	txHashMemoizer
 }
-
-var _ Tx = &NameTx{}
 
 func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := from.Address()
@@ -39,10 +37,9 @@ func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string,
 
 func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: from,
+		Address:  from.Address(),
+		Amount:   amt,
+		Sequence: sequence,
 	}
 
 	return &NameTx{
@@ -53,23 +50,23 @@ func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, s
 	}
 }
 
-func (tx *NameTx) Type() TxType {
-	return TxTypeName
+func (tx *NameTx) Type() Type {
+	return TypeName
 }
 
-func (tx *NameTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+func (tx *NameTx) GetInputs() []*TxInput {
+	return []*TxInput{tx.Input}
 }
 
 func (tx *NameTx) ValidateStrings() error {
 	if len(tx.Name) == 0 {
 		return ErrTxInvalidString{"Name must not be empty"}
 	}
-	if len(tx.Name) > MaxNameLength {
-		return ErrTxInvalidString{fmt.Sprintf("Name is too long. Max %d bytes", MaxNameLength)}
+	if len(tx.Name) > names.MaxNameLength {
+		return ErrTxInvalidString{fmt.Sprintf("Name is too long. Max %d bytes", names.MaxNameLength)}
 	}
-	if len(tx.Data) > MaxDataLength {
-		return ErrTxInvalidString{fmt.Sprintf("Data is too long. Max %d bytes", MaxDataLength)}
+	if len(tx.Data) > names.MaxDataLength {
+		return ErrTxInvalidString{fmt.Sprintf("Data is too long. Max %d bytes", names.MaxDataLength)}
 	}
 
 	if !validateNameRegEntryName(tx.Name) {

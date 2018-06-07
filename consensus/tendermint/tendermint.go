@@ -54,7 +54,7 @@ func NewNode(
 	conf *config.Config,
 	privValidator tm_types.PrivValidator,
 	genesisDoc *tm_types.GenesisDoc,
-	blockchain bcm.MutableBlockchain,
+	blockchain *bcm.Blockchain,
 	checker execution.BatchExecutor,
 	committer execution.BatchCommitter,
 	logger *logging.Logger) (*Node, error) {
@@ -86,11 +86,11 @@ func NewNode(
 	return nde, nil
 }
 
-func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx,
+func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(env *txs.Envelope,
 	callback func(res *abci_types.Response)) error {
 
-	return func(tx txs.Tx, callback func(res *abci_types.Response)) error {
-		txBytes, err := txEncoder.EncodeTx(tx)
+	return func(env *txs.Envelope, callback func(res *abci_types.Response)) error {
+		txBytes, err := txEncoder.EncodeTx(env)
 		if err != nil {
 			return fmt.Errorf("error encoding transaction: %v", err)
 		}

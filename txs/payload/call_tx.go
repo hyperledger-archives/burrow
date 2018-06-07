@@ -1,4 +1,4 @@
-package txs
+package payload
 
 import (
 	"fmt"
@@ -14,10 +14,7 @@ type CallTx struct {
 	GasLimit uint64
 	Fee      uint64
 	Data     []byte
-	txHashMemoizer
 }
-
-var _ Tx = &CallTx{}
 
 func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
@@ -38,10 +35,9 @@ func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address
 func NewCallTxWithSequence(from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: from,
+		Address:  from.Address(),
+		Amount:   amt,
+		Sequence: sequence,
 	}
 
 	return &CallTx{
@@ -53,11 +49,11 @@ func NewCallTxWithSequence(from crypto.PublicKey, to *crypto.Address, data []byt
 	}
 }
 
-func (tx *CallTx) Type() TxType {
-	return TxTypeCall
+func (tx *CallTx) Type() Type {
+	return TypeCall
 }
-func (tx *CallTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+func (tx *CallTx) GetInputs() []*TxInput {
+	return []*TxInput{tx.Input}
 }
 
 func (tx *CallTx) String() string {

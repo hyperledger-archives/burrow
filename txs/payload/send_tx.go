@@ -1,7 +1,8 @@
-package txs
+package payload
 
 import (
 	"fmt"
+
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
 )
@@ -9,10 +10,7 @@ import (
 type SendTx struct {
 	Inputs  []*TxInput
 	Outputs []*TxOutput
-	txHashMemoizer
 }
-
-var _ Tx = &SendTx{}
 
 func NewSendTx() *SendTx {
 	return &SendTx{
@@ -21,12 +19,12 @@ func NewSendTx() *SendTx {
 	}
 }
 
-func (tx *SendTx) GetInputs() []TxInput {
-	return copyInputs(tx.Inputs)
+func (tx *SendTx) GetInputs() []*TxInput {
+	return tx.Inputs
 }
 
-func (tx *SendTx) Type() TxType {
-	return TxTypeSend
+func (tx *SendTx) Type() Type {
+	return TypeSend
 }
 
 func (tx *SendTx) String() string {
@@ -48,10 +46,9 @@ func (tx *SendTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt 
 func (tx *SendTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
 	addr := pubkey.Address()
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:   addr,
-		Amount:    amt,
-		Sequence:  sequence,
-		PublicKey: pubkey,
+		Address:  addr,
+		Amount:   amt,
+		Sequence: sequence,
 	})
 	return nil
 }
@@ -63,4 +60,3 @@ func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) error {
 	})
 	return nil
 }
-

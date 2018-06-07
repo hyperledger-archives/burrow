@@ -1,4 +1,4 @@
-package txs
+package payload
 
 import (
 	"fmt"
@@ -11,10 +11,7 @@ import (
 type PermissionsTx struct {
 	Input    *TxInput
 	PermArgs snatives.PermArgs
-	txHashMemoizer
 }
-
-var _ Tx = &PermissionsTx{}
 
 func NewPermissionsTx(st state.AccountGetter, from crypto.PublicKey, args snatives.PermArgs) (*PermissionsTx, error) {
 	addr := from.Address()
@@ -32,10 +29,9 @@ func NewPermissionsTx(st state.AccountGetter, from crypto.PublicKey, args snativ
 
 func NewPermissionsTxWithSequence(from crypto.PublicKey, args snatives.PermArgs, sequence uint64) *PermissionsTx {
 	input := &TxInput{
-		Address:   from.Address(),
-		Amount:    1, // NOTE: amounts can't be 0 ...
-		Sequence:  sequence,
-		PublicKey: from,
+		Address:  from.Address(),
+		Amount:   1, // NOTE: amounts can't be 0 ...
+		Sequence: sequence,
 	}
 
 	return &PermissionsTx{
@@ -44,12 +40,12 @@ func NewPermissionsTxWithSequence(from crypto.PublicKey, args snatives.PermArgs,
 	}
 }
 
-func (tx *PermissionsTx) Type() TxType {
-	return TxTypePermissions
+func (tx *PermissionsTx) Type() Type {
+	return TypePermissions
 }
 
-func (tx *PermissionsTx) GetInputs() []TxInput {
-	return []TxInput{*tx.Input}
+func (tx *PermissionsTx) GetInputs() []*TxInput {
+	return []*TxInput{tx.Input}
 }
 
 func (tx *PermissionsTx) String() string {

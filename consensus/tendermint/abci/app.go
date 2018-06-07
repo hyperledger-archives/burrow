@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
+
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
@@ -15,7 +17,6 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
 	abciTypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-wire"
 )
 
 const responseInfoName = "Burrow"
@@ -44,7 +45,7 @@ func NewApp(blockchain *bcm.Blockchain,
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
-		txDecoder:  txs.NewGoWireCodec(),
+		txDecoder:  txs.NewJSONCodec(),
 		logger:     logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App"),
 	}
 }
@@ -79,7 +80,7 @@ func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.Resp
 }
 
 func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
-	tx, err := app.txDecoder.DecodeTx(txBytes)
+	txEnv, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("CheckTx decoding error",
 			"tag", "CheckTx",
@@ -89,9 +90,9 @@ func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 			Log:  fmt.Sprintf("Encoding error: %s", err),
 		}
 	}
-	receipt := txs.GenerateReceipt(app.blockchain.ChainID(), tx)
+	receipt := txEnv.Tx.GenerateReceipt()
 
-	err = app.checker.Execute(tx)
+	err = app.checker.Execute(txEnv)
 	if err != nil {
 		app.logger.TraceMsg("CheckTx execution error",
 			structure.ErrorKey, err,
@@ -100,11 +101,17 @@ func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 			"creates_contract", receipt.CreatesContract)
 		return abciTypes.ResponseCheckTx{
 			Code: codes.EncodingErrorCode,
-			Log:  fmt.Sprintf("CheckTx could not execute transaction: %s, error: %v", tx, err),
+			Log:  fmt.Sprintf("CheckTx could not execute transaction: %s, error: %v", txEnv, err),
 		}
 	}
 
-	receiptBytes := wire.BinaryBytes(receipt)
+	receiptBytes, err := json.Marshal(receipt)
+	if err != nil {
+		return abciTypes.ResponseCheckTx{
+			Code: codes.TxExecutionErrorCode,
+			Log:  fmt.Sprintf("CheckTx could not serialise receipt: %s", err),
+		}
+	}
 	app.logger.TraceMsg("CheckTx success",
 		"tag", "CheckTx",
 		"tx_hash", receipt.TxHash,
@@ -127,7 +134,7 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 }
 
 func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
-	tx, err := app.txDecoder.DecodeTx(txBytes)
+	txEnv, err := app.txDecoder.DecodeTx(txBytes)
 	if err != nil {
 		app.logger.TraceMsg("DeliverTx decoding error",
 			"tag", "DeliverTx",
@@ -138,8 +145,8 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 		}
 	}
 
-	receipt := txs.GenerateReceipt(app.blockchain.ChainID(), tx)
-	err = app.committer.Execute(tx)
+	receipt := txEnv.Tx.GenerateReceipt()
+	err = app.committer.Execute(txEnv)
 	if err != nil {
 		app.logger.TraceMsg("DeliverTx execution error",
 			structure.ErrorKey, err,
@@ -148,7 +155,7 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 			"creates_contract", receipt.CreatesContract)
 		return abciTypes.ResponseDeliverTx{
 			Code: codes.TxExecutionErrorCode,
-			Log:  fmt.Sprintf("DeliverTx could not execute transaction: %s, error: %s", tx, err),
+			Log:  fmt.Sprintf("DeliverTx could not execute transaction: %s, error: %s", txEnv, err),
 		}
 	}
 
@@ -156,7 +163,13 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 		"tag", "DeliverTx",
 		"tx_hash", receipt.TxHash,
 		"creates_contract", receipt.CreatesContract)
-	receiptBytes := wire.BinaryBytes(receipt)
+	receiptBytes, err := json.Marshal(receipt)
+	if err != nil {
+		return abciTypes.ResponseDeliverTx{
+			Code: codes.TxExecutionErrorCode,
+			Log:  fmt.Sprintf("DeliverTx could not serialise receipt: %s", err),
+		}
+	}
 	return abciTypes.ResponseDeliverTx{
 		Code: codes.TxExecutionSuccessCode,
 		Log:  "DeliverTx success - receipt in data",

@@ -63,8 +63,8 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 	logger = logger.WithScope("GetRoutes")
 	return map[string]*server.RPCFunc{
 		// Transact
-		BroadcastTx: server.NewRPCFunc(func(tx txs.Body) (*rpc.ResultBroadcastTx, error) {
-			receipt, err := service.Transactor().BroadcastTx(tx.Unwrap())
+		BroadcastTx: server.NewRPCFunc(func(txEnv *txs.Envelope) (*rpc.ResultBroadcastTx, error) {
+			receipt, err := service.Transactor().BroadcastTx(txEnv)
 			if err != nil {
 				return nil, err
 			}
@@ -73,9 +73,9 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 			}, nil
 		}, "tx"),
 
-		SignTx: server.NewRPCFunc(func(tx txs.Tx, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
-			tx, err := service.Transactor().SignTx(tx, acm.SigningAccounts(concretePrivateAccounts))
-			return &rpc.ResultSignTx{Tx: txs.Wrap(tx)}, err
+		SignTx: server.NewRPCFunc(func(txEnv *txs.Envelope, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
+			txEnv, err := service.Transactor().SignTx(txEnv, acm.SigningAccounts(concretePrivateAccounts))
+			return &rpc.ResultSignTx{Tx: txEnv}, err
 
 		}, "tx,privAccounts"),
 
@@ -156,7 +156,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 
 		// Blockchain
 		Genesis:    server.NewRPCFunc(service.Genesis, ""),
-		ChainID:    server.NewRPCFunc(service.ChainId, ""),
+		ChainID:    server.NewRPCFunc(service.ChainIdentifiers, ""),
 		ListBlocks: server.NewRPCFunc(service.ListBlocks, "minHeight,maxHeight"),
 		GetBlock:   server.NewRPCFunc(service.GetBlock, "height"),
 

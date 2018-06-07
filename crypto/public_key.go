@@ -76,7 +76,8 @@ func (p *PublicKey) UnmarshalText(text []byte) error {
 }
 
 func (p PublicKey) IsValid() bool {
-	return PublicKeyLength(p.CurveType) == len(p.PublicKey)
+	publicKeyLength := PublicKeyLength(p.CurveType)
+	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
 }
 
 func (p PublicKey) Verify(msg []byte, signature Signature) bool {

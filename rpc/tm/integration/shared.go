@@ -31,6 +31,7 @@ import (
 	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
 	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,34 +56,35 @@ var (
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTx(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *payload.SendTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewSendTx()
+	tx := payload.NewSendTx()
 	tx.AddInputWithSequence(privateAccounts[0].PublicKey(), amt, sequence+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *txs.SendTx {
-	tx := makeDefaultSendTx(t, client, addr, amt)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+func makeDefaultSendTxSigned(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *txs.Envelope {
+	txEnv := txs.Enclose(genesisDoc.ChainID(), makeDefaultSendTx(t, client, addr, amt))
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
 func makeDefaultCallTx(t *testing.T, client tmClient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
-	fee uint64) *txs.CallTx {
+	fee uint64) *txs.Envelope {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
-		sequence+1)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+	tx := payload.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee, sequence+1)
+	txEnv := txs.Enclose(genesisDoc.ChainID(), tx)
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
-func makeDefaultNameTx(t *testing.T, client tmClient.RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
+func makeDefaultNameTx(t *testing.T, client tmClient.RPCClient, name, value string, amt, fee uint64) *txs.Envelope {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+	tx := payload.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
+	txEnv := txs.Enclose(genesisDoc.ChainID(), tx)
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
 //-------------------------------------------------------------------------------
@@ -111,7 +113,7 @@ func getAccount(t *testing.T, client tmClient.RPCClient, addr crypto.Address) ac
 
 // sign transaction
 func signTx(t *testing.T, client tmClient.RPCClient, tx txs.Tx,
-	privAcc *acm.ConcretePrivateAccount) txs.Tx {
+	privAcc *acm.ConcretePrivateAccount) *txs.Envelope {
 	signedTx, err := tmClient.SignTx(client, tx, []*acm.ConcretePrivateAccount{privAcc})
 	if err != nil {
 		t.Fatal(err)
@@ -120,8 +122,8 @@ func signTx(t *testing.T, client tmClient.RPCClient, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, client tmClient.RPCClient, tx txs.Tx) *txs.Receipt {
-	rec, err := tmClient.BroadcastTx(client, tx)
+func broadcastTx(t *testing.T, client tmClient.RPCClient, txEnv *txs.Envelope) *txs.Receipt {
+	rec, err := tmClient.BroadcastTx(client, txEnv)
 	require.NoError(t, err)
 	return rec
 }
