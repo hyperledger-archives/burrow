@@ -121,6 +121,14 @@ func ErrorCodef(errorCode ErrorCode, format string, a ...interface{}) CodedError
 	return NewCodedError(errorCode, fmt.Sprintf(format, a...))
 }
 
+func (e *Exception) AsError() error {
+	// thanks go, you dick
+	if e == nil {
+		return nil
+	}
+	return e
+}
+
 func (e *Exception) ErrorCode() ErrorCode {
 	return e.Code
 }

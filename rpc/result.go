@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	exeEvents "github.com/hyperledger/burrow/execution/events"
 	evmEvents "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-amino"
@@ -161,7 +162,7 @@ type ResultPeers struct {
 
 type ResultListNames struct {
 	BlockHeight uint64
-	Names       []*execution.NameRegEntry
+	Names       []*names.NameRegEntry
 }
 
 type ResultGeneratePrivateAccount struct {
@@ -205,7 +206,7 @@ type ResultListUnconfirmedTxs struct {
 }
 
 type ResultGetName struct {
-	Entry *execution.NameRegEntry
+	Entry *names.NameRegEntry
 }
 
 type ResultGenesis struct {

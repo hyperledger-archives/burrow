@@ -29,9 +29,11 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/executors"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
@@ -235,7 +237,7 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case eventDataCall := <-ch:
-		if eventDataCall.Exception != nil {
+		if eventDataCall.Exception != nil && eventDataCall.Exception.Code != errors.ErrorCodeExecutionReverted {
 			return nil, fmt.Errorf("error when transacting: %v", eventDataCall.Exception)
 		} else {
 			return eventDataCall, nil
@@ -392,6 +394,6 @@ func vmParams(tip *blockchain.Tip) evm.Params {
 		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),
 		BlockTime:   tip.LastBlockTime().Unix(),
-		GasLimit:    GasLimit,
+		GasLimit:    executors.GasLimit,
 	}
 }

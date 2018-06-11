@@ -33,14 +33,18 @@ const DefaultValidatorsWindowSize = 10
 
 var stateKey = []byte("BlockchainState")
 
-type BlockchainInfo interface {
-	GenesisHash() []byte
-	GenesisDoc() genesis.GenesisDoc
+type TipInfo interface {
 	ChainID() string
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
+}
+
+type BlockchainInfo interface {
+	TipInfo
+	GenesisHash() []byte
+	GenesisDoc() genesis.GenesisDoc
 }
 
 type Root struct {

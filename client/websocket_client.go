@@ -171,7 +171,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						continue
 					}
 
-					if eventDataTx.Exception != nil {
+					if eventDataTx.Exception != nil && eventDataTx.Exception.Code != errors.ErrorCodeExecutionReverted {
 						confirmationChannel <- Confirmation{
 							BlockHash:   latestBlockHash,
 							EventDataTx: eventDataTx,

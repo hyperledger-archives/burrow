@@ -31,7 +31,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	exe_events "github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
@@ -140,9 +139,10 @@ func newBlockchain(genesisDoc *genesis.GenesisDoc) *bcm.Blockchain {
 	return bc
 }
 
-func makeExecutor(state *State) *executor {
-	return newExecutor("makeExecutorCache", true, state, testChainID,
-		newBlockchain(testGenesisDoc).Tip, event.NewEmitter(logger), logger)
+func makeExecutor(state *State) (*executor, event.Emitter) {
+	emitter := event.NewEmitter(logger)
+	return newExecutor("makeExecutorCache", true, state,
+		newBlockchain(testGenesisDoc).Tip, emitter, logger), emitter
 }
 
 func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.GenesisDoc {
@@ -193,7 +193,7 @@ func TestSendFails(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(ptypes.CreateContract, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, _ := makeExecutor(st)
 
 	//-------------------
 	// send txs
@@ -243,7 +243,7 @@ func TestName(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(ptypes.Name, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, _ := makeExecutor(st)
 
 	//-------------------
 	// name txs
@@ -272,7 +272,7 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(ptypes.CreateContract, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, _ := makeExecutor(st)
 
 	//-------------------
 	// call txs
@@ -313,7 +313,7 @@ func TestSendPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Send, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, _ := makeExecutor(st)
 
 	// A single input, having the permission, should succeed
 	tx := payload.NewSendTx()
@@ -338,7 +338,7 @@ func TestCallPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, emitter := makeExecutor(st)
 
 	//------------------------------
 	// call to simple contract
@@ -383,7 +383,7 @@ func TestCallPermission(t *testing.T) {
 	require.NoError(t, txEnv.Sign(users[0]))
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, caller1ContractAddr) //
 	require.Error(t, err)
 
 	//----------------------------------------------------------
@@ -398,7 +398,7 @@ func TestCallPermission(t *testing.T) {
 	require.NoError(t, txEnv.Sign(users[0]))
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, caller1ContractAddr) //
 	require.NoError(t, err)
 
 	//----------------------------------------------------------
@@ -426,7 +426,7 @@ func TestCallPermission(t *testing.T) {
 	txEnv = txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, caller1ContractAddr) //
 	require.Error(t, err)
 
 	//----------------------------------------------------------
@@ -443,7 +443,7 @@ func TestCallPermission(t *testing.T) {
 	require.NoError(t, txEnv.Sign(users[0]))
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, caller1ContractAddr) //
 	require.NoError(t, err)
 }
 
@@ -455,7 +455,7 @@ func TestCreatePermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.Call, true)           // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, emitter := makeExecutor(st)
 
 	//------------------------------
 	// create a simple contract
@@ -510,7 +510,7 @@ func TestCreatePermission(t *testing.T) {
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(contractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, contractAddr) //
 	require.Error(t, err)
 
 	//------------------------------
@@ -525,7 +525,7 @@ func TestCreatePermission(t *testing.T) {
 	txEnv = txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(contractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, contractAddr) //
 	require.NoError(t, err)
 
 	//--------------------------------
@@ -550,7 +550,7 @@ func TestCreatePermission(t *testing.T) {
 	txEnv = txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(crypto.Address{})) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, crypto.Address{}) //
 	require.NoError(t, err)
 	zeroAcc := getAccount(batchCommitter.stateCache, crypto.Address{})
 	if len(zeroAcc.Code()) != 0 {
@@ -567,7 +567,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(ptypes.CreateAccount, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, emitter := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// SendTx to unknown account
@@ -656,7 +656,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCallEnv.Sign(users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txCallEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txCallEnv, caller1ContractAddr) //
 	require.Error(t, err)
 
 	// NOTE: for a contract to be able to CreateAccount, it must be able to call
@@ -670,7 +670,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	txCallEnv.Sign(users[0])
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitEvent(t, batchCommitter, txCallEnv, evm_events.EventStringAccountCall(caller1ContractAddr)) //
+	_, err = execTxWaitAccountCall(t, batchCommitter, emitter, txCallEnv, caller1ContractAddr) //
 	require.NoError(t, err)
 
 }
@@ -692,7 +692,7 @@ func TestSNativeCALL(t *testing.T) {
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, emitter := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// Test CALL to SNative contracts
@@ -714,8 +714,8 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### HasBase")
 	// HasBase
 	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", users[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -726,10 +726,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### SetBase")
 	// SetBase
 	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], ptypes.Bond, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], ptypes.Bond, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -737,9 +737,9 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -750,10 +750,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
 	snativeAddress, pF, data = snativePermTestInputCALL("unsetBase", users[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -763,10 +763,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
 	snativeAddress, pF, data = snativePermTestInputCALL("setGlobal", users[3], ptypes.CreateContract, true)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], ptypes.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -777,8 +777,8 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### HasRole")
 	// HasRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "bumble")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
@@ -788,17 +788,17 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### AddRole")
 	// AddRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
 	snativeAddress, pF, data = snativeRoleTestInputCALL("addRole", users[3], "chuck")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
@@ -808,10 +808,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### RemoveRole")
 	// RemoveRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", users[3], "chuck")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, emitter, doug, snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, emitter, doug, pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -829,7 +829,7 @@ func TestSNativeTx(t *testing.T) {
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	batchCommitter, _ := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// Test SNativeTx
@@ -976,7 +976,7 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *NameRegEntry, name, data string, addr crypto.Address, expires uint64) {
+	validateEntry := func(t *testing.T, entry *names.NameRegEntry, name, data string, addr crypto.Address, expires uint64) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
@@ -1561,7 +1561,7 @@ func TestSelfDestruct(t *testing.T) {
 	tx := payload.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(state, testChainID, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(state, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// if we do it again, we won't get an error, but the self-destruct
@@ -1599,7 +1599,7 @@ func signAndExecute(t *testing.T, shoudlFail bool, exe BatchExecutor, chainID st
 }
 
 func execTxWithStateAndBlockchain(state *State, tip *bcm.Tip, txEnv *txs.Envelope) error {
-	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, testChainID, tip,
+	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, tip,
 		event.NewNoOpPublisher(), logger)
 	if err := exe.Execute(txEnv); err != nil {
 		return err
@@ -1658,38 +1658,27 @@ var ExceptionTimeOut = errors.NewCodedError(errors.ErrorCodeGeneric, "timed out 
 
 // run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
-func execTxWaitEvent(t *testing.T, batchCommitter *executor, txEnv *txs.Envelope, eventid string) (interface{}, error) {
-	emitter := event.NewEmitter(logger)
-	ch := make(chan interface{})
-	emitter.Subscribe(context.Background(), "test", event.QueryForEventID(eventid), ch)
-	evc := event.NewEventCache(emitter)
-	batchCommitter.eventCache = evc
-	go func() {
-		if err := batchCommitter.Execute(txEnv); err != nil {
-			ch <- err
-		}
-		evc.Flush()
-	}()
+func execTxWaitAccountCall(t *testing.T, batchCommitter *executor, emitter event.Emitter, txEnv *txs.Envelope,
+	address crypto.Address) (*evm_events.EventDataCall, error) {
+
+	ch := make(chan *evm_events.EventDataCall)
+	ctx := context.Background()
+	const subscriber = "exexTxWaitEvent"
+	//emitter.Subscribe(ctx, subscriber, event.QueryForEventID(eventid), ch)
+	evm_events.SubscribeAccountCall(ctx, emitter, subscriber, address, txEnv.Tx.Hash(), -1, ch)
+	defer emitter.UnsubscribeAll(ctx, subscriber)
+	err := batchCommitter.Execute(txEnv)
+	if err != nil {
+		return nil, err
+	}
+	batchCommitter.Commit()
 	ticker := time.NewTicker(5 * time.Second)
 
 	select {
-	case msg := <-ch:
-		switch ev := msg.(type) {
-		case *exe_events.EventDataTx:
-			if ev.Exception != nil {
-				return nil, ev.Exception
-			}
-			return ev, nil
-		case *evm_events.EventDataCall:
-			if ev.Exception != nil {
-				return nil, ev.Exception
-			}
-			return ev, nil
-		case error:
-			return nil, ev
-		default:
-			return ev, nil
-		}
+	case eventDataCall := <-ch:
+		fmt.Println("MSG: ", eventDataCall)
+		return eventDataCall, eventDataCall.Exception.AsError()
+
 	case <-ticker.C:
 		return nil, ExceptionTimeOut
 	}
@@ -1697,18 +1686,18 @@ func execTxWaitEvent(t *testing.T, batchCommitter *executor, txEnv *txs.Envelope
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
-func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, doug acm.MutableAccount,
+func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount,
 	snativeAddress crypto.Address, data []byte) {
-	testSNativeCALL(t, false, batchCommitter, doug, 0, snativeAddress, data, nil)
+	testSNativeCALL(t, false, batchCommitter, emitter, doug, 0, snativeAddress, data, nil)
 }
 
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
-func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
+func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
 	snativeAddress crypto.Address, data []byte, f func([]byte) error) {
-	testSNativeCALL(t, true, batchCommitter, doug, snativePerm, snativeAddress, data, f)
+	testSNativeCALL(t, true, batchCommitter, emitter, doug, snativePerm, snativeAddress, data, f)
 }
 
-func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, doug acm.MutableAccount,
+func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount,
 	snativePerm ptypes.PermFlag, snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	if expectPass {
 		doug.MutablePermissions().Base.Set(snativePerm, true)
@@ -1722,14 +1711,13 @@ func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, do
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	t.Logf("subscribing to %v", evm_events.EventStringAccountCall(snativeAddress))
-	ev, err := execTxWaitEvent(t, batchCommitter, txEnv, evm_events.EventStringAccountCall(snativeAddress))
+	ev, err := execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, snativeAddress)
 	if err == ExceptionTimeOut {
 		t.Fatal("Timed out waiting for event")
 	}
 	if expectPass {
 		require.NoError(t, err)
-		evv := ev.(*evm_events.EventDataCall)
-		ret := evv.Return
+		ret := ev.Return
 		if err := f(ret); err != nil {
 			t.Fatal(err)
 		}

@@ -20,7 +20,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/txs"
@@ -125,7 +125,7 @@ func Call(client RPCClient, fromAddress, toAddress crypto.Address, data []byte) 
 	return res, nil
 }
 
-func GetName(client RPCClient, name string) (*execution.NameRegEntry, error) {
+func GetName(client RPCClient, name string) (*names.NameRegEntry, error) {
 	res := new(rpc.ResultGetName)
 	_, err := client.Call(tm.GetName, pmap("name", name), res)
 	if err != nil {

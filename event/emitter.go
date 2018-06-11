@@ -42,6 +42,12 @@ type Publisher interface {
 	Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error
 }
 
+type PublisherFunc func(ctx context.Context, message interface{}, tags map[string]interface{}) error
+
+func (pf PublisherFunc) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+	return pf(ctx, message, tags)
+}
+
 type Emitter interface {
 	Subscribable
 	Publisher
