@@ -60,8 +60,8 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 
 				_, err = explorer.Blocks(start, end,
 					func(block *forensics.Block) (stop bool) {
-						stopped, err := block.Transactions(func(tx txs.Tx) (stop bool) {
-							bs, err := json.Marshal(tx)
+						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
+							bs, err := json.Marshal(txEnv)
 							if err != nil {
 								output.Fatalf("Could not deserialise transaction: %v", err)
 							}

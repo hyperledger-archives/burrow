@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
@@ -171,48 +170,38 @@ func NewLocalKeyClient(ks KeyStore, logger *logging.Logger) KeyClient {
 	return localKeyClient{ks: ks, logger: logger}
 }
 
-type signer struct {
+type Signer struct {
 	keyClient KeyClient
 	address   crypto.Address
+	publicKey crypto.PublicKey
 }
 
-func (ms *signer) Sign(messsage []byte) (crypto.Signature, error) {
+// Creates a AddressableSigner that assumes the address holds an Ed25519 key
+func AddressableSigner(keyClient KeyClient, address crypto.Address) (*Signer, error) {
+	publicKey, err := keyClient.PublicKey(address)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: we can do better than this and return a typed signature when we reform the keys service
+	return &Signer{
+		keyClient: keyClient,
+		address:   address,
+		publicKey: publicKey,
+	}, nil
+}
+
+func (ms *Signer) Address() crypto.Address {
+	return ms.address
+}
+
+func (ms *Signer) PublicKey() crypto.PublicKey {
+	return ms.publicKey
+}
+
+func (ms *Signer) Sign(messsage []byte) (crypto.Signature, error) {
 	signature, err := ms.keyClient.Sign(ms.address, messsage)
 	if err != nil {
 		return crypto.Signature{}, err
 	}
 	return signature, nil
-}
-
-// Creates a Signer that assumes the address holds an Ed25519 key
-func Signer(keyClient KeyClient, address crypto.Address) crypto.Signer {
-	// TODO: we can do better than this and return a typed signature when we reform the keys service
-	return &signer{
-		keyClient: keyClient,
-		address:   address,
-	}
-}
-
-type keyAddressable struct {
-	publicKey crypto.PublicKey
-	address   crypto.Address
-}
-
-func (ka *keyAddressable) Address() crypto.Address {
-	return ka.address
-}
-
-func (ka *keyAddressable) PublicKey() crypto.PublicKey {
-	return ka.publicKey
-}
-
-func Addressable(keyClient KeyClient, address crypto.Address) (acm.Addressable, error) {
-	pubKey, err := keyClient.PublicKey(address)
-	if err != nil {
-		return nil, err
-	}
-	return &keyAddressable{
-		address:   address,
-		publicKey: pubKey,
-	}, nil
 }

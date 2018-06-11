@@ -35,7 +35,7 @@ func NewMockNodeClient() *MockNodeClient {
 	}
 }
 
-func (mock *MockNodeClient) Broadcast(transaction txs.Tx) (*txs.Receipt, error) {
+func (mock *MockNodeClient) Broadcast(txEnv *txs.Envelope) (*txs.Receipt, error) {
 	// make zero transaction receipt
 	txReceipt := &txs.Receipt{
 		TxHash:          make([]byte, 20),

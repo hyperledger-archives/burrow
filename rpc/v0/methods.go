@@ -198,12 +198,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 		},
 		BROADCAST_TX: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			// Accept all transaction types as parameter for broadcast.
-			param := new(txs.Tx)
-			err := codec.DecodeBytesPtr(param, request.Params)
+			txEnv := new(txs.Envelope)
+			err := codec.DecodeBytesPtr(txEnv, request.Params)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			receipt, err := service.Transactor().BroadcastTx(*param)
+			receipt, err := service.Transactor().BroadcastTx(txEnv)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -215,7 +215,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			txRet, err := service.Transactor().SignTx(param.Tx, acm.SigningAccounts(param.PrivateAccounts))
+			txRet, err := service.Transactor().SignTx(txs.Enclose(service.BlockchainInfo().ChainID(), param.Tx),
+				acm.SigningAccounts(param.PrivateAccounts))
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -428,7 +429,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return resultNetInfo, 0, nil
 		},
 		GET_CHAIN_ID: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-			resultChainID, err := service.ChainId()
+			resultChainID, err := service.ChainIdentifiers()
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -454,7 +455,7 @@ func signingAccount(accounts *execution.Accounts, inputAccount InputAccount) (*e
 		if err != nil {
 			return nil, err
 		}
-		return accounts.SequentialSigningAccount(address), nil
+		return accounts.SequentialSigningAccount(address)
 	}
 
 	return accounts.SequentialSigningAccountFromPrivateKey(inputAccount.PrivateKey)

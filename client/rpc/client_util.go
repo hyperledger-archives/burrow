@@ -30,49 +30,18 @@ import (
 
 // tx has either one input or we default to the first one (ie for send/bond)
 // TODO: better support for multisig and bonding
-func signTx(keyClient keys.KeyClient, chainID string, tx_ txs.Tx) (crypto.Address, txs.Tx, error) {
-	signBytes := crypto.SignBytes(chainID, tx_)
-	var err error
-	switch tx := tx_.(type) {
-	case *txs.SendTx:
-		signAddress := tx.Inputs[0].Address
-		tx.Inputs[0].Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	case *txs.NameTx:
-		signAddress := tx.Input.Address
-		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	case *txs.CallTx:
-		signAddress := tx.Input.Address
-		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	case *txs.PermissionsTx:
-		signAddress := tx.Input.Address
-		tx.Input.Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	case *txs.BondTx:
-		signAddress := tx.Inputs[0].Address
-		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
-		tx.Inputs[0].Signature = tx.Signature
-		return signAddress, tx, err
-
-	case *txs.UnbondTx:
-		signAddress := tx.Address
-		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	case *txs.RebondTx:
-		signAddress := tx.Address
-		tx.Signature, err = keyClient.Sign(signAddress, signBytes)
-		return signAddress, tx, err
-
-	default:
-		return crypto.ZeroAddress, nil, fmt.Errorf("unknown transaction type for signTx: %#v", tx_)
+func signTx(keyClient keys.KeyClient, tx *txs.Tx) (crypto.Address, *txs.Envelope, error) {
+	txEnv := tx.Enclose()
+	inputs := tx.GetInputs()
+	signer, err := keys.AddressableSigner(keyClient, inputs[0].Address)
+	if err != nil {
+		return crypto.ZeroAddress, nil, err
 	}
+	err = txEnv.Sign(signer)
+	if err != nil {
+		return crypto.ZeroAddress, nil, err
+	}
+	return signer.Address(), txEnv, nil
 }
 
 func checkCommon(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS,

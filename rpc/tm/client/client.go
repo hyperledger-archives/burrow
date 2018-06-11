@@ -30,9 +30,9 @@ type RPCClient interface {
 	Call(method string, params map[string]interface{}, result interface{}) (interface{}, error)
 }
 
-func BroadcastTx(client RPCClient, tx txs.Tx) (*txs.Receipt, error) {
+func BroadcastTx(client RPCClient, txEnv *txs.Envelope) (*txs.Receipt, error) {
 	res := new(txs.Receipt)
-	_, err := client.Call(tm.BroadcastTx, pmap("tx", txs.Wrap(tx)), res)
+	_, err := client.Call(tm.BroadcastTx, pmap("tx", txEnv), res)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func GetAccount(client RPCClient, address crypto.Address) (acm.Account, error) {
 	return concreteAccount.Account(), nil
 }
 
-func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (txs.Tx, error) {
+func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (*txs.Envelope, error) {
 	res := new(rpc.ResultSignTx)
 	_, err := client.Call(tm.SignTx, pmap("tx", tx, "privAccounts", privAccounts), res)
 	if err != nil {

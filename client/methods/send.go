@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/client/rpc"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/txs"
 )
 
 func Send(do *client.Do) error {
@@ -47,8 +48,8 @@ func Send(do *client.Do) error {
 	// TODO: [ben] we carry over the sign bool, but always set it to true,
 	// as we move away from and deprecate the api that allows sending unsigned
 	// transactions and relying on (our) receiving node to sign it.
-	txResult, err := rpc.SignAndBroadcast(chainID, burrowNodeClient, burrowKeyClient,
-		sendTransaction, true, do.BroadcastFlag, do.WaitFlag)
+	txResult, err := rpc.SignAndBroadcast(burrowNodeClient, burrowKeyClient,
+		txs.Enclose(chainID, sendTransaction), true, do.BroadcastFlag, do.WaitFlag)
 	if err != nil {
 		return fmt.Errorf("Failed on signing (and broadcasting) transaction: %s", err)
 	}
