@@ -21,6 +21,7 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/keys"
@@ -32,7 +33,7 @@ import (
 // core functions with string args.
 // validates strings and forms transaction
 
-func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS string) (*txs.SendTx, error) {
+func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS string) (*payload.SendTx, error) {
 	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
@@ -47,14 +48,14 @@ func Send(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, err
 	}
 
-	tx := txs.NewSendTx()
+	tx := payload.NewSendTx()
 	tx.AddInputWithSequence(pub, amt, sequence)
 	tx.AddOutput(toAddress, amt)
 
 	return tx, nil
 }
 
-func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS, gasS, feeS, data string) (*txs.CallTx, error) {
+func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, toAddr, amtS, sequenceS, gasS, feeS, data string) (*payload.CallTx, error) {
 	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
@@ -85,11 +86,11 @@ func Call(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("data is bad hex: %v", err)
 	}
 
-	tx := txs.NewCallTxWithSequence(pub, toAddress, dataBytes, amt, gas, fee, sequence)
+	tx := payload.NewCallTxWithSequence(pub, toAddress, dataBytes, amt, gas, fee, sequence)
 	return tx, nil
 }
 
-func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, sequenceS, feeS, name, data string) (*txs.NameTx, error) {
+func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, amtS, sequenceS, feeS, name, data string) (*payload.NameTx, error) {
 	pub, amt, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addr, amtS, sequenceS)
 	if err != nil {
 		return nil, err
@@ -100,12 +101,12 @@ func Name(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addr, 
 		return nil, fmt.Errorf("fee is misformatted: %v", err)
 	}
 
-	tx := txs.NewNameTxWithSequence(pub, name, data, amt, fee, sequence)
+	tx := payload.NewNameTxWithSequence(pub, name, data, amt, fee, sequence)
 	return tx, nil
 }
 
 func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, addrS, sequenceS string,
-	action, target, permissionFlag, role, value string) (*txs.PermissionsTx, error) {
+	action, target, permissionFlag, role, value string) (*payload.PermissionsTx, error) {
 
 	pub, _, sequence, err := checkCommon(nodeClient, keyClient, pubkey, addrS, "0", sequenceS)
 	if err != nil {
@@ -154,11 +155,11 @@ func Permissions(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey,
 		return nil, err
 	}
 
-	tx := txs.NewPermissionsTxWithSequence(pub, permArgs, sequence)
+	tx := payload.NewPermissionsTxWithSequence(pub, permArgs, sequence)
 	return tx, nil
 }
 
-func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbondAddr, amtS, sequenceS string) (*txs.BondTx, error) {
+func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbondAddr, amtS, sequenceS string) (*payload.BondTx, error) {
 	return nil, fmt.Errorf("Bond Transaction formation to be implemented on 0.12.0")
 	// pub, amt, sequence, err := checkCommon(nodeAddr, signAddr, pubkey, "", amtS, sequenceS)
 	// if err != nil {
@@ -189,7 +190,7 @@ func Bond(nodeClient client.NodeClient, keyClient keys.KeyClient, pubkey, unbond
 	// return tx, nil
 }
 
-func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
+func Unbond(addrS, heightS string) (*payload.UnbondTx, error) {
 	return nil, fmt.Errorf("Unbond Transaction formation to be implemented on 0.12.0")
 	// if addrS == "" {
 	// 	return nil, fmt.Errorf("Validator address must be given with --addr flag")
@@ -211,28 +212,6 @@ func Unbond(addrS, heightS string) (*txs.UnbondTx, error) {
 	// }, nil
 }
 
-func Rebond(addrS, heightS string) (*txs.RebondTx, error) {
-	return nil, fmt.Errorf("Rebond Transaction formation to be implemented on 0.12.0")
-	// 	if addrS == "" {
-	// 		return nil, fmt.Errorf("Validator address must be given with --addr flag")
-	// 	}
-
-	// 	addrBytes, err := hex.DecodeString(addrS)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("addr is bad hex: %v", err)
-	// 	}
-
-	// 	height, err := strconv.ParseInt(heightS, 10, 32)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("height is misformatted: %v", err)
-	// 	}
-
-	// 	return &types.RebondTx{
-	// 		Address: addrBytes,
-	// 		Height:  int(height),
-	// 	}, nil
-}
-
 type TxResult struct {
 	BlockHash []byte // all txs get in a block
 	Hash      []byte // all txs get a hash
@@ -247,12 +226,12 @@ type TxResult struct {
 }
 
 // Preserve
-func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient keys.KeyClient, tx txs.Tx, sign,
+func SignAndBroadcast(nodeClient client.NodeClient, keyClient keys.KeyClient, txEnv *txs.Envelope, sign,
 	broadcast, wait bool) (txResult *TxResult, err error) {
 
 	var inputAddr crypto.Address
 	if sign {
-		inputAddr, tx, err = signTx(keyClient, chainID, tx)
+		inputAddr, txEnv, err = signTx(keyClient, txEnv.Tx)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +245,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 				return nil, err
 			}
 			var confirmationChannel chan client.Confirmation
-			confirmationChannel, err = wsClient.WaitForConfirmation(tx, chainID, inputAddr)
+			confirmationChannel, err = wsClient.WaitForConfirmation(txEnv, inputAddr)
 			if err != nil {
 				return nil, err
 			}
@@ -300,7 +279,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		}
 
 		var receipt *txs.Receipt
-		receipt, err = nodeClient.Broadcast(tx)
+		receipt, err = nodeClient.Broadcast(txEnv)
 		if err != nil {
 			return nil, err
 		}
@@ -310,7 +289,7 @@ func SignAndBroadcast(chainID string, nodeClient client.NodeClient, keyClient ke
 		// NOTE: [ben] is this consistent with the Ethereum protocol?  It should seem
 		// reasonable to get this returned from the chain directly.  Alternatively,
 		// the benefit is that the we don't need to trust the chain node
-		if tx_, ok := tx.(*txs.CallTx); ok {
+		if tx_, ok := txEnv.Tx.Payload.(*payload.CallTx); ok {
 			if tx_.Address == nil {
 				address := crypto.NewContractAddress(tx_.Input.Address, tx_.Input.Sequence)
 				txResult.Address = &address

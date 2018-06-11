@@ -59,14 +59,17 @@ func (accs *Accounts) SigningAccount(address crypto.Address, signer crypto.Signe
 	}, nil
 }
 
-func (accs *Accounts) SequentialSigningAccount(address crypto.Address) *SequentialSigningAccount {
-	signer := keys.Signer(accs.keyClient, address)
+func (accs *Accounts) SequentialSigningAccount(address crypto.Address) (*SequentialSigningAccount, error) {
+	signer, err := keys.AddressableSigner(accs.keyClient, address)
+	if err != nil {
+		return nil, err
+	}
 	return &SequentialSigningAccount{
 		accountLocker: accs.Mutex(address.Bytes()),
 		getter: func() (*SigningAccount, error) {
 			return accs.SigningAccount(address, signer)
 		},
-	}
+	}, nil
 }
 
 func (accs *Accounts) SequentialSigningAccountFromPrivateKey(privateKeyBytes []byte) (*SequentialSigningAccount, error) {

@@ -67,11 +67,15 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		keyClient = keys.NewLocalKeyClient(keyStore, logger)
 	}
 
-	val, err := keys.Addressable(keyClient, *conf.ValidatorAddress)
+	val, err := keys.AddressableSigner(keyClient, *conf.ValidatorAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-	privValidator := validator.NewPrivValidatorMemory(val, keys.Signer(keyClient, val.Address()))
+	signer, err := keys.AddressableSigner(keyClient, val.Address())
+	if err != nil {
+		return nil, err
+	}
+	privValidator := validator.NewPrivValidatorMemory(val, signer)
 
 	var exeOptions []execution.ExecutionOption
 	if conf.Execution != nil {

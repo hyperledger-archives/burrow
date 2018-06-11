@@ -1,11 +1,9 @@
-package txs
+package payload
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tendermint/go-wire"
 )
 
 type TxOutput struct {
@@ -21,10 +19,6 @@ func (txOut *TxOutput) ValidateBasic() error {
 		return ErrTxInvalidAmount
 	}
 	return nil
-}
-
-func (txOut *TxOutput) WriteSignBytes(w io.Writer, n *int, err *error) {
-	wire.WriteTo([]byte(fmt.Sprintf(`{"address":"%s","amount":%v}`, txOut.Address, txOut.Amount)), w, n, err)
 }
 
 func (txOut *TxOutput) String() string {

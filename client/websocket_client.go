@@ -68,7 +68,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscrip
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string,
+func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(txEnv *txs.Envelope,
 	inputAddr crypto.Address) (chan Confirmation, error) {
 
 	// Setup the confirmation channel to be returned
@@ -163,10 +163,10 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						return
 					}
 
-					if !bytes.Equal(eventDataTx.Tx.Hash(chainId), tx.Hash(chainId)) {
+					if !bytes.Equal(eventDataTx.Tx.Hash(), txEnv.Tx.Hash()) {
 						burrowNodeWebsocketClient.logger.TraceMsg("Received different event",
 							// TODO: consider re-implementing TxID again, or other more clear debug
-							"received transaction event", eventDataTx.Tx.Hash(chainId))
+							"received transaction event", eventDataTx.Tx.Hash())
 						continue
 					}
 
