@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -48,7 +49,7 @@ func (nv *NodeView) Peers() p2p.IPeerSet {
 	return nv.tmNode.Switch().Peers()
 }
 
-func (nv *NodeView) BlockStore() types.BlockStoreRPC {
+func (nv *NodeView) BlockStore() state.BlockStoreRPC {
 	return nv.tmNode.BlockStore()
 }
 
