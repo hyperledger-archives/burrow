@@ -162,7 +162,7 @@ type ResultPeers struct {
 
 type ResultListNames struct {
 	BlockHeight uint64
-	Names       []*names.NameRegEntry
+	Names       []*names.Entry
 }
 
 type ResultGeneratePrivateAccount struct {
@@ -206,7 +206,7 @@ type ResultListUnconfirmedTxs struct {
 }
 
 type ResultGetName struct {
-	Entry *names.NameRegEntry
+	Entry *names.Entry
 }
 
 type ResultGenesis struct {

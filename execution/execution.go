@@ -61,7 +61,7 @@ type executor struct {
 	runCall      bool
 	state        *State
 	stateCache   state.Cache
-	nameRegCache *names.NameRegCache
+	nameRegCache *names.Cache
 	eventCache   *event.Cache
 	logger       *logging.Logger
 	vmOptions    []func(*evm.VM)
@@ -93,7 +93,7 @@ func newExecutor(name string, runCall bool, backend *State, tip *bcm.Tip, publis
 		state:        backend,
 		stateCache:   state.NewCache(backend, state.Name(name)),
 		eventCache:   event.NewEventCache(publisher),
-		nameRegCache: names.NewNameRegCache(backend),
+		nameRegCache: names.NewCache(backend),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
 	for _, option := range options {

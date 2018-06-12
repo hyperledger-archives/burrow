@@ -234,13 +234,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 	return nil
 }
 
-func (ctx *CallContext) FireCallEvents(ret []byte, exception errors.CodedError) {
+func (ctx *CallContext) FireCallEvents(ret []byte, err error) {
 	// Fire Events for sender and receiver
 	// a separate event will be fired from vm for each additional call
 	if ctx.EventPublisher != nil {
-		events.PublishAccountInput(ctx.EventPublisher, ctx.tx.Input.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(exception))
+		events.PublishAccountInput(ctx.EventPublisher, ctx.tx.Input.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(err))
 		if ctx.tx.Address != nil {
-			events.PublishAccountOutput(ctx.EventPublisher, *ctx.tx.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(exception))
+			events.PublishAccountOutput(ctx.EventPublisher, *ctx.tx.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(err))
 		}
 	}
 }

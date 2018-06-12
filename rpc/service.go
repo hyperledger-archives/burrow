@@ -46,7 +46,7 @@ const AccountsRingMutexCount = 100
 type Service struct {
 	ctx             context.Context
 	state           state.Iterable
-	nameReg         names.NameRegIterable
+	nameReg         names.Iterable
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
 	blockchain      *bcm.Blockchain
@@ -55,7 +55,7 @@ type Service struct {
 	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, state state.Iterable, nameReg names.NameRegIterable,
+func NewService(ctx context.Context, state state.Iterable, nameReg names.Iterable,
 	checker state.Reader, subscribable event.Subscribable, blockchain *bcm.Blockchain, keyClient keys.KeyClient,
 	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
@@ -321,7 +321,7 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 
 // Name registry
 func (s *Service) GetName(name string) (*ResultGetName, error) {
-	entry, err := s.nameReg.GetNameRegEntry(name)
+	entry, err := s.nameReg.GetNameEntry(name)
 	if err != nil {
 		return nil, err
 	}
@@ -331,9 +331,9 @@ func (s *Service) GetName(name string) (*ResultGetName, error) {
 	return &ResultGetName{Entry: entry}, nil
 }
 
-func (s *Service) ListNames(predicate func(*names.NameRegEntry) bool) (*ResultListNames, error) {
-	var nms []*names.NameRegEntry
-	s.nameReg.IterateNameRegEntries(func(entry *names.NameRegEntry) (stop bool) {
+func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames, error) {
+	var nms []*names.Entry
+	s.nameReg.IterateNameEntries(func(entry *names.Entry) (stop bool) {
 		if predicate(entry) {
 			nms = append(nms, entry)
 		}

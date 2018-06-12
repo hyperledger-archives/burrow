@@ -20,33 +20,33 @@ import (
 	"sync"
 )
 
-// The NameRegCache helps prevent unnecessary IAVLTree updates and garbage generation.
-type NameRegCache struct {
+// The Cache helps prevent unnecessary IAVLTree updates and garbage generation.
+type Cache struct {
 	sync.RWMutex
-	backend NameRegGetter
+	backend Getter
 	names   map[string]*nameInfo
 }
 
 type nameInfo struct {
 	sync.RWMutex
-	entry   *NameRegEntry
+	entry   *Entry
 	removed bool
 	updated bool
 }
 
-var _ NameRegWriter = &NameRegCache{}
+var _ Writer = &Cache{}
 
-// Returns a NameRegCache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output NameRegWriter via Sync.
+// Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
+// output Writer via Sync.
 // Not goroutine safe, use syncStateCache if you need concurrent access
-func NewNameRegCache(backend NameRegGetter) *NameRegCache {
-	return &NameRegCache{
+func NewCache(backend Getter) *Cache {
+	return &Cache{
 		backend: backend,
 		names:   make(map[string]*nameInfo),
 	}
 }
 
-func (cache *NameRegCache) GetNameRegEntry(name string) (*NameRegEntry, error) {
+func (cache *Cache) GetNameEntry(name string) (*Entry, error) {
 	nameInfo, err := cache.get(name)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (cache *NameRegCache) GetNameRegEntry(name string) (*NameRegEntry, error) {
 	return nameInfo.entry, nil
 }
 
-func (cache *NameRegCache) UpdateNameRegEntry(entry *NameRegEntry) error {
+func (cache *Cache) UpdateNameEntry(entry *Entry) error {
 	nameInfo, err := cache.get(entry.Name)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (cache *NameRegCache) UpdateNameRegEntry(entry *NameRegEntry) error {
 	nameInfo.Lock()
 	defer nameInfo.Unlock()
 	if nameInfo.removed {
-		return fmt.Errorf("UpdateNameRegEntry on a removed name: %s", nameInfo.entry.Name)
+		return fmt.Errorf("UpdateNameEntry on a removed name: %s", nameInfo.entry.Name)
 	}
 
 	nameInfo.entry = entry
@@ -75,7 +75,7 @@ func (cache *NameRegCache) UpdateNameRegEntry(entry *NameRegEntry) error {
 	return nil
 }
 
-func (cache *NameRegCache) RemoveNameRegEntry(name string) error {
+func (cache *Cache) RemoveNameEntry(name string) error {
 	nameInfo, err := cache.get(name)
 	if err != nil {
 		return err
@@ -83,15 +83,15 @@ func (cache *NameRegCache) RemoveNameRegEntry(name string) error {
 	nameInfo.Lock()
 	defer nameInfo.Unlock()
 	if nameInfo.removed {
-		return fmt.Errorf("RemoveNameRegEntry on removed name: %s", name)
+		return fmt.Errorf("RemoveNameEntry on removed name: %s", name)
 	}
 	nameInfo.removed = true
 	return nil
 }
 
-// Writes whatever is in the cache to the output NameRegWriter state. Does not flush the cache, to do that call Reset()
+// Writes whatever is in the cache to the output Writer state. Does not flush the cache, to do that call Reset()
 // after Sync or use Flusth if your wish to use the output state as your next backend
-func (cache *NameRegCache) Sync(state NameRegWriter) error {
+func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
 	// Determine order for names
@@ -107,13 +107,13 @@ func (cache *NameRegCache) Sync(state NameRegWriter) error {
 		nameInfo := cache.names[name]
 		nameInfo.RLock()
 		if nameInfo.removed {
-			err := state.RemoveNameRegEntry(name)
+			err := state.RemoveNameEntry(name)
 			if err != nil {
 				nameInfo.RUnlock()
 				return err
 			}
 		} else if nameInfo.updated {
-			err := state.UpdateNameRegEntry(nameInfo.entry)
+			err := state.UpdateNameEntry(nameInfo.entry)
 			if err != nil {
 				nameInfo.RUnlock()
 				return err
@@ -125,15 +125,15 @@ func (cache *NameRegCache) Sync(state NameRegWriter) error {
 }
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
-func (cache *NameRegCache) Reset(backend NameRegGetter) {
+func (cache *Cache) Reset(backend Getter) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.names = make(map[string]*nameInfo)
 }
 
-// Syncs the NameRegCache and Resets it to use NameRegWriter as the backend NameRegGetter
-func (cache *NameRegCache) Flush(state NameRegWriter) error {
+// Syncs the Cache and Resets it to use Writer as the backend Getter
+func (cache *Cache) Flush(state Writer) error {
 	err := cache.Sync(state)
 	if err != nil {
 		return err
@@ -142,12 +142,12 @@ func (cache *NameRegCache) Flush(state NameRegWriter) error {
 	return nil
 }
 
-func (cache *NameRegCache) Backend() NameRegGetter {
+func (cache *Cache) Backend() Getter {
 	return cache.backend
 }
 
 // Get the cache accountInfo item creating it if necessary
-func (cache *NameRegCache) get(name string) (*nameInfo, error) {
+func (cache *Cache) get(name string) (*nameInfo, error) {
 	cache.RLock()
 	nmeInfo := cache.names[name]
 	cache.RUnlock()
@@ -156,7 +156,7 @@ func (cache *NameRegCache) get(name string) (*nameInfo, error) {
 		defer cache.Unlock()
 		nmeInfo = cache.names[name]
 		if nmeInfo == nil {
-			entry, err := cache.backend.GetNameRegEntry(name)
+			entry, err := cache.backend.GetNameEntry(name)
 			if err != nil {
 				return nil, err
 			}

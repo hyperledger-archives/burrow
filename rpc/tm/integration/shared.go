@@ -173,7 +173,7 @@ func callContract(t *testing.T, client tmClient.RPCClient, fromAddress, toAddres
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, client tmClient.RPCClient, name string) *names.NameRegEntry {
+func getNameRegEntry(t *testing.T, client tmClient.RPCClient, name string) *names.Entry {
 	entry, err := tmClient.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)

@@ -125,7 +125,7 @@ func Call(client RPCClient, fromAddress, toAddress crypto.Address, data []byte) 
 	return res, nil
 }
 
-func GetName(client RPCClient, name string) (*names.NameRegEntry, error) {
+func GetName(client RPCClient, name string) (*names.Entry, error) {
 	res := new(rpc.ResultGetName)
 	_, err := client.Call(tm.GetName, pmap("name", name), res)
 	if err != nil {

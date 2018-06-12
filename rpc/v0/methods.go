@@ -348,7 +348,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			list, err := service.ListNames(func(entry *names.NameRegEntry) bool {
+			list, err := service.ListNames(func(entry *names.Entry) bool {
 				return filter.Match(entry)
 			})
 			if err != nil {

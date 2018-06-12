@@ -271,9 +271,9 @@ func (s *State) IterateStorage(address crypto.Address,
 //-------------------------------------
 // State.nameReg
 
-var _ names.NameRegIterable = &State{}
+var _ names.Iterable = &State{}
 
-func (s *State) GetNameRegEntry(name string) (*names.NameRegEntry, error) {
+func (s *State) GetNameEntry(name string) (*names.Entry, error) {
 	_, valueBytes := s.tree.Get(prefixedKey(nameRegPrefix, []byte(name)))
 	if valueBytes == nil {
 		return nil, nil
@@ -282,13 +282,13 @@ func (s *State) GetNameRegEntry(name string) (*names.NameRegEntry, error) {
 	return DecodeNameRegEntry(valueBytes), nil
 }
 
-func (s *State) IterateNameRegEntries(consumer func(*names.NameRegEntry) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
 	return s.tree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
 		return consumer(DecodeNameRegEntry(value))
 	}), nil
 }
 
-func (s *State) UpdateNameRegEntry(entry *names.NameRegEntry) error {
+func (s *State) UpdateNameEntry(entry *names.Entry) error {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
@@ -300,7 +300,7 @@ func (s *State) UpdateNameRegEntry(entry *names.NameRegEntry) error {
 	return nil
 }
 
-func (s *State) RemoveNameRegEntry(name string) error {
+func (s *State) RemoveNameEntry(name string) error {
 	s.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
 	return nil
 }
@@ -315,19 +315,19 @@ func (s *State) Copy(db dbm.DB) *State {
 	return state
 }
 
-func DecodeNameRegEntry(entryBytes []byte) *names.NameRegEntry {
+func DecodeNameRegEntry(entryBytes []byte) *names.Entry {
 	var n int
 	var err error
 	value := NameRegDecode(bytes.NewBuffer(entryBytes), &n, &err)
-	return value.(*names.NameRegEntry)
+	return value.(*names.Entry)
 }
 
 func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*names.NameRegEntry), w, n, err)
+	wire.WriteBinary(o.(*names.Entry), w, n, err)
 }
 
 func NameRegDecode(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&names.NameRegEntry{}, r, names.MaxDataLength, n, err)
+	return wire.ReadBinary(&names.Entry{}, r, names.MaxDataLength, n, err)
 }
 
 func prefixedKey(prefix string, suffices ...[]byte) []byte {

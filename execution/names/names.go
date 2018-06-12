@@ -14,6 +14,8 @@
 
 package names
 
+import "github.com/hyperledger/burrow/crypto"
+
 var (
 	MinNameRegistrationPeriod uint64 = 5
 
@@ -28,6 +30,40 @@ var (
 	MaxNameLength = 64
 	MaxDataLength = 1 << 16
 )
+
+// NameReg provides a global key value store based on Name, Data pairs that are subject to expiry and ownership by an
+// account.
+type Entry struct {
+	// registered name for the entry
+	Name string
+	// address that created the entry
+	Owner crypto.Address
+	// data to store under this name
+	Data string
+	// block at which this entry expires
+	Expires uint64
+}
+
+type Getter interface {
+	GetNameEntry(name string) (*Entry, error)
+}
+
+type Updater interface {
+	// Updates the name entry creating it if it does not exist
+	UpdateNameEntry(entry *Entry) error
+	// Remove the name entry
+	RemoveNameEntry(name string) error
+}
+
+type Writer interface {
+	Getter
+	Updater
+}
+
+type Iterable interface {
+	Getter
+	IterateNameEntries(consumer func(*Entry) (stop bool)) (stopped bool, err error)
+}
 
 // base cost is "effective" number of bytes
 func NameBaseCost(name, data string) uint64 {

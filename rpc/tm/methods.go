@@ -168,7 +168,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 		// Names
 		GetName: server.NewRPCFunc(service.GetName, "name"),
 		ListNames: server.NewRPCFunc(func() (*rpc.ResultListNames, error) {
-			return service.ListNames(func(*names.NameRegEntry) bool {
+			return service.ListNames(func(*names.Entry) bool {
 				return true
 			})
 		}, ""),

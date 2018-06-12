@@ -976,7 +976,7 @@ func TestNameTxs(t *testing.T) {
 		}
 	}
 
-	validateEntry := func(t *testing.T, entry *names.NameRegEntry, name, data string, addr crypto.Address, expires uint64) {
+	validateEntry := func(t *testing.T, entry *names.Entry, name, data string, addr crypto.Address, expires uint64) {
 
 		if entry == nil {
 			t.Fatalf("Could not find name %s", name)
@@ -1005,7 +1005,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithState(state, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err := state.GetNameRegEntry(name)
+	entry, err := state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks)
 
@@ -1025,7 +1025,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks*2)
 
@@ -1036,7 +1036,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks*3)
 
@@ -1060,7 +1060,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain.Tip, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[1].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 
@@ -1075,7 +1075,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain.Tip, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[1].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 
@@ -1088,7 +1088,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	if entry != nil {
 		t.Fatal("Expected removed entry to be nil")
@@ -1105,7 +1105,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateAndBlockchain(state, blockchain.Tip, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), blockchain.LastBlockHeight()+numDesiredBlocks)
 	// Fast forward
@@ -1121,7 +1121,7 @@ func TestNameTxs(t *testing.T) {
 	if err := execTxWithStateNewBlock(state, blockchain, txEnv); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = state.GetNameRegEntry(name)
+	entry, err = state.GetNameEntry(name)
 	require.NoError(t, err)
 	if entry != nil {
 		t.Fatal("Expected removed entry to be nil")
@@ -1465,7 +1465,7 @@ proof-of-work chain as proof of what happened while they were gone `
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
 				acc0.Balance()-entryAmount, newAcc0.Balance())
 		}
-		entry, err := stateNameTx.GetNameRegEntry(entryName)
+		entry, err := stateNameTx.GetNameEntry(entryName)
 		require.NoError(t, err)
 		if entry == nil {
 			t.Errorf("Expected an entry but got nil")

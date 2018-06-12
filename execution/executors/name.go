@@ -18,7 +18,7 @@ type NameContext struct {
 	Tip            blockchain.TipInfo
 	StateWriter    state.Writer
 	EventPublisher event.Publisher
-	NameReg        names.NameRegWriter
+	NameReg        names.Writer
 	Logger         *logging.Logger
 	tx             *payload.NameTx
 }
@@ -74,7 +74,7 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 		"last_block_height", lastBlockHeight)
 
 	// check if the name exists
-	entry, err := ctx.NameReg.GetNameRegEntry(ctx.tx.Name)
+	entry, err := ctx.NameReg.GetNameEntry(ctx.tx.Name)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 			// (owners if not expired, anyone if expired)
 			ctx.Logger.TraceMsg("Removing NameReg entry (no value and empty data in tx requests this)",
 				"name", entry.Name)
-			err := ctx.NameReg.RemoveNameRegEntry(entry.Name)
+			err := ctx.NameReg.RemoveNameEntry(entry.Name)
 			if err != nil {
 				return err
 			}
@@ -134,7 +134,7 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 					"credit", credit)
 			}
 			entry.Data = ctx.tx.Data
-			err := ctx.NameReg.UpdateNameRegEntry(entry)
+			err := ctx.NameReg.UpdateNameEntry(entry)
 			if err != nil {
 				return err
 			}
@@ -144,7 +144,7 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 			return fmt.Errorf("Names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 		}
 		// entry does not exist, so create it
-		entry = &names.NameRegEntry{
+		entry = &names.Entry{
 			Name:    ctx.tx.Name,
 			Owner:   ctx.tx.Input.Address,
 			Data:    ctx.tx.Data,
@@ -153,7 +153,7 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 		ctx.Logger.TraceMsg("Creating NameReg entry",
 			"name", entry.Name,
 			"expires_in", expiresIn)
-		err := ctx.NameReg.UpdateNameRegEntry(entry)
+		err := ctx.NameReg.UpdateNameEntry(entry)
 		if err != nil {
 			return err
 		}
