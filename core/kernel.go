@@ -94,17 +94,17 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		state, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
 
+	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
 	checker := execution.NewBatchChecker(state, blockchain.Tip, logger)
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, blockchain.Tip, emitter, logger, exeOptions...)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
-
+	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
+		tmLogger)
 	if err != nil {
 		return nil, err
 	}
-	txCodec := txs.NewJSONCodec()
 	transactor := execution.NewTransactor(blockchain.Tip, emitter, tmNode.MempoolReactor().BroadcastTx, txCodec,
 		logger)
 
@@ -130,7 +130,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name: "Database",
+			Name:    "Database",
+			Enabled: true,
 			Launch: func() (process.Process, error) {
 				// Just close database
 				return process.ShutdownFunc(func(ctx context.Context) error {
@@ -157,6 +158,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				}
 				return process.ShutdownFunc(func(ctx context.Context) error {
 					err := tmNode.Stop()
+					// Close tendermint database connections using our wrapper
+					defer tmNode.Close()
 					if err != nil {
 						return err
 					}
@@ -165,8 +168,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 						return ctx.Err()
 					case <-tmNode.Quit():
 						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
-						// Close tendermint database connections using our wrapper
-						tmNode.Close()
 						return nil
 					}
 					return err
@@ -226,7 +227,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					pbkeys.RegisterKeysServer(grpcServer, &ks)
 				}
 
-				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service))
+				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service, state, txCodec))
 
 				go grpcServer.Serve(listen)
 
