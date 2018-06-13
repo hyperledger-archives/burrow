@@ -3,12 +3,40 @@
   unused-packages = true
   non-go = true
 
+# From Tendermint
 [[constraint]]
   name = "github.com/tendermint/tendermint"
   version = "=v0.20.0"
 
-# Because Tendermint did this, we have to...
-[[override]]
-  name = "google.golang.org/genproto"
-  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
+[[constraint]]
+  name = "github.com/go-kit/kit"
+  version = "~0.6.0"
 
+[[constraint]]
+  name = "github.com/tendermint/abci"
+  version = "~0.11.0"
+
+[[constraint]]
+  name = "github.com/tendermint/go-crypto"
+  version = "~0.6.2"
+
+[[constraint]]
+  name = "github.com/tendermint/go-amino"
+  version = "=0.9.9"
+
+[[constraint]]
+  name = "github.com/tendermint/iavl"
+  branch = "develop"
+
+[[override]]
+  name = "github.com/tendermint/tmlibs"
+  version = "~0.8.4"
+
+# We don't care which version Tendermint wants
+[[override]]
+  name = "github.com/golang/protobuf"
+  version = "~1.1.0"
+
+[[override]]
+  name = "google.golang.org/grpc"
+  version = "~1.12.2"
