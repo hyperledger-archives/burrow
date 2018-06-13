@@ -71,9 +71,24 @@ func (s *Signatory) RealisePublicKey(getter state.AccountGetter) error {
 	return nil
 }
 
+// Returns an error if Envelope has a nil transaction or zero signatures (and therefore could not possibly be valid)
+func (txEnv *Envelope) Validate() error {
+	if txEnv.Tx == nil {
+		return fmt.Errorf("transaction envelope contains no (successfully unmarshalled) transaction")
+	}
+	if len(txEnv.Signatories) == 0 {
+		return fmt.Errorf("transaction envelope contains no (successfully unmarshalled) signatories")
+	}
+	return nil
+}
+
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
 func (txEnv *Envelope) Verify(getter state.AccountGetter) error {
+	err := txEnv.Validate()
+	if err != nil {
+		return err
+	}
 	errPrefix := fmt.Sprintf("could not verify transaction %X", txEnv.Tx.Hash())
 	inputs := txEnv.Tx.GetInputs()
 	if len(inputs) != len(txEnv.Signatories) {

@@ -18,9 +18,9 @@ import (
 	"io"
 	"io/ioutil"
 
-	wire "github.com/tendermint/go-wire"
+	"encoding/json"
 
-	rpc "github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc"
 )
 
 // Codec that uses tendermints 'binary' package for JSON.
@@ -34,40 +34,29 @@ func NewTCodec() rpc.Codec {
 
 // Encode to an io.Writer.
 func (codec *TCodec) Encode(v interface{}, w io.Writer) error {
-	var err error
-	var n int
-	wire.WriteJSON(v, w, &n, &err)
+	bs, err := codec.EncodeBytes(v)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(bs)
 	return err
 }
 
 // Encode to a byte array.
 func (codec *TCodec) EncodeBytes(v interface{}) ([]byte, error) {
-	return wire.JSONBytes(v), nil
+	return json.Marshal(v)
 }
-
-// TODO: [ben] implement EncodeBytesPtr ?
 
 // Decode from an io.Reader.
 func (codec *TCodec) Decode(v interface{}, r io.Reader) error {
-	bts, errR := ioutil.ReadAll(r)
-	if errR != nil {
-		return errR
+	bs, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
 	}
-	var err error
-	wire.ReadJSON(v, bts, &err)
-	return err
+	return codec.DecodeBytes(v, bs)
 }
 
 // Decode from a byte array.
-func (codec *TCodec) DecodeBytes(v interface{}, bts []byte) error {
-	var err error
-	wire.ReadJSON(v, bts, &err)
-	return err
-}
-
-// Decode from a byte array pointer.
-func (codec *TCodec) DecodeBytesPtr(v interface{}, bts []byte) error {
-	var err error
-	wire.ReadJSONPtr(v, bts, &err)
-	return err
+func (codec *TCodec) DecodeBytes(v interface{}, bs []byte) error {
+	return json.Unmarshal(bs, v)
 }

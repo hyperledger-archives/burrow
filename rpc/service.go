@@ -419,3 +419,19 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 		PrivateAccount: acm.AsConcretePrivateAccount(privateAccount),
 	}, nil
 }
+
+// Gets signing account from onr of private key or address - failing if both are provided
+func (s *Service) SigningAccount(address, privateKey []byte) (*execution.SequentialSigningAccount, error) {
+	if len(address) > 0 {
+		if len(privateKey) > 0 {
+			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
+		}
+		address, err := crypto.AddressFromBytes(address)
+		if err != nil {
+			return nil, err
+		}
+		return s.MempoolAccounts().SequentialSigningAccount(address)
+	}
+
+	return s.mempoolAccounts.SequentialSigningAccountFromPrivateKey(privateKey)
+}

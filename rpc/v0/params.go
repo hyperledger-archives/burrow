@@ -16,24 +16,15 @@ package v0
 
 import (
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/rpc/filters"
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/tendermint/go-wire/data"
 )
-
-// Legacy for JS
-var _ = data.NewMapper(struct{ payload.Payload }{}).
-	RegisterImplementation(&payload.SendTx{}, "send_tx", byte(payload.TypeSend)).
-	RegisterImplementation(&payload.CallTx{}, "call_tx", byte(payload.TypeCall)).
-	RegisterImplementation(&payload.NameTx{}, "name_tx", byte(payload.TypeName)).
-	RegisterImplementation(&payload.BondTx{}, "bond_tx", byte(payload.TypeBond)).
-	RegisterImplementation(&payload.UnbondTx{}, "unbond_tx", byte(payload.TypeUnbond)).
-	RegisterImplementation(&payload.PermissionsTx{}, "permissions_tx", byte(payload.TypePermissions))
 
 type (
 	// Used to send an address. The address should be hex and properly formatted.
 	AddressParam struct {
-		Address []byte `json:"address"`
+		Address binary.HexBytes `json:"address"`
 	}
 
 	// Used to send an address
@@ -42,18 +33,18 @@ type (
 	}
 
 	PrivateKeyParam struct {
-		PrivateKey []byte `json:"privateKey"`
+		PrivateKey binary.HexBytes `json:"privateKey"`
 	}
 
 	InputAccount struct {
-		PrivateKey []byte `json:"privateKey"`
-		Address    []byte `json:"address"`
+		PrivateKey binary.HexBytes `json:"privateKey"`
+		Address    binary.HexBytes `json:"address"`
 	}
 
 	// StorageAt
 	StorageAtParam struct {
-		Address []byte `json:"address"`
-		Key     []byte `json:"key"`
+		Address binary.HexBytes `json:"address"`
+		Key     binary.HexBytes `json:"key"`
 	}
 
 	// Get a block
@@ -82,16 +73,16 @@ type (
 
 	// Used when doing calls
 	CallParam struct {
-		Address []byte `json:"address"`
-		From    []byte `json:"from"`
-		Data    []byte `json:"data"`
+		Address binary.HexBytes `json:"address"`
+		From    binary.HexBytes `json:"from"`
+		Data    binary.HexBytes `json:"data"`
 	}
 
 	// Used when doing code calls
 	CallCodeParam struct {
-		From []byte `json:"from"`
-		Code []byte `json:"code"`
-		Data []byte `json:"data"`
+		From binary.HexBytes `json:"from"`
+		Code binary.HexBytes `json:"code"`
+		Data binary.HexBytes `json:"data"`
 	}
 
 	// Used when signing a tx. Uses placeholders just like TxParam
@@ -103,18 +94,18 @@ type (
 	// Used when sending a transaction to be created and signed on the server
 	// (using the private key). This only uses the standard key type for now.
 	TransactParam struct {
-		InputAccount InputAccount `json:"inputAccount"`
-		Data         []byte       `json:"data"`
-		Address      []byte       `json:"address"`
-		Fee          uint64       `json:"fee"`
-		GasLimit     uint64       `json:"gasLimit"`
+		InputAccount InputAccount    `json:"inputAccount"`
+		Data         binary.HexBytes `json:"data"`
+		Address      binary.HexBytes `json:"address"`
+		Fee          uint64          `json:"fee"`
+		GasLimit     uint64          `json:"gasLimit"`
 	}
 
 	// Used when sending a 'Send' transaction.
 	SendParam struct {
-		InputAccount InputAccount `json:"inputAccount"`
-		ToAddress    []byte       `json:"toAddress"`
-		Amount       uint64       `json:"amount"`
+		InputAccount InputAccount    `json:"inputAccount"`
+		ToAddress    binary.HexBytes `json:"toAddress"`
+		Amount       uint64          `json:"amount"`
 	}
 
 	NameRegEntryParam struct {

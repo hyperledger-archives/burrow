@@ -38,7 +38,8 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	abci_types "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/abci/types"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const BlockingTimeoutSeconds = 30
@@ -52,18 +53,20 @@ type Call struct {
 type Transactor struct {
 	tip              *blockchain.Tip
 	eventEmitter     event.Emitter
-	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error
+	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
+	txEncoder        txs.Encoder
 	logger           *logging.Logger
 }
 
 func NewTransactor(tip *blockchain.Tip, eventEmitter event.Emitter,
-	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error,
+	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		tip:              tip,
 		eventEmitter:     eventEmitter,
 		broadcastTxAsync: broadcastTxAsync,
+		txEncoder:        txEncoder,
 		logger:           logger.With(structure.ComponentKey, "Transactor"),
 	}
 }
@@ -126,8 +129,20 @@ func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Addres
 	return &Call{Return: ret, GasUsed: gasUsed}, nil
 }
 
-func (trans *Transactor) BroadcastTxAsync(tx *txs.Envelope, callback func(res *abci_types.Response)) error {
-	return trans.broadcastTxAsync(tx, callback)
+func (trans *Transactor) BroadcastTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
+	return trans.broadcastTxAsync(txBytes, callback)
+}
+
+func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {
+	err := txEnv.Validate()
+	if err != nil {
+		return err
+	}
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+	if err != nil {
+		return fmt.Errorf("error encoding transaction: %v", err)
+	}
+	return trans.BroadcastTxAsyncRaw(txBytes, callback)
 }
 
 // Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
@@ -136,8 +151,20 @@ func (trans *Transactor) BroadcastTx(txEnv *txs.Envelope) (*txs.Receipt, error) 
 	trans.logger.Trace.Log("method", "BroadcastTx",
 		"tx_hash", txEnv.Tx.Hash(),
 		"tx", txEnv.String())
-	responseCh := make(chan *abci_types.Response, 1)
-	err := trans.BroadcastTxAsync(txEnv, func(res *abci_types.Response) {
+	err := txEnv.Validate()
+	if err != nil {
+		return nil, err
+	}
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+	if err != nil {
+		return nil, err
+	}
+	return trans.BroadcastTxRaw(txBytes)
+}
+
+func (trans *Transactor) BroadcastTxRaw(txBytes []byte) (*txs.Receipt, error) {
+	responseCh := make(chan *abciTypes.Response, 1)
+	err := trans.BroadcastTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
 	})
 

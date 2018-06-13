@@ -61,7 +61,7 @@ message CallData {
 
 // #BEGIN(account)
 // Account Service definition
-service AccountService {
+service Accounts {
 	rpc GenPrivAccount(Empty) returns (PrivateAccount);
 	rpc GenPrivAccountFromKey(PrivateKeyParam) returns (PrivateAccount);
 	rpc GetAccount(AddressParam) returns (Account);
@@ -140,7 +140,7 @@ message StorageDump {
 
 // #BEGIN(blockchain)
 // Blockchain Service Definition
-service BlockchainService {
+service Blockchain {
 	rpc GetBlock(HeightParam) returns (Block);
 	rpc GetBlocks(BlocksParam) returns (BlockList);
 	rpc GetBlockchainInfo(Empty) returns (Status);
@@ -298,7 +298,7 @@ message ConsensusState {
 
 // #BEGIN(event)
 // Event Service Definition
-service EventService {
+service Events {
 	rpc EventPoll(SubIdParam) returns (PollResponse);
 	rpc EventSubscribe(EventIdParam) returns (SubIdParam);
 	rpc EventUnsubscribe(SubIdParam) returns (EventUnSub);
@@ -347,7 +347,7 @@ message PollResponse {
 
 // #BEGIN(namereg)
 // Name Registry Service Definition 
-service NameRegService {
+service NameReg {
 	rpc GetEntry(NameRegEntryParam) returns (NameRegEntry);
 	rpc GetEntries(FilterListParam) returns (NameRegEntryList);
 	rpc TransactNameReg(TransactNameRegParam) returns (TxReceipt);
@@ -387,7 +387,7 @@ message NameRegEntryList {
 
 // #BEGIN(network)
 // Network Service Definition
-service NetworkService {
+service Network {
 	rpc GetClientVersion(Empty) returns (ClientVersion); 	// NI - go
 	rpc GetNetworkInfo(Empty) returns (NetworkInfo);
 	rpc GetNodeInfo(Empty) returns (NodeInfo);  			// NI - go
@@ -440,7 +440,7 @@ message PeerList {
 
 // #BEGIN(transaction)
 // Transaction Service Definition
-service TransactionService {
+service Transaction {
 	rpc BroadcastTx(TxParam) returns (TxReceipt);
 	rpc Call(CallParam) returns (CallResult);
 	rpc CallCode(CallCodeParam) returns (CallResult);

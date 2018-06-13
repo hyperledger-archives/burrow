@@ -62,9 +62,16 @@ megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
 	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
 
+# Protobuffing
+.PHONY: protobuf_deps
+protobuf_deps:
+	@go get -u github.com/golang/protobuf/protoc-gen-go
+
 keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
 	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
 
+rpc/grpc/burrow.pb.go: rpc/burrow
+	@protoc -I ./rpc/grpc rpc/grpc/burrow.proto --go_out=plugins=grpc:rpc/grpc
 ### Dependency management for github.com/hyperledger/burrow
 
 # erase vendor wipes the full vendor directory

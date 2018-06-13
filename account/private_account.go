@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tendermint/go-wire"
 )
 
 type AddressableSigner interface {
@@ -43,8 +42,6 @@ type concretePrivateAccountWrapper struct {
 }
 
 var _ PrivateAccount = concretePrivateAccountWrapper{}
-
-var _ = wire.RegisterInterface(struct{ PrivateAccount }{}, wire.ConcreteType{concretePrivateAccountWrapper{}, 0x01})
 
 func AsConcretePrivateAccount(privateAccount PrivateAccount) *ConcretePrivateAccount {
 	if privateAccount == nil {

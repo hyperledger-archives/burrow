@@ -1,3 +1,6 @@
+// +build integration
+
+// Space above here matters
 // Copyright 2017 Monax Industries Limited
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +15,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpc
+package integration
 
 import (
-	"io"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/core/integration"
 )
 
-// Used for rpc request and response data.
-type Codec interface {
-	EncodeBytes(interface{}) ([]byte, error)
-	Encode(interface{}, io.Writer) error
-	DecodeBytes(interface{}, []byte) error
-	Decode(interface{}, io.Reader) error
+var privateAccounts = integration.MakePrivateAccounts(5) // make keys
+var genesisDoc = integration.TestGenesisDoc(privateAccounts)
+var kern *core.Kernel
+
+// Needs to be in a _test.go file to be picked up
+func TestMain(m *testing.M) {
+	returnValue := integration.TestWrapper(privateAccounts, genesisDoc, func(k *core.Kernel) int {
+		kern = k
+		return m.Run()
+	})
+
+	time.Sleep(3 * time.Second)
+	os.Exit(returnValue)
 }

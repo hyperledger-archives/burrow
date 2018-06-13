@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	goCrypto "github.com/tendermint/go-crypto"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
@@ -27,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/go-wire"
+	goCrypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/common"
@@ -43,8 +41,9 @@ func TestResultBroadcastTx(t *testing.T) {
 		},
 	}
 
-	js := string(wire.JSONBytes(res))
-	assert.Equal(t, `{"Receipt":{"TxHash":"666F6F","CreatesContract":true,"ContractAddress":"0002030000000000000000000000000000000000"}}`, js)
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	assert.Equal(t, `{"TxHash":"666F6F","CreatesContract":true,"ContractAddress":"0002030000000000000000000000000000000000"}`, string(bs))
 }
 
 func TestListUnconfirmedTxs(t *testing.T) {

@@ -14,7 +14,12 @@
 
 package names
 
-import "github.com/hyperledger/burrow/crypto"
+import (
+	"bytes"
+	"encoding/gob"
+
+	"github.com/hyperledger/burrow/crypto"
+)
 
 var (
 	MinNameRegistrationPeriod uint64 = 5
@@ -42,6 +47,25 @@ type Entry struct {
 	Data string
 	// block at which this entry expires
 	Expires uint64
+}
+
+func (e *Entry) Encode() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := gob.NewEncoder(buf).Encode(e)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func DecodeEntry(entryBytes []byte) (*Entry, error) {
+	entry := new(Entry)
+	buf := bytes.NewBuffer(entryBytes)
+	err := gob.NewDecoder(buf).Decode(entry)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
 }
 
 type Getter interface {
