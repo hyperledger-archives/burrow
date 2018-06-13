@@ -13,7 +13,8 @@ type CallTx struct {
 	Address  *crypto.Address
 	GasLimit uint64
 	Fee      uint64
-	Data     []byte
+	// Signing normalisation needs omitempty
+	Data []byte `json:",omitempty"`
 }
 
 func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,

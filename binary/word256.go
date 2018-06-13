@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"math/big"
 	"sort"
+
+	"github.com/tmthrgd/go-hex"
 )
 
 var (
@@ -32,6 +34,19 @@ var BigWord256Length = big.NewInt(Word256Length)
 var trimCutSet = string([]byte{0})
 
 type Word256 [Word256Length]byte
+
+func (w *Word256) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
+	if err != nil {
+		return err
+	}
+	copy(w[:], bs)
+	return nil
+}
+
+func (w Word256) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeUpperToString(w[:])), nil
+}
 
 func (w Word256) String() string {
 	return string(w[:])

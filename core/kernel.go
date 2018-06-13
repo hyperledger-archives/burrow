@@ -39,6 +39,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/burrow"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/rpc/v0"
 	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
@@ -84,7 +85,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	var state *execution.State
 	// These should be in sync unless we are at the genesis block
 	if blockchain.LastBlockHeight() > 0 {
-		state, err = execution.LoadState(stateDB, blockchain.AppHashAfterLastBlock())
+		state, err = execution.LoadState(stateDB)
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				blockchain.AppHashAfterLastBlock(), err)
@@ -93,18 +94,18 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		state, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
 
+	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
 	checker := execution.NewBatchChecker(state, blockchain.Tip, logger)
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, blockchain.Tip, emitter, logger, exeOptions...)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, tmLogger)
-
+	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
+		tmLogger)
 	if err != nil {
 		return nil, err
 	}
-	txCodec := txs.NewJSONCodec()
-	transactor := execution.NewTransactor(blockchain.Tip, emitter, tendermint.BroadcastTxAsyncFunc(tmNode, txCodec),
+	transactor := execution.NewTransactor(blockchain.Tip, emitter, tmNode.MempoolReactor().BroadcastTx, txCodec,
 		logger)
 
 	nameReg := state
@@ -113,8 +114,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 
 	launchers := []process.Launcher{
 		{
-			Name:     "Profiling Server",
-			Disabled: !rpcConfig.Profiler.Enabled,
+			Name:    "Profiling Server",
+			Enabled: !rpcConfig.Profiler.Enabled,
 			Launch: func() (process.Process, error) {
 				debugServer := &http.Server{
 					Addr: ":6060",
@@ -129,7 +130,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name: "Database",
+			Name:    "Database",
+			Enabled: true,
 			Launch: func() (process.Process, error) {
 				// Just close database
 				return process.ShutdownFunc(func(ctx context.Context) error {
@@ -139,7 +141,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name: "Tendermint",
+			Name:    "Tendermint",
+			Enabled: true,
 			Launch: func() (process.Process, error) {
 				err := tmNode.Start()
 				if err != nil {
@@ -155,6 +158,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				}
 				return process.ShutdownFunc(func(ctx context.Context) error {
 					err := tmNode.Stop()
+					// Close tendermint database connections using our wrapper
+					defer tmNode.Close()
 					if err != nil {
 						return err
 					}
@@ -163,8 +168,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 						return ctx.Err()
 					case <-tmNode.Quit():
 						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
-						// Close tendermint database connections using our wrapper
-						tmNode.Close()
 						return nil
 					}
 					return err
@@ -172,8 +175,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:     "RPC/tm",
-			Disabled: !rpcConfig.TM.Enabled,
+			Name:    "RPC/tm",
+			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
@@ -183,8 +186,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:     "RPC/V0",
-			Disabled: !rpcConfig.V0.Enabled,
+			Name:    "RPC/V0",
+			Enabled: rpcConfig.V0.Enabled,
 			Launch: func() (process.Process, error) {
 				codec := v0.NewTCodec()
 				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
@@ -203,8 +206,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:     "grpc service",
-			Disabled: !rpcConfig.GRPC.Enabled,
+			Name:    "GRPC service",
+			Enabled: rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
 				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
 				if err != nil {
@@ -223,6 +226,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					}
 					pbkeys.RegisterKeysServer(grpcServer, &ks)
 				}
+
+				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service, state, txCodec))
 
 				go grpcServer.Serve(listen)
 
@@ -248,12 +253,14 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 // Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() error {
 	for _, launcher := range kern.Launchers {
-		srvr, err := launcher.Launch()
-		if err != nil {
-			return fmt.Errorf("error launching %s server: %v", launcher.Name, err)
-		}
+		if launcher.Enabled {
+			srvr, err := launcher.Launch()
+			if err != nil {
+				return fmt.Errorf("error launching %s server: %v", launcher.Name, err)
+			}
 
-		kern.processes[launcher.Name] = srvr
+			kern.processes[launcher.Name] = srvr
+		}
 	}
 	go kern.supervise()
 	return nil

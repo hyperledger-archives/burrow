@@ -14,7 +14,10 @@
 
 package names
 
-import "github.com/hyperledger/burrow/crypto"
+import (
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/tendermint/go-amino"
+)
 
 var (
 	MinNameRegistrationPeriod uint64 = 5
@@ -42,6 +45,21 @@ type Entry struct {
 	Data string
 	// block at which this entry expires
 	Expires uint64
+}
+
+var cdc = amino.NewCodec()
+
+func (e *Entry) Encode() ([]byte, error) {
+	return cdc.MarshalBinary(e)
+}
+
+func DecodeEntry(entryBytes []byte) (*Entry, error) {
+	entry := new(Entry)
+	err := cdc.UnmarshalBinary(entryBytes, entry)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
 }
 
 type Getter interface {
