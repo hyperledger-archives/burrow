@@ -144,7 +144,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 
 		// Accounts
 		ListAccounts: server.NewRPCFunc(func() (*rpc.ResultListAccounts, error) {
-			return service.ListAccounts(func(acm.Account) bool {
+			return service.ListAccounts(func(*acm.Account) bool {
 				return true
 			})
 		}, ""),

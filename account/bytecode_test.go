@@ -11,6 +11,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNil_MarshalJSON(t *testing.T) {
+	var bytecode Bytecode = []byte{}
+
+	bs, err := json.Marshal(bytecode)
+
+	assert.NoError(t, err)
+
+	bytecodeOut := new(Bytecode)
+	err = json.Unmarshal(bs, bytecodeOut)
+
+	assert.Equal(t, bytecode, *bytecodeOut)
+}
+
 func TestBytecode_MarshalJSON(t *testing.T) {
 	bytecode := Bytecode{
 		73, 234, 48, 252, 174,

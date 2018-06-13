@@ -66,17 +66,14 @@ func GenPrivAccount(client RPCClient) (*rpc.ResultGeneratePrivateAccount, error)
 	return res, nil
 }
 
-func GetAccount(client RPCClient, address crypto.Address) (acm.Account, error) {
+func GetAccount(client RPCClient, address crypto.Address) (*acm.Account, error) {
 	res := new(rpc.ResultGetAccount)
 	_, err := client.Call(tm.GetAccount, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
-	concreteAccount := res.Account
-	if concreteAccount == nil {
-		return nil, nil
-	}
-	return concreteAccount.Account(), nil
+
+	return res.Account, nil
 }
 
 func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (*txs.Envelope, error) {

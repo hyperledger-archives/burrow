@@ -114,7 +114,7 @@ func newExecutor(name string, runCall bool, backend *State, chainID string, tip 
 // to always access the freshest mempool state as needed by accounts.SequentialSigningAccount
 //
 // Accounts
-func (exe *executor) GetAccount(address crypto.Address) (acm.Account, error) {
+func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetAccount(address)
@@ -245,11 +245,11 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		return nil
 
 	case *payload.CallTx:
-		var inAcc acm.MutableAccount
-		var outAcc acm.Account
+		var inAcc *acm.Account
+		var outAcc *acm.Account
 
 		// Validate input
-		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -313,7 +313,8 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 
-		inAcc, err = inAcc.IncSequence().SubtractFromBalance(tx.Fee)
+		inAcc.IncSequence()
+		err = inAcc.SubtractFromBalance(tx.Fee)
 		if err != nil {
 			return err
 		}
@@ -324,14 +325,14 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		if exe.runCall {
 			// VM call variables
 			var (
-				gas     uint64             = tx.GasLimit
-				err     error              = nil
-				caller  acm.MutableAccount = acm.AsMutableAccount(inAcc)
-				callee  acm.MutableAccount = nil // initialized below
-				code    []byte             = nil
-				ret     []byte             = nil
-				txCache                    = state.NewCache(exe.stateCache, state.Name("TxCache"))
-				params                     = evm.Params{
+				gas     uint64       = tx.GasLimit
+				err     error        = nil
+				caller  *acm.Account = inAcc
+				callee  *acm.Account = nil // initialized below
+				code    []byte       = nil
+				ret     []byte       = nil
+				txCache              = state.NewCache(exe.stateCache, state.Name("TxCache"))
+				params               = evm.Params{
 					BlockHeight: exe.tip.LastBlockHeight(),
 					BlockHash:   binary.LeftPadWord256(exe.tip.LastBlockHash()),
 					BlockTime:   exe.tip.LastBlockTime().Unix(),
@@ -374,7 +375,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 					"contract_address", callee.Address(),
 					"init_code", code)
 			} else {
-				callee = acm.AsMutableAccount(outAcc)
+				callee = outAcc
 				code = callee.Code()
 				logger.TraceMsg("Calling existing contract",
 					"contract_address", callee.Address(),
@@ -403,6 +404,10 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 				if createContract {
 					callee.SetCode(ret)
 				}
+				// Update caller/callee to txCache.
+				txCache.UpdateAccount(caller)
+				txCache.UpdateAccount(callee)
+
 				txCache.Sync(exe.stateCache)
 			}
 
@@ -432,7 +437,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 			// the proposer determines the order of txs.
 			// So mempool will skip the actual .Call(),
 			// and only deduct from the caller's balance.
-			inAcc, err = inAcc.SubtractFromBalance(value)
+			err = inAcc.SubtractFromBalance(value)
 			if err != nil {
 				return err
 			}
@@ -452,7 +457,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 
 	case *payload.NameTx:
 		// Validate input
-		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -590,7 +595,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
-		inAcc, err = inAcc.SubtractFromBalance(value)
+		err = inAcc.SubtractFromBalance(value)
 		if err != nil {
 			return err
 		}
@@ -746,7 +751,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 
 	case *payload.PermissionsTx:
 		// Validate input
-		inAcc, err := state.GetMutableAccount(exe.stateCache, tx.Input.Address)
+		inAcc, err := state.GetAccount(exe.stateCache, tx.Input.Address)
 		if err != nil {
 			return err
 		}
@@ -781,7 +786,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 		logger.TraceMsg("New PermissionsTx",
 			"perm_args", tx.PermArgs.String())
 
-		var permAcc acm.Account
+		var permAcc *acm.Account
 		switch tx.PermArgs.PermFlag {
 		case permission.HasBase:
 			// this one doesn't make sense from txs
@@ -837,7 +842,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 			"old_sequence", inAcc.Sequence(),
 			"new_sequence", inAcc.Sequence()+1)
 		inAcc.IncSequence()
-		inAcc, err = inAcc.SubtractFromBalance(value)
+		err = inAcc.SubtractFromBalance(value)
 		if err != nil {
 			return err
 		}
@@ -860,7 +865,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 }
 
 func mutatePermissions(stateReader state.Reader, address crypto.Address,
-	mutator func(*ptypes.AccountPermissions) error) (acm.Account, error) {
+	mutator func(*ptypes.AccountPermissions) error) (*acm.Account, error) {
 
 	account, err := stateReader.GetAccount(address)
 	if err != nil {
@@ -869,7 +874,7 @@ func mutatePermissions(stateReader state.Reader, address crypto.Address,
 	if account == nil {
 		return nil, fmt.Errorf("could not get account at address %s in order to alter permissions", address)
 	}
-	mutableAccount := acm.AsMutableAccount(account)
+	mutableAccount := account
 
 	return mutableAccount, mutator(mutableAccount.MutablePermissions())
 }
@@ -1008,15 +1013,15 @@ func execBlock(s *State, block *txs.Block, blockPartsHeader txs.PartSetHeader) e
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
 func getInputs(accountGetter state.AccountGetter,
-	ins []*payload.TxInput) (map[crypto.Address]acm.MutableAccount, error) {
+	ins []*payload.TxInput) (map[crypto.Address]*acm.Account, error) {
 
-	accounts := map[crypto.Address]acm.MutableAccount{}
+	accounts := map[crypto.Address]*acm.Account{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
 			return nil, payload.ErrTxDuplicateAddress
 		}
-		acc, err := state.GetMutableAccount(accountGetter, in.Address)
+		acc, err := state.GetAccount(accountGetter, in.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -1028,10 +1033,10 @@ func getInputs(accountGetter state.AccountGetter,
 	return accounts, nil
 }
 
-func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
-	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]acm.MutableAccount, error) {
+func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]*acm.Account, error) {
 	if accs == nil {
-		accs = make(map[crypto.Address]acm.MutableAccount)
+		accs = make(map[crypto.Address]*acm.Account)
 	}
 
 	// we should err if an account is being created but the inputs don't have permission
@@ -1041,7 +1046,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 		if _, ok := accs[out.Address]; ok {
 			return nil, payload.ErrTxDuplicateAddress
 		}
-		acc, err := state.GetMutableAccount(accountGetter, out.Address)
+		acc, err := state.GetAccount(accountGetter, out.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -1053,19 +1058,14 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 				}
 				checkedCreatePerms = true
 			}
-			acc = acm.ConcreteAccount{
-				Address:     out.Address,
-				Sequence:    0,
-				Balance:     0,
-				Permissions: permission.ZeroAccountPermissions,
-			}.MutableAccount()
+			acc = acm.NewContractAccount(out.Address, permission.ZeroAccountPermissions)
 		}
 		accs[out.Address] = acc
 	}
 	return accs, nil
 }
 
-func validateInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput) (uint64, error) {
+func validateInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput) (uint64, error) {
 	total := uint64(0)
 	for _, in := range ins {
 		acc := accs[in.Address]
@@ -1082,7 +1082,7 @@ func validateInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 	return total, nil
 }
 
-func validateInput(acc acm.MutableAccount, in *payload.TxInput) error {
+func validateInput(acc *acm.Account, in *payload.TxInput) error {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
@@ -1114,7 +1114,7 @@ func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -1125,7 +1125,7 @@ func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
 				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
 		}
-		acc, err := acc.SubtractFromBalance(in.Amount)
+		err := acc.SubtractFromBalance(in.Amount)
 		if err != nil {
 			return err
 		}
@@ -1139,14 +1139,14 @@ func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 	return nil
 }
 
-func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload.TxOutput) error {
+func adjustByOutputs(accs map[crypto.Address]*acm.Account, outs []*payload.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
 			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
 				out.Address)
 		}
-		_, err := acc.AddToBalance(out.Amount)
+		err := acc.AddToBalance(out.Amount)
 		if err != nil {
 			return err
 		}
@@ -1157,7 +1157,7 @@ func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
+func HasPermission(accountGetter state.AccountGetter, acc *acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
 	if perm > permission.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
@@ -1189,7 +1189,7 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptyp
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
+func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Send, logger) {
@@ -1199,22 +1199,22 @@ func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Addres
 	return true
 }
 
-func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasNamePermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
-func hasCallPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasCallPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
-func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasCreateContractPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -1224,12 +1224,12 @@ func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[cryp
 	return true
 }
 
-func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasBondPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.Account,
+func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

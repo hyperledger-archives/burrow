@@ -32,7 +32,7 @@ type NodeClient interface {
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight uint64, LatestBlockTime int64, err error)
-	GetAccount(address crypto.Address) (acm.Account, error)
+	GetAccount(address crypto.Address) (*acm.Account, error)
 	QueryContract(callerAddress, calleeAddress crypto.Address, data []byte) (ret []byte, gasUsed uint64, err error)
 	QueryContractCode(address crypto.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
 
@@ -188,7 +188,7 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address crypto.Addre
 }
 
 // GetAccount returns a copy of the account
-func (burrowNodeClient *burrowNodeClient) GetAccount(address crypto.Address) (acm.Account, error) {
+func (burrowNodeClient *burrowNodeClient) GetAccount(address crypto.Address) (*acm.Account, error) {
 	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	account, err := tmClient.GetAccount(client, address)
 	if err != nil {

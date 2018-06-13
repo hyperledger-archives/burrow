@@ -9,8 +9,8 @@ import (
 
 // Create a new account from a parent 'creator' account. The creator account will have its
 // sequence number incremented
-func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPermissions,
-	logger *logging.Logger) acm.MutableAccount {
+func DeriveNewAccount(creator *acm.Account, permissions ptypes.AccountPermissions,
+	logger *logging.Logger) *acm.Account {
 	// Generate an address
 	sequence := creator.Sequence()
 	logger.TraceMsg("Incrementing sequence number in DeriveNewAccount()",
@@ -23,11 +23,6 @@ func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPerm
 	addr := crypto.NewContractAddress(creator.Address(), sequence)
 
 	// Create account from address.
-	return acm.ConcreteAccount{
-		Address:     addr,
-		Balance:     0,
-		Code:        nil,
-		Sequence:    0,
-		Permissions: permissions,
-	}.MutableAccount()
+	acc := acm.NewContractAccount(addr, permissions)
+	return acc
 }

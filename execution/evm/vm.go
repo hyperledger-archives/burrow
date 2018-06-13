@@ -152,7 +152,7 @@ func (vm *VM) SetPublisher(publisher event.Publisher) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(stateWriter state.Writer, acc acm.Account, perm ptypes.PermFlag) bool {
+func HasPermission(stateWriter state.Writer, acc *acm.Account, perm ptypes.PermFlag) bool {
 	value, _ := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(stateWriter).Base).Get(perm)
 	return value
 }
@@ -183,7 +183,7 @@ func (vm *VM) fireCallEvent(exception *string, output *[]byte, callerAddress, ca
 // value: To be transferred from caller to callee. Refunded upon error.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) Call(callState state.Cache, caller, callee *acm.Account, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -194,6 +194,8 @@ func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, cod
 		return
 	}
 	//childCallState
+	callState.UpdateAccount(caller)
+	callState.UpdateAccount(callee)
 	childCallState := state.NewCache(callState)
 
 	if len(code) > 0 {
@@ -228,7 +230,7 @@ func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, cod
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) DelegateCall(callState state.Cache, caller *acm.Account, callee *acm.Account, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -268,7 +270,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *error) bool {
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
+func (vm *VM) call(callState state.Cache, caller *acm.Account, callee *acm.Account, code, input []byte, value uint64, gas *uint64) (output []byte, err error) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
@@ -1022,7 +1024,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 				if useGasNegative(gas, GasGetAccount, &callErr) {
 					return nil, callErr
 				}
-				acc, errAcc := state.GetMutableAccount(callState, crypto.AddressFromWord256(addr))
+				acc, errAcc := state.GetAccount(callState, crypto.AddressFromWord256(addr))
 				if errAcc != nil {
 					return nil, firstErr(callErr, errAcc)
 				}
@@ -1046,7 +1048,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 						if !HasPermission(callState, caller, permission.CreateAccount) {
 							return nil, ErrPermission{"create_account"}
 						}
-						acc = acm.ConcreteAccount{Address: crypto.AddressFromWord256(addr)}.MutableAccount()
+						acc = acm.NewContractAccount(crypto.AddressFromWord256(addr), permission.ZeroAccountPermissions)
 					}
 					// add account to the tx cache
 					callState.UpdateAccount(acc)
@@ -1062,7 +1064,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 			if getErr != nil {
 				return nil, firstErr(err, getErr)
 			}
-			callee, getErr = state.GetMutableAccount(callState, callee.Address())
+			callee, getErr = state.GetAccount(callState, callee.Address())
 			if getErr != nil {
 				return nil, firstErr(err, getErr)
 			}
@@ -1129,7 +1131,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			receiver, errAcc := state.GetMutableAccount(callState, crypto.AddressFromWord256(addr))
+			receiver, errAcc := state.GetAccount(callState, crypto.AddressFromWord256(addr))
 			if errAcc != nil {
 				return nil, firstErr(err, errAcc)
 			}
@@ -1149,7 +1151,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 
 			}
 
-			receiver, errAdd := receiver.AddToBalance(callee.Balance())
+			errAdd := receiver.AddToBalance(callee.Balance())
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
@@ -1172,7 +1174,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 	}
 }
 
-func (vm *VM) createAccount(callState state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, error) {
+func (vm *VM) createAccount(callState state.Cache, callee *acm.Account, logger *logging.Logger) (*acm.Account, error) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {
@@ -1235,12 +1237,12 @@ func firstErr(errA, errB error) error {
 	}
 }
 
-func transfer(from, to acm.MutableAccount, amount uint64) error {
+func transfer(from, to *acm.Account, amount uint64) error {
 	if from.Balance() < amount {
 		return ErrInsufficientBalance
 	} else {
 		from.SubtractFromBalance(amount)
-		_, err := to.AddToBalance(amount)
+		err := to.AddToBalance(amount)
 		if err != nil {
 			return err
 		}
@@ -1249,7 +1251,7 @@ func transfer(from, to acm.MutableAccount, amount uint64) error {
 }
 
 // Dump the bytecode being sent to the EVM in the current working directory
-func dumpTokens(txHash []byte, caller, callee acm.Account, code []byte) {
+func dumpTokens(txHash []byte, caller, callee *acm.Account, code []byte) {
 	var tokensString string
 	tokens, err := acm.Bytecode(code).Tokens()
 	if err != nil {

@@ -83,7 +83,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			list, err := service.ListAccounts(func(account acm.Account) bool {
+			list, err := service.ListAccounts(func(account *acm.Account) bool {
 				return filter.Match(account)
 
 			})

@@ -232,14 +232,14 @@ func (s *Service) GetAccount(address crypto.Address) (*ResultGetAccount, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
+	return &ResultGetAccount{Account: acc}, nil
 }
 
-func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error) {
-	accounts := make([]*acm.ConcreteAccount, 0)
-	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
+func (s *Service) ListAccounts(predicate func(*acm.Account) bool) (*ResultListAccounts, error) {
+	accounts := make([]*acm.Account, 0)
+	s.state.IterateAccounts(func(account *acm.Account) (stop bool) {
 		if predicate(account) {
-			accounts = append(accounts, acm.AsConcreteAccount(account))
+			accounts = append(accounts, account)
 		}
 		return
 	})

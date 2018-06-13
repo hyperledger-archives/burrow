@@ -80,7 +80,7 @@ func (acf *AccountCodeFilter) Configure(fd *FilterData) error {
 }
 
 func (acf *AccountCodeFilter) Match(v interface{}) bool {
-	acc, ok := v.(acm.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}
@@ -111,7 +111,7 @@ func (abf *AccountBalanceFilter) Configure(fd *FilterData) error {
 }
 
 func (abf *AccountBalanceFilter) Match(v interface{}) bool {
-	acc, ok := v.(acm.Account)
+	acc, ok := v.(*acm.Account)
 	if !ok {
 		return false
 	}

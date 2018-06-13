@@ -103,7 +103,7 @@ func getSequence(t *testing.T, client tmClient.RPCClient, addr crypto.Address) u
 }
 
 // get the account
-func getAccount(t *testing.T, client tmClient.RPCClient, addr crypto.Address) acm.Account {
+func getAccount(t *testing.T, client tmClient.RPCClient, addr crypto.Address) *acm.Account {
 	ac, err := tmClient.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)

@@ -44,6 +44,7 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tmthrgd/go-hex"
@@ -150,8 +151,9 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 		accountPermCopy := accountPerm // Create new instance for custom overridability.
 		genAccounts = append(genAccounts, genesis.Account{
 			BasicAccount: genesis.BasicAccount{
-				Address: user.Address(),
-				Amount:  1000000,
+				PublicKey: user.PublicKey(),
+				Address:   user.Address(),
+				Amount:    1000000,
 			},
 			Permissions: accountPermCopy,
 		})
@@ -170,7 +172,8 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 				},
 				UnbondTo: []genesis.BasicAccount{
 					{
-						Address: users[0].Address(),
+						PublicKey: users[0].PublicKey(),
+						Address:   users[0].Address(),
 					},
 				},
 			},
@@ -179,7 +182,7 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 }
 
 //func getAccount(state state.AccountGetter, address acm.Address) acm.MutableAccount {
-//	acc, _ := state.GetMutableAccount(state, address)
+//	acc, _ := state.GetAccount(state, address)
 //	return acc
 //}
 
@@ -345,14 +348,10 @@ func TestCallPermission(t *testing.T) {
 
 	// create simple contract
 	simpleContractAddr := crypto.NewContractAddress(users[0].Address(), 100)
-	simpleAcc := acm.ConcreteAccount{
-		Address:     simpleContractAddr,
-		Balance:     0,
-		Code:        []byte{0x60},
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
+	simpleAcc := acm.NewContractAccount(simpleContractAddr, permission.ZeroAccountPermissions)
+	simpleAcc.SetCode([]byte{0x60})
+	simpleAcc.AddToBalance(0)
+	simpleAcc.SetStorageRoot(Zero256.Bytes())
 	st.UpdateAccount(simpleAcc)
 
 	// A single input, having the permission, should succeed
@@ -364,16 +363,12 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### CALL TO SIMPLE CONTRACT (FAIL)")
 
 	// create contract that calls the simple contract
-	contractCode := callContractCode(simpleContractAddr)
+	contractCode1 := callContractCode(simpleContractAddr)
 	caller1ContractAddr := crypto.NewContractAddress(users[0].Address(), 101)
-	caller1Acc := acm.ConcreteAccount{
-		Address:     caller1ContractAddr,
-		Balance:     10000,
-		Code:        contractCode,
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
+	caller1Acc := acm.NewContractAccount(caller1ContractAddr, permission.ZeroAccountPermissions)
+	caller1Acc.SetCode(contractCode1)
+	caller1Acc.AddToBalance(10000)
+	caller1Acc.SetStorageRoot(Zero256.Bytes())
 	batchCommitter.stateCache.UpdateAccount(caller1Acc)
 
 	// A single input, having the permission, but the contract doesn't have permission
@@ -412,14 +407,11 @@ func TestCallPermission(t *testing.T) {
 
 	contractCode2 := callContractCode(caller1ContractAddr)
 	caller2ContractAddr := crypto.NewContractAddress(users[0].Address(), 102)
-	caller2Acc := acm.ConcreteAccount{
-		Address:     caller2ContractAddr,
-		Balance:     1000,
-		Code:        contractCode2,
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
+	caller2Acc := acm.NewContractAccount(caller2ContractAddr, permission.ZeroAccountPermissions)
+	caller2Acc.SetCode(contractCode2)
+	caller2Acc.AddToBalance(1000)
+	caller2Acc.SetStorageRoot(Zero256.Bytes())
+
 	caller1Acc.MutablePermissions().Base.Set(permission.Call, false)
 	caller2Acc.MutablePermissions().Base.Set(permission.Call, true)
 	batchCommitter.stateCache.UpdateAccount(caller1Acc)
@@ -544,14 +536,11 @@ func TestCreatePermission(t *testing.T) {
 	code := callContractCode(crypto.Address{})
 
 	contractAddr = crypto.NewContractAddress(users[0].Address(), 110)
-	contractAcc = acm.ConcreteAccount{
-		Address:     contractAddr,
-		Balance:     1000,
-		Code:        code,
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
+	contractAcc = acm.NewContractAccount(contractAddr, permission.ZeroAccountPermissions)
+	contractAcc.SetCode(code)
+	contractAcc.AddToBalance(1000)
+	contractAcc.SetStorageRoot(Zero256.Bytes())
+
 	contractAcc.MutablePermissions().Base.Set(permission.Call, true)
 	contractAcc.MutablePermissions().Base.Set(permission.CreateContract, true)
 	batchCommitter.stateCache.UpdateAccount(contractAcc)
@@ -653,14 +642,11 @@ func TestCreateAccountPermission(t *testing.T) {
 	// create contract that calls the simple contract
 	contractCode := callContractCode(users[9].Address())
 	caller1ContractAddr := crypto.NewContractAddress(users[4].Address(), 101)
-	caller1Acc := acm.ConcreteAccount{
-		Address:     caller1ContractAddr,
-		Balance:     0,
-		Code:        contractCode,
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
+	caller1Acc := acm.NewContractAccount(caller1ContractAddr, permission.ZeroAccountPermissions)
+	caller1Acc.SetCode(contractCode)
+	caller1Acc.AddToBalance(0)
+	caller1Acc.SetStorageRoot(Zero256.Bytes())
+
 	batchCommitter.stateCache.UpdateAccount(caller1Acc)
 
 	// A single input, having the permission, but the contract doesn't have permission
@@ -692,11 +678,26 @@ func TestCreateAccountPermission(t *testing.T) {
 
 }
 
+// contract accounts
 // holla at my boy
-var DougAddress crypto.Address
+var doug [3]*acm.Account
 
 func init() {
-	copy(DougAddress[:], ([]byte)("THISISDOUG"))
+	var dougAddress crypto.Address
+
+	copy(dougAddress[:], ([]byte)("THISISDOUG"))
+
+	for i := 0; i < 3; i++ {
+		dougAddress[0] += byte(i)
+
+		// make the main contract once
+		doug[i] = acm.NewContractAccount(dougAddress, permission.ZeroAccountPermissions)
+		doug[i].SetCode([]byte{0x1})
+		doug[i].AddToBalance(100)
+		doug[i].MutablePermissions().Base.Set(permission.Call, true)
+		doug[i].MutablePermissions().Base.Set(permission.CreateContract, true)
+		doug[i].MutablePermissions().Base.Set(permission.CreateAccount, true)
+	}
 }
 
 func TestSNativeCALL(t *testing.T) {
@@ -714,25 +715,13 @@ func TestSNativeCALL(t *testing.T) {
 	//----------------------------------------------------------
 	// Test CALL to SNative contracts
 
-	// make the main contract once
-	doug := acm.ConcreteAccount{
-		Address:     DougAddress,
-		Balance:     0,
-		Code:        nil,
-		Sequence:    0,
-		StorageRoot: Zero256.Bytes(),
-		Permissions: permission.ZeroAccountPermissions,
-	}.MutableAccount()
-
-	doug.MutablePermissions().Base.Set(permission.Call, true)
-	//doug.Permissions.Base.Set(permission.HasBase, true)
-	batchCommitter.stateCache.UpdateAccount(doug)
+	batchCommitter.stateCache.UpdateAccount(doug[0])
 
 	fmt.Println("\n#### HasBase")
 	// HasBase
 	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -743,10 +732,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### SetBase")
 	// SetBase
 	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], permission.Bond, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
@@ -754,9 +743,9 @@ func TestSNativeCALL(t *testing.T) {
 		return nil
 	})
 	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], permission.CreateContract, true)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -767,10 +756,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### UnsetBase")
 	// UnsetBase
 	snativeAddress, pF, data = snativePermTestInputCALL("unsetBase", users[3], permission.CreateContract, false)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -780,10 +769,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### SetGlobal")
 	// SetGlobalPerm
 	snativeAddress, pF, data = snativePermTestInputCALL("setGlobal", users[3], permission.CreateContract, true)
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.CreateContract, false)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
@@ -794,8 +783,8 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### HasRole")
 	// HasRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "bumble")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
@@ -805,17 +794,17 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### AddRole")
 	// AddRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
 		return nil
 	})
 	snativeAddress, pF, data = snativeRoleTestInputCALL("addRole", users[3], "chuck")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret[:31]) || ret[31] != byte(1) {
 			return fmt.Errorf("Expected 1. Got %X", ret)
 		}
@@ -825,10 +814,10 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Println("\n#### RemoveRole")
 	// RemoveRole
 	snativeAddress, pF, data = snativeRoleTestInputCALL("removeRole", users[3], "chuck")
-	testSNativeCALLExpectFail(t, batchCommitter, doug, snativeAddress, data)
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+	testSNativeCALLExpectFail(t, batchCommitter, doug[0], snativeAddress, data)
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error { return nil })
 	snativeAddress, pF, data = snativeRoleTestInputCALL("hasRole", users[3], "chuck")
-	testSNativeCALLExpectPass(t, batchCommitter, doug, pF, snativeAddress, data, func(ret []byte) error {
+	testSNativeCALLExpectPass(t, batchCommitter, doug[0], pF, snativeAddress, data, func(ret []byte) error {
 		if !IsZeros(ret) {
 			return fmt.Errorf("Expected 0. Got %X", ret)
 		}
@@ -1175,8 +1164,12 @@ func TestCreates(t *testing.T) {
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address())
 	acc0 := getAccount(state, privAccounts[0].Address())
-	acc1 := getAccount(state, privAccounts[1].Address())
-	acc2 := getAccount(state, privAccounts[2].Address())
+
+	acc1 := doug[0]
+	acc2 := doug[1]
+
+	state.UpdateAccount(acc1)
+	state.UpdateAccount(acc2)
 
 	newAcc1 := getAccount(state, acc1.Address())
 	newAcc1.SetCode(preFactoryCode)
@@ -1255,15 +1248,17 @@ func TestContractSend(t *testing.T) {
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address())
 	acc0 := getAccount(state, privAccounts[0].Address())
-	acc1 := getAccount(state, privAccounts[1].Address())
+	acc1 := doug[0]
 	acc2 := getAccount(state, privAccounts[2].Address())
 
-	newAcc1 := getAccount(state, acc1.Address())
+	newAcc1 := doug[0]
 	newAcc1.SetCode(callerCode)
 	state.UpdateAccount(newAcc1)
 
 	sendData = append(sendData, acc2.Address().Word256().Bytes()...)
 	sendAmt := uint64(10)
+	acc0Balance := acc0.Balance()
+	acc1Balance := acc1.Balance()
 	acc2Balance := acc2.Balance()
 
 	// call the contract, triggering the send
@@ -1285,10 +1280,14 @@ func TestContractSend(t *testing.T) {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
 
+	acc0 = getAccount(state, acc0.Address())
+	acc1 = getAccount(state, acc1.Address())
 	acc2 = getAccount(state, acc2.Address())
-	if acc2.Balance() != sendAmt+acc2Balance {
-		t.Errorf("Value transfer from contract failed! Got %d, expected %d", acc2.Balance(), sendAmt+acc2Balance)
-	}
+
+	assert.Equal(t, acc0.Balance(), acc0Balance-sendAmt)
+	assert.Equal(t, acc1.Balance(), acc1Balance)
+	assert.Equal(t, acc2.Balance(), acc2Balance+sendAmt)
+
 }
 
 func TestMerklePanic(t *testing.T) {
@@ -1406,16 +1405,15 @@ func TestTxs(t *testing.T) {
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
 		stateCallTx := state.Copy(dbm.NewMemDB())
-		newAcc1 := getAccount(stateCallTx, acc1.Address())
-		newAcc1.SetCode([]byte{0x60})
-		stateCallTx.UpdateAccount(newAcc1)
+		balance := doug[0].Balance()
+		stateCallTx.UpdateAccount(doug[0])
 		tx := &payload.CallTx{
 			Input: &payload.TxInput{
 				Address:  acc0.Address(),
 				Amount:   1,
 				Sequence: acc0.Sequence() + 1,
 			},
-			Address:  addressPtr(acc1),
+			Address:  addressPtr(doug[0]),
 			GasLimit: 10,
 		}
 
@@ -1430,10 +1428,10 @@ func TestTxs(t *testing.T) {
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
 				acc0.Balance()-1, newAcc0.Balance())
 		}
-		newAcc1 = getAccount(stateCallTx, acc1.Address())
-		if acc1.Balance()+1 != newAcc1.Balance() {
+		doug0 := getAccount(stateCallTx, doug[0].Address())
+		if balance+1 != doug0.Balance() {
 			t.Errorf("Unexpected newAcc1 balance. Expected %v, got %v",
-				acc1.Balance()+1, newAcc1.Balance())
+				balance+1, doug0.Balance())
 		}
 	}
 	trygetacc0 := getAccount(state, privAccounts[0].Address())
@@ -1561,11 +1559,11 @@ func TestSelfDestruct(t *testing.T) {
 
 	acc0 := getAccount(state, privAccounts[0].Address())
 	acc0PubKey := privAccounts[0].PublicKey()
-	acc1 := getAccount(state, privAccounts[1].Address())
+	acc1 := doug[0]
 	acc2 := getAccount(state, privAccounts[2].Address())
 	sendingAmount, refundedBalance, oldBalance := uint64(1), acc1.Balance(), acc2.Balance()
 
-	newAcc1 := getAccount(state, acc1.Address())
+	newAcc1 := doug[0]
 
 	// store 0x1 at 0x1, push an address, then self-destruct:)
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
@@ -1655,12 +1653,12 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	return s0, privAccounts
 }
 
-func getAccount(accountGetter state.AccountGetter, address crypto.Address) acm.MutableAccount {
-	acc, _ := state.GetMutableAccount(accountGetter, address)
+func getAccount(accountGetter state.AccountGetter, address crypto.Address) *acm.Account {
+	acc, _ := state.GetAccount(accountGetter, address)
 	return acc
 }
 
-func addressPtr(account acm.Account) *crypto.Address {
+func addressPtr(account *acm.Account) *crypto.Address {
 	if account == nil {
 		return nil
 	}
@@ -1708,18 +1706,18 @@ func execTxWaitEvent(t *testing.T, batchCommitter *executor, txEnv *txs.Envelope
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
-func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, doug acm.MutableAccount,
+func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, doug *acm.Account,
 	snativeAddress crypto.Address, data []byte) {
 	testSNativeCALL(t, false, batchCommitter, doug, 0, snativeAddress, data, nil)
 }
 
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
-func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
+func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, doug *acm.Account, snativePerm ptypes.PermFlag,
 	snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	testSNativeCALL(t, true, batchCommitter, doug, snativePerm, snativeAddress, data, f)
 }
 
-func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, doug acm.MutableAccount,
+func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, doug *acm.Account,
 	snativePerm ptypes.PermFlag, snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	if expectPass {
 		doug.MutablePermissions().Base.Set(snativePerm, true)

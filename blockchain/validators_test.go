@@ -3,6 +3,8 @@ package blockchain
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/permission"
+
 	"fmt"
 
 	"math/rand"
@@ -46,5 +48,5 @@ func TestValidators_Encode(t *testing.T) {
 }
 
 func pubKey(secret interface{}) crypto.PublicKey {
-	return acm.NewConcreteAccountFromSecret(fmt.Sprintf("%v", secret)).PublicKey
+	return acm.NewAccountFromSecret(fmt.Sprintf("%v", secret), permission.ZeroAccountPermissions).PublicKey()
 }

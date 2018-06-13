@@ -19,6 +19,7 @@ import (
 	. "github.com/hyperledger/burrow/client"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 )
@@ -26,12 +27,12 @@ import (
 var _ NodeClient = (*MockNodeClient)(nil)
 
 type MockNodeClient struct {
-	accounts map[string]*acm.ConcreteAccount
+	accounts map[string]acm.Account
 }
 
 func NewMockNodeClient() *MockNodeClient {
 	return &MockNodeClient{
-		accounts: make(map[string]*acm.ConcreteAccount),
+		accounts: make(map[string]acm.Account),
 	}
 }
 
@@ -48,14 +49,16 @@ func (mock *MockNodeClient) DeriveWebsocketClient() (nodeWsClient NodeWebsocketC
 	return nil, nil
 }
 
-func (mock *MockNodeClient) GetAccount(address crypto.Address) (acm.Account, error) {
+func (mock *MockNodeClient) GetAccount(address crypto.Address) (*acm.Account, error) {
 	// make zero account
-	return acm.FromAddressable(acm.GeneratePrivateAccountFromSecret("mock-node-client-account")), nil
+	acc := acm.NewAccountFromSecret("mock-node-client-account", permission.DefaultAccountPermissions)
+	acc.AddToBalance(100)
+	return acc, nil
 }
 
-func (mock *MockNodeClient) MockAddAccount(account *acm.ConcreteAccount) {
-	addressString := string(account.Address[:])
-	mock.accounts[addressString] = account.Copy()
+func (mock *MockNodeClient) MockAddAccount(account *acm.Account) {
+	addressString := string(account.Address().Bytes())
+	mock.accounts[addressString] = *account
 }
 
 func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
