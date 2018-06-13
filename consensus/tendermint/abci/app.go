@@ -37,15 +37,13 @@ type App struct {
 
 var _ abciTypes.Application = &App{}
 
-func NewApp(blockchain *bcm.Blockchain,
-	checker execution.BatchExecutor,
-	committer execution.BatchCommitter,
-	logger *logging.Logger) *App {
+func NewApp(blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
+	txDecoder txs.Decoder, logger *logging.Logger) *App {
 	return &App{
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
-		txDecoder:  txs.NewJSONCodec(),
+		txDecoder:  txDecoder,
 		logger:     logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App"),
 	}
 }

@@ -332,8 +332,7 @@
     "db",
     "flowrate",
     "log",
-    "merkle",
-    "test"
+    "merkle"
   ]
   revision = "692f1d86a6e2c0efa698fd1e4541b68c74ffaf38"
   version = "v0.8.4"
@@ -485,6 +484,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "766fecea2ba1613d7d686ddae1228a47ee1d5e62e93e6ab6fe9dc5812207c071"
+  inputs-digest = "65c36d346ec9b2591985beee41737b31df479ef48759f4ff4ac165c0108f5296"
   solver-name = "gps-cdcl"
   solver-version = 1

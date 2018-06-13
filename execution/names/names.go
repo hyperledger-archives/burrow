@@ -15,10 +15,8 @@
 package names
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/tendermint/go-amino"
 )
 
 var (
@@ -49,19 +47,15 @@ type Entry struct {
 	Expires uint64
 }
 
+var cdc = amino.NewCodec()
+
 func (e *Entry) Encode() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := gob.NewEncoder(buf).Encode(e)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return cdc.MarshalBinary(e)
 }
 
 func DecodeEntry(entryBytes []byte) (*Entry, error) {
 	entry := new(Entry)
-	buf := bytes.NewBuffer(entryBytes)
-	err := gob.NewDecoder(buf).Decode(entry)
+	err := cdc.UnmarshalBinary(entryBytes, entry)
 	if err != nil {
 		return nil, err
 	}

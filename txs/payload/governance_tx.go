@@ -36,6 +36,10 @@ func NewGovTxWithSequence(from crypto.Address, sequence uint64, accounts []spec.
 	}
 }
 
+func (tx *GovernanceTx) Type() Type {
+	return TypeGovernance
+}
+
 func (tx *GovernanceTx) GetInputs() []*TxInput {
 	return []*TxInput{tx.Input}
 }

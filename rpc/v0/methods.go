@@ -15,6 +15,8 @@
 package v0
 
 import (
+	"context"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
@@ -255,7 +257,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			eventDataCall, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+			eventDataCall, err := service.Transactor().TransactAndHold(context.Background(), inputAccount, address,
+				param.Data, param.GasLimit, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -297,7 +300,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			rec, err := service.Transactor().SendAndHold(inputAccount, toAddress, param.Amount)
+			rec, err := service.Transactor().SendAndHold(context.Background(), inputAccount, toAddress, param.Amount)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}

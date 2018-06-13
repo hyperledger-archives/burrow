@@ -15,15 +15,13 @@
 package account
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"encoding/gob"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/tendermint/go-amino"
 )
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
@@ -302,14 +300,10 @@ func (caw concreteAccountWrapper) Copy() MutableAccount {
 // concreteAccount Wrapper
 //----------------------------------------------
 // Encoding/decoding
+var cdc = amino.NewCodec()
 
 func (acc *ConcreteAccount) Encode() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := gob.NewEncoder(buf).Encode(acc)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return cdc.MarshalBinary(acc)
 }
 
 func Decode(accBytes []byte) (Account, error) {
@@ -322,8 +316,7 @@ func Decode(accBytes []byte) (Account, error) {
 
 func DecodeConcrete(accBytes []byte) (*ConcreteAccount, error) {
 	ca := new(ConcreteAccount)
-	buf := bytes.NewBuffer(accBytes)
-	err := gob.NewDecoder(buf).Decode(ca)
+	err := cdc.UnmarshalBinary(accBytes, ca)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert decoded account to *ConcreteAccount: %v", err)
 	}

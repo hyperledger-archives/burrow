@@ -3,7 +3,9 @@ package txs
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/account"
+	"fmt"
+
+	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,7 @@ func TestAminoEncodeTxDecodeTx(t *testing.T) {
 
 func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
 	codec := NewAminoCodec()
-	inputAccount := account.GeneratePrivateAccountFromSecret("fooo")
+	inputAccount := acm.GeneratePrivateAccountFromSecret("fooo")
 	amount := uint64(2)
 	sequence := uint64(3)
 	tx := &payload.CallTx{
@@ -61,5 +63,23 @@ func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
 	}
 	txEnvOut, err := codec.DecodeTx(txBytes)
 	assert.NoError(t, err, "DecodeTx error")
+	assert.Equal(t, txEnv, txEnvOut)
+}
+
+func TestAminoTxEnvelope(t *testing.T) {
+	codec := NewAminoCodec()
+	privAccFrom := acm.GeneratePrivateAccountFromSecret("foo")
+	privAccTo := acm.GeneratePrivateAccountFromSecret("bar")
+	toAddress := privAccTo.Address()
+	txEnv := Enclose("testChain", payload.NewCallTxWithSequence(privAccFrom.PublicKey(), &toAddress,
+		[]byte{3, 4, 5, 5}, 343, 2323, 12, 3))
+	err := txEnv.Sign(privAccFrom)
+	require.NoError(t, err)
+
+	bs, err := codec.EncodeTx(txEnv)
+	require.NoError(t, err)
+	txEnvOut, err := codec.DecodeTx(bs)
+	require.NoError(t, err)
+	fmt.Println(txEnvOut)
 	assert.Equal(t, txEnv, txEnvOut)
 }

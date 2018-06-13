@@ -73,21 +73,21 @@ func NewTransactor(tip *blockchain.Tip, eventEmitter event.Emitter,
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress crypto.Address,
+func (trans *Transactor) Call(reader state.Reader, fromAddress, address crypto.Address,
 	data []byte) (call *Call, err error) {
 
-	if evm.IsRegisteredNativeContract(toAddress.Word256()) {
+	if evm.IsRegisteredNativeContract(address.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
-			"contract that calls the native function instead", toAddress)
+			"contract that calls the native function instead", address)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := state.GetMutableAccount(reader, toAddress)
+	callee, err := state.GetMutableAccount(reader, address)
 	if err != nil {
 		return nil, err
 	}
 	if callee == nil {
-		return nil, fmt.Errorf("account %s does not exist", toAddress)
+		return nil, fmt.Errorf("account %s does not exist", address)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := state.NewCache(reader)
@@ -203,20 +203,15 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	}
 	defer unlock()
 
-	callTx, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	txEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
-	// Got ourselves a tx.
-	err = callTx.Sign(inputAccount)
-	if err != nil {
-		return nil, err
-	}
-	return trans.BroadcastTx(callTx)
+	return trans.BroadcastTx(txEnv)
 }
 
-func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte, gasLimit,
-	fee uint64) (*evm_events.EventDataCall, error) {
+func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
+	address *crypto.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
@@ -261,6 +256,8 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	defer timer.Stop()
 
 	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case eventDataCall := <-ch:
@@ -313,8 +310,8 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	return trans.BroadcastTx(sendTxEnv)
 }
 
-func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
-	amount uint64) (*txs.Receipt, error) {
+func (trans *Transactor) SendAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
+	toAddress crypto.Address, amount uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
@@ -354,6 +351,8 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 	defer timer.Stop()
 
 	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case sendTx := <-wc:

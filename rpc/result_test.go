@@ -57,7 +57,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
-	assert.Equal(t, "{\"NumTxs\":3,\"Txs\":[{\"Signatories\":null,\"Tx\":{\"ChainID\":\"testChain\",\"Type\":\"CallTx\",\"Payload\":{\"Input\":null,\"Address\":\"0100000000000000000000000000000000000000\",\"GasLimit\":0,\"Fee\":0,\"Data\":null}}}]}",
+	assert.Equal(t, "{\"NumTxs\":3,\"Txs\":[{\"Signatories\":null,\"Tx\":{\"ChainID\":\"testChain\",\"Type\":\"CallTx\",\"Payload\":{\"Input\":null,\"Address\":\"0100000000000000000000000000000000000000\",\"GasLimit\":0,\"Fee\":0}}}]}",
 		string(bs))
 }
 

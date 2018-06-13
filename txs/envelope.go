@@ -9,6 +9,11 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
+type Codec interface {
+	Encoder
+	Decoder
+}
+
 type Encoder interface {
 	EncodeTx(envelope *Envelope) ([]byte, error)
 }

@@ -33,9 +33,7 @@ message TxReceipt {
 // This is here because it is used in both the Account Service (GenPrivAccount)
 // And in the transaction service (SignTx)
 message PrivateAccount {
-	bytes Address    = 1;
-	bytes PublicKey  = 2;
-	bytes PrivateKey = 3;
+	bytes PrivateKey = 1;
 }
 
 // This is hear because it is used by both the Events service (Poll) and the

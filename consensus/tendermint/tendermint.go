@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/txs"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
@@ -46,14 +47,9 @@ func (n *Node) Close() {
 	}
 }
 
-func NewNode(
-	conf *config.Config,
-	privValidator tm_types.PrivValidator,
-	genesisDoc *tm_types.GenesisDoc,
-	blockchain *bcm.Blockchain,
-	checker execution.BatchExecutor,
-	committer execution.BatchCommitter,
-	logger *logging.Logger) (*Node, error) {
+func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisDoc *tm_types.GenesisDoc,
+	blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
+	txDecoder txs.Decoder, logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
@@ -65,7 +61,7 @@ func NewNode(
 	}
 
 	nde := &Node{}
-	app := abci.NewApp(blockchain, checker, committer, logger)
+	app := abci.NewApp(blockchain, checker, committer, txDecoder, logger)
 	conf.NodeKeyFile()
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
