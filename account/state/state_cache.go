@@ -216,7 +216,7 @@ func (cache *stateCache) Sync(state Writer) error {
 		addresses = append(addresses, address)
 	}
 
-	sort.Stable(addresses)
+	sort.Sort(addresses)
 	for _, address := range addresses {
 		accInfo := cache.accounts[address]
 		accInfo.RLock()
@@ -237,8 +237,8 @@ func (cache *stateCache) Sync(state Writer) error {
 			for key := range accInfo.storage {
 				keys = append(keys, key)
 			}
-			// Update keys
-			sort.Stable(keys)
+			// First update keys
+			sort.Sort(keys)
 			for _, key := range keys {
 				value := accInfo.storage[key]
 				err := state.SetStorage(address, key, value)

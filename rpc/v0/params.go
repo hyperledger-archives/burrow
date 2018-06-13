@@ -17,8 +17,18 @@ package v0
 import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/rpc/filters"
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/tendermint/go-wire/data"
 )
+
+// Legacy for JS
+var _ = data.NewMapper(struct{ payload.Payload }{}).
+	RegisterImplementation(&payload.SendTx{}, "send_tx", byte(payload.TypeSend)).
+	RegisterImplementation(&payload.CallTx{}, "call_tx", byte(payload.TypeCall)).
+	RegisterImplementation(&payload.NameTx{}, "name_tx", byte(payload.TypeName)).
+	RegisterImplementation(&payload.BondTx{}, "bond_tx", byte(payload.TypeBond)).
+	RegisterImplementation(&payload.UnbondTx{}, "unbond_tx", byte(payload.TypeUnbond)).
+	RegisterImplementation(&payload.PermissionsTx{}, "permissions_tx", byte(payload.TypePermissions))
 
 type (
 	// Used to send an address. The address should be hex and properly formatted.
@@ -86,7 +96,7 @@ type (
 
 	// Used when signing a tx. Uses placeholders just like TxParam
 	SignTxParam struct {
-		Tx              *txs.CallTx                   `json:"tx"`
+		Tx              *payload.CallTx               `json:"tx"`
 		PrivateAccounts []*acm.ConcretePrivateAccount `json:"privateAccounts"`
 	}
 

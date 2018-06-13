@@ -17,7 +17,7 @@ func NewBlock(txDecoder txs.Decoder, block *types.Block) *Block {
 	}
 }
 
-func (b *Block) Transactions(iter func(txs.Tx) (stop bool)) (stopped bool, err error) {
+func (b *Block) Transactions(iter func(*txs.Envelope) (stop bool)) (stopped bool, err error) {
 	for i := 0; i < len(b.Txs); i++ {
 		tx, err := b.txDecoder.DecodeTx(b.Txs[i])
 		if err != nil {

@@ -90,15 +90,15 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 	assert.Equal(t, balance, accNewOut.Balance())
 
 	// Alter in cache
-	newBalance := uint64(100029)
-	accNew.AddToBalance(newBalance)
+	addBalance := uint64(100029)
+	accNew.AddToBalance(addBalance)
 	err = cache.UpdateAccount(accNew)
 	require.NoError(t, err)
 
 	// Check cache
 	accNewOut, err = cache.GetAccount(accNew.Address())
 	require.NoError(t, err)
-	assert.Equal(t, newBalance, accNewOut.Balance())
+	assert.Equal(t, balance+addBalance, accNewOut.Balance())
 
 	// Check backend unchanged
 	accNewOut, err = backend.GetAccount(accNew.Address())

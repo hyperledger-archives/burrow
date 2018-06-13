@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -210,8 +211,8 @@ func TestWSCallNoWait(t *testing.T) {
 	code, _, returnVal := simpleContract()
 
 	sequence := getSequence(t, jsonRpcClient, privateAccounts[0].Address())
-	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt := broadcastTx(t, jsonRpcClient, tx)
+	txEnv := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt := broadcastTx(t, jsonRpcClient, txEnv)
 	contractAddr := receipt.ContractAddress
 
 	// susbscribe to the new contract
@@ -222,10 +223,11 @@ func TestWSCallNoWait(t *testing.T) {
 
 	data := []byte{0x1}
 	waitForEvent(t, wsc, eid, func() {
-		tx = txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), &contractAddr, data, amt, gasLim, fee,
+		tx := payload.NewCallTxWithSequence(privateAccounts[0].PublicKey(), &contractAddr, data, amt, gasLim, fee,
 			sequence+3)
-		require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-		broadcastTx(t, jsonRpcClient, tx)
+		txEnv = txs.Enclose(genesisDoc.ChainID(), tx)
+		require.NoError(t, txEnv.Sign(privateAccounts[0]))
+		broadcastTx(t, jsonRpcClient, txEnv)
 	}, unmarshalValidateTx(amt, returnVal))
 }
 
@@ -241,21 +243,21 @@ func TestWSCallCall(t *testing.T) {
 	TxHash := new([]byte)
 
 	// deploy the two contracts
-	tx := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt := txs.GenerateReceipt(genesisDoc.ChainID(), tx)
+	txEnv := makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt := txEnv.Tx.GenerateReceipt()
 	contractAddr1 := receipt.ContractAddress
 	// subscribe to the new contracts
 	eid := evm_events.EventStringAccountCall(contractAddr1)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
 
-	_, err := broadcastTxAndWait(t, jsonRpcClient, tx)
+	_, err := broadcastTxAndWait(t, jsonRpcClient, txEnv)
 	require.NoError(t, err)
 
 	// call contract2, which should call contract1, and wait for ev1
 	code, _, _ = simpleCallContract(contractAddr1)
-	tx = makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
-	receipt2, err := broadcastTxAndWait(t, jsonRpcClient, tx)
+	txEnv = makeDefaultCallTx(t, jsonRpcClient, nil, code, amt, gasLim, fee)
+	receipt2, err := broadcastTxAndWait(t, jsonRpcClient, txEnv)
 	require.NoError(t, err)
 	contractAddr2 := receipt2.ContractAddress
 
@@ -272,9 +274,9 @@ func TestWSCallCall(t *testing.T) {
 	waitForEvent(t, wsc, eid,
 		// Runner
 		func() {
-			tx := makeDefaultCallTx(t, jsonRpcClient, &contractAddr2, nil, amt, gasLim, fee)
-			broadcastTx(t, jsonRpcClient, tx)
-			*TxHash = tx.Hash(genesisDoc.ChainID())
+			txEnv := makeDefaultCallTx(t, jsonRpcClient, &contractAddr2, nil, amt, gasLim, fee)
+			broadcastTx(t, jsonRpcClient, txEnv)
+			*TxHash = txEnv.Tx.Hash()
 		},
 		// Event checker
 		unmarshalValidateCall(privateAccounts[0].Address(), returnVal, TxHash))

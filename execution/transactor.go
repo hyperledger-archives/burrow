@@ -15,14 +15,12 @@
 package execution
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime/debug"
 	"time"
-
-	"github.com/hyperledger/burrow/permission"
-
-	"bytes"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
@@ -36,9 +34,10 @@ import (
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	abci_types "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-wire"
 )
 
 const BlockingTimeoutSeconds = 30
@@ -50,14 +49,14 @@ type Call struct {
 
 // Transactor is the controller/middleware for the v0 RPC
 type Transactor struct {
-	tip              blockchain.Tip
+	tip              *blockchain.Tip
 	eventEmitter     event.Emitter
-	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error
+	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error
 	logger           *logging.Logger
 }
 
-func NewTransactor(tip blockchain.Tip, eventEmitter event.Emitter,
-	broadcastTxAsync func(tx txs.Tx, callback func(res *abci_types.Response)) error,
+func NewTransactor(tip *blockchain.Tip, eventEmitter event.Emitter,
+	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
@@ -126,18 +125,18 @@ func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Addres
 	return &Call{Return: ret, GasUsed: gasUsed}, nil
 }
 
-func (trans *Transactor) BroadcastTxAsync(tx txs.Tx, callback func(res *abci_types.Response)) error {
+func (trans *Transactor) BroadcastTxAsync(tx *txs.Envelope, callback func(res *abci_types.Response)) error {
 	return trans.broadcastTxAsync(tx, callback)
 }
 
 // Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
 // various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
-func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
+func (trans *Transactor) BroadcastTx(txEnv *txs.Envelope) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "BroadcastTx",
-		"tx_hash", tx.Hash(trans.tip.ChainID()),
-		"tx", tx.String())
+		"tx_hash", txEnv.Tx.Hash(),
+		"tx", txEnv.String())
 	responseCh := make(chan *abci_types.Response, 1)
-	err := trans.BroadcastTxAsync(tx, func(res *abci_types.Response) {
+	err := trans.BroadcastTxAsync(txEnv, func(res *abci_types.Response) {
 		responseCh <- res
 	})
 
@@ -153,7 +152,7 @@ func (trans *Transactor) BroadcastTx(tx txs.Tx) (*txs.Receipt, error) {
 	switch checkTxResponse.Code {
 	case codes.TxExecutionSuccessCode:
 		receipt := new(txs.Receipt)
-		err := wire.ReadBinaryBytes(checkTxResponse.Data, receipt)
+		err := json.Unmarshal(checkTxResponse.Data, receipt)
 		if err != nil {
 			return nil, fmt.Errorf("could not deserialise transaction receipt: %s", err)
 		}
@@ -176,12 +175,12 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	}
 	defer unlock()
 
-	callTx, _, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	callTx, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
 	// Got ourselves a tx.
-	err = callTx.Sign(trans.tip.ChainID(), inputAccount)
+	err = callTx.Sign(inputAccount)
 	if err != nil {
 		return nil, err
 	}
@@ -197,10 +196,12 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	}
 	defer unlock()
 
-	callTx, expectedReceipt, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	callTxEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
+
+	expectedReceipt := callTxEnv.Tx.GenerateReceipt()
 
 	subID, err := event.GenerateSubscriptionID()
 	if err != nil {
@@ -219,7 +220,7 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	// Will clean up callback goroutine and subscription in pubsub
 	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
 
-	receipt, err := trans.BroadcastTx(callTx)
+	receipt, err := trans.BroadcastTx(callTxEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -243,15 +244,14 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	}
 }
 func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *crypto.Address, data []byte,
-	gasLimit, fee uint64) (*txs.CallTx, *txs.Receipt, error) {
+	gasLimit, fee uint64) (*txs.Envelope, error) {
 
-	txInput := &txs.TxInput{
-		Address:   inputAccount.Address(),
-		Amount:    fee,
-		Sequence:  inputAccount.Sequence() + 1,
-		PublicKey: inputAccount.PublicKey(),
+	txInput := &payload.TxInput{
+		Address:  inputAccount.Address(),
+		Amount:   fee,
+		Sequence: inputAccount.Sequence() + 1,
 	}
-	tx := &txs.CallTx{
+	tx := &payload.CallTx{
 		Input:    txInput,
 		Address:  address,
 		GasLimit: gasLimit,
@@ -259,13 +259,13 @@ func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *
 		Data:     data,
 	}
 
+	env := txs.Enclose(trans.tip.ChainID(), tx)
 	// Got ourselves a tx.
-	err := tx.Sign(trans.tip.ChainID(), inputAccount)
+	err := env.Sign(inputAccount)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	receipt := txs.GenerateReceipt(trans.tip.ChainID(), tx)
-	return tx, &receipt, nil
+	return env, nil
 }
 
 func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
@@ -277,12 +277,12 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	}
 	defer unlock()
 
-	sendTx, _, err := trans.formulateSendTx(inputAccount, toAddress, amount)
+	sendTxEnv, err := trans.formulateSendTx(inputAccount, toAddress, amount)
 	if err != nil {
 		return nil, err
 	}
 
-	return trans.BroadcastTx(sendTx)
+	return trans.BroadcastTx(sendTxEnv)
 }
 
 func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
@@ -294,17 +294,18 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 	}
 	defer unlock()
 
-	sendTx, expectedReceipt, err := trans.formulateSendTx(inputAccount, toAddress, amount)
+	sendTxEnv, err := trans.formulateSendTx(inputAccount, toAddress, amount)
 	if err != nil {
 		return nil, err
 	}
+	expectedReceipt := sendTxEnv.Tx.GenerateReceipt()
 
 	subID, err := event.GenerateSubscriptionID()
 	if err != nil {
 		return nil, err
 	}
 
-	wc := make(chan *txs.SendTx)
+	wc := make(chan *payload.SendTx)
 	err = exe_events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
 		expectedReceipt.TxHash, wc)
 	if err != nil {
@@ -312,7 +313,7 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 	}
 	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
 
-	receipt, err := trans.BroadcastTx(sendTx)
+	receipt, err := trans.BroadcastTx(sendTxEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -338,26 +339,25 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 }
 
 func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress crypto.Address,
-	amount uint64) (*txs.SendTx, *txs.Receipt, error) {
+	amount uint64) (*txs.Envelope, error) {
 
-	sendTx := txs.NewSendTx()
-	txInput := &txs.TxInput{
-		Address:   inputAccount.Address(),
-		Amount:    amount,
-		Sequence:  inputAccount.Sequence() + 1,
-		PublicKey: inputAccount.PublicKey(),
+	sendTx := payload.NewSendTx()
+	txInput := &payload.TxInput{
+		Address:  inputAccount.Address(),
+		Amount:   amount,
+		Sequence: inputAccount.Sequence() + 1,
 	}
 	sendTx.Inputs = append(sendTx.Inputs, txInput)
-	txOutput := &txs.TxOutput{Address: toAddress, Amount: amount}
+	txOutput := &payload.TxOutput{Address: toAddress, Amount: amount}
 	sendTx.Outputs = append(sendTx.Outputs, txOutput)
 
-	err := sendTx.Sign(trans.tip.ChainID(), inputAccount)
+	env := txs.Enclose(trans.tip.ChainID(), sendTx)
+	err := env.Sign(inputAccount)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	receipt := txs.GenerateReceipt(trans.tip.ChainID(), sendTx)
-	return sendTx, &receipt, nil
+	return env, nil
 }
 
 func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSigningAccount, name, data string, amount,
@@ -369,25 +369,26 @@ func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSig
 	}
 	defer unlock()
 	// Formulate and sign
-	tx := txs.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)
-	err = tx.Sign(trans.tip.ChainID(), inputAccount)
+	tx := payload.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)
+	env := txs.Enclose(trans.tip.ChainID(), tx)
+	err = env.Sign(inputAccount)
 	if err != nil {
 		return nil, err
 	}
-	return trans.BroadcastTx(tx)
+	return trans.BroadcastTx(env)
 }
 
 // Sign a transaction
-func (trans *Transactor) SignTx(tx txs.Tx, signingAccounts []acm.AddressableSigner) (txs.Tx, error) {
+func (trans *Transactor) SignTx(txEnv *txs.Envelope, signingAccounts []acm.AddressableSigner) (*txs.Envelope, error) {
 	// more checks?
-	err := tx.Sign(trans.tip.ChainID(), signingAccounts...)
+	err := txEnv.Sign(signingAccounts...)
 	if err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return txEnv, nil
 }
 
-func vmParams(tip blockchain.Tip) evm.Params {
+func vmParams(tip *blockchain.Tip) evm.Params {
 	return evm.Params{
 		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),

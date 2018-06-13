@@ -25,10 +25,10 @@ import (
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -318,7 +318,7 @@ func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
 }
 
 func NameRegDecode(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&NameRegEntry{}, r, txs.MaxDataLength, n, err)
+	return wire.ReadBinary(&NameRegEntry{}, r, names.MaxDataLength, n, err)
 }
 
 func prefixedKey(prefix string, suffices ...[]byte) []byte {

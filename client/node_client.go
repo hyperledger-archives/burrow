@@ -27,7 +27,7 @@ import (
 )
 
 type NodeClient interface {
-	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
+	Broadcast(transaction *txs.Envelope) (*txs.Receipt, error)
 	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
@@ -47,8 +47,7 @@ type NodeClient interface {
 type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
-
-	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr crypto.Address) (chan Confirmation, error)
+	WaitForConfirmation(tx *txs.Envelope, inputAddr crypto.Address) (chan Confirmation, error)
 	Close()
 }
 
@@ -74,9 +73,9 @@ func NewBurrowNodeClient(rpcString string, logger *logging.Logger) *burrowNodeCl
 //------------------------------------------------------------------------------------
 // broadcast to blockchain node
 
-func (burrowNodeClient *burrowNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
+func (burrowNodeClient *burrowNodeClient) Broadcast(txEnv *txs.Envelope) (*txs.Receipt, error) {
 	client := rpcClient.NewURIClient(burrowNodeClient.broadcastRPC)
-	receipt, err := tmClient.BroadcastTx(client, tx)
+	receipt, err := tmClient.BroadcastTx(client, txEnv)
 	if err != nil {
 		return nil, err
 	}

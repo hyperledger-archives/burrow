@@ -53,14 +53,14 @@ func (nv *NodeView) BlockStore() types.BlockStoreRPC {
 }
 
 // Pass -1 to get all available transactions
-func (nv *NodeView) MempoolTransactions(maxTxs int) ([]txs.Tx, error) {
-	var transactions []txs.Tx
+func (nv *NodeView) MempoolTransactions(maxTxs int) ([]*txs.Envelope, error) {
+	var transactions []*txs.Envelope
 	for _, txBytes := range nv.tmNode.MempoolReactor().Mempool.Reap(maxTxs) {
-		tx, err := nv.txDecoder.DecodeTx(txBytes)
+		txEnv, err := nv.txDecoder.DecodeTx(txBytes)
 		if err != nil {
 			return nil, err
 		}
-		transactions = append(transactions, tx)
+		transactions = append(transactions, txEnv)
 	}
 	return transactions, nil
 }

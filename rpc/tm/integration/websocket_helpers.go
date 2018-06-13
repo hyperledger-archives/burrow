@@ -32,6 +32,7 @@ import (
 	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	rpcTypes "github.com/hyperledger/burrow/rpc/tm/lib/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -97,10 +98,10 @@ func unsubscribe(t *testing.T, wsc *rpcClient.WSClient, subscriptionId string) {
 }
 
 // broadcast transaction and wait for new block
-func broadcastTxAndWait(t *testing.T, client tmClient.RPCClient, tx txs.Tx) (*txs.Receipt, error) {
+func broadcastTxAndWait(t *testing.T, client tmClient.RPCClient, txEnv *txs.Envelope) (*txs.Receipt, error) {
 	wsc := newWSClient()
 	defer stopWSClient(wsc)
-	inputs := tx.GetInputs()
+	inputs := txEnv.Tx.GetInputs()
 	if len(inputs) == 0 {
 		t.Fatalf("cannot broadcastAndWait fot Tx with no inputs")
 	}
@@ -111,7 +112,7 @@ func broadcastTxAndWait(t *testing.T, client tmClient.RPCClient, tx txs.Tx) (*tx
 
 	err = subscribeAndWaitForNext(t, wsc, events.EventStringAccountInput(address),
 		func() {
-			rec, err = tmClient.BroadcastTx(client, tx)
+			rec, err = tmClient.BroadcastTx(client, txEnv)
 		}, func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 			return true, nil
 		})
@@ -256,7 +257,7 @@ func unmarshalValidateSend(amt uint64, toAddr crypto.Address, resultEvent *rpc.R
 	if data.Exception != "" {
 		return fmt.Errorf(data.Exception)
 	}
-	tx := data.Tx.(*txs.SendTx)
+	tx := data.Tx.Payload.(*payload.SendTx)
 	if tx.Inputs[0].Address != privateAccounts[0].Address() {
 		return fmt.Errorf("senders do not match up! Got %s, expected %s", tx.Inputs[0].Address,
 			privateAccounts[0].Address())
@@ -280,7 +281,7 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 		if data.Exception != "" {
 			return true, fmt.Errorf(data.Exception)
 		}
-		tx := data.Tx.(*txs.CallTx)
+		tx := data.Tx.Payload.(*payload.CallTx)
 		if tx.Input.Address != privateAccounts[0].Address() {
 			return true, fmt.Errorf("senders do not match up! Got %s, expected %s",
 				tx.Input.Address, privateAccounts[0].Address())
