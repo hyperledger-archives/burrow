@@ -1,0 +1,500 @@
+syntax = "proto3";
+
+
+// #BEGIN(common)
+// Common Messages
+message Empty {
+
+}
+
+message InputAccount {
+	bytes privateKey = 1;
+	bytes address = 2;
+}
+
+message FilterData {
+	string field = 1;
+	string op = 2;
+	string value = 3;
+}
+
+message FilterListParam {
+	repeated FilterData filters = 1;
+}
+
+// This is here because it is required by both transactions and namereg
+// This situation can be remedied multiple ways 
+message TxReceipt {
+	bytes TxHash          = 1;
+	bool  CreatesContract = 2;
+	bytes ContractAddress = 3;
+}
+
+// This is here because it is used in both the Account Service (GenPrivAccount)
+// And in the transaction service (SignTx)
+message PrivateAccount {
+	bytes Address    = 1;
+	bytes PublicKey  = 2;
+	bytes PrivateKey = 3;
+}
+
+// This is hear because it is used by both the Events service (Poll) and the
+// Transaction service (TransactAndHold)
+message EventDataCall {
+	CallData CallData = 1;
+	bytes Origin      = 2;
+	bytes TxHash      = 3;
+	int64 StackDepth  = 4;
+	bytes Return      = 5;     
+	string Exception  = 6;
+}
+
+message CallData {
+	bytes Caller = 1;
+	bytes Callee = 2;
+	bytes Data   = 3;
+	uint64 Value = 4;
+	uint64 Gas   = 5;
+}
+
+
+
+// #BEGIN(account)
+// Account Service definition
+service AccountService {
+	rpc GenPrivAccount(Empty) returns (PrivateAccount);
+	rpc GenPrivAccountFromKey(PrivateKeyParam) returns (PrivateAccount);
+	rpc GetAccount(AddressParam) returns (Account);
+	rpc GetAccounts(FilterListParam) returns (AccountList);
+	rpc GetValidators(Empty) returns (ValidatorList);
+	rpc GetStorage(AddressParam) returns (StorageDump);
+	rpc GetStorageAt(StorageAtParam) returns (StorageItem);
+}
+
+// Params
+message AddressParam {
+	bytes address = 1;
+}
+
+message PrivateKeyParam {
+	bytes privateKey = 1;
+}
+
+message StorageAtParam {
+	bytes address = 1;
+	bytes key = 2;
+}
+
+// Results
+
+message BasePermissions {
+	uint64 Perms = 1;
+	uint64 SetBit = 2;
+}
+
+message AccountPermissions {
+	BasePermissions Base  = 1;
+	repeated string Roles = 2;
+}
+
+message Account {
+	bytes Address 	= 1;
+	bytes PublicKey = 2;
+	uint64 Sequence = 3;
+	uint64 Balance 	= 4;
+	bytes Code 		= 5;
+	bytes StorageRoot = 6;
+	AccountPermissions Permissions = 7;
+}
+
+message AccountList {
+	uint64 BlockHeight = 1;
+	repeated Account Accounts = 2;
+}
+
+message Validator {
+	bytes   Address   = 1;
+	bytes   PublicKey = 2;
+	uint64  Power     = 3;
+}
+
+message ValidatorList {
+	uint64 BlockHeight  = 1;
+	repeated Validator BondedValidators = 2;
+	repeated Validator UnbondingValidators = 3;
+}
+
+message StorageItem {
+	bytes Key = 1;
+	bytes Value = 2;
+}
+
+message StorageDump {
+	bytes StorageRoot = 1;
+	repeated StorageItem StorageItems = 2;
+}
+
+
+//-----------------------------------------------
+
+
+// #BEGIN(blockchain)
+// Blockchain Service Definition
+service BlockchainService {
+	rpc GetBlock(HeightParam) returns (Block);
+	rpc GetBlocks(BlocksParam) returns (BlockList);
+	rpc GetBlockchainInfo(Empty) returns (Status);
+	rpc GetChainId(Empty) returns (ChainId);
+	rpc GetGenesis(Empty) returns (GenesisDoc);            			// NI - go
+	rpc GetLatestBlock(Empty) returns (Block);
+	rpc GetUnconfirmedTxs(Empty) returns (UnconfirmedTxList);
+
+	rpc GetConsensusState(Empty) returns (ConsensusState); // WE NEED TO DISCUSS THIS ONE
+}
+
+// Params
+message HeightParam {
+	uint64 height = 1;
+}
+
+message BlocksParam {
+	uint64 minHeight = 1;
+	uint64 maxHeight = 2;
+}
+
+// Results
+message Header {
+	string ChainID       = 1;
+	int64 Height         = 2;
+	int64 Time           = 3;
+	int64 NumTxs         = 4;
+	bytes LastBlockID    = 5;
+	bytes LastCommitHash = 6;
+	bytes DataHash       = 7;
+	bytes ValidatorsHash = 8;
+	bytes AppHash        = 9;
+}
+
+
+message Data {
+	repeated bytes Txs = 1;
+	bytes hash = 2;
+}
+
+message Block {
+	bytes   BlockID    = 1;
+	Header  Header     = 2;
+	Data    Data       = 3;
+}
+
+message BlockMeta {
+	bytes   BlockID = 1;
+	Header  Header  = 2;
+}
+
+message BlockList {
+	uint64 LastHeight = 1;
+	repeated BlockMeta BlockMetas = 2;
+}
+
+message ChainId {
+	string ChainName  = 1;
+	string ChainId    = 2;
+	bytes GenesisHash = 3;
+}
+
+
+message GenesisDoc {
+	message GenesisAccount {
+		bytes Address   = 1;
+		bytes PublicKey = 2;
+		uint64 Amount   = 3;
+		string Name     = 4;
+		AccountPermissions Permissions = 5;
+	}
+
+	message GenesisValidator {
+		bytes Address   = 1;
+		bytes PublicKey = 2;
+		uint64 Amount   = 3;
+		string Name     = 4;
+		repeated bytes UnbondTo = 5;
+	}
+	uint64 GenesisTime       = 1;
+	string ChainName         = 2;
+	bytes Salt               = 3;
+	uint64 GlobalPermissions = 4;
+	repeated GenesisAccount   Accounts   = 5;
+	repeated GenesisValidator Validators = 6;
+}
+
+message UnconfirmedTxList {
+	uint64 NumTxs = 1;
+	repeated bytes Txs = 2;
+}
+
+message Status {
+	NodeInfo NodeInfo 		   = 1;
+	bytes 	 GenesisHash	   = 2;
+	bytes 	 PublicKey         = 3;
+	bytes 	 LatestBlockHash   = 4;
+	uint64 	 LatestBlockHeight = 5;
+	int64 	 LatestBlockTime   = 6;
+	string 	 NodeVersion 	   = 7;
+}
+
+
+// These are used for get consensus state. There is a lot of information that could be included
+// We should decided what the minimum we want inccluded is.
+message RoundState {
+	int64 Height       = 1;
+	int64 Round        = 2;
+	int64 Step         = 3;
+	uint64 StartTime   = 4;
+	uint64 CommitTime  = 5;
+/*	Validators         *types.ValidatorSet `json:"validators"`
+	Proposal           *types.Proposal     `json:"proposal"`
+	ProposalBlock      *types.Block        `json:"proposal_block"`
+	ProposalBlockParts *types.PartSet      `json:"proposal_block_parts"`
+	LockedRound        int                 `json:"locked_round"`
+	LockedBlock        *types.Block        `json:"locked_block"`
+	LockedBlockParts   *types.PartSet      `json:"locked_block_parts"`
+	ValidRound         int                 `json:"valid_round"`       // Last known round with POL for non-nil valid block.
+	ValidBlock         *types.Block        `json:"valid_block"`       // Last known block of POL mentioned above.
+	ValidBlockParts    *types.PartSet      `json:"valid_block_parts"` // Last known block parts of POL metnioned above.
+	Votes              *HeightVoteSet      `json:"votes"`
+	CommitRound        int                 `json:"commit_round"` //
+	LastCommit         *types.VoteSet      `json:"last_commit"`  // Last precommits at Height-1
+	LastValidators     *types.ValidatorSet `json:"last_validators"`*/
+}
+
+message PeerRoundState {
+	int64 Height             = 1;
+	int64 Round              = 2;
+	int64 Step               = 3;
+	uint64 StartTime         = 4;
+	bool Proposal            = 5;
+/*
+	ProposalBlockPartsHeader types.PartSetHeader `json:"proposal_block_parts_header"` //
+	ProposalBlockParts       *cmn.BitArray       `json:"proposal_block_parts"`        //
+	ProposalPOLRound         int                 `json:"proposal_pol_round"`          // Proposal's POL round. -1 if none.
+	ProposalPOL              *cmn.BitArray       `json:"proposal_pol"`                // nil until ProposalPOLMessage received.
+	Prevotes                 *cmn.BitArray       `json:"prevotes"`                    // All votes peer has for this round
+	Precommits               *cmn.BitArray       `json:"precommits"`                  // All precommits peer has for this round
+	LastCommitRound          int                 `json:"last_commit_round"`           // Round of commit for last height. -1 if none.
+	LastCommit               *cmn.BitArray       `json:"last_commit"`                 // All commit precommits of commit for last height.
+	CatchupCommitRound       int                 `json:"catchup_commit_round"`        // Round that we have commit for. Not necessarily unique. -1 if none.
+	CatchupCommit            *cmn.BitArray       `json:"catchup_commit"`              // All commit precommits peer has for this height & CatchupCommitRound
+*/
+}
+
+message ConsensusState {
+	RoundState RoundState   = 1;
+	repeated PeerRoundState PeerRoundStates = 2;
+}
+
+//--------------------------------------------------
+
+
+// #BEGIN(event)
+// Event Service Definition
+service EventService {
+	rpc EventPoll(SubIdParam) returns (PollResponse);
+	rpc EventSubscribe(EventIdParam) returns (SubIdParam);
+	rpc EventUnsubscribe(SubIdParam) returns (EventUnSub);
+}
+
+// Params
+message EventIdParam {
+	string eventId = 1;
+}
+
+message SubIdParam {
+	string subId = 1;
+}
+
+// Results
+message EventUnSub {
+	bool result = 1;
+}
+
+message EventDataLog {
+	bytes  Address = 1;
+	bytes  Data    = 2;    
+	uint64 Height  = 3;
+	repeated string Topics  = 4;
+}
+
+message EventDataTx {
+	bytes Tx         = 1;
+	bytes Return     = 2;
+	string Exception = 3;
+}
+
+message Event {
+	string Event 				= 1; // This message is missing the tendermint object part. this might not be important?
+	EventDataTx EventDataTx    	= 2;
+	EventDataCall EventDataCall = 3;
+	EventDataLog EventDataLog   = 4;
+}
+
+
+message PollResponse {
+	repeated Event events = 1;
+}
+//--------------------------------------------------
+
+
+// #BEGIN(namereg)
+// Name Registry Service Definition 
+service NameRegService {
+	rpc GetEntry(NameRegEntryParam) returns (NameRegEntry);
+	rpc GetEntries(FilterListParam) returns (NameRegEntryList);
+	rpc TransactNameReg(TransactNameRegParam) returns (TxReceipt);
+	rpc TransactNameRegAndHold(TransactNameRegParam) returns (NameRegEntry);
+}
+
+// Params
+message NameRegEntryParam {
+	string name = 1;
+}
+
+message TransactNameRegParam {
+	InputAccount inputAccount = 1;
+	string name = 2;
+	string data = 3;
+	uint64 fee = 4;
+	uint64 amount = 5;
+}
+
+// Results
+message NameRegEntry {
+	// registered name for the entry
+	string Name    = 1;
+	bytes  Owner   = 2;
+	string Data    = 3;
+	uint64 Expires = 4;
+}
+
+message NameRegEntryList {
+	uint64 BlockHeight = 1;
+	repeated NameRegEntry Names = 2;
+}
+
+
+//--------------------------------------------------
+
+
+// #BEGIN(network)
+// Network Service Definition
+service NetworkService {
+	rpc GetClientVersion(Empty) returns (ClientVersion); 	// NI - go
+	rpc GetNetworkInfo(Empty) returns (NetworkInfo);
+	rpc GetNodeInfo(Empty) returns (NodeInfo);  			// NI - go
+	rpc GetPeer(PeerParam) returns (Peer);					// NI - go
+	rpc GetPeers(Empty) returns (PeerList);
+}
+
+// Params
+message PeerParam {
+	bytes address = 1;
+}
+
+// Results
+message ClientVersion {
+	string version = 1;
+}
+
+message NodeID {
+	string Name = 1;
+	bytes  PublicKey = 2;
+}
+
+message NodeInfo {
+	NodeID ID  			= 1;
+	string ListenAddr  	= 2;
+	string Network  	= 3;
+	string Version 		= 4; 
+	bytes  Channels  	= 5;
+	string Moniker 		= 6;
+	repeated string Other = 7;
+}
+
+message NetworkInfo {
+	bool Listening = 1;
+	repeated string Listeners = 2;
+	repeated Peer Peers = 3;
+}
+
+message Peer {
+	NodeInfo NodeInfo   = 1;
+	bool     IsOutbound = 2;
+}
+
+message PeerList {
+	repeated Peer Peers = 1;
+}
+
+//-------------------------------------------------
+
+
+// #BEGIN(transaction)
+// Transaction Service Definition
+service TransactionService {
+	rpc BroadcastTx(TxParam) returns (TxReceipt);
+	rpc Call(CallParam) returns (CallResult);
+	rpc CallCode(CallCodeParam) returns (CallResult);
+	rpc Transact(TransactParam) returns (TxReceipt);
+	rpc TransactAndHold(TransactParam) returns (EventDataCall);
+	rpc Send(SendParam) returns (TxReceipt);
+	rpc SendAndHold(SendParam) returns (TxReceipt);
+	rpc SignTx(SignTxParam) returns (SignedTx);
+}
+
+// Params
+message CallParam {
+	bytes from    = 1;
+	bytes address = 2;
+	bytes data 	  = 3;
+}
+
+message CallCodeParam {
+	bytes from = 1;
+	bytes code = 2;
+	bytes data = 3;
+}
+
+message TransactParam {
+	InputAccount inputAccount = 1;
+	bytes address = 2;
+	bytes data = 3;
+	uint64 gasLimit =4;
+	uint64 fee = 5;
+}
+
+message SendParam {
+	InputAccount inputAccount = 1;
+	bytes toAddress = 2;
+	uint64 amount = 3;
+}
+
+message TxParam {
+	bytes tx = 1;
+}
+
+message SignTxParam {
+	bytes tx = 1;
+	repeated PrivateAccount privateAccounts = 2;
+}
+
+// Results
+message SignedTx {
+	bytes tx = 1;
+}
+
+message CallResult {
+	bytes Return   = 1;
+	uint64 GasUsed = 2;
+}
+
+//--------------------------------------------------

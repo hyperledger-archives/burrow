@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 )
 
 func NewNameRegFilterFactory() *FilterFactory {
@@ -82,7 +82,7 @@ func (nrnf *NameRegNameFilter) Configure(fd *FilterData) error {
 }
 
 func (nrnf *NameRegNameFilter) Match(v interface{}) bool {
-	nre, ok := v.(*execution.NameRegEntry)
+	nre, ok := v.(*names.Entry)
 	if !ok {
 		return false
 	}
@@ -121,7 +121,7 @@ func (nrof *NameRegOwnerFilter) Configure(fd *FilterData) error {
 }
 
 func (nrof *NameRegOwnerFilter) Match(v interface{}) bool {
-	nre, ok := v.(*execution.NameRegEntry)
+	nre, ok := v.(*names.Entry)
 	if !ok {
 		return false
 	}
@@ -157,7 +157,7 @@ func (nrdf *NameRegDataFilter) Configure(fd *FilterData) error {
 }
 
 func (nrdf *NameRegDataFilter) Match(v interface{}) bool {
-	nre, ok := v.(*execution.NameRegEntry)
+	nre, ok := v.(*names.Entry)
 	if !ok {
 		return false
 	}
@@ -188,7 +188,7 @@ func (nref *NameRegExpiresFilter) Configure(fd *FilterData) error {
 }
 
 func (nref *NameRegExpiresFilter) Match(v interface{}) bool {
-	nre, ok := v.(*execution.NameRegEntry)
+	nre, ok := v.(*names.Entry)
 	if !ok {
 		return false
 	}

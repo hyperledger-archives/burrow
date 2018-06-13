@@ -18,7 +18,9 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/filters"
@@ -97,7 +99,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -113,7 +115,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -129,7 +131,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -147,12 +149,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return acm.AsConcretePrivateAccount(pa), 0, nil
 		},
 		GEN_PRIV_ACCOUNT_FROM_KEY: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-			param := &PrivKeyParam{}
+			param := &PrivateKeyParam{}
 			err := codec.DecodeBytes(param, request.Params)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(param.PrivKey)
+			pa, err := acm.GeneratePrivateAccountFromPrivateKeyBytes(param.PrivateKey)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -165,11 +167,11 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			from, err := acm.AddressFromBytes(param.From)
+			from, err := crypto.AddressFromBytes(param.From)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.AddressFromBytes(param.Address)
+			address, err := crypto.AddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -185,7 +187,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			from, err := acm.AddressFromBytes(param.From)
+			from, err := crypto.AddressFromBytes(param.From)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -197,12 +199,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 		},
 		BROADCAST_TX: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			// Accept all transaction types as parameter for broadcast.
-			param := new(txs.Tx)
-			err := codec.DecodeBytesPtr(param, request.Params)
+			txEnv := new(txs.Envelope)
+			err := codec.DecodeBytesPtr(txEnv, request.Params)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			receipt, err := service.Transactor().BroadcastTx(*param)
+			receipt, err := service.Transactor().BroadcastTx(txEnv)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -214,7 +216,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			txRet, err := service.Transactor().SignTx(param.Tx, acm.SigningAccounts(param.PrivAccounts))
+			txRet, err := service.Transactor().SignTx(txs.Enclose(service.BlockchainInfo().ChainID(), param.Tx),
+				acm.SigningAccounts(param.PrivateAccounts))
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -226,12 +229,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.MaybeAddressFromBytes(param.Address)
+			address, err := crypto.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Use mempool state so that transact can generate a run of sequence numbers when formulating transactions
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -247,19 +250,19 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			address, err := acm.MaybeAddressFromBytes(param.Address)
+			address, err := crypto.MaybeAddressFromBytes(param.Address)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			ce, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+			eventDataCall, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
-			return ce, 0, nil
+			return eventDataCall, 0, nil
 		},
 		SEND: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			param := &SendParam{}
@@ -267,12 +270,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			toAddress, err := crypto.AddressFromBytes(param.ToAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -288,12 +291,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			toAddress, err := acm.AddressFromBytes(param.ToAddress)
+			toAddress, err := crypto.AddressFromBytes(param.ToAddress)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -309,7 +312,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.PrivKey, param.InputAddress)
+			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -345,7 +348,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			list, err := service.ListNames(func(entry *execution.NameRegEntry) bool {
+			list, err := service.ListNames(func(entry *names.Entry) bool {
 				return filter.Match(entry)
 			})
 			if err != nil {
@@ -427,7 +430,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return resultNetInfo, 0, nil
 		},
 		GET_CHAIN_ID: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
-			resultChainID, err := service.ChainId()
+			resultChainID, err := service.ChainIdentifiers()
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -444,17 +447,17 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 }
 
 // Gets signing account from onr of private key or address - failing if both are provided
-func signingAccount(accounts *execution.Accounts, privKey, addressBytes []byte) (*execution.SequentialSigningAccount, error) {
-	if len(addressBytes) > 0 {
-		if len(privKey) > 0 {
+func signingAccount(accounts *execution.Accounts, inputAccount InputAccount) (*execution.SequentialSigningAccount, error) {
+	if len(inputAccount.Address) > 0 {
+		if len(inputAccount.PrivateKey) > 0 {
 			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
 		}
-		address, err := acm.AddressFromBytes(addressBytes)
+		address, err := crypto.AddressFromBytes(inputAccount.Address)
 		if err != nil {
 			return nil, err
 		}
-		return accounts.SequentialSigningAccount(address), nil
+		return accounts.SequentialSigningAccount(address)
 	}
 
-	return accounts.SequentialSigningAccountFromPrivateKey(privKey)
+	return accounts.SequentialSigningAccountFromPrivateKey(inputAccount.PrivateKey)
 }

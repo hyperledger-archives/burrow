@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package pbkeys;
+
+service Keys {
+    rpc GenerateKey(GenRequest) returns (GenResponse);
+    rpc PublicKey(PubRequest) returns (PubResponse);
+    rpc Sign(SignRequest) returns (SignResponse);
+    rpc Verify(VerifyRequest) returns (Empty);
+    rpc Import(ImportRequest) returns (ImportResponse);
+    rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
+    rpc Export(ExportRequest) returns (ExportResponse);
+    rpc Hash(HashRequest) returns (HashResponse);
+    rpc RemoveName(Name) returns (Empty);
+    rpc List(Name) returns (ListResponse);
+    rpc AddName(AddNameRequest) returns (Empty);
+}
+
+message Name {
+    string keyname = 1;
+}
+
+message Empty {
+
+}
+
+message GenRequest {
+    string passphrase = 1;
+    string curvetype = 2;
+    string keyname = 3;
+}
+
+message GenResponse {
+    string address = 1;
+}
+
+message PubRequest {
+    string address = 1;
+    string name = 2;
+} 
+
+message PubResponse {
+    bytes pub = 1;
+    string curvetype = 2;
+}
+
+message ImportJSONRequest {
+    string passphrase = 1;
+    string JSON = 2;
+}
+
+message ImportResponse {
+    string address = 1;
+}
+
+message ImportRequest {
+    string passphrase = 1;
+    string name = 2;
+    string curvetype = 3;
+    bytes keybytes = 4;
+}
+
+message ExportRequest {
+    string passphrase = 1;
+    string name = 2;
+    string address = 3;
+}
+
+message ExportResponse {
+    string export = 1;
+}
+
+message SignRequest {
+    string passphrase = 1;
+    string address = 2;
+    string name = 3;
+    bytes message = 4;
+}
+
+message SignResponse {
+    bytes signature = 1;
+    string curvetype = 2;
+}
+
+message VerifyRequest {
+    string curvetype = 1;
+    bytes pub = 2;
+    bytes message = 3;
+    bytes signature = 4;
+}
+
+message HashRequest {
+    string hashtype = 1;
+    bytes message = 2;
+}
+
+message HashResponse {
+    string hash = 1;
+}
+
+message Key {
+    string address = 1;
+    string keyname = 2;
+}
+
+message ListResponse {
+    repeated Key key = 1;
+}
+
+message AddNameRequest {
+    string keyname = 1;
+    string address = 2;
+}

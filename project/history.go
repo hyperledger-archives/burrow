@@ -28,6 +28,10 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
+	"0.18.1",
+	`This is a minor release including:
+- Introduce InputAccount param for RPC/v0 for integration in JS libs
+- Resolve some issues with RPC/tm tests swallowing timeouts and not dealing with reordered events`,
 	"0.18.0",
 	`This is an extremely large release in terms of lines of code changed addressing several years of technical debt. Despite this efforts were made to maintain external interfaces as much as possible and an extended period of stabilisation has taken place on develop.
 

@@ -25,12 +25,14 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core/integration"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
-	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
+	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
+	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/rpc/lib/client"
 )
 
 const (
@@ -42,9 +44,9 @@ const (
 // global variables for use across all tests
 var (
 	privateAccounts = integration.MakePrivateAccounts(5) // make keys
-	jsonRpcClient   = rpcclient.NewJSONRPCClient(rpcAddr)
-	httpClient      = rpcclient.NewURIClient(rpcAddr)
-	clients         = map[string]tm_client.RPCClient{
+	jsonRpcClient   = rpcClient.NewJSONRPCClient(rpcAddr)
+	httpClient      = rpcClient.NewURIClient(rpcAddr)
+	clients         = map[string]tmClient.RPCClient{
 		"JSONRPC": jsonRpcClient,
 		"HTTP":    httpClient,
 	}
@@ -54,42 +56,43 @@ var (
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func makeDefaultSendTx(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
+func makeDefaultSendTx(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *payload.SendTx {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewSendTx()
+	tx := payload.NewSendTx()
 	tx.AddInputWithSequence(privateAccounts[0].PublicKey(), amt, sequence+1)
 	tx.AddOutput(addr, amt)
 	return tx
 }
 
-func makeDefaultSendTxSigned(t *testing.T, client tm_client.RPCClient, addr acm.Address, amt uint64) *txs.SendTx {
-	tx := makeDefaultSendTx(t, client, addr, amt)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+func makeDefaultSendTxSigned(t *testing.T, client tmClient.RPCClient, addr crypto.Address, amt uint64) *txs.Envelope {
+	txEnv := txs.Enclose(genesisDoc.ChainID(), makeDefaultSendTx(t, client, addr, amt))
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
-func makeDefaultCallTx(t *testing.T, client tm_client.RPCClient, addr *acm.Address, code []byte, amt, gasLim,
-	fee uint64) *txs.CallTx {
+func makeDefaultCallTx(t *testing.T, client tmClient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
+	fee uint64) *txs.Envelope {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee,
-		sequence+1)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+	tx := payload.NewCallTxWithSequence(privateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee, sequence+1)
+	txEnv := txs.Enclose(genesisDoc.ChainID(), tx)
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
-func makeDefaultNameTx(t *testing.T, client tm_client.RPCClient, name, value string, amt, fee uint64) *txs.NameTx {
+func makeDefaultNameTx(t *testing.T, client tmClient.RPCClient, name, value string, amt, fee uint64) *txs.Envelope {
 	sequence := getSequence(t, client, privateAccounts[0].Address())
-	tx := txs.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
-	require.NoError(t, tx.Sign(genesisDoc.ChainID(), privateAccounts[0]))
-	return tx
+	tx := payload.NewNameTxWithSequence(privateAccounts[0].PublicKey(), name, value, amt, fee, sequence+1)
+	txEnv := txs.Enclose(genesisDoc.ChainID(), tx)
+	require.NoError(t, txEnv.Sign(privateAccounts[0]))
+	return txEnv
 }
 
 //-------------------------------------------------------------------------------
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uint64 {
-	acc, err := tm_client.GetAccount(client, addr)
+func getSequence(t *testing.T, client tmClient.RPCClient, addr crypto.Address) uint64 {
+	acc, err := tmClient.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,8 +103,8 @@ func getSequence(t *testing.T, client tm_client.RPCClient, addr acm.Address) uin
 }
 
 // get the account
-func getAccount(t *testing.T, client tm_client.RPCClient, addr acm.Address) acm.Account {
-	ac, err := tm_client.GetAccount(client, addr)
+func getAccount(t *testing.T, client tmClient.RPCClient, addr crypto.Address) acm.Account {
+	ac, err := tmClient.GetAccount(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,9 +112,9 @@ func getAccount(t *testing.T, client tm_client.RPCClient, addr acm.Address) acm.
 }
 
 // sign transaction
-func signTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx,
-	privAcc *acm.ConcretePrivateAccount) txs.Tx {
-	signedTx, err := tm_client.SignTx(client, tx, []*acm.ConcretePrivateAccount{privAcc})
+func signTx(t *testing.T, client tmClient.RPCClient, tx txs.Tx,
+	privAcc *acm.ConcretePrivateAccount) *txs.Envelope {
+	signedTx, err := tmClient.SignTx(client, tx, []*acm.ConcretePrivateAccount{privAcc})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,33 +122,33 @@ func signTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx,
 }
 
 // broadcast transaction
-func broadcastTx(t *testing.T, client tm_client.RPCClient, tx txs.Tx) *txs.Receipt {
-	rec, err := tm_client.BroadcastTx(client, tx)
+func broadcastTx(t *testing.T, client tmClient.RPCClient, txEnv *txs.Envelope) *txs.Receipt {
+	rec, err := tmClient.BroadcastTx(client, txEnv)
 	require.NoError(t, err)
 	return rec
 }
 
 // dump all storage for an account. currently unused
-func dumpStorage(t *testing.T, addr acm.Address) *rpc.ResultDumpStorage {
+func dumpStorage(t *testing.T, addr crypto.Address) *rpc.ResultDumpStorage {
 	client := clients["HTTP"]
-	resp, err := tm_client.DumpStorage(client, addr)
+	resp, err := tmClient.DumpStorage(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return resp
 }
 
-func getStorage(t *testing.T, client tm_client.RPCClient, addr acm.Address, key []byte) []byte {
-	resp, err := tm_client.GetStorage(client, addr, key)
+func getStorage(t *testing.T, client tmClient.RPCClient, addr crypto.Address, key []byte) []byte {
+	resp, err := tmClient.GetStorage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return resp
 }
 
-func callCode(t *testing.T, client tm_client.RPCClient, fromAddress acm.Address, code, data,
+func callCode(t *testing.T, client tmClient.RPCClient, fromAddress crypto.Address, code, data,
 	expected []byte) {
-	resp, err := tm_client.CallCode(client, fromAddress, code, data)
+	resp, err := tmClient.CallCode(client, fromAddress, code, data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,9 +159,9 @@ func callCode(t *testing.T, client tm_client.RPCClient, fromAddress acm.Address,
 	}
 }
 
-func callContract(t *testing.T, client tm_client.RPCClient, fromAddress, toAddress acm.Address,
+func callContract(t *testing.T, client tmClient.RPCClient, fromAddress, toAddress crypto.Address,
 	data, expected []byte) {
-	resp, err := tm_client.Call(client, fromAddress, toAddress, data)
+	resp, err := tmClient.Call(client, fromAddress, toAddress, data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,8 +173,8 @@ func callContract(t *testing.T, client tm_client.RPCClient, fromAddress, toAddre
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, client tm_client.RPCClient, name string) *execution.NameRegEntry {
-	entry, err := tm_client.GetName(client, name)
+func getNameRegEntry(t *testing.T, client tmClient.RPCClient, name string) *names.Entry {
+	entry, err := tmClient.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +212,7 @@ func simpleContract() ([]byte, []byte, []byte) {
 }
 
 // simple call contract calls another contract
-func simpleCallContract(addr acm.Address) ([]byte, []byte, []byte) {
+func simpleCallContract(addr crypto.Address) ([]byte, []byte, []byte) {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x1)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data

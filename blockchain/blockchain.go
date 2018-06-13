@@ -18,80 +18,56 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"sync"
+
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
+// Blocks to average validator power over
+const DefaultValidatorsWindowSize = 10
+
 var stateKey = []byte("BlockchainState")
 
-// Immutable Root of blockchain
-type Root interface {
-	// GenesisHash precomputed from GenesisDoc
+type TipInfo interface {
+	ChainID() string
+	LastBlockHeight() uint64
+	LastBlockTime() time.Time
+	LastBlockHash() []byte
+	AppHashAfterLastBlock() []byte
+}
+
+type BlockchainInfo interface {
+	TipInfo
 	GenesisHash() []byte
 	GenesisDoc() genesis.GenesisDoc
 }
 
-// Immutable pointer to the current tip of the blockchain
-type Tip interface {
-	// ChainID precomputed from GenesisDoc
-	ChainID() string
-	// All Last* references are to the block last committed
-	LastBlockHeight() uint64
-	LastBlockTime() time.Time
-	LastBlockHash() []byte
-	// Note this is the hash of the application state after the most recently committed block's transactions executed
-	// and so lastBlock.Header.AppHash will be one block older than our AppHashAfterLastBlock (i.e. Tendermint closes
-	// the AppHash we return from ABCI Commit into the _next_ block)
-	AppHashAfterLastBlock() []byte
-}
-
-// Burrow's portion of the Blockchain state
-type Blockchain interface {
-	// Read locker
-	sync.Locker
-	Root
-	Tip
-	// Returns an immutable copy of the tip
-	Tip() Tip
-	// Returns a copy of the current validator set
-	Validators() []acm.Validator
-}
-
-type MutableBlockchain interface {
-	Blockchain
-	CommitBlock(blockTime time.Time, blockHash, appHash []byte) error
-}
-
-type root struct {
+type Root struct {
 	genesisHash []byte
 	genesisDoc  genesis.GenesisDoc
 }
 
-type tip struct {
+type Tip struct {
 	chainID               string
 	lastBlockHeight       uint64
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
 	appHashAfterLastBlock []byte
+	validators            Validators
+	validatorsWindow      ValidatorsWindow
 }
 
-type blockchain struct {
+type Blockchain struct {
+	*Root
+	*Tip
 	sync.RWMutex
 	db dbm.DB
-	*root
-	*tip
-	validators []acm.Validator
 }
-
-var _ Root = &blockchain{}
-var _ Tip = &blockchain{}
-var _ Blockchain = &blockchain{}
-var _ MutableBlockchain = &blockchain{}
 
 type PersistedState struct {
 	AppHashAfterLastBlock []byte
@@ -100,23 +76,23 @@ type PersistedState struct {
 }
 
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
-	logger *logging.Logger) (*blockchain, error) {
+	logger *logging.Logger) (*Blockchain, error) {
 
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
-	blockchain, err := loadBlockchain(db)
+	bc, err := loadBlockchain(db)
 	if err != nil {
 		return nil, fmt.Errorf("error loading blockchain state from database: %v", err)
 	}
-	if blockchain != nil {
-		dbHash := blockchain.genesisDoc.Hash()
+	if bc != nil {
+		dbHash := bc.genesisDoc.Hash()
 		argHash := genesisDoc.Hash()
 		if !bytes.Equal(dbHash, argHash) {
 			return nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
 				"match the one found in database: 0x%X", argHash, dbHash)
 		}
-		return blockchain, nil
+		return bc, nil
 	}
 
 	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
@@ -124,24 +100,19 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 }
 
 // Pointer to blockchain state initialised from genesis
-func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *blockchain {
-	var validators []acm.Validator
+func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
+	bc := &Blockchain{
+		db:   db,
+		Root: NewRoot(genesisDoc),
+		Tip:  NewTip(genesisDoc.ChainID(), NewRoot(genesisDoc).genesisDoc.GenesisTime, NewRoot(genesisDoc).genesisHash),
+	}
 	for _, gv := range genesisDoc.Validators {
-		validators = append(validators, acm.ConcreteValidator{
-			PublicKey: gv.PublicKey,
-			Power:     uint64(gv.Amount),
-		}.Validator())
+		bc.validators.AlterPower(gv.PublicKey, gv.Amount)
 	}
-	root := NewRoot(genesisDoc)
-	return &blockchain{
-		db:         db,
-		root:       root,
-		tip:        NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash),
-		validators: validators,
-	}
+	return bc
 }
 
-func loadBlockchain(db dbm.DB) (*blockchain, error) {
+func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	buf := db.Get(stateKey)
 	if len(buf) == 0 {
 		return nil, nil
@@ -150,29 +121,31 @@ func loadBlockchain(db dbm.DB) (*blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockchain := newBlockchain(db, &persistedState.GenesisDoc)
-	blockchain.lastBlockHeight = persistedState.LastBlockHeight
-	blockchain.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
-	return blockchain, nil
+	bc := newBlockchain(db, &persistedState.GenesisDoc)
+	bc.lastBlockHeight = persistedState.LastBlockHeight
+	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
+	return bc, nil
 }
 
-func NewRoot(genesisDoc *genesis.GenesisDoc) *root {
-	return &root{
+func NewRoot(genesisDoc *genesis.GenesisDoc) *Root {
+	return &Root{
 		genesisHash: genesisDoc.Hash(),
 		genesisDoc:  *genesisDoc,
 	}
 }
 
 // Create genesis Tip
-func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *tip {
-	return &tip{
+func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *Tip {
+	return &Tip{
 		chainID:               chainID,
 		lastBlockTime:         genesisTime,
 		appHashAfterLastBlock: genesisHash,
+		validators:            NewValidators(),
+		validatorsWindow:      NewValidatorsWindow(DefaultValidatorsWindowSize),
 	}
 }
 
-func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
+func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
 	bc.Lock()
 	defer bc.Unlock()
 	bc.lastBlockHeight += 1
@@ -182,7 +155,7 @@ func (bc *blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte
 	return bc.save()
 }
 
-func (bc *blockchain) save() error {
+func (bc *Blockchain) save() error {
 	if bc.db != nil {
 		encodedState, err := bc.Encode()
 		if err != nil {
@@ -193,28 +166,7 @@ func (bc *blockchain) save() error {
 	return nil
 }
 
-func (bc *blockchain) Root() Root {
-	return bc.root
-}
-
-func (bc *blockchain) Tip() Tip {
-	bc.RLock()
-	defer bc.RUnlock()
-	t := *bc.tip
-	return &t
-}
-
-func (bc *blockchain) Validators() []acm.Validator {
-	bc.RLock()
-	defer bc.RUnlock()
-	vs := make([]acm.Validator, len(bc.validators))
-	for i, v := range bc.validators {
-		vs[i] = v
-	}
-	return vs
-}
-
-func (bc *blockchain) Encode() ([]byte, error) {
+func (bc *Blockchain) Encode() ([]byte, error) {
 	persistedState := &PersistedState{
 		GenesisDoc:            bc.genesisDoc,
 		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
@@ -236,30 +188,38 @@ func Decode(encodedState []byte) (*PersistedState, error) {
 	return persistedState, nil
 }
 
-func (r *root) GenesisHash() []byte {
+func (r *Root) GenesisHash() []byte {
 	return r.genesisHash
 }
 
-func (r *root) GenesisDoc() genesis.GenesisDoc {
+func (r *Root) GenesisDoc() genesis.GenesisDoc {
 	return r.genesisDoc
 }
 
-func (t *tip) ChainID() string {
+func (t *Tip) ChainID() string {
 	return t.chainID
 }
 
-func (t *tip) LastBlockHeight() uint64 {
+func (t *Tip) LastBlockHeight() uint64 {
 	return t.lastBlockHeight
 }
 
-func (t *tip) LastBlockTime() time.Time {
+func (t *Tip) LastBlockTime() time.Time {
 	return t.lastBlockTime
 }
 
-func (t *tip) LastBlockHash() []byte {
+func (t *Tip) LastBlockHash() []byte {
 	return t.lastBlockHash
 }
 
-func (t *tip) AppHashAfterLastBlock() []byte {
+func (t *Tip) AppHashAfterLastBlock() []byte {
 	return t.appHashAfterLastBlock
+}
+
+func (t *Tip) IterateValidators(iter func(publicKey crypto.PublicKey, power uint64) (stop bool)) (stopped bool) {
+	return t.validators.Iterate(iter)
+}
+
+func (t *Tip) NumValidators() int {
+	return t.validators.Length()
 }

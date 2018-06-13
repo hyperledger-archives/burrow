@@ -18,32 +18,33 @@ import (
 	"context"
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/tmthrgd/go-hex"
 )
 
 // Functions to generate eventId strings
 
-func EventStringAccountCall(addr acm.Address) string { return fmt.Sprintf("Acc/%s/Call", addr) }
-func EventStringLogEvent(addr acm.Address) string    { return fmt.Sprintf("Log/%s", addr) }
+func EventStringAccountCall(addr crypto.Address) string { return fmt.Sprintf("Acc/%s/Call", addr) }
+func EventStringLogEvent(addr crypto.Address) string    { return fmt.Sprintf("Log/%s", addr) }
 
 //----------------------------------------
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract
 type EventDataCall struct {
 	CallData   *CallData
-	Origin     acm.Address
+	Origin     crypto.Address
 	TxHash     []byte
 	StackDepth int
 	Return     []byte
-	Exception  string
+	Exception  *errors.Exception
 }
 
 type CallData struct {
-	Caller acm.Address
-	Callee acm.Address
+	Caller crypto.Address
+	Callee crypto.Address
 	Data   []byte
 	Value  uint64
 	Gas    uint64
@@ -51,7 +52,7 @@ type CallData struct {
 
 // EventDataLog fires when a contract executes the LOG opcode
 type EventDataLog struct {
-	Address acm.Address
+	Address crypto.Address
 	Topics  []Word256
 	Data    []byte
 	Height  uint64
@@ -62,7 +63,7 @@ type EventDataLog struct {
 // Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all, if
 // stackDepth is greater than or equal to 0 captures calls at a specific stack depth (useful for capturing the return
 // of the root call over recursive calls
-func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, subscriber string, address acm.Address,
+func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,
 	txHash []byte, stackDepth int, ch chan<- *EventDataCall) error {
 
 	query := event.QueryForEventID(EventStringAccountCall(address))
@@ -84,7 +85,7 @@ func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, 
 	})
 }
 
-func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, subscriber string, address acm.Address,
+func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,
 	ch chan<- *EventDataLog) error {
 
 	query := event.QueryForEventID(EventStringLogEvent(address))
@@ -98,7 +99,7 @@ func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, sub
 	})
 }
 
-func PublishAccountCall(publisher event.Publisher, address acm.Address, eventDataCall *EventDataCall) error {
+func PublishAccountCall(publisher event.Publisher, address crypto.Address, eventDataCall *EventDataCall) error {
 	return event.PublishWithEventID(publisher, EventStringAccountCall(address), eventDataCall,
 		map[string]interface{}{
 			"address":           address,
@@ -107,7 +108,7 @@ func PublishAccountCall(publisher event.Publisher, address acm.Address, eventDat
 		})
 }
 
-func PublishLogEvent(publisher event.Publisher, address acm.Address, eventDataLog *EventDataLog) error {
+func PublishLogEvent(publisher event.Publisher, address crypto.Address, eventDataLog *EventDataLog) error {
 	return event.PublishWithEventID(publisher, EventStringLogEvent(address), eventDataLog,
 		map[string]interface{}{"address": address})
 }

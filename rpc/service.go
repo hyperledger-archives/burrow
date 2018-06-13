@@ -23,8 +23,10 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -44,17 +46,17 @@ const AccountsRingMutexCount = 100
 type Service struct {
 	ctx             context.Context
 	state           state.Iterable
-	nameReg         execution.NameRegIterable
+	nameReg         names.Iterable
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
-	blockchain      bcm.Blockchain
+	blockchain      *bcm.Blockchain
 	transactor      *execution.Transactor
 	nodeView        *query.NodeView
 	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, state state.Iterable, nameReg execution.NameRegIterable,
-	checker state.Reader, subscribable event.Subscribable, blockchain bcm.Blockchain, keyClient keys.KeyClient,
+func NewService(ctx context.Context, state state.Iterable, nameReg names.Iterable,
+	checker state.Reader, subscribable event.Subscribable, blockchain *bcm.Blockchain, keyClient keys.KeyClient,
 	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
@@ -101,15 +103,19 @@ func (s *Service) State() state.Reader {
 	return s.state
 }
 
+func (s *Service) BlockchainInfo() bcm.BlockchainInfo {
+	return s.blockchain
+}
+
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
 	// Get all transactions for now
 	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
 	if err != nil {
 		return nil, err
 	}
-	wrappedTxs := make([]txs.Wrapper, len(transactions))
+	wrappedTxs := make([]*txs.Envelope, len(transactions))
 	for i, tx := range transactions {
-		wrappedTxs[i] = txs.Wrap(tx)
+		wrappedTxs[i] = tx
 	}
 	return &ResultListUnconfirmedTxs{
 		NumTxs: len(transactions),
@@ -150,7 +156,7 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error 
 }
 
 func (s *Service) Status() (*ResultStatus, error) {
-	tip := s.blockchain.Tip()
+	tip := s.blockchain.Tip
 	latestHeight := tip.LastBlockHeight()
 	var (
 		latestBlockMeta *tm_types.BlockMeta
@@ -177,7 +183,7 @@ func (s *Service) Status() (*ResultStatus, error) {
 	}, nil
 }
 
-func (s *Service) ChainId() (*ResultChainId, error) {
+func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
 	return &ResultChainId{
 		ChainName:   s.blockchain.GenesisDoc().ChainName,
 		ChainId:     s.blockchain.ChainID(),
@@ -222,14 +228,11 @@ func (s *Service) Genesis() (*ResultGenesis, error) {
 }
 
 // Accounts
-func (s *Service) GetAccount(address acm.Address) (*ResultGetAccount, error) {
+func (s *Service) GetAccount(address crypto.Address) (*ResultGetAccount, error) {
 	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Trace.Log("method", "GetAccount",
-		"address", address,
-		"sequence", acc.Sequence())
 	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 
@@ -243,12 +246,12 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 	})
 
 	return &ResultListAccounts{
-		BlockHeight: s.blockchain.Tip().LastBlockHeight(),
+		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
 		Accounts:    accounts,
 	}, nil
 }
 
-func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage, error) {
+func (s *Service) GetStorage(address crypto.Address, key []byte) (*ResultGetStorage, error) {
 	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -267,7 +270,7 @@ func (s *Service) GetStorage(address acm.Address, key []byte) (*ResultGetStorage
 	return &ResultGetStorage{Key: key, Value: value.UnpadLeft()}, nil
 }
 
-func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
+func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error) {
 	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -286,7 +289,7 @@ func (s *Service) DumpStorage(address acm.Address) (*ResultDumpStorage, error) {
 	}, nil
 }
 
-func (s *Service) GetAccountHumanReadable(address acm.Address) (*ResultGetAccountHumanReadable, error) {
+func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAccountHumanReadable, error) {
 	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -318,7 +321,7 @@ func (s *Service) GetAccountHumanReadable(address acm.Address) (*ResultGetAccoun
 
 // Name registry
 func (s *Service) GetName(name string) (*ResultGetName, error) {
-	entry, err := s.nameReg.GetNameRegEntry(name)
+	entry, err := s.nameReg.GetNameEntry(name)
 	if err != nil {
 		return nil, err
 	}
@@ -328,24 +331,24 @@ func (s *Service) GetName(name string) (*ResultGetName, error) {
 	return &ResultGetName{Entry: entry}, nil
 }
 
-func (s *Service) ListNames(predicate func(*execution.NameRegEntry) bool) (*ResultListNames, error) {
-	var names []*execution.NameRegEntry
-	s.nameReg.IterateNameRegEntries(func(entry *execution.NameRegEntry) (stop bool) {
+func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames, error) {
+	var nms []*names.Entry
+	s.nameReg.IterateNameEntries(func(entry *names.Entry) (stop bool) {
 		if predicate(entry) {
-			names = append(names, entry)
+			nms = append(nms, entry)
 		}
 		return
 	})
 	return &ResultListNames{
-		BlockHeight: s.blockchain.Tip().LastBlockHeight(),
-		Names:       names,
+		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
+		Names:       nms,
 	}, nil
 }
 
 func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 	return &ResultGetBlock{
-		Block:     s.nodeView.BlockStore().LoadBlock(int64(height)),
-		BlockMeta: s.nodeView.BlockStore().LoadBlockMeta(int64(height)),
+		Block:     &Block{s.nodeView.BlockStore().LoadBlock(int64(height))},
+		BlockMeta: &BlockMeta{s.nodeView.BlockStore().LoadBlockMeta(int64(height))},
 	}, nil
 }
 
@@ -355,7 +358,7 @@ func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
 func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
-	latestHeight := s.blockchain.Tip().LastBlockHeight()
+	latestHeight := s.blockchain.Tip.LastBlockHeight()
 
 	if minHeight == 0 {
 		minHeight = 1
@@ -380,15 +383,17 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 }
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
-	// TODO: when we reintroduce support for bonding and unbonding update this
-	// to reflect the mutable bonding state
-	validators := s.blockchain.Validators()
-	concreteValidators := make([]*acm.ConcreteValidator, len(validators))
-	for i, validator := range validators {
-		concreteValidators[i] = acm.AsConcreteValidator(validator)
-	}
+	concreteValidators := make([]*acm.ConcreteValidator, 0, s.blockchain.NumValidators())
+	s.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
+		concreteValidators = append(concreteValidators, &acm.ConcreteValidator{
+			Address:   publicKey.Address(),
+			PublicKey: publicKey,
+			Power:     power,
+		})
+		return
+	})
 	return &ResultListValidators{
-		BlockHeight:         s.blockchain.Tip().LastBlockHeight(),
+		BlockHeight:         s.blockchain.Tip.LastBlockHeight(),
 		BondedValidators:    concreteValidators,
 		UnbondingValidators: nil,
 	}, nil
@@ -400,7 +405,7 @@ func (s *Service) DumpConsensusState() (*ResultDumpConsensusState, error) {
 		return nil, err
 	}
 	return &ResultDumpConsensusState{
-		RoundState:      s.nodeView.RoundState(),
+		RoundState:      s.nodeView.RoundState().RoundStateSimple(),
 		PeerRoundStates: peerRoundState,
 	}, nil
 }

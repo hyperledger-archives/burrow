@@ -14,6 +14,12 @@ const (
 	prime64x5 uint64 = 2870177450012600261
 
 	maxInt32 int32 = (1<<31 - 1)
+
+	// precomputed zero Vs for seed 0
+	zero64x1 = 0x60ea27eeadc0b5d6
+	zero64x2 = 0xc2b2ae3d27d4eb4f
+	zero64x3 = 0x0
+	zero64x4 = 0x61c8864e7a143579
 )
 
 // Checksum32 returns the checksum of the input data with the seed set to 0.
@@ -93,14 +99,6 @@ type XXHash64 struct {
 	memIdx         int8
 }
 
-var zeroVs64 = [...]uint64{
-	// workaround static overflow checker
-	func(s uint64) uint64 { return s + prime64x1 + prime64x2 }(0),
-	prime64x2,
-	0,
-	func(s uint64) uint64 { return s - prime64x1 }(0),
-}
-
 // Size returns the number of bytes Sum will return.
 func (xx *XXHash64) Size() int {
 	return 8
@@ -170,7 +168,7 @@ func mix64(h uint64) uint64 {
 
 func resetVs64(seed uint64) (v1, v2, v3, v4 uint64) {
 	if seed == 0 {
-		return zeroVs64[0], zeroVs64[1], zeroVs64[2], zeroVs64[3]
+		return zero64x1, zero64x2, zero64x3, zero64x4
 	}
 	return (seed + prime64x1 + prime64x2), (seed + prime64x2), (seed), (seed - prime64x1)
 }

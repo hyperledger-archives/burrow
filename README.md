@@ -5,7 +5,9 @@
 | Master | [![Circle CI](https://circleci.com/gh/hyperledger/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/hyperledger/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/develop) |
 
-Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node built with <3 by Monax. It executes Ethereum EVM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
+Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It executes Ethereum EVM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
+
+![burrow logo](docs/images/burrow.png)
 
 ## What is Burrow
 
@@ -42,18 +44,6 @@ The end result will be a `burrow.toml` that will be read in from your current wo
 
 ### Configuration
 
-#### Install monax-keys
-Monax-keys is our key-signing daemon. In a future release this will be merged with Burrow and will support a GPG backend
-in addition to the development mode that monax-keys currently supplies.
-
-We need to run monax-keys so that `burrow configure` can generate keys for us in the following step.
-```shell
-# Install monax-keys
-go get -u github.com/monax/bosmarmot/keys/cmd/monax-keys
-# run monax-keys server in background
-monax-keys server &
-```
-
 #### Configure Burrow
 The quick-and-dirty one-liner looks like:
 
@@ -75,7 +65,7 @@ Once the `burrow.toml` has been created, we run:
 
 ```
 # To select our validator address by index in the GenesisDoc
-burrow serve --validator-index=0 
+burrow serve --validator-index=0
 # Or to select based on address directly (substituting the example address below with your validator's):
 burrow serve --validator-address=BE584820DC904A55449D7EB0C97607B40224B96E
 ```
@@ -87,7 +77,7 @@ multi-node chain it will resync with peers, otherwise it will restart from heigh
 
 ### Logging
 
-Logging is highly configurable through the `burrow.toml` `[logging]` section. Each log line is a list of key-value pairs that flows from the root sink through possible child sinks. Each sink can have an output, a transform, and sinks that it outputs to. Below is a more involved example than the one appearing in the default generated config of what you can configure: 
+Logging is highly configurable through the `burrow.toml` `[logging]` section. Each log line is a list of key-value pairs that flows from the root sink through possible child sinks. Each sink can have an output, a transform, and sinks that it outputs to. Below is a more involved example than the one appearing in the default generated config of what you can configure:
 
 ```toml
 # This is a top level config section within the main Burrow config

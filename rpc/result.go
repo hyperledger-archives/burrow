@@ -19,15 +19,28 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
-	exe_events "github.com/hyperledger/burrow/execution/events"
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	exeEvents "github.com/hyperledger/burrow/execution/events"
+	evmEvents "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	ctypes "github.com/tendermint/tendermint/consensus/types"
+	"github.com/tendermint/go-amino"
+	consensusTypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
-	tm_types "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/rpc/core/types"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
+
+// When using Tendermint types like Block and Vote we are forced to wrap the outer object and use amino marshalling
+var aminoCodec = amino.NewCodec()
+
+func init() {
+	//types.RegisterEvidences(AminoCodec)
+	//crypto.RegisterAmino(cdc)
+	core_types.RegisterAmino(aminoCodec)
+}
 
 type ResultGetStorage struct {
 	Key   []byte
@@ -63,18 +76,43 @@ type StorageItem struct {
 
 type ResultListBlocks struct {
 	LastHeight uint64
-	BlockMetas []*tm_types.BlockMeta
+	BlockMetas []*tmTypes.BlockMeta
 }
 
 type ResultGetBlock struct {
-	BlockMeta *tm_types.BlockMeta
-	Block     *tm_types.Block
+	BlockMeta *BlockMeta
+	Block     *Block
+}
+
+type BlockMeta struct {
+	*tmTypes.BlockMeta
+}
+
+func (bm BlockMeta) MarshalJSON() ([]byte, error) {
+	return aminoCodec.MarshalJSON(bm.BlockMeta)
+}
+
+func (bm *BlockMeta) UnmarshalJSON(data []byte) (err error) {
+	return aminoCodec.UnmarshalJSON(data, &bm.BlockMeta)
+}
+
+// Needed for go-amino handling of interface types
+type Block struct {
+	*tmTypes.Block
+}
+
+func (b Block) MarshalJSON() ([]byte, error) {
+	return aminoCodec.MarshalJSON(b.Block)
+}
+
+func (b *Block) UnmarshalJSON(data []byte) (err error) {
+	return aminoCodec.UnmarshalJSON(data, &b.Block)
 }
 
 type ResultStatus struct {
 	NodeInfo          p2p.NodeInfo
 	GenesisHash       []byte
-	PubKey            acm.PublicKey
+	PubKey            crypto.PublicKey
 	LatestBlockHash   []byte
 	LatestBlockHeight uint64
 	LatestBlockTime   int64
@@ -114,8 +152,8 @@ type ResultListValidators struct {
 }
 
 type ResultDumpConsensusState struct {
-	RoundState      *ctypes.RoundState
-	PeerRoundStates []*ctypes.PeerRoundState
+	RoundState      consensusTypes.RoundStateSimple
+	PeerRoundStates []*consensusTypes.PeerRoundState
 }
 
 type ResultPeers struct {
@@ -124,7 +162,7 @@ type ResultPeers struct {
 
 type ResultListNames struct {
 	BlockHeight uint64
-	Names       []*execution.NameRegEntry
+	Names       []*names.Entry
 }
 
 type ResultGeneratePrivateAccount struct {
@@ -136,8 +174,8 @@ type ResultGetAccount struct {
 }
 
 type AccountHumanReadable struct {
-	Address     acm.Address
-	PublicKey   acm.PublicKey
+	Address     crypto.Address
+	PublicKey   crypto.PublicKey
 	Sequence    uint64
 	Balance     uint64
 	Code        []string
@@ -154,8 +192,6 @@ type ResultBroadcastTx struct {
 	txs.Receipt
 }
 
-// Unwrap
-
 func (rbt ResultBroadcastTx) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rbt.Receipt)
 }
@@ -166,11 +202,11 @@ func (rbt ResultBroadcastTx) UnmarshalJSON(data []byte) (err error) {
 
 type ResultListUnconfirmedTxs struct {
 	NumTxs int
-	Txs    []txs.Wrapper
+	Txs    []*txs.Envelope
 }
 
 type ResultGetName struct {
-	Entry *execution.NameRegEntry
+	Entry *names.Entry
 }
 
 type ResultGenesis struct {
@@ -178,53 +214,53 @@ type ResultGenesis struct {
 }
 
 type ResultSignTx struct {
-	Tx txs.Wrapper
+	Tx *txs.Envelope
 }
 
-type ResultEvent struct {
-	Event         string
-	TMEventData   *tm_types.TMEventData     `json:",omitempty"`
-	EventDataTx   *exe_events.EventDataTx   `json:",omitempty"`
-	EventDataCall *evm_events.EventDataCall `json:",omitempty"`
-	EventDataLog  *evm_events.EventDataLog  `json:",omitempty"`
+type TendermintEvent struct {
+	tmTypes.TMEventData
 }
 
-func (resultEvent ResultEvent) EventDataNewBlock() *tm_types.EventDataNewBlock {
-	if resultEvent.TMEventData != nil {
-		eventData, _ := resultEvent.TMEventData.Unwrap().(tm_types.EventDataNewBlock)
+func (te TendermintEvent) MarshalJSON() ([]byte, error) {
+	return aminoCodec.MarshalJSON(te.TMEventData)
+}
+
+func (te *TendermintEvent) UnmarshalJSON(data []byte) (err error) {
+	return aminoCodec.UnmarshalJSON(data, &te.TMEventData)
+}
+
+func (te *TendermintEvent) EventDataNewBlock() *tmTypes.EventDataNewBlock {
+	if te != nil {
+		eventData, _ := te.TMEventData.(tmTypes.EventDataNewBlock)
 		return &eventData
 	}
 	return nil
 }
 
+type ResultEvent struct {
+	Event         string
+	Tendermint    *TendermintEvent         `json:",omitempty"`
+	EventDataTx   *exeEvents.EventDataTx   `json:",omitempty"`
+	EventDataCall *evmEvents.EventDataCall `json:",omitempty"`
+	EventDataLog  *evmEvents.EventDataLog  `json:",omitempty"`
+}
+
 // Map any supported event data element to our ResultEvent sum type
 func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
+	res := &ResultEvent{
+		Event: event,
+	}
 	switch ed := eventData.(type) {
-	case tm_types.TMEventData:
-		return &ResultEvent{
-			Event:       event,
-			TMEventData: &ed,
-		}, nil
-
-	case *exe_events.EventDataTx:
-		return &ResultEvent{
-			Event:       event,
-			EventDataTx: ed,
-		}, nil
-
-	case *evm_events.EventDataCall:
-		return &ResultEvent{
-			Event:         event,
-			EventDataCall: ed,
-		}, nil
-
-	case *evm_events.EventDataLog:
-		return &ResultEvent{
-			Event:        event,
-			EventDataLog: ed,
-		}, nil
-
+	case tmTypes.TMEventData:
+		res.Tendermint = &TendermintEvent{ed}
+	case *exeEvents.EventDataTx:
+		res.EventDataTx = ed
+	case *evmEvents.EventDataCall:
+		res.EventDataCall = ed
+	case *evmEvents.EventDataLog:
+		res.EventDataLog = ed
 	default:
 		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
 	}
+	return res, nil
 }

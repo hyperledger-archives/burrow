@@ -21,6 +21,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 )
 
 type Cache interface {
@@ -34,7 +35,7 @@ type stateCache struct {
 	sync.RWMutex
 	name     string
 	backend  Reader
-	accounts map[acm.Address]*accountInfo
+	accounts map[crypto.Address]*accountInfo
 }
 
 type accountInfo struct {
@@ -52,7 +53,7 @@ type CacheOption func(*stateCache)
 func NewCache(backend Reader, options ...CacheOption) Cache {
 	cache := &stateCache{
 		backend:  backend,
-		accounts: make(map[acm.Address]*accountInfo),
+		accounts: make(map[crypto.Address]*accountInfo),
 	}
 	for _, option := range options {
 		option(cache)
@@ -66,7 +67,7 @@ func Name(name string) CacheOption {
 	}
 }
 
-func (cache *stateCache) GetAccount(address acm.Address) (acm.Account, error) {
+func (cache *stateCache) GetAccount(address crypto.Address) (acm.Account, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (cache *stateCache) UpdateAccount(account acm.Account) error {
 	return nil
 }
 
-func (cache *stateCache) RemoveAccount(address acm.Address) error {
+func (cache *stateCache) RemoveAccount(address crypto.Address) error {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return err
@@ -122,7 +123,7 @@ func (cache *stateCache) IterateCachedAccount(consumer func(acm.Account) (stop b
 	return false, nil
 }
 
-func (cache *stateCache) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+func (cache *stateCache) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return binary.Zero256, err
@@ -148,7 +149,7 @@ func (cache *stateCache) GetStorage(address acm.Address, key binary.Word256) (bi
 }
 
 // NOTE: Set value to zero to remove.
-func (cache *stateCache) SetStorage(address acm.Address, key binary.Word256, value binary.Word256) error {
+func (cache *stateCache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
 	accInfo, err := cache.get(address)
 	accInfo.Lock()
 	defer accInfo.Unlock()
@@ -164,7 +165,7 @@ func (cache *stateCache) SetStorage(address acm.Address, key binary.Word256, val
 }
 
 // Iterates over all cached storage items first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateCachedStorage(address acm.Address,
+func (cache *stateCache) IterateCachedStorage(address crypto.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -187,12 +188,12 @@ func (cache *stateCache) IterateCachedStorage(address acm.Address,
 func (cache *stateCache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
-	var addresses acm.Addresses
+	var addresses crypto.Addresses
 	for address := range cache.accounts {
 		addresses = append(addresses, address)
 	}
 
-	sort.Stable(addresses)
+	sort.Sort(addresses)
 	for _, address := range addresses {
 		accInfo := cache.accounts[address]
 		accInfo.RLock()
@@ -207,7 +208,7 @@ func (cache *stateCache) Sync(state Writer) error {
 				keys = append(keys, key)
 			}
 			// First update keys
-			sort.Stable(keys)
+			sort.Sort(keys)
 			for _, key := range keys {
 				value := accInfo.storage[key]
 				err := state.SetStorage(address, key, value)
@@ -232,7 +233,7 @@ func (cache *stateCache) Reset(backend Iterable) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
-	cache.accounts = make(map[acm.Address]*accountInfo, len(cache.accounts))
+	cache.accounts = make(map[crypto.Address]*accountInfo, len(cache.accounts))
 }
 
 // Syncs the Cache and Resets it to use as the backend Reader
@@ -253,7 +254,7 @@ func (cache *stateCache) String() string {
 }
 
 // Get the cache accountInfo item creating it if necessary
-func (cache *stateCache) get(address acm.Address) (*accountInfo, error) {
+func (cache *stateCache) get(address crypto.Address) (*accountInfo, error) {
 	cache.RLock()
 	accInfo := cache.accounts[address]
 	cache.RUnlock()

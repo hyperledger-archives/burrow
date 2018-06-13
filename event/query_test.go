@@ -3,8 +3,10 @@ package event
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/libs/pubsub"
 )
 
 func TestQueryBuilder(t *testing.T) {
@@ -23,21 +25,29 @@ func TestQueryBuilder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "foo.size >= 45 AND bar.name = 'marmot'", qry.String())
 
-	assert.True(t, qry.Matches(map[string]interface{}{"foo.size": 80, "bar.name": "marmot"}))
-	assert.False(t, qry.Matches(map[string]interface{}{"foo.size": 8, "bar.name": "marmot"}))
-	assert.False(t, qry.Matches(map[string]interface{}{"foo.size": 80, "bar.name": "marot"}))
+	assert.True(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot")))
+	assert.False(t, qry.Matches(makeTagMap("foo.size", 8, "bar.name", "marmot")))
+	assert.False(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marot")))
 
 	qb = qb.AndContains("bar.desc", "burrow")
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.Equal(t, "foo.size >= 45 AND bar.name = 'marmot' AND bar.desc CONTAINS 'burrow'", qry.String())
 
-	assert.True(t, qry.Matches(map[string]interface{}{"foo.size": 80, "bar.name": "marmot", "bar.desc": "lives in a burrow"}))
-	assert.False(t, qry.Matches(map[string]interface{}{"foo.size": 80, "bar.name": "marmot", "bar.desc": "lives in a shoe"}))
+	assert.True(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a burrow")))
+	assert.False(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a shoe")))
 
 	qb = NewQueryBuilder().AndEquals("foo", "bar")
 	qb = qb.And(NewQueryBuilder().AndGreaterThanOrEqual("frogs", 4))
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.Equal(t, "foo = 'bar' AND frogs >= 4", qry.String())
+}
+
+func makeTagMap(keyvals ...interface{}) pubsub.TagMap {
+	tmap := make(map[string]string)
+	for i := 0; i < len(keyvals); i += 2 {
+		tmap[keyvals[i].(string)] = structure.StringifyKey(keyvals[i+1])
+	}
+	return pubsub.NewTagMap(tmap)
 }

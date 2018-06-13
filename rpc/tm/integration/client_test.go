@@ -22,11 +22,16 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+	"strings"
+
 	"github.com/hyperledger/burrow/binary"
 	exe_events "github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
 	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/consensus/types"
@@ -53,17 +58,15 @@ func TestBroadcastTx(t *testing.T) {
 		// Avoid duplicate Tx in mempool
 		amt := hashString(clientName) % 1000
 		toAddr := privateAccounts[1].Address()
-		tx := makeDefaultSendTxSigned(t, client, toAddr, amt)
-		receipt, err := broadcastTxAndWait(t, client, tx)
+		txEnv := makeDefaultSendTxSigned(t, client, toAddr, amt)
+		receipt, err := broadcastTxAndWait(t, client, txEnv)
 		require.NoError(t, err)
 		assert.False(t, receipt.CreatesContract, "This tx should not create a contract")
 		assert.NotEmpty(t, receipt.TxHash, "Failed to compute tx hash")
 
-		buf, n, errp := new(bytes.Buffer), new(int), new(error)
 		hasher := ripemd160.New()
-		tx.WriteSignBytes(genesisDoc.ChainID(), buf, n, errp)
-		assert.NoError(t, *errp)
-		txSignBytes := buf.Bytes()
+		txSignBytes, err := txEnv.Tx.SignBytes()
+		require.NoError(t, err)
 		hasher.Write(txSignBytes)
 		txHashExpected := hasher.Sum(nil)
 
@@ -179,7 +182,7 @@ func TestNameReg(t *testing.T) {
 	wsc := newWSClient()
 	defer stopWSClient(wsc)
 	testWithAllClients(t, func(t *testing.T, clientName string, client tm_client.RPCClient) {
-		txs.MinNameRegistrationPeriod = 1
+		names.MinNameRegistrationPeriod = 1
 
 		// register a new name, check if its there
 		// since entries ought to be unique and these run against different clients, we append the client
@@ -187,19 +190,19 @@ func TestNameReg(t *testing.T) {
 		const data = "if not now, when"
 		fee := uint64(1000)
 		numDesiredBlocks := uint64(2)
-		amt := fee + numDesiredBlocks*txs.NameByteCostMultiplier*txs.NameBlockCostMultiplier*txs.NameBaseCost(name, data)
+		amt := fee + numDesiredBlocks*names.NameByteCostMultiplier*names.NameBlockCostMultiplier*names.NameBaseCost(name, data)
 
-		tx := makeDefaultNameTx(t, client, name, data, amt, fee)
+		txEnv := makeDefaultNameTx(t, client, name, data, amt, fee)
 		// verify the name by both using the event and by checking get_name
 		subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
 			func() {
-				broadcastTx(t, client, tx)
+				broadcastTx(t, client, txEnv)
 			},
 			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 
 				eventDataTx := resultEvent.EventDataTx
 				assert.NotNil(t, eventDataTx, "could not convert %s to EventDataTx", resultEvent)
-				tx, ok := eventDataTx.Tx.(*txs.NameTx)
+				tx, ok := eventDataTx.Tx.Payload.(*payload.NameTx)
 				if !ok {
 					t.Fatalf("Could not convert %v to *NameTx", eventDataTx)
 				}
@@ -217,20 +220,21 @@ func TestNameReg(t *testing.T) {
 		const updatedData = "these are amongst the things I wish to bestow upon " +
 			"the youth of generations come: a safe supply of honey, and a better " +
 			"money. For what else shall they need"
-		amt = fee + numDesiredBlocks*txs.NameByteCostMultiplier*
-			txs.NameBlockCostMultiplier*txs.NameBaseCost(name, updatedData)
-		tx = makeDefaultNameTx(t, client, name, updatedData, amt, fee)
-		broadcastTxAndWait(t, client, tx)
+		amt = fee + numDesiredBlocks*names.NameByteCostMultiplier*
+			names.NameBlockCostMultiplier*names.NameBaseCost(name, updatedData)
+		txEnv = makeDefaultNameTx(t, client, name, updatedData, amt, fee)
+		broadcastTxAndWait(t, client, txEnv)
 		entry = getNameRegEntry(t, client, name)
 
 		assert.Equal(t, updatedData, entry.Data)
 
 		// try to update as non owner, should fail
-		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, "never mind", amt, fee,
+		tx := payload.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, "never mind", amt, fee,
 			getSequence(t, client, privateAccounts[1].Address())+1)
-		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
+		txEnv = txs.Enclose(genesisDoc.ChainID(), tx)
+		require.NoError(t, txEnv.Sign(privateAccounts[1]))
 
-		_, err := tm_client.BroadcastTx(client, tx)
+		_, err := tm_client.BroadcastTx(client, txEnv)
 		assert.Error(t, err, "Expected error when updating someone else's unexpired"+
 			" name registry entry")
 		if err != nil {
@@ -243,14 +247,15 @@ func TestNameReg(t *testing.T) {
 
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
-		tx = txs.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, data2, amt, fee,
+		tx = payload.NewNameTxWithSequence(privateAccounts[1].PublicKey(), name, data2, amt, fee,
 			getSequence(t, client, privateAccounts[1].Address())+1)
-		tx.Sign(genesisDoc.ChainID(), privateAccounts[1])
+		txEnv = txs.Enclose(genesisDoc.ChainID(), tx)
+		require.NoError(t, txEnv.Sign(privateAccounts[1]))
 
 		//_, err = tm_client.BroadcastTx(client, tx)
 		require.NoError(t, subscribeAndWaitForNext(t, wsc, exe_events.EventStringNameReg(name),
 			func() {
-				_, err = tm_client.BroadcastTx(client, tx)
+				_, err = tm_client.BroadcastTx(client, txEnv)
 				assert.NoError(t, err, "Should be able to update a previously expired name"+
 					" registry entry as a different address")
 			},
@@ -319,8 +324,8 @@ func TestListUnconfirmedTxs(t *testing.T) {
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
-		tx := txs.Wrap(makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee))
-		txChan := make(chan []txs.Wrapper)
+		txEnv := makeDefaultCallTx(t, client, nil, code, amt, gasLim, fee)
+		txChan := make(chan []*txs.Envelope)
 
 		// We want to catch the Tx in mempool before it gets reaped by tendermint
 		// consensus. We should be able to do this almost always if we broadcast our
@@ -342,17 +347,17 @@ func TestListUnconfirmedTxs(t *testing.T) {
 			}
 		}()
 
-		runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
-			broadcastTx(t, client, tx)
+		require.NoError(t, runThenWaitForBlock(t, wsc, nextBlockPredicateFn(), func() {
+			broadcastTx(t, client, txEnv)
 			select {
 			case <-time.After(time.Second * timeoutSeconds * 10):
 				t.Fatal("Timeout out waiting for unconfirmed transactions to appear")
 			case transactions := <-txChan:
 				assert.Len(t, transactions, 1, "There should only be a single transaction in the "+
 					"mempool during this test (previous txs should have made it into a block)")
-				assert.Contains(t, transactions, tx, "Transaction should be returned by ListUnconfirmedTxs")
+				assert.Contains(t, transactions, txEnv, "Transaction should be returned by ListUnconfirmedTxs")
 			}
-		})
+		}))
 	})
 }
 
@@ -386,11 +391,8 @@ func TestDumpConsensusState(t *testing.T) {
 		waitNBlocks(t, wsc, 3)
 		resp, err := tm_client.DumpConsensusState(client)
 		assert.NoError(t, err)
-		commitTime := resp.RoundState.CommitTime
 		assert.NotZero(t, startTime)
-		assert.NotZero(t, commitTime)
-		assert.True(t, commitTime.Unix() > startTime.Unix(),
-			"Commit time %v should be later than start time %v", commitTime, startTime)
-		assert.Equal(t, types.RoundStepNewHeight, resp.RoundState.Step)
+		assert.Equal(t, fmt.Sprintf("/0/%d", types.RoundStepNewHeight),
+			strings.TrimLeft(resp.RoundState.HeightRoundStep, "0123456789"))
 	})
 }

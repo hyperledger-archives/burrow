@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	abci_types "github.com/tendermint/abci/types"
+	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
@@ -32,9 +33,13 @@ type Node struct {
 	}
 }
 
+func DBProvider(ID string, backendType dbm.DBBackendType, dbDir string) dbm.DB {
+	return dbm.NewDB(ID, backendType, dbDir)
+}
+
 // Since Tendermint doesn't close its DB connections
 func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
-	db := dbm.NewDB(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
+	db := DBProvider(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
 	n.closers = append(n.closers, db)
 	return db, nil
 }
@@ -49,7 +54,7 @@ func NewNode(
 	conf *config.Config,
 	privValidator tm_types.PrivValidator,
 	genesisDoc *tm_types.GenesisDoc,
-	blockchain bcm.MutableBlockchain,
+	blockchain *bcm.Blockchain,
 	checker execution.BatchExecutor,
 	committer execution.BatchCommitter,
 	logger *logging.Logger) (*Node, error) {
@@ -81,11 +86,11 @@ func NewNode(
 	return nde, nil
 }
 
-func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx,
+func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(env *txs.Envelope,
 	callback func(res *abci_types.Response)) error {
 
-	return func(tx txs.Tx, callback func(res *abci_types.Response)) error {
-		txBytes, err := txEncoder.EncodeTx(tx)
+	return func(env *txs.Envelope, callback func(res *abci_types.Response)) error {
+		txBytes, err := txEncoder.EncodeTx(env)
 		if err != nil {
 			return fmt.Errorf("error encoding transaction: %v", err)
 		}
@@ -101,8 +106,10 @@ func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(tx txs.Tx
 func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
 	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
+		tm := tm_crypto.PubKeyEd25519{}
+		copy(tm[:], validator.PublicKey.RawBytes())
 		validators[i] = tm_types.GenesisValidator{
-			PubKey: validator.PublicKey.PubKey,
+			PubKey: tm,
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}
@@ -122,7 +129,7 @@ func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable, sub
 	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
 		tmEventData, ok := message.(tm_types.TMEventData)
 		if ok {
-			eventDataNewBlock, ok := tmEventData.Unwrap().(tm_types.EventDataNewBlock)
+			eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
 			if ok {
 				ch <- &eventDataNewBlock
 			}

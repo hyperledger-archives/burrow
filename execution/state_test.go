@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/permission"
+	permission "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tmlibs/db"

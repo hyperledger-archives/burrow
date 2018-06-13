@@ -17,7 +17,6 @@ package evm
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strconv"
 	"testing"
@@ -26,7 +25,9 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
@@ -45,7 +46,7 @@ var logger = logging.NewNoopLogger()
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
-		accounts: make(map[acm.Address]acm.Account),
+		accounts: make(map[crypto.Address]acm.Account),
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
@@ -68,13 +69,14 @@ func newAccount(seed ...byte) acm.MutableAccount {
 	hasher := ripemd160.New()
 	hasher.Write(seed)
 	return acm.ConcreteAccount{
-		Address: acm.MustAddressFromBytes(hasher.Sum(nil)),
+		Address: crypto.MustAddressFromBytes(hasher.Sum(nil)),
 	}.MutableAccount()
 }
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -87,7 +89,7 @@ func TestVM(t *testing.T) {
 		MSTORE, PUSH1, 0x05, JUMP, JUMPDEST)
 
 	start := time.Now()
-	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	if err != nil {
@@ -95,9 +97,483 @@ func TestVM(t *testing.T) {
 	}
 }
 
+func TestSHL(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	//Shift left 0
+	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SHL, return1())
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value := []uint8([]byte{0x1})
+	expected := LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift left 0
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift left 1
+	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x2})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift left 1
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift left 1
+	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift left 255
+	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0xFF, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x80})
+	expected = RightPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift left 255
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x80})
+	expected = RightPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift left 256 (overflow)
+	bytecode = MustSplice(PUSH1, 0x01, PUSH2, 0x01, 0x00, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift left 256 (overflow)
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SHL,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift left 257 (overflow)
+	bytecode = MustSplice(PUSH1, 0x01, PUSH2, 0x01, 0x01, SHL, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func TestSHR(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	//Shift right 0
+	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SHR, return1())
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value := []uint8([]byte{0x1})
+	expected := LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift right 0
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift right 1
+	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift right 1
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0x01, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x40})
+	expected = RightPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift right 1
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift right 255
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0xFF, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x1})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift right 255
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SHR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x1})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift right 256 (underflow)
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x00, SHR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift right 256 (underflow)
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SHR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift right 257 (underflow)
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x01, SHR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func TestSAR(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	//Shift arith right 0
+	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SAR, return1())
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value := []uint8([]byte{0x1})
+	expected := LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative arith shift right 0
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift arith right 1
+	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift arith right 1
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0x01, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0xc0})
+	expected = RightPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift arith right 1
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift arith right 255
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0xFF, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift arith right 255
+	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift arith right 255
+	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SAR, return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = RightPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift arith right 256 (reset)
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x00, SAR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Alternative shift arith right 256 (reset)
+	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SAR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	value = []uint8([]byte{0x00})
+	expected = LeftPadBytes(value, 32)
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//Shift arith right 257 (reset)
+	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x01, SAR,
+		return1())
+	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Result: %v == %v\n", output, expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
-	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
@@ -110,7 +586,7 @@ func TestJumpErr(t *testing.T) {
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		_, err = ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
+		_, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)
@@ -127,14 +603,17 @@ func TestJumpErr(t *testing.T) {
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
-
+	cache := state.NewCache(st)
 	// Create accounts
 	account1 := newAccount(1, 2, 3)
 	account2 := newAccount(3, 2, 1)
-	st.accounts[account1.Address()] = account1
-	st.accounts[account2.Address()] = account2
+	cache.UpdateAccount(account1)
+	cache.UpdateAccount(account2)
+	cache.Sync(st)
+	//st.accounts[account1.Address()] = account1
+	//st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	var gas uint64 = 1000
 
@@ -153,7 +632,7 @@ func TestSubcurrency(t *testing.T) {
 		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, RETURN)
 
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
-	output, err := ourVm.Call(account1, account2, bytecode, data, 0, &gas)
+	output, err := ourVm.Call(cache, account1, account2, bytecode, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	if err != nil {
 		t.Fatal(err)
@@ -163,59 +642,71 @@ func TestSubcurrency(t *testing.T) {
 //This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
-	ourVm := NewVM(newAppState(), newParams(), acm.ZeroAddress, nil, logger)
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
 	account2 := newAccount(1, 0, 1)
 
+	key, value := []byte{0x00}, []byte{0x00}
+	cache.SetStorage(account1.Address(), LeftPadWord256(key), LeftPadWord256(value))
+
 	var gas uint64 = 100000
 
-	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
-		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)
+	bytecode := MustSplice(PUSH13, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x65, 0x64, 0x20, 0x64, 0x61, 0x74, 0x61,
+		PUSH1, 0x00, SSTORE, PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)
 
-	start := time.Now()
-	output, err := ourVm.Call(account1, account2, bytecode, []byte{}, 0, &gas)
-	assert.Error(t, err, "Expected execution reverted error")
-	fmt.Printf("Output: %v Error: %v\n", output, err)
-	fmt.Println("Call took:", time.Since(start))
+	/*bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)*/
+
+	output, cErr := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.Error(t, cErr, "Expected execution reverted error")
+
+	storageVal, err := cache.GetStorage(account1.Address(), LeftPadWord256(key))
+	assert.Equal(t, LeftPadWord256(value), storageVal)
+
+	t.Logf("Output: %v Error: %v\n", output, err)
+
 }
 
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
-	fakeAppState := newAppState()
-	ourVm := NewVM(fakeAppState, newParams(), acm.ZeroAddress, nil, logger)
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
 	account1 := newAccount(1)
 	account2 := newAccount(2)
 	account3 := newAccount(3)
 
-	fakeAppState.UpdateAccount(account1)
-	fakeAppState.UpdateAccount(account2)
-	fakeAppState.UpdateAccount(account3)
+	cache.UpdateAccount(account1)
+	cache.UpdateAccount(account2)
+	cache.UpdateAccount(account3)
 	// account1 will call account2 which will trigger CALL opcode to account3
 	addr := account3.Address()
 	contractCode := callContractCode(addr)
 
 	//----------------------------------------------
 	// account2 has insufficient balance, should fail
-	_, err := runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
+	_, err := runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
 	assert.Error(t, err, "Expected insufficient balance error")
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
 	account2, err = newAccount(2).AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 1000)
+	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
 	account2, err = newAccount(2).AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(ourVm, account1, account2, addr, contractCode, 100)
+	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
 }
 
@@ -225,8 +716,8 @@ func TestSendCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	appState := newAppState()
-	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger)
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	inOff := 0
 	inSize := 0 // no call data
@@ -246,7 +737,7 @@ func TestDelegateCallGas(t *testing.T) {
 	costBetweenGasAndDelegateCall := gasCost + subCost + delegateCallCost + pushCost
 
 	// Do a simple operation using 1 gas unit
-	calleeAccount, calleeAddress := makeAccountWithCode(appState, "callee",
+	calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
 		MustSplice(PUSH1, calleeReturnValue, return1()))
 
 	// Here we split up the caller code so we can make a DELEGATE call with
@@ -259,14 +750,14 @@ func TestDelegateCallGas(t *testing.T) {
 	callerCodeSuffix := MustSplice(GAS, SUB, DELEGATECALL, returnWord())
 
 	// Perform a delegate call
-	callerAccount, _ := makeAccountWithCode(appState, "caller",
+	callerAccount, _ := makeAccountWithCode(cache, "caller",
 		MustSplice(callerCodePrefix,
 			// Give just enough gas to make the DELEGATECALL
 			costBetweenGasAndDelegateCall,
 			callerCodeSuffix))
 
 	// Should pass
-	output, err := runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
+	output, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress,
 		callerAccount.Code(), 100)
 	assert.NoError(t, err, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
@@ -277,23 +768,23 @@ func TestDelegateCallGas(t *testing.T) {
 		callerCodeSuffix))
 
 	// Should fail
-	_, err = runVMWaitError(ourVm, callerAccount, calleeAccount, calleeAddress,
+	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress,
 		callerAccount.Code(), 100)
 	assert.Error(t, err, "Should have insufficient gas for call")
 }
 
 func TestMemoryBounds(t *testing.T) {
-	appState := newAppState()
+	cache := state.NewCache(newAppState())
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
 	}
-	ourVm := NewVM(appState, newParams(), acm.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
-	caller, _ := makeAccountWithCode(appState, "caller", nil)
-	callee, _ := makeAccountWithCode(appState, "callee", nil)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
+	caller, _ := makeAccountWithCode(cache, "caller", nil)
+	callee, _ := makeAccountWithCode(cache, "callee", nil)
 	gas := uint64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
-	output, err := ourVm.call(caller, callee,
+	output, err := ourVm.call(cache, caller, callee,
 		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
@@ -301,7 +792,7 @@ func TestMemoryBounds(t *testing.T) {
 
 	// Same with number
 	word = Int64ToWord256(232234234432)
-	output, err = ourVm.call(caller, callee,
+	output, err = ourVm.call(cache, caller, callee,
 		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
@@ -312,7 +803,7 @@ func TestMemoryBounds(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(cache, caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -322,19 +813,23 @@ func TestMemoryBounds(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.call(cache, caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
 }
 
 func TestMsgSender(t *testing.T) {
 	st := newAppState()
+	cache := state.NewCache(st)
 	account1 := newAccount(1, 2, 3)
 	account2 := newAccount(3, 2, 1)
-	st.accounts[account1.Address()] = account1
-	st.accounts[account2.Address()] = account2
+	cache.UpdateAccount(account1)
+	cache.UpdateAccount(account2)
+	cache.Sync(st)
+	//st.accounts[account1.Address()] = account1
+	//st.accounts[account2.Address()] = account2
 
-	ourVm := NewVM(st, newParams(), acm.ZeroAddress, nil, logger)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	var gas uint64 = 100000
 
@@ -357,7 +852,7 @@ func TestMsgSender(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
-	contractCode, err := ourVm.Call(account1, account2, code, code, 0, &gas)
+	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
 	require.NoError(t, err)
 
 	// Not needed for this test (since contract code is passed as argument to vm), but this is what an execution
@@ -367,11 +862,111 @@ func TestMsgSender(t *testing.T) {
 	// Input is the function hash of `get()`
 	input, err := hex.DecodeString("6d4ce63c")
 
-	output, err := ourVm.Call(account1, account2, contractCode, input, 0, &gas)
+	output, err := ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
 	require.NoError(t, err)
 
 	assert.Equal(t, account1.Address().Word256().Bytes(), output)
 
+}
+
+func TestInvalid(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2 := newAccount(1, 0, 1)
+
+	var gas uint64 = 100000
+
+	bytecode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
+
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	expected := errors.ErrorCodeExecutionAborted.Error()
+	assert.EqualError(t, err, expected)
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+}
+
+func TestReturnDataSize(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	accountName := "account2addresstests"
+
+	callcode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, RETURN)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2, _ := makeAccountWithCode(cache, accountName, callcode)
+	cache.UpdateAccount(account2)
+
+	var gas uint64 = 100000
+
+	gas1, gas2 := byte(0x1), byte(0x1)
+	value := byte(0x69)
+	inOff, inSize := byte(0x0), byte(0x0) // no call data
+	retOff, retSize := byte(0x0), byte(0x0E)
+
+	bytecode := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1, inOff, PUSH1, value, PUSH20,
+		0x61, 0x63, 0x63, 0x6F, 0x75, 0x6E, 0x74, 0x32, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x74, 0x65,
+		0x73, 0x74, 0x73, PUSH2, gas1, gas2, CALL, RETURNDATASIZE, PUSH1, 0x00, MSTORE, PUSH1, 0x20, PUSH1, 0x00, RETURN)
+
+	expected := LeftPadBytes([]byte{0x0E}, 32)
+
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReturnDataCopy(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	accountName := "account2addresstests"
+
+	callcode := MustSplice(PUSH32, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61,
+		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, RETURN)
+
+	// Create accounts
+	account1 := newAccount(1)
+	account2, _ := makeAccountWithCode(cache, accountName, callcode)
+	cache.UpdateAccount(account2)
+
+	var gas uint64 = 100000
+
+	gas1, gas2 := byte(0x1), byte(0x1)
+	value := byte(0x69)
+	inOff, inSize := byte(0x0), byte(0x0) // no call data
+	retOff, retSize := byte(0x0), byte(0x0E)
+
+	bytecode := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1, inOff, PUSH1, value, PUSH20,
+		0x61, 0x63, 0x63, 0x6F, 0x75, 0x6E, 0x74, 0x32, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x74, 0x65,
+		0x73, 0x74, 0x73, PUSH2, gas1, gas2, CALL, RETURNDATASIZE, PUSH1, 0x00, PUSH1, 0x00, RETURNDATACOPY,
+		RETURNDATASIZE, PUSH1, 0x00, RETURN)
+
+	expected := []byte{0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65}
+
+	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+
+	assert.Equal(t, expected, output)
+
+	t.Logf("Output: %v Error: %v\n", output, err)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
@@ -401,8 +996,8 @@ func returnWord() []byte {
 }
 
 func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
-	code []byte) (acm.MutableAccount, acm.Address) {
-	address, _ := acm.AddressFromBytes([]byte(name))
+	code []byte) (acm.MutableAccount, crypto.Address) {
+	address, _ := crypto.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
 		Address:  address,
 		Balance:  9999999,
@@ -417,17 +1012,17 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr acm.Address,
+func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
 	eventCh := make(chan *evm_events.EventDataCall)
-	output, err := runVM(eventCh, ourVm, caller, callee, subscribeAddr, contractCode, gas)
+	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
 	if err != nil {
 		return output, err
 	}
 	select {
 	case eventDataCall := <-eventCh:
-		if eventDataCall.Exception != "" {
-			return output, errors.New(eventDataCall.Exception)
+		if eventDataCall.Exception != nil {
+			return output, eventDataCall.Exception
 		}
 		return output, nil
 	}
@@ -435,8 +1030,8 @@ func runVMWaitError(ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr 
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee acm.MutableAccount,
-	subscribeAddr acm.Address, contractCode []byte, gas uint64) ([]byte, error) {
+func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
 	emitter := event.NewEmitter(logging.NewNoopLogger())
@@ -450,7 +1045,7 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee a
 	evc := event.NewEventCache(emitter)
 	ourVm.SetPublisher(evc)
 	start := time.Now()
-	output, err := ourVm.Call(caller, callee, contractCode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(vmCache, caller, callee, contractCode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	evc.Flush()
@@ -458,7 +1053,7 @@ func runVM(eventCh chan<- *evm_events.EventDataCall, ourVm *VM, caller, callee a
 }
 
 // this is code to call another contract (hardcoded as addr)
-func callContractCode(addr acm.Address) []byte {
+func callContractCode(addr crypto.Address) []byte {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
@@ -515,7 +1110,7 @@ func TestBytecode(t *testing.T) {
 		[]byte{},
 		MustSplice(MustSplice(MustSplice())))
 
-	contractAccount := &acm.ConcreteAccount{Address: acm.AddressFromWord256(Int64ToWord256(102))}
+	contractAccount := &acm.ConcreteAccount{Address: crypto.AddressFromWord256(Int64ToWord256(102))}
 	addr := contractAccount.Address
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)

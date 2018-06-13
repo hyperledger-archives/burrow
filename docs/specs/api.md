@@ -984,23 +984,57 @@ Parameter:
 		chain_id:        <string>
 		height:          <number>
 		time:            <string>
-		fees:            <number>
 		num_txs:         <number>
-		last_block_hash: <string>
-		last_block_parts: {
-			total: <number>
-			hash:  <string>
+		last_block_id: {
+			hash:	<string>
+			parts: {
+				total:	<int>
+				hash:	<string>
+			}
 		}
-		state_hash: <string>
-	}
-	validation: {
-		commits: [<Commit>]
-		TODO those other two.
+		last_commit_hash:	<string>
+		data_hash:			<string>
+		validators_hast:	<string>
+		app_hash:			<string>
 	}
 	data: {
 		txs: [<Tx>]
-		TODO that other field.
 	}
+	last_commit: {
+		blockID: {
+			hash:	<string>
+			parts: {
+				total:	<int>
+				hash:	<string>
+			}
+		}
+		precommits: {
+			validator_address:	<string>
+			validator_index:	<int>
+			height:				<int>
+			round:				<int>
+			type:				<int>
+			block_id: {
+				hash:	<string>
+				parts: {
+					total:	<int>
+					hash:	<string>
+				}
+			}
+			signature: [<signature>]
+		}
+	}
+	id:		 <string>
+	jsonrpc: <string>
+}
+```
+
+The `Signature` object:
+
+```
+{
+	index:		<int>
+	signature:	<string>
 }
 ```
 

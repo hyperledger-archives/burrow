@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/config"
@@ -44,6 +45,7 @@ const (
 )
 
 // Enable logger output during tests
+//var debugLogging = true
 var debugLogging = false
 
 // We use this to wrap tests
@@ -79,9 +81,9 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 
 	validatorAccount := privateAccounts[0]
 	privValidator := validator.NewPrivValidatorMemory(validatorAccount, validatorAccount)
-	keyClient := mock.NewMockKeyClient(privateAccounts...)
-	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(),
-		nil, logger)
+	keyClient := mock.NewKeyClient(privateAccounts...)
+	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf, rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(),
+		nil, nil, logger)
 	if err != nil {
 		panic(err)
 	}

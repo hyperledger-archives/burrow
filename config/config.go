@@ -5,11 +5,11 @@ import (
 
 	"context"
 
-	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
@@ -19,13 +19,13 @@ import (
 )
 
 const DefaultBurrowConfigTOMLFileName = "burrow.toml"
-const DefaultBurrowConfigJSONEnvironmentVariable = "BURROW_CONFIG_JSON"
+const DefaultBurrowConfigEnvironmentVariable = "BURROW_CONFIG_JSON"
 const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
 	// Set on startup
-	ValidatorAddress    *acm.Address `json:",omitempty" toml:",omitempty"`
-	ValidatorPassphrase *string      `json:",omitempty" toml:",omitempty"`
+	ValidatorAddress    *crypto.Address `json:",omitempty" toml:",omitempty"`
+	ValidatorPassphrase *string         `json:",omitempty" toml:",omitempty"`
 	// From config file
 	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
 	Tendermint *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
@@ -55,12 +55,27 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not generate logger from logging config: %v", err)
 	}
-	keyClient := keys.NewKeyClient(conf.Keys.URL, logger)
-	val, err := keys.Addressable(keyClient, *conf.ValidatorAddress)
+	var keyClient keys.KeyClient
+	var keyStore keys.KeyStore
+	if conf.Keys.RemoteAddress != "" {
+		keyClient, err = keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logger)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		keyStore = keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions, logger)
+		keyClient = keys.NewLocalKeyClient(keyStore, logger)
+	}
+
+	val, err := keys.AddressableSigner(keyClient, *conf.ValidatorAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-	privValidator := validator.NewPrivValidatorMemory(val, keys.Signer(keyClient, val.Address()))
+	signer, err := keys.AddressableSigner(keyClient, val.Address())
+	if err != nil {
+		return nil, err
+	}
+	privValidator := validator.NewPrivValidatorMemory(val, signer)
 
 	var exeOptions []execution.ExecutionOption
 	if conf.Execution != nil {
@@ -70,8 +85,8 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		}
 	}
 
-	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		exeOptions, logger)
+	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, conf.Keys,
+		&keyStore, exeOptions, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

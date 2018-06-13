@@ -3,6 +3,7 @@ package mempool
 import (
 	"bytes"
 	"container/list"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -48,7 +49,13 @@ TODO: Better handle abci client errors. (make it automatically handle connection
 
 */
 
-var ErrTxInCache = errors.New("Tx already exists in cache")
+var (
+	// ErrTxInCache is returned to the client if we saw tx earlier
+	ErrTxInCache = errors.New("Tx already exists in cache")
+
+	// ErrMempoolIsFull means Tendermint & an application can't handle that much load
+	ErrMempoolIsFull = errors.New("Mempool is full")
+)
 
 // Mempool is an ordered in-memory pool for transactions before they are proposed in a consensus
 // round. Transaction validity is checked using the CheckTx abci message before the transaction is
@@ -65,8 +72,8 @@ type Mempool struct {
 	rechecking           int32           // for re-checking filtered txs on Update()
 	recheckCursor        *clist.CElement // next expected response
 	recheckEnd           *clist.CElement // re-checking stops here
-	notifiedTxsAvailable bool            // true if fired on txsAvailable for this height
-	txsAvailable         chan int64      // fires the next height once for each height, when the mempool is not empty
+	notifiedTxsAvailable bool
+	txsAvailable         chan int64 // fires the next height once for each height, when the mempool is not empty
 
 	// Keep a cache of already-seen txs.
 	// This reduces the pressure on the proxyApp.
@@ -79,7 +86,6 @@ type Mempool struct {
 }
 
 // NewMempool returns a new Mempool with the given configuration and connection to an application.
-// TODO: Extract logger into arguments.
 func NewMempool(config *cfg.MempoolConfig, proxyAppConn proxy.AppConnMempool, height int64) *Mempool {
 	mempool := &Mempool{
 		config:        config,
@@ -201,11 +207,14 @@ func (mem *Mempool) CheckTx(tx types.Tx, cb func(*abci.Response)) (err error) {
 	mem.proxyMtx.Lock()
 	defer mem.proxyMtx.Unlock()
 
+	if mem.Size() >= mem.config.Size {
+		return ErrMempoolIsFull
+	}
+
 	// CACHE
-	if mem.cache.Exists(tx) {
+	if !mem.cache.Push(tx) {
 		return ErrTxInCache
 	}
-	mem.cache.Push(tx)
 	// END CACHE
 
 	// WAL
@@ -255,16 +264,14 @@ func (mem *Mempool) resCbNormal(req *abci.Request, res *abci.Response) {
 				tx:      tx,
 			}
 			mem.txs.PushBack(memTx)
-			mem.logger.Info("Added good transaction", "tx", tx, "res", r)
+			mem.logger.Info("Added good transaction", "tx", fmt.Sprintf("%X", types.Tx(tx).Hash()), "res", r)
 			mem.notifyTxsAvailable()
 		} else {
 			// ignore bad transaction
-			mem.logger.Info("Rejected bad transaction", "tx", tx, "res", r)
+			mem.logger.Info("Rejected bad transaction", "tx", fmt.Sprintf("%X", types.Tx(tx).Hash()), "res", r)
 
 			// remove from cache (it might be good later)
 			mem.cache.Remove(tx)
-
-			// TODO: handle other retcodes
 		}
 	default:
 		// ignore other messages
@@ -321,8 +328,12 @@ func (mem *Mempool) notifyTxsAvailable() {
 		panic("notified txs available but mempool is empty!")
 	}
 	if mem.txsAvailable != nil && !mem.notifiedTxsAvailable {
+		select {
+		case mem.txsAvailable <- mem.height + 1:
+		default:
+		}
+
 		mem.notifiedTxsAvailable = true
-		mem.txsAvailable <- mem.height + 1
 	}
 }
 
@@ -375,7 +386,7 @@ func (mem *Mempool) Update(height int64, txs types.Txs) error {
 	// Recheck mempool txs if any txs were committed in the block
 	// NOTE/XXX: in some apps a tx could be invalidated due to EndBlock,
 	//	so we really still do need to recheck, but this is for debugging
-	if mem.config.Recheck && (mem.config.RecheckEmpty || len(txs) > 0) {
+	if mem.config.Recheck && (mem.config.RecheckEmpty || len(goodTxs) > 0) {
 		mem.logger.Info("Recheck txs", "numtxs", len(goodTxs), "height", height)
 		mem.recheckTxs(goodTxs)
 		// At this point, mem.txs are being rechecked.
@@ -460,14 +471,6 @@ func (cache *txCache) Reset() {
 	cache.map_ = make(map[string]struct{}, cache.size)
 	cache.list.Init()
 	cache.mtx.Unlock()
-}
-
-// Exists returns true if the given tx is cached.
-func (cache *txCache) Exists(tx types.Tx) bool {
-	cache.mtx.Lock()
-	_, exists := cache.map_[string(tx)]
-	cache.mtx.Unlock()
-	return exists
 }
 
 // Push adds the given tx to the txCache. It returns false if tx is already in the cache.

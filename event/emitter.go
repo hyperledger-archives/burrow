@@ -24,8 +24,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
+	"github.com/tendermint/tendermint/libs/pubsub"
 	"github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/pubsub"
 )
 
 const DefaultEventBufferCapacity = 2 << 10
@@ -40,6 +40,12 @@ type Subscribable interface {
 
 type Publisher interface {
 	Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error
+}
+
+type PublisherFunc func(ctx context.Context, message interface{}, tags map[string]interface{}) error
+
+func (pf PublisherFunc) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+	return pf(ctx, message, tags)
 }
 
 type Emitter interface {
@@ -72,7 +78,7 @@ func (em *emitter) Shutdown(ctx context.Context) error {
 
 // Publisher
 func (em *emitter) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
-	return em.pubsubServer.PublishWithTags(ctx, message, tags)
+	return em.pubsubServer.PublishWithTags(ctx, message, tagMap(tags))
 }
 
 // Subscribable
@@ -120,4 +126,12 @@ func GenerateSubscriptionID() (string, error) {
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
+}
+
+func tagMap(tags map[string]interface{}) pubsub.TagMap {
+	mp := make(map[string]string, len(tags))
+	for k, v := range tags {
+		mp[k] = structure.StringifyKey(v)
+	}
+	return pubsub.NewTagMap(mp)
 }

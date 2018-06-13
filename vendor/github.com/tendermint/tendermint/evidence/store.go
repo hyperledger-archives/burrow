@@ -3,7 +3,6 @@ package evidence
 import (
 	"fmt"
 
-	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
 )
@@ -18,10 +17,6 @@ Impl:
 	- First commit atomically in outqueue, pending, lookup.
 	- Once broadcast, remove from outqueue. No need to sync
 	- Once committed, atomically remove from pending and update lookup.
-		- TODO: If we crash after committed but before removing/updating,
-			we'll be stuck broadcasting evidence we never know we committed.
-			so either share the state db and atomically MarkCommitted
-			with ApplyBlock, or check all outqueue/pending on Start to see if its committed
 
 Schema for indexing evidence (note you need both height and hash to find a piece of evidence):
 
@@ -104,7 +99,10 @@ func (store *EvidenceStore) ListEvidence(prefixKey string) (evidence []types.Evi
 		val := iter.Value()
 
 		var ei EvidenceInfo
-		wire.ReadBinaryBytes(val, &ei)
+		err := cdc.UnmarshalBinaryBare(val, &ei)
+		if err != nil {
+			panic(err)
+		}
 		evidence = append(evidence, ei.Evidence)
 	}
 	return evidence
@@ -119,7 +117,10 @@ func (store *EvidenceStore) GetEvidence(height int64, hash []byte) *EvidenceInfo
 		return nil
 	}
 	var ei EvidenceInfo
-	wire.ReadBinaryBytes(val, &ei)
+	err := cdc.UnmarshalBinaryBare(val, &ei)
+	if err != nil {
+		panic(err)
+	}
 	return &ei
 }
 
@@ -137,7 +138,7 @@ func (store *EvidenceStore) AddNewEvidence(evidence types.Evidence, priority int
 		Priority:  priority,
 		Evidence:  evidence,
 	}
-	eiBytes := wire.BinaryBytes(ei)
+	eiBytes := cdc.MustMarshalBinaryBare(ei)
 
 	// add it to the store
 	key := keyOutqueue(evidence, priority)
@@ -159,7 +160,7 @@ func (store *EvidenceStore) MarkEvidenceAsBroadcasted(evidence types.Evidence) {
 	store.db.Delete(key)
 }
 
-// MarkEvidenceAsPending removes evidence from pending and outqueue and sets the state to committed.
+// MarkEvidenceAsCommitted removes evidence from pending and outqueue and sets the state to committed.
 func (store *EvidenceStore) MarkEvidenceAsCommitted(evidence types.Evidence) {
 	// if its committed, its been broadcast
 	store.MarkEvidenceAsBroadcasted(evidence)
@@ -171,7 +172,7 @@ func (store *EvidenceStore) MarkEvidenceAsCommitted(evidence types.Evidence) {
 	ei.Committed = true
 
 	lookupKey := keyLookup(evidence)
-	store.db.SetSync(lookupKey, wire.BinaryBytes(ei))
+	store.db.SetSync(lookupKey, cdc.MustMarshalBinaryBare(ei))
 }
 
 //---------------------------------------------------
@@ -181,6 +182,9 @@ func (store *EvidenceStore) getEvidenceInfo(evidence types.Evidence) EvidenceInf
 	key := keyLookup(evidence)
 	var ei EvidenceInfo
 	b := store.db.Get(key)
-	wire.ReadBinaryBytes(b, &ei)
+	err := cdc.UnmarshalBinaryBare(b, &ei)
+	if err != nil {
+		panic(err)
+	}
 	return ei
 }

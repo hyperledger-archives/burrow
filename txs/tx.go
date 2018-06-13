@@ -16,198 +16,137 @@ package txs
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/tendermint/go-wire/data"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/txs/payload"
 	"golang.org/x/crypto/ripemd160"
 )
 
-var (
-	ErrTxInvalidAddress    = errors.New("error invalid address")
-	ErrTxDuplicateAddress  = errors.New("error duplicate address")
-	ErrTxInvalidAmount     = errors.New("error invalid amount")
-	ErrTxInsufficientFunds = errors.New("error insufficient funds")
-	ErrTxUnknownPubKey     = errors.New("error unknown pubkey")
-	ErrTxInvalidPubKey     = errors.New("error invalid pubkey")
-	ErrTxInvalidSignature  = errors.New("error invalid signature")
-)
-
-/*
-Tx (Transaction) is an atomic operation on the ledger state.
-
-Account Txs:
- - SendTx         Send coins to address
- - CallTx         Send a msg to a contract that runs in the vm
- - NameTx	  Store some value under a name in the global namereg
-
-Validation Txs:
- - BondTx         New validator posts a bond
- - UnbondTx       Validator leaves
-
-Admin Txs:
- - PermissionsTx
-*/
-
-// Types of Tx implementations
-const (
-	// Account transactions
-	TxTypeSend = byte(0x01)
-	TxTypeCall = byte(0x02)
-	TxTypeName = byte(0x03)
-
-	// Validation transactions
-	TxTypeBond   = byte(0x11)
-	TxTypeUnbond = byte(0x12)
-	TxTypeRebond = byte(0x13)
-
-	// Admin transactions
-	TxTypePermissions = byte(0x1f)
-)
-
-var mapper = data.NewMapper(Wrapper{}).
-	RegisterImplementation(&SendTx{}, "send_tx", TxTypeSend).
-	RegisterImplementation(&CallTx{}, "call_tx", TxTypeCall).
-	RegisterImplementation(&NameTx{}, "name_tx", TxTypeName).
-	RegisterImplementation(&BondTx{}, "bond_tx", TxTypeBond).
-	RegisterImplementation(&UnbondTx{}, "unbond_tx", TxTypeUnbond).
-	RegisterImplementation(&RebondTx{}, "rebond_tx", TxTypeRebond).
-	RegisterImplementation(&PermissionsTx{}, "permissions_tx", TxTypePermissions)
-
-	//-----------------------------------------------------------------------------
-
-// TODO: replace with sum-type struct like ResultEvent
-type Tx interface {
-	WriteSignBytes(chainID string, w io.Writer, n *int, err *error)
-	String() string
-	GetInputs() []TxInput
-	Hash(chainID string) []byte
-	Sign(chainID string, signingAccounts ...acm.AddressableSigner) error
+// Tx is the canonical object that we serialise to produce the SignBytes that we sign
+type Tx struct {
+	ChainID string
+	payload.Payload
+	txHash []byte
 }
 
-type Encoder interface {
-	EncodeTx(tx Tx) ([]byte, error)
-}
-
-type Decoder interface {
-	DecodeTx(txBytes []byte) (Tx, error)
-}
-
-// BroadcastTx or Transact
-type Receipt struct {
-	TxHash          []byte
-	CreatesContract bool
-	ContractAddress acm.Address
-}
-
-type Wrapper struct {
-	Tx `json:"unwrap"`
-}
-
-// Wrap the Tx in a struct that allows for go-wire JSON serialisation
-func Wrap(tx Tx) Wrapper {
-	if txWrapped, ok := tx.(Wrapper); ok {
-		return txWrapped
+// Wrap the Payload in Tx required for signing and serialisation
+func NewTx(payload payload.Payload) *Tx {
+	switch t := payload.(type) {
+	case Tx:
+		return &t
+	case *Tx:
+		return t
 	}
-	return Wrapper{
+	return &Tx{
+		Payload: payload,
+	}
+}
+
+// Enclose this Tx in an Envelope to be signed
+func (tx *Tx) Enclose() *Envelope {
+	return &Envelope{
 		Tx: tx,
 	}
 }
 
-// A serialisation wrapper that is itself a Tx
-func (txw Wrapper) WriteSignBytes(chainID string, w io.Writer, n *int, err *error) {
-	txw.Tx.WriteSignBytes(chainID, w, n, err)
-}
-
-func (txw Wrapper) MarshalJSON() ([]byte, error) {
-	return mapper.ToJSON(txw.Tx)
-}
-
-func (txw *Wrapper) UnmarshalJSON(data []byte) (err error) {
-	parsed, err := mapper.FromJSON(data)
-	if err == nil && parsed != nil {
-		txw.Tx = parsed.(Tx)
+// Encloses in Envelope and signs envelope
+func (tx *Tx) Sign(signingAccounts ...acm.AddressableSigner) (*Envelope, error) {
+	env := tx.Enclose()
+	err := env.Sign(signingAccounts...)
+	if err != nil {
+		return nil, err
 	}
-	return err
+	return env, nil
 }
 
-// Get the inner Tx that this Wrapper wraps
-func (txw *Wrapper) Unwrap() Tx {
-	return txw.Tx
-}
-
-// Avoid re-hashing the same in-memory Tx
-type txHashMemoizer struct {
-	txHashBytes []byte
-	chainID     string
-}
-
-func (thm *txHashMemoizer) hash(chainID string, tx Tx) []byte {
-	if thm.txHashBytes == nil || thm.chainID != chainID {
-		thm.chainID = chainID
-		thm.txHashBytes = TxHash(chainID, tx)
+// Generate SignBytes, panicking on any failure
+func (tx *Tx) MustSignBytes() []byte {
+	bs, err := tx.SignBytes()
+	if err != nil {
+		panic(err)
 	}
-	return thm.txHashBytes
+	return bs
 }
 
-func TxHash(chainID string, tx Tx) []byte {
-	signBytes := acm.SignBytes(chainID, tx)
+// Produces the canonical SignBytes (the Tx message that will be signed) for a Tx
+func (tx *Tx) SignBytes() ([]byte, error) {
+	bs, err := json.Marshal(tx)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
+	}
+	return bs, nil
+}
+
+// Serialisation intermediate for switching on type
+type wrapper struct {
+	ChainID string
+	Type    payload.Type
+	Payload json.RawMessage
+}
+
+func (tx *Tx) MarshalJSON() ([]byte, error) {
+	bs, err := json.Marshal(tx.Payload)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(wrapper{
+		ChainID: tx.ChainID,
+		Type:    tx.Type(),
+		Payload: bs,
+	})
+}
+
+func (tx *Tx) UnmarshalJSON(data []byte) error {
+	w := new(wrapper)
+	err := json.Unmarshal(data, w)
+	if err != nil {
+		return err
+	}
+	tx.ChainID = w.ChainID
+	// Now we know the Type we can deserialise the Payload
+	tx.Payload = payload.New(w.Type)
+	return json.Unmarshal(w.Payload, tx.Payload)
+}
+
+// Generate a Hash for this transaction based on the SignBytes. The hash is memoized over the lifetime
+// of the Tx so repeated calls to Hash() are effectively free
+func (tx *Tx) Hash() []byte {
+	if tx.txHash == nil {
+		return tx.Rehash()
+	}
+	return tx.txHash
+}
+
+// Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
+func (tx *Tx) Rehash() []byte {
 	hasher := ripemd160.New()
-	hasher.Write(signBytes)
-	// Calling Sum(nil) just gives us the digest with nothing prefixed
-	return hasher.Sum(nil)
+	hasher.Write(tx.MustSignBytes())
+	tx.txHash = hasher.Sum(nil)
+	return tx.txHash
 }
 
-func GenerateReceipt(chainId string, tx Tx) Receipt {
-	receipt := Receipt{
-		TxHash: tx.Hash(chainId),
+// BroadcastTx or Transaction receipt
+type Receipt struct {
+	TxHash          []byte
+	CreatesContract bool
+	ContractAddress crypto.Address
+}
+
+// Generate a transaction Receipt containing the Tx hash and other information if the Tx is call.
+// Returned by ABCI methods.
+func (tx *Tx) GenerateReceipt() *Receipt {
+	receipt := &Receipt{
+		TxHash: tx.Hash(),
 	}
-	if callTx, ok := tx.(*CallTx); ok {
+	if callTx, ok := tx.Payload.(*payload.CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
-			receipt.ContractAddress = acm.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
 		} else {
 			receipt.ContractAddress = *callTx.Address
 		}
 	}
 	return receipt
-}
-
-type ErrTxInvalidString struct {
-	Msg string
-}
-
-func (e ErrTxInvalidString) Error() string {
-	return e.Msg
-}
-
-type ErrTxInvalidSequence struct {
-	Got      uint64
-	Expected uint64
-}
-
-func (e ErrTxInvalidSequence) Error() string {
-	return fmt.Sprintf("Error invalid sequence. Got %d, expected %d", e.Got, e.Expected)
-}
-
-//--------------------------------------------------------------------------------
-
-func copyInputs(inputs []*TxInput) []TxInput {
-	inputsCopy := make([]TxInput, len(inputs))
-	for i, input := range inputs {
-		inputsCopy[i] = *input
-	}
-	return inputsCopy
-}
-
-// Contract: This function is deterministic and completely reversible.
-func jsonEscape(str string) string {
-	// TODO: escape without panic
-	escapedBytes, err := json.Marshal(str)
-	if err != nil {
-		panic(fmt.Errorf("error json-escaping string: %s", str))
-	}
-	return string(escapedBytes)
 }

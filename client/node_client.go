@@ -18,25 +18,26 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
-	tendermint_client "github.com/hyperledger/burrow/rpc/tm/client"
+	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
+	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/tendermint/rpc/lib/client"
 )
 
 type NodeClient interface {
-	Broadcast(transaction txs.Tx) (*txs.Receipt, error)
+	Broadcast(transaction *txs.Envelope) (*txs.Receipt, error)
 	DeriveWebsocketClient() (nodeWsClient NodeWebsocketClient, err error)
 
 	Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,
 		LatestBlockHeight uint64, LatestBlockTime int64, err error)
-	GetAccount(address acm.Address) (acm.Account, error)
-	QueryContract(callerAddress, calleeAddress acm.Address, data []byte) (ret []byte, gasUsed uint64, err error)
-	QueryContractCode(address acm.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
+	GetAccount(address crypto.Address) (acm.Account, error)
+	QueryContract(callerAddress, calleeAddress crypto.Address, data []byte) (ret []byte, gasUsed uint64, err error)
+	QueryContractCode(address crypto.Address, code, data []byte) (ret []byte, gasUsed uint64, err error)
 
-	DumpStorage(address acm.Address) (storage *rpc.ResultDumpStorage, err error)
-	GetName(name string) (owner acm.Address, data string, expirationBlock uint64, err error)
+	DumpStorage(address crypto.Address) (storage *rpc.ResultDumpStorage, err error)
+	GetName(name string) (owner crypto.Address, data string, expirationBlock uint64, err error)
 	ListValidators() (blockHeight uint64, bondedValidators, unbondingValidators []acm.Validator, err error)
 
 	// Logging context for this NodeClient
@@ -46,8 +47,7 @@ type NodeClient interface {
 type NodeWebsocketClient interface {
 	Subscribe(eventId string) error
 	Unsubscribe(eventId string) error
-
-	WaitForConfirmation(tx txs.Tx, chainId string, inputAddr acm.Address) (chan Confirmation, error)
+	WaitForConfirmation(tx *txs.Envelope, inputAddr crypto.Address) (chan Confirmation, error)
 	Close()
 }
 
@@ -73,9 +73,9 @@ func NewBurrowNodeClient(rpcString string, logger *logging.Logger) *burrowNodeCl
 //------------------------------------------------------------------------------------
 // broadcast to blockchain node
 
-func (burrowNodeClient *burrowNodeClient) Broadcast(tx txs.Tx) (*txs.Receipt, error) {
-	client := rpcclient.NewURIClient(burrowNodeClient.broadcastRPC)
-	receipt, err := tendermint_client.BroadcastTx(client, tx)
+func (burrowNodeClient *burrowNodeClient) Broadcast(txEnv *txs.Envelope) (*txs.Receipt, error) {
+	client := rpcClient.NewURIClient(burrowNodeClient.broadcastRPC)
+	receipt, err := tmClient.BroadcastTx(client, txEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 		"websocket address", wsAddr,
 		"endpoint", "/websocket",
 	)
-	wsClient := rpcclient.NewWSClient(wsAddr, "/websocket")
+	wsClient := rpcClient.NewWSClient(wsAddr, "/websocket")
 	if err = wsClient.Start(); err != nil {
 		return nil, err
 	}
@@ -123,8 +123,8 @@ func (burrowNodeClient *burrowNodeClient) DeriveWebsocketClient() (nodeWsClient 
 func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, ValidatorPublicKey []byte,
 	LatestBlockHash []byte, LatestBlockHeight uint64, LatestBlockTime int64, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	res, err := tendermint_client.Status(client)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	res, err := tmClient.Status(client)
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to get status: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
@@ -133,7 +133,7 @@ func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, Validato
 
 	// unwrap return results
 	GenesisHash = res.GenesisHash
-	ValidatorPublicKey = res.PubKey.Bytes()
+	ValidatorPublicKey = res.PubKey.RawBytes()
 	LatestBlockHash = res.LatestBlockHash
 	LatestBlockHeight = res.LatestBlockHeight
 	LatestBlockTime = res.LatestBlockTime
@@ -141,8 +141,8 @@ func (burrowNodeClient *burrowNodeClient) Status() (GenesisHash []byte, Validato
 }
 
 func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, GenesisHash []byte, err error) {
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	chainIdResult, err := tendermint_client.ChainId(client)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	chainIdResult, err := tmClient.ChainId(client)
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to get chain id: %s",
 			burrowNodeClient.broadcastRPC, err.Error())
@@ -158,11 +158,11 @@ func (burrowNodeClient *burrowNodeClient) ChainId() (ChainName, ChainId string, 
 
 // QueryContract executes the contract code at address with the given data
 // NOTE: there is no check on the caller;
-func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress acm.Address,
+func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAddress crypto.Address,
 	data []byte) (ret []byte, gasUsed uint64, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	callResult, err := tendermint_client.Call(client, callerAddress, calleeAddress, data)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	callResult, err := tmClient.Call(client, callerAddress, calleeAddress, data)
 	if err != nil {
 		err = fmt.Errorf("error (%v) connnecting to node (%s) to query contract at (%s) with data (%X)",
 			err.Error(), burrowNodeClient.broadcastRPC, calleeAddress, data)
@@ -172,13 +172,13 @@ func (burrowNodeClient *burrowNodeClient) QueryContract(callerAddress, calleeAdd
 }
 
 // QueryContractCode executes the contract code at address with the given data but with provided code
-func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address, code,
+func (burrowNodeClient *burrowNodeClient) QueryContractCode(address crypto.Address, code,
 	data []byte) (ret []byte, gasUsed uint64, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
 	// TODO: [ben] Call and CallCode have an inconsistent signature; it makes sense for both to only
 	// have a single address that is the contract to query.
-	callResult, err := tendermint_client.CallCode(client, address, code, data)
+	callResult, err := tmClient.CallCode(client, address, code, data)
 	if err != nil {
 		err = fmt.Errorf("error connnecting to node (%s) to query contract code at (%s) with data (%X) and code (%X): %v",
 			burrowNodeClient.broadcastRPC, address, data, code, err.Error())
@@ -188,16 +188,16 @@ func (burrowNodeClient *burrowNodeClient) QueryContractCode(address acm.Address,
 }
 
 // GetAccount returns a copy of the account
-func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.Account, error) {
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	account, err := tendermint_client.GetAccount(client, address)
+func (burrowNodeClient *burrowNodeClient) GetAccount(address crypto.Address) (acm.Account, error) {
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	account, err := tmClient.GetAccount(client, address)
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to fetch account (%s): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
 		return nil, err
 	}
 	if account == nil {
-		err = fmt.Errorf("unknown account %X at node (%s)", address, burrowNodeClient.broadcastRPC)
+		err = fmt.Errorf("unknown account %s at node (%s)", address, burrowNodeClient.broadcastRPC)
 		return nil, err
 	}
 
@@ -205,9 +205,9 @@ func (burrowNodeClient *burrowNodeClient) GetAccount(address acm.Address) (acm.A
 }
 
 // DumpStorage returns the full storage for an acm.
-func (burrowNodeClient *burrowNodeClient) DumpStorage(address acm.Address) (*rpc.ResultDumpStorage, error) {
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	resultStorage, err := tendermint_client.DumpStorage(client, address)
+func (burrowNodeClient *burrowNodeClient) DumpStorage(address crypto.Address) (*rpc.ResultDumpStorage, error) {
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	resultStorage, err := tmClient.DumpStorage(client, address)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to node (%s) to get storage for account (%X): %s",
 			burrowNodeClient.broadcastRPC, address, err.Error())
@@ -218,15 +218,15 @@ func (burrowNodeClient *burrowNodeClient) DumpStorage(address acm.Address) (*rpc
 //--------------------------------------------------------------------------------------------
 // Name registry
 
-func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Address, data string,
+func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner crypto.Address, data string,
 	expirationBlock uint64, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	entryResult, err := tendermint_client.GetName(client, name)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	entryResult, err := tmClient.GetName(client, name)
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to get name registrar entry for name (%s)",
 			burrowNodeClient.broadcastRPC, name)
-		return acm.ZeroAddress, "", 0, err
+		return crypto.ZeroAddress, "", 0, err
 	}
 	// unwrap return results
 	owner = entryResult.Owner
@@ -240,8 +240,8 @@ func (burrowNodeClient *burrowNodeClient) GetName(name string) (owner acm.Addres
 func (burrowNodeClient *burrowNodeClient) ListValidators() (blockHeight uint64,
 	bondedValidators, unbondingValidators []acm.Validator, err error) {
 
-	client := rpcclient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
-	validatorsResult, err := tendermint_client.ListValidators(client)
+	client := rpcClient.NewJSONRPCClient(burrowNodeClient.broadcastRPC)
+	validatorsResult, err := tmClient.ListValidators(client)
 	if err != nil {
 		err = fmt.Errorf("error connecting to node (%s) to get validators", burrowNodeClient.broadcastRPC)
 		return

@@ -1,23 +1,21 @@
 package spec
 
 import (
-	"fmt"
-
 	"sort"
 
-	"github.com/hyperledger/burrow/permission"
+	permission "github.com/hyperledger/burrow/permission/types"
 )
 
 // Files here can be used as starting points for building various 'chain types' but are otherwise
 // a fairly unprincipled collection of GenesisSpecs that we find useful in testing and development
 
-func FullAccount(index int) GenesisSpec {
+func FullAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(99999999999999)
 	amountBonded := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:         fmt.Sprintf("Full_%v", index),
+			Name:         name,
 			Amount:       &amount,
 			AmountBonded: &amountBonded,
 			Permissions:  []string{permission.AllString},
@@ -26,12 +24,12 @@ func FullAccount(index int) GenesisSpec {
 	}
 }
 
-func RootAccount(index int) GenesisSpec {
+func RootAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(99999999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:        fmt.Sprintf("Root_%v", index),
+			Name:        name,
 			Amount:      &amount,
 			Permissions: []string{permission.AllString},
 		},
@@ -39,12 +37,12 @@ func RootAccount(index int) GenesisSpec {
 	}
 }
 
-func ParticipantAccount(index int) GenesisSpec {
+func ParticipantAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:   fmt.Sprintf("Participant_%v", index),
+			Name:   name,
 			Amount: &amount,
 			Permissions: []string{permission.SendString, permission.CallString, permission.NameString,
 				permission.HasRoleString},
@@ -52,12 +50,12 @@ func ParticipantAccount(index int) GenesisSpec {
 	}
 }
 
-func DeveloperAccount(index int) GenesisSpec {
+func DeveloperAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:   fmt.Sprintf("Developer_%v", index),
+			Name:   name,
 			Amount: &amount,
 			Permissions: []string{permission.SendString, permission.CallString, permission.CreateContractString,
 				permission.CreateAccountString, permission.NameString, permission.HasRoleString,
@@ -66,13 +64,13 @@ func DeveloperAccount(index int) GenesisSpec {
 	}
 }
 
-func ValidatorAccount(index int) GenesisSpec {
+func ValidatorAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(9999999999)
 	amountBonded := amount - 1
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:         fmt.Sprintf("Validator_%v", index),
+			Name:         name,
 			Amount:       &amount,
 			AmountBonded: &amountBonded,
 			Permissions:  []string{permission.BondString},
@@ -83,7 +81,7 @@ func ValidatorAccount(index int) GenesisSpec {
 func MergeGenesisSpecs(genesisSpecs ...GenesisSpec) GenesisSpec {
 	mergedGenesisSpec := GenesisSpec{}
 	// We will deduplicate and merge global permissions flags
-	permSet := make(map[string]bool)
+	permSet := make(map[string]struct{})
 
 	for _, genesisSpec := range genesisSpecs {
 		// We'll overwrite chain name for later specs
@@ -97,11 +95,11 @@ func MergeGenesisSpecs(genesisSpecs ...GenesisSpec) GenesisSpec {
 		}
 
 		for _, permString := range genesisSpec.GlobalPermissions {
-			permSet[permString] = true
+			permSet[permString] = struct{}{}
 		}
 
 		mergedGenesisSpec.Salt = append(mergedGenesisSpec.Salt, genesisSpec.Salt...)
-		mergedGenesisSpec.Accounts = append(mergedGenesisSpec.Accounts, genesisSpec.Accounts...)
+		mergedGenesisSpec.Accounts = mergeAccounts(mergedGenesisSpec.Accounts, genesisSpec.Accounts)
 	}
 
 	mergedGenesisSpec.GlobalPermissions = make([]string, 0, len(permSet))
@@ -114,4 +112,74 @@ func MergeGenesisSpecs(genesisSpecs ...GenesisSpec) GenesisSpec {
 	sort.Strings(mergedGenesisSpec.GlobalPermissions)
 
 	return mergedGenesisSpec
+}
+
+// Merge accounts by adding to base list or updating previously named account
+func mergeAccounts(bases, overrides []TemplateAccount) []TemplateAccount {
+	indexOfBase := make(map[string]int, len(bases))
+	for i, ta := range bases {
+		if ta.Name != "" {
+			indexOfBase[ta.Name] = i
+		}
+	}
+
+	for _, override := range overrides {
+		if override.Name != "" {
+			if i, ok := indexOfBase[override.Name]; ok {
+				bases[i] = mergeAccount(bases[i], override)
+				continue
+			}
+		}
+		bases = append(bases, override)
+	}
+	return bases
+}
+
+func mergeAccount(base, override TemplateAccount) TemplateAccount {
+	if override.Address != nil {
+		base.Address = override.Address
+	}
+	if override.PublicKey != nil {
+		base.PublicKey = override.PublicKey
+	}
+	if override.Name != "" {
+		base.Name = override.Name
+	}
+
+	base.Amount = addUint64Pointers(base.Amount, override.Amount)
+	base.AmountBonded = addUint64Pointers(base.AmountBonded, override.AmountBonded)
+
+	base.Permissions = mergeStrings(base.Permissions, override.Permissions)
+	base.Roles = mergeStrings(base.Roles, override.Roles)
+	return base
+}
+
+func mergeStrings(as, bs []string) []string {
+	var strs []string
+	strSet := make(map[string]struct{})
+	for _, a := range as {
+		strSet[a] = struct{}{}
+	}
+	for _, b := range bs {
+		strSet[b] = struct{}{}
+	}
+	for str := range strSet {
+		strs = append(strs, str)
+	}
+	sort.Strings(strs)
+	return strs
+}
+
+func addUint64Pointers(a, b *uint64) *uint64 {
+	if a == nil && b == nil {
+		return nil
+	}
+	amt := uint64(0)
+	if a != nil {
+		amt += *a
+	}
+	if b != nil {
+		amt += *b
+	}
+	return &amt
 }

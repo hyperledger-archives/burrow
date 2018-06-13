@@ -5,8 +5,8 @@ import (
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/tendermint/tendermint/libs/pubsub"
 	tm_types "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/pubsub"
 )
 
 // Publishes all tendermint events available on subscribable to publisher

@@ -1,12 +1,18 @@
 package keys
 
 type KeysConfig struct {
-	URL string
+	GRPCServiceEnabled      bool
+	AllowBadFilePermissions bool
+	RemoteAddress           string
+	KeysDirectory           string
 }
 
 func DefaultKeysConfig() *KeysConfig {
 	return &KeysConfig{
 		// Default Monax keys port
-		URL: "http://localhost:4767",
+		GRPCServiceEnabled:      true,
+		AllowBadFilePermissions: false,
+		RemoteAddress:           "",
+		KeysDirectory:           DefaultKeysDir,
 	}
 }

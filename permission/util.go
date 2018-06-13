@@ -45,7 +45,7 @@ func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool
 	basePermissions := ZeroBasePermissions
 
 	for permissionName, value := range permissions {
-		permissionsFlag, err := PermStringToFlag(permissionName)
+		permissionsFlag, err := types.PermStringToFlag(permissionName)
 		if err != nil {
 			return basePermissions, err
 		}
@@ -74,7 +74,7 @@ func BasePermissionsFromStringList(permissions []string) (types.BasePermissions,
 func PermFlagFromStringList(permissions []string) (types.PermFlag, error) {
 	var permFlag types.PermFlag
 	for _, perm := range permissions {
-		flag, err := PermStringToFlag(perm)
+		flag, err := types.PermStringToFlag(perm)
 		if err != nil {
 			return permFlag, err
 		}
@@ -92,15 +92,15 @@ func BasePermissionsToStringList(basePermissions types.BasePermissions) ([]strin
 // Creates a list of individual permission flag strings from a possibly composite PermFlag
 // by projecting out each bit and adding its permission string if it is set
 func PermFlagToStringList(permFlag types.PermFlag) ([]string, error) {
-	permStrings := make([]string, 0, NumPermissions)
-	if permFlag > AllPermFlags {
+	permStrings := make([]string, 0, types.NumPermissions)
+	if permFlag > types.AllPermFlags {
 		return nil, fmt.Errorf("resultant permission 0b%b is invalid: has permission flag set above top flag 0b%b",
-			permFlag, TopPermFlag)
+			permFlag, types.TopPermFlag)
 	}
-	for i := uint(0); i < NumPermissions; i++ {
+	for i := uint(0); i < types.NumPermissions; i++ {
 		permFlag := permFlag & (1 << i)
 		if permFlag > 0 {
-			permStrings = append(permStrings, PermFlagToString(permFlag))
+			permStrings = append(permStrings, permFlag.String())
 		}
 	}
 	return permStrings, nil
@@ -110,7 +110,7 @@ func PermFlagToStringList(permFlag types.PermFlag) ([]string, error) {
 func BasePermissionsString(basePermissions types.BasePermissions) string {
 	permStrings, err := BasePermissionsToStringList(basePermissions)
 	if err != nil {
-		return UnknownString
+		return types.UnknownString
 	}
 	return strings.Join(permStrings, " | ")
 }
@@ -118,7 +118,7 @@ func BasePermissionsString(basePermissions types.BasePermissions) string {
 func String(permFlag types.PermFlag) string {
 	permStrings, err := PermFlagToStringList(permFlag)
 	if err != nil {
-		return UnknownString
+		return types.UnknownString
 	}
 	return strings.Join(permStrings, " | ")
 }

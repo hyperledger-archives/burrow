@@ -15,198 +15,63 @@
 package txs
 
 import (
-	"fmt"
+	"encoding/json"
+	"runtime/debug"
 	"testing"
 
-	"encoding/json"
-
 	acm "github.com/hyperledger/burrow/account"
-	ptypes "github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission/snatives"
+	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var chainID = "myChainID"
 
-func makeAddress(str string) (address acm.Address) {
-	copy(address[:], ([]byte)(str))
-	return
+var privateAccounts = make(map[crypto.Address]acm.AddressableSigner)
+
+func makePrivateAccount(str string) acm.PrivateAccount {
+	acc := acm.GeneratePrivateAccountFromSecret(str)
+	privateAccounts[acc.Address()] = acc
+	return acc
 }
 
 func TestSendTxSignable(t *testing.T) {
-	sendTx := &SendTx{
-		Inputs: []*TxInput{
+	sendTx := &payload.SendTx{
+		Inputs: []*payload.TxInput{
 			{
-				Address:  makeAddress("input1"),
+				Address:  makePrivateAccount("input1").Address(),
 				Amount:   12345,
 				Sequence: 67890,
 			},
 			{
-				Address:  makeAddress("input2"),
+				Address:  makePrivateAccount("input2").Address(),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
-		Outputs: []*TxOutput{
+		Outputs: []*payload.TxOutput{
 			{
-				Address: makeAddress("output1"),
+				Address: makePrivateAccount("output1").Address(),
 				Amount:  333,
 			},
 			{
-				Address: makeAddress("output2"),
+				Address: makePrivateAccount("output2").Address(),
 				Amount:  444,
 			},
 		},
 	}
-	signBytes := acm.SignBytes(chainID, sendTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[1,{"inputs":[{"address":"%s","amount":12345,"sequence":67890},{"address":"%s","amount":111,"sequence":222}],"outputs":[{"address":"%s","amount":333},{"address":"%s","amount":444}]}]}`,
-		chainID, sendTx.Inputs[0].Address.String(), sendTx.Inputs[1].Address.String(), sendTx.Outputs[0].Address.String(), sendTx.Outputs[1].Address.String())
-
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for SendTx. Expected:\n%v\nGot:\n%v", expected, signStr)
-	}
+	testTxMarshalJSON(t, sendTx)
+	testTxSignVerify(t, sendTx)
 }
 
 func TestCallTxSignable(t *testing.T) {
-	toAddress := makeAddress("contract1")
-	callTx := &CallTx{
-		Input: &TxInput{
-			Address:  makeAddress("input1"),
-			Amount:   12345,
-			Sequence: 67890,
-		},
-		Address:  &toAddress,
-		GasLimit: 111,
-		Fee:      222,
-		Data:     []byte("data1"),
-	}
-	signBytes := acm.SignBytes(chainID, callTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[2,{"address":"%s","data":"6461746131","fee":222,"gas_limit":111,"input":{"address":"%s","amount":12345,"sequence":67890}}]}`,
-		chainID, callTx.Address.String(), callTx.Input.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
-	}
-}
-
-func TestNameTxSignable(t *testing.T) {
-	nameTx := &NameTx{
-		Input: &TxInput{
-			Address:  makeAddress("input1"),
-			Amount:   12345,
-			Sequence: 250,
-		},
-		Name: "google.com",
-		Data: "secretly.not.google.com",
-		Fee:  1000,
-	}
-	signBytes := acm.SignBytes(chainID, nameTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[3,{"data":"secretly.not.google.com","fee":1000,"input":{"address":"%s","amount":12345,"sequence":250},"name":"google.com"}]}`,
-		chainID, nameTx.Input.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for CallTx. Expected:\n%v\nGot:\n%v", expected, signStr)
-	}
-}
-
-func TestBondTxSignable(t *testing.T) {
-	privAccount := acm.GeneratePrivateAccountFromSecret("foooobars")
-	bondTx := &BondTx{
-		PubKey: privAccount.PublicKey(),
-		Inputs: []*TxInput{
-			{
-				Address:  makeAddress("input1"),
-				Amount:   12345,
-				Sequence: 67890,
-			},
-			{
-				Address:  makeAddress("input2"),
-				Amount:   111,
-				Sequence: 222,
-			},
-		},
-		UnbondTo: []*TxOutput{
-			{
-				Address: makeAddress("output1"),
-				Amount:  333,
-			},
-			{
-				Address: makeAddress("output2"),
-				Amount:  444,
-			},
-		},
-	}
-	expected := fmt.Sprintf(`{"chain_id":"%s",`+
-		`"tx":[17,{"inputs":[{"address":"%s",`+
-		`"amount":12345,"sequence":67890},{"address":"%s",`+
-		`"amount":111,"sequence":222}],"pub_key":[1,"%X"],`+
-		`"unbond_to":[{"address":"%s",`+
-		`"amount":333},{"address":"%s",`+
-		`"amount":444}]}]}`,
-		chainID,
-		bondTx.Inputs[0].Address.String(),
-		bondTx.Inputs[1].Address.String(),
-		bondTx.PubKey.RawBytes(),
-		bondTx.UnbondTo[0].Address.String(),
-		bondTx.UnbondTo[1].Address.String())
-
-	assert.Equal(t, expected, string(acm.SignBytes(chainID, bondTx)), "Unexpected sign string for BondTx")
-}
-
-func TestUnbondTxSignable(t *testing.T) {
-	unbondTx := &UnbondTx{
-		Address: makeAddress("address1"),
-		Height:  111,
-	}
-	signBytes := acm.SignBytes(chainID, unbondTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[18,{"address":"%s","height":111}]}`,
-		chainID, unbondTx.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for UnbondTx")
-	}
-}
-
-func TestRebondTxSignable(t *testing.T) {
-	rebondTx := &RebondTx{
-		Address: makeAddress("address1"),
-		Height:  111,
-	}
-	signBytes := acm.SignBytes(chainID, rebondTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[19,{"address":"%s","height":111}]}`,
-		chainID, rebondTx.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for RebondTx")
-	}
-}
-
-func TestPermissionsTxSignable(t *testing.T) {
-	permsTx := &PermissionsTx{
-		Input: &TxInput{
-			Address:  makeAddress("input1"),
-			Amount:   12345,
-			Sequence: 250,
-		},
-		PermArgs: snatives.SetBaseArgs(makeAddress("address1"), 1, true),
-	}
-
-	signBytes := acm.SignBytes(chainID, permsTx)
-	signStr := string(signBytes)
-	expected := fmt.Sprintf(`{"chain_id":"%s","tx":[31,{"args":"{"PermFlag":%v,"Address":"%s","Permission":1,"Value":true}","input":{"address":"%s","amount":12345,"sequence":250}}]}`,
-		chainID, ptypes.SetBase, permsTx.PermArgs.Address.String(), permsTx.Input.Address.String())
-	if signStr != expected {
-		t.Errorf("Got unexpected sign string for PermsTx. Expected:\n%v\nGot:\n%v", expected, signStr)
-	}
-}
-
-func TestTxWrapper_MarshalJSON(t *testing.T) {
-	toAddress := makeAddress("contract1")
-	callTx := &CallTx{
-		Input: &TxInput{
-			Address:  makeAddress("input1"),
+	toAddress := makePrivateAccount("contract1").Address()
+	callTx := &payload.CallTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").Address(),
 			Amount:   12345,
 			Sequence: 67890,
 		},
@@ -216,21 +81,109 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 		Data:     []byte("data1"),
 	}
 	testTxMarshalJSON(t, callTx)
+	testTxSignVerify(t, callTx)
+}
+
+func TestNameTxSignable(t *testing.T) {
+	nameTx := &payload.NameTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").Address(),
+			Amount:   12345,
+			Sequence: 250,
+		},
+		Name: "google.com",
+		Data: "secretly.not.google.com",
+		Fee:  1000,
+	}
+	testTxMarshalJSON(t, nameTx)
+	testTxSignVerify(t, nameTx)
+}
+
+func TestBondTxSignable(t *testing.T) {
+	bondTx := &payload.BondTx{
+		Inputs: []*payload.TxInput{
+			{
+				Address:  makePrivateAccount("input1").Address(),
+				Amount:   12345,
+				Sequence: 67890,
+			},
+			{
+				Address:  makePrivateAccount("input2").Address(),
+				Amount:   111,
+				Sequence: 222,
+			},
+		},
+		UnbondTo: []*payload.TxOutput{
+			{
+				Address: makePrivateAccount("output1").Address(),
+				Amount:  333,
+			},
+			{
+				Address: makePrivateAccount("output2").Address(),
+				Amount:  444,
+			},
+		},
+	}
+	testTxMarshalJSON(t, bondTx)
+	testTxSignVerify(t, bondTx)
+}
+
+func TestUnbondTxSignable(t *testing.T) {
+	unbondTx := &payload.UnbondTx{
+		Input: &payload.TxInput{
+			Address: makePrivateAccount("fooo1").Address(),
+		},
+		Address: makePrivateAccount("address1").Address(),
+		Height:  111,
+	}
+	testTxMarshalJSON(t, unbondTx)
+	testTxSignVerify(t, unbondTx)
+}
+
+func TestPermissionsTxSignable(t *testing.T) {
+	permsTx := &payload.PermissionsTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").Address(),
+			Amount:   12345,
+			Sequence: 250,
+		},
+		PermArgs: snatives.SetBaseArgs(makePrivateAccount("address1").Address(), 1, true),
+	}
+
+	testTxMarshalJSON(t, permsTx)
+	testTxSignVerify(t, permsTx)
+}
+
+func TestTxWrapper_MarshalJSON(t *testing.T) {
+	toAddress := makePrivateAccount("contract1").Address()
+	callTx := &payload.CallTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").Address(),
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		Address:  &toAddress,
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
+	}
+	testTxMarshalJSON(t, callTx)
+	testTxSignVerify(t, callTx)
 }
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {
-	privateKey := acm.PrivateKeyFromSecret("Shhh...")
-
-	args := snatives.SetBaseArgs(privateKey.PublicKey().Address(), ptypes.HasRole, true)
-	permTx := NewPermissionsTxWithSequence(privateKey.PublicKey(), args, 1)
+	privateAccount := makePrivateAccount("shhhhh")
+	args := snatives.SetBaseArgs(privateAccount.PublicKey().Address(), ptypes.HasRole, true)
+	permTx := payload.NewPermissionsTxWithSequence(privateAccount.PublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
+	testTxSignVerify(t, permTx)
 }
 
-func testTxMarshalJSON(t *testing.T, tx Tx) {
-	txw := &Wrapper{Tx: tx}
+func testTxMarshalJSON(t *testing.T, tx payload.Payload) {
+	txw := &Tx{Payload: tx}
 	bs, err := json.Marshal(txw)
 	require.NoError(t, err)
-	txwOut := new(Wrapper)
+	txwOut := new(Tx)
 	err = json.Unmarshal(bs, txwOut)
 	require.NoError(t, err)
 	bsOut, err := json.Marshal(txwOut)
@@ -238,13 +191,13 @@ func testTxMarshalJSON(t *testing.T, tx Tx) {
 	assert.Equal(t, string(bs), string(bsOut))
 }
 
-func TestTxHashMemoizer(t *testing.T) {
-	tx := &CallTx{
-		Input: &TxInput{
-			Sequence: 4,
-		},
+func testTxSignVerify(t *testing.T, tx payload.Payload) {
+	inputs := tx.GetInputs()
+	var signers []acm.AddressableSigner
+	for _, in := range inputs {
+		signers = append(signers, privateAccounts[in.Address])
 	}
-	hsh := tx.Hash("foo")
-	assert.Equal(t, hsh, tx.txHashMemoizer.txHashBytes)
-	assert.Equal(t, "foo", tx.txHashMemoizer.chainID)
+	txEnv := Enclose(chainID, tx)
+	require.NoError(t, txEnv.Sign(signers...), "Error signing tx: %s", debug.Stack())
+	require.NoError(t, txEnv.Verify(nil), "Error verifying tx: %s", debug.Stack())
 }

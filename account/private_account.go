@@ -17,24 +17,25 @@ package account
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/tendermint/go-wire"
 )
 
 type AddressableSigner interface {
 	Addressable
-	Signer
+	crypto.Signer
 }
 
 type PrivateAccount interface {
 	AddressableSigner
-	PrivateKey() PrivateKey
+	PrivateKey() crypto.PrivateKey
 }
 
 //
 type ConcretePrivateAccount struct {
-	Address    Address
-	PublicKey  PublicKey
-	PrivateKey PrivateKey
+	Address    crypto.Address
+	PublicKey  crypto.PublicKey
+	PrivateKey crypto.PrivateKey
 }
 
 type concretePrivateAccountWrapper struct {
@@ -60,15 +61,15 @@ func AsConcretePrivateAccount(privateAccount PrivateAccount) *ConcretePrivateAcc
 	}
 }
 
-func (cpaw concretePrivateAccountWrapper) Address() Address {
+func (cpaw concretePrivateAccountWrapper) Address() crypto.Address {
 	return cpaw.ConcretePrivateAccount.Address
 }
 
-func (cpaw concretePrivateAccountWrapper) PublicKey() PublicKey {
+func (cpaw concretePrivateAccountWrapper) PublicKey() crypto.PublicKey {
 	return cpaw.ConcretePrivateAccount.PublicKey
 }
 
-func (cpaw concretePrivateAccountWrapper) PrivateKey() PrivateKey {
+func (cpaw concretePrivateAccountWrapper) PrivateKey() crypto.PrivateKey {
 	return cpaw.ConcretePrivateAccount.PrivateKey
 }
 
@@ -82,16 +83,8 @@ func (pa ConcretePrivateAccount) PrivateAccount() PrivateAccount {
 	return concretePrivateAccountWrapper{ConcretePrivateAccount: &pa}
 }
 
-func (pa ConcretePrivateAccount) Sign(msg []byte) (Signature, error) {
+func (pa ConcretePrivateAccount) Sign(msg []byte) (crypto.Signature, error) {
 	return pa.PrivateKey.Sign(msg)
-}
-
-func ChainSign(signer Signer, chainID string, o Signable) (Signature, error) {
-	sig, err := signer.Sign(SignBytes(chainID, o))
-	if err != nil {
-		return Signature{}, err
-	}
-	return sig, nil
 }
 
 func (pa *ConcretePrivateAccount) String() string {
@@ -109,11 +102,11 @@ func SigningAccounts(concretePrivateAccounts []*ConcretePrivateAccount) []Addres
 
 // Generates a new account with private key.
 func GeneratePrivateAccount() (PrivateAccount, error) {
-	privateKey, err := GeneratePrivateKey(nil)
+	privateKey, err := crypto.GeneratePrivateKey(nil, crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
-	publicKey := privateKey.PublicKey()
+	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.Address(),
 		PublicKey:  publicKey,
@@ -123,8 +116,8 @@ func GeneratePrivateAccount() (PrivateAccount, error) {
 
 // Generates a new account with private key from SHA256 hash of a secret
 func GeneratePrivateAccountFromSecret(secret string) PrivateAccount {
-	privateKey := PrivateKeyFromSecret(secret)
-	publicKey := privateKey.PublicKey()
+	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519)
+	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.Address(),
 		PublicKey:  publicKey,
@@ -133,11 +126,11 @@ func GeneratePrivateAccountFromSecret(secret string) PrivateAccount {
 }
 
 func GeneratePrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (PrivateAccount, error) {
-	privateKey, err := Ed25519PrivateKeyFromRawBytes(privKeyBytes)
+	privateKey, err := crypto.PrivateKeyFromRawBytes(privKeyBytes, crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
-	publicKey := privateKey.PublicKey()
+	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.Address(),
 		PublicKey:  publicKey,

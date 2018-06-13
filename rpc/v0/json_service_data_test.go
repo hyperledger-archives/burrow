@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/txs"
-
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,7 +57,7 @@ var testBroadcastCallTxJsonRequest = []byte(`
 // (which was broken on v0.12)
 func TestCallTxJsonFormatCodec(t *testing.T) {
 	codec := NewTCodec()
-	param := new(txs.Tx)
+	param := new(payload.Payload)
 
 	// Create new request object and unmarshal.
 	request := &rpc.RPCRequest{}
@@ -66,6 +65,6 @@ func TestCallTxJsonFormatCodec(t *testing.T) {
 		"Provided JSON test data does not unmarshal to rpc.RPCRequest object.")
 	assert.NoError(t, codec.DecodeBytesPtr(param, request.Params),
 		"RPC codec failed to decode params as transaction type.")
-	_, ok := (*param).(*txs.CallTx)
+	_, ok := (*param).(*payload.CallTx)
 	assert.True(t, ok, "Type byte 0x02 should unmarshal into CallTx.")
 }

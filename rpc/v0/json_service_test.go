@@ -13,3 +13,18 @@
 // limitations under the License.
 
 package v0
+
+import (
+	"encoding/json"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestPollResponse(t *testing.T) {
+	pr := PollResponse{}
+	bs, err := json.Marshal(pr)
+	require.NoError(t, err)
+	fmt.Println(string(bs))
+}

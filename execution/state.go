@@ -24,10 +24,12 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	ptypes "github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/permission"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -105,7 +107,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 
 	// global permissions are saved as the 0 address
 	// so they are included in the accounts tree
-	globalPerms := ptypes.DefaultAccountPermissions
+	globalPerms := permission.DefaultAccountPermissions
 	globalPerms = genesisDoc.GlobalPermissions
 	// XXX: make sure the set bits are all true
 	// Without it the HasPermission() functions will fail
@@ -176,7 +178,7 @@ func (s *State) Hash() []byte {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address acm.Address) (acm.Account, error) {
+func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 	s.RLock()
 	defer s.RUnlock()
 	_, accBytes := s.tree.Get(prefixedKey(accountsPrefix, address.Bytes()))
@@ -204,7 +206,7 @@ func (s *State) UpdateAccount(account acm.Account) error {
 	return nil
 }
 
-func (s *State) RemoveAccount(address acm.Address) error {
+func (s *State) RemoveAccount(address crypto.Address) error {
 	s.Lock()
 	defer s.Unlock()
 	s.tree.Remove(prefixedKey(accountsPrefix, address.Bytes()))
@@ -225,14 +227,14 @@ func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped
 	return
 }
 
-func (s *State) GetStorage(address acm.Address, key binary.Word256) (binary.Word256, error) {
+func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	s.RLock()
 	defer s.RUnlock()
 	_, value := s.tree.Get(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
 	return binary.LeftPadWord256(value), nil
 }
 
-func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error {
+func (s *State) SetStorage(address crypto.Address, key, value binary.Word256) error {
 	s.Lock()
 	defer s.Unlock()
 	if value == binary.Zero256 {
@@ -243,7 +245,7 @@ func (s *State) SetStorage(address acm.Address, key, value binary.Word256) error
 	return nil
 }
 
-func (s *State) IterateStorage(address acm.Address,
+func (s *State) IterateStorage(address crypto.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	s.RLock()
 	defer s.RUnlock()
@@ -269,9 +271,9 @@ func (s *State) IterateStorage(address acm.Address,
 //-------------------------------------
 // State.nameReg
 
-var _ NameRegIterable = &State{}
+var _ names.Iterable = &State{}
 
-func (s *State) GetNameRegEntry(name string) (*NameRegEntry, error) {
+func (s *State) GetNameEntry(name string) (*names.Entry, error) {
 	_, valueBytes := s.tree.Get(prefixedKey(nameRegPrefix, []byte(name)))
 	if valueBytes == nil {
 		return nil, nil
@@ -280,13 +282,13 @@ func (s *State) GetNameRegEntry(name string) (*NameRegEntry, error) {
 	return DecodeNameRegEntry(valueBytes), nil
 }
 
-func (s *State) IterateNameRegEntries(consumer func(*NameRegEntry) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
 	return s.tree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
 		return consumer(DecodeNameRegEntry(value))
 	}), nil
 }
 
-func (s *State) UpdateNameRegEntry(entry *NameRegEntry) error {
+func (s *State) UpdateNameEntry(entry *names.Entry) error {
 	w := new(bytes.Buffer)
 	var n int
 	var err error
@@ -298,7 +300,7 @@ func (s *State) UpdateNameRegEntry(entry *NameRegEntry) error {
 	return nil
 }
 
-func (s *State) RemoveNameRegEntry(name string) error {
+func (s *State) RemoveNameEntry(name string) error {
 	s.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
 	return nil
 }
@@ -313,19 +315,19 @@ func (s *State) Copy(db dbm.DB) *State {
 	return state
 }
 
-func DecodeNameRegEntry(entryBytes []byte) *NameRegEntry {
+func DecodeNameRegEntry(entryBytes []byte) *names.Entry {
 	var n int
 	var err error
 	value := NameRegDecode(bytes.NewBuffer(entryBytes), &n, &err)
-	return value.(*NameRegEntry)
+	return value.(*names.Entry)
 }
 
 func NameRegEncode(o interface{}, w io.Writer, n *int, err *error) {
-	wire.WriteBinary(o.(*NameRegEntry), w, n, err)
+	wire.WriteBinary(o.(*names.Entry), w, n, err)
 }
 
 func NameRegDecode(r io.Reader, n *int, err *error) interface{} {
-	return wire.ReadBinary(&NameRegEntry{}, r, txs.MaxDataLength, n, err)
+	return wire.ReadBinary(&names.Entry{}, r, names.MaxDataLength, n, err)
 }
 
 func prefixedKey(prefix string, suffices ...[]byte) []byte {

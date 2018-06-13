@@ -27,7 +27,7 @@ import (
 
 // EventSubscribe
 type EventSub struct {
-	SubId string `json:"sub_id"`
+	SubId string `json:"subId"`
 }
 
 // EventUnsubscribe

@@ -22,11 +22,12 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
@@ -97,7 +98,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				permission.AddRole,
+				ptypes.AddRole,
 				addRole},
 
 			&SNativeFunctionDescription{`
@@ -112,7 +113,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				permission.RemoveRole,
+				ptypes.RemoveRole,
 				removeRole},
 
 			&SNativeFunctionDescription{`
@@ -127,7 +128,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				permission.HasRole,
+				ptypes.HasRole,
 				hasRole},
 
 			&SNativeFunctionDescription{`
@@ -144,7 +145,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_set", abi.BoolTypeName),
 				},
 				abiReturn("result", permFlagTypeName),
-				permission.SetBase,
+				ptypes.SetBase,
 				setBase},
 
 			&SNativeFunctionDescription{`
@@ -158,7 +159,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_account", abi.AddressTypeName),
 					abiArg("_permission", permFlagTypeName)},
 				abiReturn("result", permFlagTypeName),
-				permission.UnsetBase,
+				ptypes.UnsetBase,
 				unsetBase},
 
 			&SNativeFunctionDescription{`
@@ -172,7 +173,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_account", abi.AddressTypeName),
 					abiArg("_permission", permFlagTypeName)},
 				abiReturn("result", abi.BoolTypeName),
-				permission.HasBase,
+				ptypes.HasBase,
 				hasBase},
 
 			&SNativeFunctionDescription{`
@@ -186,7 +187,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_permission", permFlagTypeName),
 					abiArg("_set", abi.BoolTypeName)},
 				abiReturn("result", permFlagTypeName),
-				permission.SetGlobal,
+				ptypes.SetGlobal,
 				setGlobal},
 		),
 	}
@@ -226,15 +227,6 @@ func NewSNativeContract(comment, name string,
 	}
 }
 
-type ErrLacksSNativePermission struct {
-	Address acm.Address
-	SNative string
-}
-
-func (e ErrLacksSNativePermission) Error() string {
-	return fmt.Sprintf("account %s does not have SNative function call permission: %s", e.Address, e.SNative)
-}
-
 // This function is designed to be called from the EVM once a SNative contract
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
@@ -244,8 +236,9 @@ func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller 
 	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
 
 	if len(args) < abi.FunctionSelectorLength {
-		return nil, fmt.Errorf("SNatives dispatch requires a 4-byte function "+
-			"identifier but arguments are only %v bytes long", len(args))
+		return nil, errors.ErrorCodef(errors.ErrorCodeNativeFunction,
+			"SNatives dispatch requires a 4-byte function identifier but arguments are only %v bytes long",
+			len(args))
 	}
 
 	function, err := contract.FunctionByID(abi.FirstFourBytes(args))
@@ -261,12 +254,12 @@ func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller 
 
 	// check if we have permission to call this function
 	if !HasPermission(state, caller, function.PermFlag) {
-		return nil, ErrLacksSNativePermission{caller.Address(), function.Name}
+		return nil, errors.LacksSNativePermission{caller.Address(), function.Name}
 	}
 
 	// ensure there are enough arguments
 	if len(remainingArgs) != function.NArgs()*Word256Length {
-		return nil, fmt.Errorf("%s() takes %d arguments but got %d (with %d bytes unconsumed - should be 0)",
+		return nil, errors.ErrorCodef(errors.ErrorCodeNativeFunction, "%s() takes %d arguments but got %d (with %d bytes unconsumed - should be 0)",
 			function.Name, function.NArgs(), len(remainingArgs)/Word256Length, len(remainingArgs)%Word256Length)
 	}
 
@@ -276,18 +269,18 @@ func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller 
 
 // We define the address of an SNative contact as the last 20 bytes of the sha3
 // hash of its name
-func (contract *SNativeContractDescription) Address() (address acm.Address) {
+func (contract *SNativeContractDescription) Address() (address crypto.Address) {
 	hash := sha3.Sha3([]byte(contract.Name))
 	copy(address[:], hash[len(hash)-abi.AddressLength:])
 	return
 }
 
 // Get function by calling identifier FunctionSelector
-func (contract *SNativeContractDescription) FunctionByID(id abi.FunctionSelector) (*SNativeFunctionDescription, error) {
+func (contract *SNativeContractDescription) FunctionByID(id abi.FunctionSelector) (*SNativeFunctionDescription, errors.CodedError) {
 	f, ok := contract.functionsByID[id]
 	if !ok {
 		return nil,
-			fmt.Errorf("unknown SNative function with ID %x", id)
+			errors.ErrorCodef(errors.ErrorCodeNativeFunction, "unknown SNative function with ID %x", id)
 	}
 	return f, nil
 }
@@ -354,7 +347,7 @@ func hasBase(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -380,7 +373,7 @@ func setBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum, permVal := returnThreeArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -407,7 +400,7 @@ func unsetBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *u
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -460,7 +453,7 @@ func hasRole(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -481,7 +474,7 @@ func addRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -503,7 +496,7 @@ func removeRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
-	address := acm.AddressFromWord256(addrWord256)
+	address := crypto.AddressFromWord256(addrWord256)
 	acc, err := state.GetMutableAccount(stateWriter, address)
 	if err != nil {
 		return nil, err
@@ -526,7 +519,7 @@ func removeRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *
 
 // Checks if a permission flag is valid (a known base chain or snative permission)
 func ValidPermN(n ptypes.PermFlag) bool {
-	return n <= permission.AllPermFlags
+	return n <= ptypes.AllPermFlags
 }
 
 // Get the global BasePermissions
