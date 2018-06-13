@@ -28,7 +28,7 @@ type concreteValidatorWrapper struct {
 
 var _ Validator = concreteValidatorWrapper{}
 
-func AsValidator(account Account) Validator {
+func AsValidator(account *Account) Validator {
 	return ConcreteValidator{
 		Address:   account.Address(),
 		PublicKey: account.PublicKey(),

@@ -93,12 +93,9 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	// Make accounts state tree
 	for _, genAcc := range genesisDoc.Accounts {
 		perm := genAcc.Permissions
-		acc := &acm.ConcreteAccount{
-			Address:     genAcc.Address,
-			Balance:     genAcc.Amount,
-			Permissions: perm,
-		}
-		err := state.UpdateAccount(acc.Account())
+		acc := acm.NewAccount(genAcc.PublicKey, perm)
+		acc.AddToBalance(genAcc.Amount)
+		err := state.UpdateAccount(acc)
 		if err != nil {
 			return nil, err
 		}
@@ -112,12 +109,10 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	// Without it the HasPermission() functions will fail
 	globalPerms.Base.SetBit = ptypes.AllPermFlags
 
-	permsAcc := &acm.ConcreteAccount{
-		Address:     acm.GlobalPermissionsAddress,
-		Balance:     1337,
-		Permissions: globalPerms,
-	}
-	err := state.UpdateAccount(permsAcc.Account())
+	permsAcc := acm.NewContractAccount(acm.GlobalPermissionsAddress, globalPerms)
+	permsAcc.AddToBalance(1337)
+
+	err := state.UpdateAccount(permsAcc)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +172,7 @@ func (s *State) Hash() []byte {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
+func (s *State) GetAccount(address crypto.Address) (*acm.Account, error) {
 	s.RLock()
 	defer s.RUnlock()
 	_, accBytes := s.tree.Get(prefixedKey(accountsPrefix, address.Bytes()))
@@ -187,17 +182,14 @@ func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 	return acm.Decode(accBytes)
 }
 
-func (s *State) UpdateAccount(account acm.Account) error {
+func (s *State) UpdateAccount(account *acm.Account) error {
 	s.Lock()
 	defer s.Unlock()
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in execution.State")
 	}
-	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
-	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
-	// Alternatively just abandon and
-	accountWithStorageRoot := acm.AsMutableAccount(account).SetStorageRoot(nil)
-	encodedAccount, err := accountWithStorageRoot.Encode()
+
+	encodedAccount, err := account.Encode()
 	if err != nil {
 		return err
 	}
@@ -212,11 +204,11 @@ func (s *State) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
 	s.RLock()
 	defer s.RUnlock()
 	stopped = s.tree.IterateRange(accountsStart, accountsEnd, true, func(key, value []byte) bool {
-		var account acm.Account
+		var account *acm.Account
 		account, err = acm.Decode(value)
 		if err != nil {
 			return true

@@ -23,6 +23,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,11 +67,12 @@ func TestListUnconfirmedTxs(t *testing.T) {
 }
 
 func TestResultListAccounts(t *testing.T) {
-	concreteAcc := acm.AsConcreteAccount(acm.FromAddressable(
-		acm.GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	concreteAcc := acm.NewAccountFromSecret("Super Semi Secret", permission.DefaultAccountPermissions)
+	concreteAcc.AddToBalance(100)
+
 	acc := concreteAcc
 	res := ResultListAccounts{
-		Accounts:    []*acm.ConcreteAccount{acc},
+		Accounts:    []*acm.Account{acc},
 		BlockHeight: 2,
 	}
 	bs, err := json.Marshal(res)

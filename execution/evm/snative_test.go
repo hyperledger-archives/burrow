@@ -66,12 +66,8 @@ func TestPermissionsContractSignatures(t *testing.T) {
 func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	contract := SNativeContracts()["Permissions"]
 	state := newAppState()
-	caller := acm.ConcreteAccount{
-		Address: crypto.Address{1, 1, 1},
-	}.MutableAccount()
-	grantee := acm.ConcreteAccount{
-		Address: crypto.Address{2, 2, 2},
-	}.MutableAccount()
+	caller := acm.NewContractAccount(crypto.Address{1, 1, 1}, permission.ZeroAccountPermissions)
+	grantee := acm.NewContractAccount(crypto.Address{2, 2, 2}, permission.ZeroAccountPermissions)
 	state.UpdateAccount(grantee)
 
 	function, err := contract.FunctionByName("addRole")

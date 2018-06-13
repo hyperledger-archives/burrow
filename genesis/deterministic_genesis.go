@@ -31,8 +31,9 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		account, privAccount := dg.Account(randBalance, minBalance)
 		accounts[i] = Account{
 			BasicAccount: BasicAccount{
-				Address: account.Address(),
-				Amount:  account.Balance(),
+				Address:   account.Address(),
+				PublicKey: account.PublicKey(),
+				Amount:    account.Balance(),
 			},
 			Permissions: defaultPerms.Clone(), // This will get copied into each state.Account.
 		}
@@ -51,8 +52,9 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 			},
 			UnbondTo: []BasicAccount{
 				{
-					Address: validator.Address(),
-					Amount:  uint64(dg.random.Int63()),
+					Address:   validator.Address(),
+					PublicKey: validator.PublicKey(),
+					Amount:    uint64(dg.random.Int63()),
 				},
 			},
 		}
@@ -66,7 +68,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 
 }
 
-func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, acm.AddressableSigner) {
+func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (*acm.Account, acm.AddressableSigner) {
 	privateKey, err := crypto.GeneratePrivateKey(dg.random, crypto.CurveTypeEd25519)
 	if err != nil {
 		panic(fmt.Errorf("could not generate private key deterministically"))
@@ -77,15 +79,12 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 		Address:    privateKey.GetPublicKey().Address(),
 	}
 	perms := permission.DefaultAccountPermissions
-	acc := &acm.ConcreteAccount{
-		Address:     privAccount.Address,
-		PublicKey:   privAccount.PublicKey,
-		Sequence:    uint64(dg.random.Int()),
-		Balance:     minBalance,
-		Permissions: perms,
-	}
+	balance := minBalance
 	if randBalance {
-		acc.Balance += uint64(dg.random.Int())
+		balance += uint64(dg.random.Int())
 	}
-	return acc.Account(), privAccount.PrivateAccount()
+	acc := acm.NewAccount(privAccount.PublicKey, perms)
+	acc.AddToBalance(balance)
+
+	return acc, privAccount.PrivateAccount()
 }

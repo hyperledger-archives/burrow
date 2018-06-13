@@ -54,7 +54,7 @@ func registerNativeContracts() {
 
 //-----------------------------------------------------------------------------
 
-type NativeContract func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+type NativeContract func(state state.Writer, caller *acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error)
 
 /* Removed due to C dependency
@@ -81,7 +81,7 @@ OH NO STOCASTIC CAT CODING!!!!
 }
 */
 
-func sha256Func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+func sha256Func(state state.Writer, caller *acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasSha256Word + GasSha256Base
@@ -97,7 +97,7 @@ func sha256Func(state state.Writer, caller acm.Account, input []byte, gas *uint6
 	return hasher.Sum(nil), nil
 }
 
-func ripemd160Func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+func ripemd160Func(state state.Writer, caller *acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasRipemd160Word + GasRipemd160Base
@@ -113,7 +113,7 @@ func ripemd160Func(state state.Writer, caller acm.Account, input []byte, gas *ui
 	return LeftPadBytes(hasher.Sum(nil), 32), nil
 }
 
-func identityFunc(state state.Writer, caller acm.Account, input []byte, gas *uint64,
+func identityFunc(state state.Writer, caller *acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasIdentityWord + GasIdentityBase

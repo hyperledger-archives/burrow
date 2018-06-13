@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/permission"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
@@ -46,14 +48,11 @@ func TestLog4(t *testing.T) {
 	st := newAppState()
 	cache := state.NewCache(st)
 	// Create accounts
-	account1 := acm.ConcreteAccount{
-		Address: crypto.Address{1, 3, 5, 7, 9},
-	}.MutableAccount()
-	account2 := acm.ConcreteAccount{
-		Address: crypto.Address{2, 4, 6, 8, 10},
-	}.MutableAccount()
-	st.accounts[account1.Address()] = account1
-	st.accounts[account2.Address()] = account2
+	account1 := acm.NewContractAccount(crypto.Address{1, 3, 5, 7, 9}, permission.ZeroAccountPermissions)
+	account2 := acm.NewContractAccount(crypto.Address{2, 4, 6, 8, 10}, permission.ZeroAccountPermissions)
+
+	st.accounts[account1.Address()] = *account1
+	st.accounts[account2.Address()] = *account2
 
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 

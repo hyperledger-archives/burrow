@@ -23,15 +23,20 @@ func NewMemoryState() *MemoryState {
 	}
 }
 
-func (ms *MemoryState) GetAccount(address crypto.Address) (acm.Account, error) {
-	return ms.Accounts[address], nil
+func (ms *MemoryState) GetAccount(address crypto.Address) (*acm.Account, error) {
+	if value, ok := ms.Accounts[address]; ok {
+		account := value /// make a copy
+		return &account, nil
+	}
+
+	return nil, nil
 }
 
-func (ms *MemoryState) UpdateAccount(updatedAccount acm.Account) error {
+func (ms *MemoryState) UpdateAccount(updatedAccount *acm.Account) error {
 	if updatedAccount == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in MemoryState")
 	}
-	ms.Accounts[updatedAccount.Address()] = updatedAccount
+	ms.Accounts[updatedAccount.Address()] = *updatedAccount
 	return nil
 }
 
@@ -62,9 +67,10 @@ func (ms *MemoryState) SetStorage(address crypto.Address, key, value binary.Word
 	return nil
 }
 
-func (ms *MemoryState) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+func (ms *MemoryState) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
 	for _, acc := range ms.Accounts {
-		if consumer(acc) {
+		account := acc
+		if consumer(&account) {
 			return true, nil
 		}
 	}

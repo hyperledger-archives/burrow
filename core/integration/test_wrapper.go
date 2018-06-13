@@ -101,11 +101,10 @@ func TestWrapper(privateAccounts []acm.PrivateAccount, genesisDoc *genesis.Genes
 }
 
 func TestGenesisDoc(addressables []acm.PrivateAccount) *genesis.GenesisDoc {
-	accounts := make(map[string]acm.Account, len(addressables))
+	accounts := make(map[string]*acm.Account, len(addressables))
 	for i, pa := range addressables {
-		account := acm.FromAddressable(pa)
+		account := acm.NewAccount(pa.PublicKey(), permission.AllAccountPermissions.Clone())
 		account.AddToBalance(1 << 32)
-		account.SetPermissions(permission.AllAccountPermissions.Clone())
 		accounts[fmt.Sprintf("user_%v", i)] = account
 	}
 	genesisTime, err := time.Parse("02-01-2006", "27-10-2017")

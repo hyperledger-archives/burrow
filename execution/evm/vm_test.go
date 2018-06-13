@@ -50,9 +50,10 @@ func newAppState() *FakeAppState {
 		storage:  make(map[string]Word256),
 	}
 	// For default permissions
-	fas.accounts[acm.GlobalPermissionsAddress] = acm.ConcreteAccount{
-		Permissions: permission.DefaultAccountPermissions,
-	}.Account()
+	acc := acm.NewContractAccount(acm.GlobalPermissionsAddress, permission.ZeroAccountPermissions)
+	acc.SetPermissions(permission.DefaultAccountPermissions)
+	fas.accounts[acm.GlobalPermissionsAddress] = *acc
+
 	return fas
 }
 
@@ -65,12 +66,10 @@ func newParams() Params {
 	}
 }
 
-func newAccount(seed ...byte) acm.MutableAccount {
+func newAccount(seed ...byte) *acm.Account {
 	hasher := ripemd160.New()
 	hasher.Write(seed)
-	return acm.ConcreteAccount{
-		Address: crypto.MustAddressFromBytes(hasher.Sum(nil)),
-	}.MutableAccount()
+	return acm.NewContractAccount(crypto.MustAddressFromBytes(hasher.Sum(nil)), permission.ZeroAccountPermissions)
 }
 
 // Runs a basic loop
@@ -697,14 +696,14 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2, err = newAccount(2).AddToBalance(100000)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2, err = newAccount(2).AddToBalance(100000)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
@@ -996,14 +995,11 @@ func returnWord() []byte {
 }
 
 func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
-	code []byte) (acm.MutableAccount, crypto.Address) {
+	code []byte) (*acm.Account, crypto.Address) {
 	address, _ := crypto.AddressFromBytes([]byte(name))
-	account := acm.ConcreteAccount{
-		Address:  address,
-		Balance:  9999999,
-		Code:     code,
-		Sequence: 0,
-	}.MutableAccount()
+	account := acm.NewContractAccount(address, permission.DefaultAccountPermissions)
+	account.SetCode(code)
+	account.AddToBalance(9999999)
 	accountUpdater.UpdateAccount(account)
 	return account, account.Address()
 }
@@ -1012,7 +1008,7 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
+func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee *acm.Account, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
 	eventCh := make(chan *evm_events.EventDataCall)
 	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
@@ -1030,7 +1026,7 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAc
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee *acm.Account,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
@@ -1110,8 +1106,8 @@ func TestBytecode(t *testing.T) {
 		[]byte{},
 		MustSplice(MustSplice(MustSplice())))
 
-	contractAccount := &acm.ConcreteAccount{Address: crypto.AddressFromWord256(Int64ToWord256(102))}
-	addr := contractAccount.Address
+	contractAccount := acm.NewContractAccount(crypto.AddressFromWord256(Int64ToWord256(102)), permission.ZeroAccountPermissions)
+	addr := contractAccount.Address()
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
@@ -1154,13 +1150,13 @@ func TestSubslice(t *testing.T) {
 
 func TestHasPermission(t *testing.T) {
 	st := newAppState()
-	acc := acm.ConcreteAccount{
-		Permissions: ptypes.AccountPermissions{
-			Base: BasePermissionsFromStrings(t,
-				"00100001000111",
-				"11011110111000"),
-		},
-	}.Account()
+	acc := acm.NewAccountFromSecret("test", ptypes.AccountPermissions{
+		Base: BasePermissionsFromStrings(t,
+			"00100001000111",
+			"11011110111000"),
+	},
+	)
+	acc.AddToBalance(100)
 	// Ensure we are falling through to global permissions on those bits not set
 	assert.True(t, HasPermission(st, acc, PermFlagFromString(t, "100001000110")))
 }

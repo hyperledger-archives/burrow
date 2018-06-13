@@ -20,6 +20,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/hyperledger/burrow/permission"
+
 	"bytes"
 
 	acm "github.com/hyperledger/burrow/account"
@@ -77,14 +79,14 @@ func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress crypto
 			"contract that calls the native function instead", toAddress)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := state.GetMutableAccount(reader, toAddress)
+	callee, err := state.GetAccount(reader, toAddress)
 	if err != nil {
 		return nil, err
 	}
 	if callee == nil {
 		return nil, fmt.Errorf("account %s does not exist", toAddress)
 	}
-	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
+	caller := acm.NewContractAccount(fromAddress, permission.ZeroAccountPermissions)
 	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
@@ -109,8 +111,8 @@ func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress crypto
 // Cannot be used to create new contracts.
 func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Address, code, data []byte) (*Call, error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
+	callee := acm.NewContractAccount(fromAddress, permission.ZeroAccountPermissions)
+	caller := acm.NewContractAccount(fromAddress, permission.ZeroAccountPermissions)
 	txCache := state.NewCache(reader)
 	params := vmParams(trans.tip)
 
