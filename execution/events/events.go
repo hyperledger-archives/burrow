@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -25,7 +26,7 @@ func EventStringRebond() string                           { return "Rebond" }
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {
 	Tx        *txs.Tx
-	Return    []byte
+	Return    binary.HexBytes
 	Exception *errors.Exception
 }
 

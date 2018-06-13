@@ -45,7 +45,7 @@ import (
 const BlockingTimeoutSeconds = 30
 
 type Call struct {
-	Return  []byte
+	Return  binary.HexBytes
 	GasUsed uint64
 }
 

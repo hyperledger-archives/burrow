@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
 
@@ -14,7 +15,7 @@ type CallTx struct {
 	GasLimit uint64
 	Fee      uint64
 	// Signing normalisation needs omitempty
-	Data []byte `json:",omitempty"`
+	Data binary.HexBytes `json:",omitempty"`
 }
 
 func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,

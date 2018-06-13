@@ -160,7 +160,7 @@ docker_build: check commit_hash
 
 # test burrow
 .PHONY: test
-test: fix
+test: check
 	@go test ${PACKAGES_NOVENDOR}
 
 .PHONY: test_keys
