@@ -20,6 +20,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/filters"
@@ -257,11 +258,11 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			ce, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+			eventDataCall, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
-			return ce, 0, nil
+			return eventDataCall, 0, nil
 		},
 		SEND: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			param := &SendParam{}
@@ -347,7 +348,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			list, err := service.ListNames(func(entry *execution.NameRegEntry) bool {
+			list, err := service.ListNames(func(entry *names.Entry) bool {
 				return filter.Match(entry)
 			})
 			if err != nil {

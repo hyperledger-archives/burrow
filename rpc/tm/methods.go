@@ -8,7 +8,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/tm/lib/server"
@@ -168,7 +168,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 		// Names
 		GetName: server.NewRPCFunc(service.GetName, "name"),
 		ListNames: server.NewRPCFunc(func() (*rpc.ResultListNames, error) {
-			return service.ListNames(func(*execution.NameRegEntry) bool {
+			return service.ListNames(func(*names.Entry) bool {
 				return true
 			})
 		}, ""),

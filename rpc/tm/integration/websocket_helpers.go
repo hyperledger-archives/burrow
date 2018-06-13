@@ -254,8 +254,8 @@ func unmarshalValidateSend(amt uint64, toAddr crypto.Address, resultEvent *rpc.R
 	if data == nil {
 		return fmt.Errorf("event data %v is not EventDataTx", resultEvent)
 	}
-	if data.Exception != "" {
-		return fmt.Errorf(data.Exception)
+	if data.Exception == nil {
+		return data.Exception.AsError()
 	}
 	tx := data.Tx.Payload.(*payload.SendTx)
 	if tx.Inputs[0].Address != privateAccounts[0].Address() {
@@ -278,8 +278,8 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 		if data == nil {
 			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
-		if data.Exception != "" {
-			return true, fmt.Errorf(data.Exception)
+		if data.Exception != nil {
+			return true, data.Exception.AsError()
 		}
 		tx := data.Tx.Payload.(*payload.CallTx)
 		if tx.Input.Address != privateAccounts[0].Address() {
@@ -304,8 +304,8 @@ func unmarshalValidateCall(origin crypto.Address, returnCode []byte, txid *[]byt
 		if data == nil {
 			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
-		if data.Exception != "" {
-			return true, fmt.Errorf(data.Exception)
+		if data.Exception != nil {
+			return true, data.Exception.AsError()
 		}
 		if data.Origin != origin {
 			return true, fmt.Errorf("origin does not match up! Got %s, expected %s", data.Origin, origin)

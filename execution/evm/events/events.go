@@ -21,6 +21,7 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -38,7 +39,7 @@ type EventDataCall struct {
 	TxHash     []byte
 	StackDepth int
 	Return     []byte
-	Exception  string
+	Exception  *errors.Exception
 }
 
 type CallData struct {

@@ -9,15 +9,15 @@ import (
 )
 
 func TestBasePermissionsFromStringList(t *testing.T) {
-	basePerms, err := BasePermissionsFromStringList([]string{HasRoleString, CreateContractString, SendString})
+	basePerms, err := BasePermissionsFromStringList([]string{types.HasRoleString, types.CreateContractString, types.SendString})
 	require.NoError(t, err)
-	permFlag := HasRole | CreateContract | Send
+	permFlag := types.HasRole | types.CreateContract | types.Send
 	assert.Equal(t, permFlag, basePerms.Perms)
 	assert.Equal(t, permFlag, basePerms.SetBit)
 
-	basePerms, err = BasePermissionsFromStringList([]string{AllString})
+	basePerms, err = BasePermissionsFromStringList([]string{types.AllString})
 	require.NoError(t, err)
-	permFlag = AllPermFlags
+	permFlag = types.AllPermFlags
 	assert.Equal(t, permFlag, basePerms.Perms)
 	assert.Equal(t, permFlag, basePerms.SetBit)
 
@@ -26,21 +26,21 @@ func TestBasePermissionsFromStringList(t *testing.T) {
 }
 
 func TestBasePermissionsToStringList(t *testing.T) {
-	permStrings, err := BasePermissionsToStringList(allSetBasePermission(Root | HasRole | SetBase | Call))
+	permStrings, err := BasePermissionsToStringList(allSetBasePermission(types.Root | types.HasRole | types.SetBase | types.Call))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"root", "call", "setBase", "hasRole"}, permStrings)
 
-	permStrings, err = BasePermissionsToStringList(allSetBasePermission(AllPermFlags))
+	permStrings, err = BasePermissionsToStringList(allSetBasePermission(types.AllPermFlags))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"root", "send", "call", "createContract", "createAccount", "bond", "name", "hasBase",
 		"setBase", "unsetBase", "setGlobal", "hasRole", "addRole", "removeRole"}, permStrings)
 
-	permStrings, err = BasePermissionsToStringList(allSetBasePermission(AllPermFlags + 1))
+	permStrings, err = BasePermissionsToStringList(allSetBasePermission(types.AllPermFlags + 1))
 	assert.Error(t, err)
 }
 
 func TestBasePermissionsString(t *testing.T) {
-	permissionString := BasePermissionsString(allSetBasePermission(AllPermFlags &^ Root))
+	permissionString := BasePermissionsString(allSetBasePermission(types.AllPermFlags &^ types.Root))
 	assert.Equal(t, "send | call | createContract | createAccount | bond | name | hasBase | "+
 		"setBase | unsetBase | setGlobal | hasRole | addRole | removeRole", permissionString)
 }

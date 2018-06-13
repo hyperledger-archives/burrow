@@ -7,6 +7,8 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/tmthrgd/go-hex"
@@ -15,7 +17,7 @@ import (
 func EventStringAccountInput(addr crypto.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
 func EventStringAccountOutput(addr crypto.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
 func EventStringNameReg(name string) string               { return fmt.Sprintf("NameReg/%s", name) }
-func EventStringPermissions(name string) string           { return fmt.Sprintf("Permissions/%s", name) }
+func EventStringPermissions(perm ptypes.PermFlag) string  { return fmt.Sprintf("Permissions/%v", perm) }
 func EventStringBond() string                             { return "Bond" }
 func EventStringUnbond() string                           { return "Unbond" }
 func EventStringRebond() string                           { return "Rebond" }
@@ -24,7 +26,7 @@ func EventStringRebond() string                           { return "Rebond" }
 type EventDataTx struct {
 	Tx        *txs.Tx
 	Return    []byte
-	Exception string
+	Exception *errors.Exception
 }
 
 // For re-use
@@ -54,7 +56,7 @@ func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscr
 }
 
 func PublishAccountOutput(publisher event.Publisher, address crypto.Address, tx *txs.Tx, ret []byte,
-	exception string) error {
+	exception *errors.Exception) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountOutput(address),
 		&EventDataTx{
@@ -70,7 +72,7 @@ func PublishAccountOutput(publisher event.Publisher, address crypto.Address, tx 
 }
 
 func PublishAccountInput(publisher event.Publisher, address crypto.Address, tx *txs.Tx, ret []byte,
-	exception string) error {
+	exception *errors.Exception) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountInput(address),
 		&EventDataTx{
@@ -98,14 +100,14 @@ func PublishNameReg(publisher event.Publisher, tx *txs.Tx) error {
 		})
 }
 
-func PublishPermissions(publisher event.Publisher, name string, tx *txs.Tx) error {
+func PublishPermissions(publisher event.Publisher, perm ptypes.PermFlag, tx *txs.Tx) error {
 	_, ok := tx.Payload.(*payload.PermissionsTx)
 	if !ok {
 		return fmt.Errorf("Tx payload must be PermissionsTx to PublishPermissions")
 	}
-	return event.PublishWithEventID(publisher, EventStringPermissions(name), &EventDataTx{Tx: tx},
+	return event.PublishWithEventID(publisher, EventStringPermissions(perm), &EventDataTx{Tx: tx},
 		map[string]interface{}{
-			"name":          name,
+			"name":          perm.String(),
 			event.TxTypeKey: tx.Type().String(),
 			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
 		})

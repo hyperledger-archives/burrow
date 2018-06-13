@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 //---------------------------------------------------------------------------------------------------
@@ -36,12 +37,12 @@ type PermArgs struct {
 
 func (pa PermArgs) String() string {
 	body := make([]string, 0, 5)
-	body = append(body, fmt.Sprintf("PermFlag: %s", permission.String(pa.PermFlag)))
+	body = append(body, fmt.Sprintf("PermFlag: %v", permission.String(pa.PermFlag)))
 	if pa.Address != nil {
 		body = append(body, fmt.Sprintf("Address: %s", *pa.Address))
 	}
 	if pa.Permission != nil {
-		body = append(body, fmt.Sprintf("Permission: %s", permission.String(*pa.Permission)))
+		body = append(body, fmt.Sprintf("Permission: %v", permission.String(*pa.Permission)))
 	}
 	if pa.Role != nil {
 		body = append(body, fmt.Sprintf("Role: %s", *pa.Role))
@@ -55,10 +56,10 @@ func (pa PermArgs) String() string {
 func (pa PermArgs) EnsureValid() error {
 	pf := pa.PermFlag
 	// Address
-	if pa.Address == nil && pf != permission.SetGlobal {
+	if pa.Address == nil && pf != ptypes.SetGlobal {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Address to be provided but was nil", pf)
 	}
-	if pf == permission.HasRole || pf == permission.AddRole || pf == permission.RemoveRole {
+	if pf == ptypes.HasRole || pf == ptypes.AddRole || pf == ptypes.RemoveRole {
 		// Role
 		if pa.Role == nil {
 			return fmt.Errorf("PermArgs for PermFlag %v requires Role to be provided but was nil", pf)
@@ -67,7 +68,7 @@ func (pa PermArgs) EnsureValid() error {
 	} else if pa.Permission == nil {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Permission to be provided but was nil", pf)
 		// Value
-	} else if (pf == permission.SetBase || pf == permission.SetGlobal) && pa.Value == nil {
+	} else if (pf == ptypes.SetBase || pf == ptypes.SetGlobal) && pa.Value == nil {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Value to be provided but was nil", pf)
 	}
 	return nil
@@ -75,7 +76,7 @@ func (pa PermArgs) EnsureValid() error {
 
 func HasBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   permission.HasBase,
+		PermFlag:   ptypes.HasBase,
 		Address:    &address,
 		Permission: &permFlag,
 	}
@@ -83,7 +84,7 @@ func HasBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 
 func SetBaseArgs(address crypto.Address, permFlag types.PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   permission.SetBase,
+		PermFlag:   ptypes.SetBase,
 		Address:    &address,
 		Permission: &permFlag,
 		Value:      &value,
@@ -92,7 +93,7 @@ func SetBaseArgs(address crypto.Address, permFlag types.PermFlag, value bool) Pe
 
 func UnsetBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   permission.UnsetBase,
+		PermFlag:   ptypes.UnsetBase,
 		Address:    &address,
 		Permission: &permFlag,
 	}
@@ -100,7 +101,7 @@ func UnsetBaseArgs(address crypto.Address, permFlag types.PermFlag) PermArgs {
 
 func SetGlobalArgs(permFlag types.PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   permission.SetGlobal,
+		PermFlag:   ptypes.SetGlobal,
 		Permission: &permFlag,
 		Value:      &value,
 	}
@@ -108,7 +109,7 @@ func SetGlobalArgs(permFlag types.PermFlag, value bool) PermArgs {
 
 func HasRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: permission.HasRole,
+		PermFlag: ptypes.HasRole,
 		Address:  &address,
 		Role:     &role,
 	}
@@ -116,7 +117,7 @@ func HasRoleArgs(address crypto.Address, role string) PermArgs {
 
 func AddRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: permission.AddRole,
+		PermFlag: ptypes.AddRole,
 		Address:  &address,
 		Role:     &role,
 	}
@@ -124,7 +125,7 @@ func AddRoleArgs(address crypto.Address, role string) PermArgs {
 
 func RemoveRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: permission.RemoveRole,
+		PermFlag: ptypes.RemoveRole,
 		Address:  &address,
 		Role:     &role,
 	}

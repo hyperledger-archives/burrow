@@ -22,8 +22,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/go-wire"
@@ -79,10 +78,10 @@ func TestAccountSerialise(t *testing.T) {
 
 func TestDecodeConcrete(t *testing.T) {
 	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
-	concreteAcc.Permissions = types.AccountPermissions{
-		Base: types.BasePermissions{
-			Perms:  permission.SetGlobal,
-			SetBit: permission.SetGlobal,
+	concreteAcc.Permissions = ptypes.AccountPermissions{
+		Base: ptypes.BasePermissions{
+			Perms:  ptypes.SetGlobal,
+			SetBit: ptypes.SetGlobal,
 		},
 		Roles: []string{"bums"},
 	}

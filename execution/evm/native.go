@@ -20,13 +20,15 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/logging"
 	"golang.org/x/crypto/ripemd160"
 )
 
 var registeredNativeContracts = make(map[Word256]NativeContract)
 
-func RegisteredNativeContract(address Word256) bool {
+func IsRegisteredNativeContract(address Word256) bool {
 	_, ok := registeredNativeContracts[address]
 	return ok
 }
@@ -53,6 +55,21 @@ func registerNativeContracts() {
 }
 
 //-----------------------------------------------------------------------------
+
+func ExecuteNativeContract(address Word256, state state.Writer, caller acm.Account, input []byte, gas *uint64,
+	logger *logging.Logger) ([]byte, errors.CodedError) {
+
+	contract, ok := registeredNativeContracts[address]
+	if !ok {
+		return nil, errors.ErrorCodef(errors.ErrorCodeNativeFunction,
+			"no native contract registered at address: %v", crypto.AddressFromWord256(address))
+	}
+	output, err := contract(state, caller, input, gas, logger)
+	if err != nil {
+		return nil, errors.NewCodedError(errors.ErrorCodeNativeFunction, err.Error())
+	}
+	return output, nil
+}
 
 type NativeContract func(state state.Writer, caller acm.Account, input []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error)
@@ -86,7 +103,7 @@ func sha256Func(state state.Writer, caller acm.Account, input []byte, gas *uint6
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasSha256Word + GasSha256Base
 	if *gas < gasRequired {
-		return nil, ErrInsufficientGas
+		return nil, errors.ErrorCodeInsufficientGas
 	} else {
 		*gas -= gasRequired
 	}
@@ -102,7 +119,7 @@ func ripemd160Func(state state.Writer, caller acm.Account, input []byte, gas *ui
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasRipemd160Word + GasRipemd160Base
 	if *gas < gasRequired {
-		return nil, ErrInsufficientGas
+		return nil, errors.ErrorCodeInsufficientGas
 	} else {
 		*gas -= gasRequired
 	}
@@ -118,7 +135,7 @@ func identityFunc(state state.Writer, caller acm.Account, input []byte, gas *uin
 	// Deduct gas
 	gasRequired := uint64((len(input)+31)/32)*GasIdentityWord + GasIdentityBase
 	if *gas < gasRequired {
-		return nil, ErrInsufficientGas
+		return nil, errors.ErrorCodeInsufficientGas
 	} else {
 		*gas -= gasRequired
 	}

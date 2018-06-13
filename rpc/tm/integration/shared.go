@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core/integration"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
 	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
 	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
@@ -173,7 +173,7 @@ func callContract(t *testing.T, client tmClient.RPCClient, fromAddress, toAddres
 }
 
 // get the namereg entry
-func getNameRegEntry(t *testing.T, client tmClient.RPCClient, name string) *execution.NameRegEntry {
+func getNameRegEntry(t *testing.T, client tmClient.RPCClient, name string) *names.Entry {
 	entry, err := tmClient.GetName(client, name)
 	if err != nil {
 		t.Fatal(err)
