@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"time"
@@ -32,32 +33,42 @@ type tm2pb struct{}
 
 func (tm2pb) Header(header *Header) abci.Header {
 	return abci.Header{
-		ChainID:       header.ChainID,
-		Height:        header.Height,
-		Time:          header.Time.Unix(),
-		NumTxs:        int32(header.NumTxs), // XXX: overflow
-		LastBlockHash: header.LastBlockID.Hash,
-		AppHash:       header.AppHash,
+		ChainID: header.ChainID,
+		Height:  header.Height,
+
+		Time:     header.Time.Unix(),
+		NumTxs:   int32(header.NumTxs), // XXX: overflow
+		TotalTxs: header.TotalTxs,
+
+		LastBlockHash:  header.LastBlockID.Hash,
+		ValidatorsHash: header.ValidatorsHash,
+		AppHash:        header.AppHash,
+
+		// Proposer: TODO
 	}
 }
 
+// XXX: panics on unknown pubkey type
 func (tm2pb) Validator(val *Validator) abci.Validator {
 	return abci.Validator{
-		PubKey: TM2PB.PubKey(val.PubKey),
-		Power:  val.VotingPower,
+		Address: val.PubKey.Address(),
+		PubKey:  TM2PB.PubKey(val.PubKey),
+		Power:   val.VotingPower,
 	}
 }
 
+// XXX: panics on nil or unknown pubkey type
+// TODO: add cases when new pubkey types are added to go-crypto
 func (tm2pb) PubKey(pubKey crypto.PubKey) abci.PubKey {
 	switch pk := pubKey.(type) {
 	case crypto.PubKeyEd25519:
 		return abci.PubKey{
-			Type: "ed25519",
+			Type: ABCIPubKeyTypeEd25519,
 			Data: pk[:],
 		}
 	case crypto.PubKeySecp256k1:
 		return abci.PubKey{
-			Type: "secp256k1",
+			Type: ABCIPubKeyTypeSecp256k1,
 			Data: pk[:],
 		}
 	default:
@@ -65,6 +76,7 @@ func (tm2pb) PubKey(pubKey crypto.PubKey) abci.PubKey {
 	}
 }
 
+// XXX: panics on nil or unknown pubkey type
 func (tm2pb) Validators(vals *ValidatorSet) []abci.Validator {
 	validators := make([]abci.Validator, len(vals.Validators))
 	for i, val := range vals.Validators {
@@ -93,6 +105,7 @@ func (tm2pb) ConsensusParams(params *ConsensusParams) *abci.ConsensusParams {
 
 // ABCI Evidence includes information from the past that's not included in the evidence itself
 // so Evidence types stays compact.
+// XXX: panics on nil or unknown pubkey type
 func (tm2pb) Evidence(ev Evidence, valSet *ValidatorSet, evTime time.Time) abci.Evidence {
 	_, val := valSet.GetByAddress(ev.Address())
 	if val == nil {
@@ -100,30 +113,28 @@ func (tm2pb) Evidence(ev Evidence, valSet *ValidatorSet, evTime time.Time) abci.
 		panic(val)
 	}
 
-	abciEvidence := abci.Evidence{
-		Validator: abci.Validator{
-			Address: ev.Address(),
-			PubKey:  TM2PB.PubKey(val.PubKey),
-			Power:   val.VotingPower,
-		},
-		Height:           ev.Height(),
-		Time:             evTime.Unix(),
-		TotalVotingPower: valSet.TotalVotingPower(),
-	}
-
 	// set type
+	var evType string
 	switch ev.(type) {
 	case *DuplicateVoteEvidence:
-		abciEvidence.Type = ABCIEvidenceTypeDuplicateVote
-	case *MockGoodEvidence, MockGoodEvidence:
-		abciEvidence.Type = ABCIEvidenceTypeMockGood
+		evType = ABCIEvidenceTypeDuplicateVote
+	case MockGoodEvidence:
+		// XXX: not great to have test types in production paths ...
+		evType = ABCIEvidenceTypeMockGood
 	default:
 		panic(fmt.Sprintf("Unknown evidence type: %v %v", ev, reflect.TypeOf(ev)))
 	}
 
-	return abciEvidence
+	return abci.Evidence{
+		Type:             evType,
+		Validator:        TM2PB.Validator(val),
+		Height:           ev.Height(),
+		Time:             evTime.Unix(),
+		TotalVotingPower: valSet.TotalVotingPower(),
+	}
 }
 
+// XXX: panics on nil or unknown pubkey type
 func (tm2pb) ValidatorFromPubKeyAndPower(pubkey crypto.PubKey, power int64) abci.Validator {
 	pubkeyABCI := TM2PB.PubKey(pubkey)
 	return abci.Validator{
@@ -162,5 +173,49 @@ func (pb2tm) PubKey(pubKey abci.PubKey) (crypto.PubKey, error) {
 		return pk, nil
 	default:
 		return nil, fmt.Errorf("Unknown pubkey type %v", pubKey.Type)
+	}
+}
+
+func (pb2tm) Validators(vals []abci.Validator) ([]*Validator, error) {
+	tmVals := make([]*Validator, len(vals))
+	for i, v := range vals {
+		pub, err := PB2TM.PubKey(v.PubKey)
+		if err != nil {
+			return nil, err
+		}
+		// If the app provided an address too, it must match.
+		// This is just a sanity check.
+		if len(v.Address) > 0 {
+			if !bytes.Equal(pub.Address(), v.Address) {
+				return nil, fmt.Errorf("Validator.Address (%X) does not match PubKey.Address (%X)",
+					v.Address, pub.Address())
+			}
+		}
+		tmVals[i] = &Validator{
+			Address:     pub.Address(),
+			PubKey:      pub,
+			VotingPower: v.Power,
+		}
+	}
+	return tmVals, nil
+}
+
+func (pb2tm) ConsensusParams(csp *abci.ConsensusParams) ConsensusParams {
+	return ConsensusParams{
+		BlockSize: BlockSize{
+			MaxBytes: int(csp.BlockSize.MaxBytes), // XXX
+			MaxTxs:   int(csp.BlockSize.MaxTxs),   // XXX
+			MaxGas:   csp.BlockSize.MaxGas,
+		},
+		TxSize: TxSize{
+			MaxBytes: int(csp.TxSize.MaxBytes), // XXX
+			MaxGas:   csp.TxSize.MaxGas,
+		},
+		BlockGossip: BlockGossip{
+			BlockPartSizeBytes: int(csp.BlockGossip.BlockPartSizeBytes), // XXX
+		},
+		// TODO: EvidenceParams: EvidenceParams{
+		// MaxAge: int(csp.Evidence.MaxAge), // XXX
+		// },
 	}
 }
