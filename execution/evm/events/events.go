@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/tmthrgd/go-hex"
+	"github.com/hyperledger/burrow/binary"
 )
 
 // Functions to generate eventId strings
@@ -36,16 +37,16 @@ func EventStringLogEvent(addr crypto.Address) string    { return fmt.Sprintf("Lo
 type EventDataCall struct {
 	CallData   *CallData
 	Origin     crypto.Address
-	TxHash     []byte
+	TxHash     binary.HexBytes
 	StackDepth int
-	Return     []byte
+	Return     binary.HexBytes
 	Exception  *errors.Exception
 }
 
 type CallData struct {
 	Caller crypto.Address
 	Callee crypto.Address
-	Data   []byte
+	Data   binary.HexBytes
 	Value  uint64
 	Gas    uint64
 }
@@ -54,7 +55,7 @@ type CallData struct {
 type EventDataLog struct {
 	Address crypto.Address
 	Topics  []Word256
-	Data    []byte
+	Data    binary.HexBytes
 	Height  uint64
 }
 
