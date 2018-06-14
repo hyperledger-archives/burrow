@@ -195,7 +195,7 @@ func makeHeightSearchFunc(height int64) auto.SearchFunc {
 type Handshaker struct {
 	stateDB      dbm.DB
 	initialState sm.State
-	store        types.BlockStore
+	store        sm.BlockStore
 	genDoc       *types.GenesisDoc
 	logger       log.Logger
 
@@ -203,7 +203,7 @@ type Handshaker struct {
 }
 
 func NewHandshaker(stateDB dbm.DB, state sm.State,
-	store types.BlockStore, genDoc *types.GenesisDoc) *Handshaker {
+	store sm.BlockStore, genDoc *types.GenesisDoc) *Handshaker {
 
 	return &Handshaker{
 		stateDB:      stateDB,
@@ -267,17 +267,33 @@ func (h *Handshaker) ReplayBlocks(state sm.State, appHash []byte, appBlockHeight
 	// If appBlockHeight == 0 it means that we are at genesis and hence should send InitChain
 	if appBlockHeight == 0 {
 		validators := types.TM2PB.Validators(state.Validators)
+		csParams := types.TM2PB.ConsensusParams(h.genDoc.ConsensusParams)
 		req := abci.RequestInitChain{
 			Time:            h.genDoc.GenesisTime.Unix(), // TODO
 			ChainId:         h.genDoc.ChainID,
-			ConsensusParams: types.TM2PB.ConsensusParams(h.genDoc.ConsensusParams),
+			ConsensusParams: csParams,
 			Validators:      validators,
 			AppStateBytes:   h.genDoc.AppStateJSON,
 		}
-		_, err := proxyApp.Consensus().InitChainSync(req)
+		res, err := proxyApp.Consensus().InitChainSync(req)
 		if err != nil {
 			return nil, err
 		}
+
+		// if the app returned validators
+		// or consensus params, update the state
+		// with the them
+		if len(res.Validators) > 0 {
+			vals, err := types.PB2TM.Validators(res.Validators)
+			if err != nil {
+				return nil, err
+			}
+			state.Validators = types.NewValidatorSet(vals)
+		}
+		if res.ConsensusParams != nil {
+			state.ConsensusParams = types.PB2TM.ConsensusParams(res.ConsensusParams)
+		}
+		sm.SaveState(h.stateDB, state)
 	}
 
 	// First handle edge cases and constraints on the storeBlockHeight
@@ -392,7 +408,7 @@ func (h *Handshaker) replayBlock(state sm.State, height int64, proxyApp proxy.Ap
 	block := h.store.LoadBlock(height)
 	meta := h.store.LoadBlockMeta(height)
 
-	blockExec := sm.NewBlockExecutor(h.stateDB, h.logger, proxyApp, types.MockMempool{}, types.MockEvidencePool{})
+	blockExec := sm.NewBlockExecutor(h.stateDB, h.logger, proxyApp, sm.MockMempool{}, sm.MockEvidencePool{})
 
 	var err error
 	state, err = blockExec.ApplyBlock(state, meta.BlockID, block)

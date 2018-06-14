@@ -17,7 +17,6 @@ package evm
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strconv"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	evm_events "github.com/hyperledger/burrow/execution/evm/events"
@@ -662,8 +662,8 @@ func TestRevert(t *testing.T) {
 	0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)*/
 
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
-	assert.Error(t, err, "Expected execution reverted error")
+	output, cErr := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.Error(t, cErr, "Expected execution reverted error")
 
 	storageVal, err := cache.GetStorage(account1.Address(), LeftPadWord256(key))
 	assert.Equal(t, LeftPadWord256(value), storageVal)
@@ -883,7 +883,7 @@ func TestInvalid(t *testing.T) {
 		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
 
 	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
-	expected := "call error: " + ErrExecutionAborted.Error()
+	expected := errors.ErrorCodeExecutionAborted.Error()
 	assert.EqualError(t, err, expected)
 	t.Logf("Output: %v Error: %v\n", output, err)
 
@@ -1017,8 +1017,8 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee *acm.Account,
 	}
 	select {
 	case eventDataCall := <-eventCh:
-		if eventDataCall.Exception != "" {
-			return output, errors.New(eventDataCall.Exception)
+		if eventDataCall.Exception != nil {
+			return output, eventDataCall.Exception
 		}
 		return output, nil
 	}

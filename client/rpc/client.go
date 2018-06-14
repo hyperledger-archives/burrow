@@ -19,14 +19,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger/burrow/crypto"
-	ptypes "github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/txs/payload"
-
 	"github.com/hyperledger/burrow/client"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission/snatives"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 )
 
 //------------------------------------------------------------------------------------

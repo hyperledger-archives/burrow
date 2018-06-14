@@ -12,7 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package permission
+package names
 
-//------------------------------------------------------------------------------------------------
-// Some errors
+import (
+	"testing"
+)
+
+// TODO: tests
+func TestNewNameRegCache(t *testing.T) {
+}
+
+func TestNameRegCache_GetNameRegEntry(t *testing.T) {
+}
+
+func TestNameRegCache_UpdateNameRegEntry(t *testing.T) {
+}
+
+func TestNameRegCache_RemoveNameRegEntry(t *testing.T) {
+}
+
+func TestNameRegCache_Sync(t *testing.T) {
+
+}
+
+func TestNameRegCache_get(t *testing.T) {
+}

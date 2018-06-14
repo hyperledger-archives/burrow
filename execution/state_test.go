@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +29,7 @@ func TestState_UpdateAccount(t *testing.T) {
 
 	perm := ptypes.AccountPermissions{
 		Base: ptypes.BasePermissions{
-			Perms: permission.SetGlobal | permission.HasRole,
+			Perms: ptypes.SetGlobal | ptypes.HasRole,
 		},
 		Roles: []string{},
 	}

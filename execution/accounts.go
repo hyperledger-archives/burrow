@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/permission"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/permission"
 	burrow_sync "github.com/hyperledger/burrow/sync"
 )
 

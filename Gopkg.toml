@@ -5,7 +5,7 @@
 
 [[constraint]]
   name = "github.com/tendermint/tendermint"
-  version = "=v0.20.0-rc3"
+  version = "=v0.20.0"
 
 # Because Tendermint did this, we have to...
 [[override]]

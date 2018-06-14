@@ -23,6 +23,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
@@ -79,16 +80,16 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 
 	// Should fail since we have no permissions
 	retValue, err := contract.Dispatch(state, caller, bc.MustSplice(funcID[:],
-		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
+		grantee.Address(), permFlagToWord256(ptypes.CreateAccount)), &gas, logger)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
-	assert.IsType(t, err, ErrLacksSNativePermission{})
+	assert.IsType(t, err, errors.LacksSNativePermission{})
 
 	// Grant all permissions and dispatch should success
 	caller.SetPermissions(allAccountPermissions())
 	retValue, err = contract.Dispatch(state, caller, bc.MustSplice(funcID[:],
-		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
+		grantee.Address().Word256(), permFlagToWord256(ptypes.CreateAccount)), &gas, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }
@@ -130,8 +131,8 @@ func permFlagToWord256(permFlag ptypes.PermFlag) Word256 {
 func allAccountPermissions() ptypes.AccountPermissions {
 	return ptypes.AccountPermissions{
 		Base: ptypes.BasePermissions{
-			Perms:  permission.AllPermFlags,
-			SetBit: permission.AllPermFlags,
+			Perms:  ptypes.AllPermFlags,
+			SetBit: ptypes.AllPermFlags,
 		},
 		Roles: []string{},
 	}

@@ -21,8 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/permission"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	. "github.com/hyperledger/burrow/binary"
@@ -31,6 +29,7 @@ import (
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/require"
 )
 

@@ -3,14 +3,13 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/permission"
-
 	"fmt"
 
 	"math/rand"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

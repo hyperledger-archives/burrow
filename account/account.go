@@ -34,10 +34,7 @@ type Addressable interface {
 	PublicKey() crypto.PublicKey
 }
 
-// -------------------------------------------------
-// Account structure (unexported)
-
-// account is the canonical serialisation and bash-in-place object for an Account
+// Account structure
 type Account struct {
 	data accountData
 }
@@ -81,6 +78,7 @@ func NewContractAccount(address crypto.Address, permissions ptypes.AccountPermis
 	}
 }
 
+/// For tests, TODO: Move to tests
 func NewAccountFromSecret(secret string, permissions ptypes.AccountPermissions) *Account {
 	return NewAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519).GetPublicKey(),
 		permissions)
@@ -99,11 +97,6 @@ func (acc Account) Code() Bytecode                         { return acc.data.Cod
 func (acc Account) Sequence() uint64                       { return acc.data.Sequence }
 func (acc Account) StorageRoot() []byte                    { return acc.data.StorageRoot }
 func (acc Account) Permissions() ptypes.AccountPermissions { return acc.data.Permissions }
-
-func (acc Account) String() string {
-	return fmt.Sprintf("Account{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
-		acc.Address(), acc.Sequence(), acc.PublicKey(), acc.Balance(), len(acc.Code()), acc.StorageRoot(), acc.Permissions())
-}
 
 ///---- Mutable methods
 func (acc *Account) SubtractFromBalance(amount uint64) error {
@@ -148,18 +141,19 @@ func (acc *Account) MutablePermissions() *ptypes.AccountPermissions {
 }
 
 ///---- Serialisation methods
-//----------------------------------------------
 func (acc Account) validate() bool {
-	if len(acc.data.PublicKey.PublicKey) > 0 {
-		/// Only contracts have Bytecode
-		if len(acc.data.Code) > 0 {
-			return false
-		}
+	/*
+		if len(acc.data.PublicKey.PublicKey) > 0 {
+			/// Only contracts have Bytecode
+			if len(acc.data.Code) > 0 {
+				return false
+			}
 
-		if acc.data.Address != acc.data.PublicKey.Address() {
-			return false
+			if acc.data.Address != acc.data.PublicKey.Address() {
+				return false
+			}
 		}
-	}
+	*/
 
 	return true
 }
@@ -203,4 +197,9 @@ func (acc *Account) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	return nil
+}
+
+func (acc Account) String() string {
+	return fmt.Sprintf("Account{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeBytes: %v; StorageRoot: 0x%X; Permissions: %s}",
+		acc.Address(), acc.Sequence(), acc.PublicKey(), acc.Balance(), len(acc.Code()), acc.StorageRoot(), acc.Permissions())
 }

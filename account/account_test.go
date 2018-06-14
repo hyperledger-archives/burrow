@@ -21,7 +21,7 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/permission/types"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,10 +48,10 @@ func TestAddress(t *testing.T) {
 }
 
 func TestDecodeAccount(t *testing.T) {
-	permissions := types.AccountPermissions{
-		Base: types.BasePermissions{
-			Perms:  permission.SetGlobal,
-			SetBit: permission.SetGlobal,
+	permissions := ptypes.AccountPermissions{
+		Base: ptypes.BasePermissions{
+			Perms:  ptypes.SetGlobal,
+			SetBit: ptypes.SetGlobal,
 		},
 		Roles: []string{"bums"},
 	}

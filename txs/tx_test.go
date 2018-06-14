@@ -21,8 +21,8 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
-	ptypes "github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/permission/snatives"
+	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
