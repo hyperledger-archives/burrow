@@ -1,8 +1,6 @@
 package tendermint
 
 import (
-	"fmt"
-
 	"context"
 
 	"os"
@@ -16,7 +14,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
-	abci_types "github.com/tendermint/abci/types"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
@@ -50,14 +47,9 @@ func (n *Node) Close() {
 	}
 }
 
-func NewNode(
-	conf *config.Config,
-	privValidator tm_types.PrivValidator,
-	genesisDoc *tm_types.GenesisDoc,
-	blockchain *bcm.Blockchain,
-	checker execution.BatchExecutor,
-	committer execution.BatchCommitter,
-	logger *logging.Logger) (*Node, error) {
+func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisDoc *tm_types.GenesisDoc,
+	blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
+	txDecoder txs.Decoder, logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
@@ -69,7 +61,7 @@ func NewNode(
 	}
 
 	nde := &Node{}
-	app := abci.NewApp(blockchain, checker, committer, logger)
+	app := abci.NewApp(blockchain, checker, committer, txDecoder, logger)
 	conf.NodeKeyFile()
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
@@ -84,23 +76,6 @@ func NewNode(
 	}
 	app.SetMempoolLocker(nde.MempoolReactor().Mempool)
 	return nde, nil
-}
-
-func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(env *txs.Envelope,
-	callback func(res *abci_types.Response)) error {
-
-	return func(env *txs.Envelope, callback func(res *abci_types.Response)) error {
-		txBytes, err := txEncoder.EncodeTx(env)
-		if err != nil {
-			return fmt.Errorf("error encoding transaction: %v", err)
-		}
-
-		err = validator.MempoolReactor().BroadcastTx(txBytes, callback)
-		if err != nil {
-			return fmt.Errorf("error broadcasting transaction: %v", err)
-		}
-		return nil
-	}
 }
 
 func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {

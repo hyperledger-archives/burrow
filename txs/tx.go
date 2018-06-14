@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs/payload"
 	"golang.org/x/crypto/ripemd160"
@@ -129,7 +130,7 @@ func (tx *Tx) Rehash() []byte {
 
 // BroadcastTx or Transaction receipt
 type Receipt struct {
-	TxHash          []byte
+	TxHash          binary.HexBytes
 	CreatesContract bool
 	ContractAddress crypto.Address
 }

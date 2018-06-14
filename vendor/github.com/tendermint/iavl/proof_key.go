@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -51,15 +50,19 @@ func (proof *KeyExistsProof) Verify(key []byte, value []byte, root []byte) error
 	return proof.PathToKey.verify(proofLeafNode{key, value, proof.Version}.Hash(), root)
 }
 
-// Bytes returns a go-wire binary serialization
+// Bytes returns a go-amino binary serialization
 func (proof *KeyExistsProof) Bytes() []byte {
-	return append([]byte{keyExistsMagicNumber}, wire.BinaryBytes(proof)...)
+	bz, err := cdc.MarshalBinary(proof)
+	if err != nil {
+		panic(fmt.Sprintf("error marshaling proof (%v): %v", proof, err))
+	}
+	return append([]byte{keyExistsMagicNumber}, bz...)
 }
 
 // readKeyExistsProof will deserialize a KeyExistsProof from bytes.
 func readKeyExistsProof(data []byte) (*KeyExistsProof, error) {
 	proof := new(KeyExistsProof)
-	err := wire.ReadBinaryBytes(data, &proof)
+	err := cdc.UnmarshalBinary(data, proof)
 	return proof, err
 }
 
@@ -102,13 +105,17 @@ func (proof *KeyAbsentProof) Verify(key, value []byte, root []byte) error {
 
 // Bytes returns a go-wire binary serialization
 func (proof *KeyAbsentProof) Bytes() []byte {
-	return append([]byte{keyAbsentMagicNumber}, wire.BinaryBytes(proof)...)
+	bz, err := cdc.MarshalBinary(proof)
+	if err != nil {
+		panic(fmt.Sprintf("error marshaling proof (%v): %v", proof, err))
+	}
+	return append([]byte{keyAbsentMagicNumber}, bz...)
 }
 
 // readKeyAbsentProof will deserialize a KeyAbsentProof from bytes.
 func readKeyAbsentProof(data []byte) (*KeyAbsentProof, error) {
 	proof := new(KeyAbsentProof)
-	err := wire.ReadBinaryBytes(data, &proof)
+	err := cdc.UnmarshalBinary(data, proof)
 	return proof, err
 }
 
@@ -149,6 +156,6 @@ func (proof *InnerKeyProof) Verify(hash []byte, value []byte, root []byte) error
 // ReadKeyInnerProof will deserialize a InnerKeyProof from bytes.
 func ReadInnerKeyProof(data []byte) (*InnerKeyProof, error) {
 	proof := new(InnerKeyProof)
-	err := wire.ReadBinaryBytes(data, &proof)
+	err := cdc.UnmarshalBinary(data, proof)
 	return proof, err
 }

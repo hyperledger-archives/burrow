@@ -18,9 +18,9 @@ func (sf ShutdownFunc) Shutdown(ctx context.Context) error {
 }
 
 type Launcher struct {
-	Name     string
-	Disabled bool
-	Launch   func() (Process, error)
+	Name    string
+	Enabled bool
+	Launch  func() (Process, error)
 }
 
 type listenersServer struct {

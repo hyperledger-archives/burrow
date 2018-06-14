@@ -25,7 +25,6 @@ import (
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/go-wire"
 )
 
 func TestAddress(t *testing.T) {
@@ -47,33 +46,6 @@ func TestAddress(t *testing.T) {
 	addrFromWord256 := crypto.AddressFromWord256(word256)
 	assert.Equal(t, bs, addrFromWord256[:])
 	assert.Equal(t, addr, addrFromWord256)
-}
-
-func TestAccountSerialise(t *testing.T) {
-	type AccountContainingStruct struct {
-		Account Account
-		ChainID string
-	}
-
-	// This test is really testing this go wire declaration in account.go
-
-	acc := NewConcreteAccountFromSecret("Super Semi Secret")
-
-	// Go wire cannot serialise a top-level interface type it needs to be a field or sub-field of a struct
-	// at some depth. i.e. you MUST wrap an interface if you want it to be decoded (they do not document this)
-	var accStruct = AccountContainingStruct{
-		Account: acc.Account(),
-		ChainID: "TestChain",
-	}
-
-	// We will write into this
-	accStructOut := AccountContainingStruct{}
-
-	// We must pass in a value type to read from (accStruct), but provide a pointer type to write into (accStructout
-	err := wire.ReadBinaryBytes(wire.BinaryBytes(accStruct), &accStructOut)
-	require.NoError(t, err)
-
-	assert.Equal(t, accStruct, accStructOut)
 }
 
 func TestDecodeConcrete(t *testing.T) {
@@ -118,8 +90,8 @@ func TestMarshalJSON(t *testing.T) {
 	bs, err := json.Marshal(acc)
 
 	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
-		`"Sequence":0,"Balance":0,"Code":"3C172D","StorageRoot":"",`+
-		`"Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":[]}}`,
+		`"Sequence":0,"Balance":0,"Code":"3C172D","StorageRoot":null,`+
+		`"Permissions":{"Base":{"Perms":0,"SetBit":0},"Roles":null}}`,
 		concreteAcc.Address, concreteAcc.PublicKey)
 	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)

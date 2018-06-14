@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
 # The git revision of Bosmarmot/bos we will build and install into ./bin/ for integration tests
-echo "86a3a0879782bec0a9f300d69a542fbbe3737fa9"
+
+echo "4731b612c040e8b0ab7c6cbab3eb0b2fe0e49298"

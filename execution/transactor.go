@@ -38,13 +38,14 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	abci_types "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/abci/types"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const BlockingTimeoutSeconds = 30
 
 type Call struct {
-	Return  []byte
+	Return  binary.HexBytes
 	GasUsed uint64
 }
 
@@ -52,39 +53,41 @@ type Call struct {
 type Transactor struct {
 	tip              *blockchain.Tip
 	eventEmitter     event.Emitter
-	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error
+	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
+	txEncoder        txs.Encoder
 	logger           *logging.Logger
 }
 
 func NewTransactor(tip *blockchain.Tip, eventEmitter event.Emitter,
-	broadcastTxAsync func(tx *txs.Envelope, callback func(res *abci_types.Response)) error,
+	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		tip:              tip,
 		eventEmitter:     eventEmitter,
 		broadcastTxAsync: broadcastTxAsync,
+		txEncoder:        txEncoder,
 		logger:           logger.With(structure.ComponentKey, "Transactor"),
 	}
 }
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func (trans *Transactor) Call(reader state.Reader, fromAddress, toAddress crypto.Address,
+func (trans *Transactor) Call(reader state.Reader, fromAddress, address crypto.Address,
 	data []byte) (call *Call, err error) {
 
-	if evm.IsRegisteredNativeContract(toAddress.Word256()) {
+	if evm.IsRegisteredNativeContract(address.Word256()) {
 		return nil, fmt.Errorf("attempt to call native contract at address "+
 			"%X, but native contracts can not be called directly. Use a deployed "+
-			"contract that calls the native function instead", toAddress)
+			"contract that calls the native function instead", address)
 	}
 	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := state.GetMutableAccount(reader, toAddress)
+	callee, err := state.GetMutableAccount(reader, address)
 	if err != nil {
 		return nil, err
 	}
 	if callee == nil {
-		return nil, fmt.Errorf("account %s does not exist", toAddress)
+		return nil, fmt.Errorf("account %s does not exist", address)
 	}
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
 	txCache := state.NewCache(reader)
@@ -126,8 +129,20 @@ func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Addres
 	return &Call{Return: ret, GasUsed: gasUsed}, nil
 }
 
-func (trans *Transactor) BroadcastTxAsync(tx *txs.Envelope, callback func(res *abci_types.Response)) error {
-	return trans.broadcastTxAsync(tx, callback)
+func (trans *Transactor) BroadcastTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
+	return trans.broadcastTxAsync(txBytes, callback)
+}
+
+func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {
+	err := txEnv.Validate()
+	if err != nil {
+		return err
+	}
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+	if err != nil {
+		return fmt.Errorf("error encoding transaction: %v", err)
+	}
+	return trans.BroadcastTxAsyncRaw(txBytes, callback)
 }
 
 // Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
@@ -136,8 +151,20 @@ func (trans *Transactor) BroadcastTx(txEnv *txs.Envelope) (*txs.Receipt, error) 
 	trans.logger.Trace.Log("method", "BroadcastTx",
 		"tx_hash", txEnv.Tx.Hash(),
 		"tx", txEnv.String())
-	responseCh := make(chan *abci_types.Response, 1)
-	err := trans.BroadcastTxAsync(txEnv, func(res *abci_types.Response) {
+	err := txEnv.Validate()
+	if err != nil {
+		return nil, err
+	}
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+	if err != nil {
+		return nil, err
+	}
+	return trans.BroadcastTxRaw(txBytes)
+}
+
+func (trans *Transactor) BroadcastTxRaw(txBytes []byte) (*txs.Receipt, error) {
+	responseCh := make(chan *abciTypes.Response, 1)
+	err := trans.BroadcastTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
 	})
 
@@ -176,20 +203,15 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 	}
 	defer unlock()
 
-	callTx, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	txEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
 	if err != nil {
 		return nil, err
 	}
-	// Got ourselves a tx.
-	err = callTx.Sign(inputAccount)
-	if err != nil {
-		return nil, err
-	}
-	return trans.BroadcastTx(callTx)
+	return trans.BroadcastTx(txEnv)
 }
 
-func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte, gasLimit,
-	fee uint64) (*evm_events.EventDataCall, error) {
+func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
+	address *crypto.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
@@ -234,6 +256,8 @@ func (trans *Transactor) TransactAndHold(sequentialSigningAccount *SequentialSig
 	defer timer.Stop()
 
 	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case eventDataCall := <-ch:
@@ -286,8 +310,8 @@ func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount
 	return trans.BroadcastTx(sendTxEnv)
 }
 
-func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
-	amount uint64) (*txs.Receipt, error) {
+func (trans *Transactor) SendAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
+	toAddress crypto.Address, amount uint64) (*txs.Receipt, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
@@ -327,6 +351,8 @@ func (trans *Transactor) SendAndHold(sequentialSigningAccount *SequentialSigning
 	defer timer.Stop()
 
 	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case sendTx := <-wc:

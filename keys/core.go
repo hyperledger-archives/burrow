@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	tmint_crypto "github.com/hyperledger/burrow/crypto/helpers"
-	wire "github.com/tendermint/go-wire"
+	"encoding/json"
 )
 
 const (
@@ -51,36 +50,7 @@ func writeKey(keyDir string, addr, keyJson []byte) ([]byte, error) {
 }
 
 func coreExport(key *Key) ([]byte, error) {
-	type privValidator struct {
-		Address    []byte        `json:"address"`
-		PubKey     []interface{} `json:"pub_key"`
-		PrivKey    []interface{} `json:"priv_key"`
-		LastHeight int           `json:"last_height"`
-		LastRound  int           `json:"last_round"`
-		LastStep   int           `json:"last_step"`
-	}
-
-	pub := key.Pubkey()
-
-	var pubKeyWithType []interface{}
-	var pubKey tmint_crypto.PubKeyEd25519
-	copy(pubKey[:], pub)
-	pubKeyWithType = append(pubKeyWithType, tmint_crypto.PubKeyTypeEd25519)
-	pubKeyWithType = append(pubKeyWithType, pubKey)
-
-	var privKeyWithType []interface{}
-	var privKey tmint_crypto.PrivKeyEd25519
-	copy(privKey[:], key.PrivateKey.RawBytes())
-	privKeyWithType = append(privKeyWithType, tmint_crypto.PrivKeyTypeEd25519)
-	privKeyWithType = append(privKeyWithType, privKey)
-
-	privVal := &privValidator{
-		Address: key.Address[:],
-		PubKey:  pubKeyWithType,
-		PrivKey: privKeyWithType,
-	}
-
-	return wire.JSONBytes(privVal), nil
+	return json.Marshal(key)
 }
 
 //----------------------------------------------------------------

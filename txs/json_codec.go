@@ -15,10 +15,10 @@ func (gwc *jsonCodec) EncodeTx(env *Envelope) ([]byte, error) {
 }
 
 func (gwc *jsonCodec) DecodeTx(txBytes []byte) (*Envelope, error) {
-	env := new(Envelope)
-	err := json.Unmarshal(txBytes, env)
+	txEnv := new(Envelope)
+	err := json.Unmarshal(txBytes, txEnv)
 	if err != nil {
 		return nil, err
 	}
-	return env, nil
+	return txEnv, nil
 }

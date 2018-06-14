@@ -5,6 +5,7 @@
 
 # TODO: run the suite with/without encryption!
 
+set -e
 
 burrow_bin=${burrow_bin:-burrow}
 
@@ -93,7 +94,7 @@ do
 	DIR=$keys_dir/data
 	FILE=$DIR/$ADDR.json
 	PRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
-	HEXPRIV=`echo -n "$PRIV" | base64 -d | xxd -p -u -c 256`
+	HEXPRIV=`echo -n "$PRIV" | base64 -d | xxd -p -c 256 | tr '[:lower:]' '[:upper:]'`
 	cp $FILE ~/$ADDR
 	rm -rf $DIR
 
