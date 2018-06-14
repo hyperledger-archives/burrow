@@ -227,13 +227,15 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		}
 	}()
 
+	// First commit the app start, this app hash will not get checkpointed until the next block when we are sure
+	// that nothing in the downstream commit process could have failed. At worst we go back one block.
 	appHash, err := app.committer.Commit()
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
-
 	}
 
-	// Commit to our blockchain state
+	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
+	// (we know the previous app hash is safely committed because we are about to commit the next)
 	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
 	if err != nil {
 		panic(errors.Wrap(err, "could not commit block to blockchain state"))

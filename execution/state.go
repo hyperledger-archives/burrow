@@ -57,8 +57,7 @@ var _ state.Writer = &State{}
 
 type State struct {
 	sync.RWMutex
-	db dbm.DB
-	// TODO:
+	db     dbm.DB
 	tree   *iavl.VersionedTree
 	logger *logging.Logger
 }
@@ -129,11 +128,20 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found
-func LoadState(db dbm.DB) (*State, error) {
+func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	s := NewState(db)
-	_, err := s.tree.Load()
+	// Get the version associated with this state hash
+	version, err := s.GetVersion(hash)
+	if err != nil {
+		return nil, err
+	}
+	treeVersion, err := s.tree.LoadVersion(version)
 	if err != nil {
 		return nil, fmt.Errorf("could not load versioned state tree")
+	}
+	if treeVersion != version {
+		return nil, fmt.Errorf("tried to load state version %v for state hash %X but loaded version %v",
+			version, hash, treeVersion)
 	}
 	return s, nil
 }
@@ -141,11 +149,30 @@ func LoadState(db dbm.DB) (*State, error) {
 func (s *State) Save() error {
 	s.Lock()
 	defer s.Unlock()
-	_, _, err := s.tree.SaveVersion()
+	// Save state at a new version may still be orphaned before we save the version against the hash
+	hash, treeVersion, err := s.tree.SaveVersion()
 	if err != nil {
 		return err
 	}
+	// Provide a reference to load this version in the future from the state hash
+	s.SetVersion(hash, treeVersion)
 	return nil
+}
+
+// Get a previously saved tree version stored by state hash
+func (s *State) GetVersion(hash []byte) (int64, error) {
+	versionBytes := s.db.Get(prefixedKey(versionPrefix, hash))
+	if versionBytes == nil {
+		return -1, fmt.Errorf("could not retrieve version corresponding to state hash '%X' in database", hash)
+	}
+	return binary.GetInt64BE(versionBytes), nil
+}
+
+// Set the tree version associated with a particular hash
+func (s *State) SetVersion(hash []byte, version int64) {
+	versionBytes := make([]byte, 8)
+	binary.PutInt64BE(versionBytes, version)
+	s.db.SetSync(prefixedKey(versionPrefix, hash), versionBytes)
 }
 
 // Computes the state hash, also computed on save where it is returned
