@@ -4,6 +4,7 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
@@ -25,7 +26,7 @@ func NewTransactionServer(service *rpc.Service, reader state.Reader, txCodec txs
 }
 
 func (ts *transactionServer) BroadcastTx(ctx context.Context, param *TxParam) (*TxReceipt, error) {
-	receipt, err := ts.service.Transactor().BroadcastTxRaw(param.Tx)
+	receipt, err := ts.service.Transactor().BroadcastTxRaw(param.GetTx())
 	if err != nil {
 		return nil, err
 	}
@@ -33,15 +34,15 @@ func (ts *transactionServer) BroadcastTx(ctx context.Context, param *TxParam) (*
 }
 
 func (ts *transactionServer) Call(ctx context.Context, param *CallParam) (*CallResult, error) {
-	fromAddress, err := crypto.AddressFromBytes(param.From)
+	fromAddress, err := crypto.AddressFromBytes(param.GetFrom())
 	if err != nil {
 		return nil, err
 	}
-	address, err := crypto.AddressFromBytes(param.Address)
+	address, err := crypto.AddressFromBytes(param.GetAddress())
 	if err != nil {
 		return nil, err
 	}
-	call, err := ts.service.Transactor().Call(ts.reader, fromAddress, address, param.Data)
+	call, err := ts.service.Transactor().Call(ts.reader, fromAddress, address, param.GetData())
 	return &CallResult{
 		Return:  call.Return,
 		GasUsed: call.GasUsed,
@@ -49,11 +50,11 @@ func (ts *transactionServer) Call(ctx context.Context, param *CallParam) (*CallR
 }
 
 func (ts *transactionServer) CallCode(ctx context.Context, param *CallCodeParam) (*CallResult, error) {
-	fromAddress, err := crypto.AddressFromBytes(param.From)
+	fromAddress, err := crypto.AddressFromBytes(param.GetFrom())
 	if err != nil {
 		return nil, err
 	}
-	call, err := ts.service.Transactor().CallCode(ts.reader, fromAddress, param.Code, param.Data)
+	call, err := ts.service.Transactor().CallCode(ts.reader, fromAddress, param.GetCode(), param.GetData())
 	return &CallResult{
 		Return:  call.Return,
 		GasUsed: call.GasUsed,
@@ -61,15 +62,16 @@ func (ts *transactionServer) CallCode(ctx context.Context, param *CallCodeParam)
 }
 
 func (ts *transactionServer) Transact(ctx context.Context, param *TransactParam) (*TxReceipt, error) {
-	inputAccount, err := ts.service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+	inputAccount, err := ts.inputAccount(param.GetInputAccount())
 	if err != nil {
 		return nil, err
 	}
-	address, err := crypto.MaybeAddressFromBytes(param.Address)
+	address, err := crypto.MaybeAddressFromBytes(param.GetAddress())
 	if err != nil {
 		return nil, err
 	}
-	receipt, err := ts.service.Transactor().Transact(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+	receipt, err := ts.service.Transactor().Transact(inputAccount, address, param.GetData(), param.GetGasLimit(),
+		param.GetFee())
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +79,16 @@ func (ts *transactionServer) Transact(ctx context.Context, param *TransactParam)
 }
 
 func (ts *transactionServer) TransactAndHold(ctx context.Context, param *TransactParam) (*EventDataCall, error) {
-	inputAccount, err := ts.service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+	inputAccount, err := ts.inputAccount(param.GetInputAccount())
 	if err != nil {
 		return nil, err
 	}
-	address, err := crypto.MaybeAddressFromBytes(param.Address)
+	address, err := crypto.MaybeAddressFromBytes(param.GetAddress())
 	if err != nil {
 		return nil, err
 	}
-	edt, err := ts.service.Transactor().TransactAndHold(ctx, inputAccount, address, param.Data, param.GasLimit, param.Fee)
+	edt, err := ts.service.Transactor().TransactAndHold(ctx, inputAccount, address, param.GetData(),
+		param.GetGasLimit(), param.GetFee())
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +96,15 @@ func (ts *transactionServer) TransactAndHold(ctx context.Context, param *Transac
 }
 
 func (ts *transactionServer) Send(ctx context.Context, param *SendParam) (*TxReceipt, error) {
-	inputAccount, err := ts.service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+	inputAccount, err := ts.inputAccount(param.GetInputAccount())
 	if err != nil {
 		return nil, err
 	}
-	toAddress, err := crypto.AddressFromBytes(param.ToAddress)
+	toAddress, err := crypto.AddressFromBytes(param.GetToAddress())
 	if err != nil {
 		return nil, err
 	}
-	receipt, err := ts.service.Transactor().Send(inputAccount, toAddress, param.Amount)
+	receipt, err := ts.service.Transactor().Send(inputAccount, toAddress, param.GetAmount())
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +112,15 @@ func (ts *transactionServer) Send(ctx context.Context, param *SendParam) (*TxRec
 }
 
 func (ts *transactionServer) SendAndHold(ctx context.Context, param *SendParam) (*TxReceipt, error) {
-	inputAccount, err := ts.service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+	inputAccount, err := ts.inputAccount(param.GetInputAccount())
 	if err != nil {
 		return nil, err
 	}
-	toAddress, err := crypto.AddressFromBytes(param.ToAddress)
+	toAddress, err := crypto.AddressFromBytes(param.GetToAddress())
 	if err != nil {
 		return nil, err
 	}
-	receipt, err := ts.service.Transactor().SendAndHold(ctx, inputAccount, toAddress, param.Amount)
+	receipt, err := ts.service.Transactor().SendAndHold(ctx, inputAccount, toAddress, param.GetAmount())
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +128,11 @@ func (ts *transactionServer) SendAndHold(ctx context.Context, param *SendParam) 
 }
 
 func (ts *transactionServer) SignTx(ctx context.Context, param *SignTxParam) (*SignedTx, error) {
-	txEnv, err := ts.txCodec.DecodeTx(param.Tx)
+	txEnv, err := ts.txCodec.DecodeTx(param.GetTx())
 	if err != nil {
 		return nil, err
 	}
-	signers, err := signersFromPrivateAccounts(param.PrivateAccounts)
+	signers, err := signersFromPrivateAccounts(param.GetPrivateAccounts())
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +147,10 @@ func (ts *transactionServer) SignTx(ctx context.Context, param *SignTxParam) (*S
 	return &SignedTx{
 		Tx: bs,
 	}, nil
+}
+
+func (ts *transactionServer) inputAccount(inAcc *InputAccount) (*execution.SequentialSigningAccount, error) {
+	return ts.service.SigningAccount(inAcc.GetAddress(), inAcc.GetPrivateKey())
 }
 
 func eventDataCall(edt *events.EventDataCall) *EventDataCall {

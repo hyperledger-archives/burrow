@@ -47,7 +47,6 @@ import (
 	tm_config "github.com/tendermint/tendermint/config"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -206,7 +205,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:    "GRPC service",
+			Name:    "GRPC",
 			Enabled: rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
 				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
@@ -214,7 +213,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					return nil, err
 				}
 
-				grpcServer := grpc.NewServer()
+				grpcServer := rpc.NewGRPCServer(logger)
 				var ks keys.KeyStore
 				if keyStore != nil {
 					ks = *keyStore
