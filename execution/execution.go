@@ -59,6 +59,7 @@ type BatchCommitter interface {
 type executor struct {
 	sync.RWMutex
 	runCall      bool
+	publisher    event.Publisher
 	state        *State
 	stateCache   state.Cache
 	nameRegCache *names.Cache
@@ -91,8 +92,9 @@ func newExecutor(name string, runCall bool, backend *State, tip *bcm.Tip, publis
 	exe := &executor{
 		runCall:      runCall,
 		state:        backend,
+		publisher:    publisher,
 		stateCache:   state.NewCache(backend, state.Name(name)),
-		eventCache:   event.NewEventCache(publisher),
+		eventCache:   event.NewEventCache(),
 		nameRegCache: names.NewCache(backend),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
@@ -193,13 +195,19 @@ func (exe *executor) Commit() (hash []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+	err = exe.eventCache.Flush(exe.state)
+	if err != nil {
+		return nil, err
+	}
 	// save state to disk
 	err = exe.state.Save()
 	if err != nil {
 		return nil, err
 	}
 	// flush events to listeners
-	defer exe.eventCache.Flush()
+	defer func() {
+		err = exe.eventCache.Flush(exe.publisher)
+	}()
 	return exe.state.Hash(), nil
 }
 

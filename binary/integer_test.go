@@ -97,6 +97,12 @@ func TestS256(t *testing.T) {
 	assertBigIntEqual(t, expected, signed, "Out of twos complement bounds")
 }
 
+func TestPutUint64BE(t *testing.T) {
+	bs := make([]byte, 8)
+	PutUint64LE(bs, 245343)
+	assert.Equal(t, "5FBE030000000000", fmt.Sprintf("%X\n", bs))
+}
+
 func TestSignExtend(t *testing.T) {
 	assertSignExtend(t, 16, 0,
 		"0000 0000 1001 0000",

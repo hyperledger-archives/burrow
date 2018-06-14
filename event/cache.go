@@ -10,17 +10,14 @@ const maximumBufferCapacityToLengthRatio = 2
 
 // A Cache buffers events for a Publisher.
 type Cache struct {
-	publisher Publisher
-	events    []messageInfo
+	events []messageInfo
 }
 
 var _ Publisher = &Cache{}
 
 // Create a new Cache with an EventSwitch as backend
-func NewEventCache(publisher Publisher) *Cache {
-	return &Cache{
-		publisher: publisher,
-	}
+func NewEventCache() *Cache {
+	return &Cache{}
 }
 
 // a cached event
@@ -44,10 +41,10 @@ func (evc *Cache) Publish(ctx context.Context, message interface{}, tags map[str
 }
 
 // Clears cached events by flushing them to Publisher
-func (evc *Cache) Flush() error {
+func (evc *Cache) Flush(publisher Publisher) error {
 	var err error
 	for _, mi := range evc.events {
-		publishErr := evc.publisher.Publish(mi.ctx, mi.message, mi.tags)
+		publishErr := publisher.Publish(mi.ctx, mi.message, mi.tags)
 		// Capture first by try to flush the rest
 		if publishErr != nil && err == nil {
 			err = publishErr
