@@ -54,7 +54,7 @@ func (ctx *CallContext) Execute(txEnv *txs.Envelope) error {
 	return nil
 }
 
-func (ctx *CallContext) Precheck() (acm.MutableAccount, acm.Account, error) {
+func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 	var outAcc acm.Account
 	// Validate input
 	inAcc, err := state.GetMutableAccount(ctx.StateWriter, ctx.tx.Input.Address)
@@ -85,7 +85,8 @@ func (ctx *CallContext) Precheck() (acm.MutableAccount, acm.Account, error) {
 		"old_sequence", inAcc.Sequence(),
 		"new_sequence", inAcc.Sequence()+1)
 
-	inAcc, err = inAcc.IncSequence().SubtractFromBalance(ctx.tx.Fee)
+	inAcc.IncSequence()
+	err = inAcc.SubtractFromBalance(ctx.tx.Fee)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,13 +127,13 @@ func (ctx *CallContext) Precheck() (acm.MutableAccount, acm.Account, error) {
 	return inAcc, outAcc, nil
 }
 
-func (ctx *CallContext) Check(inAcc acm.MutableAccount, value uint64) error {
+func (ctx *CallContext) Check(inAcc *acm.MutableAccount, value uint64) error {
 	createContract := ctx.tx.Address == nil
 	// The mempool does not call txs until
 	// the proposer determines the order of txs.
 	// So mempool will skip the actual .Call(),
 	// and only deduct from the caller's balance.
-	inAcc, err := inAcc.SubtractFromBalance(value)
+	err := inAcc.SubtractFromBalance(value)
 	if err != nil {
 		return err
 	}
@@ -152,13 +153,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 	createContract := ctx.tx.Address == nil
 	// VM call variables
 	var (
-		gas     uint64             = ctx.tx.GasLimit
-		caller  acm.MutableAccount = acm.AsMutableAccount(inAcc)
-		callee  acm.MutableAccount = nil // initialized below
-		code    []byte             = nil
-		ret     []byte             = nil
-		txCache                    = state.NewCache(ctx.StateWriter, state.Name("TxCache"))
-		params                     = evm.Params{
+		gas     uint64              = ctx.tx.GasLimit
+		caller  *acm.MutableAccount = acm.AsMutableAccount(inAcc)
+		callee  *acm.MutableAccount = nil // initialized below
+		code    []byte              = nil
+		ret     []byte              = nil
+		txCache                     = state.NewCache(ctx.StateWriter, state.Name("TxCache"))
+		params                      = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
 			BlockTime:   ctx.Tip.LastBlockTime().Unix(),

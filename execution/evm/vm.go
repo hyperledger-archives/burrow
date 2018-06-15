@@ -125,7 +125,7 @@ func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, caller
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) Call(callState state.Cache, caller, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
@@ -169,7 +169,7 @@ func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, cod
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) DelegateCall(callState state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -209,7 +209,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bo
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) call(callState state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
@@ -1085,7 +1085,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 
 			}
 
-			receiver, errAdd := receiver.AddToBalance(callee.Balance())
+			errAdd := receiver.AddToBalance(callee.Balance())
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
@@ -1108,7 +1108,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 	}
 }
 
-func (vm *VM) createAccount(callState state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, errors.CodedError) {
+func (vm *VM) createAccount(callState state.Cache, callee *acm.MutableAccount, logger *logging.Logger) (*acm.MutableAccount, errors.CodedError) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {
@@ -1171,12 +1171,12 @@ func firstErr(errA, errB error) errors.CodedError {
 	}
 }
 
-func transfer(from, to acm.MutableAccount, amount uint64) errors.CodedError {
+func transfer(from, to *acm.MutableAccount, amount uint64) errors.CodedError {
 	if from.Balance() < amount {
 		return errors.ErrorCodeInsufficientBalance
 	} else {
 		from.SubtractFromBalance(amount)
-		_, err := to.AddToBalance(amount)
+		err := to.AddToBalance(amount)
 		if err != nil {
 			return errors.AsCodedError(err)
 		}

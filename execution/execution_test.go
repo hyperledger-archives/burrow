@@ -179,7 +179,7 @@ func newBaseGenDoc(globalPerm, accountPerm ptypes.AccountPermissions) genesis.Ge
 	}
 }
 
-//func getAccount(state state.AccountGetter, address acm.Address) acm.MutableAccount {
+//func getAccount(state state.AccountGetter, address acm.Address) *acm.MutableAccount {
 //	acc, _ := state.GetMutableAccount(state, address)
 //	return acc
 //}
@@ -1638,7 +1638,7 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	return s0, privAccounts
 }
 
-func getAccount(accountGetter state.AccountGetter, address crypto.Address) acm.MutableAccount {
+func getAccount(accountGetter state.AccountGetter, address crypto.Address) *acm.MutableAccount {
 	acc, _ := state.GetMutableAccount(accountGetter, address)
 	return acc
 }
@@ -1686,18 +1686,18 @@ func execTxWaitAccountCall(t *testing.T, batchCommitter *executor, emitter event
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
-func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount,
+func testSNativeCALLExpectFail(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug *acm.MutableAccount,
 	snativeAddress crypto.Address, data []byte) {
 	testSNativeCALL(t, false, batchCommitter, emitter, doug, 0, snativeAddress, data, nil)
 }
 
 // give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
-func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount, snativePerm ptypes.PermFlag,
+func testSNativeCALLExpectPass(t *testing.T, batchCommitter *executor, emitter event.Emitter, doug *acm.MutableAccount, snativePerm ptypes.PermFlag,
 	snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	testSNativeCALL(t, true, batchCommitter, emitter, doug, snativePerm, snativeAddress, data, f)
 }
 
-func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, emitter event.Emitter, doug acm.MutableAccount,
+func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, emitter event.Emitter, doug *acm.MutableAccount,
 	snativePerm ptypes.PermFlag, snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	if expectPass {
 		doug.MutablePermissions().Base.Set(snativePerm, true)

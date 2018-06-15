@@ -65,7 +65,7 @@ func newParams() Params {
 	}
 }
 
-func newAccount(seed ...byte) acm.MutableAccount {
+func newAccount(seed ...byte) *acm.MutableAccount {
 	hasher := ripemd160.New()
 	hasher.Write(seed)
 	return acm.ConcreteAccount{
@@ -697,14 +697,16 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2, err = newAccount(2).AddToBalance(100000)
+	account2 = newAccount(2)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2, err = newAccount(2).AddToBalance(100000)
+	account2 = newAccount(2)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
@@ -996,7 +998,7 @@ func returnWord() []byte {
 }
 
 func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
-	code []byte) (acm.MutableAccount, crypto.Address) {
+	code []byte) (*acm.MutableAccount, crypto.Address) {
 	address, _ := crypto.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
 		Address:  address,
@@ -1012,7 +1014,7 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
+func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee *acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
 	eventCh := make(chan *evm_events.EventDataCall)
 	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
@@ -1030,7 +1032,7 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAc
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee *acm.MutableAccount,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
