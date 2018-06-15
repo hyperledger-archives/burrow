@@ -90,10 +90,11 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc
 		}
 	}
 	return &tm_types.GenesisDoc{
-		ChainID:     burrowGenesisDoc.ChainID(),
-		GenesisTime: burrowGenesisDoc.GenesisTime,
-		Validators:  validators,
-		AppHash:     burrowGenesisDoc.Hash(),
+		ChainID:         burrowGenesisDoc.ChainID(),
+		GenesisTime:     burrowGenesisDoc.GenesisTime,
+		Validators:      validators,
+		AppHash:         burrowGenesisDoc.Hash(),
+		ConsensusParams: tm_types.DefaultConsensusParams(),
 	}
 }
 

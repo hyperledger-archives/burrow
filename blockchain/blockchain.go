@@ -148,11 +148,18 @@ func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *Tip {
 func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
 	bc.Lock()
 	defer bc.Unlock()
+	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know it must have been
+	// committed since we are committing the next block. If we fall over we can resume a safe committed state and
+	// Tendermint will catch us up
+	err := bc.save()
+	if err != nil {
+		return err
+	}
 	bc.lastBlockHeight += 1
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
-	return bc.save()
+	return nil
 }
 
 func (bc *Blockchain) save() error {

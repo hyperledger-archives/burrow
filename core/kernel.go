@@ -84,7 +84,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	var state *execution.State
 	// These should be in sync unless we are at the genesis block
 	if blockchain.LastBlockHeight() > 0 {
-		state, err = execution.LoadState(stateDB)
+		state, err = execution.LoadState(stateDB, blockchain.AppHashAfterLastBlock())
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				blockchain.AppHashAfterLastBlock(), err)

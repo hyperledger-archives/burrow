@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	tmConfig "github.com/tendermint/tendermint/config"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -42,18 +43,18 @@ func TestBootShutdownResume(t *testing.T) {
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 	privValidator := validator.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 
-	i := int64(1)
+	i := int64(0)
 	// asserts we get a consecutive run of blocks
 	blockChecker := func(block *tmTypes.EventDataNewBlock) bool {
-		assert.Equal(t, i, block.Block.Height)
+		assert.Equal(t, i+1, block.Block.Height)
 		i++
 		// stop every third block
 		return i%3 != 0
 	}
 	// First run
-	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
 	// Resume and check we pick up where we left off
-	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
 	// Resuming with mismatched genesis should fail
 	genesisDoc.Salt = []byte("foo")
 	assert.Error(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
