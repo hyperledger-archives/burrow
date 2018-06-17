@@ -15,6 +15,7 @@
 package execution
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -273,6 +274,15 @@ func (s *State) IterateStorage(address crypto.Address,
 }
 
 // State.storage
+//-------------------------------------
+// Events
+
+// Sevents
+func (s *State) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+	panic("implement me")
+}
+
+// Events
 //-------------------------------------
 // State.nameReg
 

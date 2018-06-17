@@ -1,0 +1,57 @@
+syntax = 'proto3';
+
+option go_package = "burrow";
+
+// Common Messages
+message Empty {
+
+}
+
+message InputAccount {
+    bytes privateKey = 1;
+    bytes address = 2;
+}
+
+message FilterData {
+    string field = 1;
+    string op = 2;
+    string value = 3;
+}
+
+message FilterListParam {
+    repeated FilterData filters = 1;
+}
+
+// This is here because it is required by both transactions and namereg
+// This situation can be remedied multiple ways 
+message TxReceipt {
+    bytes TxHash = 1;
+    bool CreatesContract = 2;
+    bytes ContractAddress = 3;
+}
+
+// This is here because it is used in both the Account Service (GenPrivAccount)
+// And in the transaction service (SignTx)
+message PrivateAccount {
+    bytes PrivateKey = 1;
+}
+
+// This is hear because it is used by both the Events service (Poll) and the
+// Transaction service (TransactAndHold)
+message EventDataCall {
+    CallData CallData = 1;
+    bytes Origin = 2;
+    bytes TxHash = 3;
+    int64 StackDepth = 4;
+    bytes Return = 5;
+    string Exception = 6;
+}
+
+message CallData {
+    bytes Caller = 1;
+    bytes Callee = 2;
+    bytes Data = 3;
+    uint64 Value = 4;
+    uint64 Gas = 5;
+}
+

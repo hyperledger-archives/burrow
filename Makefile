@@ -16,7 +16,8 @@ BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
-DOCKER_NAMESPACE := quay.io/monax
+PROTO_FILES = $(shell find . -type f -name '*.proto')
+PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 
 ### Formatting, linting and vetting
 
@@ -67,13 +68,24 @@ megacheck:
 protobuf_deps:
 	@go get -u github.com/golang/protobuf/protoc-gen-go
 
+# Implicit compile rule for GRPC/proto files
+%.pb.go: %.proto
+	@protoc -I ./$(@D) $< --go_out=plugins=grpc:$(@D)
+
 keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
-	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
 
-rpc/burrow/burrow.pb.go: rpc/burrow
-	@protoc -I ./rpc/burrow rpc/burrow/burrow.proto --go_out=plugins=grpc:rpc/burrow
+rpc/burrow/burrow.pb.go: rpc/burrow/burrow.proto
+
+execution/events/events.pb.go: execution/events/events.proto
+
+.PHONY: protobuf
+protobuf: $(PROTO_GO_FILES)
+
+.PHONY: clean_protobuf
+clean_protobuf:
+	@rm $(PROTO_GO_FILES)
+
 ### Dependency management for github.com/hyperledger/burrow
-
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
 erase_vendor:
