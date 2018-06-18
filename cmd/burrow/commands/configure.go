@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deployment"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
@@ -16,7 +18,23 @@ import (
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
 	"github.com/jawher/mow.cli"
+	"github.com/tendermint/go-amino"
+	tm_crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/p2p"
 )
+
+func processTemplate(config *genesis.GenesisDoc, templateIn, templateOut string) error {
+	data, err := ioutil.ReadFile(templateIn)
+	if err != nil {
+		return err
+	}
+	pkg := deployment.Config{Config: *config}
+	output, err := pkg.Dump(string(data))
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(templateOut, []byte(output), 0644)
+}
 
 func Configure(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
@@ -33,13 +51,22 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		genesisDocOpt := cmd.StringOpt("g genesis-doc", "", "GenesisDoc in JSON or TOML to embed in config")
 
-		generateKeysOpt := cmd.StringOpt("x generate-keys", "",
-			"File to output containing secret keys as JSON or according to a custom template (see --keys-template). "+
-				"Note that using this options means the keys will not be generated in the default keys instance")
+		generateNodeKeys := cmd.BoolOpt("generate-node-keys", false, "Generate node keys for validators")
 
-		keysTemplateOpt := cmd.StringOpt("z keys-template", deployment.DefaultDumpKeysFormat,
+		generateKeysOpt := cmd.StringOpt("x generate-keys", "",
+			"File to output keys in a kubernetes secret definition (see --kubernetes-template)")
+
+		keysTemplateOpt := cmd.StringOpt("z keys-template", deployment.KubernetesKeyDumpFormat,
 			fmt.Sprintf("Go text/template template (left delim: %s right delim: %s) to generate secret keys "+
 				"file specified with --generate-keys.", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
+
+		configTemplateIn := cmd.StringsOpt("t config-template-in", nil,
+			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to output generate config "+
+				"file specified with --config-template-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
+
+		configTemplateOut := cmd.StringsOpt("t config-template-out", nil,
+			"Go text/template template output file. Template filename specified with --config-template-in "+
+				"file specified with --config-template-out")
 
 		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -56,7 +83,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-		cmd.Spec = "[--keys-url=<keys URL> | (--generate-keys=<secret keys files> [--keys-template=<text template for each key>])] " +
+		cmd.Spec = "[--keys-url=<keys URL> | (--generate-keys=<secret keys files> [--keys-template=<text template for key>])] " +
+			"[--config-template-in=<text template> --config-template-out=<output file>] " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name] [--json] " +
 			"[--logging=<logging program>] [--describe-logging] [--debug]"
@@ -87,6 +115,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Keys.RemoteAddress = *keysUrlOpt
 			}
 
+			if len(*configTemplateIn) != len(*configTemplateOut) {
+				output.Fatalf("--config-template-in and --config-template-out must be specified the same number of times")
+			}
+
 			// Genesis Spec
 			if *genesisSpecOpt != "" {
 				genesisSpec := new(spec.GenesisSpec)
@@ -95,21 +127,64 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
 				}
 				keyStore := keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions, logging.NewNoopLogger())
+
 				if *generateKeysOpt != "" {
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys)
 					if err != nil {
 						output.Fatalf("Could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 					}
 
-					allKeys, err := keyStore.AllKeys()
+					allNames, err := keyStore.GetAllNames()
 					if err != nil {
 						output.Fatalf("could get all keys: %v", err)
 					}
-					pkg := deployment.Package{Keys: allKeys}
-					if err != nil {
-						output.Fatalf("Could not dump keys: %v", err)
+
+					cdc := amino.NewCodec()
+					tm_crypto.RegisterAmino(cdc)
+
+					pkg := deployment.KeysSecret{ChainName: conf.GenesisDoc.ChainName}
+
+					for k := range allNames {
+						addr, err := crypto.AddressFromHexString(allNames[k])
+						if err != nil {
+							output.Fatalf("Address %s not valid: %v", k, err)
+						}
+						key, err := keyStore.GetKey("", addr[:])
+						if err != nil {
+							output.Fatalf("Failed to get key: %s: %v", k, err)
+						}
+
+						// Is this is a validator node key?
+						nodeKey := false
+						for _, a := range conf.GenesisDoc.Validators {
+							if a.NodeAddress != nil && addr == *a.NodeAddress {
+								nodeKey = true
+								break
+							}
+						}
+
+						if nodeKey {
+							privKey := tm_crypto.GenPrivKeyEd25519()
+							copy(privKey[:], key.PrivateKey.PrivateKey)
+							nodeKey := &p2p.NodeKey{
+								PrivKey: privKey,
+							}
+
+							json, err := cdc.MarshalJSON(nodeKey)
+							if err != nil {
+								output.Fatalf("go-amino failed to json marshall private key: %v", err)
+							}
+							pkg.NodeKeys = append(pkg.NodeKeys, deployment.Key{Name: k, Address: addr, KeyJSON: json})
+						} else {
+							json, err := json.Marshal(key)
+							if err != nil {
+								output.Fatalf("Failed to json marshal key: %s: %v", k, err)
+							}
+							pkg.Keys = append(pkg.Keys, deployment.Key{Name: k, Address: addr, KeyJSON: json})
+						}
 					}
+
 					secretKeysString, err := pkg.Dump(*keysTemplateOpt)
 					if err != nil {
 						output.Fatalf("Could not dump keys: %v", err)
@@ -128,7 +203,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					} else {
 						keyClient = keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 					}
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys)
 				}
 
 				if err != nil {
@@ -141,6 +216,13 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not read GenesisSpec: %v", err)
 				}
 				conf.GenesisDoc = genesisDoc
+			}
+
+			for ind := range *configTemplateIn {
+				err := processTemplate(conf.GenesisDoc, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
+				if err != nil {
+					output.Fatalf("coult not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
+				}
 			}
 
 			// Logging
@@ -183,6 +265,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 				conf.GenesisDoc = nil
 			}
+
 			if *jsonOutOpt {
 				output.Printf(conf.JSONString())
 			} else {

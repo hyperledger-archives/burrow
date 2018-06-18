@@ -340,6 +340,10 @@ func WriteKeyFile(addr []byte, dataDirPath string, content []byte) (err error) {
 	return ioutil.WriteFile(keyFilePath, content, 0600) // read, write for user
 }
 
+func (ks *KeyStore) GetAllNames() (map[string]string, error) {
+	return coreNameList(ks.keysDirPath)
+}
+
 func GetAllAddresses(dataDirPath string) (addresses [][]byte, err error) {
 	fileInfos, err := ioutil.ReadDir(dataDirPath)
 	if err != nil {
@@ -347,7 +351,7 @@ func GetAllAddresses(dataDirPath string) (addresses [][]byte, err error) {
 	}
 	addresses = make([][]byte, len(fileInfos))
 	for i, fileInfo := range fileInfos {
-		addr := strings.TrimSuffix(fileInfo.Name(), "json")
+		addr := strings.TrimSuffix(fileInfo.Name(), ".json")
 		address, err := hex.DecodeString(addr)
 		if err != nil {
 			continue

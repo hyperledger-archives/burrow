@@ -3,19 +3,31 @@ package deployment
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"text/template"
 
-	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/genesis"
 	"github.com/pkg/errors"
 	"github.com/tmthrgd/go-hex"
 )
 
-type Package struct {
-	Keys         []*keys.Key
-	BurrowConfig *config.BurrowConfig
+type Config struct {
+	Config genesis.GenesisDoc
+}
+
+type Key struct {
+	Name    string
+	Address crypto.Address
+	KeyJSON json.RawMessage
+}
+
+type KeysSecret struct {
+	Keys      []Key
+	NodeKeys  []Key
+	ChainName string
 }
 
 const DefaultDumpKeysFormat = `{
@@ -37,12 +49,18 @@ const HelmDumpKeysFormat = `privateKeys:<< range $key := . >>
     privateKey: << base64 $key.PrivateKey >><< end >>
   `
 
-const KubernetesKeyDumpFormat = `keysFiles:<< range $index, $key := . >>
-  key-<< printf "%03d" $index >>: << base64 $key.MonaxKeysJSON >><< end >>
-keysAddresses:<< range $index, $key := . >>
-  key-<< printf "%03d" $index >>: << $key.Address >><< end >>
-validatorAddresses:<< range $index, $key := . >>
-  - << $key.Address >><< end >>
+const KubernetesKeyDumpFormat = `apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: << .ChainName >>-keys
+data:
+<<- range .Keys >>
+  << .Address >>.json: << base64 .KeyJSON >>
+<<- end >>
+<<- range .NodeKeys >>
+  << .Name >>: << base64 .KeyJSON >>
+<<- end >>
 `
 
 const LeftTemplateDelim = "<<"
@@ -59,16 +77,30 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 
 var DefaultDumpKeysTemplate = template.Must(template.New("MockKeyClient_DumpKeys").Funcs(templateFuncs).
 	Delims(LeftTemplateDelim, RightTemplateDelim).
-	Parse(DefaultDumpKeysFormat))
+	Parse(KubernetesKeyDumpFormat))
 
-func (pkg *Package) Dump(templateString string) (string, error) {
+func (pkg *KeysSecret) Dump(templateString string) (string, error) {
 	tmpl, err := template.New("DumpKeys").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
 		Parse(templateString)
 	if err != nil {
 		return "", errors.Wrap(err, "could not dump keys to template")
 	}
 	buf := new(bytes.Buffer)
-	err = tmpl.Execute(buf, pkg.Keys)
+	err = tmpl.Execute(buf, pkg)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (pkg *Config) Dump(templateString string) (string, error) {
+	tmpl, err := template.New("ConfigTemplate").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
+		Parse(templateString)
+	if err != nil {
+		return "", errors.Wrap(err, "could not dump config to template")
+	}
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, pkg)
 	if err != nil {
 		return "", err
 	}

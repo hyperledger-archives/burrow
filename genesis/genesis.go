@@ -50,8 +50,9 @@ type Account struct {
 
 type Validator struct {
 	BasicAccount
-	Name     string
-	UnbondTo []BasicAccount
+	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty"`
+	Name        string
+	UnbondTo    []BasicAccount
 }
 
 //------------------------------------------------------------
@@ -60,7 +61,7 @@ type Validator struct {
 type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
-	Salt              []byte `json:",omitempty"`
+	Salt              []byte `json:",omitempty" toml:",omitempty"`
 	GlobalPermissions ptypes.AccountPermissions
 	Accounts          []Account
 	Validators        []Validator
@@ -153,8 +154,9 @@ func (gv *Validator) Clone() Validator {
 			PublicKey: gv.PublicKey,
 			Amount:    gv.Amount,
 		},
-		Name:     gv.Name,
-		UnbondTo: unbondToClone,
+		Name:        gv.Name,
+		UnbondTo:    unbondToClone,
+		NodeAddress: gv.NodeAddress,
 	}
 }
 
