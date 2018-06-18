@@ -195,10 +195,10 @@ func (exe *executor) Commit() (hash []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	err = exe.eventCache.Flush(exe.state)
-	if err != nil {
-		return nil, err
-	}
+	//err = exe.eventCache.Sync(exe.state)
+	//if err != nil {
+	//	return nil, err
+	//}
 	// save state to disk
 	err = exe.state.Save()
 	if err != nil {

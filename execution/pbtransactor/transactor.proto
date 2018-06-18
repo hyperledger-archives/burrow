@@ -1,16 +1,18 @@
 syntax = 'proto3';
 
-option go_package = "burrow";
+package pbtransactor;
 
-import "common.proto";
+option go_package = "github.com/hyperledger/burrow/execution/pbtransactor";
+
+import "github.com/hyperledger/burrow/execution/events/pbevents/events.proto";
 
 // Transaction Service Definition
-service Transaction {
+service Transactor {
     rpc BroadcastTx (TxParam) returns (TxReceipt);
     rpc Call (CallParam) returns (CallResult);
     rpc CallCode (CallCodeParam) returns (CallResult);
     rpc Transact (TransactParam) returns (TxReceipt);
-    rpc TransactAndHold (TransactParam) returns (EventDataCall);
+    rpc TransactAndHold (TransactParam) returns (pbevents.EventDataCall);
     rpc Send (SendParam) returns (TxReceipt);
     rpc SendAndHold (SendParam) returns (TxReceipt);
     rpc SignTx (SignTxParam) returns (SignedTx);
@@ -62,4 +64,18 @@ message CallResult {
     uint64 GasUsed = 2;
 }
 
+message TxReceipt {
+    bytes TxHash = 1;
+    bool CreatesContract = 2;
+    bytes ContractAddress = 3;
+}
+
+message InputAccount {
+    bytes privateKey = 1;
+    bytes address = 2;
+}
+
+message PrivateAccount {
+    bytes PrivateKey = 1;
+}
 //--------------------------------------------------

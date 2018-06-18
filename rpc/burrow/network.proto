@@ -2,7 +2,7 @@ syntax = 'proto3';
 
 option go_package = "burrow";
 
-import "common.proto";
+import "rpc/burrow/common.proto";
 
 // Network Service Definition
 service Network {

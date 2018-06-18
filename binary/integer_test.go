@@ -100,7 +100,7 @@ func TestS256(t *testing.T) {
 func TestPutUint64BE(t *testing.T) {
 	bs := make([]byte, 8)
 	PutUint64LE(bs, 245343)
-	assert.Equal(t, "5FBE030000000000", fmt.Sprintf("%X\n", bs))
+	assert.Equal(t, "5FBE030000000000", fmt.Sprintf("%X", bs))
 }
 
 func TestSignExtend(t *testing.T) {

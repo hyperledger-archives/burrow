@@ -3,7 +3,6 @@ package events
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -21,7 +20,6 @@ func EventStringNameReg(name string) string               { return fmt.Sprintf("
 func EventStringPermissions(perm ptypes.PermFlag) string  { return fmt.Sprintf("Permissions/%v", perm) }
 func EventStringBond() string                             { return "Bond" }
 func EventStringUnbond() string                           { return "Unbond" }
-func EventStringRebond() string                           { return "Rebond" }
 
 // All txs fire EventDataTx, but only CallTx might have Return or Exception
 type EventDataTx struct {
@@ -32,39 +30,17 @@ type EventDataTx struct {
 
 // For re-use
 var sendTxQuery = event.NewQueryBuilder().
-	AndEquals(event.MessageTypeKey, reflect.TypeOf(&EventDataTx{}).String()).
 	AndEquals(event.TxTypeKey, payload.TypeSend.String())
 
 var callTxQuery = event.NewQueryBuilder().
-	AndEquals(event.MessageTypeKey, reflect.TypeOf(&EventDataTx{}).String()).
 	AndEquals(event.TxTypeKey, payload.TypeCall.String())
 
 // Publish/Subscribe
-func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
-	address crypto.Address, txHash []byte, ch chan<- *payload.SendTx) error {
-
-	query := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
-		AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
-
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
-		if edt, ok := message.(*EventDataTx); ok {
-			if sendTx, ok := edt.Tx.Payload.(*payload.SendTx); ok {
-				ch <- sendTx
-			}
-		}
-		return true
-	})
-}
-
 func PublishAccountOutput(publisher event.Publisher, address crypto.Address, tx *txs.Tx, ret []byte,
 	exception *errors.Exception) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountOutput(address),
-		&EventDataTx{
-			Tx:        tx,
-			Return:    ret,
-			Exception: exception,
-		},
+		eventDataTx(tx, ret, exception),
 		map[string]interface{}{
 			"address":       address,
 			event.TxTypeKey: tx.Type().String(),
@@ -76,11 +52,7 @@ func PublishAccountInput(publisher event.Publisher, address crypto.Address, tx *
 	exception *errors.Exception) error {
 
 	return event.PublishWithEventID(publisher, EventStringAccountInput(address),
-		&EventDataTx{
-			Tx:        tx,
-			Return:    ret,
-			Exception: exception,
-		},
+		eventDataTx(tx, ret, exception),
 		map[string]interface{}{
 			"address":       address,
 			event.TxTypeKey: tx.Type().String(),
@@ -93,7 +65,8 @@ func PublishNameReg(publisher event.Publisher, tx *txs.Tx) error {
 	if !ok {
 		return fmt.Errorf("Tx payload must be NameTx to PublishNameReg")
 	}
-	return event.PublishWithEventID(publisher, EventStringNameReg(nameTx.Name), &EventDataTx{Tx: tx},
+	return event.PublishWithEventID(publisher, EventStringNameReg(nameTx.Name),
+		eventDataTx(tx, nil, nil),
 		map[string]interface{}{
 			"name":          nameTx.Name,
 			event.TxTypeKey: tx.Type().String(),
@@ -106,10 +79,40 @@ func PublishPermissions(publisher event.Publisher, perm ptypes.PermFlag, tx *txs
 	if !ok {
 		return fmt.Errorf("Tx payload must be PermissionsTx to PublishPermissions")
 	}
-	return event.PublishWithEventID(publisher, EventStringPermissions(perm), &EventDataTx{Tx: tx},
+	return event.PublishWithEventID(publisher, EventStringPermissions(perm),
+		eventDataTx(tx, nil, nil),
 		map[string]interface{}{
 			"name":          perm.String(),
 			event.TxTypeKey: tx.Type().String(),
 			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
 		})
+}
+
+func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
+	address crypto.Address, txHash []byte, ch chan<- *payload.SendTx) error {
+
+	query := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
+		AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
+
+	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
+		if ev, ok := message.(*Event); ok && ev.Tx != nil {
+			if sendTx, ok := ev.Tx.Tx.Payload.(*payload.SendTx); ok {
+				ch <- sendTx
+			}
+		}
+		return true
+	})
+}
+
+func eventDataTx(tx *txs.Tx, ret []byte, exception *errors.Exception) *Event {
+	return &Event{
+		Header: &Header{
+			TxHash: tx.Hash(),
+		},
+		Tx: &EventDataTx{
+			Tx:        tx,
+			Return:    ret,
+			Exception: exception,
+		},
+	}
 }

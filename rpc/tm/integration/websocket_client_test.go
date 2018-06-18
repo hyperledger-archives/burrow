@@ -24,15 +24,14 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	exe_events "github.com/hyperledger/burrow/execution/events"
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
-	tm_client "github.com/hyperledger/burrow/rpc/tm/client"
+	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tm_types "github.com/tendermint/tendermint/types"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 //--------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ func TestWSConnect(t *testing.T) {
 // receive a new block message
 func TestWSNewBlock(t *testing.T) {
 	wsc := newWSClient()
-	eid := tm_types.EventNewBlock
+	eid := tmTypes.EventNewBlock
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
@@ -66,7 +65,7 @@ func TestWSBlockchainGrowth(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := tm_types.EventNewBlock
+	eid := tmTypes.EventNewBlock
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
@@ -100,8 +99,8 @@ func TestWSSend(t *testing.T) {
 	wsc := newWSClient()
 	toAddr := privateAccounts[1].Address()
 	amt := uint64(100)
-	eidInput := exe_events.EventStringAccountInput(privateAccounts[0].Address())
-	eidOutput := exe_events.EventStringAccountOutput(toAddr)
+	eidInput := events.EventStringAccountInput(privateAccounts[0].Address())
+	eidOutput := events.EventStringAccountOutput(toAddr)
 	subIdInput := subscribeAndGetSubscriptionId(t, wsc, eidInput)
 	subIdOutput := subscribeAndGetSubscriptionId(t, wsc, eidOutput)
 	defer func() {
@@ -114,7 +113,7 @@ func TestWSSend(t *testing.T) {
 	broadcastTx(t, jsonRpcClient, tx)
 
 	// Set of response IDs we expect
-	rids := map[string]struct{}{tm_client.EventResponseID(eidInput): {}, tm_client.EventResponseID(eidOutput): {}}
+	rids := map[string]struct{}{tmClient.EventResponseID(eidInput): {}, tmClient.EventResponseID(eidOutput): {}}
 
 	r := <-wsc.ResponsesCh
 	result, err := readResponse(r)
@@ -138,7 +137,7 @@ func TestWSDoubleFire(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	wsc := newWSClient()
-	eid := exe_events.EventStringAccountInput(privateAccounts[0].Address())
+	eid := events.EventStringAccountInput(privateAccounts[0].Address())
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer func() {
 		unsubscribe(t, wsc, subId)
@@ -173,7 +172,7 @@ func TestWSCallWait(t *testing.T) {
 		amt, gasLim, fee := uint64(10000), uint64(1000), uint64(1000)
 		code, returnCode, returnVal := simpleContract()
 		var contractAddr crypto.Address
-		eid1 := exe_events.EventStringAccountInput(privateAccounts[0].Address())
+		eid1 := events.EventStringAccountInput(privateAccounts[0].Address())
 		subId1 := subscribeAndGetSubscriptionId(t, wsc, eid1)
 		// wait for the contract to be created
 		waitForEvent(t, wsc, eid1, func() {
@@ -186,7 +185,7 @@ func TestWSCallWait(t *testing.T) {
 
 		// susbscribe to the new contract
 		amt = uint64(10001)
-		eid2 := exe_events.EventStringAccountOutput(contractAddr)
+		eid2 := events.EventStringAccountOutput(contractAddr)
 		subId2 := subscribeAndGetSubscriptionId(t, wsc, eid2)
 		// get the return value from a call
 		data := []byte{0x1}
@@ -217,7 +216,7 @@ func TestWSCallNoWait(t *testing.T) {
 
 	// susbscribe to the new contract
 	amt = uint64(10001)
-	eid := exe_events.EventStringAccountOutput(contractAddr)
+	eid := events.EventStringAccountOutput(contractAddr)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
 
@@ -247,7 +246,7 @@ func TestWSCallCall(t *testing.T) {
 	receipt := txEnv.Tx.GenerateReceipt()
 	contractAddr1 := receipt.ContractAddress
 	// subscribe to the new contracts
-	eid := evm_events.EventStringAccountCall(contractAddr1)
+	eid := events.EventStringAccountCall(contractAddr1)
 	subId := subscribeAndGetSubscriptionId(t, wsc, eid)
 	defer unsubscribe(t, wsc, subId)
 
@@ -285,7 +284,7 @@ func TestWSCallCall(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	wsc := newWSClient()
 	var subId string
-	subscribe(t, wsc, tm_types.EventNewBlock)
+	subscribe(t, wsc, tmTypes.EventNewBlock)
 
 Subscribe:
 	for {
@@ -297,7 +296,7 @@ Subscribe:
 			require.Nil(t, response.Error)
 			res := new(rpc.ResultSubscribe)
 			require.NoError(t, json.Unmarshal(response.Result, res))
-			assert.Equal(t, tm_types.EventNewBlock, res.EventID)
+			assert.Equal(t, tmTypes.EventNewBlock, res.EventID)
 			subId = res.SubscriptionID
 			break Subscribe
 		}
@@ -317,7 +316,7 @@ Subscribe:
 		case response := <-wsc.ResponsesCh:
 			require.Nil(t, response.Error)
 
-			if response.ID == tm_client.EventResponseID(tm_types.EventNewBlock) {
+			if response.ID == tmClient.EventResponseID(tmTypes.EventNewBlock) {
 				res := new(rpc.ResultEvent)
 				json.Unmarshal(response.Result, res)
 				enb := res.Tendermint.EventDataNewBlock()

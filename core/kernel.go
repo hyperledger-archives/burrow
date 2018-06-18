@@ -32,6 +32,8 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/events/pbevents"
+	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/pbkeys"
@@ -39,8 +41,9 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/burrow"
 	"github.com/hyperledger/burrow/rpc/metrics"
+	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/rpctransactor"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/rpc/v0"
 	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
@@ -238,7 +241,12 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					pbkeys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service, state, txCodec))
+				pbtransactor.RegisterTransactorServer(grpcServer, rpctransactor.NewTransactorServer(service.Transactor(),
+					service.MempoolAccounts(), state, txCodec))
+
+				pbevents.RegisterEventsServer(grpcServer, rpcevents.NewEventsServer(rpc.NewSubscriptions(service)))
+
+				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer())
 
 				go grpcServer.Serve(listen)
 

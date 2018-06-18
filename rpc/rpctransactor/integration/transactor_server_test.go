@@ -27,8 +27,8 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/burrow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/types"
@@ -44,7 +44,7 @@ func TestTransactCallNoCode(t *testing.T) {
 	numCreates := 1000
 	countCh := committedTxCount(t)
 	for i := 0; i < numCreates; i++ {
-		receipt, err := cli.Transact(context.Background(), &burrow.TransactParam{
+		receipt, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      toAddress.Bytes(),
 			Data:         []byte{},
@@ -71,7 +71,7 @@ func TestTransactCreate(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numCreates; j++ {
-				create, err := cli.Transact(context.Background(), &burrow.TransactParam{
+				create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 					InputAccount: inputAccount(i),
 					Address:      nil,
 					Data:         bc,
@@ -95,7 +95,7 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 	bc, err := hex.DecodeString(strangeLoopBytecode)
 	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
-		create, err := cli.Transact(context.Background(), &burrow.TransactParam{
+		create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      nil,
 			Data:         bc,
@@ -116,7 +116,7 @@ func TestTransactAndHold(t *testing.T) {
 	countCh := committedTxCount(t)
 	for i := 0; i < numGoroutines; i++ {
 		for j := 0; j < numRuns; j++ {
-			create, err := cli.TransactAndHold(context.Background(), &burrow.TransactParam{
+			create, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
 				InputAccount: inputAccount(i),
 				Address:      nil,
 				Data:         bc,
@@ -124,9 +124,9 @@ func TestTransactAndHold(t *testing.T) {
 				GasLimit:     10000,
 			})
 			require.NoError(t, err)
-			assert.Equal(t, int64(0), create.StackDepth)
+			assert.Equal(t, uint64(0), create.StackDepth)
 			functionID := abi.FunctionID("UpsieDownsie()")
-			call, err := cli.TransactAndHold(context.Background(), &burrow.TransactParam{
+			call, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
 				InputAccount: inputAccount(i),
 				Address:      create.CallData.Callee,
 				Data:         functionID[:],
@@ -147,7 +147,7 @@ func TestSend(t *testing.T) {
 	numSends := 1000
 	countCh := committedTxCount(t)
 	for i := 0; i < numSends; i++ {
-		send, err := cli.Send(context.Background(), &burrow.SendParam{
+		send, err := cli.Send(context.Background(), &pbtransactor.SendParam{
 			InputAccount: inputAccount(i),
 			Amount:       2003,
 			ToAddress:    privateAccounts[3].Address().Bytes(),
@@ -161,7 +161,7 @@ func TestSend(t *testing.T) {
 func TestSendAndHold(t *testing.T) {
 	cli := newClient(t)
 	for i := 0; i < 2; i++ {
-		send, err := cli.SendAndHold(context.Background(), &burrow.SendParam{
+		send, err := cli.SendAndHold(context.Background(), &pbtransactor.SendParam{
 			InputAccount: inputAccount(i),
 			Amount:       2003,
 			ToAddress:    privateAccounts[3].Address().Bytes(),
@@ -172,10 +172,10 @@ func TestSendAndHold(t *testing.T) {
 }
 
 // Helpers
-func newClient(t testing.TB) burrow.TransactionClient {
+func newClient(t testing.TB) pbtransactor.TransactorClient {
 	conn, err := grpc.Dial(rpc.DefaultGRPCConfig().ListenAddress, grpc.WithInsecure())
 	require.NoError(t, err)
-	return burrow.NewTransactionClient(conn)
+	return pbtransactor.NewTransactorClient(conn)
 }
 
 var committedTxCountIndex = 0
@@ -213,8 +213,8 @@ func committedTxCount(t *testing.T) chan int {
 var inputPrivateKey = privateAccounts[0].PrivateKey().RawBytes()
 var inputAddress = privateAccounts[0].Address().Bytes()
 
-func inputAccount(i int) *burrow.InputAccount {
-	ia := new(burrow.InputAccount)
+func inputAccount(i int) *pbtransactor.InputAccount {
+	ia := new(pbtransactor.InputAccount)
 	if i%2 == 0 {
 		ia.PrivateKey = inputPrivateKey
 	} else {

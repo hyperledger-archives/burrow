@@ -233,7 +233,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Use mempool state so that transact can generate a run of sequence numbers when formulating transactions
-			inputAccount, err := service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -253,7 +254,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -275,7 +277,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -296,7 +299,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -312,7 +316,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := service.SigningAccount(param.InputAccount.Address, param.InputAccount.PrivateKey)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}

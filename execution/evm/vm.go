@@ -27,8 +27,8 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission/types"
@@ -51,7 +51,7 @@ type VM struct {
 	params           Params
 	origin           crypto.Address
 	txHash           []byte
-	stackDepth       int
+	stackDepth       uint64
 	nestedCallErrors []errors.NestedCall
 	publisher        event.Publisher
 	logger           *logging.Logger
@@ -841,6 +841,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 			}
 			if vm.publisher != nil {
 				events.PublishLogEvent(vm.publisher, callee.Address(), &events.EventDataLog{
+					TxHash:  vm.txHash,
 					Address: callee.Address(),
 					Topics:  topics,
 					Data:    data,

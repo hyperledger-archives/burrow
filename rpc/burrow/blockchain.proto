@@ -2,9 +2,9 @@ syntax = 'proto3';
 
 option go_package = "burrow";
 
-import "common.proto";
-import "account.proto";
-import "network.proto";
+import "rpc/burrow/common.proto";
+import "rpc/burrow/account.proto";
+import "rpc/burrow/network.proto";
 
 // Blockchain Service Definition
 service Blockchain {

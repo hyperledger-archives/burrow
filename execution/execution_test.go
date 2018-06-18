@@ -31,10 +31,10 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
@@ -1585,12 +1585,12 @@ func TestSelfDestruct(t *testing.T) {
 	}
 }
 
-func signAndExecute(t *testing.T, shoudlFail bool, exe BatchExecutor, chainID string, tx payload.Payload,
+func signAndExecute(t *testing.T, shouldFail bool, exe BatchExecutor, chainID string, tx payload.Payload,
 	signers ...acm.AddressableSigner) *txs.Envelope {
 
 	env := txs.Enclose(chainID, tx)
 	require.NoError(t, env.Sign(signers...), "Could not sign tx in call: %s", debug.Stack())
-	if shoudlFail {
+	if shouldFail {
 		require.Error(t, exe.Execute(env), "Tx should fail in call: %s", debug.Stack())
 	} else {
 		require.NoError(t, exe.Execute(env), "Could not execute tx in call: %s", debug.Stack())
@@ -1659,13 +1659,12 @@ var ExceptionTimeOut = errors.NewCodedError(errors.ErrorCodeGeneric, "timed out 
 // run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
 func execTxWaitAccountCall(t *testing.T, batchCommitter *executor, emitter event.Emitter, txEnv *txs.Envelope,
-	address crypto.Address) (*evm_events.EventDataCall, error) {
+	address crypto.Address) (*events.EventDataCall, error) {
 
-	ch := make(chan *evm_events.EventDataCall)
+	ch := make(chan *events.EventDataCall)
 	ctx := context.Background()
-	const subscriber = "exexTxWaitEvent"
-	//emitter.Subscribe(ctx, subscriber, event.QueryForEventID(eventid), ch)
-	evm_events.SubscribeAccountCall(ctx, emitter, subscriber, address, txEnv.Tx.Hash(), -1, ch)
+	const subscriber = "execTxWaitEvent"
+	events.SubscribeAccountCall(ctx, emitter, subscriber, address, txEnv.Tx.Hash(), -1, ch)
 	defer emitter.UnsubscribeAll(ctx, subscriber)
 	err := batchCommitter.Execute(txEnv)
 	if err != nil {
@@ -1710,7 +1709,7 @@ func testSNativeCALL(t *testing.T, expectPass bool, batchCommitter *executor, em
 	tx, _ := payload.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), &dougAddress, data, 100, 10000, 100)
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
-	t.Logf("subscribing to %v", evm_events.EventStringAccountCall(snativeAddress))
+	t.Logf("subscribing to %v", events.EventStringAccountCall(snativeAddress))
 	ev, err := execTxWaitAccountCall(t, batchCommitter, emitter, txEnv, snativeAddress)
 	if err == ExceptionTimeOut {
 		t.Fatal("Timed out waiting for event")

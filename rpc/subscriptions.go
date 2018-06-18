@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v0
+package rpc
 
 import (
 	"context"
@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/rpc"
 )
 
 var (
@@ -32,7 +31,7 @@ var (
 // Catches events that callers subscribe to and adds them to an array ready to be polled.
 type Subscriptions struct {
 	mtx     *sync.RWMutex
-	service *rpc.Service
+	service *Service
 	subs    map[string]*SubscriptionsCache
 	reap    bool
 }
@@ -44,7 +43,7 @@ type SubscriptionsCache struct {
 	subId  string
 }
 
-func NewSubscriptions(service *rpc.Service) *Subscriptions {
+func NewSubscriptions(service *Service) *Subscriptions {
 	es := &Subscriptions{
 		mtx:     &sync.RWMutex{},
 		service: service,
@@ -106,7 +105,7 @@ func (subs *Subscriptions) Add(eventId string) (string, error) {
 		return "", err
 	}
 	cache := newSubscriptionsCache()
-	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) bool {
+	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *ResultEvent) bool {
 		cache.mtx.Lock()
 		defer cache.mtx.Unlock()
 		cache.events = append(cache.events, resultEvent)

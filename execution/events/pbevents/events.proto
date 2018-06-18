@@ -1,0 +1,100 @@
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/execution/events/pbevents";
+
+import "github.com/hyperledger/burrow/execution/errors/errors.proto";
+
+package pbevents;
+
+//--------------------------------------------------
+// Event Service Definition
+service Events {
+    rpc EventPoll (SubIdParam) returns (PollResponse);
+    rpc EventSubscribe (EventIdParam) returns (SubIdParam);
+    rpc EventUnsubscribe (SubIdParam) returns (EventUnSub);
+}
+
+// Params
+message EventIdParam {
+    string eventId = 1;
+}
+
+message SubIdParam {
+    string subId = 1;
+}
+
+// Results
+message EventUnSub {
+    bool result = 1;
+}
+
+message PollResponse {
+    repeated ExecutionEvent events = 1;
+}
+
+//--------------------------------------------------
+// Event dump
+
+service ExecutionEvents {
+    rpc GetEvents (GetEventsRequest) returns (GetEventsResponse);
+}
+
+message GetEventsRequest {
+    BlockRange BlockRange = 1;
+}
+
+message GetEventsResponse {
+    repeated ExecutionEvent events = 1;
+}
+
+// An inclusive range of blocks to include
+message BlockRange {
+    uint64 StartBlock = 1;
+    uint64 FinalBlock = 2;
+}
+
+message EventHeader {
+    // The hash of the transaction that caused this event to be generated
+    bytes TxHash = 1;
+    // The block height at which this event was emitted
+    uint64 Height = 2;
+    // The index amongst all other events in the block of this event
+    uint64 Index = 3;
+}
+//--------------------------------------------------
+// Event types
+message ExecutionEvent {
+    EventHeader Header = 1;
+    oneof EventData {
+        EventDataTx EventDataTx = 2;
+        EventDataCall EventDataCall = 3;
+        EventDataLog EventDataLog = 4;
+    }
+}
+
+message EventDataLog {
+    bytes Address = 1;
+    bytes Data = 2;
+    repeated bytes Topics = 3;
+}
+
+message EventDataTx {
+    bytes Return = 1;
+    errors.Exception Exception = 2;
+}
+
+message EventDataCall {
+    CallData CallData = 1;
+    bytes Origin = 2;
+    uint64 StackDepth = 3;
+    bytes Return = 4;
+    errors.Exception Exception = 5;
+}
+
+message CallData {
+    bytes Caller = 1;
+    bytes Callee = 2;
+    bytes Data = 3;
+    uint64 Value = 4;
+    uint64 Gas = 5;
+}

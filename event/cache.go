@@ -40,16 +40,29 @@ func (evc *Cache) Publish(ctx context.Context, message interface{}, tags map[str
 	return nil
 }
 
-// Clears cached events by flushing them to Publisher
 func (evc *Cache) Flush(publisher Publisher) error {
+	err := evc.Sync(publisher)
+	if err != nil {
+		return err
+	}
+	evc.Reset()
+	return nil
+}
+
+// Clears cached events by flushing them to Publisher
+func (evc *Cache) Sync(publisher Publisher) error {
 	var err error
 	for _, mi := range evc.events {
 		publishErr := publisher.Publish(mi.ctx, mi.message, mi.tags)
-		// Capture first by try to flush the rest
+		// Capture first by try to sync the rest
 		if publishErr != nil && err == nil {
 			err = publishErr
 		}
 	}
+	return err
+}
+
+func (evc *Cache) Reset() {
 	// Clear the buffer by re-slicing its length to zero
 	if cap(evc.events) > len(evc.events)*maximumBufferCapacityToLengthRatio {
 		// Trim the backing array capacity when it is more than double the length of the slice to avoid tying up memory
@@ -60,5 +73,4 @@ func (evc *Cache) Flush(publisher Publisher) error {
 		// in previous cache round
 		evc.events = evc.events[:0]
 	}
-	return err
 }

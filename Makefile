@@ -70,7 +70,7 @@ protobuf_deps:
 
 # Implicit compile rule for GRPC/proto files
 %.pb.go: %.proto
-	@protoc -I ./$(@D) $< --go_out=plugins=grpc:$(@D)
+	protoc -I ${GOPATH}/src ${REPO}/$< --go_out=plugins=grpc:${GOPATH}/src
 
 keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
 
@@ -83,7 +83,7 @@ protobuf: $(PROTO_GO_FILES)
 
 .PHONY: clean_protobuf
 clean_protobuf:
-	@rm $(PROTO_GO_FILES)
+	@rm -f $(PROTO_GO_FILES)
 
 ### Dependency management for github.com/hyperledger/burrow
 # erase vendor wipes the full vendor directory
@@ -181,7 +181,7 @@ test_keys: build_db
 
 .PHONY: test_integration
 test_integration: test_keys
-	@go test -tags integration ./rpc/burrow/integration
+	@go test -tags integration ./rpc/rpctransactor/integration
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

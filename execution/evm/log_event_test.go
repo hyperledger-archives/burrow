@@ -26,8 +26,8 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"
 )

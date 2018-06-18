@@ -200,7 +200,7 @@ func TestNameReg(t *testing.T) {
 			},
 			func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
 
-				eventDataTx := resultEvent.EventDataTx
+				eventDataTx := resultEvent.Execution.GetTx()
 				assert.NotNil(t, eventDataTx, "could not convert %s to EventDataTx", resultEvent)
 				tx, ok := eventDataTx.Tx.Payload.(*payload.NameTx)
 				if !ok {

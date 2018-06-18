@@ -124,7 +124,7 @@ func TestTransactAndHold(t *testing.T) {
 				GasLimit:     10000,
 			})
 			require.NoError(t, err)
-			assert.Equal(t, 0, create.StackDepth)
+			assert.Equal(t, uint64(0), create.StackDepth)
 			functionID := abi.FunctionID("UpsieDownsie()")
 			call, err := cli.TransactAndHold(v0.TransactParam{
 				InputAccount: inputAccount(i),
