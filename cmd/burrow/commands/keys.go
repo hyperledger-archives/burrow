@@ -69,9 +69,8 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not generate logger from logging config: %v", err)
 				}
 
-				if *badPerm != false {
-					conf.Keys.AllowBadFilePermissions = *badPerm
-				}
+				conf.Keys.AllowBadFilePermissions = *badPerm
+
 				if *keysDir != "" {
 					conf.Keys.KeysDirectory = *keysDir
 				}
