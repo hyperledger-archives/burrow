@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message Exception {
+    ErrorCode Code = 1;
+    string Exception = 2;
+    bytes BS = 3;
+}
+
+message ErrorCode {
+    uint32 Code = 1;
+}

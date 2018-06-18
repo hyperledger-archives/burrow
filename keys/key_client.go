@@ -43,7 +43,7 @@ var _ KeyClient = (*localKeyClient)(nil)
 var _ KeyClient = (*remoteKeyClient)(nil)
 
 type localKeyClient struct {
-	ks     KeyStore
+	ks     *KeyStore
 	logger *logging.Logger
 }
 
@@ -53,7 +53,7 @@ type remoteKeyClient struct {
 	logger     *logging.Logger
 }
 
-func (l localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
 	resp, err := l.ks.Sign(nil, &pbkeys.SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
 		return crypto.Signature{}, err
@@ -65,7 +65,7 @@ func (l localKeyClient) Sign(signAddress crypto.Address, message []byte) (signat
 	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
 }
 
-func (l localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
 	resp, err := l.ks.PublicKey(nil, &pbkeys.PubRequest{Address: address.String()})
 	if err != nil {
 		return crypto.PublicKey{}, err
@@ -78,7 +78,7 @@ func (l localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.Publ
 }
 
 // Generate requests that a key be generate within the keys instance and returns the address
-func (l localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
+func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
 	resp, err := l.ks.GenerateKey(nil, &pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()})
 	if err != nil {
 		return crypto.Address{}, err
@@ -87,11 +87,11 @@ func (l localKeyClient) Generate(keyName string, curveType crypto.CurveType) (ke
 }
 
 // Returns nil if the keys instance is healthy, error otherwise
-func (l localKeyClient) HealthCheck() error {
+func (l *localKeyClient) HealthCheck() error {
 	return nil
 }
 
-func (l remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := pbkeys.SignRequest{Address: signAddress.String(), Message: message}
@@ -109,7 +109,7 @@ func (l remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signa
 	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
 }
 
-func (l remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := pbkeys.PubRequest{Address: address.String()}
@@ -128,7 +128,7 @@ func (l remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.Pub
 }
 
 // Generate requests that a key be generate within the keys instance and returns the address
-func (l remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
+func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()}
@@ -143,10 +143,10 @@ func (l remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (k
 }
 
 // Returns nil if the keys instance is healthy, error otherwise
-func (l remoteKeyClient) HealthCheck() error {
+func (l *remoteKeyClient) HealthCheck() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := l.kc.List(ctx, &pbkeys.Name{""})
+	_, err := l.kc.List(ctx, &pbkeys.ListRequest{})
 	return err
 }
 
@@ -162,12 +162,12 @@ func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, e
 	}
 	kc := pbkeys.NewKeysClient(conn)
 
-	return remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}, nil
+	return &remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}, nil
 }
 
-func NewLocalKeyClient(ks KeyStore, logger *logging.Logger) KeyClient {
+func NewLocalKeyClient(ks *KeyStore, logger *logging.Logger) KeyClient {
 	logger = logger.WithScope("LocalKeyClient")
-	return localKeyClient{ks: ks, logger: logger}
+	return &localKeyClient{ks: ks, logger: logger}
 }
 
 type Signer struct {

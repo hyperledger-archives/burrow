@@ -331,7 +331,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				resp, err := c.List(ctx, &pbkeys.Name{*name})
+				resp, err := c.List(ctx, &pbkeys.ListRequest{})
 				if err != nil {
 					output.Fatalf("failed to list key names: %v", err)
 				}
@@ -356,7 +356,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_, err := c.RemoveName(ctx, &pbkeys.Name{*name})
+				_, err := c.RemoveName(ctx, &pbkeys.RemoveNameRequest{Keyname: *name})
 				if err != nil {
 					output.Fatalf("failed to remove key: %v", err)
 				}

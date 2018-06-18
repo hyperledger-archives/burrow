@@ -226,16 +226,16 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				}
 
 				grpcServer := rpc.NewGRPCServer(logger)
-				var ks keys.KeyStore
+				var ks *keys.KeyStore
 				if keyStore != nil {
-					ks = *keyStore
+					ks = keyStore
 				}
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
 						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, logger)
 					}
-					pbkeys.RegisterKeysServer(grpcServer, &ks)
+					pbkeys.RegisterKeysServer(grpcServer, ks)
 				}
 
 				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service, state, txCodec))

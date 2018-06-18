@@ -6,23 +6,38 @@ service Keys {
     rpc GenerateKey(GenRequest) returns (GenResponse);
     rpc PublicKey(PubRequest) returns (PubResponse);
     rpc Sign(SignRequest) returns (SignResponse);
-    rpc Verify(VerifyRequest) returns (Empty);
+    rpc Verify(VerifyRequest) returns (VerifyResponse);
     rpc Import(ImportRequest) returns (ImportResponse);
     rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
     rpc Export(ExportRequest) returns (ExportResponse);
     rpc Hash(HashRequest) returns (HashResponse);
-    rpc RemoveName(Name) returns (Empty);
-    rpc List(Name) returns (ListResponse);
-    rpc AddName(AddNameRequest) returns (Empty);
+    rpc RemoveName(RemoveNameRequest) returns (RemoveNameResponse);
+    rpc List(ListRequest) returns (ListResponse);
+    rpc AddName(AddNameRequest) returns (AddNameResponse);
 }
 
-message Name {
+// Some empty types we may define later
+
+message ListRequest {
+
+}
+
+message VerifyResponse {
+
+}
+
+message RemoveNameResponse {
+
+}
+
+message AddNameResponse {
+
+}
+
+message RemoveNameRequest {
     string keyname = 1;
 }
 
-message Empty {
-
-}
 
 message GenRequest {
     string passphrase = 1;
