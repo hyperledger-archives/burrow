@@ -12,9 +12,26 @@ burrow_bin=${burrow_bin:-burrow}
 keys_dir=./keys/test_scratch/.keys
 
 echo "-----------------------------"
+echo "checking for dependent utilities"
+for UTILITY in jq xxd openssl; do
+        echo -n "... "
+        if ! command -v $UTILITY; then
+                echo "$UTILITY (missing)"
+                missing_utility=$UTILITY
+        fi
+done
+if [ ! -z $missing_utility ]; then
+        echo "FAILED dependency check: the '$missing_utility' utility is missing"
+        exit 1
+fi
+
 echo "starting the server"
 $burrow_bin keys server --dir $keys_dir &
 keys_pid=$!
+function kill_burrow_keys {
+        kill -TERM $keys_pid
+}
+trap kill_burrow_keys EXIT
 sleep 1
 echo "-----------------------------"
 echo "testing the cli"
@@ -40,7 +57,6 @@ do
 	PUB2=`$burrow_bin keys pub --addr $ADDR`
 	if [ "$PUB1" != "$PUB2" ]; then
 		echo "FAILED pub: got $PUB2, expected $PUB1"
-		kill $keys_pid
 		exit 1
 	fi
 	echo "...... passed pub"
@@ -49,7 +65,6 @@ do
 	VERIFY1=`$burrow_bin keys verify --curvetype $CURVETYPE $HASH $SIG1 $PUB1`
 	if [ $VERIFY1 != "true" ]; then
 		echo "FAILED verify: got $VERIFY1 expected true"
-		kill $keys_pid
 		exit 1
 	fi
 
@@ -57,7 +72,6 @@ do
 	VERIFY1=`$burrow_bin keys verify --curvetype $CURVETYPE $HASH $SIG2 $PUB1`
 	if [ $VERIFY1 != "true" ]; then
 		echo "FAILED verify: got $VERIFY1 expected true"
-		kill $keys_pid
 		exit 1
 	fi
 
@@ -72,7 +86,19 @@ HASHTYPES=(sha256 ripemd160)
 for HASHTYPE in ${HASHTYPES[*]}
 do
 	echo  "... $HASHTYPE"
-	HASH0=`echo -n $TOHASH | openssl dgst -$HASHTYPE | awk '{print toupper($2)}'`
+	# XXX: OpenSSL's `openssl dgst -<hash>` command might produce both
+        # a one-field (LibreSSL 2.2.7)
+        #
+        #   $ echo -n okeydokey |openssl dgst -sha256
+        #   0fd2479fa22057f562698c4e6bb5b6c7430a10ba0fe6cd41fa9908e2c0a684a4
+        #
+        # and a two-field result (OpenSSL 1.1.0f):
+        #
+        #   $ echo -n okeydokey |openssl dgst -sha256
+        #   (stdin)= 0fd2479fa22057f562698c4e6bb5b6c7430a10ba0fe6cd41fa9908e2c0a684a4
+        #
+        # Generalize to adjust for the inconsistency:
+        HASH0=`echo -n $TOHASH | openssl dgst -$HASHTYPE | sed 's/^.* //' | tr '[:lower:]' '[:upper:]'`
 	HASH1=`$burrow_bin keys hash --type $HASHTYPE $TOHASH`
 	if [ "$HASH0" != "$HASH1" ]; then
 		echo "FAILED hash $HASHTYPE: got $HASH1 expected $HASH0"
@@ -94,15 +120,17 @@ do
 	DIR=$keys_dir/data
 	FILE=$DIR/$ADDR.json
 	PRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
-	HEXPRIV=`echo -n "$PRIV" | base64 -d | xxd -p -c 256 | tr '[:lower:]' '[:upper:]'`
-	cp $FILE ~/$ADDR
+	# XXX: Without the `-A` flag, `openssl base64 -d` command produces
+        # an empty string with the OpenSSL (LibreSSL 2.2.7).
+        HEXPRIV=`echo -n "$PRIV" | openssl base64 -d -A | xxd -p -c 256 | tr '[:lower:]' '[:upper:]'`
+
+        cp $FILE ~/$ADDR
 	rm -rf $DIR
 
 	# import the key via priv
 	ADDR2=`$burrow_bin keys import --no-password --curvetype $CURVETYPE $HEXPRIV`
-	if [ "$ADDR" != "$ADDR2" ]; then
+        if [ "$ADDR" != "$ADDR2" ]; then
 		echo "FAILED import $CURVETYPE: got $ADDR2 expected $ADDR"
-		kill $keys_pid
 		exit
 	fi
 	rm -rf $DIR
@@ -112,7 +140,6 @@ do
 	ADDR2=`$burrow_bin keys import --no-password --curvetype $CURVETYPE $JSON`
 	if [ "$ADDR" != "$ADDR2" ]; then
 		echo "FAILED import (json) $CURVETYPE: got $ADDR2 expected $ADDR"
-		kill $keys_pid
 		exit
 	fi
 	rm -rf $DIR
@@ -121,7 +148,6 @@ do
 	ADDR2=`$burrow_bin keys import --no-password --curvetype $CURVETYPE ~/$ADDR`
 	if [ "$ADDR" != "$ADDR2" ]; then
 		echo "FAILED import $CURVETYPE: got $ADDR2 expected $ADDR"
-		kill $keys_pid
 		exit
 	fi
 	rm -rf $DIR
@@ -137,7 +163,6 @@ ADDR=`$burrow_bin keys gen --name $NAME --no-password`
 ADDR2=`$burrow_bin keys list --name $NAME`
 if [ "$ADDR" != "$ADDR2" ]; then
 	echo "FAILED name: got $ADDR2 expected $ADDR"
-	kill $keys_pid
 	exit
 fi
 
@@ -146,13 +171,10 @@ $burrow_bin keys name $NAME2 $ADDR
 ADDR2=`$burrow_bin keys list --name $NAME2`
 if [ "$ADDR" != "$ADDR2" ]; then
 	echo "FAILED rename: got $ADDR2 expected $ADDR"
-	kill $keys_pid
 	exit
 fi
 
 echo "... passed"
-
-kill $keys_pid
 
 # TODO a little more on names...
 
