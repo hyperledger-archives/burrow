@@ -67,7 +67,10 @@ message ExportRequest {
 }
 
 message ExportResponse {
-    string export = 1;
+    bytes publickey = 1;
+    bytes privatekey = 2;
+    bytes address = 3;
+    string curvetype = 4;
 }
 
 message SignRequest {

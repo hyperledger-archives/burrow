@@ -21,9 +21,12 @@ type Validator struct {
 }
 
 type Key struct {
-	Name    string
-	Address crypto.Address
-	KeyJSON json.RawMessage
+	Name       string
+	Address    crypto.Address
+	CurveType  string
+	PublicKey  []byte
+	PrivateKey []byte
+	KeyJSON    json.RawMessage
 }
 
 type Config struct {
@@ -44,6 +47,18 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 	},
 }
 
+const DefaultKeysExportFormat = `{
+	"CurveType": "<< .CurveType>>",
+	"Address": "<< .Address >>",
+	"PublicKey": "<< hex .PublicKey >>",
+	"PrivateKey": "<< hex .PrivateKey >>"
+}
+`
+
+var DefaultKeyExportTemplate = template.Must(template.New("KeysExport").Funcs(templateFuncs).
+	Delims(LeftTemplateDelim, RightTemplateDelim).
+	Parse(DefaultKeysExportFormat))
+
 func (pkg *Config) Dump(templateName, templateString string) (string, error) {
 	tmpl, err := template.New(templateName).Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
 		Parse(templateString)
@@ -52,6 +67,20 @@ func (pkg *Config) Dump(templateName, templateString string) (string, error) {
 	}
 	buf := new(bytes.Buffer)
 	err = tmpl.Execute(buf, pkg)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (key *Key) Dump(templateString string) (string, error) {
+	tmpl, err := template.New("ExportKey").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
+		Parse(templateString)
+	if err != nil {
+		return "", errors.Wrap(err, "could not export key to template")
+	}
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, key)
 	if err != nil {
 		return "", err
 	}

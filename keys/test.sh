@@ -119,10 +119,7 @@ do
 	ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE --no-password`
 	DIR=$keys_dir/data
 	FILE=$DIR/$ADDR.json
-	PRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
-	# XXX: Without the `-A` flag, `openssl base64 -d` command produces
-        # an empty string with the OpenSSL (LibreSSL 2.2.7).
-        HEXPRIV=`echo -n "$PRIV" | openssl base64 -d -A | xxd -p -c 256 | tr '[:lower:]' '[:upper:]'`
+	HEXPRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
 
         cp $FILE ~/$ADDR
 	rm -rf $DIR

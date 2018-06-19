@@ -75,12 +75,13 @@ func (k *KeyStore) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkey
 	if err != nil {
 		return nil, err
 	}
-	resp, err := coreExport(key)
-	if err != nil {
-		return nil, err
-	}
 
-	return &pbkeys.ExportResponse{Export: string(resp)}, nil
+	return &pbkeys.ExportResponse{
+		Address:    addrB[:],
+		Curvetype:  key.CurveType.String(),
+		Publickey:  key.PublicKey.PublicKey[:],
+		Privatekey: key.PrivateKey.PrivateKey[:],
+	}, nil
 }
 
 func (k *KeyStore) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.PubResponse, error) {
