@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
@@ -32,14 +33,14 @@ const DefaultEventBufferCapacity = 2 << 10
 
 type Subscribable interface {
 	// Subscribe to all events matching query, which is a valid tmlibs Query
-	Subscribe(ctx context.Context, subscriber string, query Queryable, out chan<- interface{}) error
+	Subscribe(ctx context.Context, subscriber string, queryable query.Queryable, out chan<- interface{}) error
 	// Unsubscribe subscriber from a specific query string
-	Unsubscribe(ctx context.Context, subscriber string, query Queryable) error
+	Unsubscribe(ctx context.Context, subscriber string, queryable query.Queryable) error
 	UnsubscribeAll(ctx context.Context, subscriber string) error
 }
 
 type Publisher interface {
-	Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error
+	Publish(ctx context.Context, message interface{}, tag Tags) error
 }
 
 type PublisherFunc func(ctx context.Context, message interface{}, tags map[string]interface{}) error
@@ -77,21 +78,21 @@ func (em *emitter) Shutdown(ctx context.Context) error {
 }
 
 // Publisher
-func (em *emitter) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
-	return em.pubsubServer.PublishWithTags(ctx, message, tagMap(tags))
+func (em *emitter) Publish(ctx context.Context, message interface{}, tags Tags) error {
+	return em.pubsubServer.PublishWithTags(ctx, message, tags)
 }
 
 // Subscribable
-func (em *emitter) Subscribe(ctx context.Context, subscriber string, query Queryable, out chan<- interface{}) error {
-	pubsubQuery, err := query.Query()
+func (em *emitter) Subscribe(ctx context.Context, subscriber string, queryable query.Queryable, out chan<- interface{}) error {
+	pubsubQuery, err := queryable.Query()
 	if err != nil {
 		return nil
 	}
 	return em.pubsubServer.Subscribe(ctx, subscriber, pubsubQuery, out)
 }
 
-func (em *emitter) Unsubscribe(ctx context.Context, subscriber string, query Queryable) error {
-	pubsubQuery, err := query.Query()
+func (em *emitter) Unsubscribe(ctx context.Context, subscriber string, queryable query.Queryable) error {
+	pubsubQuery, err := queryable.Query()
 	if err != nil {
 		return nil
 	}
@@ -110,7 +111,7 @@ func NewNoOpPublisher() Publisher {
 type noOpPublisher struct {
 }
 
-func (nop *noOpPublisher) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+func (nop *noOpPublisher) Publish(ctx context.Context, message interface{}, tags Tags) error {
 	return nil
 }
 
@@ -126,12 +127,4 @@ func GenerateSubscriptionID() (string, error) {
 	}
 	rStr := hex.EncodeToString(b)
 	return strings.ToUpper(rStr), nil
-}
-
-func tagMap(tags map[string]interface{}) pubsub.TagMap {
-	mp := make(map[string]string, len(tags))
-	for k, v := range tags {
-		mp[k] = structure.StringifyKey(v)
-	}
-	return pubsub.NewTagMap(mp)
 }

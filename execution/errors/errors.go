@@ -32,6 +32,7 @@ const (
 	ErrorCodeExecutionReverted
 	ErrorCodePermissionDenied
 	ErrorCodeNativeFunction
+	ErrorCodeEventPublish
 )
 
 func (c Code) ErrorCode() Code {
@@ -74,6 +75,8 @@ func (c Code) Error() string {
 		return "Execution reverted"
 	case ErrorCodeNativeFunction:
 		return "Native function error"
+	case ErrorCodeEventPublish:
+		return "Event publish error"
 	case ErrorCodeGeneric:
 		return "Generic error"
 	default:
@@ -136,7 +139,7 @@ func (e *Exception) Error() string {
 	if e == nil {
 		return ""
 	}
-	return fmt.Sprintf("Error %v: %s", e.Code, e.Exception)
+	return fmt.Sprintf("Error %v: %s", e.Code.Code, e.Exception)
 }
 
 func NewErrorCode(code Code) *ErrorCode {

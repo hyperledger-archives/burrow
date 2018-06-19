@@ -22,6 +22,8 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/txs"
 )
 
 // Functions to generate eventId strings
@@ -32,24 +34,54 @@ func EventStringLogEvent(addr crypto.Address) string { return fmt.Sprintf("Log/%
 
 // EventDataLog fires when a contract executes the LOG opcode
 type EventDataLog struct {
-	TxHash  binary.HexBytes
+	Height  uint64
 	Address crypto.Address
 	Topics  []Word256
 	Data    binary.HexBytes
-	Height  uint64
+}
+
+var logTagKeys = []string{event.AddressKey}
+
+func (log *EventDataLog) Get(key string) (string, bool) {
+	var value interface{}
+	switch key {
+	case event.AddressKey:
+		value = log.Address
+	default:
+		return "", false
+	}
+	return query.StringFromValue(value), true
+}
+
+func (log *EventDataLog) Len() int {
+	return len(logTagKeys)
+}
+
+func (log *EventDataLog) Map() map[string]interface{} {
+	tags := make(map[string]interface{})
+	for _, key := range logTagKeys {
+		tags[key], _ = log.Get(key)
+	}
+	return tags
+}
+
+func (log *EventDataLog) Keys() []string {
+	return logTagKeys
 }
 
 // Publish/Subscribe
-func PublishLogEvent(publisher event.Publisher, address crypto.Address, log *EventDataLog) error {
-
-	return event.PublishWithEventID(publisher, EventStringLogEvent(address),
-		&Event{
-			Header: &Header{
-				TxHash: log.TxHash,
-			},
-			Log: log,
+func PublishLogEvent(publisher event.Publisher, tx *txs.Tx, log *EventDataLog) error {
+	ev := &Event{
+		Header: &Header{
+			TxType:    tx.Type(),
+			TxHash:    tx.Hash(),
+			EventType: TypeLog,
+			EventID:   EventStringLogEvent(log.Address),
+			Height:    log.Height,
 		},
-		map[string]interface{}{"address": address})
+		Log: log,
+	}
+	return publisher.Publish(context.Background(), ev, ev.Tags())
 }
 
 func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,

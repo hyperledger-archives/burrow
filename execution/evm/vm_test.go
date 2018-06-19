@@ -1012,7 +1012,7 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
+func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
 	eventCh := make(chan *events.EventDataCall)
 	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
@@ -1030,7 +1030,7 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAc
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan<- *events.EventDataCall, vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions

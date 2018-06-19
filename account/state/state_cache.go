@@ -24,14 +24,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-type Cache interface {
-	Writer
-	Sync(state Writer) error
-	Reset(backend Iterable)
-	Flush(state IterableWriter) error
-}
-
-type stateCache struct {
+type Cache struct {
 	sync.RWMutex
 	name     string
 	backend  Reader
@@ -46,12 +39,12 @@ type accountInfo struct {
 	updated bool
 }
 
-type CacheOption func(*stateCache)
+type CacheOption func(*Cache)
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
-func NewCache(backend Reader, options ...CacheOption) Cache {
-	cache := &stateCache{
+func NewCache(backend Reader, options ...CacheOption) *Cache {
+	cache := &Cache{
 		backend:  backend,
 		accounts: make(map[crypto.Address]*accountInfo),
 	}
@@ -62,12 +55,12 @@ func NewCache(backend Reader, options ...CacheOption) Cache {
 }
 
 func Name(name string) CacheOption {
-	return func(cache *stateCache) {
+	return func(cache *Cache) {
 		cache.name = name
 	}
 }
 
-func (cache *stateCache) GetAccount(address crypto.Address) (acm.Account, error) {
+func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return nil, err
@@ -80,7 +73,7 @@ func (cache *stateCache) GetAccount(address crypto.Address) (acm.Account, error)
 	return accInfo.account, nil
 }
 
-func (cache *stateCache) UpdateAccount(account acm.Account) error {
+func (cache *Cache) UpdateAccount(account acm.Account) error {
 	accInfo, err := cache.get(account.Address())
 	if err != nil {
 		return err
@@ -95,7 +88,7 @@ func (cache *stateCache) UpdateAccount(account acm.Account) error {
 	return nil
 }
 
-func (cache *stateCache) RemoveAccount(address crypto.Address) error {
+func (cache *Cache) RemoveAccount(address crypto.Address) error {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return err
@@ -110,7 +103,7 @@ func (cache *stateCache) RemoveAccount(address crypto.Address) error {
 }
 
 // Iterates over all cached accounts first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateCachedAccount(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+func (cache *Cache) IterateCachedAccount(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
 	// Try cache first for early exit
 	cache.RLock()
 	for _, info := range cache.accounts {
@@ -123,7 +116,7 @@ func (cache *stateCache) IterateCachedAccount(consumer func(acm.Account) (stop b
 	return false, nil
 }
 
-func (cache *stateCache) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return binary.Zero256, err
@@ -149,7 +142,7 @@ func (cache *stateCache) GetStorage(address crypto.Address, key binary.Word256) 
 }
 
 // NOTE: Set value to zero to remove.
-func (cache *stateCache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
+func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
 	accInfo, err := cache.get(address)
 	accInfo.Lock()
 	defer accInfo.Unlock()
@@ -165,7 +158,7 @@ func (cache *stateCache) SetStorage(address crypto.Address, key binary.Word256, 
 }
 
 // Iterates over all cached storage items first in cache and then in backend until consumer returns true for 'stop'
-func (cache *stateCache) IterateCachedStorage(address crypto.Address,
+func (cache *Cache) IterateCachedStorage(address crypto.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -185,7 +178,7 @@ func (cache *stateCache) IterateCachedStorage(address crypto.Address,
 
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating
 // the account they belong so that storage values can be taken account of in the update.
-func (cache *stateCache) Sync(state Writer) error {
+func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
 	var addresses crypto.Addresses
@@ -229,7 +222,7 @@ func (cache *stateCache) Sync(state Writer) error {
 }
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
-func (cache *stateCache) Reset(backend Iterable) {
+func (cache *Cache) Reset(backend Iterable) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
@@ -237,7 +230,7 @@ func (cache *stateCache) Reset(backend Iterable) {
 }
 
 // Syncs the Cache and Resets it to use as the backend Reader
-func (cache *stateCache) Flush(state IterableWriter) error {
+func (cache *Cache) Flush(state IterableWriter) error {
 	err := cache.Sync(state)
 	if err != nil {
 		return err
@@ -246,7 +239,7 @@ func (cache *stateCache) Flush(state IterableWriter) error {
 	return nil
 }
 
-func (cache *stateCache) String() string {
+func (cache *Cache) String() string {
 	if cache.name == "" {
 		return fmt.Sprintf("StateCache{Length: %v}", len(cache.accounts))
 	}
@@ -254,7 +247,7 @@ func (cache *stateCache) String() string {
 }
 
 // Get the cache accountInfo item creating it if necessary
-func (cache *stateCache) get(address crypto.Address) (*accountInfo, error) {
+func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 	cache.RLock()
 	accInfo := cache.accounts[address]
 	cache.RUnlock()

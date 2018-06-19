@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/types"
@@ -65,7 +66,7 @@ func TestTransactCreate(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	wg.Add(numGoroutines)
 	// Flip flops between sending private key and input address to test private key and address based signing
-	bc, err := hex.DecodeString(strangeLoopBytecode)
+	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
 	require.NoError(t, err)
 	countCh := committedTxCount(t)
 	for i := 0; i < numGoroutines; i++ {
@@ -92,7 +93,7 @@ func TestTransactCreate(t *testing.T) {
 
 func BenchmarkTransactCreateContract(b *testing.B) {
 	cli := newClient(b)
-	bc, err := hex.DecodeString(strangeLoopBytecode)
+	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
 	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
@@ -109,7 +110,7 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 
 func TestTransactAndHold(t *testing.T) {
 	cli := newClient(t)
-	bc, err := hex.DecodeString(strangeLoopBytecode)
+	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
 	require.NoError(t, err)
 	numGoroutines := 5
 	numRuns := 2

@@ -1,6 +1,7 @@
 package rpcevents
 
 import (
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/rpc"
 	"golang.org/x/net/context"
@@ -25,9 +26,8 @@ func (es *eventServer) EventPoll(ctx context.Context, param *pbevents.SubIdParam
 		Events: make([]*pbevents.ExecutionEvent, 0, len(msgs)),
 	}
 	for _, msg := range msgs {
-		ev := pbevents.GetEvent(msg)
-		if ev != nil {
-			resp.Events = append(resp.Events, ev)
+		if exeEvent, ok := msg.(*events.Event); ok {
+			resp.Events = append(resp.Events, pbevents.GetEvent(exeEvent))
 		}
 	}
 	return resp, nil

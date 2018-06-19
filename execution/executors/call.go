@@ -206,7 +206,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 
 	txCache.UpdateAccount(caller)
 	txCache.UpdateAccount(callee)
-	vmach := evm.NewVM(params, caller.Address(), ctx.txEnv.Tx.Hash(), ctx.Logger, ctx.VMOptions...)
+	vmach := evm.NewVM(params, caller.Address(), ctx.txEnv.Tx, ctx.Logger, ctx.VMOptions...)
 	vmach.SetPublisher(ctx.EventPublisher)
 	// NOTE: Call() transfers the value from caller to callee iff call succeeds.
 	ret, exception := vmach.Call(txCache, caller, callee, code, ctx.tx.Data, value, &gas)
@@ -238,9 +238,11 @@ func (ctx *CallContext) FireCallEvents(ret []byte, err error) {
 	// Fire Events for sender and receiver
 	// a separate event will be fired from vm for each additional call
 	if ctx.EventPublisher != nil {
-		events.PublishAccountInput(ctx.EventPublisher, ctx.tx.Input.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(err))
+		events.PublishAccountInput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), ctx.tx.Input.Address, ctx.txEnv.Tx,
+			ret, errors.AsCodedError(err))
 		if ctx.tx.Address != nil {
-			events.PublishAccountOutput(ctx.EventPublisher, *ctx.tx.Address, ctx.txEnv.Tx, ret, errors.AsCodedError(err))
+			events.PublishAccountOutput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), *ctx.tx.Address, ctx.txEnv.Tx,
+				ret, errors.AsCodedError(err))
 		}
 	}
 }

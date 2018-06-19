@@ -314,9 +314,9 @@ func unmarshalValidateCall(origin crypto.Address, returnCode []byte, txid *[]byt
 		if !bytes.Equal(ret, returnCode) {
 			return true, fmt.Errorf("call did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
-		if !bytes.Equal(data.TxHash, *txid) {
+		if !bytes.Equal(resultEvent.Execution.Header.TxHash, *txid) {
 			return true, fmt.Errorf("TxIDs do not match up! Got %x, expected %x",
-				data.TxHash, *txid)
+				resultEvent.Execution.Header.TxHash, *txid)
 		}
 		return true, nil
 	}

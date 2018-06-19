@@ -36,33 +36,59 @@ message PollResponse {
 // Event dump
 
 service ExecutionEvents {
-    rpc GetEvents (GetEventsRequest) returns (GetEventsResponse);
+    rpc GetEvents (GetEventsRequest) returns (stream GetEventsResponse);
 }
 
 message GetEventsRequest {
     BlockRange BlockRange = 1;
+    uint32 BatchSize = 2;
+    string Query = 3;
 }
 
 message GetEventsResponse {
     repeated ExecutionEvent events = 1;
 }
 
-// An inclusive range of blocks to include
-message BlockRange {
-    uint64 StartBlock = 1;
-    uint64 FinalBlock = 2;
+message Bound {
+    BoundType Type = 1;
+    uint64 Index = 2;
+    enum BoundType {
+        // Index is absolute index of object in collection
+        ABSOLUTE = 0;
+        // Index is an offset reltiave to another bound determined by context
+        RELATIVE = 1;
+        // Ignore provided index and evaluate to latest index
+        LATEST = 2;
+        // Ignore provided index and stream new objects as they are generated
+        STREAM = 3;
+    }
 }
 
-message EventHeader {
-    // The hash of the transaction that caused this event to be generated
-    bytes TxHash = 1;
-    // The block height at which this event was emitted
-    uint64 Height = 2;
-    // The index amongst all other events in the block of this event
-    uint64 Index = 3;
+// An inclusive range of blocks to include
+message BlockRange {
+    // How to interpret StartBlock
+    Bound Start = 1;
+    Bound End = 2;
 }
+
 //--------------------------------------------------
 // Event types
+
+message EventHeader {
+    // Transaction type
+    string TxType = 1;
+    // The hash of the transaction that caused this event to be generated
+    bytes TxHash = 2;
+    // The type of event
+    string EventType = 3;
+    // EventID published with event
+    string EventID = 4;
+    // The block height at which this event was emitted
+    uint64 Height = 5;
+    // The index amongst all other events in the block of this event
+    uint64 Index = 6;
+}
+
 message ExecutionEvent {
     EventHeader Header = 1;
     oneof EventData {

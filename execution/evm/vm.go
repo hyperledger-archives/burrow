@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
 	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/txs"
 )
 
 const (
@@ -50,7 +51,7 @@ type VM struct {
 	memoryProvider   func() Memory
 	params           Params
 	origin           crypto.Address
-	txHash           []byte
+	tx               *txs.Tx
 	stackDepth       uint64
 	nestedCallErrors []errors.NestedCall
 	publisher        event.Publisher
@@ -60,14 +61,13 @@ type VM struct {
 	dumpTokens       bool
 }
 
-func NewVM(params Params, origin crypto.Address, txid []byte,
-	logger *logging.Logger, options ...func(*VM)) *VM {
+func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
 	vm := &VM{
 		memoryProvider: DefaultDynamicMemoryProvider,
 		params:         params,
 		origin:         origin,
 		stackDepth:     0,
-		txHash:         txid,
+		tx:             tx,
 		logger:         logger.WithScope("NewVM"),
 	}
 	for _, option := range options {
@@ -101,7 +101,7 @@ func HasPermission(stateWriter state.Writer, acc acm.Account, perm ptypes.PermFl
 func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64) {
 	// fire the post call event (including exception if applicable)
 	if vm.publisher != nil {
-		events.PublishAccountCall(vm.publisher, calleeAddress,
+		events.PublishAccountCall(vm.publisher, vm.tx, vm.params.BlockHeight,
 			&events.EventDataCall{
 				CallData: &events.CallData{
 					Caller: callerAddress,
@@ -111,7 +111,6 @@ func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, caller
 					Gas:    *gas,
 				},
 				Origin:     vm.origin,
-				TxHash:     vm.txHash,
 				StackDepth: vm.stackDepth,
 				Return:     *output,
 				Exception:  errors.AsCodedError(*exception),
@@ -125,7 +124,7 @@ func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, caller
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) Call(callState *state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
@@ -169,7 +168,7 @@ func (vm *VM) Call(callState state.Cache, caller, callee acm.MutableAccount, cod
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -209,14 +208,14 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bo
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
-	logger := vm.logger.With("tx_hash", vm.txHash)
+	logger := vm.logger.With("tx_hash", vm.tx)
 
 	if vm.dumpTokens {
-		dumpTokens(vm.txHash, caller, callee, code)
+		dumpTokens(vm.tx.Hash(), caller, callee, code)
 	}
 
 	var (
@@ -840,13 +839,16 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
 			}
 			if vm.publisher != nil {
-				events.PublishLogEvent(vm.publisher, callee.Address(), &events.EventDataLog{
-					TxHash:  vm.txHash,
+				publishErr := events.PublishLogEvent(vm.publisher, vm.tx, &events.EventDataLog{
+					Height:  vm.params.BlockHeight,
 					Address: callee.Address(),
 					Topics:  topics,
 					Data:    data,
-					Height:  vm.params.BlockHeight,
 				})
+				if publishErr != nil {
+					vm.Debugf(" => Log event publish err: %s", publishErr)
+					return nil, firstErr(err, errors.ErrorCodeEventPublish)
+				}
 			}
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
@@ -1109,7 +1111,7 @@ func (vm *VM) call(callState state.Cache, caller acm.Account, callee acm.Mutable
 	}
 }
 
-func (vm *VM) createAccount(callState state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, errors.CodedError) {
+func (vm *VM) createAccount(callState *state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, errors.CodedError) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {

@@ -24,12 +24,17 @@ import (
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/iavl"
+	"github.com/tendermint/tendermint/libs/pubsub"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -43,6 +48,7 @@ const (
 	accountsPrefix = "a/"
 	storagePrefix  = "s/"
 	nameRegPrefix  = "n/"
+	eventPrefix    = "e/"
 )
 
 var (
@@ -52,22 +58,42 @@ var (
 )
 
 // Implements account and blockchain state
-var _ state.AccountUpdater = &State{}
 var _ state.Iterable = &State{}
-var _ state.Writer = &State{}
+var _ names.Iterable = &State{}
+var _ Updatable = &writeState{}
 
-type State struct {
-	sync.RWMutex
-	db     dbm.DB
-	tree   *iavl.VersionedTree
-	logger *logging.Logger
+type Updatable interface {
+	state.IterableWriter
+	names.IterableWriter
+	event.Publisher
+	Hash() []byte
+	Save() error
 }
 
+// Wraps state to give access to writer methods
+type writeState struct {
+	state *State
+}
+
+// Writers to state are responsible for calling State.Lock() before calling
+type State struct {
+	sync.RWMutex
+	writeState *writeState
+	// High water mark for height/index - make sure we do not overwrite events - can only increase
+	eventKeyHighWatermark events.Key
+	db                    dbm.DB
+	tree                  *iavl.VersionedTree
+	logger                *logging.Logger
+}
+
+// Create a new State object
 func NewState(db dbm.DB) *State {
-	return &State{
+	s := &State{
 		db:   db,
 		tree: iavl.NewVersionedTree(db, defaultCacheCapacity),
 	}
+	s.writeState = &writeState{state: s}
+	return s
 }
 
 // Make genesis state from GenesisDoc and save to DB
@@ -76,7 +102,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		return nil, fmt.Errorf("the genesis file has no validators")
 	}
 
-	state := NewState(db)
+	s := NewState(db)
 
 	if genesisDoc.GenesisTime.IsZero() {
 		// NOTE: [ben] change GenesisTime to requirement on v0.17
@@ -95,7 +121,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 			Balance:     genAcc.Amount,
 			Permissions: perm,
 		}
-		err := state.UpdateAccount(acc.Account())
+		err := s.writeState.UpdateAccount(acc.Account())
 		if err != nil {
 			return nil, err
 		}
@@ -114,17 +140,17 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	err := state.UpdateAccount(permsAcc.Account())
+	err := s.writeState.UpdateAccount(permsAcc.Account())
 	if err != nil {
 		return nil, err
 	}
 
 	// IAVLTrees must be persisted before copy operations.
-	err = state.Save()
+	err = s.writeState.Save()
 	if err != nil {
 		return nil, err
 	}
-	return state, nil
+	return s, nil
 
 }
 
@@ -132,7 +158,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	s := NewState(db)
 	// Get the version associated with this state hash
-	version, err := s.GetVersion(hash)
+	version, err := s.writeState.GetVersion(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +173,17 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	return s, nil
 }
 
-func (s *State) Save() error {
+// Perform updates to state whilst holding the write lock, allows a commit to hold the write lock across multiple
+// operations while preventing interlaced reads and writes
+func (s *State) Update(updater func(up Updatable)) {
 	s.Lock()
 	defer s.Unlock()
+	updater(s.writeState)
+}
+
+func (s *writeState) Save() error {
 	// Save state at a new version may still be orphaned before we save the version against the hash
-	hash, treeVersion, err := s.tree.SaveVersion()
+	hash, treeVersion, err := s.state.tree.SaveVersion()
 	if err != nil {
 		return err
 	}
@@ -161,8 +193,8 @@ func (s *State) Save() error {
 }
 
 // Get a previously saved tree version stored by state hash
-func (s *State) GetVersion(hash []byte) (int64, error) {
-	versionBytes := s.db.Get(prefixedKey(versionPrefix, hash))
+func (s *writeState) GetVersion(hash []byte) (int64, error) {
+	versionBytes := s.state.db.Get(prefixedKey(versionPrefix, hash))
 	if versionBytes == nil {
 		return -1, fmt.Errorf("could not retrieve version corresponding to state hash '%X' in database", hash)
 	}
@@ -170,33 +202,33 @@ func (s *State) GetVersion(hash []byte) (int64, error) {
 }
 
 // Set the tree version associated with a particular hash
-func (s *State) SetVersion(hash []byte, version int64) {
+func (s *writeState) SetVersion(hash []byte, version int64) {
 	versionBytes := make([]byte, 8)
 	binary.PutInt64BE(versionBytes, version)
-	s.db.SetSync(prefixedKey(versionPrefix, hash), versionBytes)
+	s.state.db.SetSync(prefixedKey(versionPrefix, hash), versionBytes)
 }
 
 // Computes the state hash, also computed on save where it is returned
-func (s *State) Hash() []byte {
-	s.RLock()
-	defer s.RUnlock()
-	return s.tree.Hash()
+func (s *writeState) Hash() []byte {
+	return s.state.tree.Hash()
 }
 
 // Returns nil if account does not exist with given address.
 func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 	s.RLock()
 	defer s.RUnlock()
-	_, accBytes := s.tree.Get(prefixedKey(accountsPrefix, address.Bytes()))
+	return s.writeState.GetAccount(address)
+}
+
+func (s *writeState) GetAccount(address crypto.Address) (acm.Account, error) {
+	_, accBytes := s.state.tree.Get(prefixedKey(accountsPrefix, address.Bytes()))
 	if accBytes == nil {
 		return nil, nil
 	}
 	return acm.Decode(accBytes)
 }
 
-func (s *State) UpdateAccount(account acm.Account) error {
-	s.Lock()
-	defer s.Unlock()
+func (s *writeState) UpdateAccount(account acm.Account) error {
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in execution.State")
 	}
@@ -208,21 +240,23 @@ func (s *State) UpdateAccount(account acm.Account) error {
 	if err != nil {
 		return err
 	}
-	s.tree.Set(prefixedKey(accountsPrefix, account.Address().Bytes()), encodedAccount)
+	s.state.tree.Set(prefixedKey(accountsPrefix, account.Address().Bytes()), encodedAccount)
 	return nil
 }
 
-func (s *State) RemoveAccount(address crypto.Address) error {
-	s.Lock()
-	defer s.Unlock()
-	s.tree.Remove(prefixedKey(accountsPrefix, address.Bytes()))
+func (s *writeState) RemoveAccount(address crypto.Address) error {
+	s.state.tree.Remove(prefixedKey(accountsPrefix, address.Bytes()))
 	return nil
 }
 
 func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
 	s.RLock()
 	defer s.RUnlock()
-	stopped = s.tree.IterateRange(accountsStart, accountsEnd, true, func(key, value []byte) bool {
+	return s.writeState.IterateAccounts(consumer)
+}
+
+func (s *writeState) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+	stopped = s.state.tree.IterateRange(accountsStart, accountsEnd, true, func(key, value []byte) bool {
 		var account acm.Account
 		account, err = acm.Decode(value)
 		if err != nil {
@@ -236,17 +270,19 @@ func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped
 func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	s.RLock()
 	defer s.RUnlock()
-	_, value := s.tree.Get(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
+	return s.writeState.GetStorage(address, key)
+}
+
+func (s *writeState) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+	_, value := s.state.tree.Get(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
 	return binary.LeftPadWord256(value), nil
 }
 
-func (s *State) SetStorage(address crypto.Address, key, value binary.Word256) error {
-	s.Lock()
-	defer s.Unlock()
+func (s *writeState) SetStorage(address crypto.Address, key, value binary.Word256) error {
 	if value == binary.Zero256 {
-		s.tree.Remove(key.Bytes())
+		s.state.tree.Remove(key.Bytes())
 	} else {
-		s.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
+		s.state.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
 	}
 	return nil
 }
@@ -255,8 +291,13 @@ func (s *State) IterateStorage(address crypto.Address,
 	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	s.RLock()
 	defer s.RUnlock()
+	return s.writeState.IterateStorage(address, consumer)
 
-	stopped = s.tree.IterateRange(storageStart, storageEnd, true, func(key []byte, value []byte) (stop bool) {
+}
+
+func (s *writeState) IterateStorage(address crypto.Address,
+	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+	stopped = s.state.tree.IterateRange(storageStart, storageEnd, true, func(key []byte, value []byte) (stop bool) {
 		// Note: no left padding should occur unless there is a bug and non-words have been writte to this storage tree
 		if len(key) != binary.Word256Length {
 			err = fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
@@ -277,9 +318,55 @@ func (s *State) IterateStorage(address crypto.Address,
 //-------------------------------------
 // Events
 
-// Sevents
-func (s *State) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
-	panic("implement me")
+// Execution events
+func (s *writeState) Publish(ctx context.Context, msg interface{}, tags event.Tags) error {
+	if exeEvent, ok := msg.(*events.Event); ok {
+		key := exeEvent.Header.Key()
+		if !key.IsSuccessorOf(s.state.eventKeyHighWatermark) {
+			return fmt.Errorf("received event with non-increasing key compared with current high watermark %v: %v",
+				s.state.eventKeyHighWatermark, exeEvent)
+		}
+		s.state.eventKeyHighWatermark = key
+		bs, err := exeEvent.Encode()
+		if err != nil {
+			return err
+		}
+		s.state.tree.Set(prefixedKey(eventPrefix, key), bs)
+	}
+	return nil
+}
+
+func (s *State) GetEvents(startBlock, endBlock uint64, queryable query.Queryable) (<-chan *events.Event, error) {
+	var query pubsub.Query
+	var err error
+	query, err = queryable.Query()
+	if err != nil {
+		return nil, err
+	}
+	ch := make(chan *events.Event)
+	go func() {
+		s.RLock()
+		defer s.RUnlock()
+		// Close channel to signal end of iteration
+		defer close(ch)
+		//if endBlock == 0 {
+		//endBlock = s.eventKeyHighWatermark.Height()
+		//}
+		s.tree.IterateRange(eventKey(startBlock, 0), eventKey(endBlock+1, 0), true,
+			func(_, value []byte) bool {
+				exeEvent, err := events.DecodeEvent(value)
+				if err != nil {
+					s.logger.InfoMsg("error unmarshalling ExecutionEvent in GetEvents", structure.ErrorKey, err)
+					// stop iteration on error
+					return true
+				}
+				if query.Matches(exeEvent) {
+					ch <- exeEvent
+				}
+				return false
+			})
+	}()
+	return ch, nil
 }
 
 // Events
@@ -289,7 +376,13 @@ func (s *State) Publish(ctx context.Context, message interface{}, tags map[strin
 var _ names.Iterable = &State{}
 
 func (s *State) GetNameEntry(name string) (*names.Entry, error) {
-	_, entryBytes := s.tree.Get(prefixedKey(nameRegPrefix, []byte(name)))
+	s.RLock()
+	defer s.RUnlock()
+	return s.writeState.GetNameEntry(name)
+}
+
+func (s *writeState) GetNameEntry(name string) (*names.Entry, error) {
+	_, entryBytes := s.state.tree.Get(prefixedKey(nameRegPrefix, []byte(name)))
 	if entryBytes == nil {
 		return nil, nil
 	}
@@ -298,7 +391,13 @@ func (s *State) GetNameEntry(name string) (*names.Entry, error) {
 }
 
 func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
-	return s.tree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
+	s.RLock()
+	defer s.RUnlock()
+	return s.writeState.IterateNameEntries(consumer)
+}
+
+func (s *writeState) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+	return s.state.tree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
 		var entry *names.Entry
 		entry, err = names.DecodeEntry(value)
 		if err != nil {
@@ -308,28 +407,34 @@ func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (sto
 	}), err
 }
 
-func (s *State) UpdateNameEntry(entry *names.Entry) error {
+func (s *writeState) UpdateNameEntry(entry *names.Entry) error {
 	bs, err := entry.Encode()
 	if err != nil {
 		return err
 	}
-	s.tree.Set(prefixedKey(nameRegPrefix, []byte(entry.Name)), bs)
+	s.state.tree.Set(prefixedKey(nameRegPrefix, []byte(entry.Name)), bs)
 	return nil
 }
 
-func (s *State) RemoveNameEntry(name string) error {
-	s.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
+func (s *writeState) RemoveNameEntry(name string) error {
+	s.state.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
 	return nil
 }
 
 // Creates a copy of the database to the supplied db
 func (s *State) Copy(db dbm.DB) *State {
-	state := NewState(db)
+	s.RLock()
+	defer s.RUnlock()
+	stateCopy := NewState(db)
 	s.tree.Iterate(func(key []byte, value []byte) bool {
-		state.tree.Set(key, value)
+		stateCopy.tree.Set(key, value)
 		return false
 	})
-	return state
+	return stateCopy
+}
+
+func eventKey(height, index uint64) events.Key {
+	return prefixedKey(eventPrefix, events.NewKey(height, index))
 }
 
 func prefixedKey(prefix string, suffices ...[]byte) []byte {

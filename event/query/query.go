@@ -1,4 +1,4 @@
-package event
+package query
 
 import (
 	"bytes"
@@ -34,9 +34,9 @@ type Queryable interface {
 }
 
 // A yet-to-parsed query
-type QueryString string
+type String string
 
-func (qs QueryString) Query() (pubsub.Query, error) {
+func (qs String) Query() (pubsub.Query, error) {
 	if isEmpty(string(qs)) {
 		return query.Empty{}, nil
 	}
@@ -61,7 +61,7 @@ func (q Query) Query() (pubsub.Query, error) {
 }
 
 // A fluent query builder
-type QueryBuilder struct {
+type Builder struct {
 	queryString string
 	condition
 	// reusable buffer for building queryString
@@ -79,17 +79,17 @@ type condition struct {
 var conditionTemplate = template.Must(template.New("condition").Parse("{{.Tag}} {{.Op}} {{.Operand}}"))
 
 // Creates a new query builder with a base query that is the conjunction of all queries passed
-func NewQueryBuilder(queries ...string) *QueryBuilder {
-	qb := new(QueryBuilder)
+func NewBuilder(queries ...string) *Builder {
+	qb := new(Builder)
 	qb.queryString = qb.and(stringIterator(queries...))
 	return qb
 }
 
-func (qb *QueryBuilder) String() string {
+func (qb *Builder) String() string {
 	return qb.queryString
 }
 
-func (qb *QueryBuilder) Query() (pubsub.Query, error) {
+func (qb *Builder) Query() (pubsub.Query, error) {
 	if qb.error != nil {
 		return nil, qb.error
 	}
@@ -99,55 +99,55 @@ func (qb *QueryBuilder) Query() (pubsub.Query, error) {
 	return query.New(qb.String())
 }
 
-// Creates the conjunction of QueryBuilder and rightQuery
-func (qb *QueryBuilder) And(queryBuilders ...*QueryBuilder) *QueryBuilder {
-	return NewQueryBuilder(qb.and(queryBuilderIterator(queryBuilders...)))
+// Creates the conjunction of Builder and rightQuery
+func (qb *Builder) And(queryBuilders ...*Builder) *Builder {
+	return NewBuilder(qb.and(queryBuilderIterator(queryBuilders...)))
 }
 
-// Creates the conjunction of QueryBuilder and tag = operand
-func (qb *QueryBuilder) AndEquals(tag string, operand interface{}) *QueryBuilder {
+// Creates the conjunction of Builder and tag = operand
+func (qb *Builder) AndEquals(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = equalString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) AndGreaterThanOrEqual(tag string, operand interface{}) *QueryBuilder {
+func (qb *Builder) AndGreaterThanOrEqual(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = greaterOrEqualString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) AndLessThanOrEqual(tag string, operand interface{}) *QueryBuilder {
+func (qb *Builder) AndLessThanOrEqual(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = lessOrEqualString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) AndStrictlyGreaterThan(tag string, operand interface{}) *QueryBuilder {
+func (qb *Builder) AndStrictlyGreaterThan(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = greaterThanString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) AndStrictlyLessThan(tag string, operand interface{}) *QueryBuilder {
+func (qb *Builder) AndStrictlyLessThan(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = lessThanString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) AndContains(tag string, operand interface{}) *QueryBuilder {
+func (qb *Builder) AndContains(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = containsString
-	qb.condition.Operand = qb.operand(operand)
-	return NewQueryBuilder(qb.and(stringIterator(qb.conditionString())))
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
 }
 
-func (qb *QueryBuilder) and(queryIterator func(func(string))) string {
+func (qb *Builder) and(queryIterator func(func(string))) string {
 	defer qb.Buffer.Reset()
 	qb.Buffer.WriteString(qb.queryString)
 	queryIterator(func(q string) {
@@ -163,44 +163,56 @@ func (qb *QueryBuilder) and(queryIterator func(func(string))) string {
 	return qb.Buffer.String()
 }
 
-func (qb *QueryBuilder) operand(operand interface{}) string {
-	defer qb.Buffer.Reset()
-	switch oper := operand.(type) {
+func operandString(value interface{}) string {
+	buf := new(bytes.Buffer)
+	switch v := value.(type) {
 	case string:
-		qb.Buffer.WriteByte('\'')
-		qb.Buffer.WriteString(oper)
-		qb.Buffer.WriteByte('\'')
-		return qb.Buffer.String()
+		buf.WriteByte('\'')
+		buf.WriteString(v)
+		buf.WriteByte('\'')
+		return buf.String()
 	case fmt.Stringer:
-		return qb.operand(oper.String())
+		return operandString(v.String())
+	default:
+		return StringFromValue(v)
+	}
+}
+
+func StringFromValue(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case fmt.Stringer:
+		return v.String()
 	case bool:
-		if oper {
+		if v {
 			return trueString
 		}
 		return falseString
 	case int:
-		return strconv.FormatInt(int64(oper), 10)
+		return strconv.FormatInt(int64(v), 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
 	case int64:
-		return strconv.FormatInt(oper, 10)
+		return strconv.FormatInt(v, 10)
 	case uint:
-		return strconv.FormatUint(uint64(oper), 10)
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
 	case uint64:
-		return strconv.FormatUint(oper, 10)
+		return strconv.FormatUint(v, 10)
 	case float32:
-		return strconv.FormatFloat(float64(oper), 'f', -1, 32)
+		return strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case float64:
-		return strconv.FormatFloat(float64(oper), 'f', -1, 64)
+		return strconv.FormatFloat(float64(v), 'f', -1, 64)
 	case time.Time:
-		qb.Buffer.WriteString(timeString)
-		qb.Buffer.WriteByte(' ')
-		qb.Buffer.WriteString(oper.Format(time.RFC3339))
-		return qb.Buffer.String()
+		return timeString + " " + v.Format(time.RFC3339)
 	default:
-		return fmt.Sprintf("%v", oper)
+		return fmt.Sprintf("%v", v)
 	}
 }
 
-func (qb *QueryBuilder) conditionString() string {
+func (qb *Builder) conditionString() string {
 	defer qb.Buffer.Reset()
 	err := conditionTemplate.Execute(&qb.Buffer, qb.condition)
 	if err != nil && qb.error == nil {
@@ -222,7 +234,7 @@ func stringIterator(strs ...string) func(func(string)) {
 	}
 }
 
-func queryBuilderIterator(qbs ...*QueryBuilder) func(func(string)) {
+func queryBuilderIterator(qbs ...*Builder) func(func(string)) {
 	return func(callback func(string)) {
 		for _, qb := range qbs {
 			callback(qb.String())

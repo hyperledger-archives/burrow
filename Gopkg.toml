@@ -29,8 +29,8 @@
   branch = "develop"
 
 [[constraint]]
-name = "github.com/prometheus/client_golang"
-branch = "master"
+  name = "github.com/prometheus/client_golang"
+  branch = "master"
 
 [[override]]
   name = "github.com/tendermint/tmlibs"

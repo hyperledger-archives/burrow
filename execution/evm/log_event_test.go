@@ -42,7 +42,6 @@ var expectedTopics = []Word256{
 
 // Tests logs and events.
 func TestLog4(t *testing.T) {
-
 	st := newAppState()
 	cache := state.NewCache(st)
 	// Create accounts

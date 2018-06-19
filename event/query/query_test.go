@@ -1,4 +1,4 @@
-package event
+package query
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestQueryBuilder(t *testing.T) {
-	qb := NewQueryBuilder()
+	qb := NewBuilder()
 	qry, err := qb.Query()
 	require.NoError(t, err)
 	assert.Equal(t, emptyString, qry.String())
@@ -37,8 +37,8 @@ func TestQueryBuilder(t *testing.T) {
 	assert.True(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a burrow")))
 	assert.False(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a shoe")))
 
-	qb = NewQueryBuilder().AndEquals("foo", "bar")
-	qb = qb.And(NewQueryBuilder().AndGreaterThanOrEqual("frogs", 4))
+	qb = NewBuilder().AndEquals("foo", "bar")
+	qb = qb.And(NewBuilder().AndGreaterThanOrEqual("frogs", 4))
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.Equal(t, "foo = 'bar' AND frogs >= 4", qry.String())

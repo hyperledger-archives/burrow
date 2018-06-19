@@ -3,6 +3,8 @@ package rpc
 import (
 	"fmt"
 
+	"runtime/debug"
+
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"golang.org/x/net/context"
@@ -38,7 +40,7 @@ func streamInterceptor(logger *logging.Logger) grpc.StreamServerInterceptor {
 				logger.InfoMsg("panic in GRPC stream", "method", info.FullMethod,
 					"is_client_stream", info.IsClientStream, "is_server_stream", info.IsServerStream,
 					structure.ErrorKey, fmt.Sprintf("%v", r))
-				err = fmt.Errorf("panic in GRPC stream %s: %v", info.FullMethod, r)
+				err = fmt.Errorf("panic in GRPC stream %s: %v: %s", info.FullMethod, r, debug.Stack())
 			}
 		}()
 		return handler(srv, ss)

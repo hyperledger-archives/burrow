@@ -13,6 +13,11 @@ type Cache struct {
 	events []messageInfo
 }
 
+// If message implement this interface we will provide them with an index in the cache
+type Indexable interface {
+	ProvideIndex(index uint64)
+}
+
 var _ Publisher = &Cache{}
 
 // Create a new Cache with an EventSwitch as backend
@@ -26,15 +31,15 @@ type messageInfo struct {
 	// empty context
 	ctx     context.Context
 	message interface{}
-	tags    map[string]interface{}
+	tags    Tags
 }
 
 // Cache an event to be fired upon finality.
-func (evc *Cache) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+func (evc *Cache) Publish(ctx context.Context, message interface{}, tags Tags) error {
 	// append to list (go will grow our backing array exponentially)
 	evc.events = append(evc.events, messageInfo{
 		ctx:     ctx,
-		message: message,
+		message: evc.provideIndex(message),
 		tags:    tags,
 	})
 	return nil
@@ -73,4 +78,11 @@ func (evc *Cache) Reset() {
 		// in previous cache round
 		evc.events = evc.events[:0]
 	}
+}
+
+func (evc *Cache) provideIndex(message interface{}) interface{} {
+	if im, ok := message.(Indexable); ok {
+		im.ProvideIndex(uint64(len(evc.events)))
+	}
+	return message
 }

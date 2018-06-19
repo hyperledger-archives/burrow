@@ -34,12 +34,6 @@ type Tx struct {
 
 // Wrap the Payload in Tx required for signing and serialisation
 func NewTx(payload payload.Payload) *Tx {
-	switch t := payload.(type) {
-	case Tx:
-		return &t
-	case *Tx:
-		return t
-	}
 	return &Tx{
 		Payload: payload,
 	}
@@ -111,9 +105,19 @@ func (tx *Tx) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(w.Payload, tx.Payload)
 }
 
+func (tx *Tx) Type() payload.Type {
+	if tx == nil {
+		return payload.TypeUnknown
+	}
+	return tx.Payload.Type()
+}
+
 // Generate a Hash for this transaction based on the SignBytes. The hash is memoized over the lifetime
 // of the Tx so repeated calls to Hash() are effectively free
 func (tx *Tx) Hash() []byte {
+	if tx == nil {
+		return nil
+	}
 	if tx.txHash == nil {
 		return tx.Rehash()
 	}

@@ -5,6 +5,7 @@ import (
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/events"
@@ -16,6 +17,7 @@ import (
 )
 
 type PermissionsContext struct {
+	Tip            blockchain.TipInfo
 	StateWriter    state.Writer
 	EventPublisher event.Publisher
 	Logger         *logging.Logger
@@ -130,8 +132,8 @@ func (ctx *PermissionsContext) Execute(txEnv *txs.Envelope) error {
 	}
 
 	if ctx.EventPublisher != nil {
-		events.PublishAccountInput(ctx.EventPublisher, ctx.tx.Input.Address, txEnv.Tx, nil, nil)
-		events.PublishPermissions(ctx.EventPublisher, permFlag, txEnv.Tx)
+		events.PublishAccountInput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), ctx.tx.Input.Address, txEnv.Tx, nil, nil)
+		events.PublishPermissions(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), txEnv.Tx)
 	}
 
 	return nil

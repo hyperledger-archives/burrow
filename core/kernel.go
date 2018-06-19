@@ -65,6 +65,7 @@ type Kernel struct {
 	Emitter        event.Emitter
 	Service        *rpc.Service
 	Launchers      []process.Launcher
+	State          *execution.State
 	Logger         *logging.Logger
 	processes      map[string]process.Process
 	shutdownNotify chan struct{}
@@ -111,8 +112,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	transactor := execution.NewTransactor(blockchain.Tip, emitter, tmNode.MempoolReactor().BroadcastTx, txCodec,
 		logger)
 
-	nameReg := state
-	service := rpc.NewService(ctx, state, nameReg, checker, emitter, blockchain, keyClient, transactor,
+	nameRegState := state
+	accountState := state
+	service := rpc.NewService(ctx, accountState, nameRegState, checker, emitter, blockchain, keyClient, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{
@@ -220,7 +222,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:    "GRPC",
+			Name:    "RPC/GRPC",
 			Enabled: rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
 				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
@@ -246,7 +248,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 
 				pbevents.RegisterEventsServer(grpcServer, rpcevents.NewEventsServer(rpc.NewSubscriptions(service)))
 
-				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer())
+				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state))
 
 				go grpcServer.Serve(listen)
 
@@ -263,8 +265,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		Emitter:        emitter,
 		Service:        service,
 		Launchers:      launchers,
-		processes:      make(map[string]process.Process),
+		State:          state,
 		Logger:         logger,
+		processes:      make(map[string]process.Process),
 		shutdownNotify: make(chan struct{}),
 	}, nil
 }

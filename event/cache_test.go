@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,7 +19,7 @@ func TestEventCache_Flush(t *testing.T) {
 	flushed := false
 
 	em := NewEmitter(logging.NewNoopLogger())
-	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) bool {
+	SubscribeCallback(ctx, em, "nothingness", query.NewBuilder(), func(message interface{}) bool {
 		// Check against sending a buffer of zeroed messages
 		if message == nil {
 			errCh <- fmt.Errorf("recevied empty message but none sent")
@@ -29,7 +30,7 @@ func TestEventCache_Flush(t *testing.T) {
 	evc.Flush(em)
 	// Check after reset
 	evc.Flush(em)
-	SubscribeCallback(ctx, em, "somethingness", NewQueryBuilder().AndEquals("foo", "bar"),
+	SubscribeCallback(ctx, em, "somethingness", query.NewBuilder().AndEquals("foo", "bar"),
 		func(interface{}) bool {
 			if flushed {
 				errCh <- nil
@@ -41,7 +42,7 @@ func TestEventCache_Flush(t *testing.T) {
 		})
 
 	numMessages := 3
-	tags := map[string]interface{}{"foo": "bar"}
+	tags := TagMap{"foo": "bar"}
 	for i := 0; i < numMessages; i++ {
 		evc.Publish(ctx, fmt.Sprintf("something_%v", i), tags)
 	}

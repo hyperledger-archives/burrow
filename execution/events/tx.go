@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
 	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs"
@@ -28,64 +29,81 @@ type EventDataTx struct {
 	Exception *errors.Exception
 }
 
+var txTagKeys = []string{event.ExceptionKey}
+
+func (tx *EventDataTx) Get(key string) (string, bool) {
+	var value interface{}
+	switch key {
+	case event.ExceptionKey:
+		value = tx.Exception
+	default:
+		return "", false
+	}
+	return query.StringFromValue(value), true
+}
+
+func (tx *EventDataTx) Len() int {
+	return len(txTagKeys)
+}
+
+func (tx *EventDataTx) Map() map[string]interface{} {
+	tags := make(map[string]interface{})
+	for _, key := range txTagKeys {
+		tags[key], _ = tx.Get(key)
+	}
+	return tags
+}
+
+func (tx *EventDataTx) Keys() []string {
+	return txTagKeys
+}
+
 // For re-use
-var sendTxQuery = event.NewQueryBuilder().
+var sendTxQuery = query.NewBuilder().
 	AndEquals(event.TxTypeKey, payload.TypeSend.String())
 
-var callTxQuery = event.NewQueryBuilder().
+var callTxQuery = query.NewBuilder().
 	AndEquals(event.TxTypeKey, payload.TypeCall.String())
 
 // Publish/Subscribe
-func PublishAccountOutput(publisher event.Publisher, address crypto.Address, tx *txs.Tx, ret []byte,
+func PublishAccountInput(publisher event.Publisher, height uint64, address crypto.Address, tx *txs.Tx, ret []byte,
 	exception *errors.Exception) error {
 
-	return event.PublishWithEventID(publisher, EventStringAccountOutput(address),
-		eventDataTx(tx, ret, exception),
-		map[string]interface{}{
-			"address":       address,
-			event.TxTypeKey: tx.Type().String(),
-			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
-		})
+	ev := txEvent(height, TypeAccountInput, EventStringAccountInput(address), tx, ret, exception)
+	return publisher.Publish(context.Background(), ev, event.CombinedTags{ev.Tags(), event.TagMap{
+		event.AddressKey: address,
+	}})
 }
 
-func PublishAccountInput(publisher event.Publisher, address crypto.Address, tx *txs.Tx, ret []byte,
+func PublishAccountOutput(publisher event.Publisher, height uint64, address crypto.Address, tx *txs.Tx, ret []byte,
 	exception *errors.Exception) error {
 
-	return event.PublishWithEventID(publisher, EventStringAccountInput(address),
-		eventDataTx(tx, ret, exception),
-		map[string]interface{}{
-			"address":       address,
-			event.TxTypeKey: tx.Type().String(),
-			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
-		})
+	ev := txEvent(height, TypeAccountOutput, EventStringAccountOutput(address), tx, ret, exception)
+	return publisher.Publish(context.Background(), ev, event.CombinedTags{ev.Tags(), event.TagMap{
+		event.AddressKey: address,
+	}})
 }
 
-func PublishNameReg(publisher event.Publisher, tx *txs.Tx) error {
+func PublishNameReg(publisher event.Publisher, height uint64, tx *txs.Tx) error {
 	nameTx, ok := tx.Payload.(*payload.NameTx)
 	if !ok {
 		return fmt.Errorf("Tx payload must be NameTx to PublishNameReg")
 	}
-	return event.PublishWithEventID(publisher, EventStringNameReg(nameTx.Name),
-		eventDataTx(tx, nil, nil),
-		map[string]interface{}{
-			"name":          nameTx.Name,
-			event.TxTypeKey: tx.Type().String(),
-			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
-		})
+	ev := txEvent(height, TypeAccountInput, EventStringNameReg(nameTx.Name), tx, nil, nil)
+	return publisher.Publish(context.Background(), ev, event.CombinedTags{ev.Tags(), event.TagMap{
+		event.NameKey: nameTx.Name,
+	}})
 }
 
-func PublishPermissions(publisher event.Publisher, perm ptypes.PermFlag, tx *txs.Tx) error {
-	_, ok := tx.Payload.(*payload.PermissionsTx)
+func PublishPermissions(publisher event.Publisher, height uint64, tx *txs.Tx) error {
+	permTx, ok := tx.Payload.(*payload.PermissionsTx)
 	if !ok {
 		return fmt.Errorf("Tx payload must be PermissionsTx to PublishPermissions")
 	}
-	return event.PublishWithEventID(publisher, EventStringPermissions(perm),
-		eventDataTx(tx, nil, nil),
-		map[string]interface{}{
-			"name":          perm.String(),
-			event.TxTypeKey: tx.Type().String(),
-			event.TxHashKey: hex.EncodeUpperToString(tx.Hash()),
-		})
+	ev := txEvent(height, TypeAccountInput, EventStringPermissions(permTx.PermArgs.PermFlag), tx, nil, nil)
+	return publisher.Publish(context.Background(), ev, event.CombinedTags{ev.Tags(), event.TagMap{
+		event.PermissionKey: permTx.PermArgs.PermFlag.String(),
+	}})
 }
 
 func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
@@ -104,10 +122,14 @@ func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscr
 	})
 }
 
-func eventDataTx(tx *txs.Tx, ret []byte, exception *errors.Exception) *Event {
+func txEvent(height uint64, eventType Type, eventID string, tx *txs.Tx, ret []byte, exception *errors.Exception) *Event {
 	return &Event{
 		Header: &Header{
-			TxHash: tx.Hash(),
+			TxType:    tx.Type(),
+			TxHash:    tx.Hash(),
+			EventType: eventType,
+			EventID:   eventID,
+			Height:    height,
 		},
 		Tx: &EventDataTx{
 			Tx:        tx,

@@ -21,7 +21,9 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -33,7 +35,6 @@ func EventStringAccountCall(addr crypto.Address) string { return fmt.Sprintf("Ac
 
 // EventDataCall fires when we call a contract, and when a contract calls another contract
 type EventDataCall struct {
-	TxHash     binary.HexBytes
 	CallData   *CallData
 	Origin     crypto.Address
 	StackDepth uint64
@@ -49,21 +50,82 @@ type CallData struct {
 	Gas    uint64
 }
 
-// Publish/Subscribe
-func PublishAccountCall(publisher event.Publisher, address crypto.Address, call *EventDataCall) error {
+var callTagKeys = []string{
+	event.CalleeKey,
+	event.CallerKey,
+	event.ValueKey,
+	event.GasKey,
+	event.StackDepthKey,
+	event.OriginKey,
+	event.ExceptionKey,
+}
 
-	return event.PublishWithEventID(publisher, EventStringAccountCall(address),
-		&Event{
-			Header: &Header{
-				TxHash: call.TxHash,
-			},
-			Call: call,
+// Implements Tags for events
+func (call *EventDataCall) Get(key string) (string, bool) {
+	var value interface{}
+	switch key {
+	case event.CalleeKey:
+		value = call.CallData.Callee
+	case event.CallerKey:
+		value = call.CallData.Caller
+	case event.ValueKey:
+		value = call.CallData.Value
+	case event.GasKey:
+		value = call.CallData.Gas
+	case event.StackDepthKey:
+		value = call.StackDepth
+	case event.OriginKey:
+		value = call.Origin
+	case event.ExceptionKey:
+		value = call.Exception
+	default:
+		return "", false
+	}
+	return query.StringFromValue(value), true
+}
+
+func (call *EventDataCall) Len() int {
+	return len(callTagKeys)
+}
+
+func (call *EventDataCall) Map() map[string]interface{} {
+	tags := make(map[string]interface{})
+	for _, key := range callTagKeys {
+		tags[key], _ = call.Get(key)
+	}
+	return tags
+}
+
+func (call *EventDataCall) Keys() []string {
+	return callTagKeys
+}
+func (call *EventDataCall) Tags(tags map[string]interface{}) map[string]interface{} {
+	tags[event.CalleeKey] = call.CallData.Callee
+	tags[event.CallerKey] = call.CallData.Caller
+	tags[event.ValueKey] = call.CallData.Value
+	tags[event.GasKey] = call.CallData.Gas
+	tags[event.StackDepthKey] = call.StackDepth
+	tags[event.OriginKey] = call.Origin
+	if call.Exception != nil {
+		tags[event.ExceptionKey] = call.Exception
+	}
+	return tags
+}
+
+// Publish/Subscribe
+func PublishAccountCall(publisher event.Publisher, tx *txs.Tx, height uint64, call *EventDataCall) error {
+	eventID := EventStringAccountCall(call.CallData.Callee)
+	ev := &Event{
+		Header: &Header{
+			TxType:    tx.Type(),
+			TxHash:    tx.Hash(),
+			EventType: TypeCall,
+			EventID:   eventID,
+			Height:    height,
 		},
-		map[string]interface{}{
-			"address":           address,
-			event.TxHashKey:     hex.EncodeUpperToString(call.TxHash),
-			event.StackDepthKey: call.StackDepth,
-		})
+		Call: call,
+	}
+	return publisher.Publish(context.Background(), ev, ev.Tags())
 }
 
 // Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all, if

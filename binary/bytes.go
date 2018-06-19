@@ -14,5 +14,9 @@ func (hb *HexBytes) UnmarshalText(hexBytes []byte) error {
 }
 
 func (hb HexBytes) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeUpperToString(hb)), nil
+	return []byte(hb.String()), nil
+}
+
+func (hb HexBytes) String() string {
+	return hex.EncodeUpperToString(hb)
 }

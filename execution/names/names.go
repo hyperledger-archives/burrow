@@ -83,6 +83,11 @@ type Iterable interface {
 	IterateNameEntries(consumer func(*Entry) (stop bool)) (stopped bool, err error)
 }
 
+type IterableWriter interface {
+	Iterable
+	Updater
+}
+
 // base cost is "effective" number of bytes
 func NameBaseCost(name, data string) uint64 {
 	return uint64(len(data) + 32)
