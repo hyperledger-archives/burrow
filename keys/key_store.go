@@ -39,14 +39,14 @@ const (
 type keyJSON struct {
 	CurveType   string
 	Address     string
-	PublicKey   []byte
+	PublicKey   string
 	AddressHash string
 	PrivateKey  privateKeyJSON
 }
 
 type privateKeyJSON struct {
 	Crypto     string
-	Plain      []byte `json:",omitempty"`
+	Plain      string `json:",omitempty"`
 	Salt       []byte `json:",omitempty"`
 	Nonce      []byte `json:",omitempty"`
 	CipherText []byte `json:",omitempty"`
@@ -55,10 +55,10 @@ type privateKeyJSON struct {
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := keyJSON{
 		CurveType:   k.CurveType.String(),
-		Address:     hex.EncodeToString(k.Address[:]),
-		PublicKey:   k.Pubkey(),
+		Address:     hex.EncodeUpperToString(k.Address[:]),
+		PublicKey:   hex.EncodeUpperToString(k.Pubkey()),
 		AddressHash: k.PublicKey.AddressHashType(),
-		PrivateKey:  privateKeyJSON{Crypto: CryptoNone, Plain: k.PrivateKey.RawBytes()},
+		PrivateKey:  privateKeyJSON{Crypto: CryptoNone, Plain: hex.EncodeUpperToString(k.PrivateKey.RawBytes())},
 	}
 	j, err = json.Marshal(jStruct)
 	return j, err
@@ -77,7 +77,11 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	if err != nil {
 		curveType = crypto.CurveTypeEd25519
 	}
-	k2, err := NewKeyFromPriv(curveType, keyJ.PrivateKey.Plain)
+	privKey, err := hex.DecodeString(keyJ.PrivateKey.Plain)
+	if err != nil {
+		return err
+	}
+	k2, err := NewKeyFromPriv(curveType, privKey)
 	if err != nil {
 		return err
 	}
@@ -201,9 +205,13 @@ func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
+	pubKey, err := hex.DecodeString(keyProtected.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 	plainText, err := gcm.Open(nil, nonce, cipherText, nil)
 	if err != nil {
-		pkey, _ := NewKeyFromPub(curveType, keyProtected.PublicKey)
+		pkey, _ := NewKeyFromPub(curveType, pubKey)
 		return pkey, err
 	}
 	address, err := crypto.AddressFromHexString(keyProtected.Address)
@@ -289,8 +297,8 @@ func (ks KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
 	}
 	keyStruct := keyJSON{
 		CurveType:   key.CurveType.String(),
-		Address:     strings.ToUpper(hex.EncodeToString(key.Address[:])),
-		PublicKey:   key.Pubkey(),
+		Address:     hex.EncodeUpperToString(key.Address[:]),
+		PublicKey:   hex.EncodeUpperToString(key.Pubkey()),
 		AddressHash: key.PublicKey.AddressHashType(),
 		PrivateKey:  cipherStruct,
 	}
