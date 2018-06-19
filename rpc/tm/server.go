@@ -15,7 +15,6 @@
 package tm
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -23,11 +22,11 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/tm/lib/server"
+	"github.com/hyperledger/burrow/rpc/lib/server"
 )
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, emitter event.Emitter,
-	logger *logging.Logger) (net.Listener, error) {
+	logger *logging.Logger) (*http.Server, error) {
 
 	logger = logger.With(structure.ComponentKey, "RPC_TM")
 	routes := GetRoutes(service, logger)
@@ -35,9 +34,9 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, emitter ev
 	wm := server.NewWebsocketManager(routes, logger, server.EventSubscriber(tendermint.SubscribableAsEventBus(emitter)))
 	mux.HandleFunc(pattern, wm.WebsocketHandler)
 	server.RegisterRPCFuncs(mux, routes, logger)
-	listener, err := server.StartHTTPServer(listenAddress, mux, logger)
+	server, err := server.StartHTTPServer(listenAddress, mux, logger)
 	if err != nil {
 		return nil, err
 	}
-	return listener, nil
+	return server, nil
 }

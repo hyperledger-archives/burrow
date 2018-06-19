@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 	cmn "github.com/tendermint/tmlibs/common"

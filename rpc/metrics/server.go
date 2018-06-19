@@ -14,7 +14,6 @@
 package metrics
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,7 +21,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/tm/lib/server"
+	"github.com/hyperledger/burrow/rpc/lib/server"
 )
 
 // Exporter is used to store Metrics data and embeds the config struct.
@@ -32,14 +31,14 @@ type Exporter struct {
 	burrowMetrics    map[string]*prometheus.Desc
 	service          *rpc.Service
 	logger           *logging.Logger
-	datum            *Data
+	datum            *Datum
 	chainID          string
 	validatorMoniker string
 	blockSampleSize  uint64
 }
 
 // Datum is used to store data from all the relevant endpoints
-type Data struct {
+type Datum struct {
 	LatestBlockHeight   float64
 	UnconfirmedTxs      float64
 	TotalPeers          float64
@@ -53,13 +52,13 @@ type Data struct {
 }
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampleSize uint64,
-	logger *logging.Logger) (net.Listener, error) {
+	logger *logging.Logger) (*http.Server, error) {
 
 	// instantiate metrics and variables we do not expect to change during runtime
 	chainStatus, _ := service.Status()
 	exporter := Exporter{
 		burrowMetrics:    AddMetrics(),
-		datum:            &Data{},
+		datum:            &Datum{},
 		logger:           logger.With(structure.ComponentKey, "Metrics_Exporter"),
 		service:          service,
 		chainID:          chainStatus.NodeInfo.Network,
@@ -74,11 +73,11 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampl
 	mux := http.NewServeMux()
 	mux.Handle(pattern, prometheus.Handler())
 
-	listener, err := server.StartHTTPServer(listenAddress, mux, logger)
+	srv, err := server.StartHTTPServer(listenAddress, mux, logger)
 	if err != nil {
 		return nil, err
 	}
-	return listener, nil
+	return srv, nil
 }
 
 // AddMetrics - Add's all of the metrics to a map of strings, returns the map.

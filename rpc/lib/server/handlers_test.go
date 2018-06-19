@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

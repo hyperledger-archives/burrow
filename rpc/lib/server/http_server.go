@@ -13,11 +13,11 @@ import (
 
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
 )
 
-func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Logger) (listener net.Listener, err error) {
+func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Logger) (*http.Server, error) {
 	var proto, addr string
 	parts := strings.SplitN(listenAddr, "://", 2)
 	if len(parts) != 2 {
@@ -26,19 +26,18 @@ func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Lo
 	proto, addr = parts[0], parts[1]
 
 	logger.InfoMsg("Starting RPC HTTP server", "listen_address", listenAddr)
-	listener, err = net.Listen(proto, addr)
+	listener, err := net.Listen(proto, addr)
 	if err != nil {
 		return nil, errors.Errorf("Failed to listen on %v: %v", listenAddr, err)
 	}
 
+	server := &http.Server{Handler: RecoverAndLogHandler(handler, logger)}
+
 	go func() {
-		err := http.Serve(
-			listener,
-			RecoverAndLogHandler(handler, logger),
-		)
+		err := server.Serve(listener)
 		logger.TraceMsg("RPC HTTP server stopped", structure.ErrorKey, err)
 	}()
-	return listener, nil
+	return server, nil
 }
 
 func WriteRPCResponseHTTP(w http.ResponseWriter, res types.RPCResponse) {

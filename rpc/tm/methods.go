@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/tm/lib/server"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
+	"github.com/hyperledger/burrow/rpc/lib/server"
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/hyperledger/burrow/txs"
 )
 

@@ -115,7 +115,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	launchers := []process.Launcher{
 		{
 			Name:    "Profiling Server",
-			Enabled: !rpcConfig.Profiler.Enabled,
+			Enabled: rpcConfig.Profiler.Enabled,
 			Launch: func() (process.Process, error) {
 				debugServer := &http.Server{
 					Addr: ":6060",
@@ -178,22 +178,22 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			Name:    "RPC/tm",
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
-				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
+				server, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
 				if err != nil {
 					return nil, err
 				}
-				return process.FromListeners(listener), nil
+				return server, nil
 			},
 		},
 		{
 			Name:    "RPC/metrics",
 			Enabled: rpcConfig.Metrics.Enabled,
 			Launch: func() (process.Process, error) {
-				listener, err := metrics.StartServer(service, rpcConfig.Metrics.MetricsPath, rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, logger)
+				server, err := metrics.StartServer(service, rpcConfig.Metrics.MetricsPath, rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, logger)
 				if err != nil {
 					return nil, err
 				}
-				return process.FromListeners(listener), nil
+				return server, nil
 			},
 		},
 		{
