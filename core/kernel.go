@@ -40,6 +40,7 @@ import (
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/burrow"
+	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/rpc/v0"
 	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
@@ -178,6 +179,17 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
 				listener, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
+				if err != nil {
+					return nil, err
+				}
+				return process.FromListeners(listener), nil
+			},
+		},
+		{
+			Name:    "RPC/metrics",
+			Enabled: rpcConfig.Metrics.Enabled,
+			Launch: func() (process.Process, error) {
+				listener, err := metrics.StartServer(service, rpcConfig.Metrics.MetricsPath, rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, logger)
 				if err != nil {
 					return nil, err
 				}
