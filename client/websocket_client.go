@@ -27,8 +27,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
+	rpcClient "github.com/hyperledger/burrow/rpc/lib/client"
 	"github.com/hyperledger/burrow/rpc/tm/client"
-	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
 	tmTypes "github.com/tendermint/tendermint/types"
 )

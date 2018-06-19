@@ -17,8 +17,8 @@ package client
 import (
 	"context"
 
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/hyperledger/burrow/rpc/tm"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
 )
 
 type WebsocketClient interface {
