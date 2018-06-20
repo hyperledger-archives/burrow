@@ -14,8 +14,10 @@ import (
 	"github.com/tmthrgd/go-hex"
 )
 
-type Config struct {
-	Config genesis.GenesisDoc
+type Validator struct {
+	Name        string
+	Address     crypto.Address
+	NodeAddress crypto.Address
 }
 
 type Key struct {
@@ -24,44 +26,11 @@ type Key struct {
 	KeyJSON json.RawMessage
 }
 
-type KeysSecret struct {
-	Keys      []Key
-	NodeKeys  []Key
-	ChainName string
+type Config struct {
+	Keys       map[crypto.Address]Key
+	Validators []Validator
+	Config     *genesis.GenesisDoc
 }
-
-const DefaultDumpKeysFormat = `{
-  "Keys": [<< range $index, $key := . >><< if $index>>,<< end >>
-    {
-      "Name": "<< $key.Name >>",
-      "Address": "<< $key.Address >>",
-      "PublicKey": "<< base64 $key.PublicKey >>",
-      "PrivateKey": "<< base64 $key.PrivateKey >>"
-    }<< end >>
-  ]
-}`
-
-const HelmDumpKeysFormat = `privateKeys:<< range $key := . >>
-  << $key.Address >>:
-    name: << $key.Name >>
-    address: << $key.Address >>
-    publicKey: << base64 $key.PublicKey >>
-    privateKey: << base64 $key.PrivateKey >><< end >>
-  `
-
-const KubernetesKeyDumpFormat = `apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: << .ChainName >>-keys
-data:
-<<- range .Keys >>
-  << .Address >>.json: << base64 .KeyJSON >>
-<<- end >>
-<<- range .NodeKeys >>
-  << .Name >>: << base64 .KeyJSON >>
-<<- end >>
-`
 
 const LeftTemplateDelim = "<<"
 const RightTemplateDelim = ">>"
@@ -73,24 +42,6 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 	"hex": func(rv reflect.Value) string {
 		return encode(rv, hex.EncodeUpperToString)
 	},
-}
-
-var DefaultDumpKeysTemplate = template.Must(template.New("MockKeyClient_DumpKeys").Funcs(templateFuncs).
-	Delims(LeftTemplateDelim, RightTemplateDelim).
-	Parse(KubernetesKeyDumpFormat))
-
-func (pkg *KeysSecret) Dump(templateString string) (string, error) {
-	tmpl, err := template.New("DumpKeys").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
-		Parse(templateString)
-	if err != nil {
-		return "", errors.Wrap(err, "could not dump keys to template")
-	}
-	buf := new(bytes.Buffer)
-	err = tmpl.Execute(buf, pkg)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
 }
 
 func (pkg *Config) Dump(templateString string) (string, error) {
