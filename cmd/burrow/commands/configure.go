@@ -47,6 +47,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		keysUrlOpt := cmd.StringOpt("k keys-url", "", fmt.Sprintf("Provide keys GRPC address, default: %s",
 			keys.DefaultKeysConfig().RemoteAddress))
 
+		keysDir := cmd.StringOpt("keysdir", "", "Directory where keys are stored")
+
 		configOpt := cmd.StringOpt("c base-config", "", "Use the a specified burrow config file as a base")
 
 		genesisDocOpt := cmd.StringOpt("g genesis-doc", "", "GenesisDoc in JSON or TOML to embed in config")
@@ -83,10 +85,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
-		cmd.Spec = "[--keys-url=<keys URL> | (--generate-keys=<secret keys files> [--keys-template=<text template for key>])] " +
+		cmd.Spec = "[--keys-url=<keys URL> | ([--keysdir=<keys directory>] " +
+			"[--generate-keys=<secret keys files> [--keys-template=<text template for key>]])] " +
 			"[--config-template-in=<text template> --config-template-out=<output file>] " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name] [--json] " +
+			"[--keysdir=<keys directory>] " +
 			"[--logging=<logging program>] [--describe-logging] [--debug]"
 
 		cmd.Action = func() {
@@ -126,7 +130,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
 				}
-				keyStore := keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions, logging.NewNoopLogger())
+				dir := conf.Keys.KeysDirectory
+				if *keysDir != "" {
+					dir = *keysDir
+				}
+				keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions, logging.NewNoopLogger())
 
 				if *generateKeysOpt != "" {
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
