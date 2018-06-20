@@ -205,6 +205,13 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.GenesisDoc = genesisDoc
 			}
 
+			if *chainNameOpt != "" {
+				if conf.GenesisDoc == nil {
+					output.Fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
+				}
+				conf.GenesisDoc.ChainName = *chainNameOpt
+			}
+
 			if conf.GenesisDoc != nil {
 				pkg.Config = conf.GenesisDoc
 
@@ -246,13 +253,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Execution = &execution.ExecutionConfig{
 					VMOptions: []execution.VMOption{execution.DumpTokens, execution.DebugOpcodes},
 				}
-			}
-
-			if *chainNameOpt != "" {
-				if conf.GenesisDoc == nil {
-					output.Fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
-				}
-				conf.GenesisDoc.ChainName = *chainNameOpt
 			}
 
 			if *separateGenesisDoc != "" {
