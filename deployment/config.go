@@ -44,8 +44,8 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 	},
 }
 
-func (pkg *Config) Dump(templateString string) (string, error) {
-	tmpl, err := template.New("ConfigTemplate").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
+func (pkg *Config) Dump(templateName, templateString string) (string, error) {
+	tmpl, err := template.New(templateName).Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
 		Parse(templateString)
 	if err != nil {
 		return "", errors.Wrap(err, "could not dump config to template")

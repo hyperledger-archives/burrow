@@ -23,18 +23,6 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 )
 
-func processTemplate(pkg *deployment.Config, config *genesis.GenesisDoc, templateIn, templateOut string) error {
-	data, err := ioutil.ReadFile(templateIn)
-	if err != nil {
-		return err
-	}
-	output, err := pkg.Dump(string(data))
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(templateOut, []byte(output), 0644)
-}
-
 func Configure(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		genesisSpecOpt := cmd.StringOpt("s genesis-spec", "",
@@ -56,11 +44,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		configTemplateIn := cmd.StringsOpt("t config-template-in", nil,
 			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to output generate config "+
-				"file specified with --config-template-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
+				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
 
-		configTemplateOut := cmd.StringsOpt("t config-template-out", nil,
+		configOut := cmd.StringsOpt("t config-out", nil,
 			"Go text/template template output file. Template filename specified with --config-template-in "+
-				"file specified with --config-template-out")
+				"file specified with --config-out")
 
 		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -78,7 +66,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
 		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
-			"[--config-template-in=<text template> --config-template-out=<output file>]... " +
+			"[--config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name] [--json] " +
 			"[--generate-node-keys] " +
@@ -110,8 +98,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Keys.RemoteAddress = *keysUrlOpt
 			}
 
-			if len(*configTemplateIn) != len(*configTemplateOut) {
-				output.Fatalf("--config-template-in and --config-template-out must be specified the same number of times")
+			if len(*configTemplateIn) != len(*configOut) {
+				output.Fatalf("--config-template-in and --config-out must be specified the same number of times")
 			}
 
 			pkg := deployment.Config{}
@@ -229,9 +217,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 
 				for ind := range *configTemplateIn {
-					err := processTemplate(&pkg, conf.GenesisDoc, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
+					err := processTemplate(&pkg, conf.GenesisDoc, (*configTemplateIn)[ind], (*configOut)[ind])
 					if err != nil {
-						output.Fatalf("coult not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
+						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configOut)[ind], err)
 					}
 				}
 			}
@@ -277,4 +265,16 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 			}
 		}
 	}
+}
+
+func processTemplate(pkg *deployment.Config, config *genesis.GenesisDoc, templateIn, templateOut string) error {
+	data, err := ioutil.ReadFile(templateIn)
+	if err != nil {
+		return err
+	}
+	output, err := pkg.Dump(templateIn, string(data))
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(templateOut, []byte(output), 0644)
 }
