@@ -14,7 +14,7 @@ import (
 )
 
 const DefaultAmount uint64 = 1000000
-const DefaultAmountBonded uint64 = 10000
+const DefaultPower uint64 = 10000
 
 // A GenesisSpec is schematic representation of a genesis state, that is it is a template
 // for a GenesisDoc excluding that which needs to be instantiated at the point of genesis
@@ -41,7 +41,7 @@ func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
 }
 
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
-func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
+func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys bool) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)
 	if gs.GenesisTime == nil {
 		genesisDoc.GenesisTime = time.Now()
@@ -69,9 +69,9 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 
 	templateAccounts := gs.Accounts
 	if len(gs.Accounts) == 0 {
-		amountBonded := DefaultAmountBonded
+		Power := DefaultPower
 		templateAccounts = append(templateAccounts, TemplateAccount{
-			AmountBonded: &amountBonded,
+			Power: &Power,
 		})
 	}
 
@@ -82,10 +82,10 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 		}
 		genesisDoc.Accounts = append(genesisDoc.Accounts, *account)
 		// Create a corresponding validator
-		if templateAccount.AmountBonded != nil {
+		if templateAccount.Power != nil {
 			// Note this does not modify the input template
 			templateAccount.Address = &account.Address
-			validator, err := templateAccount.Validator(keyClient, i)
+			validator, err := templateAccount.Validator(keyClient, i, generateNodeKeys)
 			if err != nil {
 				return nil, fmt.Errorf("could not create Validator from template: %v", err)
 			}

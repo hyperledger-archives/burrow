@@ -1525,9 +1525,9 @@ proof-of-work chain as proof of what happened while they were gone `
 				t.Errorf("Unexpected bond height. Expected %v, got %v",
 					blockchain.LastBlockHeight(), acc0Val.BondHeight)
 			}
-			if acc0Val.VotingPower != 1 {
+			if acc0Val.Power != 1 {
 				t.Errorf("Unexpected voting power. Expected %v, got %v",
-					acc0Val.VotingPower, acc0.Balance())
+					acc0Val.Power, acc0.Balance())
 			}
 			if acc0Val.Accum != 0 {
 				t.Errorf("Unexpected accum. Expected 0, got %v",

@@ -322,7 +322,7 @@ func (ks *KeyStore) GetKeyFile(dataDirPath string, keyAddr []byte) (fileContent 
 		return nil, err
 	}
 	if (uint32(fileInfo.Mode()) & 0077) != 0 {
-		ks.logger.InfoMsg("file should be accessible by user only", filename)
+		ks.logger.InfoMsg("file should be accessible by user only", "file", filename)
 		if !ks.AllowBadFilePermissions {
 			return nil, fmt.Errorf("file %s should be accessible by user only", filename)
 		}
@@ -340,6 +340,10 @@ func WriteKeyFile(addr []byte, dataDirPath string, content []byte) (err error) {
 	return ioutil.WriteFile(keyFilePath, content, 0600) // read, write for user
 }
 
+func (ks *KeyStore) GetAllNames() (map[string]string, error) {
+	return coreNameList(ks.keysDirPath)
+}
+
 func GetAllAddresses(dataDirPath string) (addresses [][]byte, err error) {
 	fileInfos, err := ioutil.ReadDir(dataDirPath)
 	if err != nil {
@@ -347,7 +351,7 @@ func GetAllAddresses(dataDirPath string) (addresses [][]byte, err error) {
 	}
 	addresses = make([][]byte, len(fileInfos))
 	for i, fileInfo := range fileInfos {
-		addr := strings.TrimSuffix(fileInfo.Name(), "json")
+		addr := strings.TrimSuffix(fileInfo.Name(), ".json")
 		address, err := hex.DecodeString(addr)
 		if err != nil {
 			continue
