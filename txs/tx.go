@@ -124,6 +124,13 @@ func (tx *Tx) Hash() []byte {
 	return tx.txHash
 }
 
+func (tx *Tx) String() string {
+	if tx == nil {
+		return "Tx{nil}"
+	}
+	return fmt.Sprintf("Tx{TxHash: %X; Payload: %v}", tx.Hash(), tx.Payload)
+}
+
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
 func (tx *Tx) Rehash() []byte {
 	hasher := ripemd160.New()

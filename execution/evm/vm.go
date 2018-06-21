@@ -212,7 +212,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
-	logger := vm.logger.With("tx_hash", vm.tx)
+	logger := vm.logger.With("tx_hash", vm.tx.Hash())
 
 	if vm.dumpTokens {
 		dumpTokens(vm.tx.Hash(), caller, callee, code)
