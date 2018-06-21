@@ -322,7 +322,7 @@ func (ks *KeyStore) GetKeyFile(dataDirPath string, keyAddr []byte) (fileContent 
 		return nil, err
 	}
 	if (uint32(fileInfo.Mode()) & 0077) != 0 {
-		ks.logger.InfoMsg("file should be accessible by user only", filename)
+		ks.logger.InfoMsg("file should be accessible by user only", "file", filename)
 		if !ks.AllowBadFilePermissions {
 			return nil, fmt.Errorf("file %s should be accessible by user only", filename)
 		}
