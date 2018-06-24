@@ -916,8 +916,9 @@ func TestTxSequence(t *testing.T) {
 		tx.AddOutput(acc1.Address(), 1)
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		stateCopy := state.Copy(dbm.NewMemDB())
-		err := execTxWithState(stateCopy, txEnv)
+		stateCopy, err := state.Copy(dbm.NewMemDB())
+		require.NoError(t, err)
+		err = execTxWithState(stateCopy, txEnv)
 		if i == 1 {
 			// Sequence is good.
 			if err != nil {
@@ -947,7 +948,7 @@ func TestTxSequence(t *testing.T) {
 func TestNameTxs(t *testing.T) {
 	st, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	require.NoError(t, err)
-	st.writeState.Save()
+	st.writeState.save()
 
 	names.MinNameRegistrationPeriod = 5
 	blockchain := newBlockchain(testGenesisDoc)
@@ -1245,16 +1246,19 @@ var callerCode, _ = hex.DecodeString("60606040526000357c010000000000000000000000
 var sendData, _ = hex.DecodeString("3e58c58c")
 
 func TestContractSend(t *testing.T) {
-	state, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
+	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address())
-	acc0 := getAccount(state, privAccounts[0].Address())
-	acc1 := getAccount(state, privAccounts[1].Address())
-	acc2 := getAccount(state, privAccounts[2].Address())
+	acc0 := getAccount(st, privAccounts[0].Address())
+	acc1 := getAccount(st, privAccounts[1].Address())
+	acc2 := getAccount(st, privAccounts[2].Address())
 
-	newAcc1 := getAccount(state, acc1.Address())
+	newAcc1 := getAccount(st, acc1.Address())
 	newAcc1.SetCode(callerCode)
-	state.writeState.UpdateAccount(newAcc1)
+	_, err := st.Update(func(up Updatable) error {
+		return up.UpdateAccount(newAcc1)
+	})
+	require.NoError(t, err)
 
 	sendData = append(sendData, acc2.Address().Word256().Bytes()...)
 	sendAmt := uint64(10)
@@ -1274,12 +1278,12 @@ func TestContractSend(t *testing.T) {
 
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(privAccounts[0]))
-	err := execTxWithState(state, txEnv)
+	err = execTxWithState(st, txEnv)
 	if err != nil {
 		t.Errorf("Got error in executing call transaction, %v", err)
 	}
 
-	acc2 = getAccount(state, acc2.Address())
+	acc2 = getAccount(st, acc2.Address())
 	if acc2.Balance() != sendAmt+acc2Balance {
 		t.Errorf("Value transfer from contract failed! Got %d, expected %d", acc2.Balance(), sendAmt+acc2Balance)
 	}
@@ -1293,10 +1297,11 @@ func TestMerklePanic(t *testing.T) {
 	acc0 := getAccount(state, privAccounts[0].Address())
 	acc1 := getAccount(state, privAccounts[1].Address())
 
-	state.writeState.Save()
+	state.writeState.save()
 	// SendTx.
 	{
-		stateSendTx := state.Copy(dbm.NewMemDB())
+		stateSendTx, err := state.Copy(dbm.NewMemDB())
+		require.NoError(t, err)
 		tx := &payload.SendTx{
 			Inputs: []*payload.TxInput{
 				{
@@ -1315,17 +1320,18 @@ func TestMerklePanic(t *testing.T) {
 
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err := execTxWithState(stateSendTx, txEnv)
+		err = execTxWithState(stateSendTx, txEnv)
 		if err != nil {
 			t.Errorf("Got error in executing send transaction, %v", err)
 		}
 		// uncomment for panic fun!
-		//stateSendTx.Save()
+		//stateSendTx.save()
 	}
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx := state.Copy(dbm.NewMemDB())
+		stateCallTx, err := state.Copy(dbm.NewMemDB())
+		require.NoError(t, err)
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.writeState.UpdateAccount(newAcc1)
@@ -1341,12 +1347,12 @@ func TestMerklePanic(t *testing.T) {
 
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err := execTxWithState(stateCallTx, txEnv)
+		err = execTxWithState(stateCallTx, txEnv)
 		if err != nil {
 			t.Errorf("Got error in executing call transaction, %v", err)
 		}
 	}
-	state.writeState.Save()
+	state.writeState.save()
 	trygetacc0 := getAccount(state, privAccounts[0].Address())
 	fmt.Println(trygetacc0.Address())
 }
@@ -1354,15 +1360,16 @@ func TestMerklePanic(t *testing.T) {
 // TODO: test overflows.
 // TODO: test for unbonding validators.
 func TestTxs(t *testing.T) {
-	state, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
+	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address())
-	acc0 := getAccount(state, privAccounts[0].Address())
-	acc1 := getAccount(state, privAccounts[1].Address())
+	acc0 := getAccount(st, privAccounts[0].Address())
+	acc1 := getAccount(st, privAccounts[1].Address())
 
 	// SendTx.
 	{
-		stateSendTx := state.Copy(dbm.NewMemDB())
+		stateSendTx, err := st.Copy(dbm.NewMemDB())
+		require.NoError(t, err)
 		tx := &payload.SendTx{
 			Inputs: []*payload.TxInput{
 				{
@@ -1381,7 +1388,7 @@ func TestTxs(t *testing.T) {
 
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err := execTxWithState(stateSendTx, txEnv)
+		err = execTxWithState(stateSendTx, txEnv)
 		if err != nil {
 			t.Errorf("Got error in executing send transaction, %v", err)
 		}
@@ -1399,10 +1406,14 @@ func TestTxs(t *testing.T) {
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx := state.Copy(dbm.NewMemDB())
+		stateCallTx, err := st.Copy(dbm.NewMemDB())
+		require.NoError(t, err)
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
-		stateCallTx.writeState.UpdateAccount(newAcc1)
+		_, err = stateCallTx.Update(func(up Updatable) error {
+			return up.UpdateAccount(newAcc1)
+		})
+		require.NoError(t, err)
 		tx := &payload.CallTx{
 			Input: &payload.TxInput{
 				Address:  acc0.Address(),
@@ -1415,7 +1426,7 @@ func TestTxs(t *testing.T) {
 
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err := execTxWithState(stateCallTx, txEnv)
+		err = execTxWithState(stateCallTx, txEnv)
 		if err != nil {
 			t.Errorf("Got error in executing call transaction, %v", err)
 		}
@@ -1430,7 +1441,7 @@ func TestTxs(t *testing.T) {
 				acc1.Balance()+1, newAcc1.Balance())
 		}
 	}
-	trygetacc0 := getAccount(state, privAccounts[0].Address())
+	trygetacc0 := getAccount(st, privAccounts[0].Address())
 	fmt.Println(trygetacc0.Address())
 
 	// NameTx.
@@ -1453,7 +1464,7 @@ basis,   and   nodes   can   leave  and   rejoin   the  network   at  will,  acc
 proof-of-work chain as proof of what happened while they were gone `
 		entryAmount := uint64(10000)
 
-		stateNameTx := state
+		stateNameTx := st
 		tx := &payload.NameTx{
 			Input: &payload.TxInput{
 				Address:  acc0.Address(),
@@ -1551,28 +1562,32 @@ proof-of-work chain as proof of what happened while they were gone `
 }
 
 func TestSelfDestruct(t *testing.T) {
-	state, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
+	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
 
-	acc0 := getAccount(state, privAccounts[0].Address())
+	acc0 := getAccount(st, privAccounts[0].Address())
 	acc0PubKey := privAccounts[0].PublicKey()
-	acc1 := getAccount(state, privAccounts[1].Address())
-	acc2 := getAccount(state, privAccounts[2].Address())
+	acc1 := getAccount(st, privAccounts[1].Address())
+	acc2 := getAccount(st, privAccounts[2].Address())
 	sendingAmount, refundedBalance, oldBalance := uint64(1), acc1.Balance(), acc2.Balance()
 
-	newAcc1 := getAccount(state, acc1.Address())
+	newAcc1 := getAccount(st, acc1.Address())
 
 	// store 0x1 at 0x1, push an address, then self-destruct:)
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
 	contractCode = append(contractCode, acc2.Address().Bytes()...)
 	contractCode = append(contractCode, 0xff)
 	newAcc1.SetCode(contractCode)
-	state.writeState.UpdateAccount(newAcc1)
+	_, err := st.Update(func(up Updatable) error {
+		require.NoError(t, up.UpdateAccount(newAcc1))
+		return nil
+	})
+	require.NoError(t, err)
 
 	// send call tx with no data, cause self-destruct
 	tx := payload.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(state, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// if we do it again, we won't get an error, but the self-destruct
@@ -1584,13 +1599,13 @@ func TestSelfDestruct(t *testing.T) {
 	exe.Commit()
 
 	// acc2 should receive the sent funds and the contracts balance
-	newAcc2 := getAccount(state, acc2.Address())
+	newAcc2 := getAccount(st, acc2.Address())
 	newBalance := sendingAmount + refundedBalance + oldBalance
 	if newAcc2.Balance() != newBalance {
 		t.Errorf("Unexpected newAcc2 balance. Expected %v, got %v",
 			newAcc2.Balance(), newBalance)
 	}
-	newAcc1 = getAccount(state, acc1.Address())
+	newAcc1 = getAccount(st, acc1.Address())
 	if newAcc1 != nil {
 		t.Errorf("Expected account to be removed")
 	}
@@ -1627,7 +1642,7 @@ func execTxWithState(state *State, txEnv *txs.Envelope) error {
 
 func commitNewBlock(state *State, blockchain *bcm.Blockchain) {
 	blockchain.CommitBlock(blockchain.LastBlockTime().Add(time.Second), sha3.Sha3(blockchain.LastBlockHash()),
-		state.writeState.Hash())
+		state.Hash())
 }
 
 func execTxWithStateNewBlock(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
@@ -1646,7 +1661,7 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
 	}
-	s0.writeState.Save()
+	s0.writeState.save()
 	return s0, privAccounts
 }
 

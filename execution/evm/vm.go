@@ -93,7 +93,7 @@ func (vm *VM) SetPublisher(publisher event.Publisher) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(stateWriter state.Writer, acc acm.Account, perm ptypes.PermFlag) bool {
+func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm ptypes.PermFlag) bool {
 	value, _ := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(stateWriter).Base).Get(perm)
 	return value
 }

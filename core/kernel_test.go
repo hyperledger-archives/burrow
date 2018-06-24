@@ -77,8 +77,10 @@ func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *gen
 		return err
 	}
 
-	ch := make(chan *tmTypes.EventDataNewBlock)
-	tendermint.SubscribeNewBlock(context.Background(), kern.Emitter, "TestBootShutdownResume", ch)
+	ch, err := tendermint.SubscribeNewBlock(context.Background(), kern.Emitter)
+	if err != nil {
+		return err
+	}
 	cont := true
 	for cont {
 		select {

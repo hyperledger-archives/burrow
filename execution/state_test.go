@@ -24,7 +24,6 @@ import (
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
@@ -40,11 +39,10 @@ func TestState_UpdateAccount(t *testing.T) {
 	s := NewState(db.NewMemDB())
 	account := acm.NewConcreteAccountFromSecret("Foo").MutableAccount()
 	account.MutablePermissions().Base.Perms = permission.SetGlobal | permission.HasRole
-	var err error
-	s.Update(func(ws Updatable) {
-		err = ws.UpdateAccount(account)
-		err = ws.Save()
+	_, err := s.Update(func(ws Updatable) error {
+		return ws.UpdateAccount(account)
 	})
+	require.NoError(t, err)
 
 	require.NoError(t, err)
 	accountOut, err := s.GetAccount(account.Address())
@@ -59,31 +57,36 @@ func TestState_Publish(t *testing.T) {
 		mkEvent(100, 0),
 		mkEvent(100, 1),
 	}
-	s.Update(func(ws Updatable) {
+	_, err := s.Update(func(ws Updatable) error {
 		for _, ev := range evs {
 			require.NoError(t, ws.Publish(ctx, ev, nil))
 		}
+		return nil
 	})
-	i := 0
-	ch, err := s.GetEvents(100, 100, query.Empty{})
 	require.NoError(t, err)
-	for ev := range ch {
-		assert.Equal(t, evs[i], ev)
-		i++
-	}
+	i := 0
+	_, err = s.GetEvents(events.NewKey(100, 0), events.NewKey(100, 0),
+		func(ev *events.Event) (stop bool) {
+			assert.Equal(t, evs[i], ev)
+			i++
+			return false
+		})
+	require.NoError(t, err)
 	// non-increasing events
-	s.Update(func(ws Updatable) {
+	_, err = s.Update(func(ws Updatable) error {
 		require.Error(t, ws.Publish(ctx, mkEvent(100, 0), nil))
 		require.Error(t, ws.Publish(ctx, mkEvent(100, 1), nil))
 		require.Error(t, ws.Publish(ctx, mkEvent(99, 1324234), nil))
 		require.NoError(t, ws.Publish(ctx, mkEvent(100, 2), nil))
 		require.NoError(t, ws.Publish(ctx, mkEvent(101, 0), nil))
+		return nil
 	})
+	require.NoError(t, err)
 }
 
 func TestProtobufEventSerialisation(t *testing.T) {
 	ev := mkEvent(112, 23)
-	pbEvent := pbevents.GetEvent(ev)
+	pbEvent := pbevents.GetExecutionEvent(ev)
 	bs, err := proto.Marshal(pbEvent)
 	require.NoError(t, err)
 	pbEventOut := new(pbevents.ExecutionEvent)

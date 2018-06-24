@@ -36,6 +36,13 @@ type Queryable interface {
 // A yet-to-parsed query
 type String string
 
+func Must(qry pubsub.Query, err error) Query {
+	if err != nil {
+		panic(fmt.Errorf("could not compile: %v", qry))
+	}
+	return WrapQuery(qry)
+}
+
 func (qs String) Query() (pubsub.Query, error) {
 	if isEmpty(string(qs)) {
 		return query.Empty{}, nil

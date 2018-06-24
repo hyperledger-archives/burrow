@@ -23,7 +23,7 @@ import (
 // The Cache helps prevent unnecessary IAVLTree updates and garbage generation.
 type Cache struct {
 	sync.RWMutex
-	backend Getter
+	backend Reader
 	names   map[string]*nameInfo
 }
 
@@ -39,7 +39,7 @@ var _ Writer = &Cache{}
 // Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
 // output Writer via Sync.
 // Not goroutine safe, use syncStateCache if you need concurrent access
-func NewCache(backend Getter) *Cache {
+func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend: backend,
 		names:   make(map[string]*nameInfo),
@@ -125,24 +125,24 @@ func (cache *Cache) Sync(state Writer) error {
 }
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
-func (cache *Cache) Reset(backend Getter) {
+func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.names = make(map[string]*nameInfo)
 }
 
-// Syncs the Cache and Resets it to use Writer as the backend Getter
-func (cache *Cache) Flush(state Writer) error {
-	err := cache.Sync(state)
+// Syncs the Cache and Resets it to use Writer as the backend Reader
+func (cache *Cache) Flush(output Writer, backend Reader) error {
+	err := cache.Sync(output)
 	if err != nil {
 		return err
 	}
-	cache.Reset(state)
+	cache.Reset(backend)
 	return nil
 }
 
-func (cache *Cache) Backend() Getter {
+func (cache *Cache) Backend() Reader {
 	return cache.backend
 }
 

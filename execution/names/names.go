@@ -62,30 +62,34 @@ func DecodeEntry(entryBytes []byte) (*Entry, error) {
 	return entry, nil
 }
 
-type Getter interface {
+type Reader interface {
 	GetNameEntry(name string) (*Entry, error)
 }
 
-type Updater interface {
+type Writer interface {
 	// Updates the name entry creating it if it does not exist
 	UpdateNameEntry(entry *Entry) error
 	// Remove the name entry
 	RemoveNameEntry(name string) error
 }
 
-type Writer interface {
-	Getter
-	Updater
+type ReaderWriter interface {
+	Reader
+	Writer
 }
 
 type Iterable interface {
-	Getter
 	IterateNameEntries(consumer func(*Entry) (stop bool)) (stopped bool, err error)
 }
 
-type IterableWriter interface {
+type IterableReader interface {
 	Iterable
-	Updater
+	Reader
+}
+
+type IterableReaderWriter interface {
+	Iterable
+	ReaderWriter
 }
 
 // base cost is "effective" number of bytes

@@ -39,9 +39,9 @@ type Executor interface {
 }
 
 type ExecutorState interface {
-	Update(updater func(ws Updatable))
-	names.Getter
-	state.Iterable
+	Update(updater func(ws Updatable) error) (hash []byte, err error)
+	names.Reader
+	state.IterableReader
 }
 
 type BatchExecutor interface {
@@ -78,21 +78,21 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, tip *bcm.Tip, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, tip bcm.TipInfo, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
 	return newExecutor("CheckCache", false, backend, tip, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend ExecutorState, tip *bcm.Tip, publisher event.Publisher, logger *logging.Logger,
+func NewBatchCommitter(backend ExecutorState, tip bcm.TipInfo, publisher event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
 	return newExecutor("CommitCache", true, backend, tip, publisher,
 		logger.WithScope("NewBatchCommitter"), options...)
 }
 
-func newExecutor(name string, runCall bool, backend ExecutorState, tip *bcm.Tip, publisher event.Publisher,
+func newExecutor(name string, runCall bool, backend ExecutorState, tip bcm.TipInfo, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 
 	exe := &executor{
@@ -100,7 +100,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, tip *bcm.Tip,
 		state:        backend,
 		publisher:    publisher,
 		stateCache:   state.NewCache(backend, state.Name(name)),
-		eventCache:   event.NewEventCache(),
+		eventCache:   event.NewCache(),
 		nameRegCache: names.NewCache(backend),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
@@ -167,7 +167,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 	return fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }
 
-func (exe *executor) Commit() (hash []byte, err error) {
+func (exe *executor) Commit() (_ []byte, err error) {
 	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
 	// deadlock
 	defer func() {
@@ -175,36 +175,27 @@ func (exe *executor) Commit() (hash []byte, err error) {
 			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%v", r, debug.Stack())
 		}
 	}()
-	exe.state.Update(func(ws Updatable) {
+	return exe.state.Update(func(ws Updatable) error {
 		// flush the caches
-		err = exe.stateCache.Flush(ws)
+		err := exe.stateCache.Flush(ws, exe.state)
 		if err != nil {
-			return
+			return err
 		}
-		err = exe.nameRegCache.Flush(ws)
+		err = exe.nameRegCache.Flush(ws, exe.state)
 		if err != nil {
-			return
+			return err
 		}
 		err = exe.eventCache.Sync(ws)
 		if err != nil {
-			return
-		}
-		//save state to disk
-		err = ws.Save()
-		if err != nil {
-			return
+			return err
 		}
 		// flush events to listeners
 		err = exe.eventCache.Flush(exe.publisher)
 		if err != nil {
-			return
+			return err
 		}
-		hash = ws.Hash()
+		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return hash, nil
 }
 
 func (exe *executor) Reset() error {

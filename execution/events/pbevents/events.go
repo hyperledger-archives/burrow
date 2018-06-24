@@ -29,7 +29,7 @@ func GetCallData(cd *events.CallData) *CallData {
 	}
 }
 
-func GetEvent(event *events.Event) *ExecutionEvent {
+func GetExecutionEvent(event *events.Event) *ExecutionEvent {
 	return &ExecutionEvent{
 		Header:    GetEventHeader(event.Header),
 		EventData: GetEventData(event),
@@ -97,6 +97,14 @@ func (ee *ExecutionEvent) Event() *events.Event {
 		Log:    ee.GetEventDataLog().Log(ee.Header.Height),
 		Call:   ee.GetEventDataCall().Call(ee.Header.TxHash),
 	}
+}
+
+func (ee *ExecutionEvent) Key() events.Key {
+	return ee.Header.Key()
+}
+
+func (h *EventHeader) Key() events.Key {
+	return events.NewKey(h.Height, h.Index)
 }
 
 func (h *EventHeader) Header() *events.Header {

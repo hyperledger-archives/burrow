@@ -40,7 +40,7 @@ type SubscriptionsCache struct {
 	mtx    *sync.Mutex
 	events []interface{}
 	ts     time.Time
-	subId  string
+	subID  string
 }
 
 func NewSubscriptions(service *Service) *Subscriptions {
@@ -56,12 +56,12 @@ func NewSubscriptions(service *Service) *Subscriptions {
 	return es
 }
 
-func newSubscriptionsCache() *SubscriptionsCache {
+func newSubscriptionsCache(subID string) *SubscriptionsCache {
 	return &SubscriptionsCache{
-		&sync.Mutex{},
-		make([]interface{}, 0),
-		time.Now(),
-		"",
+		subID:  subID,
+		mtx:    &sync.Mutex{},
+		events: make([]interface{}, 0),
+		ts:     time.Now(),
 	}
 }
 
@@ -100,26 +100,26 @@ func reap(es *Subscriptions) {
 // happen it's for an insignificant amount of time (the time it takes to
 // carry out SubscriptionsCache.poll() ).
 func (subs *Subscriptions) Add(eventId string) (string, error) {
-	subId, err := event.GenerateSubscriptionID()
+	subID, err := event.GenerateSubscriptionID()
 	if err != nil {
 		return "", err
 	}
-	cache := newSubscriptionsCache()
-	err = subs.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *ResultEvent) bool {
+	subs.mtx.Lock()
+	defer subs.mtx.Unlock()
+	cache := newSubscriptionsCache(subID)
+	subs.subs[subID] = cache
+
+	err = subs.service.Subscribe(context.Background(), subID, eventId, func(resultEvent *ResultEvent) (stop bool) {
 		cache.mtx.Lock()
 		defer cache.mtx.Unlock()
 		cache.events = append(cache.events, resultEvent)
-		return true
+		return
 	})
 	if err != nil {
 		return "", err
 	}
-	cache.subId = subId
-	subs.mtx.Lock()
-	defer subs.mtx.Unlock()
-	subs.subs[subId] = cache
 
-	return subId, nil
+	return subID, nil
 }
 
 func (subs *Subscriptions) Poll(subId string) ([]interface{}, error) {

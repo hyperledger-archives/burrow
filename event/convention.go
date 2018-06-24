@@ -3,6 +3,10 @@ package event
 import (
 	"context"
 
+	"time"
+
+	"fmt"
+
 	"github.com/hyperledger/burrow/event/query"
 )
 
@@ -24,7 +28,18 @@ const (
 	ValueKey       = "Value"
 	GasKey         = "Gas"
 	ExceptionKey   = "Exception"
+	LogNKeyPrefix  = "Log"
 )
+
+func LogNKey(topic int) string {
+	return fmt.Sprintf("%s%d", LogNKeyPrefix, topic)
+}
+
+func LogNTextKey(topic int) string {
+	return fmt.Sprintf("%s%dText", LogNKeyPrefix, topic)
+}
+
+const SubscribeCallbackTimeout = 2 * time.Second
 
 // Get a query that matches events with a specific eventID
 func QueryForEventID(eventID string) *query.Builder {
@@ -33,14 +48,27 @@ func QueryForEventID(eventID string) *query.Builder {
 }
 
 // Subscribe to messages matching query and launch a goroutine to run a callback for each one. The goroutine will exit
-// when the context is done or the subscription is removed.
+// if the callback returns true for 'stop' and clean up the subscription and channel.
 func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscriber string, queryable query.Queryable,
-	callback func(message interface{}) bool) error {
+	callback func(message interface{}) (stop bool)) error {
 
-	out := make(chan interface{})
+	out := make(chan interface{}, 1)
+	stopCh := make(chan bool)
+
 	go func() {
 		for msg := range out {
-			if !callback(msg) {
+			go func() {
+				stopCh <- callback(msg)
+			}()
+
+			// Stop unless the callback returns
+			stop := true
+			select {
+			case stop = <-stopCh:
+			case <-time.After(SubscribeCallbackTimeout):
+			}
+
+			if stop {
 				// Callback is requesting stop so unsubscribe and drain channel
 				subscribable.Unsubscribe(context.Background(), subscriber, queryable)
 				// Not draining channel can starve other subscribers
@@ -61,13 +89,13 @@ func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscribe
 func PublishAll(ctx context.Context, subscribable Subscribable, subscriber string, queryable query.Queryable,
 	publisher Publisher, extraTags map[string]interface{}) error {
 
-	return SubscribeCallback(ctx, subscribable, subscriber, queryable, func(message interface{}) bool {
+	return SubscribeCallback(ctx, subscribable, subscriber, queryable, func(message interface{}) (stop bool) {
 		tags := make(map[string]interface{})
 		for k, v := range extraTags {
 			tags[k] = v
 		}
 		// Help! I can't tell which tags the original publisher used - so I can't forward them on
 		publisher.Publish(ctx, message, TagMap(tags))
-		return true
+		return
 	})
 }

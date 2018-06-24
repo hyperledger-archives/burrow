@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 // Functions to generate eventId strings
@@ -49,6 +49,49 @@ type CallData struct {
 	Value  uint64
 	Gas    uint64
 }
+
+// Publish/Subscribe
+func PublishAccountCall(publisher event.Publisher, tx *txs.Tx, height uint64, call *EventDataCall) error {
+	eventID := EventStringAccountCall(call.CallData.Callee)
+	ev := &Event{
+		Header: &Header{
+			TxType:    tx.Type(),
+			TxHash:    tx.Hash(),
+			EventType: TypeCall,
+			EventID:   eventID,
+			Height:    height,
+		},
+		Call: call,
+	}
+	return publisher.Publish(context.Background(), ev, ev.Tags())
+}
+
+// Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all, if
+// stackDepth is greater than or equal to 0 captures calls at a specific stack depth (useful for capturing the return
+// of the root call over recursive calls
+func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,
+	txHash []byte, stackDepth int, ch chan<- *EventDataCall) error {
+
+	query := event.QueryForEventID(EventStringAccountCall(address))
+
+	if len(txHash) > 0 {
+		query = query.AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
+	}
+
+	if stackDepth >= 0 {
+		query = query.AndEquals(event.StackDepthKey, stackDepth)
+	}
+
+	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) (stop bool) {
+		ev, ok := message.(*Event)
+		if ok && ev.Call != nil {
+			ch <- ev.Call
+		}
+		return
+	})
+}
+
+// Tags
 
 var callTagKeys = []string{
 	event.CalleeKey,
@@ -88,17 +131,10 @@ func (call *EventDataCall) Len() int {
 	return len(callTagKeys)
 }
 
-func (call *EventDataCall) Map() map[string]interface{} {
-	tags := make(map[string]interface{})
-	for _, key := range callTagKeys {
-		tags[key], _ = call.Get(key)
-	}
-	return tags
-}
-
 func (call *EventDataCall) Keys() []string {
 	return callTagKeys
 }
+
 func (call *EventDataCall) Tags(tags map[string]interface{}) map[string]interface{} {
 	tags[event.CalleeKey] = call.CallData.Callee
 	tags[event.CallerKey] = call.CallData.Caller
@@ -110,45 +146,4 @@ func (call *EventDataCall) Tags(tags map[string]interface{}) map[string]interfac
 		tags[event.ExceptionKey] = call.Exception
 	}
 	return tags
-}
-
-// Publish/Subscribe
-func PublishAccountCall(publisher event.Publisher, tx *txs.Tx, height uint64, call *EventDataCall) error {
-	eventID := EventStringAccountCall(call.CallData.Callee)
-	ev := &Event{
-		Header: &Header{
-			TxType:    tx.Type(),
-			TxHash:    tx.Hash(),
-			EventType: TypeCall,
-			EventID:   eventID,
-			Height:    height,
-		},
-		Call: call,
-	}
-	return publisher.Publish(context.Background(), ev, ev.Tags())
-}
-
-// Subscribe to account call event - if TxHash is provided listens for a specifc Tx otherwise captures all, if
-// stackDepth is greater than or equal to 0 captures calls at a specific stack depth (useful for capturing the return
-// of the root call over recursive calls
-func SubscribeAccountCall(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,
-	txHash []byte, stackDepth int, ch chan<- *EventDataCall) error {
-
-	query := event.QueryForEventID(EventStringAccountCall(address))
-
-	if len(txHash) > 0 {
-		query = query.AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
-	}
-
-	if stackDepth >= 0 {
-		query = query.AndEquals(event.StackDepthKey, stackDepth)
-	}
-
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
-		ev, ok := message.(*Event)
-		if ok && ev.Call != nil {
-			ch <- ev.Call
-		}
-		return true
-	})
 }

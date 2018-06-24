@@ -13,9 +13,9 @@ type MemoryState struct {
 	Storage  map[crypto.Address]map[binary.Word256]binary.Word256
 }
 
-var _ IterableWriter = &MemoryState{}
+var _ IterableReaderWriter = &MemoryState{}
 
-// Get an in-memory state Iterable
+// Get an in-memory state IterableReader
 func NewMemoryState() *MemoryState {
 	return &MemoryState{
 		Accounts: make(map[crypto.Address]acm.Account),

@@ -19,25 +19,25 @@ func TestEventCache_Flush(t *testing.T) {
 	flushed := false
 
 	em := NewEmitter(logging.NewNoopLogger())
-	SubscribeCallback(ctx, em, "nothingness", query.NewBuilder(), func(message interface{}) bool {
+	SubscribeCallback(ctx, em, "nothingness", query.NewBuilder(), func(message interface{}) (stop bool) {
 		// Check against sending a buffer of zeroed messages
 		if message == nil {
 			errCh <- fmt.Errorf("recevied empty message but none sent")
 		}
-		return false
+		return true
 	})
-	evc := NewEventCache()
+	evc := NewCache()
 	evc.Flush(em)
 	// Check after reset
 	evc.Flush(em)
 	SubscribeCallback(ctx, em, "somethingness", query.NewBuilder().AndEquals("foo", "bar"),
-		func(interface{}) bool {
+		func(interface{}) (stop bool) {
 			if flushed {
 				errCh <- nil
-				return true
+				return false
 			} else {
 				errCh <- fmt.Errorf("callback was run before messages were flushed")
-				return false
+				return true
 			}
 		})
 
@@ -62,7 +62,7 @@ func TestEventCache_Flush(t *testing.T) {
 
 func TestEventCacheGrowth(t *testing.T) {
 	em := NewEmitter(logging.NewNoopLogger())
-	evc := NewEventCache()
+	evc := NewCache()
 
 	fireNEvents(evc, 100)
 	c := cap(evc.events)

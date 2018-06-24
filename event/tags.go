@@ -8,7 +8,6 @@ import (
 
 type Tags interface {
 	pubsub.TagMap
-	Map() map[string]interface{}
 	Keys() []string
 }
 

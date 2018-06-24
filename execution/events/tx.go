@@ -29,35 +29,6 @@ type EventDataTx struct {
 	Exception *errors.Exception
 }
 
-var txTagKeys = []string{event.ExceptionKey}
-
-func (tx *EventDataTx) Get(key string) (string, bool) {
-	var value interface{}
-	switch key {
-	case event.ExceptionKey:
-		value = tx.Exception
-	default:
-		return "", false
-	}
-	return query.StringFromValue(value), true
-}
-
-func (tx *EventDataTx) Len() int {
-	return len(txTagKeys)
-}
-
-func (tx *EventDataTx) Map() map[string]interface{} {
-	tags := make(map[string]interface{})
-	for _, key := range txTagKeys {
-		tags[key], _ = tx.Get(key)
-	}
-	return tags
-}
-
-func (tx *EventDataTx) Keys() []string {
-	return txTagKeys
-}
-
 // For re-use
 var sendTxQuery = query.NewBuilder().
 	AndEquals(event.TxTypeKey, payload.TypeSend.String())
@@ -109,16 +80,16 @@ func PublishPermissions(publisher event.Publisher, height uint64, tx *txs.Tx) er
 func SubscribeAccountOutputSendTx(ctx context.Context, subscribable event.Subscribable, subscriber string,
 	address crypto.Address, txHash []byte, ch chan<- *payload.SendTx) error {
 
-	query := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
+	qry := sendTxQuery.And(event.QueryForEventID(EventStringAccountOutput(address))).
 		AndEquals(event.TxHashKey, hex.EncodeUpperToString(txHash))
 
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
+	return event.SubscribeCallback(ctx, subscribable, subscriber, qry, func(message interface{}) (stop bool) {
 		if ev, ok := message.(*Event); ok && ev.Tx != nil {
 			if sendTx, ok := ev.Tx.Tx.Payload.(*payload.SendTx); ok {
 				ch <- sendTx
 			}
 		}
-		return true
+		return
 	})
 }
 
@@ -137,4 +108,27 @@ func txEvent(height uint64, eventType Type, eventID string, tx *txs.Tx, ret []by
 			Exception: exception,
 		},
 	}
+}
+
+// Tags
+
+var txTagKeys = []string{event.ExceptionKey}
+
+func (tx *EventDataTx) Get(key string) (string, bool) {
+	var value interface{}
+	switch key {
+	case event.ExceptionKey:
+		value = tx.Exception
+	default:
+		return "", false
+	}
+	return query.StringFromValue(value), true
+}
+
+func (tx *EventDataTx) Len() int {
+	return len(txTagKeys)
+}
+
+func (tx *EventDataTx) Keys() []string {
+	return txTagKeys
 }

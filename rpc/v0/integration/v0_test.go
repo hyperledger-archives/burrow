@@ -37,7 +37,7 @@ func TestTransactCallNoCode(t *testing.T) {
 	toAddress := privateAccounts[2].Address()
 
 	numCreates := 1000
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numCreates; i++ {
 		receipt, err := cli.Transact(v0.TransactParam{
 			InputAccount: inputAccount(i),
@@ -62,7 +62,7 @@ func TestTransactCreate(t *testing.T) {
 	// Flip flops between sending private key and input address to test private key and address based signing
 	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
 	require.NoError(t, err)
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numCreates; j++ {
@@ -110,7 +110,7 @@ func TestTransactAndHold(t *testing.T) {
 
 	numGoroutines := 5
 	numRuns := 2
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		for j := 0; j < numRuns; j++ {
 			create, err := cli.TransactAndHold(v0.TransactParam{
@@ -142,7 +142,7 @@ func TestTransactAndHold(t *testing.T) {
 func TestSend(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 	numSends := 1000
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numSends; i++ {
 		send, err := cli.Send(v0.SendParam{
 			InputAccount: inputAccount(i),
@@ -170,8 +170,6 @@ func TestSendAndHold(t *testing.T) {
 }
 
 // Helpers
-
-var committedTxCountIndex = 0
 
 var inputPrivateKey = privateAccounts[0].PrivateKey().RawBytes()
 var inputAddress = privateAccounts[0].Address().Bytes()

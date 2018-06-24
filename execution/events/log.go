@@ -18,12 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	"strings"
+
 	"github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tmthrgd/go-hex"
 )
 
 // Functions to generate eventId strings
@@ -38,35 +41,6 @@ type EventDataLog struct {
 	Address crypto.Address
 	Topics  []Word256
 	Data    binary.HexBytes
-}
-
-var logTagKeys = []string{event.AddressKey}
-
-func (log *EventDataLog) Get(key string) (string, bool) {
-	var value interface{}
-	switch key {
-	case event.AddressKey:
-		value = log.Address
-	default:
-		return "", false
-	}
-	return query.StringFromValue(value), true
-}
-
-func (log *EventDataLog) Len() int {
-	return len(logTagKeys)
-}
-
-func (log *EventDataLog) Map() map[string]interface{} {
-	tags := make(map[string]interface{})
-	for _, key := range logTagKeys {
-		tags[key], _ = log.Get(key)
-	}
-	return tags
-}
-
-func (log *EventDataLog) Keys() []string {
-	return logTagKeys
 }
 
 // Publish/Subscribe
@@ -87,13 +61,64 @@ func PublishLogEvent(publisher event.Publisher, tx *txs.Tx, log *EventDataLog) e
 func SubscribeLogEvent(ctx context.Context, subscribable event.Subscribable, subscriber string, address crypto.Address,
 	ch chan<- *EventDataLog) error {
 
-	query := event.QueryForEventID(EventStringLogEvent(address))
+	qry := event.QueryForEventID(EventStringLogEvent(address))
 
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
+	return event.SubscribeCallback(ctx, subscribable, subscriber, qry, func(message interface{}) (stop bool) {
 		ev, ok := message.(*Event)
 		if ok && ev.Log != nil {
 			ch <- ev.Log
 		}
-		return true
+		return
 	})
+}
+
+// Tags
+const logNTextTopicCutset = "\x00"
+
+var logTagKeys []string
+var logNTopicIndex = make(map[string]int, 5)
+var logNTextTopicIndex = make(map[string]int, 5)
+
+func init() {
+	for i := 0; i <= 4; i++ {
+		logN := event.LogNKey(i)
+		logTagKeys = append(logTagKeys, event.LogNKey(i))
+		logNText := event.LogNTextKey(i)
+		logTagKeys = append(logTagKeys, logNText)
+		logNTopicIndex[logN] = i
+		logNTextTopicIndex[logNText] = i
+	}
+	logTagKeys = append(logTagKeys, event.AddressKey)
+}
+
+func (log *EventDataLog) Get(key string) (string, bool) {
+	var value interface{}
+	switch key {
+	case event.AddressKey:
+		value = log.Address
+	default:
+		if i, ok := logNTopicIndex[key]; ok {
+			return hex.EncodeUpperToString(log.GetTopic(i).Bytes()), true
+		}
+		if i, ok := logNTextTopicIndex[key]; ok {
+			return strings.Trim(string(log.GetTopic(i).Bytes()), logNTextTopicCutset), true
+		}
+		return "", false
+	}
+	return query.StringFromValue(value), true
+}
+
+func (log *EventDataLog) GetTopic(i int) Word256 {
+	if i < len(log.Topics) {
+		return log.Topics[i]
+	}
+	return Word256{}
+}
+
+func (log *EventDataLog) Len() int {
+	return len(logTagKeys)
+}
+
+func (log *EventDataLog) Keys() []string {
+	return logTagKeys
 }

@@ -16,9 +16,9 @@ import (
 
 type NameContext struct {
 	Tip            blockchain.TipInfo
-	StateWriter    state.Writer
+	StateWriter    state.ReaderWriter
 	EventPublisher event.Publisher
-	NameReg        names.Writer
+	NameReg        names.ReaderWriter
 	Logger         *logging.Logger
 	tx             *payload.NameTx
 }

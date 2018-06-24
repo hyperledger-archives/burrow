@@ -24,10 +24,12 @@ import (
 
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/core/integration"
+	"github.com/hyperledger/burrow/execution/pbtransactor"
 )
 
 var privateAccounts = integration.MakePrivateAccounts(5) // make keys
 var genesisDoc = integration.TestGenesisDoc(privateAccounts)
+var inputAccount = &pbtransactor.InputAccount{Address: privateAccounts[0].Address().Bytes()}
 var kern *core.Kernel
 
 // Needs to be in a _test.go file to be picked up

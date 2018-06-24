@@ -1042,7 +1042,7 @@ func runVM(eventCh chan<- *events.EventDataCall, vmCache *state.Cache, ourVm *VM
 	if err != nil {
 		return nil, err
 	}
-	evc := event.NewEventCache()
+	evc := event.NewCache()
 	ourVm.SetPublisher(evc)
 	start := time.Now()
 	output, err := ourVm.Call(vmCache, caller, callee, contractCode, []byte{}, 0, &gas)

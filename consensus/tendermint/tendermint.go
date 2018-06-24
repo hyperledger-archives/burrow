@@ -9,6 +9,7 @@ import (
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
@@ -29,6 +30,8 @@ type Node struct {
 		Close()
 	}
 }
+
+var NewBlockQuery = query.Must(event.QueryForEventID(tm_types.EventNewBlock).Query())
 
 func DBProvider(ID string, backendType dbm.DBBackendType, dbDir string) dbm.DB {
 	return dbm.NewDB(ID, backendType, dbDir)
@@ -98,18 +101,36 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc
 	}
 }
 
-func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable, subscriber string,
-	ch chan<- *tm_types.EventDataNewBlock) error {
-	query := event.QueryForEventID(tm_types.EventNewBlock)
-
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
-		tmEventData, ok := message.(tm_types.TMEventData)
+func NewBlockEvent(message interface{}) *tm_types.EventDataNewBlock {
+	tmEventData, ok := message.(tm_types.TMEventData)
+	if ok {
+		eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
 		if ok {
-			eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
-			if ok {
-				ch <- &eventDataNewBlock
+			return &eventDataNewBlock
+		}
+	}
+	return nil
+}
+
+// Subscribe to NewBlock event safely that ensures progress by a non-blocking receive as well as handling unsubscribe
+func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable) (<-chan *tm_types.EventDataNewBlock, error) {
+	subID, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, err
+	}
+	const unconsumedBlocksBeforeUnsubscribe = 3
+	ch := make(chan *tm_types.EventDataNewBlock, unconsumedBlocksBeforeUnsubscribe)
+	return ch, event.SubscribeCallback(ctx, subscribable, subID, NewBlockQuery, func(message interface{}) (stop bool) {
+		eventDataNewBlock := NewBlockEvent(message)
+		if eventDataNewBlock != nil {
+			select {
+			case ch <- eventDataNewBlock:
+				return false
+			default:
+				// If we can't send shut down the channel
+				return true
 			}
 		}
-		return true
+		return
 	})
 }

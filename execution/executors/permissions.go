@@ -18,7 +18,7 @@ import (
 
 type PermissionsContext struct {
 	Tip            blockchain.TipInfo
-	StateWriter    state.Writer
+	StateWriter    state.ReaderWriter
 	EventPublisher event.Publisher
 	Logger         *logging.Logger
 	tx             *payload.PermissionsTx

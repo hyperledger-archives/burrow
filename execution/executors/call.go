@@ -22,7 +22,7 @@ const GasLimit = uint64(1000000)
 
 type CallContext struct {
 	Tip            blockchain.TipInfo
-	StateWriter    state.Writer
+	StateWriter    state.ReaderWriter
 	EventPublisher event.Publisher
 	RunCall        bool
 	VMOptions      []func(*evm.VM)

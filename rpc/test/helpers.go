@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -11,7 +10,6 @@ import (
 	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc"
 )
 
@@ -28,16 +26,20 @@ func NewExecutionEventsClient(t testing.TB) pbevents.ExecutionEventsClient {
 	return pbevents.NewExecutionEventsClient(conn)
 }
 
-func CommittedTxCount(t *testing.T, em event.Emitter, committedTxCountIndex *int) chan int {
+func NewEventsClient(t testing.TB) pbevents.EventsClient {
+	conn, err := grpc.Dial(rpc.DefaultGRPCConfig().ListenAddress, grpc.WithInsecure())
+	require.NoError(t, err)
+	return pbevents.NewEventsClient(conn)
+}
+
+func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 	var numTxs int64
 	emptyBlocks := 0
 	maxEmptyBlocks := 2
 	outCh := make(chan int)
-	ch := make(chan *types.EventDataNewBlock)
 	ctx := context.Background()
-	subscriber := fmt.Sprintf("committedTxCount_%v", *committedTxCountIndex)
-	*committedTxCountIndex++
-	require.NoError(t, tendermint.SubscribeNewBlock(ctx, em, subscriber, ch))
+	ch, err := tendermint.SubscribeNewBlock(ctx, em)
+	require.NoError(t, err)
 
 	go func() {
 		for ed := range ch {
@@ -52,7 +54,6 @@ func CommittedTxCount(t *testing.T, em event.Emitter, committedTxCountIndex *int
 			numTxs += ed.Block.NumTxs
 			t.Logf("Total TXs committed at block %v: %v (+%v)\n", ed.Block.Height, numTxs, ed.Block.NumTxs)
 		}
-		require.NoError(t, em.UnsubscribeAll(ctx, subscriber))
 		outCh <- int(numTxs)
 	}()
 	return outCh

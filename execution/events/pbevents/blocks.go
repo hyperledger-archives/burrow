@@ -1,18 +1,63 @@
 package pbevents
 
-func (br *BlockRange) Bounds() (start uint64, end uint64) {
-	return br.GetStart().GetIndex(), br.GetEnd().GetIndex()
+import "github.com/hyperledger/burrow/execution/events"
+
+func (br *BlockRange) Bounds(latestBlockHeight uint64) (startKey, endKey events.Key, streaming bool) {
+	return br.GetStart().Key(latestBlockHeight), br.GetEnd().Key(latestBlockHeight),
+		br.GetEnd().GetType() == Bound_STREAM
 }
 
-func SimpleBlockRange(start, end uint64) *BlockRange {
+func (b *Bound) Key(latestBlockHeight uint64) events.Key {
+	return events.NewKey(b.Bound(latestBlockHeight), 0)
+}
+
+func (b *Bound) Bound(latestBlockHeight uint64) uint64 {
+	switch b.Type {
+	case Bound_ABSOLUTE:
+		return b.GetIndex()
+	case Bound_RELATIVE:
+		if b.Index < latestBlockHeight {
+			return latestBlockHeight - b.Index
+		}
+		return 0
+	case Bound_FIRST:
+		return 0
+	case Bound_LATEST, Bound_STREAM:
+		return latestBlockHeight
+	default:
+		return latestBlockHeight
+	}
+}
+
+func AbsoluteBound(index uint64) *Bound {
+	return &Bound{
+		Index: index,
+		Type:  Bound_ABSOLUTE,
+	}
+}
+
+func RelativeBound(index uint64) *Bound {
+	return &Bound{
+		Index: index,
+		Type:  Bound_RELATIVE,
+	}
+}
+
+func LatestBound() *Bound {
+	return &Bound{
+		Type: Bound_LATEST,
+	}
+}
+
+func StreamBound() *Bound {
+	return &Bound{
+		Type: Bound_STREAM,
+	}
+}
+
+func NewBlockRange(start, end *Bound) *BlockRange {
 	return &BlockRange{
-		Start: &Bound{
-			Type:  Bound_ABSOLUTE,
-			Index: start,
-		},
-		End: &Bound{
-			Type:  Bound_ABSOLUTE,
-			Index: end,
-		},
+		Start: start,
+		End:   end,
 	}
 }

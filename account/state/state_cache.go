@@ -222,20 +222,20 @@ func (cache *Cache) Sync(state Writer) error {
 }
 
 // Resets the cache to empty initialising the backing map to the same size as the previous iteration.
-func (cache *Cache) Reset(backend Iterable) {
+func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.accounts = make(map[crypto.Address]*accountInfo, len(cache.accounts))
 }
 
-// Syncs the Cache and Resets it to use as the backend Reader
-func (cache *Cache) Flush(state IterableWriter) error {
-	err := cache.Sync(state)
+// Syncs the Cache to output and Resets it to use backend as Reader
+func (cache *Cache) Flush(output Writer, backend Reader) error {
+	err := cache.Sync(output)
 	if err != nil {
 		return err
 	}
-	cache.Reset(state)
+	cache.Reset(backend)
 	return nil
 }
 

@@ -31,10 +31,13 @@ import (
 
 const DefaultEventBufferCapacity = 2 << 10
 
+// TODO: manage the creation, closing, and draining of channels behind the interface rather than only closing.
+// stop one subscriber from blocking everything!
 type Subscribable interface {
-	// Subscribe to all events matching query, which is a valid tmlibs Query
+	// Subscribe to all events matching query, which is a valid tmlibs Query. Blocking the out channel blocks the entire
+	// pubsub.
 	Subscribe(ctx context.Context, subscriber string, queryable query.Queryable, out chan<- interface{}) error
-	// Unsubscribe subscriber from a specific query string
+	// Unsubscribe subscriber from a specific query string. Note the subscribe channel must be drained.
 	Unsubscribe(ctx context.Context, subscriber string, queryable query.Queryable) error
 	UnsubscribeAll(ctx context.Context, subscriber string) error
 }
@@ -43,9 +46,11 @@ type Publisher interface {
 	Publish(ctx context.Context, message interface{}, tag Tags) error
 }
 
-type PublisherFunc func(ctx context.Context, message interface{}, tags map[string]interface{}) error
+var _ Publisher = PublisherFunc(nil)
 
-func (pf PublisherFunc) Publish(ctx context.Context, message interface{}, tags map[string]interface{}) error {
+type PublisherFunc func(ctx context.Context, message interface{}, tags Tags) error
+
+func (pf PublisherFunc) Publish(ctx context.Context, message interface{}, tags Tags) error {
 	return pf(ctx, message, tags)
 }
 

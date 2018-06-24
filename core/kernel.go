@@ -51,6 +51,7 @@ import (
 	tm_config "github.com/tendermint/tendermint/config"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -66,6 +67,7 @@ type Kernel struct {
 	Service        *rpc.Service
 	Launchers      []process.Launcher
 	State          *execution.State
+	Blockchain     bcm.BlockchainInfo
 	Logger         *logging.Logger
 	processes      map[string]process.Process
 	shutdownNotify chan struct{}
@@ -248,7 +250,11 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 
 				pbevents.RegisterEventsServer(grpcServer, rpcevents.NewEventsServer(rpc.NewSubscriptions(service)))
 
-				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state))
+				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state, emitter,
+					blockchain.Tip))
+
+				// Provides metadata about services registered
+				reflection.Register(grpcServer)
 
 				go grpcServer.Serve(listen)
 
@@ -266,6 +272,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		Service:        service,
 		Launchers:      launchers,
 		State:          state,
+		Blockchain:     blockchain,
 		Logger:         logger,
 		processes:      make(map[string]process.Process),
 		shutdownNotify: make(chan struct{}),

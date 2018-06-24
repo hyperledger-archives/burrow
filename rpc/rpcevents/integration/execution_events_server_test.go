@@ -29,75 +29,59 @@ import (
 	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc/test"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var committedTxCountIndex = 0
-var inputAccount = &pbtransactor.InputAccount{Address: privateAccounts[0].Address().Bytes()}
-
-func TestSend(t *testing.T) {
+func TestExecutionEventsSendStream(t *testing.T) {
+	request := &pbevents.GetEventsRequest{
+		BlockRange: pbevents.NewBlockRange(pbevents.LatestBound(), pbevents.StreamBound()),
+	}
 	tcli := test.NewTransactorClient(t)
-	numSends := 1500
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
-	for i := 0; i < numSends; i++ {
-		send, err := tcli.Send(context.Background(), &pbtransactor.SendParam{
-			InputAccount: inputAccount,
-			Amount:       2003,
-			ToAddress:    privateAccounts[3].Address().Bytes(),
-		})
-		require.NoError(t, err)
-		assert.Equal(t, false, send.CreatesContract)
-	}
-	require.Equal(t, numSends, <-countCh)
-
 	ecli := test.NewExecutionEventsClient(t)
-
-	evs, err := ecli.GetEvents(context.Background(), &pbevents.GetEventsRequest{
-		BlockRange: pbevents.SimpleBlockRange(0, 100),
-	})
+	stream, err := ecli.GetEvents(context.Background(), request)
 	require.NoError(t, err)
-	i := 0
-	for {
-		resp, err := evs.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			require.NoError(t, err)
-		}
-		for _, ev := range resp.Events {
-			assert.Len(t, ev.Header.TxHash, 20)
-			i++
-		}
+	numSends := 1
+	for i := 0; i < numSends; i++ {
+		doSends(t, 2, tcli)
+		response, err := stream.Recv()
+		require.NoError(t, err)
+		require.Len(t, response.Events, 4, "expect multiple events")
+		assert.Equal(t, payload.TypeSend.String(), response.Events[0].GetHeader().GetTxType())
+		assert.Equal(t, payload.TypeSend.String(), response.Events[1].GetHeader().GetTxType())
 	}
-	// Input/output events for each
-	assert.Equal(t, numSends*2, i)
+	require.NoError(t, stream.CloseSend())
 }
 
-func TestSendFiltered(t *testing.T) {
-	tcli := test.NewTransactorClient(t)
-	numSends := 1500
-	countCh := test.CommittedTxCount(t, kern.Emitter, &committedTxCountIndex)
-	for i := 0; i < numSends; i++ {
-		send, err := tcli.Send(context.Background(), &pbtransactor.SendParam{
-			InputAccount: inputAccount,
-			Amount:       2003,
-			ToAddress:    privateAccounts[3].Address().Bytes(),
-		})
-		require.NoError(t, err)
-		assert.Equal(t, false, send.CreatesContract)
+func TestExecutionEventsSend(t *testing.T) {
+	request := &pbevents.GetEventsRequest{
+		BlockRange: pbevents.NewBlockRange(pbevents.AbsoluteBound(kern.Blockchain.LastBlockHeight()),
+			pbevents.AbsoluteBound(300)),
 	}
-	require.Equal(t, numSends, <-countCh)
+	numSends := 1100
+	responses := testExecutionEventsSend(t, numSends, request)
+	assert.Equal(t, numSends*2, totalEvents(responses), "should receive and input and output event per send")
+}
 
+func TestExecutionEventsSendFiltered(t *testing.T) {
+	request := &pbevents.GetEventsRequest{
+		BlockRange: pbevents.NewBlockRange(pbevents.AbsoluteBound(kern.Blockchain.LastBlockHeight()),
+			pbevents.AbsoluteBound(300)),
+		Query: query.NewBuilder().AndEquals(event.EventTypeKey, events.TypeAccountInput.String()).String(),
+	}
+	numSends := 500
+	responses := testExecutionEventsSend(t, numSends, request)
+	assert.Equal(t, numSends, totalEvents(responses), "should receive a single input event per send")
+}
+
+func testExecutionEventsSend(t *testing.T, numSends int, request *pbevents.GetEventsRequest) []*pbevents.GetEventsResponse {
+	doSends(t, numSends, test.NewTransactorClient(t))
 	ecli := test.NewExecutionEventsClient(t)
 
-	evs, err := ecli.GetEvents(context.Background(), &pbevents.GetEventsRequest{
-		BlockRange: pbevents.SimpleBlockRange(0, 100),
-		Query:      query.NewBuilder().AndEquals(event.EventTypeKey, events.TypeAccountInput.String()).String(),
-	})
+	evs, err := ecli.GetEvents(context.Background(), request)
 	require.NoError(t, err)
-	i := 0
+	var responses []*pbevents.GetEventsResponse
 	for {
 		resp, err := evs.Recv()
 		if err != nil {
@@ -106,11 +90,29 @@ func TestSendFiltered(t *testing.T) {
 			}
 			require.NoError(t, err)
 		}
-		for _, ev := range resp.Events {
-			assert.Len(t, ev.Header.TxHash, 20)
-			i++
-		}
+		responses = append(responses, resp)
 	}
-	// Should only get input events
-	assert.Equal(t, numSends, i)
+	return responses
+}
+
+func doSends(t *testing.T, numSends int, cli pbtransactor.TransactorClient) {
+	countCh := test.CommittedTxCount(t, kern.Emitter)
+	for i := 0; i < numSends; i++ {
+		send, err := cli.Send(context.Background(), &pbtransactor.SendParam{
+			InputAccount: inputAccount,
+			Amount:       2003,
+			ToAddress:    privateAccounts[3].Address().Bytes(),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, false, send.CreatesContract)
+	}
+	require.Equal(t, numSends, <-countCh)
+}
+
+func totalEvents(respones []*pbevents.GetEventsResponse) int {
+	i := 0
+	for _, resp := range respones {
+		i += len(resp.Events)
+	}
+	return i
 }

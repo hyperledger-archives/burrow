@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
@@ -257,4 +258,26 @@ func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
 		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
 	}
 	return res, nil
+}
+
+func (re *ResultEvent) GetEvent() (*pbevents.Event, error) {
+	ev := &pbevents.Event{
+		Name: re.Event,
+	}
+	if re.Tendermint != nil {
+		bs, err := json.Marshal(re.Tendermint)
+		if err != nil {
+			return nil, err
+		}
+		ev.Event = &pbevents.Event_TendermintEventJSON{
+			TendermintEventJSON: string(bs),
+		}
+	} else if re.Execution != nil {
+		ev.Event = &pbevents.Event_ExecutionEvent{
+			ExecutionEvent: pbevents.GetExecutionEvent(re.Execution),
+		}
+	} else {
+		return nil, fmt.Errorf("ResultEvent is empty")
+	}
+	return ev, nil
 }

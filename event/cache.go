@@ -21,7 +21,7 @@ type Indexable interface {
 var _ Publisher = &Cache{}
 
 // Create a new Cache with an EventSwitch as backend
-func NewEventCache() *Cache {
+func NewCache() *Cache {
 	return &Cache{}
 }
 

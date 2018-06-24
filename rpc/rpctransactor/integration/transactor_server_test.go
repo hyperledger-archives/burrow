@@ -20,19 +20,16 @@ package integration
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc"
 )
 
@@ -43,7 +40,7 @@ func TestTransactCallNoCode(t *testing.T) {
 	toAddress := privateAccounts[2].Address()
 
 	numCreates := 1000
-	countCh := committedTxCount(t)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numCreates; i++ {
 		receipt, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 			InputAccount: inputAccount(i),
@@ -68,7 +65,7 @@ func TestTransactCreate(t *testing.T) {
 	// Flip flops between sending private key and input address to test private key and address based signing
 	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
 	require.NoError(t, err)
-	countCh := committedTxCount(t)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numCreates; j++ {
@@ -114,7 +111,7 @@ func TestTransactAndHold(t *testing.T) {
 	require.NoError(t, err)
 	numGoroutines := 5
 	numRuns := 2
-	countCh := committedTxCount(t)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		for j := 0; j < numRuns; j++ {
 			create, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
@@ -146,7 +143,7 @@ func TestTransactAndHold(t *testing.T) {
 func TestSend(t *testing.T) {
 	cli := newClient(t)
 	numSends := 1000
-	countCh := committedTxCount(t)
+	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numSends; i++ {
 		send, err := cli.Send(context.Background(), &pbtransactor.SendParam{
 			InputAccount: inputAccount(i),
@@ -177,38 +174,6 @@ func newClient(t testing.TB) pbtransactor.TransactorClient {
 	conn, err := grpc.Dial(rpc.DefaultGRPCConfig().ListenAddress, grpc.WithInsecure())
 	require.NoError(t, err)
 	return pbtransactor.NewTransactorClient(conn)
-}
-
-var committedTxCountIndex = 0
-
-func committedTxCount(t *testing.T) chan int {
-	var numTxs int64
-	emptyBlocks := 0
-	maxEmptyBlocks := 2
-	outCh := make(chan int)
-	ch := make(chan *types.EventDataNewBlock)
-	ctx := context.Background()
-	subscriber := fmt.Sprintf("committedTxCount_%v", committedTxCountIndex)
-	committedTxCountIndex++
-	require.NoError(t, tendermint.SubscribeNewBlock(ctx, kern.Emitter, subscriber, ch))
-
-	go func() {
-		for ed := range ch {
-			if ed.Block.NumTxs == 0 {
-				emptyBlocks++
-			} else {
-				emptyBlocks = 0
-			}
-			if emptyBlocks > maxEmptyBlocks {
-				break
-			}
-			numTxs += ed.Block.NumTxs
-			t.Logf("Total TXs committed at block %v: %v (+%v)\n", ed.Block.Height, numTxs, ed.Block.NumTxs)
-		}
-		require.NoError(t, kern.Emitter.UnsubscribeAll(ctx, subscriber))
-		outCh <- int(numTxs)
-	}()
-	return outCh
 }
 
 var inputPrivateKey = privateAccounts[0].PrivateKey().RawBytes()

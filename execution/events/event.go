@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -15,7 +14,8 @@ var cdc = txs.NewAminoCodec()
 var eventMessageTag = event.TagMap{event.MessageTypeKey: reflect.TypeOf(&Event{}).String()}
 
 type Provider interface {
-	GetEvents(startBlock, finalBlock uint64, queryable query.Queryable) (<-chan *Event, error)
+	GetEvents(startKey, endKey Key, consumer func(*Event) (stop bool)) (stopped bool, err error)
+	LatestEventKey() Key
 }
 
 type Event struct {
@@ -33,6 +33,10 @@ func DecodeEvent(bs []byte) (*Event, error) {
 		return nil, err
 	}
 	return ev, nil
+}
+
+func (ev *Event) Key() Key {
+	return ev.Header.Key()
 }
 
 func (ev *Event) Encode() ([]byte, error) {
@@ -62,10 +66,6 @@ func (ev *Event) Keys() []string {
 
 func (ev *Event) Len() int {
 	return ev.Tags().Len()
-}
-
-func (ev *Event) Map() map[string]interface{} {
-	return ev.Tags().Map()
 }
 
 // event.Cache will provide an index through this methods of Indexable
