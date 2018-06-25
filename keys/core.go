@@ -7,8 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"encoding/json"
 )
 
 const (
@@ -47,10 +45,6 @@ func writeKey(keyDir string, addr, keyJson []byte) ([]byte, error) {
 		return nil, err
 	}
 	return addr, nil
-}
-
-func coreExport(key *Key) ([]byte, error) {
-	return json.Marshal(key)
 }
 
 //----------------------------------------------------------------
