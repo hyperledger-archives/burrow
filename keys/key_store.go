@@ -105,8 +105,8 @@ func IsValidKeyJson(j []byte) []byte {
 	return nil
 }
 
-func NewKeyStore(dir string, AllowBadFilePermissions bool, logger *logging.Logger) KeyStore {
-	return KeyStore{
+func NewKeyStore(dir string, AllowBadFilePermissions bool, logger *logging.Logger) *KeyStore {
+	return &KeyStore{
 		keysDirPath:             dir,
 		AllowBadFilePermissions: AllowBadFilePermissions,
 		logger:                  logger.With(structure.ComponentKey, "keys").WithScope("NewKeyStore"),
@@ -120,7 +120,7 @@ type KeyStore struct {
 	logger                  *logging.Logger
 }
 
-func (ks KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key, err error) {
+func (ks *KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("GenerateNewKey error: %v", r)
@@ -134,7 +134,7 @@ func (ks KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key,
 	return key, err
 }
 
-func (ks KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
+func (ks *KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
 	ks.Lock()
 	defer ks.Unlock()
 	dataDirPath, err := returnDataDir(ks.keysDirPath)
@@ -159,7 +159,7 @@ func (ks KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
 	}
 }
 
-func (ks KeyStore) AllKeys() ([]*Key, error) {
+func (ks *KeyStore) AllKeys() ([]*Key, error) {
 
 	dataDirPath, err := returnDataDir(ks.keysDirPath)
 	if err != nil {
@@ -228,13 +228,13 @@ func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
 	return k, nil
 }
 
-func (ks KeyStore) GetAllAddresses() (addresses [][]byte, err error) {
+func (ks *KeyStore) GetAllAddresses() (addresses [][]byte, err error) {
 	ks.Lock()
 	defer ks.Unlock()
 	return GetAllAddresses(ks.keysDirPath)
 }
 
-func (ks KeyStore) StoreKey(passphrase string, key *Key) error {
+func (ks *KeyStore) StoreKey(passphrase string, key *Key) error {
 	ks.Lock()
 	defer ks.Unlock()
 	if passphrase != "" {
@@ -244,7 +244,7 @@ func (ks KeyStore) StoreKey(passphrase string, key *Key) error {
 	}
 }
 
-func (ks KeyStore) StoreKeyPlain(key *Key) (err error) {
+func (ks *KeyStore) StoreKeyPlain(key *Key) (err error) {
 	keyJSON, err := json.Marshal(key)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (ks KeyStore) StoreKeyPlain(key *Key) (err error) {
 	return err
 }
 
-func (ks KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
+func (ks *KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
 	authArray := []byte(passphrase)
 	salt := make([]byte, 32)
 	_, err := rand.Read(salt)
@@ -314,7 +314,7 @@ func (ks KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
 	return WriteKeyFile(key.Address[:], dataDirPath, keyJSON)
 }
 
-func (ks KeyStore) DeleteKey(passphrase string, keyAddr []byte) (err error) {
+func (ks *KeyStore) DeleteKey(passphrase string, keyAddr []byte) (err error) {
 	dataDirPath, err := returnDataDir(ks.keysDirPath)
 	if err != nil {
 		return err

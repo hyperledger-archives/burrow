@@ -106,7 +106,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
 			defer cancel()
 
-			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
+			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) (stop bool) {
 				keepAlive := wsCtx.TryWriteRPCResponse(types.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
@@ -114,7 +114,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 						"subscription_id", subscriptionID,
 						"event_id", eventID)
 				}
-				return keepAlive
+				return !keepAlive
 			})
 			if err != nil {
 				return nil, err

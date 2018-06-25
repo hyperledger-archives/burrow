@@ -230,7 +230,7 @@ func NewSNativeContract(comment, name string,
 // This function is designed to be called from the EVM once a SNative contract
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
-func (contract *SNativeContractDescription) Dispatch(state state.Writer, caller acm.Account,
+func (contract *SNativeContractDescription) Dispatch(state state.ReaderWriter, caller acm.Account,
 	args []byte, gas *uint64, logger *logging.Logger) (output []byte, err error) {
 
 	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
@@ -343,7 +343,7 @@ func abiReturn(name string, abiTypeName abi.TypeName) abi.Return {
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
-func hasBase(state state.Writer, caller acm.Account, args []byte, gas *uint64,
+func hasBase(state state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
@@ -369,7 +369,7 @@ func hasBase(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func setBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *uint64,
+func setBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum, permVal := returnThreeArgs(args)
@@ -396,7 +396,7 @@ func setBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(stateWriter)), nil
 }
 
-func unsetBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *uint64,
+func unsetBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, permNum := returnTwoArgs(args)
@@ -423,7 +423,7 @@ func unsetBase(stateWriter state.Writer, caller acm.Account, args []byte, gas *u
 	return effectivePermBytes(acc.Permissions().Base, globalPerms(stateWriter)), nil
 }
 
-func setGlobal(stateWriter state.Writer, caller acm.Account, args []byte, gas *uint64,
+func setGlobal(stateWriter state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	permNum, permVal := returnTwoArgs(args)
@@ -449,7 +449,7 @@ func setGlobal(stateWriter state.Writer, caller acm.Account, args []byte, gas *u
 	return permBytes(acc.Permissions().Base.ResultantPerms()), nil
 }
 
-func hasRole(state state.Writer, caller acm.Account, args []byte, gas *uint64,
+func hasRole(state state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
@@ -470,7 +470,7 @@ func hasRole(state state.Writer, caller acm.Account, args []byte, gas *uint64,
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func addRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *uint64,
+func addRole(stateWriter state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
@@ -492,7 +492,7 @@ func addRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *uin
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
-func removeRole(stateWriter state.Writer, caller acm.Account, args []byte, gas *uint64,
+func removeRole(stateWriter state.ReaderWriter, caller acm.Account, args []byte, gas *uint64,
 	logger *logging.Logger) (output []byte, err error) {
 
 	addrWord256, role := returnTwoArgs(args)
@@ -523,7 +523,7 @@ func ValidPermN(n ptypes.PermFlag) bool {
 }
 
 // Get the global BasePermissions
-func globalPerms(stateWriter state.Writer) ptypes.BasePermissions {
+func globalPerms(stateWriter state.ReaderWriter) ptypes.BasePermissions {
 	return state.GlobalAccountPermissions(stateWriter).Base
 }
 

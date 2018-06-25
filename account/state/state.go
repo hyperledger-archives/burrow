@@ -53,26 +53,32 @@ type Reader interface {
 	StorageGetter
 }
 
-// Read and list account and storage state
 type Iterable interface {
-	Reader
 	AccountIterable
 	StorageIterable
+}
+
+// Read and list account and storage state
+type IterableReader interface {
+	Iterable
+	Reader
+}
+
+type Writer interface {
+	AccountUpdater
+	StorageSetter
 }
 
 // Read and write account and storage state
-type Writer interface {
+type ReaderWriter interface {
 	Reader
-	AccountUpdater
-	StorageSetter
+	Writer
 }
 
-type IterableWriter interface {
+type IterableReaderWriter interface {
+	Iterable
 	Reader
-	AccountUpdater
-	StorageSetter
-	AccountIterable
-	StorageIterable
+	Writer
 }
 
 func GetMutableAccount(getter AccountGetter, address crypto.Address) (acm.MutableAccount, error) {

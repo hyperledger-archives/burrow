@@ -39,6 +39,8 @@ type TipInfo interface {
 	LastBlockTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
+	IterateValidators(iter func(publicKey crypto.PublicKey, power uint64) (stop bool)) (stopped bool)
+	NumValidators() int
 }
 
 type BlockchainInfo interface {

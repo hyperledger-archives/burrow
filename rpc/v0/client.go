@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 )

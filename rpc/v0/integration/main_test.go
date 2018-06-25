@@ -28,12 +28,12 @@ import (
 
 var privateAccounts = integration.MakePrivateAccounts(5) // make keys
 var genesisDoc = integration.TestGenesisDoc(privateAccounts)
-var kernel *core.Kernel
+var kern *core.Kernel
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	returnValue := integration.TestWrapper(privateAccounts, genesisDoc, func(kern *core.Kernel) int {
-		kernel = kern
+	returnValue := integration.TestWrapper(privateAccounts, genesisDoc, func(k *core.Kernel) int {
+		kern = k
 		return m.Run()
 	})
 

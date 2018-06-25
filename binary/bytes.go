@@ -4,15 +4,19 @@ import "github.com/tmthrgd/go-hex"
 
 type HexBytes []byte
 
-func (bs *HexBytes) UnmarshalText(hexBytes []byte) error {
-	bs2, err := hex.DecodeString(string(hexBytes))
+func (hb *HexBytes) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
 	if err != nil {
 		return err
 	}
-	*bs = bs2
+	*hb = bs
 	return nil
 }
 
-func (bs HexBytes) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeUpperToString(bs)), nil
+func (hb HexBytes) MarshalText() ([]byte, error) {
+	return []byte(hb.String()), nil
+}
+
+func (hb HexBytes) String() string {
+	return hex.EncodeUpperToString(hb)
 }

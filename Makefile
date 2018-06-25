@@ -16,7 +16,8 @@ BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
-DOCKER_NAMESPACE := quay.io/monax
+PROTO_FILES = $(shell find . -type f -name '*.proto')
+PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 
 ### Formatting, linting and vetting
 
@@ -67,13 +68,18 @@ megacheck:
 protobuf_deps:
 	@go get -u github.com/golang/protobuf/protoc-gen-go
 
-keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
-	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
+# Implicit compile rule for GRPC/proto files
+%.pb.go: %.proto
+	protoc -I ${GOPATH}/src ${REPO}/$< --go_out=plugins=grpc:${GOPATH}/src
 
-rpc/burrow/burrow.pb.go: rpc/burrow
-	@protoc -I ./rpc/burrow rpc/burrow/burrow.proto --go_out=plugins=grpc:rpc/burrow
+.PHONY: protobuf
+protobuf: $(PROTO_GO_FILES)
+
+.PHONY: clean_protobuf
+clean_protobuf:
+	@rm -f $(PROTO_GO_FILES)
+
 ### Dependency management for github.com/hyperledger/burrow
-
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
 erase_vendor:
@@ -114,7 +120,7 @@ build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db
-build_db: commit_hash
+build_db: commit_hash protobuf
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
@@ -125,7 +131,7 @@ install_db: build_db
 
 # build burrow-client
 .PHONY: build_client
-build_client: commit_hash
+build_client: commit_hash protobuf
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
@@ -169,7 +175,7 @@ test_keys: build_db
 
 .PHONY: test_integration
 test_integration: test_keys
-	@go test -tags integration ./rpc/burrow/integration
+	@go test -tags integration ./rpc/rpctransactor/integration
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

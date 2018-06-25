@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/logging"
@@ -12,7 +13,8 @@ import (
 )
 
 type SendContext struct {
-	StateWriter    state.Writer
+	Tip            blockchain.TipInfo
+	StateWriter    state.ReaderWriter
 	EventPublisher event.Publisher
 	Logger         *logging.Logger
 	tx             *payload.SendTx
@@ -70,11 +72,11 @@ func (ctx *SendContext) Execute(txEnv *txs.Envelope) error {
 
 	if ctx.EventPublisher != nil {
 		for _, i := range ctx.tx.Inputs {
-			events.PublishAccountInput(ctx.EventPublisher, i.Address, txEnv.Tx, nil, nil)
+			events.PublishAccountInput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), i.Address, txEnv.Tx, nil, nil)
 		}
 
 		for _, o := range ctx.tx.Outputs {
-			events.PublishAccountOutput(ctx.EventPublisher, o.Address, txEnv.Tx, nil, nil)
+			events.PublishAccountOutput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), o.Address, txEnv.Tx, nil, nil)
 		}
 	}
 	return nil

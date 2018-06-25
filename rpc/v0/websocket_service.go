@@ -137,9 +137,9 @@ func (ws *WebsocketService) EventSubscribe(request *rpc.RPCRequest,
 		return nil, rpc.INTERNAL_ERROR, err
 	}
 
-	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) bool {
+	err = ws.service.Subscribe(context.Background(), subId, eventId, func(resultEvent *rpc.ResultEvent) (stop bool) {
 		ws.writeResponse(subId, resultEvent, session)
-		return true
+		return
 	})
 	if err != nil {
 		return nil, rpc.INTERNAL_ERROR, err

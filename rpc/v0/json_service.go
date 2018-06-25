@@ -81,7 +81,7 @@ func (jrs *JsonRpcServer) handleFunc(c *gin.Context) {
 type JSONService struct {
 	codec           rpc.Codec
 	service         *rpc.Service
-	eventSubs       *Subscriptions
+	eventSubs       *rpc.Subscriptions
 	defaultHandlers map[string]RequestHandlerFunc
 	logger          *logging.Logger
 }
@@ -92,7 +92,7 @@ func NewJSONService(codec rpc.Codec, service *rpc.Service, logger *logging.Logge
 	tmhttps := &JSONService{
 		codec:     codec,
 		service:   service,
-		eventSubs: NewSubscriptions(service),
+		eventSubs: rpc.NewSubscriptions(service),
 		logger:    logger.WithScope("NewJSONService"),
 	}
 

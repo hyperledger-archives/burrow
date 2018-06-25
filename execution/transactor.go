@@ -30,9 +30,8 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	exe_events "github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/execution/evm"
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/execution/executors"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -211,7 +210,7 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 }
 
 func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
-	address *crypto.Address, data []byte, gasLimit, fee uint64) (*evm_events.EventDataCall, error) {
+	address *crypto.Address, data []byte, gasLimit, fee uint64) (*events.EventDataCall, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
@@ -233,9 +232,9 @@ func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningA
 
 	// We want non-blocking on the first event received (but buffer the value),
 	// after which we want to block (and then discard the value - see below)
-	ch := make(chan *evm_events.EventDataCall, 1)
+	ch := make(chan *events.EventDataCall, 1)
 
-	err = evm_events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, expectedReceipt.ContractAddress,
+	err = events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, expectedReceipt.ContractAddress,
 		expectedReceipt.TxHash, 0, ch)
 	if err != nil {
 		return nil, err
@@ -261,7 +260,7 @@ func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningA
 	case <-timer.C:
 		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
 	case eventDataCall := <-ch:
-		if eventDataCall.Exception != nil && eventDataCall.Exception.Code != errors.ErrorCodeExecutionReverted {
+		if eventDataCall.Exception != nil && eventDataCall.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
 			return nil, fmt.Errorf("error when transacting: %v", eventDataCall.Exception)
 		} else {
 			return eventDataCall, nil
@@ -331,7 +330,7 @@ func (trans *Transactor) SendAndHold(ctx context.Context, sequentialSigningAccou
 	}
 
 	wc := make(chan *payload.SendTx)
-	err = exe_events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
+	err = events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
 		expectedReceipt.TxHash, wc)
 	if err != nil {
 		return nil, err

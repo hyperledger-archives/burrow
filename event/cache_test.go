@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,35 +19,35 @@ func TestEventCache_Flush(t *testing.T) {
 	flushed := false
 
 	em := NewEmitter(logging.NewNoopLogger())
-	SubscribeCallback(ctx, em, "nothingness", NewQueryBuilder(), func(message interface{}) bool {
+	SubscribeCallback(ctx, em, "nothingness", query.NewBuilder(), func(message interface{}) (stop bool) {
 		// Check against sending a buffer of zeroed messages
 		if message == nil {
 			errCh <- fmt.Errorf("recevied empty message but none sent")
 		}
-		return false
+		return true
 	})
-	evc := NewEventCache(em)
-	evc.Flush()
+	evc := NewCache()
+	evc.Flush(em)
 	// Check after reset
-	evc.Flush()
-	SubscribeCallback(ctx, em, "somethingness", NewQueryBuilder().AndEquals("foo", "bar"),
-		func(interface{}) bool {
+	evc.Flush(em)
+	SubscribeCallback(ctx, em, "somethingness", query.NewBuilder().AndEquals("foo", "bar"),
+		func(interface{}) (stop bool) {
 			if flushed {
 				errCh <- nil
-				return true
+				return false
 			} else {
 				errCh <- fmt.Errorf("callback was run before messages were flushed")
-				return false
+				return true
 			}
 		})
 
 	numMessages := 3
-	tags := map[string]interface{}{"foo": "bar"}
+	tags := TagMap{"foo": "bar"}
 	for i := 0; i < numMessages; i++ {
 		evc.Publish(ctx, fmt.Sprintf("something_%v", i), tags)
 	}
 	flushed = true
-	evc.Flush()
+	evc.Flush(em)
 	for i := 0; i < numMessages; i++ {
 		select {
 		case <-time.After(2 * time.Second):
@@ -60,30 +61,31 @@ func TestEventCache_Flush(t *testing.T) {
 }
 
 func TestEventCacheGrowth(t *testing.T) {
-	evc := NewEventCache(NewEmitter(logging.NewNoopLogger()))
+	em := NewEmitter(logging.NewNoopLogger())
+	evc := NewCache()
 
 	fireNEvents(evc, 100)
 	c := cap(evc.events)
-	evc.Flush()
+	evc.Flush(em)
 	assert.Equal(t, c, cap(evc.events), "cache cap should remain the same after flushing events")
 
 	fireNEvents(evc, c/maximumBufferCapacityToLengthRatio+1)
-	evc.Flush()
+	evc.Flush(em)
 	assert.Equal(t, c, cap(evc.events), "cache cap should remain the same after flushing more than half "+
 		"the number of events as last time")
 
 	fireNEvents(evc, c/maximumBufferCapacityToLengthRatio-1)
-	evc.Flush()
+	evc.Flush(em)
 	assert.True(t, c > cap(evc.events), "cache cap should drop after flushing fewer than half "+
 		"the number of events as last time")
 
 	fireNEvents(evc, c*2*maximumBufferCapacityToLengthRatio)
-	evc.Flush()
+	evc.Flush(em)
 	assert.True(t, c < cap(evc.events), "cache cap should grow after flushing more events than seen before")
 
 	for numEvents := 100; numEvents >= 0; numEvents-- {
 		fireNEvents(evc, numEvents)
-		evc.Flush()
+		evc.Flush(em)
 		assert.True(t, cap(evc.events) <= maximumBufferCapacityToLengthRatio*numEvents,
 			"cap (%v) should be at most twice numEvents (%v)", cap(evc.events), numEvents)
 	}

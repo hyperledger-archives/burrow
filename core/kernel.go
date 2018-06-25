@@ -32,6 +32,8 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/events/pbevents"
+	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/pbkeys"
@@ -39,8 +41,9 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/burrow"
 	"github.com/hyperledger/burrow/rpc/metrics"
+	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/rpctransactor"
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/rpc/v0"
 	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
@@ -48,6 +51,7 @@ import (
 	tm_config "github.com/tendermint/tendermint/config"
 	tm_types "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -62,6 +66,8 @@ type Kernel struct {
 	Emitter        event.Emitter
 	Service        *rpc.Service
 	Launchers      []process.Launcher
+	State          *execution.State
+	Blockchain     bcm.BlockchainInfo
 	Logger         *logging.Logger
 	processes      map[string]process.Process
 	shutdownNotify chan struct{}
@@ -108,8 +114,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	transactor := execution.NewTransactor(blockchain.Tip, emitter, tmNode.MempoolReactor().BroadcastTx, txCodec,
 		logger)
 
-	nameReg := state
-	service := rpc.NewService(ctx, state, nameReg, checker, emitter, blockchain, keyClient, transactor,
+	nameRegState := state
+	accountState := state
+	service := rpc.NewService(ctx, accountState, nameRegState, checker, emitter, blockchain, keyClient, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{
@@ -217,7 +224,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:    "GRPC",
+			Name:    "RPC/GRPC",
 			Enabled: rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
 				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
@@ -226,19 +233,28 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				}
 
 				grpcServer := rpc.NewGRPCServer(logger)
-				var ks keys.KeyStore
+				var ks *keys.KeyStore
 				if keyStore != nil {
-					ks = *keyStore
+					ks = keyStore
 				}
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
 						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, logger)
 					}
-					pbkeys.RegisterKeysServer(grpcServer, &ks)
+					pbkeys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				burrow.RegisterTransactionServer(grpcServer, burrow.NewTransactionServer(service, state, txCodec))
+				pbtransactor.RegisterTransactorServer(grpcServer, rpctransactor.NewTransactorServer(service.Transactor(),
+					service.MempoolAccounts(), state, txCodec))
+
+				pbevents.RegisterEventsServer(grpcServer, rpcevents.NewEventsServer(rpc.NewSubscriptions(service)))
+
+				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state, emitter,
+					blockchain.Tip))
+
+				// Provides metadata about services registered
+				reflection.Register(grpcServer)
 
 				go grpcServer.Serve(listen)
 
@@ -255,8 +271,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		Emitter:        emitter,
 		Service:        service,
 		Launchers:      launchers,
-		processes:      make(map[string]process.Process),
+		State:          state,
+		Blockchain:     blockchain,
 		Logger:         logger,
+		processes:      make(map[string]process.Process),
 		shutdownNotify: make(chan struct{}),
 	}, nil
 }

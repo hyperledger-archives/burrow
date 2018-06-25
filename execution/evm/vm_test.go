@@ -28,9 +28,9 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
-	evm_events "github.com/hyperledger/burrow/execution/evm/events"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	ptypes "github.com/hyperledger/burrow/permission/types"
@@ -1012,9 +1012,9 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
+func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
-	eventCh := make(chan *evm_events.EventDataCall)
+	eventCh := make(chan *events.EventDataCall)
 	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
 	if err != nil {
 		return output, err
@@ -1030,25 +1030,25 @@ func runVMWaitError(vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAc
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *evm_events.EventDataCall, vmCache state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(eventCh chan<- *events.EventDataCall, vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	// we need to catch the event from the CALL to check for exceptions
-	emitter := event.NewEmitter(logging.NewNoopLogger())
+	em := event.NewEmitter(logging.NewNoopLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
-	err := evm_events.SubscribeAccountCall(context.Background(), emitter, "test", subscribeAddr,
+	err := events.SubscribeAccountCall(context.Background(), em, "test", subscribeAddr,
 		nil, -1, eventCh)
 	if err != nil {
 		return nil, err
 	}
-	evc := event.NewEventCache(emitter)
+	evc := event.NewCache()
 	ourVm.SetPublisher(evc)
 	start := time.Now()
 	output, err := ourVm.Call(vmCache, caller, callee, contractCode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
-	evc.Flush()
+	evc.Flush(em)
 	return output, err
 }
 

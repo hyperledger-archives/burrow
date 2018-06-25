@@ -3,8 +3,6 @@ package txs
 import (
 	"testing"
 
-	"fmt"
-
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -80,6 +78,5 @@ func TestAminoTxEnvelope(t *testing.T) {
 	require.NoError(t, err)
 	txEnvOut, err := codec.DecodeTx(bs)
 	require.NoError(t, err)
-	fmt.Println(txEnvOut)
 	assert.Equal(t, txEnv, txEnvOut)
 }

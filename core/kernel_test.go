@@ -67,7 +67,7 @@ func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *gen
 	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
 	keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 	kern, err := NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf,
-		rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(), &keyStore, nil, logger)
+		rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(), keyStore, nil, logger)
 	if err != nil {
 		return err
 	}
@@ -77,8 +77,10 @@ func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *gen
 		return err
 	}
 
-	ch := make(chan *tmTypes.EventDataNewBlock)
-	tendermint.SubscribeNewBlock(context.Background(), kern.Emitter, "TestBootShutdownResume", ch)
+	ch, err := tendermint.SubscribeNewBlock(context.Background(), kern.Emitter)
+	if err != nil {
+		return err
+	}
 	cont := true
 	for cont {
 		select {

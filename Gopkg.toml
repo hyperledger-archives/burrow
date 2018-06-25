@@ -26,11 +26,11 @@
 
 [[constraint]]
   name = "github.com/tendermint/iavl"
-  branch = "develop"
+  version = "=0.8.0-rc0"
 
 [[constraint]]
-name = "github.com/prometheus/client_golang"
-branch = "master"
+  name = "github.com/prometheus/client_golang"
+  branch = "master"
 
 [[override]]
   name = "github.com/tendermint/tmlibs"

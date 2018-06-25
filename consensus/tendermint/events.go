@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tendermint/tendermint/libs/pubsub"
 	tm_types "github.com/tendermint/tendermint/types"
@@ -55,7 +56,7 @@ func PublishEvent(ctx context.Context, fromSubscribable event.Subscribable, subs
 		tm_types.EventTypeKey:  eventType,
 		event.EventIDKey:       eventType,
 	}
-	return event.PublishAll(ctx, fromSubscribable, subscriber, event.WrapQuery(tm_types.QueryForEvent(eventType)),
+	return event.PublishAll(ctx, fromSubscribable, subscriber, query.WrapQuery(tm_types.QueryForEvent(eventType)),
 		toPublisher, tags)
 }
 
@@ -67,17 +68,17 @@ func EventBusAsSubscribable(eventBus tm_types.EventBusSubscriber) event.Subscrib
 	return eventBusSubscriber{eventBus}
 }
 
-func (ebs eventBusSubscriber) Subscribe(ctx context.Context, subscriber string, query event.Queryable,
+func (ebs eventBusSubscriber) Subscribe(ctx context.Context, subscriber string, queryable query.Queryable,
 	out chan<- interface{}) error {
-	qry, err := query.Query()
+	qry, err := queryable.Query()
 	if err != nil {
 		return err
 	}
 	return ebs.EventBusSubscriber.Subscribe(ctx, subscriber, qry, out)
 }
 
-func (ebs eventBusSubscriber) Unsubscribe(ctx context.Context, subscriber string, query event.Queryable) error {
-	qry, err := query.Query()
+func (ebs eventBusSubscriber) Unsubscribe(ctx context.Context, subscriber string, queryable query.Queryable) error {
+	qry, err := queryable.Query()
 	if err != nil {
 		return err
 	}
@@ -92,11 +93,11 @@ func SubscribableAsEventBus(subscribable event.Subscribable) tm_types.EventBusSu
 	return subscribableEventBus{subscribable}
 }
 
-func (seb subscribableEventBus) Subscribe(ctx context.Context, subscriber string, query pubsub.Query,
+func (seb subscribableEventBus) Subscribe(ctx context.Context, subscriber string, qry pubsub.Query,
 	out chan<- interface{}) error {
-	return seb.Subscribable.Subscribe(ctx, subscriber, event.WrapQuery(query), out)
+	return seb.Subscribable.Subscribe(ctx, subscriber, query.WrapQuery(qry), out)
 }
 
-func (seb subscribableEventBus) Unsubscribe(ctx context.Context, subscriber string, query pubsub.Query) error {
-	return seb.Subscribable.Unsubscribe(ctx, subscriber, event.WrapQuery(query))
+func (seb subscribableEventBus) Unsubscribe(ctx context.Context, subscriber string, qry pubsub.Query) error {
+	return seb.Subscribable.Unsubscribe(ctx, subscriber, query.WrapQuery(qry))
 }
