@@ -58,7 +58,7 @@ func (x Bound_BoundType) String() string {
 	return proto.EnumName(Bound_BoundType_name, int32(x))
 }
 func (Bound_BoundType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{7, 0}
+	return fileDescriptor_events_a0e2b84614955cff, []int{7, 0}
 }
 
 // Params
@@ -73,7 +73,7 @@ func (m *EventIdParam) Reset()         { *m = EventIdParam{} }
 func (m *EventIdParam) String() string { return proto.CompactTextString(m) }
 func (*EventIdParam) ProtoMessage()    {}
 func (*EventIdParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{0}
+	return fileDescriptor_events_a0e2b84614955cff, []int{0}
 }
 func (m *EventIdParam) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventIdParam.Unmarshal(m, b)
@@ -111,7 +111,7 @@ func (m *SubIdParam) Reset()         { *m = SubIdParam{} }
 func (m *SubIdParam) String() string { return proto.CompactTextString(m) }
 func (*SubIdParam) ProtoMessage()    {}
 func (*SubIdParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{1}
+	return fileDescriptor_events_a0e2b84614955cff, []int{1}
 }
 func (m *SubIdParam) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SubIdParam.Unmarshal(m, b)
@@ -150,7 +150,7 @@ func (m *EventUnSub) Reset()         { *m = EventUnSub{} }
 func (m *EventUnSub) String() string { return proto.CompactTextString(m) }
 func (*EventUnSub) ProtoMessage()    {}
 func (*EventUnSub) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{2}
+	return fileDescriptor_events_a0e2b84614955cff, []int{2}
 }
 func (m *EventUnSub) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventUnSub.Unmarshal(m, b)
@@ -188,7 +188,7 @@ func (m *PollResponse) Reset()         { *m = PollResponse{} }
 func (m *PollResponse) String() string { return proto.CompactTextString(m) }
 func (*PollResponse) ProtoMessage()    {}
 func (*PollResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{3}
+	return fileDescriptor_events_a0e2b84614955cff, []int{3}
 }
 func (m *PollResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PollResponse.Unmarshal(m, b)
@@ -230,7 +230,7 @@ func (m *Event) Reset()         { *m = Event{} }
 func (m *Event) String() string { return proto.CompactTextString(m) }
 func (*Event) ProtoMessage()    {}
 func (*Event) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{4}
+	return fileDescriptor_events_a0e2b84614955cff, []int{4}
 }
 func (m *Event) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Event.Unmarshal(m, b)
@@ -363,18 +363,53 @@ func _Event_OneofSizer(msg proto.Message) (n int) {
 }
 
 type GetEventsRequest struct {
-	BlockRange           *BlockRange `protobuf:"bytes,1,opt,name=BlockRange,proto3" json:"BlockRange,omitempty"`
-	Query                string      `protobuf:"bytes,2,opt,name=Query,proto3" json:"Query,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
+	BlockRange *BlockRange `protobuf:"bytes,1,opt,name=BlockRange,proto3" json:"BlockRange,omitempty"`
+	// Specify a query on which to match the tags of events.
+	// Tag        | Match type | Values
+	// -----------------------------------------
+	//   All events
+	// -----------------------------------------
+	// TxType       | String     | "UnknownTx", "SendTx", "CallTx", "NameTx", "BondTx", "UnbondTx", "PermissionsTx", "GovernanceTx"
+	// TxHash       | String     | bytes
+	// EventType    | String     | "CallEvent", "LogEvent", "AccountInputEvent", "AccountOutputEvent"
+	// EventID      | String     | string
+	// Height       | Integer    | uint64
+	// Index        | Integer    | uint64
+	// MessageType  | String     | Go type name
+	// -----------------------------------------
+	//   Log event
+	// -----------------------------------------
+	// Address      | String     | Address (hex)
+	// Log<0-4>     | String     | Word256 (hex)
+	// Log<0-4>Text | String     | string (trimmed)
+	// -----------------------------------------
+	//   Call event
+	// -----------------------------------------
+	// Origin       | String     | Address (hex)
+	// Callee       | String     | Address (hex)
+	// Caller       | String     | Address (hex)
+	// Value        | Integer    | uint64
+	// Gas          | Integer    | uint64
+	// StackDepth   | Integer    | uint64
+	// Exception    | String     | string
+	// -----------------------------------------
+	//   Tx event (input/output)
+	// -----------------------------------------
+	// Exception  | String     | string
+	//
+	// For example:
+	// EventType = 'LogEvent' AND EventID CONTAINS 'bar' AND TxHash = '020304' AND Height >= 34 AND Index < 3 AND Address = 'DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF'
+	Query                string   `protobuf:"bytes,2,opt,name=Query,proto3" json:"Query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *GetEventsRequest) Reset()         { *m = GetEventsRequest{} }
 func (m *GetEventsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetEventsRequest) ProtoMessage()    {}
 func (*GetEventsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{5}
+	return fileDescriptor_events_a0e2b84614955cff, []int{5}
 }
 func (m *GetEventsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetEventsRequest.Unmarshal(m, b)
@@ -419,7 +454,7 @@ func (m *GetEventsResponse) Reset()         { *m = GetEventsResponse{} }
 func (m *GetEventsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetEventsResponse) ProtoMessage()    {}
 func (*GetEventsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{6}
+	return fileDescriptor_events_a0e2b84614955cff, []int{6}
 }
 func (m *GetEventsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetEventsResponse.Unmarshal(m, b)
@@ -458,7 +493,7 @@ func (m *Bound) Reset()         { *m = Bound{} }
 func (m *Bound) String() string { return proto.CompactTextString(m) }
 func (*Bound) ProtoMessage()    {}
 func (*Bound) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{7}
+	return fileDescriptor_events_a0e2b84614955cff, []int{7}
 }
 func (m *Bound) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Bound.Unmarshal(m, b)
@@ -492,9 +527,13 @@ func (m *Bound) GetIndex() uint64 {
 	return 0
 }
 
-// An inclusive range of blocks to include
+// An inclusive range of blocks to include in output
 type BlockRange struct {
-	// How to interpret StartBlock
+	// Bounds can be set to:
+	// absolute: block height
+	// relative: block height counting back from latest
+	// latest: latest block when call is processed
+	// stream: for End keep sending new blocks, for start same as latest
 	Start                *Bound   `protobuf:"bytes,1,opt,name=Start,proto3" json:"Start,omitempty"`
 	End                  *Bound   `protobuf:"bytes,2,opt,name=End,proto3" json:"End,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -506,7 +545,7 @@ func (m *BlockRange) Reset()         { *m = BlockRange{} }
 func (m *BlockRange) String() string { return proto.CompactTextString(m) }
 func (*BlockRange) ProtoMessage()    {}
 func (*BlockRange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{8}
+	return fileDescriptor_events_a0e2b84614955cff, []int{8}
 }
 func (m *BlockRange) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BlockRange.Unmarshal(m, b)
@@ -562,7 +601,7 @@ func (m *EventHeader) Reset()         { *m = EventHeader{} }
 func (m *EventHeader) String() string { return proto.CompactTextString(m) }
 func (*EventHeader) ProtoMessage()    {}
 func (*EventHeader) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{9}
+	return fileDescriptor_events_a0e2b84614955cff, []int{9}
 }
 func (m *EventHeader) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventHeader.Unmarshal(m, b)
@@ -640,7 +679,7 @@ func (m *ExecutionEvent) Reset()         { *m = ExecutionEvent{} }
 func (m *ExecutionEvent) String() string { return proto.CompactTextString(m) }
 func (*ExecutionEvent) ProtoMessage()    {}
 func (*ExecutionEvent) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{10}
+	return fileDescriptor_events_a0e2b84614955cff, []int{10}
 }
 func (m *ExecutionEvent) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExecutionEvent.Unmarshal(m, b)
@@ -819,7 +858,7 @@ func (m *EventDataLog) Reset()         { *m = EventDataLog{} }
 func (m *EventDataLog) String() string { return proto.CompactTextString(m) }
 func (*EventDataLog) ProtoMessage()    {}
 func (*EventDataLog) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{11}
+	return fileDescriptor_events_a0e2b84614955cff, []int{11}
 }
 func (m *EventDataLog) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventDataLog.Unmarshal(m, b)
@@ -872,7 +911,7 @@ func (m *EventDataTx) Reset()         { *m = EventDataTx{} }
 func (m *EventDataTx) String() string { return proto.CompactTextString(m) }
 func (*EventDataTx) ProtoMessage()    {}
 func (*EventDataTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{12}
+	return fileDescriptor_events_a0e2b84614955cff, []int{12}
 }
 func (m *EventDataTx) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventDataTx.Unmarshal(m, b)
@@ -921,7 +960,7 @@ func (m *EventDataCall) Reset()         { *m = EventDataCall{} }
 func (m *EventDataCall) String() string { return proto.CompactTextString(m) }
 func (*EventDataCall) ProtoMessage()    {}
 func (*EventDataCall) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{13}
+	return fileDescriptor_events_a0e2b84614955cff, []int{13}
 }
 func (m *EventDataCall) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EventDataCall.Unmarshal(m, b)
@@ -991,7 +1030,7 @@ func (m *CallData) Reset()         { *m = CallData{} }
 func (m *CallData) String() string { return proto.CompactTextString(m) }
 func (*CallData) ProtoMessage()    {}
 func (*CallData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_events_d44ffa1d22a15482, []int{14}
+	return fileDescriptor_events_a0e2b84614955cff, []int{14}
 }
 func (m *CallData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CallData.Unmarshal(m, b)
@@ -1207,6 +1246,8 @@ var _Events_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ExecutionEventsClient interface {
+	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
+	// are guaranteed to be delivered in each GetEventsResponse
 	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (ExecutionEvents_GetEventsClient, error)
 }
 
@@ -1252,6 +1293,8 @@ func (x *executionEventsGetEventsClient) Recv() (*GetEventsResponse, error) {
 
 // ExecutionEventsServer is the server API for ExecutionEvents service.
 type ExecutionEventsServer interface {
+	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
+	// are guaranteed to be delivered in each GetEventsResponse
 	GetEvents(*GetEventsRequest, ExecutionEvents_GetEventsServer) error
 }
 
@@ -1295,10 +1338,10 @@ var _ExecutionEvents_serviceDesc = grpc.ServiceDesc{
 }
 
 func init() {
-	proto.RegisterFile("github.com/hyperledger/burrow/execution/events/pbevents/events.proto", fileDescriptor_events_d44ffa1d22a15482)
+	proto.RegisterFile("github.com/hyperledger/burrow/execution/events/pbevents/events.proto", fileDescriptor_events_a0e2b84614955cff)
 }
 
-var fileDescriptor_events_d44ffa1d22a15482 = []byte{
+var fileDescriptor_events_a0e2b84614955cff = []byte{
 	// 907 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x56, 0xdd, 0x6e, 0xdc, 0x44,
 	0x14, 0x5e, 0x67, 0x7f, 0x1a, 0x9f, 0x5d, 0x12, 0x77, 0x08, 0xc5, 0x04, 0x84, 0x82, 0x05, 0x22,
