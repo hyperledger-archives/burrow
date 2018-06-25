@@ -202,7 +202,8 @@ func (s *State) UpdateAccount(account acm.Account) error {
 	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
 	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
 	// Alternatively just abandon and
-	accountWithStorageRoot := acm.AsMutableAccount(account).SetStorageRoot(nil)
+	accountWithStorageRoot := acm.AsMutableAccount(account)
+	accountWithStorageRoot.SetStorageRoot(nil)
 	encodedAccount, err := accountWithStorageRoot.Encode()
 	if err != nil {
 		return err

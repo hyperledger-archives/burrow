@@ -120,7 +120,7 @@ func (ctx *PermissionsContext) Execute(txEnv *txs.Envelope) error {
 		"old_sequence", inAcc.Sequence(),
 		"new_sequence", inAcc.Sequence()+1)
 	inAcc.IncSequence()
-	inAcc, err = inAcc.SubtractFromBalance(value)
+	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
 		return err
 	}

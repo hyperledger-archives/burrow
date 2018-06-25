@@ -57,14 +57,14 @@ func TestDecodeConcrete(t *testing.T) {
 		},
 		Roles: []string{"bums"},
 	}
-	acc := concreteAcc.Account()
+	acc := concreteAcc
 	encodedAcc, err := acc.Encode()
 	require.NoError(t, err)
 
 	concreteAccOut, err := DecodeConcrete(encodedAcc)
 	require.NoError(t, err)
 
-	assert.Equal(t, concreteAcc, *concreteAccOut)
+	assert.Equal(t, concreteAcc, concreteAccOut)
 	concreteAccOut, err = DecodeConcrete([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
 }
@@ -76,7 +76,7 @@ func TestDecode(t *testing.T) {
 	require.NoError(t, err)
 	accOut, err := Decode(encodedAcc)
 	require.NoError(t, err)
-	assert.Equal(t, concreteAcc, *AsConcreteAccount(accOut))
+	assert.Equal(t, concreteAcc, AsConcreteAccount(accOut))
 
 	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
 	require.Error(t, err)

@@ -55,7 +55,7 @@ func (mock *MockNodeClient) GetAccount(address crypto.Address) (acm.Account, err
 
 func (mock *MockNodeClient) MockAddAccount(account *acm.ConcreteAccount) {
 	addressString := string(account.Address[:])
-	mock.accounts[addressString] = account.Copy()
+	mock.accounts[addressString] = account
 }
 
 func (mock *MockNodeClient) Status() (ChainId []byte, ValidatorPublicKey []byte, LatestBlockHash []byte,

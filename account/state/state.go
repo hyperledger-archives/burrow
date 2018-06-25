@@ -75,7 +75,7 @@ type IterableWriter interface {
 	StorageIterable
 }
 
-func GetMutableAccount(getter AccountGetter, address crypto.Address) (acm.MutableAccount, error) {
+func GetMutableAccount(getter AccountGetter, address crypto.Address) (*acm.MutableAccount, error) {
 	acc, err := getter.GetAccount(address)
 	if err != nil {
 		return nil, err
