@@ -94,7 +94,7 @@ reinstall_vendor: erase_vendor
 # delete the vendor directy and pull back using dep lock and constraints file
 # will exit with an error if the working directory is not clean (any missing files or new
 # untracked ones)
-.PHONY: ensure_vendor
+.PHONY: ensure_vendor protobuf
 ensure_vendor: reinstall_vendor
 	@scripts/is_checkout_dirty.sh
 
@@ -120,7 +120,7 @@ build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db
-build_db: commit_hash protobuf
+build_db: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
