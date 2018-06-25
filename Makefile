@@ -72,12 +72,6 @@ protobuf_deps:
 %.pb.go: %.proto
 	protoc -I ${GOPATH}/src ${REPO}/$< --go_out=plugins=grpc:${GOPATH}/src
 
-keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
-
-rpc/burrow/burrow.pb.go: rpc/burrow/burrow.proto
-
-execution/events/events.pb.go: execution/events/events.proto
-
 .PHONY: protobuf
 protobuf: $(PROTO_GO_FILES)
 
@@ -126,7 +120,7 @@ build_race:	check build_race_db build_race_client
 
 # build burrow
 .PHONY: build_db
-build_db: commit_hash
+build_db: commit_hash protobuf
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
@@ -137,7 +131,7 @@ install_db: build_db
 
 # build burrow-client
 .PHONY: build_client
-build_client: commit_hash
+build_client: commit_hash protobuf
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
