@@ -1,47 +1,39 @@
-This is an extremely large release in terms of lines of code changed addressing several years of technical debt. Despite this efforts were made to maintain external interfaces as much as possible and an extended period of stabilisation has taken place on develop.
+This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
 
-A major strand of work has been in condensing previous Monax tooling spread across multiple repos into just two. The Hyperledger Burrow repo and [Bosmarmot](http://github.com/monax/bosmarmot). Burrow is now able to generate chains (replacing 'monax chains make') with 'burrow spec' and 'burrow configure'. Our 'EPM' contract deployment and testing tool, our javascript libraries, compilers, and monax-keys are avaiable in Bosmarmot (the former in the 'bos' tool). Work is underway to pull monax-keys into the Burrow project, and we will continue to make Burrow as self-contained as possible.
+#### Breaking changes
+In addition to breaking changes associated with Tendermint (see their changelog):
+- State checkpointing logic has changed which has we load based on blockchain
+- Event format has changed over rpc/V0 see execution/events/ package
+- On-disk keys format has change from monax-keys to be more standard burrow keys
+- Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
 
 #### Features
-- Substantial support for latest EVM and solidity 0.4.21+ (missing some opcodes that will be added shortly - see known issues)
-- Tendermint 0.18.0
-- All signing through monax-keys KeyClient connection (preparation for HSM and GPG based signing daemon)
-- Address-based signing (Burrow acts as delegate when you send transact, transactAndHold, send, sendAndHold, and transactNameReg a parameter including input_account (hex address) instead of priv_key.
-- Provide sequential signing when using transact family methods (above) - allowing 100s Tx per second with the same input account
-- Genesis making, config making, and key generation through 'burrow spec' and 'burrow configure'
-- Logging configuration language and text/template for output
-- Improved CLI UX and framework (mow.cli)
-- Improved configuration
-
-
-#### Internal Improvements
-- Refactored execution and provide interfaces for executor
-- Segregate EVM and blockchain state to act as better library
-- Panic recovery on TX execution
-- Stricter interface boundaries and immutability of core objects by default
-- Replace broken BlockCache with universal StateCache that doesn't write directly to DB
-- All dependencies upgraded, notably: tendermint/IAVL 0.7.0
-- Use Go dep instead of glide
-- PubSub event hub with query language
-- Heavily optimised logging
-- PPROF profiling server option
-- Additional tests in multiple packages including v0 RPC and concurrency-focussed test
-- Use Tendermint verifier for PrivValidator
-- Use monax/relic for project history
-- Run bosmarmot integration tests in CI
-- Update documentation
-- Numerous maintainability, naming, and aesthetic code improvements
+- Tendermint 0.20.0
+- Implemented EVM opcodes: REVERT, INVALID, SHL, SAR, SHR, RETURNDATACOPY, RETURNDATASIZE
+- Add config templating with burrow configure --config-template-in --config-out
+- Add config templates for kubernetes
+- Integrate monax-keys as internal (default) or standalone keys service, key gen exposed over CLI
+- Use GRPC for keys
+- Add GRPC service for Transactor and Events
+- Store ExecutionEvent by height and index in merkle tree state
+- Add historical query for all time with GetEvents
+- Add streaming GRPC service for ExecutionEvents with query language over tags
+- Add metadata to ExecutionEvents
+- Add BlockExplorer CLI for forensics
+- Expose reason for REVERT
+- Add last_block_info healthcheck endpoint to rpc/TM
+- 
+#### Improvements
+- Implement checkpointing when saving application and blockchain state in commit - interrupted commit rolls burrow back to last block whereon it can catch up using Tendermint
+- Maintain separate read-only tree in state so that long-running RPC request cannot block writes
+- Improve state safety
+- Improved input account server-side-signing
+- Increase subscription reap time on rpc/V0 to 20 seconds
+- Reorganise CLI
+- Improve internal serialisation
+- Refactor and modularise execution logic
 
 #### Bug fixes
-- Fix memory leak in BlockCache
-- Fix CPU usage in BlockCache
-- Fix SIGNEXTEND for negative numbers
-- Fix multiple execution level panics
-- Make Transactor work during tendermint recheck
+- Fix address generation from bytes mismatch
 
-#### Known issues
-- Documentation rot - some effort has been made to update documentation to represent the current state but in some places it has slipped help can be found (and would be welcomed) on: [Hyperledger Burrow Chat](https://chat.hyperledger.org/channel/burrow)
-- Missing support for: RETURNDATACOPY and RETURNDATASIZE https://github.com/hyperledger/burrow/issues/705 (coming very soon)
-- Missing support for: INVALID https://github.com/hyperledger/burrow/issues/705 (coming very soon)
-- Missing support for: REVERT https://github.com/hyperledger/burrow/issues/600 (coming very soon)
 

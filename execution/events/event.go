@@ -39,6 +39,27 @@ func (ev *Event) Key() Key {
 	return ev.Header.Key()
 }
 
+// Performs a shallow copy of Event
+func (ev *Event) Copy() *Event {
+	h := *ev.Header
+	evCopy := Event{
+		Header: &h,
+	}
+	if ev.Tx != nil {
+		tx := *ev.Tx
+		evCopy.Tx = &tx
+	}
+	if ev.Call != nil {
+		call := *ev.Call
+		evCopy.Call = &call
+	}
+	if ev.Log != nil {
+		log := *ev.Log
+		evCopy.Log = &log
+	}
+	return &evCopy
+}
+
 func (ev *Event) Encode() ([]byte, error) {
 	return cdc.MarshalBinary(ev)
 }

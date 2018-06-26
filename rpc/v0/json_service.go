@@ -132,8 +132,7 @@ func (js *JSONService) Process(r *http.Request, w http.ResponseWriter) {
 	if handler, ok := js.defaultHandlers[mName]; ok {
 		js.logger.TraceMsg("Request received",
 			"id", req.Id,
-			"method", req.Method,
-			"params", string(req.Params))
+			"method", req.Method)
 		resp, errCode, err := handler(req, w)
 		if err != nil {
 			js.writeError(err.Error(), req.Id, errCode, w)

@@ -187,22 +187,22 @@ func testWithHTTPClient(t *testing.T, cl client.HTTPClient) {
 	val := "acbd"
 	got, err := echoViaHTTP(cl, val)
 	require.Nil(t, err)
-	assert.Equal(t, got, val)
+	assert.Equal(t, val, got)
 
 	val2 := randBytes(t)
 	got2, err := echoBytesViaHTTP(cl, val2)
 	require.Nil(t, err)
-	assert.Equal(t, got2, val2)
+	assert.Equal(t, val2, got2)
 
 	val3 := cmn.HexBytes(randBytes(t))
 	got3, err := echoDataBytesViaHTTP(cl, val3)
 	require.Nil(t, err)
-	assert.Equal(t, got3, val3)
+	assert.Equal(t, val3, got3)
 
 	val4 := rand.Intn(10000)
 	got4, err := echoIntViaHTTP(cl, val4)
 	require.Nil(t, err)
-	assert.Equal(t, got4, val4)
+	assert.Equal(t, val4, got4)
 }
 
 func echoViaWS(cl *client.WSClient, val string) (string, error) {

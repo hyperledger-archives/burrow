@@ -37,8 +37,8 @@ func TestRPCParams(t *testing.T) {
 		wantErr string
 	}{
 		// bad
-		{`{"jsonrpc": "2.0", "id": "0"}`, "Method not found"},
-		{`{"jsonrpc": "2.0", "method": "y", "id": "0"}`, "Method not found"},
+		{`{"jsonrpc": "2.0", "id": "0"}`, "Method Not Found"},
+		{`{"jsonrpc": "2.0", "method": "y", "id": "0"}`, "Method Not Found"},
 		{`{"method": "c", "id": "0", "params": a}`, "invalid character"},
 		{`{"method": "c", "id": "0", "params": ["a"]}`, "got 1"},
 		{`{"method": "c", "id": "0", "params": ["a", "b"]}`, "of type int"},
@@ -56,7 +56,6 @@ func TestRPCParams(t *testing.T) {
 		mux.ServeHTTP(rec, req)
 		res := rec.Result()
 		// Always expecting back a JSONRPCResponse
-		assert.True(t, statusOK(res.StatusCode), "#%d: should always return 2XX", i)
 		blob, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			t.Errorf("#%d: err reading body: %v", i, err)
@@ -66,7 +65,7 @@ func TestRPCParams(t *testing.T) {
 		recv := new(types.RPCResponse)
 		assert.Nil(t, json.Unmarshal(blob, recv), "#%d: expecting successful parsing of an RPCResponse:\nblob: %s", i, blob)
 		assert.NotEqual(t, recv, new(types.RPCResponse), "#%d: not expecting a blank RPCResponse", i)
-
+		assert.Equal(t, recv.Error.HTTPStatusCode(), res.StatusCode, "#%d: status should match error code", i)
 		if tt.wantErr == "" {
 			assert.Nil(t, recv.Error, "#%d: not expecting an error", i)
 		} else {

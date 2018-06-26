@@ -55,6 +55,9 @@ const (
 	// Private keys and signing
 	GeneratePrivateAccount = "unsafe/gen_priv_account"
 	SignTx                 = "unsafe/sign_tx"
+
+	// Health check
+	LastBlockInfo = "last_block_info"
 )
 
 const SubscriptionTimeout = 5 * time.Second
@@ -175,6 +178,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 
 		// Private account
 		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
+		LastBlockInfo:          server.NewRPCFunc(service.LastBlockInfo, "block_within"),
 	}
 }
 

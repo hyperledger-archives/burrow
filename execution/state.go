@@ -321,6 +321,12 @@ func (ws *writeState) Publish(ctx context.Context, msg interface{}, tags event.T
 				ws.state.eventKeyHighWatermark, exeEvent)
 		}
 		ws.state.eventKeyHighWatermark = key
+		if exeEvent.Tx != nil {
+			// Don't serialise the tx (for now) we should normalise and store against tx hash
+			exeEvent = exeEvent.Copy()
+			// The header still contains the tx hash
+			exeEvent.Tx.Tx = nil
+		}
 		bs, err := exeEvent.Encode()
 		if err != nil {
 			return err
