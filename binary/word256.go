@@ -123,7 +123,6 @@ func Uint64FromWord256(word Word256) uint64 {
 }
 
 func Int64FromWord256(word Word256) int64 {
-
 	buf := word.Postfix(8)
 	return GetInt64BE(buf)
 }

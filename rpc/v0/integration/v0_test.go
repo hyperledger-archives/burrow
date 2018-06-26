@@ -18,7 +18,6 @@
 package integration
 
 import (
-	"encoding/hex"
 	"sync"
 	"testing"
 
@@ -60,8 +59,6 @@ func TestTransactCreate(t *testing.T) {
 	wg.Add(numGoroutines)
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 	// Flip flops between sending private key and input address to test private key and address based signing
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(t, err)
 	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -69,7 +66,7 @@ func TestTransactCreate(t *testing.T) {
 				create, err := cli.Transact(v0.TransactParam{
 					InputAccount: inputAccount(i),
 					Address:      nil,
-					Data:         bc,
+					Data:         test.StrangeLoopBytecode,
 					Fee:          2,
 					GasLimit:     10000,
 				})
@@ -88,13 +85,11 @@ func TestTransactCreate(t *testing.T) {
 func BenchmarkTransactCreateContract(b *testing.B) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
 
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		create, err := cli.Transact(v0.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      nil,
-			Data:         bc,
+			Data:         test.StrangeLoopBytecode,
 			Fee:          2,
 			GasLimit:     10000,
 		})
@@ -105,8 +100,6 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 
 func TestTransactAndHold(t *testing.T) {
 	cli := v0.NewV0Client("http://localhost:1337/rpc")
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(t, err)
 
 	numGoroutines := 5
 	numRuns := 2
@@ -116,7 +109,7 @@ func TestTransactAndHold(t *testing.T) {
 			create, err := cli.TransactAndHold(v0.TransactParam{
 				InputAccount: inputAccount(i),
 				Address:      nil,
-				Data:         bc,
+				Data:         test.StrangeLoopBytecode,
 				Fee:          2,
 				GasLimit:     10000,
 			})
