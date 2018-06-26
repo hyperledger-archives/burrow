@@ -311,37 +311,40 @@ func jsonStringToArg(ty reflect.Type, arg string) (reflect.Value, error) {
 }
 
 func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, error, bool) {
-	isQuotedString := strings.HasPrefix(arg, `"`) && strings.HasSuffix(arg, `"`)
-	isHexString := strings.HasPrefix(strings.ToLower(arg), "0x")
 	expectingString := ty.Kind() == reflect.String
-	expectingByteSlice := ty.Kind() == reflect.Slice && ty.Elem().Kind() == reflect.Uint8
+	expectingBytes := (ty.Kind() == reflect.Slice || ty.Kind() == reflect.Array) && ty.Elem().Kind() == reflect.Uint8
 
-	if isHexString {
-		if !expectingString && !expectingByteSlice {
-			err := errors.Errorf("Got a hex string arg, but expected '%s'",
-				ty.Kind().String())
-			return reflect.ValueOf(nil), err, false
-		}
+	isQuotedString := strings.HasPrefix(arg, `"`) && strings.HasSuffix(arg, `"`)
 
-		var value []byte
-		value, err := hex.DecodeString(arg[2:])
-		if err != nil {
-			return reflect.ValueOf(nil), err, false
-		}
-		if ty.Kind() == reflect.String {
-			return reflect.ValueOf(string(value)), nil, true
-		}
-		return reflect.ValueOf([]byte(value)), nil, true
+	// Throw quoted strings at JSON parser later... because it always has...
+	if expectingString && !isQuotedString {
+		return reflect.ValueOf(arg), nil, true
 	}
 
-	if isQuotedString && expectingByteSlice {
-		v := reflect.New(reflect.TypeOf(""))
-		err := json.Unmarshal([]byte(arg), v.Interface())
+	if expectingBytes {
+		if isQuotedString {
+			rv := reflect.New(ty)
+			err := json.Unmarshal([]byte(arg), rv.Interface())
+			if err != nil {
+				return reflect.ValueOf(nil), err, false
+			}
+			return rv.Elem(), nil, true
+		}
+		if strings.HasPrefix(strings.ToLower(arg), "0x") {
+			arg = arg[2:]
+		}
+		var value []byte
+		value, err := hex.DecodeString(arg)
 		if err != nil {
 			return reflect.ValueOf(nil), err, false
 		}
-		v = v.Elem()
-		return reflect.ValueOf([]byte(v.String())), nil, true
+		if ty.Kind() == reflect.Array {
+			// Gives us an empty array of the right type
+			rv := reflect.New(ty).Elem()
+			reflect.Copy(rv, reflect.ValueOf(value))
+			return rv, nil, true
+		}
+		return reflect.ValueOf(value), nil, true
 	}
 
 	return reflect.ValueOf(nil), nil, false

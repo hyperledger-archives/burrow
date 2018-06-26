@@ -18,7 +18,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"time"
+
+	"fmt"
+
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/txs"
@@ -165,4 +170,16 @@ func TestResultDumpConsensusState(t *testing.T) {
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
+}
+
+func TestResultLastBlockInfo(t *testing.T) {
+	res := &ResultLastBlockInfo{
+		LastBlockTime:   time.Now(),
+		LastBlockHash:   binary.HexBytes{3, 4, 5, 6},
+		LastBlockHeight: 2343,
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	fmt.Println(string(bs))
+
 }

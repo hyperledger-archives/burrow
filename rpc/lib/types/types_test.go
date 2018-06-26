@@ -23,12 +23,12 @@ func TestResponses(t *testing.T) {
 
 	d := RPCParseError("1", errors.New("Hello world"))
 	e, _ := json.Marshal(d)
-	f := `{"jsonrpc":"2.0","id":"1","error":{"code":-32700,"message":"Parse error. Invalid JSON","data":"Hello world"}}`
+	f := `{"jsonrpc":"2.0","id":"1","error":{"code":-32700,"message":"Parse Error","data":"Hello world"}}`
 	assert.Equal(string(f), string(e))
 
 	g := RPCMethodNotFoundError("2")
 	h, _ := json.Marshal(g)
-	i := `{"jsonrpc":"2.0","id":"2","error":{"code":-32601,"message":"Method not found"}}`
+	i := `{"jsonrpc":"2.0","id":"2","error":{"code":-32601,"message":"Method Not Found"}}`
 	assert.Equal(string(h), string(i))
 }
 

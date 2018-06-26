@@ -18,6 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
+	"encoding/json"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -417,4 +421,34 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	return &ResultGeneratePrivateAccount{
 		PrivateAccount: acm.AsConcretePrivateAccount(privateAccount),
 	}, nil
+}
+
+func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error) {
+	res := &ResultLastBlockInfo{
+		LastBlockHeight: s.blockchain.LastBlockHeight(),
+		LastBlockHash:   s.blockchain.LastBlockHash(),
+		LastBlockTime:   s.blockchain.LastBlockTime(),
+	}
+	if blockWithin == "" {
+		return res, nil
+	}
+	duration, err := time.ParseDuration(blockWithin)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse blockWithin duration to determine whether to throw error: %v", err)
+	}
+	// Take neg abs in case caller is counting backwards (not we add later)
+	if duration > 0 {
+		duration = -duration
+	}
+	blockTimeThreshold := time.Now().Add(duration)
+	if res.LastBlockTime.After(blockTimeThreshold) {
+		// We've created blocks recently enough
+		return res, nil
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		resJSON = []byte("<error: could not marshal last block info>")
+	}
+	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), last block info: %s",
+		blockWithin, blockTimeThreshold.Format(time.RFC3339), string(resJSON))
 }

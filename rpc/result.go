@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -118,6 +120,12 @@ type ResultStatus struct {
 	LatestBlockHeight uint64
 	LatestBlockTime   int64
 	NodeVersion       string
+}
+
+type ResultLastBlockInfo struct {
+	LastBlockHeight uint64
+	LastBlockTime   time.Time
+	LastBlockHash   binary.HexBytes
 }
 
 type ResultChainId struct {

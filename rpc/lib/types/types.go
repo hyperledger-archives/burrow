@@ -71,9 +71,9 @@ func ArrayToRequest(id string, method string, params []interface{}) (RPCRequest,
 // RESPONSE
 
 type RPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    string `json:"data,omitempty"`
+	Code    RPCErrorCode `json:"code"`
+	Message string       `json:"message"`
+	Data    string       `json:"data,omitempty"`
 }
 
 func (err RPCError) Error() string {
@@ -82,6 +82,13 @@ func (err RPCError) Error() string {
 		return fmt.Sprintf(baseFormat+": %s", err.Code, err.Message, err.Data)
 	}
 	return fmt.Sprintf(baseFormat, err.Code, err.Message)
+}
+
+func (err *RPCError) HTTPStatusCode() int {
+	if err == nil {
+		return 200
+	}
+	return err.Code.HTTPStatusCode()
 }
 
 type RPCResponse struct {
@@ -106,11 +113,11 @@ func NewRPCSuccessResponse(id string, res interface{}) RPCResponse {
 	return RPCResponse{JSONRPC: "2.0", ID: id, Result: rawMsg}
 }
 
-func NewRPCErrorResponse(id string, code int, msg string, data string) RPCResponse {
+func NewRPCErrorResponse(id string, code RPCErrorCode, data string) RPCResponse {
 	return RPCResponse{
 		JSONRPC: "2.0",
 		ID:      id,
-		Error:   &RPCError{Code: code, Message: msg, Data: data},
+		Error:   &RPCError{Code: code, Message: code.String(), Data: data},
 	}
 }
 
@@ -122,27 +129,27 @@ func (resp RPCResponse) String() string {
 }
 
 func RPCParseError(id string, err error) RPCResponse {
-	return NewRPCErrorResponse(id, -32700, "Parse error. Invalid JSON", err.Error())
+	return NewRPCErrorResponse(id, RPCErrorCodeParseError, err.Error())
 }
 
 func RPCInvalidRequestError(id string, err error) RPCResponse {
-	return NewRPCErrorResponse(id, -32600, "Invalid Request", err.Error())
+	return NewRPCErrorResponse(id, RPCErrorCodeInvalidRequest, err.Error())
 }
 
 func RPCMethodNotFoundError(id string) RPCResponse {
-	return NewRPCErrorResponse(id, -32601, "Method not found", "")
+	return NewRPCErrorResponse(id, RPCErrorCodeMethodNotFound, "")
 }
 
 func RPCInvalidParamsError(id string, err error) RPCResponse {
-	return NewRPCErrorResponse(id, -32602, "Invalid params", err.Error())
+	return NewRPCErrorResponse(id, RPCErrorCodeInvalidParams, err.Error())
 }
 
 func RPCInternalError(id string, err error) RPCResponse {
-	return NewRPCErrorResponse(id, -32603, "Internal error", err.Error())
+	return NewRPCErrorResponse(id, RPCErrorCodeInternalError, err.Error())
 }
 
 func RPCServerError(id string, err error) RPCResponse {
-	return NewRPCErrorResponse(id, -32000, "Server error", err.Error())
+	return NewRPCErrorResponse(id, RPCErrorCodeServerError, err.Error())
 }
 
 //----------------------------------------
