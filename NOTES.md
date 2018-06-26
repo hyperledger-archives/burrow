@@ -8,7 +8,7 @@ In addition to breaking changes associated with Tendermint (see their changelog)
 - Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
 
 #### Features
-- Tendermint 0.20.0
+- Tendermint 0.21.0
 - Implemented EVM opcodes: REVERT, INVALID, SHL, SAR, SHR, RETURNDATACOPY, RETURNDATASIZE
 - Add config templating with burrow configure --config-template-in --config-out
 - Add config templates for kubernetes

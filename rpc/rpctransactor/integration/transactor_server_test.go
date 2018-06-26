@@ -19,12 +19,10 @@ package integration
 
 import (
 	"context"
-	"encoding/hex"
 	"sync"
 	"testing"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/test"
@@ -62,9 +60,6 @@ func TestTransactCreate(t *testing.T) {
 	numCreates := 50
 	wg := new(sync.WaitGroup)
 	wg.Add(numGoroutines)
-	// Flip flops between sending private key and input address to test private key and address based signing
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(t, err)
 	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -72,7 +67,7 @@ func TestTransactCreate(t *testing.T) {
 				create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 					InputAccount: inputAccount(i),
 					Address:      nil,
-					Data:         bc,
+					Data:         test.StrangeLoopBytecode,
 					Fee:          2,
 					GasLimit:     10000,
 				})
@@ -90,13 +85,11 @@ func TestTransactCreate(t *testing.T) {
 
 func BenchmarkTransactCreateContract(b *testing.B) {
 	cli := newClient(b)
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      nil,
-			Data:         bc,
+			Data:         test.StrangeLoopBytecode,
 			Fee:          2,
 			GasLimit:     10000,
 		})
@@ -107,31 +100,13 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 
 func TestTransactAndHold(t *testing.T) {
 	cli := newClient(t)
-	bc, err := hex.DecodeString(test.StrangeLoopByteCode)
-	require.NoError(t, err)
 	numGoroutines := 5
 	numRuns := 2
 	countCh := test.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		for j := 0; j < numRuns; j++ {
-			create, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
-				InputAccount: inputAccount(i),
-				Address:      nil,
-				Data:         bc,
-				Fee:          2,
-				GasLimit:     10000,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, uint64(0), create.StackDepth)
-			functionID := abi.FunctionID("UpsieDownsie()")
-			call, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
-				InputAccount: inputAccount(i),
-				Address:      create.CallData.Callee,
-				Data:         functionID[:],
-				Fee:          2,
-				GasLimit:     10000,
-			})
-			require.NoError(t, err)
+			create := test.CreateContract(t, cli, inputAccount(i))
+			call := test.CallContract(t, cli, inputAccount(i), create.CallData.Callee)
 			depth := binary.Uint64FromWord256(binary.LeftPadWord256(call.Return))
 			// Would give 23 if taken from wrong frame
 			assert.Equal(t, 18, int(depth))

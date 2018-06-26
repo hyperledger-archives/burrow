@@ -175,6 +175,7 @@ test_keys: build_db
 
 .PHONY: test_integration
 test_integration: test_keys
+	@go test -tags integration ./rpc/rpcevents/integration
 	@go test -tags integration ./rpc/rpctransactor/integration
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
