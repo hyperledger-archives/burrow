@@ -19,44 +19,50 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/pbtransactor"
+	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	tmTypes "github.com/tendermint/tendermint/types"
 	"github.com/tmthrgd/go-hex"
 )
 
 func TestEventSubscribe(t *testing.T) {
-	//cli := test.NewEventsClient(t)
-	//sub, err := cli.EventSubscribe(context.Background(), &pbevents.EventIdParam{
-	//	EventId: tmTypes.EventNewBlock,
-	//})
-	//require.NoError(t, err)
-	//defer cli.EventUnsubscribe(context.Background(), sub)
-	//
-	//pollCh := make(chan *pbevents.PollResponse)
-	//go func() {
-	//	poll := new(pbevents.PollResponse)
-	//	for len(poll.Events) == 0 {
-	//		poll, err = cli.EventPoll(context.Background(), sub)
-	//		require.NoError(t, err)
-	//		time.Sleep(1)
-	//	}
-	//	pollCh <- poll
-	//}()
-	//select {
-	//case poll := <-pollCh:
-	//	require.True(t, len(poll.Events) > 0, "event poll should return at least 1 event")
-	//	tendermintEvent := new(rpc.TendermintEvent)
-	//	tendermintEventJSON := poll.Events[0].GetTendermintEventJSON()
-	//	require.NoError(t, json.Unmarshal([]byte(tendermintEventJSON), tendermintEvent))
-	//	newBlock, ok := tendermintEvent.TMEventData.(tmTypes.EventDataNewBlock)
-	//	require.True(t, ok, "new block event expected")
-	//	assert.Equal(t, genesisDoc.ChainID(), newBlock.Block.ChainID)
-	//case <-time.After(3 * time.Second):
-	//	t.Fatal("timed out waiting for poll event")
-	//}
+	cli := test.NewEventsClient(t)
+	sub, err := cli.EventSubscribe(context.Background(), &pbevents.EventIdParam{
+		EventId: tmTypes.EventNewBlock,
+	})
+	require.NoError(t, err)
+	defer cli.EventUnsubscribe(context.Background(), sub)
+
+	pollCh := make(chan *pbevents.PollResponse)
+	go func() {
+		poll := new(pbevents.PollResponse)
+		for len(poll.Events) == 0 {
+			poll, err = cli.EventPoll(context.Background(), sub)
+			require.NoError(t, err)
+			time.Sleep(1)
+		}
+		pollCh <- poll
+	}()
+	select {
+	case poll := <-pollCh:
+		require.True(t, len(poll.Events) > 0, "event poll should return at least 1 event")
+		tendermintEvent := new(rpc.TendermintEvent)
+		tendermintEventJSON := poll.Events[0].GetTendermintEventJSON()
+		require.NoError(t, json.Unmarshal([]byte(tendermintEventJSON), tendermintEvent))
+		newBlock, ok := tendermintEvent.TMEventData.(tmTypes.EventDataNewBlock)
+		require.True(t, ok, "new block event expected")
+		assert.Equal(t, genesisDoc.ChainID(), newBlock.Block.ChainID)
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for poll event")
+	}
 }
 
 func testEventsCall(t *testing.T, numTxs int) {
