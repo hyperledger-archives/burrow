@@ -12,6 +12,9 @@ func (b *Bound) Key(latestBlockHeight uint64) events.Key {
 }
 
 func (b *Bound) Bound(latestBlockHeight uint64) uint64 {
+	if b == nil {
+		return latestBlockHeight
+	}
 	switch b.Type {
 	case Bound_ABSOLUTE:
 		return b.GetIndex()
