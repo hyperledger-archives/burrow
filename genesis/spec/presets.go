@@ -12,13 +12,13 @@ import (
 func FullAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(99999999999999)
-	amountBonded := uint64(9999999999)
+	Power := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:         name,
-			Amount:       &amount,
-			AmountBonded: &amountBonded,
-			Permissions:  []string{permission.AllString},
+			Name:        name,
+			Amount:      &amount,
+			Power:       &Power,
+			Permissions: []string{permission.AllString},
 		},
 		},
 	}
@@ -67,13 +67,13 @@ func DeveloperAccount(name string) GenesisSpec {
 func ValidatorAccount(name string) GenesisSpec {
 	// Inheriting from the arbitrary figures used by monax tool for now
 	amount := uint64(9999999999)
-	amountBonded := amount - 1
+	Power := amount - 1
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:         name,
-			Amount:       &amount,
-			AmountBonded: &amountBonded,
-			Permissions:  []string{permission.BondString},
+			Name:        name,
+			Amount:      &amount,
+			Power:       &Power,
+			Permissions: []string{permission.BondString},
 		}},
 	}
 }
@@ -147,7 +147,7 @@ func mergeAccount(base, override TemplateAccount) TemplateAccount {
 	}
 
 	base.Amount = addUint64Pointers(base.Amount, override.Amount)
-	base.AmountBonded = addUint64Pointers(base.AmountBonded, override.AmountBonded)
+	base.Power = addUint64Pointers(base.Power, override.Power)
 
 	base.Permissions = mergeStrings(base.Permissions, override.Permissions)
 	base.Roles = mergeStrings(base.Roles, override.Roles)

@@ -25,11 +25,8 @@ func StartStandAloneServer(keysDir, host, port string, AllowBadFilePermissions b
 	if err != nil {
 		return err
 	}
-
-	ks := NewKeyStore(keysDir, AllowBadFilePermissions, logger)
-
 	grpcServer := grpc.NewServer()
-	pbkeys.RegisterKeysServer(grpcServer, &ks)
+	pbkeys.RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions, logger))
 	return grpcServer.Serve(listen)
 }
 
@@ -75,12 +72,13 @@ func (k *KeyStore) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkey
 	if err != nil {
 		return nil, err
 	}
-	resp, err := coreExport(key)
-	if err != nil {
-		return nil, err
-	}
 
-	return &pbkeys.ExportResponse{Export: string(resp)}, nil
+	return &pbkeys.ExportResponse{
+		Address:    addrB[:],
+		Curvetype:  key.CurveType.String(),
+		Publickey:  key.PublicKey.PublicKey[:],
+		Privatekey: key.PrivateKey.PrivateKey[:],
+	}, nil
 }
 
 func (k *KeyStore) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.PubResponse, error) {
@@ -124,7 +122,7 @@ func (k *KeyStore) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.Si
 	return &pbkeys.SignResponse{Signature: sig, Curvetype: key.CurveType.String()}, nil
 }
 
-func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.Empty, error) {
+func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.VerifyResponse, error) {
 	if in.GetPub() == nil {
 		return nil, fmt.Errorf("must provide a pubkey")
 	}
@@ -152,7 +150,7 @@ func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkey
 		return nil, fmt.Errorf("Signature does not match")
 	}
 
-	return &pbkeys.Empty{}, nil
+	return &pbkeys.VerifyResponse{}, nil
 }
 
 func (k *KeyStore) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.HashResponse, error) {
@@ -210,7 +208,7 @@ func (k *KeyStore) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkey
 	return &pbkeys.ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
 }
 
-func (k *KeyStore) List(ctx context.Context, in *pbkeys.Name) (*pbkeys.ListResponse, error) {
+func (k *KeyStore) List(ctx context.Context, in *pbkeys.ListRequest) (*pbkeys.ListResponse, error) {
 	names, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
@@ -225,15 +223,15 @@ func (k *KeyStore) List(ctx context.Context, in *pbkeys.Name) (*pbkeys.ListRespo
 	return &pbkeys.ListResponse{Key: list}, nil
 }
 
-func (k *KeyStore) RemoveName(ctx context.Context, in *pbkeys.Name) (*pbkeys.Empty, error) {
+func (k *KeyStore) RemoveName(ctx context.Context, in *pbkeys.RemoveNameRequest) (*pbkeys.RemoveNameResponse, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
 
-	return &pbkeys.Empty{}, coreNameRm(k.keysDirPath, in.GetKeyname())
+	return &pbkeys.RemoveNameResponse{}, coreNameRm(k.keysDirPath, in.GetKeyname())
 }
 
-func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbkeys.Empty, error) {
+func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbkeys.AddNameResponse, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
@@ -242,5 +240,5 @@ func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbk
 		return nil, fmt.Errorf("please specify an address")
 	}
 
-	return &pbkeys.Empty{}, coreNameAdd(k.keysDirPath, in.GetKeyname(), strings.ToUpper(in.GetAddress()))
+	return &pbkeys.AddNameResponse{}, coreNameAdd(k.keysDirPath, in.GetKeyname(), strings.ToUpper(in.GetAddress()))
 }

@@ -16,9 +16,9 @@ import (
 
 type NameContext struct {
 	Tip            blockchain.TipInfo
-	StateWriter    state.Writer
+	StateWriter    state.ReaderWriter
 	EventPublisher event.Publisher
-	NameReg        names.Writer
+	NameReg        names.ReaderWriter
 	Logger         *logging.Logger
 	tx             *payload.NameTx
 }
@@ -177,8 +177,8 @@ func (ctx *NameContext) Execute(txEnv *txs.Envelope) error {
 	// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
 
 	if ctx.EventPublisher != nil {
-		events.PublishAccountInput(ctx.EventPublisher, ctx.tx.Input.Address, txEnv.Tx, nil, nil)
-		events.PublishNameReg(ctx.EventPublisher, txEnv.Tx)
+		events.PublishAccountInput(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), ctx.tx.Input.Address, txEnv.Tx, nil, nil)
+		events.PublishNameReg(ctx.EventPublisher, ctx.Tip.LastBlockHeight(), txEnv.Tx)
 	}
 
 	return nil

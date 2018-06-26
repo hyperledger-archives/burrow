@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	tmConfig "github.com/tendermint/tendermint/config"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -42,18 +43,18 @@ func TestBootShutdownResume(t *testing.T) {
 	genesisDoc, _, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 	privValidator := validator.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 
-	i := int64(1)
+	i := int64(0)
 	// asserts we get a consecutive run of blocks
 	blockChecker := func(block *tmTypes.EventDataNewBlock) bool {
-		assert.Equal(t, i, block.Block.Height)
+		assert.Equal(t, i+1, block.Block.Height)
 		i++
 		// stop every third block
 		return i%3 != 0
 	}
 	// First run
-	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
 	// Resume and check we pick up where we left off
-	assert.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
 	// Resuming with mismatched genesis should fail
 	genesisDoc.Salt = []byte("foo")
 	assert.Error(t, bootWaitBlocksShutdown(privValidator, genesisDoc, tmConf, logger, blockChecker))
@@ -66,7 +67,7 @@ func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *gen
 	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
 	keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 	kern, err := NewKernel(context.Background(), keyClient, privValidator, genesisDoc, tmConf,
-		rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(), &keyStore, nil, logger)
+		rpc.DefaultRPCConfig(), keys.DefaultKeysConfig(), keyStore, nil, logger)
 	if err != nil {
 		return err
 	}
@@ -76,8 +77,10 @@ func bootWaitBlocksShutdown(privValidator tmTypes.PrivValidator, genesisDoc *gen
 		return err
 	}
 
-	ch := make(chan *tmTypes.EventDataNewBlock)
-	tendermint.SubscribeNewBlock(context.Background(), kern.Emitter, "TestBootShutdownResume", ch)
+	ch, err := tendermint.SubscribeNewBlock(context.Background(), kern.Emitter)
+	if err != nil {
+		return err
+	}
 	cont := true
 	for cont {
 		select {

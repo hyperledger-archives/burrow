@@ -1,8 +1,6 @@
 package tendermint
 
 import (
-	"fmt"
-
 	"context"
 
 	"os"
@@ -11,12 +9,12 @@ import (
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
-	abci_types "github.com/tendermint/abci/types"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/node"
@@ -32,6 +30,8 @@ type Node struct {
 		Close()
 	}
 }
+
+var NewBlockQuery = query.Must(event.QueryForEventID(tm_types.EventNewBlock).Query())
 
 func DBProvider(ID string, backendType dbm.DBBackendType, dbDir string) dbm.DB {
 	return dbm.NewDB(ID, backendType, dbDir)
@@ -50,14 +50,9 @@ func (n *Node) Close() {
 	}
 }
 
-func NewNode(
-	conf *config.Config,
-	privValidator tm_types.PrivValidator,
-	genesisDoc *tm_types.GenesisDoc,
-	blockchain *bcm.Blockchain,
-	checker execution.BatchExecutor,
-	committer execution.BatchCommitter,
-	logger *logging.Logger) (*Node, error) {
+func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisDoc *tm_types.GenesisDoc,
+	blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
+	txDecoder txs.Decoder, logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
@@ -69,7 +64,7 @@ func NewNode(
 	}
 
 	nde := &Node{}
-	app := abci.NewApp(blockchain, checker, committer, logger)
+	app := abci.NewApp(blockchain, checker, committer, txDecoder, logger)
 	conf.NodeKeyFile()
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
@@ -86,23 +81,6 @@ func NewNode(
 	return nde, nil
 }
 
-func BroadcastTxAsyncFunc(validator *Node, txEncoder txs.Encoder) func(env *txs.Envelope,
-	callback func(res *abci_types.Response)) error {
-
-	return func(env *txs.Envelope, callback func(res *abci_types.Response)) error {
-		txBytes, err := txEncoder.EncodeTx(env)
-		if err != nil {
-			return fmt.Errorf("error encoding transaction: %v", err)
-		}
-
-		err = validator.MempoolReactor().BroadcastTx(txBytes, callback)
-		if err != nil {
-			return fmt.Errorf("error broadcasting transaction: %v", err)
-		}
-		return nil
-	}
-}
-
 func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
 	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
@@ -115,25 +93,44 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc
 		}
 	}
 	return &tm_types.GenesisDoc{
-		ChainID:     burrowGenesisDoc.ChainID(),
-		GenesisTime: burrowGenesisDoc.GenesisTime,
-		Validators:  validators,
-		AppHash:     burrowGenesisDoc.Hash(),
+		ChainID:         burrowGenesisDoc.ChainID(),
+		GenesisTime:     burrowGenesisDoc.GenesisTime,
+		Validators:      validators,
+		AppHash:         burrowGenesisDoc.Hash(),
+		ConsensusParams: tm_types.DefaultConsensusParams(),
 	}
 }
 
-func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable, subscriber string,
-	ch chan<- *tm_types.EventDataNewBlock) error {
-	query := event.QueryForEventID(tm_types.EventNewBlock)
-
-	return event.SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
-		tmEventData, ok := message.(tm_types.TMEventData)
+func NewBlockEvent(message interface{}) *tm_types.EventDataNewBlock {
+	tmEventData, ok := message.(tm_types.TMEventData)
+	if ok {
+		eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
 		if ok {
-			eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
-			if ok {
-				ch <- &eventDataNewBlock
+			return &eventDataNewBlock
+		}
+	}
+	return nil
+}
+
+// Subscribe to NewBlock event safely that ensures progress by a non-blocking receive as well as handling unsubscribe
+func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable) (<-chan *tm_types.EventDataNewBlock, error) {
+	subID, err := event.GenerateSubscriptionID()
+	if err != nil {
+		return nil, err
+	}
+	const unconsumedBlocksBeforeUnsubscribe = 3
+	ch := make(chan *tm_types.EventDataNewBlock, unconsumedBlocksBeforeUnsubscribe)
+	return ch, event.SubscribeCallback(ctx, subscribable, subID, NewBlockQuery, func(message interface{}) (stop bool) {
+		eventDataNewBlock := NewBlockEvent(message)
+		if eventDataNewBlock != nil {
+			select {
+			case ch <- eventDataNewBlock:
+				return false
+			default:
+				// If we can't send shut down the channel
+				return true
 			}
 		}
-		return true
+		return
 	})
 }

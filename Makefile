@@ -16,7 +16,8 @@ BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
-DOCKER_NAMESPACE := quay.io/monax
+PROTO_FILES = $(shell find . -type f -name '*.proto')
+PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 
 ### Formatting, linting and vetting
 
@@ -62,11 +63,23 @@ megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
 	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
 
-keys/pbkeys/keys.pb.go: keys/pbkeys/keys.proto
-	@protoc -I ./keys/pbkeys keys/pbkeys/keys.proto --go_out=plugins=grpc:keys/pbkeys
+# Protobuffing
+.PHONY: protobuf_deps
+protobuf_deps:
+	@go get -u github.com/golang/protobuf/protoc-gen-go
+
+# Implicit compile rule for GRPC/proto files
+%.pb.go: %.proto
+	protoc -I ${GOPATH}/src ${REPO}/$< --go_out=plugins=grpc:${GOPATH}/src
+
+.PHONY: protobuf
+protobuf: $(PROTO_GO_FILES)
+
+.PHONY: clean_protobuf
+clean_protobuf:
+	@rm -f $(PROTO_GO_FILES)
 
 ### Dependency management for github.com/hyperledger/burrow
-
 # erase vendor wipes the full vendor directory
 .PHONY: erase_vendor
 erase_vendor:
@@ -81,7 +94,7 @@ reinstall_vendor: erase_vendor
 # delete the vendor directy and pull back using dep lock and constraints file
 # will exit with an error if the working directory is not clean (any missing files or new
 # untracked ones)
-.PHONY: ensure_vendor
+.PHONY: ensure_vendor protobuf
 ensure_vendor: reinstall_vendor
 	@scripts/is_checkout_dirty.sh
 
@@ -162,6 +175,8 @@ test_keys: build_db
 
 .PHONY: test_integration
 test_integration: test_keys
+	@go test -tags integration ./rpc/rpcevents/integration
+	@go test -tags integration ./rpc/rpctransactor/integration
 	@go test -tags integration ./rpc/v0/integration
 	@go test -tags integration ./rpc/tm/integration
 

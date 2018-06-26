@@ -38,6 +38,12 @@ type Executor interface {
 	Execute(txEnv *txs.Envelope) error
 }
 
+type ExecutorState interface {
+	Update(updater func(ws Updatable) error) (hash []byte, err error)
+	names.Reader
+	state.IterableReader
+}
+
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker
@@ -59,8 +65,9 @@ type BatchCommitter interface {
 type executor struct {
 	sync.RWMutex
 	runCall      bool
-	state        *State
-	stateCache   state.Cache
+	publisher    event.Publisher
+	state        ExecutorState
+	stateCache   *state.Cache
 	nameRegCache *names.Cache
 	eventCache   *event.Cache
 	logger       *logging.Logger
@@ -71,28 +78,29 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend *State, tip *bcm.Tip, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, tip bcm.TipInfo, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
 	return newExecutor("CheckCache", false, backend, tip, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend *State, tip *bcm.Tip, publisher event.Publisher, logger *logging.Logger,
+func NewBatchCommitter(backend ExecutorState, tip bcm.TipInfo, publisher event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
 	return newExecutor("CommitCache", true, backend, tip, publisher,
 		logger.WithScope("NewBatchCommitter"), options...)
 }
 
-func newExecutor(name string, runCall bool, backend *State, tip *bcm.Tip, publisher event.Publisher,
+func newExecutor(name string, runCall bool, backend ExecutorState, tip bcm.TipInfo, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 
 	exe := &executor{
 		runCall:      runCall,
 		state:        backend,
+		publisher:    publisher,
 		stateCache:   state.NewCache(backend, state.Name(name)),
-		eventCache:   event.NewEventCache(publisher),
+		eventCache:   event.NewCache(),
 		nameRegCache: names.NewCache(backend),
 		logger:       logger.With(structure.ComponentKey, "Executor"),
 	}
@@ -101,26 +109,28 @@ func newExecutor(name string, runCall bool, backend *State, tip *bcm.Tip, publis
 	}
 	exe.txExecutors = map[payload.Type]Executor{
 		payload.TypeSend: &executors.SendContext{
+			Tip:            tip,
 			StateWriter:    exe.stateCache,
 			EventPublisher: exe.eventCache,
 			Logger:         exe.logger,
 		},
 		payload.TypeCall: &executors.CallContext{
+			Tip:            tip,
 			StateWriter:    exe.stateCache,
 			EventPublisher: exe.eventCache,
-			Tip:            tip,
 			RunCall:        runCall,
 			VMOptions:      exe.vmOptions,
 			Logger:         exe.logger,
 		},
 		payload.TypeName: &executors.NameContext{
+			Tip:            tip,
 			StateWriter:    exe.stateCache,
 			EventPublisher: exe.eventCache,
 			NameReg:        exe.nameRegCache,
-			Tip:            tip,
 			Logger:         exe.logger,
 		},
 		payload.TypePermissions: &executors.PermissionsContext{
+			Tip:            tip,
 			StateWriter:    exe.stateCache,
 			EventPublisher: exe.eventCache,
 			Logger:         exe.logger,
@@ -157,6 +167,44 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (err error) {
 	return fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }
 
+func (exe *executor) Commit() (_ []byte, err error) {
+	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
+	// deadlock
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%v", r, debug.Stack())
+		}
+	}()
+	return exe.state.Update(func(ws Updatable) error {
+		// flush the caches
+		err := exe.stateCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
+		err = exe.nameRegCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
+		err = exe.eventCache.Sync(ws)
+		if err != nil {
+			return err
+		}
+		// flush events to listeners
+		err = exe.eventCache.Flush(exe.publisher)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (exe *executor) Reset() error {
+	// As with Commit() we do not take the write lock here
+	exe.stateCache.Reset(exe.state)
+	exe.nameRegCache.Reset(exe.state)
+	return nil
+}
+
 // executor exposes access to the underlying state cache protected by a RWMutex that prevents access while locked
 // (during an ABCI commit). while access can occur (and needs to continue for CheckTx/DeliverTx to make progress)
 // through calls to Execute() external readers will be blocked until the executor is unlocked that allows the Transactor
@@ -174,38 +222,4 @@ func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) (bin
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)
-}
-
-func (exe *executor) Commit() (hash []byte, err error) {
-	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
-	// deadlock
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%v", r, debug.Stack())
-		}
-	}()
-	// flush the caches
-	err = exe.stateCache.Flush(exe.state)
-	if err != nil {
-		return nil, err
-	}
-	err = exe.nameRegCache.Flush(exe.state)
-	if err != nil {
-		return nil, err
-	}
-	// save state to disk
-	err = exe.state.Save()
-	if err != nil {
-		return nil, err
-	}
-	// flush events to listeners
-	defer exe.eventCache.Flush()
-	return exe.state.Hash(), nil
-}
-
-func (exe *executor) Reset() error {
-	// As with Commit() we do not take the write lock here
-	exe.stateCache.Reset(exe.state)
-	exe.nameRegCache.Reset(exe.state)
-	return nil
 }

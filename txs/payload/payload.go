@@ -54,6 +54,27 @@ func init() {
 	}
 }
 
+func TxTypeFromString(name string) Type {
+	return typeFromName[name]
+}
+
+func (typ Type) String() string {
+	name, ok := nameFromType[typ]
+	if ok {
+		return name
+	}
+	return "UnknownTx"
+}
+
+func (typ Type) MarshalText() ([]byte, error) {
+	return []byte(typ.String()), nil
+}
+
+func (typ *Type) UnmarshalText(data []byte) error {
+	*typ = TxTypeFromString(string(data))
+	return nil
+}
+
 type Payload interface {
 	String() string
 	GetInputs() []*TxInput
@@ -75,26 +96,5 @@ func New(txType Type) Payload {
 	case TypePermissions:
 		return &PermissionsTx{}
 	}
-	return nil
-}
-
-func TxTypeFromString(name string) Type {
-	return typeFromName[name]
-}
-
-func (typ Type) String() string {
-	name, ok := nameFromType[typ]
-	if ok {
-		return name
-	}
-	return "UnknownTx"
-}
-
-func (typ Type) MarshalText() ([]byte, error) {
-	return []byte(typ.String()), nil
-}
-
-func (typ *Type) UnmarshalText(data []byte) error {
-	*typ = TxTypeFromString(string(data))
 	return nil
 }

@@ -15,14 +15,13 @@
 package account
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	ptypes "github.com/hyperledger/burrow/permission/types"
-	"github.com/tendermint/go-wire"
+	"github.com/tendermint/go-amino"
 )
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
@@ -96,12 +95,6 @@ func NewConcreteAccount(pubKey crypto.PublicKey) ConcreteAccount {
 	return ConcreteAccount{
 		Address:   pubKey.Address(),
 		PublicKey: pubKey,
-		// Since nil slices and maps compare differently to empty ones
-		Code:        Bytecode{},
-		StorageRoot: []byte{},
-		Permissions: ptypes.AccountPermissions{
-			Roles: []string{},
-		},
 	}
 }
 
@@ -117,17 +110,6 @@ func (acc ConcreteAccount) Account() Account {
 // Return as mutable MutableAccount
 func (acc ConcreteAccount) MutableAccount() MutableAccount {
 	return concreteAccountWrapper{&acc}
-}
-
-func (acc *ConcreteAccount) Encode() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	var n int
-	var err error
-	wire.WriteBinary(acc, buf, &n, &err)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 func (acc *ConcreteAccount) Copy() *ConcreteAccount {
@@ -315,11 +297,14 @@ func (caw concreteAccountWrapper) Copy() MutableAccount {
 	return concreteAccountWrapper{caw.ConcreteAccount.Copy()}
 }
 
-var _ = wire.RegisterInterface(struct{ Account }{}, wire.ConcreteType{concreteAccountWrapper{}, 0x01})
-
 // concreteAccount Wrapper
 //----------------------------------------------
 // Encoding/decoding
+var cdc = amino.NewCodec()
+
+func (acc *ConcreteAccount) Encode() ([]byte, error) {
+	return cdc.MarshalBinary(acc)
+}
 
 func Decode(accBytes []byte) (Account, error) {
 	ca, err := DecodeConcrete(accBytes)
@@ -330,10 +315,10 @@ func Decode(accBytes []byte) (Account, error) {
 }
 
 func DecodeConcrete(accBytes []byte) (*ConcreteAccount, error) {
-	ca := new(concreteAccountWrapper)
-	err := wire.ReadBinaryBytes(accBytes, ca)
+	ca := new(ConcreteAccount)
+	err := cdc.UnmarshalBinary(accBytes, ca)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert decoded account to *ConcreteAccount: %v", err)
 	}
-	return ca.ConcreteAccount, nil
+	return ca, nil
 }

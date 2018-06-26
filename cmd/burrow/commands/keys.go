@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hyperledger/burrow/deployment"
+
 	"time"
 
 	"io/ioutil"
@@ -67,10 +69,9 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not generate logger from logging config: %v", err)
 				}
 
-				if badPerm != nil {
-					conf.Keys.AllowBadFilePermissions = *badPerm
-				}
-				if keysDir != nil {
+				conf.Keys.AllowBadFilePermissions = *badPerm
+
+				if *keysDir != "" {
 					conf.Keys.KeysDirectory = *keysDir
 				}
 
@@ -151,6 +152,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 			keyName := cmd.StringOpt("name", "", "name of key to use")
 			keyAddr := cmd.StringOpt("addr", "", "address of key to use")
 			passphrase := cmd.StringOpt("passphrase", "", "passphrase for encrypted key")
+			keyTemplate := cmd.StringOpt("t template", deployment.DefaultKeysExportFormat, "template for export key")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
@@ -161,7 +163,25 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("failed to export key: %v", err)
 				}
 
-				fmt.Printf("%s\n", resp.GetExport())
+				addr, err := crypto.AddressFromBytes(resp.GetAddress())
+				if err != nil {
+					output.Fatalf("failed to convert address: %v", err)
+				}
+
+				key := deployment.Key{
+					Name:       *keyName,
+					CurveType:  resp.GetCurvetype(),
+					Address:    addr,
+					PublicKey:  resp.GetPublickey(),
+					PrivateKey: resp.GetPrivatekey(),
+				}
+
+				str, err := key.Dump(*keyTemplate)
+				if err != nil {
+					output.Fatalf("failed to template key: %v", err)
+				}
+
+				fmt.Printf("%s\n", str)
 			}
 		})
 
@@ -310,7 +330,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				resp, err := c.List(ctx, &pbkeys.Name{*name})
+				resp, err := c.List(ctx, &pbkeys.ListRequest{})
 				if err != nil {
 					output.Fatalf("failed to list key names: %v", err)
 				}
@@ -335,7 +355,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_, err := c.RemoveName(ctx, &pbkeys.Name{*name})
+				_, err := c.RemoveName(ctx, &pbkeys.RemoveNameRequest{Keyname: *name})
 				if err != nil {
 					output.Fatalf("failed to remove key: %v", err)
 				}

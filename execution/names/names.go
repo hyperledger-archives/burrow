@@ -14,7 +14,10 @@
 
 package names
 
-import "github.com/hyperledger/burrow/crypto"
+import (
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/tendermint/go-amino"
+)
 
 var (
 	MinNameRegistrationPeriod uint64 = 5
@@ -44,25 +47,49 @@ type Entry struct {
 	Expires uint64
 }
 
-type Getter interface {
+var cdc = amino.NewCodec()
+
+func (e *Entry) Encode() ([]byte, error) {
+	return cdc.MarshalBinary(e)
+}
+
+func DecodeEntry(entryBytes []byte) (*Entry, error) {
+	entry := new(Entry)
+	err := cdc.UnmarshalBinary(entryBytes, entry)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+type Reader interface {
 	GetNameEntry(name string) (*Entry, error)
 }
 
-type Updater interface {
+type Writer interface {
 	// Updates the name entry creating it if it does not exist
 	UpdateNameEntry(entry *Entry) error
 	// Remove the name entry
 	RemoveNameEntry(name string) error
 }
 
-type Writer interface {
-	Getter
-	Updater
+type ReaderWriter interface {
+	Reader
+	Writer
 }
 
 type Iterable interface {
-	Getter
 	IterateNameEntries(consumer func(*Entry) (stop bool)) (stopped bool, err error)
+}
+
+type IterableReader interface {
+	Iterable
+	Reader
+}
+
+type IterableReaderWriter interface {
+	Iterable
+	ReaderWriter
 }
 
 // base cost is "effective" number of bytes

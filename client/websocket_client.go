@@ -27,8 +27,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
+	rpcClient "github.com/hyperledger/burrow/rpc/lib/client"
 	"github.com/hyperledger/burrow/rpc/tm/client"
-	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
 	"github.com/hyperledger/burrow/txs"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -152,7 +152,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						continue
 					}
 
-					eventDataTx := resultEvent.EventDataTx
+					eventDataTx := resultEvent.Execution.GetTx()
 					if eventDataTx == nil {
 						// We are on the lookout for EventDataTx
 						confirmationChannel <- Confirmation{
@@ -171,7 +171,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 						continue
 					}
 
-					if eventDataTx.Exception != nil && eventDataTx.Exception.Code != errors.ErrorCodeExecutionReverted {
+					if eventDataTx.Exception != nil && eventDataTx.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
 						confirmationChannel <- Confirmation{
 							BlockHash:   latestBlockHash,
 							EventDataTx: eventDataTx,

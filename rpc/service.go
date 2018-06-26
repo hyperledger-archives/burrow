@@ -18,6 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
+	"encoding/json"
+
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/account/state"
 	"github.com/hyperledger/burrow/binary"
@@ -45,18 +49,18 @@ const AccountsRingMutexCount = 100
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
 	ctx             context.Context
-	state           state.Iterable
-	nameReg         names.Iterable
+	state           state.IterableReader
+	nameReg         names.IterableReader
 	mempoolAccounts *execution.Accounts
 	subscribable    event.Subscribable
-	blockchain      *bcm.Blockchain
+	blockchain      bcm.BlockchainInfo
 	transactor      *execution.Transactor
 	nodeView        *query.NodeView
 	logger          *logging.Logger
 }
 
-func NewService(ctx context.Context, state state.Iterable, nameReg names.Iterable,
-	checker state.Reader, subscribable event.Subscribable, blockchain *bcm.Blockchain, keyClient keys.KeyClient,
+func NewService(ctx context.Context, state state.IterableReader, nameReg names.IterableReader,
+	checker state.Reader, subscribable event.Subscribable, blockchain bcm.BlockchainInfo, keyClient keys.KeyClient,
 	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
@@ -124,7 +128,7 @@ func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 }
 
 func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID string,
-	callback func(resultEvent *ResultEvent) bool) error {
+	callback func(resultEvent *ResultEvent) (stop bool)) error {
 
 	queryBuilder := event.QueryForEventID(eventID)
 	s.logger.InfoMsg("Subscribing to events",
@@ -132,14 +136,14 @@ func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID 
 		"subscription_id", subscriptionID,
 		"event_id", eventID)
 	return event.SubscribeCallback(ctx, s.subscribable, subscriptionID, queryBuilder,
-		func(message interface{}) bool {
+		func(message interface{}) (stop bool) {
 			resultEvent, err := NewResultEvent(eventID, message)
 			if err != nil {
 				s.logger.InfoMsg("Received event that could not be mapped to ResultEvent",
 					structure.ErrorKey, err,
 					"subscription_id", subscriptionID,
 					"event_id", eventID)
-				return true
+				return false
 			}
 			return callback(resultEvent)
 		})
@@ -156,8 +160,7 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error 
 }
 
 func (s *Service) Status() (*ResultStatus, error) {
-	tip := s.blockchain.Tip
-	latestHeight := tip.LastBlockHeight()
+	latestHeight := s.blockchain.LastBlockHeight()
 	var (
 		latestBlockMeta *tm_types.BlockMeta
 		latestBlockHash []byte
@@ -246,7 +249,7 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 	})
 
 	return &ResultListAccounts{
-		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
+		BlockHeight: s.blockchain.LastBlockHeight(),
 		Accounts:    accounts,
 	}, nil
 }
@@ -340,7 +343,7 @@ func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames
 		return
 	})
 	return &ResultListNames{
-		BlockHeight: s.blockchain.Tip.LastBlockHeight(),
+		BlockHeight: s.blockchain.LastBlockHeight(),
 		Names:       nms,
 	}, nil
 }
@@ -358,7 +361,7 @@ func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
 func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
-	latestHeight := s.blockchain.Tip.LastBlockHeight()
+	latestHeight := s.blockchain.LastBlockHeight()
 
 	if minHeight == 0 {
 		minHeight = 1
@@ -393,7 +396,7 @@ func (s *Service) ListValidators() (*ResultListValidators, error) {
 		return
 	})
 	return &ResultListValidators{
-		BlockHeight:         s.blockchain.Tip.LastBlockHeight(),
+		BlockHeight:         s.blockchain.LastBlockHeight(),
 		BondedValidators:    concreteValidators,
 		UnbondingValidators: nil,
 	}, nil
@@ -418,4 +421,34 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	return &ResultGeneratePrivateAccount{
 		PrivateAccount: acm.AsConcretePrivateAccount(privateAccount),
 	}, nil
+}
+
+func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error) {
+	res := &ResultLastBlockInfo{
+		LastBlockHeight: s.blockchain.LastBlockHeight(),
+		LastBlockHash:   s.blockchain.LastBlockHash(),
+		LastBlockTime:   s.blockchain.LastBlockTime(),
+	}
+	if blockWithin == "" {
+		return res, nil
+	}
+	duration, err := time.ParseDuration(blockWithin)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse blockWithin duration to determine whether to throw error: %v", err)
+	}
+	// Take neg abs in case caller is counting backwards (not we add later)
+	if duration > 0 {
+		duration = -duration
+	}
+	blockTimeThreshold := time.Now().Add(duration)
+	if res.LastBlockTime.After(blockTimeThreshold) {
+		// We've created blocks recently enough
+		return res, nil
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		resJSON = []byte("<error: could not marshal last block info>")
+	}
+	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), last block info: %s",
+		blockWithin, blockTimeThreshold.Format(time.RFC3339), string(resJSON))
 }

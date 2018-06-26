@@ -1,18 +1,19 @@
 package errors
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
 type CodedError interface {
 	error
-	ErrorCode() ErrorCode
+	ErrorCode() Code
 }
 
-type ErrorCode int8
+type Code uint32
 
 const (
-	ErrorCodeGeneric ErrorCode = iota
+	ErrorCodeGeneric Code = iota
 	ErrorCodeUnknownAddress
 	ErrorCodeInsufficientBalance
 	ErrorCodeInvalidJumpDest
@@ -31,14 +32,15 @@ const (
 	ErrorCodeExecutionReverted
 	ErrorCodePermissionDenied
 	ErrorCodeNativeFunction
+	ErrorCodeEventPublish
 )
 
-func (ec ErrorCode) ErrorCode() ErrorCode {
-	return ec
+func (c Code) ErrorCode() Code {
+	return c
 }
 
-func (ec ErrorCode) Error() string {
-	switch ec {
+func (c Code) Error() string {
+	switch c {
 	case ErrorCodeUnknownAddress:
 		return "Unknown address"
 	case ErrorCodeInsufficientBalance:
@@ -73,23 +75,23 @@ func (ec ErrorCode) Error() string {
 		return "Execution reverted"
 	case ErrorCodeNativeFunction:
 		return "Native function error"
-	default:
+	case ErrorCodeEventPublish:
+		return "Event publish error"
+	case ErrorCodeGeneric:
 		return "Generic error"
+	default:
+		return "Unknown error"
 	}
 }
 
-// Exception provides a serialisable coded error for the VM
-type Exception struct {
-	Code      ErrorCode
-	Exception string
-}
-
-func NewCodedError(errorCode ErrorCode, exception string) *Exception {
+func NewCodedError(errorCode Code, exception string) *Exception {
 	if exception == "" {
 		return nil
 	}
 	return &Exception{
-		Code:      errorCode,
+		Code: &ErrorCode{
+			Code: uint32(errorCode),
+		},
 		Exception: exception,
 	}
 }
@@ -117,26 +119,39 @@ func Errorf(format string, a ...interface{}) CodedError {
 	return ErrorCodef(ErrorCodeGeneric, format, a...)
 }
 
-func ErrorCodef(errorCode ErrorCode, format string, a ...interface{}) CodedError {
+func ErrorCodef(errorCode Code, format string, a ...interface{}) CodedError {
 	return NewCodedError(errorCode, fmt.Sprintf(format, a...))
 }
 
 func (e *Exception) AsError() error {
-	// thanks go, you dick
+	// We need to return a bare untyped error here so that err == nil downstream
 	if e == nil {
 		return nil
 	}
 	return e
 }
 
-func (e *Exception) ErrorCode() ErrorCode {
-	return e.Code
-}
-
-func (e *Exception) String() string {
-	return e.Error()
+func (e *Exception) ErrorCode() Code {
+	return Code(e.GetCode().Code)
 }
 
 func (e *Exception) Error() string {
-	return fmt.Sprintf("VM Error %v: %s", e.Code, e.Exception)
+	if e == nil {
+		return ""
+	}
+	return fmt.Sprintf("Error %v: %s", e.Code.Code, e.Exception)
+}
+
+func NewErrorCode(code Code) *ErrorCode {
+	return &ErrorCode{
+		Code: uint32(code),
+	}
+}
+
+func (e ErrorCode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.Code)
+}
+
+func (e *ErrorCode) UnmarshalJSON(bs []byte) error {
+	return json.Unmarshal(bs, &(e.Code))
 }

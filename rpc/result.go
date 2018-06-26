@@ -18,11 +18,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"time"
+
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
-	exeEvents "github.com/hyperledger/burrow/execution/events"
-	evmEvents "github.com/hyperledger/burrow/execution/evm/events"
+	"github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
@@ -43,8 +46,8 @@ func init() {
 }
 
 type ResultGetStorage struct {
-	Key   []byte
-	Value []byte
+	Key   binary.HexBytes
+	Value binary.HexBytes
 }
 
 type ResultCall struct {
@@ -65,13 +68,13 @@ type ResultListAccounts struct {
 }
 
 type ResultDumpStorage struct {
-	StorageRoot  []byte
+	StorageRoot  binary.HexBytes
 	StorageItems []StorageItem
 }
 
 type StorageItem struct {
-	Key   []byte
-	Value []byte
+	Key   binary.HexBytes
+	Value binary.HexBytes
 }
 
 type ResultListBlocks struct {
@@ -111,18 +114,24 @@ func (b *Block) UnmarshalJSON(data []byte) (err error) {
 
 type ResultStatus struct {
 	NodeInfo          p2p.NodeInfo
-	GenesisHash       []byte
+	GenesisHash       binary.HexBytes
 	PubKey            crypto.PublicKey
-	LatestBlockHash   []byte
+	LatestBlockHash   binary.HexBytes
 	LatestBlockHeight uint64
 	LatestBlockTime   int64
 	NodeVersion       string
 }
 
+type ResultLastBlockInfo struct {
+	LastBlockHeight uint64
+	LastBlockTime   time.Time
+	LastBlockHash   binary.HexBytes
+}
+
 type ResultChainId struct {
 	ChainName   string
 	ChainId     string
-	GenesisHash []byte
+	GenesisHash binary.HexBytes
 }
 
 type ResultSubscribe struct {
@@ -238,11 +247,9 @@ func (te *TendermintEvent) EventDataNewBlock() *tmTypes.EventDataNewBlock {
 }
 
 type ResultEvent struct {
-	Event         string
-	Tendermint    *TendermintEvent         `json:",omitempty"`
-	EventDataTx   *exeEvents.EventDataTx   `json:",omitempty"`
-	EventDataCall *evmEvents.EventDataCall `json:",omitempty"`
-	EventDataLog  *evmEvents.EventDataLog  `json:",omitempty"`
+	Event      string
+	Tendermint *TendermintEvent `json:",omitempty"`
+	Execution  *events.Event    `json:",omitempty"`
 }
 
 // Map any supported event data element to our ResultEvent sum type
@@ -253,14 +260,32 @@ func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
 	switch ed := eventData.(type) {
 	case tmTypes.TMEventData:
 		res.Tendermint = &TendermintEvent{ed}
-	case *exeEvents.EventDataTx:
-		res.EventDataTx = ed
-	case *evmEvents.EventDataCall:
-		res.EventDataCall = ed
-	case *evmEvents.EventDataLog:
-		res.EventDataLog = ed
+	case *events.Event:
+		res.Execution = ed
 	default:
 		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
 	}
 	return res, nil
+}
+
+func (re *ResultEvent) GetEvent() (*pbevents.Event, error) {
+	ev := &pbevents.Event{
+		Name: re.Event,
+	}
+	if re.Tendermint != nil {
+		bs, err := json.Marshal(re.Tendermint)
+		if err != nil {
+			return nil, err
+		}
+		ev.Event = &pbevents.Event_TendermintEventJSON{
+			TendermintEventJSON: string(bs),
+		}
+	} else if re.Execution != nil {
+		ev.Event = &pbevents.Event_ExecutionEvent{
+			ExecutionEvent: pbevents.GetExecutionEvent(re.Execution),
+		}
+	} else {
+		return nil, fmt.Errorf("ResultEvent is empty")
+	}
+	return ev, nil
 }

@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/tm/lib/server"
-	"github.com/hyperledger/burrow/rpc/tm/lib/types"
+	"github.com/hyperledger/burrow/rpc/lib/server"
+	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -55,6 +55,9 @@ const (
 	// Private keys and signing
 	GeneratePrivateAccount = "unsafe/gen_priv_account"
 	SignTx                 = "unsafe/sign_tx"
+
+	// Health check
+	LastBlockInfo = "last_block_info"
 )
 
 const SubscriptionTimeout = 5 * time.Second
@@ -106,7 +109,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
 			defer cancel()
 
-			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) bool {
+			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) (stop bool) {
 				keepAlive := wsCtx.TryWriteRPCResponse(types.NewRPCSuccessResponse(
 					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
 				if !keepAlive {
@@ -114,7 +117,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 						"subscription_id", subscriptionID,
 						"event_id", eventID)
 				}
-				return keepAlive
+				return !keepAlive
 			})
 			if err != nil {
 				return nil, err
@@ -175,6 +178,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 
 		// Private account
 		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
+		LastBlockInfo:          server.NewRPCFunc(service.LastBlockInfo, "block_within"),
 	}
 }
 

@@ -14,25 +14,34 @@ type TemplateAccount struct {
 	// Template accounts sharing a name will be merged when merging genesis specs
 	Name string `json:",omitempty" toml:",omitempty"`
 	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address      *crypto.Address   `json:",omitempty" toml:",omitempty"`
-	PublicKey    *crypto.PublicKey `json:",omitempty" toml:",omitempty"`
-	Amount       *uint64           `json:",omitempty" toml:",omitempty"`
-	AmountBonded *uint64           `json:",omitempty" toml:",omitempty"`
-	Permissions  []string          `json:",omitempty" toml:",omitempty"`
-	Roles        []string          `json:",omitempty" toml:",omitempty"`
+	Address     *crypto.Address   `json:",omitempty" toml:",omitempty"`
+	NodeAddress *crypto.Address   `json:",omitempty" toml:",omitempty"`
+	PublicKey   *crypto.PublicKey `json:",omitempty" toml:",omitempty"`
+	Amount      *uint64           `json:",omitempty" toml:",omitempty"`
+	Power       *uint64           `json:",omitempty" toml:",omitempty"`
+	Permissions []string          `json:",omitempty" toml:",omitempty"`
+	Roles       []string          `json:",omitempty" toml:",omitempty"`
 }
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generateNodeKeys bool) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
 	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
-	if ta.AmountBonded == nil {
-		gv.Amount = DefaultAmountBonded
+	if generateNodeKeys && ta.NodeAddress == nil {
+		// If neither PublicKey or Address set then generate a new one
+		address, err := keyClient.Generate("nodekey-"+ta.Name, crypto.CurveTypeEd25519)
+		if err != nil {
+			return nil, err
+		}
+		ta.NodeAddress = &address
+	}
+	if ta.Power == nil {
+		gv.Amount = DefaultPower
 	} else {
-		gv.Amount = *ta.AmountBonded
+		gv.Amount = *ta.Power
 	}
 	if ta.Name == "" {
 		gv.Name = accountNameFromIndex(index)
@@ -45,6 +54,7 @@ func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genes
 		PublicKey: gv.PublicKey,
 		Amount:    gv.Amount,
 	}}
+	gv.NodeAddress = ta.NodeAddress
 	return gv, nil
 }
 

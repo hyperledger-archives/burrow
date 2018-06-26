@@ -3,10 +3,11 @@ package rpc
 import "github.com/hyperledger/burrow/rpc/v0/server"
 
 type RPCConfig struct {
-	V0       *V0Config     `json:",omitempty" toml:",omitempty"`
-	TM       *ServerConfig `json:",omitempty" toml:",omitempty"`
-	Profiler *ServerConfig `json:",omitempty" toml:",omitempty"`
-	GRPC     *ServerConfig `json:",omitempty" toml:",omitempty"`
+	V0       *V0Config      `json:",omitempty" toml:",omitempty"`
+	TM       *ServerConfig  `json:",omitempty" toml:",omitempty"`
+	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
+	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
+	Metrics  *MetricsConfig `json:",omitempty" toml:",omitempty"`
 }
 
 type ServerConfig struct {
@@ -29,12 +30,20 @@ type GRPCConfig struct {
 	ListenAddress string
 }
 
+type MetricsConfig struct {
+	Enabled         bool
+	ListenAddress   string
+	MetricsPath     string
+	BlockSampleSize uint64
+}
+
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
 		TM:       DefaultTMConfig(),
 		V0:       DefaultV0Config(),
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
+		Metrics:  DefaultMetricsConfig(),
 	}
 }
 
@@ -63,5 +72,14 @@ func DefaultProfilerConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       false,
 		ListenAddress: "tcp://localhost:6060",
+	}
+}
+
+func DefaultMetricsConfig() *MetricsConfig {
+	return &MetricsConfig{
+		Enabled:         false,
+		ListenAddress:   "tcp://localhost:9102",
+		MetricsPath:     "/metrics",
+		BlockSampleSize: 100,
 	}
 }

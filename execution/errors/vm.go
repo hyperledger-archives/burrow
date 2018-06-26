@@ -12,7 +12,7 @@ type PermissionDenied struct {
 	Perm types.PermFlag
 }
 
-func (err PermissionDenied) ErrorCode() ErrorCode {
+func (err PermissionDenied) ErrorCode() Code {
 	return ErrorCodePermissionDenied
 }
 
@@ -24,10 +24,10 @@ type NestedCall struct {
 	NestedError CodedError
 	Caller      crypto.Address
 	Callee      crypto.Address
-	StackDepth  int
+	StackDepth  uint64
 }
 
-func (err NestedCall) ErrorCode() ErrorCode {
+func (err NestedCall) ErrorCode() Code {
 	return err.NestedError.ErrorCode()
 }
 
@@ -41,7 +41,7 @@ type Call struct {
 	NestedErrors []NestedCall
 }
 
-func (err Call) ErrorCode() ErrorCode {
+func (err Call) ErrorCode() Code {
 	return err.CallError.ErrorCode()
 }
 

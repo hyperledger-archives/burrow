@@ -15,6 +15,6 @@ func (e LacksSNativePermission) Error() string {
 	return fmt.Sprintf("account %s does not have SNative function call permission: %s", e.Address, e.SNative)
 }
 
-func (e LacksSNativePermission) ErrorCode() ErrorCode {
+func (e LacksSNativePermission) ErrorCode() Code {
 	return ErrorCodeNativeFunction
 }

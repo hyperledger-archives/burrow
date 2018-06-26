@@ -18,16 +18,19 @@ import (
 	"encoding/json"
 	"testing"
 
-	goCrypto "github.com/tendermint/go-crypto"
+	"time"
+
+	"fmt"
 
 	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/go-wire"
+	goCrypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/common"
@@ -43,8 +46,9 @@ func TestResultBroadcastTx(t *testing.T) {
 		},
 	}
 
-	js := string(wire.JSONBytes(res))
-	assert.Equal(t, `{"Receipt":{"TxHash":"666F6F","CreatesContract":true,"ContractAddress":"0002030000000000000000000000000000000000"}}`, js)
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	assert.Equal(t, `{"TxHash":"666F6F","CreatesContract":true,"ContractAddress":"0002030000000000000000000000000000000000"}`, string(bs))
 }
 
 func TestListUnconfirmedTxs(t *testing.T) {
@@ -58,7 +62,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
-	assert.Equal(t, "{\"NumTxs\":3,\"Txs\":[{\"Signatories\":null,\"Tx\":{\"ChainID\":\"testChain\",\"Type\":\"CallTx\",\"Payload\":{\"Input\":null,\"Address\":\"0100000000000000000000000000000000000000\",\"GasLimit\":0,\"Fee\":0,\"Data\":null}}}]}",
+	assert.Equal(t, "{\"NumTxs\":3,\"Txs\":[{\"Signatories\":null,\"Tx\":{\"ChainID\":\"testChain\",\"Type\":\"CallTx\",\"Payload\":{\"Input\":null,\"Address\":\"0100000000000000000000000000000000000000\",\"GasLimit\":0,\"Fee\":0}}}]}",
 		string(bs))
 }
 
@@ -166,4 +170,16 @@ func TestResultDumpConsensusState(t *testing.T) {
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
+}
+
+func TestResultLastBlockInfo(t *testing.T) {
+	res := &ResultLastBlockInfo{
+		LastBlockTime:   time.Now(),
+		LastBlockHash:   binary.HexBytes{3, 4, 5, 6},
+		LastBlockHeight: 2343,
+	}
+	bs, err := json.Marshal(res)
+	require.NoError(t, err)
+	fmt.Println(string(bs))
+
 }

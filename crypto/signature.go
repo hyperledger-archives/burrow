@@ -3,21 +3,13 @@ package crypto
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/binary"
 	"golang.org/x/crypto/ed25519"
 )
 
 type Signature struct {
-	Signature []byte
+	Signature binary.HexBytes
 }
-
-//
-//func (sig *Signature) MarshalJSON() ([]byte, error) {
-//
-//}
-//
-//func (sig *Signature) UnmarshalJSON(data []byte) error {
-//
-//}
 
 // Currently this is a stub that reads the raw bytes returned by key_client and returns
 // an ed25519 signature.

@@ -2,52 +2,75 @@ package event
 
 import (
 	"context"
+
+	"time"
+
 	"fmt"
-	"reflect"
+
+	"github.com/hyperledger/burrow/event/query"
 )
 
 const (
+	EventTypeKey   = "EventType"
 	EventIDKey     = "EventID"
 	MessageTypeKey = "MessageType"
 	TxTypeKey      = "TxType"
 	TxHashKey      = "TxHash"
+	HeightKey      = "Height"
+	IndexKey       = "Index"
+	NameKey        = "Name"
+	PermissionKey  = "Permission"
 	StackDepthKey  = "StackDepth"
+	AddressKey     = "Address"
+	OriginKey      = "Origin"
+	CalleeKey      = "Callee"
+	CallerKey      = "Caller"
+	ValueKey       = "Value"
+	GasKey         = "Gas"
+	ExceptionKey   = "Exception"
+	LogNKeyPrefix  = "Log"
 )
 
-// Get a query that matches events with a specific eventID
-func QueryForEventID(eventID string) *QueryBuilder {
-	// Since we're accepting external output here there is a chance it won't parse...
-	return NewQueryBuilder().AndEquals(EventIDKey, eventID)
+func LogNKey(topic int) string {
+	return fmt.Sprintf("%s%d", LogNKeyPrefix, topic)
 }
 
-func PublishWithEventID(publisher Publisher, eventID string, eventData interface{},
-	extraTags map[string]interface{}) error {
+func LogNTextKey(topic int) string {
+	return fmt.Sprintf("%s%dText", LogNKeyPrefix, topic)
+}
 
-	if extraTags[EventIDKey] != nil {
-		return fmt.Errorf("PublishWithEventID was passed the extraTags with %s already set: %s = '%s'",
-			EventIDKey, EventIDKey, eventID)
-	}
-	tags := map[string]interface{}{
-		EventIDKey:     eventID,
-		MessageTypeKey: reflect.TypeOf(eventData).String(),
-	}
-	for k, v := range extraTags {
-		tags[k] = v
-	}
-	return publisher.Publish(context.Background(), eventData, tags)
+const SubscribeCallbackTimeout = 2 * time.Second
+
+// Get a query that matches events with a specific eventID
+func QueryForEventID(eventID string) *query.Builder {
+	// Since we're accepting external output here there is a chance it won't parse...
+	return query.NewBuilder().AndEquals(EventIDKey, eventID)
 }
 
 // Subscribe to messages matching query and launch a goroutine to run a callback for each one. The goroutine will exit
-// when the context is done or the subscription is removed.
-func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscriber string, query Queryable,
-	callback func(message interface{}) bool) error {
+// if the callback returns true for 'stop' and clean up the subscription and channel.
+func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscriber string, queryable query.Queryable,
+	callback func(message interface{}) (stop bool)) error {
 
-	out := make(chan interface{})
+	out := make(chan interface{}, 1)
+	stopCh := make(chan bool)
+
 	go func() {
 		for msg := range out {
-			if !callback(msg) {
+			go func() {
+				stopCh <- callback(msg)
+			}()
+
+			// Stop unless the callback returns
+			stop := true
+			select {
+			case stop = <-stopCh:
+			case <-time.After(SubscribeCallbackTimeout):
+			}
+
+			if stop {
 				// Callback is requesting stop so unsubscribe and drain channel
-				subscribable.Unsubscribe(context.Background(), subscriber, query)
+				subscribable.Unsubscribe(context.Background(), subscriber, queryable)
 				// Not draining channel can starve other subscribers
 				for range out {
 				}
@@ -55,7 +78,7 @@ func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscribe
 			}
 		}
 	}()
-	err := subscribable.Subscribe(ctx, subscriber, query, out)
+	err := subscribable.Subscribe(ctx, subscriber, queryable, out)
 	if err != nil {
 		// To clean up goroutine - otherwise subscribable should close channel for us
 		close(out)
@@ -63,16 +86,16 @@ func SubscribeCallback(ctx context.Context, subscribable Subscribable, subscribe
 	return err
 }
 
-func PublishAll(ctx context.Context, subscribable Subscribable, subscriber string, query Queryable,
+func PublishAll(ctx context.Context, subscribable Subscribable, subscriber string, queryable query.Queryable,
 	publisher Publisher, extraTags map[string]interface{}) error {
 
-	return SubscribeCallback(ctx, subscribable, subscriber, query, func(message interface{}) bool {
+	return SubscribeCallback(ctx, subscribable, subscriber, queryable, func(message interface{}) (stop bool) {
 		tags := make(map[string]interface{})
 		for k, v := range extraTags {
 			tags[k] = v
 		}
 		// Help! I can't tell which tags the original publisher used - so I can't forward them on
-		publisher.Publish(ctx, message, tags)
-		return true
+		publisher.Publish(ctx, message, TagMap(tags))
+		return
 	})
 }

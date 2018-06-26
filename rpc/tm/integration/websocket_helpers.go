@@ -28,9 +28,9 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/events"
 	"github.com/hyperledger/burrow/rpc"
+	rpcClient "github.com/hyperledger/burrow/rpc/lib/client"
+	rpcTypes "github.com/hyperledger/burrow/rpc/lib/types"
 	tmClient "github.com/hyperledger/burrow/rpc/tm/client"
-	rpcClient "github.com/hyperledger/burrow/rpc/tm/lib/client"
-	rpcTypes "github.com/hyperledger/burrow/rpc/tm/lib/types"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
@@ -250,7 +250,7 @@ func readResponse(r rpcTypes.RPCResponse) (*rpc.ResultEvent, error) {
 //--------------------------------------------------------------------------------
 
 func unmarshalValidateSend(amt uint64, toAddr crypto.Address, resultEvent *rpc.ResultEvent) error {
-	data := resultEvent.EventDataTx
+	data := resultEvent.Execution.GetTx()
 	if data == nil {
 		return fmt.Errorf("event data %v is not EventDataTx", resultEvent)
 	}
@@ -274,7 +274,7 @@ func unmarshalValidateSend(amt uint64, toAddr crypto.Address, resultEvent *rpc.R
 
 func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
-		data := resultEvent.EventDataTx
+		data := resultEvent.Execution.GetTx()
 		if data == nil {
 			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
@@ -300,7 +300,7 @@ func unmarshalValidateTx(amt uint64, returnCode []byte) resultEventChecker {
 
 func unmarshalValidateCall(origin crypto.Address, returnCode []byte, txid *[]byte) resultEventChecker {
 	return func(eventID string, resultEvent *rpc.ResultEvent) (bool, error) {
-		data := resultEvent.EventDataCall
+		data := resultEvent.Execution.Call
 		if data == nil {
 			return true, fmt.Errorf("event data %v is not EventDataTx", *resultEvent)
 		}
@@ -314,9 +314,9 @@ func unmarshalValidateCall(origin crypto.Address, returnCode []byte, txid *[]byt
 		if !bytes.Equal(ret, returnCode) {
 			return true, fmt.Errorf("call did not return correctly. Got %x, expected %x", ret, returnCode)
 		}
-		if !bytes.Equal(data.TxHash, *txid) {
+		if !bytes.Equal(resultEvent.Execution.Header.TxHash, *txid) {
 			return true, fmt.Errorf("TxIDs do not match up! Got %x, expected %x",
-				data.TxHash, *txid)
+				resultEvent.Execution.Header.TxHash, *txid)
 		}
 		return true, nil
 	}

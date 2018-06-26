@@ -88,6 +88,22 @@ func (accs *Accounts) SequentialSigningAccountFromPrivateKey(privateKeyBytes []b
 	}, nil
 }
 
+// Gets signing account from onr of private key or address - failing if both are provided
+func (accs *Accounts) GetSequentialSigningAccount(address, privateKey []byte) (*SequentialSigningAccount, error) {
+	if len(address) > 0 {
+		if len(privateKey) > 0 {
+			return nil, fmt.Errorf("address and private key provided but only one or the other should be given")
+		}
+		address, err := crypto.AddressFromBytes(address)
+		if err != nil {
+			return nil, err
+		}
+		return accs.SequentialSigningAccount(address)
+	}
+
+	return accs.SequentialSigningAccountFromPrivateKey(privateKey)
+}
+
 type UnlockFunc func()
 
 func (ssa *SequentialSigningAccount) Lock() (*SigningAccount, UnlockFunc, error) {

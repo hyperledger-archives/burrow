@@ -30,7 +30,7 @@ type FakeAppState struct {
 	storage  map[string]Word256
 }
 
-var _ state.Writer = &FakeAppState{}
+var _ state.ReaderWriter = &FakeAppState{}
 
 func (fas *FakeAppState) GetAccount(addr crypto.Address) (acm.Account, error) {
 	account := fas.accounts[addr]

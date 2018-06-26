@@ -15,11 +15,10 @@
 package v0
 
 import (
-	"fmt"
+	"context"
 
 	acm "github.com/hyperledger/burrow/account"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
@@ -200,7 +199,7 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 		BROADCAST_TX: func(request *rpc.RPCRequest, requester interface{}) (interface{}, int, error) {
 			// Accept all transaction types as parameter for broadcast.
 			txEnv := new(txs.Envelope)
-			err := codec.DecodeBytesPtr(txEnv, request.Params)
+			err := codec.DecodeBytes(txEnv, request.Params)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -234,7 +233,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Use mempool state so that transact can generate a run of sequence numbers when formulating transactions
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -254,11 +254,13 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			eventDataCall, err := service.Transactor().TransactAndHold(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+			eventDataCall, err := service.Transactor().TransactAndHold(context.Background(), inputAccount, address,
+				param.Data, param.GasLimit, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -275,7 +277,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -296,11 +299,12 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 				return nil, rpc.INVALID_PARAMS, err
 			}
 			// Run Send against mempool state
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			rec, err := service.Transactor().SendAndHold(inputAccount, toAddress, param.Amount)
+			rec, err := service.Transactor().SendAndHold(context.Background(), inputAccount, toAddress, param.Amount)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -312,7 +316,8 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			inputAccount, err := signingAccount(service.MempoolAccounts(), param.InputAccount)
+			inputAccount, err := service.MempoolAccounts().GetSequentialSigningAccount(param.InputAccount.Address,
+				param.InputAccount.PrivateKey)
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
@@ -444,20 +449,4 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			return resultPeers, 0, nil
 		},
 	}
-}
-
-// Gets signing account from onr of private key or address - failing if both are provided
-func signingAccount(accounts *execution.Accounts, inputAccount InputAccount) (*execution.SequentialSigningAccount, error) {
-	if len(inputAccount.Address) > 0 {
-		if len(inputAccount.PrivateKey) > 0 {
-			return nil, fmt.Errorf("privKey and address provided but only one or the other should be given")
-		}
-		address, err := crypto.AddressFromBytes(inputAccount.Address)
-		if err != nil {
-			return nil, err
-		}
-		return accounts.SequentialSigningAccount(address)
-	}
-
-	return accounts.SequentialSigningAccountFromPrivateKey(inputAccount.PrivateKey)
 }
