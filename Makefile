@@ -131,7 +131,7 @@ install_db: build_db
 
 # build burrow-client
 .PHONY: build_client
-build_client: commit_hash protobuf
+build_client: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
