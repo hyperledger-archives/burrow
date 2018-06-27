@@ -173,6 +173,9 @@ test: check
 test_keys: build_db
 	burrow_bin="${REPO}/bin/burrow" keys/test.sh
 
+rpc/test/strange_loop.go: rpc/test/strange_loop.sol
+	@rpc/test/strange_loop.sh
+
 .PHONY: test_integration
 test_integration: test_keys
 	@go test -tags integration ./rpc/rpcevents/integration
