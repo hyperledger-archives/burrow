@@ -7,7 +7,7 @@ contract StrangeLoop {
     bool down = true;
     // indexed puts it in topic
     event ChangeLevel(
-        string direction,
+        bytes32 indexed direction,
         int indexed newDepth);
 
     function UpsieDownsie() public returns (int i) {

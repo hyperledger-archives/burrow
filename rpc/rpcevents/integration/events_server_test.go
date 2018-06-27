@@ -24,6 +24,8 @@ import (
 
 	"encoding/json"
 
+	"strings"
+
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/events"
@@ -80,10 +82,10 @@ func TestEventSubscribeLog(t *testing.T) {
 		func(evs []*pbevents.Event) {
 			require.Len(t, evs, test.UpsieDownsieCallCount-2)
 			log := evs[0].GetExecutionEvent().GetEventDataLog()
-			depth := binary.Int64FromWord256(binary.LeftPadWord256(log.Topics[1]))
-			payload := string(log.Data)
+			depth := binary.Int64FromWord256(binary.LeftPadWord256(log.Topics[2]))
+			direction := strings.TrimRight(string(log.Topics[1]), "\x00")
 			assert.Equal(t, int64(18), depth)
-			assert.Contains(t, payload, "Upsie!")
+			assert.Equal(t, "Upsie!", direction)
 		})
 }
 
