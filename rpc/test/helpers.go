@@ -12,11 +12,8 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tmthrgd/go-hex"
 	"google.golang.org/grpc"
 )
-
-var StrangeLoopBytecode = hex.MustDecodeString(strangeLoopBytecodeHex)
 
 // Recursive call count for UpsieDownsie() function call from strange_loop.sol
 // Equals initial call, then depth from 17 -> 34, one for the bounce, then depth from 34 -> 23,
@@ -75,7 +72,7 @@ func CreateContract(t testing.TB, cli pbtransactor.TransactorClient,
 	create, err := cli.TransactAndHold(context.Background(), &pbtransactor.TransactParam{
 		InputAccount: inputAccount,
 		Address:      nil,
-		Data:         StrangeLoopBytecode,
+		Data:         Bytecode_strange_loop,
 		Fee:          2,
 		GasLimit:     10000,
 	})

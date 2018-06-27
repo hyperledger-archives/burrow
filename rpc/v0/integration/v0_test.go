@@ -66,7 +66,7 @@ func TestTransactCreate(t *testing.T) {
 				create, err := cli.Transact(v0.TransactParam{
 					InputAccount: inputAccount(i),
 					Address:      nil,
-					Data:         test.StrangeLoopBytecode,
+					Data:         test.Bytecode_strange_loop,
 					Fee:          2,
 					GasLimit:     10000,
 				})
@@ -89,7 +89,7 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 		create, err := cli.Transact(v0.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      nil,
-			Data:         test.StrangeLoopBytecode,
+			Data:         test.Bytecode_strange_loop,
 			Fee:          2,
 			GasLimit:     10000,
 		})
@@ -109,7 +109,7 @@ func TestTransactAndHold(t *testing.T) {
 			create, err := cli.TransactAndHold(v0.TransactParam{
 				InputAccount: inputAccount(i),
 				Address:      nil,
-				Data:         test.StrangeLoopBytecode,
+				Data:         test.Bytecode_strange_loop,
 				Fee:          2,
 				GasLimit:     10000,
 			})
