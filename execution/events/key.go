@@ -36,6 +36,10 @@ func (k Key) IsSuccessorOf(p Key) bool {
 	return ph == kh && pi+1 == ki || ph < kh && ki == 0
 }
 
+func (k Key) IncHeight() Key {
+	return NewKey(k.Height()+1, k.Index())
+}
+
 func (k Key) Bytes() []byte {
 	return k
 }

@@ -16,8 +16,13 @@ BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
-PROTO_FILES = $(shell find . -type f -name '*.proto')
+# Protobuf generated go files
+PROTO_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.proto')
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
+
+# Our own Go files containing the compiled bytecode of solidity files as a constant
+SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.sol')
+SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
 ### Formatting, linting and vetting
 
@@ -146,7 +151,6 @@ build_race_db:
 build_race_client:
 	go build -race -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
-
 # Get the Bosmarmot code
 .PHONY: bos
 bos: ./scripts/deps/bos.sh
@@ -164,7 +168,15 @@ docker_build: check commit_hash
 
 ### Testing github.com/hyperledger/burrow
 
-# test burrow
+# Solidity fixtures
+%.sol.go: %.sol scripts/solc_compile_go.sh
+	scripts/solc_compile_go.sh $< $@
+
+.PHONY: solidity
+solidity: $(SOLIDITY_GO_FILES)
+
+# Test
+
 .PHONY: test
 test: check
 	@go test ${PACKAGES_NOVENDOR}

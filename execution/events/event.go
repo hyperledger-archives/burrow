@@ -14,6 +14,7 @@ var cdc = txs.NewAminoCodec()
 var eventMessageTag = event.TagMap{event.MessageTypeKey: reflect.TypeOf(&Event{}).String()}
 
 type Provider interface {
+	// Get events between startKey (inclusive) and endKey (exclusive) - i.e. the half open interval [start, end)
 	GetEvents(startKey, endKey Key, consumer func(*Event) (stop bool)) (stopped bool, err error)
 	LatestEventKey() Key
 }

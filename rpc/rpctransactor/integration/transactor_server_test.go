@@ -67,7 +67,7 @@ func TestTransactCreate(t *testing.T) {
 				create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 					InputAccount: inputAccount(i),
 					Address:      nil,
-					Data:         test.StrangeLoopBytecode,
+					Data:         test.Bytecode_strange_loop,
 					Fee:          2,
 					GasLimit:     10000,
 				})
@@ -89,7 +89,7 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 		create, err := cli.Transact(context.Background(), &pbtransactor.TransactParam{
 			InputAccount: inputAccount(i),
 			Address:      nil,
-			Data:         test.StrangeLoopBytecode,
+			Data:         test.Bytecode_strange_loop,
 			Fee:          2,
 			GasLimit:     10000,
 		})
