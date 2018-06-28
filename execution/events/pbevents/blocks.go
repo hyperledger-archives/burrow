@@ -2,8 +2,10 @@ package pbevents
 
 import "github.com/hyperledger/burrow/execution/events"
 
+// Get bounds suitable for events.Provider
 func (br *BlockRange) Bounds(latestBlockHeight uint64) (startKey, endKey events.Key, streaming bool) {
-	return br.GetStart().Key(latestBlockHeight), br.GetEnd().Key(latestBlockHeight),
+	// End bound is exclusive in state.GetEvents so we increment the height
+	return br.GetStart().Key(latestBlockHeight), br.GetEnd().Key(latestBlockHeight).IncHeight(),
 		br.GetEnd().GetType() == Bound_STREAM
 }
 
