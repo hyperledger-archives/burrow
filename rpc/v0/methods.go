@@ -238,7 +238,9 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
-			receipt, err := service.Transactor().Transact(inputAccount, address, param.Data, param.GasLimit, param.Fee)
+			// We ensure zero value transfer for legacy compatibility reason (i.e. we always have)
+			receipt, err := service.Transactor().Transact(inputAccount, address, param.Data, param.GasLimit, 0,
+				param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}
@@ -259,8 +261,9 @@ func GetMethods(codec rpc.Codec, service *rpc.Service, logger *logging.Logger) m
 			if err != nil {
 				return nil, rpc.INVALID_PARAMS, err
 			}
+			// We ensure zero value transfer for legacy compatibility reason (i.e. we always have)
 			eventDataCall, err := service.Transactor().TransactAndHold(context.Background(), inputAccount, address,
-				param.Data, param.GasLimit, param.Fee)
+				param.Data, param.GasLimit, 0, param.Fee)
 			if err != nil {
 				return nil, rpc.INTERNAL_ERROR, err
 			}

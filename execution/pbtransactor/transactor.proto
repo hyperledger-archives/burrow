@@ -8,13 +8,21 @@ import "github.com/hyperledger/burrow/execution/events/pbevents/events.proto";
 
 // Transaction Service Definition
 service Transactor {
+    // Broadcast a signed and serialised transaction to the mempool
     rpc BroadcastTx (TxParam) returns (TxReceipt);
+    // Perform a 'simulated' call of a contract against the current committed EVM state without any changes been saved
     rpc Call (CallParam) returns (CallResult);
+    // Perform a 'simulated' execution of provided code against the current committed EVM state without any changes been saved
     rpc CallCode (CallCodeParam) returns (CallResult);
+    // Formulate a CallTx transaction signed server-side
     rpc Transact (TransactParam) returns (TxReceipt);
+    // Formulate a CallTx transaction signed server-side and wait for it to be included in a block, retrieving response
     rpc TransactAndHold (TransactParam) returns (pbevents.EventDataCall);
+    // Formulate a SendTx transaction signed server-side
     rpc Send (SendParam) returns (TxReceipt);
+    // Formulate a SendTx transaction signed server-side and wait for it to be included in a block, retrieving response
     rpc SendAndHold (SendParam) returns (TxReceipt);
+    // Sign a transaction server-side
     rpc SignTx (SignTxParam) returns (SignedTx);
 }
 
@@ -32,11 +40,18 @@ message CallCodeParam {
 }
 
 message TransactParam {
+    // The input account to sign with
     InputAccount inputAccount = 1;
+    // The address of the contract to call, or omitted if creating a new contract
     bytes address = 2;
+    // EVM bytecode payload to deliver
     bytes data = 3;
+    // The maximum gas to provide to the EVM when running any code - provided in order to bound the computation time
     uint64 gasLimit = 4;
-    uint64 fee = 5;
+    // Value to transfer, where amount = value + fee
+    uint64 value = 5;
+    // Fee to offer validators for processing transaction
+    uint64 fee = 6;
 }
 
 message SendParam {
