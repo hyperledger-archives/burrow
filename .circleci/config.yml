@@ -4,7 +4,7 @@
 defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
-    - image: quay.io/monax/burrow:ci
+    - image: quay.io/monax/build:burrow-ci
 
 tag_filters: &tags_filters
   tags:
@@ -130,4 +130,3 @@ workflows:
             <<: *tags_filters
             branches:
               only: develop
-
