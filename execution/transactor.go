@@ -192,7 +192,7 @@ func (trans *Transactor) BroadcastTxRaw(txBytes []byte) (*txs.Receipt, error) {
 
 // Orders calls to BroadcastTx using lock (waits for response from core before releasing)
 func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte,
-	gasLimit, fee uint64) (*txs.Receipt, error) {
+	gasLimit, value, fee uint64) (*txs.Receipt, error) {
 
 	// Use the get the freshest sequence numbers from mempool state and hold the lock until we get a response from
 	// CheckTx
@@ -201,8 +201,10 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 		return nil, err
 	}
 	defer unlock()
-
-	txEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	if binary.IsUint64SumOverflow(value, fee) {
+		return nil, fmt.Errorf("amount to transfer overflows uint64 amount = %v (value) + %v (fee)", value, fee)
+	}
+	txEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, value+fee, fee)
 	if err != nil {
 		return nil, err
 	}
@@ -210,15 +212,17 @@ func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAcc
 }
 
 func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
-	address *crypto.Address, data []byte, gasLimit, fee uint64) (*events.EventDataCall, error) {
+	address *crypto.Address, data []byte, gasLimit, value, fee uint64) (*events.EventDataCall, error) {
 
 	inputAccount, unlock, err := sequentialSigningAccount.Lock()
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
-
-	callTxEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
+	if binary.IsUint64SumOverflow(value, fee) {
+		return nil, fmt.Errorf("amount to transfer overflows uint64 amount = %v (value) + %v (fee)", value, fee)
+	}
+	callTxEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, value+fee, fee)
 	if err != nil {
 		return nil, err
 	}
@@ -268,11 +272,11 @@ func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningA
 	}
 }
 func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *crypto.Address, data []byte,
-	gasLimit, fee uint64) (*txs.Envelope, error) {
+	gasLimit, amount, fee uint64) (*txs.Envelope, error) {
 
 	txInput := &payload.TxInput{
 		Address:  inputAccount.Address(),
-		Amount:   fee,
+		Amount:   amount,
 		Sequence: inputAccount.Sequence() + 1,
 	}
 	tx := &payload.CallTx{

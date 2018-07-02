@@ -73,7 +73,7 @@ func (ts *transactorServer) Transact(ctx context.Context, param *pbtransactor.Tr
 	if err != nil {
 		return nil, err
 	}
-	receipt, err := ts.transactor.Transact(inputAccount, address, param.GetData(), param.GetGasLimit(),
+	receipt, err := ts.transactor.Transact(inputAccount, address, param.GetData(), param.GetGasLimit(), param.GetValue(),
 		param.GetFee())
 	if err != nil {
 		return nil, err
@@ -90,8 +90,8 @@ func (ts *transactorServer) TransactAndHold(ctx context.Context, param *pbtransa
 	if err != nil {
 		return nil, err
 	}
-	edt, err := ts.transactor.TransactAndHold(ctx, inputAccount, address, param.GetData(),
-		param.GetGasLimit(), param.GetFee())
+	edt, err := ts.transactor.TransactAndHold(ctx, inputAccount, address, param.GetData(), param.GetGasLimit(),
+		param.GetValue(), param.GetFee())
 	if err != nil {
 		return nil, err
 	}

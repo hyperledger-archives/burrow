@@ -44,6 +44,7 @@ func TestTransactCallNoCode(t *testing.T) {
 			InputAccount: inputAccount(i),
 			Address:      toAddress.Bytes(),
 			Data:         []byte{},
+			Value:        0,
 			Fee:          2,
 			GasLimit:     10000 + uint64(i),
 		})
@@ -68,6 +69,7 @@ func TestTransactCreate(t *testing.T) {
 					InputAccount: inputAccount(i),
 					Address:      nil,
 					Data:         test.Bytecode_strange_loop,
+					Value:        0,
 					Fee:          2,
 					GasLimit:     10000,
 				})
@@ -90,6 +92,7 @@ func BenchmarkTransactCreateContract(b *testing.B) {
 			InputAccount: inputAccount(i),
 			Address:      nil,
 			Data:         test.Bytecode_strange_loop,
+			Value:        0,
 			Fee:          2,
 			GasLimit:     10000,
 		})
