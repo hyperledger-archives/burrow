@@ -50,7 +50,7 @@ type Account struct {
 
 type Validator struct {
 	BasicAccount
-	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty"`
+	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty" yaml:",omitempty"`
 	Name        string
 	UnbondTo    []BasicAccount
 }

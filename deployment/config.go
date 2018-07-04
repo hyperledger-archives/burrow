@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/pkg/errors"
 	"github.com/tmthrgd/go-hex"
+	"gopkg.in/yaml.v2"
 )
 
 type Validator struct {
@@ -44,6 +45,14 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"hex": func(rv reflect.Value) string {
 		return encode(rv, hex.EncodeUpperToString)
+	},
+	"yaml": func(rv interface{}) string {
+		a, _ := yaml.Marshal(rv)
+		return string(a)
+	},
+	"json": func(rv interface{}) string {
+		b, _ := json.Marshal(rv)
+		return string(b)
 	},
 }
 
