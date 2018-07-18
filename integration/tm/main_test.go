@@ -18,6 +18,7 @@
 package tm
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -40,10 +41,14 @@ var clients = map[string]tmClient.RPCClient{
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	returnValue := integration.TestWrapper(rpctest.PrivateAccounts, testConfig, func(k *core.Kernel) int {
-		kern = k
-		return m.Run()
-	})
-
-	os.Exit(returnValue)
+	kern = integration.TestKernel(rpctest.PrivateAccounts, testConfig)
+	err := kern.Boot()
+	if err != nil {
+		panic(err)
+	}
+	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
+	defer func() {
+		kern.Shutdown(context.Background())
+	}()
+	os.Exit(m.Run())
 }

@@ -15,9 +15,10 @@ import (
 func EventStringAccountInput(addr crypto.Address) string  { return fmt.Sprintf("Acc/%s/Input", addr) }
 func EventStringAccountOutput(addr crypto.Address) string { return fmt.Sprintf("Acc/%s/Output", addr) }
 
-func EventStringAccountCall(addr crypto.Address) string { return fmt.Sprintf("Acc/%s/Call", addr) }
-func EventStringLogEvent(addr crypto.Address) string    { return fmt.Sprintf("Log/%s", addr) }
-func EventStringTxExecution(txHash []byte) string       { return fmt.Sprintf("Execution/Tx/%X", txHash) }
+func EventStringAccountCall(addr crypto.Address) string    { return fmt.Sprintf("Acc/%s/Call", addr) }
+func EventStringLogEvent(addr crypto.Address) string       { return fmt.Sprintf("Log/%s", addr) }
+func EventStringTxExecution(txHash []byte) string          { return fmt.Sprintf("Execution/Tx/%X", txHash) }
+func EventStringGovernAccount(addr *crypto.Address) string { return fmt.Sprintf("Govern/Acc/%v", addr) }
 
 func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 	return &TxExecution{
@@ -86,6 +87,13 @@ func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) {
 	txe.Append(&Event{
 		Header: txe.Header(TypeCall, EventStringAccountCall(call.CallData.Callee), exception),
 		Call:   call,
+	})
+}
+
+func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, exception *errors.Exception) {
+	txe.Append(&Event{
+		Header:        txe.Header(TypeCall, EventStringGovernAccount(governAccount.AccountUpdate.Address), exception),
+		GovernAccount: governAccount,
 	})
 }
 

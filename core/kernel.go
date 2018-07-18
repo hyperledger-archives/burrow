@@ -102,10 +102,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(state, blockchain.Tip, logger)
+	checker := execution.NewBatchChecker(state, blockchain, logger)
 
 	emitter := event.NewEmitter(logger)
-	committer := execution.NewBatchCommitter(state, blockchain.Tip, emitter, logger, exeOptions...)
+	committer := execution.NewBatchCommitter(state, blockchain, emitter, logger, exeOptions...)
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
 		kern.Panic, tmLogger)
 	if err != nil {
@@ -204,7 +204,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				if err != nil {
 					return nil, err
 				}
-				listen.Addr()
 
 				grpcServer := rpc.NewGRPCServer(logger)
 				var ks *keys.KeyStore

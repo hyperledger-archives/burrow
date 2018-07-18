@@ -2,121 +2,174 @@ package blockchain
 
 import (
 	"fmt"
-
+	"math/big"
 	"sort"
+	"strings"
 
-	"bytes"
-	"encoding/binary"
-
-	burrowBinary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
 
-// A Validator multiset
+var big0 = big.NewInt(0)
+
+// A Validator multiset - can be used to capture the global state of validators or as an accumulator each block
 type Validators struct {
-	power      map[crypto.Address]uint64
-	publicKey  map[crypto.Address]crypto.PublicKey
-	totalPower uint64
+	powers     map[crypto.Address]*big.Int
+	publicKeys map[crypto.Address]crypto.Addressable
+	totalPower *big.Int
 }
 
-func NewValidators() Validators {
-	return Validators{
-		power:     make(map[crypto.Address]uint64),
-		publicKey: make(map[crypto.Address]crypto.PublicKey),
+type ValidatorSet interface {
+	AlterPower(id crypto.Addressable, power *big.Int) (flow *big.Int, err error)
+}
+
+// Create a new Validators which can act as an accumulator for validator power changes
+func NewValidators() *Validators {
+	return &Validators{
+		totalPower: new(big.Int),
+		powers:     make(map[crypto.Address]*big.Int),
+		publicKeys: make(map[crypto.Address]crypto.Addressable),
 	}
 }
 
-// Add the power of a validator
-func (vs *Validators) AlterPower(publicKey crypto.PublicKey, power uint64) error {
-	address := publicKey.Address()
-	// Remove existing power (possibly 0) from total
-	vs.totalPower -= vs.power[address]
-	if burrowBinary.IsUint64SumOverflow(vs.totalPower, power) {
-		// Undo removing existing power
-		vs.totalPower += vs.power[address]
-		return fmt.Errorf("could not increase total validator power by %v from %v since that would overflow "+
-			"uint64", power, vs.totalPower)
+// Add the power of a validator and returns the flow into that validator
+func (vs *Validators) AlterPower(id crypto.Addressable, power *big.Int) *big.Int {
+	if power.Sign() == -1 {
+		panic("ASRRRH")
 	}
-	vs.publicKey[address] = publicKey
-	vs.power[address] = power
-	// Note we are adjusting by the difference in power (+/-) since we subtracted the previous amount above
-	vs.totalPower += power
-	return nil
+	address := id.Address()
+	// Calculcate flow into this validator (postive means in, negative means out)
+	flow := new(big.Int).Sub(power, vs.Power(id))
+	vs.totalPower.Add(vs.totalPower, flow)
+	if power.Cmp(big0) == 0 {
+		// Remove from set so that we return an accurate length
+		delete(vs.publicKeys, address)
+		delete(vs.powers, address)
+		return flow
+	}
+	vs.publicKeys[address] = crypto.MemoizeAddressable(id)
+	vs.powers[address] = new(big.Int).Set(power)
+	return flow
 }
 
-func (vs *Validators) AddPower(publicKey crypto.PublicKey, power uint64) error {
-	currentPower := vs.power[publicKey.Address()]
-	if burrowBinary.IsUint64SumOverflow(currentPower, power) {
-		return fmt.Errorf("could add power %v to validator %v with power %v because that would overflow uint64",
-			power, publicKey.Address(), currentPower)
-	}
-	return vs.AlterPower(publicKey, vs.power[publicKey.Address()]+power)
+// Adds vsOther to vs
+func (vs *Validators) Add(vsOther *Validators) {
+	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		vs.AddPower(id, power)
+		return
+	})
 }
 
-func (vs *Validators) SubtractPower(publicKey crypto.PublicKey, power uint64) error {
-	currentPower := vs.power[publicKey.Address()]
-	if currentPower < power {
-		return fmt.Errorf("could subtract power %v from validator %v with power %v because that would "+
-			"underflow uint64", power, publicKey.Address(), currentPower)
+func (vs *Validators) AddPower(id crypto.Addressable, power *big.Int) {
+	// Current power + power
+	vs.AlterPower(id, new(big.Int).Add(vs.Power(id), power))
+}
+
+// Subtracts vsOther from vs
+func (vs *Validators) Subtract(vsOther *Validators) {
+	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		vs.SubtractPower(id, power)
+		return
+	})
+}
+
+func (vs *Validators) SubtractPower(id crypto.Addressable, power *big.Int) {
+	// Current power - power
+	thisPower := vs.Power(id)
+	vs.AlterPower(id, new(big.Int).Sub(thisPower, power))
+}
+
+func (vs *Validators) Power(id crypto.Addressable) *big.Int {
+	if vs.powers[id.Address()] == nil {
+		return new(big.Int)
 	}
-	return vs.AlterPower(publicKey, vs.power[publicKey.Address()]-power)
+	return new(big.Int).Set(vs.powers[id.Address()])
+}
+
+func (vs *Validators) Equal(vsOther *Validators) bool {
+	if vs.Count() != vsOther.Count() {
+		return false
+	}
+	// Stop iteration IFF we find a non-matching validator
+	return !vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		otherPower := vsOther.Power(id)
+		if otherPower.Cmp(power) != 0 {
+			return true
+		}
+		return false
+	})
 }
 
 // Iterates over validators sorted by address
-func (vs *Validators) Iterate(iter func(publicKey crypto.PublicKey, power uint64) (stop bool)) (stopped bool) {
-	addresses := make(crypto.Addresses, 0, len(vs.power))
-	for address := range vs.power {
+func (vs *Validators) Iterate(iter func(id crypto.Addressable, power *big.Int) (stop bool)) (stopped bool) {
+	if vs == nil {
+		return
+	}
+	addresses := make(crypto.Addresses, 0, len(vs.powers))
+	for address := range vs.powers {
 		addresses = append(addresses, address)
 	}
 	sort.Sort(addresses)
 	for _, address := range addresses {
-		if iter(vs.publicKey[address], vs.power[address]) {
+		if iter(vs.publicKeys[address], new(big.Int).Set(vs.powers[address])) {
 			return true
 		}
 	}
-	return false
+	return
 }
 
-func (vs *Validators) Length() int {
-	return len(vs.power)
+func (vs *Validators) Count() int {
+	return len(vs.publicKeys)
 }
 
-func (vs *Validators) TotalPower() uint64 {
-	return vs.totalPower
+func (vs *Validators) TotalPower() *big.Int {
+	return new(big.Int).Set(vs.totalPower)
 }
 
-// Uses the fixed width public key encoding to
-func (vs *Validators) Encode() []byte {
-	buffer := new(bytes.Buffer)
-	// varint buffer
-	buf := make([]byte, 8)
-	vs.Iterate(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
-		buffer.Write(publicKey.Encode())
-		buffer.Write(buf[:binary.PutUvarint(buf, power)])
+func (vs *Validators) Copy() *Validators {
+	vsCopy := NewValidators()
+	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		vsCopy.AlterPower(id, power)
 		return
 	})
-	return buffer.Bytes()
+	return vsCopy
 }
 
-// Decodes validators encoded with Encode - expects the exact encoded size with no trailing bytes
-func DecodeValidators(encoded []byte, validators *Validators) error {
-	publicKey := new(crypto.PublicKey)
-	i := 0
-	for i < len(encoded) {
-		n, err := crypto.DecodePublicKeyFixedWidth(encoded[i:], publicKey)
-		if err != nil {
-			return err
-		}
-		i += n
-		power, n := binary.Uvarint(encoded[i:])
-		if n <= 0 {
-			return fmt.Errorf("error decoding uint64 from validators binary encoding")
-		}
-		i += n
-		err = validators.AlterPower(*publicKey, power)
-		if err != nil {
-			return err
-		}
+type PersistedValidator struct {
+	PublicKey  crypto.PublicKey
+	PowerBytes []byte
+}
+
+func (vs *Validators) Persistable() []PersistedValidator {
+	if vs == nil {
+		return nil
 	}
-	return nil
+	pvs := make([]PersistedValidator, 0, vs.Count())
+	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		pvs = append(pvs, PersistedValidator{PublicKey: id.PublicKey(), PowerBytes: power.Bytes()})
+		return
+	})
+	return pvs
+}
+
+func UnpersistValidators(pvs []PersistedValidator) *Validators {
+	vs := NewValidators()
+	for _, pv := range pvs {
+		power := new(big.Int).SetBytes(pv.PowerBytes)
+		vs.AlterPower(pv.PublicKey, power)
+	}
+	return vs
+}
+
+func (vs *Validators) String() string {
+	return fmt.Sprintf("Validators{TotalPower: %v; Count: %v; %v}", vs.TotalPower(), vs.Count(),
+		vs.ValidatorStrings())
+}
+
+func (vs *Validators) ValidatorStrings() string {
+	strs := make([]string, 0, vs.Count())
+	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		strs = append(strs, fmt.Sprintf("%v->%v", id.Address(), power))
+		return
+	})
+	return strings.Join(strs, ", ")
 }

@@ -1,14 +1,13 @@
 package validator
 
 import (
-	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	tm_crypto "github.com/tendermint/go-crypto"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 
 type privValidatorMemory struct {
-	acm.Addressable
+	crypto.Addressable
 	signer         goCryptoSigner
 	lastSignedInfo *LastSignedInfo
 }
@@ -17,7 +16,7 @@ var _ tm_types.PrivValidator = &privValidatorMemory{}
 
 // Create a PrivValidator with in-memory state that takes an addressable representing the validator identity
 // and a signer providing private signing for that identity.
-func NewPrivValidatorMemory(addressable acm.Addressable, signer crypto.Signer) *privValidatorMemory {
+func NewPrivValidatorMemory(addressable crypto.Addressable, signer crypto.Signer) *privValidatorMemory {
 	return &privValidatorMemory{
 		Addressable:    addressable,
 		signer:         asTendermintSigner(signer),

@@ -59,7 +59,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 	}
 	return &GenesisDoc{
 		ChainName:   "TestChain",
-		GenesisTime: time.Unix(1506172037, 0),
+		GenesisTime: time.Unix(1506172037, 0).UTC(),
 		Accounts:    accounts,
 		Validators:  validators,
 	}, privAccounts, privValidators

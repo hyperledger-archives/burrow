@@ -38,7 +38,7 @@ import (
 
 func TestTransactor_BroadcastTxSync(t *testing.T) {
 	chainID := "TestChain"
-	tip := blockchain.NewTip(chainID, time.Time{}, []byte("genesis"))
+	tip := blockchain.NewTip(chainID, time.Time{}, []byte("genesis"), blockchain.NewValidators())
 	logger := logging.NewNoopLogger()
 	evc := event.NewEmitter(logger)
 	txCodec := txs.NewAminoCodec()

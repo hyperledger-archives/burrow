@@ -75,7 +75,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys boo
 	}
 
 	for i, templateAccount := range templateAccounts {
-		account, err := templateAccount.Account(keyClient, i)
+		account, err := templateAccount.GenesisAccount(keyClient, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not create Account from template: %v", err)
 		}

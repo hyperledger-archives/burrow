@@ -55,7 +55,7 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 	}, nil
 }
 
-func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
+func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
 	ga.PublicKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)

@@ -11,6 +11,7 @@ import "errors.proto";
 import "names.proto";
 import "txs.proto";
 import "permission.proto";
+import "spec.proto";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
@@ -33,9 +34,6 @@ message BlockHeader {
 }
 
 message TxExecution {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     // Transaction type
     uint32 TxType = 2 [(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
     // The hash of the transaction that caused this event to be generated
@@ -58,9 +56,6 @@ message TxExecution {
 
 message Header {
     option (gogoproto.goproto_stringer) = false;
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     // Transaction type
     uint32 TxType = 1 [(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
     // The hash of the transaction that caused this event to be generated
@@ -78,22 +73,17 @@ message Header {
 }
 
 message Event {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     option (gogoproto.goproto_stringer) = false;
     Header Header = 1;
     InputEvent Input = 2;
     OutputEvent Output = 3;
     CallEvent Call = 4;
     LogEvent Log = 5;
+    GovernAccountEvent GovernAccount = 6;
 }
 
 // Could structure this further if needed - sum type of various results relevant to different transaction types
 message Result {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     // EVM execution return
     bytes Return = 1;
     // Gas used in computation
@@ -105,42 +95,31 @@ message Result {
 }
 
 message LogEvent {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     bytes Data = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     repeated bytes Topics = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
 }
 
 message CallEvent {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     CallData CallData = 1;
     bytes Origin = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     uint64 StackDepth = 3;
     bytes Return = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }
 
+message GovernAccountEvent {
+    spec.TemplateAccount AccountUpdate = 1;
+}
+
 message InputEvent {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
 }
 
 message OutputEvent {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
 }
 
 message CallData {
-    option (gogoproto.sizer) = true;
-    option (gogoproto.marshaler) = true;
-    option (gogoproto.unmarshaler) = true;
     bytes Caller = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     bytes Callee = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     bytes Data = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];

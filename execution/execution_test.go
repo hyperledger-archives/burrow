@@ -123,15 +123,13 @@ var testChainID = testGenesisDoc.ChainID()
 
 type testExecutor struct {
 	*executor
-	blockchain *bcm.Blockchain
 }
 
 func makeExecutor(state *State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
 	return &testExecutor{
-		executor: newExecutor("makeExecutorCache", true, state, blockchain.Tip, event.NewNoOpPublisher(),
+		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),
-		blockchain: blockchain,
 	}
 }
 
@@ -145,11 +143,8 @@ func (te *testExecutor) signExecuteCommit(tx payload.Payload, signer acm.Address
 	if err != nil {
 		return err
 	}
-	appHash, err := te.Commit(nil)
-	if err != nil {
-		return err
-	}
-	return te.blockchain.CommitBlock(time.Now(), nil, appHash)
+	_, err = te.Commit(nil, time.Now(), nil)
+	return err
 }
 
 func makeUsers(n int) []acm.AddressableSigner {
@@ -1546,7 +1541,7 @@ func TestSelfDestruct(t *testing.T) {
 	tx := payload.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// if we do it again, we won't get an error, but the self-destruct
@@ -1555,7 +1550,8 @@ func TestSelfDestruct(t *testing.T) {
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// commit the block
-	exe.Commit(nil)
+	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
+	require.NoError(t, err)
 
 	// acc2 should receive the sent funds and the contracts balance
 	newAcc2 := getAccount(st, acc2.Address())
@@ -1585,12 +1581,12 @@ func signAndExecute(t *testing.T, shouldFail bool, exe BatchExecutor, chainID st
 }
 
 func execTxWithStateAndBlockchain(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
-	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, blockchain.Tip,
+	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, blockchain,
 		event.NewNoOpPublisher(), logger)
 	if _, err := exe.Execute(txEnv); err != nil {
 		return err
 	} else {
-		_, err := exe.Commit(nil)
+		_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
 		if err != nil {
 			return err
 		}
@@ -1660,7 +1656,7 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	if err != nil {
 		return nil, err
 	}
-	_, err = exe.Commit(nil)
+	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
 	require.NoError(t, err)
 	err = exe.blockchain.CommitBlock(time.Time{}, nil, nil)
 	require.NoError(t, err)

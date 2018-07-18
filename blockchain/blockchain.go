@@ -16,15 +16,15 @@ package blockchain
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"time"
-
+	"math/big"
 	"sync"
+	"time"
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -39,7 +39,7 @@ type TipInfo interface {
 	LastBlockTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
-	IterateValidators(iter func(publicKey crypto.PublicKey, power uint64) (stop bool)) (stopped bool)
+	IterateValidators(iter func(id crypto.Addressable, power *big.Int) (stop bool)) (stopped bool)
 	NumValidators() int
 }
 
@@ -60,8 +60,7 @@ type Tip struct {
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
 	appHashAfterLastBlock []byte
-	validators            Validators
-	validatorsWindow      ValidatorsWindow
+	validators            *ValidatorsRing
 }
 
 type Blockchain struct {
@@ -71,10 +70,13 @@ type Blockchain struct {
 	db dbm.DB
 }
 
+var _ TipInfo = &Blockchain{}
+
 type PersistedState struct {
 	AppHashAfterLastBlock []byte
 	LastBlockHeight       uint64
 	GenesisDoc            genesis.GenesisDoc
+	Validators            PersistedValidatorsRing
 }
 
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
@@ -103,13 +105,15 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc,
 
 // Pointer to blockchain state initialised from genesis
 func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
+	vs := NewValidators()
+	for _, gv := range genesisDoc.Validators {
+		vs.AlterPower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
+	}
+	root := NewRoot(genesisDoc)
 	bc := &Blockchain{
 		db:   db,
-		Root: NewRoot(genesisDoc),
-		Tip:  NewTip(genesisDoc.ChainID(), NewRoot(genesisDoc).genesisDoc.GenesisTime, NewRoot(genesisDoc).genesisHash),
-	}
-	for _, gv := range genesisDoc.Validators {
-		bc.validators.AlterPower(gv.PublicKey, gv.Amount)
+		Root: root,
+		Tip:  NewTip(genesisDoc.ChainID(), root.genesisDoc.GenesisTime, root.genesisHash, vs),
 	}
 	return bc
 }
@@ -119,13 +123,11 @@ func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	if len(buf) == 0 {
 		return nil, nil
 	}
-	persistedState, err := Decode(buf)
+	bc, err := DecodeBlockchain(buf)
 	if err != nil {
 		return nil, err
 	}
-	bc := newBlockchain(db, &persistedState.GenesisDoc)
-	bc.lastBlockHeight = persistedState.LastBlockHeight
-	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
+	bc.db = db
 	return bc, nil
 }
 
@@ -137,14 +139,17 @@ func NewRoot(genesisDoc *genesis.GenesisDoc) *Root {
 }
 
 // Create genesis Tip
-func NewTip(chainID string, genesisTime time.Time, genesisHash []byte) *Tip {
+func NewTip(chainID string, genesisTime time.Time, genesisHash []byte, initialValidators *Validators) *Tip {
 	return &Tip{
 		chainID:               chainID,
 		lastBlockTime:         genesisTime,
 		appHashAfterLastBlock: genesisHash,
-		validators:            NewValidators(),
-		validatorsWindow:      NewValidatorsWindow(DefaultValidatorsWindowSize),
+		validators:            NewValidatorsRing(initialValidators, DefaultValidatorsWindowSize),
 	}
+}
+
+func (bc *Blockchain) AlterPower(id crypto.Addressable, power *big.Int) (*big.Int, error) {
+	return bc.validators.AlterPower(id, power)
 }
 
 func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
@@ -156,6 +161,14 @@ func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte
 	err := bc.save()
 	if err != nil {
 		return err
+	}
+	maxFlow := bc.validators.MaxFlow()
+	// Update validator set
+	_, totalFlow := bc.validators.Rotate()
+	if totalFlow.Cmp(maxFlow) == 1 {
+		return fmt.Errorf("total flow during block was %v exceeding the maximum allowablw flow of %v - this "+
+			"should have been prevented on a per transaction basis - we cannot continue",
+			totalFlow, maxFlow)
 	}
 	bc.lastBlockHeight += 1
 	bc.lastBlockTime = blockTime
@@ -175,26 +188,33 @@ func (bc *Blockchain) save() error {
 	return nil
 }
 
+var cdc = amino.NewCodec()
+
 func (bc *Blockchain) Encode() ([]byte, error) {
 	persistedState := &PersistedState{
 		GenesisDoc:            bc.genesisDoc,
 		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
 		LastBlockHeight:       bc.lastBlockHeight,
+		Validators:            bc.validators.Persistable(),
 	}
-	encodedState, err := json.Marshal(persistedState)
+	encodedState, err := cdc.MarshalBinary(persistedState)
 	if err != nil {
 		return nil, err
 	}
 	return encodedState, nil
 }
 
-func Decode(encodedState []byte) (*PersistedState, error) {
+func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
 	persistedState := new(PersistedState)
-	err := json.Unmarshal(encodedState, persistedState)
+	err := cdc.UnmarshalBinary(encodedState, persistedState)
 	if err != nil {
 		return nil, err
 	}
-	return persistedState, nil
+	bc := newBlockchain(nil, &persistedState.GenesisDoc)
+	bc.lastBlockHeight = persistedState.LastBlockHeight
+	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
+	bc.validators = UnpersistValidatorsRing(persistedState.Validators)
+	return bc, nil
 }
 
 func (r *Root) GenesisHash() []byte {
@@ -225,10 +245,14 @@ func (t *Tip) AppHashAfterLastBlock() []byte {
 	return t.appHashAfterLastBlock
 }
 
-func (t *Tip) IterateValidators(iter func(publicKey crypto.PublicKey, power uint64) (stop bool)) (stopped bool) {
-	return t.validators.Iterate(iter)
+func (t *Tip) Validators() *Validators {
+	return t.validators.Prev().Copy()
+}
+
+func (t *Tip) IterateValidators(iter func(id crypto.Addressable, power *big.Int) (stop bool)) (stopped bool) {
+	return t.validators.Prev().Copy().Iterate(iter)
 }
 
 func (t *Tip) NumValidators() int {
-	return t.validators.Length()
+	return t.validators.Prev().Count()
 }

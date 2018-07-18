@@ -1,4 +1,4 @@
-package executors
+package contexts
 
 import (
 	"fmt"
@@ -189,10 +189,10 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm perm
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
-	logger *logging.Logger) bool {
+func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFlag,
+	accs map[crypto.Address]*acm.MutableAccount, logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, permission.Send, logger) {
+		if !HasPermission(accountGetter, acc, perm, logger) {
 			return false
 		}
 	}

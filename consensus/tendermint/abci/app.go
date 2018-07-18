@@ -2,6 +2,7 @@ package abci
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -82,13 +83,55 @@ func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.Resp
 }
 
 func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciTypes.ResponseInitChain) {
-	// Could verify agreement on initial validator set here
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
+		}
+	}()
+	err := app.checkValidatorsMatch(chain.Validators)
+	if err != nil {
+		app.logger.InfoMsg("Initial validator set mistmatch", structure.ErrorKey, err)
+		panic(err)
+	}
+	app.logger.InfoMsg("Initial validator set matches")
 	return
 }
 
 func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock abciTypes.ResponseBeginBlock) {
 	app.block = &block
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/BeginBlock: %v\n%s", r, debug.Stack()))
+		}
+	}()
+	if block.Header.Height > 1 {
+		validators := make([]abciTypes.Validator, len(block.Validators))
+		for i, v := range block.Validators {
+			validators[i] = v.Validator
+		}
+		err := app.checkValidatorsMatch(validators)
+		if err != nil {
+			panic(err)
+		}
+	}
 	return
+}
+
+func (app *App) checkValidatorsMatch(validators []abciTypes.Validator) error {
+	tendermintValidators := bcm.NewValidators()
+	for _, v := range validators {
+		publicKey, err := crypto.PublicKeyFromABCIPubKey(v.PubKey)
+		if err != nil {
+			panic(err)
+		}
+		tendermintValidators.AlterPower(publicKey, big.NewInt(v.Power))
+	}
+	burrowValidators := app.blockchain.Validators()
+	if !burrowValidators.Equal(tendermintValidators) {
+		return fmt.Errorf("validators provided by Tendermint at InitChain do not match those held by Burrow: "+
+			"Tendermint gives: %v, Burrow gives: %v", tendermintValidators, burrowValidators)
+	}
+	return nil
 }
 
 func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
@@ -163,13 +206,13 @@ func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger 
 }
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
-	// Validator mutation goes here
 	var validatorUpdates abciTypes.Validators
-	app.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
+	app.blockchain.IterateValidators(func(id crypto.Addressable, power *big.Int) (stop bool) {
 		validatorUpdates = append(validatorUpdates, abciTypes.Validator{
-			Address: publicKey.Address().Bytes(),
-			PubKey:  publicKey.ABCIPubKey(),
-			Power:   int64(power),
+			Address: id.Address().Bytes(),
+			PubKey:  id.PublicKey().ABCIPubKey(),
+			// Must be ensured during execution
+			Power: power.Int64(),
 		})
 		return
 	})
@@ -184,13 +227,14 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Commit: %v\n%s", r, debug.Stack()))
 		}
 	}()
+	blockTime := time.Unix(app.block.Header.Time, 0)
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
 		"height", app.block.Header.Height,
 		"hash", app.block.Hash,
 		"txs", app.block.Header.NumTxs,
-		"block_time", app.block.Header.Time, // [CSK] this sends a fairly non-sensical number; should be human readable
+		"block_time", blockTime,
 		"last_block_time", app.blockchain.Tip.LastBlockTime(),
 		"last_block_hash", app.blockchain.Tip.LastBlockHash())
 
@@ -219,19 +263,9 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		}
 	}()
 
-	// First commit the app start, this app hash will not get checkpointed until the next block when we are sure
-	// that nothing in the downstream commit process could have failed. At worst we go back one block.
-	blockHeader := app.block.Header
-	appHash, err := app.committer.Commit(&blockHeader)
+	appHash, err := app.committer.Commit(app.block.Hash, blockTime, &app.block.Header)
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
-	}
-
-	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
-	// (we know the previous app hash is safely committed because we are about to commit the next)
-	err = app.blockchain.CommitBlock(time.Unix(int64(app.block.Header.Time), 0), app.block.Hash, appHash)
-	if err != nil {
-		panic(errors.Wrap(err, "could not commit block to blockchain state"))
 	}
 
 	err = app.checker.Reset()
@@ -239,17 +273,6 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		panic(errors.Wrap(err, "could not reset check cache during commit"))
 	}
 
-	// Perform a sanity check our block height
-	if app.blockchain.LastBlockHeight() != uint64(app.block.Header.Height) {
-		app.logger.InfoMsg("Burrow block height disagrees with Tendermint block height",
-			structure.ScopeKey, "Commit()",
-			"burrow_height", app.blockchain.LastBlockHeight(),
-			"tendermint_height", app.block.Header.Height)
-
-		panic(fmt.Errorf("burrow has recorded a block height of %v, "+
-			"but Tendermint reports a block height of %v, and the two should agree",
-			app.blockchain.LastBlockHeight(), app.block.Header.Height))
-	}
 	return abciTypes.ResponseCommit{
 		Data: appHash,
 	}

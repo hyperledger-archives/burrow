@@ -7,7 +7,7 @@ import (
 )
 
 type Validator interface {
-	Addressable
+	crypto.Addressable
 	// The validator's voting power
 	Power() uint64
 }

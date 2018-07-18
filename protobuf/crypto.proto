@@ -16,7 +16,7 @@ option (gogoproto.messagename_all) = true;
 message PublicKey {
     option (gogoproto.goproto_stringer) = false;
     uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
-    bytes PublicKey = 2;
+    bytes Key = 2;
 }
 
 message PrivateKey {
@@ -25,5 +25,5 @@ message PrivateKey {
     uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
     // Note may need initialisation
     bytes PublicKey = 2;
-    bytes PrivateKey = 3;
+    bytes Key = 3;
 }

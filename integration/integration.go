@@ -59,7 +59,7 @@ const startingPortBuckets = 1000
 var port = uint32(startingPort)
 
 // We use this to wrap tests
-func TestWrapper(privateAccounts []*acm.PrivateAccount, testConfig *config.BurrowConfig, runner func(*core.Kernel) int) int {
+func TestKernel(privateAccounts []*acm.PrivateAccount, testConfig *config.BurrowConfig) *core.Kernel {
 	fmt.Println("Running with integration TestWrapper (core/integration/integration.go)...")
 
 	os.RemoveAll(testDir)
@@ -101,17 +101,8 @@ func TestWrapper(privateAccounts []*acm.PrivateAccount, testConfig *config.Burro
 	if err != nil {
 		panic(err)
 	}
-	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
-	defer func() {
-		kernel.Shutdown(context.Background())
-	}()
 
-	err = kernel.Boot()
-	if err != nil {
-		panic(err)
-	}
-
-	return runner(kernel)
+	return kernel
 }
 
 func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {

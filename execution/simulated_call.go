@@ -9,9 +9,9 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/contexts"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/execution/executors"
 	"github.com/hyperledger/burrow/logging"
 )
 
@@ -70,6 +70,6 @@ func vmParams(tip blockchain.TipInfo) evm.Params {
 		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),
 		BlockTime:   tip.LastBlockTime().Unix(),
-		GasLimit:    executors.GasLimit,
+		GasLimit:    contexts.GasLimit,
 	}
 }

@@ -17,6 +17,7 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
@@ -323,11 +324,11 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
 	concreteValidators := make([]*acm.ConcreteValidator, 0, s.blockchain.NumValidators())
-	s.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
+	s.blockchain.IterateValidators(func(id crypto.Addressable, power *big.Int) (stop bool) {
 		concreteValidators = append(concreteValidators, &acm.ConcreteValidator{
-			Address:   publicKey.Address(),
-			PublicKey: publicKey,
-			Power:     power,
+			Address:   id.Address(),
+			PublicKey: id.PublicKey(),
+			Power:     power.Uint64(),
 		})
 		return
 	})

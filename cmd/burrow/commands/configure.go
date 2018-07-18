@@ -155,7 +155,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 						if nodeKey {
 							privKey := tm_crypto.GenPrivKeyEd25519()
-							copy(privKey[:], key.PrivateKey.PrivateKey)
+							copy(privKey[:], key.PrivateKey.Key)
 							nodeKey := &p2p.NodeKey{
 								PrivKey: privKey,
 							}

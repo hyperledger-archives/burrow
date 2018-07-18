@@ -66,10 +66,10 @@ type GenesisDoc struct {
 	Validators        []Validator
 }
 
-// JSONBytes returns the JSON (not-yet) canonical bytes for a given
-// GenesisDoc or an error.
+// JSONBytes returns the JSON canonical bytes for a given GenesisDoc or an error.
 func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
-	// TODO: write JSON in canonical order
+	// Just in case
+	genesisDoc.GenesisTime = genesisDoc.GenesisTime.UTC()
 	return json.MarshalIndent(genesisDoc, "", "\t")
 }
 

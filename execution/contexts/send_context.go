@@ -1,4 +1,4 @@
-package executors
+package contexts
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
@@ -30,7 +31,7 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// ensure all inputs have send permissions
-	if !hasSendPermission(ctx.StateWriter, accounts, ctx.Logger) {
+	if !allHavePermission(ctx.StateWriter, permission.Send, accounts, ctx.Logger) {
 		return fmt.Errorf("at least one input lacks permission for SendTx")
 	}
 
