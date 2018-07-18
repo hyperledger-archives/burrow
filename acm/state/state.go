@@ -1,10 +1,10 @@
 package state
 
 import (
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 type AccountGetter interface {
@@ -81,7 +81,7 @@ type IterableReaderWriter interface {
 	Writer
 }
 
-func GetMutableAccount(getter AccountGetter, address crypto.Address) (acm.MutableAccount, error) {
+func GetMutableAccount(getter AccountGetter, address crypto.Address) (*acm.MutableAccount, error) {
 	acc, err := getter.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -98,9 +98,9 @@ func GlobalPermissionsAccount(getter AccountGetter) acm.Account {
 }
 
 // Get global permissions from the account at GlobalPermissionsAddress
-func GlobalAccountPermissions(getter AccountGetter) ptypes.AccountPermissions {
+func GlobalAccountPermissions(getter AccountGetter) permission.AccountPermissions {
 	if getter == nil {
-		return ptypes.AccountPermissions{
+		return permission.AccountPermissions{
 			Roles: []string{},
 		}
 	}

@@ -3,7 +3,7 @@ package state
 import (
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )

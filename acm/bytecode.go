@@ -1,4 +1,4 @@
-package account
+package acm
 
 import (
 	"encoding/json"
@@ -62,6 +62,24 @@ func (bc *Bytecode) UnmarshalText(text []byte) error {
 	*bc = make([]byte, hex.DecodedLen(len(text)))
 	_, err := hex.Decode(*bc, text)
 	return err
+}
+
+// Protobuf support
+func (bc Bytecode) Marshal() ([]byte, error) {
+	return bc, nil
+}
+
+func (bc *Bytecode) Unmarshal(data []byte) error {
+	*bc = data
+	return nil
+}
+
+func (bc Bytecode) MarshalTo(data []byte) (int, error) {
+	return copy(data, bc), nil
+}
+
+func (bc Bytecode) Size() int {
+	return len(bc)
 }
 
 // Tokenises the bytecode into opcodes and values
