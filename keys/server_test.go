@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
-	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"google.golang.org/grpc"
@@ -52,7 +51,7 @@ func init() {
 	}
 }
 
-func grpcKeysClient() pbkeys.KeysClient {
+func grpcKeysClient() KeysClient {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	conn, err := grpc.Dial(DefaultHost+":"+TestPort, opts...)
@@ -60,7 +59,7 @@ func grpcKeysClient() pbkeys.KeysClient {
 		fmt.Printf("Failed to connect to grpc server: %v\n", err)
 		os.Exit(1)
 	}
-	return pbkeys.NewKeysClient(conn)
+	return NewKeysClient(conn)
 }
 
 func checkAddrFromPub(typ string, pub, addr []byte) error {
@@ -90,12 +89,12 @@ func testServerKeygenAndPub(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	genresp, err := c.GenerateKey(ctx, &pbkeys.GenRequest{Curvetype: typ})
+	genresp, err := c.GenerateKey(ctx, &GenRequest{CurveType: typ})
 	if err != nil {
 		t.Fatal(err)
 	}
 	addr := genresp.Address
-	resp, err := c.PublicKey(ctx, &pbkeys.PubRequest{Address: addr})
+	resp, err := c.PublicKey(ctx, &PubRequest{Address: addr})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +102,7 @@ func testServerKeygenAndPub(t *testing.T, typ string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = checkAddrFromPub(typ, resp.GetPub(), addrB[:]); err != nil {
+	if err = checkAddrFromPub(typ, resp.GetPublicKey(), addrB[:]); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -118,23 +117,27 @@ func testServerSignAndVerify(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	genresp, err := c.GenerateKey(ctx, &pbkeys.GenRequest{Curvetype: typ})
+	genresp, err := c.GenerateKey(ctx, &GenRequest{CurveType: typ})
 	if err != nil {
 		t.Fatal(err)
 	}
 	addr := genresp.Address
-	resp, err := c.PublicKey(ctx, &pbkeys.PubRequest{Address: addr})
+	resp, err := c.PublicKey(ctx, &PubRequest{Address: addr})
 	if err != nil {
 		t.Fatal(err)
 	}
 	hash := sha3.Sha3([]byte("the hash of something!"))
 
-	sig, err := c.Sign(ctx, &pbkeys.SignRequest{Address: addr, Message: hash})
+	sig, err := c.Sign(ctx, &SignRequest{Address: addr, Message: hash})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = c.Verify(ctx, &pbkeys.VerifyRequest{Signature: sig.GetSignature(), Pub: resp.GetPub(), Message: hash, Curvetype: typ})
+	_, err = c.Verify(ctx, &VerifyRequest{
+		Signature: sig.GetSignature(),
+		PublicKey: resp.GetPublicKey(),
+		Message:   hash,
+		CurveType: typ})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +156,7 @@ func testServerHash(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	resp, err := c.Hash(ctx, &pbkeys.HashRequest{Hashtype: typ, Message: []byte(data)})
+	resp, err := c.Hash(ctx, &HashRequest{Hashtype: typ, Message: []byte(data)})
 	if err != nil {
 		t.Fatal(err)
 	}

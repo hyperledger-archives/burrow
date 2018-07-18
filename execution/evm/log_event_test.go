@@ -15,20 +15,17 @@
 package evm
 
 import (
-	"bytes"
-	"context"
-	"reflect"
 	"testing"
-	"time"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"bytes"
+	"reflect"
+
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,13 +53,8 @@ func TestLog4(t *testing.T) {
 
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
-	emitter := event.NewEmitter(logging.NewNoopLogger())
-
-	ch := make(chan *events.EventDataLog)
-
-	require.NoError(t, events.SubscribeLogEvent(context.Background(), emitter, "test", account2.Address(), ch))
-
-	ourVm.SetPublisher(emitter)
+	txe := new(exec.TxExecution)
+	ourVm.SetEventSink(txe)
 
 	var gas uint64 = 100000
 
@@ -87,18 +79,20 @@ func TestLog4(t *testing.T) {
 
 	_, err := ourVm.Call(cache, account1, account2, code, []byte{}, 0, &gas)
 	require.NoError(t, err)
-	select {
-	case <-time.After(5 * time.Second):
-		t.Fatalf("timedout waiting for EventDataLog")
-	case eventDataLog := <-ch:
-		if !reflect.DeepEqual(eventDataLog.Topics, expectedTopics) {
-			t.Errorf("Event topics are wrong. Got: %v. Expected: %v", eventDataLog.Topics, expectedTopics)
-		}
-		if !bytes.Equal(eventDataLog.Data, expectedData) {
-			t.Errorf("Event data is wrong. Got: %s. Expected: %s", eventDataLog.Data, expectedData)
-		}
-		if eventDataLog.Height != expectedHeight {
-			t.Errorf("Event block height is wrong. Got: %d. Expected: %d", eventDataLog.Height, expectedHeight)
+
+	for _, ev := range txe.Events {
+		if ev.Log != nil {
+			if !reflect.DeepEqual(ev.Log.Topics, expectedTopics) {
+				t.Errorf("Event topics are wrong. Got: %v. Expected: %v", ev.Log.Topics, expectedTopics)
+			}
+			if !bytes.Equal(ev.Log.Data, expectedData) {
+				t.Errorf("Event data is wrong. Got: %s. Expected: %s", ev.Log.Data, expectedData)
+			}
+			if ev.Header.Height != expectedHeight {
+				t.Errorf("Event block height is wrong. Got: %d. Expected: %d", ev.Header.Height, expectedHeight)
+			}
+			return
 		}
 	}
+	t.Fatalf("Did not see LogEvent")
 }

@@ -16,7 +16,7 @@ Admin Txs:
  - PermissionsTx
 */
 
-type Type int8
+type Type uint32
 
 // Types of Payload implementations
 const (
@@ -75,10 +75,21 @@ func (typ *Type) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// Protobuf support
+func (typ Type) Marshal() ([]byte, error) {
+	return typ.MarshalText()
+}
+
+func (typ *Type) Unmarshal(data []byte) error {
+	return typ.UnmarshalText(data)
+}
+
 type Payload interface {
 	String() string
 	GetInputs() []*TxInput
 	Type() Type
+	// The serialised size in bytes
+	Size() int
 }
 
 func New(txType Type) Payload {

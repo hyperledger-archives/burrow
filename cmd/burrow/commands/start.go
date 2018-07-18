@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 )
 
 func Start(output Output) func(cmd *cli.Cmd) {

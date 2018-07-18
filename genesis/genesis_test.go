@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )

@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 const DefaultAmount uint64 = 1000000
@@ -62,7 +61,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys boo
 		if err != nil {
 			return nil, err
 		}
-		genesisDoc.GlobalPermissions = ptypes.AccountPermissions{
+		genesisDoc.GlobalPermissions = permission.AccountPermissions{
 			Base: basePerms,
 		}
 	}

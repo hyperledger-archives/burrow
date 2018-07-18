@@ -1,7 +1,7 @@
 package validator
 
 import (
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	tm_crypto "github.com/tendermint/go-crypto"
 	tm_types "github.com/tendermint/tendermint/types"

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 
 	"github.com/pkg/errors"
@@ -55,7 +55,7 @@ func newKey(name string) (*Key, error) {
 	return key, nil
 }
 
-func mockKeyFromPrivateAccount(privateAccount acm.PrivateAccount) *Key {
+func mockKeyFromPrivateAccount(privateAccount *acm.PrivateAccount) *Key {
 	if privateAccount.PrivateKey().CurveType != crypto.CurveTypeEd25519 {
 		panic(fmt.Errorf("mock key client only supports ed25519 private keys at present"))
 	}

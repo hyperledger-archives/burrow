@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"encoding/json"
+	"runtime/debug"
 
 	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
@@ -26,11 +26,13 @@ type App struct {
 	blockchain    *bcm.Blockchain
 	checker       execution.BatchExecutor
 	committer     execution.BatchCommitter
+	checkTx       func(txBytes []byte) abciTypes.ResponseCheckTx
+	deliverTx     func(txBytes []byte) abciTypes.ResponseCheckTx
 	mempoolLocker sync.Locker
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
 	block *abciTypes.RequestBeginBlock
-	// Utility
-	txDecoder txs.Decoder
+	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
+	panicFunc func(error)
 	// Logging
 	logger *logging.Logger
 }
@@ -38,12 +40,14 @@ type App struct {
 var _ abciTypes.Application = &App{}
 
 func NewApp(blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
-	txDecoder txs.Decoder, logger *logging.Logger) *App {
+	txDecoder txs.Decoder, panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
-		txDecoder:  txDecoder,
+		checkTx:    txExecutor(checker, txDecoder, logger.WithScope("CheckTx")),
+		deliverTx:  txExecutor(committer, txDecoder, logger.WithScope("DeliverTx")),
+		panicFunc:  panicFunc,
 		logger:     logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App"),
 	}
 }
@@ -77,50 +81,6 @@ func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.Resp
 	return
 }
 
-func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
-	txEnv, err := app.txDecoder.DecodeTx(txBytes)
-	if err != nil {
-		app.logger.TraceMsg("CheckTx decoding error",
-			"tag", "CheckTx",
-			structure.ErrorKey, err)
-		return abciTypes.ResponseCheckTx{
-			Code: codes.EncodingErrorCode,
-			Log:  fmt.Sprintf("Encoding error: %s", err),
-		}
-	}
-	receipt := txEnv.Tx.GenerateReceipt()
-
-	err = app.checker.Execute(txEnv)
-	if err != nil {
-		app.logger.TraceMsg("CheckTx execution error",
-			structure.ErrorKey, err,
-			"tag", "CheckTx",
-			"tx_hash", receipt.TxHash,
-			"creates_contract", receipt.CreatesContract)
-		return abciTypes.ResponseCheckTx{
-			Code: codes.EncodingErrorCode,
-			Log:  fmt.Sprintf("CheckTx could not execute transaction: %s, error: %v", txEnv, err),
-		}
-	}
-
-	receiptBytes, err := json.Marshal(receipt)
-	if err != nil {
-		return abciTypes.ResponseCheckTx{
-			Code: codes.TxExecutionErrorCode,
-			Log:  fmt.Sprintf("CheckTx could not serialise receipt: %s", err),
-		}
-	}
-	app.logger.TraceMsg("CheckTx success",
-		"tag", "CheckTx",
-		"tx_hash", receipt.TxHash,
-		"creates_contract", receipt.CreatesContract)
-	return abciTypes.ResponseCheckTx{
-		Code: codes.TxExecutionSuccessCode,
-		Log:  "CheckTx success - receipt in data",
-		Data: receiptBytes,
-	}
-}
-
 func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciTypes.ResponseInitChain) {
 	// Could verify agreement on initial validator set here
 	return
@@ -131,47 +91,74 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 	return
 }
 
+func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
+		}
+	}()
+	return app.checkTx(txBytes)
+}
+
 func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
-	txEnv, err := app.txDecoder.DecodeTx(txBytes)
-	if err != nil {
-		app.logger.TraceMsg("DeliverTx decoding error",
-			"tag", "DeliverTx",
-			structure.ErrorKey, err)
-		return abciTypes.ResponseDeliverTx{
-			Code: codes.EncodingErrorCode,
-			Log:  fmt.Sprintf("Encoding error: %s", err),
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/DeliverTx: %v\n%s", r, debug.Stack()))
 		}
-	}
-
-	receipt := txEnv.Tx.GenerateReceipt()
-	err = app.committer.Execute(txEnv)
-	if err != nil {
-		app.logger.TraceMsg("DeliverTx execution error",
-			structure.ErrorKey, err,
-			"tag", "DeliverTx",
-			"tx_hash", receipt.TxHash,
-			"creates_contract", receipt.CreatesContract)
-		return abciTypes.ResponseDeliverTx{
-			Code: codes.TxExecutionErrorCode,
-			Log:  fmt.Sprintf("DeliverTx could not execute transaction: %s, error: %s", txEnv, err),
-		}
-	}
-
-	app.logger.TraceMsg("DeliverTx success",
-		"tag", "DeliverTx",
-		"tx_hash", receipt.TxHash,
-		"creates_contract", receipt.CreatesContract)
-	receiptBytes, err := json.Marshal(receipt)
-	if err != nil {
-		return abciTypes.ResponseDeliverTx{
-			Code: codes.TxExecutionErrorCode,
-			Log:  fmt.Sprintf("DeliverTx could not serialise receipt: %s", err),
-		}
-	}
+	}()
+	ctr := app.deliverTx(txBytes)
+	// Currently these message types are identical, if they are ever different can map between
 	return abciTypes.ResponseDeliverTx{
-		Code: codes.TxExecutionSuccessCode,
-		Log:  "DeliverTx success - receipt in data",
-		Data: receiptBytes,
+		Code:      ctr.Code,
+		Log:       ctr.Log,
+		Data:      ctr.Data,
+		Tags:      ctr.Tags,
+		Fee:       ctr.Fee,
+		GasUsed:   ctr.GasUsed,
+		GasWanted: ctr.GasWanted,
+		Info:      ctr.Info,
+	}
+}
+
+func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
+	return func(txBytes []byte) abciTypes.ResponseCheckTx {
+		txEnv, err := txDecoder.DecodeTx(txBytes)
+		if err != nil {
+			logger.TraceMsg("Decoding error",
+				structure.ErrorKey, err)
+			return abciTypes.ResponseCheckTx{
+				Code: codes.EncodingErrorCode,
+				Log:  fmt.Sprintf("Encoding error: %s", err),
+			}
+		}
+
+		txe, err := executor.Execute(txEnv)
+		if err != nil {
+			logger.TraceMsg("Execution error",
+				structure.ErrorKey, err,
+				"tx_hash", txEnv.Tx.Hash())
+			return abciTypes.ResponseCheckTx{
+				Code: codes.EncodingErrorCode,
+				Log:  fmt.Sprintf("Could not execute transaction: %s, error: %v", txEnv, err),
+			}
+		}
+
+		bs, err := txe.Receipt.Encode()
+		if err != nil {
+			return abciTypes.ResponseCheckTx{
+				Code: codes.TxExecutionErrorCode,
+				Log:  fmt.Sprintf("Could not serialise receipt: %s", err),
+			}
+		}
+		logger.TraceMsg("Execution success",
+			"tx_hash", txe.TxHash,
+			"contract_address", txe.Receipt.ContractAddress,
+			"creates_contract", txe.Receipt.CreatesContract)
+		return abciTypes.ResponseCheckTx{
+			Code: codes.TxExecutionSuccessCode,
+			Log:  "Execution success - TxExecution in data",
+			Data: bs,
+		}
 	}
 }
 
@@ -192,6 +179,11 @@ func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.Respon
 }
 
 func (app *App) Commit() abciTypes.ResponseCommit {
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Commit: %v\n%s", r, debug.Stack()))
+		}
+	}()
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
 		structure.ScopeKey, "Commit()",
@@ -229,7 +221,8 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 
 	// First commit the app start, this app hash will not get checkpointed until the next block when we are sure
 	// that nothing in the downstream commit process could have failed. At worst we go back one block.
-	appHash, err := app.committer.Commit()
+	blockHeader := app.block.Header
+	appHash, err := app.committer.Commit(&blockHeader)
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
 	}

@@ -21,6 +21,14 @@ func DefaultExecutionConfig() *ExecutionConfig {
 	return &ExecutionConfig{}
 }
 
+type ExecutionOption func(*executor)
+
+func VMOptions(vmOptions ...func(*evm.VM)) func(*executor) {
+	return func(exe *executor) {
+		exe.vmOptions = vmOptions
+	}
+}
+
 func (ec *ExecutionConfig) ExecutionOptions() ([]ExecutionOption, error) {
 	var exeOptions []ExecutionOption
 	var vmOptions []func(*evm.VM)

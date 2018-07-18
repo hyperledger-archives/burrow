@@ -6,12 +6,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-type TxInput struct {
-	Address  crypto.Address
-	Amount   uint64
-	Sequence uint64
-}
-
 func (txIn *TxInput) ValidateBasic() error {
 	if txIn.Address == crypto.ZeroAddress {
 		return ErrTxInvalidAddress
@@ -23,5 +17,5 @@ func (txIn *TxInput) ValidateBasic() error {
 }
 
 func (txIn *TxInput) String() string {
-	return fmt.Sprintf("TxInput{%s, Amt: %v, Seq:%v}", txIn.Address, txIn.Amount, txIn.Sequence)
+	return fmt.Sprintf("TxInput{%s, Amount: %v, Sequence:%v}", txIn.Address, txIn.Amount, txIn.Sequence)
 }

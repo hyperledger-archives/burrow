@@ -21,17 +21,16 @@ import (
 	"math/big"
 	"strings"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 )
 
@@ -39,6 +38,16 @@ const (
 	dataStackCapacity = 1024
 	callStackCapacity = 100 // TODO ensure usage.
 )
+
+type EventSink interface {
+	Call(call *exec.CallEvent, exception *errors.Exception)
+	Log(log *exec.LogEvent)
+}
+
+type noopEventSink struct{}
+
+func (*noopEventSink) Call(call *exec.CallEvent, exception *errors.Exception) {}
+func (*noopEventSink) Log(log *exec.LogEvent)                                 {}
 
 type Params struct {
 	BlockHeight uint64
@@ -54,7 +63,7 @@ type VM struct {
 	tx               *txs.Tx
 	stackDepth       uint64
 	nestedCallErrors []errors.NestedCall
-	publisher        event.Publisher
+	eventSink        EventSink
 	logger           *logging.Logger
 	returnData       []byte
 	debugOpcodes     bool
@@ -68,6 +77,7 @@ func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Log
 		origin:         origin,
 		stackDepth:     0,
 		tx:             tx,
+		eventSink:      &noopEventSink{},
 		logger:         logger.WithScope("NewVM"),
 	}
 	for _, option := range options {
@@ -82,9 +92,9 @@ func (vm *VM) Debugf(format string, a ...interface{}) {
 	}
 }
 
-// satisfies go_events.Eventable
-func (vm *VM) SetPublisher(publisher event.Publisher) {
-	vm.publisher = publisher
+// Set EventSink destination for events - can be unset if events generation is not required
+func (vm *VM) SetEventSink(em EventSink) {
+	vm.eventSink = em
 }
 
 // CONTRACT: it is the duty of the contract writer to call known permissions
@@ -93,29 +103,25 @@ func (vm *VM) SetPublisher(publisher event.Publisher) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm ptypes.PermFlag) bool {
+func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm permission.PermFlag) bool {
 	value, _ := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(stateWriter).Base).Get(perm)
 	return value
 }
 
 func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64) {
 	// fire the post call event (including exception if applicable)
-	if vm.publisher != nil {
-		events.PublishAccountCall(vm.publisher, vm.tx, vm.params.BlockHeight,
-			&events.EventDataCall{
-				CallData: &events.CallData{
-					Caller: callerAddress,
-					Callee: calleeAddress,
-					Data:   input,
-					Value:  value,
-					Gas:    *gas,
-				},
-				Origin:     vm.origin,
-				StackDepth: vm.stackDepth,
-				Return:     *output,
-				Exception:  errors.AsCodedError(*exception),
-			})
-	}
+	vm.eventSink.Call(&exec.CallEvent{
+		CallData: &exec.CallData{
+			Caller: callerAddress,
+			Callee: calleeAddress,
+			Data:   input,
+			Value:  value,
+			Gas:    *gas,
+		},
+		Origin:     vm.origin,
+		StackDepth: vm.stackDepth,
+		Return:     *output,
+	}, errors.AsException(*exception))
 }
 
 // CONTRACT state is aware of caller and callee, so we can just mutate them.
@@ -124,7 +130,7 @@ func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, caller
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState *state.Cache, caller, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
@@ -168,7 +174,7 @@ func (vm *VM) Call(callState *state.Cache, caller, callee acm.MutableAccount, co
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -208,7 +214,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bo
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
 
@@ -838,25 +844,18 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 				vm.Debugf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
 			}
-			if vm.publisher != nil {
-				publishErr := events.PublishLogEvent(vm.publisher, vm.tx, &events.EventDataLog{
-					Height:  vm.params.BlockHeight,
-					Address: callee.Address(),
-					Topics:  topics,
-					Data:    data,
-				})
-				if publishErr != nil {
-					vm.Debugf(" => Log event publish err: %s", publishErr)
-					return nil, firstErr(err, errors.ErrorCodeEventPublish)
-				}
-			}
+			vm.eventSink.Log(&exec.LogEvent{
+				Address: callee.Address(),
+				Topics:  topics,
+				Data:    data,
+			})
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
 			vm.returnData = nil
 
-			if !HasPermission(callState, callee, ptypes.CreateContract) {
-				return nil, errors.PermissionDenied{Perm: ptypes.CreateContract}
+			if !HasPermission(callState, callee, permission.CreateContract) {
+				return nil, errors.PermissionDenied{Perm: permission.CreateContract}
 			}
 			contractValue, popErr := stack.PopU64()
 			if popErr != nil {
@@ -902,8 +901,8 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
 			vm.returnData = nil
 
-			if !HasPermission(callState, callee, ptypes.Call) {
-				return nil, errors.PermissionDenied{Perm: ptypes.Call}
+			if !HasPermission(callState, callee, permission.Call) {
+				return nil, errors.PermissionDenied{Perm: permission.Call}
 			}
 			gasLimit, popErr := stack.PopU64()
 			if popErr != nil {
@@ -982,8 +981,8 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
-						if !HasPermission(callState, caller, ptypes.CreateAccount) {
-							return nil, errors.PermissionDenied{Perm: ptypes.CreateAccount}
+						if !HasPermission(callState, caller, permission.CreateAccount) {
+							return nil, errors.PermissionDenied{Perm: permission.CreateAccount}
 						}
 						acc = acm.ConcreteAccount{Address: crypto.AddressFromWord256(addr)}.MutableAccount()
 					}
@@ -1077,8 +1076,8 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 				if useGasNegative(gas, GasCreateAccount, &gasErr) {
 					return nil, firstErr(err, gasErr)
 				}
-				if !HasPermission(callState, callee, ptypes.CreateContract) {
-					return nil, firstErr(err, errors.PermissionDenied{Perm: ptypes.CreateContract})
+				if !HasPermission(callState, callee, permission.CreateContract) {
+					return nil, firstErr(err, errors.PermissionDenied{Perm: permission.CreateContract})
 				}
 				var createErr errors.CodedError
 				receiver, createErr = vm.createAccount(callState, callee, logger)
@@ -1088,7 +1087,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 
 			}
 
-			receiver, errAdd := receiver.AddToBalance(callee.Balance())
+			errAdd := receiver.AddToBalance(callee.Balance())
 			if errAdd != nil {
 				return nil, firstErr(err, errAdd)
 			}
@@ -1101,25 +1100,25 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee acm.Mutabl
 			return nil, nil
 
 		case STATICCALL, CREATE2:
-			return nil, errors.Errorf("%s not yet implemented", op.Name())
+			return nil, errors.Errorf("%v not yet implemented", op)
 
 		default:
-			vm.Debugf("(pc) %-3v Unknown opcode %X\n", pc, op)
-			return nil, errors.Errorf("unknown opcode %X", op)
+			vm.Debugf("(pc) %-3v Unknown opcode %v\n", pc, op)
+			return nil, errors.Errorf("unknown opcode %v", op)
 		}
 		pc++
 	}
 }
 
-func (vm *VM) createAccount(callState *state.Cache, callee acm.MutableAccount, logger *logging.Logger) (acm.MutableAccount, errors.CodedError) {
+func (vm *VM) createAccount(callState *state.Cache, callee *acm.MutableAccount, logger *logging.Logger) (*acm.MutableAccount, errors.CodedError) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {
-		return nil, errors.AsCodedError(err)
+		return nil, errors.AsException(err)
 	}
 	err = callState.UpdateAccount(callee)
 	if err != nil {
-		return nil, errors.AsCodedError(err)
+		return nil, errors.AsException(err)
 	}
 	return newAccount, nil
 }
@@ -1168,20 +1167,20 @@ func (vm *VM) jump(code []byte, to int64, pc *int64) (err errors.CodedError) {
 
 func firstErr(errA, errB error) errors.CodedError {
 	if errA != nil {
-		return errors.AsCodedError(errA)
+		return errors.AsException(errA)
 	} else {
-		return errors.AsCodedError(errB)
+		return errors.AsException(errB)
 	}
 }
 
-func transfer(from, to acm.MutableAccount, amount uint64) errors.CodedError {
+func transfer(from, to *acm.MutableAccount, amount uint64) errors.CodedError {
 	if from.Balance() < amount {
 		return errors.ErrorCodeInsufficientBalance
 	} else {
 		from.SubtractFromBalance(amount)
-		_, err := to.AddToBalance(amount)
+		err := to.AddToBalance(amount)
 		if err != nil {
-			return errors.AsCodedError(err)
+			return errors.AsException(err)
 		}
 	}
 	return nil

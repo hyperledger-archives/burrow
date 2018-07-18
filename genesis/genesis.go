@@ -21,10 +21,9 @@ import (
 	"sort"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 // How many bytes to take from the front of the GenesisDoc hash to append
@@ -45,7 +44,7 @@ type BasicAccount struct {
 type Account struct {
 	BasicAccount
 	Name        string
-	Permissions ptypes.AccountPermissions
+	Permissions permission.AccountPermissions
 }
 
 type Validator struct {
@@ -62,7 +61,7 @@ type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
 	Salt              []byte `json:",omitempty" toml:",omitempty"`
-	GlobalPermissions ptypes.AccountPermissions
+	GlobalPermissions permission.AccountPermissions
 	Accounts          []Account
 	Validators        []Validator
 }

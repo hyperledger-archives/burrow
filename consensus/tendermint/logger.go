@@ -9,7 +9,7 @@ type tendermintLogger struct {
 	logger *logging.Logger
 }
 
-func NewLogger(logger *logging.Logger) *tendermintLogger {
+func NewLogger(logger *logging.Logger) log.Logger {
 	return &tendermintLogger{
 		logger: logger,
 	}

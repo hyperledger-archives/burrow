@@ -32,32 +32,28 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/query"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/events/pbevents"
-	"github.com/hyperledger/burrow/execution/pbtransactor"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"github.com/hyperledger/burrow/rpc/rpctransactor"
+	"github.com/hyperledger/burrow/rpc/rpcquery"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/rpc/tm"
-	"github.com/hyperledger/burrow/rpc/v0"
-	v0_server "github.com/hyperledger/burrow/rpc/v0/server"
 	"github.com/hyperledger/burrow/txs"
-	tm_config "github.com/tendermint/tendermint/config"
-	tm_types "github.com/tendermint/tendermint/types"
+	tmConfig "github.com/tendermint/tendermint/config"
+	tmTypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tmlibs/db"
-	"google.golang.org/grpc/reflection"
 )
 
 const (
 	CooldownMilliseconds              = 1000
 	ServerShutdownTimeoutMilliseconds = 1000
 	LoggingCallerDepth                = 5
+	AccountsRingMutexCount            = 100
 )
 
 // Kernel is the root structure of Burrow
@@ -74,10 +70,14 @@ type Kernel struct {
 	shutdownOnce   sync.Once
 }
 
-func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_types.PrivValidator,
-	genesisDoc *genesis.GenesisDoc, tmConf *tm_config.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
+func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
+	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
 	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
+	kern := &Kernel{
+		processes:      make(map[string]process.Process),
+		shutdownNotify: make(chan struct{}),
+	}
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
 	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
@@ -107,16 +107,17 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, blockchain.Tip, emitter, logger, exeOptions...)
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
-		tmLogger)
+		kern.Panic, tmLogger)
 	if err != nil {
 		return nil, err
 	}
-	transactor := execution.NewTransactor(blockchain.Tip, emitter, tmNode.MempoolReactor().BroadcastTx, txCodec,
-		logger)
+
+	transactor := execution.NewTransactor(blockchain.Tip, emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+		tmNode.MempoolReactor().BroadcastTx, txCodec, logger)
 
 	nameRegState := state
 	accountState := state
-	service := rpc.NewService(ctx, accountState, nameRegState, checker, emitter, blockchain, keyClient, transactor,
+	service := rpc.NewService(accountState, nameRegState, blockchain, transactor,
 		query.NewNodeView(tmNode, txCodec), logger)
 
 	launchers := []process.Launcher{
@@ -155,14 +156,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				if err != nil {
 					return nil, fmt.Errorf("error starting Tendermint node: %v", err)
 				}
-				subscriber := fmt.Sprintf("TendermintFireHose-%s-%s", genesisDoc.ChainName, genesisDoc.ChainID())
-				// Multiplex Tendermint and EVM events
-
-				err = tendermint.PublishAllEvents(ctx, tendermint.EventBusAsSubscribable(tmNode.EventBus()), subscriber,
-					emitter)
-				if err != nil {
-					return nil, fmt.Errorf("could not subscribe to Tendermint events: %v", err)
-				}
 				return process.ShutdownFunc(func(ctx context.Context) error {
 					err := tmNode.Stop()
 					// Close tendermint database connections using our wrapper
@@ -185,7 +178,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			Name:    "RPC/tm",
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, emitter, logger)
+				server, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, logger)
 				if err != nil {
 					return nil, err
 				}
@@ -204,26 +197,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 			},
 		},
 		{
-			Name:    "RPC/V0",
-			Enabled: rpcConfig.V0.Enabled,
-			Launch: func() (process.Process, error) {
-				codec := v0.NewTCodec()
-				jsonServer := v0.NewJSONServer(v0.NewJSONService(codec, service, logger))
-				websocketServer := v0_server.NewWebSocketServer(rpcConfig.V0.Server.WebSocket.MaxWebSocketSessions,
-					v0.NewWebsocketService(codec, service, logger), logger)
-
-				serveProcess, err := v0_server.NewServeProcess(rpcConfig.V0.Server, logger, jsonServer, websocketServer)
-				if err != nil {
-					return nil, err
-				}
-				err = serveProcess.Start()
-				if err != nil {
-					return nil, err
-				}
-				return serveProcess, nil
-			},
-		},
-		{
 			Name:    "RPC/GRPC",
 			Enabled: rpcConfig.GRPC.Enabled,
 			Launch: func() (process.Process, error) {
@@ -231,6 +204,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 				if err != nil {
 					return nil, err
 				}
+				listen.Addr()
 
 				grpcServer := rpc.NewGRPCServer(logger)
 				var ks *keys.KeyStore
@@ -242,19 +216,18 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 					if keyStore == nil {
 						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, logger)
 					}
-					pbkeys.RegisterKeysServer(grpcServer, ks)
+					keys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				pbtransactor.RegisterTransactorServer(grpcServer, rpctransactor.NewTransactorServer(service.Transactor(),
-					service.MempoolAccounts(), state, txCodec))
+				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(state, nameRegState))
 
-				pbevents.RegisterEventsServer(grpcServer, rpcevents.NewEventsServer(rpc.NewSubscriptions(service)))
+				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(transactor, txCodec))
 
-				pbevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state, emitter,
-					blockchain.Tip))
+				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state, emitter,
+					blockchain.Tip, logger))
 
 				// Provides metadata about services registered
-				reflection.Register(grpcServer)
+				//reflection.Register(grpcServer)
 
 				go grpcServer.Serve(listen)
 
@@ -267,16 +240,13 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tm_t
 		},
 	}
 
-	return &Kernel{
-		Emitter:        emitter,
-		Service:        service,
-		Launchers:      launchers,
-		State:          state,
-		Blockchain:     blockchain,
-		Logger:         logger,
-		processes:      make(map[string]process.Process),
-		shutdownNotify: make(chan struct{}),
-	}, nil
+	kern.Emitter = emitter
+	kern.Service = service
+	kern.Launchers = launchers
+	kern.State = state
+	kern.Blockchain = blockchain
+	kern.Logger = logger
+	return kern, nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
@@ -293,6 +263,12 @@ func (kern *Kernel) Boot() error {
 	}
 	go kern.supervise()
 	return nil
+}
+
+func (kern *Kernel) Panic(err error) {
+	fmt.Fprintf(os.Stderr, "Kernel shutting down due to panic: %v", err)
+	kern.Shutdown(context.Background())
+	os.Exit(1)
 }
 
 // Wait for a graceful shutdown

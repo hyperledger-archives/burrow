@@ -46,7 +46,7 @@ func NewCache(backend Reader) *Cache {
 	}
 }
 
-func (cache *Cache) GetNameEntry(name string) (*Entry, error) {
+func (cache *Cache) GetName(name string) (*Entry, error) {
 	nameInfo, err := cache.get(name)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (cache *Cache) GetNameEntry(name string) (*Entry, error) {
 	return nameInfo.entry, nil
 }
 
-func (cache *Cache) UpdateNameEntry(entry *Entry) error {
+func (cache *Cache) UpdateName(entry *Entry) error {
 	nameInfo, err := cache.get(entry.Name)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (cache *Cache) UpdateNameEntry(entry *Entry) error {
 	nameInfo.Lock()
 	defer nameInfo.Unlock()
 	if nameInfo.removed {
-		return fmt.Errorf("UpdateNameEntry on a removed name: %s", nameInfo.entry.Name)
+		return fmt.Errorf("UpdateName on a removed name: %s", nameInfo.entry.Name)
 	}
 
 	nameInfo.entry = entry
@@ -75,7 +75,7 @@ func (cache *Cache) UpdateNameEntry(entry *Entry) error {
 	return nil
 }
 
-func (cache *Cache) RemoveNameEntry(name string) error {
+func (cache *Cache) RemoveName(name string) error {
 	nameInfo, err := cache.get(name)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (cache *Cache) RemoveNameEntry(name string) error {
 	nameInfo.Lock()
 	defer nameInfo.Unlock()
 	if nameInfo.removed {
-		return fmt.Errorf("RemoveNameEntry on removed name: %s", name)
+		return fmt.Errorf("RemoveName on removed name: %s", name)
 	}
 	nameInfo.removed = true
 	return nil
@@ -107,13 +107,13 @@ func (cache *Cache) Sync(state Writer) error {
 		nameInfo := cache.names[name]
 		nameInfo.RLock()
 		if nameInfo.removed {
-			err := state.RemoveNameEntry(name)
+			err := state.RemoveName(name)
 			if err != nil {
 				nameInfo.RUnlock()
 				return err
 			}
 		} else if nameInfo.updated {
-			err := state.UpdateNameEntry(nameInfo.entry)
+			err := state.UpdateName(nameInfo.entry)
 			if err != nil {
 				nameInfo.RUnlock()
 				return err
@@ -156,7 +156,7 @@ func (cache *Cache) get(name string) (*nameInfo, error) {
 		defer cache.Unlock()
 		nmeInfo = cache.names[name]
 		if nmeInfo == nil {
-			entry, err := cache.backend.GetNameEntry(name)
+			entry, err := cache.backend.GetName(name)
 			if err != nil {
 				return nil, err
 			}

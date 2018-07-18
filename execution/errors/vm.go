@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 type PermissionDenied struct {
-	Perm types.PermFlag
+	Perm permission.PermFlag
 }
 
 func (err PermissionDenied) ErrorCode() Code {

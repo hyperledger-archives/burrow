@@ -40,6 +40,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 		Tendermint: tendermint.DefaultBurrowTendermintConfig(),
 		Keys:       keys.DefaultKeysConfig(),
 		RPC:        rpc.DefaultRPCConfig(),
+		Execution:  execution.DefaultExecutionConfig(),
 		Logging:    logging_config.DefaultNodeLoggingConfig(),
 	}
 }

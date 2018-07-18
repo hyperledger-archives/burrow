@@ -368,7 +368,7 @@ func (o OpCode) String() string {
 func (o OpCode) Name() string {
 	str := opCodeNames[o]
 	if len(str) == 0 {
-		return fmt.Sprintf("Missing opcode 0x%x", int(o))
+		return fmt.Sprintf("Non-opcode 0x%x", int(o))
 	}
 
 	return str

@@ -3,7 +3,7 @@ package spec
 import (
 	"sort"
 
-	permission "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 // Files here can be used as starting points for building various 'chain types' but are otherwise

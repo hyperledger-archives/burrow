@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	"google.golang.org/grpc"
 )
@@ -49,16 +48,16 @@ type localKeyClient struct {
 
 type remoteKeyClient struct {
 	rpcAddress string
-	kc         pbkeys.KeysClient
+	kc         KeysClient
 	logger     *logging.Logger
 }
 
 func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
-	resp, err := l.ks.Sign(nil, &pbkeys.SignRequest{Address: signAddress.String(), Message: message})
+	resp, err := l.ks.Sign(nil, &SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
 		return crypto.Signature{}, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
 		return crypto.Signature{}, err
 	}
@@ -66,20 +65,20 @@ func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (signa
 }
 
 func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
-	resp, err := l.ks.PublicKey(nil, &pbkeys.PubRequest{Address: address.String()})
+	resp, err := l.ks.PublicKey(nil, &PubRequest{Address: address.String()})
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	return crypto.PublicKeyFromBytes(resp.GetPub(), curveType)
+	return crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 }
 
 // Generate requests that a key be generate within the keys instance and returns the address
 func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
-	resp, err := l.ks.GenerateKey(nil, &pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()})
+	resp, err := l.ks.GenerateKey(nil, &GenRequest{KeyName: keyName, CurveType: curveType.String()})
 	if err != nil {
 		return crypto.Address{}, err
 	}
@@ -94,7 +93,7 @@ func (l *localKeyClient) HealthCheck() error {
 func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req := pbkeys.SignRequest{Address: signAddress.String(), Message: message}
+	req := SignRequest{Address: signAddress.String(), Message: message}
 	l.logger.TraceMsg("Sending Sign request to remote key server: ", fmt.Sprintf("%v", req))
 	resp, err := l.kc.Sign(ctx, &req)
 	if err != nil {
@@ -102,7 +101,7 @@ func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (sign
 		return crypto.Signature{}, err
 	}
 	l.logger.TraceMsg("Received Sign response to remote key server: %v", resp)
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
 		return crypto.Signature{}, err
 	}
@@ -112,26 +111,26 @@ func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (sign
 func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req := pbkeys.PubRequest{Address: address.String()}
+	req := PubRequest{Address: address.String()}
 	l.logger.TraceMsg("Sending PublicKey request to remote key server: ", fmt.Sprintf("%v", req))
 	resp, err := l.kc.PublicKey(ctx, &req)
 	if err != nil {
 		l.logger.TraceMsg("Received PublicKey error response: ", err)
 		return crypto.PublicKey{}, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurvetype())
+	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
 	l.logger.TraceMsg("Received PublicKey response to remote key server: ", fmt.Sprintf("%v", resp))
-	return crypto.PublicKeyFromBytes(resp.GetPub(), curveType)
+	return crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 }
 
 // Generate requests that a key be generate within the keys instance and returns the address
 func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req := pbkeys.GenRequest{Keyname: keyName, Curvetype: curveType.String()}
+	req := GenRequest{KeyName: keyName, CurveType: curveType.String()}
 	l.logger.TraceMsg("Sending Generate request to remote key server: ", fmt.Sprintf("%v", req))
 	resp, err := l.kc.GenerateKey(ctx, &req)
 	if err != nil {
@@ -146,7 +145,7 @@ func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (
 func (l *remoteKeyClient) HealthCheck() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := l.kc.List(ctx, &pbkeys.ListRequest{})
+	_, err := l.kc.List(ctx, &ListRequest{})
 	return err
 }
 
@@ -160,7 +159,7 @@ func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, e
 	if err != nil {
 		return nil, err
 	}
-	kc := pbkeys.NewKeysClient(conn)
+	kc := NewKeysClient(conn)
 
 	return &remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}, nil
 }

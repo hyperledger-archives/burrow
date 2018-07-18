@@ -15,22 +15,19 @@
 package execution
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/events"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
 )
@@ -49,13 +46,15 @@ const (
 	accountsPrefix = "a/"
 	storagePrefix  = "s/"
 	nameRegPrefix  = "n/"
-	eventPrefix    = "e/"
+	blockPrefix    = "b/"
+	txPrefix       = "t/"
 )
 
 var (
 	accountsStart, accountsEnd []byte = prefixKeyRange(accountsPrefix)
 	storageStart, storageEnd   []byte = prefixKeyRange(storagePrefix)
 	nameRegStart, nameRegEnd   []byte = prefixKeyRange(nameRegPrefix)
+	lastBlockHeightKey                = []byte("h")
 )
 
 // Implements account and blockchain state
@@ -66,7 +65,7 @@ var _ Updatable = &writeState{}
 type Updatable interface {
 	state.Writer
 	names.Writer
-	event.Publisher
+	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
 // Wraps state to give access to writer methods
@@ -86,8 +85,6 @@ type State struct {
 	// Values may be reassigned (mutex protected)
 	// Previous version of IAVL tree for concurrent read-only access
 	readTree *iavl.Tree
-	// High water mark for height/index - make sure we do not overwrite events - should only increase
-	eventKeyHighWatermark events.Key
 	// Last state hash
 	hash []byte
 }
@@ -139,7 +136,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	globalPerms = genesisDoc.GlobalPermissions
 	// XXX: make sure the set bits are all true
 	// Without it the HasPermission() functions will fail
-	globalPerms.Base.SetBit = ptypes.AllPermFlags
+	globalPerms.Base.SetBit = permission.AllPermFlags
 
 	permsAcc := &acm.ConcreteAccount{
 		Address:     acm.GlobalPermissionsAddress,
@@ -195,7 +192,10 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 func (s *State) Update(updater func(up Updatable) error) ([]byte, error) {
 	s.Lock()
 	defer s.Unlock()
-	updater(s.writeState)
+	err := updater(s.writeState)
+	if err != nil {
+		return nil, err
+	}
 	return s.writeState.save()
 }
 
@@ -244,12 +244,12 @@ func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 
 func (ws *writeState) UpdateAccount(account acm.Account) error {
 	if account == nil {
-		return fmt.Errorf("UpdateAccount passed nil account in execution.State")
+		return fmt.Errorf("UpdateAccount passed nil account in State")
 	}
 	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
 	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
 	// Alternatively just abandon and
-	accountWithStorageRoot := acm.AsMutableAccount(account).SetStorageRoot(nil)
+	accountWithStorageRoot := acm.AsMutableAccount(account)
 	encodedAccount, err := accountWithStorageRoot.Encode()
 	if err != nil {
 		return err
@@ -313,40 +313,68 @@ func (s *State) IterateStorage(address crypto.Address,
 // Events
 
 // Execution events
-func (ws *writeState) Publish(ctx context.Context, msg interface{}, tags event.Tags) error {
-	if exeEvent, ok := msg.(*events.Event); ok {
-		key := exeEvent.Header.Key()
-		if !key.IsSuccessorOf(ws.state.eventKeyHighWatermark) {
-			return fmt.Errorf("received event with non-increasing key compared with current high watermark %v: %v",
-				ws.state.eventKeyHighWatermark, exeEvent)
-		}
-		ws.state.eventKeyHighWatermark = key
-		if exeEvent.Tx != nil {
-			// Don't serialise the tx (for now) we should normalise and store against tx hash
-			exeEvent = exeEvent.Copy()
-			// The header still contains the tx hash
-			exeEvent.Tx.Tx = nil
-		}
-		bs, err := exeEvent.Encode()
-		if err != nil {
-			return err
-		}
-		ws.state.tree.Set(eventKey(key), bs)
+func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
+	lastBlockHeight, ok := ws.lastBlockHeight()
+	if ok && be.Height != lastBlockHeight+1 {
+		return fmt.Errorf("AddBlock received block for height %v but last block height was %v",
+			be.Height, lastBlockHeight)
 	}
+	ws.setLastBlockHeight(be.Height)
+	// Index transactions so they can be retrieved by their TxHash
+	for i, txe := range be.TxExecutions {
+		ws.addTx(txe.TxHash, be.Height, uint64(i))
+	}
+	bs, err := be.Encode()
+	if err != nil {
+		return err
+	}
+	key := blockKey(be.Height)
+	ws.state.tree.Set(key, bs)
 	return nil
 }
 
-func (s *State) GetEvents(startKey, endKey events.Key, consumer func(ev *events.Event) (stop bool)) (stopped bool, err error) {
-	return s.tree.IterateRange(eventKey(startKey), eventKey(endKey), true,
+func (ws *writeState) addTx(txHash []byte, height, index uint64) {
+	ws.state.tree.Set(txKey(txHash), encodeTxRef(height, index))
+}
+
+func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
+	_, bs := s.readTree.Get(txKey(txHash))
+	if len(bs) == 0 {
+		return nil, nil
+	}
+	height, index, err := decodeTxRef(bs)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding database reference to tx %X: %v", txHash, err)
+	}
+	be, err := s.GetBlock(height)
+	if err != nil {
+		return nil, fmt.Errorf("error getting block %v containing tx %X", height, txHash)
+	}
+	if index < uint64(len(be.TxExecutions)) {
+		return be.TxExecutions[index], nil
+	}
+	return nil, fmt.Errorf("retrieved index %v in block %v for tx %X but block only contains %v TxExecutions",
+		index, height, txHash, len(be.TxExecutions))
+}
+
+func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
+	_, bs := s.readTree.Get(blockKey(height))
+	if len(bs) == 0 {
+		return nil, nil
+	}
+	return exec.DecodeBlockExecution(bs)
+}
+
+func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) (stop bool)) (stopped bool, err error) {
+	return s.readTree.IterateRange(blockKey(startHeight), blockKey(endHeight), true,
 		func(_, value []byte) bool {
-			var exeEvent *events.Event
-			exeEvent, err = events.DecodeEvent(value)
+			block, err := exec.DecodeBlockExecution(value)
 			if err != nil {
 				err = fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
 				// stop iteration on error
 				return true
 			}
-			return consumer(exeEvent)
+			return consumer(block)
 		}), err
 }
 
@@ -356,10 +384,18 @@ func (s *State) Hash() []byte {
 	return s.hash
 }
 
-func (s *State) LatestEventKey() events.Key {
-	s.RLock()
-	defer s.RUnlock()
-	return s.eventKeyHighWatermark
+func (s *writeState) lastBlockHeight() (uint64, bool) {
+	_, bs := s.state.tree.Get(lastBlockHeightKey)
+	if len(bs) == 0 {
+		return 0, false
+	}
+	return binary.GetUint64BE(bs), true
+}
+
+func (s *writeState) setLastBlockHeight(height uint64) {
+	bs := make([]byte, 8)
+	binary.PutUint64BE(bs, height)
+	s.state.tree.Set(lastBlockHeightKey, bs)
 }
 
 // Events
@@ -368,7 +404,7 @@ func (s *State) LatestEventKey() events.Key {
 
 var _ names.IterableReader = &State{}
 
-func (s *State) GetNameEntry(name string) (*names.Entry, error) {
+func (s *State) GetName(name string) (*names.Entry, error) {
 	_, entryBytes := s.readTree.Get(prefixedKey(nameRegPrefix, []byte(name)))
 	if entryBytes == nil {
 		return nil, nil
@@ -377,7 +413,7 @@ func (s *State) GetNameEntry(name string) (*names.Entry, error) {
 	return names.DecodeEntry(entryBytes)
 }
 
-func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
 	return s.readTree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
 		var entry *names.Entry
 		entry, err = names.DecodeEntry(value)
@@ -388,7 +424,7 @@ func (s *State) IterateNameEntries(consumer func(*names.Entry) (stop bool)) (sto
 	}), err
 }
 
-func (ws *writeState) UpdateNameEntry(entry *names.Entry) error {
+func (ws *writeState) UpdateName(entry *names.Entry) error {
 	bs, err := entry.Encode()
 	if err != nil {
 		return err
@@ -397,7 +433,7 @@ func (ws *writeState) UpdateNameEntry(entry *names.Entry) error {
 	return nil
 }
 
-func (ws *writeState) RemoveNameEntry(name string) error {
+func (ws *writeState) RemoveName(name string) error {
 	ws.state.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
 	return nil
 }
@@ -416,8 +452,32 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 	return stateCopy, nil
 }
 
-func eventKey(key events.Key) []byte {
-	return prefixedKey(eventPrefix, key)
+// Key and value helpers
+
+func encodeTxRef(height, index uint64) []byte {
+	bs := make([]byte, 16)
+	binary.PutUint64BE(bs[:8], height)
+	binary.PutUint64BE(bs[8:], index)
+	return bs
+}
+
+func decodeTxRef(bs []byte) (height, index uint64, _ error) {
+	if len(bs) != 16 {
+		return 0, 0, fmt.Errorf("tx reference must have 16 bytes but '%X' does not", bs)
+	}
+	height = binary.GetUint64BE(bs[:8])
+	index = binary.GetUint64BE(bs[8:])
+	return
+}
+
+func txKey(txHash []byte) []byte {
+	return prefixedKey(txPrefix, txHash)
+}
+
+func blockKey(height uint64) []byte {
+	bs := make([]byte, 8)
+	binary.PutUint64BE(bs, height)
+	return prefixedKey(blockPrefix, bs)
 }
 
 func prefixedKey(prefix string, suffices ...[]byte) []byte {

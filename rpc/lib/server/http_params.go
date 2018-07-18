@@ -1,12 +1,12 @@
 package server
 
 import (
+	"encoding/hex"
 	"net/http"
 	"regexp"
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/tmthrgd/go-hex"
 )
 
 var (

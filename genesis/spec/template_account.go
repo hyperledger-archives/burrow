@@ -7,21 +7,7 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 )
-
-type TemplateAccount struct {
-	// Template accounts sharing a name will be merged when merging genesis specs
-	Name string `json:",omitempty" toml:",omitempty"`
-	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
-	Address     *crypto.Address   `json:",omitempty" toml:",omitempty"`
-	NodeAddress *crypto.Address   `json:",omitempty" toml:",omitempty"`
-	PublicKey   *crypto.PublicKey `json:",omitempty" toml:",omitempty"`
-	Amount      *uint64           `json:",omitempty" toml:",omitempty"`
-	Power       *uint64           `json:",omitempty" toml:",omitempty"`
-	Permissions []string          `json:",omitempty" toml:",omitempty"`
-	Roles       []string          `json:",omitempty" toml:",omitempty"`
-}
 
 func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generateNodeKeys bool) (*genesis.Validator, error) {
 	var err error
@@ -58,12 +44,12 @@ func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generat
 	return gv, nil
 }
 
-func (ta TemplateAccount) AccountPermissions() (ptypes.AccountPermissions, error) {
+func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, error) {
 	basePerms, err := permission.BasePermissionsFromStringList(ta.Permissions)
 	if err != nil {
 		return permission.ZeroAccountPermissions, nil
 	}
-	return ptypes.AccountPermissions{
+	return permission.AccountPermissions{
 		Base:  basePerms,
 		Roles: ta.Roles,
 	}, nil

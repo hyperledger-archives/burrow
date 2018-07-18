@@ -17,8 +17,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/config/presets"
-	"github.com/jawher/mow.cli"
-	"github.com/tendermint/go-amino"
+	cli "github.com/jawher/mow.cli"
+	amino "github.com/tendermint/go-amino"
 	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/p2p"
 )

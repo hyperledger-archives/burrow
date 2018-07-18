@@ -6,7 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/cmd/burrow/commands"
 	"github.com/hyperledger/burrow/project"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 )
 
 func main() {

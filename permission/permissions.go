@@ -14,26 +14,25 @@
 
 package permission
 
-import (
-	"github.com/hyperledger/burrow/permission/types"
-)
-
 var (
-	ZeroBasePermissions    = types.BasePermissions{0, 0}
-	ZeroAccountPermissions = types.AccountPermissions{
+	ZeroBasePermissions = BasePermissions{
+		Perms:  0,
+		SetBit: 0,
+	}
+	ZeroAccountPermissions = AccountPermissions{
 		Base: ZeroBasePermissions,
 	}
-	DefaultAccountPermissions = types.AccountPermissions{
-		Base: types.BasePermissions{
-			Perms:  types.DefaultPermFlags,
-			SetBit: types.AllPermFlags,
+	DefaultAccountPermissions = AccountPermissions{
+		Base: BasePermissions{
+			Perms:  DefaultPermFlags,
+			SetBit: AllPermFlags,
 		},
 		Roles: []string{},
 	}
-	AllAccountPermissions = types.AccountPermissions{
-		Base: types.BasePermissions{
-			Perms:  types.AllPermFlags,
-			SetBit: types.AllPermFlags,
+	AllAccountPermissions = AccountPermissions{
+		Base: BasePermissions{
+			Perms:  AllPermFlags,
+			SetBit: AllPermFlags,
 		},
 		Roles: []string{},
 	}
