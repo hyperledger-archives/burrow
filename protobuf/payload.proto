@@ -1,0 +1,123 @@
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/txs/payload";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "permission.proto";
+import "spec.proto";
+
+package payload;
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message AnyPayload {
+    CallTx CallTx = 1;
+    SendTx SendTx = 2;
+    NameTx NameTx = 3;
+    PermissionsTx PermissionsTx = 4;
+    GovernanceTx GovernanceTx = 5;
+}
+
+// An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
+// that associated with the account at Address at the time of being received
+message TxInput {
+    option (gogoproto.goproto_stringer) = false;
+    // The address from which this input flows
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    // The amount of native token to transfer from the input address
+    uint64 Amount = 2;
+    // The sequence number that this transaction will induce (i.e. one greater than the input account's current sequence)
+    uint64 Sequence = 3;
+}
+
+// An output from a transaction that may carry an amount as a charge
+message TxOutput {
+    option (gogoproto.goproto_stringer) = false;
+    // The address to which this output flows
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    // The amount of native token to transfer to the output address
+    uint64 Amount = 2;
+}
+
+// A instruction to run smart contract code in the EVM
+message CallTx {
+    option (gogoproto.goproto_stringer) = false;
+    // The caller's input
+    TxInput Input = 1;
+    // The contract address to call or nil if we are creating a contract
+    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    // The upper bound on the amount of gas (and therefore EVM execution steps) this CallTx may generate
+    uint64 GasLimit = 3;
+    // Fee to offer validators for processing transaction
+    uint64 Fee = 4;
+    // EVM bytecode payload
+    bytes Data = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+
+}
+
+// A payment between two sets of parties
+message SendTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+    // The payers
+    repeated TxInput Inputs = 1;
+    // The payees
+    repeated TxOutput Outputs = 2;
+}
+
+// An update to the on-chain permissions
+message PermissionsTx {
+    option (gogoproto.goproto_stringer) = false;
+    // The permission moderator
+    TxInput Input = 1;
+    // The modified permissions
+    permission.PermArgs PermArgs = 2 [(gogoproto.nullable) = false];
+}
+
+// A request to claim a globally unique name across the entire chain with some optional data storage leased for a fee
+message NameTx {
+    option (gogoproto.goproto_stringer) = false;
+    // The name updater
+    TxInput Input = 1;
+    // The name to update or create
+    string Name = 2;
+    // The data to store against the name
+    string Data = 3;
+    // The fee to provide that will determine the lenght of the name lease
+    uint64 Fee = 4;
+}
+
+message BondTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    repeated TxInput Inputs = 1;
+    repeated TxOutput UnbondTo = 2;
+}
+
+message UnbondTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    TxInput Input = 1;
+    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    uint64 Height = 3;
+}
+
+message GovernanceTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    repeated TxInput Inputs = 1;
+    repeated spec.TemplateAccount AccountUpdates = 2 [(gogoproto.nullable) = true];
+}

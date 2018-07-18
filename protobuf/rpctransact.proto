@@ -1,0 +1,80 @@
+syntax = 'proto3';
+
+package rpctransact;
+
+option go_package = "github.com/hyperledger/burrow/rpc/rpctransact";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "exec.proto";
+import "payload.proto";
+import "txs.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+// Transaction Service Definition
+service Transact {
+    // Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
+    // and wait for it to be included in block
+    rpc BroadcastTxSync (TxEnvelopeParam) returns (exec.TxExecution);
+    // Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
+    rpc BroadcastTxAsync (TxEnvelopeParam) returns (txs.Receipt);
+
+    // Sign transaction server-side
+    rpc SignTx (TxEnvelopeParam) returns (TxEnvelope);
+    // Formulate a transaction from a Payload and retrun the envelop with the Tx bytes ready to sign
+    rpc FormulateTx (PayloadParam) returns (TxEnvelope);
+
+    // Formulate and sign a CallTx transaction signed server-side and wait for it to be included in a block, retrieving response
+    rpc CallTxSync (payload.CallTx) returns (exec.TxExecution);
+    // Formulate and sign a CallTx transaction signed server-side
+    rpc CallTxAsync (payload.CallTx) returns (txs.Receipt);
+    // Perform a 'simulated' call of a contract against the current committed EVM state without any changes been saved
+    // and wait for the transaction to be included in a block
+    rpc CallTxSim (payload.CallTx) returns (exec.TxExecution);
+    // Perform a 'simulated' execution of provided code against the current committed EVM state without any changes been saved
+    rpc CallCodeSim (CallCodeParam) returns (exec.TxExecution);
+
+    // Formulate a SendTx transaction signed server-side and wait for it to be included in a block, retrieving response
+    rpc SendTxSync (payload.SendTx) returns (exec.TxExecution);
+    // Formulate and  SendTx transaction signed server-side
+    rpc SendTxAsync (payload.SendTx) returns (txs.Receipt);
+
+    // Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
+    rpc NameTxSync (payload.NameTx) returns (exec.TxExecution);
+    // Formulate a NameTx signed server-side
+    rpc NameTxAsync (payload.NameTx) returns (txs.Receipt);
+}
+
+message CallCodeParam {
+    bytes FromAddress = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    bytes Code = 2;
+    bytes Data = 3;
+}
+
+message PayloadParam {
+    payload.CallTx CallTx = 1;
+    payload.SendTx SendTx = 2;
+    payload.NameTx NameTx = 3;
+}
+
+message TxEnvelope {
+    txs.Envelope Envelope = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
+}
+
+message TxEnvelopeParam {
+    // An existing Envelope - either signed or unsigned - if the latter will be signed server-side
+    txs.Envelope Envelope = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
+    // If no Envelope provided then one will be generated from the provided payload and signed server-side
+    PayloadParam Payload = 2;
+}
+

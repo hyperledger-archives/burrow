@@ -1,0 +1,35 @@
+// Needed to proto2 rather than proto3 to get pointer field for PermArg
+syntax = 'proto2';
+
+option go_package = "github.com/hyperledger/burrow/genesis/spec";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "crypto.proto";
+
+package spec;
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message TemplateAccount {
+    option (gogoproto.goproto_unrecognized) = false;
+
+    optional string Name = 1 [(gogoproto.nullable) = false];
+    optional bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    optional bytes NodeAddress = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    optional crypto.PublicKey PublicKey = 4 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    optional uint64 Amount = 5 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    optional uint64 Power = 6 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    repeated string Permissions = 7 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    repeated string Roles = 8 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+}
+

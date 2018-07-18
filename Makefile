@@ -10,18 +10,18 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 PACKAGES_NOVENDOR := $(shell go list ./...)
-LDFLAGS :=
 # Bosmarmot integration testing
 BOSMARMOT_PROJECT := github.com/monax/bosmarmot
 BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 # Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.proto')
+PROTO_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
+PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
-SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.sol')
+SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.sol' -print)
 SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
 ### Formatting, linting and vetting
@@ -71,18 +71,20 @@ megacheck:
 # Protobuffing
 .PHONY: protobuf_deps
 protobuf_deps:
-	@go get -u github.com/golang/protobuf/protoc-gen-go
+	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
+#	@go get -u github.com/golang/protobuf/protoc-gen-go
 
-# Implicit compile rule for GRPC/proto files
+# Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
+# in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
-	protoc -I ${GOPATH}/src ${REPO}/$< --go_out=plugins=grpc:${GOPATH}/src
+	protoc -I vendor -I protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
 
 .PHONY: protobuf
 protobuf: $(PROTO_GO_FILES)
 
 .PHONY: clean_protobuf
 clean_protobuf:
-	@rm -f $(PROTO_GO_FILES)
+	@rm -f $(PROTO_GO_FILES_REAL)
 
 ### Dependency management for github.com/hyperledger/burrow
 # erase vendor wipes the full vendor directory
@@ -117,11 +119,11 @@ commit_hash:
 
 # build all targets in github.com/hyperledger/burrow
 .PHONY: build
-build:	check build_db build_client
+build:	check build_db
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
-build_race:	check build_race_db build_race_client
+build_race:	check build_race_db
 
 # build burrow
 .PHONY: build_db
@@ -134,22 +136,10 @@ build_db: commit_hash
 install_db: build_db
 	cp ${REPO}/bin/burrow ${GOPATH}/bin/burrow
 
-# build burrow-client
-.PHONY: build_client
-build_client: commit_hash
-	go build -ldflags "-extldflags '-static' \
-	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
-	-o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
-
 # build burrow with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
 	go build -race -o ${REPO}/bin/burrow ./cmd/burrow
-
-# build burrow-client with checks for race conditions
-.PHONY: build_race_client
-build_race_client:
-	go build -race -o ${REPO}/bin/burrow-client ./client/cmd/burrow-client
 
 # Get the Bosmarmot code
 .PHONY: bos
@@ -185,15 +175,13 @@ test: check
 test_keys: build_db
 	burrow_bin="${REPO}/bin/burrow" keys/test.sh
 
-rpc/test/strange_loop.go: rpc/test/strange_loop.sol
+rpc/test/strange_loop.go: integration/rpctest
 	@rpc/test/strange_loop.sh
 
+# Go will attempt to run separate packages in parallel
 .PHONY: test_integration
 test_integration: test_keys
-	@go test -tags integration ./rpc/rpcevents/integration
-	@go test -tags integration ./rpc/rpctransactor/integration
-	@go test -tags integration ./rpc/v0/integration
-	@go test -tags integration ./rpc/tm/integration
+	@go test -v -tags integration ./integration/...
 
 # Run integration test from bosmarmot (separated from other integration tests so we can
 # make exception when this test fails when we make a breaking change in Burrow)
