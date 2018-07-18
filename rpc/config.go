@@ -41,7 +41,7 @@ func DefaultRPCConfig() *RPCConfig {
 func DefaultTMConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "tcp://localhost:46657",
+		ListenAddress: "tcp://localhost:26658",
 	}
 }
 
