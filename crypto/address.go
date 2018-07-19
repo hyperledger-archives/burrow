@@ -120,6 +120,35 @@ func (address *Address) UnmarshalText(text []byte) error {
 
 func (address Address) MarshalText() ([]byte, error) {
 	return ([]byte)(hex.EncodeUpperToString(address[:])), nil
+
+}
+
+// Gogo proto support
+func (address *Address) Marshal() ([]byte, error) {
+	if address == nil {
+		return nil, nil
+	}
+	return address.Bytes(), nil
+}
+
+func (address *Address) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if len(data) != binary.Word160Length {
+		return fmt.Errorf("error unmarshallling address '%X' from bytes: %d bytes but should have %d bytes",
+			data, len(data), binary.Word160Length)
+	}
+	copy(address[:], data)
+	return nil
+}
+
+func (address *Address) MarshalTo(data []byte) (int, error) {
+	return copy(data, address[:]), nil
+}
+
+func (address *Address) Size() int {
+	return binary.Word160Length
 }
 
 func NewContractAddress(caller Address, sequence uint64) (newAddr Address) {

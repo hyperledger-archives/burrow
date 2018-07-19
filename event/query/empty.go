@@ -1,13 +1,21 @@
 package query
 
-import (
-	"github.com/tendermint/tendermint/libs/pubsub"
-	"github.com/tendermint/tendermint/libs/pubsub/query"
-)
+// Empty query matches any set of tags.
+type Empty struct {
+}
 
-// Matches everything
-type Empty query.Empty
+var _ Query = Empty{}
+var _ Queryable = Empty{}
 
-func (Empty) Query() (pubsub.Query, error) {
-	return query.Empty{}, nil
+// Matches always returns true.
+func (Empty) Matches(tags Tagged) bool {
+	return true
+}
+
+func (Empty) String() string {
+	return "empty"
+}
+
+func (Empty) Query() (Query, error) {
+	return Empty{}, nil
 }

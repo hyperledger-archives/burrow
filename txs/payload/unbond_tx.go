@@ -6,15 +6,9 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-type UnbondTx struct {
-	Input   *TxInput
-	Address crypto.Address
-	Height  int
-}
-
-func NewUnbondTx(addr crypto.Address, height int) *UnbondTx {
+func NewUnbondTx(address crypto.Address, height uint64) *UnbondTx {
 	return &UnbondTx{
-		Address: addr,
+		Address: address,
 		Height:  height,
 	}
 }

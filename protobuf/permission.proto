@@ -1,0 +1,39 @@
+syntax = 'proto2';
+
+package permission;
+
+option go_package = "github.com/hyperledger/burrow/permission";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message AccountPermissions {
+    optional BasePermissions Base = 1 [(gogoproto.nullable) = false];
+    repeated string Roles = 2;
+}
+
+message BasePermissions {
+    option (gogoproto.goproto_stringer) = false;
+    optional uint64 Perms = 1 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
+    optional uint64 SetBit = 2 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
+}
+
+message PermArgs {
+    option (gogoproto.goproto_unrecognized) = false;
+    option (gogoproto.goproto_stringer) = false;
+    optional uint64 PermFlag = 1 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
+    optional bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    optional uint64 Permission = 3 [(gogoproto.casttype) = "PermFlag"];
+    optional string Role = 4;
+    optional bool Value = 5;
+}

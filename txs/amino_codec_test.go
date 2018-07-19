@@ -3,7 +3,7 @@ package txs
 import (
 	"testing"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"

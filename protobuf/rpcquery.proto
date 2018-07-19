@@ -1,0 +1,40 @@
+syntax = 'proto3';
+
+package rpcquery;
+
+option go_package = "github.com/hyperledger/burrow/rpc/rpcquery";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "names.proto";
+import "acm.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_registration) = true;
+option (gogoproto.messagename_all) = true;
+
+service Query {
+    rpc GetAccount (GetAccountParam) returns (acm.ConcreteAccount);
+    rpc ListAccounts (ListAccountsParam) returns (stream acm.ConcreteAccount);
+    rpc GetName (GetNameParam) returns (names.Entry);
+    rpc ListNames (ListNamesParam) returns (stream names.Entry);
+}
+
+message GetAccountParam {
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+}
+
+message ListAccountsParam {
+    string Query = 1;
+}
+
+message GetNameParam {
+    string Name = 1;
+}
+
+message ListNamesParam {
+    string Query = 1;
+}
+

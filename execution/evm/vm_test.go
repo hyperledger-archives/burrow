@@ -15,25 +15,22 @@
 package evm
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/events"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
@@ -65,7 +62,7 @@ func newParams() Params {
 	}
 }
 
-func newAccount(seed ...byte) acm.MutableAccount {
+func newAccount(seed ...byte) *acm.MutableAccount {
 	hasher := ripemd160.New()
 	hasher.Write(seed)
 	return acm.ConcreteAccount{
@@ -697,14 +694,16 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
-	account2, err = newAccount(2).AddToBalance(100000)
+	account2 = newAccount(2)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	account2, err = newAccount(2).AddToBalance(100000)
+	account2 = newAccount(2)
+	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
@@ -996,7 +995,7 @@ func returnWord() []byte {
 }
 
 func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
-	code []byte) (acm.MutableAccount, crypto.Address) {
+	code []byte) (*acm.MutableAccount, crypto.Address) {
 	address, _ := crypto.AddressFromBytes([]byte(name))
 	account := acm.ConcreteAccount{
 		Address:  address,
@@ -1012,43 +1011,34 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount, subscribeAddr crypto.Address,
+func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount, subscribeAddr crypto.Address,
 	contractCode []byte, gas uint64) ([]byte, error) {
-	eventCh := make(chan *events.EventDataCall)
-	output, err := runVM(eventCh, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
+	txe := new(exec.TxExecution)
+	output, err := runVM(txe, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
 	if err != nil {
 		return output, err
 	}
-	select {
-	case eventDataCall := <-eventCh:
-		if eventDataCall.Exception != nil {
-			return output, eventDataCall.Exception
+	if len(txe.Events) > 0 {
+		ex := txe.Events[0].Header.Exception
+		if ex != nil {
+			return output, ex
 		}
-		return output, nil
 	}
+	return output, nil
 }
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(eventCh chan<- *events.EventDataCall, vmCache *state.Cache, ourVm *VM, caller, callee acm.MutableAccount,
+func runVM(sink EventSink, vmCache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
-	// we need to catch the event from the CALL to check for exceptions
-	em := event.NewEmitter(logging.NewNoopLogger())
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
-	err := events.SubscribeAccountCall(context.Background(), em, "test", subscribeAddr,
-		nil, -1, eventCh)
-	if err != nil {
-		return nil, err
-	}
-	evc := event.NewCache()
-	ourVm.SetPublisher(evc)
+	ourVm.SetEventSink(sink)
 	start := time.Now()
 	output, err := ourVm.Call(vmCache, caller, callee, contractCode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
-	evc.Flush(em)
 	return output, err
 }
 
@@ -1155,7 +1145,7 @@ func TestSubslice(t *testing.T) {
 func TestHasPermission(t *testing.T) {
 	st := newAppState()
 	acc := acm.ConcreteAccount{
-		Permissions: ptypes.AccountPermissions{
+		Permissions: permission.AccountPermissions{
 			Base: BasePermissionsFromStrings(t,
 				"00100001000111",
 				"11011110111000"),
@@ -1165,15 +1155,15 @@ func TestHasPermission(t *testing.T) {
 	assert.True(t, HasPermission(st, acc, PermFlagFromString(t, "100001000110")))
 }
 
-func BasePermissionsFromStrings(t *testing.T, perms, setBit string) ptypes.BasePermissions {
-	return ptypes.BasePermissions{
+func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {
+	return permission.BasePermissions{
 		Perms:  PermFlagFromString(t, perms),
 		SetBit: PermFlagFromString(t, setBit),
 	}
 }
 
-func PermFlagFromString(t *testing.T, binaryString string) ptypes.PermFlag {
+func PermFlagFromString(t *testing.T, binaryString string) permission.PermFlag {
 	permFlag, err := strconv.ParseUint(binaryString, 2, 64)
 	require.NoError(t, err)
-	return ptypes.PermFlag(permFlag)
+	return permission.PermFlag(permFlag)
 }

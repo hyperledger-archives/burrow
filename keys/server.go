@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys/pbkeys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
@@ -26,15 +25,15 @@ func StartStandAloneServer(keysDir, host, port string, AllowBadFilePermissions b
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	pbkeys.RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions, logger))
+	RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions, logger))
 	return grpcServer.Serve(listen)
 }
 
 //------------------------------------------------------------------------
 // handlers
 
-func (k *KeyStore) GenerateKey(ctx context.Context, in *pbkeys.GenRequest) (*pbkeys.GenResponse, error) {
-	curveT, err := crypto.CurveTypeFromString(in.Curvetype)
+func (k *KeyStore) GenerateKey(ctx context.Context, in *GenRequest) (*GenResponse, error) {
+	curveT, err := crypto.CurveTypeFromString(in.CurveType)
 	if err != nil {
 		return nil, err
 	}
@@ -45,17 +44,17 @@ func (k *KeyStore) GenerateKey(ctx context.Context, in *pbkeys.GenRequest) (*pbk
 	}
 
 	addrH := key.Address.String()
-	if in.Keyname != "" {
-		err = coreNameAdd(k.keysDirPath, in.Keyname, addrH)
+	if in.KeyName != "" {
+		err = coreNameAdd(k.keysDirPath, in.KeyName, addrH)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &pbkeys.GenResponse{Address: addrH}, nil
+	return &GenResponse{Address: addrH}, nil
 }
 
-func (k *KeyStore) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkeys.ExportResponse, error) {
+func (k *KeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 
 	if err != nil {
@@ -73,15 +72,15 @@ func (k *KeyStore) Export(ctx context.Context, in *pbkeys.ExportRequest) (*pbkey
 		return nil, err
 	}
 
-	return &pbkeys.ExportResponse{
+	return &ExportResponse{
 		Address:    addrB[:],
-		Curvetype:  key.CurveType.String(),
+		CurveType:  key.CurveType.String(),
 		Publickey:  key.PublicKey.PublicKey[:],
 		Privatekey: key.PrivateKey.PrivateKey[:],
 	}, nil
 }
 
-func (k *KeyStore) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkeys.PubResponse, error) {
+func (k *KeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
@@ -98,10 +97,10 @@ func (k *KeyStore) PublicKey(ctx context.Context, in *pbkeys.PubRequest) (*pbkey
 		return nil, err
 	}
 
-	return &pbkeys.PubResponse{Curvetype: key.CurveType.String(), Pub: key.Pubkey()}, nil
+	return &PubResponse{CurveType: key.CurveType.String(), PublicKey: key.Pubkey()}, nil
 }
 
-func (k *KeyStore) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.SignResponse, error) {
+func (k *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
@@ -119,11 +118,11 @@ func (k *KeyStore) Sign(ctx context.Context, in *pbkeys.SignRequest) (*pbkeys.Si
 
 	sig, err := key.Sign(in.GetMessage())
 
-	return &pbkeys.SignResponse{Signature: sig, Curvetype: key.CurveType.String()}, nil
+	return &SignResponse{Signature: sig, CurveType: key.CurveType.String()}, nil
 }
 
-func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkeys.VerifyResponse, error) {
-	if in.GetPub() == nil {
+func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
+	if in.GetPublicKey() == nil {
 		return nil, fmt.Errorf("must provide a pubkey")
 	}
 	if in.GetMessage() == nil {
@@ -133,7 +132,7 @@ func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkey
 		return nil, fmt.Errorf("must provide a signature")
 	}
 
-	curveT, err := crypto.CurveTypeFromString(in.GetCurvetype())
+	curveT, err := crypto.CurveTypeFromString(in.GetCurveType())
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +140,7 @@ func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkey
 	if err != nil {
 		return nil, err
 	}
-	pubkey, err := crypto.PublicKeyFromBytes(in.GetPub(), curveT)
+	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), curveT)
 	if err != nil {
 		return nil, err
 	}
@@ -150,10 +149,10 @@ func (k *KeyStore) Verify(ctx context.Context, in *pbkeys.VerifyRequest) (*pbkey
 		return nil, fmt.Errorf("Signature does not match")
 	}
 
-	return &pbkeys.VerifyResponse{}, nil
+	return &VerifyResponse{}, nil
 }
 
-func (k *KeyStore) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.HashResponse, error) {
+func (k *KeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, error) {
 	var hasher hash.Hash
 	switch in.GetHashtype() {
 	case "ripemd160":
@@ -167,10 +166,10 @@ func (k *KeyStore) Hash(ctx context.Context, in *pbkeys.HashRequest) (*pbkeys.Ha
 
 	hasher.Write(in.GetMessage())
 
-	return &pbkeys.HashResponse{Hash: hex.EncodeUpperToString(hasher.Sum(nil))}, nil
+	return &HashResponse{Hash: hex.EncodeUpperToString(hasher.Sum(nil))}, nil
 }
 
-func (k *KeyStore) ImportJSON(ctx context.Context, in *pbkeys.ImportJSONRequest) (*pbkeys.ImportResponse, error) {
+func (k *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*ImportResponse, error) {
 	keyJSON := []byte(in.GetJSON())
 	var err error
 	addr := IsValidKeyJson(keyJSON)
@@ -182,15 +181,15 @@ func (k *KeyStore) ImportJSON(ctx context.Context, in *pbkeys.ImportJSONRequest)
 	if err != nil {
 		return nil, err
 	}
-	return &pbkeys.ImportResponse{Address: hex.EncodeUpperToString(addr)}, nil
+	return &ImportResponse{Address: hex.EncodeUpperToString(addr)}, nil
 }
 
-func (k *KeyStore) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkeys.ImportResponse, error) {
-	curveT, err := crypto.CurveTypeFromString(in.GetCurvetype())
+func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportResponse, error) {
+	curveT, err := crypto.CurveTypeFromString(in.GetCurveType())
 	if err != nil {
 		return nil, err
 	}
-	key, err := NewKeyFromPriv(curveT, in.GetKeybytes())
+	key, err := NewKeyFromPriv(curveT, in.GetKeyBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -205,33 +204,33 @@ func (k *KeyStore) Import(ctx context.Context, in *pbkeys.ImportRequest) (*pbkey
 			return nil, err
 		}
 	}
-	return &pbkeys.ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
+	return &ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
 }
 
-func (k *KeyStore) List(ctx context.Context, in *pbkeys.ListRequest) (*pbkeys.ListResponse, error) {
+func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
 	names, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var list []*pbkeys.Key
+	var list []*KeyID
 
 	for name, addr := range names {
-		list = append(list, &pbkeys.Key{Keyname: name, Address: addr})
+		list = append(list, &KeyID{KeyName: name, Address: addr})
 	}
 
-	return &pbkeys.ListResponse{Key: list}, nil
+	return &ListResponse{Key: list}, nil
 }
 
-func (k *KeyStore) RemoveName(ctx context.Context, in *pbkeys.RemoveNameRequest) (*pbkeys.RemoveNameResponse, error) {
-	if in.GetKeyname() == "" {
+func (k *KeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*RemoveNameResponse, error) {
+	if in.GetKeyName() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
 
-	return &pbkeys.RemoveNameResponse{}, coreNameRm(k.keysDirPath, in.GetKeyname())
+	return &RemoveNameResponse{}, coreNameRm(k.keysDirPath, in.GetKeyName())
 }
 
-func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbkeys.AddNameResponse, error) {
+func (k *KeyStore) AddName(ctx context.Context, in *AddNameRequest) (*AddNameResponse, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
@@ -240,5 +239,5 @@ func (k *KeyStore) AddName(ctx context.Context, in *pbkeys.AddNameRequest) (*pbk
 		return nil, fmt.Errorf("please specify an address")
 	}
 
-	return &pbkeys.AddNameResponse{}, coreNameAdd(k.keysDirPath, in.GetKeyname(), strings.ToUpper(in.GetAddress()))
+	return &AddNameResponse{}, coreNameAdd(k.keysDirPath, in.GetKeyname(), strings.ToUpper(in.GetAddress()))
 }

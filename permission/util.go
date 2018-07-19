@@ -17,8 +17,6 @@ package permission
 import (
 	"fmt"
 	"strings"
-
-	"github.com/hyperledger/burrow/permission/types"
 )
 
 // ConvertMapStringIntToPermissions converts a map of string-bool pairs and a slice of
@@ -27,9 +25,9 @@ import (
 // will be set in the AccountsPermissions. For all unmentioned permissions the
 // ZeroBasePermissions is defaulted to.
 func ConvertPermissionsMapAndRolesToAccountPermissions(permissions map[string]bool,
-	roles []string) (*types.AccountPermissions, error) {
+	roles []string) (*AccountPermissions, error) {
 	var err error
-	accountPermissions := &types.AccountPermissions{}
+	accountPermissions := &AccountPermissions{}
 	accountPermissions.Base, err = convertPermissionsMapStringIntToBasePermissions(permissions)
 	if err != nil {
 		return nil, err
@@ -40,12 +38,12 @@ func ConvertPermissionsMapAndRolesToAccountPermissions(permissions map[string]bo
 
 // convertPermissionsMapStringIntToBasePermissions converts a map of string-bool
 // pairs to BasePermissions.
-func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool) (types.BasePermissions, error) {
+func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool) (BasePermissions, error) {
 	// initialise basePermissions as ZeroBasePermissions
 	basePermissions := ZeroBasePermissions
 
 	for permissionName, value := range permissions {
-		permissionsFlag, err := types.PermStringToFlag(permissionName)
+		permissionsFlag, err := PermStringToFlag(permissionName)
 		if err != nil {
 			return basePermissions, err
 		}
@@ -58,12 +56,12 @@ func convertPermissionsMapStringIntToBasePermissions(permissions map[string]bool
 
 // Builds a composite BasePermission by creating a PermFlag from permissions strings and
 // setting them all
-func BasePermissionsFromStringList(permissions []string) (types.BasePermissions, error) {
+func BasePermissionsFromStringList(permissions []string) (BasePermissions, error) {
 	permFlag, err := PermFlagFromStringList(permissions)
 	if err != nil {
 		return ZeroBasePermissions, err
 	}
-	return types.BasePermissions{
+	return BasePermissions{
 		Perms:  permFlag,
 		SetBit: permFlag,
 	}, nil
@@ -71,10 +69,10 @@ func BasePermissionsFromStringList(permissions []string) (types.BasePermissions,
 
 // Builds a composite PermFlag by mapping each permission string in permissions to its
 // flag and composing them with binary or
-func PermFlagFromStringList(permissions []string) (types.PermFlag, error) {
-	var permFlag types.PermFlag
+func PermFlagFromStringList(permissions []string) (PermFlag, error) {
+	var permFlag PermFlag
 	for _, perm := range permissions {
-		flag, err := types.PermStringToFlag(perm)
+		flag, err := PermStringToFlag(perm)
 		if err != nil {
 			return permFlag, err
 		}
@@ -85,19 +83,19 @@ func PermFlagFromStringList(permissions []string) (types.PermFlag, error) {
 
 // Builds a list of set permissions from a BasePermission by creating a list of permissions strings
 // from the resultant permissions of basePermissions
-func BasePermissionsToStringList(basePermissions types.BasePermissions) ([]string, error) {
+func BasePermissionsToStringList(basePermissions BasePermissions) ([]string, error) {
 	return PermFlagToStringList(basePermissions.ResultantPerms())
 }
 
 // Creates a list of individual permission flag strings from a possibly composite PermFlag
 // by projecting out each bit and adding its permission string if it is set
-func PermFlagToStringList(permFlag types.PermFlag) ([]string, error) {
-	permStrings := make([]string, 0, types.NumPermissions)
-	if permFlag > types.AllPermFlags {
+func PermFlagToStringList(permFlag PermFlag) ([]string, error) {
+	permStrings := make([]string, 0, NumPermissions)
+	if permFlag > AllPermFlags {
 		return nil, fmt.Errorf("resultant permission 0b%b is invalid: has permission flag set above top flag 0b%b",
-			permFlag, types.TopPermFlag)
+			permFlag, TopPermFlag)
 	}
-	for i := uint(0); i < types.NumPermissions; i++ {
+	for i := uint(0); i < NumPermissions; i++ {
 		permFlag := permFlag & (1 << i)
 		if permFlag > 0 {
 			permStrings = append(permStrings, permFlag.String())
@@ -107,18 +105,18 @@ func PermFlagToStringList(permFlag types.PermFlag) ([]string, error) {
 }
 
 // Generates a human readable string from the resultant permissions of basePermission
-func BasePermissionsString(basePermissions types.BasePermissions) string {
+func BasePermissionsString(basePermissions BasePermissions) string {
 	permStrings, err := BasePermissionsToStringList(basePermissions)
 	if err != nil {
-		return types.UnknownString
+		return UnknownString
 	}
 	return strings.Join(permStrings, " | ")
 }
 
-func String(permFlag types.PermFlag) string {
+func String(permFlag PermFlag) string {
 	permStrings, err := PermFlagToStringList(permFlag)
 	if err != nil {
-		return types.UnknownString
+		return UnknownString
 	}
 	return strings.Join(permStrings, " | ")
 }

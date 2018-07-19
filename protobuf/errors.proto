@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package errors;
+
+option go_package = "github.com/hyperledger/burrow/execution/errors";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message Exception {
+    option (gogoproto.goproto_stringer) = false;
+    uint32 Code = 1 [(gogoproto.casttype) = "Code"];
+    string Exception = 2;
+}

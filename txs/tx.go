@@ -18,9 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -53,6 +54,7 @@ func (tx *Tx) Sign(signingAccounts ...acm.AddressableSigner) (*Envelope, error) 
 	if err != nil {
 		return nil, err
 	}
+	tx.Rehash()
 	return env, nil
 }
 
@@ -105,6 +107,34 @@ func (tx *Tx) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(w.Payload, tx.Payload)
 }
 
+// Protobuf support
+func (tx *Tx) Marshal() ([]byte, error) {
+	if tx == nil {
+		return nil, nil
+	}
+	return tx.MarshalJSON()
+}
+
+func (tx *Tx) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return tx.UnmarshalJSON(data)
+}
+
+func (tx *Tx) MarshalTo(data []byte) (int, error) {
+	bs, err := tx.Marshal()
+	if err != nil {
+		return 0, err
+	}
+	return copy(data, bs), nil
+}
+
+func (tx *Tx) Size() int {
+	bs, _ := tx.Marshal()
+	return len(bs)
+}
+
 func (tx *Tx) Type() payload.Type {
 	if tx == nil {
 		return payload.TypeUnknown
@@ -114,7 +144,7 @@ func (tx *Tx) Type() payload.Type {
 
 // Generate a Hash for this transaction based on the SignBytes. The hash is memoized over the lifetime
 // of the Tx so repeated calls to Hash() are effectively free
-func (tx *Tx) Hash() []byte {
+func (tx *Tx) Hash() binary.HexBytes {
 	if tx == nil {
 		return nil
 	}
@@ -139,17 +169,15 @@ func (tx *Tx) Rehash() []byte {
 	return tx.txHash
 }
 
-// BroadcastTx or Transaction receipt
-type Receipt struct {
-	TxHash          binary.HexBytes
-	CreatesContract bool
-	ContractAddress crypto.Address
+func (tx *Tx) Tagged() query.Tagged {
+	return query.MergeTags(query.MustReflectTags(tx), query.MustReflectTags(tx.Payload))
 }
 
 // Generate a transaction Receipt containing the Tx hash and other information if the Tx is call.
 // Returned by ABCI methods.
 func (tx *Tx) GenerateReceipt() *Receipt {
 	receipt := &Receipt{
+		TxType: tx.Type(),
 		TxHash: tx.Hash(),
 	}
 	if callTx, ok := tx.Payload.(*payload.CallTx); ok {
@@ -161,4 +189,19 @@ func (tx *Tx) GenerateReceipt() *Receipt {
 		}
 	}
 	return receipt
+}
+
+var cdc = NewAminoCodec()
+
+func DecodeReceipt(bs []byte) (*Receipt, error) {
+	receipt := new(Receipt)
+	err := cdc.UnmarshalBinary(bs, receipt)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
+
+func (receipt *Receipt) Encode() ([]byte, error) {
+	return cdc.MarshalBinary(receipt)
 }

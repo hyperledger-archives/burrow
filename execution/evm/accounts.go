@@ -1,16 +1,16 @@
 package evm
 
 import (
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 // Create a new account from a parent 'creator' account. The creator account will have its
 // sequence number incremented
-func DeriveNewAccount(creator acm.MutableAccount, permissions ptypes.AccountPermissions,
-	logger *logging.Logger) acm.MutableAccount {
+func DeriveNewAccount(creator *acm.MutableAccount, permissions permission.AccountPermissions,
+	logger *logging.Logger) *acm.MutableAccount {
 	// Generate an address
 	sequence := creator.Sequence()
 	logger.TraceMsg("Incrementing sequence number in DeriveNewAccount()",

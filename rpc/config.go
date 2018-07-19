@@ -1,9 +1,6 @@
 package rpc
 
-import "github.com/hyperledger/burrow/rpc/v0/server"
-
 type RPCConfig struct {
-	V0       *V0Config      `json:",omitempty" toml:",omitempty"`
 	TM       *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
@@ -13,11 +10,6 @@ type RPCConfig struct {
 type ServerConfig struct {
 	Enabled       bool
 	ListenAddress string
-}
-
-type V0Config struct {
-	Enabled bool
-	Server  *server.ServerConfig
 }
 
 type ProfilerConfig struct {
@@ -40,24 +32,16 @@ type MetricsConfig struct {
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
 		TM:       DefaultTMConfig(),
-		V0:       DefaultV0Config(),
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
 		Metrics:  DefaultMetricsConfig(),
 	}
 }
 
-func DefaultV0Config() *V0Config {
-	return &V0Config{
-		Enabled: true,
-		Server:  server.DefaultServerConfig(),
-	}
-}
-
 func DefaultTMConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "tcp://localhost:46657",
+		ListenAddress: "tcp://localhost:26658",
 	}
 }
 

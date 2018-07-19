@@ -5,7 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/genesis/spec"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 )
 
 func Spec(output Output) func(cmd *cli.Cmd) {

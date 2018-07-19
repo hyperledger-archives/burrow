@@ -1,0 +1,31 @@
+syntax = 'proto3';
+
+package acm;
+
+option go_package = "github.com/hyperledger/burrow/acm";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "permission.proto";
+import "crypto.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message ConcreteAccount {
+    option (gogoproto.goproto_stringer) = false;
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    crypto.PublicKey PublicKey = 2 [(gogoproto.nullable) = false];
+    uint64 Sequence = 3;
+    uint64 Balance = 4;
+    bytes Code = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
+    permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
+}

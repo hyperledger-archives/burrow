@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type CurveType int8
+type CurveType uint32
 
 const (
 	CurveTypeSecp256k1 CurveType = iota

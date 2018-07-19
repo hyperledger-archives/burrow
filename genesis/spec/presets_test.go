@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/keys/mock"
-	permission "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

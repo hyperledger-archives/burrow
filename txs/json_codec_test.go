@@ -3,7 +3,7 @@ package txs
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +39,7 @@ func TestJSONEncodeTxDecodeTx(t *testing.T) {
 
 func TestJSONEncodeTxDecodeTx_CallTx(t *testing.T) {
 	codec := NewJSONCodec()
-	inputAccount := account.GeneratePrivateAccountFromSecret("fooo")
+	inputAccount := acm.GeneratePrivateAccountFromSecret("fooo")
 	amount := uint64(2)
 	sequence := uint64(3)
 	tx := &payload.CallTx{
@@ -66,7 +66,7 @@ func TestJSONEncodeTxDecodeTx_CallTx(t *testing.T) {
 
 func TestJSONEncodeTxDecodeTx_CallTxNoData(t *testing.T) {
 	codec := NewJSONCodec()
-	inputAccount := account.GeneratePrivateAccountFromSecret("fooo")
+	inputAccount := acm.GeneratePrivateAccountFromSecret("fooo")
 	amount := uint64(2)
 	sequence := uint64(3)
 	tx := &payload.CallTx{
@@ -88,5 +88,11 @@ func TestJSONEncodeTxDecodeTx_CallTxNoData(t *testing.T) {
 	}
 	txEnvOut, err := codec.DecodeTx(txBytes)
 	assert.NoError(t, err, "DecodeTx error")
-	assert.Equal(t, txEnv, txEnvOut)
+
+	bs, err := codec.EncodeTx(txEnv)
+	require.NoError(t, err)
+	bsOut, err := codec.EncodeTx(txEnvOut)
+	require.NoError(t, err)
+
+	assert.Equal(t, bs, bsOut)
 }

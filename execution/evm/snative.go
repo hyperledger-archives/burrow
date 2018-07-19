@@ -19,8 +19,8 @@ import (
 
 	"strings"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -28,7 +28,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 //
@@ -61,7 +61,7 @@ type SNativeFunctionDescription struct {
 	// Function return value
 	Return abi.Return
 	// Permissions required to call function
-	PermFlag ptypes.PermFlag
+	PermFlag permission.PermFlag
 	// Native function to which calls will be dispatched when a containing
 	// contract is called with a FunctionSelector matching this NativeContract
 	F NativeContract
@@ -98,7 +98,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				ptypes.AddRole,
+				permission.AddRole,
 				addRole},
 
 			&SNativeFunctionDescription{`
@@ -113,7 +113,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				ptypes.RemoveRole,
+				permission.RemoveRole,
 				removeRole},
 
 			&SNativeFunctionDescription{`
@@ -128,7 +128,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_role", roleTypeName),
 				},
 				abiReturn("result", abi.BoolTypeName),
-				ptypes.HasRole,
+				permission.HasRole,
 				hasRole},
 
 			&SNativeFunctionDescription{`
@@ -145,7 +145,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_set", abi.BoolTypeName),
 				},
 				abiReturn("result", permFlagTypeName),
-				ptypes.SetBase,
+				permission.SetBase,
 				setBase},
 
 			&SNativeFunctionDescription{`
@@ -159,7 +159,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_account", abi.AddressTypeName),
 					abiArg("_permission", permFlagTypeName)},
 				abiReturn("result", permFlagTypeName),
-				ptypes.UnsetBase,
+				permission.UnsetBase,
 				unsetBase},
 
 			&SNativeFunctionDescription{`
@@ -173,7 +173,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_account", abi.AddressTypeName),
 					abiArg("_permission", permFlagTypeName)},
 				abiReturn("result", abi.BoolTypeName),
-				ptypes.HasBase,
+				permission.HasBase,
 				hasBase},
 
 			&SNativeFunctionDescription{`
@@ -187,7 +187,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 					abiArg("_permission", permFlagTypeName),
 					abiArg("_set", abi.BoolTypeName)},
 				abiReturn("result", permFlagTypeName),
-				ptypes.SetGlobal,
+				permission.SetGlobal,
 				setGlobal},
 		),
 	}
@@ -355,9 +355,9 @@ func hasBase(state state.ReaderWriter, caller acm.Account, args []byte, gas *uin
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
-	permN := ptypes.PermFlag(Uint64FromWord256(permNum)) // already shifted
+	permN := permission.PermFlag(Uint64FromWord256(permNum)) // already shifted
 	if !ValidPermN(permN) {
-		return nil, ptypes.ErrInvalidPermission(permN)
+		return nil, permission.ErrInvalidPermission(permN)
 	}
 	hasPermission := HasPermission(state, acc, permN)
 	permInt := byteFromBool(hasPermission)
@@ -381,9 +381,9 @@ func setBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, ga
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
-	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
+	permN := permission.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
-		return nil, ptypes.ErrInvalidPermission(permN)
+		return nil, permission.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
 	if err = acc.MutablePermissions().Base.Set(permN, permV); err != nil {
@@ -408,9 +408,9 @@ func unsetBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, 
 	if acc == nil {
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
-	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
+	permN := permission.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
-		return nil, ptypes.ErrInvalidPermission(permN)
+		return nil, permission.ErrInvalidPermission(permN)
 	}
 	if err = acc.MutablePermissions().Base.Unset(permN); err != nil {
 		return nil, err
@@ -434,9 +434,9 @@ func setGlobal(stateWriter state.ReaderWriter, caller acm.Account, args []byte, 
 	if acc == nil {
 		panic("cant find the global permissions account")
 	}
-	permN := ptypes.PermFlag(Uint64FromWord256(permNum))
+	permN := permission.PermFlag(Uint64FromWord256(permNum))
 	if !ValidPermN(permN) {
-		return nil, ptypes.ErrInvalidPermission(permN)
+		return nil, permission.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
 	if err = acc.MutablePermissions().Base.Set(permN, permV); err != nil {
@@ -518,23 +518,23 @@ func removeRole(stateWriter state.ReaderWriter, caller acm.Account, args []byte,
 // Errors and utility funcs
 
 // Checks if a permission flag is valid (a known base chain or snative permission)
-func ValidPermN(n ptypes.PermFlag) bool {
-	return n <= ptypes.AllPermFlags
+func ValidPermN(n permission.PermFlag) bool {
+	return n <= permission.AllPermFlags
 }
 
 // Get the global BasePermissions
-func globalPerms(stateWriter state.ReaderWriter) ptypes.BasePermissions {
+func globalPerms(stateWriter state.ReaderWriter) permission.BasePermissions {
 	return state.GlobalAccountPermissions(stateWriter).Base
 }
 
 // Compute the effective permissions from an acm.Account's BasePermissions by
 // taking the bitwise or with the global BasePermissions resultant permissions
-func effectivePermBytes(basePerms ptypes.BasePermissions,
-	globalPerms ptypes.BasePermissions) []byte {
+func effectivePermBytes(basePerms permission.BasePermissions,
+	globalPerms permission.BasePermissions) []byte {
 	return permBytes(basePerms.ResultantPerms() | globalPerms.ResultantPerms())
 }
 
-func permBytes(basePerms ptypes.PermFlag) []byte {
+func permBytes(basePerms permission.PermFlag) []byte {
 	return Uint64ToWord256(uint64(basePerms)).Bytes()
 }
 

@@ -11,8 +11,8 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/pkg/errors"
-	"github.com/tmthrgd/go-hex"
-	"gopkg.in/yaml.v2"
+	hex "github.com/tmthrgd/go-hex"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Validator struct {

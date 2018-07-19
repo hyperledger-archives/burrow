@@ -20,3 +20,25 @@ func (hb HexBytes) MarshalText() ([]byte, error) {
 func (hb HexBytes) String() string {
 	return hex.EncodeUpperToString(hb)
 }
+
+// Protobuf support
+func (hb HexBytes) Marshal() ([]byte, error) {
+	return hb, nil
+}
+
+func (hb *HexBytes) Unmarshal(data []byte) error {
+	*hb = data
+	return nil
+}
+
+func (hb HexBytes) MarshalTo(data []byte) (int, error) {
+	return copy(data, hb), nil
+}
+
+func (hb HexBytes) Size() int {
+	return len(hb)
+}
+
+func (hb HexBytes) Bytes() []byte {
+	return hb
+}

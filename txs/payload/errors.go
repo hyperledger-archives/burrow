@@ -15,14 +15,6 @@ var (
 	ErrTxInvalidSignature  = errors.New("error invalid signature")
 )
 
-type ErrTxInvalidString struct {
-	Msg string
-}
-
-func (e ErrTxInvalidString) Error() string {
-	return e.Msg
-}
-
 type ErrTxInvalidSequence struct {
 	Got      uint64
 	Expected uint64

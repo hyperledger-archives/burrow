@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/tmthrgd/go-hex"
 
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/scrypt"
 )
 

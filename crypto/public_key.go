@@ -13,14 +13,6 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-// PublicKey
-type PublicKey struct {
-	CurveType CurveType
-	PublicKey []byte
-	// memoised address
-	address *Address
-}
-
 type PublicKeyJSON struct {
 	CurveType string
 	PublicKey string
@@ -83,13 +75,13 @@ func (p PublicKey) IsValid() bool {
 func (p PublicKey) Verify(msg []byte, signature Signature) bool {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		return ed25519.Verify(p.PublicKey, msg, signature.Signature[:])
+		return ed25519.Verify(p.PublicKey, msg, signature)
 	case CurveTypeSecp256k1:
 		pub, err := btcec.ParsePubKey(p.PublicKey, btcec.S256())
 		if err != nil {
 			return false
 		}
-		sig, err := btcec.ParseDERSignature(signature.Signature, btcec.S256())
+		sig, err := btcec.ParseDERSignature(signature, btcec.S256())
 		if err != nil {
 			return false
 		}
@@ -100,14 +92,6 @@ func (p PublicKey) Verify(msg []byte, signature Signature) bool {
 }
 
 func (p PublicKey) Address() Address {
-	if p.address == nil {
-		address := p.computeAddress()
-		p.address = &address
-	}
-	return *p.address
-}
-
-func (p PublicKey) computeAddress() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
 		// FIMXE: tendermint go-crypto-0.5.0 uses weird scheme, this is fixed in 0.6.0

@@ -1,0 +1,29 @@
+syntax = 'proto3';
+
+package crypto;
+
+option go_package = "github.com/hyperledger/burrow/crypto";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_registration) = true;
+option (gogoproto.messagename_all) = true;
+
+// PublicKey
+message PublicKey {
+    option (gogoproto.goproto_stringer) = false;
+    uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
+    bytes PublicKey = 2;
+}
+
+message PrivateKey {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+    uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
+    // Note may need initialisation
+    bytes PublicKey = 2;
+    bytes PrivateKey = 3;
+}

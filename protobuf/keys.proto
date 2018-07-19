@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+option go_package = "github.com/hyperledger/burrow/keys";
+
+package keys;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_registration) = true;
+option (gogoproto.messagename_all) = true;
+
+service Keys {
+    rpc GenerateKey(GenRequest) returns (GenResponse);
+    rpc PublicKey(PubRequest) returns (PubResponse);
+    rpc Sign(SignRequest) returns (SignResponse);
+    rpc Verify(VerifyRequest) returns (VerifyResponse);
+    rpc Import(ImportRequest) returns (ImportResponse);
+    rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
+    rpc Export(ExportRequest) returns (ExportResponse);
+    rpc Hash(HashRequest) returns (HashResponse);
+    rpc RemoveName(RemoveNameRequest) returns (RemoveNameResponse);
+    rpc List(ListRequest) returns (ListResponse);
+    rpc AddName(AddNameRequest) returns (AddNameResponse);
+}
+
+// Some empty types we may define later
+
+message ListRequest {
+
+}
+
+message VerifyResponse {
+
+}
+
+message RemoveNameResponse {
+
+}
+
+message AddNameResponse {
+
+}
+
+message RemoveNameRequest {
+    string KeyName = 1;
+}
+
+
+message GenRequest {
+    string Passphrase = 1;
+    string CurveType = 2;
+    string KeyName = 3;
+}
+
+message GenResponse {
+    string Address = 1;
+}
+
+message PubRequest {
+    string Address = 1;
+    string Name = 2;
+} 
+
+message PubResponse {
+    bytes PublicKey = 1;
+    string CurveType = 2;
+}
+
+message ImportJSONRequest {
+    string Passphrase = 1;
+    string JSON = 2;
+}
+
+message ImportResponse {
+    string Address = 1;
+}
+
+message ImportRequest {
+    string Passphrase = 1;
+    string Name = 2;
+    string CurveType = 3;
+    bytes KeyBytes = 4;
+}
+
+message ExportRequest {
+    string Passphrase = 1;
+    string Name = 2;
+    string Address = 3;
+}
+
+message ExportResponse {
+    bytes Publickey = 1;
+    bytes Privatekey = 2;
+    bytes Address = 3;
+    string CurveType = 4;
+}
+
+message SignRequest {
+    string Passphrase = 1;
+    string Address = 2;
+    string Name = 3;
+    bytes Message = 4;
+}
+
+message SignResponse {
+    bytes Signature = 1;
+    string CurveType = 2;
+}
+
+message VerifyRequest {
+    string CurveType = 1;
+    bytes PublicKey = 2;
+    bytes Message = 3;
+    bytes Signature = 4;
+}
+
+message HashRequest {
+    string Hashtype = 1;
+    bytes Message = 2;
+}
+
+message HashResponse {
+    string Hash = 1;
+}
+
+message KeyID {
+    string Address = 1;
+    string KeyName = 2;
+}
+
+message ListResponse {
+    repeated KeyID key = 1;
+}
+
+message AddNameRequest {
+    string Keyname = 1;
+    string Address = 2;
+}

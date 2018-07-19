@@ -3,13 +3,12 @@ package executors
 import (
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
@@ -18,9 +17,9 @@ import (
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
 func getInputs(accountGetter state.AccountGetter,
-	ins []*payload.TxInput) (map[crypto.Address]acm.MutableAccount, error) {
+	ins []*payload.TxInput) (map[crypto.Address]*acm.MutableAccount, error) {
 
-	accounts := map[crypto.Address]acm.MutableAccount{}
+	accounts := map[crypto.Address]*acm.MutableAccount{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
@@ -38,10 +37,10 @@ func getInputs(accountGetter state.AccountGetter,
 	return accounts, nil
 }
 
-func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
-	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]acm.MutableAccount, error) {
+func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
+	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]*acm.MutableAccount, error) {
 	if accs == nil {
-		accs = make(map[crypto.Address]acm.MutableAccount)
+		accs = make(map[crypto.Address]*acm.MutableAccount)
 	}
 
 	// we should err if an account is being created but the inputs don't have permission
@@ -75,7 +74,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	return accs, nil
 }
 
-func validateInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput) (uint64, error) {
+func validateInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.TxInput) (uint64, error) {
 	total := uint64(0)
 	for _, in := range ins {
 		acc := accs[in.Address]
@@ -92,7 +91,7 @@ func validateInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 	return total, nil
 }
 
-func validateInput(acc acm.MutableAccount, in *payload.TxInput) error {
+func validateInput(acc *acm.MutableAccount, in *payload.TxInput) error {
 	// Check TxInput basic
 	if err := in.ValidateBasic(); err != nil {
 		return err
@@ -124,7 +123,7 @@ func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -135,7 +134,7 @@ func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
 				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
 		}
-		acc, err := acc.SubtractFromBalance(in.Amount)
+		err := acc.SubtractFromBalance(in.Amount)
 		if err != nil {
 			return err
 		}
@@ -149,14 +148,14 @@ func adjustByInputs(accs map[crypto.Address]acm.MutableAccount, ins []*payload.T
 	return nil
 }
 
-func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload.TxOutput) error {
+func adjustByOutputs(accs map[crypto.Address]*acm.MutableAccount, outs []*payload.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
 			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
 				out.Address)
 		}
-		_, err := acc.AddToBalance(out.Amount)
+		err := acc.AddToBalance(out.Amount)
 		if err != nil {
 			return err
 		}
@@ -167,13 +166,13 @@ func adjustByOutputs(accs map[crypto.Address]acm.MutableAccount, outs []*payload
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptypes.PermFlag, logger *logging.Logger) bool {
-	if perm > ptypes.AllPermFlags {
+func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm permission.PermFlag, logger *logging.Logger) bool {
+	if perm > permission.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
-				perm, ptypes.AllPermFlags),
+				perm, permission.AllPermFlags),
 			"invalid_permission", perm,
-			"maximum_permission", ptypes.AllPermFlags)
+			"maximum_permission", permission.AllPermFlags)
 		return false
 	}
 
@@ -197,10 +196,10 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm ptyp
 }
 
 // TODO: for debug log the failed accounts
-func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
+func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, ptypes.Send, logger) {
+		if !HasPermission(accountGetter, acc, permission.Send, logger) {
 			return false
 		}
 	}
@@ -209,23 +208,23 @@ func hasSendPermission(accountGetter state.AccountGetter, accs map[crypto.Addres
 
 func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, ptypes.Name, logger)
+	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
 func hasCallPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, ptypes.Call, logger)
+	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
 func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, ptypes.CreateContract, logger)
+	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, ptypes.CreateAccount, logger) {
+		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
 			return false
 		}
 	}
@@ -234,14 +233,14 @@ func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[cryp
 
 func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
 	logger *logging.Logger) bool {
-	return HasPermission(accountGetter, acc, ptypes.Bond, logger)
+	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
 func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
-		if !HasPermission(accountGetter, acc, ptypes.Bond, logger) {
-			if !HasPermission(accountGetter, acc, ptypes.Send, logger) {
+		if !HasPermission(accountGetter, acc, permission.Bond, logger) {
+			if !HasPermission(accountGetter, acc, permission.Send, logger) {
 				return false
 			}
 		}
