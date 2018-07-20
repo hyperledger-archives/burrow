@@ -29,6 +29,7 @@ import (
 
 var _ = integration.ClaimPorts()
 var inputAddress = rpctest.PrivateAccounts[0].Address()
+var gene
 var testConfig = integration.NewTestConfig(rpctest.GenesisDoc)
 var kern *core.Kernel
 

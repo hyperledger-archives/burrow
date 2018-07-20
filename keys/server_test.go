@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
-	tm_crypto "github.com/tendermint/go-crypto"
+	tm_crypto "github.com/tendermint/tendermint/crypto"
 	"google.golang.org/grpc"
 )
 

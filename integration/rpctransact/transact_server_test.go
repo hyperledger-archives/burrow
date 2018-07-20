@@ -102,7 +102,7 @@ func TestFormulateTx(t *testing.T) {
 	require.NoError(t, err)
 	// We should see the sign bytes embedded
 	if !assert.Contains(t, string(bs), fmt.Sprintf("{\"ChainID\":\"%s\",\"Type\":\"CallTx\","+
-		"\"Payload\":{\"Input\":{\"Address\":\"4A6DFB649EF0D50780998A686BD69AB175C08E26\",\"Amount\":230},"+
+		"\"Payload\":{\"Input\":{\"Address\":\"E80BB91C2F0F4C3C39FC53E89BF8416B219BE6E4\",\"Amount\":230},"+
 		"\"Data\":\"0203060403\"}}", rpctest.GenesisDoc.ChainID())) {
 		fmt.Println(string(bs))
 	}

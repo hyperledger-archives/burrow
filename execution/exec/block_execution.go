@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs"
-	abciTypes "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }

@@ -20,8 +20,8 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/log"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // Client and Server should work over tcp or unix sockets

@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tendermint/go-crypto"
+	"github.com/hyperledger/burrow/binary"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/types"
-	cmn "github.com/tendermint/tmlibs/common"
 )
 
 // TODO: type ?
@@ -27,7 +27,7 @@ func voteToStep(vote *types.Vote) int8 {
 	case types.VoteTypePrecommit:
 		return stepPrecommit
 	default:
-		cmn.PanicSanity("Unknown vote type")
+		panic("Unknown vote type")
 		return 0
 	}
 }
@@ -40,7 +40,7 @@ type LastSignedInfo struct {
 	Round     int              `json:"round"`
 	Step      int8             `json:"step"`
 	Signature crypto.Signature `json:"signature,omitempty"` // so we dont lose signatures
-	SignBytes cmn.HexBytes     `json:"signbytes,omitempty"` // so we dont lose signatures
+	SignBytes binary.HexBytes  `json:"signbytes,omitempty"` // so we dont lose signatures
 }
 
 func NewLastSignedInfo() *LastSignedInfo {
@@ -57,7 +57,7 @@ func (lsi *LastSignedInfo) SignVote(sign goCryptoSigner, chainID string, vote *t
 	lsi.Lock()
 	defer lsi.Unlock()
 	if err := lsi.signVote(sign, chainID, vote); err != nil {
-		return errors.New(cmn.Fmt("Error signing vote: %v", err))
+		return fmt.Errorf("error signing vote: %v", err)
 	}
 	return nil
 }
@@ -68,7 +68,7 @@ func (lsi *LastSignedInfo) SignProposal(sign goCryptoSigner, chainID string, pro
 	lsi.Lock()
 	defer lsi.Unlock()
 	if err := lsi.signProposal(sign, chainID, proposal); err != nil {
-		return fmt.Errorf("Error signing proposal: %v", err)
+		return fmt.Errorf("error signing proposal: %v", err)
 	}
 	return nil
 }

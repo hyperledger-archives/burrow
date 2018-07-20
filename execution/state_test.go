@@ -27,7 +27,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 func TestState_UpdateAccount(t *testing.T) {

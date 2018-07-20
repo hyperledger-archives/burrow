@@ -38,6 +38,8 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.Moniker = btc.Moniker
+		// Unfortunately this stops metrics from being used at all
+		conf.Instrumentation.Prometheus = false
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""

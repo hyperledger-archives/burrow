@@ -5,7 +5,7 @@ package exec;
 option go_package = "github.com/hyperledger/burrow/execution/exec";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/tendermint/abci/types/types.proto";
+import "github.com/tendermint/tendermint/abci/types/types.proto";
 
 import "errors.proto";
 import "names.proto";

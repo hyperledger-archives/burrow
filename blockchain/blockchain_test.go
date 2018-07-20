@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger/burrow/logging/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 func TestBlockchain_Encode(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
-	abciTypes "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 const responseInfoName = "Burrow"

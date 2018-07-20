@@ -1,8 +1,8 @@
 package validator
 
 import (
-	"github.com/tendermint/go-amino"
-	"github.com/tendermint/go-crypto"
+	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/tendermint/crypto"
 )
 
 var cdc = amino.NewCodec()

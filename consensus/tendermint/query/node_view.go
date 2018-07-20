@@ -5,7 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	tm_crypto "github.com/tendermint/go-crypto"
+	tm_crypto "github.com/tendermint/tendermint/crypto"
 
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"

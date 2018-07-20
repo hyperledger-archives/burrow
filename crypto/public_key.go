@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
-	abci "github.com/tendermint/abci/types"
-	tmCrypto "github.com/tendermint/go-crypto"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ripemd160"
@@ -98,10 +98,7 @@ func (p PublicKey) PublicKey() PublicKey {
 func (p PublicKey) Address() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		// FIMXE: tendermint go-crypto-0.5.0 uses weird scheme, this is fixed in 0.6.0
-		tmPubKey := new(tmCrypto.PubKeyEd25519)
-		copy(tmPubKey[:], p.Key)
-		addr, _ := AddressFromBytes(tmPubKey.Address())
+		addr, _ := AddressFromBytes(tmhash.Sum(p.Key))
 		return addr
 	case CurveTypeSecp256k1:
 		sha := sha256.New()
@@ -166,27 +163,4 @@ func (p PublicKey) Encode() []byte {
 	encoded[0] = p.CurveType.Byte()
 	copy(encoded[1:], p.Key)
 	return encoded
-}
-
-// Decodes an encoded public key returning the number of bytes consumed
-func DecodePublicKeyFixedWidth(buf []byte, publicKey *PublicKey) (int, error) {
-	if len(buf) < 1 {
-		return 0, fmt.Errorf("encoded bytes buffer must not be empty")
-	}
-	curveType := CurveType(buf[0])
-	publicKeyEnd := PublicKeyLength(curveType) + 1
-	if publicKeyEnd <= 0 {
-		return 0, fmt.Errorf("CurveType with identifier %v is unknown", curveType.Byte())
-	}
-	if len(buf) < publicKeyEnd {
-		return 0, fmt.Errorf("encoded bytes buffer has length %v but public key encoding for %v needs %v bytes",
-			len(buf), curveType, publicKeyEnd)
-	}
-
-	publicKey.CurveType = curveType
-	publicKey.Key = buf[1:publicKeyEnd]
-	if !publicKey.IsValid() {
-		return publicKeyEnd, fmt.Errorf("decoded public key %v is not valid", publicKey)
-	}
-	return publicKeyEnd, nil
 }

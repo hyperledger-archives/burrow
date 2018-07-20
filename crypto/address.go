@@ -59,7 +59,8 @@ func (as Addresses) Swap(i, j int) {
 	as[i], as[j] = as[j], as[i]
 }
 
-const AddressHexLength = 2 * binary.Word160Length
+const AddressLength = binary.Word160Length
+const AddressHexLength = 2 * AddressLength
 
 var ZeroAddress = Address{}
 

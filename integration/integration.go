@@ -65,6 +65,7 @@ func TestKernel(privateAccounts []*acm.PrivateAccount, testConfig *config.Burrow
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
+	defer os.RemoveAll(testDir)
 
 	os.MkdirAll("config", 0777)
 

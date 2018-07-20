@@ -2,7 +2,7 @@ package validator
 
 import (
 	"github.com/hyperledger/burrow/crypto"
-	tm_crypto "github.com/tendermint/go-crypto"
+	tm_crypto "github.com/tendermint/tendermint/crypto"
 	tm_types "github.com/tendermint/tendermint/types"
 )
 

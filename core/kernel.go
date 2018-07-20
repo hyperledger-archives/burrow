@@ -45,8 +45,9 @@ import (
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/txs"
 	tmConfig "github.com/tendermint/tendermint/config"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/node"
 	tmTypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -106,8 +107,12 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	emitter := event.NewEmitter(logger)
 	committer := execution.NewBatchCommitter(state, blockchain, emitter, logger, exeOptions...)
+
+	// We could use this to provide/register our own metrics (though this will register them with us). Unforunately
+	// Tendermint currently ignores the metrics passed unless its own server is turned on.
+	metricsProvider := node.DefaultMetricsProvider
 	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
-		kern.Panic, tmLogger)
+		metricsProvider, kern.Panic, tmLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +283,6 @@ func (kern *Kernel) WaitForShutdown() {
 
 // Supervise kernel once booted
 func (kern *Kernel) supervise() {
-	// TODO: Consider capturing kernel panics from boot and sending them here via a channel where we could
 	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
