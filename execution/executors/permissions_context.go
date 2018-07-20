@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -35,7 +36,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return payload.ErrTxInvalidAddress
+		return errors.ErrorCodeInvalidAddress
 	}
 
 	err = ctx.tx.PermArgs.EnsureValid()

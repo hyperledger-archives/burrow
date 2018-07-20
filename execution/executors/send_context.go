@@ -5,6 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -49,7 +50,13 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 		return err
 	}
 	if outTotal > inTotal {
-		return payload.ErrTxInsufficientFunds
+		return errors.ErrorCodeInsufficientFunds
+	}
+	if outTotal < inTotal {
+		return errors.ErrorCodeOverpayment
+	}
+	if outTotal == 0 {
+		return errors.ErrorCodeZeroPayment
 	}
 
 	// Good! Adjust accounts

@@ -42,7 +42,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return payload.ErrTxInvalidAddress
+		return errors.ErrorCodeInvalidAddress
 	}
 	// check permission
 	if !hasNamePermission(ctx.StateWriter, inAcc, ctx.Logger) {
@@ -57,7 +57,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
 		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
 			"tx_input", ctx.tx.Input)
-		return payload.ErrTxInsufficientFunds
+		return errors.ErrorCodeInsufficientFunds
 	}
 
 	// validate the input strings
