@@ -6,6 +6,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -23,14 +24,14 @@ func getInputs(accountGetter state.AccountGetter,
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
-			return nil, payload.ErrTxDuplicateAddress
+			return nil, errors.ErrorCodeDuplicateAddress
 		}
 		acc, err := state.GetMutableAccount(accountGetter, in.Address)
 		if err != nil {
 			return nil, err
 		}
 		if acc == nil {
-			return nil, payload.ErrTxInvalidAddress
+			return nil, errors.ErrorCodeInvalidAddress
 		}
 		accounts[in.Address] = acc
 	}
@@ -48,7 +49,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	for _, out := range outs {
 		// Account shouldn't be duplicated
 		if _, ok := accs[out.Address]; ok {
-			return nil, payload.ErrTxDuplicateAddress
+			return nil, errors.ErrorCodeDuplicateAddress
 		}
 		acc, err := state.GetMutableAccount(accountGetter, out.Address)
 		if err != nil {
@@ -92,20 +93,16 @@ func validateInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.
 }
 
 func validateInput(acc *acm.MutableAccount, in *payload.TxInput) error {
-	// Check TxInput basic
-	if err := in.ValidateBasic(); err != nil {
-		return err
-	}
 	// Check sequences
 	if acc.Sequence()+1 != uint64(in.Sequence) {
 		return payload.ErrTxInvalidSequence{
-			Got:      in.Sequence,
-			Expected: acc.Sequence() + uint64(1),
+			Input:   in,
+			Account: acc,
 		}
 	}
 	// Check amount
 	if acc.Balance() < uint64(in.Amount) {
-		return payload.ErrTxInsufficientFunds
+		return errors.ErrorCodeInsufficientFunds
 	}
 	return nil
 }
@@ -113,10 +110,6 @@ func validateInput(acc *acm.MutableAccount, in *payload.TxInput) error {
 func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	total := uint64(0)
 	for _, out := range outs {
-		// Check TxOutput basic
-		if err := out.ValidateBasic(); err != nil {
-			return 0, err
-		}
 		// Good. Add amount to total
 		total += out.Amount
 	}

@@ -32,6 +32,12 @@ const (
 	ErrorCodeEventPublish
 	ErrorCodeInvalidString
 	ErrorCodeEventMapping
+	ErrorCodeInvalidAddress
+	ErrorCodeDuplicateAddress
+	ErrorCodeInsufficientFunds
+	ErrorCodeOverpayment
+	ErrorCodeZeroPayment
+	ErrorCodeInvalidSequence
 )
 
 func (c Code) ErrorCode() Code {
@@ -39,6 +45,10 @@ func (c Code) ErrorCode() Code {
 }
 
 func (c Code) Error() string {
+	return fmt.Sprintf("Error %d: %s", c, c.String())
+}
+
+func (c Code) String() string {
 	switch c {
 	case ErrorCodeUnknownAddress:
 		return "Unknown address"
@@ -82,6 +92,18 @@ func (c Code) Error() string {
 		return "Event mapping error"
 	case ErrorCodeGeneric:
 		return "Generic error"
+	case ErrorCodeInvalidAddress:
+		return "Invalid address"
+	case ErrorCodeDuplicateAddress:
+		return "Duplicate address"
+	case ErrorCodeInsufficientFunds:
+		return "Insufficient funds"
+	case ErrorCodeOverpayment:
+		return "Overpayment"
+	case ErrorCodeZeroPayment:
+		return "Zero payment error"
+	case ErrorCodeInvalidSequence:
+		return "Invalid sequence number"
 	default:
 		return "Unknown error"
 	}

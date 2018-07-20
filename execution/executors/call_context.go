@@ -58,7 +58,7 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return nil, nil, payload.ErrTxInvalidAddress
+		return nil, nil, errors.ErrorCodeInvalidAddress
 	}
 
 	err = validateInput(inAcc, ctx.tx.Input)
@@ -70,7 +70,7 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
 		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
 			"tx_input", ctx.tx.Input)
-		return nil, nil, payload.ErrTxInsufficientFunds
+		return nil, nil, errors.ErrorCodeInsufficientFunds
 	}
 
 	ctx.Logger.TraceMsg("Incrementing sequence number for CallTx",
@@ -191,7 +191,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 					"caller_address", inAcc.Address(),
 					"callee_address", ctx.tx.Address)
 			}
-			ctx.CallEvents(payload.ErrTxInvalidAddress)
+			ctx.CallEvents(errors.ErrorCodeInvalidAddress)
 			return nil
 		}
 		callee = acm.AsMutableAccount(outAcc)

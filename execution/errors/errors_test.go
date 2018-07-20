@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestErrorCode_MarshalJSON(t *testing.T) {
-	ec := NewCodedError(ErrorCodeDataStackOverflow, "arrg")
+	ec := NewCodedError(ErrorCodeDataStackOverflow, "arrgh")
 	bs, err := json.Marshal(ec)
 	require.NoError(t, err)
 
@@ -18,4 +19,9 @@ func TestErrorCode_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, ec, ecOut)
+}
+
+func TestCode_String(t *testing.T) {
+	err := ErrorCodeCodeOutOfBounds
+	fmt.Println(err.Error())
 }
