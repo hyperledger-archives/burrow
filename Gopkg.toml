@@ -7,34 +7,21 @@
     name = "github.com/gogo/protobuf"
     non-go = false
   [[prune.project]]
-    name = "github.com/tendermint/abci"
+    name = "github.com/tendermint/tendermint"
     non-go = false
   [[prune.project]]
     name = "github.com/tendermint/tmlibs"
     non-go = false
 
-# From Tendermint
-[[constraint]]
+# overriding here because of IAVL
+[[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.21.0"
-
-[[constraint]]
-  name = "github.com/tendermint/go-amino"
-  version = "=0.9.9"
+  version = "=0.22.4"
 
 [[constraint]]
   name = "github.com/tendermint/iavl"
-  version = "=0.8.0-rc0"
+  version = "=0.9.2"
 
-[[constraint]]
-  name = "github.com/prometheus/client_golang"
-  branch = "master"
-
-[[override]]
-  name = "github.com/tendermint/tmlibs"
-  version = "~0.8.4"
-
-# We don't care which version Tendermint wants
 [[override]]
   name = "github.com/gogo/protobuf"
   version = "~1.1.0"

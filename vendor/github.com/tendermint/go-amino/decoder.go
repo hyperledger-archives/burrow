@@ -45,7 +45,7 @@ func DecodeInt32(bz []byte) (i int32, n int, err error) {
 		err = errors.New("EOF decoding int32")
 		return
 	}
-	i = int32(binary.BigEndian.Uint32(bz[:size]))
+	i = int32(binary.LittleEndian.Uint32(bz[:size]))
 	n = size
 	return
 }
@@ -56,15 +56,20 @@ func DecodeInt64(bz []byte) (i int64, n int, err error) {
 		err = errors.New("EOF decoding int64")
 		return
 	}
-	i = int64(binary.BigEndian.Uint64(bz[:size]))
+	i = int64(binary.LittleEndian.Uint64(bz[:size]))
 	n = size
 	return
 }
 
 func DecodeVarint(bz []byte) (i int64, n int, err error) {
 	i, n = binary.Varint(bz)
-	if n < 0 {
-		n = 0
+	if n == 0 {
+		// buf too small
+		err = errors.New("buffer too small")
+	} else if n < 0 {
+		// value larger than 64 bits (overflow)
+		// and -n is the number of bytes read
+		n = -n
 		err = errors.New("EOF decoding varint")
 	}
 	return
@@ -110,7 +115,7 @@ func DecodeUint32(bz []byte) (u uint32, n int, err error) {
 		err = errors.New("EOF decoding uint32")
 		return
 	}
-	u = binary.BigEndian.Uint32(bz[:size])
+	u = binary.LittleEndian.Uint32(bz[:size])
 	n = size
 	return
 }
@@ -121,15 +126,20 @@ func DecodeUint64(bz []byte) (u uint64, n int, err error) {
 		err = errors.New("EOF decoding uint64")
 		return
 	}
-	u = binary.BigEndian.Uint64(bz[:size])
+	u = binary.LittleEndian.Uint64(bz[:size])
 	n = size
 	return
 }
 
 func DecodeUvarint(bz []byte) (u uint64, n int, err error) {
 	u, n = binary.Uvarint(bz)
-	if n <= 0 {
-		n = 0
+	if n == 0 {
+		// buf too small
+		err = errors.New("buffer too small")
+	} else if n < 0 {
+		// value larger than 64 bits (overflow)
+		// and -n is the number of bytes read
+		n = -n
 		err = errors.New("EOF decoding uvarint")
 	}
 	return
@@ -163,7 +173,7 @@ func DecodeFloat32(bz []byte) (f float32, n int, err error) {
 		err = errors.New("EOF decoding float32")
 		return
 	}
-	i := binary.BigEndian.Uint32(bz[:size])
+	i := binary.LittleEndian.Uint32(bz[:size])
 	f = math.Float32frombits(i)
 	n = size
 	return
@@ -176,7 +186,7 @@ func DecodeFloat64(bz []byte) (f float64, n int, err error) {
 		err = errors.New("EOF decoding float64")
 		return
 	}
-	i := binary.BigEndian.Uint64(bz[:size])
+	i := binary.LittleEndian.Uint64(bz[:size])
 	f = math.Float64frombits(i)
 	n = size
 	return
@@ -200,11 +210,11 @@ func DecodeTime(bz []byte) (t time.Time, n int, err error) {
 			return
 		}
 		if fieldNum != 1 {
-			err = fmt.Errorf("Expected field number 1, got %v", fieldNum)
+			err = fmt.Errorf("expected field number 1, got %v", fieldNum)
 			return
 		}
 		if typ != Typ3_8Byte {
-			err = fmt.Errorf("Expected Typ3 bytes <8Bytes> for time field #1, got %X", typ)
+			err = fmt.Errorf("expected Typ3 bytes <8Bytes> for time field #1, got %v", typ)
 			return
 		}
 	}
@@ -222,11 +232,11 @@ func DecodeTime(bz []byte) (t time.Time, n int, err error) {
 			return
 		}
 		if fieldNum != 2 {
-			err = fmt.Errorf("Expected field number 2, got %v", fieldNum)
+			err = fmt.Errorf("expected field number 2, got %v", fieldNum)
 			return
 		}
 		if typ != Typ3_4Byte {
-			err = fmt.Errorf("Expected Typ3 bytes <4Byte> for time field #2, got %X", typ)
+			err = fmt.Errorf("expected Typ3 bytes <4Byte> for time field #2, got %v", typ)
 			return
 		}
 	}
@@ -238,19 +248,8 @@ func DecodeTime(bz []byte) (t time.Time, n int, err error) {
 	}
 	// Validation check.
 	if nsec < 0 || 999999999 < nsec {
-		err = fmt.Errorf("Invalid time, nanoseconds out of bounds %v", nsec)
+		err = fmt.Errorf("invalid time, nanoseconds out of bounds %v", nsec)
 		return
-	}
-	{ // Expect "StructTerm" Typ3 byte.
-		var typ, _n = Typ3(0x00), int(0)
-		typ, _n, err = decodeTyp3(bz)
-		if slide(&bz, &n, _n) && err != nil {
-			return
-		}
-		if typ != Typ3_StructTerm {
-			err = errors.New(fmt.Sprintf("Expected StructTerm Typ3 byte for time, got %X", typ))
-			return
-		}
 	}
 	// Construct time.
 	t = time.Unix(sec, int64(nsec))

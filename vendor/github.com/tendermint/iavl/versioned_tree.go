@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/pkg/errors"
-	dbm "github.com/tendermint/tmlibs/db"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
+// ErrVersionDoesNotExist is returned if a requested version does not exist.
 var ErrVersionDoesNotExist = fmt.Errorf("version does not exist")
 
 // VersionedTree is a persistent tree which keeps track of versions.
@@ -160,7 +161,7 @@ func (tree *VersionedTree) SaveVersion() ([]byte, int64, error) {
 			tree.orphaningTree = newOrphaningTree(tree.versions[version].clone())
 			return existingHash, version, nil
 		}
-		return nil, version, errors.Errorf("version %d was already saved to different hash %X (existing hash %X)",
+		return nil, version, fmt.Errorf("version %d was already saved to different hash %X (existing hash %X)",
 			version, newHash, existingHash)
 	}
 
@@ -178,13 +179,13 @@ func (tree *VersionedTree) SaveVersion() ([]byte, int64, error) {
 // longer be accessed.
 func (tree *VersionedTree) DeleteVersion(version int64) error {
 	if version == 0 {
-		return errors.New("version must be greater than 0")
+		return cmn.NewError("version must be greater than 0")
 	}
 	if version == tree.version {
-		return errors.Errorf("cannot delete latest saved version (%d)", version)
+		return cmn.NewError("cannot delete latest saved version (%d)", version)
 	}
 	if _, ok := tree.versions[version]; !ok {
-		return errors.WithStack(ErrVersionDoesNotExist)
+		return cmn.ErrorWrap(ErrVersionDoesNotExist, "")
 	}
 
 	tree.ndb.DeleteVersion(version)
@@ -193,43 +194,4 @@ func (tree *VersionedTree) DeleteVersion(version int64) error {
 	delete(tree.versions, version)
 
 	return nil
-}
-
-// GetVersionedWithProof gets the value under the key at the specified version
-// if it exists, or returns nil.  A proof of existence or absence is returned
-// alongside the value.
-func (tree *VersionedTree) GetVersionedWithProof(key []byte, version int64) ([]byte, KeyProof, error) {
-	if t, ok := tree.versions[version]; ok {
-		return t.GetWithProof(key)
-	}
-	return nil, nil, errors.WithStack(ErrVersionDoesNotExist)
-}
-
-// GetVersionedRangeWithProof gets key/value pairs within the specified range
-// and limit. To specify a descending range, swap the start and end keys.
-//
-// Returns a list of keys, a list of values and a proof.
-func (tree *VersionedTree) GetVersionedRangeWithProof(startKey, endKey []byte, limit int, version int64) ([][]byte, [][]byte, *KeyRangeProof, error) {
-	if t, ok := tree.versions[version]; ok {
-		return t.GetRangeWithProof(startKey, endKey, limit)
-	}
-	return nil, nil, nil, errors.WithStack(ErrVersionDoesNotExist)
-}
-
-// GetVersionedFirstInRangeWithProof gets the first key/value pair in the
-// specified range, with a proof.
-func (tree *VersionedTree) GetVersionedFirstInRangeWithProof(startKey, endKey []byte, version int64) ([]byte, []byte, *KeyFirstInRangeProof, error) {
-	if t, ok := tree.versions[version]; ok {
-		return t.GetFirstInRangeWithProof(startKey, endKey)
-	}
-	return nil, nil, nil, errors.WithStack(ErrVersionDoesNotExist)
-}
-
-// GetVersionedLastInRangeWithProof gets the last key/value pair in the
-// specified range, with a proof.
-func (tree *VersionedTree) GetVersionedLastInRangeWithProof(startKey, endKey []byte, version int64) ([]byte, []byte, *KeyLastInRangeProof, error) {
-	if t, ok := tree.versions[version]; ok {
-		return t.GetLastInRangeWithProof(startKey, endKey)
-	}
-	return nil, nil, nil, errors.WithStack(ErrVersionDoesNotExist)
 }
