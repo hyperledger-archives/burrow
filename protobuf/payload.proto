@@ -20,12 +20,14 @@ option (gogoproto.goproto_registration) = true;
 // Enable generation of XXX_MessageName methods for grpc-go/status.
 option (gogoproto.messagename_all) = true;
 
-message AnyPayload {
+message Any {
     CallTx CallTx = 1;
     SendTx SendTx = 2;
     NameTx NameTx = 3;
-    PermissionsTx PermissionsTx = 4;
-    GovernanceTx GovernanceTx = 5;
+    PermsTx PermsTx = 4;
+    GovTx GovTx = 5;
+    BondTx BondTx = 6;
+    UnbondTx UnbondTx = 7;
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -76,7 +78,7 @@ message SendTx {
 }
 
 // An update to the on-chain permissions
-message PermissionsTx {
+message PermsTx {
     option (gogoproto.goproto_stringer) = false;
     // The permission moderator
     TxInput Input = 1;
@@ -114,7 +116,7 @@ message UnbondTx {
     uint64 Height = 3;
 }
 
-message GovernanceTx {
+message GovTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 

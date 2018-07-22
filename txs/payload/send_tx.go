@@ -55,3 +55,9 @@ func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) error {
 	})
 	return nil
 }
+
+func (tx *SendTx) Any() *Any {
+	return &Any{
+		SendTx: tx,
+	}
+}

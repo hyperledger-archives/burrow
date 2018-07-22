@@ -6,8 +6,8 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/contexts"
 	"github.com/hyperledger/burrow/execution/evm"
@@ -17,7 +17,7 @@ import (
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func CallSim(reader state.Reader, tip blockchain.TipInfo, fromAddress, address crypto.Address, data []byte,
+func CallSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, address crypto.Address, data []byte,
 	logger *logging.Logger) (*exec.TxExecution, error) {
 
 	if evm.IsRegisteredNativeContract(address.Word256()) {
@@ -38,7 +38,7 @@ func CallSim(reader state.Reader, tip blockchain.TipInfo, fromAddress, address c
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func CallCodeSim(reader state.Reader, tip blockchain.TipInfo, fromAddress, address crypto.Address, code, data []byte,
+func CallCodeSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, address crypto.Address, code, data []byte,
 	logger *logging.Logger) (_ *exec.TxExecution, err error) {
 	// This was being run against CheckTx cache, need to understand the reasoning
 	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
@@ -65,7 +65,7 @@ func CallCodeSim(reader state.Reader, tip blockchain.TipInfo, fromAddress, addre
 	return txe, nil
 }
 
-func vmParams(tip blockchain.TipInfo) evm.Params {
+func vmParams(tip bcm.BlockchainInfo) evm.Params {
 	return evm.Params{
 		BlockHeight: tip.LastBlockHeight(),
 		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),

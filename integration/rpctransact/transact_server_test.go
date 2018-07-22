@@ -88,7 +88,7 @@ func TestBroadcastTxLocallySigned(t *testing.T) {
 
 func TestFormulateTx(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	txEnv, err := cli.FormulateTx(context.Background(), &rpctransact.PayloadParam{
+	txEnv, err := cli.FormulateTx(context.Background(), &payload.Any{
 		CallTx: &payload.CallTx{
 			Input: &payload.TxInput{
 				Address: inputAddress,

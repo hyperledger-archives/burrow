@@ -54,3 +54,9 @@ func (tx *BondTx) AddOutput(addr crypto.Address, amt uint64) error {
 	})
 	return nil
 }
+
+func (tx *BondTx) Any() *Any {
+	return &Any{
+		BondTx: tx,
+	}
+}

@@ -43,36 +43,43 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	if accs == nil {
 		accs = make(map[crypto.Address]*acm.MutableAccount)
 	}
-
 	// we should err if an account is being created but the inputs don't have permission
-	var checkedCreatePerms bool
+	var err error
 	for _, out := range outs {
-		// Account shouldn't be duplicated
-		if _, ok := accs[out.Address]; ok {
-			return nil, errors.ErrorCodeDuplicateAddress
-		}
-		acc, err := state.GetMutableAccount(accountGetter, out.Address)
+		accs[out.Address], err = getOrMakeOutput(accountGetter, accs, out.Address, logger)
 		if err != nil {
 			return nil, err
 		}
-		// output account may be nil (new)
-		if acc == nil {
-			if !checkedCreatePerms {
-				if !hasCreateAccountPermission(accountGetter, accs, logger) {
-					return nil, fmt.Errorf("at least one input does not have permission to create accounts")
-				}
-				checkedCreatePerms = true
-			}
-			acc = acm.ConcreteAccount{
-				Address:     out.Address,
-				Sequence:    0,
-				Balance:     0,
-				Permissions: permission.ZeroAccountPermissions,
-			}.MutableAccount()
-		}
-		accs[out.Address] = acc
 	}
 	return accs, nil
+}
+
+func getOrMakeOutput(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
+	outputAddress crypto.Address, logger *logging.Logger) (*acm.MutableAccount, error) {
+
+	// Account shouldn't be duplicated
+	if _, ok := accs[outputAddress]; ok {
+		return nil, errors.ErrorCodeDuplicateAddress
+	}
+	acc, err := state.GetMutableAccount(accountGetter, outputAddress)
+	if err != nil {
+		return nil, err
+	}
+	// output account may be nil (new)
+	if acc == nil {
+		if !hasCreateAccountPermission(accountGetter, accs, logger) {
+			return nil, fmt.Errorf("at least one input does not have permission to create accounts")
+		}
+		logger.InfoMsg("Account not found so attempting to create it", "address", outputAddress)
+		acc = acm.ConcreteAccount{
+			Address:     outputAddress,
+			Sequence:    0,
+			Balance:     0,
+			Permissions: permission.ZeroAccountPermissions,
+		}.MutableAccount()
+	}
+
+	return acc, nil
 }
 
 func validateInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.TxInput) (uint64, error) {
@@ -188,15 +195,17 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm perm
 	return v
 }
 
-// TODO: for debug log the failed accounts
 func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFlag,
-	accs map[crypto.Address]*acm.MutableAccount, logger *logging.Logger) bool {
+	accs map[crypto.Address]*acm.MutableAccount, logger *logging.Logger) error {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, perm, logger) {
-			return false
+			return errors.PermissionDenied{
+				Address: acc.Address(),
+				Perm:    perm,
+			}
 		}
 	}
-	return true
+	return nil
 }
 
 func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,

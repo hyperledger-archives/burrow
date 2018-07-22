@@ -32,7 +32,7 @@ service Transact {
     // Sign transaction server-side
     rpc SignTx (TxEnvelopeParam) returns (TxEnvelope);
     // Formulate a transaction from a Payload and retrun the envelop with the Tx bytes ready to sign
-    rpc FormulateTx (PayloadParam) returns (TxEnvelope);
+    rpc FormulateTx (payload.Any) returns (TxEnvelope);
 
     // Formulate and sign a CallTx transaction signed server-side and wait for it to be included in a block, retrieving response
     rpc CallTxSync (payload.CallTx) returns (exec.TxExecution);
@@ -61,12 +61,6 @@ message CallCodeParam {
     bytes Data = 3;
 }
 
-message PayloadParam {
-    payload.CallTx CallTx = 1;
-    payload.SendTx SendTx = 2;
-    payload.NameTx NameTx = 3;
-}
-
 message TxEnvelope {
     txs.Envelope Envelope = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
 }
@@ -75,6 +69,6 @@ message TxEnvelopeParam {
     // An existing Envelope - either signed or unsigned - if the latter will be signed server-side
     txs.Envelope Envelope = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
     // If no Envelope provided then one will be generated from the provided payload and signed server-side
-    PayloadParam Payload = 2;
+    payload.Any Payload = 2;
 }
 

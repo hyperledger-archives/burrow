@@ -22,11 +22,11 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	bcm "github.com/hyperledger/burrow/blockchain"
-	"github.com/hyperledger/burrow/consensus/tendermint/query"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -45,29 +45,22 @@ type Service struct {
 	state      state.IterableReader
 	nameReg    names.IterableReader
 	blockchain bcm.BlockchainInfo
-	transactor *execution.Transactor
-	nodeView   *query.NodeView
+	nodeView   *tendermint.NodeView
 	logger     *logging.Logger
 }
 
-func NewService(state state.IterableReader, nameReg names.IterableReader,
-	blockchain bcm.BlockchainInfo, transactor *execution.Transactor, nodeView *query.NodeView,
-	logger *logging.Logger) *Service {
+// Service provides an internal query and information service with serialisable return types on which can accomodate
+// a number of transport front ends
+func NewService(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		state:      state,
 		nameReg:    nameReg,
 		blockchain: blockchain,
-		transactor: transactor,
 		nodeView:   nodeView,
 		logger:     logger.With(structure.ComponentKey, "Service"),
 	}
-}
-
-// Get a Transactor providing methods for delegating signing and the core BroadcastTx function for publishing
-// transactions to the network
-func (s *Service) Transactor() *execution.Transactor {
-	return s.transactor
 }
 
 func (s *Service) State() state.Reader {
@@ -117,7 +110,7 @@ func (s *Service) Status() (*ResultStatus, error) {
 	return &ResultStatus{
 		NodeInfo:          s.nodeView.NodeInfo(),
 		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            publicKey,
+		PublicKey:         publicKey,
 		LatestBlockHash:   latestBlockHash,
 		LatestBlockHeight: latestHeight,
 		LatestBlockTime:   latestBlockTime,
@@ -157,6 +150,7 @@ func (s *Service) NetInfo() (*ResultNetInfo, error) {
 		return nil, err
 	}
 	return &ResultNetInfo{
+		ThisNode:  s.nodeView.NodeInfo(),
 		Listening: listening,
 		Listeners: listeners,
 		Peers:     peers.Peers,
@@ -242,7 +236,7 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 	if acc == nil {
 		return &ResultGetAccountHumanReadable{}, nil
 	}
-	perms, err := permission.BasePermissionsToStringList(acc.Permissions().Base)
+	perms := permission.BasePermissionsToStringList(acc.Permissions().Base)
 	if acc == nil {
 		return &ResultGetAccountHumanReadable{}, nil
 	}
@@ -323,10 +317,11 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 }
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
-	concreteValidators := make([]*acm.ConcreteValidator, 0, s.blockchain.NumValidators())
-	s.blockchain.IterateValidators(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		concreteValidators = append(concreteValidators, &acm.ConcreteValidator{
-			Address:   id.Address(),
+	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
+	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		address := id.Address()
+		validators = append(validators, &validator.Validator{
+			Address:   &address,
 			PublicKey: id.PublicKey(),
 			Power:     power.Uint64(),
 		})
@@ -334,7 +329,7 @@ func (s *Service) ListValidators() (*ResultListValidators, error) {
 	})
 	return &ResultListValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
-		BondedValidators:    concreteValidators,
+		BondedValidators:    validators,
 		UnbondingValidators: nil,
 	}, nil
 }

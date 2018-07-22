@@ -44,6 +44,10 @@ func (c Code) ErrorCode() Code {
 	return c
 }
 
+func (c Code) Uint32() uint32 {
+	return uint32(c)
+}
+
 func (c Code) Error() string {
 	return fmt.Sprintf("Error %d: %s", c, c.String())
 }
@@ -76,6 +80,8 @@ func (c Code) String() string {
 		return "Data stack underflow"
 	case ErrorCodeInvalidContract:
 		return "Invalid contract"
+	case ErrorCodePermissionDenied:
+		return "Permission denied"
 	case ErrorCodeNativeContractCodeCopy:
 		return "Tried to copy native contract code"
 	case ErrorCodeExecutionAborted:
@@ -134,8 +140,9 @@ func AsException(err error) *Exception {
 	}
 }
 
-func Wrap(err CodedError, message string) *Exception {
-	return NewCodedError(err.ErrorCode(), message+": "+err.Error())
+func Wrap(err error, message string) *Exception {
+	ex := AsException(err)
+	return NewCodedError(ex.ErrorCode(), message+": "+ex.Error())
 }
 
 func Errorf(format string, a ...interface{}) *Exception {

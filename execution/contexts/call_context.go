@@ -5,8 +5,8 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -19,7 +19,7 @@ import (
 const GasLimit = uint64(1000000)
 
 type CallContext struct {
-	Tip         blockchain.TipInfo
+	Tip         bcm.BlockchainInfo
 	StateWriter state.ReaderWriter
 	RunCall     bool
 	VMOptions   []func(*evm.VM)
@@ -101,7 +101,7 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 			return nil, nil, fmt.Errorf("attempt to call a native contract at %s, "+
 				"but native contracts cannot be called using CallTx. Use a "+
 				"contract that calls the native contract or the appropriate tx "+
-				"type (eg. PermissionsTx, NameTx)", ctx.tx.Address)
+				"type (eg. PermsTx, NameTx)", ctx.tx.Address)
 		}
 
 		// Output account may be nil if we are still in mempool and contract was created in same block as this tx

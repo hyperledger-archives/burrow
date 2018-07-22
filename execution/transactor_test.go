@@ -17,11 +17,10 @@ package execution
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
@@ -38,7 +37,7 @@ import (
 
 func TestTransactor_BroadcastTxSync(t *testing.T) {
 	chainID := "TestChain"
-	tip := blockchain.NewTip(chainID, time.Time{}, []byte("genesis"), blockchain.NewValidators())
+	bc := &bcm.Blockchain{}
 	logger := logging.NewNoopLogger()
 	evc := event.NewEmitter(logger)
 	txCodec := txs.NewAminoCodec()
@@ -53,7 +52,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	err := txEnv.Sign(privAccount)
 	require.NoError(t, err)
 	height := uint64(35)
-	trans := NewTransactor(tip, evc, NewAccounts(state.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
+	trans := NewTransactor(bc, evc, NewAccounts(state.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height

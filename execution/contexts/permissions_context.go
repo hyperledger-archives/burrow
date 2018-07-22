@@ -5,7 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -16,17 +16,17 @@ import (
 )
 
 type PermissionsContext struct {
-	Tip         blockchain.TipInfo
+	Tip         bcm.BlockchainInfo
 	StateWriter state.ReaderWriter
 	Logger      *logging.Logger
-	tx          *payload.PermissionsTx
+	tx          *payload.PermsTx
 }
 
 func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.PermissionsTx)
+	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.PermsTx)
 	if !ok {
-		return fmt.Errorf("payload must be PermissionsTx, but is: %v", txe.Envelope.Tx.Payload)
+		return fmt.Errorf("payload must be PermsTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
 	inAcc, err := state.GetMutableAccount(ctx.StateWriter, ctx.tx.Input.Address)
@@ -41,7 +41,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 
 	err = ctx.tx.PermArgs.EnsureValid()
 	if err != nil {
-		return fmt.Errorf("PermissionsTx received containing invalid PermArgs: %v", err)
+		return fmt.Errorf("PermsTx received containing invalid PermArgs: %v", err)
 	}
 
 	permFlag := ctx.tx.PermArgs.PermFlag
@@ -61,7 +61,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 
 	value := ctx.tx.Input.Amount
 
-	ctx.Logger.TraceMsg("New PermissionsTx",
+	ctx.Logger.TraceMsg("New PermsTx",
 		"perm_args", ctx.tx.PermArgs.String())
 
 	var permAcc acm.Account
@@ -114,7 +114,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// Good!
-	ctx.Logger.TraceMsg("Incrementing sequence number for PermissionsTx",
+	ctx.Logger.TraceMsg("Incrementing sequence number for PermsTx",
 		"tag", "sequence",
 		"account", inAcc.Address(),
 		"old_sequence", inAcc.Sequence(),

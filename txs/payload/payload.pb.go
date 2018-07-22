@@ -8,16 +8,16 @@
 		payload.proto
 
 	It has these top-level messages:
-		AnyPayload
+		Any
 		TxInput
 		TxOutput
 		CallTx
 		SendTx
-		PermissionsTx
+		PermsTx
 		NameTx
 		BondTx
 		UnbondTx
-		GovernanceTx
+		GovTx
 */
 package payload
 
@@ -46,56 +46,72 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type AnyPayload struct {
-	CallTx        *CallTx        `protobuf:"bytes,1,opt,name=CallTx" json:"CallTx,omitempty"`
-	SendTx        *SendTx        `protobuf:"bytes,2,opt,name=SendTx" json:"SendTx,omitempty"`
-	NameTx        *NameTx        `protobuf:"bytes,3,opt,name=NameTx" json:"NameTx,omitempty"`
-	PermissionsTx *PermissionsTx `protobuf:"bytes,4,opt,name=PermissionsTx" json:"PermissionsTx,omitempty"`
-	GovernanceTx  *GovernanceTx  `protobuf:"bytes,5,opt,name=GovernanceTx" json:"GovernanceTx,omitempty"`
+type Any struct {
+	CallTx   *CallTx   `protobuf:"bytes,1,opt,name=CallTx" json:"CallTx,omitempty"`
+	SendTx   *SendTx   `protobuf:"bytes,2,opt,name=SendTx" json:"SendTx,omitempty"`
+	NameTx   *NameTx   `protobuf:"bytes,3,opt,name=NameTx" json:"NameTx,omitempty"`
+	PermsTx  *PermsTx  `protobuf:"bytes,4,opt,name=PermsTx" json:"PermsTx,omitempty"`
+	GovTx    *GovTx    `protobuf:"bytes,5,opt,name=GovTx" json:"GovTx,omitempty"`
+	BondTx   *BondTx   `protobuf:"bytes,6,opt,name=BondTx" json:"BondTx,omitempty"`
+	UnbondTx *UnbondTx `protobuf:"bytes,7,opt,name=UnbondTx" json:"UnbondTx,omitempty"`
 }
 
-func (m *AnyPayload) Reset()                    { *m = AnyPayload{} }
-func (m *AnyPayload) String() string            { return proto.CompactTextString(m) }
-func (*AnyPayload) ProtoMessage()               {}
-func (*AnyPayload) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{0} }
+func (m *Any) Reset()                    { *m = Any{} }
+func (m *Any) String() string            { return proto.CompactTextString(m) }
+func (*Any) ProtoMessage()               {}
+func (*Any) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{0} }
 
-func (m *AnyPayload) GetCallTx() *CallTx {
+func (m *Any) GetCallTx() *CallTx {
 	if m != nil {
 		return m.CallTx
 	}
 	return nil
 }
 
-func (m *AnyPayload) GetSendTx() *SendTx {
+func (m *Any) GetSendTx() *SendTx {
 	if m != nil {
 		return m.SendTx
 	}
 	return nil
 }
 
-func (m *AnyPayload) GetNameTx() *NameTx {
+func (m *Any) GetNameTx() *NameTx {
 	if m != nil {
 		return m.NameTx
 	}
 	return nil
 }
 
-func (m *AnyPayload) GetPermissionsTx() *PermissionsTx {
+func (m *Any) GetPermsTx() *PermsTx {
 	if m != nil {
-		return m.PermissionsTx
+		return m.PermsTx
 	}
 	return nil
 }
 
-func (m *AnyPayload) GetGovernanceTx() *GovernanceTx {
+func (m *Any) GetGovTx() *GovTx {
 	if m != nil {
-		return m.GovernanceTx
+		return m.GovTx
 	}
 	return nil
 }
 
-func (*AnyPayload) XXX_MessageName() string {
-	return "payload.AnyPayload"
+func (m *Any) GetBondTx() *BondTx {
+	if m != nil {
+		return m.BondTx
+	}
+	return nil
+}
+
+func (m *Any) GetUnbondTx() *UnbondTx {
+	if m != nil {
+		return m.UnbondTx
+	}
+	return nil
+}
+
+func (*Any) XXX_MessageName() string {
+	return "payload.Any"
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -214,33 +230,33 @@ func (*SendTx) XXX_MessageName() string {
 }
 
 // An update to the on-chain permissions
-type PermissionsTx struct {
+type PermsTx struct {
 	// The permission moderator
 	Input *TxInput `protobuf:"bytes,1,opt,name=Input" json:"Input,omitempty"`
 	// The modified permissions
 	PermArgs permission.PermArgs `protobuf:"bytes,2,opt,name=PermArgs" json:"PermArgs"`
 }
 
-func (m *PermissionsTx) Reset()                    { *m = PermissionsTx{} }
-func (*PermissionsTx) ProtoMessage()               {}
-func (*PermissionsTx) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{5} }
+func (m *PermsTx) Reset()                    { *m = PermsTx{} }
+func (*PermsTx) ProtoMessage()               {}
+func (*PermsTx) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{5} }
 
-func (m *PermissionsTx) GetInput() *TxInput {
+func (m *PermsTx) GetInput() *TxInput {
 	if m != nil {
 		return m.Input
 	}
 	return nil
 }
 
-func (m *PermissionsTx) GetPermArgs() permission.PermArgs {
+func (m *PermsTx) GetPermArgs() permission.PermArgs {
 	if m != nil {
 		return m.PermArgs
 	}
 	return permission.PermArgs{}
 }
 
-func (*PermissionsTx) XXX_MessageName() string {
-	return "payload.PermissionsTx"
+func (*PermsTx) XXX_MessageName() string {
+	return "payload.PermsTx"
 }
 
 // A request to claim a globally unique name across the entire chain with some optional data storage leased for a fee
@@ -318,21 +334,21 @@ func (*UnbondTx) XXX_MessageName() string {
 	return "payload.UnbondTx"
 }
 
-type GovernanceTx struct {
+type GovTx struct {
 	Inputs         []*TxInput              `protobuf:"bytes,1,rep,name=Inputs" json:"Inputs,omitempty"`
 	AccountUpdates []*spec.TemplateAccount `protobuf:"bytes,2,rep,name=AccountUpdates" json:"AccountUpdates,omitempty"`
 }
 
-func (m *GovernanceTx) Reset()                    { *m = GovernanceTx{} }
-func (*GovernanceTx) ProtoMessage()               {}
-func (*GovernanceTx) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{9} }
+func (m *GovTx) Reset()                    { *m = GovTx{} }
+func (*GovTx) ProtoMessage()               {}
+func (*GovTx) Descriptor() ([]byte, []int) { return fileDescriptorPayload, []int{9} }
 
-func (*GovernanceTx) XXX_MessageName() string {
-	return "payload.GovernanceTx"
+func (*GovTx) XXX_MessageName() string {
+	return "payload.GovTx"
 }
 func init() {
-	proto.RegisterType((*AnyPayload)(nil), "payload.AnyPayload")
-	golang_proto.RegisterType((*AnyPayload)(nil), "payload.AnyPayload")
+	proto.RegisterType((*Any)(nil), "payload.Any")
+	golang_proto.RegisterType((*Any)(nil), "payload.Any")
 	proto.RegisterType((*TxInput)(nil), "payload.TxInput")
 	golang_proto.RegisterType((*TxInput)(nil), "payload.TxInput")
 	proto.RegisterType((*TxOutput)(nil), "payload.TxOutput")
@@ -341,18 +357,18 @@ func init() {
 	golang_proto.RegisterType((*CallTx)(nil), "payload.CallTx")
 	proto.RegisterType((*SendTx)(nil), "payload.SendTx")
 	golang_proto.RegisterType((*SendTx)(nil), "payload.SendTx")
-	proto.RegisterType((*PermissionsTx)(nil), "payload.PermissionsTx")
-	golang_proto.RegisterType((*PermissionsTx)(nil), "payload.PermissionsTx")
+	proto.RegisterType((*PermsTx)(nil), "payload.PermsTx")
+	golang_proto.RegisterType((*PermsTx)(nil), "payload.PermsTx")
 	proto.RegisterType((*NameTx)(nil), "payload.NameTx")
 	golang_proto.RegisterType((*NameTx)(nil), "payload.NameTx")
 	proto.RegisterType((*BondTx)(nil), "payload.BondTx")
 	golang_proto.RegisterType((*BondTx)(nil), "payload.BondTx")
 	proto.RegisterType((*UnbondTx)(nil), "payload.UnbondTx")
 	golang_proto.RegisterType((*UnbondTx)(nil), "payload.UnbondTx")
-	proto.RegisterType((*GovernanceTx)(nil), "payload.GovernanceTx")
-	golang_proto.RegisterType((*GovernanceTx)(nil), "payload.GovernanceTx")
+	proto.RegisterType((*GovTx)(nil), "payload.GovTx")
+	golang_proto.RegisterType((*GovTx)(nil), "payload.GovTx")
 }
-func (m *AnyPayload) Marshal() (dAtA []byte, err error) {
+func (m *Any) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -362,7 +378,7 @@ func (m *AnyPayload) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *AnyPayload) MarshalTo(dAtA []byte) (int, error) {
+func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -397,25 +413,45 @@ func (m *AnyPayload) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n3
 	}
-	if m.PermissionsTx != nil {
+	if m.PermsTx != nil {
 		dAtA[i] = 0x22
 		i++
-		i = encodeVarintPayload(dAtA, i, uint64(m.PermissionsTx.Size()))
-		n4, err := m.PermissionsTx.MarshalTo(dAtA[i:])
+		i = encodeVarintPayload(dAtA, i, uint64(m.PermsTx.Size()))
+		n4, err := m.PermsTx.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n4
 	}
-	if m.GovernanceTx != nil {
+	if m.GovTx != nil {
 		dAtA[i] = 0x2a
 		i++
-		i = encodeVarintPayload(dAtA, i, uint64(m.GovernanceTx.Size()))
-		n5, err := m.GovernanceTx.MarshalTo(dAtA[i:])
+		i = encodeVarintPayload(dAtA, i, uint64(m.GovTx.Size()))
+		n5, err := m.GovTx.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n5
+	}
+	if m.BondTx != nil {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.BondTx.Size()))
+		n6, err := m.BondTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n6
+	}
+	if m.UnbondTx != nil {
+		dAtA[i] = 0x3a
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.UnbondTx.Size()))
+		n7, err := m.UnbondTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n7
 	}
 	return i, nil
 }
@@ -438,11 +474,11 @@ func (m *TxInput) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n6, err := m.Address.MarshalTo(dAtA[i:])
+	n8, err := m.Address.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n6
+	i += n8
 	if m.Amount != 0 {
 		dAtA[i] = 0x10
 		i++
@@ -474,11 +510,11 @@ func (m *TxOutput) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n7, err := m.Address.MarshalTo(dAtA[i:])
+	n9, err := m.Address.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n7
+	i += n9
 	if m.Amount != 0 {
 		dAtA[i] = 0x10
 		i++
@@ -506,21 +542,21 @@ func (m *CallTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n8, err := m.Input.MarshalTo(dAtA[i:])
+		n10, err := m.Input.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n8
+		i += n10
 	}
 	if m.Address != nil {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-		n9, err := m.Address.MarshalTo(dAtA[i:])
+		n11, err := m.Address.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n9
+		i += n11
 	}
 	if m.GasLimit != 0 {
 		dAtA[i] = 0x18
@@ -535,11 +571,11 @@ func (m *CallTx) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x2a
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Data.Size()))
-	n10, err := m.Data.MarshalTo(dAtA[i:])
+	n12, err := m.Data.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n10
+	i += n12
 	return i, nil
 }
 
@@ -585,7 +621,7 @@ func (m *SendTx) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *PermissionsTx) Marshal() (dAtA []byte, err error) {
+func (m *PermsTx) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -595,7 +631,7 @@ func (m *PermissionsTx) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PermissionsTx) MarshalTo(dAtA []byte) (int, error) {
+func (m *PermsTx) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -604,20 +640,20 @@ func (m *PermissionsTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n11, err := m.Input.MarshalTo(dAtA[i:])
+		n13, err := m.Input.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n11
+		i += n13
 	}
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.PermArgs.Size()))
-	n12, err := m.PermArgs.MarshalTo(dAtA[i:])
+	n14, err := m.PermArgs.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n12
+	i += n14
 	return i, nil
 }
 
@@ -640,11 +676,11 @@ func (m *NameTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n13, err := m.Input.MarshalTo(dAtA[i:])
+		n15, err := m.Input.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n13
+		i += n15
 	}
 	if len(m.Name) > 0 {
 		dAtA[i] = 0x12
@@ -727,20 +763,20 @@ func (m *UnbondTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n14, err := m.Input.MarshalTo(dAtA[i:])
+		n16, err := m.Input.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n14
+		i += n16
 	}
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n15, err := m.Address.MarshalTo(dAtA[i:])
+	n17, err := m.Address.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n15
+	i += n17
 	if m.Height != 0 {
 		dAtA[i] = 0x18
 		i++
@@ -749,7 +785,7 @@ func (m *UnbondTx) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *GovernanceTx) Marshal() (dAtA []byte, err error) {
+func (m *GovTx) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -759,7 +795,7 @@ func (m *GovernanceTx) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GovernanceTx) MarshalTo(dAtA []byte) (int, error) {
+func (m *GovTx) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -800,7 +836,7 @@ func encodeVarintPayload(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *AnyPayload) Size() (n int) {
+func (m *Any) Size() (n int) {
 	var l int
 	_ = l
 	if m.CallTx != nil {
@@ -815,12 +851,20 @@ func (m *AnyPayload) Size() (n int) {
 		l = m.NameTx.Size()
 		n += 1 + l + sovPayload(uint64(l))
 	}
-	if m.PermissionsTx != nil {
-		l = m.PermissionsTx.Size()
+	if m.PermsTx != nil {
+		l = m.PermsTx.Size()
 		n += 1 + l + sovPayload(uint64(l))
 	}
-	if m.GovernanceTx != nil {
-		l = m.GovernanceTx.Size()
+	if m.GovTx != nil {
+		l = m.GovTx.Size()
+		n += 1 + l + sovPayload(uint64(l))
+	}
+	if m.BondTx != nil {
+		l = m.BondTx.Size()
+		n += 1 + l + sovPayload(uint64(l))
+	}
+	if m.UnbondTx != nil {
+		l = m.UnbondTx.Size()
 		n += 1 + l + sovPayload(uint64(l))
 	}
 	return n
@@ -891,7 +935,7 @@ func (m *SendTx) Size() (n int) {
 	return n
 }
 
-func (m *PermissionsTx) Size() (n int) {
+func (m *PermsTx) Size() (n int) {
 	var l int
 	_ = l
 	if m.Input != nil {
@@ -957,7 +1001,7 @@ func (m *UnbondTx) Size() (n int) {
 	return n
 }
 
-func (m *GovernanceTx) Size() (n int) {
+func (m *GovTx) Size() (n int) {
 	var l int
 	_ = l
 	if len(m.Inputs) > 0 {
@@ -988,7 +1032,7 @@ func sovPayload(x uint64) (n int) {
 func sozPayload(x uint64) (n int) {
 	return sovPayload(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *AnyPayload) Unmarshal(dAtA []byte) error {
+func (m *Any) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1011,10 +1055,10 @@ func (m *AnyPayload) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: AnyPayload: wiretype end group for non-group")
+			return fmt.Errorf("proto: Any: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AnyPayload: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Any: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1118,7 +1162,7 @@ func (m *AnyPayload) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PermissionsTx", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PermsTx", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1142,16 +1186,16 @@ func (m *AnyPayload) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.PermissionsTx == nil {
-				m.PermissionsTx = &PermissionsTx{}
+			if m.PermsTx == nil {
+				m.PermsTx = &PermsTx{}
 			}
-			if err := m.PermissionsTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.PermsTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GovernanceTx", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field GovTx", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1175,10 +1219,76 @@ func (m *AnyPayload) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.GovernanceTx == nil {
-				m.GovernanceTx = &GovernanceTx{}
+			if m.GovTx == nil {
+				m.GovTx = &GovTx{}
 			}
-			if err := m.GovernanceTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.GovTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BondTx", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.BondTx == nil {
+				m.BondTx = &BondTx{}
+			}
+			if err := m.BondTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UnbondTx", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.UnbondTx == nil {
+				m.UnbondTx = &UnbondTx{}
+			}
+			if err := m.UnbondTx.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -1715,7 +1825,7 @@ func (m *SendTx) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PermissionsTx) Unmarshal(dAtA []byte) error {
+func (m *PermsTx) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1738,10 +1848,10 @@ func (m *PermissionsTx) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PermissionsTx: wiretype end group for non-group")
+			return fmt.Errorf("proto: PermsTx: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PermissionsTx: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PermsTx: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2232,7 +2342,7 @@ func (m *UnbondTx) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GovernanceTx) Unmarshal(dAtA []byte) error {
+func (m *GovTx) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2255,10 +2365,10 @@ func (m *GovernanceTx) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: GovernanceTx: wiretype end group for non-group")
+			return fmt.Errorf("proto: GovTx: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GovernanceTx: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GovTx: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2453,46 +2563,47 @@ func init() { proto.RegisterFile("payload.proto", fileDescriptorPayload) }
 func init() { golang_proto.RegisterFile("payload.proto", fileDescriptorPayload) }
 
 var fileDescriptorPayload = []byte{
-	// 652 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0xbf, 0x6f, 0xd3, 0x40,
-	0x14, 0xee, 0x35, 0x6e, 0x62, 0x8e, 0x16, 0xca, 0x89, 0x56, 0x51, 0x86, 0x04, 0x75, 0x80, 0x22,
-	0xa8, 0x83, 0xf8, 0x25, 0x51, 0x21, 0xa1, 0xb8, 0x88, 0xb6, 0x08, 0x85, 0xea, 0xea, 0x2e, 0x6c,
-	0xfe, 0x71, 0x38, 0x16, 0xb1, 0xcf, 0xd8, 0x67, 0xb0, 0x37, 0x36, 0xd8, 0x59, 0x18, 0x3b, 0xf0,
-	0x87, 0x30, 0x66, 0x64, 0x66, 0xa8, 0x50, 0xfa, 0x67, 0xb0, 0xa0, 0x3b, 0x9f, 0x5d, 0x27, 0x40,
-	0x95, 0x82, 0xc4, 0x76, 0xef, 0x7d, 0xdf, 0xbb, 0xf7, 0xde, 0x77, 0xef, 0xd9, 0x70, 0x29, 0x34,
-	0xb3, 0x21, 0x35, 0x1d, 0x2d, 0x8c, 0x28, 0xa3, 0xa8, 0x21, 0xcd, 0xd6, 0x86, 0xeb, 0xb1, 0x41,
-	0x62, 0x69, 0x36, 0xf5, 0xbb, 0x2e, 0x75, 0x69, 0x57, 0xe0, 0x56, 0xf2, 0x52, 0x58, 0xc2, 0x10,
-	0xa7, 0x3c, 0xae, 0xb5, 0x1c, 0x92, 0xc8, 0xf7, 0xe2, 0xd8, 0xa3, 0x81, 0xf4, 0xc0, 0x38, 0x24,
-	0x76, 0x7e, 0x5e, 0x7b, 0x37, 0x0f, 0x61, 0x2f, 0xc8, 0xf6, 0xf2, 0xbb, 0xd1, 0x35, 0x58, 0xdf,
-	0x32, 0x87, 0x43, 0x23, 0x6d, 0x82, 0x2b, 0x60, 0xfd, 0xfc, 0xed, 0x8b, 0x5a, 0x51, 0x44, 0xee,
-	0xc6, 0x12, 0xe6, 0xc4, 0x7d, 0x12, 0x38, 0x46, 0xda, 0x9c, 0x9f, 0x22, 0xe6, 0x6e, 0x2c, 0x61,
-	0x4e, 0xec, 0x9b, 0x3e, 0x31, 0xd2, 0x66, 0x6d, 0x8a, 0x98, 0xbb, 0xb1, 0x84, 0xd1, 0x43, 0xb8,
-	0xb4, 0x57, 0x56, 0x1a, 0x1b, 0x69, 0x53, 0x11, 0xfc, 0xd5, 0x92, 0x3f, 0x81, 0xe2, 0x49, 0x32,
-	0x7a, 0x00, 0x17, 0xb7, 0xe9, 0x1b, 0x12, 0x05, 0x66, 0x60, 0xf3, 0x64, 0x0b, 0x22, 0x78, 0xa5,
-	0x0c, 0xae, 0x82, 0x78, 0x82, 0xba, 0xf6, 0x11, 0xc0, 0x86, 0x91, 0xee, 0x06, 0x61, 0xc2, 0x50,
-	0x1f, 0x36, 0x7a, 0x8e, 0x13, 0x91, 0x38, 0x16, 0x02, 0x2c, 0xea, 0x77, 0x47, 0x47, 0x9d, 0xb9,
-	0x6f, 0x47, 0x9d, 0x9b, 0x15, 0xd1, 0x07, 0x59, 0x48, 0xa2, 0x21, 0x71, 0x5c, 0x12, 0x75, 0xad,
-	0x24, 0x8a, 0xe8, 0xdb, 0xae, 0x1d, 0x65, 0x21, 0xa3, 0x9a, 0x8c, 0xc5, 0xc5, 0x25, 0x68, 0x15,
-	0xd6, 0x7b, 0x3e, 0x4d, 0x02, 0x26, 0x64, 0x52, 0xb0, 0xb4, 0x50, 0x0b, 0xaa, 0xfb, 0xe4, 0x75,
-	0x42, 0x02, 0x9b, 0x08, 0x5d, 0x14, 0x5c, 0xda, 0x9b, 0xca, 0xa7, 0xc3, 0xce, 0xdc, 0x5a, 0x0a,
-	0x55, 0x23, 0x7d, 0x9e, 0xb0, 0xff, 0x58, 0x95, 0xcc, 0xfc, 0x03, 0x14, 0x43, 0x80, 0xae, 0xc2,
-	0x05, 0xa1, 0x8b, 0x9c, 0x86, 0xe5, 0x52, 0x4e, 0xa9, 0x17, 0xce, 0x61, 0xf4, 0xf4, 0xa4, 0xc0,
-	0x79, 0x51, 0xe0, 0xad, 0xbf, 0x2f, 0xae, 0x05, 0xd5, 0x6d, 0x33, 0x7e, 0xe6, 0xf9, 0x1e, 0x2b,
-	0xa4, 0x29, 0x6c, 0xb4, 0x0c, 0x6b, 0x4f, 0x08, 0x11, 0x93, 0xa1, 0x60, 0x7e, 0x44, 0xbb, 0x50,
-	0x79, 0x6c, 0x32, 0x53, 0xbc, 0xf7, 0xa2, 0x7e, 0x4f, 0xea, 0xb2, 0x71, 0x7a, 0x6a, 0xcb, 0x0b,
-	0xcc, 0x28, 0xd3, 0x76, 0x48, 0xaa, 0x67, 0x8c, 0xc4, 0x58, 0x5c, 0x21, 0xbb, 0xf7, 0x8a, 0xc1,
-	0x46, 0xeb, 0xb0, 0x2e, 0xba, 0xe3, 0xa2, 0xd7, 0x7e, 0xdb, 0xbd, 0xc4, 0xd1, 0x0d, 0xd8, 0xc8,
-	0x5f, 0x8a, 0xb7, 0xcf, 0xa9, 0x97, 0x2a, 0xd4, 0x1c, 0xc1, 0x05, 0x63, 0x53, 0xfd, 0x70, 0xd8,
-	0x99, 0x13, 0xa9, 0x92, 0xa9, 0x89, 0x9f, 0x59, 0xee, 0xfb, 0x50, 0xe5, 0x81, 0xbd, 0xc8, 0x8d,
-	0xe5, 0xfa, 0x5d, 0xd6, 0x2a, 0x5b, 0x5e, 0x60, 0xba, 0xc2, 0xe5, 0xc0, 0x25, 0x57, 0x76, 0x18,
-	0x16, 0x1b, 0x39, 0x73, 0x3e, 0x04, 0x15, 0x1e, 0x21, 0x72, 0x9d, 0xc3, 0xe2, 0xcc, 0x7d, 0x42,
-	0xf8, 0x5a, 0xee, 0xe3, 0xe7, 0x5f, 0x9f, 0x47, 0x66, 0x7c, 0x05, 0xeb, 0x3a, 0x3d, 0xa3, 0xa6,
-	0x1b, 0x50, 0x3d, 0x08, 0x2c, 0x1e, 0x45, 0xff, 0x2c, 0x6a, 0x49, 0xa9, 0xa8, 0xfa, 0x19, 0x94,
-	0x91, 0xb3, 0x77, 0xd8, 0x9f, 0x1e, 0xe0, 0x7f, 0xdf, 0xb0, 0x1d, 0xe2, 0xb9, 0x83, 0x62, 0x84,
-	0xa5, 0x55, 0x29, 0xf3, 0x3d, 0x98, 0xfc, 0x62, 0x9d, 0x41, 0x9a, 0x2d, 0x78, 0xa1, 0x67, 0xdb,
-	0x7c, 0x63, 0x0f, 0x42, 0xc7, 0x64, 0xa4, 0x98, 0xba, 0x15, 0x4d, 0x7c, 0xd8, 0x0d, 0xe2, 0x87,
-	0x43, 0x93, 0x11, 0xc9, 0x11, 0x53, 0x00, 0xf0, 0x54, 0xc8, 0x49, 0x25, 0xfa, 0xa3, 0xd1, 0xb8,
-	0x0d, 0xbe, 0x8e, 0xdb, 0xe0, 0xfb, 0xb8, 0x0d, 0xbe, 0x1c, 0xb7, 0xc1, 0xe8, 0xb8, 0x0d, 0x5e,
-	0x5c, 0x3f, 0xbd, 0x71, 0x96, 0xc6, 0x5d, 0x59, 0x9f, 0x55, 0x17, 0xbf, 0x92, 0x3b, 0x3f, 0x03,
-	0x00, 0x00, 0xff, 0xff, 0xac, 0xa5, 0xe3, 0x1c, 0xb1, 0x06, 0x00, 0x00,
+	// 665 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0x3b, 0x6f, 0xd4, 0x40,
+	0x10, 0xce, 0xe6, 0x9c, 0xbb, 0x63, 0x09, 0x21, 0xac, 0x00, 0x9d, 0xae, 0xb8, 0x43, 0x11, 0x82,
+	0xf0, 0x88, 0x0f, 0xf1, 0x2a, 0xd2, 0xa0, 0xbb, 0x20, 0x92, 0x20, 0x14, 0xd0, 0xc6, 0x69, 0xe8,
+	0xfc, 0x58, 0x1c, 0x8b, 0xb3, 0xd7, 0xd8, 0x6b, 0xb0, 0x3b, 0x4a, 0x7a, 0x1a, 0xca, 0x14, 0x54,
+	0xfc, 0x0a, 0xca, 0x94, 0xd4, 0x14, 0x11, 0x4a, 0x7e, 0x06, 0x0d, 0xda, 0xf1, 0xae, 0xef, 0x38,
+	0x20, 0xba, 0x80, 0x44, 0xb7, 0x33, 0xdf, 0xb7, 0x9e, 0x99, 0x6f, 0x66, 0xd6, 0xf8, 0x4c, 0x6c,
+	0x17, 0x43, 0x6e, 0x7b, 0x66, 0x9c, 0x70, 0xc1, 0x49, 0x43, 0x99, 0xed, 0x15, 0x3f, 0x10, 0xbb,
+	0x99, 0x63, 0xba, 0x3c, 0xec, 0xf9, 0xdc, 0xe7, 0x3d, 0xc0, 0x9d, 0xec, 0x05, 0x58, 0x60, 0xc0,
+	0xa9, 0xbc, 0xd7, 0x5e, 0x8c, 0x59, 0x12, 0x06, 0x69, 0x1a, 0xf0, 0x48, 0x79, 0x70, 0x1a, 0x33,
+	0xb7, 0x3c, 0x2f, 0x7d, 0x9a, 0xc5, 0xb5, 0x7e, 0x54, 0x90, 0xab, 0xb8, 0xbe, 0x66, 0x0f, 0x87,
+	0x56, 0xde, 0x42, 0x97, 0xd0, 0xf2, 0xe9, 0xdb, 0x67, 0x4d, 0x1d, 0xbd, 0x74, 0x53, 0x05, 0x4b,
+	0xe2, 0x36, 0x8b, 0x3c, 0x2b, 0x6f, 0xcd, 0x4e, 0x10, 0x4b, 0x37, 0x55, 0xb0, 0x24, 0x6e, 0xd9,
+	0x21, 0xb3, 0xf2, 0x56, 0x6d, 0x82, 0x58, 0xba, 0xa9, 0x82, 0xc9, 0x75, 0xdc, 0x78, 0xc6, 0x92,
+	0x30, 0xb5, 0xf2, 0x96, 0x01, 0xcc, 0xc5, 0x8a, 0xa9, 0xfc, 0x54, 0x13, 0xc8, 0x65, 0x3c, 0xb7,
+	0xce, 0x5f, 0x5b, 0x79, 0x6b, 0x0e, 0x98, 0x0b, 0x15, 0x13, 0xbc, 0xb4, 0x04, 0x65, 0xe8, 0x01,
+	0x87, 0x1c, 0xeb, 0x13, 0xa1, 0x4b, 0x37, 0x55, 0x30, 0x59, 0xc1, 0xcd, 0x9d, 0xc8, 0x29, 0xa9,
+	0x0d, 0xa0, 0x9e, 0xab, 0xa8, 0x1a, 0xa0, 0x15, 0x65, 0xe9, 0x3d, 0xc2, 0x0d, 0x2b, 0xdf, 0x8c,
+	0xe2, 0x4c, 0x90, 0x2d, 0xdc, 0xe8, 0x7b, 0x5e, 0xc2, 0xd2, 0x14, 0x14, 0x9b, 0x1f, 0xdc, 0xdd,
+	0x3f, 0xe8, 0xce, 0x7c, 0x3d, 0xe8, 0xde, 0x1c, 0x6b, 0xcf, 0x6e, 0x11, 0xb3, 0x64, 0xc8, 0x3c,
+	0x9f, 0x25, 0x3d, 0x27, 0x4b, 0x12, 0xfe, 0xa6, 0xe7, 0x26, 0x45, 0x2c, 0xb8, 0xa9, 0xee, 0x52,
+	0xfd, 0x11, 0x72, 0x11, 0xd7, 0xfb, 0x21, 0xcf, 0x22, 0x01, 0xba, 0x1a, 0x54, 0x59, 0xa4, 0x8d,
+	0x9b, 0xdb, 0xec, 0x55, 0xc6, 0x22, 0x97, 0x81, 0x90, 0x06, 0xad, 0xec, 0x55, 0xe3, 0xc3, 0x5e,
+	0x77, 0x66, 0x29, 0xc7, 0x4d, 0x2b, 0x7f, 0x9a, 0x89, 0xff, 0x98, 0x95, 0x8a, 0xfc, 0x1d, 0xe9,
+	0xa9, 0x21, 0x57, 0xf0, 0x1c, 0xe8, 0xa2, 0xc6, 0x67, 0xd4, 0x42, 0xa5, 0x17, 0x2d, 0x61, 0xf2,
+	0x78, 0x94, 0xe0, 0x2c, 0x24, 0x78, 0xeb, 0xef, 0x93, 0x6b, 0xe3, 0xe6, 0xba, 0x9d, 0x3e, 0x09,
+	0xc2, 0x40, 0x68, 0x69, 0xb4, 0x4d, 0x16, 0x71, 0xed, 0x11, 0x63, 0x30, 0x50, 0x06, 0x95, 0x47,
+	0xb2, 0x89, 0x8d, 0x87, 0xb6, 0xb0, 0x61, 0x72, 0xe6, 0x07, 0xf7, 0x94, 0x2e, 0x2b, 0xc7, 0x87,
+	0x76, 0x82, 0xc8, 0x4e, 0x0a, 0x73, 0x83, 0xe5, 0x83, 0x42, 0xb0, 0x94, 0xc2, 0x27, 0x54, 0xf5,
+	0x81, 0xde, 0x04, 0xb2, 0x8c, 0xeb, 0x50, 0x9d, 0x14, 0xbd, 0xf6, 0xdb, 0xea, 0x15, 0x4e, 0x6e,
+	0xe0, 0x46, 0xd9, 0x29, 0x59, 0x7e, 0xed, 0xa7, 0x79, 0xd3, 0x3d, 0xa4, 0x9a, 0xb1, 0xda, 0x7c,
+	0xb7, 0xd7, 0x9d, 0x81, 0x50, 0xbc, 0x5a, 0x91, 0xa9, 0x85, 0xbe, 0x8f, 0x9b, 0xf2, 0x4a, 0x3f,
+	0xf1, 0x53, 0xb5, 0xa9, 0xe7, 0xcd, 0xb1, 0x97, 0x40, 0x63, 0x03, 0x43, 0x0a, 0x41, 0x2b, 0xae,
+	0xaa, 0x2d, 0xd6, 0xcb, 0x3b, 0x75, 0x3c, 0x82, 0x0d, 0x79, 0x03, 0x62, 0x9d, 0xa2, 0x70, 0x96,
+	0x3e, 0x90, 0xbc, 0x56, 0xfa, 0xe4, 0xf9, 0xd7, 0xc6, 0xa8, 0x88, 0x2f, 0xf5, 0xce, 0x9e, 0x40,
+	0xcd, 0xd1, 0xfa, 0xf2, 0x3f, 0xcb, 0x59, 0x51, 0xc6, 0xf4, 0xfc, 0x88, 0x46, 0x8b, 0x3f, 0x75,
+	0x85, 0x5b, 0x93, 0xa3, 0xfb, 0xef, 0xbb, 0xb5, 0xc1, 0x02, 0x7f, 0x57, 0x0f, 0xaf, 0xb2, 0xc6,
+	0xd2, 0x7c, 0x8b, 0xd4, 0x73, 0x77, 0x02, 0x4d, 0xd6, 0xf0, 0x42, 0xdf, 0x75, 0xe5, 0x92, 0xee,
+	0xc4, 0x9e, 0x2d, 0x98, 0x1e, 0xb4, 0x0b, 0x26, 0xbc, 0xfa, 0x16, 0x0b, 0xe3, 0xa1, 0x2d, 0x98,
+	0xe2, 0x40, 0xfb, 0x11, 0x9d, 0xb8, 0x32, 0x4a, 0x61, 0xf0, 0x60, 0xff, 0xb0, 0x83, 0xbe, 0x1c,
+	0x76, 0xd0, 0xb7, 0xc3, 0x0e, 0xfa, 0x7c, 0xd4, 0x41, 0xfb, 0x47, 0x1d, 0xf4, 0xfc, 0xda, 0xf1,
+	0x15, 0x8b, 0x3c, 0xed, 0xa9, 0xfc, 0x9c, 0x3a, 0xfc, 0x67, 0xee, 0xfc, 0x08, 0x00, 0x00, 0xff,
+	0xff, 0xf8, 0x92, 0x62, 0xb5, 0xce, 0x06, 0x00, 0x00,
 }

@@ -25,27 +25,25 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/consensus/tendermint/validator"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
-	lConfig "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
-	"github.com/hyperledger/burrow/logging/structure"
+	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 )
 
 const (
-	chainName = "Integration_Test_Chain"
+	ChainName = "Integration_Test_Chain"
 	testDir   = "./test_scratch/tm_test"
 )
 
 // Enable logger output during tests
-//var debugLogging = true
-var debugLogging = false
 
 // Starting point for assigning range of ports for tests
 // Start at unprivileged port (hoping for the best)
@@ -58,41 +56,25 @@ const startingPortBuckets = 1000
 // Mutable port to assign to next claimant
 var port = uint32(startingPort)
 
+var node uint64 = 0
+
 // We use this to wrap tests
-func TestKernel(privateAccounts []*acm.PrivateAccount, testConfig *config.BurrowConfig) *core.Kernel {
-	fmt.Println("Running with integration TestWrapper (core/integration/integration.go)...")
-
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0777)
-	os.Chdir(testDir)
-	defer os.RemoveAll(testDir)
-
-	os.MkdirAll("config", 0777)
+func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.PrivateAccount,
+	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) *core.Kernel {
+	fmt.Println("Creating integration test Kernel...")
 
 	logger := logging.NewNoopLogger()
-	if debugLogging {
+	if loggingConfig != nil {
 		var err error
 		// Change config as needed
-		logger, err = lifecycle.NewLoggerFromLoggingConfig(&lConfig.LoggingConfig{
-			ExcludeTrace: false,
-			RootSink: lConfig.Sink().
-				SetTransform(lConfig.FilterTransform(lConfig.IncludeWhenAnyMatches,
-					structure.ComponentKey, "Tendermint",
-					structure.ScopeKey, "executor.Execute\\(tx txs.Tx\\)",
-				)).
-				//AddSinks(config.Sink().SetTransform(config.FilterTransform(config.ExcludeWhenAnyMatches, "run_call", "false")).
-				AddSinks(lConfig.Sink().SetTransform(lConfig.PruneTransform("log_channel", "trace", "scope", "returns", "run_id", "args")).
-					AddSinks(lConfig.Sink().SetTransform(lConfig.SortTransform("tx_hash", "time", "message", "method")).
-						SetOutput(lConfig.StdoutOutput()))),
-		})
+		logger, err = lifecycle.NewLoggerFromLoggingConfig(loggingConfig)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	validatorAccount := privateAccounts[0]
-	privValidator := validator.NewPrivValidatorMemory(validatorAccount, validatorAccount)
-	keyClient := mock.NewKeyClient(privateAccounts...)
+	privValidator := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
+	keyClient := mock.NewKeyClient(keysAccounts...)
 	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator,
 		testConfig.GenesisDoc,
 		testConfig.Tendermint.TendermintConfig(),
@@ -104,6 +86,14 @@ func TestKernel(privateAccounts []*acm.PrivateAccount, testConfig *config.Burrow
 	}
 
 	return kernel
+}
+
+func EnterTestDirectory() (cleanup func()) {
+	os.RemoveAll(testDir)
+	os.MkdirAll(testDir, 0777)
+	os.Chdir(testDir)
+	os.MkdirAll("config", 0777)
+	return func() { os.RemoveAll(testDir) }
 }
 
 func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
@@ -118,9 +108,9 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
 	if err != nil {
 		panic("could not parse test genesis time")
 	}
-	return genesis.MakeGenesisDocFromAccounts(chainName, nil, genesisTime, accounts,
-		map[string]acm.Validator{
-			"genesis_validator": acm.AsValidator(accounts["user_0"]),
+	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts,
+		map[string]validator.Validator{
+			"genesis_validator": validator.FromAccount(accounts["user_0"], 1<<16),
 		})
 }
 
@@ -152,17 +142,26 @@ func GetPort() uint16 {
 	return uint16(atomic.AddUint32(&port, 1))
 }
 
+// Gets an name based on an incrementing counter for running multiple nodes
+func GetName() string {
+	nodeNumber := atomic.AddUint64(&node, 1)
+	return fmt.Sprintf("node_%03d", nodeNumber)
+}
+
 func GetLocalAddress() string {
-	return fmt.Sprintf("localhost:%v", GetPort())
+	return fmt.Sprintf("127.0.0.1:%v", GetPort())
 }
 
 func GetTCPLocalAddress() string {
-	return fmt.Sprintf("tcp://localhost:%v", GetPort())
+	return fmt.Sprintf("tcp://127.0.0.1:%v", GetPort())
 }
 
 func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
+	name := GetName()
 	cnf := config.DefaultBurrowConfig()
 	cnf.GenesisDoc = genesisDoc
+	cnf.Tendermint.Moniker = name
+	cnf.Tendermint.TendermintRoot = fmt.Sprintf(".burrow_%s", name)
 	cnf.Tendermint.ListenAddress = GetTCPLocalAddress()
 	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()
 	cnf.RPC.Metrics.ListenAddress = GetTCPLocalAddress()

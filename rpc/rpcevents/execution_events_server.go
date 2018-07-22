@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/gogo/protobuf/proto"
-	bcm "github.com/hyperledger/burrow/blockchain"
+	bcm "github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -29,12 +29,12 @@ type Provider interface {
 type executionEventsServer struct {
 	eventsProvider Provider
 	subscribable   event.Subscribable
-	tip            bcm.TipInfo
+	tip            bcm.BlockchainInfo
 	logger         *logging.Logger
 }
 
 func NewExecutionEventsServer(eventsProvider Provider, subscribable event.Subscribable,
-	tip bcm.TipInfo, logger *logging.Logger) ExecutionEventsServer {
+	tip bcm.BlockchainInfo, logger *logging.Logger) ExecutionEventsServer {
 
 	return &executionEventsServer{
 		eventsProvider: eventsProvider,

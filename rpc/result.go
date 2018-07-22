@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
@@ -96,7 +97,7 @@ func (b *Block) UnmarshalJSON(data []byte) (err error) {
 type ResultStatus struct {
 	NodeInfo          p2p.NodeInfo
 	GenesisHash       binary.HexBytes
-	PubKey            crypto.PublicKey
+	PublicKey         crypto.PublicKey
 	LatestBlockHash   binary.HexBytes
 	LatestBlockHeight uint64
 	LatestBlockTime   int64
@@ -130,6 +131,7 @@ type Peer struct {
 }
 
 type ResultNetInfo struct {
+	ThisNode  p2p.NodeInfo
 	Listening bool
 	Listeners []string
 	Peers     []*Peer
@@ -137,8 +139,8 @@ type ResultNetInfo struct {
 
 type ResultListValidators struct {
 	BlockHeight         uint64
-	BondedValidators    []*acm.ConcreteValidator
-	UnbondingValidators []*acm.ConcreteValidator
+	BondedValidators    []*validator.Validator
+	UnbondingValidators []*validator.Validator
 }
 
 type ResultDumpConsensusState struct {

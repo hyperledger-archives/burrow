@@ -15,7 +15,6 @@
 package permission
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -83,40 +82,28 @@ func PermFlagFromStringList(permissions []string) (PermFlag, error) {
 
 // Builds a list of set permissions from a BasePermission by creating a list of permissions strings
 // from the resultant permissions of basePermissions
-func BasePermissionsToStringList(basePermissions BasePermissions) ([]string, error) {
+func BasePermissionsToStringList(basePermissions BasePermissions) []string {
 	return PermFlagToStringList(basePermissions.ResultantPerms())
 }
 
 // Creates a list of individual permission flag strings from a possibly composite PermFlag
 // by projecting out each bit and adding its permission string if it is set
-func PermFlagToStringList(permFlag PermFlag) ([]string, error) {
+func PermFlagToStringList(permFlag PermFlag) []string {
 	permStrings := make([]string, 0, NumPermissions)
-	if permFlag > AllPermFlags {
-		return nil, fmt.Errorf("resultant permission 0b%b is invalid: has permission flag set above top flag 0b%b",
-			permFlag, TopPermFlag)
-	}
 	for i := uint(0); i < NumPermissions; i++ {
 		permFlag := permFlag & (1 << i)
 		if permFlag > 0 {
 			permStrings = append(permStrings, permFlag.String())
 		}
 	}
-	return permStrings, nil
+	return permStrings
 }
 
 // Generates a human readable string from the resultant permissions of basePermission
 func BasePermissionsString(basePermissions BasePermissions) string {
-	permStrings, err := BasePermissionsToStringList(basePermissions)
-	if err != nil {
-		return UnknownString
-	}
-	return strings.Join(permStrings, " | ")
+	return strings.Join(BasePermissionsToStringList(basePermissions), " | ")
 }
 
 func String(permFlag PermFlag) string {
-	permStrings, err := PermFlagToStringList(permFlag)
-	if err != nil {
-		return UnknownString
-	}
-	return strings.Join(permStrings, " | ")
+	return strings.Join(PermFlagToStringList(permFlag), " | ")
 }

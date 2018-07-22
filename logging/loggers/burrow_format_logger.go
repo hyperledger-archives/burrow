@@ -20,6 +20,7 @@ import (
 
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/tmthrgd/go-hex"
 )
 
 // Logger that implements some formatting conventions for burrow and burrow-client
@@ -48,7 +49,7 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 			case fmt.Stringer:
 				value = v.String()
 			case []byte:
-				value = fmt.Sprintf("%X", v)
+				value = hex.EncodeUpperToString(v)
 			case time.Time:
 				value = v.Format(time.RFC3339Nano)
 			}

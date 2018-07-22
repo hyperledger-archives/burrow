@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/logging/adapters/stdlib"
-	"github.com/hyperledger/burrow/logging/config"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 
@@ -37,7 +37,7 @@ import (
 // to set up their root logger and capture any other logging output.
 
 // Obtain a logger from a LoggingConfig
-func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.Logger, error) {
+func NewLoggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (*logging.Logger, error) {
 	if loggingConfig == nil {
 		return NewStdErrLogger()
 	} else {
@@ -61,7 +61,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (*logging.L
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
-func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *config.LoggingConfig) (error, channels.Channel) {
+func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *logconfig.LoggingConfig) (error, channels.Channel) {
 	outputLogger, errCh, err := loggerFromLoggingConfig(loggingConfig)
 	if err != nil {
 		return err, channels.NewDeadChannel()
@@ -99,7 +99,7 @@ func CaptureStdlibLogOutput(infoTraceLogger *logging.Logger) {
 }
 
 // Helpers
-func loggerFromLoggingConfig(loggingConfig *config.LoggingConfig) (kitlog.Logger, channels.Channel, error) {
+func loggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (kitlog.Logger, channels.Channel, error) {
 	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
 	if err != nil {
 		return nil, nil, err

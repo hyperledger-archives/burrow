@@ -6,7 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis/spec"
@@ -17,18 +17,18 @@ import (
 
 type GovernanceContext struct {
 	StateWriter  state.ReaderWriter
-	ValidatorSet blockchain.ValidatorSet
+	ValidatorSet validator.Writer
 	Logger       *logging.Logger
-	tx           *payload.GovernanceTx
+	tx           *payload.GovTx
 	txe          *exec.TxExecution
 }
 
-// GovernanceTx provides a set of TemplateAccounts and GovernanceContext tries to alter the chain state to match the
+// GovTx provides a set of TemplateAccounts and GovernanceContext tries to alter the chain state to match the
 // specification given
 func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	var ok bool
 	ctx.txe = txe
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.GovernanceTx)
+	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.GovTx)
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
@@ -38,8 +38,9 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// ensure all inputs have root permissions
-	if !allHavePermission(ctx.StateWriter, permission.Root, accounts, ctx.Logger) {
-		return fmt.Errorf("at least one input lacks Root permission needed for GovernanceTx")
+	err = allHavePermission(ctx.StateWriter, permission.Root, accounts, ctx.Logger)
+	if err != nil {
+		return errors.Wrap(err, "at least one input lacks permission for GovTx")
 	}
 
 	for _, i := range ctx.tx.Inputs {
@@ -49,27 +50,24 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	for _, update := range ctx.tx.AccountUpdates {
 		if update.Address == nil && update.PublicKey == nil {
 			// We do not want to generate a key
-			return fmt.Errorf("could not execution GovernanceTx since account template %v contains neither "+
+			return fmt.Errorf("could not execution GovTx since account template %v contains neither "+
 				"address or public key", update)
 		}
 		if update.PublicKey != nil {
 			address := update.PublicKey.Address()
 			if update.Address != nil && address != *update.Address {
 				return fmt.Errorf("supplied public key %v whose address %v does not match %v provided by"+
-					"GovernanceTx", update.PublicKey, address, update.Address)
+					"GovTx", update.PublicKey, address, update.Address)
 			}
 			update.Address = &address
 		}
-		if update.PublicKey == nil && update.Power != nil {
+		if update.PublicKey == nil && update.Balances().HasPower() {
 			// If we are updating power we will need the key
-			return fmt.Errorf("GovernanceTx must be provided with public key when updating validator power")
+			return fmt.Errorf("GovTx must be provided with public key when updating validator power")
 		}
-		account, err := state.GetMutableAccount(ctx.StateWriter, *update.Address)
+		account, err := getOrMakeOutput(ctx.StateWriter, accounts, *update.Address, ctx.Logger)
 		if err != nil {
 			return err
-		}
-		if account == nil {
-			return fmt.Errorf("account %v not found so cannot update using template %v", update.Address, update)
 		}
 		governAccountEvent, err := ctx.updateAccount(account, update)
 		if err != nil {
@@ -85,8 +83,8 @@ func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update 
 	ev = &exec.GovernAccountEvent{
 		AccountUpdate: update,
 	}
-	if update.Amount != nil {
-		err = account.SetBalance(*update.Amount)
+	if update.Balances().HasNative() {
+		err = account.SetBalance(update.Balances().GetNative(0))
 		if err != nil {
 			return
 		}
@@ -95,13 +93,13 @@ func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update 
 		// TODO: can we do something useful if provided with a NodeAddress for an account about to become a validator
 		// like add it to persistent peers or pre gossip so it gets inbound connections? If so under which circumstances?
 	}
-	if update.Power != nil {
+	if update.Balances().HasPower() {
 		if update.PublicKey == nil {
 			err = fmt.Errorf("updateAccount should have PublicKey by this point but appears not to for "+
 				"template account: %v", update)
 			return
 		}
-		power := new(big.Int).SetUint64(*update.Power)
+		power := new(big.Int).SetUint64(update.Balances().GetPower(0))
 		if !power.IsInt64() {
 			err = fmt.Errorf("power supplied in update to validator power for %v does not fit into int64 and "+
 				"so is not supported by Tendermint", update.Address)

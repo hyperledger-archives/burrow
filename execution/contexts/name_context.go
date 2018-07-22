@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
@@ -21,7 +21,7 @@ var regexpAlphaNum = regexp.MustCompile("^[a-zA-Z0-9._/-@]*$")
 var regexpJSON = regexp.MustCompile(`^[a-zA-Z0-9_/ \-+"':,\n\t.{}()\[\]]*$`)
 
 type NameContext struct {
-	Tip         blockchain.TipInfo
+	Tip         bcm.BlockchainInfo
 	StateWriter state.ReaderWriter
 	NameReg     names.ReaderWriter
 	Logger      *logging.Logger

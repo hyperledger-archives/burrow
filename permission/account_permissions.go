@@ -2,6 +2,19 @@ package permission
 
 import "github.com/hyperledger/burrow/binary"
 
+func NewAccountPermissions(pss ...PermFlag) AccountPermissions {
+	var perms PermFlag
+	for _, ps := range pss {
+		perms |= ps
+	}
+	return AccountPermissions{
+		Base: BasePermissions{
+			Perms:  perms,
+			SetBit: perms,
+		},
+	}
+}
+
 // Returns true if the role is found
 func (ap AccountPermissions) HasRole(role string) bool {
 	role = string(binary.RightPadBytes([]byte(role), 32))

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
@@ -13,7 +13,7 @@ import (
 )
 
 type SendContext struct {
-	Tip         blockchain.TipInfo
+	Tip         bcm.BlockchainInfo
 	StateWriter state.ReaderWriter
 	Logger      *logging.Logger
 	tx          *payload.SendTx
@@ -31,8 +31,9 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// ensure all inputs have send permissions
-	if !allHavePermission(ctx.StateWriter, permission.Send, accounts, ctx.Logger) {
-		return fmt.Errorf("at least one input lacks permission for SendTx")
+	err = allHavePermission(ctx.StateWriter, permission.Send, accounts, ctx.Logger)
+	if err != nil {
+		return errors.Wrap(err, "at least one input lacks permission for SendTx")
 	}
 
 	// add outputs to accounts map

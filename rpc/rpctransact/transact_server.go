@@ -52,8 +52,8 @@ func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*
 	}, nil
 }
 
-func (ts *transactServer) FormulateTx(ctx context.Context, param *PayloadParam) (*TxEnvelope, error) {
-	txEnv := param.Envelope(ts.transactor.Tip.ChainID())
+func (ts *transactServer) FormulateTx(ctx context.Context, param *payload.Any) (*TxEnvelope, error) {
+	txEnv := EnvelopeFromAny(ts.transactor.Tip.ChainID(), param)
 	if txEnv == nil {
 		return nil, fmt.Errorf("no payload provided to FormulateTx")
 	}
@@ -63,11 +63,11 @@ func (ts *transactServer) FormulateTx(ctx context.Context, param *PayloadParam) 
 }
 
 func (ts *transactServer) CallTxSync(ctx context.Context, param *payload.CallTx) (*exec.TxExecution, error) {
-	return ts.BroadcastTxSync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxSync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (ts *transactServer) CallTxAsync(ctx context.Context, param *payload.CallTx) (*txs.Receipt, error) {
-	return ts.BroadcastTxAsync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxAsync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (ts *transactServer) CallTxSim(ctx context.Context, param *payload.CallTx) (*exec.TxExecution, error) {
@@ -82,19 +82,19 @@ func (ts *transactServer) CallCodeSim(ctx context.Context, param *CallCodeParam)
 }
 
 func (ts *transactServer) SendTxSync(ctx context.Context, param *payload.SendTx) (*exec.TxExecution, error) {
-	return ts.BroadcastTxSync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxSync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (ts *transactServer) SendTxAsync(ctx context.Context, param *payload.SendTx) (*txs.Receipt, error) {
-	return ts.BroadcastTxAsync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxAsync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (ts *transactServer) NameTxSync(ctx context.Context, param *payload.NameTx) (*exec.TxExecution, error) {
-	return ts.BroadcastTxSync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxSync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (ts *transactServer) NameTxAsync(ctx context.Context, param *payload.NameTx) (*txs.Receipt, error) {
-	return ts.BroadcastTxAsync(ctx, txEnvelopeParam(param))
+	return ts.BroadcastTxAsync(ctx, &TxEnvelopeParam{Payload: param.Any()})
 }
 
 func (te *TxEnvelopeParam) GetEnvelope(chainID string) *txs.Envelope {
@@ -105,44 +105,26 @@ func (te *TxEnvelopeParam) GetEnvelope(chainID string) *txs.Envelope {
 		return te.Envelope
 	}
 	if te.Payload != nil {
-		return te.Payload.Envelope(chainID)
+		return EnvelopeFromAny(chainID, te.Payload)
 	}
 	return nil
 }
 
-func (pp *PayloadParam) Envelope(chainID string) *txs.Envelope {
-	if pp.CallTx != nil {
-		return txs.Enclose(chainID, pp.CallTx)
+func EnvelopeFromAny(chainID string, p *payload.Any) *txs.Envelope {
+	if p.CallTx != nil {
+		return txs.Enclose(chainID, p.CallTx)
 	}
-	if pp.SendTx != nil {
-		return txs.Enclose(chainID, pp.SendTx)
+	if p.SendTx != nil {
+		return txs.Enclose(chainID, p.SendTx)
 	}
-	if pp.NameTx != nil {
-		return txs.Enclose(chainID, pp.NameTx)
+	if p.NameTx != nil {
+		return txs.Enclose(chainID, p.NameTx)
 	}
-	return nil
-}
-
-func txEnvelopeParam(pl payload.Payload) *TxEnvelopeParam {
-	switch tx := pl.(type) {
-	case *payload.CallTx:
-		return &TxEnvelopeParam{
-			Payload: &PayloadParam{
-				CallTx: tx,
-			},
-		}
-	case *payload.SendTx:
-		return &TxEnvelopeParam{
-			Payload: &PayloadParam{
-				SendTx: tx,
-			},
-		}
-	case *payload.NameTx:
-		return &TxEnvelopeParam{
-			Payload: &PayloadParam{
-				NameTx: tx,
-			},
-		}
+	if p.PermsTx != nil {
+		return txs.Enclose(chainID, p.PermsTx)
+	}
+	if p.GovTx != nil {
+		return txs.Enclose(chainID, p.GovTx)
 	}
 	return nil
 }

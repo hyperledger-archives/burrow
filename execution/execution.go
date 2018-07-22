@@ -15,17 +15,16 @@
 package execution
 
 import (
+	"context"
 	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
 
-	"context"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/contexts"
@@ -36,7 +35,6 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/pkg/errors"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -83,7 +81,7 @@ type executor struct {
 	blockExecution *exec.BlockExecution
 	logger         *logging.Logger
 	vmOptions      []func(*evm.VM)
-	txExecutors    map[payload.Type]Context
+	contexts       map[payload.Type]Context
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -92,20 +90,35 @@ var _ BatchExecutor = (*executor)(nil)
 func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
-	return newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
+	exe := newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
+
+	return exe.AddContext(payload.TypeGovernance,
+		&contexts.GovernanceContext{
+			ValidatorSet: exe.blockchain.ValidatorChecker(),
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+	)
 }
 
 func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
-	return newExecutor("CommitCache", true, backend, blockchain, emitter,
+	exe := newExecutor("CommitCache", true, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
+
+	return exe.AddContext(payload.TypeGovernance,
+		&contexts.GovernanceContext{
+			ValidatorSet: exe.blockchain.ValidatorWriter(),
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+	)
 }
 
 func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
-
 	exe := &executor{
 		runCall:      runCall,
 		state:        backend,
@@ -121,7 +134,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 	for _, option := range options {
 		option(exe)
 	}
-	exe.txExecutors = map[payload.Type]Context{
+	exe.contexts = map[payload.Type]Context{
 		payload.TypeSend: &contexts.SendContext{
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
@@ -145,12 +158,12 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
-		payload.TypeGovernance: &contexts.GovernanceContext{
-			ValidatorSet: blockchain,
-			StateWriter:  exe.stateCache,
-			Logger:       exe.logger,
-		},
 	}
+	return exe
+}
+
+func (exe *executor) AddContext(ty payload.Type, ctx Context) *executor {
+	exe.contexts[ty] = ctx
 	return exe
 }
 
@@ -176,7 +189,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return nil, err
 	}
 
-	if txExecutor, ok := exe.txExecutors[txEnv.Tx.Type()]; ok {
+	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)
 		err = txExecutor.Execute(txe)
@@ -251,15 +264,17 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	}
 	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
 	exe.logger.InfoMsg("Error publishing TxExecution",
-		"height", blockExecution.Height,
-		structure.ErrorKey, publishErr)
-
+		"height", blockExecution.Height, structure.ErrorKey, publishErr)
 	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
 	// (we know the previous app hash is safely committed because we are about to commit the next)
-	err = exe.blockchain.CommitBlock(blockTime, blockHash, hash)
+	totalPowerChange, totalFlow, err := exe.blockchain.CommitBlock(blockTime, blockHash, hash)
 	if err != nil {
-		panic(errors.Wrap(err, "could not commit block to blockchain state"))
+		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
 	}
+	exe.logger.InfoMsg("Committed block",
+		"total_validator_power", exe.blockchain.CurrentValidators().TotalPower(),
+		"total_validator_power_change", totalPowerChange,
+		"total_validator_flow", totalFlow)
 
 	return hash, nil
 }

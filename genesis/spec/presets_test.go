@@ -3,6 +3,7 @@ package spec
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +44,7 @@ func TestMergeGenesisSpecsRepeatedAccounts(t *testing.T) {
 		Accounts: []TemplateAccount{
 			{
 				Name:        name1,
-				Amount:      &amt1,
+				Amounts:     balance.New().Native(amt1),
 				Permissions: []string{permission.SendString, permission.CreateAccountString, permission.HasRoleString},
 				Roles:       []string{"fooer"},
 			},
@@ -53,7 +54,7 @@ func TestMergeGenesisSpecsRepeatedAccounts(t *testing.T) {
 		Accounts: []TemplateAccount{
 			{
 				Name:        name1,
-				Amount:      &amt2,
+				Amounts:     balance.New().Native(amt2),
 				Permissions: []string{permission.SendString, permission.CreateAccountString},
 				Roles:       []string{"barer"},
 			},
@@ -62,8 +63,8 @@ func TestMergeGenesisSpecsRepeatedAccounts(t *testing.T) {
 	gs3 := GenesisSpec{
 		Accounts: []TemplateAccount{
 			{
-				Name:   name3,
-				Amount: &amt3,
+				Name:    name3,
+				Amounts: balance.New().Native(amt3),
 			},
 		},
 	}
@@ -77,7 +78,7 @@ func TestMergeGenesisSpecsRepeatedAccounts(t *testing.T) {
 		Accounts: []TemplateAccount{
 			{
 				Name:        name1,
-				Amount:      &amtExpected,
+				Amounts:     balance.New().Native(amtExpected),
 				Permissions: []string{permission.CreateAccountString, permission.HasRoleString, permission.SendString},
 				Roles:       []string{"barer", "fooer"},
 			},

@@ -7,6 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmCrypto "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
@@ -136,6 +137,17 @@ func (p PublicKey) ABCIPubKey() abci.PubKey {
 	}
 }
 
+func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
+	switch pk := pubKey.(type) {
+	case tmCrypto.PubKeyEd25519:
+		return PublicKeyFromBytes(pk[:], CurveTypeEd25519)
+	case tmCrypto.PubKeySecp256k1:
+		return PublicKeyFromBytes(pk[:], CurveTypeSecp256k1)
+	default:
+		return PublicKey{}, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
+	}
+
+}
 func PublicKeyFromABCIPubKey(pubKey abci.PubKey) (PublicKey, error) {
 	switch pubKey.Type {
 	case CurveTypeEd25519.ABCIType():

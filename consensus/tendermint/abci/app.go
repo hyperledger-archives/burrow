@@ -8,10 +8,12 @@ import (
 
 	"runtime/debug"
 
-	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
+	errors2 "github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
@@ -20,9 +22,9 @@ import (
 	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
-const responseInfoName = "Burrow"
-
 type App struct {
+	// Node information to return in Info
+	nodeInfo string
 	// State
 	blockchain    *bcm.Blockchain
 	checker       execution.BatchExecutor
@@ -40,16 +42,18 @@ type App struct {
 
 var _ abciTypes.Application = &App{}
 
-func NewApp(blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
+func NewApp(nodeInfo string, blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
 	txDecoder txs.Decoder, panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
+		nodeInfo:   nodeInfo,
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
 		checkTx:    txExecutor(checker, txDecoder, logger.WithScope("CheckTx")),
 		deliverTx:  txExecutor(committer, txDecoder, logger.WithScope("DeliverTx")),
 		panicFunc:  panicFunc,
-		logger:     logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App"),
+		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
+			"node_info", nodeInfo),
 	}
 }
 
@@ -61,12 +65,11 @@ func (app *App) SetMempoolLocker(mempoolLocker sync.Locker) {
 }
 
 func (app *App) Info(info abciTypes.RequestInfo) abciTypes.ResponseInfo {
-	tip := app.blockchain.Tip
 	return abciTypes.ResponseInfo{
-		Data:             responseInfoName,
+		Data:             app.nodeInfo,
 		Version:          project.History.CurrentVersion().String(),
-		LastBlockHeight:  int64(tip.LastBlockHeight()),
-		LastBlockAppHash: tip.AppHashAfterLastBlock(),
+		LastBlockHeight:  int64(app.blockchain.LastBlockHeight()),
+		LastBlockAppHash: app.blockchain.AppHashAfterLastBlock(),
 	}
 }
 
@@ -88,10 +91,15 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	err := app.checkValidatorsMatch(chain.Validators)
-	if err != nil {
-		app.logger.InfoMsg("Initial validator set mistmatch", structure.ErrorKey, err)
-		panic(err)
+	if len(chain.Validators) != app.blockchain.NumValidators() {
+		panic(fmt.Errorf("Tendermint passes %d validators to InitChain but Burrow's Blockchain has %d",
+			len(chain.Validators), app.blockchain.NumValidators()))
+	}
+	for _, v := range chain.Validators {
+		err := app.checkValidatorMatches(app.blockchain.Validators(), v)
+		if err != nil {
+			panic(err)
+		}
 	}
 	app.logger.InfoMsg("Initial validator set matches")
 	return
@@ -105,31 +113,33 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 		}
 	}()
 	if block.Header.Height > 1 {
-		validators := make([]abciTypes.Validator, len(block.Validators))
-		for i, v := range block.Validators {
-			validators[i] = v.Validator
-		}
-		err := app.checkValidatorsMatch(validators)
-		if err != nil {
+		var err error
+		// Tendermint runs a block behind with the validators passed in here
+		previousValidators := app.blockchain.PreviousValidators()
+		if len(block.Validators) != previousValidators.Count() {
+			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d",
+				len(block.Validators), previousValidators.Count())
 			panic(err)
+		}
+		for _, v := range block.Validators {
+			err = app.checkValidatorMatches(previousValidators, v.Validator)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return
 }
 
-func (app *App) checkValidatorsMatch(validators []abciTypes.Validator) error {
-	tendermintValidators := bcm.NewValidators()
-	for _, v := range validators {
-		publicKey, err := crypto.PublicKeyFromABCIPubKey(v.PubKey)
-		if err != nil {
-			panic(err)
-		}
-		tendermintValidators.AlterPower(publicKey, big.NewInt(v.Power))
+func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validator) error {
+	publicKey, err := crypto.PublicKeyFromABCIPubKey(v.PubKey)
+	if err != nil {
+		return err
 	}
-	burrowValidators := app.blockchain.Validators()
-	if !burrowValidators.Equal(tendermintValidators) {
-		return fmt.Errorf("validators provided by Tendermint at InitChain do not match those held by Burrow: "+
-			"Tendermint gives: %v, Burrow gives: %v", tendermintValidators, burrowValidators)
+	power := ours.Power(publicKey)
+	if power.Cmp(big.NewInt(v.Power)) != 0 {
+		return fmt.Errorf("validator %v has power %d from Tendermint but power %d from Burrow",
+			publicKey.Address(), v.Power, power)
 	}
 	return nil
 }
@@ -137,6 +147,7 @@ func (app *App) checkValidatorsMatch(validators []abciTypes.Validator) error {
 func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 	defer func() {
 		if r := recover(); r != nil {
+			fmt.Println("BeginBlock")
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
@@ -177,19 +188,20 @@ func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger 
 
 		txe, err := executor.Execute(txEnv)
 		if err != nil {
+			ex := errors2.AsException(err)
 			logger.TraceMsg("Execution error",
 				structure.ErrorKey, err,
 				"tx_hash", txEnv.Tx.Hash())
 			return abciTypes.ResponseCheckTx{
-				Code: codes.EncodingErrorCode,
-				Log:  fmt.Sprintf("Could not execute transaction: %s, error: %v", txEnv, err),
+				Code: codes.TxExecutionErrorCode,
+				Log:  fmt.Sprintf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
 			}
 		}
 
 		bs, err := txe.Receipt.Encode()
 		if err != nil {
 			return abciTypes.ResponseCheckTx{
-				Code: codes.TxExecutionErrorCode,
+				Code: codes.EncodingErrorCode,
 				Log:  fmt.Sprintf("Could not serialise receipt: %s", err),
 			}
 		}
@@ -207,11 +219,13 @@ func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger 
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
 	var validatorUpdates abciTypes.Validators
-	app.blockchain.IterateValidators(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	app.blockchain.PendingValidators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		app.logger.InfoMsg("Updating validator power", "validator_address", id.Address(),
+			"new_power", power)
 		validatorUpdates = append(validatorUpdates, abciTypes.Validator{
 			Address: id.Address().Bytes(),
 			PubKey:  id.PublicKey().ABCIPubKey(),
-			// Must be ensured during execution
+			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})
 		return
@@ -235,8 +249,8 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		"hash", app.block.Hash,
 		"txs", app.block.Header.NumTxs,
 		"block_time", blockTime,
-		"last_block_time", app.blockchain.Tip.LastBlockTime(),
-		"last_block_hash", app.blockchain.Tip.LastBlockHash())
+		"last_block_time", app.blockchain.LastBlockTime(),
+		"last_block_hash", app.blockchain.LastBlockHash())
 
 	// Lock the checker while we reset it and possibly while recheckTxs replays transactions
 	app.checker.Lock()
