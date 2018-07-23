@@ -7,14 +7,14 @@ import (
 	"sort"
 	"sync"
 
-	dbm "github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 var (
 	// All node keys are prefixed with this. This ensures no collision is
 	// possible with the other keys, and makes them easier to traverse.
 	nodePrefix = "n/"
-	nodeKeyFmt = "n/%x"
+	nodeKeyFmt = "n/%X"
 
 	// Orphans are keyed in the database by their expected lifetime.
 	// The first number represents the *last* version at which the orphan needs
@@ -22,12 +22,12 @@ var (
 	// which it is expected to exist - which starts out by being the version
 	// of the node being orphaned.
 	orphanPrefix    = "o/"
-	orphanPrefixFmt = "o/%d/"      // o/<last-version>/
-	orphanKeyFmt    = "o/%d/%d/%x" // o/<last-version>/<first-version>/<hash>
+	orphanPrefixFmt = "o/%010d/"         // o/<last-version>/
+	orphanKeyFmt    = "o/%010d/%010d/%X" // o/<last-version>/<first-version>/<hash>
 
 	// r/<version>
 	rootPrefix    = "r/"
-	rootPrefixFmt = "r/%d"
+	rootPrefixFmt = "r/%010d"
 )
 
 type nodeDB struct {
@@ -35,9 +35,7 @@ type nodeDB struct {
 	db    dbm.DB     // Persistent node storage.
 	batch dbm.Batch  // Batched writing buffer.
 
-	versionCache  map[int64][]byte // Cache of tree (root) versions.
-	latestVersion int64            // Latest root version.
-
+	latestVersion  int64
 	nodeCache      map[string]*list.Element // Node cache.
 	nodeCacheSize  int                      // Node cache size limit in elements.
 	nodeCacheQueue *list.List               // LRU queue of cache elements. Used for deletion.
@@ -47,7 +45,6 @@ func newNodeDB(db dbm.DB, cacheSize int) *nodeDB {
 	ndb := &nodeDB{
 		db:             db,
 		batch:          db.NewBatch(),
-		versionCache:   map[int64][]byte{},
 		latestVersion:  0, // initially invalid
 		nodeCache:      make(map[string]*list.Element),
 		nodeCacheSize:  cacheSize,
@@ -171,7 +168,6 @@ func (ndb *nodeDB) SaveOrphans(version int64, orphans map[string]int64) {
 	defer ndb.mtx.Unlock()
 
 	toVersion := ndb.getPreviousVersion(version)
-
 	for hash, fromVersion := range orphans {
 		debug("SAVEORPHAN %v-%v %X\n", fromVersion, toVersion, hash)
 		ndb.saveOrphan([]byte(hash), fromVersion, toVersion)
@@ -194,6 +190,7 @@ func (ndb *nodeDB) deleteOrphans(version int64) {
 	predecessor := ndb.getPreviousVersion(version)
 
 	// Traverse orphans with a lifetime ending at the version specified.
+	// TODO optimize.
 	ndb.traverseOrphansVersion(version, func(key, hash []byte) {
 		var fromVersion, toVersion int64
 
@@ -234,38 +231,36 @@ func (ndb *nodeDB) rootKey(version int64) []byte {
 
 func (ndb *nodeDB) getLatestVersion() int64 {
 	if ndb.latestVersion == 0 {
-		ndb.getVersions()
+		ndb.latestVersion = ndb.getPreviousVersion(1<<63 - 1)
 	}
 	return ndb.latestVersion
 }
 
-func (ndb *nodeDB) getVersions() map[int64][]byte {
-	if len(ndb.versionCache) == 0 {
-		ndb.traversePrefix([]byte(rootPrefix), func(k, hash []byte) {
-			var version int64
-			fmt.Sscanf(string(k), rootPrefixFmt, &version)
-			ndb.cacheVersion(version, hash)
-		})
-	}
-	return ndb.versionCache
-}
-
-func (ndb *nodeDB) cacheVersion(version int64, hash []byte) {
-	ndb.versionCache[version] = hash
-
-	if version > ndb.getLatestVersion() {
+func (ndb *nodeDB) updateLatestVersion(version int64) {
+	if ndb.latestVersion < version {
 		ndb.latestVersion = version
 	}
 }
 
 func (ndb *nodeDB) getPreviousVersion(version int64) int64 {
-	var result int64
-	for v := range ndb.getVersions() {
-		if v < version && v > result {
-			result = v
+	itr := ndb.db.ReverseIterator(
+		[]byte(fmt.Sprintf(rootPrefixFmt, version-1)),
+		[]byte(fmt.Sprintf(rootPrefixFmt, 0)),
+	)
+	defer itr.Close()
+
+	pversion := int64(-1)
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		_, err := fmt.Sscanf(string(k), rootPrefixFmt, &pversion)
+		if err != nil {
+			panic(err)
+		} else {
+			return pversion
 		}
 	}
-	return result
+
+	return 0
 }
 
 // deleteRoot deletes the root entry from disk, but not the node it points to.
@@ -276,7 +271,6 @@ func (ndb *nodeDB) deleteRoot(version int64) {
 
 	key := ndb.rootKey(version)
 	ndb.batch.Delete(key)
-	delete(ndb.versionCache, version)
 }
 
 func (ndb *nodeDB) traverseOrphans(fn func(k, v []byte)) {
@@ -373,7 +367,7 @@ func (ndb *nodeDB) saveRoot(hash []byte, version int64) error {
 
 	key := ndb.rootKey(version)
 	ndb.batch.Set(key, hash)
-	ndb.cacheVersion(version, hash)
+	ndb.updateLatestVersion(version)
 
 	return nil
 }

@@ -29,7 +29,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/tendermint/iavl"
-	dbm "github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 const (

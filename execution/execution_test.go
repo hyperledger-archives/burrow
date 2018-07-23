@@ -17,16 +17,15 @@ package execution
 import (
 	"bytes"
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"testing"
 	"time"
 
-	"runtime/debug"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	. "github.com/hyperledger/burrow/binary"
-	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -42,7 +41,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -123,15 +122,13 @@ var testChainID = testGenesisDoc.ChainID()
 
 type testExecutor struct {
 	*executor
-	blockchain *bcm.Blockchain
 }
 
 func makeExecutor(state *State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
 	return &testExecutor{
-		executor: newExecutor("makeExecutorCache", true, state, blockchain.Tip, event.NewNoOpPublisher(),
+		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),
-		blockchain: blockchain,
 	}
 }
 
@@ -145,11 +142,8 @@ func (te *testExecutor) signExecuteCommit(tx payload.Payload, signer acm.Address
 	if err != nil {
 		return err
 	}
-	appHash, err := te.Commit(nil)
-	if err != nil {
-		return err
-	}
-	return te.blockchain.CommitBlock(time.Now(), nil, appHash)
+	_, err = te.Commit(nil, time.Now(), nil)
+	return err
 }
 
 func makeUsers(n int) []acm.AddressableSigner {
@@ -903,10 +897,10 @@ func TestSNativeTx(t *testing.T) {
 }
 
 func TestTxSequence(t *testing.T) {
-	state, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
-	acc0 := getAccount(state, privAccounts[0].Address())
+	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
+	acc0 := getAccount(st, privAccounts[0].Address())
 	acc0PubKey := privAccounts[0].PublicKey()
-	acc1 := getAccount(state, privAccounts[1].Address())
+	acc1 := getAccount(st, privAccounts[1].Address())
 
 	// Test a variety of sequence numbers for the tx.
 	// The tx should only pass when i == 1.
@@ -917,7 +911,7 @@ func TestTxSequence(t *testing.T) {
 		tx.AddOutput(acc1.Address(), 1)
 		txEnv := txs.Enclose(testChainID, tx)
 		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		stateCopy, err := state.Copy(dbm.NewMemDB())
+		stateCopy, err := st.Copy(dbm.NewMemDB())
 		require.NoError(t, err)
 		err = execTxWithState(stateCopy, txEnv)
 		if i == 1 {
@@ -1038,7 +1032,7 @@ func TestNameTxs(t *testing.T) {
 
 	// fail to update it as non-owner
 	// Fast forward
-	for exe.blockchain.Tip.LastBlockHeight() < entry.Expires-1 {
+	for exe.blockchain.LastBlockHeight() < entry.Expires-1 {
 		commitNewBlock(st, exe.blockchain)
 	}
 	tx, _ = payload.NewNameTx(st, testPrivAccounts[1].PublicKey(), name, data, amt, fee)
@@ -1091,7 +1085,7 @@ func TestNameTxs(t *testing.T) {
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].Address(), startingBlock+numDesiredBlocks)
 	// Fast forward
-	for exe.blockchain.Tip.LastBlockHeight() < entry.Expires {
+	for exe.blockchain.LastBlockHeight() < entry.Expires {
 		commitNewBlock(st, exe.blockchain)
 	}
 
@@ -1546,7 +1540,7 @@ func TestSelfDestruct(t *testing.T) {
 	tx := payload.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc).Tip, event.NewNoOpPublisher(), logger)
+	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// if we do it again, we won't get an error, but the self-destruct
@@ -1555,7 +1549,8 @@ func TestSelfDestruct(t *testing.T) {
 	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
 
 	// commit the block
-	exe.Commit(nil)
+	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
+	require.NoError(t, err)
 
 	// acc2 should receive the sent funds and the contracts balance
 	newAcc2 := getAccount(st, acc2.Address())
@@ -1585,12 +1580,12 @@ func signAndExecute(t *testing.T, shouldFail bool, exe BatchExecutor, chainID st
 }
 
 func execTxWithStateAndBlockchain(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
-	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, blockchain.Tip,
+	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, blockchain,
 		event.NewNoOpPublisher(), logger)
 	if _, err := exe.Execute(txEnv); err != nil {
 		return err
 	} else {
-		_, err := exe.Commit(nil)
+		_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
 		if err != nil {
 			return err
 		}
@@ -1617,7 +1612,7 @@ func execTxWithStateNewBlock(state *State, blockchain *bcm.Blockchain, txEnv *tx
 }
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
-	minBonded int64) (*State, []acm.AddressableSigner) {
+	minBonded int64) (*State, []*acm.PrivateAccount) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
 	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
@@ -1629,7 +1624,10 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 }
 
 func getAccount(accountGetter state.AccountGetter, address crypto.Address) *acm.MutableAccount {
-	acc, _ := state.GetMutableAccount(accountGetter, address)
+	acc, err := state.GetMutableAccount(accountGetter, address)
+	if err != nil {
+		panic(err)
+	}
 	return acc
 }
 
@@ -1660,9 +1658,9 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	if err != nil {
 		return nil, err
 	}
-	_, err = exe.Commit(nil)
+	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
 	require.NoError(t, err)
-	err = exe.blockchain.CommitBlock(time.Time{}, nil, nil)
+	_, _, err = exe.blockchain.CommitBlock(time.Time{}, nil, nil)
 	require.NoError(t, err)
 
 	for _, ev := range evs.TaggedEvents().Filter(qry) {
@@ -1729,7 +1727,7 @@ func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *testExecutor, 
 		acc.MutablePermissions().Base.Set(perm, true)
 		batchCommitter.stateCache.UpdateAccount(acc)
 	}
-	tx, _ := payload.NewPermissionsTx(batchCommitter.stateCache, users[0].PublicKey(), snativeArgs)
+	tx, _ := payload.NewPermsTx(batchCommitter.stateCache, users[0].PublicKey(), snativeArgs)
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))
 	_, err := batchCommitter.Execute(txEnv)

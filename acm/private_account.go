@@ -23,7 +23,7 @@ import (
 )
 
 type AddressableSigner interface {
-	Addressable
+	crypto.Addressable
 	crypto.Signer
 }
 

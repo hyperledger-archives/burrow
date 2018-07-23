@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/genesis"
-	logging_config "github.com/hyperledger/burrow/logging/config"
+	logging_config "github.com/hyperledger/burrow/logging/logconfig"
 )
 
 type Output interface {

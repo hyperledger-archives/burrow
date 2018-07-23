@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
-	abci "github.com/tendermint/abci/types"
-	tmCrypto "github.com/tendermint/go-crypto"
+	abci "github.com/tendermint/tendermint/abci/types"
+	tmCrypto "github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ripemd160"
@@ -34,7 +35,7 @@ func PublicKeyLength(curveType CurveType) int {
 func (p PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
 		CurveType: p.CurveType.String(),
-		PublicKey: hex.EncodeUpperToString(p.PublicKey),
+		PublicKey: hex.EncodeUpperToString(p.Key),
 	}
 	txt, err := json.Marshal(jStruct)
 	return txt, err
@@ -59,7 +60,7 @@ func (p *PublicKey) UnmarshalJSON(text []byte) error {
 		return err
 	}
 	p.CurveType = CurveType
-	p.PublicKey = bs
+	p.Key = bs
 	return nil
 }
 
@@ -69,15 +70,15 @@ func (p *PublicKey) UnmarshalText(text []byte) error {
 
 func (p PublicKey) IsValid() bool {
 	publicKeyLength := PublicKeyLength(p.CurveType)
-	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
+	return publicKeyLength != 0 && publicKeyLength == len(p.Key)
 }
 
 func (p PublicKey) Verify(msg []byte, signature Signature) bool {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		return ed25519.Verify(p.PublicKey, msg, signature)
+		return ed25519.Verify(p.Key, msg, signature)
 	case CurveTypeSecp256k1:
-		pub, err := btcec.ParsePubKey(p.PublicKey, btcec.S256())
+		pub, err := btcec.ParsePubKey(p.Key, btcec.S256())
 		if err != nil {
 			return false
 		}
@@ -91,17 +92,18 @@ func (p PublicKey) Verify(msg []byte, signature Signature) bool {
 	}
 }
 
+func (p PublicKey) PublicKey() PublicKey {
+	return p
+}
+
 func (p PublicKey) Address() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		// FIMXE: tendermint go-crypto-0.5.0 uses weird scheme, this is fixed in 0.6.0
-		tmPubKey := new(tmCrypto.PubKeyEd25519)
-		copy(tmPubKey[:], p.PublicKey)
-		addr, _ := AddressFromBytes(tmPubKey.Address())
+		addr, _ := AddressFromBytes(tmhash.Sum(p.Key))
 		return addr
 	case CurveTypeSecp256k1:
 		sha := sha256.New()
-		sha.Write(p.PublicKey[:])
+		sha.Write(p.Key[:])
 
 		hash := ripemd160.New()
 		hash.Write(sha.Sum(nil))
@@ -124,29 +126,46 @@ func (p PublicKey) AddressHashType() string {
 }
 
 func (p PublicKey) RawBytes() []byte {
-	return p.PublicKey[:]
+	return p.Key[:]
 }
 
 // Return the ABCI PubKey. See Tendermint protobuf.go for the go-crypto conversion this is based on
 func (p PublicKey) ABCIPubKey() abci.PubKey {
-	switch p.CurveType {
-	case CurveTypeEd25519:
-		return abci.PubKey{
-			Type: "ed25519",
-			Data: p.RawBytes(),
-		}
-	case CurveTypeSecp256k1:
-		return abci.PubKey{
-			Type: "secp256k1",
-			Data: p.RawBytes(),
-		}
-	default:
-		return abci.PubKey{}
+	return abci.PubKey{
+		Type: p.CurveType.ABCIType(),
+		Data: p.RawBytes(),
 	}
 }
 
+func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
+	switch pk := pubKey.(type) {
+	case tmCrypto.PubKeyEd25519:
+		return PublicKeyFromBytes(pk[:], CurveTypeEd25519)
+	case tmCrypto.PubKeySecp256k1:
+		return PublicKeyFromBytes(pk[:], CurveTypeSecp256k1)
+	default:
+		return PublicKey{}, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
+	}
+
+}
+func PublicKeyFromABCIPubKey(pubKey abci.PubKey) (PublicKey, error) {
+	switch pubKey.Type {
+	case CurveTypeEd25519.ABCIType():
+		return PublicKey{
+			CurveType: CurveTypeEd25519,
+			Key:       pubKey.Data,
+		}, nil
+	case CurveTypeSecp256k1.ABCIType():
+		return PublicKey{
+			CurveType: CurveTypeEd25519,
+			Key:       pubKey.Data,
+		}, nil
+	}
+	return PublicKey{}, fmt.Errorf("did not recognise ABCI PubKey type: %s", pubKey.Type)
+}
+
 func (p PublicKey) String() string {
-	return hex.EncodeUpperToString(p.PublicKey)
+	return hex.EncodeUpperToString(p.Key)
 }
 
 // Produces a binary encoding of the CurveType byte plus
@@ -154,29 +173,6 @@ func (p PublicKey) String() string {
 func (p PublicKey) Encode() []byte {
 	encoded := make([]byte, PublicKeyLength(p.CurveType)+1)
 	encoded[0] = p.CurveType.Byte()
-	copy(encoded[1:], p.PublicKey)
+	copy(encoded[1:], p.Key)
 	return encoded
-}
-
-// Decodes an encoded public key returning the number of bytes consumed
-func DecodePublicKeyFixedWidth(buf []byte, publicKey *PublicKey) (int, error) {
-	if len(buf) < 1 {
-		return 0, fmt.Errorf("encoded bytes buffer must not be empty")
-	}
-	curveType := CurveType(buf[0])
-	publicKeyEnd := PublicKeyLength(curveType) + 1
-	if publicKeyEnd <= 0 {
-		return 0, fmt.Errorf("CurveType with identifier %v is unknown", curveType.Byte())
-	}
-	if len(buf) < publicKeyEnd {
-		return 0, fmt.Errorf("encoded bytes buffer has length %v but public key encoding for %v needs %v bytes",
-			len(buf), curveType, publicKeyEnd)
-	}
-
-	publicKey.CurveType = curveType
-	publicKey.PublicKey = buf[1:publicKeyEnd]
-	if !publicKey.IsValid() {
-		return publicKeyEnd, fmt.Errorf("decoded public key %v is not valid", publicKey)
-	}
-	return publicKeyEnd, nil
 }

@@ -855,7 +855,10 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.returnData = nil
 
 			if !HasPermission(callState, callee, permission.CreateContract) {
-				return nil, errors.PermissionDenied{Perm: permission.CreateContract}
+				return nil, errors.PermissionDenied{
+					Address: callee.Address(),
+					Perm:    permission.CreateContract,
+				}
 			}
 			contractValue, popErr := stack.PopU64()
 			if popErr != nil {
@@ -902,7 +905,10 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.returnData = nil
 
 			if !HasPermission(callState, callee, permission.Call) {
-				return nil, errors.PermissionDenied{Perm: permission.Call}
+				return nil, errors.PermissionDenied{
+					Address: callee.Address(),
+					Perm:    permission.Call,
+				}
 			}
 			gasLimit, popErr := stack.PopU64()
 			if popErr != nil {
@@ -982,7 +988,10 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 					// nil account means we're sending funds to a new account
 					if acc == nil {
 						if !HasPermission(callState, caller, permission.CreateAccount) {
-							return nil, errors.PermissionDenied{Perm: permission.CreateAccount}
+							return nil, errors.PermissionDenied{
+								Address: callee.Address(),
+								Perm:    permission.CreateAccount,
+							}
 						}
 						acc = acm.ConcreteAccount{Address: crypto.AddressFromWord256(addr)}.MutableAccount()
 					}
@@ -1077,7 +1086,10 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 					return nil, firstErr(err, gasErr)
 				}
 				if !HasPermission(callState, callee, permission.CreateContract) {
-					return nil, firstErr(err, errors.PermissionDenied{Perm: permission.CreateContract})
+					return nil, firstErr(err, errors.PermissionDenied{
+						Address: callee.Address(),
+						Perm:    permission.CreateContract,
+					})
 				}
 				var createErr errors.CodedError
 				receiver, createErr = vm.createAccount(callState, callee, logger)

@@ -26,10 +26,10 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	goCrypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/consensus/types"
+	goCrypto "github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/common"
 	tmTypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/common"
 )
 
 func TestResultListAccounts(t *testing.T) {

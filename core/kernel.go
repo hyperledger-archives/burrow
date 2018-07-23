@@ -27,9 +27,9 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
-	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/query"
+	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
@@ -45,15 +45,17 @@ import (
 	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/txs"
 	tmConfig "github.com/tendermint/tendermint/config"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/node"
 	tmTypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
-	CooldownMilliseconds              = 1000
-	ServerShutdownTimeoutMilliseconds = 1000
-	LoggingCallerDepth                = 5
-	AccountsRingMutexCount            = 100
+	FirstBlockTimeout      = 3 * time.Second
+	CooldownTime           = 1000 * time.Millisecond
+	ServerShutdownTimeout  = 1000 * time.Millisecond
+	LoggingCallerDepth     = 5
+	AccountsRingMutexCount = 100
 )
 
 // Kernel is the root structure of Burrow
@@ -63,8 +65,10 @@ type Kernel struct {
 	Service        *rpc.Service
 	Launchers      []process.Launcher
 	State          *execution.State
-	Blockchain     bcm.BlockchainInfo
+	Blockchain     *bcm.Blockchain
+	Node           *tendermint.Node
 	Logger         *logging.Logger
+	nodeInfo       string
 	processes      map[string]process.Process
 	shutdownNotify chan struct{}
 	shutdownOnce   sync.Once
@@ -74,53 +78,58 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
 	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
 
+	var err error
 	kern := &Kernel{
 		processes:      make(map[string]process.Process),
 		shutdownNotify: make(chan struct{}),
 	}
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
 	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
-	logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
+	kern.Logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackend, tmConf.DBDir())
 
-	blockchain, err := bcm.LoadOrNewBlockchain(stateDB, genesisDoc, logger)
+	kern.Blockchain, err = bcm.LoadOrNewBlockchain(stateDB, genesisDoc, kern.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
 
-	var state *execution.State
 	// These should be in sync unless we are at the genesis block
-	if blockchain.LastBlockHeight() > 0 {
-		state, err = execution.LoadState(stateDB, blockchain.AppHashAfterLastBlock())
+	if kern.Blockchain.LastBlockHeight() > 0 {
+		kern.State, err = execution.LoadState(stateDB, kern.Blockchain.AppHashAfterLastBlock())
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
-				blockchain.AppHashAfterLastBlock(), err)
+				kern.Blockchain.AppHashAfterLastBlock(), err)
 		}
 	} else {
-		state, err = execution.MakeGenesisState(stateDB, genesisDoc)
+		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
 
 	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(state, blockchain.Tip, logger)
+	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, kern.Logger)
 
-	emitter := event.NewEmitter(logger)
-	committer := execution.NewBatchCommitter(state, blockchain.Tip, emitter, logger, exeOptions...)
-	tmNode, err := tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, blockchain, checker, committer, txCodec,
-		kern.Panic, tmLogger)
+	kern.Emitter = event.NewEmitter(kern.Logger)
+	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
+
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%X", genesisDoc.ChainID(), privValidator.GetAddress())
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)
+	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
+	// Tendermint currently ignores the metrics passed unless its own server is turned on.
+	metricsProvider := node.DefaultMetricsProvider
+	kern.Node, err = tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, app, metricsProvider, tmLogger)
 	if err != nil {
 		return nil, err
 	}
 
-	transactor := execution.NewTransactor(blockchain.Tip, emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
-		tmNode.MempoolReactor().BroadcastTx, txCodec, logger)
+	transactor := execution.NewTransactor(kern.Blockchain, kern.Emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+		kern.Node.MempoolReactor().BroadcastTx, txCodec, kern.Logger)
 
-	nameRegState := state
-	accountState := state
-	service := rpc.NewService(accountState, nameRegState, blockchain, transactor,
-		query.NewNodeView(tmNode, txCodec), logger)
+	nameRegState := kern.State
+	accountState := kern.State
+	nodeView := tendermint.NewNodeView(kern.Node, txCodec)
+	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, nodeView, kern.Logger)
 
-	launchers := []process.Launcher{
+	kern.Launchers = []process.Launcher{
 		{
 			Name:    "Profiling Server",
 			Enabled: rpcConfig.Profiler.Enabled,
@@ -131,7 +140,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				go func() {
 					err := debugServer.ListenAndServe()
 					if err != nil {
-						logger.InfoMsg("Error from pprof debug server", structure.ErrorKey, err)
+						kern.Logger.InfoMsg("Error from pprof debug server", structure.ErrorKey, err)
 					}
 				}()
 				return debugServer, nil
@@ -152,22 +161,22 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			Name:    "Tendermint",
 			Enabled: true,
 			Launch: func() (process.Process, error) {
-				err := tmNode.Start()
+				err := kern.Node.Start()
 				if err != nil {
 					return nil, fmt.Errorf("error starting Tendermint node: %v", err)
 				}
 				return process.ShutdownFunc(func(ctx context.Context) error {
-					err := tmNode.Stop()
+					err := kern.Node.Stop()
 					// Close tendermint database connections using our wrapper
-					defer tmNode.Close()
+					defer kern.Node.Close()
 					if err != nil {
 						return err
 					}
 					select {
 					case <-ctx.Done():
 						return ctx.Err()
-					case <-tmNode.Quit():
-						logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
+					case <-kern.Node.Quit():
+						kern.Logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
 						return nil
 					}
 					return err
@@ -178,7 +187,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			Name:    "RPC/tm",
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := tm.StartServer(service, "/websocket", rpcConfig.TM.ListenAddress, logger)
+				server, err := tm.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
 				if err != nil {
 					return nil, err
 				}
@@ -189,7 +198,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			Name:    "RPC/metrics",
 			Enabled: rpcConfig.Metrics.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := metrics.StartServer(service, rpcConfig.Metrics.MetricsPath, rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, logger)
+				server, err := metrics.StartServer(kern.Service, rpcConfig.Metrics.MetricsPath,
+					rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, kern.Logger)
 				if err != nil {
 					return nil, err
 				}
@@ -204,9 +214,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				if err != nil {
 					return nil, err
 				}
-				listen.Addr()
 
-				grpcServer := rpc.NewGRPCServer(logger)
+				grpcServer := rpc.NewGRPCServer(kern.Logger)
 				var ks *keys.KeyStore
 				if keyStore != nil {
 					ks = keyStore
@@ -214,17 +223,18 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
-						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, logger)
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, kern.Logger)
 					}
 					keys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(state, nameRegState))
+				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState,
+					kern.Blockchain, nodeView, kern.Logger))
 
 				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(transactor, txCodec))
 
-				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(state, emitter,
-					blockchain.Tip, logger))
+				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
+					kern.Emitter, kern.Blockchain, kern.Logger))
 
 				// Provides metadata about services registered
 				//reflection.Register(grpcServer)
@@ -240,12 +250,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		},
 	}
 
-	kern.Emitter = emitter
-	kern.Service = service
-	kern.Launchers = launchers
-	kern.State = state
-	kern.Blockchain = blockchain
-	kern.Logger = logger
 	return kern, nil
 }
 
@@ -266,7 +270,7 @@ func (kern *Kernel) Boot() error {
 }
 
 func (kern *Kernel) Panic(err error) {
-	fmt.Fprintf(os.Stderr, "Kernel shutting down due to panic: %v", err)
+	fmt.Fprintf(os.Stderr, "%s: Kernel shutting down due to panic: %v", kern.nodeInfo, err)
 	kern.Shutdown(context.Background())
 	os.Exit(1)
 }
@@ -279,7 +283,6 @@ func (kern *Kernel) WaitForShutdown() {
 
 // Supervise kernel once booted
 func (kern *Kernel) supervise() {
-	// TODO: Consider capturing kernel panics from boot and sending them here via a channel where we could
 	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
@@ -295,7 +298,7 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 		logger := kern.Logger.WithScope("Shutdown")
 		logger.InfoMsg("Attempting graceful shutdown...")
 		logger.InfoMsg("Shutting down servers")
-		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeoutMilliseconds*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeout)
 		defer cancel()
 		// Shutdown servers in reverse order to boot
 		for i := len(kern.Launchers) - 1; i >= 0; i-- {
@@ -319,7 +322,7 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush
 		// potentially interesting final output (e.g. log messages)
-		time.Sleep(time.Millisecond * CooldownMilliseconds)
+		time.Sleep(CooldownTime)
 		close(kern.shutdownNotify)
 	})
 	return

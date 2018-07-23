@@ -24,3 +24,9 @@ func (tx *UnbondTx) GetInputs() []*TxInput {
 func (tx *UnbondTx) String() string {
 	return fmt.Sprintf("UnbondTx{%v -> %s,%v}", tx.Input, tx.Address, tx.Height)
 }
+
+func (tx *UnbondTx) Any() *Any {
+	return &Any{
+		UnbondTx: tx,
+	}
+}

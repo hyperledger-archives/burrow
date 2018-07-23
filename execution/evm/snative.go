@@ -356,7 +356,7 @@ func hasBase(state state.ReaderWriter, caller acm.Account, args []byte, gas *uin
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := permission.PermFlag(Uint64FromWord256(permNum)) // already shifted
-	if !ValidPermN(permN) {
+	if !permN.IsValid() {
 		return nil, permission.ErrInvalidPermission(permN)
 	}
 	hasPermission := HasPermission(state, acc, permN)
@@ -382,7 +382,7 @@ func setBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, ga
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := permission.PermFlag(Uint64FromWord256(permNum))
-	if !ValidPermN(permN) {
+	if !permN.IsValid() {
 		return nil, permission.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
@@ -409,7 +409,7 @@ func unsetBase(stateWriter state.ReaderWriter, caller acm.Account, args []byte, 
 		return nil, fmt.Errorf("unknown account %s", address)
 	}
 	permN := permission.PermFlag(Uint64FromWord256(permNum))
-	if !ValidPermN(permN) {
+	if !permN.IsValid() {
 		return nil, permission.ErrInvalidPermission(permN)
 	}
 	if err = acc.MutablePermissions().Base.Unset(permN); err != nil {
@@ -435,7 +435,7 @@ func setGlobal(stateWriter state.ReaderWriter, caller acm.Account, args []byte, 
 		panic("cant find the global permissions account")
 	}
 	permN := permission.PermFlag(Uint64FromWord256(permNum))
-	if !ValidPermN(permN) {
+	if !permN.IsValid() {
 		return nil, permission.ErrInvalidPermission(permN)
 	}
 	permV := !permVal.IsZero()
@@ -516,11 +516,6 @@ func removeRole(stateWriter state.ReaderWriter, caller acm.Account, args []byte,
 
 //------------------------------------------------------------------------------------------------
 // Errors and utility funcs
-
-// Checks if a permission flag is valid (a known base chain or snative permission)
-func ValidPermN(n permission.PermFlag) bool {
-	return n <= permission.AllPermFlags
-}
 
 // Get the global BasePermissions
 func globalPerms(stateWriter state.ReaderWriter) permission.BasePermissions {

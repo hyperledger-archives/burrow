@@ -21,6 +21,16 @@ func (k CurveType) String() string {
 		return "unknown"
 	}
 }
+func (k CurveType) ABCIType() string {
+	switch k {
+	case CurveTypeSecp256k1:
+		return "secp256k1"
+	case CurveTypeEd25519:
+		return "ed25519"
+	default:
+		return "unknown"
+	}
+}
 
 // Get this CurveType's 8 bit identifier as a byte
 func (k CurveType) Byte() byte {

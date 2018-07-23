@@ -15,27 +15,27 @@
 package execution
 
 import (
+	"context"
 	"fmt"
 	"runtime/debug"
 	"sync"
-
-	"context"
+	"time"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	bcm "github.com/hyperledger/burrow/blockchain"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/contexts"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/execution/executors"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	abciTypes "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 type Executor interface {
@@ -67,13 +67,13 @@ type BatchCommitter interface {
 	BatchExecutor
 	// Commit execution results to underlying State and provide opportunity
 	// to mutate state before it is saved
-	Commit(*abciTypes.Header) (stateHash []byte, err error)
+	Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (stateHash []byte, err error)
 }
 
 type executor struct {
 	sync.RWMutex
 	runCall        bool
-	tip            bcm.TipInfo
+	blockchain     *bcm.Blockchain
 	state          ExecutorState
 	stateCache     *state.Cache
 	nameRegCache   *names.Cache
@@ -81,69 +81,89 @@ type executor struct {
 	blockExecution *exec.BlockExecution
 	logger         *logging.Logger
 	vmOptions      []func(*evm.VM)
-	txExecutors    map[payload.Type]Context
+	contexts       map[payload.Type]Context
 }
 
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, tip bcm.TipInfo, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
-	return newExecutor("CheckCache", false, backend, tip, event.NewNoOpPublisher(),
+	exe := newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
+
+	return exe.AddContext(payload.TypeGovernance,
+		&contexts.GovernanceContext{
+			ValidatorSet: exe.blockchain.ValidatorChecker(),
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+	)
 }
 
-func NewBatchCommitter(backend ExecutorState, tip bcm.TipInfo, emitter event.Publisher, logger *logging.Logger,
+func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher, logger *logging.Logger,
 	options ...ExecutionOption) BatchCommitter {
 
-	return newExecutor("CommitCache", true, backend, tip, emitter,
+	exe := newExecutor("CommitCache", true, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
+
+	return exe.AddContext(payload.TypeGovernance,
+		&contexts.GovernanceContext{
+			ValidatorSet: exe.blockchain.ValidatorWriter(),
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+	)
 }
 
-func newExecutor(name string, runCall bool, backend ExecutorState, tip bcm.TipInfo, publisher event.Publisher,
+func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
-
 	exe := &executor{
 		runCall:      runCall,
 		state:        backend,
-		tip:          tip,
+		blockchain:   blockchain,
 		stateCache:   state.NewCache(backend, state.Name(name)),
 		nameRegCache: names.NewCache(backend),
 		publisher:    publisher,
 		blockExecution: &exec.BlockExecution{
-			Height: tip.LastBlockHeight() + 1,
+			Height: blockchain.LastBlockHeight() + 1,
 		},
 		logger: logger.With(structure.ComponentKey, "Executor"),
 	}
 	for _, option := range options {
 		option(exe)
 	}
-	exe.txExecutors = map[payload.Type]Context{
-		payload.TypeSend: &executors.SendContext{
-			Tip:         tip,
+	exe.contexts = map[payload.Type]Context{
+		payload.TypeSend: &contexts.SendContext{
+			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
-		payload.TypeCall: &executors.CallContext{
-			Tip:         tip,
+		payload.TypeCall: &contexts.CallContext{
+			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			RunCall:     runCall,
 			VMOptions:   exe.vmOptions,
 			Logger:      exe.logger,
 		},
-		payload.TypeName: &executors.NameContext{
-			Tip:         tip,
+		payload.TypeName: &contexts.NameContext{
+			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			NameReg:     exe.nameRegCache,
 			Logger:      exe.logger,
 		},
-		payload.TypePermissions: &executors.PermissionsContext{
-			Tip:         tip,
+		payload.TypePermissions: &contexts.PermissionsContext{
+			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
 	}
+	return exe
+}
+
+func (exe *executor) AddContext(ty payload.Type, ctx Context) *executor {
+	exe.contexts[ty] = ctx
 	return exe
 }
 
@@ -169,7 +189,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return nil, err
 	}
 
-	if txExecutor, ok := exe.txExecutors[txEnv.Tx.Type()]; ok {
+	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)
 		err = txExecutor.Execute(txe)
@@ -198,7 +218,8 @@ func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.Blo
 	return be, nil
 }
 
-func (exe *executor) Commit(header *abciTypes.Header) (_ []byte, err error) {
+func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (_ []byte, err error) {
+
 	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
 	// deadlock
 	defer func() {
@@ -212,6 +233,9 @@ func (exe *executor) Commit(header *abciTypes.Header) (_ []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// First commit the app state, this app hash will not get checkpointed until the next block when we are sure
+	// that nothing in the downstream commit process could have failed. At worst we go back one block.
 	hash, err := exe.state.Update(func(ws Updatable) error {
 		// flush the caches
 		err := exe.stateCache.Flush(ws, exe.state)
@@ -240,8 +264,18 @@ func (exe *executor) Commit(header *abciTypes.Header) (_ []byte, err error) {
 	}
 	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
 	exe.logger.InfoMsg("Error publishing TxExecution",
-		"height", blockExecution.Height,
-		structure.ErrorKey, publishErr)
+		"height", blockExecution.Height, structure.ErrorKey, publishErr)
+	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
+	// (we know the previous app hash is safely committed because we are about to commit the next)
+	totalPowerChange, totalFlow, err := exe.blockchain.CommitBlock(blockTime, blockHash, hash)
+	if err != nil {
+		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
+	}
+	exe.logger.InfoMsg("Committed block",
+		"total_validator_power", exe.blockchain.CurrentValidators().TotalPower(),
+		"total_validator_power_change", totalPowerChange,
+		"total_validator_flow", totalFlow)
+
 	return hash, nil
 }
 

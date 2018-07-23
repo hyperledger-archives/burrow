@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
 	metrics "github.com/rcrowley/go-metrics"
-	cmn "github.com/tendermint/tmlibs/common"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 const (

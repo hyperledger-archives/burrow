@@ -59,3 +59,9 @@ func (tx *CallTx) CreatesContractAddress() *crypto.Address {
 	address := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
 	return &address
 }
+
+func (tx *CallTx) Any() *Any {
+	return &Any{
+		CallTx: tx,
+	}
+}

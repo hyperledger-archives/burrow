@@ -45,6 +45,7 @@ func (tree *orphaningTree) SaveAs(version int64) {
 	if tree.root == nil {
 		// There can still be orphans, for example if the root is the node being
 		// removed.
+		debug("SAVE EMPTY TREE %v\n", version)
 		tree.ndb.SaveOrphans(version, tree.orphans)
 		tree.ndb.SaveEmptyRoot(version)
 	} else {

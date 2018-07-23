@@ -10,6 +10,40 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
+type Addressable interface {
+	// Get the 20 byte EVM address of this account
+	Address() Address
+	// Public key from which the Address is derived
+	PublicKey() PublicKey
+}
+
+func NewAddressable(address Address, publicKey PublicKey) Addressable {
+	return &memoizedAddressable{
+		address:   address,
+		publicKey: publicKey,
+	}
+}
+
+type memoizedAddressable struct {
+	publicKey PublicKey
+	address   Address
+}
+
+func MemoizeAddressable(addressable Addressable) Addressable {
+	if a, ok := addressable.(*memoizedAddressable); ok {
+		return a
+	}
+	return NewAddressable(addressable.Address(), addressable.PublicKey())
+}
+
+func (a *memoizedAddressable) PublicKey() PublicKey {
+	return a.publicKey
+}
+
+func (a *memoizedAddressable) Address() Address {
+	return a.address
+}
+
 type Address binary.Word160
 
 type Addresses []Address
@@ -25,7 +59,8 @@ func (as Addresses) Swap(i, j int) {
 	as[i], as[j] = as[j], as[i]
 }
 
-const AddressHexLength = 2 * binary.Word160Length
+const AddressLength = binary.Word160Length
+const AddressHexLength = 2 * AddressLength
 
 var ZeroAddress = Address{}
 

@@ -23,7 +23,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
-	"github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tmthrgd/go-hex"
 )
 

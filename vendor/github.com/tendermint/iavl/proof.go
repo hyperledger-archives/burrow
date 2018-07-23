@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/tendermint/go-amino"
-	"github.com/tendermint/iavl/sha256truncated"
-	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var (
@@ -25,40 +23,58 @@ var (
 	ErrNilRoot = fmt.Errorf("tree root is nil")
 )
 
+//----------------------------------------
+
 type proofInnerNode struct {
-	Height  int8
-	Size    int64
-	Version int64
-	Left    []byte
-	Right   []byte
+	Height  int8   `json:"height"`
+	Size    int64  `json:"size"`
+	Version int64  `json:"version"`
+	Left    []byte `json:"left"`
+	Right   []byte `json:"right"`
 }
 
-func (n *proofInnerNode) String() string {
-	return fmt.Sprintf("proofInnerNode[height=%d, ver=%d %x / %x]", n.Height, n.Version, n.Left, n.Right)
+func (pin proofInnerNode) String() string {
+	return pin.stringIndented("")
 }
 
-func (branch proofInnerNode) Hash(childHash []byte) []byte {
-	hasher := sha256truncated.New()
+func (pin proofInnerNode) stringIndented(indent string) string {
+	return fmt.Sprintf(`proofInnerNode{
+%s  Height:  %v
+%s  Size:    %v
+%s  Version: %v
+%s  Left:    %X
+%s  Right:   %X
+%s}`,
+		indent, pin.Height,
+		indent, pin.Size,
+		indent, pin.Version,
+		indent, pin.Left,
+		indent, pin.Right,
+		indent)
+}
+
+func (pin proofInnerNode) Hash(childHash []byte) []byte {
+	hasher := tmhash.New()
 	buf := new(bytes.Buffer)
 
-	err := amino.EncodeInt8(buf, branch.Height)
+	err := amino.EncodeInt8(buf, pin.Height)
 	if err == nil {
-		err = amino.EncodeInt64(buf, branch.Size)
+		err = amino.EncodeVarint(buf, pin.Size)
 	}
 	if err == nil {
-		err = amino.EncodeInt64(buf, branch.Version)
+		err = amino.EncodeVarint(buf, pin.Version)
 	}
 
-	if len(branch.Left) == 0 {
+	if len(pin.Left) == 0 {
 		if err == nil {
 			err = amino.EncodeByteSlice(buf, childHash)
 		}
 		if err == nil {
-			err = amino.EncodeByteSlice(buf, branch.Right)
+			err = amino.EncodeByteSlice(buf, pin.Right)
 		}
 	} else {
 		if err == nil {
-			err = amino.EncodeByteSlice(buf, branch.Left)
+			err = amino.EncodeByteSlice(buf, pin.Left)
 		}
 		if err == nil {
 			err = amino.EncodeByteSlice(buf, childHash)
@@ -67,33 +83,51 @@ func (branch proofInnerNode) Hash(childHash []byte) []byte {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to hash proofInnerNode: %v", err))
 	}
-	hasher.Write(buf.Bytes())
 
+	hasher.Write(buf.Bytes())
 	return hasher.Sum(nil)
 }
 
+//----------------------------------------
+
 type proofLeafNode struct {
-	KeyBytes   cmn.HexBytes `json:"key"`
-	ValueBytes cmn.HexBytes `json:"value"`
-	Version    int64        `json:"version"`
+	Key       cmn.HexBytes `json:"key"`
+	ValueHash cmn.HexBytes `json:"value"`
+	Version   int64        `json:"version"`
 }
 
-func (leaf proofLeafNode) Hash() []byte {
-	hasher := sha256truncated.New()
+func (pln proofLeafNode) String() string {
+	return pln.stringIndented("")
+}
+
+func (pln proofLeafNode) stringIndented(indent string) string {
+	return fmt.Sprintf(`proofLeafNode{
+%s  Key:       %v
+%s  ValueHash: %X
+%s  Version:   %v
+%s}`,
+		indent, pln.Key,
+		indent, pln.ValueHash,
+		indent, pln.Version,
+		indent)
+}
+
+func (pln proofLeafNode) Hash() []byte {
+	hasher := tmhash.New()
 	buf := new(bytes.Buffer)
 
 	err := amino.EncodeInt8(buf, 0)
 	if err == nil {
-		err = amino.EncodeInt64(buf, 1)
+		err = amino.EncodeVarint(buf, 1)
 	}
 	if err == nil {
-		err = amino.EncodeInt64(buf, leaf.Version)
+		err = amino.EncodeVarint(buf, pln.Version)
 	}
 	if err == nil {
-		err = amino.EncodeByteSlice(buf, leaf.KeyBytes)
+		err = amino.EncodeByteSlice(buf, pln.Key)
 	}
 	if err == nil {
-		err = amino.EncodeByteSlice(buf, leaf.ValueBytes)
+		err = amino.EncodeByteSlice(buf, pln.ValueHash)
 	}
 	if err != nil {
 		panic(fmt.Sprintf("Failed to hash proofLeafNode: %v", err))
@@ -103,157 +137,50 @@ func (leaf proofLeafNode) Hash() []byte {
 	return hasher.Sum(nil)
 }
 
-func (leaf proofLeafNode) isLesserThan(key []byte) bool {
-	return bytes.Compare(leaf.KeyBytes, key) == -1
+//----------------------------------------
+
+// If the key does not exist, returns the path to the next leaf left of key (w/
+// path), except when key is less than the least item, in which case it returns
+// a path to the least item.
+func (node *Node) PathToLeaf(t *Tree, key []byte) (PathToLeaf, *Node, error) {
+	path := new(PathToLeaf)
+	val, err := node.pathToLeaf(t, key, path)
+	return *path, val, err
 }
 
-func (leaf proofLeafNode) isGreaterThan(key []byte) bool {
-	return bytes.Compare(leaf.KeyBytes, key) == 1
-}
-
-func (node *Node) pathToInnerKey(t *Tree, key []byte) (*PathToKey, *Node, error) {
-	path := &PathToKey{}
-	val, err := node._pathToKey(t, key, false, path)
-	return path, val, err
-}
-
-func (node *Node) pathToKey(t *Tree, key []byte) (*PathToKey, *Node, error) {
-	path := &PathToKey{}
-	val, err := node._pathToKey(t, key, true, path)
-	return path, val, err
-}
-func (node *Node) _pathToKey(t *Tree, key []byte, skipInner bool, path *PathToKey) (*Node, error) {
+// pathToLeaf is a helper which recursively constructs the PathToLeaf.
+// As an optimization the already constructed path is passed in as an argument
+// and is shared among recursive calls.
+func (node *Node) pathToLeaf(t *Tree, key []byte, path *PathToLeaf) (*Node, error) {
 	if node.height == 0 {
 		if bytes.Equal(node.key, key) {
 			return node, nil
 		}
-		return nil, errors.New("key does not exist")
-	} else if !skipInner && bytes.Equal(node.key, key) {
-		return node, nil
+		return node, cmn.NewError("key does not exist")
 	}
 
 	if bytes.Compare(key, node.key) < 0 {
-		if n, err := node.getLeftNode(t)._pathToKey(t, key, skipInner, path); err != nil {
-			return nil, err
-		} else {
-			branch := proofInnerNode{
-				Height:  node.height,
-				Size:    node.size,
-				Version: node.version,
-				Left:    nil,
-				Right:   node.getRightNode(t).hash,
-			}
-			path.InnerNodes = append(path.InnerNodes, branch)
-			return n, nil
-		}
-	}
-
-	if n, err := node.getRightNode(t)._pathToKey(t, key, skipInner, path); err != nil {
-		return nil, err
-	} else {
-		branch := proofInnerNode{
+		// left side
+		pin := proofInnerNode{
 			Height:  node.height,
 			Size:    node.size,
 			Version: node.version,
-			Left:    node.getLeftNode(t).hash,
-			Right:   nil,
+			Left:    nil,
+			Right:   node.getRightNode(t).hash,
 		}
-		path.InnerNodes = append(path.InnerNodes, branch)
-		return n, nil
+		*path = append(*path, pin)
+		n, err := node.getLeftNode(t).pathToLeaf(t, key, path)
+		return n, err
 	}
-}
-
-func (t *Tree) constructKeyAbsentProof(key []byte, proof *KeyAbsentProof) error {
-	// Get the index of the first key greater than the requested key, if the key doesn't exist.
-	idx, val := t.Get64(key)
-	if val != nil {
-		return errors.Errorf("couldn't construct non-existence proof: key 0x%x exists", key)
+	// right side
+	pin := proofInnerNode{
+		Height:  node.height,
+		Size:    node.size,
+		Version: node.version,
+		Left:    node.getLeftNode(t).hash,
+		Right:   nil,
 	}
-
-	var (
-		lkey, lval []byte
-		rkey, rval []byte
-	)
-	if idx > 0 {
-		lkey, lval = t.GetByIndex64(idx - 1)
-	}
-	if idx <= t.Size64()-1 {
-		rkey, rval = t.GetByIndex64(idx)
-	}
-
-	if lkey == nil && rkey == nil {
-		return errors.New("couldn't get keys required for non-existence proof")
-	}
-
-	if lkey != nil {
-		path, node, _ := t.root.pathToKey(t, lkey)
-		proof.Left = &pathWithNode{
-			Path: path,
-			Node: proofLeafNode{lkey, lval, node.version},
-		}
-	}
-	if rkey != nil {
-		path, node, _ := t.root.pathToKey(t, rkey)
-		proof.Right = &pathWithNode{
-			Path: path,
-			Node: proofLeafNode{rkey, rval, node.version},
-		}
-	}
-
-	return nil
-}
-
-func (t *Tree) getWithProof(key []byte) (value []byte, proof *KeyExistsProof, err error) {
-	if t.root == nil {
-		return nil, nil, errors.WithStack(ErrNilRoot)
-	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
-
-	path, node, err := t.root.pathToKey(t, key)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not construct path to key")
-	}
-
-	proof = &KeyExistsProof{
-		RootHash:  t.root.hash,
-		PathToKey: path,
-		Version:   node.version,
-	}
-	return node.value, proof, nil
-}
-
-func (t *Tree) getInnerWithProof(key []byte) (proof *InnerKeyProof, err error) {
-	if t.root == nil {
-		return nil, errors.WithStack(ErrNilRoot)
-	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
-
-	path, node, err := t.root.pathToInnerKey(t, key)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not construct path to key")
-	}
-
-	proof = &InnerKeyProof{
-		&KeyExistsProof{
-			RootHash:  t.root.hash,
-			PathToKey: path,
-			Version:   node.version,
-		},
-	}
-	return proof, nil
-}
-
-func (t *Tree) keyAbsentProof(key []byte) (*KeyAbsentProof, error) {
-	if t.root == nil {
-		return nil, errors.WithStack(ErrNilRoot)
-	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
-
-	proof := &KeyAbsentProof{
-		RootHash: t.root.hash,
-	}
-	if err := t.constructKeyAbsentProof(key, proof); err != nil {
-		return nil, errors.Wrap(err, "could not construct proof of non-existence")
-	}
-	return proof, nil
+	*path = append(*path, pin)
+	n, err := node.getRightNode(t).pathToLeaf(t, key, path)
+	return n, err
 }

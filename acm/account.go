@@ -27,16 +27,9 @@ import (
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
 
-type Addressable interface {
-	// Get the 20 byte EVM address of this account
-	Address() crypto.Address
-	// Public key from which the Address is derived
-	PublicKey() crypto.PublicKey
-}
-
 // The default immutable interface to an account
 type Account interface {
-	Addressable
+	crypto.Addressable
 	// The value held by this account in terms of the chain-native token
 	Balance() uint64
 	// The EVM byte code held by this account (or equivalently, this contract)
@@ -117,7 +110,7 @@ func AsConcreteAccount(account Account) *ConcreteAccount {
 }
 
 // Creates an otherwise zeroed Account from an Addressable and returns it as MutableAccount
-func FromAddressable(addressable Addressable) *MutableAccount {
+func FromAddressable(addressable crypto.Addressable) *MutableAccount {
 	ca := &ConcreteAccount{
 		Address:   addressable.Address(),
 		PublicKey: addressable.PublicKey(),
@@ -137,6 +130,8 @@ func AsMutableAccount(account Account) *MutableAccount {
 	}
 	return AsConcreteAccount(account).MutableAccount()
 }
+
+var _ Account = &MutableAccount{}
 
 func (acc ConcreteAccount) String() string {
 	return fmt.Sprintf("ConcreteAccount{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeLength: %v; Permissions: %s}",
@@ -177,6 +172,11 @@ func (acc *MutableAccount) AddToBalance(amount uint64) error {
 	return nil
 }
 
+func (acc *MutableAccount) SetBalance(amount uint64) error {
+	acc.concreteAccount.Balance = amount
+	return nil
+}
+
 func (acc *MutableAccount) SetCode(code []byte) error {
 	acc.concreteAccount.Code = code
 	return nil
@@ -186,8 +186,11 @@ func (acc *MutableAccount) IncSequence() {
 	acc.concreteAccount.Sequence++
 }
 
-func (acc *MutableAccount) SetPermissions(permissions permission.AccountPermissions) error {
-	acc.concreteAccount.Permissions = permissions
+func (acc *MutableAccount) SetPermissions(accPerms permission.AccountPermissions) error {
+	if !accPerms.Base.Perms.IsValid() {
+		return fmt.Errorf("attempt to set invalid perm 0%b on account %v", accPerms.Base.Perms, acc)
+	}
+	acc.concreteAccount.Permissions = accPerms
 	return nil
 }
 

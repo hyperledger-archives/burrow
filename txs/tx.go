@@ -103,7 +103,7 @@ func (tx *Tx) UnmarshalJSON(data []byte) error {
 	}
 	tx.ChainID = w.ChainID
 	// Now we know the Type we can deserialise the Payload
-	tx.Payload = payload.New(w.Type)
+	tx.Payload, err = payload.New(w.Type)
 	return json.Unmarshal(w.Payload, tx.Payload)
 }
 

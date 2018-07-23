@@ -20,15 +20,16 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
-	abciTypes "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -46,7 +47,7 @@ const (
 // for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
 // concurrent within a new block window.
 type Transactor struct {
-	Tip             blockchain.TipInfo
+	Tip             bcm.BlockchainInfo
 	Subscribable    event.Subscribable
 	MempoolAccounts *Accounts
 	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
@@ -54,7 +55,7 @@ type Transactor struct {
 	logger          *logging.Logger
 }
 
-func NewTransactor(tip blockchain.TipInfo, subscribable event.Subscribable, mempoolAccounts *Accounts,
+func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, mempoolAccounts *Accounts,
 	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
@@ -76,7 +77,7 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 		var unlock UnlockFunc
 		txEnv, unlock, err = trans.SignTxMempool(txEnv)
 		if err != nil {
-			return nil, fmt.Errorf("error signing trnasction: %v", err)
+			return nil, fmt.Errorf("error signing transaction: %v", err)
 		}
 		defer unlock()
 	}
@@ -215,8 +216,8 @@ func (trans *Transactor) CheckTxSyncRaw(txBytes []byte) (*txs.Receipt, error) {
 			}
 			return receipt, nil
 		default:
-			return nil, fmt.Errorf("error returned by Tendermint in BroadcastTxSync "+
-				"ABCI code: %v, ABCI log: %v", checkTxResponse.Code, checkTxResponse.Log)
+			return nil, errors.ErrorCodef(errors.Code(checkTxResponse.Code),
+				"error returned by Tendermint in BroadcastTxSync ABCI log: %v", checkTxResponse.Log)
 		}
 	}
 }

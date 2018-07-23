@@ -5,23 +5,35 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/logging"
 )
 
 type queryServer struct {
-	accounts state.IterableReader
-	nameReg  names.IterableReader
+	accounts   state.IterableReader
+	nameReg    names.IterableReader
+	blockchain bcm.BlockchainInfo
+	nodeView   *tendermint.NodeView
+	logger     *logging.Logger
 }
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state state.IterableReader, nameReg names.IterableReader) *queryServer {
+func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+	nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
-		accounts: state,
-		nameReg:  nameReg,
+		accounts:   state,
+		nameReg:    nameReg,
+		blockchain: blockchain,
+		nodeView:   nodeView,
+		logger:     logger,
 	}
 }
+
+// Account state
 
 func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (*acm.ConcreteAccount, error) {
 	acc, err := qs.accounts.GetAccount(param.Address)
@@ -73,4 +85,21 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 		return err
 	}
 	return streamErr
+}
+
+func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorSetParam) (*ValidatorSet, error) {
+	set, deltas, height := qs.blockchain.ValidatorsHistory()
+	vs := &ValidatorSet{
+		Height: height,
+		Set:    set.Validators(),
+	}
+	if param.IncludeHistory {
+		vs.History = make([]*ValidatorSetDeltas, len(deltas))
+		for i, d := range deltas {
+			vs.History[i] = &ValidatorSetDeltas{
+				Validators: d.Validators(),
+			}
+		}
+	}
+	return vs, nil
 }

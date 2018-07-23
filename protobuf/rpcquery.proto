@@ -8,6 +8,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 import "names.proto";
 import "acm.proto";
+import "validator.proto";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
@@ -20,6 +21,7 @@ service Query {
     rpc ListAccounts (ListAccountsParam) returns (stream acm.ConcreteAccount);
     rpc GetName (GetNameParam) returns (names.Entry);
     rpc ListNames (ListNamesParam) returns (stream names.Entry);
+    rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
 }
 
 message GetAccountParam {
@@ -38,3 +40,16 @@ message ListNamesParam {
     string Query = 1;
 }
 
+message GetValidatorSetParam {
+    bool IncludeHistory = 1;
+}
+
+message ValidatorSet {
+    uint64 height = 1;
+    repeated validator.Validator Set = 2;
+    repeated ValidatorSetDeltas History = 3;
+}
+
+message ValidatorSetDeltas {
+    repeated validator.Validator Validators = 2;
+}

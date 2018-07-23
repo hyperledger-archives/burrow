@@ -47,3 +47,9 @@ func (tx *NameTx) GetInputs() []*TxInput {
 func (tx *NameTx) String() string {
 	return fmt.Sprintf("NameTx{%v -> %s: %s}", tx.Input, tx.Name, tx.Data)
 }
+
+func (tx *NameTx) Any() *Any {
+	return &Any{
+		NameTx: tx,
+	}
+}

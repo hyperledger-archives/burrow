@@ -1,5 +1,11 @@
 package rpc
 
+import "fmt"
+
+// 'localhost' gets interpreted as ipv6
+// TODO: revisit this
+const localhost = "127.0.0.1"
+
 type RPCConfig struct {
 	TM       *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
@@ -41,28 +47,28 @@ func DefaultRPCConfig() *RPCConfig {
 func DefaultTMConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "tcp://localhost:26658",
+		ListenAddress: fmt.Sprintf("tcp://%s:26658", localhost),
 	}
 }
 
 func DefaultGRPCConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "localhost:10997",
+		ListenAddress: fmt.Sprintf("%s:10997", localhost),
 	}
 }
 
 func DefaultProfilerConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       false,
-		ListenAddress: "tcp://localhost:6060",
+		ListenAddress: fmt.Sprintf("tcp://%s:6060", localhost),
 	}
 }
 
 func DefaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
 		Enabled:         false,
-		ListenAddress:   "tcp://localhost:9102",
+		ListenAddress:   fmt.Sprintf("tcp://%s:9102", localhost),
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,
 	}

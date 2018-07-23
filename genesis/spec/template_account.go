@@ -3,6 +3,7 @@ package spec
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
@@ -24,11 +25,7 @@ func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generat
 		}
 		ta.NodeAddress = &address
 	}
-	if ta.Power == nil {
-		gv.Amount = DefaultPower
-	} else {
-		gv.Amount = *ta.Power
-	}
+	gv.Amount = ta.Balances().GetPower(DefaultPower)
 	if ta.Name == "" {
 		gv.Name = accountNameFromIndex(index)
 	} else {
@@ -55,18 +52,14 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 	}, nil
 }
 
-func (ta TemplateAccount) Account(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
+func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
 	ga.PublicKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
-	if ta.Amount == nil {
-		ga.Amount = DefaultAmount
-	} else {
-		ga.Amount = *ta.Amount
-	}
+	ga.Amount = ta.Balances().GetNative(DefaultAmount)
 	if ta.Name == "" {
 		ga.Name = accountNameFromIndex(index)
 	} else {
@@ -110,4 +103,8 @@ func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pub
 		pubKey = *ta.PublicKey
 	}
 	return
+}
+
+func (ta TemplateAccount) Balances() balance.Balances {
+	return ta.Amounts
 }

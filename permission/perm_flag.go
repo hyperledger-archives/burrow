@@ -76,6 +76,11 @@ const (
 // A particular permission
 type PermFlag uint64
 
+// Checks if a permission flag is valid (a known base chain or snative permission)
+func (pf PermFlag) IsValid() bool {
+	return pf <= AllPermFlags
+}
+
 // Returns the string name of a single bit non-composite PermFlag, or otherwise UnknownString
 // See BasePermissionsToStringList to generate a string representation of a composite PermFlag
 func (pf PermFlag) String() string {

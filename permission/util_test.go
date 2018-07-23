@@ -25,17 +25,15 @@ func TestBasePermissionsFromStringList(t *testing.T) {
 }
 
 func TestBasePermissionsToStringList(t *testing.T) {
-	permStrings, err := BasePermissionsToStringList(allSetBasePermission(Root | HasRole | SetBase | Call))
-	require.NoError(t, err)
+	permStrings := BasePermissionsToStringList(allSetBasePermission(Root | HasRole | SetBase | Call))
 	assert.Equal(t, []string{"root", "call", "setBase", "hasRole"}, permStrings)
 
-	permStrings, err = BasePermissionsToStringList(allSetBasePermission(AllPermFlags))
-	require.NoError(t, err)
+	permStrings = BasePermissionsToStringList(allSetBasePermission(AllPermFlags))
 	assert.Equal(t, []string{"root", "send", "call", "createContract", "createAccount", "bond", "name", "hasBase",
 		"setBase", "unsetBase", "setGlobal", "hasRole", "addRole", "removeRole"}, permStrings)
 
-	permStrings, err = BasePermissionsToStringList(allSetBasePermission(AllPermFlags + 1))
-	assert.Error(t, err)
+	permStrings = BasePermissionsToStringList(allSetBasePermission(AllPermFlags + 1))
+	assert.Equal(t, []string{}, permStrings)
 }
 
 func TestBasePermissionsString(t *testing.T) {

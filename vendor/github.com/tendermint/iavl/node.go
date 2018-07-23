@@ -9,7 +9,8 @@ import (
 	"io"
 
 	"github.com/tendermint/go-amino"
-	"github.com/tendermint/iavl/sha256truncated"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 // Node represents a node in a Tree.
@@ -40,56 +41,60 @@ func NewNode(key []byte, value []byte, version int64) *Node {
 
 // MakeNode constructs an *Node from an encoded byte slice.
 //
-// The new node doesn't have its hash saved or set.  The caller must set it
+// The new node doesn't have its hash saved or set. The caller must set it
 // afterwards.
-func MakeNode(buf []byte) (node *Node, err error) {
-	node = &Node{}
+func MakeNode(buf []byte) (*Node, cmn.Error) {
 
-	// Keeps track of bytes read.
-	n := 0
-
-	// Read node header.
-	node.height, n, err = amino.DecodeInt8(buf)
-	if err != nil {
-		return nil, err
+	// Read node header (height, size, version, key).
+	height, n, cause := amino.DecodeInt8(buf)
+	if cause != nil {
+		return nil, cmn.ErrorWrap(cause, "decoding node.height")
 	}
 	buf = buf[n:]
 
-	node.size, n, err = amino.DecodeInt64(buf)
-	if err != nil {
-		return nil, err
+	size, n, cause := amino.DecodeVarint(buf)
+	if cause != nil {
+		return nil, cmn.ErrorWrap(cause, "decoding node.size")
 	}
 	buf = buf[n:]
 
-	node.version, n, err = amino.DecodeInt64(buf)
-	if err != nil {
-		return nil, err
+	ver, n, cause := amino.DecodeVarint(buf)
+	if cause != nil {
+		return nil, cmn.ErrorWrap(cause, "decoding node.version")
 	}
 	buf = buf[n:]
 
-	node.key, n, err = amino.DecodeByteSlice(buf)
-	if err != nil {
-		return nil, err
+	key, n, cause := amino.DecodeByteSlice(buf)
+	if cause != nil {
+		return nil, cmn.ErrorWrap(cause, "decoding node.key")
 	}
 	buf = buf[n:]
+
+	node := &Node{
+		height:  height,
+		size:    size,
+		version: ver,
+		key:     key,
+	}
 
 	// Read node body.
 
 	if node.isLeaf() {
-		node.value, _, err = amino.DecodeByteSlice(buf)
-		if err != nil {
-			return nil, err
+		val, _, cause := amino.DecodeByteSlice(buf)
+		if cause != nil {
+			return nil, cmn.ErrorWrap(cause, "decoding node.value")
 		}
+		node.value = val
 	} else { // Read children.
-		leftHash, n, err := amino.DecodeByteSlice(buf)
-		if err != nil {
-			return nil, err
+		leftHash, n, cause := amino.DecodeByteSlice(buf)
+		if cause != nil {
+			return nil, cmn.ErrorWrap(cause, "deocding node.leftHash")
 		}
 		buf = buf[n:]
 
-		rightHash, _, err := amino.DecodeByteSlice(buf)
-		if err != nil {
-			return nil, err
+		rightHash, _, cause := amino.DecodeByteSlice(buf)
+		if cause != nil {
+			return nil, cmn.ErrorWrap(cause, "decoding node.rightHash")
 		}
 		node.leftHash = leftHash
 		node.rightHash = rightHash
@@ -99,11 +104,16 @@ func MakeNode(buf []byte) (node *Node, err error) {
 
 // String returns a string representation of the node.
 func (node *Node) String() string {
-	if len(node.hash) == 0 {
-		return "<no hash>"
-	} else {
-		return fmt.Sprintf("%x", node.hash)
+	hashstr := "<no hash>"
+	if len(node.hash) > 0 {
+		hashstr = fmt.Sprintf("%X", node.hash)
 	}
+	return fmt.Sprintf("Node{%s:%s@%d %X;%X}#%s",
+		cmn.ColoredBytes(node.key, cmn.Green, cmn.Blue),
+		cmn.ColoredBytes(node.value, cmn.Cyan, cmn.Blue),
+		node.version,
+		node.leftHash, node.rightHash,
+		hashstr)
 }
 
 // clone creates a shallow copy of a node with its hash set to nil.
@@ -139,9 +149,8 @@ func (node *Node) has(t *Tree, key []byte) (has bool) {
 	}
 	if bytes.Compare(key, node.key) < 0 {
 		return node.getLeftNode(t).has(t, key)
-	} else {
-		return node.getRightNode(t).has(t, key)
 	}
+	return node.getRightNode(t).has(t, key)
 }
 
 // Get a key under the node.
@@ -159,31 +168,28 @@ func (node *Node) get(t *Tree, key []byte) (index int64, value []byte) {
 
 	if bytes.Compare(key, node.key) < 0 {
 		return node.getLeftNode(t).get(t, key)
-	} else {
-		rightNode := node.getRightNode(t)
-		index, value = rightNode.get(t, key)
-		index += node.size - rightNode.size
-		return index, value
 	}
+	rightNode := node.getRightNode(t)
+	index, value = rightNode.get(t, key)
+	index += node.size - rightNode.size
+	return index, value
 }
 
 func (node *Node) getByIndex(t *Tree, index int64) (key []byte, value []byte) {
 	if node.isLeaf() {
 		if index == 0 {
 			return node.key, node.value
-		} else {
-			return nil, nil
 		}
-	} else {
-		// TODO: could improve this by storing the
-		// sizes as well as left/right hash.
-		leftNode := node.getLeftNode(t)
-		if index < leftNode.size {
-			return leftNode.getByIndex(t, index)
-		} else {
-			return node.getRightNode(t).getByIndex(t, index-leftNode.size)
-		}
+		return nil, nil
 	}
+	// TODO: could improve this by storing the
+	// sizes as well as left/right hash.
+	leftNode := node.getLeftNode(t)
+
+	if index < leftNode.size {
+		return leftNode.getByIndex(t, index)
+	}
+	return node.getRightNode(t).getByIndex(t, index-leftNode.size)
 }
 
 // Computes the hash of the node without computing its descendants. Must be
@@ -193,7 +199,7 @@ func (node *Node) _hash() []byte {
 		return node.hash
 	}
 
-	h := sha256truncated.New()
+	h := tmhash.New()
 	buf := new(bytes.Buffer)
 	if err := node.writeHashBytes(buf); err != nil {
 		panic(err)
@@ -211,7 +217,7 @@ func (node *Node) hashWithCount() ([]byte, int64) {
 		return node.hash, 0
 	}
 
-	h := sha256truncated.New()
+	h := tmhash.New()
 	buf := new(bytes.Buffer)
 	hashCount, err := node.writeHashBytesRecursively(buf)
 	if err != nil {
@@ -225,41 +231,54 @@ func (node *Node) hashWithCount() ([]byte, int64) {
 
 // Writes the node's hash to the given io.Writer. This function expects
 // child hashes to be already set.
-func (node *Node) writeHashBytes(w io.Writer) (err error) {
-	err = amino.EncodeInt8(w, node.height)
-	if err == nil {
-		err = amino.EncodeInt64(w, node.size)
+func (node *Node) writeHashBytes(w io.Writer) cmn.Error {
+	err := amino.EncodeInt8(w, node.height)
+	if err != nil {
+		return cmn.ErrorWrap(err, "writing height")
 	}
-	if err == nil {
-		err = amino.EncodeInt64(w, node.version)
+	err = amino.EncodeVarint(w, node.size)
+	if err != nil {
+		return cmn.ErrorWrap(err, "writing size")
+	}
+	err = amino.EncodeVarint(w, node.version)
+	if err != nil {
+		return cmn.ErrorWrap(err, "writing version")
 	}
 
 	// Key is not written for inner nodes, unlike writeBytes.
 
 	if node.isLeaf() {
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.key)
+		err = amino.EncodeByteSlice(w, node.key)
+		if err != nil {
+			return cmn.ErrorWrap(err, "writing key")
 		}
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.value)
+		// Indirection needed to provide proofs without values.
+		// (e.g. proofLeafNode.ValueHash)
+		valueHash := tmhash.Sum(node.value)
+		err = amino.EncodeByteSlice(w, valueHash)
+		if err != nil {
+			return cmn.ErrorWrap(err, "writing value")
 		}
 	} else {
 		if node.leftHash == nil || node.rightHash == nil {
 			panic("Found an empty child hash")
 		}
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.leftHash)
+		err = amino.EncodeByteSlice(w, node.leftHash)
+		if err != nil {
+			return cmn.ErrorWrap(err, "writing left hash")
 		}
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.rightHash)
+		err = amino.EncodeByteSlice(w, node.rightHash)
+		if err != nil {
+			return cmn.ErrorWrap(err, "writing right hash")
 		}
 	}
-	return
+
+	return nil
 }
 
 // Writes the node's hash to the given io.Writer.
 // This function has the side-effect of calling hashWithCount.
-func (node *Node) writeHashBytesRecursively(w io.Writer) (hashCount int64, err error) {
+func (node *Node) writeHashBytesRecursively(w io.Writer) (hashCount int64, err cmn.Error) {
 	if node.leftNode != nil {
 		leftHash, leftCount := node.leftNode.hashWithCount()
 		node.leftHash = leftHash
@@ -276,40 +295,50 @@ func (node *Node) writeHashBytesRecursively(w io.Writer) (hashCount int64, err e
 }
 
 // Writes the node as a serialized byte slice to the supplied io.Writer.
-func (node *Node) writeBytes(w io.Writer) (err error) {
-	err = amino.EncodeInt8(w, node.height)
-	if err == nil {
-		err = amino.EncodeInt64(w, node.size)
+func (node *Node) writeBytes(w io.Writer) cmn.Error {
+	var cause error
+	cause = amino.EncodeInt8(w, node.height)
+	if cause != nil {
+		return cmn.ErrorWrap(cause, "writing height")
 	}
-	if err == nil {
-		err = amino.EncodeInt64(w, node.version)
+	cause = amino.EncodeVarint(w, node.size)
+	if cause != nil {
+		return cmn.ErrorWrap(cause, "writing size")
+	}
+	cause = amino.EncodeVarint(w, node.version)
+	if cause != nil {
+		return cmn.ErrorWrap(cause, "writing version")
 	}
 
 	// Unlike writeHashBytes, key is written for inner nodes.
-	if err == nil {
-		err = amino.EncodeByteSlice(w, node.key)
+	cause = amino.EncodeByteSlice(w, node.key)
+	if cause != nil {
+		return cmn.ErrorWrap(cause, "writing key")
 	}
 
 	if node.isLeaf() {
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.value)
+		cause = amino.EncodeByteSlice(w, node.value)
+		if cause != nil {
+			return cmn.ErrorWrap(cause, "writing value")
 		}
 	} else {
 		if node.leftHash == nil {
 			panic("node.leftHash was nil in writeBytes")
 		}
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.leftHash)
+		cause = amino.EncodeByteSlice(w, node.leftHash)
+		if cause != nil {
+			return cmn.ErrorWrap(cause, "writing left hash")
 		}
 
 		if node.rightHash == nil {
 			panic("node.rightHash was nil in writeBytes")
 		}
-		if err == nil {
-			err = amino.EncodeByteSlice(w, node.rightHash)
+		cause = amino.EncodeByteSlice(w, node.rightHash)
+		if cause != nil {
+			return cmn.ErrorWrap(cause, "writing right hash")
 		}
 	}
-	return
+	return nil
 }
 
 func (node *Node) set(t *Tree, key []byte, value []byte) (
@@ -358,35 +387,33 @@ func (node *Node) set(t *Tree, key []byte, value []byte) (
 
 		if updated {
 			return node, updated, orphaned
-		} else {
-			node.calcHeightAndSize(t)
-			newNode, balanceOrphaned := node.balance(t)
-			return newNode, updated, append(orphaned, balanceOrphaned...)
 		}
+		node.calcHeightAndSize(t)
+		newNode, balanceOrphaned := node.balance(t)
+		return newNode, updated, append(orphaned, balanceOrphaned...)
 	}
 }
 
-// newHash/newNode: The new hash or node to replace node after remove.
-// newKey: new leftmost leaf key for tree after successfully removing 'key' if changed.
-// value: removed value.
-func (node *Node) remove(t *Tree, key []byte) (
-	newHash []byte, newNode *Node, newKey []byte, value []byte, orphaned []*Node,
-) {
+// removes the node corresponding to the passed key and balances the tree.
+// It returns:
+// - the hash of the new node (or nil if the node is the one removed)
+// - the node that replaces the orig. node after remove
+// - new leftmost leaf key for tree after successfully removing 'key' if changed.
+// - the removed value
+// - the orphaned nodes.
+func (node *Node) remove(t *Tree, key []byte) ([]byte, *Node, []byte, []byte, []*Node) {
 	version := t.version + 1
 
 	if node.isLeaf() {
 		if bytes.Equal(key, node.key) {
 			return nil, nil, nil, node.value, []*Node{node}
 		}
-		return node.hash, node, nil, nil, orphaned
+		return node.hash, node, nil, nil, nil
 	}
 
+	// node.key < key; we go to the left to find the key:
 	if bytes.Compare(key, node.key) < 0 {
-		var newLeftHash []byte
-		var newLeftNode *Node
-
-		newLeftHash, newLeftNode, newKey, value, orphaned =
-			node.getLeftNode(t).remove(t, key)
+		newLeftHash, newLeftNode, newKey, value, orphaned := node.getLeftNode(t).remove(t, key)
 
 		if len(orphaned) == 0 {
 			return node.hash, node, nil, value, orphaned
@@ -401,30 +428,26 @@ func (node *Node) remove(t *Tree, key []byte) (
 		newNode, balanceOrphaned := newNode.balance(t)
 
 		return newNode.hash, newNode, newKey, value, append(orphaned, balanceOrphaned...)
-	} else {
-		var newRightHash []byte
-		var newRightNode *Node
-
-		newRightHash, newRightNode, newKey, value, orphaned =
-			node.getRightNode(t).remove(t, key)
-
-		if len(orphaned) == 0 {
-			return node.hash, node, nil, value, orphaned
-		} else if newRightHash == nil && newRightNode == nil { // right node held value, was removed
-			return node.leftHash, node.leftNode, nil, value, orphaned
-		}
-		orphaned = append(orphaned, node)
-
-		newNode := node.clone(version)
-		newNode.rightHash, newNode.rightNode = newRightHash, newRightNode
-		if newKey != nil {
-			newNode.key = newKey
-		}
-		newNode.calcHeightAndSize(t)
-		newNode, balanceOrphaned := newNode.balance(t)
-
-		return newNode.hash, newNode, nil, value, append(orphaned, balanceOrphaned...)
 	}
+	// node.key >= key; either found or look to the right:
+	newRightHash, newRightNode, newKey, value, orphaned := node.getRightNode(t).remove(t, key)
+
+	if len(orphaned) == 0 {
+		return node.hash, node, nil, value, orphaned
+	} else if newRightHash == nil && newRightNode == nil { // right node held value, was removed
+		return node.leftHash, node.leftNode, nil, value, orphaned
+	}
+	orphaned = append(orphaned, node)
+
+	newNode := node.clone(version)
+	newNode.rightHash, newNode.rightNode = newRightHash, newRightNode
+	if newKey != nil {
+		newNode.key = newKey
+	}
+	newNode.calcHeightAndSize(t)
+	newNode, balanceOrphaned := newNode.balance(t)
+
+	return newNode.hash, newNode, nil, value, append(orphaned, balanceOrphaned...)
 }
 
 func (node *Node) getLeftNode(t *Tree) *Node {
@@ -502,34 +525,32 @@ func (node *Node) balance(t *Tree) (newSelf *Node, orphaned []*Node) {
 			// Left Left Case
 			newNode, orphaned := node.rotateRight(t)
 			return newNode, []*Node{orphaned}
-		} else {
-			// Left Right Case
-			var leftOrphaned *Node
-
-			left := node.getLeftNode(t)
-			node.leftHash = nil
-			node.leftNode, leftOrphaned = left.rotateLeft(t)
-			newNode, rightOrphaned := node.rotateRight(t)
-
-			return newNode, []*Node{left, leftOrphaned, rightOrphaned}
 		}
+		// Left Right Case
+		var leftOrphaned *Node
+
+		left := node.getLeftNode(t)
+		node.leftHash = nil
+		node.leftNode, leftOrphaned = left.rotateLeft(t)
+		newNode, rightOrphaned := node.rotateRight(t)
+
+		return newNode, []*Node{left, leftOrphaned, rightOrphaned}
 	}
 	if balance < -1 {
 		if node.getRightNode(t).calcBalance(t) <= 0 {
 			// Right Right Case
 			newNode, orphaned := node.rotateLeft(t)
 			return newNode, []*Node{orphaned}
-		} else {
-			// Right Left Case
-			var rightOrphaned *Node
-
-			right := node.getRightNode(t)
-			node.rightHash = nil
-			node.rightNode, rightOrphaned = right.rotateRight(t)
-			newNode, leftOrphaned := node.rotateLeft(t)
-
-			return newNode, []*Node{right, leftOrphaned, rightOrphaned}
 		}
+		// Right Left Case
+		var rightOrphaned *Node
+
+		right := node.getRightNode(t)
+		node.rightHash = nil
+		node.rightNode, rightOrphaned = right.rotateRight(t)
+		newNode, leftOrphaned := node.rotateLeft(t)
+
+		return newNode, []*Node{right, leftOrphaned, rightOrphaned}
 	}
 	// Nothing changed
 	return node, []*Node{}
@@ -547,19 +568,20 @@ func (node *Node) traverseWithDepth(t *Tree, ascending bool, cb func(*Node, uint
 }
 
 func (node *Node) traverseInRange(t *Tree, start, end []byte, ascending bool, inclusive bool, depth uint8, cb func(*Node, uint8) bool) bool {
-	afterStart := start == nil || bytes.Compare(start, node.key) <= 0
+	afterStart := start == nil || bytes.Compare(start, node.key) < 0
+	startOrAfter := start == nil || bytes.Compare(start, node.key) <= 0
 	beforeEnd := end == nil || bytes.Compare(node.key, end) < 0
 	if inclusive {
 		beforeEnd = end == nil || bytes.Compare(node.key, end) <= 0
 	}
 
+	// Run callback per inner/leaf node.
 	stop := false
-	if afterStart && beforeEnd {
-		// IterateRange ignores this if not leaf
+	if !node.isLeaf() || (startOrAfter && beforeEnd) {
 		stop = cb(node, depth)
-	}
-	if stop {
-		return stop
+		if stop {
+			return stop
+		}
 	}
 	if node.isLeaf() {
 		return stop

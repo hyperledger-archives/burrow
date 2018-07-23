@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
-	cmn "github.com/tendermint/tmlibs/common"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 // RegisterRPCFuncs adds a route for each function in the funcMap, as well as general jsonrpc and websocket handlers for all functions.

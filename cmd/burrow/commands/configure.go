@@ -15,11 +15,11 @@ import (
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
-	logging_config "github.com/hyperledger/burrow/logging/config"
-	"github.com/hyperledger/burrow/logging/config/presets"
+	logging_config "github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/logconfig/presets"
 	cli "github.com/jawher/mow.cli"
 	amino "github.com/tendermint/go-amino"
-	tm_crypto "github.com/tendermint/go-crypto"
+	tm_crypto "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/p2p"
 )
 
@@ -155,7 +155,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 						if nodeKey {
 							privKey := tm_crypto.GenPrivKeyEd25519()
-							copy(privKey[:], key.PrivateKey.PrivateKey)
+							copy(privKey[:], key.PrivateKey.Key)
 							nodeKey := &p2p.NodeKey{
 								PrivKey: privKey,
 							}

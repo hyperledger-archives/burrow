@@ -12,6 +12,9 @@
 		ListAccountsParam
 		GetNameParam
 		ListNamesParam
+		GetValidatorSetParam
+		ValidatorSet
+		ValidatorSetDeltas
 */
 package rpcquery
 
@@ -22,6 +25,7 @@ import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 import names "github.com/hyperledger/burrow/execution/names"
 import acm "github.com/hyperledger/burrow/acm"
+import validator "github.com/hyperledger/burrow/acm/validator"
 
 import github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 
@@ -114,6 +118,82 @@ func (m *ListNamesParam) GetQuery() string {
 func (*ListNamesParam) XXX_MessageName() string {
 	return "rpcquery.ListNamesParam"
 }
+
+type GetValidatorSetParam struct {
+	IncludeHistory bool `protobuf:"varint,1,opt,name=IncludeHistory,proto3" json:"IncludeHistory,omitempty"`
+}
+
+func (m *GetValidatorSetParam) Reset()                    { *m = GetValidatorSetParam{} }
+func (m *GetValidatorSetParam) String() string            { return proto.CompactTextString(m) }
+func (*GetValidatorSetParam) ProtoMessage()               {}
+func (*GetValidatorSetParam) Descriptor() ([]byte, []int) { return fileDescriptorRpcquery, []int{4} }
+
+func (m *GetValidatorSetParam) GetIncludeHistory() bool {
+	if m != nil {
+		return m.IncludeHistory
+	}
+	return false
+}
+
+func (*GetValidatorSetParam) XXX_MessageName() string {
+	return "rpcquery.GetValidatorSetParam"
+}
+
+type ValidatorSet struct {
+	Height  uint64                 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Set     []*validator.Validator `protobuf:"bytes,2,rep,name=Set" json:"Set,omitempty"`
+	History []*ValidatorSetDeltas  `protobuf:"bytes,3,rep,name=History" json:"History,omitempty"`
+}
+
+func (m *ValidatorSet) Reset()                    { *m = ValidatorSet{} }
+func (m *ValidatorSet) String() string            { return proto.CompactTextString(m) }
+func (*ValidatorSet) ProtoMessage()               {}
+func (*ValidatorSet) Descriptor() ([]byte, []int) { return fileDescriptorRpcquery, []int{5} }
+
+func (m *ValidatorSet) GetHeight() uint64 {
+	if m != nil {
+		return m.Height
+	}
+	return 0
+}
+
+func (m *ValidatorSet) GetSet() []*validator.Validator {
+	if m != nil {
+		return m.Set
+	}
+	return nil
+}
+
+func (m *ValidatorSet) GetHistory() []*ValidatorSetDeltas {
+	if m != nil {
+		return m.History
+	}
+	return nil
+}
+
+func (*ValidatorSet) XXX_MessageName() string {
+	return "rpcquery.ValidatorSet"
+}
+
+type ValidatorSetDeltas struct {
+	Validators []*validator.Validator `protobuf:"bytes,2,rep,name=Validators" json:"Validators,omitempty"`
+}
+
+func (m *ValidatorSetDeltas) Reset()                    { *m = ValidatorSetDeltas{} }
+func (m *ValidatorSetDeltas) String() string            { return proto.CompactTextString(m) }
+func (*ValidatorSetDeltas) ProtoMessage()               {}
+func (*ValidatorSetDeltas) Descriptor() ([]byte, []int) { return fileDescriptorRpcquery, []int{6} }
+
+func (m *ValidatorSetDeltas) GetValidators() []*validator.Validator {
+	if m != nil {
+		return m.Validators
+	}
+	return nil
+}
+
+func (*ValidatorSetDeltas) XXX_MessageName() string {
+	return "rpcquery.ValidatorSetDeltas"
+}
 func init() {
 	proto.RegisterType((*GetAccountParam)(nil), "rpcquery.GetAccountParam")
 	golang_proto.RegisterType((*GetAccountParam)(nil), "rpcquery.GetAccountParam")
@@ -123,6 +203,12 @@ func init() {
 	golang_proto.RegisterType((*GetNameParam)(nil), "rpcquery.GetNameParam")
 	proto.RegisterType((*ListNamesParam)(nil), "rpcquery.ListNamesParam")
 	golang_proto.RegisterType((*ListNamesParam)(nil), "rpcquery.ListNamesParam")
+	proto.RegisterType((*GetValidatorSetParam)(nil), "rpcquery.GetValidatorSetParam")
+	golang_proto.RegisterType((*GetValidatorSetParam)(nil), "rpcquery.GetValidatorSetParam")
+	proto.RegisterType((*ValidatorSet)(nil), "rpcquery.ValidatorSet")
+	golang_proto.RegisterType((*ValidatorSet)(nil), "rpcquery.ValidatorSet")
+	proto.RegisterType((*ValidatorSetDeltas)(nil), "rpcquery.ValidatorSetDeltas")
+	golang_proto.RegisterType((*ValidatorSetDeltas)(nil), "rpcquery.ValidatorSetDeltas")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -140,6 +226,7 @@ type QueryClient interface {
 	ListAccounts(ctx context.Context, in *ListAccountsParam, opts ...grpc.CallOption) (Query_ListAccountsClient, error)
 	GetName(ctx context.Context, in *GetNameParam, opts ...grpc.CallOption) (*names.Entry, error)
 	ListNames(ctx context.Context, in *ListNamesParam, opts ...grpc.CallOption) (Query_ListNamesClient, error)
+	GetValidatorSet(ctx context.Context, in *GetValidatorSetParam, opts ...grpc.CallOption) (*ValidatorSet, error)
 }
 
 type queryClient struct {
@@ -232,6 +319,15 @@ func (x *queryListNamesClient) Recv() (*names.Entry, error) {
 	return m, nil
 }
 
+func (c *queryClient) GetValidatorSet(ctx context.Context, in *GetValidatorSetParam, opts ...grpc.CallOption) (*ValidatorSet, error) {
+	out := new(ValidatorSet)
+	err := grpc.Invoke(ctx, "/rpcquery.Query/GetValidatorSet", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Query service
 
 type QueryServer interface {
@@ -239,6 +335,7 @@ type QueryServer interface {
 	ListAccounts(*ListAccountsParam, Query_ListAccountsServer) error
 	GetName(context.Context, *GetNameParam) (*names.Entry, error)
 	ListNames(*ListNamesParam, Query_ListNamesServer) error
+	GetValidatorSet(context.Context, *GetValidatorSetParam) (*ValidatorSet, error)
 }
 
 func RegisterQueryServer(s *grpc.Server, srv QueryServer) {
@@ -323,6 +420,24 @@ func (x *queryListNamesServer) Send(m *names.Entry) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Query_GetValidatorSet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetValidatorSetParam)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).GetValidatorSet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcquery.Query/GetValidatorSet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).GetValidatorSet(ctx, req.(*GetValidatorSetParam))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Query_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcquery.Query",
 	HandlerType: (*QueryServer)(nil),
@@ -334,6 +449,10 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetName",
 			Handler:    _Query_GetName_Handler,
+		},
+		{
+			MethodName: "GetValidatorSet",
+			Handler:    _Query_GetValidatorSet_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -449,6 +568,111 @@ func (m *ListNamesParam) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *GetValidatorSetParam) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetValidatorSetParam) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.IncludeHistory {
+		dAtA[i] = 0x8
+		i++
+		if m.IncludeHistory {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	return i, nil
+}
+
+func (m *ValidatorSet) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorSet) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Height != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcquery(dAtA, i, uint64(m.Height))
+	}
+	if len(m.Set) > 0 {
+		for _, msg := range m.Set {
+			dAtA[i] = 0x12
+			i++
+			i = encodeVarintRpcquery(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if len(m.History) > 0 {
+		for _, msg := range m.History {
+			dAtA[i] = 0x1a
+			i++
+			i = encodeVarintRpcquery(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	return i, nil
+}
+
+func (m *ValidatorSetDeltas) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorSetDeltas) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Validators) > 0 {
+		for _, msg := range m.Validators {
+			dAtA[i] = 0x12
+			i++
+			i = encodeVarintRpcquery(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	return i, nil
+}
+
 func encodeVarintRpcquery(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -492,6 +716,48 @@ func (m *ListNamesParam) Size() (n int) {
 	l = len(m.Query)
 	if l > 0 {
 		n += 1 + l + sovRpcquery(uint64(l))
+	}
+	return n
+}
+
+func (m *GetValidatorSetParam) Size() (n int) {
+	var l int
+	_ = l
+	if m.IncludeHistory {
+		n += 2
+	}
+	return n
+}
+
+func (m *ValidatorSet) Size() (n int) {
+	var l int
+	_ = l
+	if m.Height != 0 {
+		n += 1 + sovRpcquery(uint64(m.Height))
+	}
+	if len(m.Set) > 0 {
+		for _, e := range m.Set {
+			l = e.Size()
+			n += 1 + l + sovRpcquery(uint64(l))
+		}
+	}
+	if len(m.History) > 0 {
+		for _, e := range m.History {
+			l = e.Size()
+			n += 1 + l + sovRpcquery(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ValidatorSetDeltas) Size() (n int) {
+	var l int
+	_ = l
+	if len(m.Validators) > 0 {
+		for _, e := range m.Validators {
+			l = e.Size()
+			n += 1 + l + sovRpcquery(uint64(l))
+		}
 	}
 	return n
 }
@@ -826,6 +1092,288 @@ func (m *ListNamesParam) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *GetValidatorSetParam) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetValidatorSetParam: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetValidatorSetParam: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IncludeHistory", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IncludeHistory = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ValidatorSet) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorSet: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorSet: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
+			}
+			m.Height = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Height |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Set", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Set = append(m.Set, &validator.Validator{})
+			if err := m.Set[len(m.Set)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field History", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.History = append(m.History, &ValidatorSetDeltas{})
+			if err := m.History[len(m.History)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ValidatorSetDeltas) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorSetDeltas: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorSetDeltas: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Validators", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Validators = append(m.Validators, &validator.Validator{})
+			if err := m.Validators[len(m.Validators)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipRpcquery(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
@@ -935,27 +1483,36 @@ func init() { proto.RegisterFile("rpcquery.proto", fileDescriptorRpcquery) }
 func init() { golang_proto.RegisterFile("rpcquery.proto", fileDescriptorRpcquery) }
 
 var fileDescriptorRpcquery = []byte{
-	// 349 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0xcd, 0x4a, 0xc3, 0x40,
-	0x14, 0x85, 0x1d, 0x50, 0x6b, 0xaf, 0xa1, 0xe2, 0x50, 0xa4, 0x46, 0x48, 0x25, 0x0b, 0x51, 0xd1,
-	0xa4, 0xf8, 0xb3, 0x14, 0x6c, 0x8b, 0x74, 0x23, 0x45, 0xbb, 0x74, 0x97, 0x4c, 0xc7, 0xb4, 0x60,
-	0x32, 0xf1, 0x66, 0x82, 0xe4, 0xed, 0x5c, 0x76, 0xe9, 0xda, 0x45, 0x91, 0xf6, 0x11, 0x7c, 0x01,
-	0xc9, 0x24, 0xe9, 0x8f, 0x4a, 0x77, 0xf7, 0x84, 0x7b, 0xce, 0x99, 0x6f, 0x26, 0x50, 0xc1, 0x90,
-	0xbd, 0xc6, 0x1c, 0x13, 0x2b, 0x44, 0x21, 0x05, 0xdd, 0x2a, 0xb4, 0x7e, 0xee, 0x0d, 0xe5, 0x20,
-	0x76, 0x2d, 0x26, 0x7c, 0xdb, 0x13, 0x9e, 0xb0, 0xd5, 0x82, 0x1b, 0x3f, 0x2b, 0xa5, 0x84, 0x9a,
-	0x32, 0xa3, 0xbe, 0x1d, 0x38, 0x3e, 0x8f, 0x72, 0x51, 0x76, 0x98, 0x9f, 0x8d, 0xa6, 0x03, 0x3b,
-	0x1d, 0x2e, 0x9b, 0x8c, 0x89, 0x38, 0x90, 0x0f, 0x0e, 0x3a, 0x3e, 0xed, 0x42, 0xa9, 0xd9, 0xef,
-	0x23, 0x8f, 0xa2, 0x1a, 0x39, 0x24, 0xc7, 0x5a, 0xeb, 0x6a, 0x34, 0xae, 0xaf, 0x7d, 0x8e, 0xeb,
-	0x67, 0x0b, 0x95, 0x83, 0x24, 0xe4, 0xf8, 0xc2, 0xfb, 0x1e, 0x47, 0xdb, 0x8d, 0x11, 0xc5, 0x9b,
-	0xcd, 0x30, 0x09, 0xa5, 0xb0, 0x72, 0x6f, 0xaf, 0x08, 0x31, 0x4f, 0x60, 0xf7, 0x7e, 0x18, 0x15,
-	0x1d, 0x51, 0x56, 0x52, 0x85, 0x8d, 0xc7, 0x94, 0x43, 0x55, 0x94, 0x7b, 0x99, 0x30, 0x4d, 0xd0,
-	0x3a, 0x5c, 0x76, 0x1d, 0x9f, 0x67, 0x5b, 0x14, 0xd6, 0x53, 0x91, 0x2f, 0xa9, 0xd9, 0x3c, 0x82,
-	0x4a, 0x1a, 0x97, 0xce, 0xab, 0xb2, 0x2e, 0xbe, 0x49, 0xfe, 0x99, 0xde, 0x00, 0xcc, 0x19, 0xe9,
-	0xbe, 0x35, 0xbb, 0xd3, 0x5f, 0xe4, 0x7a, 0xd5, 0x4a, 0x2f, 0xa6, 0x2d, 0x02, 0x86, 0x5c, 0xf2,
-	0xc2, 0xd0, 0x06, 0x6d, 0xf1, 0xfc, 0xf4, 0x60, 0x1e, 0xf0, 0x87, 0xeb, 0xff, 0x88, 0x06, 0xa1,
-	0x36, 0x94, 0x72, 0x32, 0xba, 0xb7, 0x74, 0x80, 0x19, 0xac, 0xae, 0x59, 0xd9, 0x1b, 0xdd, 0x05,
-	0x12, 0x13, 0x7a, 0x0d, 0xe5, 0x19, 0x26, 0xad, 0x2d, 0x57, 0xce, 0xd9, 0x97, 0x4d, 0x0d, 0xd2,
-	0xba, 0x1d, 0x4d, 0x0c, 0xf2, 0x31, 0x31, 0xc8, 0xd7, 0xc4, 0x20, 0xef, 0x53, 0x83, 0x8c, 0xa6,
-	0x06, 0x79, 0x3a, 0x5d, 0xfd, 0x72, 0x18, 0x32, 0xbb, 0x28, 0x70, 0x37, 0xd5, 0x8f, 0x71, 0xf9,
-	0x13, 0x00, 0x00, 0xff, 0xff, 0xfa, 0xef, 0x21, 0x21, 0x7b, 0x02, 0x00, 0x00,
+	// 487 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x53, 0x4f, 0x6f, 0xd3, 0x30,
+	0x1c, 0xc5, 0xeb, 0x58, 0xd7, 0xdf, 0xaa, 0x4e, 0x58, 0x55, 0x55, 0x02, 0xca, 0xa6, 0x1c, 0xaa,
+	0x81, 0x20, 0x99, 0xc6, 0xe0, 0x06, 0x62, 0x1b, 0xa8, 0x0c, 0xa1, 0x09, 0x32, 0x89, 0x03, 0x37,
+	0xd7, 0x31, 0x69, 0xa4, 0x26, 0x0e, 0x8e, 0x03, 0xea, 0x17, 0xe0, 0x63, 0x21, 0x8e, 0x3d, 0x72,
+	0xe6, 0x30, 0xa1, 0xee, 0x8b, 0xa0, 0x38, 0xce, 0xbf, 0x75, 0xea, 0xcd, 0xcf, 0x79, 0xef, 0xf7,
+	0xec, 0xbc, 0x67, 0xe8, 0x89, 0x98, 0x7e, 0x4b, 0x99, 0x98, 0xdb, 0xb1, 0xe0, 0x92, 0xe3, 0xed,
+	0x02, 0x1b, 0x4f, 0xfd, 0x40, 0x4e, 0xd3, 0x89, 0x4d, 0x79, 0xe8, 0xf8, 0xdc, 0xe7, 0x8e, 0x22,
+	0x4c, 0xd2, 0xaf, 0x0a, 0x29, 0xa0, 0x56, 0xb9, 0xd0, 0xd8, 0x89, 0x48, 0xc8, 0x12, 0x0d, 0x3a,
+	0x84, 0x86, 0x7a, 0xb9, 0xfb, 0x9d, 0xcc, 0x02, 0x8f, 0x48, 0x2e, 0xf2, 0x0d, 0x8b, 0xc0, 0xee,
+	0x98, 0xc9, 0x13, 0x4a, 0x79, 0x1a, 0xc9, 0x8f, 0x44, 0x90, 0x10, 0x5f, 0x40, 0xfb, 0xc4, 0xf3,
+	0x04, 0x4b, 0x92, 0x21, 0xda, 0x47, 0x07, 0xdd, 0xd3, 0xe3, 0xc5, 0xd5, 0xde, 0x9d, 0xbf, 0x57,
+	0x7b, 0x4f, 0x6a, 0x67, 0x98, 0xce, 0x63, 0x26, 0x66, 0xcc, 0xf3, 0x99, 0x70, 0x26, 0xa9, 0x10,
+	0xfc, 0x87, 0x43, 0xc5, 0x3c, 0x96, 0xdc, 0xd6, 0x5a, 0xb7, 0x18, 0x62, 0x3d, 0x82, 0x7b, 0x1f,
+	0x82, 0xa4, 0xf0, 0x48, 0x72, 0x93, 0x3e, 0xdc, 0xfd, 0x94, 0x5d, 0x4c, 0x59, 0x74, 0xdc, 0x1c,
+	0x58, 0x16, 0x74, 0xc7, 0x4c, 0x5e, 0x90, 0x90, 0xe5, 0x2c, 0x0c, 0x9b, 0x19, 0xd0, 0x24, 0xb5,
+	0xb6, 0x46, 0xd0, 0xcb, 0xc6, 0x65, 0xeb, 0xb5, 0xb3, 0x5e, 0x41, 0x7f, 0xcc, 0xe4, 0xe7, 0xe2,
+	0xbe, 0x97, 0x4c, 0x5f, 0x6f, 0x04, 0xbd, 0xf3, 0x88, 0xce, 0x52, 0x8f, 0xbd, 0x0b, 0x12, 0xc9,
+	0xb5, 0x6c, 0xdb, 0xbd, 0xb1, 0x6b, 0xfd, 0x44, 0xd0, 0xad, 0xab, 0xf1, 0x00, 0xb6, 0xa6, 0x2c,
+	0xf0, 0xa7, 0x52, 0x09, 0x36, 0x5d, 0x8d, 0xf0, 0x08, 0x5a, 0x97, 0x4c, 0x0e, 0x37, 0xf6, 0x5b,
+	0x07, 0x3b, 0x47, 0x7d, 0xbb, 0xfa, 0xc3, 0xa5, 0xda, 0xcd, 0x08, 0xf8, 0x05, 0xb4, 0x0b, 0xc7,
+	0x96, 0xe2, 0x3e, 0xb4, 0xcb, 0xb8, 0xeb, 0x46, 0x6f, 0xd8, 0x4c, 0x92, 0xc4, 0x2d, 0xc8, 0xd6,
+	0x7b, 0xc0, 0xab, 0x9f, 0xf1, 0x31, 0x40, 0xb9, 0x9b, 0xac, 0x35, 0xaf, 0xf1, 0x8e, 0x7e, 0x6d,
+	0xe8, 0x7f, 0x85, 0x5f, 0x02, 0x54, 0xc1, 0xe3, 0xfb, 0xd5, 0x51, 0x6e, 0xd4, 0xc1, 0xe8, 0xdb,
+	0x59, 0x7d, 0xce, 0x78, 0x44, 0x05, 0x93, 0xac, 0x10, 0x9c, 0x41, 0xb7, 0x1e, 0x2a, 0x7e, 0x50,
+	0x0d, 0x58, 0x09, 0xfb, 0xf6, 0x11, 0x87, 0x08, 0x3b, 0xd0, 0xd6, 0x71, 0xe3, 0x41, 0xe3, 0x00,
+	0x65, 0x03, 0x8c, 0xae, 0x9d, 0x37, 0xf9, 0x6d, 0x24, 0xc5, 0x1c, 0x3f, 0x87, 0x4e, 0x99, 0x3d,
+	0x1e, 0x36, 0x2d, 0xab, 0x42, 0x34, 0x45, 0x87, 0x08, 0x9f, 0xab, 0x92, 0x37, 0xc2, 0x34, 0x1b,
+	0x7e, 0x2b, 0x2d, 0x31, 0x06, 0xb7, 0x67, 0x73, 0xfa, 0x7a, 0xb1, 0x34, 0xd1, 0x9f, 0xa5, 0x89,
+	0xfe, 0x2d, 0x4d, 0xf4, 0xfb, 0xda, 0x44, 0x8b, 0x6b, 0x13, 0x7d, 0x79, 0xbc, 0xfe, 0x65, 0x88,
+	0x98, 0x3a, 0xc5, 0xb8, 0xc9, 0x96, 0x7a, 0x78, 0xcf, 0xfe, 0x07, 0x00, 0x00, 0xff, 0xff, 0xfd,
+	0xa4, 0xb6, 0xf9, 0xec, 0x03, 0x00, 0x00,
 }

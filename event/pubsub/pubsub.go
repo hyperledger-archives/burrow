@@ -19,7 +19,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/event/query"
-	"github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 type operation int

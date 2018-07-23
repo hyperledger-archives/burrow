@@ -153,7 +153,7 @@ func TestUnbondTxSignable(t *testing.T) {
 }
 
 func TestPermissionsTxSignable(t *testing.T) {
-	permsTx := &payload.PermissionsTx{
+	permsTx := &payload.PermsTx{
 		Input: &payload.TxInput{
 			Address:  makePrivateAccount("input1").Address(),
 			Amount:   12345,
@@ -191,7 +191,7 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 func TestNewPermissionsTxWithSequence(t *testing.T) {
 	privateAccount := makePrivateAccount("shhhhh")
 	args := permission.SetBaseArgs(privateAccount.PublicKey().Address(), permission.HasRole, true)
-	permTx := payload.NewPermissionsTxWithSequence(privateAccount.PublicKey(), args, 1)
+	permTx := payload.NewPermsTxWithSequence(privateAccount.PublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 	testTxSignVerify(t, permTx)
 }
