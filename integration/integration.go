@@ -163,6 +163,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
 	cnf.Tendermint.Moniker = name
 	cnf.Tendermint.TendermintRoot = fmt.Sprintf(".burrow_%s", name)
 	cnf.Tendermint.ListenAddress = GetTCPLocalAddress()
+	cnf.Tendermint.ExternalAddress = cnf.Tendermint.ListenAddress
 	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()
 	cnf.RPC.Metrics.ListenAddress = GetTCPLocalAddress()
 	cnf.RPC.TM.ListenAddress = GetTCPLocalAddress()
