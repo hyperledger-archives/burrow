@@ -184,7 +184,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	logger.TraceMsg("Executing transaction", "tx", txEnv.String())
 
 	// Verify transaction signature against inputs
-	err = txEnv.Verify(exe.stateCache)
+	err = txEnv.Verify(exe.stateCache, exe.blockchain.ChainID())
 	if err != nil {
 		return nil, err
 	}

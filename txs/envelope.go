@@ -77,12 +77,16 @@ func (txEnv *Envelope) Validate() error {
 
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
-func (txEnv *Envelope) Verify(getter state.AccountGetter) error {
+func (txEnv *Envelope) Verify(getter state.AccountGetter, chainID string) error {
 	err := txEnv.Validate()
 	if err != nil {
 		return err
 	}
 	errPrefix := fmt.Sprintf("could not verify transaction %X", txEnv.Tx.Hash())
+	if txEnv.Tx.ChainID != chainID {
+		return fmt.Errorf("%s: ChainID in envelope is %s but receiving chain has ID %s",
+			errPrefix, txEnv.Tx.ChainID, chainID)
+	}
 	inputs := txEnv.Tx.GetInputs()
 	if len(inputs) != len(txEnv.Signatories) {
 		return fmt.Errorf("%s: number of inputs (= %v) should equal number of signatories (= %v)",
