@@ -97,6 +97,10 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 	})
 }
 
+func (txe *TxExecution) SetException(err error) {
+	txe.Exception = errors.AsException(err)
+}
+
 // Set result
 func (txe *TxExecution) Return(returnValue []byte, gasUsed uint64) {
 	if txe.Result == nil {

@@ -213,6 +213,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 		ctx.Logger.InfoMsg("Error on execution",
 			structure.ErrorKey, exception)
+		ctx.txe.SetException(exception)
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")
 		if createContract {

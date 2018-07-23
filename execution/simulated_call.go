@@ -57,6 +57,7 @@ func CallCodeSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, addre
 			err = fmt.Errorf("panic from VM in simulated call: %v\n%s", r, debug.Stack())
 		}
 	}()
+
 	ret, err := vmach.Call(txCache, caller, callee, code, data, 0, &gas)
 	if err != nil {
 		return nil, err

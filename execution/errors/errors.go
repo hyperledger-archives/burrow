@@ -173,5 +173,5 @@ func (e *Exception) Error() string {
 	if e == nil {
 		return ""
 	}
-	return fmt.Sprintf("Error %v: %s", e.Code, e.Exception)
+	return fmt.Sprintf("Error %d: %s", e.Code, e.Exception)
 }
