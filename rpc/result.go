@@ -15,18 +15,16 @@
 package rpc
 
 import (
-	"time"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-amino"
 	consensusTypes "github.com/tendermint/tendermint/consensus/types"
-	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -94,22 +92,6 @@ func (b *Block) UnmarshalJSON(data []byte) (err error) {
 	return aminoCodec.UnmarshalJSON(data, &b.Block)
 }
 
-type ResultStatus struct {
-	NodeInfo          p2p.NodeInfo
-	GenesisHash       binary.HexBytes
-	PublicKey         crypto.PublicKey
-	LatestBlockHash   binary.HexBytes
-	LatestBlockHeight uint64
-	LatestBlockTime   int64
-	NodeVersion       string
-}
-
-type ResultLastBlockInfo struct {
-	LastBlockHeight uint64
-	LastBlockTime   time.Time
-	LastBlockHash   binary.HexBytes
-}
-
 type ResultChainId struct {
 	ChainName   string
 	ChainId     string
@@ -126,12 +108,12 @@ type ResultUnsubscribe struct {
 }
 
 type Peer struct {
-	NodeInfo   p2p.NodeInfo
+	NodeInfo   *tendermint.NodeInfo
 	IsOutbound bool
 }
 
 type ResultNetInfo struct {
-	ThisNode  p2p.NodeInfo
+	ThisNode  *tendermint.NodeInfo
 	Listening bool
 	Listeners []string
 	Peers     []*Peer

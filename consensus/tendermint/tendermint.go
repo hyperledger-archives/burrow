@@ -4,7 +4,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -12,6 +14,7 @@ import (
 	tmCrypto "github.com/tendermint/tendermint/crypto"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/proxy"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -90,13 +93,15 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc 
 	}
 }
 
-func NewBlockEvent(message interface{}) *tmTypes.EventDataNewBlock {
-	tmEventData, ok := message.(tmTypes.TMEventData)
-	if ok {
-		eventDataNewBlock, ok := tmEventData.(tmTypes.EventDataNewBlock)
-		if ok {
-			return &eventDataNewBlock
-		}
+func NewNodeInfo(ni p2p.NodeInfo) *NodeInfo {
+	address, _ := crypto.AddressFromHexString(string(ni.ID))
+	return &NodeInfo{
+		ID:            address,
+		Moniker:       ni.Moniker,
+		ListenAddress: ni.ListenAddr,
+		Version:       ni.Version,
+		Channels:      binary.HexBytes(ni.Channels),
+		Network:       ni.Network,
+		Other:         ni.Other,
 	}
-	return nil
 }

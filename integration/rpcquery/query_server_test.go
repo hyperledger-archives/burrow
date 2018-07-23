@@ -18,6 +18,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestStatus(t *testing.T) {
+	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
+	stat, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
+	require.NoError(t, err)
+	assert.Equal(t, rpctest.PrivateAccounts[0].PublicKey(), stat.PublicKey)
+	assert.Equal(t, rpctest.GenesisDoc.ChainID(), stat.ChainID)
+	for i := 0; i < 3; i++ {
+		// Unless we get lucky this is an error
+		_, err = cli.Status(context.Background(), &rpcquery.StatusParam{
+			BlockWithin: "1ns",
+		})
+		if err != nil {
+			break
+		}
+	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no block committed within")
+}
+
 func TestGetAccount(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
 	ca, err := cli.GetAccount(context.Background(), &rpcquery.GetAccountParam{

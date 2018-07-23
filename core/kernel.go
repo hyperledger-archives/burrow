@@ -126,7 +126,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	nameRegState := kern.State
 	accountState := kern.State
-	nodeView := tendermint.NewNodeView(kern.Node, txCodec)
+	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec)
+	if err != nil {
+		return nil, err
+	}
 	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, nodeView, kern.Logger)
 
 	kern.Launchers = []process.Launcher{
