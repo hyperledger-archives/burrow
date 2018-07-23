@@ -216,5 +216,5 @@ func testTxSignVerify(t *testing.T, tx payload.Payload) {
 	}
 	txEnv := Enclose(chainID, tx)
 	require.NoError(t, txEnv.Sign(signers...), "Error signing tx: %s", debug.Stack())
-	require.NoError(t, txEnv.Verify(nil), "Error verifying tx: %s", debug.Stack())
+	require.NoError(t, txEnv.Verify(nil, chainID), "Error verifying tx: %s", debug.Stack())
 }
