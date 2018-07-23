@@ -44,7 +44,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 		return fmt.Errorf("PermsTx received containing invalid PermArgs: %v", err)
 	}
 
-	permFlag := ctx.tx.PermArgs.PermFlag
+	permFlag := ctx.tx.PermArgs.Action
 	// check permission
 	if !HasPermission(ctx.StateWriter, inAcc, permFlag, ctx.Logger) {
 		return fmt.Errorf("account %s does not have moderator permission %s (%b)", ctx.tx.Input.Address,
@@ -65,17 +65,17 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 		"perm_args", ctx.tx.PermArgs.String())
 
 	var permAcc acm.Account
-	switch ctx.tx.PermArgs.PermFlag {
+	switch ctx.tx.PermArgs.Action {
 	case permission.HasBase:
 		// this one doesn't make sense from txs
 		return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
 	case permission.SetBase:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Address,
+		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				return perms.Base.Set(*ctx.tx.PermArgs.Permission, *ctx.tx.PermArgs.Value)
 			})
 	case permission.UnsetBase:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Address,
+		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				return perms.Base.Unset(*ctx.tx.PermArgs.Permission)
 			})
@@ -87,20 +87,20 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	case permission.HasRole:
 		return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
 	case permission.AddRole:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Address,
+		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				if !perms.AddRole(*ctx.tx.PermArgs.Role) {
 					return fmt.Errorf("role (%s) already exists for account %s",
-						*ctx.tx.PermArgs.Role, *ctx.tx.PermArgs.Address)
+						*ctx.tx.PermArgs.Role, *ctx.tx.PermArgs.Target)
 				}
 				return nil
 			})
 	case permission.RemoveRole:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Address,
+		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				if !perms.RmRole(*ctx.tx.PermArgs.Role) {
 					return fmt.Errorf("role (%s) does not exist for account %s",
-						*ctx.tx.PermArgs.Role, *ctx.tx.PermArgs.Address)
+						*ctx.tx.PermArgs.Role, *ctx.tx.PermArgs.Target)
 				}
 				return nil
 			})

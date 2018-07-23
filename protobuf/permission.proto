@@ -31,8 +31,11 @@ message BasePermissions {
 message PermArgs {
     option (gogoproto.goproto_unrecognized) = false;
     option (gogoproto.goproto_stringer) = false;
-    optional uint64 PermFlag = 1 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
-    optional bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    // The permission function
+    optional uint64 Action = 1 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
+    // The target of the action
+    optional bytes Target = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    // Possible arguments
     optional uint64 Permission = 3 [(gogoproto.casttype) = "PermFlag"];
     optional string Role = 4;
     optional bool Value = 5;
