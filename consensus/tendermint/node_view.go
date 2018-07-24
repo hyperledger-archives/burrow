@@ -7,32 +7,35 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
-	tmCrypto "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/types"
 )
 
 type NodeView struct {
-	tmNode    *Node
-	txDecoder txs.Decoder
+	tmNode             *Node
+	validatorPublicKey crypto.PublicKey
+	txDecoder          txs.Decoder
 }
 
-func NewNodeView(tmNode *Node, txDecoder txs.Decoder) *NodeView {
-	return &NodeView{
-		tmNode:    tmNode,
-		txDecoder: txDecoder,
+func NewNodeView(tmNode *Node, txDecoder txs.Decoder) (*NodeView, error) {
+	publicKey, err := crypto.PublicKeyFromTendermintPubKey(tmNode.PrivValidator().GetPubKey())
+	if err != nil {
+		return nil, err
 	}
+	return &NodeView{
+		validatorPublicKey: publicKey,
+		tmNode:             tmNode,
+		txDecoder:          txDecoder,
+	}, nil
 }
 
-func (nv *NodeView) PrivValidatorPublicKey() (crypto.PublicKey, error) {
-	pub := nv.tmNode.PrivValidator().GetPubKey().(tmCrypto.PubKeyEd25519)
-
-	return crypto.PublicKeyFromBytes(pub[:], crypto.CurveTypeEd25519)
+func (nv *NodeView) ValidatorPublicKey() crypto.PublicKey {
+	return nv.validatorPublicKey
 }
 
-func (nv *NodeView) NodeInfo() p2p.NodeInfo {
-	return nv.tmNode.NodeInfo()
+func (nv *NodeView) NodeInfo() *NodeInfo {
+	return NewNodeInfo(nv.tmNode.NodeInfo())
 }
 
 func (nv *NodeView) IsListening() bool {

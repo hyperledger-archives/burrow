@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/rpc"
 )
 
 type queryServer struct {
@@ -31,6 +32,10 @@ func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, bl
 		nodeView:   nodeView,
 		logger:     logger,
 	}
+}
+
+func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.ResultStatus, error) {
+	return rpc.Status(qs.blockchain, qs.nodeView, param.BlockWithin)
 }
 
 // Account state

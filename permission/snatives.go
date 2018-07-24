@@ -26,9 +26,9 @@ import (
 
 func (pa PermArgs) String() string {
 	body := make([]string, 0, 5)
-	body = append(body, fmt.Sprintf("PermFlag: %v", String(pa.PermFlag)))
-	if pa.Address != nil {
-		body = append(body, fmt.Sprintf("Address: %s", *pa.Address))
+	body = append(body, fmt.Sprintf("PermFlag: %v", String(pa.Action)))
+	if pa.Target != nil {
+		body = append(body, fmt.Sprintf("Address: %s", *pa.Target))
 	}
 	if pa.Permission != nil {
 		body = append(body, fmt.Sprintf("Permission: %v", String(*pa.Permission)))
@@ -43,9 +43,9 @@ func (pa PermArgs) String() string {
 }
 
 func (pa PermArgs) EnsureValid() error {
-	pf := pa.PermFlag
+	pf := pa.Action
 	// Address
-	if pa.Address == nil && pf != SetGlobal {
+	if pa.Target == nil && pf != SetGlobal {
 		return fmt.Errorf("PermArgs for PermFlag %v requires Address to be provided but was nil", pf)
 	}
 	if pf == HasRole || pf == AddRole || pf == RemoveRole {
@@ -65,16 +65,16 @@ func (pa PermArgs) EnsureValid() error {
 
 func HasBaseArgs(address crypto.Address, permFlag PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   HasBase,
-		Address:    &address,
+		Action:     HasBase,
+		Target:     &address,
 		Permission: &permFlag,
 	}
 }
 
 func SetBaseArgs(address crypto.Address, permFlag PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   SetBase,
-		Address:    &address,
+		Action:     SetBase,
+		Target:     &address,
 		Permission: &permFlag,
 		Value:      &value,
 	}
@@ -82,15 +82,15 @@ func SetBaseArgs(address crypto.Address, permFlag PermFlag, value bool) PermArgs
 
 func UnsetBaseArgs(address crypto.Address, permFlag PermFlag) PermArgs {
 	return PermArgs{
-		PermFlag:   UnsetBase,
-		Address:    &address,
+		Action:     UnsetBase,
+		Target:     &address,
 		Permission: &permFlag,
 	}
 }
 
 func SetGlobalArgs(permFlag PermFlag, value bool) PermArgs {
 	return PermArgs{
-		PermFlag:   SetGlobal,
+		Action:     SetGlobal,
 		Permission: &permFlag,
 		Value:      &value,
 	}
@@ -98,24 +98,24 @@ func SetGlobalArgs(permFlag PermFlag, value bool) PermArgs {
 
 func HasRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: HasRole,
-		Address:  &address,
-		Role:     &role,
+		Action: HasRole,
+		Target: &address,
+		Role:   &role,
 	}
 }
 
 func AddRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: AddRole,
-		Address:  &address,
-		Role:     &role,
+		Action: AddRole,
+		Target: &address,
+		Role:   &role,
 	}
 }
 
 func RemoveRoleArgs(address crypto.Address, role string) PermArgs {
 	return PermArgs{
-		PermFlag: RemoveRole,
-		Address:  &address,
-		Role:     &role,
+		Action: RemoveRole,
+		Target: &address,
+		Role:   &role,
 	}
 }

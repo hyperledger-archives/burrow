@@ -18,12 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"time"
-
-	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/binary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/consensus/types"
@@ -86,16 +81,4 @@ func TestResultDumpConsensusState(t *testing.T) {
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
 	assert.Equal(t, string(bs), string(bsOut))
-}
-
-func TestResultLastBlockInfo(t *testing.T) {
-	res := &ResultLastBlockInfo{
-		LastBlockTime:   time.Now(),
-		LastBlockHash:   binary.HexBytes{3, 4, 5, 6},
-		LastBlockHeight: 2343,
-	}
-	bs, err := json.Marshal(res)
-	require.NoError(t, err)
-	fmt.Println(string(bs))
-
 }

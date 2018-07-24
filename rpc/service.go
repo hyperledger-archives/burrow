@@ -91,31 +91,8 @@ func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 	}, nil
 }
 
-func (s *Service) Status() (*ResultStatus, error) {
-	latestHeight := s.blockchain.LastBlockHeight()
-	var (
-		latestBlockMeta *tmTypes.BlockMeta
-		latestBlockHash []byte
-		latestBlockTime int64
-	)
-	if latestHeight != 0 {
-		latestBlockMeta = s.nodeView.BlockStore().LoadBlockMeta(int64(latestHeight))
-		latestBlockHash = latestBlockMeta.Header.Hash()
-		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
-	}
-	publicKey, err := s.nodeView.PrivValidatorPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return &ResultStatus{
-		NodeInfo:          s.nodeView.NodeInfo(),
-		GenesisHash:       s.blockchain.GenesisHash(),
-		PublicKey:         publicKey,
-		LatestBlockHash:   latestBlockHash,
-		LatestBlockHeight: latestHeight,
-		LatestBlockTime:   latestBlockTime,
-		NodeVersion:       project.History.CurrentVersion().String(),
-	}, nil
+func (s *Service) Status(blockWithin string) (*ResultStatus, error) {
+	return Status(s.BlockchainInfo(), s.nodeView, blockWithin)
 }
 
 func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
@@ -130,7 +107,7 @@ func (s *Service) Peers() (*ResultPeers, error) {
 	peers := make([]*Peer, s.nodeView.Peers().Size())
 	for i, peer := range s.nodeView.Peers().List() {
 		peers[i] = &Peer{
-			NodeInfo:   peer.NodeInfo(),
+			NodeInfo:   tendermint.NewNodeInfo(peer.NodeInfo()),
 			IsOutbound: peer.IsOutbound(),
 		}
 	}
@@ -355,11 +332,16 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	}, nil
 }
 
-func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error) {
-	res := &ResultLastBlockInfo{
-		LastBlockHeight: s.blockchain.LastBlockHeight(),
-		LastBlockHash:   s.blockchain.LastBlockHash(),
-		LastBlockTime:   s.blockchain.LastBlockTime(),
+func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockWithin string) (*ResultStatus, error) {
+	res := &ResultStatus{
+		ChainID:           blockchain.ChainID(),
+		NodeInfo:          nodeView.NodeInfo(),
+		NodeVersion:       project.History.CurrentVersion().String(),
+		GenesisHash:       blockchain.GenesisHash(),
+		PublicKey:         nodeView.ValidatorPublicKey(),
+		LatestBlockHash:   blockchain.LastBlockHash(),
+		LatestBlockHeight: blockchain.LastBlockHeight(),
+		LatestBlockTime:   blockchain.LastBlockTime(),
 	}
 	if blockWithin == "" {
 		return res, nil
@@ -368,12 +350,12 @@ func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error
 	if err != nil {
 		return nil, fmt.Errorf("could not parse blockWithin duration to determine whether to throw error: %v", err)
 	}
-	// Take neg abs in case caller is counting backwards (not we add later)
+	// Take neg abs in case caller is counting backwards (note we later add the time since we normalise the duration to negative)
 	if duration > 0 {
 		duration = -duration
 	}
 	blockTimeThreshold := time.Now().Add(duration)
-	if res.LastBlockTime.After(blockTimeThreshold) {
+	if res.LatestBlockTime.After(blockTimeThreshold) {
 		// We've created blocks recently enough
 		return res, nil
 	}
@@ -381,6 +363,6 @@ func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error
 	if err != nil {
 		resJSON = []byte("<error: could not marshal last block info>")
 	}
-	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), last block info: %s",
+	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), current status: %s",
 		blockWithin, blockTimeThreshold.Format(time.RFC3339), string(resJSON))
 }

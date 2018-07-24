@@ -197,7 +197,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			return nil, err
 		}
 		// Return execution for this tx
-		return txe, err
+		return txe, nil
 	}
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }

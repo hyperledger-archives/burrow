@@ -11,7 +11,7 @@ import (
 
 // Method names
 const (
-	// Status
+	// Status and healthcheck
 	Status  = "status"
 	NetInfo = "net_info"
 
@@ -44,16 +44,13 @@ const (
 	// Private keys and signing
 	GeneratePrivateAccount = "unsafe/gen_priv_account"
 	SignTx                 = "unsafe/sign_tx"
-
-	// Health check
-	LastBlockInfo = "last_block_info"
 )
 
 func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.RPCFunc {
 	logger = logger.WithScope("GetRoutes")
 	return map[string]*server.RPCFunc{
 		// Status
-		Status:  server.NewRPCFunc(service.Status, ""),
+		Status:  server.NewRPCFunc(service.Status, "block_within"),
 		NetInfo: server.NewRPCFunc(service.NetInfo, ""),
 
 		// Accounts
@@ -85,7 +82,6 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 
 		// Private account
 		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
-		LastBlockInfo:          server.NewRPCFunc(service.LastBlockInfo, "block_within"),
 	}
 }
 
