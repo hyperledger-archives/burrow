@@ -19,7 +19,7 @@ package tm
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -194,13 +194,21 @@ func TestListValidators(t *testing.T) {
 }
 
 func TestDumpConsensusState(t *testing.T) {
-	startTime := time.Now()
 	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
 		resp, err := tmclient.DumpConsensusState(client)
 		assert.NoError(t, err)
-		assert.NotZero(t, startTime)
-		assert.Equal(t, fmt.Sprintf("/0/%d", types.RoundStepNewHeight),
-			strings.TrimLeft(resp.RoundState.HeightRoundStep, "0123456789"))
+		hrs := strings.Split(resp.RoundState.HeightRoundStep, "/")
+		require.Len(t, hrs, 3)
+		// height
+		_, err = strconv.ParseUint(hrs[0], 10, 64)
+		require.NoError(t, err)
+		// round
+		_, err = strconv.ParseUint(hrs[1], 10, 64)
+		require.NoError(t, err)
+		step, err := strconv.ParseUint(hrs[2], 10, 8)
+		require.NoError(t, err)
+
+		assert.True(t, step <= uint64(types.RoundStepCommit), "round step should be of proper enum type")
 	})
 }
 

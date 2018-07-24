@@ -11,7 +11,7 @@ func TestSum(t *testing.T) {
 	one := New().Power(23223).Native(34).Native(1111)
 	two := New().Power(3).Native(22)
 	sum := one.Sum(two)
-	assert.Equal(t, New().Power(23226).Native(1167), sum)
+	assert.Equal(t, New().Power(23226).Native(1167).Sort(), sum)
 }
 
 func TestSort(t *testing.T) {

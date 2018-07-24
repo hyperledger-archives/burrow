@@ -1,6 +1,9 @@
 package balance
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 type Balances []Balance
 
@@ -10,6 +13,11 @@ func (b Balance) String() string {
 
 func New() Balances {
 	return []Balance{}
+}
+
+func (bs Balances) Sort() Balances {
+	sort.Stable(bs)
+	return bs
 }
 
 func (bs Balances) Len() int {
@@ -57,6 +65,7 @@ func Sum(bss ...Balances) Balances {
 	for k, v := range sumMap {
 		sum = sum.Add(k, v)
 	}
+	sort.Stable(sum)
 	return sum
 }
 
