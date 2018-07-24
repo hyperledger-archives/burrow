@@ -41,7 +41,7 @@ func TestAlterValidators(t *testing.T) {
 	alterPower(vs, 8, 9931)
 
 	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		_, err := govSync(t, tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
+		_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
 		require.NoError(t, err)
 		return
 	})
@@ -52,16 +52,17 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Remove validator from chain
-	txe, err := govSync(t, tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+	txe, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
 	// Mirror in our check set
 	alterPower(vs, 3, 0)
 	fmt.Println(txe.Events)
 	vsOut = getValidatorHistory(t, qcli)
 	assertValidatorsEqual(t, vs, vsOut)
 
+	// Now check Tendermint
 	waitNBlocks(t, ecli, 3)
-	height := int64(kernels[4].Blockchain.LastBlockHeight())
-	kernels[4].Node.ConfigureRPC()
+	height := int64(kernels[0].Blockchain.LastBlockHeight())
+	kernels[0].Node.ConfigureRPC()
 	tmVals, err := core.Validators(&height)
 	require.NoError(t, err)
 	vsOut = validator.NewTrimSet()
@@ -74,14 +75,36 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 }
 
+func TestAlterValidatorsTooQuickly(t *testing.T) {
+	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
+	inputAddress := privateAccounts[0].Address()
+	tcli := rpctest.NewTransactClient(t, grpcAddress)
+	qcli := rpctest.NewQueryClient(t, grpcAddress)
+
+	maxFlow := getMaxFlow(t, qcli)
+	acc1 := acm.GeneratePrivateAccountFromSecret("Foo1")
+	t.Logf("Changing power of new account %v to MaxFlow = %d that should succeed", acc1.Address(), maxFlow)
+
+	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, acc1, maxFlow))
+	require.NoError(t, err)
+
+	maxFlow = getMaxFlow(t, qcli)
+	power := maxFlow + 1
+	acc2 := acm.GeneratePrivateAccountFromSecret("Foo2")
+	t.Logf("Changing power of new account %v to MaxFlow + 1 = %d that should fail", acc2.Address(), power)
+
+	_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, acc2, power))
+	require.Error(t, err)
+}
+
 func TestNoRootPermission(t *testing.T) {
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	// Account does not have Root permission
 	inputAddress := privateAccounts[4].Address()
-	_, err := govSync(t, tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
+	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), errors.ErrorCodePermissionDenied.Error())
+	assert.Contains(t, err.Error(), errors.PermissionDenied{Address: inputAddress, Perm: permission.Root}.Error())
 }
 
 func TestAlterAmount(t *testing.T) {
@@ -91,7 +114,7 @@ func TestAlterAmount(t *testing.T) {
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
 	var amount uint64 = 18889
 	acc := account(5)
-	_, err := govSync(t, tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
+	_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 	require.NoError(t, err)
 	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
 	require.NoError(t, err)
@@ -104,7 +127,7 @@ func TestAlterPermissions(t *testing.T) {
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
 	acc := account(5)
-	_, err := govSync(t, tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
+	_, err := govSync(tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
 	require.NoError(t, err)
 	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
 	require.NoError(t, err)
@@ -123,11 +146,20 @@ func TestCreateAccount(t *testing.T) {
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
 	var amount uint64 = 18889
 	acc := acm.GeneratePrivateAccountFromSecret("we almost certainly don't exist")
-	_, err := govSync(t, tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
+	_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 	require.NoError(t, err)
 	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
 	require.NoError(t, err)
 	assert.Equal(t, amount, ca.Balance)
+}
+
+func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
+	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
+	require.NoError(t, err)
+	set := validator.UnpersistSet(vs.Set)
+	totalPower := set.TotalPower()
+	maxFlow := new(big.Int)
+	return maxFlow.Sub(maxFlow.Div(totalPower, big.NewInt(3)), big.NewInt(1)).Uint64()
 }
 
 func getValidatorHistory(t testing.TB, qcli rpcquery.QueryClient) *validator.Set {
@@ -144,7 +176,7 @@ func account(i int) *acm.PrivateAccount {
 	return rpctest.PrivateAccounts[i]
 }
 
-func govSync(t testing.TB, cli rpctransact.TransactClient, tx *payload.GovTx) (*exec.TxExecution, error) {
+func govSync(cli rpctransact.TransactClient, tx *payload.GovTx) (*exec.TxExecution, error) {
 	return cli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{
 		Payload: tx.Any(),
 	})
@@ -166,6 +198,7 @@ func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
 	})
 	defer stream.CloseSend()
 	for i := 0; i < n; i++ {
+		fmt.Println("block")
 		require.NoError(t, err)
 		_, err = stream.Recv()
 	}
