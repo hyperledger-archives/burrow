@@ -1,20 +1,18 @@
 package config
 
 import (
-	"fmt"
-
 	"context"
+	"fmt"
 
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/validator"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
-	logging_config "github.com/hyperledger/burrow/logging/config"
 	"github.com/hyperledger/burrow/logging/lifecycle"
+	logging_config "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc"
 )
 
@@ -40,6 +38,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 		Tendermint: tendermint.DefaultBurrowTendermintConfig(),
 		Keys:       keys.DefaultKeysConfig(),
 		RPC:        rpc.DefaultRPCConfig(),
+		Execution:  execution.DefaultExecutionConfig(),
 		Logging:    logging_config.DefaultNodeLoggingConfig(),
 	}
 }
@@ -75,7 +74,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if err != nil {
 		return nil, err
 	}
-	privValidator := validator.NewPrivValidatorMemory(val, signer)
+	privValidator := tendermint.NewPrivValidatorMemory(val, signer)
 
 	var exeOptions []execution.ExecutionOption
 	if conf.Execution != nil {
@@ -85,8 +84,8 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 		}
 	}
 
-	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC, conf.Keys,
-		keyStore, exeOptions, logger)
+	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
+		conf.Keys, keyStore, exeOptions, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

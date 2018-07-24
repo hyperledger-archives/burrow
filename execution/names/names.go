@@ -15,12 +15,15 @@
 package names
 
 import (
-	"github.com/hyperledger/burrow/crypto"
+	"fmt"
+
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/tendermint/go-amino"
 )
 
-var (
-	MinNameRegistrationPeriod uint64 = 5
+var MinNameRegistrationPeriod uint64 = 5
+
+const (
 
 	// NOTE: base costs and validity checks are here so clients
 	// can use them without importing state
@@ -34,23 +37,26 @@ var (
 	MaxDataLength = 1 << 16
 )
 
-// NameReg provides a global key value store based on Name, Data pairs that are subject to expiry and ownership by an
-// account.
-type Entry struct {
-	// registered name for the entry
-	Name string
-	// address that created the entry
-	Owner crypto.Address
-	// data to store under this name
-	Data string
-	// block at which this entry expires
-	Expires uint64
-}
-
 var cdc = amino.NewCodec()
 
 func (e *Entry) Encode() ([]byte, error) {
 	return cdc.MarshalBinary(e)
+}
+
+func (e *Entry) String() string {
+	return fmt.Sprintf("NameEntry{%v -> %v; Expires: %v, Owner: %v}", e.Name, e.Data, e.Expires, e.Owner)
+}
+
+type TaggedEntry struct {
+	*Entry
+	query.Tagged
+}
+
+func (e *Entry) Tagged() *TaggedEntry {
+	return &TaggedEntry{
+		Entry:  e,
+		Tagged: query.MustReflectTags(e),
+	}
 }
 
 func DecodeEntry(entryBytes []byte) (*Entry, error) {
@@ -63,14 +69,14 @@ func DecodeEntry(entryBytes []byte) (*Entry, error) {
 }
 
 type Reader interface {
-	GetNameEntry(name string) (*Entry, error)
+	GetName(name string) (*Entry, error)
 }
 
 type Writer interface {
 	// Updates the name entry creating it if it does not exist
-	UpdateNameEntry(entry *Entry) error
+	UpdateName(entry *Entry) error
 	// Remove the name entry
-	RemoveNameEntry(name string) error
+	RemoveName(name string) error
 }
 
 type ReaderWriter interface {
@@ -79,7 +85,7 @@ type ReaderWriter interface {
 }
 
 type Iterable interface {
-	IterateNameEntries(consumer func(*Entry) (stop bool)) (stopped bool, err error)
+	IterateNames(consumer func(*Entry) (stop bool)) (stopped bool, err error)
 }
 
 type IterableReader interface {
@@ -99,4 +105,8 @@ func NameBaseCost(name, data string) uint64 {
 
 func NameCostPerBlock(baseCost uint64) uint64 {
 	return NameBlockCostMultiplier * NameByteCostMultiplier * baseCost
+}
+
+func NameCostForExpiryIn(name, data string, expiresIn uint64) uint64 {
+	return NameCostPerBlock(NameBaseCost(name, data)) * expiresIn
 }

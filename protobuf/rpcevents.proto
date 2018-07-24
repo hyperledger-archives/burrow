@@ -1,0 +1,128 @@
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/rpc/rpcevents";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "exec.proto";
+
+package rpcevents;
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+//--------------------------------------------------
+// Execution events
+service ExecutionEvents {
+    // Get Blockexecution at particular height
+    rpc GetBlock (GetBlockRequest) returns (exec.BlockExecution);
+    // Get BlockExecutions for a range of blocks
+    rpc GetBlocks (BlocksRequest) returns (stream exec.BlockExecution);
+    // Get a particular TxExecution
+    rpc GetTx (GetTxRequest) returns (exec.TxExecution);
+    // Get TxExecutions for a range of block
+    rpc GetTxs (BlocksRequest) returns (stream GetTxsResponse);
+    // GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
+    // are guaranteed to be delivered in each GetEventsResponse
+    rpc GetEvents (BlocksRequest) returns (stream GetEventsResponse);
+}
+
+message GetBlockRequest {
+    // Height of block required
+    uint64 Height = 1;
+    // Whether to wait for the block to become available
+    bool Wait = 2;
+}
+
+message GetTxRequest {
+    // Height of block required
+    bytes TxHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    // Whether to wait for the block to become available
+    bool Wait = 2;
+}
+
+message BlocksRequest {
+    BlockRange BlockRange = 1;
+    // Specify a query on which to match the tags of events.
+    // Tag        | Match type | Values
+    // -----------------------------------------
+    //   All events
+    // -----------------------------------------
+    // TxType       | String     | "UnknownTx", "SendTx", "CallTx", "NameTx", "BondTx", "UnbondTx", "PermissionsTx", "GovernanceTx"
+    // TxHash       | String     | bytes
+    // EventType    | String     | "CallEvent", "LogEvent", "AccountInputEvent", "AccountOutputEvent"
+    // EventID      | String     | string
+    // Height       | Integer    | uint64
+    // Index        | Integer    | uint64
+    // MessageType  | String     | Go type name
+    // -----------------------------------------
+    //   Log event
+    // -----------------------------------------
+    // Address      | String     | Address (hex)
+    // Log<0-4>     | String     | Word256 (hex)
+    // Log<0-4>Text | String     | string (trimmed)
+    // -----------------------------------------
+    //   Call event
+    // -----------------------------------------
+    // Origin       | String     | Address (hex)
+    // Callee       | String     | Address (hex)
+    // Caller       | String     | Address (hex)
+    // Value        | Integer    | uint64
+    // Gas          | Integer    | uint64
+    // StackDepth   | Integer    | uint64
+    // Exception    | String     | string
+    // -----------------------------------------
+    //   Tx event (input/output)
+    // -----------------------------------------
+    // Exception  | String     | string
+    //
+    // For example:
+    // EventType = 'LogEvent' AND EventID CONTAINS 'bar' AND TxHash = '020304' AND Height >= 34 AND Index < 3 AND Address = 'DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF'
+    string Query = 2;
+}
+
+message GetEventsResponse {
+    uint64 Height = 1;
+    repeated exec.Event Events = 2;
+}
+
+message GetTxsResponse {
+    uint64 Height = 1;
+    repeated exec.TxExecution TxExecutions = 2;
+}
+
+message Bound {
+    BoundType Type = 1;
+    uint64 Index = 2;
+    enum BoundType {
+        // Index is absolute index of an item
+        ABSOLUTE = 0;
+        // Index is an offset relative to last item
+        RELATIVE = 1;
+        // The first block
+        FIRST = 2;
+        // Ignore provided index and evaluate to latest index
+        LATEST = 3;
+        // Ignore provided index and stream new objects as they are generated
+        STREAM = 4;
+    }
+}
+
+// An inclusive range of blocks to include in output
+message BlockRange {
+    // Bounds can be set to:
+    // absolute: block height
+    // relative: block height counting back from latest
+    // latest: latest block when call is processed
+    // stream: for End keep sending new blocks, for start same as latest
+    Bound Start = 1;
+    Bound End = 2;
+}
+

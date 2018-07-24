@@ -6,7 +6,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/blockchain"
-	"github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 type BlockExplorer struct {

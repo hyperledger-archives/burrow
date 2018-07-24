@@ -1,5 +1,7 @@
 package payload
 
+import "fmt"
+
 /*
 Payload (Transaction) is an atomic operation on the ledger state.
 
@@ -13,10 +15,10 @@ Validation Txs:
  - UnbondTx       Validator leaves
 
 Admin Txs:
- - PermissionsTx
+ - PermsTx
 */
 
-type Type int8
+type Type uint32
 
 // Types of Payload implementations
 const (
@@ -42,8 +44,8 @@ var nameFromType = map[Type]string{
 	TypeName:        "NameTx",
 	TypeBond:        "BondTx",
 	TypeUnbond:      "UnbondTx",
-	TypePermissions: "PermissionsTx",
-	TypeGovernance:  "GovernanceTx",
+	TypePermissions: "PermsTx",
+	TypeGovernance:  "GovTx",
 }
 
 var typeFromName = make(map[string]Type)
@@ -75,26 +77,63 @@ func (typ *Type) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// Protobuf support
+func (typ Type) Marshal() ([]byte, error) {
+	return typ.MarshalText()
+}
+
+func (typ *Type) Unmarshal(data []byte) error {
+	return typ.UnmarshalText(data)
+}
+
 type Payload interface {
 	String() string
 	GetInputs() []*TxInput
 	Type() Type
+	Any() *Any
+	// The serialised size in bytes
+	Size() int
 }
 
-func New(txType Type) Payload {
+type UnknownTx struct {
+}
+
+func (UnknownTx) String() string {
+	panic("implement me")
+}
+
+func (UnknownTx) GetInputs() []*TxInput {
+	panic("implement me")
+}
+
+func (UnknownTx) Type() Type {
+	panic("implement me")
+}
+
+func (UnknownTx) Any() *Any {
+	panic("implement me")
+}
+
+func (UnknownTx) Size() int {
+	panic("implement me")
+}
+
+func New(txType Type) (Payload, error) {
 	switch txType {
 	case TypeSend:
-		return &SendTx{}
+		return &SendTx{}, nil
 	case TypeCall:
-		return &CallTx{}
+		return &CallTx{}, nil
 	case TypeName:
-		return &NameTx{}
+		return &NameTx{}, nil
 	case TypeBond:
-		return &BondTx{}
+		return &BondTx{}, nil
 	case TypeUnbond:
-		return &UnbondTx{}
+		return &UnbondTx{}, nil
 	case TypePermissions:
-		return &PermissionsTx{}
+		return &PermsTx{}, nil
+	case TypeGovernance:
+		return &GovTx{}, nil
 	}
-	return nil
+	return nil, fmt.Errorf("unknown payload type: %d", txType)
 }

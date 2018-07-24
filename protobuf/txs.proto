@@ -1,0 +1,47 @@
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/txs";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "crypto.proto";
+
+package txs;
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+// An envelope contains both the signable Tx and the signatures for each input (in signatories)
+message Envelope {
+    option (gogoproto.goproto_stringer) = false;
+    repeated Signatory Signatories = 1 [(gogoproto.nullable) = false];
+    // Canonical bytes of the Tx ready to be signed
+    bytes Tx = 2 [(gogoproto.customtype) = "Tx"];
+}
+
+// Signatory contains signature and one or both of Address and PublicKey to identify the signer
+message Signatory {
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    crypto.PublicKey PublicKey = 2;
+    bytes Signature = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Signature", (gogoproto.nullable) = false];
+}
+
+// BroadcastTx or Transaction receipt
+message Receipt {
+    // Transaction type
+    uint32 TxType = 1[(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
+    // The hash of the transaction that caused this event to be generated
+    bytes TxHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    // Whether the transaction creates a contract
+    bool CreatesContract = 3;
+    // The address of the contract being called
+    bytes ContractAddress = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+}

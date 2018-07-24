@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 )
 
 type PermissionDenied struct {
-	Perm types.PermFlag
+	Address crypto.Address
+	Perm    permission.PermFlag
 }
 
 func (err PermissionDenied) ErrorCode() Code {
@@ -17,7 +18,7 @@ func (err PermissionDenied) ErrorCode() Code {
 }
 
 func (err PermissionDenied) Error() string {
-	return fmt.Sprintf("Contract does not have permission to %v", err.Perm)
+	return fmt.Sprintf("Account/contract %v does not have permission %v", err.Address, err.Perm)
 }
 
 type NestedCall struct {

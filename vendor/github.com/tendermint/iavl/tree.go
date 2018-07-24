@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
-	"github.com/pkg/errors"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 // Tree is a container for an immutable AVL+ Tree. Changes are performed by
@@ -143,39 +141,6 @@ func (t *Tree) GetByIndex64(index int64) (key []byte, value []byte) {
 	return t.root.getByIndex(t, index)
 }
 
-// GetWithProof gets the value under the key if it exists, or returns nil.
-// A proof of existence or absence is returned alongside the value.
-func (t *Tree) GetWithProof(key []byte) ([]byte, KeyProof, error) {
-	value, eproof, err := t.getWithProof(key)
-	if err == nil {
-		return value, eproof, nil
-	}
-
-	aproof, err := t.keyAbsentProof(key)
-	if err == nil {
-		return nil, aproof, nil
-	}
-	return nil, nil, errors.Wrap(err, "could not construct any proof")
-}
-
-// GetRangeWithProof gets key/value pairs within the specified range and limit. To specify a descending
-// range, swap the start and end keys.
-//
-// Returns a list of keys, a list of values and a proof.
-func (t *Tree) GetRangeWithProof(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, *KeyRangeProof, error) {
-	return t.getRangeWithProof(startKey, endKey, limit)
-}
-
-// GetFirstInRangeWithProof gets the first key/value pair in the specified range, with a proof.
-func (t *Tree) GetFirstInRangeWithProof(startKey, endKey []byte) ([]byte, []byte, *KeyFirstInRangeProof, error) {
-	return t.getFirstInRangeWithProof(startKey, endKey)
-}
-
-// GetLastInRangeWithProof gets the last key/value pair in the specified range, with a proof.
-func (t *Tree) GetLastInRangeWithProof(startKey, endKey []byte) ([]byte, []byte, *KeyLastInRangeProof, error) {
-	return t.getLastInRangeWithProof(startKey, endKey)
-}
-
 // Remove tries to remove a key from the tree and if removed, returns its
 // value, and 'true'.
 func (t *Tree) Remove(key []byte) ([]byte, bool) {
@@ -210,9 +175,8 @@ func (t *Tree) Iterate(fn func(key []byte, value []byte) bool) (stopped bool) {
 	return t.root.traverse(t, true, func(node *Node) bool {
 		if node.height == 0 {
 			return fn(node.key, node.value)
-		} else {
-			return false
 		}
+		return false
 	})
 }
 
@@ -225,9 +189,8 @@ func (t *Tree) IterateRange(start, end []byte, ascending bool, fn func(key []byt
 	return t.root.traverseInRange(t, start, end, ascending, false, 0, func(node *Node, _ uint8) bool {
 		if node.height == 0 {
 			return fn(node.key, node.value)
-		} else {
-			return false
 		}
+		return false
 	})
 }
 
@@ -240,19 +203,18 @@ func (t *Tree) IterateRangeInclusive(start, end []byte, ascending bool, fn func(
 	return t.root.traverseInRange(t, start, end, ascending, true, 0, func(node *Node, _ uint8) bool {
 		if node.height == 0 {
 			return fn(node.key, node.value, node.version)
-		} else {
-			return false
 		}
+		return false
 	})
 }
 
 // Clone creates a clone of the tree.
 // Used internally by VersionedTree.
-func (tree *Tree) clone() *Tree {
+func (t *Tree) clone() *Tree {
 	return &Tree{
-		root:    tree.root,
-		ndb:     tree.ndb,
-		version: tree.version,
+		root:    t.root,
+		ndb:     t.ndb,
+		version: t.version,
 	}
 }
 

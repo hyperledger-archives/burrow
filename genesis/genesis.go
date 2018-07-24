@@ -21,10 +21,10 @@ import (
 	"sort"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 // How many bytes to take from the front of the GenesisDoc hash to append
@@ -45,12 +45,12 @@ type BasicAccount struct {
 type Account struct {
 	BasicAccount
 	Name        string
-	Permissions ptypes.AccountPermissions
+	Permissions permission.AccountPermissions
 }
 
 type Validator struct {
 	BasicAccount
-	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty"`
+	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty" yaml:",omitempty"`
 	Name        string
 	UnbondTo    []BasicAccount
 }
@@ -62,15 +62,23 @@ type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
 	Salt              []byte `json:",omitempty" toml:",omitempty"`
-	GlobalPermissions ptypes.AccountPermissions
+	GlobalPermissions permission.AccountPermissions
 	Accounts          []Account
 	Validators        []Validator
 }
 
-// JSONBytes returns the JSON (not-yet) canonical bytes for a given
-// GenesisDoc or an error.
+func (genesisDoc *GenesisDoc) JSONString() string {
+	bs, err := genesisDoc.JSONBytes()
+	if err != nil {
+		return fmt.Sprintf("error marshalling GenesisDoc: %v", err)
+	}
+	return string(bs)
+}
+
+// JSONBytes returns the JSON canonical bytes for a given GenesisDoc or an error.
 func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
-	// TODO: write JSON in canonical order
+	// Just in case
+	genesisDoc.GenesisTime = genesisDoc.GenesisTime.UTC()
 	return json.MarshalIndent(genesisDoc, "", "\t")
 }
 
@@ -134,12 +142,13 @@ func (genesisAccount *Account) Clone() Account {
 //------------------------------------------------------------
 // Validator methods
 
-func (gv *Validator) Validator() acm.Validator {
-	return acm.ConcreteValidator{
-		Address:   gv.PublicKey.Address(),
+func (gv *Validator) Validator() validator.Validator {
+	address := gv.PublicKey.Address()
+	return validator.Validator{
+		Address:   &address,
 		PublicKey: gv.PublicKey,
 		Power:     uint64(gv.Amount),
-	}.Validator()
+	}
 }
 
 // Clone clones the genesis validator
@@ -176,7 +185,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
 func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
-	validators map[string]acm.Validator) *GenesisDoc {
+	validators map[string]validator.Validator) *GenesisDoc {
 
 	// Establish deterministic order of accounts by name so we obtain identical GenesisDoc
 	// from identical input
@@ -203,15 +212,15 @@ func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.
 		genesisValidators = append(genesisValidators, Validator{
 			Name: name,
 			BasicAccount: BasicAccount{
-				Address:   val.Address(),
-				PublicKey: val.PublicKey(),
-				Amount:    val.Power(),
+				Address:   *val.Address,
+				PublicKey: val.PublicKey,
+				Amount:    val.Power,
 			},
 			// Simpler to just do this by convention
 			UnbondTo: []BasicAccount{
 				{
-					Amount:  val.Power(),
-					Address: val.Address(),
+					Amount:  val.Power,
+					Address: *val.Address,
 				},
 			},
 		})

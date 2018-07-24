@@ -1,53 +1,84 @@
 package query
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
-	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/pubsub"
 )
 
-func TestQueryBuilder(t *testing.T) {
-	qb := NewBuilder()
-	qry, err := qb.Query()
-	require.NoError(t, err)
-	assert.Equal(t, emptyString, qry.String())
+func TestMatches(t *testing.T) {
+	var (
+		txDate = "2017-01-01"
+		txTime = "2018-05-03T14:45:00Z"
+	)
 
-	qb = qb.AndGreaterThanOrEqual("foo.size", 45)
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.Equal(t, "foo.size >= 45", qry.String())
+	testCases := []struct {
+		s       string
+		tags    map[string]interface{}
+		err     bool
+		matches bool
+	}{
+		{"tm.events.type='NewBlock'", map[string]interface{}{"tm.events.type": "NewBlock"}, false, true},
 
-	qb = qb.AndEquals("bar.name", "marmot")
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.Equal(t, "foo.size >= 45 AND bar.name = 'marmot'", qry.String())
+		{"tx.gas > 7", map[string]interface{}{"tx.gas": "8"}, false, true},
+		{"tx.gas > 7 AND tx.gas < 9", map[string]interface{}{"tx.gas": "8"}, false, true},
+		{"body.weight >= 3.5", map[string]interface{}{"body.weight": "3.5"}, false, true},
+		{"account.balance < 1000.0", map[string]interface{}{"account.balance": "900"}, false, true},
+		{"apples.kg <= 4", map[string]interface{}{"apples.kg": "4.0"}, false, true},
+		{"body.weight >= 4.5", map[string]interface{}{"body.weight": fmt.Sprintf("%v", float32(4.5))}, false, true},
+		{"oranges.kg < 4 AND watermellons.kg > 10", map[string]interface{}{"oranges.kg": "3", "watermellons.kg": "12"}, false, true},
+		{"peaches.kg < 4", map[string]interface{}{"peaches.kg": "5"}, false, false},
 
-	assert.True(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot")))
-	assert.False(t, qry.Matches(makeTagMap("foo.size", 8, "bar.name", "marmot")))
-	assert.False(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marot")))
+		{"tx.date > DATE 2017-01-01", map[string]interface{}{"tx.date": time.Now().Format(DateLayout)}, false, true},
+		{"tx.date = DATE 2017-01-01", map[string]interface{}{"tx.date": txDate}, false, true},
+		{"tx.date = DATE 2018-01-01", map[string]interface{}{"tx.date": txDate}, false, false},
 
-	qb = qb.AndContains("bar.desc", "burrow")
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.Equal(t, "foo.size >= 45 AND bar.name = 'marmot' AND bar.desc CONTAINS 'burrow'", qry.String())
+		{"tx.time >= TIME 2013-05-03T14:45:00Z", map[string]interface{}{"tx.time": time.Now().Format(TimeLayout)}, false, true},
+		{"tx.time = TIME 2013-05-03T14:45:00Z", map[string]interface{}{"tx.time": txTime}, false, false},
 
-	assert.True(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a burrow")))
-	assert.False(t, qry.Matches(makeTagMap("foo.size", 80, "bar.name", "marmot", "bar.desc", "lives in a shoe")))
+		{"abci.owner.name CONTAINS 'Igor'", map[string]interface{}{"abci.owner.name": "Igor,Ivan"}, false, true},
+		{"abci.owner.name CONTAINS 'Igor'", map[string]interface{}{"abci.owner.name": "Pavel,Ivan"}, false, false},
+	}
 
-	qb = NewBuilder().AndEquals("foo", "bar")
-	qb = qb.And(NewBuilder().AndGreaterThanOrEqual("frogs", 4))
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.Equal(t, "foo = 'bar' AND frogs >= 4", qry.String())
+	for _, tc := range testCases {
+		q, err := New(tc.s)
+		if !tc.err {
+			require.Nil(t, err)
+		}
+
+		if tc.matches {
+			assert.True(t, q.Matches(TagMap(tc.tags)), "Query '%s' should match %v", tc.s, tc.tags)
+		} else {
+			assert.False(t, q.Matches(TagMap(tc.tags)), "Query '%s' should not match %v", tc.s, tc.tags)
+		}
+	}
 }
 
-func makeTagMap(keyvals ...interface{}) pubsub.TagMap {
-	tmap := make(map[string]string)
-	for i := 0; i < len(keyvals); i += 2 {
-		tmap[keyvals[i].(string)] = structure.StringifyKey(keyvals[i+1])
+func TestMustParse(t *testing.T) {
+	assert.Panics(t, func() { MustParse("=") })
+	assert.NotPanics(t, func() { MustParse("tm.events.type='NewBlock'") })
+}
+
+func TestConditions(t *testing.T) {
+	txTime, err := time.Parse(time.RFC3339, "2013-05-03T14:45:00Z")
+	require.NoError(t, err)
+
+	testCases := []struct {
+		s          string
+		conditions []Condition
+	}{
+		{s: "tm.events.type='NewBlock'", conditions: []Condition{{Tag: "tm.events.type", Op: OpEqual, Operand: "NewBlock"}}},
+		{s: "tx.gas > 7 AND tx.gas < 9", conditions: []Condition{{Tag: "tx.gas", Op: OpGreater, Operand: int64(7)}, {Tag: "tx.gas", Op: OpLess, Operand: int64(9)}}},
+		{s: "tx.time >= TIME 2013-05-03T14:45:00Z", conditions: []Condition{{Tag: "tx.time", Op: OpGreaterEqual, Operand: txTime}}},
 	}
-	return pubsub.NewTagMap(tmap)
+
+	for _, tc := range testCases {
+		q, err := New(tc.s)
+		require.Nil(t, err)
+
+		assert.Equal(t, tc.conditions, q.Conditions())
+	}
 }

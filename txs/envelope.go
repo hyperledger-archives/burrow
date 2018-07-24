@@ -3,9 +3,10 @@ package txs
 import (
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
@@ -22,12 +23,6 @@ type Decoder interface {
 	DecodeTx(txBytes []byte) (*Envelope, error)
 }
 
-// An envelope contains both the signable Tx and the signatures for each input (in signatories)
-type Envelope struct {
-	Signatories []Signatory
-	Tx          *Tx
-}
-
 // Enclose a Payload in an Envelope so it is ready to be signed by first wrapping the Payload
 // as a Tx (including ChainID) and writing it to the Tx field of the Envelope
 func Enclose(chainID string, payload payload.Payload) *Envelope {
@@ -38,13 +33,6 @@ func Enclose(chainID string, payload payload.Payload) *Envelope {
 
 func (txEnv *Envelope) String() string {
 	return fmt.Sprintf("TxEnvelope{Signatures: %v, Tx: %s}", len(txEnv.Signatories), txEnv.Tx)
-}
-
-// Signatory contains signature and one or both of Address and PublicKey to identify the signer
-type Signatory struct {
-	Address   *crypto.Address
-	PublicKey *crypto.PublicKey
-	crypto.Signature
 }
 
 // Attempts to 'realise' the PublicKey and Address of a Signatory possibly referring to state
@@ -89,12 +77,16 @@ func (txEnv *Envelope) Validate() error {
 
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
-func (txEnv *Envelope) Verify(getter state.AccountGetter) error {
+func (txEnv *Envelope) Verify(getter state.AccountGetter, chainID string) error {
 	err := txEnv.Validate()
 	if err != nil {
 		return err
 	}
 	errPrefix := fmt.Sprintf("could not verify transaction %X", txEnv.Tx.Hash())
+	if txEnv.Tx.ChainID != chainID {
+		return fmt.Errorf("%s: ChainID in envelope is %s but receiving chain has ID %s",
+			errPrefix, txEnv.Tx.ChainID, chainID)
+	}
 	inputs := txEnv.Tx.GetInputs()
 	if len(inputs) != len(txEnv.Signatories) {
 		return fmt.Errorf("%s: number of inputs (= %v) should equal number of signatories (= %v)",
@@ -149,4 +141,8 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 		})
 	}
 	return nil
+}
+
+func (txEnv *Envelope) Tagged() query.Tagged {
+	return query.MergeTags(query.MustReflectTags(txEnv, "Signatories"), txEnv.Tx.Tagged())
 }

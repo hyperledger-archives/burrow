@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type CurveType int8
+type CurveType uint32
 
 const (
 	CurveTypeSecp256k1 CurveType = iota
@@ -12,6 +12,16 @@ const (
 )
 
 func (k CurveType) String() string {
+	switch k {
+	case CurveTypeSecp256k1:
+		return "secp256k1"
+	case CurveTypeEd25519:
+		return "ed25519"
+	default:
+		return "unknown"
+	}
+}
+func (k CurveType) ABCIType() string {
 	switch k {
 	case CurveTypeSecp256k1:
 		return "secp256k1"

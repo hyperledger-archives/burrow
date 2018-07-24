@@ -3,7 +3,8 @@ package spec
 import (
 	"sort"
 
-	permission "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/acm/balance"
+	"github.com/hyperledger/burrow/permission"
 )
 
 // Files here can be used as starting points for building various 'chain types' but are otherwise
@@ -16,8 +17,7 @@ func FullAccount(name string) GenesisSpec {
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
 			Name:        name,
-			Amount:      &amount,
-			Power:       &Power,
+			Amounts:     balance.New().Native(amount).Power(Power),
 			Permissions: []string{permission.AllString},
 		},
 		},
@@ -30,7 +30,7 @@ func RootAccount(name string) GenesisSpec {
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
 			Name:        name,
-			Amount:      &amount,
+			Amounts:     balance.New().Native(amount),
 			Permissions: []string{permission.AllString},
 		},
 		},
@@ -42,8 +42,8 @@ func ParticipantAccount(name string) GenesisSpec {
 	amount := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:   name,
-			Amount: &amount,
+			Name:    name,
+			Amounts: balance.New().Native(amount),
 			Permissions: []string{permission.SendString, permission.CallString, permission.NameString,
 				permission.HasRoleString},
 		}},
@@ -55,8 +55,8 @@ func DeveloperAccount(name string) GenesisSpec {
 	amount := uint64(9999999999)
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Name:   name,
-			Amount: &amount,
+			Name:    name,
+			Amounts: balance.New().Native(amount),
 			Permissions: []string{permission.SendString, permission.CallString, permission.CreateContractString,
 				permission.CreateAccountString, permission.NameString, permission.HasRoleString,
 				permission.RemoveRoleString},
@@ -71,8 +71,7 @@ func ValidatorAccount(name string) GenesisSpec {
 	return GenesisSpec{
 		Accounts: []TemplateAccount{{
 			Name:        name,
-			Amount:      &amount,
-			Power:       &Power,
+			Amounts:     balance.New().Native(amount).Power(Power),
 			Permissions: []string{permission.BondString},
 		}},
 	}
@@ -146,8 +145,7 @@ func mergeAccount(base, override TemplateAccount) TemplateAccount {
 		base.Name = override.Name
 	}
 
-	base.Amount = addUint64Pointers(base.Amount, override.Amount)
-	base.Power = addUint64Pointers(base.Power, override.Power)
+	base.Amounts = base.Balances().Sum(override.Balances())
 
 	base.Permissions = mergeStrings(base.Permissions, override.Permissions)
 	base.Roles = mergeStrings(base.Roles, override.Roles)

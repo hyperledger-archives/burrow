@@ -3,15 +3,9 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 )
-
-type BondTx struct {
-	// At least one should have bond permission (even if 0 amount transfer)
-	Inputs   []*TxInput
-	UnbondTo []*TxOutput
-}
 
 func NewBondTx(pubkey crypto.PublicKey) (*BondTx, error) {
 	return &BondTx{
@@ -59,4 +53,10 @@ func (tx *BondTx) AddOutput(addr crypto.Address, amt uint64) error {
 		Amount:  amt,
 	})
 	return nil
+}
+
+func (tx *BondTx) Any() *Any {
+	return &Any{
+		BondTx: tx,
+	}
 }

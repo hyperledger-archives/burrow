@@ -3,9 +3,10 @@ package spec
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys/mock"
-	permission "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +18,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	amtBonded := uint64(100)
 	genesisSpec := GenesisSpec{
 		Accounts: []TemplateAccount{{
-			Power: &amtBonded,
+			Amounts: balance.New().Power(amtBonded),
 		}},
 	}
 
@@ -46,7 +47,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 				Address: &address,
 			},
 			{
-				Amount:      &amt,
+				Amounts:     balance.New().Native(amt),
 				Permissions: []string{permission.CreateAccountString, permission.CallString},
 			}},
 	}

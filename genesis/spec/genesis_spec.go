@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
-	ptypes "github.com/hyperledger/burrow/permission/types"
 )
 
 const DefaultAmount uint64 = 1000000
@@ -62,27 +62,26 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys boo
 		if err != nil {
 			return nil, err
 		}
-		genesisDoc.GlobalPermissions = ptypes.AccountPermissions{
+		genesisDoc.GlobalPermissions = permission.AccountPermissions{
 			Base: basePerms,
 		}
 	}
 
 	templateAccounts := gs.Accounts
 	if len(gs.Accounts) == 0 {
-		Power := DefaultPower
 		templateAccounts = append(templateAccounts, TemplateAccount{
-			Power: &Power,
+			Amounts: balance.New().Power(DefaultPower),
 		})
 	}
 
 	for i, templateAccount := range templateAccounts {
-		account, err := templateAccount.Account(keyClient, i)
+		account, err := templateAccount.GenesisAccount(keyClient, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not create Account from template: %v", err)
 		}
 		genesisDoc.Accounts = append(genesisDoc.Accounts, *account)
-		// Create a corresponding validator
-		if templateAccount.Power != nil {
+
+		if templateAccount.Balances().HasPower() {
 			// Note this does not modify the input template
 			templateAccount.Address = &account.Address
 			validator, err := templateAccount.Validator(keyClient, i, generateNodeKeys)

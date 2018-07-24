@@ -20,15 +20,14 @@ import (
 
 	"strings"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
-	permission "github.com/hyperledger/burrow/permission/types"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -128,13 +127,13 @@ func funcIDFromHex(t *testing.T, hexString string) abi.FunctionSelector {
 	return abi.FirstFourBytes(bs)
 }
 
-func permFlagToWord256(permFlag ptypes.PermFlag) Word256 {
+func permFlagToWord256(permFlag permission.PermFlag) Word256 {
 	return Uint64ToWord256(uint64(permFlag))
 }
 
-func allAccountPermissions() ptypes.AccountPermissions {
-	return ptypes.AccountPermissions{
-		Base: ptypes.BasePermissions{
+func allAccountPermissions() permission.AccountPermissions {
+	return permission.AccountPermissions{
+		Base: permission.BasePermissions{
 			Perms:  permission.AllPermFlags,
 			SetBit: permission.AllPermFlags,
 		},

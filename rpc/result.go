@@ -15,23 +15,16 @@
 package rpc
 
 import (
-	"encoding/json"
-	"fmt"
-
-	"time"
-
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/events"
-	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-amino"
 	consensusTypes "github.com/tendermint/tendermint/consensus/types"
-	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
@@ -50,25 +43,12 @@ type ResultGetStorage struct {
 	Value binary.HexBytes
 }
 
-type ResultCall struct {
-	execution.Call
-}
-
-func (rc ResultCall) MarshalJSON() ([]byte, error) {
-	return json.Marshal(rc.Call)
-}
-
-func (rc *ResultCall) UnmarshalJSON(data []byte) (err error) {
-	return json.Unmarshal(data, &rc.Call)
-}
-
 type ResultListAccounts struct {
 	BlockHeight uint64
 	Accounts    []*acm.ConcreteAccount
 }
 
 type ResultDumpStorage struct {
-	StorageRoot  binary.HexBytes
 	StorageItems []StorageItem
 }
 
@@ -112,22 +92,6 @@ func (b *Block) UnmarshalJSON(data []byte) (err error) {
 	return aminoCodec.UnmarshalJSON(data, &b.Block)
 }
 
-type ResultStatus struct {
-	NodeInfo          p2p.NodeInfo
-	GenesisHash       binary.HexBytes
-	PubKey            crypto.PublicKey
-	LatestBlockHash   binary.HexBytes
-	LatestBlockHeight uint64
-	LatestBlockTime   int64
-	NodeVersion       string
-}
-
-type ResultLastBlockInfo struct {
-	LastBlockHeight uint64
-	LastBlockTime   time.Time
-	LastBlockHash   binary.HexBytes
-}
-
 type ResultChainId struct {
 	ChainName   string
 	ChainId     string
@@ -144,11 +108,12 @@ type ResultUnsubscribe struct {
 }
 
 type Peer struct {
-	NodeInfo   p2p.NodeInfo
+	NodeInfo   *tendermint.NodeInfo
 	IsOutbound bool
 }
 
 type ResultNetInfo struct {
+	ThisNode  *tendermint.NodeInfo
 	Listening bool
 	Listeners []string
 	Peers     []*Peer
@@ -156,8 +121,8 @@ type ResultNetInfo struct {
 
 type ResultListValidators struct {
 	BlockHeight         uint64
-	BondedValidators    []*acm.ConcreteValidator
-	UnbondingValidators []*acm.ConcreteValidator
+	BondedValidators    []*validator.Validator
+	UnbondingValidators []*validator.Validator
 }
 
 type ResultDumpConsensusState struct {
@@ -188,25 +153,12 @@ type AccountHumanReadable struct {
 	Sequence    uint64
 	Balance     uint64
 	Code        []string
-	StorageRoot string
 	Permissions []string
 	Roles       []string
 }
 
 type ResultGetAccountHumanReadable struct {
 	Account *AccountHumanReadable
-}
-
-type ResultBroadcastTx struct {
-	txs.Receipt
-}
-
-func (rbt ResultBroadcastTx) MarshalJSON() ([]byte, error) {
-	return json.Marshal(rbt.Receipt)
-}
-
-func (rbt ResultBroadcastTx) UnmarshalJSON(data []byte) (err error) {
-	return json.Unmarshal(data, &rbt.Receipt)
 }
 
 type ResultListUnconfirmedTxs struct {
@@ -224,68 +176,4 @@ type ResultGenesis struct {
 
 type ResultSignTx struct {
 	Tx *txs.Envelope
-}
-
-type TendermintEvent struct {
-	tmTypes.TMEventData
-}
-
-func (te TendermintEvent) MarshalJSON() ([]byte, error) {
-	return aminoCodec.MarshalJSON(te.TMEventData)
-}
-
-func (te *TendermintEvent) UnmarshalJSON(data []byte) (err error) {
-	return aminoCodec.UnmarshalJSON(data, &te.TMEventData)
-}
-
-func (te *TendermintEvent) EventDataNewBlock() *tmTypes.EventDataNewBlock {
-	if te != nil {
-		eventData, _ := te.TMEventData.(tmTypes.EventDataNewBlock)
-		return &eventData
-	}
-	return nil
-}
-
-type ResultEvent struct {
-	Event      string
-	Tendermint *TendermintEvent `json:",omitempty"`
-	Execution  *events.Event    `json:",omitempty"`
-}
-
-// Map any supported event data element to our ResultEvent sum type
-func NewResultEvent(event string, eventData interface{}) (*ResultEvent, error) {
-	res := &ResultEvent{
-		Event: event,
-	}
-	switch ed := eventData.(type) {
-	case tmTypes.TMEventData:
-		res.Tendermint = &TendermintEvent{ed}
-	case *events.Event:
-		res.Execution = ed
-	default:
-		return nil, fmt.Errorf("could not map event data of type %T to ResultEvent", eventData)
-	}
-	return res, nil
-}
-
-func (re *ResultEvent) GetEvent() (*pbevents.Event, error) {
-	ev := &pbevents.Event{
-		Name: re.Event,
-	}
-	if re.Tendermint != nil {
-		bs, err := json.Marshal(re.Tendermint)
-		if err != nil {
-			return nil, err
-		}
-		ev.Event = &pbevents.Event_TendermintEventJSON{
-			TendermintEventJSON: string(bs),
-		}
-	} else if re.Execution != nil {
-		ev.Event = &pbevents.Event_ExecutionEvent{
-			ExecutionEvent: pbevents.GetExecutionEvent(re.Execution),
-		}
-	} else {
-		return nil, fmt.Errorf("ResultEvent is empty")
-	}
-	return ev, nil
 }

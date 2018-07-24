@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"fmt"
-
 	"runtime/debug"
 
 	"github.com/hyperledger/burrow/logging"
@@ -25,7 +24,7 @@ func unaryInterceptor(logger *logging.Logger) grpc.UnaryServerInterceptor {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.InfoMsg("panic in GRPC unary call", structure.ErrorKey, fmt.Sprintf("%v", r))
-				err = fmt.Errorf("panic in GRPC unary call %s: %v", info.FullMethod, r)
+				err = fmt.Errorf("panic in GRPC unary call %s: %v: %s", info.FullMethod, r, debug.Stack())
 			}
 		}()
 		logger.TraceMsg("GRPC unary call")

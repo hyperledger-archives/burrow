@@ -3,20 +3,9 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/account/state"
-	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 )
-
-type CallTx struct {
-	Input *TxInput
-	// Pointer since CallTx defines unset 'to' address as inducing account creation
-	Address  *crypto.Address
-	GasLimit uint64
-	Fee      uint64
-	// Signing normalisation needs omitempty
-	Data binary.HexBytes `json:",omitempty"`
-}
 
 func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
@@ -59,5 +48,20 @@ func (tx *CallTx) GetInputs() []*TxInput {
 }
 
 func (tx *CallTx) String() string {
-	return fmt.Sprintf("CallTx{%v -> %s: %X}", tx.Input, tx.Address, tx.Data)
+	return fmt.Sprintf("CallTx{%v -> %s: %v}", tx.Input, tx.Address, tx.Data)
+}
+
+// Returns the contract address that this CallTx would create if CallTx.Address == nil otherwise returns nil
+func (tx *CallTx) CreatesContractAddress() *crypto.Address {
+	if tx.Address != nil {
+		return nil
+	}
+	address := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	return &address
+}
+
+func (tx *CallTx) Any() *Any {
+	return &Any{
+		CallTx: tx,
+	}
 }

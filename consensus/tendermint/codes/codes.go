@@ -1,7 +1,7 @@
 package codes
 
 import (
-	abci_types "github.com/tendermint/abci/types"
+	abci_types "github.com/tendermint/tendermint/abci/types"
 )
 
 const (

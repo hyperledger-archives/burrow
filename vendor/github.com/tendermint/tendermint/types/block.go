@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/merkle"
-	"golang.org/x/crypto/ripemd160"
+	"github.com/tendermint/tendermint/crypto/merkle"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 // Block defines the atomic unit of a Tendermint blockchain.
@@ -107,6 +107,7 @@ func (b *Block) Hash() cmn.HexBytes {
 
 // MakePartSet returns a PartSet containing parts of a serialized block.
 // This is the form in which the block is gossipped to peers.
+// CONTRACT: partSize is greater than zero.
 func (b *Block) MakePartSet(partSize int) *PartSet {
 	if b == nil {
 		return nil
@@ -133,6 +134,15 @@ func (b *Block) HashesTo(hash []byte) bool {
 		return false
 	}
 	return bytes.Equal(b.Hash(), hash)
+}
+
+// Size returns size of the block in bytes.
+func (b *Block) Size() int {
+	bz, err := cdc.MarshalBinaryBare(b)
+	if err != nil {
+		return 0
+	}
+	return len(bz)
 }
 
 // String returns a string representation of the block
@@ -199,7 +209,7 @@ type Header struct {
 // Hash returns the hash of the header.
 // Returns nil if ValidatorHash is missing,
 // since a Header is not valid unless there is
-// a ValidaotrsHash (corresponding to the validator set).
+// a ValidatorsHash (corresponding to the validator set).
 func (h *Header) Hash() cmn.HexBytes {
 	if h == nil || len(h.ValidatorsHash) == 0 {
 		return nil
@@ -383,6 +393,9 @@ func (commit *Commit) ValidateBasic() error {
 
 // Hash returns the hash of the commit
 func (commit *Commit) Hash() cmn.HexBytes {
+	if commit == nil {
+		return nil
+	}
 	if commit.hash == nil {
 		bs := make([]merkle.Hasher, len(commit.Precommits))
 		for i, precommit := range commit.Precommits {
@@ -455,7 +468,7 @@ func (data *Data) StringIndented(indent string) string {
 			txStrings[i] = fmt.Sprintf("... (%v total)", len(data.Txs))
 			break
 		}
-		txStrings[i] = fmt.Sprintf("Tx:%v", tx)
+		txStrings[i] = fmt.Sprintf("%X (%d bytes)", tx.Hash(), len(tx))
 	}
 	return fmt.Sprintf(`Data{
 %s  %v
@@ -495,7 +508,7 @@ func (data *EvidenceData) StringIndented(indent string) string {
 		}
 		evStrings[i] = fmt.Sprintf("Evidence:%v", ev)
 	}
-	return fmt.Sprintf(`Data{
+	return fmt.Sprintf(`EvidenceData{
 %s  %v
 %s}#%v`,
 		indent, strings.Join(evStrings, "\n"+indent+"  "),
@@ -543,7 +556,7 @@ type hasher struct {
 }
 
 func (h hasher) Hash() []byte {
-	hasher := ripemd160.New()
+	hasher := tmhash.New()
 	if h.item != nil && !cmn.IsTypedNil(h.item) && !cmn.IsEmpty(h.item) {
 		bz, err := cdc.MarshalBinaryBare(h.item)
 		if err != nil {

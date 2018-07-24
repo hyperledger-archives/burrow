@@ -19,10 +19,12 @@ import (
 	"runtime/debug"
 	"testing"
 
-	acm "github.com/hyperledger/burrow/account"
+	"fmt"
+
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/permission/snatives"
-	ptypes "github.com/hyperledger/burrow/permission/types"
+	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,13 +34,13 @@ var chainID = "myChainID"
 
 var privateAccounts = make(map[crypto.Address]acm.AddressableSigner)
 
-func makePrivateAccount(str string) acm.PrivateAccount {
+func makePrivateAccount(str string) *acm.PrivateAccount {
 	acc := acm.GeneratePrivateAccountFromSecret(str)
 	privateAccounts[acc.Address()] = acc
 	return acc
 }
 
-func TestSendTxSignable(t *testing.T) {
+func TestSendTx(t *testing.T) {
 	sendTx := &payload.SendTx{
 		Inputs: []*payload.TxInput{
 			{
@@ -65,6 +67,16 @@ func TestSendTxSignable(t *testing.T) {
 	}
 	testTxMarshalJSON(t, sendTx)
 	testTxSignVerify(t, sendTx)
+
+	tx := Enclose("Foo", sendTx).Tx
+	value, ok := tx.Tagged().Get("Inputs")
+	require.True(t, ok)
+	assert.Equal(t, fmt.Sprintf("%v%s%v", sendTx.Inputs[0], query.MultipleValueTagSeparator, sendTx.Inputs[1]),
+		value)
+
+	value, ok = tx.Tagged().Get("ChainID")
+	require.True(t, ok)
+	assert.Equal(t, "Foo", value)
 }
 
 func TestCallTxSignable(t *testing.T) {
@@ -141,13 +153,13 @@ func TestUnbondTxSignable(t *testing.T) {
 }
 
 func TestPermissionsTxSignable(t *testing.T) {
-	permsTx := &payload.PermissionsTx{
+	permsTx := &payload.PermsTx{
 		Input: &payload.TxInput{
 			Address:  makePrivateAccount("input1").Address(),
 			Amount:   12345,
 			Sequence: 250,
 		},
-		PermArgs: snatives.SetBaseArgs(makePrivateAccount("address1").Address(), 1, true),
+		PermArgs: permission.SetBaseArgs(makePrivateAccount("address1").Address(), 1, true),
 	}
 
 	testTxMarshalJSON(t, permsTx)
@@ -169,12 +181,17 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 	}
 	testTxMarshalJSON(t, callTx)
 	testTxSignVerify(t, callTx)
+
+	tx := Enclose("Foo", callTx).Tx
+	value, ok := tx.Tagged().Get("Input")
+	require.True(t, ok)
+	assert.Equal(t, callTx.Input.String(), value)
 }
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {
 	privateAccount := makePrivateAccount("shhhhh")
-	args := snatives.SetBaseArgs(privateAccount.PublicKey().Address(), ptypes.HasRole, true)
-	permTx := payload.NewPermissionsTxWithSequence(privateAccount.PublicKey(), args, 1)
+	args := permission.SetBaseArgs(privateAccount.PublicKey().Address(), permission.HasRole, true)
+	permTx := payload.NewPermsTxWithSequence(privateAccount.PublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 	testTxSignVerify(t, permTx)
 }
@@ -199,5 +216,5 @@ func testTxSignVerify(t *testing.T, tx payload.Payload) {
 	}
 	txEnv := Enclose(chainID, tx)
 	require.NoError(t, txEnv.Sign(signers...), "Error signing tx: %s", debug.Stack())
-	require.NoError(t, txEnv.Verify(nil), "Error verifying tx: %s", debug.Stack())
+	require.NoError(t, txEnv.Verify(nil, chainID), "Error verifying tx: %s", debug.Stack())
 }

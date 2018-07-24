@@ -15,92 +15,52 @@
 package rpc
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
-
+	"math/big"
 	"time"
 
-	"encoding/json"
-
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
-	bcm "github.com/hyperledger/burrow/blockchain"
-	"github.com/hyperledger/burrow/consensus/tendermint/query"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/names"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
-	tm_types "github.com/tendermint/tendermint/types"
-	"github.com/tmthrgd/go-hex"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 // Magic! Should probably be configurable, but not shouldn't be so huge we
 // end up DoSing ourselves.
 const MaxBlockLookback = 1000
-const AccountsRingMutexCount = 100
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
-	ctx             context.Context
-	state           state.IterableReader
-	nameReg         names.IterableReader
-	mempoolAccounts *execution.Accounts
-	subscribable    event.Subscribable
-	blockchain      bcm.BlockchainInfo
-	transactor      *execution.Transactor
-	nodeView        *query.NodeView
-	logger          *logging.Logger
+	state      state.IterableReader
+	nameReg    names.IterableReader
+	blockchain bcm.BlockchainInfo
+	nodeView   *tendermint.NodeView
+	logger     *logging.Logger
 }
 
-func NewService(ctx context.Context, state state.IterableReader, nameReg names.IterableReader,
-	checker state.Reader, subscribable event.Subscribable, blockchain bcm.BlockchainInfo, keyClient keys.KeyClient,
-	transactor *execution.Transactor, nodeView *query.NodeView, logger *logging.Logger) *Service {
+// Service provides an internal query and information service with serialisable return types on which can accomodate
+// a number of transport front ends
+func NewService(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
-		ctx:             ctx,
-		state:           state,
-		mempoolAccounts: execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
-		nameReg:         nameReg,
-		subscribable:    subscribable,
-		blockchain:      blockchain,
-		transactor:      transactor,
-		nodeView:        nodeView,
-		logger:          logger.With(structure.ComponentKey, "Service"),
+		state:      state,
+		nameReg:    nameReg,
+		blockchain: blockchain,
+		nodeView:   nodeView,
+		logger:     logger.With(structure.ComponentKey, "Service"),
 	}
-}
-
-// Provides a sub-service with only the subscriptions methods
-func NewSubscribableService(subscribable event.Subscribable, logger *logging.Logger) *Service {
-	return &Service{
-		ctx:          context.Background(),
-		subscribable: subscribable,
-		logger:       logger.With(structure.ComponentKey, "Service"),
-	}
-}
-
-// Get a Transactor providing methods for delegating signing and the core BroadcastTx function for publishing
-// transactions to the network
-func (s *Service) Transactor() *execution.Transactor {
-	return s.transactor
-}
-
-// By providing certain methods on the Transactor (such as Transact, Send, etc) with the (non-final) MempoolAccounts
-// rather than the committed (final) Accounts state the transactor can assign a sequence number based on all of the txs
-// it has seen since the last block - provided these transactions are successfully committed (via DeliverTx) then
-// subsequent transactions will have valid sequence numbers. This allows Burrow to coordinate sequencing and signing
-// for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
-// concurrent within a new block window.
-
-// Get pending account state residing in the mempool
-func (s *Service) MempoolAccounts() *execution.Accounts {
-	return s.mempoolAccounts
 }
 
 func (s *Service) State() state.Reader {
@@ -109,6 +69,10 @@ func (s *Service) State() state.Reader {
 
 func (s *Service) BlockchainInfo() bcm.BlockchainInfo {
 	return s.blockchain
+}
+
+func (s *Service) ChainID() string {
+	return s.blockchain.ChainID()
 }
 
 func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
@@ -127,63 +91,8 @@ func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 	}, nil
 }
 
-func (s *Service) Subscribe(ctx context.Context, subscriptionID string, eventID string,
-	callback func(resultEvent *ResultEvent) (stop bool)) error {
-
-	queryBuilder := event.QueryForEventID(eventID)
-	s.logger.InfoMsg("Subscribing to events",
-		"query", queryBuilder.String(),
-		"subscription_id", subscriptionID,
-		"event_id", eventID)
-	return event.SubscribeCallback(ctx, s.subscribable, subscriptionID, queryBuilder,
-		func(message interface{}) (stop bool) {
-			resultEvent, err := NewResultEvent(eventID, message)
-			if err != nil {
-				s.logger.InfoMsg("Received event that could not be mapped to ResultEvent",
-					structure.ErrorKey, err,
-					"subscription_id", subscriptionID,
-					"event_id", eventID)
-				return false
-			}
-			return callback(resultEvent)
-		})
-}
-
-func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error {
-	s.logger.InfoMsg("Unsubscribing from events",
-		"subscription_id", subscriptionID)
-	err := s.subscribable.UnsubscribeAll(ctx, subscriptionID)
-	if err != nil {
-		return fmt.Errorf("error unsubscribing from event with subscriptionID '%s': %v", subscriptionID, err)
-	}
-	return nil
-}
-
-func (s *Service) Status() (*ResultStatus, error) {
-	latestHeight := s.blockchain.LastBlockHeight()
-	var (
-		latestBlockMeta *tm_types.BlockMeta
-		latestBlockHash []byte
-		latestBlockTime int64
-	)
-	if latestHeight != 0 {
-		latestBlockMeta = s.nodeView.BlockStore().LoadBlockMeta(int64(latestHeight))
-		latestBlockHash = latestBlockMeta.Header.Hash()
-		latestBlockTime = latestBlockMeta.Header.Time.UnixNano()
-	}
-	publicKey, err := s.nodeView.PrivValidatorPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return &ResultStatus{
-		NodeInfo:          s.nodeView.NodeInfo(),
-		GenesisHash:       s.blockchain.GenesisHash(),
-		PubKey:            publicKey,
-		LatestBlockHash:   latestBlockHash,
-		LatestBlockHeight: latestHeight,
-		LatestBlockTime:   latestBlockTime,
-		NodeVersion:       project.History.CurrentVersion().String(),
-	}, nil
+func (s *Service) Status(blockWithin string) (*ResultStatus, error) {
+	return Status(s.BlockchainInfo(), s.nodeView, blockWithin)
 }
 
 func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
@@ -198,7 +107,7 @@ func (s *Service) Peers() (*ResultPeers, error) {
 	peers := make([]*Peer, s.nodeView.Peers().Size())
 	for i, peer := range s.nodeView.Peers().List() {
 		peers[i] = &Peer{
-			NodeInfo:   peer.NodeInfo(),
+			NodeInfo:   tendermint.NewNodeInfo(peer.NodeInfo()),
 			IsOutbound: peer.IsOutbound(),
 		}
 	}
@@ -218,6 +127,7 @@ func (s *Service) NetInfo() (*ResultNetInfo, error) {
 		return nil, err
 	}
 	return &ResultNetInfo{
+		ThisNode:  s.nodeView.NodeInfo(),
 		Listening: listening,
 		Listeners: listeners,
 		Peers:     peers.Peers,
@@ -287,7 +197,6 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 		return
 	})
 	return &ResultDumpStorage{
-		StorageRoot:  account.StorageRoot(),
 		StorageItems: storageItems,
 	}, nil
 }
@@ -304,7 +213,7 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 	if acc == nil {
 		return &ResultGetAccountHumanReadable{}, nil
 	}
-	perms, err := permission.BasePermissionsToStringList(acc.Permissions().Base)
+	perms := permission.BasePermissionsToStringList(acc.Permissions().Base)
 	if acc == nil {
 		return &ResultGetAccountHumanReadable{}, nil
 	}
@@ -315,7 +224,6 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 			Sequence:    acc.Sequence(),
 			Balance:     acc.Balance(),
 			Code:        tokens,
-			StorageRoot: hex.EncodeUpperToString(acc.StorageRoot()),
 			Permissions: perms,
 			Roles:       acc.Permissions().Roles,
 		},
@@ -324,7 +232,7 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 
 // Name registry
 func (s *Service) GetName(name string) (*ResultGetName, error) {
-	entry, err := s.nameReg.GetNameEntry(name)
+	entry, err := s.nameReg.GetName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +244,7 @@ func (s *Service) GetName(name string) (*ResultGetName, error) {
 
 func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames, error) {
 	var nms []*names.Entry
-	s.nameReg.IterateNameEntries(func(entry *names.Entry) (stop bool) {
+	s.nameReg.IterateNames(func(entry *names.Entry) (stop bool) {
 		if predicate(entry) {
 			nms = append(nms, entry)
 		}
@@ -373,7 +281,7 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 		minHeight = maxHeight - MaxBlockLookback
 	}
 
-	var blockMetas []*tm_types.BlockMeta
+	var blockMetas []*tmTypes.BlockMeta
 	for height := maxHeight; height >= minHeight; height-- {
 		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int64(height))
 		blockMetas = append(blockMetas, blockMeta)
@@ -386,18 +294,19 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 }
 
 func (s *Service) ListValidators() (*ResultListValidators, error) {
-	concreteValidators := make([]*acm.ConcreteValidator, 0, s.blockchain.NumValidators())
-	s.blockchain.IterateValidators(func(publicKey crypto.PublicKey, power uint64) (stop bool) {
-		concreteValidators = append(concreteValidators, &acm.ConcreteValidator{
-			Address:   publicKey.Address(),
-			PublicKey: publicKey,
-			Power:     power,
+	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
+	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+		address := id.Address()
+		validators = append(validators, &validator.Validator{
+			Address:   &address,
+			PublicKey: id.PublicKey(),
+			Power:     power.Uint64(),
 		})
 		return
 	})
 	return &ResultListValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
-		BondedValidators:    concreteValidators,
+		BondedValidators:    validators,
 		UnbondingValidators: nil,
 	}, nil
 }
@@ -419,15 +328,20 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 		return nil, err
 	}
 	return &ResultGeneratePrivateAccount{
-		PrivateAccount: acm.AsConcretePrivateAccount(privateAccount),
+		PrivateAccount: privateAccount.ConcretePrivateAccount(),
 	}, nil
 }
 
-func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error) {
-	res := &ResultLastBlockInfo{
-		LastBlockHeight: s.blockchain.LastBlockHeight(),
-		LastBlockHash:   s.blockchain.LastBlockHash(),
-		LastBlockTime:   s.blockchain.LastBlockTime(),
+func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockWithin string) (*ResultStatus, error) {
+	res := &ResultStatus{
+		ChainID:           blockchain.ChainID(),
+		NodeInfo:          nodeView.NodeInfo(),
+		NodeVersion:       project.History.CurrentVersion().String(),
+		GenesisHash:       blockchain.GenesisHash(),
+		PublicKey:         nodeView.ValidatorPublicKey(),
+		LatestBlockHash:   blockchain.LastBlockHash(),
+		LatestBlockHeight: blockchain.LastBlockHeight(),
+		LatestBlockTime:   blockchain.LastBlockTime(),
 	}
 	if blockWithin == "" {
 		return res, nil
@@ -436,12 +350,12 @@ func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error
 	if err != nil {
 		return nil, fmt.Errorf("could not parse blockWithin duration to determine whether to throw error: %v", err)
 	}
-	// Take neg abs in case caller is counting backwards (not we add later)
+	// Take neg abs in case caller is counting backwards (note we later add the time since we normalise the duration to negative)
 	if duration > 0 {
 		duration = -duration
 	}
 	blockTimeThreshold := time.Now().Add(duration)
-	if res.LastBlockTime.After(blockTimeThreshold) {
+	if res.LatestBlockTime.After(blockTimeThreshold) {
 		// We've created blocks recently enough
 		return res, nil
 	}
@@ -449,6 +363,6 @@ func (s *Service) LastBlockInfo(blockWithin string) (*ResultLastBlockInfo, error
 	if err != nil {
 		resJSON = []byte("<error: could not marshal last block info>")
 	}
-	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), last block info: %s",
+	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), current status: %s",
 		blockWithin, blockTimeThreshold.Format(time.RFC3339), string(resJSON))
 }

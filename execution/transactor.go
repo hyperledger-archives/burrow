@@ -15,139 +15,170 @@
 package execution
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"runtime/debug"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/account/state"
-	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/events"
-	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/execution/executors"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
-	abciTypes "github.com/tendermint/abci/types"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
-const BlockingTimeoutSeconds = 30
+const (
+	BlockingTimeout     = 10 * time.Second
+	SubscribeBufferSize = 10
+)
 
-type Call struct {
-	Return  binary.HexBytes
-	GasUsed uint64
-}
-
-// Transactor is the controller/middleware for the v0 RPC
+// Transactor is responsible for helping to formulate, sign, and broadcast transactions to tendermint
+//
+// The BroadcastTx* methods are able to work against the mempool Accounts (pending) state rather than the
+// committed (final) Accounts state and can assign a sequence number based on all of the txs
+// seen since the last block - provided these transactions are successfully committed (via DeliverTx) then
+// subsequent transactions will have valid sequence numbers. This allows Burrow to coordinate sequencing and signing
+// for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
+// concurrent within a new block window.
 type Transactor struct {
-	tip              *blockchain.Tip
-	eventEmitter     event.Emitter
-	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
-	txEncoder        txs.Encoder
-	logger           *logging.Logger
+	Tip             bcm.BlockchainInfo
+	Subscribable    event.Subscribable
+	MempoolAccounts *Accounts
+	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
+	txEncoder       txs.Encoder
+	logger          *logging.Logger
 }
 
-func NewTransactor(tip *blockchain.Tip, eventEmitter event.Emitter,
-	broadcastTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
+func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, mempoolAccounts *Accounts,
+	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
-		tip:              tip,
-		eventEmitter:     eventEmitter,
-		broadcastTxAsync: broadcastTxAsync,
-		txEncoder:        txEncoder,
-		logger:           logger.With(structure.ComponentKey, "Transactor"),
+		Tip:             tip,
+		Subscribable:    subscribable,
+		MempoolAccounts: mempoolAccounts,
+		checkTxAsync:    checkTxAsync,
+		txEncoder:       txEncoder,
+		logger:          logger.With(structure.ComponentKey, "Transactor"),
 	}
 }
 
-// Run a contract's code on an isolated and unpersisted state
-// Cannot be used to create new contracts
-func (trans *Transactor) Call(reader state.Reader, fromAddress, address crypto.Address,
-	data []byte) (call *Call, err error) {
-
-	if evm.IsRegisteredNativeContract(address.Word256()) {
-		return nil, fmt.Errorf("attempt to call native contract at address "+
-			"%X, but native contracts can not be called directly. Use a deployed "+
-			"contract that calls the native function instead", address)
-	}
-	// This was being run against CheckTx cache, need to understand the reasoning
-	callee, err := state.GetMutableAccount(reader, address)
-	if err != nil {
-		return nil, err
-	}
-	if callee == nil {
-		return nil, fmt.Errorf("account %s does not exist", address)
-	}
-	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := state.NewCache(reader)
-	params := vmParams(trans.tip)
-
-	vmach := evm.NewVM(params, caller.Address(), nil, trans.logger.WithScope("Call"))
-	vmach.SetPublisher(trans.eventEmitter)
-
-	gas := params.GasLimit
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic from VM in simulated call: %v\n%s", r, debug.Stack())
+func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
+	// Subscribe to TX
+	// Sign if needed - must do before we sign in order to get correct TxHash
+	if len(txEnv.Signatories) == 0 {
+		var err error
+		var unlock UnlockFunc
+		txEnv, unlock, err = trans.SignTxMempool(txEnv)
+		if err != nil {
+			return nil, fmt.Errorf("error signing transaction: %v", err)
 		}
-	}()
-	ret, err := vmach.Call(txCache, caller, callee, callee.Code(), data, 0, &gas)
+		defer unlock()
+	}
+
+	txHash := txEnv.Tx.Hash()
+	subID := event.GenSubID()
+	out, err := trans.Subscribable.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
 	if err != nil {
 		return nil, err
 	}
-	gasUsed := params.GasLimit - gas
-	return &Call{Return: ret, GasUsed: gasUsed}, nil
-}
+	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
 
-// Run the given code on an isolated and unpersisted state
-// Cannot be used to create new contracts.
-func (trans *Transactor) CallCode(reader state.Reader, fromAddress crypto.Address, code, data []byte) (*Call, error) {
-	// This was being run against CheckTx cache, need to understand the reasoning
-	callee := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	caller := acm.ConcreteAccount{Address: fromAddress}.MutableAccount()
-	txCache := state.NewCache(reader)
-	params := vmParams(trans.tip)
-
-	vmach := evm.NewVM(params, caller.Address(), nil, trans.logger.WithScope("CallCode"))
-	gas := params.GasLimit
-	ret, err := vmach.Call(txCache, caller, callee, code, data, 0, &gas)
+	checkTxReceipt, err := trans.CheckTxSync(txEnv)
 	if err != nil {
 		return nil, err
 	}
-	gasUsed := params.GasLimit - gas
-	return &Call{Return: ret, GasUsed: gasUsed}, nil
+	// Wait for all responses
+	timer := time.NewTimer(BlockingTimeout)
+	defer timer.Stop()
+
+	// Get all the execution events for this Tx
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("timed out waiting for transaction with hash %v timed out after %v",
+			checkTxReceipt.TxHash, BlockingTimeout)
+	case msg := <-out:
+		txe := msg.(*exec.TxExecution)
+		if txe.Exception != nil && txe.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
+			return nil, errors.Wrap(txe.Exception, "exception during transaction execution")
+		}
+		return txe, nil
+	}
 }
 
-func (trans *Transactor) BroadcastTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
-	return trans.broadcastTxAsync(txBytes, callback)
+// Broadcast a transaction without waiting for confirmation - will attempt to sign server-side and set sequence numbers
+// if no signatures are provided
+func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope) (*txs.Receipt, error) {
+	// Attempt to sign unless signatures provided
+	if len(txEnv.Signatories) == 0 {
+		var err error
+		var unlock UnlockFunc
+		txEnv, unlock, err = trans.SignTxMempool(txEnv)
+		if err != nil {
+			return nil, err
+		}
+		defer unlock()
+	}
+	return trans.CheckTxSync(txEnv)
 }
 
-func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {
-	err := txEnv.Validate()
-	if err != nil {
-		return err
+func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, UnlockFunc, error) {
+	inputs := txEnv.Tx.GetInputs()
+	signers := make([]acm.AddressableSigner, len(inputs))
+	unlockers := make([]UnlockFunc, len(inputs))
+	for i, input := range inputs {
+		ssa, err := trans.MempoolAccounts.SequentialSigningAccount(input.Address)
+		if err != nil {
+			return nil, nil, err
+		}
+		sa, unlock, err := ssa.Lock()
+		if err != nil {
+			return nil, nil, err
+		}
+		// Hold lock until safely in mempool - important that this is held until after CheckTxSync returns
+		unlockers[i] = unlock
+		signers[i] = sa
+		// Set sequence number consecutively from mempool
+		input.Sequence = sa.Sequence() + 1
 	}
-	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+
+	err := txEnv.Sign(signers...)
 	if err != nil {
-		return fmt.Errorf("error encoding transaction: %v", err)
+		return nil, nil, err
 	}
-	return trans.BroadcastTxAsyncRaw(txBytes, callback)
+	return txEnv, UnlockFunc(func() {
+		for _, unlock := range unlockers {
+			defer unlock()
+		}
+	}), nil
+}
+
+func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
+	var err error
+	inputs := txEnv.Tx.GetInputs()
+	signers := make([]acm.AddressableSigner, len(inputs))
+	for i, input := range inputs {
+		signers[i], err = trans.MempoolAccounts.SigningAccount(input.Address)
+	}
+	err = txEnv.Sign(signers...)
+	if err != nil {
+		return nil, err
+	}
+	return txEnv, nil
 }
 
 // Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
 // various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
-func (trans *Transactor) BroadcastTx(txEnv *txs.Envelope) (*txs.Receipt, error) {
-	trans.logger.Trace.Log("method", "BroadcastTx",
+func (trans *Transactor) CheckTxSync(txEnv *txs.Envelope) (*txs.Receipt, error) {
+	trans.logger.Trace.Log("method", "CheckTxSync",
 		"tx_hash", txEnv.Tx.Hash(),
 		"tx", txEnv.String())
 	err := txEnv.Validate()
@@ -158,267 +189,63 @@ func (trans *Transactor) BroadcastTx(txEnv *txs.Envelope) (*txs.Receipt, error) 
 	if err != nil {
 		return nil, err
 	}
-	return trans.BroadcastTxRaw(txBytes)
+	return trans.CheckTxSyncRaw(txBytes)
 }
 
-func (trans *Transactor) BroadcastTxRaw(txBytes []byte) (*txs.Receipt, error) {
+func (trans *Transactor) CheckTxSyncRaw(txBytes []byte) (*txs.Receipt, error) {
 	responseCh := make(chan *abciTypes.Response, 1)
-	err := trans.BroadcastTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
+	err := trans.CheckTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
 	})
-
 	if err != nil {
 		return nil, err
 	}
-	response := <-responseCh
-	checkTxResponse := response.GetCheckTx()
-	if checkTxResponse == nil {
-		return nil, fmt.Errorf("application did not return CheckTx response")
-	}
-
-	switch checkTxResponse.Code {
-	case codes.TxExecutionSuccessCode:
-		receipt := new(txs.Receipt)
-		err := json.Unmarshal(checkTxResponse.Data, receipt)
-		if err != nil {
-			return nil, fmt.Errorf("could not deserialise transaction receipt: %s", err)
-		}
-		return receipt, nil
-	default:
-		return nil, fmt.Errorf("error returned by Tendermint in BroadcastTxSync "+
-			"ABCI code: %v, ABCI log: %v", checkTxResponse.Code, checkTxResponse.Log)
-	}
-}
-
-// Orders calls to BroadcastTx using lock (waits for response from core before releasing)
-func (trans *Transactor) Transact(sequentialSigningAccount *SequentialSigningAccount, address *crypto.Address, data []byte,
-	gasLimit, fee uint64) (*txs.Receipt, error) {
-
-	// Use the get the freshest sequence numbers from mempool state and hold the lock until we get a response from
-	// CheckTx
-	inputAccount, unlock, err := sequentialSigningAccount.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-
-	txEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
-	if err != nil {
-		return nil, err
-	}
-	return trans.BroadcastTx(txEnv)
-}
-
-func (trans *Transactor) TransactAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
-	address *crypto.Address, data []byte, gasLimit, fee uint64) (*events.EventDataCall, error) {
-
-	inputAccount, unlock, err := sequentialSigningAccount.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-
-	callTxEnv, err := trans.formulateCallTx(inputAccount, address, data, gasLimit, fee)
-	if err != nil {
-		return nil, err
-	}
-
-	expectedReceipt := callTxEnv.Tx.GenerateReceipt()
-
-	subID, err := event.GenerateSubscriptionID()
-	if err != nil {
-		return nil, err
-	}
-
-	// We want non-blocking on the first event received (but buffer the value),
-	// after which we want to block (and then discard the value - see below)
-	ch := make(chan *events.EventDataCall, 1)
-
-	err = events.SubscribeAccountCall(context.Background(), trans.eventEmitter, subID, expectedReceipt.ContractAddress,
-		expectedReceipt.TxHash, 0, ch)
-	if err != nil {
-		return nil, err
-	}
-	// Will clean up callback goroutine and subscription in pubsub
-	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
-
-	receipt, err := trans.BroadcastTx(callTxEnv)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(receipt.TxHash, expectedReceipt.TxHash) {
-		return nil, fmt.Errorf("BroadcastTx received TxHash %X but %X was expected",
-			receipt.TxHash, expectedReceipt.TxHash)
-	}
-
-	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
+	timer := time.NewTimer(BlockingTimeout)
 	defer timer.Stop()
 
 	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	case <-timer.C:
-		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
-	case eventDataCall := <-ch:
-		if eventDataCall.Exception != nil && eventDataCall.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
-			return nil, fmt.Errorf("error when transacting: %v", eventDataCall.Exception)
-		} else {
-			return eventDataCall, nil
+		return nil, fmt.Errorf("timed out waiting for CheckTx response in CheckTxSyncRaw")
+	case response := <-responseCh:
+		checkTxResponse := response.GetCheckTx()
+		if checkTxResponse == nil {
+			return nil, fmt.Errorf("application did not return CheckTx response")
+		}
+
+		switch checkTxResponse.Code {
+		case codes.TxExecutionSuccessCode:
+			receipt, err := txs.DecodeReceipt(checkTxResponse.Data)
+			if err != nil {
+				return nil, fmt.Errorf("could not deserialise transaction receipt: %s", err)
+			}
+			return receipt, nil
+		default:
+			return nil, errors.ErrorCodef(errors.Code(checkTxResponse.Code),
+				"error returned by Tendermint in BroadcastTxSync ABCI log: %v", checkTxResponse.Log)
 		}
 	}
 }
-func (trans *Transactor) formulateCallTx(inputAccount *SigningAccount, address *crypto.Address, data []byte,
-	gasLimit, fee uint64) (*txs.Envelope, error) {
 
-	txInput := &payload.TxInput{
-		Address:  inputAccount.Address(),
-		Amount:   fee,
-		Sequence: inputAccount.Sequence() + 1,
-	}
-	tx := &payload.CallTx{
-		Input:    txInput,
-		Address:  address,
-		GasLimit: gasLimit,
-		Fee:      fee,
-		Data:     data,
-	}
-
-	env := txs.Enclose(trans.tip.ChainID(), tx)
-	// Got ourselves a tx.
-	err := env.Sign(inputAccount)
-	if err != nil {
-		return nil, err
-	}
-	return env, nil
+func (trans *Transactor) CheckTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
+	return trans.checkTxAsync(txBytes, callback)
 }
 
-func (trans *Transactor) Send(sequentialSigningAccount *SequentialSigningAccount, toAddress crypto.Address,
-	amount uint64) (*txs.Receipt, error) {
-
-	inputAccount, unlock, err := sequentialSigningAccount.Lock()
+func (trans *Transactor) CheckTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {
+	err := txEnv.Validate()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer unlock()
-
-	sendTxEnv, err := trans.formulateSendTx(inputAccount, toAddress, amount)
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error encoding transaction: %v", err)
 	}
-
-	return trans.BroadcastTx(sendTxEnv)
+	return trans.CheckTxAsyncRaw(txBytes, callback)
 }
 
-func (trans *Transactor) SendAndHold(ctx context.Context, sequentialSigningAccount *SequentialSigningAccount,
-	toAddress crypto.Address, amount uint64) (*txs.Receipt, error) {
-
-	inputAccount, unlock, err := sequentialSigningAccount.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-
-	sendTxEnv, err := trans.formulateSendTx(inputAccount, toAddress, amount)
-	if err != nil {
-		return nil, err
-	}
-	expectedReceipt := sendTxEnv.Tx.GenerateReceipt()
-
-	subID, err := event.GenerateSubscriptionID()
-	if err != nil {
-		return nil, err
-	}
-
-	wc := make(chan *payload.SendTx)
-	err = events.SubscribeAccountOutputSendTx(context.Background(), trans.eventEmitter, subID, toAddress,
-		expectedReceipt.TxHash, wc)
-	if err != nil {
-		return nil, err
-	}
-	defer trans.eventEmitter.UnsubscribeAll(context.Background(), subID)
-
-	receipt, err := trans.BroadcastTx(sendTxEnv)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(receipt.TxHash, expectedReceipt.TxHash) {
-		return nil, fmt.Errorf("BroadcastTx received TxHash %X but %X was expected",
-			receipt.TxHash, expectedReceipt.TxHash)
-	}
-
-	timer := time.NewTimer(BlockingTimeoutSeconds * time.Second)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-timer.C:
-		return nil, fmt.Errorf("transaction timed out TxHash: %X", expectedReceipt.TxHash)
-	case sendTx := <-wc:
-		// This is a double check - we subscribed to this tx's hash so something has gone wrong if the amounts don't match
-		if sendTx.Inputs[0].Amount == amount {
-			return expectedReceipt, nil
-		}
-		return nil, fmt.Errorf("received SendTx but hash doesn't seem to match what we subscribed to, "+
-			"received SendTx: %v which does not match receipt on sending: %v", sendTx, expectedReceipt)
-	}
+func (trans *Transactor) CallCodeSim(fromAddress crypto.Address, code, data []byte) (*exec.TxExecution, error) {
+	return CallCodeSim(trans.MempoolAccounts, trans.Tip, fromAddress, fromAddress, code, data, trans.logger)
 }
 
-func (trans *Transactor) formulateSendTx(inputAccount *SigningAccount, toAddress crypto.Address,
-	amount uint64) (*txs.Envelope, error) {
-
-	sendTx := payload.NewSendTx()
-	txInput := &payload.TxInput{
-		Address:  inputAccount.Address(),
-		Amount:   amount,
-		Sequence: inputAccount.Sequence() + 1,
-	}
-	sendTx.Inputs = append(sendTx.Inputs, txInput)
-	txOutput := &payload.TxOutput{Address: toAddress, Amount: amount}
-	sendTx.Outputs = append(sendTx.Outputs, txOutput)
-
-	env := txs.Enclose(trans.tip.ChainID(), sendTx)
-	err := env.Sign(inputAccount)
-	if err != nil {
-		return nil, err
-	}
-
-	return env, nil
-}
-
-func (trans *Transactor) TransactNameReg(sequentialSigningAccount *SequentialSigningAccount, name, data string, amount,
-	fee uint64) (*txs.Receipt, error) {
-
-	inputAccount, unlock, err := sequentialSigningAccount.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-	// Formulate and sign
-	tx := payload.NewNameTxWithSequence(inputAccount.PublicKey(), name, data, amount, fee, inputAccount.Sequence()+1)
-	env := txs.Enclose(trans.tip.ChainID(), tx)
-	err = env.Sign(inputAccount)
-	if err != nil {
-		return nil, err
-	}
-	return trans.BroadcastTx(env)
-}
-
-// Sign a transaction
-func (trans *Transactor) SignTx(txEnv *txs.Envelope, signingAccounts []acm.AddressableSigner) (*txs.Envelope, error) {
-	// more checks?
-	err := txEnv.Sign(signingAccounts...)
-	if err != nil {
-		return nil, err
-	}
-	return txEnv, nil
-}
-
-func vmParams(tip *blockchain.Tip) evm.Params {
-	return evm.Params{
-		BlockHeight: tip.LastBlockHeight(),
-		BlockHash:   binary.LeftPadWord256(tip.LastBlockHash()),
-		BlockTime:   tip.LastBlockTime().Unix(),
-		GasLimit:    executors.GasLimit,
-	}
+func (trans *Transactor) CallSim(fromAddress, address crypto.Address, data []byte) (*exec.TxExecution, error) {
+	return CallSim(trans.MempoolAccounts, trans.Tip, fromAddress, address, data, trans.logger)
 }

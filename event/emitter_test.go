@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
@@ -14,17 +16,16 @@ import (
 func TestEmitter(t *testing.T) {
 	em := NewEmitter(logging.NewNoopLogger())
 	ctx := context.Background()
-	out := make(chan interface{})
 
-	err := em.Subscribe(ctx, "TestEmitter", query.NewBuilder().AndStrictlyGreaterThan("foo", 10), out)
+	out, err := em.Subscribe(ctx, "TestEmitter", query.NewBuilder().AndStrictlyGreaterThan("foo", 10), 1)
 	require.NoError(t, err)
 
 	msgMiss := struct{ flob string }{"flib"}
-	err = em.Publish(ctx, msgMiss, TagMap(map[string]interface{}{"foo": 10}))
+	err = em.Publish(ctx, msgMiss, query.TagMap{"foo": 10})
 	assert.NoError(t, err)
 
 	msgHit := struct{ blib string }{"blab"}
-	err = em.Publish(ctx, msgHit, TagMap(map[string]interface{}{"foo": 11}))
+	err = em.Publish(ctx, msgHit, query.TagMap{"foo": 11})
 	assert.NoError(t, err)
 
 	select {
@@ -38,16 +39,15 @@ func TestEmitter(t *testing.T) {
 func TestOrdering(t *testing.T) {
 	em := NewEmitter(logging.NewNoopLogger())
 	ctx := context.Background()
-	out := make(chan interface{})
 
-	err := em.Subscribe(ctx, "TestOrdering1", query.NewBuilder().AndEquals("foo", "bar"), out)
+	out1, err := em.Subscribe(ctx, "TestOrdering1", query.NewBuilder().AndEquals("foo", "bar"), 10)
 	require.NoError(t, err)
 
-	err = em.Subscribe(ctx, "TestOrdering2", query.NewBuilder().AndEquals("foo", "baz"), out)
+	out2, err := em.Subscribe(ctx, "TestOrdering2", query.NewBuilder().AndEquals("foo", "baz"), 10)
 	require.NoError(t, err)
 
-	barTag := TagMap{"foo": "bar"}
-	bazTag := TagMap{"foo": "baz"}
+	barTag := query.TagMap{"foo": "bar"}
+	bazTag := query.TagMap{"foo": "baz"}
 
 	msgs := [][]interface{}{
 		{"baz1", bazTag},
@@ -61,12 +61,17 @@ func TestOrdering(t *testing.T) {
 
 	go func() {
 		for _, msg := range msgs {
-			em.Publish(ctx, msg[0], msg[1].(TagMap))
+			em.Publish(ctx, msg[0], msg[1].(query.TagMap))
 		}
 		em.Publish(ctx, "stop", bazTag)
 	}()
 
 	for _, msg := range msgs {
-		assert.Equal(t, msg[0], <-out)
+		str := msg[0].(string)
+		if strings.HasPrefix(str, "bar") {
+			assert.Equal(t, str, <-out1)
+		} else {
+			assert.Equal(t, str, <-out2)
+		}
 	}
 }

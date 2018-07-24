@@ -15,24 +15,19 @@
 package execution
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/events"
-	"github.com/hyperledger/burrow/execution/events/pbevents"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
-	permission "github.com/hyperledger/burrow/permission/types"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 func TestState_UpdateAccount(t *testing.T) {
@@ -50,63 +45,58 @@ func TestState_UpdateAccount(t *testing.T) {
 	assert.Equal(t, account, accountOut)
 }
 
-func TestState_Publish(t *testing.T) {
+func TestWriteState_AddBlock(t *testing.T) {
 	s := NewState(db.NewMemDB())
-	ctx := context.Background()
-	evs := []*events.Event{
-		mkEvent(100, 0),
-		mkEvent(100, 1),
-	}
+	height := uint64(100)
+	txs := uint64(5)
+	events := uint64(10)
 	_, err := s.Update(func(ws Updatable) error {
-		for _, ev := range evs {
-			require.NoError(t, ws.Publish(ctx, ev, nil))
-		}
-		return nil
+		return ws.AddBlock(mkBlock(height, txs, events))
 	})
 	require.NoError(t, err)
-	i := 0
-	_, err = s.GetEvents(events.NewKey(100, 0), events.NewKey(100, 0),
-		func(ev *events.Event) (stop bool) {
-			assert.Equal(t, evs[i], ev)
-			i++
+	_, err = s.GetBlocks(height, height+1,
+		func(be *exec.BlockExecution) (stop bool) {
+			for ti := uint64(0); ti < txs; ti++ {
+				for e := uint64(0); e < events; e++ {
+					assert.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
+						be.TxExecutions[ti].Events[e].Header.TxHash.String())
+				}
+			}
 			return false
 		})
 	require.NoError(t, err)
 	// non-increasing events
 	_, err = s.Update(func(ws Updatable) error {
-		require.Error(t, ws.Publish(ctx, mkEvent(100, 0), nil))
-		require.Error(t, ws.Publish(ctx, mkEvent(100, 1), nil))
-		require.Error(t, ws.Publish(ctx, mkEvent(99, 1324234), nil))
-		require.NoError(t, ws.Publish(ctx, mkEvent(100, 2), nil))
-		require.NoError(t, ws.Publish(ctx, mkEvent(101, 0), nil))
 		return nil
 	})
 	require.NoError(t, err)
 }
 
-func TestProtobufEventSerialisation(t *testing.T) {
-	ev := mkEvent(112, 23)
-	pbEvent := pbevents.GetExecutionEvent(ev)
-	bs, err := proto.Marshal(pbEvent)
-	require.NoError(t, err)
-	pbEventOut := new(pbevents.ExecutionEvent)
-	require.NoError(t, proto.Unmarshal(bs, pbEventOut))
-	fmt.Println(pbEventOut)
-	assert.Equal(t, asJSON(t, pbEvent), asJSON(t, pbEventOut))
+func mkBlock(height, txs, events uint64) *exec.BlockExecution {
+	be := &exec.BlockExecution{
+		Height: height,
+	}
+	for ti := uint64(0); ti < txs; ti++ {
+		txe := &exec.TxExecution{
+			Height: height,
+		}
+		for e := uint64(0); e < events; e++ {
+			txe.Events = append(txe.Events, mkEvent(height, ti, e))
+		}
+		be.TxExecutions = append(be.TxExecutions, txe)
+	}
+	return be
 }
 
-func mkEvent(height, index uint64) *events.Event {
-	return &events.Event{
-		Header: &events.Header{
+func mkEvent(height, tx, index uint64) *exec.Event {
+	return &exec.Event{
+		Header: &exec.Header{
 			Height:  height,
 			Index:   index,
-			TxHash:  sha3.Sha3([]byte(fmt.Sprintf("txhash%v%v", height, index))),
-			EventID: fmt.Sprintf("eventID: %v%v", height, index),
+			TxHash:  sha3.Sha3([]byte(fmt.Sprintf("txhash%v%v%v", height, tx, index))),
+			EventID: fmt.Sprintf("eventID: %v%v%v", height, tx, index),
 		},
-		Tx: &events.EventDataTx{
-			Tx: txs.Enclose("foo", &payload.CallTx{}).Tx,
-		},
-		Log: &events.EventDataLog{
+		Log: &exec.LogEvent{
 			Address: crypto.Address{byte(height), byte(index)},
 			Topics:  []binary.Word256{{1, 2, 3}},
 		},

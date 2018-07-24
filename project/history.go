@@ -28,6 +28,29 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
+	"0.20.0",
+	`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
+
+#### Breaking changes
+- Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
+- JSON-RPC interface has been removed
+- burrow-client has been removed
+- rpc/TM methods for events and broadcast have been removed
+
+#### Features
+- Tendermint 0.24.4
+- GovTx GRPC service. The validator set can be now be changed.
+- Enhanced GRPC services: NameReg, Transaction index, blocks service
+- Events GRPC service
+- Transaction Service can set value transferred
+
+#### Improvements
+- The output of "burrow keys export" can be templated
+
+#### Bug fixes
+- Fixed panic on nil bounds for blocks service
+
+`,
 	"0.19.0",
 	`This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
 

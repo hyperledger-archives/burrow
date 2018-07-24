@@ -6,7 +6,7 @@ import (
 	"github.com/hyperledger/burrow/forensics"
 	"github.com/hyperledger/burrow/txs"
 	cli "github.com/jawher/mow.cli"
-	"github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 func Dump(output Output) func(cmd *cli.Cmd) {

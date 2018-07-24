@@ -20,14 +20,14 @@ func EncodeInt16(w io.Writer, i int16) (err error) {
 
 func EncodeInt32(w io.Writer, i int32) (err error) {
 	var buf [4]byte
-	binary.BigEndian.PutUint32(buf[:], uint32(i))
+	binary.LittleEndian.PutUint32(buf[:], uint32(i))
 	_, err = w.Write(buf[:])
 	return
 }
 
 func EncodeInt64(w io.Writer, i int64) (err error) {
 	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], uint64(i))
+	binary.LittleEndian.PutUint64(buf[:], uint64(i))
 	_, err = w.Write(buf[:])
 	return err
 }
@@ -62,14 +62,14 @@ func EncodeUint16(w io.Writer, u uint16) (err error) {
 
 func EncodeUint32(w io.Writer, u uint32) (err error) {
 	var buf [4]byte
-	binary.BigEndian.PutUint32(buf[:], u)
+	binary.LittleEndian.PutUint32(buf[:], u)
 	_, err = w.Write(buf[:])
 	return
 }
 
 func EncodeUint64(w io.Writer, u uint64) (err error) {
 	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], u)
+	binary.LittleEndian.PutUint64(buf[:], u)
 	_, err = w.Write(buf[:])
 	return
 }
@@ -138,7 +138,6 @@ func EncodeTime(w io.Writer, t time.Time) (err error) {
 		return
 	}
 
-	err = EncodeByte(w, byte(0x04)) // StructTerm
 	return
 }
 

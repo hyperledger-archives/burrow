@@ -1,28 +1,17 @@
 package tm
 
 import (
-	"context"
 	"fmt"
-	"time"
 
-	acm "github.com/hyperledger/burrow/account"
-	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/lib/server"
-	"github.com/hyperledger/burrow/rpc/lib/types"
-	"github.com/hyperledger/burrow/txs"
 )
 
 // Method names
 const (
-	BroadcastTx = "broadcast_tx"
-	Subscribe   = "subscribe"
-	Unsubscribe = "unsubscribe"
-
-	// Status
+	// Status and healthcheck
 	Status  = "status"
 	NetInfo = "net_info"
 
@@ -55,94 +44,13 @@ const (
 	// Private keys and signing
 	GeneratePrivateAccount = "unsafe/gen_priv_account"
 	SignTx                 = "unsafe/sign_tx"
-
-	// Health check
-	LastBlockInfo = "last_block_info"
 )
-
-const SubscriptionTimeout = 5 * time.Second
 
 func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.RPCFunc {
 	logger = logger.WithScope("GetRoutes")
 	return map[string]*server.RPCFunc{
-		// Transact
-		BroadcastTx: server.NewRPCFunc(func(txEnv *txs.Envelope) (*rpc.ResultBroadcastTx, error) {
-			receipt, err := service.Transactor().BroadcastTx(txEnv)
-			if err != nil {
-				return nil, err
-			}
-			return &rpc.ResultBroadcastTx{
-				Receipt: *receipt,
-			}, nil
-		}, "tx"),
-
-		SignTx: server.NewRPCFunc(func(txEnv *txs.Envelope, concretePrivateAccounts []*acm.ConcretePrivateAccount) (*rpc.ResultSignTx, error) {
-			txEnv, err := service.Transactor().SignTx(txEnv, acm.SigningAccounts(concretePrivateAccounts))
-			return &rpc.ResultSignTx{Tx: txEnv}, err
-
-		}, "tx,privAccounts"),
-
-		// Simulated call
-		Call: server.NewRPCFunc(func(fromAddress, toAddress crypto.Address, data []byte) (*rpc.ResultCall, error) {
-			call, err := service.Transactor().Call(service.State(), fromAddress, toAddress, data)
-			if err != nil {
-				return nil, err
-			}
-			return &rpc.ResultCall{Call: *call}, nil
-		}, "fromAddress,toAddress,data"),
-
-		CallCode: server.NewRPCFunc(func(fromAddress crypto.Address, code, data []byte) (*rpc.ResultCall, error) {
-			call, err := service.Transactor().CallCode(service.State(), fromAddress, code, data)
-			if err != nil {
-				return nil, err
-			}
-			return &rpc.ResultCall{Call: *call}, nil
-		}, "fromAddress,code,data"),
-
-		// Events
-		Subscribe: server.NewWSRPCFunc(func(wsCtx types.WSRPCContext, eventID string) (*rpc.ResultSubscribe, error) {
-			subscriptionID, err := event.GenerateSubscriptionID()
-			if err != nil {
-				return nil, err
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
-			defer cancel()
-
-			err = service.Subscribe(ctx, subscriptionID, eventID, func(resultEvent *rpc.ResultEvent) (stop bool) {
-				keepAlive := wsCtx.TryWriteRPCResponse(types.NewRPCSuccessResponse(
-					EventResponseID(wsCtx.Request.ID, eventID), resultEvent))
-				if !keepAlive {
-					logger.InfoMsg("dropping subscription because could not write to websocket",
-						"subscription_id", subscriptionID,
-						"event_id", eventID)
-				}
-				return !keepAlive
-			})
-			if err != nil {
-				return nil, err
-			}
-			return &rpc.ResultSubscribe{
-				EventID:        eventID,
-				SubscriptionID: subscriptionID,
-			}, nil
-		}, "eventID"),
-
-		Unsubscribe: server.NewWSRPCFunc(func(wsCtx types.WSRPCContext, subscriptionID string) (*rpc.ResultUnsubscribe, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), SubscriptionTimeout)
-			defer cancel()
-			// Since our model uses a random subscription ID per request we just drop all matching requests
-			err := service.Unsubscribe(ctx, subscriptionID)
-			if err != nil {
-				return nil, err
-			}
-			return &rpc.ResultUnsubscribe{
-				SubscriptionID: subscriptionID,
-			}, nil
-		}, "subscriptionID"),
-
 		// Status
-		Status:  server.NewRPCFunc(service.Status, ""),
+		Status:  server.NewRPCFunc(service.Status, "block_within"),
 		NetInfo: server.NewRPCFunc(service.NetInfo, ""),
 
 		// Accounts
@@ -169,16 +77,11 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 		DumpConsensusState: server.NewRPCFunc(service.DumpConsensusState, ""),
 
 		// Names
-		GetName: server.NewRPCFunc(service.GetName, "name"),
-		ListNames: server.NewRPCFunc(func() (*rpc.ResultListNames, error) {
-			return service.ListNames(func(*names.Entry) bool {
-				return true
-			})
-		}, ""),
+		GetName:   server.NewRPCFunc(service.GetName, "name"),
+		ListNames: server.NewRPCFunc(service.ListNames, ""),
 
 		// Private account
 		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
-		LastBlockInfo:          server.NewRPCFunc(service.LastBlockInfo, "block_within"),
 	}
 }
 

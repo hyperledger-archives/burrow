@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,10 +42,11 @@ func accountMap(names ...string) map[string]acm.Account {
 	return accounts
 }
 
-func validatorMap(names ...string) map[string]acm.Validator {
-	validators := make(map[string]acm.Validator, len(names))
+func validatorMap(names ...string) map[string]validator.Validator {
+	validators := make(map[string]validator.Validator, len(names))
 	for _, name := range names {
-		validators[name] = acm.AsValidator(accountFromName(name))
+		acc := accountFromName(name)
+		validators[name] = validator.FromAccount(acc, acc.Balance())
 	}
 	return validators
 }

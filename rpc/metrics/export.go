@@ -53,7 +53,7 @@ func (e *Exporter) gatherData() error {
 
 // Get status
 func (e *Exporter) getStatus() error {
-	res, err := e.service.Status()
+	res, err := e.service.Status("")
 	if err != nil {
 		return err
 	}

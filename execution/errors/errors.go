@@ -1,9 +1,6 @@
 package errors
 
-import (
-	"encoding/json"
-	"fmt"
-)
+import "fmt"
 
 type CodedError interface {
 	error
@@ -33,13 +30,29 @@ const (
 	ErrorCodePermissionDenied
 	ErrorCodeNativeFunction
 	ErrorCodeEventPublish
+	ErrorCodeInvalidString
+	ErrorCodeEventMapping
+	ErrorCodeInvalidAddress
+	ErrorCodeDuplicateAddress
+	ErrorCodeInsufficientFunds
+	ErrorCodeOverpayment
+	ErrorCodeZeroPayment
+	ErrorCodeInvalidSequence
 )
 
 func (c Code) ErrorCode() Code {
 	return c
 }
 
+func (c Code) Uint32() uint32 {
+	return uint32(c)
+}
+
 func (c Code) Error() string {
+	return fmt.Sprintf("Error %d: %s", c, c.String())
+}
+
+func (c Code) String() string {
 	switch c {
 	case ErrorCodeUnknownAddress:
 		return "Unknown address"
@@ -67,6 +80,8 @@ func (c Code) Error() string {
 		return "Data stack underflow"
 	case ErrorCodeInvalidContract:
 		return "Invalid contract"
+	case ErrorCodePermissionDenied:
+		return "Permission denied"
 	case ErrorCodeNativeContractCodeCopy:
 		return "Tried to copy native contract code"
 	case ErrorCodeExecutionAborted:
@@ -77,8 +92,24 @@ func (c Code) Error() string {
 		return "Native function error"
 	case ErrorCodeEventPublish:
 		return "Event publish error"
+	case ErrorCodeInvalidString:
+		return "Invalid string"
+	case ErrorCodeEventMapping:
+		return "Event mapping error"
 	case ErrorCodeGeneric:
 		return "Generic error"
+	case ErrorCodeInvalidAddress:
+		return "Invalid address"
+	case ErrorCodeDuplicateAddress:
+		return "Duplicate address"
+	case ErrorCodeInsufficientFunds:
+		return "Insufficient funds"
+	case ErrorCodeOverpayment:
+		return "Overpayment"
+	case ErrorCodeZeroPayment:
+		return "Zero payment error"
+	case ErrorCodeInvalidSequence:
+		return "Invalid sequence number"
 	default:
 		return "Unknown error"
 	}
@@ -89,15 +120,13 @@ func NewCodedError(errorCode Code, exception string) *Exception {
 		return nil
 	}
 	return &Exception{
-		Code: &ErrorCode{
-			Code: uint32(errorCode),
-		},
+		Code:      errorCode,
 		Exception: exception,
 	}
 }
 
 // Wraps any error as a Exception
-func AsCodedError(err error) *Exception {
+func AsException(err error) *Exception {
 	if err == nil {
 		return nil
 	}
@@ -111,15 +140,16 @@ func AsCodedError(err error) *Exception {
 	}
 }
 
-func Wrap(err CodedError, message string) *Exception {
-	return NewCodedError(err.ErrorCode(), message+": "+err.Error())
+func Wrap(err error, message string) *Exception {
+	ex := AsException(err)
+	return NewCodedError(ex.ErrorCode(), message+": "+ex.Error())
 }
 
-func Errorf(format string, a ...interface{}) CodedError {
+func Errorf(format string, a ...interface{}) *Exception {
 	return ErrorCodef(ErrorCodeGeneric, format, a...)
 }
 
-func ErrorCodef(errorCode Code, format string, a ...interface{}) CodedError {
+func ErrorCodef(errorCode Code, format string, a ...interface{}) *Exception {
 	return NewCodedError(errorCode, fmt.Sprintf(format, a...))
 }
 
@@ -132,26 +162,16 @@ func (e *Exception) AsError() error {
 }
 
 func (e *Exception) ErrorCode() Code {
-	return Code(e.GetCode().Code)
+	return e.Code
+}
+
+func (e *Exception) String() string {
+	return e.Error()
 }
 
 func (e *Exception) Error() string {
 	if e == nil {
 		return ""
 	}
-	return fmt.Sprintf("Error %v: %s", e.Code.Code, e.Exception)
-}
-
-func NewErrorCode(code Code) *ErrorCode {
-	return &ErrorCode{
-		Code: uint32(code),
-	}
-}
-
-func (e ErrorCode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.Code)
-}
-
-func (e *ErrorCode) UnmarshalJSON(bs []byte) error {
-	return json.Unmarshal(bs, &(e.Code))
+	return fmt.Sprintf("Error %d: %s", e.Code, e.Exception)
 }

@@ -1,26 +1,22 @@
 package tendermint
 
 import (
-	"context"
-
 	"os"
 	"path"
 
-	bcm "github.com/hyperledger/burrow/blockchain"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/hyperledger/burrow/txs"
-	tm_crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/tendermint/config"
+	tmCrypto "github.com/tendermint/tendermint/crypto"
+	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/proxy"
-	tm_types "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tmlibs/db"
+	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 // Serves as a wrapper around the Tendermint node's closeable resources (database connections)
@@ -30,8 +26,6 @@ type Node struct {
 		Close()
 	}
 }
-
-var NewBlockQuery = query.Must(event.QueryForEventID(tm_types.EventNewBlock).Query())
 
 func DBProvider(ID string, backendType dbm.DBBackendType, dbDir string) dbm.DB {
 	return dbm.NewDB(ID, backendType, dbDir)
@@ -50,9 +44,8 @@ func (n *Node) Close() {
 	}
 }
 
-func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisDoc *tm_types.GenesisDoc,
-	blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
-	txDecoder txs.Decoder, logger *logging.Logger) (*Node, error) {
+func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDoc *tmTypes.GenesisDoc,
+	app *abci.App, metricsProvider node.MetricsProvider, logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
@@ -64,14 +57,13 @@ func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisD
 	}
 
 	nde := &Node{}
-	app := abci.NewApp(blockchain, checker, committer, txDecoder, logger)
-	conf.NodeKeyFile()
 	nde.Node, err = node.NewNode(conf, privValidator,
 		proxy.NewLocalClientCreator(app),
-		func() (*tm_types.GenesisDoc, error) {
+		func() (*tmTypes.GenesisDoc, error) {
 			return genesisDoc, nil
 		},
 		nde.DBProvider,
+		metricsProvider,
 		NewLogger(logger.WithPrefix(structure.ComponentKey, "Tendermint").
 			With(structure.ScopeKey, "tendermint.NewNode")))
 	if err != nil {
@@ -81,56 +73,35 @@ func NewNode(conf *config.Config, privValidator tm_types.PrivValidator, genesisD
 	return nde, nil
 }
 
-func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tm_types.GenesisDoc {
-	validators := make([]tm_types.GenesisValidator, len(burrowGenesisDoc.Validators))
+func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc {
+	validators := make([]tmTypes.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
-		tm := tm_crypto.PubKeyEd25519{}
+		tm := tmCrypto.PubKeyEd25519{}
 		copy(tm[:], validator.PublicKey.RawBytes())
-		validators[i] = tm_types.GenesisValidator{
+		validators[i] = tmTypes.GenesisValidator{
 			PubKey: tm,
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}
 	}
-	return &tm_types.GenesisDoc{
+	return &tmTypes.GenesisDoc{
 		ChainID:         burrowGenesisDoc.ChainID(),
 		GenesisTime:     burrowGenesisDoc.GenesisTime,
 		Validators:      validators,
 		AppHash:         burrowGenesisDoc.Hash(),
-		ConsensusParams: tm_types.DefaultConsensusParams(),
+		ConsensusParams: tmTypes.DefaultConsensusParams(),
 	}
 }
 
-func NewBlockEvent(message interface{}) *tm_types.EventDataNewBlock {
-	tmEventData, ok := message.(tm_types.TMEventData)
-	if ok {
-		eventDataNewBlock, ok := tmEventData.(tm_types.EventDataNewBlock)
-		if ok {
-			return &eventDataNewBlock
-		}
+func NewNodeInfo(ni p2p.NodeInfo) *NodeInfo {
+	address, _ := crypto.AddressFromHexString(string(ni.ID))
+	return &NodeInfo{
+		ID:            address,
+		Moniker:       ni.Moniker,
+		ListenAddress: ni.ListenAddr,
+		Version:       ni.Version,
+		Channels:      binary.HexBytes(ni.Channels),
+		Network:       ni.Network,
+		Other:         ni.Other,
 	}
-	return nil
-}
-
-// Subscribe to NewBlock event safely that ensures progress by a non-blocking receive as well as handling unsubscribe
-func SubscribeNewBlock(ctx context.Context, subscribable event.Subscribable) (<-chan *tm_types.EventDataNewBlock, error) {
-	subID, err := event.GenerateSubscriptionID()
-	if err != nil {
-		return nil, err
-	}
-	const unconsumedBlocksBeforeUnsubscribe = 3
-	ch := make(chan *tm_types.EventDataNewBlock, unconsumedBlocksBeforeUnsubscribe)
-	return ch, event.SubscribeCallback(ctx, subscribable, subID, NewBlockQuery, func(message interface{}) (stop bool) {
-		eventDataNewBlock := NewBlockEvent(message)
-		if eventDataNewBlock != nil {
-			select {
-			case ch <- eventDataNewBlock:
-				return false
-			default:
-				// If we can't send shut down the channel
-				return true
-			}
-		}
-		return
-	})
 }

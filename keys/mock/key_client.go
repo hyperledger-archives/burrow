@@ -17,7 +17,7 @@ package mock
 import (
 	"fmt"
 
-	acm "github.com/hyperledger/burrow/account"
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 )
@@ -32,7 +32,7 @@ type KeyClient struct {
 	knownKeys map[crypto.Address]*Key
 }
 
-func NewKeyClient(privateAccounts ...acm.PrivateAccount) *KeyClient {
+func NewKeyClient(privateAccounts ...*acm.PrivateAccount) *KeyClient {
 	client := &KeyClient{
 		knownKeys: make(map[crypto.Address]*Key),
 	}

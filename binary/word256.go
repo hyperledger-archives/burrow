@@ -16,6 +16,7 @@ package binary
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"sort"
 
@@ -93,6 +94,37 @@ func (w Word256) UnpadLeft() []byte {
 
 func (w Word256) UnpadRight() []byte {
 	return bytes.TrimRight(w[:], trimCutSet)
+}
+
+// Gogo proto support
+func (w *Word256) Marshal() ([]byte, error) {
+	if w == nil {
+		return nil, nil
+	}
+	return w.Bytes(), nil
+}
+
+func (w *Word256) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if len(data) != Word256Length {
+		return fmt.Errorf("error unmarshallling Word256 '%X' from bytes: %d bytes but should have %d bytes",
+			data, len(data), Word256Length)
+	}
+	copy(w[:], data)
+	return nil
+}
+
+func (w *Word256) MarshalTo(data []byte) (int, error) {
+	if w == nil {
+		return 0, nil
+	}
+	return copy(data, w[:]), nil
+}
+
+func (w Word256) Size() int {
+	return Word256Length
 }
 
 func Uint64ToWord256(i uint64) Word256 {

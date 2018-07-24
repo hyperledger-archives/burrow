@@ -1,9 +1,12 @@
 package rpc
 
-import "github.com/hyperledger/burrow/rpc/v0/server"
+import "fmt"
+
+// 'localhost' gets interpreted as ipv6
+// TODO: revisit this
+const localhost = "127.0.0.1"
 
 type RPCConfig struct {
-	V0       *V0Config      `json:",omitempty" toml:",omitempty"`
 	TM       *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
@@ -13,11 +16,6 @@ type RPCConfig struct {
 type ServerConfig struct {
 	Enabled       bool
 	ListenAddress string
-}
-
-type V0Config struct {
-	Enabled bool
-	Server  *server.ServerConfig
 }
 
 type ProfilerConfig struct {
@@ -40,45 +38,37 @@ type MetricsConfig struct {
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
 		TM:       DefaultTMConfig(),
-		V0:       DefaultV0Config(),
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
 		Metrics:  DefaultMetricsConfig(),
 	}
 }
 
-func DefaultV0Config() *V0Config {
-	return &V0Config{
-		Enabled: true,
-		Server:  server.DefaultServerConfig(),
-	}
-}
-
 func DefaultTMConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "tcp://localhost:46657",
+		ListenAddress: fmt.Sprintf("tcp://%s:26658", localhost),
 	}
 }
 
 func DefaultGRPCConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: "localhost:10997",
+		ListenAddress: fmt.Sprintf("%s:10997", localhost),
 	}
 }
 
 func DefaultProfilerConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       false,
-		ListenAddress: "tcp://localhost:6060",
+		ListenAddress: fmt.Sprintf("tcp://%s:6060", localhost),
 	}
 }
 
 func DefaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
 		Enabled:         false,
-		ListenAddress:   "tcp://localhost:9102",
+		ListenAddress:   fmt.Sprintf("tcp://%s:9102", localhost),
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,
 	}

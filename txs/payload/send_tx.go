@@ -3,14 +3,9 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/account/state"
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 )
-
-type SendTx struct {
-	Inputs  []*TxInput
-	Outputs []*TxOutput
-}
 
 func NewSendTx() *SendTx {
 	return &SendTx{
@@ -59,4 +54,10 @@ func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) error {
 		Amount:  amt,
 	})
 	return nil
+}
+
+func (tx *SendTx) Any() *Any {
+	return &Any{
+		SendTx: tx,
+	}
 }

@@ -3,445 +3,490 @@ package iavl
 import (
 	"bytes"
 	"fmt"
+	"sort"
+	"strings"
 
-	"github.com/pkg/errors"
-	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
-// KeyInRangeProof is an interface which covers both first-in-range and last-in-range proofs.
-type KeyInRangeProof interface {
-	Verify(startKey, endKey, key, value, root []byte) error
+type RangeProof struct {
+	// You don't need the right path because
+	// it can be derived from what we have.
+	LeftPath   PathToLeaf      `json:"left_path"`
+	InnerNodes []PathToLeaf    `json:"inner_nodes"`
+	Leaves     []proofLeafNode `json:"leaves"`
+
+	// memoize
+	rootVerified bool
+	rootHash     []byte // valid iff rootVerified is true
+	treeEnd      bool   // valid iff rootVerified is true
+
 }
 
-// KeyFirstInRangeProof is a proof that a given key is the first in a given range.
-type KeyFirstInRangeProof struct {
-	KeyExistsProof `json:"key_proof"`
-
-	Left  *pathWithNode `json:"left"`
-	Right *pathWithNode `json:"right"`
+// Keys returns all the keys in the RangeProof.  NOTE: The keys here may
+// include more keys than provided by tree.GetRangeWithProof or
+// VersionedTree.GetVersionedRangeWithProof.  The keys returned there are only
+// in the provided [startKey,endKey){limit} range.  The keys returned here may
+// include extra keys, such as:
+// - the key before startKey if startKey is provided and doesn't exist;
+// - the key after a queried key with tree.GetWithProof, when the key is absent.
+func (proof *RangeProof) Keys() (keys [][]byte) {
+	if proof == nil {
+		return nil
+	}
+	for _, leaf := range proof.Leaves {
+		keys = append(keys, leaf.Key)
+	}
+	return keys
 }
 
 // String returns a string representation of the proof.
-func (proof *KeyFirstInRangeProof) String() string {
-	return fmt.Sprintf("%#v", proof)
+func (proof *RangeProof) String() string {
+	if proof == nil {
+		return "<nil-RangeProof>"
+	}
+	return proof.StringIndented("")
 }
 
-// Verify that the first in range proof is valid.
-func (proof *KeyFirstInRangeProof) Verify(startKey, endKey, key, value []byte, root []byte) error {
-	if key != nil {
-		inputsOutOfRange := bytes.Compare(key, startKey) == -1 || bytes.Compare(key, endKey) == 1
-		if inputsOutOfRange {
-			return ErrInvalidInputs
-		}
+func (proof *RangeProof) StringIndented(indent string) string {
+	istrs := make([]string, 0, len(proof.InnerNodes))
+	for _, ptl := range proof.InnerNodes {
+		istrs = append(istrs, ptl.stringIndented(indent+"    "))
 	}
-	if proof.Left == nil && proof.Right == nil && proof.PathToKey == nil {
-		return errors.WithStack(ErrInvalidProof)
+	lstrs := make([]string, 0, len(proof.Leaves))
+	for _, leaf := range proof.Leaves {
+		lstrs = append(lstrs, leaf.stringIndented(indent+"    "))
 	}
-	if err := verifyPaths(proof.Left, proof.Right, startKey, endKey, root); err != nil {
-		return err
-	}
-	if proof.PathToKey == nil {
-		// If we don't have an existing key, we effectively have a proof of absence.
-		return verifyKeyAbsence(proof.Left, proof.Right)
-	}
-
-	if err := proof.KeyExistsProof.Verify(key, value, root); err != nil {
-		return errors.Wrap(err, "failed to verify key exists proof")
-	}
-	// If the key returned is equal to our start key, and we've verified
-	// that it exists, there's nothing else to check.
-	if bytes.Equal(key, startKey) {
-		return nil
-	}
-	// If the key returned is the smallest in the tree, then it must be
-	// the smallest in the given range too.
-	if proof.PathToKey.isLeftmost() {
-		return nil
-	}
-	// The start key is in between the left path and the key returned,
-	// and the paths are adjacent. Therefore there is nothing between
-	// the key returned and the start key.
-	if proof.Left != nil && proof.Left.Path.isLeftAdjacentTo(proof.PathToKey) {
-		return nil
-	}
-	return errors.WithStack(ErrInvalidProof)
+	return fmt.Sprintf(`RangeProof{
+%s  LeftPath: %v
+%s  InnerNodes:
+%s    %v
+%s  Leaves:
+%s    %v
+%s  (rootVerified): %v
+%s  (rootHash): %X
+%s  (treeEnd): %v
+%s}`,
+		indent, proof.LeftPath.stringIndented(indent+"  "),
+		indent,
+		indent, strings.Join(istrs, "\n"+indent+"    "),
+		indent,
+		indent, strings.Join(lstrs, "\n"+indent+"    "),
+		indent, proof.rootVerified,
+		indent, proof.rootHash,
+		indent, proof.treeEnd,
+		indent)
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-// KeyLastInRangeProof is a proof that a given key is the last in a given range.
-type KeyLastInRangeProof struct {
-	KeyExistsProof `json:"key_proof"`
-
-	Left  *pathWithNode `json:"left"`
-	Right *pathWithNode `json:"right"`
+// The index of the first leaf (of the whole tree).
+// Returns -1 if the proof is nil.
+func (proof *RangeProof) LeftIndex() int64 {
+	if proof == nil {
+		return -1
+	}
+	return proof.LeftPath.Index()
 }
 
-// String returns a string representation of the proof.
-func (proof *KeyLastInRangeProof) String() string {
-	// TODO(cloudhead): Needs work.
-	return fmt.Sprintf("%#v", proof)
-}
-
-// Verify that the last in range proof is valid.
-func (proof *KeyLastInRangeProof) Verify(startKey, endKey, key, value []byte, root []byte) error {
-	if key != nil && (bytes.Compare(key, startKey) == -1 || bytes.Compare(key, endKey) == 1) {
-		return ErrInvalidInputs
+// Also see LeftIndex().
+// Verify that a key has some value.
+// Does not assume that the proof itself is valid, call Verify() first.
+func (proof *RangeProof) VerifyItem(key, value []byte) error {
+	leaves := proof.Leaves
+	if proof == nil {
+		return cmn.ErrorWrap(ErrInvalidProof, "proof is nil")
 	}
-	if proof.Left == nil && proof.Right == nil && proof.PathToKey == nil {
-		return errors.WithStack(ErrInvalidProof)
+	if !proof.rootVerified {
+		return cmn.NewError("must call Verify(root) first.")
 	}
-	if err := verifyPaths(proof.Left, proof.Right, startKey, endKey, root); err != nil {
-		return err
+	i := sort.Search(len(leaves), func(i int) bool {
+		return bytes.Compare(key, leaves[i].Key) <= 0
+	})
+	if i >= len(leaves) || !bytes.Equal(leaves[i].Key, key) {
+		return cmn.ErrorWrap(ErrInvalidProof, "leaf key not found in proof")
 	}
-	if proof.PathToKey == nil {
-		// If we don't have an existing key, we effectively have a proof of absence.
-		return verifyKeyAbsence(proof.Left, proof.Right)
-	}
-
-	if err := proof.KeyExistsProof.Verify(key, value, root); err != nil {
-		return err
-	}
-	if bytes.Equal(key, endKey) {
-		return nil
-	}
-	if proof.PathToKey.isRightmost() {
-		return nil
-	}
-	if proof.Right != nil &&
-		proof.PathToKey.isLeftAdjacentTo(proof.Right.Path) {
-		return nil
-	}
-
-	return errors.WithStack(ErrInvalidProof)
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-// KeyRangeProof is proof that a range of keys does or does not exist.
-type KeyRangeProof struct {
-	RootHash   cmn.HexBytes `json:"root_hash"`
-	Versions   []int64      `json:"versions"`
-	PathToKeys []*PathToKey `json:"paths"`
-
-	Left  *pathWithNode `json:"left"`
-	Right *pathWithNode `json:"right"`
-}
-
-// Verify that a range proof is valid.
-//
-// This method expects the same parameters passed to query the range.
-func (proof *KeyRangeProof) Verify(
-	startKey, endKey []byte, limit int, keys, values [][]byte, root []byte,
-) error {
-	if len(proof.PathToKeys) != len(keys) || len(values) != len(keys) || len(proof.Versions) != len(keys) {
-		return errors.WithStack(ErrInvalidInputs)
-	}
-	if limit > 0 && len(keys) > limit {
-		return errors.WithStack(ErrInvalidInputs)
-	}
-
-	// If startKey > endKey, reverse the keys and values, since our proofs are
-	// always in ascending order.
-	ascending := bytes.Compare(startKey, endKey) == -1
-	if !ascending {
-		startKey, endKey, keys, values = reverseKeys(startKey, endKey, keys, values)
-	}
-
-	// If the range is empty, we just have to check the left and right paths.
-	if len(keys) == 0 {
-		if err := verifyKeyAbsence(proof.Left, proof.Right); err != nil {
-			return err
-		}
-		return verifyPaths(proof.Left, proof.Right, startKey, endKey, root)
-	}
-
-	// If we hit the limit, one of the two ends doesn't have to match the
-	// limits of the query, so we adjust the range to match the limit we found.
-	if limit > 0 && len(keys) == limit {
-		if ascending {
-			endKey = keys[len(keys)-1]
-		} else {
-			startKey = keys[0]
-		}
-	}
-	// Now we know Left < startKey <= endKey < Right.
-	if err := verifyPaths(proof.Left, proof.Right, startKey, endKey, root); err != nil {
-		return err
-	}
-
-	if err := verifyNoMissingKeys(proof.paths()); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// If we've reached this point, it means our range isn't empty, and we have
-	// a list of keys.
-	for i, path := range proof.PathToKeys {
-		leafNode := proofLeafNode{
-			KeyBytes:   keys[i],
-			ValueBytes: values[i],
-			Version:    proof.Versions[i],
-		}
-		if err := path.verify(leafNode.Hash(), root); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-
-	// In the case of a descending range, if the left proof is nil and the
-	// limit wasn't reached, we have to verify that we're not missing any
-	// keys. Basically, if a key to the left is missing because we've
-	// reached the limit, then it's fine. But if the key count is smaller
-	// than the limit, we need a left proof to make sure no keys are
-	// missing.
-	if proof.Left == nil &&
-		!bytes.Equal(startKey, keys[0]) &&
-		!proof.PathToKeys[0].isLeftmost() {
-		return errors.WithStack(ErrInvalidProof)
-	}
-
-	if proof.Right == nil &&
-		!bytes.Equal(endKey, keys[len(keys)-1]) &&
-		!proof.PathToKeys[len(proof.PathToKeys)-1].isRightmost() {
-		return errors.WithStack(ErrInvalidProof)
+	valueHash := tmhash.Sum(value)
+	if !bytes.Equal(leaves[i].ValueHash, valueHash) {
+		return cmn.ErrorWrap(ErrInvalidProof, "leaf value hash not same")
 	}
 	return nil
 }
 
-func (proof *KeyRangeProof) String() string {
-	// TODO(cloudhead): Needs work.
-	return fmt.Sprintf("%#v", proof)
-}
-
-// Returns a list of all paths, in order, with the proof's Left and Right
-// paths preprended and appended respectively, if they exist.
-func (proof *KeyRangeProof) paths() []*PathToKey {
-	paths := proof.PathToKeys[:]
-	if proof.Left != nil {
-		paths = append([]*PathToKey{proof.Left.Path}, paths...)
+// Verify that proof is valid absence proof for key.
+// Does not assume that the proof itself is valid.
+// For that, use Verify(root).
+func (proof *RangeProof) VerifyAbsence(key []byte) error {
+	if proof == nil {
+		return cmn.ErrorWrap(ErrInvalidProof, "proof is nil")
 	}
-	if proof.Right != nil {
-		paths = append(paths, proof.Right.Path)
+	if !proof.rootVerified {
+		return cmn.NewError("must call Verify(root) first.")
 	}
-	return paths
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-func (t *Tree) getRangeWithProof(keyStart, keyEnd []byte, limit int) (
-	keys, values [][]byte, rangeProof *KeyRangeProof, err error,
-) {
-	if t.root == nil {
-		return nil, nil, nil, ErrNilRoot
+	cmp := bytes.Compare(key, proof.Leaves[0].Key)
+	if cmp < 0 {
+		if proof.LeftPath.isLeftmost() {
+			return nil
+		}
+		return cmn.NewError("absence not proved by left path")
+	} else if cmp == 0 {
+		return cmn.NewError("absence disproved via first item #0")
 	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
-
-	rangeProof = &KeyRangeProof{RootHash: t.root.hash}
-	rangeStart, rangeEnd := keyStart, keyEnd
-	ascending := bytes.Compare(keyStart, keyEnd) == -1
-	if !ascending {
-		rangeStart, rangeEnd = rangeEnd, rangeStart
+	if len(proof.LeftPath) == 0 {
+		return nil // proof ok
+	}
+	if proof.LeftPath.isRightmost() {
+		return nil
 	}
 
-	versions := []int64{}
-	limited := t.IterateRangeInclusive(rangeStart, rangeEnd, ascending, func(k, v []byte, version int64) bool {
-		keys = append(keys, k)
-		values = append(values, v)
-		versions = append(versions, version)
-		return len(keys) == limit
-	})
-
-	// Construct the paths such that they are always in ascending order.
-	rangeProof.PathToKeys = make([]*PathToKey, len(keys))
-	rangeProof.Versions = make([]int64, len(keys))
-	for i, k := range keys {
-		path, _, _ := t.root.pathToKey(t, k)
-		if ascending {
-			rangeProof.PathToKeys[i] = path
-			rangeProof.Versions[i] = versions[i]
+	// See if any of the leaves are greater than key.
+	for i := 1; i < len(proof.Leaves); i++ {
+		leaf := proof.Leaves[i]
+		cmp := bytes.Compare(key, leaf.Key)
+		if cmp < 0 {
+			return nil // proof ok
+		} else if cmp == 0 {
+			return cmn.NewError("absence disproved via item #%v", i)
 		} else {
-			rangeProof.PathToKeys[len(keys)-i-1] = path
-			rangeProof.Versions[len(keys)-i-1] = versions[i]
-		}
-	}
+			if i == len(proof.Leaves)-1 {
+				// If last item, check whether
+				// it's the last item in the tree.
 
-	//
-	// Figure out which of the left or right paths we need.
-	//
-	var needsLeft, needsRight bool
-
-	if len(keys) == 0 {
-		needsLeft, needsRight = true, true
-	} else {
-		first, last := 0, len(keys)-1
-		if !ascending {
-			first, last = last, first
-		}
-
-		needsLeft = !bytes.Equal(keys[first], rangeStart)
-		needsRight = !bytes.Equal(keys[last], rangeEnd)
-
-		// When limited, we can relax the right or left side, depending on
-		// the direction of the range.
-		if limited {
-			if ascending {
-				needsRight = false
-			} else {
-				needsLeft = false
 			}
+			continue
 		}
 	}
 
-	// So far, we've created proofs of the keys which are within the provided range.
-	// Next, we need to create a proof that we haven't omitted any keys to the left
-	// or right of that range. This is relevant in two scenarios:
-	//
-	// 1. There are no keys in the range. In this case, include a proof of the key
-	//    to the left and right of that empty range.
-	// 2. The start or end key do not match the start and end of the keys returned.
-	//    In this case, include proofs of the keys immediately outside of those returned.
-	//
-	if needsLeft {
-		// Find index of first key to the left, and include proof if it isn't the
-		// leftmost key.
-		if idx, _ := t.Get64(rangeStart); idx > 0 {
-			lkey, lval := t.GetByIndex64(idx - 1)
-			path, node, _ := t.root.pathToKey(t, lkey)
-			rangeProof.Left = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{lkey, lval, node.version},
-			}
-		}
+	// It's still a valid proof if our last leaf is the rightmost child.
+	if proof.treeEnd {
+		return nil // OK!
 	}
 
-	// Proof that the last key is the last value before keyEnd, or that we're limited.
-	// If len(keys) == limit, it doesn't matter that a key exists to the right of the
-	// last key, since we aren't interested in it.
-	if needsRight {
-		// Find index of first key to the right, and include proof if it isn't the
-		// rightmost key.
-		if idx, _ := t.Get64(rangeEnd); idx <= t.Size64()-1 {
-			rkey, rval := t.GetByIndex64(idx)
-			path, node, _ := t.root.pathToKey(t, rkey)
-			rangeProof.Right = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{rkey, rval, node.version},
-			}
-		}
+	// It's not a valid absence proof.
+	if len(proof.Leaves) < 2 {
+		return cmn.NewError("absence not proved by right leaf (need another leaf?)")
 	}
-
-	return keys, values, rangeProof, nil
+	return cmn.NewError("absence not proved by right leaf")
 }
 
-func (t *Tree) getFirstInRangeWithProof(keyStart, keyEnd []byte) (
-	key, value []byte, proof *KeyFirstInRangeProof, err error,
-) {
-	if t.root == nil {
-		return nil, nil, nil, ErrNilRoot
+// Verify that proof is valid.
+func (proof *RangeProof) Verify(root []byte) error {
+	if proof == nil {
+		return cmn.ErrorWrap(ErrInvalidProof, "proof is nil")
 	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
-	proof = &KeyFirstInRangeProof{}
-	proof.RootHash = t.root.hash
-	proof.Version = t.root.version
-
-	// Get the first value in the range.
-	t.IterateRangeInclusive(keyStart, keyEnd, true, func(k, v []byte, _ int64) bool {
-		key, value = k, v
-		return true
-	})
-
-	if len(key) > 0 {
-		proof.PathToKey, _, _ = t.root.pathToKey(t, key)
-	}
-
-	if !bytes.Equal(key, keyStart) {
-		if idx, _ := t.Get64(keyStart); idx-1 >= 0 && idx-1 <= t.Size64()-1 {
-			k, v := t.GetByIndex64(idx - 1)
-			path, node, _ := t.root.pathToKey(t, k)
-			proof.Left = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{k, v, node.version},
-			}
-		}
-	}
-
-	if !bytes.Equal(key, keyEnd) {
-		if idx, val := t.Get64(keyEnd); idx <= t.Size64()-1 && val == nil {
-			k, v := t.GetByIndex64(idx)
-			path, node, _ := t.root.pathToKey(t, k)
-			proof.Right = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{k, v, node.version},
-			}
-		}
-	}
-
-	return key, value, proof, nil
+	err := proof.verify(root)
+	return err
 }
 
-func (t *Tree) getLastInRangeWithProof(keyStart, keyEnd []byte) (
-	key, value []byte, proof *KeyLastInRangeProof, err error,
-) {
-	if t.root == nil {
-		return nil, nil, nil, ErrNilRoot
+func (proof *RangeProof) verify(root []byte) error {
+	rootHash := proof.rootHash
+	if rootHash == nil {
+		derivedHash, err := proof.computeRootHash()
+		if err != nil {
+			return err
+		}
+		rootHash = derivedHash
 	}
-	t.root.hashWithCount() // Ensure that all hashes are calculated.
+	if !bytes.Equal(rootHash, root) {
+		return cmn.ErrorWrap(ErrInvalidRoot, "root hash doesn't match")
+	}
+	proof.rootVerified = true
+	return nil
+}
 
-	proof = &KeyLastInRangeProof{}
-	proof.RootHash = t.root.hash
-	proof.Version = t.root.version
+// ComputeRootHash computes the root hash with leaves.
+// Returns nil if error or proof is nil.
+// Does not verify the root hash.
+func (proof *RangeProof) ComputeRootHash() []byte {
+	if proof == nil {
+		return nil
+	}
+	rootHash, _ := proof.computeRootHash()
+	return rootHash
+}
 
-	// Get the last value in the range.
-	t.IterateRangeInclusive(keyStart, keyEnd, false, func(k, v []byte, _ int64) bool {
-		key, value = k, v
-		return true
-	})
+func (proof *RangeProof) computeRootHash() (rootHash []byte, err error) {
+	rootHash, treeEnd, err := proof._computeRootHash()
+	if err == nil {
+		proof.rootHash = rootHash // memoize
+		proof.treeEnd = treeEnd   // memoize
+	}
+	return rootHash, err
+}
 
-	if len(key) > 0 {
-		proof.PathToKey, _, _ = t.root.pathToKey(t, key)
+func (proof *RangeProof) _computeRootHash() (rootHash []byte, treeEnd bool, err error) {
+	if len(proof.Leaves) == 0 {
+		return nil, false, cmn.ErrorWrap(ErrInvalidProof, "no leaves")
+	}
+	if len(proof.InnerNodes)+1 != len(proof.Leaves) {
+		return nil, false, cmn.ErrorWrap(ErrInvalidProof, "InnerNodes vs Leaves length mismatch, leaves should be 1 more.")
 	}
 
-	if !bytes.Equal(key, keyEnd) {
-		if idx, _ := t.Get64(keyEnd); idx <= t.Size64()-1 {
-			k, v := t.GetByIndex64(idx)
-			path, node, _ := t.root.pathToKey(t, k)
-			proof.Right = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{k, v, node.version},
+	// Start from the left path and prove each leaf.
+
+	// shared across recursive calls
+	var leaves = proof.Leaves
+	var innersq = proof.InnerNodes
+	var COMPUTEHASH func(path PathToLeaf, rightmost bool) (hash []byte, treeEnd bool, done bool, err error)
+
+	// rightmost: is the root a rightmost child of the tree?
+	// treeEnd: true iff the last leaf is the last item of the tree.
+	// Returns the (possibly intermediate, possibly root) hash.
+	COMPUTEHASH = func(path PathToLeaf, rightmost bool) (hash []byte, treeEnd bool, done bool, err error) {
+
+		// Pop next leaf.
+		nleaf, rleaves := leaves[0], leaves[1:]
+		leaves = rleaves
+
+		// Compute hash.
+		hash = (pathWithLeaf{
+			Path: path,
+			Leaf: nleaf,
+		}).computeRootHash()
+
+		// If we don't have any leaves left, we're done.
+		if len(leaves) == 0 {
+			rightmost = rightmost && path.isRightmost()
+			return hash, rightmost, true, nil
+		}
+
+		// Prove along path (until we run out of leaves).
+		for len(path) > 0 {
+
+			// Drop the leaf-most (last-most) inner nodes from path
+			// until we encounter one with a left hash.
+			// We assume that the left side is already verified.
+			// rpath: rest of path
+			// lpath: last path item
+			rpath, lpath := path[:len(path)-1], path[len(path)-1]
+			path = rpath
+			if len(lpath.Right) == 0 {
+				continue
+			}
+
+			// Pop next inners, a PathToLeaf (e.g. []proofInnerNode).
+			inners, rinnersq := innersq[0], innersq[1:]
+			innersq = rinnersq
+
+			// Recursively verify inners against remaining leaves.
+			derivedRoot, treeEnd, done, err := COMPUTEHASH(inners, rightmost && rpath.isRightmost())
+			if err != nil {
+				return nil, treeEnd, false, cmn.ErrorWrap(err, "recursive COMPUTEHASH call")
+			}
+			if !bytes.Equal(derivedRoot, lpath.Right) {
+				return nil, treeEnd, false, cmn.ErrorWrap(ErrInvalidRoot, "intermediate root hash %X doesn't match, got %X", lpath.Right, derivedRoot)
+			}
+			if done {
+				return hash, treeEnd, true, nil
 			}
 		}
+
+		// We're not done yet (leaves left over). No error, not done either.
+		// Technically if rightmost, we know there's an error "left over leaves
+		// -- malformed proof", but we return that at the top level, below.
+		return hash, false, false, nil
 	}
 
-	if !bytes.Equal(key, keyStart) {
-		if idx, _ := t.Get64(keyStart); idx-1 >= 0 && idx-1 <= t.Size64()-1 {
-			k, v := t.GetByIndex64(idx - 1)
-			path, node, _ := t.root.pathToKey(t, k)
-			proof.Left = &pathWithNode{
-				Path: path,
-				Node: proofLeafNode{k, v, node.version},
-			}
-		}
+	// Verify!
+	path := proof.LeftPath
+	rootHash, treeEnd, done, err := COMPUTEHASH(path, true)
+	if err != nil {
+		return nil, treeEnd, cmn.ErrorWrap(err, "root COMPUTEHASH call")
+	} else if !done {
+		return nil, treeEnd, cmn.ErrorWrap(ErrInvalidProof, "left over leaves -- malformed proof")
 	}
 
-	return key, value, proof, nil
+	// Ok!
+	return rootHash, treeEnd, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// reverseKeys reverses the keys and values and swaps start and end key
-// if startKey > endKey.
-func reverseKeys(startKey, endKey []byte, keys, values [][]byte) (
-	[]byte, []byte, [][]byte, [][]byte,
-) {
-	if bytes.Compare(startKey, endKey) == 1 {
-		startKey, endKey = endKey, startKey
-
-		ks := make([][]byte, len(keys))
-		vs := make([][]byte, len(keys))
-		for i, _ := range keys {
-			ks[len(ks)-1-i] = keys[i]
-			vs[len(vs)-1-i] = values[i]
-		}
-		keys, values = ks, vs
+// keyStart is inclusive and keyEnd is exclusive.
+// Returns the range-proof and the included keys and values.
+// If keyStart or keyEnd don't exist, the leaf before keyStart
+// or after keyEnd will also be included, but not be included in values.
+// If keyEnd-1 exists, no later leaves will be included.
+// If keyStart >= keyEnd and both not nil, panics.
+// Limit is never exceeded.
+func (t *Tree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [][]byte, [][]byte, error) {
+	if keyStart != nil && keyEnd != nil && bytes.Compare(keyStart, keyEnd) >= 0 {
+		panic("if keyStart and keyEnd are present, need keyStart < keyEnd.")
 	}
-	return startKey, endKey, keys, values
+	if limit < 0 {
+		panic("limit must be greater or equal to 0 -- 0 means no limit")
+	}
+	if t.root == nil {
+		return nil, nil, nil, cmn.ErrorWrap(ErrNilRoot, "")
+	}
+	t.root.hashWithCount() // Ensure that all hashes are calculated.
+
+	// Get the first key/value pair proof, which provides us with the left key.
+	path, left, err := t.root.PathToLeaf(t, keyStart)
+	if err != nil {
+		// Key doesn't exist, but instead we got the prev leaf (or the
+		// first or last leaf), which provides proof of absence).
+		// err = nil isn't necessary as we do not use it in the returns below
+	}
+	startOK := keyStart == nil || bytes.Compare(keyStart, left.key) <= 0
+	endOK := keyEnd == nil || bytes.Compare(left.key, keyEnd) < 0
+	// If left.key is in range, add it to key/values.
+	var keys, values [][]byte
+	if startOK && endOK {
+		keys = append(keys, left.key) // == keyStart
+		values = append(values, left.value)
+	}
+	// Either way, add to proof leaves.
+	var leaves = []proofLeafNode{{
+		Key:       left.key,
+		ValueHash: tmhash.Sum(left.value),
+		Version:   left.version,
+	}}
+
+	// 1: Special case if limit is 1.
+	// 2: Special case if keyEnd is left.key+1.
+	_stop := false
+	if limit == 1 {
+		_stop = true // case 1
+	} else if keyEnd != nil && bytes.Compare(cpIncr(left.key), keyEnd) >= 0 {
+		_stop = true // case 2
+	}
+	if _stop {
+		return &RangeProof{
+			LeftPath: path,
+			Leaves:   leaves,
+		}, keys, values, nil
+	}
+
+	// Get the key after left.key to iterate from.
+	afterLeft := cpIncr(left.key)
+
+	// Traverse starting from afterLeft, until keyEnd or the next leaf
+	// after keyEnd.
+	// nolint
+	var innersq = []PathToLeaf(nil)
+	var inners = PathToLeaf(nil)
+	var lastDepth uint8 = 0
+	var leafCount = 1 // from left above.
+	var pathCount = 0
+	// var keys, values [][]byte defined as function outs.
+
+	t.root.traverseInRange(t, afterLeft, nil, true, false, 0,
+		func(node *Node, depth uint8) (stop bool) {
+
+			// Track when we diverge from path, or when we've exhausted path,
+			// since the first innersq shouldn't include it.
+			if pathCount != -1 {
+				if len(path) <= pathCount {
+					// We're done with path counting.
+					pathCount = -1
+				} else {
+					pn := path[pathCount]
+					if pn.Height != node.height ||
+						pn.Left != nil && !bytes.Equal(pn.Left, node.leftHash) ||
+						pn.Right != nil && !bytes.Equal(pn.Right, node.rightHash) {
+
+						// We've diverged, so start appending to inners.
+						pathCount--
+					} else {
+						pathCount++
+					}
+				}
+			}
+
+			if node.height == 0 {
+				// Leaf node.
+				// Append inners to innersq.
+				innersq = append(innersq, inners)
+				inners = PathToLeaf(nil)
+				// Append leaf to leaves.
+				leaves = append(leaves, proofLeafNode{
+					Key:       node.key,
+					ValueHash: tmhash.Sum(node.value),
+					Version:   node.version,
+				})
+				leafCount++
+				// Maybe terminate because we found enough leaves.
+				if limit > 0 && limit <= leafCount {
+					return true
+				}
+				// Terminate if we've found keyEnd or after.
+				if keyEnd != nil && bytes.Compare(node.key, keyEnd) >= 0 {
+					return true
+				}
+				// Value is in range, append to keys and values.
+				keys = append(keys, node.key)
+				values = append(values, node.value)
+				// Terminate if we've found keyEnd-1 or after.
+				// We don't want to fetch any leaves for it.
+				if keyEnd != nil && bytes.Compare(cpIncr(node.key), keyEnd) >= 0 {
+					return true
+				}
+			} else {
+				// Inner node.
+				if pathCount >= 0 {
+					// Skip redundant path items.
+				} else {
+					inners = append(inners, proofInnerNode{
+						Height:  node.height,
+						Size:    node.size,
+						Version: node.version,
+						Left:    nil, // left is nil for range proof inners
+						Right:   node.rightHash,
+					})
+				}
+			}
+			lastDepth = depth
+			return false
+		},
+	)
+
+	return &RangeProof{
+		LeftPath:   path,
+		InnerNodes: innersq,
+		Leaves:     leaves,
+	}, keys, values, nil
+}
+
+//----------------------------------------
+
+// GetWithProof gets the value under the key if it exists, or returns nil.
+// A proof of existence or absence is returned alongside the value.
+func (t *Tree) GetWithProof(key []byte) (value []byte, proof *RangeProof, err error) {
+	proof, _, values, err := t.getRangeProof(key, cpIncr(key), 2)
+	if err == nil {
+		if len(values) > 0 {
+			if !bytes.Equal(proof.Leaves[0].Key, key) {
+				return nil, proof, nil
+			}
+			return values[0], proof, nil
+		}
+		return nil, proof, nil
+	}
+	return nil, nil, cmn.ErrorWrap(err, "could not construct any proof")
+}
+
+// GetRangeWithProof gets key/value pairs within the specified range and limit.
+func (t *Tree) GetRangeWithProof(startKey []byte, endKey []byte, limit int) (keys, values [][]byte, proof *RangeProof, err error) {
+	proof, keys, values, err = t.getRangeProof(startKey, endKey, limit)
+	return
+}
+
+// GetVersionedWithProof gets the value under the key at the specified version
+// if it exists, or returns nil.
+func (tree *VersionedTree) GetVersionedWithProof(key []byte, version int64) ([]byte, *RangeProof, error) {
+	if t, ok := tree.versions[version]; ok {
+		return t.GetWithProof(key)
+	}
+	return nil, nil, cmn.ErrorWrap(ErrVersionDoesNotExist, "")
+}
+
+// GetVersionedRangeWithProof gets key/value pairs within the specified range
+// and limit.
+func (tree *VersionedTree) GetVersionedRangeWithProof(startKey, endKey []byte, limit int, version int64) (
+	keys, values [][]byte, proof *RangeProof, err error) {
+
+	if t, ok := tree.versions[version]; ok {
+		return t.GetRangeWithProof(startKey, endKey, limit)
+	}
+	return nil, nil, nil, cmn.ErrorWrap(ErrVersionDoesNotExist, "")
 }

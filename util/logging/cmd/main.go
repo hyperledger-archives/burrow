@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 
-	. "github.com/hyperledger/burrow/logging/config"
+	. "github.com/hyperledger/burrow/logging/logconfig"
 )
 
 // Dump an example logging configuration
