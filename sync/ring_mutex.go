@@ -11,9 +11,28 @@ import (
 )
 
 type RingMutex struct {
-	mtxs       []sync.RWMutex
+	mutexes    []sync.RWMutex
+	values     []Value
 	hash       func(address []byte) uint64
 	mutexCount uint64
+}
+
+type Value struct {
+	set   bool
+	value interface{}
+}
+
+func (v *Value) IsSet() bool {
+	return v.set
+}
+
+func (v *Value) Set(value interface{}) {
+	v.value = value
+	v.set = true
+}
+
+func (v *Value) Get() interface{} {
+	return v.value
 }
 
 // Create a RW mutex that provides a pseudo-independent set of mutexes for addresses
@@ -26,7 +45,8 @@ func NewRingMutex(mutexCount int, hashMaker func() hash.Hash64) *RingMutex {
 	ringMutex := &RingMutex{
 		mutexCount: uint64(mutexCount),
 		// max slice length is bounded by max(int) thus the argument type
-		mtxs: make([]sync.RWMutex, mutexCount, mutexCount),
+		mutexes: make([]sync.RWMutex, mutexCount, mutexCount),
+		values:  make([]Value, mutexCount, mutexCount),
 		hash: func(address []byte) uint64 {
 			buf := make([]byte, 8)
 			copy(buf, address)
@@ -62,12 +82,15 @@ func NewRingMutexXXHash(mutexCount int) *RingMutex {
 	})
 }
 
-func (mtx *RingMutex) Lock(address []byte) {
-	mtx.Mutex(address).Lock()
+func (mtx *RingMutex) Lock(address []byte) (value *Value) {
+	index := mtx.index(address)
+	mtx.mutexes[index].Lock()
+	return &mtx.values[index]
 }
 
 func (mtx *RingMutex) Unlock(address []byte) {
-	mtx.Mutex(address).Unlock()
+	index := mtx.index(address)
+	mtx.mutexes[index].Unlock()
 }
 
 func (mtx *RingMutex) RLock(address []byte) {
@@ -84,7 +107,7 @@ func (mtx *RingMutex) MutexCount() uint64 {
 }
 
 func (mtx *RingMutex) Mutex(address []byte) *sync.RWMutex {
-	return &mtx.mtxs[mtx.index(address)]
+	return &mtx.mutexes[mtx.index(address)]
 }
 
 func (mtx *RingMutex) index(address []byte) uint64 {

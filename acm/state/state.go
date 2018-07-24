@@ -81,6 +81,14 @@ type IterableReaderWriter interface {
 	Writer
 }
 
+func GetConcreteAccount(getter AccountGetter, address crypto.Address) (*acm.ConcreteAccount, error) {
+	acc, err := getter.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	return acm.AsConcreteAccount(acc), nil
+}
+
 func GetMutableAccount(getter AccountGetter, address crypto.Address) (*acm.MutableAccount, error) {
 	acc, err := getter.GetAccount(address)
 	if err != nil {

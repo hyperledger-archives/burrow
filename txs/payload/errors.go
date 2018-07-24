@@ -13,8 +13,8 @@ type ErrTxInvalidSequence struct {
 }
 
 func (e ErrTxInvalidSequence) Error() string {
-	return fmt.Sprintf("Error invalid sequence in input %v: input has sequence %d, but account has expected "+
-		"%d, so expected input to have sequence %d", e.Input, e.Input.Sequence, e.Account.Sequence(), e.Account.Sequence()+1)
+	return fmt.Sprintf("Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
+		"so expected input to have sequence %d", e.Input, e.Input.Sequence, e.Account.Sequence(), e.Account.Sequence()+1)
 }
 
 func (e ErrTxInvalidSequence) ErrorCode() errors.Code {

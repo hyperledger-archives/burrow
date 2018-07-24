@@ -105,7 +105,7 @@ func (e *Exporter) getBlocks() (*rpc.ResultListBlocks, error) {
 		e.datum.BlockSampleSize = maxHeight
 	}
 
-	res, err := e.service.ListBlocks(minHeight, maxHeight)
+	res, err := e.service.ListBlocks(int64(minHeight), int64(maxHeight))
 	if err != nil {
 		return nil, err
 	}

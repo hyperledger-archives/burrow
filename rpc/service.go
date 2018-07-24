@@ -268,11 +268,11 @@ func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 // from the top of the range of blocks.
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
-func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
-	latestHeight := s.blockchain.LastBlockHeight()
+func (s *Service) ListBlocks(minHeight, maxHeight int64) (*ResultListBlocks, error) {
+	latestHeight := int64(s.blockchain.LastBlockHeight())
 
-	if minHeight == 0 {
-		minHeight = 1
+	if minHeight < 1 {
+		minHeight = latestHeight
 	}
 	if maxHeight == 0 || latestHeight < maxHeight {
 		maxHeight = latestHeight
@@ -283,12 +283,12 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 
 	var blockMetas []*tmTypes.BlockMeta
 	for height := maxHeight; height >= minHeight; height-- {
-		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int64(height))
+		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(height)
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
 	return &ResultListBlocks{
-		LastHeight: latestHeight,
+		LastHeight: uint64(latestHeight),
 		BlockMetas: blockMetas,
 	}, nil
 }

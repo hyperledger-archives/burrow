@@ -109,7 +109,7 @@ func TestBlockchainInfo(t *testing.T) {
 		nBlocks := 4
 		waitNBlocks(t, nBlocks)
 
-		resp, err := tmclient.ListBlocks(client, 0, 0)
+		resp, err := tmclient.ListBlocks(client, 1, 0)
 		if err != nil {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}

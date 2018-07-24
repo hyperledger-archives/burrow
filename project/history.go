@@ -28,6 +28,8 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
+	"0.20.1",
+	`Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput, also support mempool signing for BroadcastTxAsync.`,
 	"0.20.0",
 	`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 
