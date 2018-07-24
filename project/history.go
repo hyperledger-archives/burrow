@@ -29,7 +29,7 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow").MustDeclareReleases(
 	"0.20.0",
-	`This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
+	`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 
 #### Breaking changes
 - Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
