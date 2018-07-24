@@ -1,3 +1,5 @@
+This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
+
 #### Breaking changes
 - Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
 - JSON-RPC interface has been removed
@@ -16,3 +18,5 @@
 
 #### Bug fixes
 - Fixed panic on nil bounds for blocks service
+
+
