@@ -1,4 +1,7 @@
 # Hyperledger Burrow Changelog
+## Version 0.20.1
+Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput, also support mempool signing for BroadcastTxAsync.
+
 ## Version 0.20.0
 This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 

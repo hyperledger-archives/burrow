@@ -4,12 +4,10 @@ package rpctransact
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
-
-	"strings"
-
-	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -101,17 +99,19 @@ func BenchmarkCreateContract(b *testing.B) {
 
 func TestCallTxSync(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	numGoroutines := 3
-	numRuns := 2
+	numGoroutines := 40
+	numRuns := 5
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
-		for j := 0; j < numRuns; j++ {
-			createTxe := rpctest.CreateContract(t, cli, inputAddress)
-			callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee)
-			depth := binary.Uint64FromWord256(binary.LeftPadWord256(lastCall(callTxe.Events).Return))
-			// Would give 23 if taken from wrong frame (i.e. not the outer stackdepth == 0 one)
-			assert.Equal(t, 18, int(depth))
-		}
+		go func() {
+			for j := 0; j < numRuns; j++ {
+				createTxe := rpctest.CreateContract(t, cli, inputAddress)
+				callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee)
+				depth := binary.Uint64FromWord256(binary.LeftPadWord256(lastCall(callTxe.Events).Return))
+				// Would give 23 if taken from wrong frame (i.e. not the outer stackdepth == 0 one)
+				assert.Equal(t, 18, int(depth))
+			}
+		}()
 	}
 	require.Equal(t, numGoroutines*numRuns*2, <-countCh)
 }

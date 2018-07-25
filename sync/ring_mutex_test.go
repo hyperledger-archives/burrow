@@ -11,7 +11,7 @@ import (
 
 func TestRingMutexXXHash_Lock(t *testing.T) {
 	mutexCount := 10
-	numAddresses := byte(20)
+	numAddresses := 20
 	mtxs := []*RingMutex{NewRingMutexXXHash(mutexCount)}
 
 	for _, mtx := range mtxs {
@@ -21,10 +21,12 @@ func TestRingMutexXXHash_Lock(t *testing.T) {
 
 		// We'll try to acquire a locks on all of our unique addresses, knowing that
 		// some of them will share an underlying RWMutex
-		for i := byte(0); i < numAddresses; i++ {
-			address := []byte{i}
+		for i := 0; i < numAddresses; i++ {
+			address := []byte{byte(i)}
+			n := i
 			go func() {
-				mtx.Lock(address)
+				value := mtx.Lock(address)
+				value.Set(n)
 				writeCh <- address
 			}()
 		}
@@ -70,6 +72,12 @@ func TestRingMutexXXHash_Lock(t *testing.T) {
 
 		// Check we've heard back from all of them
 		assert.EqualValues(t, numAddresses, checksum)
+		for _, v := range mtx.values {
+			if v.IsSet() {
+				i := v.value.(int)
+				assert.True(t, i >= 0 && i < numAddresses)
+			}
+		}
 	}
 }
 
@@ -91,6 +99,7 @@ func receiveAddresses(returnCh chan []byte) [][]byte {
 		}
 	}
 }
+
 func unlockAddresses(mtx *RingMutex, addresses [][]byte) {
 	for _, address := range addresses {
 		mtx.Unlock(address)
