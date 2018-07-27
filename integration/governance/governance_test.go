@@ -119,6 +119,8 @@ func TestAlterAmount(t *testing.T) {
 	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
 	require.NoError(t, err)
 	assert.Equal(t, amount, ca.Balance)
+	// Check we haven't altered permissions
+	assert.Equal(t, genesisDoc.Accounts[5].Permissions, ca.Permissions)
 }
 
 func TestAlterPermissions(t *testing.T) {

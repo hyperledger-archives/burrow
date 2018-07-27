@@ -24,8 +24,6 @@ message ResultStatus {
     crypto.PublicKey PublicKey = 5 [(gogoproto.nullable) = false];
     bytes LatestBlockHash = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     uint64 LatestBlockHeight = 7 [(gogoproto.jsontag) = ""];
-    // Unix
-
     google.protobuf.Timestamp LatestBlockTime = 8 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
 }
 

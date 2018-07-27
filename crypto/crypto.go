@@ -7,8 +7,9 @@ import (
 type CurveType uint32
 
 const (
-	CurveTypeSecp256k1 CurveType = iota
+	CurveTypeUnset CurveType = iota
 	CurveTypeEd25519
+	CurveTypeSecp256k1
 )
 
 func (k CurveType) String() string {
@@ -17,6 +18,8 @@ func (k CurveType) String() string {
 		return "secp256k1"
 	case CurveTypeEd25519:
 		return "ed25519"
+	case CurveTypeUnset:
+		return ""
 	default:
 		return "unknown"
 	}
@@ -27,6 +30,8 @@ func (k CurveType) ABCIType() string {
 		return "secp256k1"
 	case CurveTypeEd25519:
 		return "ed25519"
+	case CurveTypeUnset:
+		return ""
 	default:
 		return "unknown"
 	}
@@ -43,9 +48,10 @@ func CurveTypeFromString(s string) (CurveType, error) {
 		return CurveTypeSecp256k1, nil
 	case "ed25519":
 		return CurveTypeEd25519, nil
+	case "":
+		return CurveTypeUnset, nil
 	default:
-		var k CurveType
-		return k, ErrInvalidCurve(s)
+		return CurveTypeUnset, ErrInvalidCurve(s)
 	}
 }
 

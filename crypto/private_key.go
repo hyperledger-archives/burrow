@@ -25,6 +25,11 @@ func PublicKeyFromBytes(bs []byte, curveType CurveType) (PublicKey, error) {
 			return PublicKey{}, fmt.Errorf("bytes passed have length %v but secp256k1 public keys have %v bytes",
 				len(bs), btcec.PubKeyBytesLenCompressed)
 		}
+	case CurveTypeUnset:
+		if len(bs) > 0 {
+			return PublicKey{}, fmt.Errorf("attempting to create an 'unset' PublicKey but passed non-empty key bytes: %X", bs)
+		}
+		return PublicKey{}, nil
 	default:
 		return PublicKey{}, ErrInvalidCurve(curveType)
 	}

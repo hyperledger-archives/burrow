@@ -189,6 +189,21 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return nil, err
 	}
 
+	// Initialise public keys for accounts we have seen
+	for _, sig := range txEnv.Signatories {
+		// pointer dereferences are safe since txEnv.Validate() is run by txEnv.Verify() above which checks they are
+		// non-nil
+		acc, err := state.GetMutableAccount(exe.stateCache, *sig.Address)
+		if err != nil {
+			return nil, fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
+		}
+		acc.SetPublicKey(*sig.PublicKey)
+		err = exe.stateCache.UpdateAccount(acc)
+		if err != nil {
+			return nil, fmt.Errorf("error updating account after setting public key: %v", err)
+		}
+	}
+
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)

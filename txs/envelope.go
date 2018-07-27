@@ -72,6 +72,22 @@ func (txEnv *Envelope) Validate() error {
 	if len(txEnv.Signatories) == 0 {
 		return fmt.Errorf("transaction envelope contains no (successfully unmarshalled) signatories")
 	}
+	for i, sig := range txEnv.Signatories {
+		err := sig.Validate()
+		if err != nil {
+			return fmt.Errorf("Signatory %v is invalid: %v", i, err)
+		}
+	}
+	return nil
+}
+
+func (sig *Signatory) Validate() error {
+	if sig.Address == nil {
+		return fmt.Errorf("has nil Address: %v", sig)
+	}
+	if sig.PublicKey == nil {
+		return fmt.Errorf("has nil PublicKey: %v", sig)
+	}
 	return nil
 }
 
@@ -102,8 +118,9 @@ func (txEnv *Envelope) Verify(getter state.AccountGetter, chainID string) error 
 			return fmt.Errorf("signatory %v has address %v but input %v has address %v",
 				i, *s.Address, i, inputs[i].Address)
 		}
-		if !s.PublicKey.Verify(signBytes, s.Signature) {
-			return fmt.Errorf("invalid signature in signatory %v ", *s.Address)
+		err = s.PublicKey.Verify(signBytes, s.Signature)
+		if err != nil {
+			return fmt.Errorf("invalid signature in signatory %v: %v", *s.Address, err)
 		}
 	}
 	return nil
