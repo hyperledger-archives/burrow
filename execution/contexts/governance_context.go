@@ -69,7 +69,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 		if err != nil {
 			return err
 		}
-		governAccountEvent, err := ctx.updateAccount(account, update)
+		governAccountEvent, err := ctx.UpdateAccount(account, update)
 		if err != nil {
 			txe.GovernAccount(governAccountEvent, errors.AsException(err))
 			return err
@@ -79,7 +79,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	return nil
 }
 
-func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
+func (ctx *GovernanceContext) UpdateAccount(account *acm.MutableAccount, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
 	ev = &exec.GovernAccountEvent{
 		AccountUpdate: update,
 	}
@@ -105,6 +105,12 @@ func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update 
 				"so is not supported by Tendermint", update.Address)
 		}
 		_, err := ctx.ValidatorSet.AlterPower(*update.PublicKey, power)
+		if err != nil {
+			return ev, err
+		}
+	}
+	if update.Code != nil {
+		err = account.SetCode(*update.Code)
 		if err != nil {
 			return ev, err
 		}

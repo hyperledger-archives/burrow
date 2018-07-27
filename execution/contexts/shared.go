@@ -130,7 +130,6 @@ func adjustByInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.
 			return fmt.Errorf("adjustByInputs() expects account in accounts, but account %s not found", in.Address)
 		}
 		if acc.Balance() < in.Amount {
-			panic("adjustByInputs() expects sufficient funds")
 			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
 				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
 		}

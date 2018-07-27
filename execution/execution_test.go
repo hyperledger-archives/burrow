@@ -141,7 +141,7 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(users[1].Address(), 5)
 	err = exe.signExecuteCommit(tx, users[0])
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	// simple send tx with call perm should fail
 	tx = payload.NewSendTx()
@@ -151,7 +151,7 @@ func TestSendFails(t *testing.T) {
 	tx.AddOutput(users[4].Address(), 5)
 
 	err = exe.signExecuteCommit(tx, users[2])
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	// simple send tx with create perm should fail
 	tx = payload.NewSendTx()
