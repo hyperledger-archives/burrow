@@ -13,7 +13,7 @@ import (
 func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generateNodeKeys bool) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
-	gv.PublicKey, gv.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
-	ga.PublicKey, ga.Address, err = ta.RealisePubKeyAndAddress(keyClient)
+	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePubKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
+func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one

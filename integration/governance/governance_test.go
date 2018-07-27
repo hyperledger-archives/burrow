@@ -14,12 +14,14 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/governance"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -155,6 +157,54 @@ func TestCreateAccount(t *testing.T) {
 	assert.Equal(t, amount, ca.Balance)
 }
 
+func TestChangePowerByAddress(t *testing.T) {
+	// Should use the key client to look up public key
+	inputAddress := privateAccounts[0].Address()
+	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
+	tcli := rpctest.NewTransactClient(t, grpcAddress)
+	qcli := rpctest.NewQueryClient(t, grpcAddress)
+
+	acc := account(2)
+	address := acc.Address()
+	power := uint64(2445)
+	govSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+		Address: &address,
+		Amounts: balance.New().Power(power),
+	}))
+
+	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
+	require.NoError(t, err)
+	set := validator.UnpersistSet(vs.Set)
+	assert.Equal(t, new(big.Int).SetUint64(power), set.Power(acc))
+}
+
+func TestInvalidSequenceNumber(t *testing.T) {
+	inputAddress := privateAccounts[0].Address()
+	tcli1 := rpctest.NewTransactClient(t, testConfigs[0].RPC.GRPC.ListenAddress)
+	tcli2 := rpctest.NewTransactClient(t, testConfigs[4].RPC.GRPC.ListenAddress)
+	qcli := rpctest.NewQueryClient(t, testConfigs[0].RPC.GRPC.ListenAddress)
+
+	acc := account(2)
+	address := acc.Address()
+	power := uint64(2445)
+	tx := governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+		Address: &address,
+		Amounts: balance.New().Power(power),
+	})
+
+	setSequence(t, qcli, tx)
+	_, err := localSignAndBroadcastSync(t, tcli1, tx)
+	require.NoError(t, err)
+
+	// Make it a different Tx hash so it can enter cache but keep sequence number
+	tx.AccountUpdates[0].Amounts = balance.New().Power(power).Native(1)
+	_, err = localSignAndBroadcastSync(t, tcli2, tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid sequence")
+}
+
+// Helpers
+
 func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
 	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
 	require.NoError(t, err)
@@ -192,6 +242,22 @@ func assertValidatorsEqual(t testing.TB, expected, actual *validator.Set) {
 
 func alterPower(vs *validator.Set, i int, power uint64) {
 	vs.AlterPower(account(i), new(big.Int).SetUint64(power))
+}
+
+func setSequence(t testing.TB, qcli rpcquery.QueryClient, tx payload.Payload) {
+	for _, input := range tx.GetInputs() {
+		ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address})
+		require.NoError(t, err)
+		input.Sequence = ca.Sequence + 1
+	}
+}
+
+func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, tx payload.Payload) (*exec.TxExecution, error) {
+	txEnv := txs.Enclose(genesisDoc.ChainID(), tx)
+	err := txEnv.Sign(privateAccounts[0])
+	require.NoError(t, err)
+
+	return tcli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
 }
 
 func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {

@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
@@ -47,12 +46,6 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
 	// check permission
 	if !hasNamePermission(ctx.StateWriter, inAcc, ctx.Logger) {
 		return fmt.Errorf("account %s does not have Name permission", ctx.tx.Input.Address)
-	}
-	err = validateInput(inAcc, ctx.tx.Input)
-	if err != nil {
-		ctx.Logger.InfoMsg("validateInput failed",
-			"tx_input", ctx.tx.Input, structure.ErrorKey, err)
-		return err
 	}
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
 		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
@@ -172,7 +165,6 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
 		"account", inAcc.Address(),
 		"old_sequence", inAcc.Sequence(),
 		"new_sequence", inAcc.Sequence()+1)
-	inAcc.IncSequence()
 	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
 		return err

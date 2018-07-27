@@ -32,7 +32,7 @@ type GenesisSpec struct {
 
 func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
 	for _, templateAccount := range gs.Accounts {
-		_, _, err := templateAccount.RealisePubKeyAndAddress(keyClient)
+		_, _, err := templateAccount.RealisePublicKeyAndAddress(keyClient)
 		if err != nil {
 			return err
 		}
