@@ -120,81 +120,6 @@ var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, true, 1000, 1, true, 1000)
 var testChainID = testGenesisDoc.ChainID()
 
-type testExecutor struct {
-	*executor
-}
-
-func makeExecutor(state *State) *testExecutor {
-	blockchain := newBlockchain(testGenesisDoc)
-	return &testExecutor{
-		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
-			logger),
-	}
-}
-
-func (te *testExecutor) signExecuteCommit(tx payload.Payload, signer acm.AddressableSigner) error {
-	txEnv := txs.Enclose(testChainID, tx)
-	err := txEnv.Sign(signer)
-	if err != nil {
-		return err
-	}
-	_, err = te.Execute(txEnv)
-	if err != nil {
-		return err
-	}
-	_, err = te.Commit(nil, time.Now(), nil)
-	return err
-}
-
-func makeUsers(n int) []acm.AddressableSigner {
-	users := make([]acm.AddressableSigner, n)
-	for i := 0; i < n; i++ {
-		secret := "mysecret" + strconv.Itoa(i)
-		users[i] = acm.GeneratePrivateAccountFromSecret(secret)
-	}
-	return users
-}
-func newBlockchain(genesisDoc *genesis.GenesisDoc) *bcm.Blockchain {
-	testDB := dbm.NewDB("test", dbBackend, ".")
-	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
-
-	return bc
-}
-
-func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesis.GenesisDoc {
-	var genAccounts []genesis.Account
-	for _, user := range users[:5] {
-		accountPermCopy := accountPerm // Create new instance for custom overridability.
-		genAccounts = append(genAccounts, genesis.Account{
-			BasicAccount: genesis.BasicAccount{
-				Address: user.Address(),
-				Amount:  1000000,
-			},
-			Permissions: accountPermCopy,
-		})
-	}
-
-	return genesis.GenesisDoc{
-		GenesisTime:       time.Now(),
-		ChainName:         testGenesisDoc.ChainName,
-		GlobalPermissions: globalPerm,
-		Accounts:          genAccounts,
-		Validators: []genesis.Validator{
-			{
-				BasicAccount: genesis.BasicAccount{
-					PublicKey: users[0].PublicKey(),
-					Amount:    10,
-				},
-				UnbondTo: []genesis.BasicAccount{
-					{
-						Address: users[0].Address(),
-					},
-				},
-			},
-		},
-	}
-}
-
 func TestSendFails(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
@@ -215,7 +140,8 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[1].Address(), 5)
-	signAndExecute(t, true, exe, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	// simple send tx with call perm should fail
 	tx = payload.NewSendTx()
@@ -224,7 +150,8 @@ func TestSendFails(t *testing.T) {
 	}
 	tx.AddOutput(users[4].Address(), 5)
 
-	signAndExecute(t, true, exe, testChainID, tx, users[2])
+	err = exe.signExecuteCommit(tx, users[2])
+	require.NoError(t, err)
 
 	// simple send tx with create perm should fail
 	tx = payload.NewSendTx()
@@ -232,7 +159,8 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[4].Address(), 5)
-	signAndExecute(t, true, exe, testChainID, tx, users[3])
+	err = exe.signExecuteCommit(tx, users[3])
+	require.Error(t, err)
 
 	// simple send tx to unknown account without create_account perm should fail
 	acc := getAccount(exe.stateCache, users[3].Address())
@@ -243,7 +171,8 @@ func TestSendFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[6].Address(), 5)
-	signAndExecute(t, true, exe, testChainID, tx, users[3])
+	err = exe.signExecuteCommit(tx, users[3])
+	require.Error(t, err)
 }
 
 func TestName(t *testing.T) {
@@ -254,7 +183,7 @@ func TestName(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	exe := makeExecutor(st)
 
 	//-------------------
 	// name txs
@@ -264,14 +193,17 @@ func TestName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.Error(t, err)
 
 	// simple name tx with perm should pass
 	tx, err = payload.NewNameTx(st, users[1].PublicKey(), "somename", "somedata", 10000, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signAndExecute(t, false, batchCommitter, testChainID, tx, users[1])
+
+	err = exe.signExecuteCommit(tx, users[1])
+	require.NoError(t, err)
 }
 
 func TestCallFails(t *testing.T) {
@@ -283,38 +215,44 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	exe := makeExecutor(st)
 
 	//-------------------
 	// call txs
 
 	address4 := users[4].Address()
 	// simple call tx should fail
-	tx, _ := payload.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), &address4, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[0])
+	tx, _ := payload.NewCallTx(exe.stateCache, users[0].PublicKey(), &address4, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[0])
+	require.Error(t, err)
 
 	// simple call tx with send permission should fail
-	tx, _ = payload.NewCallTx(batchCommitter.stateCache, users[1].PublicKey(), &address4, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[1])
+	tx, _ = payload.NewCallTx(exe.stateCache, users[1].PublicKey(), &address4, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[1])
+	require.Error(t, err)
 
 	// simple call tx with create permission should fail
-	tx, _ = payload.NewCallTx(batchCommitter.stateCache, users[3].PublicKey(), &address4, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[3])
+	tx, _ = payload.NewCallTx(exe.stateCache, users[3].PublicKey(), &address4, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[3])
+	require.Error(t, err)
 
 	//-------------------
 	// create txs
 
 	// simple call create tx should fail
-	tx, _ = payload.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), nil, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[0])
+	tx, _ = payload.NewCallTx(exe.stateCache, users[0].PublicKey(), nil, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[0])
+	require.Error(t, err)
 
 	// simple call create tx with send perm should fail
-	tx, _ = payload.NewCallTx(batchCommitter.stateCache, users[1].PublicKey(), nil, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[1])
+	tx, _ = payload.NewCallTx(exe.stateCache, users[1].PublicKey(), nil, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[1])
+	require.Error(t, err)
 
 	// simple call create tx with call perm should fail
-	tx, _ = payload.NewCallTx(batchCommitter.stateCache, users[2].PublicKey(), nil, nil, 100, 100, 100)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[2])
+	tx, _ = payload.NewCallTx(exe.stateCache, users[2].PublicKey(), nil, nil, 100, 100, 100)
+	err = exe.signExecuteCommit(tx, users[2])
+	require.Error(t, err)
 }
 
 func TestSendPermission(t *testing.T) {
@@ -324,22 +262,24 @@ func TestSendPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	exe := makeExecutor(st)
 
 	// A single input, having the permission, should succeed
 	tx := payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[1].Address(), 5)
-	signAndExecute(t, false, batchCommitter, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	// Two inputs, one with permission, one without, should fail
 	tx = payload.NewSendTx()
-	require.NoError(t, tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5))
-	require.NoError(t, tx.AddInput(batchCommitter.stateCache, users[1].PublicKey(), 5))
+	require.NoError(t, tx.AddInput(exe.stateCache, users[0].PublicKey(), 5))
+	require.NoError(t, tx.AddInput(exe.stateCache, users[1].PublicKey(), 5))
 	require.NoError(t, tx.AddOutput(users[2].Address(), 10))
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[:2]...)
+	err = exe.signExecuteCommit(tx, users[:2]...)
+	require.Error(t, err)
 }
 
 func TestCallPermission(t *testing.T) {
@@ -368,7 +308,8 @@ func TestCallPermission(t *testing.T) {
 
 	// A single input, having the permission, should succeed
 	tx, _ := payload.NewCallTx(exe.stateCache, users[0].PublicKey(), &simpleContractAddr, nil, 100, 100, 100)
-	signAndExecute(t, false, exe, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	//----------------------------------------------------------
 	// call to contract that calls simple contract - without perm
@@ -474,7 +415,8 @@ func TestCreatePermission(t *testing.T) {
 
 	// A single input, having the permission, should succeed
 	tx, _ := payload.NewCallTx(exe.stateCache, users[0].PublicKey(), nil, createCode, 100, 100, 100)
-	signAndExecute(t, false, exe, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	// ensure the contract is there
 	contractAddr := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
@@ -497,7 +439,8 @@ func TestCreatePermission(t *testing.T) {
 
 	// A single input, having the permission, should succeed
 	tx, _ = payload.NewCallTx(exe.stateCache, users[0].PublicKey(), nil, createFactoryCode, 100, 100, 100)
-	signAndExecute(t, false, exe, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	// ensure the contract is there
 	contractAddr = crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
@@ -574,74 +517,79 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
-	batchCommitter := makeExecutor(st)
+	exe := makeExecutor(st)
 
 	//----------------------------------------------------------
 	// SendTx to unknown account
 
 	// A single input, having the permission, should succeed
 	tx := payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[6].Address(), 5)
-	signAndExecute(t, false, batchCommitter, testChainID, tx, users[0])
+	err = exe.signExecuteCommit(tx, users[0])
+	require.NoError(t, err)
 
 	// Two inputs, both with send, one with create, one without, should fail
 	tx = payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(batchCommitter.stateCache, users[1].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 10)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[:2]...)
+	err = exe.signExecuteCommit(tx, users[:2]...)
+	require.Error(t, err)
 
 	// Two inputs, both with send, one with create, one without, two ouputs (one known, one unknown) should fail
 	tx = payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(batchCommitter.stateCache, users[1].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 4)
 	tx.AddOutput(users[4].Address(), 6)
-	signAndExecute(t, true, batchCommitter, testChainID, tx, users[:2]...)
+	err = exe.signExecuteCommit(tx, users[:2]...)
+	require.Error(t, err)
 
 	// Two inputs, both with send, both with create, should pass
-	acc := getAccount(batchCommitter.stateCache, users[1].Address())
+	acc := getAccount(exe.stateCache, users[1].Address())
 	acc.MutablePermissions().Base.Set(permission.CreateAccount, true)
-	batchCommitter.stateCache.UpdateAccount(acc)
+	exe.stateCache.UpdateAccount(acc)
 	tx = payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(batchCommitter.stateCache, users[1].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 10)
-	signAndExecute(t, false, batchCommitter, testChainID, tx, users[:2]...)
+	err = exe.signExecuteCommit(tx, users[:2]...)
 
 	// Two inputs, both with send, both with create, two outputs (one known, one unknown) should pass
 	tx = payload.NewSendTx()
-	if err := tx.AddInput(batchCommitter.stateCache, users[0].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[0].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.AddInput(batchCommitter.stateCache, users[1].PublicKey(), 5); err != nil {
+	if err := tx.AddInput(exe.stateCache, users[1].PublicKey(), 5); err != nil {
 		t.Fatal(err)
 	}
 	tx.AddOutput(users[7].Address(), 7)
 	tx.AddOutput(users[4].Address(), 3)
-	signAndExecute(t, false, batchCommitter, testChainID, tx, users[:2]...)
+	err = exe.signExecuteCommit(tx, users[:2]...)
+	require.NoError(t, err)
 
 	//----------------------------------------------------------
 	// CALL to unknown account
 
-	acc = getAccount(batchCommitter.stateCache, users[0].Address())
+	acc = getAccount(exe.stateCache, users[0].Address())
 	acc.MutablePermissions().Base.Set(permission.Call, true)
-	batchCommitter.stateCache.UpdateAccount(acc)
+	err = exe.stateCache.UpdateAccount(acc)
+	require.NoError(t, err)
 
 	// call to contract that calls unknown account - without create_account perm
 	// create contract that calls the simple contract
@@ -654,29 +602,33 @@ func TestCreateAccountPermission(t *testing.T) {
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}.MutableAccount()
-	batchCommitter.stateCache.UpdateAccount(caller1Acc)
+	err = exe.stateCache.UpdateAccount(caller1Acc)
+	require.NoError(t, err)
 
 	// A single input, having the permission, but the contract doesn't have permission
-	txCall, _ := payload.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	txCall, _ := payload.NewCallTx(exe.stateCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
 	txCallEnv := txs.Enclose(testChainID, txCall)
-	txCallEnv.Sign(users[0])
+	err = txCallEnv.Sign(users[0])
+	require.NoError(t, err)
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitAccountCall(t, batchCommitter, txCallEnv, caller1ContractAddr) //
+	_, err = execTxWaitAccountCall(t, exe, txCallEnv, caller1ContractAddr) //
 	require.Error(t, err)
 
 	// NOTE: for a contract to be able to CreateAccount, it must be able to call
 	// NOTE: for a users to be able to CreateAccount, it must be able to send!
 	caller1Acc.MutablePermissions().Base.Set(permission.CreateAccount, true)
 	caller1Acc.MutablePermissions().Base.Set(permission.Call, true)
-	batchCommitter.stateCache.UpdateAccount(caller1Acc)
+	err = exe.stateCache.UpdateAccount(caller1Acc)
+	require.NoError(t, err)
 	// A single input, having the permission, but the contract doesn't have permission
-	txCall, _ = payload.NewCallTx(batchCommitter.stateCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
+	txCall, _ = payload.NewCallTx(exe.stateCache, users[0].PublicKey(), &caller1ContractAddr, nil, 100, 10000, 100)
 	txCallEnv = txs.Enclose(testChainID, txCall)
-	txCallEnv.Sign(users[0])
+	err = txCallEnv.Sign(users[0])
+	require.NoError(t, err)
 
 	// we need to subscribe to the Call event to detect the exception
-	_, err = execTxWaitAccountCall(t, batchCommitter, txCallEnv, caller1ContractAddr) //
+	_, err = execTxWaitAccountCall(t, exe, txCallEnv, caller1ContractAddr) //
 	require.NoError(t, err)
 
 }
@@ -1540,13 +1492,15 @@ func TestSelfDestruct(t *testing.T) {
 	tx := payload.NewCallTxWithSequence(acc0PubKey, addressPtr(acc1), nil, sendingAmount, 1000, 0, acc0.Sequence()+1)
 
 	// we use cache instead of execTxWithState so we can run the tx twice
-	exe := NewBatchCommitter(st, newBlockchain(testGenesisDoc), event.NewNoOpPublisher(), logger)
-	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
+	exe := makeExecutor(st)
+	exe.signExecuteCommit(tx, privAccounts[0])
+	require.NoError(t, err)
 
 	// if we do it again, we won't get an error, but the self-destruct
 	// shouldn't happen twice and the caller should lose fee
 	tx.Input.Sequence += 1
-	signAndExecute(t, false, exe, testChainID, tx, privAccounts[0])
+	exe.signExecuteCommit(tx, privAccounts[0])
+	require.NoError(t, err)
 
 	// commit the block
 	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
@@ -1565,18 +1519,53 @@ func TestSelfDestruct(t *testing.T) {
 	}
 }
 
-func signAndExecute(t *testing.T, shouldFail bool, exe BatchExecutor, chainID string, tx payload.Payload,
-	signers ...acm.AddressableSigner) *txs.Envelope {
-
-	env := txs.Enclose(chainID, tx)
-	require.NoError(t, env.Sign(signers...), "Could not sign tx in call: %s", debug.Stack())
-	_, err := exe.Execute(env)
-	if shouldFail {
-		require.Error(t, err, "Tx should fail in call: %s", debug.Stack())
-	} else {
-		require.NoError(t, err, "Could not execute tx in call: %s", debug.Stack())
+func makeUsers(n int) []acm.AddressableSigner {
+	users := make([]acm.AddressableSigner, n)
+	for i := 0; i < n; i++ {
+		secret := "mysecret" + strconv.Itoa(i)
+		users[i] = acm.GeneratePrivateAccountFromSecret(secret)
 	}
-	return env
+	return users
+}
+func newBlockchain(genesisDoc *genesis.GenesisDoc) *bcm.Blockchain {
+	testDB := dbm.NewDB("test", dbBackend, ".")
+	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
+
+	return bc
+}
+
+func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesis.GenesisDoc {
+	var genAccounts []genesis.Account
+	for _, user := range users[:5] {
+		accountPermCopy := accountPerm // Create new instance for custom overridability.
+		genAccounts = append(genAccounts, genesis.Account{
+			BasicAccount: genesis.BasicAccount{
+				Address: user.Address(),
+				Amount:  1000000,
+			},
+			Permissions: accountPermCopy,
+		})
+	}
+
+	return genesis.GenesisDoc{
+		GenesisTime:       time.Now(),
+		ChainName:         testGenesisDoc.ChainName,
+		GlobalPermissions: globalPerm,
+		Accounts:          genAccounts,
+		Validators: []genesis.Validator{
+			{
+				BasicAccount: genesis.BasicAccount{
+					PublicKey: users[0].PublicKey(),
+					Amount:    10,
+				},
+				UnbondTo: []genesis.BasicAccount{
+					{
+						Address: users[0].Address(),
+					},
+				},
+			},
+		},
+	}
 }
 
 func execTxWithStateAndBlockchain(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
@@ -1601,14 +1590,6 @@ func execTxWithState(state *State, txEnv *txs.Envelope) error {
 func commitNewBlock(state *State, blockchain *bcm.Blockchain) {
 	blockchain.CommitBlock(blockchain.LastBlockTime().Add(time.Second), sha3.Sha3(blockchain.LastBlockHash()),
 		state.Hash())
-}
-
-func execTxWithStateNewBlock(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
-	if err := execTxWithStateAndBlockchain(state, blockchain, txEnv); err != nil {
-		return err
-	}
-	commitNewBlock(state, blockchain)
-	return nil
 }
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
@@ -1643,6 +1624,32 @@ func addressPtr(account acm.Account) *crypto.Address {
 // helpers
 
 var ExceptionTimeOut = errors.NewCodedError(errors.ErrorCodeGeneric, "timed out waiting for event")
+
+type testExecutor struct {
+	*executor
+}
+
+func makeExecutor(state *State) *testExecutor {
+	blockchain := newBlockchain(testGenesisDoc)
+	return &testExecutor{
+		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
+			logger),
+	}
+}
+
+func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.AddressableSigner) error {
+	txEnv := txs.Enclose(testChainID, tx)
+	err := txEnv.Sign(signers...)
+	if err != nil {
+		return err
+	}
+	_, err = te.Execute(txEnv)
+	if err != nil {
+		return err
+	}
+	_, err = te.Commit(nil, time.Now(), nil)
+	return err
+}
 
 // run ExecTx and wait for the Call event on given addr
 // returns the msg data and an error/exception
