@@ -24,6 +24,7 @@ import (
 
 	"time"
 
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
@@ -37,6 +38,25 @@ import (
 
 var inputAccount = rpctest.PrivateAccounts[0]
 var inputAddress = inputAccount.Address()
+
+func TestInputAccountPublicKeySet(t *testing.T) {
+	input := rpctest.PrivateAccounts[9]
+	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
+	acc, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
+	require.NoError(t, err)
+
+	// Account PublicKey should be initially unset
+	assert.Equal(t, crypto.PublicKey{}, acc.PublicKey)
+
+	// Sign with this account - should set public key
+	rpctest.CreateContract(t, tcli, input.Address())
+	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
+
+	// Check public key set
+	require.NoError(t, err)
+	assert.Equal(t, input.PublicKey(), acc.PublicKey)
+}
 
 func TestBroadcastTxLocallySigned(t *testing.T) {
 	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)

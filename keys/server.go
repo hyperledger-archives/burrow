@@ -144,9 +144,9 @@ func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyRespon
 	if err != nil {
 		return nil, err
 	}
-	match := pubkey.Verify(in.GetMessage(), sig)
-	if !match {
-		return nil, fmt.Errorf("Signature does not match")
+	err = pubkey.Verify(in.GetMessage(), sig)
+	if err != nil {
+		return nil, err
 	}
 
 	return &VerifyResponse{}, nil

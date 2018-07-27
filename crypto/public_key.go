@@ -73,22 +73,30 @@ func (p PublicKey) IsValid() bool {
 	return publicKeyLength != 0 && publicKeyLength == len(p.Key)
 }
 
-func (p PublicKey) Verify(msg []byte, signature Signature) bool {
+func (p PublicKey) Verify(msg []byte, signature Signature) error {
 	switch p.CurveType {
+	case CurveTypeUnset:
+		return fmt.Errorf("public key is unset")
 	case CurveTypeEd25519:
-		return ed25519.Verify(p.Key, msg, signature)
+		if ed25519.Verify(p.Key, msg, signature) {
+			return nil
+		}
+		return fmt.Errorf("'%X' is not a valid ed25519 signature for message: %X", signature, msg)
 	case CurveTypeSecp256k1:
 		pub, err := btcec.ParsePubKey(p.Key, btcec.S256())
 		if err != nil {
-			return false
+			return fmt.Errorf("could not parse secp256k1 public key: %v", err)
 		}
 		sig, err := btcec.ParseDERSignature(signature, btcec.S256())
 		if err != nil {
-			return false
+			return fmt.Errorf("could not parse DER signature for secp256k1 key: %v", err)
 		}
-		return sig.Verify(msg, pub)
+		if sig.Verify(msg, pub) {
+			return nil
+		}
+		return fmt.Errorf("'%X' is not a valid secp256k1 signature for message: %X", signature, msg)
 	default:
-		panic(fmt.Sprintf("invalid curve type"))
+		return fmt.Errorf("invalid curve type")
 	}
 }
 

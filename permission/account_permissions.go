@@ -58,10 +58,14 @@ func (ap *AccountPermissions) RmRole(role string) bool {
 func (ap *AccountPermissions) Clone() AccountPermissions {
 	// clone base permissions
 	basePermissionsClone := ap.Base
-	// clone roles []string
-	rolesClone := make([]string, len(ap.Roles))
-	// strings are immutable so copy suffices
-	copy(rolesClone, ap.Roles)
+	var rolesClone []string
+	// It helps if we normalise empty roles to []string(nil) rather than []string{}
+	if len(ap.Roles) > 0 {
+		// clone roles []string
+		rolesClone = make([]string, len(ap.Roles))
+		// strings are immutable so copy suffices
+		copy(rolesClone, ap.Roles)
+	}
 
 	return AccountPermissions{
 		Base:  basePermissionsClone,
