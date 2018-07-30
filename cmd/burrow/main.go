@@ -23,6 +23,8 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Action = func() {
 		if *versionOpt {
 			fmt.Println(project.FullVersion())
+		} else {
+			app.PrintHelp()
 		}
 	}
 
