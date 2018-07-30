@@ -15,7 +15,7 @@ import (
 
 const (
 	clientID       = "test-client"
-	receiveTimeout = 3 * time.Second
+	receiveTimeout = 10 * time.Second
 )
 
 func TestSubscribe(t *testing.T) {
