@@ -120,6 +120,7 @@ do
 	DIR=$keys_dir/data
 	FILE=$DIR/$ADDR.json
 	HEXPRIV=`cat $FILE |  jq -r .PrivateKey.Plain`
+	EXPORTJSON=`$burrow_bin keys export --addr $ADDR`
 
         cp $FILE ~/$ADDR
 	rm -rf $DIR
@@ -145,6 +146,14 @@ do
 	ADDR2=`$burrow_bin keys import --no-password --curvetype $CURVETYPE ~/$ADDR`
 	if [ "$ADDR" != "$ADDR2" ]; then
 		echo "FAILED import $CURVETYPE: got $ADDR2 expected $ADDR"
+		exit
+	fi
+	rm -rf $DIR
+
+	# import the key via export json
+	ADDR2=`$burrow_bin keys import --no-password "$EXPORTJSON"`
+	if [ "$ADDR" != "$ADDR2" ]; then
+		echo "FAILED import from export $CURVETYPE: got $ADDR2 expected $ADDR"
 		exit
 	fi
 	rm -rf $DIR
