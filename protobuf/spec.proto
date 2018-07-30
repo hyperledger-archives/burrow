@@ -24,5 +24,6 @@ message TemplateAccount {
     repeated balance.Balance Amounts = 5 [(gogoproto.nullable) = false, (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
     repeated string Permissions = 6 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
     repeated string Roles = 7 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    bytes Code = 8 [(gogoproto.nullable) = true, (gogoproto.customtype) = "github.com/hyperledger/burrow/acm.Bytecode"];
 }
 

@@ -32,6 +32,10 @@ func PublicKeyLength(curveType CurveType) int {
 	}
 }
 
+func (p PublicKey) IsSet() bool {
+	return p.CurveType != CurveTypeUnset && p.IsValid()
+}
+
 func (p PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
 		CurveType: p.CurveType.String(),

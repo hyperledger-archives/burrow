@@ -15,7 +15,7 @@ BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 # Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.proto' -print)
+PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
 

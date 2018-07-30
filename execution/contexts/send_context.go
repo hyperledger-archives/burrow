@@ -25,7 +25,7 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
-	accounts, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
+	accounts, inTotal, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
 	if err != nil {
 		return err
 	}
@@ -43,10 +43,6 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 		return err
 	}
 
-	inTotal, err := validateInputs(accounts, ctx.tx.Inputs)
-	if err != nil {
-		return err
-	}
 	outTotal, err := validateOutputs(ctx.tx.Outputs)
 	if err != nil {
 		return err

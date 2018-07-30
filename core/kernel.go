@@ -106,10 +106,11 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, kern.Logger)
+	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, keyClient, kern.Logger)
 
 	kern.Emitter = event.NewEmitter(kern.Logger)
-	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
+	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, keyClient, kern.Logger,
+		exeOptions...)
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%X", genesisDoc.ChainID(), privValidator.GetAddress())
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)

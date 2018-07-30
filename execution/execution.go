@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
@@ -87,7 +88,7 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, keyClient keys.KeyClient, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
 	exe := newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
@@ -97,13 +98,14 @@ func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *
 		&contexts.GovernanceContext{
 			ValidatorSet: exe.blockchain.ValidatorChecker(),
 			StateWriter:  exe.stateCache,
+			KeyClient:    keyClient,
 			Logger:       exe.logger,
 		},
 	)
 }
 
-func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher, logger *logging.Logger,
-	options ...ExecutionOption) BatchCommitter {
+func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher,
+	keyClient keys.KeyClient, logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
 
 	exe := newExecutor("CommitCache", true, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
@@ -112,6 +114,7 @@ func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitte
 		&contexts.GovernanceContext{
 			ValidatorSet: exe.blockchain.ValidatorWriter(),
 			StateWriter:  exe.stateCache,
+			KeyClient:    keyClient,
 			Logger:       exe.logger,
 		},
 	)
@@ -189,48 +192,24 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return nil, err
 	}
 
-	// Initialise public keys for accounts we have seen
-	for _, sig := range txEnv.Signatories {
-		// pointer dereferences are safe since txEnv.Validate() is run by txEnv.Verify() above which checks they are
-		// non-nil
-		acc, err := state.GetMutableAccount(exe.stateCache, *sig.Address)
-		if err != nil {
-			return nil, fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
-		}
-		acc.SetPublicKey(*sig.PublicKey)
-		err = exe.stateCache.UpdateAccount(acc)
-		if err != nil {
-			return nil, fmt.Errorf("error updating account after setting public key: %v", err)
-		}
-	}
-
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)
+		// Validate inputs and check sequence numbers
+		err = txEnv.Tx.ValidateInputs(exe.stateCache)
+		if err != nil {
+			return nil, err
+		}
 		err = txExecutor.Execute(txe)
 		if err != nil {
 			return nil, err
 		}
+		// Initialise public keys and increment sequence numbers for Tx inputs
+		exe.updateSignatories(txEnv)
 		// Return execution for this tx
 		return txe, nil
 	}
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
-}
-
-func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {
-	if header != nil && uint64(header.Height) != exe.blockExecution.Height {
-		return nil, fmt.Errorf("trying to finalise block execution with height %v but passed Tendermint"+
-			"block header at height %v", exe.blockExecution.Height, header.Height)
-	}
-	// Capture BlockExecution to return
-	be := exe.blockExecution
-	// Set the header when provided
-	be.BlockHeader = exec.BlockHeaderFromHeader(header)
-	// Start new execution for the next height
-	exe.blockExecution = &exec.BlockExecution{
-		Height: exe.blockExecution.Height + 1,
-	}
-	return be, nil
 }
 
 func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (_ []byte, err error) {
@@ -318,4 +297,50 @@ func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) (bin
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)
+}
+
+func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {
+	if header != nil && uint64(header.Height) != exe.blockExecution.Height {
+		return nil, fmt.Errorf("trying to finalise block execution with height %v but passed Tendermint"+
+			"block header at height %v", exe.blockExecution.Height, header.Height)
+	}
+	// Capture BlockExecution to return
+	be := exe.blockExecution
+	// Set the header when provided
+	be.BlockHeader = exec.BlockHeaderFromHeader(header)
+	// Start new execution for the next height
+	exe.blockExecution = &exec.BlockExecution{
+		Height: exe.blockExecution.Height + 1,
+	}
+	return be, nil
+}
+
+// Capture public keys and update sequence numbers
+func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
+	for _, sig := range txEnv.Signatories {
+		// pointer dereferences are safe since txEnv.Validate() is run by txEnv.Verify() above which checks they are
+		// non-nil
+		acc, err := state.GetMutableAccount(exe.stateCache, *sig.Address)
+		if err != nil {
+			return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
+		}
+		// Important that verify has been run against signatories at this point
+		if sig.PublicKey.Address() != acc.Address() {
+			return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
+				acc.Address(), sig.PublicKey)
+		}
+		acc.SetPublicKey(*sig.PublicKey)
+
+		exe.logger.TraceMsg("Incrementing sequence number Tx signatory/input",
+			"tag", "sequence",
+			"account", acc.Address(),
+			"old_sequence", acc.Sequence(),
+			"new_sequence", acc.Sequence()+1)
+		acc.IncSequence()
+		err = exe.stateCache.UpdateAccount(acc)
+		if err != nil {
+			return fmt.Errorf("error updating account after setting public key: %v", err)
+		}
+	}
+	return nil
 }
