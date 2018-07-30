@@ -252,13 +252,17 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	// Now state is committed publish events
 	for _, txe := range blockExecution.TxExecutions {
 		publishErr := exe.publisher.Publish(context.Background(), txe, txe.Tagged())
-		exe.logger.InfoMsg("Error publishing TxExecution",
-			"tx_hash", txe.TxHash,
-			structure.ErrorKey, publishErr)
+		if publishErr != nil {
+			exe.logger.InfoMsg("Error publishing TxExecution",
+				"tx_hash", txe.TxHash,
+				structure.ErrorKey, publishErr)
+		}
 	}
 	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
-	exe.logger.InfoMsg("Error publishing TxExecution",
-		"height", blockExecution.Height, structure.ErrorKey, publishErr)
+	if publishErr != nil {
+		exe.logger.InfoMsg("Error publishing BlockExecution",
+			"height", blockExecution.Height, structure.ErrorKey, publishErr)
+	}
 	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
 	// (we know the previous app hash is safely committed because we are about to commit the next)
 	totalPowerChange, totalFlow, err := exe.blockchain.CommitBlock(blockTime, blockHash, hash)
