@@ -336,7 +336,7 @@ func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockW
 	res := &ResultStatus{
 		ChainID:           blockchain.ChainID(),
 		NodeInfo:          nodeView.NodeInfo(),
-		NodeVersion:       project.History.CurrentVersion().String(),
+		BurrowVersion:     project.History.CurrentVersion().String(),
 		GenesisHash:       blockchain.GenesisHash(),
 		PublicKey:         nodeView.ValidatorPublicKey(),
 		LatestBlockHash:   blockchain.LastBlockHash(),
