@@ -5,7 +5,8 @@ MAINTAINER Monax <support@monax.io>
 ENV DOCKER_VERSION "17.12.1-ce"
 # This is the image used by the Circle CI config in this directory pushed to quay.io/monax/bosmarmot:ci
 # docker build -t quay.io/monax/build:burrow-ci -f ./.circleci/Dockerfile .
-RUN apk add --update --no-cache nodejs npm netcat-openbsd git openssh-client openssl make bash gcc g++ jq curl
+RUN apk add --update --no-cache nodejs npm netcat-openbsd git openssh-client openssl make bash gcc g++ jq curl parallel
+RUN echo -ne "will cite" | parallel --citation || true
 # get docker client
 RUN curl -L -o /tmp/docker-$DOCKER_VERSION.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz \
     && tar -xz -C /tmp -f /tmp/docker-$DOCKER_VERSION.tgz \

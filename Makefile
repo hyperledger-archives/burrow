@@ -231,14 +231,10 @@ docs: CHANGELOG.md NOTES.md
 tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
 
-.PHONY: docker_build_ci_rebuild
-docker_build_ci_rebuild:
+.PHONY: build_ci_image
+build_ci_image:
 	docker build --no-cache -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
 
-.PHONY: docker_build_ci
-docker_build_ci:
-	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
-
-.PHONY: docker_push_ci
-docker_push_ci: docker_build_ci
+.PHONY: push_ci_image
+push_ci_image: build_ci_image
 	docker push ${CI_IMAGE}
