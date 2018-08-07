@@ -8,7 +8,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -81,14 +80,14 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 	return outCh
 }
 
-func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address) *exec.TxExecution {
+func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) *exec.TxExecution {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
 		Address:  nil,
-		Data:     Bytecode_strange_loop,
+		Data:     bytecode,
 		Fee:      2,
 		GasLimit: 10000,
 	})
@@ -96,19 +95,17 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 	return txe
 }
 
-func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress,
-	contractAddress crypto.Address) *exec.TxExecution {
-
-	functionID := abi.FunctionID("UpsieDownsie()")
+func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	data []byte) *exec.TxExecution {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
 		Address:  &contractAddress,
-		Data:     functionID[:],
+		Data:     data,
 		Fee:      2,
-		GasLimit: 10000,
+		GasLimit: 1000000,
 	})
 	require.NoError(t, err)
 	return txe

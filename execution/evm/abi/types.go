@@ -37,10 +37,8 @@ type Return struct {
 const (
 	// We don't need to be exhaustive here, just make what we used strongly typed
 	AddressTypeName TypeName = "address"
-	IntTypeName     TypeName = "int"
 	Uint64TypeName  TypeName = "uint64"
 	Bytes32TypeName TypeName = "bytes32"
-	StringTypeName  TypeName = "string"
 	BoolTypeName    TypeName = "bool"
 )
 
@@ -49,10 +47,11 @@ const (
 	AddressLength          = 20
 )
 
-type (
-	Address          [AddressLength]byte
-	FunctionSelector [FunctionSelectorLength]byte
-)
+type FunctionSelector [FunctionSelectorLength]byte
+
+func (fs FunctionSelector) Bytes() []byte {
+	return fs[:]
+}
 
 func FunctionID(signature string) FunctionSelector {
 	return FirstFourBytes(sha3.Sha3([]byte(signature)))

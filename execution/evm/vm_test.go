@@ -883,10 +883,8 @@ func TestInvalid(t *testing.T) {
 		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
 
 	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
-	expected := errors.ErrorCodeExecutionAborted.Error()
-	assert.EqualError(t, err, expected)
+	assert.Equal(t, errors.ErrorCodeExecutionAborted, err.ErrorCode())
 	t.Logf("Output: %v Error: %v\n", output, err)
-
 }
 
 func TestReturnDataSize(t *testing.T) {

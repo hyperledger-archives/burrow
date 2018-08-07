@@ -10,7 +10,7 @@ import (
 )
 
 func TestErrorCode_MarshalJSON(t *testing.T) {
-	ec := NewCodedError(ErrorCodeDataStackOverflow, "arrgh")
+	ec := NewException(ErrorCodeDataStackOverflow, "arrgh")
 	bs, err := json.Marshal(ec)
 	require.NoError(t, err)
 

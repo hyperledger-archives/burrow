@@ -104,7 +104,8 @@ type (
 	}
 
 	PruneConfig struct {
-		Keys []string
+		Keys        []string
+		IncludeKeys bool
 	}
 
 	CaptureConfig struct {
@@ -223,6 +224,16 @@ func LabelTransform(prefix bool, labelKeyvals ...string) *TransformConfig {
 		LabelConfig: &LabelConfig{
 			Prefix: prefix,
 			Labels: labels,
+		},
+	}
+}
+
+func OnlyTransform(keys ...string) *TransformConfig {
+	return &TransformConfig{
+		TransformType: Prune,
+		PruneConfig: &PruneConfig{
+			Keys:        keys,
+			IncludeKeys: true,
 		},
 	}
 }
@@ -380,7 +391,11 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 			keys[i] = k
 		}
 		return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-			return outputLogger.Log(structure.RemoveKeys(keyvals, keys...)...)
+			if transformConfig.PruneConfig.IncludeKeys {
+				return outputLogger.Log(structure.OnlyKeys(keyvals, keys...)...)
+			} else {
+				return outputLogger.Log(structure.RemoveKeys(keyvals, keys...)...)
+			}
 		}), captures, nil
 
 	case Capture:
