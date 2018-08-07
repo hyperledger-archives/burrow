@@ -11,6 +11,8 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -101,12 +103,14 @@ func TestCallTxSync(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	numGoroutines := 40
 	numRuns := 5
+	functionID := abi.FunctionID("UpsieDownsie()")
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numRuns; j++ {
-				createTxe := rpctest.CreateContract(t, cli, inputAddress)
-				callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee)
+				createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
+				callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee,
+					functionID[:])
 				depth := binary.Uint64FromWord256(binary.LeftPadWord256(lastCall(callTxe.Events).Return))
 				// Would give 23 if taken from wrong frame (i.e. not the outer stackdepth == 0 one)
 				assert.Equal(t, 18, int(depth))
@@ -243,9 +247,10 @@ func TestNestedCall(t *testing.T) {
 
 func TestCallEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	callTxe := rpctest.CallContract(t, cli, inputAddress, address)
+	functionID := abi.FunctionID("UpsieDownsie()")
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
 	callEvents := filterCalls(callTxe.Events)
 	require.Len(t, callEvents, rpctest.UpsieDownsieCallCount, "should see 30 recursive call events")
 	for i, ev := range callEvents {
@@ -255,9 +260,10 @@ func TestCallEvents(t *testing.T) {
 
 func TestLogEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	callTxe := rpctest.CallContract(t, cli, inputAddress, address)
+	functionID := abi.FunctionID("UpsieDownsie()")
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
 	evs := filterLogs(callTxe.Events)
 	require.Len(t, evs, rpctest.UpsieDownsieCallCount-2)
 	log := evs[0]
@@ -265,6 +271,20 @@ func TestLogEvents(t *testing.T) {
 	direction := strings.TrimRight(string(log.Topics[1][:]), "\x00")
 	assert.Equal(t, int64(18), depth)
 	assert.Equal(t, "Upsie!", direction)
+}
+
+func TestRevert(t *testing.T) {
+	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	txe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_revert)
+	functionID := abi.FunctionID("RevertAt(uint32)")
+	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress,
+		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
+	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+
+	revertReason := "I have reverted"
+	expectedReturn := bc.MustSplice(abi.FunctionID("Error(string)"), binary.Int64ToWord256(binary.Word256Length),
+		binary.Int64ToWord256(int64(len(revertReason))), binary.RightPadWord256([]byte(revertReason)))
+	assert.Equal(t, expectedReturn, txe.Result.Return)
 }
 
 func filterCalls(evs []*exec.Event) []*exec.CallEvent {

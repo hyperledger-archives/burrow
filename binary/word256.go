@@ -127,16 +127,14 @@ func (w Word256) Size() int {
 	return Word256Length
 }
 
-func Uint64ToWord256(i uint64) Word256 {
-	buf := [8]byte{}
-	PutUint64BE(buf[:], i)
-	return LeftPadWord256(buf[:])
+func Uint64ToWord256(i uint64) (word Word256) {
+	PutUint64BE(word[24:], i)
+	return
 }
 
-func Int64ToWord256(i int64) Word256 {
-	buf := [8]byte{}
-	PutInt64BE(buf[:], i)
-	return LeftPadWord256(buf[:])
+func Int64ToWord256(i int64) (word Word256) {
+	PutInt64BE(word[24:], i)
+	return
 }
 
 func RightPadWord256(bz []byte) (word Word256) {
@@ -150,13 +148,11 @@ func LeftPadWord256(bz []byte) (word Word256) {
 }
 
 func Uint64FromWord256(word Word256) uint64 {
-	buf := word.Postfix(8)
-	return GetUint64BE(buf)
+	return GetUint64BE(word.Postfix(8))
 }
 
 func Int64FromWord256(word Word256) int64 {
-	buf := word.Postfix(8)
-	return GetInt64BE(buf)
+	return GetInt64BE(word.Postfix(8))
 }
 
 //-------------------------------------

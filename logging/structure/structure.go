@@ -107,7 +107,18 @@ func RemoveKeys(keyvals []interface{}, dropKeys ...interface{}) []interface{} {
 	})
 }
 
-// Drops all key value pairs where the key is in keys
+func OnlyKeys(keyvals []interface{}, includeKeys ...interface{}) []interface{} {
+	return DropKeys(keyvals, func(key, value interface{}) bool {
+		for _, includeKey := range includeKeys {
+			if key == includeKey {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+// Drops all key value pairs where dropKeyValPredicate is true
 func DropKeys(keyvals []interface{}, dropKeyValPredicate func(key, value interface{}) bool) []interface{} {
 	keyvalsDropped := make([]interface{}, 0, len(keyvals))
 	for i := 0; i < 2*(len(keyvals)/2); i += 2 {

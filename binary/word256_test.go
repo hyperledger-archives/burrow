@@ -54,3 +54,8 @@ func TestWord256_MarshalText(t *testing.T) {
 	err = json.Unmarshal(out, bs2)
 	assert.Equal(t, w, *bs2)
 }
+
+func TestInt64ToWord256(t *testing.T) {
+	i := int64(-34)
+	assert.Equal(t, i, Int64FromWord256(Int64ToWord256(i)))
+}

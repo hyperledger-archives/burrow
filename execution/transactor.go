@@ -105,7 +105,11 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 		return nil, fmt.Errorf("timed out waiting for transaction with hash %v timed out after %v",
 			checkTxReceipt.TxHash, BlockingTimeout)
 	case msg := <-out:
-		return msg.(*exec.TxExecution), nil
+		txe := msg.(*exec.TxExecution)
+		if txe.Exception != nil && txe.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
+			return nil, errors.Wrap(txe.Exception, "exception during transaction execution")
+		}
+		return txe, nil
 	}
 }
 

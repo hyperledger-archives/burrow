@@ -50,7 +50,7 @@ func TestInputAccountPublicKeySet(t *testing.T) {
 	assert.Equal(t, crypto.PublicKey{}, acc.PublicKey)
 
 	// Sign with this account - should set public key
-	rpctest.CreateContract(t, tcli, input.Address())
+	rpctest.CreateContract(t, tcli, input.Address(), rpctest.Bytecode_strange_loop)
 	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
 
 	// Check public key set

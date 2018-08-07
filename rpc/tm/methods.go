@@ -1,8 +1,6 @@
 package tm
 
 import (
-	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
@@ -83,11 +81,4 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 		// Private account
 		GeneratePrivateAccount: server.NewRPCFunc(service.GeneratePrivateAccount, ""),
 	}
-}
-
-// In a slight abuse of the JSON-RPC spec (it states we should return the same ID as provided by the client)
-// we append the eventID to the websocket response ID when pushing events over
-// the websocket to distinguish events themselves from the initial ResultSubscribe response.
-func EventResponseID(requestID, eventID string) string {
-	return fmt.Sprintf("%s#%s", requestID, eventID)
 }

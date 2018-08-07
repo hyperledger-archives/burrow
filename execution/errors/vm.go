@@ -48,7 +48,7 @@ func (err Call) ErrorCode() Code {
 
 func (err Call) Error() string {
 	buf := new(bytes.Buffer)
-	buf.WriteString("call error: ")
+	buf.WriteString("Call error: ")
 	buf.WriteString(err.CallError.Error())
 	if len(err.NestedErrors) > 0 {
 		buf.WriteString(", nested call errors:\n")

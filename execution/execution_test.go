@@ -1623,7 +1623,7 @@ func addressPtr(account acm.Account) *crypto.Address {
 //-------------------------------------------------------------------------------------
 // helpers
 
-var ExceptionTimeOut = errors.NewCodedError(errors.ErrorCodeGeneric, "timed out waiting for event")
+var ExceptionTimeOut = errors.NewException(errors.ErrorCodeGeneric, "timed out waiting for event")
 
 type testExecutor struct {
 	*executor
