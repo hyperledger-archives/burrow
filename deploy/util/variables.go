@@ -173,7 +173,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 	var callArray []string
 	if function == "" && !constructor {
 		if reflect.TypeOf(data).Kind() == reflect.Slice {
-			return "", []string{""}, fmt.Errorf("Incorrect formatting of epm.yaml. Please update it to include a function field.")
+			return "", []string{""}, fmt.Errorf("Incorrect formatting of deploy.yaml. Please update it to include a function field.")
 		}
 		function = strings.Split(data.(string), " ")[0]
 		callArray = strings.Split(data.(string), " ")[1:]
@@ -192,7 +192,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 				}
 				return function, callDataArray, nil
 			} else {
-				return "", make([]string, 0), fmt.Errorf("Incorrect formatting of epm.yaml file. Please update it to include a function field.")
+				return "", make([]string, 0), fmt.Errorf("Incorrect formatting of deploy.yaml file. Please update it to include a function field.")
 			}
 		}
 		val := reflect.ValueOf(data)

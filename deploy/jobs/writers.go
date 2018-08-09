@@ -9,7 +9,7 @@ import (
 
 // [zr] this should go (currently used by the nameReg writer)
 // WriteJobResultCSV takes two strings and writes those to the delineated log
-// file, which is currently epm.log in the same directory as the epm.yaml
+// file, which is currently deploy.log in the same directory as the deploy.yaml
 func WriteJobResultCSV(name, result string) error {
 
 	pwd, _ := os.Getwd()

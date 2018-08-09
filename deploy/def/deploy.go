@@ -40,7 +40,6 @@ func (do *Packages) Dial() error {
 }
 
 type Package struct {
-	// from epm
 	Account string
 	Jobs    []*Job
 }

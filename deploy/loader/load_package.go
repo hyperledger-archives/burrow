@@ -14,7 +14,7 @@ import (
 func LoadPackage(fileName string) (*def.Package, error) {
 	log.Info("Loading monax Jobs Definition File.")
 	var pkg = new(def.Package)
-	var epmJobs = viper.New()
+	var deployJobs = viper.New()
 
 	// setup file
 	abs, err := filepath.Abs(fileName)
@@ -31,22 +31,22 @@ func LoadPackage(fileName string) (*def.Package, error) {
 		"name": bName,
 	}).Debug("Loading jobs file")
 
-	epmJobs.SetConfigType("yaml")
-	epmJobs.SetConfigName(bName)
+	deployJobs.SetConfigType("yaml")
+	deployJobs.SetConfigName(bName)
 
 	r, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
 	// load file
-	if err := epmJobs.ReadConfig(r); err != nil {
+	if err := deployJobs.ReadConfig(r); err != nil {
 		return nil, fmt.Errorf("Sorry, the marmots were unable to load the monax jobs file. Please check your path: %v", err)
 	}
 
 	// marshall file
-	if err := epmJobs.UnmarshalExact(pkg); err != nil {
+	if err := deployJobs.UnmarshalExact(pkg); err != nil {
 		return nil, fmt.Errorf(`Sorry, the marmots could not figure that monax jobs file out.
-			Please check that your epm.yaml is properly formatted: %v`, err)
+			Please check that your deploy.yaml is properly formatted: %v`, err)
 	}
 
 	// TODO more file sanity check (fail before running)

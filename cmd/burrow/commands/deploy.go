@@ -20,10 +20,10 @@ func Packages(output Output) func(cmd *cli.Cmd) {
 
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
-		defaultOutputOpt := cmd.StringOpt("o output", "epm.output.json",
+		defaultOutputOpt := cmd.StringOpt("o output", "deploy.output.json",
 			"filename for jobs output file. by default, this name will reflect the name passed in on the optional [--file]")
 
-		yamlPathOpt := cmd.StringOpt("f file", "epm.yaml",
+		yamlPathOpt := cmd.StringOpt("f file", "deploy.yaml",
 			"path to package file which jobs should use. if also using the --dir flag, give the relative path to jobs file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
@@ -36,7 +36,7 @@ func Packages(output Output) func(cmd *cli.Cmd) {
 			"default gas to use; can be overridden for any single job")
 
 		addressOpt := cmd.StringOpt("a address", "",
-			"default address to use; operates the same way as the [account] job, only before the epm file is ran")
+			"default address to use; operates the same way as the [account] job, only before the deploy file is ran")
 
 		defaultFeeOpt := cmd.StringOpt("n fee", "9999", "default fee to use")
 

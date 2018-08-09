@@ -115,7 +115,7 @@ func RunJobs(do *def.Packages) error {
 
 		default:
 			log.Error("")
-			return fmt.Errorf("the Job specified in epm.yaml and parsed as '%v' is not recognised asa  valid job",
+			return fmt.Errorf("the Job specified in deploy.yaml and parsed as '%v' is not recognised as a valid job",
 				job)
 		}
 
@@ -191,7 +191,7 @@ func postProcess(do *def.Packages) error {
 	}
 
 	// if do.YAMLPath is not default and do.DefaultOutput is default, over-ride do.DefaultOutput
-	if yaml != "epm" && do.DefaultOutput == "epm.output.json" {
+	if yaml != "deploy" && do.DefaultOutput == "deploy.output.json" {
 		do.DefaultOutput = fmt.Sprintf("%s.output.json", yaml)
 	}
 

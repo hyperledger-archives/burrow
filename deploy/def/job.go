@@ -24,7 +24,7 @@ type Job struct {
 	Account *Account `mapstructure:"account,omitempty" json:"account,omitempty" yaml:"account,omitempty" toml:"account"`
 	// Set an arbitrary value
 	Set *Set `mapstructure:"set,omitempty" json:"set,omitempty" yaml:"set,omitempty" toml:"set"`
-	// Run a sequence of other epm.yamls
+	// Run a sequence of other deploy.yamls
 	Meta *Meta `mapstructure:"meta,omitempty" json:"meta,omitempty" yaml:"meta,omitempty" toml:"meta"`
 	// Issue a governance transaction
 	UpdateAccount *UpdateAccount `mapstructure:"update-account,omitempty" json:"update-account,omitempty" yaml:"update-account,omitempty" toml:"update-account"`
