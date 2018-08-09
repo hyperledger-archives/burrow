@@ -44,6 +44,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("dump", "Dump objects from an offline Burrow .burrow directory",
 		commands.Dump(output))
 
+	app.Command("deploy", "Deploy and test deploy",
+		commands.Packages(output))
+
 	return app
 }
 
