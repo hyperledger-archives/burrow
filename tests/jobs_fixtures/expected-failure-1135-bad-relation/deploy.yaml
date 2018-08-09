@@ -1,0 +1,27 @@
+jobs:
+
+- name: MinersFee
+    set:
+      val: 1234
+
+- name: to_save
+    set:
+      val: 5000
+
+- name: nameRegTestDataFile1
+    register:
+      data_file: names1.csv
+      amount: $to_save
+      fee: $MinersFee
+
+- name: queryReg1
+    query-name:
+      name: burrow
+      field: data
+
+- name: nameRegAssert1
+    assert:
+      key: $queryReg1
+# XXX this bad relation should fail
+      relation: neq
+      val: marmot_home

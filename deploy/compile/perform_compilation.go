@@ -157,6 +157,9 @@ func RequestCompile(file string, optimize bool, libraries map[string]string) (*R
 
 	log.WithField("Command: ", string(command)).Debug("Command Input")
 	result, err := runSolidity(string(command))
+	if err != nil {
+		return nil, err
+	}
 	log.WithField("Command Result: ", result).Debug("Command Output")
 
 	output := SolidityOutput{}

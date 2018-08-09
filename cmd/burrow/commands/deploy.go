@@ -1,10 +1,14 @@
 package commands
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	cli "github.com/jawher/mow.cli"
+	log "github.com/sirupsen/logrus"
 )
 
 func Packages(output Output) func(cmd *cli.Cmd) {
@@ -64,8 +68,60 @@ func Packages(output Output) func(cmd *cli.Cmd) {
 			do.DefaultAmount = *defaultAmountOpt
 			do.Verbose = *verboseOpt
 			do.Debug = *debugOpt
-
+			log.SetFormatter(new(PlainFormatter))
+			log.SetLevel(log.WarnLevel)
+			if do.Verbose {
+				log.SetLevel(log.InfoLevel)
+			} else if do.Debug {
+				log.SetLevel(log.DebugLevel)
+			}
 			util.IfExit(pkgs.RunPackage(do))
 		}
 	}
+}
+
+type PlainFormatter struct{}
+
+func (f *PlainFormatter) Format(entry *log.Entry) ([]byte, error) {
+	var b *bytes.Buffer
+	keys := make([]string, 0, len(entry.Data))
+	for k := range entry.Data {
+		keys = append(keys, k)
+	}
+
+	if entry.Buffer != nil {
+		b = entry.Buffer
+	} else {
+		b = &bytes.Buffer{}
+	}
+
+	f.appendMessage(b, entry.Message)
+	for _, key := range keys {
+		f.appendMessageData(b, key, entry.Data[key])
+	}
+
+	b.WriteByte('\n')
+	return b.Bytes(), nil
+}
+
+func (f *PlainFormatter) appendMessage(b *bytes.Buffer, message string) {
+	fmt.Fprintf(b, "%-44s", message)
+}
+
+func (f *PlainFormatter) appendMessageData(b *bytes.Buffer, key string, value interface{}) {
+	switch key {
+	case "":
+		b.WriteString("=> ")
+	case "=>":
+		b.WriteString(key)
+		b.WriteByte(' ')
+	default:
+		b.WriteString(key)
+		b.WriteString(" => ")
+	}
+	stringVal, ok := value.(string)
+	if !ok {
+		stringVal = fmt.Sprint(value)
+	}
+	b.WriteString(stringVal)
 }

@@ -1,0 +1,1 @@
+* tests simple meta jobs

@@ -1,0 +1,8 @@
+jobs: 
+- name: c
+  deploy:
+      contract: app32.sol
+
+- name: c
+  set:
+      val: 1 

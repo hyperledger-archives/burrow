@@ -1,0 +1,79 @@
+jobs:
+
+- name: deployC
+  deploy:
+      contract: array.sol
+
+- name: callWithIntArray
+  call:
+      destination: $deployC
+      function: intCallWithArray 
+      data: 
+        - [1,2,3,4]
+
+- name: assertIntCall
+  assert:
+      key: $callWithIntArray
+      relation: eq
+      val: 4
+
+- name: callWithByteArray
+  call:
+      destination: $deployC
+      function: bytesCallWithArray
+      data:
+        - ["Hello","World","Of","Marmots"]
+
+- name: assertBytesCall
+  assert:
+      key: $callWithByteArray
+      relation: eq
+      val: Marmots
+
+- name: callWithBoolArray
+  call:
+      destination: $deployC
+      function: boolCallWithArray 
+      data:
+        - ["true","false","true","false"]
+
+- name: assertBoolsCall
+  assert:
+      key: $callWithBoolArray
+      relation: eq
+      val: "false"
+
+- name: callWithAddressArray
+  call:
+      destination: $deployC
+      function: addressCallWithArray 
+      data:
+        - [B806DC304416CA32B5951E3391490813C9F6FF7A,B806DC304416CA32B5951E3391490813C9F6FF7C,B806DC304416CA32B5951E3391490813C9F6FF7D]
+
+- name: assertAddressCall
+  assert:
+      key: $callWithAddressArray
+      relation: eq
+      val: B806DC304416CA32B5951E3391490813C9F6FF7D
+
+- name: queryIntMemoryArray
+  query-contract:
+      destination: $deployC
+      function: intMemoryArray
+
+- name: assertIntMemoryArray
+  assert:
+      key: $queryIntMemoryArray
+      relation: eq
+      val: "[1,2,3,4]"
+
+- name: queryBytesMemoryArray
+  query-contract:
+      destination: $deployC
+      function: bytesMemoryArray
+
+- name: assertBytesMemoryArray
+  assert:
+      key: $queryBytesMemoryArray
+      relation: eq
+      val: "[hello,marmots,how,are,you]"

@@ -1,0 +1,78 @@
+{
+	"GenesisTime": "2018-07-23T20:54:35.145610201Z",
+	"ChainName": "BurrowChain_D70885",
+	"GlobalPermissions": {
+		"Base": {
+			"Perms": 2302,
+			"SetBit": 16383
+		}
+	},
+	"Accounts": [
+		{
+			"Address": "C9F239591C593CB8EE192B0009C6A0F2C9F8D768",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "238E06AE1BD6485498A13BEC84BE3ADCCED699313E518EBD2C9C8BB4DF03F84E"
+			},
+			"Amount": 99999999999999,
+			"Name": "Full_0",
+			"Permissions": {
+				"Base": {
+					"Perms": 16383,
+					"SetBit": 16383
+				}
+			}
+		},
+		{
+			"Address": "B45A407C2EBD15989DC8AB83284B31B0B6FB7C10",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "860AD13F2223C22DDECEAD7C97191CC52B8F0A858527FA17FE5DC85D7F1520A8"
+			},
+			"Amount": 9999999999,
+			"Name": "Participant_0",
+			"Permissions": {
+				"Base": {
+					"Perms": 2118,
+					"SetBit": 2118
+				}
+			}
+		},
+		{
+			"Address": "1AEEFD3783050219C3988098E152A11F02C4F4C4",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "B9BA65BBBA1109E7DBEDB0D7266968E5E7C59E0050DFDB84C867CDCC5D84DED3"
+			},
+			"Amount": 9999999999,
+			"Name": "Participant_1",
+			"Permissions": {
+				"Base": {
+					"Perms": 2118,
+					"SetBit": 2118
+				}
+			}
+		}
+	],
+	"Validators": [
+		{
+			"Address": "C9F239591C593CB8EE192B0009C6A0F2C9F8D768",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "238E06AE1BD6485498A13BEC84BE3ADCCED699313E518EBD2C9C8BB4DF03F84E"
+			},
+			"Amount": 9999999999,
+			"Name": "Full_0",
+			"UnbondTo": [
+				{
+					"Address": "C9F239591C593CB8EE192B0009C6A0F2C9F8D768",
+					"PublicKey": {
+						"CurveType": "ed25519",
+						"PublicKey": "238E06AE1BD6485498A13BEC84BE3ADCCED699313E518EBD2C9C8BB4DF03F84E"
+					},
+					"Amount": 9999999999
+				}
+			]
+		}
+	]
+}

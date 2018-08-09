@@ -1,0 +1,99 @@
+jobs:
+#
+# Add validator
+#
+
+- name: InitialTotalPower
+  query-vals:
+    field: "Set.TotalPower"
+
+- name: AddValidator
+  update-account:
+    target: 5F0577625C94E3237C800DFAD3FB0949A1761C3013B40E53CC5F64F576BFB985
+    power: 232322
+
+# Pull power from the validator set in the result of query-vals
+- name: CheckAdded
+  query-vals:
+    field: "Set.${AddValidator.address}.Power"
+
+- name: AssertPowerNonZero
+  assert:
+    key: $CheckAdded
+    relation: gt
+    val: 0
+
+# Check the power supplied in AddValidator matches the queried value
+- name: AssertPowerEqual
+  assert:
+    key: $CheckAdded
+    relation: eq
+    val: $AddValidator.power
+
+#
+# Remove validator
+#
+
+- name: RemoveValidator
+  update-account:
+    target: 5F0577625C94E3237C800DFAD3FB0949A1761C3013B40E53CC5F64F576BFB985
+    power: 0
+
+- name: PowerAfterRemoved
+  query-vals:
+    field: "Set.TotalPower"
+
+- name: AssertPowerNonZero
+  assert:
+    key: $PowerAfterRemoved
+    relation: eq
+    val: $InitialTotalPower
+
+#
+# Change native token
+#
+- name: MakeValidatorWealthy
+  update-account:
+    target: $AddValidator.address
+    native: 1111111119
+
+- name: CheckNative
+  query-account:
+    account: $AddValidator.address
+    field: balance
+
+- name: AssertNativeEqual
+  assert:
+    key: $CheckNative
+    relation: eq
+    val: $MakeValidatorWealthy.native
+
+#
+# Change permissions
+#
+- name: MakeValidatorWealthy
+  update-account:
+    target: $AddValidator.address
+    permissions: ["send"]
+
+- name: CheckBase
+  query-account:
+    account: $AddValidator.address
+    field: permissions.base
+
+- name: AssertOnlyHasSendPermission
+  assert:
+    key: $CheckBase
+    relation: eq
+    val: 2
+
+- name: MakeNewAccount
+  update-account:
+    target: new(specialKey,secp256k1)
+    native: 300
+
+- name: AssertNewAddress
+  assert:
+    key: $MakeNewAccount.address
+    relation: ne
+    val: ""

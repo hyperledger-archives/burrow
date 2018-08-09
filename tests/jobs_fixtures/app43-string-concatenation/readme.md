@@ -1,0 +1,1 @@
+* tests string concatenation

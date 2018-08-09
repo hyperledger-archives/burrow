@@ -1,0 +1,23 @@
+jobs:
+
+- name: deployByteCasting
+  deploy:
+      contract: byte_casting.sol
+
+- name: test
+  call:
+      destination: $deployByteCasting
+      function: Test
+      data:
+        - -5
+        - 6
+        - 7
+
+- name: assertExtension
+  assert:
+      key: $test
+      relation: eq
+      val: (-5, 6, 7)
+
+
+
