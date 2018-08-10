@@ -702,8 +702,9 @@ type Argument struct {
 }
 
 type FunctionSpec struct {
-	Inputs  []Argument
-	Outputs []Argument
+	FunctionID [4]byte
+	Inputs     []Argument
+	Outputs    []Argument
 }
 
 type Event struct {
@@ -888,21 +889,98 @@ func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
 	return ReadAbiSpec(specBytes)
 }
 
-func FunctionID(signature string) []byte {
-	return sha3.Sha3([]byte(signature))[:4]
+func EVMTypeFromReflect(v reflect.Type) Argument {
+	arg := Argument{Name: v.Name()}
+
+	if v.Kind() == reflect.Array {
+		arg.IsArray = true
+		arg.ArrayLength = uint64(v.Len())
+		v = v.Elem()
+	} else if v.Kind() == reflect.Slice {
+		arg.IsArray = true
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		arg.EVM = EVMBool{}
+	case reflect.String:
+		arg.EVM = EVMString{}
+	case reflect.Uint64:
+		arg.EVM = EVMUint{M: 64}
+	case reflect.Int64:
+		arg.EVM = EVMInt{M: 64}
+	case reflect.Struct:
+		if v == reflect.TypeOf(crypto.Address{}) {
+			arg.EVM = EVMAddress{}
+		} else if v == reflect.TypeOf(big.Int{}) {
+			arg.EVM = EVMInt{M: 256}
+		} else {
+			panic(fmt.Sprintf("no mapping for type struct %s.%s", v.Name(), v.PkgPath()))
+		}
+	default:
+		panic(fmt.Sprintf("no mapping for type %v", v.Kind()))
+	}
+
+	return arg
+}
+
+func SpecFromFunctionReflect(f interface{}) *FunctionSpec {
+	t := reflect.TypeOf(f)
+
+	if t.Kind() != reflect.Func {
+		panic(fmt.Sprintf("%s is not a function", t.Name()))
+	}
+
+	s := FunctionSpec{}
+	s.Inputs = make([]Argument, t.NumIn())
+	s.Outputs = make([]Argument, t.NumOut())
+
+	for i, _ := range s.Inputs {
+		s.Inputs[i] = EVMTypeFromReflect(t.In(i))
+	}
+
+	for i, _ := range s.Outputs {
+		s.Outputs[i] = EVMTypeFromReflect(t.Out(i))
+	}
+
+	SetFunctionID(t.Name(), &s)
+	return &s
+}
+
+func SetFunctionID(functionName string, functionSpec *FunctionSpec) {
+	sig := functionName + "("
+	for i, a := range functionSpec.Inputs {
+		if i > 0 {
+			sig += ","
+		}
+		sig += a.EVM.getSignature()
+		if a.IsArray {
+			if a.ArrayLength > 0 {
+				sig += fmt.Sprintf("[%d]", a.ArrayLength)
+			} else {
+				sig += "[]"
+			}
+		}
+	}
+	sig += ")"
+	copy(functionSpec.FunctionID[:], sha3.Sha3([]byte(sig))[:4])
 }
 
 func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) {
+	var funcSpec FunctionSpec
 	var argSpec []Argument
 	if fname != "" {
 		if _, ok := abiSpec.Functions[fname]; ok {
-			argSpec = abiSpec.Functions[fname].Inputs
+			funcSpec = abiSpec.Functions[fname]
 		} else {
-			argSpec = abiSpec.Fallback.Inputs
+			funcSpec = abiSpec.Fallback
 		}
 	} else {
-		argSpec = abiSpec.Constructor.Inputs
+		funcSpec = abiSpec.Constructor
 	}
+
+	argSpec = funcSpec.Inputs
 
 	if argSpec == nil {
 		return nil, fmt.Errorf("Unknown function %s", fname)
@@ -918,29 +996,20 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 	// Anything dynamic is stored after the "fixed" block. For the dynamic types, the fixed
 	// block contains byte offsets to the data. We need to know the length of the fixed
 	// block, so we can calcute the offsets
-	sig := fname + "("
-	for i, a := range argSpec {
-		if i > 0 {
-			sig += ","
-		}
-		sig += a.EVM.getSignature()
+	for _, a := range argSpec {
 		if a.IsArray {
 			if a.ArrayLength > 0 {
-				sig += fmt.Sprintf("[%d]", a.ArrayLength)
 				fixedSize += ElementSize * int(a.ArrayLength)
 			} else {
-				sig += "[]"
 				fixedSize += ElementSize
 			}
 		} else {
 			fixedSize += ElementSize
 		}
-
 	}
-	sig += ")"
 
 	if fname != "" {
-		packed = FunctionID(sig)
+		packed = funcSpec.FunctionID[:]
 	}
 
 	addArg := func(v interface{}, a Argument) error {
@@ -1013,7 +1082,6 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 			}
 		}
 	}
-	//fmt.Printf("PACKING[] -> %v,%v\n", packed, packedDynamic)
 
 	return append(packed, packedDynamic...), nil
 }
