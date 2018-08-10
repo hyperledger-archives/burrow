@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-ozzo/ozzo-validation"
+	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def/rule"
 )
 
@@ -19,7 +20,7 @@ type Job struct {
 	// Not marshalled
 	Result interface{} `json:"-" yaml:"-" toml:"-"`
 	// For multiple values
-	Variables []*Variable `json:"-" yaml:"-" toml:"-"`
+	Variables []*abi.Variable `json:"-" yaml:"-" toml:"-"`
 	// Sets/Resets the primary account to use
 	Account *Account `mapstructure:"account,omitempty" json:"account,omitempty" yaml:"account,omitempty" toml:"account"`
 	// Set an arbitrary value

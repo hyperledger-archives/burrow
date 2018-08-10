@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +15,7 @@ func TestJob_Validate(t *testing.T) {
 	job := &Job{
 		Result: "brian",
 		// This should pass emptiness validation
-		Variables: []*Variable{},
+		Variables: []*abi.Variable{},
 		QueryAccount: &QueryAccount{
 			Account: address.String(),
 			Field:   "bar",

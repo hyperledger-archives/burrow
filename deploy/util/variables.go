@@ -11,22 +11,23 @@ import (
 
 	"unicode"
 
+	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/def/rule"
 	log "github.com/sirupsen/logrus"
 )
 
-func Variables(value interface{}) []*def.Variable {
+func Variables(value interface{}) []*abi.Variable {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
 	}
 	rt := rv.Type()
-	var variables []*def.Variable
+	var variables []*abi.Variable
 	for i := 0; i < rv.NumField(); i++ {
 		field := rv.Field(i)
 		if field.Kind() == reflect.String {
-			variables = append(variables, &def.Variable{Name: lowerFirstCharacter(rt.Field(i).Name), Value: field.String()})
+			variables = append(variables, &abi.Variable{Name: lowerFirstCharacter(rt.Field(i).Name), Value: field.String()})
 		}
 
 	}
@@ -240,7 +241,7 @@ func PreProcessLibs(libs string, do *def.Packages) (string, error) {
 	return libraries, nil
 }
 
-func GetReturnValue(vars []*def.Variable) string {
+func GetReturnValue(vars []*abi.Variable) string {
 	var result []string
 
 	if len(vars) > 1 {

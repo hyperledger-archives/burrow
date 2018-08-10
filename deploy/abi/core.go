@@ -1,15 +1,23 @@
 package abi
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 
-	"github.com/hyperledger/burrow/deploy/def"
-	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/deploy/compile"
 	log "github.com/sirupsen/logrus"
 )
 
-func ReadAbiFormulateCallFile(abiLocation string, funcName string, args []string, do *def.Packages) ([]byte, error) {
-	abiSpecBytes, err := util.ReadAbi(do.BinPath, abiLocation)
+type Variable struct {
+	Name  string
+	Value string
+}
+
+func ReadAbiFormulateCallFile(abiLocation, binPath, funcName string, args []string) ([]byte, error) {
+	abiSpecBytes, err := readAbi(binPath, abiLocation)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -22,7 +30,7 @@ func ReadAbiFormulateCallFile(abiLocation string, funcName string, args []string
 	return Packer(abiSpecBytes, funcName, args...)
 }
 
-func ReadAbiFormulateCall(abiSpecBytes []byte, funcName string, args []string, do *def.Packages) ([]byte, error) {
+func ReadAbiFormulateCall(abiSpecBytes []byte, funcName string, args []string) ([]byte, error) {
 	log.WithField("=>", string(abiSpecBytes)).Debug("ABI Specification (Formulate)")
 	log.WithFields(log.Fields{
 		"function":  funcName,
@@ -32,8 +40,8 @@ func ReadAbiFormulateCall(abiSpecBytes []byte, funcName string, args []string, d
 	return Packer(string(abiSpecBytes), funcName, args...)
 }
 
-func ReadAndDecodeContractReturn(abiLocation, funcName string, resultRaw []byte, do *def.Packages) ([]*def.Variable, error) {
-	abiSpecBytes, err := util.ReadAbi(do.BinPath, abiLocation)
+func ReadAndDecodeContractReturn(abiLocation, binPath, funcName string, resultRaw []byte) ([]*Variable, error) {
+	abiSpecBytes, err := readAbi(binPath, abiLocation)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +78,7 @@ func Packer(abiData, funcName string, args ...string) ([]byte, error) {
 	return packedBytes, nil
 }
 
-func Unpacker(abiData, name string, data []byte) ([]*def.Variable, error) {
+func Unpacker(abiData, name string, data []byte) ([]*Variable, error) {
 	abiSpec, err := ReadAbiSpec([]byte(abiData))
 	if err != nil {
 		return nil, err
@@ -91,7 +99,7 @@ func Unpacker(abiData, name string, data []byte) ([]*def.Variable, error) {
 	if args == nil {
 		return nil, fmt.Errorf("no such function")
 	}
-	vars := make([]*def.Variable, len(args))
+	vars := make([]*Variable, len(args))
 
 	if len(args) == 0 {
 		return nil, nil
@@ -108,11 +116,48 @@ func Unpacker(abiData, name string, data []byte) ([]*def.Variable, error) {
 
 	for i, a := range args {
 		if a.Name != "" {
-			vars[i] = &def.Variable{Name: a.Name, Value: *(vals[i].(*string))}
+			vars[i] = &Variable{Name: a.Name, Value: *(vals[i].(*string))}
 		} else {
-			vars[i] = &def.Variable{Name: fmt.Sprintf("%d", i), Value: *(vals[i].(*string))}
+			vars[i] = &Variable{Name: fmt.Sprintf("%d", i), Value: *(vals[i].(*string))}
 		}
 	}
 
 	return vars, nil
+}
+
+func readAbi(root, contract string) (string, error) {
+	p := path.Join(root, stripHex(contract))
+	if _, err := os.Stat(p); err != nil {
+		log.WithField("abifile", p).Debug("Tried, not found")
+		p = path.Join(root, stripHex(contract)+".bin")
+		if _, err = os.Stat(p); err != nil {
+			log.WithField("abifile", p).Debug("Tried, not found")
+			return "", fmt.Errorf("Abi doesn't exist for =>\t%s", p)
+		}
+	}
+	log.WithField("abifile", p).Debug("Found ABI")
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return "", err
+	}
+	sol := compile.SolidityOutputContract{}
+	err = json.Unmarshal(b, &sol)
+	if err != nil {
+		return "", err
+	}
+
+	return string(sol.Abi), nil
+}
+
+func stripHex(s string) string {
+	if len(s) > 1 {
+		if s[:2] == "0x" {
+			s = s[2:]
+			if len(s)%2 != 0 {
+				s = "0" + s
+			}
+			return s
+		}
+	}
+	return s
 }

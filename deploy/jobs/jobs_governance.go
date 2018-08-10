@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 )
 
-func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []*def.Variable, error) {
+func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []*abi.Variable, error) {
 	gov.Source = useDefault(gov.Source, do.Package.Account)
 	perms := make([]string, len(gov.Permissions))
 

@@ -702,7 +702,7 @@ type Argument struct {
 	ArrayLength uint64
 }
 
-type Function struct {
+type FunctionSpec struct {
 	Inputs  []Argument
 	Outputs []Argument
 }
@@ -713,9 +713,9 @@ type Event struct {
 }
 
 type AbiSpec struct {
-	Constructor Function
-	Fallback    Function
-	Functions   map[string]Function
+	Constructor FunctionSpec
+	Fallback    FunctionSpec
+	Functions   map[string]FunctionSpec
 	Events      map[string]Event
 }
 
@@ -845,7 +845,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 
 	abiSpec := AbiSpec{
 		Events:    make(map[string]Event),
-		Functions: make(map[string]Function),
+		Functions: make(map[string]FunctionSpec),
 	}
 
 	for _, s := range specJ {
@@ -873,7 +873,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 			if err != nil {
 				return nil, err
 			}
-			abiSpec.Functions[s.Name] = Function{Inputs: inputs, Outputs: outputs}
+			abiSpec.Functions[s.Name] = FunctionSpec{Inputs: inputs, Outputs: outputs}
 		}
 	}
 
@@ -887,6 +887,10 @@ func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
 	}
 
 	return ReadAbiSpec(specBytes)
+}
+
+func FunctionID(signature string) []byte {
+	return sha3.Sha3([]byte(signature))[:4]
 }
 
 func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) {
@@ -937,7 +941,7 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 	sig += ")"
 
 	if fname != "" {
-		packed = sha3.Sha3([]byte(sig))[:4]
+		packed = FunctionID(sig)
 	}
 
 	addArg := func(v interface{}, a Argument) error {

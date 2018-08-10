@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	pm "github.com/hyperledger/burrow/deploy/def"
 	"github.com/stretchr/testify/require"
 	"github.com/tmthrgd/go-hex"
 )
@@ -144,13 +143,13 @@ func TestUnpacker(t *testing.T) {
 		abi            string
 		packed         []byte
 		name           string
-		expectedOutput []pm.Variable
+		expectedOutput []Variable
 	}{
 		{
 			`[{"constant":true,"inputs":[],"name":"String","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"}]`,
 			append(pad(hexToBytes(t, "0000000000000000000000000000000000000000000000000000000000000020"), 32, true), append(pad(hexToBytes(t, "0000000000000000000000000000000000000000000000000000000000000005"), 32, true), pad([]byte("Hello"), 32, false)...)...),
 			"String",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "Hello",
@@ -161,7 +160,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":true,"inputs":[],"name":"UInt","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}]`,
 			hexToBytes(t, "0000000000000000000000000000000000000000000000000000000000000001"),
 			"UInt",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "1",
@@ -172,7 +171,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":false,"inputs":[],"name":"Int","outputs":[{"name":"retVal","type":"int256"}],"payable":false,"type":"function"}]`,
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 			"Int",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "retVal",
 					Value: "-1",
@@ -183,7 +182,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":true,"inputs":[],"name":"Bool","outputs":[{"name":"","type":"bool"}],"payable":false,"type":"function"}]`,
 			hexToBytes(t, "0000000000000000000000000000000000000000000000000000000000000001"),
 			"Bool",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "true",
@@ -194,7 +193,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":true,"inputs":[],"name":"Address","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function"}]`,
 			hexToBytes(t, "0000000000000000000000001040E6521541DAB4E7EE57F21226DD17CE9F0FB7"),
 			"Address",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "1040E6521541DAB4E7EE57F21226DD17CE9F0FB7",
@@ -205,7 +204,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":false,"inputs":[],"name":"Bytes32","outputs":[{"name":"retBytes","type":"bytes32"}],"payable":false,"type":"function"}]`,
 			pad([]byte("marmatoshi"), 32, true),
 			"Bytes32",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "retBytes",
 					Value: "marmatoshi",
@@ -219,7 +218,7 @@ func TestUnpacker(t *testing.T) {
 				[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}...,
 			),
 			"multiReturnUIntInt",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "1",
@@ -237,7 +236,7 @@ func TestUnpacker(t *testing.T) {
 				append(hexToBytes(t, "0000000000000000000000000000000000000000000000000000000000000005"), pad([]byte("Hello"), 32, false)...)...,
 			),
 			"multiReturnMixed",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "Hello",
@@ -255,7 +254,7 @@ func TestUnpacker(t *testing.T) {
 				append(pad([]byte("of"), 32, true), pad([]byte("marmots"), 32, true)...)...,
 			),
 			"multiPackBytes32",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "den",
@@ -277,7 +276,7 @@ func TestUnpacker(t *testing.T) {
 				append(pad([]byte("of"), 32, true), pad([]byte("marmots"), 32, true)...)...,
 			),
 			"arrayReturnBytes32",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "[den,of,marmots]",
@@ -288,7 +287,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":false,"inputs":[],"name":"arrayReturnUInt","outputs":[{"name":"","type":"uint256[3]"}],"payable":false,"type":"function"}]`,
 			hexToBytes(t, "000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003"),
 			"arrayReturnUInt",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "[1,2,3]",
@@ -299,7 +298,7 @@ func TestUnpacker(t *testing.T) {
 			`[{"constant":false,"inputs":[],"name":"arrayReturnInt","outputs":[{"name":"","type":"int256[2]"}],"payable":false,"type":"function"}]`,
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254},
 			"arrayReturnInt",
-			[]pm.Variable{
+			[]Variable{
 				{
 					Name:  "0",
 					Value: "[-3,-2]",

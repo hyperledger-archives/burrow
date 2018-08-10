@@ -118,7 +118,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages) (result string, err error) 
 			if err != nil {
 				return "", err
 			}
-			packedBytes, err := abi.ReadAbiFormulateCall(binaryResponse.Abi, "", callDataArray, do)
+			packedBytes, err := abi.ReadAbiFormulateCall(binaryResponse.Abi, "", callDataArray)
 			if err != nil {
 				return "", err
 			}
@@ -248,7 +248,7 @@ func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse comp
 		if err != nil {
 			return "", err
 		}
-		packedBytes, err := abi.ReadAbiFormulateCall(compilersResponse.Binary.Abi, "", callDataArray, do)
+		packedBytes, err := abi.ReadAbiFormulateCall(compilersResponse.Binary.Abi, "", callDataArray)
 		if err != nil {
 			return "", err
 		}
@@ -313,7 +313,7 @@ func deployTx(do *def.Packages, deploy *def.Deploy, contractName, contractCode s
 	})
 }
 
-func CallJob(call *def.Call, do *def.Packages) (string, []*def.Variable, error) {
+func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) {
 	var err error
 	var callData string
 	var callDataArray []string
@@ -331,11 +331,11 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*def.Variable, error) 
 	// formulate call
 	var packedBytes []byte
 	if call.Bin != "" {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Bin, call.Function, callDataArray, do)
+		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Bin, do.BinPath, call.Function, callDataArray)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if call.Bin == "" || err != nil {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Destination, call.Function, callDataArray, do)
+		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Destination, do.BinPath, call.Function, callDataArray)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -380,10 +380,10 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*def.Variable, error) 
 	if txe.Result.Return != nil {
 		log.WithField("=>", result).Debug("Decoding Raw Result")
 		if call.Bin != "" {
-			call.Variables, err = abi.ReadAndDecodeContractReturn(call.Bin, call.Function, txe.Result.Return, do)
+			call.Variables, err = abi.ReadAndDecodeContractReturn(call.Bin, do.BinPath, call.Function, txe.Result.Return)
 		}
 		if call.Bin == "" || err != nil {
-			call.Variables, err = abi.ReadAndDecodeContractReturn(call.Destination, call.Function, txe.Result.Return, do)
+			call.Variables, err = abi.ReadAndDecodeContractReturn(call.Destination, do.BinPath, call.Function, txe.Result.Return)
 		}
 		if err != nil {
 			return "", nil, err

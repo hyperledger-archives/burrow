@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*def.Variable, error) {
+func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*abi.Variable, error) {
 	var queryDataArray []string
 	var err error
 	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, false)
@@ -23,11 +23,11 @@ func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*de
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Bin, query.Function, queryDataArray, do)
+		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Bin, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Destination, query.Function, queryDataArray, do)
+		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Destination, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -49,11 +49,11 @@ func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*de
 	log.WithField("res", txe.Result.Return).Debug("Decoding Raw Result")
 	if query.Bin != "" {
 		log.WithField("abi", query.Bin).Debug()
-		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Bin, query.Function, txe.Result.Return, do)
+		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Bin, do.BinPath, query.Function, txe.Result.Return)
 	}
 	if query.Bin == "" || err != nil {
 		log.WithField("abi", query.Destination).Debug()
-		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Destination, query.Function, txe.Result.Return, do)
+		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Destination, do.BinPath, query.Function, txe.Result.Return)
 	}
 	if err != nil {
 		return "", nil, err
