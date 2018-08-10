@@ -19,7 +19,6 @@ import (
 // EVM Solidity calls and return values are packed into
 // pieces of 32 bytes, including a bool (wasting 255 out of 256 bits)
 const ElementSize = 32
-const AddressSize = 20
 
 type EVMType interface {
 	getSignature() string
@@ -500,7 +499,7 @@ func (e EVMAddress) pack(v interface{}) ([]byte, error) {
 }
 
 func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) {
-	addr, err := crypto.AddressFromBytes(data[offset+ElementSize-AddressSize : offset+ElementSize])
+	addr, err := crypto.AddressFromBytes(data[offset+ElementSize-crypto.AddressLength : offset+ElementSize])
 	if err != nil {
 		return 0, err
 	}
@@ -510,7 +509,7 @@ func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) 
 	case *crypto.Address:
 		*v = addr
 	case *([]byte):
-		*v = data[offset+ElementSize-AddressSize : offset+ElementSize]
+		*v = data[offset+ElementSize-crypto.AddressLength : offset+ElementSize]
 	default:
 		return 0, fmt.Errorf("cannot map EVM address to %s", reflect.ValueOf(v).Kind().String())
 	}
@@ -1037,7 +1036,6 @@ func GetPackingTypes(args []Argument) []interface{} {
 func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 	offset := 0
 	offType := EVMInt{M: 64}
-	//fmt.Printf("UNPACKING[%v]\n", data)
 
 	getArg := func(e interface{}, a Argument) error {
 		if a.EVM.isDynamic() {
