@@ -1,3 +1,4 @@
+
 pragma solidity >=0.4.0;
 
 /**
@@ -9,62 +10,62 @@ pragma solidity >=0.4.0;
 * @dev Permissions permissions = Permissions(address(keccak256("Permissions")));
 */
 contract Permissions {
-  /**
-  * @notice Adds a role to an account
-  * @param _account account address
-  * @param _role role name
-  * @return result whether role was added
-  */
-  function addRole(address _account, bytes32 _role) public constant returns (bool result);
+    /**
+    * @notice Adds a role to an account
+    * @param Account account address
+    * @param Role role name
+    * @return result whether role was added
+    */
+    function addRole(address Account, string Role) public constant returns (bool Result);
 
-  /**
-  * @notice Removes a role from an account
-  * @param _account account address
-  * @param _role role name
-  * @return result whether role was removed
-  */
-  function removeRole(address _account, bytes32 _role) public constant returns (bool result);
+    /**
+    * @notice Removes a role from an account
+    * @param Account account address
+    * @param Role role name
+    * @return result whether role was removed
+    */
+    function removeRole(address Account, string Role) public constant returns (bool Result);
 
-  /**
-  * @notice Indicates whether an account has a role
-  * @param _account account address
-  * @param _role role name
-  * @return result whether account has role
-  */
-  function hasRole(address _account, bytes32 _role) public constant returns (bool result);
+    /**
+    * @notice Indicates whether an account has a role
+    * @param Account account address
+    * @param Role role name
+    * @return result whether account has role
+    */
+    function hasRole(address Account, string Role) public constant returns (bool Result);
 
-  /**
-  * @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
-  * @param _account account address
-  * @param _permission the base permissions flags to set for the account
-  * @param _set whether to set or unset the permissions flags at the account level
-  * @return result the effective permissions flags on the account after the call
-  */
-  function setBase(address _account, uint64 _permission, bool _set) public constant returns (uint64 result);
+    /**
+    * @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
+    * @param Account account address
+    * @param Permission the base permissions flags to set for the account
+    * @param Set whether to set or unset the permissions flags at the account level
+    * @return result the effective permissions flags on the account after the call
+    */
+    function setBase(address Account, uint64 Permission, bool Set) public constant returns (uint64 Result);
 
-  /**
-  * @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
-  * @param _account account address
-  * @param _permission the permissions flags to unset for the account
-  * @return result the effective permissions flags on the account after the call
-  */
-  function unsetBase(address _account, uint64 _permission) public constant returns (uint64 result);
+    /**
+    * @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
+    * @param Account account address
+    * @param Permission the permissions flags to unset for the account
+    * @return result the effective permissions flags on the account after the call
+    */
+    function unsetBase(address Account, uint64 Permission) public constant returns (uint64 Result);
 
-  /**
-  * @notice Indicates whether an account has a subset of permissions set
-  * @param _account account address
-  * @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
-  * @return result whether account has the passed permissions flags set
-  */
-  function hasBase(address _account, uint64 _permission) public constant returns (bool result);
+    /**
+    * @notice Indicates whether an account has a subset of permissions set
+    * @param Account account address
+    * @param Permission the permissions flags (mask) to check whether enabled against base permissions for the account
+    * @return result whether account has the passed permissions flags set
+    */
+    function hasBase(address Account, uint64 Permission) public constant returns (bool Result);
 
-  /**
-  * @notice Sets the global (default) permissions flags for the entire chain
-  * @param _permission the permissions flags to set
-  * @param _set whether to set (or unset) the permissions flags
-  * @return result the global permissions flags after the call
-  */
-  function setGlobal(uint64 _permission, bool _set) public constant returns (uint64 result);
+    /**
+    * @notice Sets the global (default) permissions flags for the entire chain
+    * @param Permission the permissions flags to set
+    * @param Set whether to set (or unset) the permissions flags
+    * @return result the global permissions flags after the call
+    */
+    function setGlobal(uint64 Permission, bool Set) public constant returns (uint64 Result);
 }
 
 contract permSNative {
@@ -87,15 +88,15 @@ contract permSNative {
     return perm.setGlobal(permFlag, value);
   }
 
-  function hasRole(address addr, bytes32 role) public constant returns (bool val) {
+  function hasRole(address addr, string role) public constant returns (bool val) {
     return perm.hasRole(addr, role);
   }
 
-  function addRole(address addr, bytes32 role) public constant returns (bool added) {
+  function addRole(address addr, string role) public constant returns (bool added) {
     return perm.addRole(addr, role);
   }
 
-  function removeRole(address addr, bytes32 role) public constant returns (bool removed) {
+  function removeRole(address addr, string role) public constant returns (bool removed) {
     return perm.removeRole(addr, role);
   }
 }

@@ -23,8 +23,8 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
@@ -37,13 +37,13 @@ import (
 // yields:
 // Keep this updated to drive TestPermissionsContractSignatures
 const compiledSigs = `
-a73f7f8a addRole(address,bytes32)
-225b6574 hasBase(address,uint64)
-ac4ab3fb hasRole(address,bytes32)
-6853920e removeRole(address,bytes32)
+7d72aa65 addRole(address,string)
+1bfe0308 removeRole(address,string)
+217fe6c6 hasRole(address,string)
 dbd4a8ea setBase(address,uint64,bool)
-c4bc7b70 setGlobal(uint64,bool)
 b7d4dc0d unsetBase(address,uint64)
+225b6574 hasBase(address,uint64)
+c4bc7b70 setGlobal(uint64,bool)
 `
 
 func TestPermissionsContractSignatures(t *testing.T) {
@@ -78,7 +78,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get function: %s", err)
 	}
-	funcID := function.ID()
+	funcID := function.Abi.FunctionID
 	gas := uint64(1000)
 
 	// Should fail since we have no permissions
@@ -117,14 +117,15 @@ func assertFunctionIDSignature(t *testing.T, contract *SNativeContractDescriptio
 	}
 }
 
-func funcIDFromHex(t *testing.T, hexString string) abi.FunctionSelector {
+func funcIDFromHex(t *testing.T, hexString string) (funcID abi.FunctionID) {
 	bs, err := hex.DecodeString(hexString)
 	assert.NoError(t, err, "Could not decode hex string '%s'", hexString)
 	if len(bs) != 4 {
 		t.Fatalf("FunctionSelector must be 4 bytes but '%s' is %v bytes", hexString,
 			len(bs))
 	}
-	return abi.FirstFourBytes(bs)
+	copy(funcID[:], bs)
+	return
 }
 
 func permFlagToWord256(permFlag permission.PermFlag) Word256 {

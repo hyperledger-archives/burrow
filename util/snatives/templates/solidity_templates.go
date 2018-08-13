@@ -39,7 +39,7 @@ contract [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) public constant returns ([[.Return.TypeName]] [[.Return.Name]]);`
+function [[.Name]]([[.ArgList]]) public constant returns ([[.RetList]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -134,9 +134,17 @@ func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunc
 }
 
 func (function *solidityFunction) ArgList() string {
-	argList := make([]string, len(function.Args))
-	for i, arg := range function.Args {
-		argList[i] = fmt.Sprintf("%s %s", arg.TypeName, arg.Name)
+	argList := make([]string, len(function.Abi.Inputs))
+	for i, arg := range function.Abi.Inputs {
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), arg.Name)
+	}
+	return strings.Join(argList, ", ")
+}
+
+func (function *solidityFunction) RetList() string {
+	argList := make([]string, len(function.Abi.Outputs))
+	for i, arg := range function.Abi.Outputs {
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), arg.Name)
 	}
 	return strings.Join(argList, ", ")
 }

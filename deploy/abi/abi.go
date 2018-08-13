@@ -21,7 +21,7 @@ import (
 const ElementSize = 32
 
 type EVMType interface {
-	getSignature() string
+	GetSignature() string
 	getGoType() interface{}
 	pack(v interface{}) ([]byte, error)
 	unpack(data []byte, offset int, v interface{}) (int, error)
@@ -33,7 +33,7 @@ var _ EVMType = (*EVMBool)(nil)
 type EVMBool struct {
 }
 
-func (e EVMBool) getSignature() string {
+func (e EVMBool) GetSignature() string {
 	return "bool"
 }
 
@@ -117,7 +117,7 @@ type EVMUint struct {
 	M uint64
 }
 
-func (e EVMUint) getSignature() string {
+func (e EVMUint) GetSignature() string {
 	return fmt.Sprintf("uint%d", e.M)
 }
 
@@ -262,7 +262,7 @@ func (e EVMUint) unpack(data []byte, offset int, v interface{}) (int, error) {
 		}
 		*v = int8(data[ElementSize-1])
 	default:
-		return 0, fmt.Errorf("unable to convert %s to %s", e.getSignature(), reflect.ValueOf(v).Kind().String())
+		return 0, fmt.Errorf("unable to convert %s to %s", e.GetSignature(), reflect.ValueOf(v).Kind().String())
 	}
 
 	return 32, nil
@@ -293,7 +293,7 @@ func (e EVMInt) getGoType() interface{} {
 	}
 }
 
-func (e EVMInt) getSignature() string {
+func (e EVMInt) GetSignature() string {
 	return fmt.Sprintf("int%d", e.M)
 }
 
@@ -445,7 +445,7 @@ func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 		}
 		*v = int16(binary.BigEndian.Uint16(data[ElementSize-maxLen : ElementSize]))
 	default:
-		return 0, fmt.Errorf("unable to convert %s to %s", e.getSignature(), toType)
+		return 0, fmt.Errorf("unable to convert %s to %s", e.GetSignature(), toType)
 	}
 
 	return ElementSize, nil
@@ -468,7 +468,7 @@ func (e EVMAddress) getGoType() interface{} {
 	return new(crypto.Address)
 }
 
-func (e EVMAddress) getSignature() string {
+func (e EVMAddress) GetSignature() string {
 	return "address"
 }
 
@@ -544,7 +544,7 @@ func (e EVMBytes) pack(v interface{}) ([]byte, error) {
 
 	if e.M > 0 {
 		if uint64(len(b)) > e.M {
-			return nil, fmt.Errorf("[%d]byte to long for %s", len(b), e.getSignature())
+			return nil, fmt.Errorf("[%d]byte to long for %s", len(b), e.GetSignature())
 		}
 		return pad(b, ElementSize, false), nil
 	} else {
@@ -587,7 +587,7 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 	case *[]byte:
 		*v = data[offset : offset+int(e.M)]
 	default:
-		return 0, fmt.Errorf("cannot map EVM %s to %s", e.getSignature(), reflect.ValueOf(v).Kind().String())
+		return 0, fmt.Errorf("cannot map EVM %s to %s", e.GetSignature(), reflect.ValueOf(v).Kind().String())
 	}
 
 	return ElementSize, nil
@@ -601,7 +601,7 @@ func (e EVMBytes) isDynamic() bool {
 	return e.M == 0
 }
 
-func (e EVMBytes) getSignature() string {
+func (e EVMBytes) GetSignature() string {
 	if e.M > 0 {
 		return fmt.Sprintf("bytes%d", e.M)
 	} else {
@@ -614,7 +614,7 @@ var _ EVMType = (*EVMString)(nil)
 type EVMString struct {
 }
 
-func (e EVMString) getSignature() string {
+func (e EVMString) GetSignature() string {
 	return "string"
 }
 
@@ -665,7 +665,7 @@ func (e EVMFixed) getGoType() interface{} {
 	return new(big.Float)
 }
 
-func (e EVMFixed) getSignature() string {
+func (e EVMFixed) GetSignature() string {
 	if e.signed {
 		return fmt.Sprintf("fixed%dx%d", e.M, e.N)
 	} else {
@@ -676,13 +676,13 @@ func (e EVMFixed) getSignature() string {
 func (e EVMFixed) pack(v interface{}) ([]byte, error) {
 	// The ABI spec does not describe how this should be packed; go-ethereum abi does not implement this
 	// need to dig in solidity to find out how this is packed
-	return nil, fmt.Errorf("packing of %s not implemented, patches welcome", e.getSignature())
+	return nil, fmt.Errorf("packing of %s not implemented, patches welcome", e.GetSignature())
 }
 
 func (e EVMFixed) unpack(data []byte, offset int, v interface{}) (int, error) {
 	// The ABI spec does not describe how this should be packed; go-ethereum abi does not implement this
 	// need to dig in solidity to find out how this is packed
-	return 0, fmt.Errorf("unpacking of %s not implemented, patches welcome", e.getSignature())
+	return 0, fmt.Errorf("unpacking of %s not implemented, patches welcome", e.GetSignature())
 }
 
 func (e EVMFixed) fixedSize() int {
@@ -701,8 +701,12 @@ type Argument struct {
 	ArrayLength uint64
 }
 
+const FunctionIDSize = 4
+
+type FunctionID [FunctionIDSize]byte
+
 type FunctionSpec struct {
-	FunctionID [4]byte
+	FunctionID FunctionID
 	Inputs     []Argument
 	Outputs    []Argument
 }
@@ -873,7 +877,9 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 			if err != nil {
 				return nil, err
 			}
-			abiSpec.Functions[s.Name] = FunctionSpec{Inputs: inputs, Outputs: outputs}
+			fs := FunctionSpec{Inputs: inputs, Outputs: outputs}
+			fs.SetFunctionID(s.Name)
+			abiSpec.Functions[s.Name] = fs
 		}
 	}
 
@@ -892,69 +898,92 @@ func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
 func EVMTypeFromReflect(v reflect.Type) Argument {
 	arg := Argument{Name: v.Name()}
 
-	if v.Kind() == reflect.Array {
-		arg.IsArray = true
-		arg.ArrayLength = uint64(v.Len())
-		v = v.Elem()
-	} else if v.Kind() == reflect.Slice {
-		arg.IsArray = true
-		v = v.Elem()
-	}
-
-	switch v.Kind() {
-	case reflect.Bool:
-		arg.EVM = EVMBool{}
-	case reflect.String:
-		arg.EVM = EVMString{}
-	case reflect.Uint64:
-		arg.EVM = EVMUint{M: 64}
-	case reflect.Int64:
-		arg.EVM = EVMInt{M: 64}
-	case reflect.Struct:
-		if v == reflect.TypeOf(crypto.Address{}) {
-			arg.EVM = EVMAddress{}
-		} else if v == reflect.TypeOf(big.Int{}) {
-			arg.EVM = EVMInt{M: 256}
-		} else {
-			panic(fmt.Sprintf("no mapping for type struct %s.%s", v.Name(), v.PkgPath()))
+	if v == reflect.TypeOf(crypto.Address{}) {
+		arg.EVM = EVMAddress{}
+	} else if v == reflect.TypeOf(big.Int{}) {
+		arg.EVM = EVMInt{M: 256}
+	} else {
+		if v.Kind() == reflect.Array {
+			arg.IsArray = true
+			arg.ArrayLength = uint64(v.Len())
+			v = v.Elem()
+		} else if v.Kind() == reflect.Slice {
+			arg.IsArray = true
+			v = v.Elem()
 		}
-	default:
-		panic(fmt.Sprintf("no mapping for type %v", v.Kind()))
+
+		switch v.Kind() {
+		case reflect.Bool:
+			arg.EVM = EVMBool{}
+		case reflect.String:
+			arg.EVM = EVMString{}
+		case reflect.Uint64:
+			arg.EVM = EVMUint{M: 64}
+		case reflect.Int64:
+			arg.EVM = EVMInt{M: 64}
+		default:
+			panic(fmt.Sprintf("no mapping for type %v", v.Kind()))
+		}
 	}
 
 	return arg
 }
 
-func SpecFromFunctionReflect(f interface{}) *FunctionSpec {
-	t := reflect.TypeOf(f)
+// SpecFromStructReflect generates a FunctionSpec where the arguments and return values are
+// described a struct. Both args and rets should be set to the return value of reflect.TypeOf()
+// with the respective struct as an argument.
+func SpecFromStructReflect(fname string, args reflect.Type, rets reflect.Type) *FunctionSpec {
+	s := FunctionSpec{
+		Inputs:  make([]Argument, args.NumField()),
+		Outputs: make([]Argument, rets.NumField()),
+	}
+	for i := 0; i < args.NumField(); i++ {
+		f := args.Field(i)
+		a := EVMTypeFromReflect(f.Type)
+		a.Name = f.Name
+		s.Inputs[i] = a
+	}
+	for i := 0; i < rets.NumField(); i++ {
+		f := rets.Field(i)
+		a := EVMTypeFromReflect(f.Type)
+		a.Name = f.Name
+		s.Outputs[i] = a
+	}
+	s.SetFunctionID(fname)
+
+	return &s
+}
+
+func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int) *FunctionSpec {
+	t := v.Type()
 
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf("%s is not a function", t.Name()))
 	}
 
 	s := FunctionSpec{}
-	s.Inputs = make([]Argument, t.NumIn())
-	s.Outputs = make([]Argument, t.NumOut())
+	s.Inputs = make([]Argument, t.NumIn()-skipIn)
+	s.Outputs = make([]Argument, t.NumOut()-skipOut)
 
-	for i, _ := range s.Inputs {
-		s.Inputs[i] = EVMTypeFromReflect(t.In(i))
+	for i := range s.Inputs {
+		s.Inputs[i] = EVMTypeFromReflect(t.In(i + skipIn))
 	}
 
-	for i, _ := range s.Outputs {
+	for i := range s.Outputs {
 		s.Outputs[i] = EVMTypeFromReflect(t.Out(i))
 	}
 
-	SetFunctionID(t.Name(), &s)
+	s.SetFunctionID(fname)
 	return &s
 }
 
-func SetFunctionID(functionName string, functionSpec *FunctionSpec) {
+func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
 	sig := functionName + "("
 	for i, a := range functionSpec.Inputs {
 		if i > 0 {
 			sig += ","
 		}
-		sig += a.EVM.getSignature()
+		sig += a.EVM.GetSignature()
 		if a.IsArray {
 			if a.ArrayLength > 0 {
 				sig += fmt.Sprintf("[%d]", a.ArrayLength)
@@ -964,7 +993,16 @@ func SetFunctionID(functionName string, functionSpec *FunctionSpec) {
 		}
 	}
 	sig += ")"
-	copy(functionSpec.FunctionID[:], sha3.Sha3([]byte(sig))[:4])
+	functionSpec.FunctionID = GetFunctionID(sig)
+}
+
+func (fs FunctionID) Bytes() []byte {
+	return fs[:]
+}
+
+func GetFunctionID(signature string) (id FunctionID) {
+	copy(id[:], sha3.Sha3([]byte(signature))[:4])
+	return
 }
 
 func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) {
@@ -986,10 +1024,44 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 		return nil, fmt.Errorf("Unknown function %s", fname)
 	}
 
-	if len(argSpec) != len(args) {
+	packed := make([]byte, 0)
+
+	if fname != "" {
+		packed = funcSpec.FunctionID[:]
+	}
+
+	packedArgs, err := Pack(argSpec, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(packed, packedArgs...), nil
+}
+
+func PackIntoStruct(argSpec []Argument, st interface{}) ([]byte, error) {
+	v := reflect.ValueOf(st)
+
+	fields := v.NumField()
+	if fields != len(argSpec) {
+		return nil, fmt.Errorf("%d arguments expected, %d received", len(argSpec), fields)
+	}
+
+	return pack(argSpec, func(i int) interface{} {
+		return v.Field(i).Interface()
+	})
+}
+
+func Pack(argSpec []Argument, args ...interface{}) ([]byte, error) {
+	if len(args) != len(argSpec) {
 		return nil, fmt.Errorf("%d arguments expected, %d received", len(argSpec), len(args))
 	}
 
+	return pack(argSpec, func(i int) interface{} {
+		return args[i]
+	})
+}
+
+func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 	packed := make([]byte, 0)
 	packedDynamic := []byte{}
 	fixedSize := 0
@@ -1006,10 +1078,6 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 		} else {
 			fixedSize += ElementSize
 		}
-	}
-
-	if fname != "" {
-		packed = funcSpec.FunctionID[:]
 	}
 
 	addArg := func(v interface{}, a Argument) error {
@@ -1034,25 +1102,26 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 		return nil
 	}
 
-	for i, a := range argSpec {
-		if a.IsArray {
-			s, ok := args[i].(string)
+	for i, as := range argSpec {
+		a := getArg(i)
+		if as.IsArray {
+			s, ok := a.(string)
 			if ok && s[0:1] == "[" && s[len(s)-1:] == "]" {
-				args[i] = strings.Split(s[1:len(s)-1], ",")
+				a = strings.Split(s[1:len(s)-1], ",")
 			}
 
-			val := reflect.ValueOf(args[i])
+			val := reflect.ValueOf(a)
 			if val.Kind() != reflect.Slice && val.Kind() != reflect.Array {
 				return nil, fmt.Errorf("argument %d should be array or slice, not %s", i, val.Kind().String())
 			}
 
-			if a.ArrayLength > 0 {
-				if a.ArrayLength != uint64(val.Len()) {
-					return nil, fmt.Errorf("argumment %d should be array of %d, not %d", i, a.ArrayLength, val.Len())
+			if as.ArrayLength > 0 {
+				if as.ArrayLength != uint64(val.Len()) {
+					return nil, fmt.Errorf("argumment %d should be array of %d, not %d", i, as.ArrayLength, val.Len())
 				}
 
 				for n := 0; n < val.Len(); n++ {
-					err := addArg(val.Index(n).Interface(), a)
+					err := addArg(val.Index(n).Interface(), as)
 					if err != nil {
 						return nil, err
 					}
@@ -1068,7 +1137,7 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 				b, _ = offset.pack(val.Len())
 				packedDynamic = append(packedDynamic, b...)
 				for n := 0; n < val.Len(); n++ {
-					d, err := a.EVM.pack(val.Index(n).Interface())
+					d, err := as.EVM.pack(val.Index(n).Interface())
 					if err != nil {
 						return nil, err
 					}
@@ -1076,7 +1145,7 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) 
 				}
 			}
 		} else {
-			err := addArg(args[i], a)
+			err := addArg(a, as)
 			if err != nil {
 				return nil, err
 			}
@@ -1101,11 +1170,24 @@ func GetPackingTypes(args []Argument) []interface{} {
 	return res
 }
 
+func UnpackIntoStruct(argSpec []Argument, data []byte, st interface{}) error {
+	v := reflect.ValueOf(st).Elem()
+	return unpack(argSpec, data, func(i int) interface{} {
+		return v.Field(i).Addr().Interface()
+	})
+}
+
 func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
+	return unpack(argSpec, data, func(i int) interface{} {
+		return args[i]
+	})
+}
+
+func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error {
 	offset := 0
 	offType := EVMInt{M: 64}
 
-	getArg := func(e interface{}, a Argument) error {
+	getPrimitive := func(e interface{}, a Argument) error {
 		if a.EVM.isDynamic() {
 			var o int64
 			l, err := offType.unpack(data, offset, &o)
@@ -1129,12 +1211,13 @@ func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 	}
 
 	for i, a := range argSpec {
+		arg := getArg(i)
 		if a.IsArray {
 			var array *[]interface{}
 
-			array, ok := args[i].(*[]interface{})
+			array, ok := arg.(*[]interface{})
 			if !ok {
-				if _, ok := args[i].(*string); ok {
+				if _, ok := arg.(*string); ok {
 					// We have been asked to return the value as a string; make intermediate
 					// array of strings; we will concatenate after
 					intermediate := make([]interface{}, a.ArrayLength)
@@ -1153,7 +1236,7 @@ func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 				}
 
 				for n := 0; n < len(*array); n++ {
-					err := getArg((*array)[n], a)
+					err := getPrimitive((*array)[n], a)
 					if err != nil {
 						return err
 					}
@@ -1176,7 +1259,7 @@ func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 
 				intermediate := make([]interface{}, length)
 
-				if _, ok := args[i].(*string); ok {
+				if _, ok := arg.(*string); ok {
 					// We have been asked to return the value as a string; make intermediate
 					// array of strings; we will concatenate after
 					for i, _ := range intermediate {
@@ -1200,7 +1283,7 @@ func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 			}
 
 			// If we were supposed to return a string, convert it back
-			if ret, ok := args[i].(*string); ok {
+			if ret, ok := arg.(*string); ok {
 				s := "["
 				for i, e := range *array {
 					if i > 0 {
@@ -1212,7 +1295,7 @@ func Unpack(argSpec []Argument, data []byte, args ...interface{}) error {
 				*ret = s
 			}
 		} else {
-			err := getArg(args[i], a)
+			err := getPrimitive(arg, a)
 			if err != nil {
 				return err
 			}
