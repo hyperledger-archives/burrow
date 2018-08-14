@@ -3,6 +3,8 @@ package presets
 import (
 	"fmt"
 
+	"strconv"
+
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -32,6 +34,9 @@ func (i Instruction) Description() string {
 }
 
 const (
+	Top        = "top"
+	Up         = "up"
+	Down       = "down"
 	Info       = "info"
 	Minimal    = "minimal"
 	IncludeAny = "include-any"
@@ -39,12 +44,18 @@ const (
 	Stdout     = "stdout"
 	Terminal   = "terminal"
 	JSON       = "json"
-	Up         = "up"
-	Down       = "down"
+	Capture    = "capture"
 	File       = "file"
 )
 
 var instructions = []Instruction{
+	{
+		name: Top,
+		desc: "Ascend the sink tree to the root and insert a new child logger",
+		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
+			return push(stack[:1], logconfig.Sink()), nil
+		},
+	},
 	{
 		name: Up,
 		desc: "Ascend the sink tree by travelling up the stack to the previous sink recorded on the stack",
@@ -134,8 +145,22 @@ var instructions = []Instruction{
 		},
 	},
 	{
+		name:  Capture,
+		desc:  "Insert a capture sink that will only flush on the Sync signal (on shutdown or via SIGHUP)",
+		nargs: 2,
+		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
+			name := args[0]
+			bufferCap, err := strconv.ParseInt(args[1], 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse int32 from capture bufferCap argument '%s': %v", args[1],
+					err)
+			}
+			return push(stack, logconfig.Sink().SetTransform(logconfig.CaptureTransform(name, int(bufferCap), false))), nil
+		},
+	},
+	{
 		name:  File,
-		desc:  "Use the the terminal output format for this sink",
+		desc:  "Save logs to file with single argument file path",
 		nargs: 1,
 		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
 			sink := peek(stack)
