@@ -3,6 +3,8 @@ package presets
 import (
 	"testing"
 
+	"strconv"
+
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -47,5 +49,21 @@ func TestFileOutput(t *testing.T) {
 	expectedSink := logconfig.Sink().
 		AddSinks(logconfig.Sink().SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat)))
 	//fmt.Println(config.TOMLString(expectedSink), "\n", config.TOMLString(builtSink))
+	assert.Equal(t, logconfig.TOMLString(expectedSink), logconfig.TOMLString(builtSink))
+}
+
+func TestCaptureLoggerNormalLogger(t *testing.T) {
+	path := "/dev/termination-log"
+	name := "hello"
+	buffer := 10000
+	builtSink, err := BuildSinkConfig(Capture, name, strconv.Itoa(buffer), File, path, JSON, Top, IncludeAny, Info, Stderr, JSON)
+	require.NoError(t, err)
+	expectedSink := logconfig.Sink().
+		AddSinks(
+			logconfig.Sink().SetTransform(logconfig.CaptureTransform(name, buffer, false)).
+				SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat)),
+			logconfig.Sink().SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAnyMatches,
+				structure.ChannelKey, structure.InfoChannelName)).SetOutput(logconfig.StderrOutput().
+				SetFormat(loggers.JSONFormat)))
 	assert.Equal(t, logconfig.TOMLString(expectedSink), logconfig.TOMLString(builtSink))
 }

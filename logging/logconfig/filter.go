@@ -7,8 +7,7 @@ import (
 )
 
 func BuildFilterPredicate(filterConfig *FilterConfig) (func([]interface{}) bool, error) {
-	predicate, err := BuildKeyValuesPredicate(filterConfig.Predicates,
-		filterConfig.FilterMode.MatchAll())
+	predicate, err := BuildKeyValuesPredicate(filterConfig.Predicates, filterConfig.FilterMode.MatchAll())
 	if err != nil {
 		return nil, err
 	}
@@ -19,8 +18,7 @@ func BuildFilterPredicate(filterConfig *FilterConfig) (func([]interface{}) bool,
 	}, nil
 }
 
-func BuildKeyValuesPredicate(kvpConfigs []*KeyValuePredicateConfig,
-	matchAll bool) (func([]interface{}) bool, error) {
+func BuildKeyValuesPredicate(kvpConfigs []*KeyValuePredicateConfig, matchAll bool) (func([]interface{}) bool, error) {
 	length := len(kvpConfigs)
 	keyRegexes := make([]*regexp.Regexp, length)
 	valueRegexes := make([]*regexp.Regexp, length)
