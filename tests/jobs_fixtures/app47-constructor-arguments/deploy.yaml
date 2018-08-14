@@ -1,0 +1,23 @@
+jobs:
+
+- name: setStorageBaseString1
+  set:
+      val: My string is longer than your string and I want it be longer than 64 bytes.
+
+- name: deployStorageK
+  deploy:
+      contract: bin/storage.bin
+      data: $setStorageBaseString1
+
+- name: queryStorageString1
+  query-contract:
+      destination: $deployStorageK
+      function: getString
+      bin: storage.bin
+
+- name: assertStorageString1
+  assert:
+      key: $queryStorageString1
+      relation: eq
+      val: $setStorageBaseString1
+

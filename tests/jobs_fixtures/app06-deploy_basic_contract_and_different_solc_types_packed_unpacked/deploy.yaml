@@ -1,0 +1,157 @@
+jobs:
+
+- name: deployStorageK
+  deploy:
+      contract: storage.sol
+
+- name: setStorageBaseBool
+  set:
+      val: "true"
+
+- name: setStorageBool
+  call:
+      destination: $deployStorageK
+      function: setBool 
+      data:
+        - $setStorageBaseBool
+
+- name: queryStorageBool
+  query-contract:
+      destination: $deployStorageK
+      function: getBool
+
+- name: assertStorageBool
+  assert:
+      key: $queryStorageBool
+      relation: eq
+      val: $setStorageBaseBool
+
+# tests string bools: #71
+- name: setStorageBool2
+  call:
+      destination: $deployStorageK
+      function: setBool2 
+      data:
+        - true
+
+- name: queryStorageBool2
+  query-contract:
+      destination: $deployStorageK
+      function: getBool2
+
+- name: assertStorageBool2
+  assert:
+      key: $queryStorageBool2
+      relation: eq
+      val: "true"
+
+- name: setStorageBaseInt
+  set:
+      val: 50000
+
+- name: setStorageInt
+  call:
+      destination: $deployStorageK
+      function: setInt 
+      data:
+        - $setStorageBaseInt
+
+- name: queryStorageInt
+  query-contract:
+      destination: $deployStorageK
+      function: getInt
+
+- name: assertStorageInt
+  assert:
+      key: $queryStorageInt
+      relation: eq
+      val: $setStorageBaseInt
+
+- name: setStorageBaseUint
+  set:
+      val: 9999999
+
+- name: setStorageUint
+  call:
+      destination: $deployStorageK
+      function: setUint 
+      data:
+        - $setStorageBaseUint
+
+- name: queryStorageUint
+  query-contract:
+      destination: $deployStorageK
+      function: getUint
+
+- name: assertStorageUint
+  assert:
+      key: $queryStorageUint
+      relation: eq
+      val: $setStorageBaseUint
+
+- name: setStorageBaseAddress
+  set:
+      val: "1040E6521541DAB4E7EE57F21226DD17CE9F0FB7"
+
+- name: setStorageAddress
+  call:
+      destination: $deployStorageK
+      function: setAddress 
+      data:
+        - $setStorageBaseAddress
+
+- name: queryStorageAddress
+  query-contract:
+      destination: $deployStorageK
+      function: getAddress
+
+- name: assertStorageAddress
+  assert:
+      key: $queryStorageAddress
+      relation: eq
+      val: $setStorageBaseAddress
+
+- name: setStorageBaseBytes
+  set:
+      val: marmatoshi
+
+- name: setStorageBytes
+  call:
+      destination: $deployStorageK
+      function: setBytes 
+      data:
+        - $setStorageBaseBytes
+
+- name: queryStorageBytes
+  query-contract:
+      destination: $deployStorageK
+      function: getBytes
+
+- name: assertStorageBytes
+  assert:
+      key: $queryStorageBytes
+      relation: eq
+      val: $setStorageBaseBytes
+
+- name: setStorageBaseString
+  set:
+      val: nakaburrow
+
+- name: setStorageString
+  call:
+      destination: $deployStorageK
+      function: setString 
+      data:
+        - $setStorageBaseString
+
+- name: queryStorageString
+  query-contract:
+      destination: $deployStorageK
+      function: getString
+
+- name: assertStorageString
+  assert:
+      key: $queryStorageString
+      relation: eq
+      val: $setStorageBaseString
+

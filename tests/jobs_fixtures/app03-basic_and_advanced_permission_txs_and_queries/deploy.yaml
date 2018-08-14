@@ -1,0 +1,62 @@
+jobs:
+
+- name: perm
+  set:
+      val: call
+
+- name: role
+  set:
+      val: 1234
+
+- name: permTest1
+  permission:
+      action: setBase
+      target: $addr2
+      permission: $perm
+      value: "true"
+
+- name: permTest2
+  permission:
+      action: unsetBase
+      target: $addr2
+      permission: $perm
+
+- name: permTest3
+  permission:
+      action: addRole
+      target: $addr2
+      role: $role
+
+- name: permTest4
+  permission:
+      action: removeRole
+      target: $addr2
+      role: $role
+
+- name: permTest5
+  permission:
+      action: setGlobal
+      permission: call
+      value: "true"
+
+- name: queryPerm1
+  query-account:
+      account: $addr2
+      field: permissions.roles
+
+- name: assertPerm1
+  assert:
+      key: $queryPerm1
+      relation: eq
+      val: ""
+
+- name: queryPerm2
+  query-account:
+      account: $addr2
+      field: permissions.base
+
+- name: assertPerm2
+  assert:
+      key: $queryPerm2
+      relation: eq
+      val: 2118

@@ -169,8 +169,8 @@ solidity: $(SOLIDITY_GO_FILES)
 # Test
 
 .PHONY: test
-test: check
-	@go test ${PACKAGES_NOVENDOR}
+test: check bin/solc
+	@tests/scripts/bin_wrapper.sh go test ./... ${GOPACKAGES_NOVENDOR}
 
 .PHONY: test_keys
 test_keys: build_db
@@ -181,8 +181,12 @@ rpc/test/strange_loop.go: integration/rpctest
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys
+test_integration: test_keys test_deploy
 	@go test -v -tags integration ./integration/...
+
+.PHONY: test_deploy
+test_deploy: bin/solc
+	@tests/scripts/bin_wrapper.sh tests/deploy.sh
 
 # Run integration test from bosmarmot (separated from other integration tests so we can
 # make exception when this test fails when we make a breaking change in Burrow)
@@ -194,6 +198,10 @@ test_integration_bosmarmot: bos build_db
 	burrow_bin="${REPO}/bin/burrow" \
 	make test_integration_no_burrow
 
+bin/solc: ./tests/scripts/deps/solc.sh
+	@mkdir -p bin
+	@tests/scripts/deps/solc.sh bin/solc
+	@touch bin/solc
 
 # test burrow with checks for race conditions
 .PHONY: test_race

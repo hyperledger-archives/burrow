@@ -1,0 +1,76 @@
+jobs: 
+- name: deploy0
+  deploy:
+      contract: app30.sol
+
+- name: queryInts
+  query-contract:
+      destination: $deploy0
+      function: getInts
+      
+- name: intsValue
+  set:
+      val: (1, 2)
+
+- name: assertInts
+  assert:
+      key: $queryInts
+      relation: eq
+      val: $intsValue
+
+- name: queryBools
+  query-contract:
+      destination: $deploy0
+      function: getBools
+
+- name: assertBools
+  assert:
+      key: $queryBools.0
+      relation: eq
+      val: "true"
+
+- name: assertBools
+  assert:
+      key: $queryBools.1
+      relation: eq
+      val: "false"
+
+- name: queryBytes
+  query-contract:
+      destination: $deploy0
+      function: getBytes
+
+- name: bytesValue
+  set:
+      val: (Hello, World, of, marmots)
+
+- name: assertBytes
+  assert:
+      key: $queryBytes
+      relation: eq
+      val: $bytesValue
+
+- name: queryInterMixed
+  query-contract:
+      destination: $deploy0
+      function: getInterMixed
+
+- name: assertIntermixed
+  assert:
+      key: $queryInterMixed.funNumber
+      relation: eq
+      val: 1
+
+- name: assertIntermixed
+  assert:
+      key: $queryInterMixed.elaborate
+      relation: eq
+      val: is
+
+- name: assertIntermixed
+  assert:
+      key: $queryInterMixed.myAddress
+      relation: eq
+      val: $deploy0
+
+

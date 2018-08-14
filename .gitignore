@@ -13,6 +13,5 @@ test_scratch/
 .vscode
 
 .gopath_bos
-burrow.toml
 
 commit_hash.txt

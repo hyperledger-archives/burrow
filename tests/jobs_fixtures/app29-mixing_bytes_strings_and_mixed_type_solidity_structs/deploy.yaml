@@ -1,0 +1,308 @@
+jobs:
+
+- name: deployK0
+  deploy:
+      contract: structs0.sol
+      instance: Structs0
+
+- name: addThing0
+  call:
+      destination: $deployK0
+      function: addThing
+      data:
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen0
+  assert:
+      key: $addThing0
+      relation: eq
+      val: 10
+
+- name: checkDesc0
+  query-contract:
+      destination: $deployK0
+      function: getDesc
+
+- name: assertDesc0
+  assert:
+      key: $checkDesc0
+      relation: eq
+      val: test
+
+- name: checkUrl0
+  query-contract:
+      destination: $deployK0
+      function: getUrl
+
+- name: assertUrl0
+  assert:
+      key: $checkUrl0
+      relation: eq
+      val: test
+
+- name: checkHash0
+  query-contract:
+      destination: $deployK0
+      function: getHash
+
+- name: assertHash0
+  assert:
+      key: $checkDesc0
+      relation: eq
+      val: test
+
+- name: checkName0
+  query-contract:
+      destination: $deployK0
+      function: getName
+
+- name: assertName0
+  assert:
+      key: $checkDesc0
+      relation: eq
+      val: test
+
+# Configuration 1
+- name: deployK1
+  deploy:
+      contract: structs1.sol
+      instance: Structs1
+
+- name: addThing1
+  call:
+      destination: $deployK1
+      function: addThing
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen1
+  assert:
+      key: $addThing1
+      relation: eq
+      val: 10
+
+# Configuration 2
+- name: deployK2
+  deploy:
+      contract: structs2.sol
+      instance: Structs2
+
+- name: addThing2
+  call:
+      destination: $deployK2
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen2
+  assert:
+      key: $addThing2
+      relation: eq
+      val: 10
+
+# Configuration 3
+- name: deployK3
+  deploy:
+      contract: structs3.sol
+      instance: Structs3
+
+- name: addThing3
+  call:
+      destination: $deployK3
+      function: addThing
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen3
+  assert:
+      key: $addThing3
+      relation: eq
+      val: 10
+
+# Configuration 4
+- name: deployK4
+  deploy:
+      contract: structs4.sol
+      instance: Structs4
+
+- name: addThing4
+  call:
+      destination: $deployK4
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen4
+  assert:
+      key: $addThing4
+      relation: eq
+      val: 10
+
+# Configuration 5
+- name: deployK5
+  deploy:
+      contract: structs5.sol
+      instance: Structs5
+
+- name: addThing5
+  call:
+      destination: $deployK5
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen5
+  assert:
+      key: $addThing5
+      relation: eq
+      val: 10
+
+# Configuration 6
+- name: deployK6
+  deploy:
+      contract: structs6.sol
+      instance: Structs6
+
+- name: addThing6
+  call:
+      destination: $deployK6
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen6
+  assert:
+      key: $addThing6
+      relation: eq
+      val: 10
+
+# Configuration 7
+- name: deployK7
+  deploy:
+      contract: structs7.sol
+      instance: Structs7
+
+- name: addThing7
+  call:
+      destination: $deployK7
+      function: addThing
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen7
+  assert:
+      key: $addThing7
+      relation: eq
+      val: 10
+
+# Configuration 8
+- name: deployK8
+  deploy:
+      contract: structs8.sol
+      instance: Structs8
+
+- name: addThing8
+  call:
+      destination: $deployK8
+      function: addThing
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen8
+  assert:
+      key: $addThing8
+      relation: eq
+      val: 10
+
+# Configuration 9
+- name: deployK9
+  deploy:
+      contract: structs9.sol
+      instance: Structs9
+
+- name: addThing9
+  call:
+      destination: $deployK9
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen9
+  assert:
+      key: $addThing9
+      relation: eq
+      val: 10
+
+# Configuration 10
+- name: deployK10
+  deploy:
+      contract: structs10.sol
+      instance: Structs10
+
+- name: addThing10
+  call:
+      destination: $deployK10
+      function: addThing 
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen10
+  assert:
+      key: $addThing10
+      relation: eq
+      val: 10
+
+# Configuration 11
+- name: deployK11
+  deploy:
+      contract: structs11.sol
+      instance: Structs11
+
+- name: addThing11
+  call:
+      destination: $deployK11
+      function: addThing
+      data: 
+        - test
+        - test
+        - test
+        - test
+
+- name: assertTen11
+  assert:
+      key: $addThing11
+      relation: eq
+      val: 10

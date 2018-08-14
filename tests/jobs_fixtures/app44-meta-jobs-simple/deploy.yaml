@@ -1,0 +1,9 @@
+jobs:
+
+- name: app05
+  meta:
+    file: '../app05-deploy_query_contracts_and_testing_rendering_solc_int_type/deploy.yaml'
+
+- name: app06
+  meta:
+    file: '../app06-deploy_basic_contract_and_different_solc_types_packed_unpacked/deploy.yaml'
