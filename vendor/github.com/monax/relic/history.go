@@ -2,20 +2,9 @@ package relic
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"text/template"
 )
-
-// The purpose of History is to capture version changes and change logs
-// in a single location and use that data to generate releases and print
-// changes to the command line to automate releases and provide a single
-// source of truth for improved certainty around versions and releases
-type History struct {
-	ProjectName       string
-	Releases          []Release
-	ChangelogTemplate *template.Template
-}
 
 // Provides the read-only methods of History to ensure releases are not accidentally mutated when it is not intended
 type ImmutableHistory interface {
@@ -33,6 +22,17 @@ type ImmutableHistory interface {
 	Release(versionLike interface{}) (Release, error)
 }
 
+// The purpose of History is to capture version changes and change logs
+// in a single location and use that data to generate releases and print
+// changes to the command line to automate releases and provide a single
+// source of truth for improved certainty around versions and releases
+type History struct {
+	ProjectName       string
+	ProjectURL        string
+	Releases          []Release
+	ChangelogTemplate *template.Template
+}
+
 var _ ImmutableHistory = &History{}
 
 type Release struct {
@@ -40,17 +40,25 @@ type Release struct {
 	Notes   string
 }
 
+type ReleasePair struct {
+	Release
+	Previous Release
+}
+
 var DefaultChangelogTemplate = template.Must(template.New("default_changelog_template").
-	Parse(`# {{ .Project }} Changelog{{ range .Releases }}
-## Version {{ .Version }}
+	Parse(`# [{{ .Project }}]({{ .ProjectURL }}) Changelog{{ range .Releases }}
+## [{{ .Version }}]{{ if .Version.Dated }} - {{ .Version.FormatDate }}{{ end }}
 {{ .Notes }}
-{{ end }}`))
+{{ end }}
+{{ range .ReleasePairs }}[{{ .Version }}]: {{ $.URL }}/compare/{{ .Previous.Version.Ref }}...{{ .Version.Ref }}
+{{ end }}[{{ .FirstRelease.Version }}]: {{ $.URL }}/commits/{{ .FirstRelease.Version.Ref }}`))
 
 // Define a new project history to which releases can be added in code
 // e.g. var history = relic.NewHistory().MustDeclareReleases(...)
-func NewHistory(projectName string) *History {
+func NewHistory(projectName, projectURL string) *History {
 	return &History{
 		ProjectName:       projectName,
+		ProjectURL:        projectURL,
 		ChangelogTemplate: DefaultChangelogTemplate,
 	}
 }
@@ -66,52 +74,44 @@ func (h *History) WithChangelogTemplate(tmpl *template.Template) *History {
 // or mixtures thereof.
 func (h *History) DeclareReleases(releaseLikes ...interface{}) (*History, error) {
 	var rs []Release
-	for i := 0; i < len(releaseLikes); i++ {
-		switch r := releaseLikes[i].(type) {
-		case Release:
-			rs = append(rs, r)
-		case fmt.Stringer:
-			releaseLikes[i] = r.String()
-			i--
-		case string:
-			version, err := AsVersion(r)
+	var err error
+	for len(releaseLikes) > 0 {
+		r, ok := releaseLikes[0].(Release)
+		if ok {
+			releaseLikes = releaseLikes[1:]
+		} else {
+			r, releaseLikes, err = readRelease(releaseLikes)
 			if err != nil {
-				return nil, fmt.Errorf("could not interpret %v as a version: %v", r, err)
+				return nil, err
 			}
-			if i+1 >= len(releaseLikes) {
-				return nil, fmt.Errorf("when specifying releases in pairs of version and note you must provide "+
-					"both, but the last release (for version %s) has no note", version.String())
-			}
-			release := Release{
-				Version: version,
-			}
-			// Get notes from next element
-			switch n := releaseLikes[i+1].(type) {
-			case string:
-				release.Notes = n
-			case fmt.Stringer:
-				release.Notes = n.String()
-			default:
-				return nil, fmt.Errorf("release element %v should be notes but cannot be converted to string",
-					releaseLikes[i+1])
-			}
-			if release.Notes == "" {
-				return nil, fmt.Errorf("release note for version %s is empty", version.String())
-			}
-			rs = append(rs, release)
-			// consume an additional element
-			i++
 		}
+		rs = append(rs, r)
 	}
 	// Check we still have a valid sequence of releases
 	rs = append(rs, h.Releases...)
-	err := EnsureReleasesUniqueValidAndMonotonic(rs)
+	err = ValidateReleases(rs)
 	if err != nil {
 		return h, err
 	}
 
 	h.Releases = rs
 	return h, err
+}
+
+func readRelease(releaseLikes []interface{}) (rel Release, tail []interface{}, err error) {
+	const fields = 2
+	if len(releaseLikes) < fields {
+		return rel, releaseLikes, fmt.Errorf("readRelease expects exactly 3 elements of version, date, notes")
+	}
+	rel.Version, err = AsVersion(releaseLikes[0])
+	if err != nil {
+		return rel, releaseLikes, err
+	}
+	rel.Notes, err = AsString(releaseLikes[1])
+	if err != nil {
+		return rel, releaseLikes, err
+	}
+	return rel, releaseLikes[fields:], nil
 }
 
 // Like DeclareReleases but will panic if the Releases list becomes invalid
@@ -123,17 +123,49 @@ func (h *History) MustDeclareReleases(releaseLikes ...interface{}) *History {
 	return h
 }
 
+func (h *History) CurrentRelease() Release {
+	for _, r := range h.Releases {
+		if r.Version != ZeroVersion {
+			return r
+		}
+	}
+	return Release{}
+}
+
+func (h *History) FirstRelease() Release {
+	l := len(h.Releases)
+	if l == 0 {
+		return Release{}
+	}
+	return h.Releases[l-1]
+}
+
 func (h *History) CurrentVersion() Version {
-	return h.Releases[0].Version
+	return h.CurrentRelease().Version
 }
 
 // Gets the release notes for the current version
 func (h *History) CurrentNotes() string {
-	return h.Releases[0].Notes
+	return h.CurrentRelease().Notes
 }
 
 func (h *History) Project() string {
 	return h.ProjectName
+}
+
+func (h *History) URL() string {
+	return h.ProjectURL
+}
+
+func (h *History) ReleasePairs() []ReleasePair {
+	pairs := make([]ReleasePair, len(h.Releases)-1)
+	for i := 0; i < len(pairs); i++ {
+		pairs[i] = ReleasePair{
+			Release:  h.Releases[i],
+			Previous: h.Releases[i+1],
+		}
+	}
+	return pairs
 }
 
 // Gets the Release for version given in versionString
@@ -172,34 +204,52 @@ func (h *History) MustChangelog() string {
 // Checks that a sequence of releases are monotonically decreasing with each
 // version being a simple major, minor, or patch bump of its successor in the
 // slice
+func ValidateReleases(rs []Release) error {
+	if len(rs) == 0 {
+		return fmt.Errorf("at least one release must be defined")
+	}
+	// Allow the first version to be zero indicating unreleased as an place to document features
+	if rs[0].Version == ZeroVersion {
+		rs = rs[1:]
+	}
+	return EnsureReleasesUniqueValidAndMonotonic(rs)
+}
+
 func EnsureReleasesUniqueValidAndMonotonic(rs []Release) error {
 	if len(rs) == 0 {
-		return errors.New("at least one release must be defined")
+		return nil
 	}
 	version := rs[0].Version
+	if version == ZeroVersion {
+		return fmt.Errorf("only the top release may have an empty version to indicate unreleased, all" +
+			"additional (earlier) releases must have a non-zero version")
+	}
 	for i := 1; i < len(rs); i++ {
 		// The numbers of the lower version (expect descending sort)
 		previousVersion := rs[i].Version
+		if previousVersion == ZeroVersion {
+			return fmt.Errorf("%v has version 0.0.0 but versions must start from 0.0.1", previousVersion)
+		}
 		// Check versions are consecutive
-		if version.Major() == previousVersion.Major()+1 {
+		if version.Major == previousVersion.Major+1 {
 			// Major bump, so minor and patch versions must be reset
-			if version.Minor() != 0 || version.Patch() != 0 {
+			if version.Minor != 0 || version.Patch != 0 {
 				return fmt.Errorf("minor and patch versions must be reset to "+
 					"0 after a major bump, but they are not in %s -> %s",
 					rs[i].Version, rs[i-1].Version)
 			}
-		} else if version.Major() == previousVersion.Major() {
+		} else if version.Major == previousVersion.Major {
 			// Same major number
-			if version.Minor() == previousVersion.Minor()+1 {
+			if version.Minor == previousVersion.Minor+1 {
 				// Minor bump so patch version must be reset
-				if version.Patch() != 0 {
+				if version.Patch != 0 {
 					return fmt.Errorf("patch version must be reset to "+
 						"0 after a minor bump, but they are not in %s -> %s",
 						rs[i].Version, rs[i-1].Version)
 				}
-			} else if version.Minor() == previousVersion.Minor() {
+			} else if version.Minor == previousVersion.Minor {
 				// Same minor number so must be patch bump to be valid
-				if version.Patch() != previousVersion.Patch()+1 {
+				if version.Patch != previousVersion.Patch+1 {
 					return fmt.Errorf("consecutive patch versions must be equal "+
 						"or incremented by 1, but they are not in %s -> %s",
 						rs[i].Version, rs[i-1].Version)

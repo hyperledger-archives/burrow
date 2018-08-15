@@ -4,45 +4,70 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
+	VersionDateSeparator = " - "
 	// Base of minor, major, and patch version numbers
-	numberBase = 10
+	NumberBase = 10
 	// Number of bits to represent version numbers
-	uintBits = 8
+	UintBits = 8
 )
 
+var ZeroVersion = Version{}
+
 type Version struct {
-	major uint8
-	minor uint8
-	patch uint8
-}
-
-func (v Version) Major() uint8 {
-	return v.major
-}
-
-func (v Version) Minor() uint8 {
-	return v.minor
-}
-
-func (v Version) Patch() uint8 {
-	return v.patch
+	Major uint8
+	Minor uint8
+	Patch uint8
+	Date  time.Time
 }
 
 func (v Version) String() string {
-	return fmt.Sprintf("%v.%v.%v", v.major, v.minor, v.patch)
+	if v == ZeroVersion {
+		return "Unreleased"
+	}
+	return v.Semver()
 }
 
-func AsVersion(versionLike interface{}) (Version, error) {
-	switch v := versionLike.(type) {
-	case Version:
+func (v Version) Semver() string {
+	return fmt.Sprintf("%v.%v.%v", v.Major, v.Minor, v.Patch)
+}
+
+func (v Version) Ref() string {
+	if v == ZeroVersion {
+		return "HEAD"
+	}
+	return fmt.Sprintf("v%s", v.Semver())
+}
+
+func (v Version) Dated() bool {
+	return v.Date != time.Time{}
+}
+
+func (v Version) FormatDate() string {
+	return v.Date.Format(DefaultDateLayout)
+}
+
+func ParseDatedVersion(versionString string) (Version, error) {
+	parts := strings.Split(versionString, VersionDateSeparator)
+	switch len(parts) {
+	case 1:
+		return ParseVersion(versionString)
+	case 2:
+		v, err := ParseVersion(parts[0])
+		if err != nil {
+			return Version{}, err
+		}
+		v.Date, err = AsDate(parts[1])
+		if err != nil {
+			return Version{}, err
+		}
 		return v, nil
-	case string:
-		return ParseVersion(v)
 	default:
-		return Version{}, fmt.Errorf("unsupported type for version: %t, must be Version or string", v)
+		return Version{}, fmt.Errorf("could interpret %v as date version, should be be of the form '2.3.4 - 2018-08-14'",
+			versionString)
 	}
 }
 
@@ -52,21 +77,21 @@ func ParseVersion(versionString string) (Version, error) {
 		return Version{},
 			fmt.Errorf("version string must have three '.' separated parts but '%s' does not", versionString)
 	}
-	maj, err := strconv.ParseUint(parts[0], numberBase, uintBits)
+	maj, err := strconv.ParseUint(parts[0], NumberBase, UintBits)
 	if err != nil {
 		return Version{}, err
 	}
-	min, err := strconv.ParseUint(parts[1], numberBase, uintBits)
+	min, err := strconv.ParseUint(parts[1], NumberBase, UintBits)
 	if err != nil {
 		return Version{}, err
 	}
-	pat, err := strconv.ParseUint(parts[2], numberBase, uintBits)
+	pat, err := strconv.ParseUint(parts[2], NumberBase, UintBits)
 	if err != nil {
 		return Version{}, err
 	}
 	return Version{
-		major: uint8(maj),
-		minor: uint8(min),
-		patch: uint8(pat),
+		Major: uint8(maj),
+		Minor: uint8(min),
+		Patch: uint8(pat),
 	}, err
 }
