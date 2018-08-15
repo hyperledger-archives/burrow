@@ -1001,7 +1001,9 @@ func (fs FunctionID) Bytes() []byte {
 }
 
 func GetFunctionID(signature string) (id FunctionID) {
-	copy(id[:], sha3.Sha3([]byte(signature))[:4])
+	hash := sha3.NewKeccak256()
+	hash.Write([]byte(signature))
+	copy(id[:], hash.Sum(nil)[:4])
 	return
 }
 
