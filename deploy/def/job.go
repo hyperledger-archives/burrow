@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/hyperledger/burrow/deploy/def/rule"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
 //TODO: Interface all the jobs, determine if they should remain in definitions or get their own package
@@ -19,7 +20,7 @@ type Job struct {
 	// Not marshalled
 	Result interface{} `json:"-" yaml:"-" toml:"-"`
 	// For multiple values
-	Variables []*Variable `json:"-" yaml:"-" toml:"-"`
+	Variables []*abi.Variable `json:"-" yaml:"-" toml:"-"`
 	// Sets/Resets the primary account to use
 	Account *Account `mapstructure:"account,omitempty" json:"account,omitempty" yaml:"account,omitempty" toml:"account"`
 	// Set an arbitrary value

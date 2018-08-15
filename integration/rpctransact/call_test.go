@@ -103,7 +103,7 @@ func TestCallTxSync(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	numGoroutines := 40
 	numRuns := 5
-	functionID := abi.FunctionID("UpsieDownsie()")
+	functionID := abi.GetFunctionID("UpsieDownsie()")
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -249,7 +249,7 @@ func TestCallEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	functionID := abi.FunctionID("UpsieDownsie()")
+	functionID := abi.GetFunctionID("UpsieDownsie()")
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
 	callEvents := filterCalls(callTxe.Events)
 	require.Len(t, callEvents, rpctest.UpsieDownsieCallCount, "should see 30 recursive call events")
@@ -262,7 +262,7 @@ func TestLogEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	functionID := abi.FunctionID("UpsieDownsie()")
+	functionID := abi.GetFunctionID("UpsieDownsie()")
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
 	evs := filterLogs(callTxe.Events)
 	require.Len(t, evs, rpctest.UpsieDownsieCallCount-2)
@@ -276,13 +276,13 @@ func TestLogEvents(t *testing.T) {
 func TestRevert(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	txe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_revert)
-	functionID := abi.FunctionID("RevertAt(uint32)")
+	functionID := abi.GetFunctionID("RevertAt(uint32)")
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress,
 		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 
 	revertReason := "I have reverted"
-	expectedReturn := bc.MustSplice(abi.FunctionID("Error(string)"), binary.Int64ToWord256(binary.Word256Length),
+	expectedReturn := bc.MustSplice(abi.GetFunctionID("Error(string)"), binary.Int64ToWord256(binary.Word256Length),
 		binary.Int64ToWord256(int64(len(revertReason))), binary.RightPadWord256([]byte(revertReason)))
 	assert.Equal(t, expectedReturn, txe.Result.Return)
 }

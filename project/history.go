@@ -38,6 +38,9 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - Reload log file (e.g. for logrotate) on SIGHUP and dump capture logs on SIGUSR1 and on shutdown (e.g. for debug).
 - File logger accepts {{.Timestamp}} in file names to generate a log file per run.
 
+#### Changes
+The snatives functions have new signatures; string arguments are now string, not byte32.
+
 ### Fixed
 - Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput.
 `,

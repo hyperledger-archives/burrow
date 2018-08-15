@@ -1764,7 +1764,7 @@ func permNameToFuncID(name string) []byte {
 	if err != nil {
 		panic("didn't find snative function signature!")
 	}
-	id := function.ID()
+	id := function.Abi.FunctionID
 	return id[:]
 }
 
@@ -1811,6 +1811,8 @@ func snativeRoleTestInputCALL(name string, user acm.AddressableSigner,
 	role string) (addr crypto.Address, pF permission.PermFlag, data []byte) {
 	addr = permissionsContract.Address()
 	data = user.Address().Word256().Bytes()
+	data = append(data, LeftPadBytes([]byte{0x40}, 32)...)
+	data = append(data, LeftPadBytes([]byte{byte(len(role))}, 32)...)
 	data = append(data, RightPadBytes([]byte(role), 32)...)
 	data = append(permNameToFuncID(name), data...)
 

@@ -6,6 +6,7 @@ import (
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/hyperledger/burrow/deploy/def/rule"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
 // ------------------------------------------------------------------------
@@ -205,11 +206,6 @@ type PackageDeploy struct {
 	// TODO
 }
 
-type Variable struct {
-	Name  string
-	Value string
-}
-
 type Build struct {
 	// (Required) the filepath to the contract file. this should be relative to the current path **or**
 	// relative to the contracts path established via the --contracts-path flag or the $EPM_CONTRACTS_PATH
@@ -258,7 +254,7 @@ type Deploy struct {
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Optional) todo
-	Variables []*Variable
+	Variables []*abi.Variable
 }
 
 func (job *Deploy) Validate() error {
@@ -301,7 +297,7 @@ type Call struct {
 	// variable. Anything other than "tx" in this field will use the default.
 	Save string `mapstructure:"save" json:"save" yaml:"save" toml:"save"`
 	// (Optional) the call job's returned variables
-	Variables []*Variable
+	Variables []*abi.Variable
 }
 
 func (job *Call) Validate() error {
@@ -365,7 +361,7 @@ type QueryContract struct {
 	// and the address where the contract was deployed to
 	Bin string `mapstructure:"bin" json:"bin" yaml:"bin" toml:"bin"`
 
-	Variables []*Variable
+	Variables []*abi.Variable
 }
 
 func (job *QueryContract) Validate() error {
