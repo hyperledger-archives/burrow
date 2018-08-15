@@ -30,7 +30,17 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
 		"",
-		`Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput, also support mempool signing for BroadcastTxAsync.`,
+		`### Changed
+-
+
+### Added
+- Support mempool signing for BroadcastTxAsync.
+- Reload log file (e.g. for logrotate) on SIGHUP and dump capture logs on SIGUSR1 and on shutdown (e.g. for debug).
+- File logger accepts {{.Timestamp}} in file names to generate a log file per run.
+
+### Fixed
+- Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput.
+`,
 		"0.20.0 - 2018-07-24",
 		`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 

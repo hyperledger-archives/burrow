@@ -90,7 +90,7 @@ deploy_tests(){
 
     if [[ "$clean" == true ]]
     then
-      git clean -fdxq
+      git clean -fdxq "${script_dir}/jobs_fixtures" "${script_dir}/keys"
       if [[ "$test_exit" -eq 0 ]]
       then
           rm -f "$job_log" "$test_output"

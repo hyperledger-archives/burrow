@@ -53,17 +53,17 @@ func (e *Exporter) gatherData() error {
 
 // Get status
 func (e *Exporter) getStatus() error {
-	res, err := e.service.Status("")
+	res, err := e.service.Status()
 	if err != nil {
 		return err
 	}
-	e.datum.LatestBlockHeight = float64(res.LatestBlockHeight)
+	e.datum.LatestBlockHeight = float64(res.SyncInfo.LatestBlockHeight)
 	return nil
 }
 
 // Get unconfirmed_transactions
 func (e *Exporter) getMemPoolDepth() error {
-	res, err := e.service.ListUnconfirmedTxs(10000000000)
+	res, err := e.service.UnconfirmedTxs(10000000000)
 	if err != nil {
 		return err
 	}
@@ -73,15 +73,12 @@ func (e *Exporter) getMemPoolDepth() error {
 
 // Get total peers
 func (e *Exporter) getPeers() error {
-	res, err := e.service.Peers()
-	if err != nil {
-		return err
-	}
-	e.datum.TotalPeers = float64(len(res.Peers))
+	peers := e.service.Peers()
+	e.datum.TotalPeers = float64(len(peers))
 	e.datum.InboundPeers = 0
 	e.datum.OutboundPeers = 0
 
-	for _, peer := range res.Peers {
+	for _, peer := range peers {
 		if peer.IsOutbound {
 			e.datum.OutboundPeers += 1
 		} else {
@@ -92,20 +89,20 @@ func (e *Exporter) getPeers() error {
 	return nil
 }
 
-func (e *Exporter) getBlocks() (*rpc.ResultListBlocks, error) {
+func (e *Exporter) getBlocks() (*rpc.ResultBlocks, error) {
 	var minHeight uint64
 	var maxHeight uint64
 	maxHeight = uint64(e.datum.LatestBlockHeight)
 
 	if maxHeight >= e.blockSampleSize {
-		minHeight = (maxHeight - (e.blockSampleSize - 1))
+		minHeight = maxHeight - (e.blockSampleSize - 1)
 		e.datum.BlockSampleSize = e.blockSampleSize
 	} else {
 		minHeight = 1
 		e.datum.BlockSampleSize = maxHeight
 	}
 
-	res, err := e.service.ListBlocks(int64(minHeight), int64(maxHeight))
+	res, err := e.service.Blocks(int64(minHeight), int64(maxHeight))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +111,7 @@ func (e *Exporter) getBlocks() (*rpc.ResultListBlocks, error) {
 }
 
 // Get transaction buckets
-func (e *Exporter) getTxBuckets(res *rpc.ResultListBlocks) error {
+func (e *Exporter) getTxBuckets(res *rpc.ResultBlocks) error {
 	e.datum.TotalTxs = 0
 	e.datum.TxPerBlockBuckets = map[float64]float64{}
 
@@ -126,7 +123,7 @@ func (e *Exporter) getTxBuckets(res *rpc.ResultListBlocks) error {
 	return nil
 }
 
-func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultListBlocks) error {
+func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultBlocks) error {
 	// tendermint gives us the blocks in the reverse of the order we'd expect them
 	//  BlockMetas[0] is the most recent block.
 	timeSampleEnded := res.BlockMetas[0].Header.Time

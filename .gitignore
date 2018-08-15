@@ -15,3 +15,5 @@ test_scratch/
 .gopath_bos
 
 commit_hash.txt
+
+tests/keys/

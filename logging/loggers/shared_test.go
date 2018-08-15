@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 const logLineTimeout = time.Second

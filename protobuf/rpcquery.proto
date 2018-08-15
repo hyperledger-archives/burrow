@@ -29,7 +29,8 @@ service Query {
 }
 
 message StatusParam {
-    string BlockWithin = 1;
+    string BlockTimeWithin = 1;
+    string BlockSeenTimeWithin = 2;
 }
 
 message GetAccountParam {

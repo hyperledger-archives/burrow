@@ -26,7 +26,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
@@ -40,9 +40,9 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/streadway/simpleuuid"
 	tmConfig "github.com/tendermint/tendermint/config"
@@ -68,8 +68,8 @@ type Kernel struct {
 	State      *execution.State
 	Blockchain *bcm.Blockchain
 	Node       *tendermint.Node
-	RunID      simpleuuid.UUID
 	// Time-based UUID randomly generated each time Burrow is started
+	RunID          simpleuuid.UUID
 	Logger         *logging.Logger
 	nodeInfo       string
 	processes      map[string]process.Process
@@ -136,7 +136,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	nameRegState := kern.State
 	accountState := kern.State
-	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec)
+	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec, kern.RunID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			Name:    "RPC/tm",
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := tm.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
+				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
 				if err != nil {
 					return nil, err
 				}

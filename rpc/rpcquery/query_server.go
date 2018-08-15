@@ -35,7 +35,7 @@ func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, bl
 }
 
 func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.ResultStatus, error) {
-	return rpc.Status(qs.blockchain, qs.nodeView, param.BlockWithin)
+	return rpc.Status(qs.blockchain, qs.nodeView, param.BlockTimeWithin, param.BlockSeenTimeWithin)
 }
 
 // Account state

@@ -3,7 +3,7 @@ package loggers
 import (
 	"sort"
 
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 type sortableKeyvals struct {

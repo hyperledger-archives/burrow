@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 func TestLogger(t *testing.T) {

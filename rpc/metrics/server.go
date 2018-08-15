@@ -55,7 +55,7 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampl
 	logger *logging.Logger) (*http.Server, error) {
 
 	// instantiate metrics and variables we do not expect to change during runtime
-	chainStatus, _ := service.Status("")
+	chainStatus, _ := service.Status()
 	exporter := Exporter{
 		burrowMetrics:    AddMetrics(),
 		datum:            &Datum{},
