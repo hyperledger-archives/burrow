@@ -20,7 +20,7 @@ import (
 
 	"sync"
 
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tmthrgd/go-hex"
 )

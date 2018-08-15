@@ -24,26 +24,28 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/go-amino"
-	consensusTypes "github.com/tendermint/tendermint/consensus/types"
+	"github.com/tendermint/tendermint/consensus"
+	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 // When using Tendermint types like Block and Vote we are forced to wrap the outer object and use amino marshalling
-var aminoCodec = amino.NewCodec()
+var aminoCodec = NewAminoCodec()
 
-func init() {
-	//types.RegisterEvidences(AminoCodec)
-	//crypto.RegisterAmino(cdc)
+func NewAminoCodec() *amino.Codec {
+	aminoCodec := amino.NewCodec()
+	consensus.RegisterConsensusMessages(aminoCodec)
 	core_types.RegisterAmino(aminoCodec)
+	return aminoCodec
 }
 
-type ResultGetStorage struct {
+type ResultStorage struct {
 	Key   binary.HexBytes
 	Value binary.HexBytes
 }
 
-type ResultListAccounts struct {
+type ResultAccounts struct {
 	BlockHeight uint64
 	Accounts    []*acm.ConcreteAccount
 }
@@ -57,12 +59,12 @@ type StorageItem struct {
 	Value binary.HexBytes
 }
 
-type ResultListBlocks struct {
+type ResultBlocks struct {
 	LastHeight uint64
 	BlockMetas []*tmTypes.BlockMeta
 }
 
-type ResultGetBlock struct {
+type ResultBlock struct {
 	BlockMeta *BlockMeta
 	Block     *Block
 }
@@ -107,34 +109,39 @@ type ResultUnsubscribe struct {
 	SubscriptionID string
 }
 
-type Peer struct {
-	NodeInfo   *tendermint.NodeInfo
-	IsOutbound bool
+type ResultNetwork struct {
+	ThisNode *tendermint.NodeInfo
+	*core_types.ResultNetInfo
 }
 
-type ResultNetInfo struct {
-	ThisNode  *tendermint.NodeInfo
-	Listening bool
-	Listeners []string
-	Peers     []*Peer
-}
-
-type ResultListValidators struct {
+type ResultValidators struct {
 	BlockHeight         uint64
 	BondedValidators    []*validator.Validator
 	UnbondingValidators []*validator.Validator
 }
 
-type ResultDumpConsensusState struct {
-	RoundState      consensusTypes.RoundStateSimple
-	PeerRoundStates []*consensusTypes.PeerRoundState
+type ResultConsensusState struct {
+	*core_types.ResultDumpConsensusState
+}
+
+// TODO use round state in ResultConsensusState - currently there are some part of RoundState have no Unmarshal
+type RoundState struct {
+	*ctypes.RoundState
+}
+
+func (rs RoundState) MarshalJSON() ([]byte, error) {
+	return aminoCodec.MarshalJSON(rs.RoundState)
+}
+
+func (rs *RoundState) UnmarshalJSON(data []byte) (err error) {
+	return aminoCodec.UnmarshalJSON(data, &rs.RoundState)
 }
 
 type ResultPeers struct {
-	Peers []*Peer
+	Peers []core_types.Peer
 }
 
-type ResultListNames struct {
+type ResultNames struct {
 	BlockHeight uint64
 	Names       []*names.Entry
 }
@@ -143,7 +150,7 @@ type ResultGeneratePrivateAccount struct {
 	PrivateAccount *acm.ConcretePrivateAccount
 }
 
-type ResultGetAccount struct {
+type ResultAccount struct {
 	Account *acm.ConcreteAccount
 }
 
@@ -157,16 +164,16 @@ type AccountHumanReadable struct {
 	Roles       []string
 }
 
-type ResultGetAccountHumanReadable struct {
+type ResultAccountHumanReadable struct {
 	Account *AccountHumanReadable
 }
 
-type ResultListUnconfirmedTxs struct {
+type ResultUnconfirmedTxs struct {
 	NumTxs int
 	Txs    []*txs.Envelope
 }
 
-type ResultGetName struct {
+type ResultName struct {
 	Entry *names.Entry
 }
 

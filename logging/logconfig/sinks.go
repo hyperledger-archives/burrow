@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/eapache/channels"
-	log "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )

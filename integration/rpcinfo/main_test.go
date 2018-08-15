@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tm
+package rpcinfo
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	rpcClient "github.com/hyperledger/burrow/rpc/lib/client"
-	tmClient "github.com/hyperledger/burrow/rpc/tm/tmclient"
+	tmClient "github.com/hyperledger/burrow/rpc/rpcinfo/infoclient"
 )
 
 var kern *core.Kernel

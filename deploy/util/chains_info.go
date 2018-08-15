@@ -20,7 +20,7 @@ func GetBlockHeight(do *def.Packages) (latestBlockHeight uint64, err error) {
 	if err != nil {
 		return 0, err
 	}
-	return stat.LatestBlockHeight, nil
+	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
 func AccountsInfo(account, field string, do *def.Packages) (string, error) {

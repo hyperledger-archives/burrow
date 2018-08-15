@@ -20,21 +20,33 @@ import (
 
 func TestStatus(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
-	stat, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
+	status, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
 	require.NoError(t, err)
-	assert.Equal(t, rpctest.PrivateAccounts[0].PublicKey(), stat.PublicKey)
-	assert.Equal(t, rpctest.GenesisDoc.ChainID(), stat.ChainID)
+	assert.Equal(t, rpctest.PrivateAccounts[0].PublicKey(), status.ValidatorInfo.PublicKey)
+	assert.Equal(t, rpctest.GenesisDoc.ChainID(), status.ChainID)
 	for i := 0; i < 3; i++ {
 		// Unless we get lucky this is an error
 		_, err = cli.Status(context.Background(), &rpcquery.StatusParam{
-			BlockWithin: "1ns",
+			BlockTimeWithin: "1ns",
 		})
 		if err != nil {
 			break
 		}
 	}
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no block committed within")
+	assert.Contains(t, err.Error(), "have not committed block with sufficiently recent timestamp")
+
+	for i := 0; i < 3; i++ {
+		// Unless we get lucky this is an error
+		_, err = cli.Status(context.Background(), &rpcquery.StatusParam{
+			BlockSeenTimeWithin: "1ns",
+		})
+		if err != nil {
+			break
+		}
+	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "have not committed a block sufficiently recently")
 }
 
 func TestGetAccount(t *testing.T) {

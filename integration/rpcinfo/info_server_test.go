@@ -15,12 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tm
+package rpcinfo
 
 import (
 	"context"
-	"strconv"
-	"strings"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -28,17 +27,18 @@ import (
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/integration/rpctest"
+	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/rpcinfo/infoclient"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/rpc/tm/tmclient"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/consensus/types"
+	ctypes "github.com/tendermint/tendermint/consensus/types"
 )
 
 const timeout = 5 * time.Second
 
-func testWithAllClients(t *testing.T, testFunction func(*testing.T, string, tmclient.RPCClient)) {
+func testWithAllClients(t *testing.T, testFunction func(*testing.T, string, infoclient.RPCClient)) {
 	for clientName, client := range clients {
 		testFunction(t, clientName, client)
 	}
@@ -46,19 +46,20 @@ func testWithAllClients(t *testing.T, testFunction func(*testing.T, string, tmcl
 
 //--------------------------------------------------------------------------------
 func TestStatus(t *testing.T) {
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
-		resp, err := tmclient.Status(client)
-		assert.NoError(t, err)
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
+		resp, err := infoclient.Status(client)
+		require.NoError(t, err)
+		assert.Equal(t, "node_001", resp.NodeInfo.Moniker)
 		assert.Equal(t, rpctest.GenesisDoc.ChainID(), resp.NodeInfo.Network,
 			"ChainID should match NodeInfo.Network")
 	})
 }
 
-func TestGetAccount(t *testing.T) {
+func TestAccount(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
 		acc := rpctest.GetAccount(t, client, rpctest.PrivateAccounts[0].Address())
 		if acc == nil {
 			t.Fatal("Account was nil")
@@ -70,11 +71,8 @@ func TestGetAccount(t *testing.T) {
 	})
 }
 
-func TestGetStorage(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
+func TestStorage(t *testing.T) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
@@ -98,18 +96,27 @@ func TestGetStorage(t *testing.T) {
 	})
 }
 
+func TestBlock(t *testing.T) {
+	waitNBlocks(t, 1)
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
+		res, err := infoclient.Block(client, 1)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), res.Block.Height)
+	})
+}
+
 func TestWaitBlocks(t *testing.T) {
 	waitNBlocks(t, 5)
 }
 
 func TestBlockchainInfo(t *testing.T) {
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
 		// wait a mimimal number of blocks to ensure that the later query for block
 		// headers has a non-trivial length
 		nBlocks := 4
 		waitNBlocks(t, nBlocks)
 
-		resp, err := tmclient.ListBlocks(client, 1, 0)
+		resp, err := infoclient.Blocks(client, 1, 0)
 		if err != nil {
 			t.Fatalf("Failed to get blockchain info: %v", err)
 		}
@@ -133,18 +140,18 @@ func TestBlockchainInfo(t *testing.T) {
 
 		// Now retrieve only two blockheaders (h=1, and h=2) and check that we got
 		// two results.
-		resp, err = tmclient.ListBlocks(client, 1, 2)
+		resp, err = infoclient.Blocks(client, 1, 2)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(resp.BlockMetas),
 			"Should see 2 BlockMetas after extracting 2 blocks")
 	})
 }
 
-func TestListUnconfirmedTxs(t *testing.T) {
+func TestUnconfirmedTxs(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
 		amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 		code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 		// Call with nil address will create a contract
@@ -160,7 +167,7 @@ func TestListUnconfirmedTxs(t *testing.T) {
 
 		go func() {
 			for {
-				resp, err := tmclient.ListUnconfirmedTxs(client, -1)
+				resp, err := infoclient.UnconfirmedTxs(client, -1)
 				if err != nil {
 					// We get an error on exit
 					return
@@ -183,9 +190,9 @@ func TestListUnconfirmedTxs(t *testing.T) {
 	})
 }
 
-func TestListValidators(t *testing.T) {
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
-		resp, err := tmclient.ListValidators(client)
+func TestValidators(t *testing.T) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
+		resp, err := infoclient.Validators(client)
 		assert.NoError(t, err)
 		assert.Len(t, resp.BondedValidators, 1)
 		validator := resp.BondedValidators[0]
@@ -193,22 +200,27 @@ func TestListValidators(t *testing.T) {
 	})
 }
 
-func TestDumpConsensusState(t *testing.T) {
-	testWithAllClients(t, func(t *testing.T, clientName string, client tmclient.RPCClient) {
-		resp, err := tmclient.DumpConsensusState(client)
-		assert.NoError(t, err)
-		hrs := strings.Split(resp.RoundState.HeightRoundStep, "/")
-		require.Len(t, hrs, 3)
-		// height
-		_, err = strconv.ParseUint(hrs[0], 10, 64)
-		require.NoError(t, err)
-		// round
-		_, err = strconv.ParseUint(hrs[1], 10, 64)
-		require.NoError(t, err)
-		step, err := strconv.ParseUint(hrs[2], 10, 8)
+func TestConsensus(t *testing.T) {
+	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
+		resp, err := infoclient.Consensus(client)
 		require.NoError(t, err)
 
-		assert.True(t, step <= uint64(types.RoundStepCommit), "round step should be of proper enum type")
+		// Now I do a special dance... because the votes section of RoundState has will Marshal but not Unmarshal yet
+		// TODO: put in a PR in tendermint to fix thiss
+		rawMap := make(map[string]json.RawMessage)
+		err = json.Unmarshal(resp.RoundState, &rawMap)
+		require.NoError(t, err)
+		delete(rawMap, "votes")
+
+		bs, err := json.Marshal(rawMap)
+		require.NoError(t, err)
+
+		cdc := rpc.NewAminoCodec()
+		rs := new(ctypes.RoundState)
+		err = cdc.UnmarshalJSON(bs, rs)
+		require.NoError(t, err)
+
+		assert.Equal(t, rs.Validators.Validators[0].Address, rs.Validators.Proposer.Address)
 	})
 }
 

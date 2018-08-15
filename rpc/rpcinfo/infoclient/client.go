@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tmclient
+package infoclient
 
 import (
 	"errors"
@@ -22,8 +22,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/tm"
-	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/rpc/rpcinfo"
 )
 
 type RPCClient interface {
@@ -32,7 +31,7 @@ type RPCClient interface {
 
 func Status(client RPCClient) (*rpc.ResultStatus, error) {
 	res := new(rpc.ResultStatus)
-	_, err := client.Call(tm.Status, pmap(), res)
+	_, err := client.Call(rpcinfo.Status, pmap(), res)
 	if err != nil {
 		return nil, err
 	}
@@ -41,25 +40,16 @@ func Status(client RPCClient) (*rpc.ResultStatus, error) {
 
 func ChainId(client RPCClient) (*rpc.ResultChainId, error) {
 	res := new(rpc.ResultChainId)
-	_, err := client.Call(tm.ChainID, pmap(), &res)
+	_, err := client.Call(rpcinfo.ChainID, pmap(), &res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func GenPrivAccount(client RPCClient) (*rpc.ResultGeneratePrivateAccount, error) {
-	res := new(rpc.ResultGeneratePrivateAccount)
-	_, err := client.Call(tm.GeneratePrivateAccount, pmap(), res)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func GetAccount(client RPCClient, address crypto.Address) (acm.Account, error) {
-	res := new(rpc.ResultGetAccount)
-	_, err := client.Call(tm.GetAccount, pmap("address", address), res)
+func Account(client RPCClient, address crypto.Address) (acm.Account, error) {
+	res := new(rpc.ResultAccount)
+	_, err := client.Call(rpcinfo.Account, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
@@ -70,63 +60,54 @@ func GetAccount(client RPCClient, address crypto.Address) (acm.Account, error) {
 	return concreteAccount.Account(), nil
 }
 
-func SignTx(client RPCClient, tx txs.Tx, privAccounts []*acm.ConcretePrivateAccount) (*txs.Envelope, error) {
-	res := new(rpc.ResultSignTx)
-	_, err := client.Call(tm.SignTx, pmap("tx", tx, "privAccounts", privAccounts), res)
-	if err != nil {
-		return nil, err
-	}
-	return res.Tx, nil
-}
-
 func DumpStorage(client RPCClient, address crypto.Address) (*rpc.ResultDumpStorage, error) {
 	res := new(rpc.ResultDumpStorage)
-	_, err := client.Call(tm.DumpStorage, pmap("address", address), res)
+	_, err := client.Call(rpcinfo.DumpStorage, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func GetStorage(client RPCClient, address crypto.Address, key []byte) ([]byte, error) {
-	res := new(rpc.ResultGetStorage)
-	_, err := client.Call(tm.GetStorage, pmap("address", address, "key", key), res)
+func Storage(client RPCClient, address crypto.Address, key []byte) ([]byte, error) {
+	res := new(rpc.ResultStorage)
+	_, err := client.Call(rpcinfo.Storage, pmap("address", address, "key", key), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Value, nil
 }
 
-func GetName(client RPCClient, name string) (*names.Entry, error) {
-	res := new(rpc.ResultGetName)
-	_, err := client.Call(tm.GetName, pmap("name", name), res)
+func Name(client RPCClient, name string) (*names.Entry, error) {
+	res := new(rpc.ResultName)
+	_, err := client.Call(rpcinfo.Name, pmap("name", name), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Entry, nil
 }
 
-func ListBlocks(client RPCClient, minHeight, maxHeight int) (*rpc.ResultListBlocks, error) {
-	res := new(rpc.ResultListBlocks)
-	_, err := client.Call(tm.ListBlocks, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
+func Blocks(client RPCClient, minHeight, maxHeight int) (*rpc.ResultBlocks, error) {
+	res := new(rpc.ResultBlocks)
+	_, err := client.Call(rpcinfo.Blocks, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func GetBlock(client RPCClient, height int) (*rpc.ResultGetBlock, error) {
-	res := new(rpc.ResultGetBlock)
-	_, err := client.Call(tm.GetBlock, pmap("height", height), res)
+func Block(client RPCClient, height int) (*rpc.ResultBlock, error) {
+	res := new(rpc.ResultBlock)
+	_, err := client.Call(rpcinfo.Block, pmap("height", height), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func ListUnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultListUnconfirmedTxs, error) {
-	res := new(rpc.ResultListUnconfirmedTxs)
-	_, err := client.Call(tm.ListUnconfirmedTxs, pmap("maxTxs", maxTxs), res)
+func UnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultUnconfirmedTxs, error) {
+	res := new(rpc.ResultUnconfirmedTxs)
+	_, err := client.Call(rpcinfo.UnconfirmedTxs, pmap("maxTxs", maxTxs), res)
 	if err != nil {
 		return nil, err
 	}
@@ -134,18 +115,18 @@ func ListUnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultListUnconfirme
 	return resCon, nil
 }
 
-func ListValidators(client RPCClient) (*rpc.ResultListValidators, error) {
-	res := new(rpc.ResultListValidators)
-	_, err := client.Call(tm.ListValidators, pmap(), res)
+func Validators(client RPCClient) (*rpc.ResultValidators, error) {
+	res := new(rpc.ResultValidators)
+	_, err := client.Call(rpcinfo.Validators, pmap(), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func DumpConsensusState(client RPCClient) (*rpc.ResultDumpConsensusState, error) {
-	res := new(rpc.ResultDumpConsensusState)
-	_, err := client.Call(tm.DumpConsensusState, pmap(), res)
+func Consensus(client RPCClient) (*rpc.ResultConsensusState, error) {
+	res := new(rpc.ResultConsensusState)
+	_, err := client.Call(rpcinfo.Consensus, pmap(), res)
 	if err != nil {
 		return nil, err
 	}

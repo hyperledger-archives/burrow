@@ -1,4 +1,4 @@
-package tmclient
+package infoclient
 
 import (
 	"testing"
