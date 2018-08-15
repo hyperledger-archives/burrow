@@ -1,8 +1,8 @@
-# Hyperledger Burrow Changelog
-## Version 0.20.1
+# [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [Unreleased]
 Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput, also support mempool signing for BroadcastTxAsync.
 
-## Version 0.20.0
+## [0.20.0] - 2018-07-24
 This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 
 #### Breaking changes
@@ -26,7 +26,7 @@ This is a major (pre-1.0.0) release that introduces the ability to change the va
 
 
 
-## Version 0.19.0
+## [0.19.0] - 2018-06-26
 This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
 
 #### Breaking changes
@@ -67,12 +67,12 @@ In addition to breaking changes associated with Tendermint (see their changelog)
 
 
 
-## Version 0.18.1
+## [0.18.1]
 This is a minor release including:
 - Introduce InputAccount param for RPC/v0 for integration in JS libs
 - Resolve some issues with RPC/tm tests swallowing timeouts and not dealing with reordered events
 
-## Version 0.18.0
+## [0.18.0] - 2018-05-09
 This is an extremely large release in terms of lines of code changed addressing several years of technical debt. Despite this efforts were made to maintain external interfaces as much as possible and an extended period of stabilisation has taken place on develop.
 
 A major strand of work has been in condensing previous Monax tooling spread across multiple repos into just two. The Hyperledger Burrow repo and [Bosmarmot](http://github.com/monax/bosmarmot). Burrow is now able to generate chains (replacing 'monax chains make') with 'burrow spec' and 'burrow configure'. Our 'EPM' contract deployment and testing tool, our javascript libraries, compilers, and monax-keys are avaiable in Bosmarmot (the former in the 'bos' tool). Work is underway to pull monax-keys into the Burrow project, and we will continue to make Burrow as self-contained as possible.
@@ -121,10 +121,10 @@ A major strand of work has been in condensing previous Monax tooling spread acro
 - Missing support for: REVERT https://github.com/hyperledger/burrow/issues/600 (coming very soon)
 
 
-## Version 0.17.1
+## [0.17.1]
 Minor tweaks to docker build file
 
-## Version 0.17.0
+## [0.17.0] - 2017-09-04
 This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
 
 - [Upgrade to use Tendermint v0.9.2](https://github.com/hyperledger/burrow/pull/595)
@@ -139,7 +139,7 @@ Known issues:
 
 - SELFDESTRUCT opcode causes a panic when an account is removed. A [fix](https://github.com/hyperledger/burrow/pull/605) was produced but was [reverted](https://github.com/hyperledger/burrow/pull/636) pending investigation of a possible regression.
 
-## Version 0.16.3
+## [0.16.3] - 2017-04-25
 This release adds an stop-gap fix to the Transact method so that it never
 transfers value with the CallTx is generates.
 
@@ -149,15 +149,15 @@ from transferring value to non-payable functions with newer versions of solidity
 By doing this we can resolve some issues with users of the v0 RPC without making
 a breaking API change.
 
-## Version 0.16.2
+## [0.16.2] - 2017-04-20
 This release finalises our accession to the Hyperledger project and updates our root package namespace to github.com/hyperledger/burrow.
 
 It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any transaction type and various pieces of internal clean-up.
 
-## Version 0.16.1
+## [0.16.1] - 2017-04-04
 This release was an internal rename to 'Burrow' with some minor other attendant clean up.
 
-## Version 0.16.0
+## [0.16.0] - 2017-03-01
 This is a consolidation release that fixes various bugs and improves elements
 of the architecture across the Monax Platform to support a quicker release
 cadence.
@@ -187,16 +187,16 @@ cadence.
 - [pull-379](https://github.com/hyperledger/burrow/pull/379) more descriptive error message for eris-client
 
 
-## Version 0.15.0
+## [0.15.0]
 This release was elided to synchronise release versions with tooling
 
-## Version 0.14.0
+## [0.14.0]
 This release was elided to synchronise release versions with tooling
 
-## Version 0.13.0
+## [0.13.0]
 This release was elided to synchronise release versions with tooling
 
-## Version 0.12.0
+## [0.12.0]
 This release marks the start of Eris-DB as the full permissioned blockchain node
  of the Eris platform with the Tendermint permissioned consensus engine.
  This involved significant refactoring of almost all parts of the code,
@@ -234,3 +234,18 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/hyperledger/burrow/compare/v0.19.0...v0.20.0
+[0.19.0]: https://github.com/hyperledger/burrow/compare/v0.18.1...v0.19.0
+[0.18.1]: https://github.com/hyperledger/burrow/compare/v0.18.0...v0.18.1
+[0.18.0]: https://github.com/hyperledger/burrow/compare/v0.17.1...v0.18.0
+[0.17.1]: https://github.com/hyperledger/burrow/compare/v0.17.0...v0.17.1
+[0.17.0]: https://github.com/hyperledger/burrow/compare/v0.16.3...v0.17.0
+[0.16.3]: https://github.com/hyperledger/burrow/compare/v0.16.2...v0.16.3
+[0.16.2]: https://github.com/hyperledger/burrow/compare/v0.16.1...v0.16.2
+[0.16.1]: https://github.com/hyperledger/burrow/compare/v0.16.0...v0.16.1
+[0.16.0]: https://github.com/hyperledger/burrow/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/hyperledger/burrow/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/hyperledger/burrow/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/hyperledger/burrow/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/hyperledger/burrow/commits/v0.12.0
