@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
 func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []*abi.Variable, error) {

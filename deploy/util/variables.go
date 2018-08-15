@@ -11,9 +11,9 @@ import (
 
 	"unicode"
 
-	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/def/rule"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	log "github.com/sirupsen/logrus"
 )
 

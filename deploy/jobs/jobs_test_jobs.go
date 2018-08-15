@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger/burrow/deploy/abi"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	log "github.com/sirupsen/logrus"
 )
 

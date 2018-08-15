@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/deploy/abi"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

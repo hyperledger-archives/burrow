@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/deploy/abi"
 	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/txs/payload"
 	log "github.com/sirupsen/logrus"
 )
