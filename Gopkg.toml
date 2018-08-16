@@ -16,20 +16,33 @@
 # overriding here because of IAVL
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.22.4"
+  version = "=0.22.8"
 
-[[constraint]]
+[[override]]
   name = "github.com/tendermint/iavl"
   version = "=0.9.2"
 
-[[override]]
-  name = "github.com/gogo/protobuf"
-  version = "~1.1.0"
+#[[constraint]]
+#  name = "github.com/prometheus/client_golang"
+#  branch = "master"
 
-[[override]]
-  name = "github.com/golang/protobuf"
-  version = "~1.1.0"
+# Haven't made a release since 2016.
+[[constraint]]
+  name = "github.com/prometheus/client_golang"
+  revision = "ae27198cdd90bf12cd134ad79d1366a6cf49f632"
 
-[[override]]
+[[constraint]]
+  name = "golang.org/x/net"
+  revision = "292b43bbf7cb8d35ddf40f8d5100ef3837cced3f"
+#
+#[[override]]
+#  name = "github.com/gogo/protobuf"
+#  version = "~1.1.0"
+#
+#[[override]]
+#  name = "github.com/golang/protobuf"
+#  version = "~1.1.0"
+#
+[[constraint]]
   name = "google.golang.org/grpc"
   version = "~1.13.0"

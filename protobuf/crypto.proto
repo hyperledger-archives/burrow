@@ -12,11 +12,10 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
-// PublicKey
 message PublicKey {
     option (gogoproto.goproto_stringer) = false;
     uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
-    bytes Key = 2;
+    bytes PublicKey = 2[(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }
 
 message PrivateKey {
@@ -25,5 +24,11 @@ message PrivateKey {
     uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
     // Note may need initialisation
     bytes PublicKey = 2;
-    bytes Key = 3;
+    bytes PrivateKey = 3;
+}
+
+message Signature {
+    option (gogoproto.goproto_stringer) = false;
+    uint32 CurveType = 1 [(gogoproto.casttype) = "CurveType"];
+    bytes Signature = 2;
 }

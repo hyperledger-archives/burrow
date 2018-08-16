@@ -10,6 +10,7 @@
 	It has these top-level messages:
 		PublicKey
 		PrivateKey
+		Signature
 */
 package crypto
 
@@ -33,10 +34,9 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-// PublicKey
 type PublicKey struct {
 	CurveType CurveType `protobuf:"varint,1,opt,name=CurveType,proto3,casttype=CurveType" json:"CurveType,omitempty"`
-	Key       []byte    `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`
+	PublicKey []byte    `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
 }
 
 func (m *PublicKey) Reset()                    { *m = PublicKey{} }
@@ -50,9 +50,9 @@ func (m *PublicKey) GetCurveType() CurveType {
 	return 0
 }
 
-func (m *PublicKey) GetKey() []byte {
+func (m *PublicKey) GetPublicKey() []byte {
 	if m != nil {
-		return m.Key
+		return m.PublicKey
 	}
 	return nil
 }
@@ -64,8 +64,8 @@ func (*PublicKey) XXX_MessageName() string {
 type PrivateKey struct {
 	CurveType CurveType `protobuf:"varint,1,opt,name=CurveType,proto3,casttype=CurveType" json:"CurveType,omitempty"`
 	// Note may need initialisation
-	PublicKey []byte `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
-	Key       []byte `protobuf:"bytes,3,opt,name=Key,proto3" json:"Key,omitempty"`
+	PublicKey  []byte `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	PrivateKey []byte `protobuf:"bytes,3,opt,name=PrivateKey,proto3" json:"PrivateKey,omitempty"`
 }
 
 func (m *PrivateKey) Reset()                    { *m = PrivateKey{} }
@@ -75,11 +75,40 @@ func (*PrivateKey) Descriptor() ([]byte, []int) { return fileDescriptorCrypto, [
 func (*PrivateKey) XXX_MessageName() string {
 	return "crypto.PrivateKey"
 }
+
+type Signature struct {
+	CurveType CurveType `protobuf:"varint,1,opt,name=CurveType,proto3,casttype=CurveType" json:"CurveType,omitempty"`
+	Signature []byte    `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
+}
+
+func (m *Signature) Reset()                    { *m = Signature{} }
+func (*Signature) ProtoMessage()               {}
+func (*Signature) Descriptor() ([]byte, []int) { return fileDescriptorCrypto, []int{2} }
+
+func (m *Signature) GetCurveType() CurveType {
+	if m != nil {
+		return m.CurveType
+	}
+	return 0
+}
+
+func (m *Signature) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+func (*Signature) XXX_MessageName() string {
+	return "crypto.Signature"
+}
 func init() {
 	proto.RegisterType((*PublicKey)(nil), "crypto.PublicKey")
 	golang_proto.RegisterType((*PublicKey)(nil), "crypto.PublicKey")
 	proto.RegisterType((*PrivateKey)(nil), "crypto.PrivateKey")
 	golang_proto.RegisterType((*PrivateKey)(nil), "crypto.PrivateKey")
+	proto.RegisterType((*Signature)(nil), "crypto.Signature")
+	golang_proto.RegisterType((*Signature)(nil), "crypto.Signature")
 }
 func (m *PublicKey) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
@@ -101,11 +130,11 @@ func (m *PublicKey) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
 	}
-	if len(m.Key) > 0 {
+	if len(m.PublicKey) > 0 {
 		dAtA[i] = 0x12
 		i++
-		i = encodeVarintCrypto(dAtA, i, uint64(len(m.Key)))
-		i += copy(dAtA[i:], m.Key)
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PublicKey)))
+		i += copy(dAtA[i:], m.PublicKey)
 	}
 	return i, nil
 }
@@ -136,11 +165,40 @@ func (m *PrivateKey) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PublicKey)))
 		i += copy(dAtA[i:], m.PublicKey)
 	}
-	if len(m.Key) > 0 {
+	if len(m.PrivateKey) > 0 {
 		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintCrypto(dAtA, i, uint64(len(m.Key)))
-		i += copy(dAtA[i:], m.Key)
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PrivateKey)))
+		i += copy(dAtA[i:], m.PrivateKey)
+	}
+	return i, nil
+}
+
+func (m *Signature) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Signature) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.CurveType != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
+	}
+	if len(m.Signature) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
 	}
 	return i, nil
 }
@@ -160,7 +218,7 @@ func (m *PublicKey) Size() (n int) {
 	if m.CurveType != 0 {
 		n += 1 + sovCrypto(uint64(m.CurveType))
 	}
-	l = len(m.Key)
+	l = len(m.PublicKey)
 	if l > 0 {
 		n += 1 + l + sovCrypto(uint64(l))
 	}
@@ -177,7 +235,20 @@ func (m *PrivateKey) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCrypto(uint64(l))
 	}
-	l = len(m.Key)
+	l = len(m.PrivateKey)
+	if l > 0 {
+		n += 1 + l + sovCrypto(uint64(l))
+	}
+	return n
+}
+
+func (m *Signature) Size() (n int) {
+	var l int
+	_ = l
+	if m.CurveType != 0 {
+		n += 1 + sovCrypto(uint64(m.CurveType))
+	}
+	l = len(m.Signature)
 	if l > 0 {
 		n += 1 + l + sovCrypto(uint64(l))
 	}
@@ -247,7 +318,7 @@ func (m *PublicKey) Unmarshal(dAtA []byte) error {
 			}
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PublicKey", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -271,9 +342,9 @@ func (m *PublicKey) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
-			if m.Key == nil {
-				m.Key = []byte{}
+			m.PublicKey = append(m.PublicKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.PublicKey == nil {
+				m.PublicKey = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -378,7 +449,7 @@ func (m *PrivateKey) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PrivateKey", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -402,9 +473,109 @@ func (m *PrivateKey) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
-			if m.Key == nil {
-				m.Key = []byte{}
+			m.PrivateKey = append(m.PrivateKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.PrivateKey == nil {
+				m.PrivateKey = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCrypto(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCrypto
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Signature) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCrypto
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Signature: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Signature: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurveType", wireType)
+			}
+			m.CurveType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCrypto
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CurveType |= (CurveType(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCrypto
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCrypto
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -537,19 +708,21 @@ func init() { proto.RegisterFile("crypto.proto", fileDescriptorCrypto) }
 func init() { golang_proto.RegisterFile("crypto.proto", fileDescriptorCrypto) }
 
 var fileDescriptorCrypto = []byte{
-	// 224 bytes of a gzipped FileDescriptorProto
+	// 244 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0x2e, 0xaa, 0x2c,
 	0x28, 0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0xa4, 0x74, 0xd3, 0x33,
 	0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xd3, 0xf3, 0xd3, 0xf3, 0xf5, 0xc1, 0xd2,
-	0x49, 0xa5, 0x69, 0x60, 0x1e, 0x98, 0x03, 0x66, 0x41, 0xb4, 0x29, 0x05, 0x70, 0x71, 0x06, 0x94,
+	0x49, 0xa5, 0x69, 0x60, 0x1e, 0x98, 0x03, 0x66, 0x41, 0xb4, 0x29, 0xc5, 0x70, 0x71, 0x06, 0x94,
 	0x26, 0xe5, 0x64, 0x26, 0x7b, 0xa7, 0x56, 0x0a, 0x69, 0x73, 0x71, 0x3a, 0x97, 0x16, 0x95, 0xa5,
 	0x86, 0x54, 0x16, 0xa4, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0xf0, 0x3a, 0xf1, 0xfe, 0xba, 0x27, 0x8f,
-	0x10, 0x0c, 0x42, 0x30, 0x85, 0x04, 0xb8, 0x98, 0xbd, 0x53, 0x2b, 0x25, 0x98, 0x14, 0x18, 0x35,
-	0x78, 0x82, 0x40, 0x4c, 0x2b, 0x96, 0x19, 0x0b, 0xe4, 0x19, 0x94, 0x8a, 0xb9, 0xb8, 0x02, 0x8a,
-	0x32, 0xcb, 0x12, 0x4b, 0x52, 0x49, 0x36, 0x52, 0x06, 0xc9, 0x31, 0x50, 0x83, 0x91, 0x5c, 0x07,
-	0xb5, 0x90, 0x19, 0x61, 0x21, 0x47, 0xc7, 0x02, 0x79, 0x06, 0x90, 0xa5, 0x4e, 0x56, 0x27, 0x1e,
-	0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x81, 0xc7, 0x72, 0x8c, 0x27,
-	0x1e, 0xcb, 0x31, 0x46, 0xa9, 0x20, 0x85, 0x45, 0x46, 0x65, 0x41, 0x6a, 0x51, 0x4e, 0x6a, 0x4a,
-	0x7a, 0x6a, 0x91, 0x7e, 0x52, 0x69, 0x51, 0x51, 0x7e, 0xb9, 0x3e, 0x24, 0xc4, 0x92, 0xd8, 0xc0,
-	0x21, 0x61, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x1f, 0x6f, 0x9c, 0xc7, 0x50, 0x01, 0x00, 0x00,
+	0x10, 0x0c, 0x42, 0x30, 0x85, 0x64, 0x90, 0x74, 0x4a, 0x30, 0x29, 0x30, 0x6a, 0xf0, 0x04, 0x21,
+	0x04, 0xac, 0x58, 0x66, 0x2c, 0x90, 0x67, 0x50, 0x6a, 0x64, 0xe4, 0xe2, 0x0a, 0x28, 0xca, 0x2c,
+	0x4b, 0x2c, 0x49, 0xa5, 0xae, 0xf9, 0x42, 0x72, 0xc8, 0x06, 0x4b, 0x30, 0x83, 0xa5, 0x91, 0x44,
+	0xac, 0x38, 0x3a, 0x16, 0xc8, 0x33, 0x80, 0xdd, 0x10, 0xc3, 0xc5, 0x19, 0x9c, 0x99, 0x9e, 0x97,
+	0x58, 0x52, 0x5a, 0x94, 0x4a, 0xb2, 0x0b, 0xe0, 0x3a, 0x61, 0x2e, 0x80, 0x0b, 0x40, 0x7c, 0xe8,
+	0x64, 0x75, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0x1e, 0x78,
+	0x2c, 0xc7, 0x78, 0xe2, 0xb1, 0x1c, 0x63, 0x94, 0x0a, 0x52, 0x24, 0x64, 0x54, 0x16, 0xa4, 0x16,
+	0xe5, 0xa4, 0xa6, 0xa4, 0xa7, 0x16, 0xe9, 0x27, 0x95, 0x16, 0x15, 0xe5, 0x97, 0xeb, 0x43, 0xa2,
+	0x2a, 0x89, 0x0d, 0x1c, 0x05, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xee, 0xf4, 0x0b, 0xa9,
+	0xc9, 0x01, 0x00, 0x00,
 }

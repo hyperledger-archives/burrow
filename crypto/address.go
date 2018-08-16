@@ -17,9 +17,9 @@ type Addressable interface {
 	PublicKey() PublicKey
 }
 
-func NewAddressable(address Address, publicKey PublicKey) Addressable {
+func NewAddressable(publicKey PublicKey) Addressable {
 	return &memoizedAddressable{
-		address:   address,
+		address:   publicKey.Address(),
 		publicKey: publicKey,
 	}
 }
@@ -33,7 +33,7 @@ func MemoizeAddressable(addressable Addressable) Addressable {
 	if a, ok := addressable.(*memoizedAddressable); ok {
 		return a
 	}
-	return NewAddressable(addressable.Address(), addressable.PublicKey())
+	return NewAddressable(addressable.PublicKey())
 }
 
 func (a *memoizedAddressable) PublicKey() PublicKey {
