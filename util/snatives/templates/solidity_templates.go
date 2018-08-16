@@ -80,7 +80,7 @@ type solidityFunction struct {
 // Create a templated solidityContract from an SNative contract description
 func NewSolidityContract(contract *evm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{
-		SolidityPragmaVersion:      ">=0.4.0",
+		SolidityPragmaVersion:      ">=0.4.24",
 		SNativeContractDescription: contract,
 	}
 }

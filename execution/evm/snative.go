@@ -65,7 +65,6 @@ type SNativeFunctionDescription struct {
 	// Permissions required to call function
 	PermFlag permission.PermFlag
 	// Native function to which calls will be dispatched when a containing
-	// contract is called with a FunctionSelector matching this NativeContract
 	F func(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
 		logger *logging.Logger, v interface{}) (interface{}, error)
 }

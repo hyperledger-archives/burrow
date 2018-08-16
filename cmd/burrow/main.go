@@ -45,7 +45,10 @@ func burrow(output commands.Output) *cli.Cli {
 		commands.Dump(output))
 
 	app.Command("deploy", "Deploy and test contracts",
-		commands.Packages(output))
+		commands.Deploy(output))
+
+	app.Command("snatives", "Dump Solidity interface contracts for SNatives",
+		commands.Snatives(output))
 
 	return app
 }

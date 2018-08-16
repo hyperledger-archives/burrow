@@ -106,11 +106,6 @@ reinstall_vendor: erase_vendor
 ensure_vendor: reinstall_vendor
 	@scripts/is_checkout_dirty.sh
 
-# dumps Solidity interface contracts for SNatives
-.PHONY: snatives
-snatives:
-	@go run ./util/snatives/cmd/main.go
-
 ### Building github.com/hyperledger/burrow
 
 # Output commit_hash but only if we have the git repo (e.g. not in docker build
