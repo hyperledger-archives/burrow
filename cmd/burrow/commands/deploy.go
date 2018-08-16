@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Packages(output Output) func(cmd *cli.Cmd) {
+func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainUrlOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
 

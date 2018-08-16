@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/iancoleman/strcase"
 )
 
 const contractTemplateText = `pragma solidity [[.SolidityPragmaVersion]];
@@ -80,7 +81,7 @@ type solidityFunction struct {
 // Create a templated solidityContract from an SNative contract description
 func NewSolidityContract(contract *evm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{
-		SolidityPragmaVersion:      ">=0.4.0",
+		SolidityPragmaVersion:      ">=0.4.24",
 		SNativeContractDescription: contract,
 	}
 }
@@ -136,7 +137,7 @@ func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunc
 func (function *solidityFunction) ArgList() string {
 	argList := make([]string, len(function.Abi.Inputs))
 	for i, arg := range function.Abi.Inputs {
-		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), arg.Name)
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
 	}
 	return strings.Join(argList, ", ")
 }
@@ -144,7 +145,7 @@ func (function *solidityFunction) ArgList() string {
 func (function *solidityFunction) RetList() string {
 	argList := make([]string, len(function.Abi.Outputs))
 	for i, arg := range function.Abi.Outputs {
-		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), arg.Name)
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
 	}
 	return strings.Join(argList, ", ")
 }
@@ -184,4 +185,8 @@ func comment(comment string) string {
 		}
 	}
 	return strings.Join(commentLines, "\n")
+}
+
+func param(name string) string {
+	return "_" + strcase.ToSnake(name)
 }

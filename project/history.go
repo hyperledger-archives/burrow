@@ -32,7 +32,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 		"",
 		`### Changed
 - The snatives functions have new signatures; string arguments are now string, not byte32.
--
+- The Solidity interface contracts can be generated using the "burrow snatives" command, and the make snatives target is gone.
 
 ### Fixed
 - TxExecutions that were exceptions (for example those that were REVERTed) will no longer have their events emitted from ExecutionEventsServer.GetEvents. They remain stored in state for the time being.
