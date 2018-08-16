@@ -1,22 +1,18 @@
-This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
+### Changed
+- The snatives functions have new signatures; string arguments are now string, not byte32.
+- The Solidity interface contracts can be generated using the "burrow snatives" command, and the make snatives target is gone.
 
-#### Breaking changes
-- Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
-- JSON-RPC interface has been removed
-- burrow-client has been removed
-- rpc/TM methods for events and broadcast have been removed
+### Fixed
+- TxExecutions that were exceptions (for example those that were REVERTed) will no longer have their events emitted from ExecutionEventsServer.GetEvents. They remain stored in state for the time being.
+- CallTxSim and CallCodeSim now take same code path as real transactions (via CallContext)
 
-#### Features
-- Tendermint 0.24.4
-- GovTx GRPC service. The validator set can be now be changed.
-- Enhanced GRPC services: NameReg, Transaction index, blocks service
-- Events GRPC service
-- Transaction Service can set value transferred
+### Added
+- Upgraded to Tendermint 0.22.8 (from 0.22.4).
+- Support mempool signing for BroadcastTxAsync.
+- Reload log file (e.g. for logrotate) on SIGHUP and dump capture logs on SIGUSR1 and on shutdown (e.g. for debug).
+- File logger accepts {{.Timestamp}} in file names to generate a log file per run.
 
-#### Improvements
-- The output of "burrow keys export" can be templated
 
-#### Bug fixes
-- Fixed panic on nil bounds for blocks service
-
+### Fixed
+- Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput.
 
