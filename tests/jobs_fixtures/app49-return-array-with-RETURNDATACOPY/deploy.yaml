@@ -2,17 +2,17 @@ jobs:
 
 - name: deloyReturnArray
   deploy:
-      contract: storage.sol
+      contract: returnArray.sol
 
-- name: deloyConsumeAray
+- name: deloyConsumeArray
   deploy:
-      contract: storage.sol
+      contract: consumeArray.sol
       data:
         - $deloyReturnArray
 
-- name: queryConsumer
+- name: lowestSingleDigitPrime
   query-contract:
-      destination: $lowestSingleDigitPrime
+      destination: $deloyConsumeArray
       function: lowestSingleDigitPrime
 
 - name: assertConsumer
