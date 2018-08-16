@@ -85,10 +85,11 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 		}
 		// check if its a native contract
 		if evm.IsRegisteredNativeContract(ctx.tx.Address.Word256()) {
-			return nil, nil, fmt.Errorf("attempt to call a native contract at %s, "+
-				"but native contracts cannot be called using CallTx. Use a "+
-				"contract that calls the native contract or the appropriate tx "+
-				"type (eg. PermsTx, NameTx)", ctx.tx.Address)
+			return nil, nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+				"attempt to call a native contract at %s, "+
+					"but native contracts cannot be called using CallTx. Use a "+
+					"contract that calls the native contract or the appropriate tx "+
+					"type (eg. PermsTx, NameTx)", ctx.tx.Address)
 		}
 
 		// Output account may be nil if we are still in mempool and contract was created in same block as this tx
