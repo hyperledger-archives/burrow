@@ -78,9 +78,9 @@ func (s *Service) ChainID() string {
 	return s.blockchain.ChainID()
 }
 
-func (s *Service) UnconfirmedTxs(maxTxs int) (*ResultUnconfirmedTxs, error) {
+func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 	// Get all transactions for now
-	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
+	transactions, err := s.nodeView.MempoolTransactions(int(maxTxs))
 	if err != nil {
 		return nil, err
 	}
