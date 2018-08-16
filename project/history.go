@@ -8,6 +8,7 @@ import (
 // `go build -ldflags "-X github.com/hyperledger/burrow/project.commit=$(git rev-parse --short HEAD)" ./cmd/burrow`
 
 var commit = ""
+var date = ""
 
 func Commit() string {
 	return commit

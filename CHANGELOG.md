@@ -1,10 +1,12 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
 ## [Unreleased]
-#### Changed
+### Changed
 - The snatives functions have new signatures; string arguments are now string, not byte32.
+-
 
 ### Fixed
 - TxExecutions that were exceptions (for example those that were REVERTed) will no longer have their events emitted from ExecutionEventsServer.GetEvents. They remain stored in state for the time being.
+- CallTxSim and CallCodeSim now take same code path as real transactions (via CallContext)
 
 ### Added
 - Support mempool signing for BroadcastTxAsync.

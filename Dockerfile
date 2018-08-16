@@ -31,4 +31,4 @@ EXPOSE 26656
 EXPOSE 26658
 EXPOSE 10997
 
-CMD [ "burrow" ]
+ENTRYPOINT [ "burrow" ]

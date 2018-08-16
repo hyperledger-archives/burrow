@@ -20,7 +20,7 @@
 
 set -e
 
-IMAGE=${IMAGE:-"quay.io/monax/db"}
+DOCKER_REPO=${DOCKER_REPO:-"hyperledger/burrow"}
 REPO=${REPO:-"$GOPATH/src/github.com/hyperledger/burrow"}
 
 function log() {
@@ -35,5 +35,5 @@ if [[ "$1" ]] ; then
     version="$1"
 fi
 
-docker build -t ${IMAGE}:${version} ${REPO}
+docker build -t ${DOCKER_REPO}:${version} ${REPO}
 

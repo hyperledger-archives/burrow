@@ -23,7 +23,7 @@ PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.p
 SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
 SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
-CI_IMAGE="quay.io/monax/build:burrow-ci"
+CI_IMAGE="hyperledger/burrow:ci"
 
 ### Formatting, linting and vetting
 
@@ -239,9 +239,14 @@ docs: CHANGELOG.md NOTES.md
 tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
 
+.PHONY: release
+release: docs check test
+	@scripts/is_checkout_dirty.sh || echo "checkout is dirty so not releasing!" && exit 1
+	@scripts/release.sh
+
 .PHONY: build_ci_image
 build_ci_image:
-	docker build --no-cache -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
+	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
 
 .PHONY: push_ci_image
 push_ci_image: build_ci_image

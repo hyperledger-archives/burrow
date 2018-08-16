@@ -4,7 +4,7 @@
 defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
-    - image: quay.io/monax/build:burrow-ci
+    - image: hyperledger/burrow:ci
 
 tag_filters: &tags_filters
   tags:
@@ -19,6 +19,7 @@ jobs:
   test:
     <<: *defaults
     steps:
+      - run: echo $CIRCLE_PULL_REQUESTS
       - checkout
       - run: make test
       # In case we miss compile errors not pulled into test paths
@@ -57,7 +58,7 @@ jobs:
           <<: *setup_docker
         # build docker image and tag the docker image(s) depending on branch/tag
       - run: make docker_build
-      - run: docker save quay.io/monax/db > db-images.tar
+      - run: docker save $DOCKER_REPO > db-images.tar
       - persist_to_workspace:
           root: .
           paths:
@@ -72,7 +73,7 @@ jobs:
       - setup_remote_docker:
           <<: *setup_docker
       - run: docker load -i db-images.tar
-      - run: docker run quay.io/monax/db:$(./scripts/local_version.sh) burrow -h
+      - run: docker run $DOCKER_REPO:$(./scripts/local_version.sh) -h
 
   push_docker:
     <<: *defaults
@@ -81,9 +82,13 @@ jobs:
           at: .
       - setup_remote_docker:
           <<: *setup_docker
-      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
-      - run: docker load -i db-images.tar
-      - run: docker push quay.io/monax/db
+      # Only run on non-pull requests
+      - run: "[[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || (docker login -u $DOCKER_USER -p $DOCKER_PASS && docker load -i db-images.tar && docker push $DOCKER_REPO)"
+
+  release:
+    <<: *defaults
+    steps:
+      - run: make release
 
 
 workflows:
@@ -130,3 +135,14 @@ workflows:
             <<: *tags_filters
             branches:
               only: develop
+
+      - release:
+          requires:
+          - test
+          - test_integration
+          - test_integration_bosmarmot
+          - test_docker_smoke
+          filters:
+            <<: *tags_filters
+            branches:
+              ignore: /.*/
