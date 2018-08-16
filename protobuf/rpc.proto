@@ -35,5 +35,5 @@ message SyncInfo {
     // Time at which we committed the last block
     google.protobuf.Timestamp LatestBlockSeenTime = 5 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
     // When catching up in fast sync
-    bool CatchingUp = 6;
+    bool CatchingUp = 6 [(gogoproto.jsontag) = ""];
 }

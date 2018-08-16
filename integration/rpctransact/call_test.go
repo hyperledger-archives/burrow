@@ -141,7 +141,7 @@ func TestSendTxAsync(t *testing.T) {
 	require.Equal(t, numSends, <-countCh)
 }
 
-func TestCallCode(t *testing.T) {
+func TestCallCodeSim(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	// add two integers and return the result
 	var i, j byte = 123, 21

@@ -80,7 +80,7 @@ func (p PublicKey) Verify(msg []byte, signature Signature) error {
 	case CurveTypeUnset:
 		return fmt.Errorf("public key is unset")
 	case CurveTypeEd25519:
-		if ed25519.Verify(p.PublicKey, msg, signature.Signature) {
+		if ed25519.Verify(p.PublicKey.Bytes(), msg, signature.Signature) {
 			return nil
 		}
 		return fmt.Errorf("'%X' is not a valid ed25519 signature for message: %X", signature, msg)

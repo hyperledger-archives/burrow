@@ -21,10 +21,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
-
 	"time"
 
-	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
@@ -47,7 +45,7 @@ func TestInputAccountPublicKeySet(t *testing.T) {
 	require.NoError(t, err)
 
 	// Account PublicKey should be initially unset
-	assert.Equal(t, crypto.PublicKey{}, acc.PublicKey)
+	assert.False(t, acc.PublicKey.IsSet())
 
 	// Sign with this account - should set public key
 	rpctest.CreateContract(t, tcli, input.Address(), rpctest.Bytecode_strange_loop)
@@ -55,6 +53,7 @@ func TestInputAccountPublicKeySet(t *testing.T) {
 
 	// Check public key set
 	require.NoError(t, err)
+	assert.True(t, acc.PublicKey.IsSet())
 	assert.Equal(t, input.PublicKey(), acc.PublicKey)
 }
 
