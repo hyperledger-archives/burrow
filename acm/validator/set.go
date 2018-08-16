@@ -41,12 +41,12 @@ func NewTrimSet() *Set {
 }
 
 // Implements Writer, but will never error
-func (vs *Set) AlterPower(id crypto.Addressable, power *big.Int) (flow *big.Int, err error) {
+func (vs *Set) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
 	return vs.ChangePower(id, power), nil
 }
 
 // Add the power of a validator and returns the flow into that validator
-func (vs *Set) ChangePower(id crypto.Addressable, power *big.Int) *big.Int {
+func (vs *Set) ChangePower(id crypto.PublicKey, power *big.Int) *big.Int {
 	address := id.Address()
 	// Calculcate flow into this validator (postive means in, negative means out)
 	flow := new(big.Int).Sub(power, vs.Power(id))
@@ -56,7 +56,7 @@ func (vs *Set) ChangePower(id crypto.Addressable, power *big.Int) *big.Int {
 		delete(vs.publicKeys, address)
 		delete(vs.powers, address)
 	} else {
-		vs.publicKeys[address] = crypto.MemoizeAddressable(id)
+		vs.publicKeys[address] = crypto.NewAddressable(id)
 		vs.powers[address] = new(big.Int).Set(power)
 	}
 	return flow
@@ -67,14 +67,14 @@ func (vs *Set) TotalPower() *big.Int {
 }
 
 // Returns the power of id but only if it is set
-func (vs *Set) MaybePower(id crypto.Addressable) *big.Int {
+func (vs *Set) MaybePower(id crypto.PublicKey) *big.Int {
 	if vs.powers[id.Address()] == nil {
 		return nil
 	}
 	return new(big.Int).Set(vs.powers[id.Address()])
 }
 
-func (vs *Set) Power(id crypto.Addressable) *big.Int {
+func (vs *Set) Power(id crypto.PublicKey) *big.Int {
 	if vs.powers[id.Address()] == nil {
 		return new(big.Int)
 	}
@@ -87,7 +87,7 @@ func (vs *Set) Equal(vsOther *Set) bool {
 	}
 	// Stop iteration IFF we find a non-matching validator
 	return !vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		otherPower := vsOther.Power(id)
+		otherPower := vsOther.Power(id.PublicKey())
 		if otherPower.Cmp(power) != 0 {
 			return true
 		}

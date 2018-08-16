@@ -76,8 +76,8 @@ func (k *KeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportRespon
 	return &ExportResponse{
 		Address:    addrB[:],
 		CurveType:  key.CurveType.String(),
-		Publickey:  key.PublicKey.Key[:],
-		Privatekey: key.PrivateKey.Key[:],
+		Publickey:  key.PublicKey.PublicKey[:],
+		Privatekey: key.PrivateKey.PrivateKey[:],
 	}, nil
 }
 

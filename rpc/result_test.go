@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	goCrypto "github.com/tendermint/tendermint/crypto"
+	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -48,7 +48,7 @@ func TestResultGetBlock(t *testing.T) {
 			LastCommit: &tmTypes.Commit{
 				Precommits: []*tmTypes.Vote{
 					{
-						Signature: goCrypto.SignatureEd25519{1, 2, 3},
+						Signature: tmEd25519.SignatureEd25519{1, 2, 3},
 					},
 				},
 			},

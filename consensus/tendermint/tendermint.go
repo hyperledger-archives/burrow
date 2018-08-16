@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tendermint/tendermint/config"
-	tmCrypto "github.com/tendermint/tendermint/crypto"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
@@ -76,10 +75,8 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc {
 	validators := make([]tmTypes.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
-		tm := tmCrypto.PubKeyEd25519{}
-		copy(tm[:], validator.PublicKey.RawBytes())
 		validators[i] = tmTypes.GenesisValidator{
-			PubKey: tm,
+			PubKey: validator.PublicKey.TendermintPubKey(),
 			Name:   validator.Name,
 			Power:  int64(validator.Amount),
 		}

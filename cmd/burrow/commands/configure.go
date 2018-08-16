@@ -15,11 +15,12 @@ import (
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
-	logging_config "github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/logconfig/presets"
-	cli "github.com/jawher/mow.cli"
-	amino "github.com/tendermint/go-amino"
-	tm_crypto "github.com/tendermint/tendermint/crypto"
+	"github.com/jawher/mow.cli"
+	"github.com/tendermint/go-amino"
+	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/p2p"
 )
 
@@ -130,7 +131,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					}
 
 					cdc := amino.NewCodec()
-					tm_crypto.RegisterAmino(cdc)
+					cryptoAmino.RegisterAmino(cdc)
 
 					pkg = deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
@@ -154,8 +155,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						}
 
 						if nodeKey {
-							privKey := tm_crypto.GenPrivKeyEd25519()
-							copy(privKey[:], key.PrivateKey.Key)
+							privKey := tmEd25519.GenPrivKey()
+							copy(privKey[:], key.PrivateKey.PrivateKey)
 							nodeKey := &p2p.NodeKey{
 								PrivKey: privKey,
 							}
@@ -232,7 +233,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not build logging configuration: %v\n\nTo see possible logging "+
 						"instructions run:\n  burrow configure --describe-logging", err)
 				}
-				conf.Logging = &logging_config.LoggingConfig{
+				conf.Logging = &logconfig.LoggingConfig{
 					RootSink: sinkConfig,
 				}
 			}

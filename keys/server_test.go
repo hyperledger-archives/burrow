@@ -1,20 +1,17 @@
 package keys
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/ripemd160"
-
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/logging"
-	tm_crypto "github.com/tendermint/tendermint/crypto"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
@@ -62,29 +59,6 @@ func grpcKeysClient() KeysClient {
 	return NewKeysClient(conn)
 }
 
-func checkAddrFromPub(typ string, pub, addr []byte) error {
-	var addr2 []byte
-	switch typ {
-	case "ed25519":
-		tmPubKey := new(tm_crypto.PubKeyEd25519)
-		copy(tmPubKey[:], pub)
-		addr2 = tmPubKey.Address()
-	case "secp256k1":
-		sha := sha256.New()
-		sha.Write(pub)
-
-		hash := ripemd160.New()
-		hash.Write(sha.Sum(nil))
-		addr2 = hash.Sum(nil)
-	default:
-		return fmt.Errorf("Unknown or incomplete typ %s", typ)
-	}
-	if bytes.Compare(addr, addr2) != 0 {
-		return fmt.Errorf("Keygen addr doesn't match pub. Got %X, expected %X", addr2, addr)
-	}
-	return nil
-}
-
 func testServerKeygenAndPub(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -102,9 +76,11 @@ func testServerKeygenAndPub(t *testing.T, typ string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = checkAddrFromPub(typ, resp.GetPublicKey(), addrB[:]); err != nil {
-		t.Fatal(err)
-	}
+	curveType, err := crypto.CurveTypeFromString(typ)
+	require.NoError(t, err)
+	publicKey, err := crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
+	require.NoError(t, err)
+	assert.Equal(t, addrB, publicKey.Address())
 }
 
 func TestServerKeygenAndPub(t *testing.T) {
