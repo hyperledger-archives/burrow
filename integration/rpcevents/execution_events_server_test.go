@@ -20,14 +20,16 @@ package rpcevents
 import (
 	"context"
 	"io"
+	"strconv"
 	"testing"
-
 	"time"
 
-	"strconv"
-
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
@@ -93,7 +95,8 @@ func TestGetEventsSend(t *testing.T) {
 			rpcevents.LatestBound()),
 	}
 	numSends := 1100
-	responses := testGetEventsSend(t, numSends, request)
+	doSends(t, numSends, rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress))
+	responses := getEvents(t, request)
 	assert.Equal(t, numSends*2, countEventsAndCheckConsecutive(t, responses),
 		"should receive 1 input, 1 output per send")
 }
@@ -105,7 +108,8 @@ func TestGetEventsSendContainsAA(t *testing.T) {
 		Query: "TxHash CONTAINS 'AA'",
 	}
 	numSends := 1100
-	responses := testGetEventsSend(t, numSends, request)
+	doSends(t, numSends, rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress))
+	responses := getEvents(t, request)
 	for _, response := range responses {
 		for _, ev := range response.Events {
 			require.Contains(t, ev.Header.TxHash.String(), "AA")
@@ -120,13 +124,31 @@ func TestGetEventsSendFiltered(t *testing.T) {
 		Query: query.NewBuilder().AndEquals(event.EventTypeKey, exec.TypeAccountInput.String()).String(),
 	}
 	numSends := 500
-	responses := testGetEventsSend(t, numSends, request)
+	doSends(t, numSends, rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress))
+	responses := getEvents(t, request)
 	assert.Equal(t, numSends, countEventsAndCheckConsecutive(t, responses), "should receive a single input event per send")
 }
 
-func testGetEventsSend(t *testing.T, numSends int, request *rpcevents.BlocksRequest) []*rpcevents.GetEventsResponse {
+func TestRevert(t *testing.T) {
+	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	txe := rpctest.CreateContract(t, tcli, inputAddress, rpctest.Bytecode_revert)
+	functionID := abi.GetFunctionID("RevertAt(uint32)")
+	contractAddress := txe.Receipt.ContractAddress
+	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress,
+		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
+	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 
-	doSends(t, numSends, rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress))
+	request := &rpcevents.BlocksRequest{
+		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.LatestBound()),
+		Query: query.Must(query.NewBuilder().AndEquals(event.EventIDKey, exec.EventStringLogEvent(contractAddress)).
+			AndEquals(event.TxHashKey, txe.TxHash).Query()).String(),
+	}
+	evs := getEvents(t, request)
+	n := countEventsAndCheckConsecutive(t, evs)
+	assert.Equal(t, 0, n, "should not see reverted events")
+}
+
+func getEvents(t *testing.T, request *rpcevents.BlocksRequest) []*rpcevents.GetEventsResponse {
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
 	evs, err := ecli.GetEvents(context.Background(), request)
 	require.NoError(t, err)
@@ -167,12 +189,12 @@ func doSends(t *testing.T, numSends int, cli rpctransact.TransactClient) {
 	require.Equal(t, numSends, <-countCh)
 }
 
-func countEventsAndCheckConsecutive(t *testing.T, respones []*rpcevents.GetEventsResponse) int {
+func countEventsAndCheckConsecutive(t *testing.T, responses []*rpcevents.GetEventsResponse) int {
 	i := 0
 	var height uint64
 	var index uint64
 	txHash := ""
-	for _, resp := range respones {
+	for _, resp := range responses {
 		require.True(t, resp.Height > height, "must not receive multiple GetEventsResponses for the same block")
 		height := resp.Height
 		for _, ev := range resp.Events {

@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/gogo/protobuf/proto"
-	bcm "github.com/hyperledger/burrow/bcm"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -253,9 +253,11 @@ func filterTxs(be *exec.BlockExecution, qry query.Query) []*exec.TxExecution {
 func filterEvents(be *exec.BlockExecution, qry query.Query) []*exec.Event {
 	var evs []*exec.Event
 	for _, txe := range be.TxExecutions {
-		for _, ev := range txe.Events {
-			if qry.Matches(ev.Tagged()) {
-				evs = append(evs, ev)
+		if txe.Exception == nil {
+			for _, ev := range txe.Events {
+				if qry.Matches(ev.Tagged()) {
+					evs = append(evs, ev)
+				}
 			}
 		}
 	}
