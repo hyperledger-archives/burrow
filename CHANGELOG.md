@@ -1,14 +1,15 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [Unreleased]
+## [0.20.1]
 ### Changed
 - The snatives functions have new signatures; string arguments are now string, not byte32.
--
+- The Solidity interface contracts can be generated using the "burrow snatives" command, and the make snatives target is gone.
 
 ### Fixed
 - TxExecutions that were exceptions (for example those that were REVERTed) will no longer have their events emitted from ExecutionEventsServer.GetEvents. They remain stored in state for the time being.
 - CallTxSim and CallCodeSim now take same code path as real transactions (via CallContext)
 
 ### Added
+- Upgraded to Tendermint 0.22.8 (from 0.22.4).
 - Support mempool signing for BroadcastTxAsync.
 - Reload log file (e.g. for logrotate) on SIGHUP and dump capture logs on SIGUSR1 and on shutdown (e.g. for debug).
 - File logger accepts {{.Timestamp}} in file names to generate a log file per run.
@@ -250,7 +251,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.20.0...HEAD
+[0.20.1]: https://github.com/hyperledger/burrow/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/hyperledger/burrow/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/hyperledger/burrow/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/hyperledger/burrow/compare/v0.18.0...v0.18.1
