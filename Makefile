@@ -196,7 +196,7 @@ test_integration_bosmarmot: bos build_db
 	make npm_install && \
 	GOPATH="${BOSMARMOT_GOPATH}" \
 	burrow_bin="${REPO}/bin/burrow" \
-	make test_integration_no_burrow
+	make test_burrow_js_no_burrow
 
 bin/solc: ./tests/scripts/deps/solc.sh
 	@mkdir -p bin

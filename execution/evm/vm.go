@@ -1127,6 +1127,11 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 func (vm *VM) createAccount(callState *state.Cache, callee *acm.MutableAccount, logger *logging.Logger) (*acm.MutableAccount, errors.CodedError) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
+	if IsRegisteredNativeContract(newAccount.Address().Word256()) {
+		return nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+			"cannot create account at %v because that address is reserved for a native contract",
+			newAccount.Address())
+	}
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {
 		return nil, errors.AsException(err)
