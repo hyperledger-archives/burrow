@@ -46,6 +46,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - File logger accepts {{.Timestamp}} in file names to generate a log file per run.
 - Ability to set --external-address on burrow configure and burrow start
 - Ability to set various command line options on burrow configure and burrow start and by BURROW_ prefixed environment variables
+- Exposed Tendermint SeedMode option
 
 
 ### Fixed

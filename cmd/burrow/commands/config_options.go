@@ -20,7 +20,7 @@ type configOptions struct {
 func addConfigOptions(cmd *cli.Cmd) *configOptions {
 	spec := "[--validator-moniker=<human readable moniker>] " +
 		"[--validator-index=<index of validator in GenesisDoc> | --validator-address=<address of validator signing key>] " +
-		"[--validator-passphrase=<secret passphrase to unlock validator key>] [--validator-moniker=<foo>] " +
+		"[--validator-passphrase=<secret passphrase to unlock validator key>] " +
 		"[--external-address=<hostname:port>]"
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
