@@ -135,7 +135,7 @@ workflows:
             # releases on master that we specifically want to build)
             <<: *tags_filters
             branches:
-              only: develop
+              ignore: /.*/
 
       - release:
           requires:
