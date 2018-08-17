@@ -236,7 +236,7 @@ tag_release: test check CHANGELOG.md NOTES.md build
 
 .PHONY: release
 release: docs check test
-	@scripts/is_checkout_dirty.sh || echo "checkout is dirty so not releasing!" && exit 1
+	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
 	@scripts/release.sh
 
 .PHONY: build_ci_image
