@@ -121,7 +121,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, keyClient, kern.Logger,
 		exeOptions...)
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%X", genesisDoc.ChainID(), privValidator.GetAddress())
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.

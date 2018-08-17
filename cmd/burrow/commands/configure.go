@@ -73,6 +73,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 			"[--generate-node-keys] " +
 			"[--logging=<logging program>] [--describe-logging] [--debug]"
 
+		configOpts := addConfigOptions(cmd)
+
 		cmd.Action = func() {
 			conf := config.DefaultBurrowConfig()
 
@@ -257,6 +259,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Could not write GenesisDoc JSON: %v", err)
 				}
 				conf.GenesisDoc = nil
+			}
+
+			err := configOpts.configure(conf)
+			if err != nil {
+				output.Fatalf("could not update burrow config: %v", err)
 			}
 
 			if *jsonOutOpt {

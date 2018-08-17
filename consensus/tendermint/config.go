@@ -10,6 +10,8 @@ import (
 type BurrowTendermintConfig struct {
 	// Initial peers we connect to for peer exchange
 	Seeds string
+	// Whether this node should crawl the network looking for new peers - disconnecting to peers after it has shared addresses
+	SeedMode bool
 	// Peers to which we automatically connect
 	PersistentPeers string
 	ListenAddress   string
@@ -38,6 +40,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.Mempool.RootDir = btc.TendermintRoot
 		conf.P2P.RootDir = btc.TendermintRoot
 		conf.P2P.Seeds = btc.Seeds
+		conf.P2P.SeedMode = btc.SeedMode
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.P2P.ExternalAddress = btc.ExternalAddress
