@@ -8,15 +8,14 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/rpcinfo/infoclient"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/rpc/tm/tmclient"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
@@ -81,14 +80,14 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 	return outCh
 }
 
-func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address) *exec.TxExecution {
+func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) *exec.TxExecution {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
 		Address:  nil,
-		Data:     Bytecode_strange_loop,
+		Data:     bytecode,
 		Fee:      2,
 		GasLimit: 10000,
 	})
@@ -96,19 +95,17 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 	return txe
 }
 
-func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress,
-	contractAddress crypto.Address) *exec.TxExecution {
-
-	functionID := abi.FunctionID("UpsieDownsie()")
+func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	data []byte) *exec.TxExecution {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
 		Address:  &contractAddress,
-		Data:     functionID[:],
+		Data:     data,
 		Fee:      2,
-		GasLimit: 10000,
+		GasLimit: 1000000,
 	})
 	require.NoError(t, err)
 	return txe
@@ -132,7 +129,7 @@ func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypt
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func MakeDefaultCallTx(t *testing.T, client tmclient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
+func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.Envelope {
 	sequence := GetSequence(t, client, PrivateAccounts[0].Address())
 	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee, sequence+1)
@@ -145,8 +142,8 @@ func MakeDefaultCallTx(t *testing.T, client tmclient.RPCClient, addr *crypto.Add
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func GetSequence(t *testing.T, client tmclient.RPCClient, addr crypto.Address) uint64 {
-	acc, err := tmclient.GetAccount(client, addr)
+func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address) uint64 {
+	acc, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,8 +154,8 @@ func GetSequence(t *testing.T, client tmclient.RPCClient, addr crypto.Address) u
 }
 
 // get the account
-func GetAccount(t *testing.T, client tmclient.RPCClient, addr crypto.Address) acm.Account {
-	ac, err := tmclient.GetAccount(client, addr)
+func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) acm.Account {
+	ac, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,16 +163,16 @@ func GetAccount(t *testing.T, client tmclient.RPCClient, addr crypto.Address) ac
 }
 
 // dump all storage for an account. currently unused
-func DumpStorage(t *testing.T, client tmclient.RPCClient, addr crypto.Address) *rpc.ResultDumpStorage {
-	resp, err := tmclient.DumpStorage(client, addr)
+func DumpStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *rpc.ResultDumpStorage {
+	resp, err := infoclient.DumpStorage(client, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return resp
 }
 
-func GetStorage(t *testing.T, client tmclient.RPCClient, addr crypto.Address, key []byte) []byte {
-	resp, err := tmclient.GetStorage(client, addr, key)
+func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, key []byte) []byte {
+	resp, err := infoclient.Storage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)
 	}

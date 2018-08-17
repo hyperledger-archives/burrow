@@ -50,7 +50,7 @@ func NewRing(initialSet Iterable, windowSize int) *Ring {
 
 // Implement Reader
 // Get power at index from the delta bucket then falling through to the cumulative
-func (vc *Ring) PowerAt(index int64, id crypto.Addressable) *big.Int {
+func (vc *Ring) PowerAt(index int64, id crypto.PublicKey) *big.Int {
 	power := vc.Head().MaybePower(id)
 	if power != nil {
 		return power
@@ -58,7 +58,7 @@ func (vc *Ring) PowerAt(index int64, id crypto.Addressable) *big.Int {
 	return vc.Cum().Power(id)
 }
 
-func (vc *Ring) Power(id crypto.Addressable) *big.Int {
+func (vc *Ring) Power(id crypto.PublicKey) *big.Int {
 	return vc.PowerAt(vc.head, id)
 }
 
@@ -67,7 +67,7 @@ func (vc *Ring) Resultant(index int64) *Set {
 	i := vc.index(index)
 	cum := CopyTrim(vc.cum[i])
 	vc.delta[i].Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		cum.AlterPower(id, power)
+		cum.AlterPower(id.PublicKey(), power)
 		return
 	})
 	return cum
@@ -78,7 +78,7 @@ func (vc *Ring) TotalPower() *big.Int {
 }
 
 // Updates the current head bucket (accumulator) with some safety checks
-func (vc *Ring) AlterPower(id crypto.Addressable, power *big.Int) (*big.Int, error) {
+func (vc *Ring) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	if power.Sign() == -1 {
 		return nil, fmt.Errorf("cannot set negative validator power: %v", power)
 	}
@@ -109,7 +109,7 @@ func (vc *Ring) AlterPower(id crypto.Addressable, power *big.Int) (*big.Int, err
 }
 
 // Returns the flow that would be induced by a validator change by comparing the head accumulater with the current set
-func (vc *Ring) Flow(id crypto.Addressable, power *big.Int) *big.Int {
+func (vc *Ring) Flow(id crypto.PublicKey, power *big.Int) *big.Int {
 	flow := new(big.Int)
 	return flow.Abs(flow.Sub(power, vc.Cum().Power(id)))
 }

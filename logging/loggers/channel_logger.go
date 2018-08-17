@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/eapache/channels"
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/errors"
 )
 
@@ -31,7 +31,7 @@ type ChannelLogger struct {
 	sync.RWMutex
 }
 
-var _ kitlog.Logger = (*ChannelLogger)(nil)
+var _ log.Logger = (*ChannelLogger)(nil)
 
 // Creates a Logger that uses a uses a non-blocking ring buffered channel.
 // This logger provides a common abstraction for both a buffered, flushable
@@ -45,9 +45,9 @@ func NewChannelLogger(loggingRingBufferCap channels.BufferCap) *ChannelLogger {
 
 func (cl *ChannelLogger) Log(keyvals ...interface{}) error {
 	// In case channel is being reset
-	cl.RWMutex.RLock()
+	cl.RLock()
+	defer cl.RUnlock()
 	cl.ch.In() <- keyvals
-	cl.RWMutex.RUnlock()
 	// We don't have a way to pass on any logging errors, but that's okay: Log is
 	// a maximal interface and the error return type is only there for special
 	// cases.
@@ -96,7 +96,7 @@ func readLogLine(logLine interface{}, ok bool) []interface{} {
 // You may pass in a channel
 //
 // Exits if the channel is closed.
-func (cl *ChannelLogger) DrainForever(logger kitlog.Logger, errCh channels.Channel) {
+func (cl *ChannelLogger) DrainForever(logger log.Logger, errCh channels.Channel) {
 	// logLine could be nil if channel was closed while waiting for next line
 	for logLine := cl.WaitReadLogLine(); logLine != nil; logLine = cl.WaitReadLogLine() {
 		err := logger.Log(logLine...)
@@ -107,9 +107,11 @@ func (cl *ChannelLogger) DrainForever(logger kitlog.Logger, errCh channels.Chann
 }
 
 // Drains everything that is available at the time of calling
-func (cl *ChannelLogger) Flush(logger kitlog.Logger) error {
+func (cl *ChannelLogger) Flush(logger log.Logger) error {
 	// Grab the buffer at the here rather than within loop condition so that we
 	// do not drain the buffer forever
+	cl.Lock()
+	defer cl.Unlock()
 	bufferLength := cl.BufferLength()
 	var errs []error
 	for i := 0; i < bufferLength; i++ {
@@ -128,7 +130,7 @@ func (cl *ChannelLogger) Flush(logger kitlog.Logger) error {
 // for at least one line
 func (cl *ChannelLogger) FlushLogLines() [][]interface{} {
 	logLines := make([][]interface{}, 0, cl.ch.Len())
-	cl.Flush(kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+	cl.Flush(log.LoggerFunc(func(keyvals ...interface{}) error {
 		logLines = append(logLines, keyvals)
 		return nil
 	}))
@@ -141,14 +143,14 @@ func (cl *ChannelLogger) FlushLogLines() [][]interface{} {
 // old channel may be.
 func (cl *ChannelLogger) Reset() {
 	cl.RWMutex.Lock()
+	defer cl.RWMutex.Unlock()
 	cl.ch.Close()
 	cl.ch = channels.NewRingChannel(cl.ch.Cap())
-	cl.RWMutex.Unlock()
 }
 
 // Returns a Logger that wraps the outputLogger passed and does not block on
 // calls to Log and a channel of any errors from the underlying logger
-func NonBlockingLogger(outputLogger kitlog.Logger) (*ChannelLogger, channels.Channel) {
+func NonBlockingLogger(outputLogger log.Logger) (*ChannelLogger, channels.Channel) {
 	cl := NewChannelLogger(DefaultLoggingRingBufferCap)
 	errCh := channels.NewRingChannel(cl.BufferCap())
 	go cl.DrainForever(outputLogger, errCh)

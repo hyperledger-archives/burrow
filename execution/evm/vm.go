@@ -108,7 +108,8 @@ func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm permiss
 	return value
 }
 
-func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64) {
+func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, callerAddress, calleeAddress crypto.Address,
+	input []byte, value uint64, gas *uint64) {
 	// fire the post call event (including exception if applicable)
 	vm.eventSink.Call(&exec.CallEvent{
 		CallData: &exec.CallData{
@@ -130,7 +131,8 @@ func (vm *VM) fireCallEvent(exception *errors.CodedError, output *[]byte, caller
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, code, input []byte, value uint64,
+	gas *uint64) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
@@ -140,7 +142,7 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 		*exception = err
 		return
 	}
-	//childCallState
+
 	childCallState := state.NewCache(callState)
 
 	if len(code) > 0 {
@@ -148,10 +150,11 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 		output, err = vm.call(childCallState, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
-			*exception = errors.Call{
+			err = errors.Call{
 				CallError:    err,
 				NestedErrors: vm.nestedCallErrors,
 			}
+			*exception = err
 			transferErr := transfer(callee, caller, value)
 			if transferErr != nil {
 				return nil, errors.Wrap(transferErr,
@@ -1124,6 +1127,11 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 func (vm *VM) createAccount(callState *state.Cache, callee *acm.MutableAccount, logger *logging.Logger) (*acm.MutableAccount, errors.CodedError) {
 	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
+	if IsRegisteredNativeContract(newAccount.Address().Word256()) {
+		return nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+			"cannot create account at %v because that address is reserved for a native contract",
+			newAccount.Address())
+	}
 	err := callState.UpdateAccount(newAccount)
 	if err != nil {
 		return nil, errors.AsException(err)

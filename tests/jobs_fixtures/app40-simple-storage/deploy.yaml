@@ -1,0 +1,26 @@
+jobs:
+
+- name: deploySimpleStorage
+  deploy:
+      contract: simple_storage.sol
+
+- name: setStorage
+  call:
+      destination: $deploySimpleStorage
+      function: set
+      data:
+        - 3
+
+- name: getStorage
+  call:
+      destination: $deploySimpleStorage
+      function: get
+
+- name: assertStorage
+  assert:
+      key: $getStorage
+      relation: eq
+      val: 3
+
+
+

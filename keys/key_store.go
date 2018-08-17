@@ -391,7 +391,7 @@ func NewKey(typ crypto.CurveType) (*Key, error) {
 }
 
 func (k *Key) Pubkey() []byte {
-	return k.PublicKey.RawBytes()
+	return k.PublicKey.PublicKey
 }
 
 func NewKeyFromPub(curveType crypto.CurveType, PubKeyBytes []byte) (*Key, error) {

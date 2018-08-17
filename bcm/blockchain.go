@@ -40,6 +40,7 @@ type BlockchainInfo interface {
 	ChainID() string
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
+	LastCommitTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
 	Validators() validator.IterableReader
@@ -56,6 +57,7 @@ type Blockchain struct {
 	lastBlockHeight       uint64
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
+	lastCommitTime        time.Time
 	appHashAfterLastBlock []byte
 	validatorCache        *validator.Ring
 	validatorCheckCache   *validator.Ring
@@ -157,6 +159,7 @@ func (bc *Blockchain) CommitBlock(blockTime time.Time,
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
+	bc.lastCommitTime = time.Now().UTC()
 	return
 }
 
@@ -223,6 +226,12 @@ func (bc *Blockchain) LastBlockTime() time.Time {
 	bc.RLock()
 	defer bc.RUnlock()
 	return bc.lastBlockTime
+}
+
+func (bc *Blockchain) LastCommitTime() time.Time {
+	bc.RLock()
+	defer bc.RUnlock()
+	return bc.lastCommitTime
 }
 
 func (bc *Blockchain) LastBlockHash() []byte {

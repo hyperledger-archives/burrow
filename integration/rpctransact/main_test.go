@@ -25,6 +25,7 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
+	"github.com/hyperledger/burrow/logging/logconfig"
 )
 
 var _ = integration.ClaimPorts()
@@ -35,7 +36,14 @@ var kern *core.Kernel
 func TestMain(m *testing.M) {
 	cleanup := integration.EnterTestDirectory()
 	defer cleanup()
-	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig, nil)
+	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig,
+		logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+			return sink
+			// Uncomment for debug opcode output
+			//return sink.
+			//	SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch, "tag", "DebugOpcodes")).
+			//	SetOutput(logconfig.StdoutOutput().SetFormat("{{.message}}"))
+		}))
 	err := kern.Boot()
 	if err != nil {
 		panic(err)

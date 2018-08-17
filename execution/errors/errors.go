@@ -38,6 +38,7 @@ const (
 	ErrorCodeOverpayment
 	ErrorCodeZeroPayment
 	ErrorCodeInvalidSequence
+	ErrorCodeReservedAddress
 )
 
 func (c Code) ErrorCode() Code {
@@ -110,12 +111,14 @@ func (c Code) String() string {
 		return "Zero payment error"
 	case ErrorCodeInvalidSequence:
 		return "Invalid sequence number"
+	case ErrorCodeReservedAddress:
+		return "Address is reserved for SNative or internal use"
 	default:
 		return "Unknown error"
 	}
 }
 
-func NewCodedError(errorCode Code, exception string) *Exception {
+func NewException(errorCode Code, exception string) *Exception {
 	if exception == "" {
 		return nil
 	}
@@ -134,15 +137,15 @@ func AsException(err error) *Exception {
 	case *Exception:
 		return e
 	case CodedError:
-		return NewCodedError(e.ErrorCode(), e.Error())
+		return NewException(e.ErrorCode(), e.Error())
 	default:
-		return NewCodedError(ErrorCodeGeneric, err.Error())
+		return NewException(ErrorCodeGeneric, err.Error())
 	}
 }
 
 func Wrap(err error, message string) *Exception {
 	ex := AsException(err)
-	return NewCodedError(ex.ErrorCode(), message+": "+ex.Error())
+	return NewException(ex.ErrorCode(), message+": "+ex.Error())
 }
 
 func Errorf(format string, a ...interface{}) *Exception {
@@ -150,7 +153,7 @@ func Errorf(format string, a ...interface{}) *Exception {
 }
 
 func ErrorCodef(errorCode Code, format string, a ...interface{}) *Exception {
-	return NewCodedError(errorCode, fmt.Sprintf(format, a...))
+	return NewException(errorCode, fmt.Sprintf(format, a...))
 }
 
 func (e *Exception) AsError() error {
@@ -166,12 +169,12 @@ func (e *Exception) ErrorCode() Code {
 }
 
 func (e *Exception) String() string {
-	return e.Error()
+	return fmt.Sprintf("Error %d: %s", e.Code, e.Exception)
 }
 
 func (e *Exception) Error() string {
 	if e == nil {
 		return ""
 	}
-	return fmt.Sprintf("Error %d: %s", e.Code, e.Exception)
+	return e.Exception
 }

@@ -62,8 +62,8 @@ func mockKeyFromPrivateAccount(privateAccount *acm.PrivateAccount) *Key {
 	key := &Key{
 		Name:       privateAccount.Address().String(),
 		Address:    privateAccount.Address(),
-		PublicKey:  privateAccount.PublicKey().RawBytes(),
-		PrivateKey: privateAccount.PrivateKey().RawBytes(),
+		PublicKey:  privateAccount.PublicKey().PublicKey,
+		PrivateKey: privateAccount.PrivateKey().PrivateKey,
 	}
 	return key
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/streadway/simpleuuid"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/p2p"
@@ -16,9 +17,10 @@ type NodeView struct {
 	tmNode             *Node
 	validatorPublicKey crypto.PublicKey
 	txDecoder          txs.Decoder
+	runID              simpleuuid.UUID
 }
 
-func NewNodeView(tmNode *Node, txDecoder txs.Decoder) (*NodeView, error) {
+func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*NodeView, error) {
 	publicKey, err := crypto.PublicKeyFromTendermintPubKey(tmNode.PrivValidator().GetPubKey())
 	if err != nil {
 		return nil, err
@@ -27,6 +29,7 @@ func NewNodeView(tmNode *Node, txDecoder txs.Decoder) (*NodeView, error) {
 		validatorPublicKey: publicKey,
 		tmNode:             tmNode,
 		txDecoder:          txDecoder,
+		runID:              runID,
 	}, nil
 }
 
@@ -42,6 +45,10 @@ func (nv *NodeView) IsListening() bool {
 	return nv.tmNode.Switch().IsListening()
 }
 
+func (nv *NodeView) IsFastSyncing() bool {
+	return nv.tmNode.ConsensusReactor().FastSync()
+}
+
 func (nv *NodeView) Listeners() []p2p.Listener {
 	return nv.tmNode.Switch().Listeners()
 }
@@ -52,6 +59,10 @@ func (nv *NodeView) Peers() p2p.IPeerSet {
 
 func (nv *NodeView) BlockStore() state.BlockStoreRPC {
 	return nv.tmNode.BlockStore()
+}
+
+func (nv *NodeView) RunID() simpleuuid.UUID {
+	return nv.runID
 }
 
 // Pass -1 to get all available transactions
@@ -69,6 +80,10 @@ func (nv *NodeView) MempoolTransactions(maxTxs int) ([]*txs.Envelope, error) {
 
 func (nv *NodeView) RoundState() *ctypes.RoundState {
 	return nv.tmNode.ConsensusState().GetRoundState()
+}
+
+func (nv *NodeView) RoundStateJSON() ([]byte, error) {
+	return nv.tmNode.ConsensusState().GetRoundStateJSON()
 }
 
 func (nv *NodeView) PeerRoundStates() ([]*ctypes.PeerRoundState, error) {

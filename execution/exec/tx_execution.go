@@ -92,7 +92,7 @@ func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) {
 
 func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, exception *errors.Exception) {
 	txe.Append(&Event{
-		Header:        txe.Header(TypeCall, EventStringGovernAccount(governAccount.AccountUpdate.Address), exception),
+		Header:        txe.Header(TypeGovernAccount, EventStringGovernAccount(governAccount.AccountUpdate.Address), exception),
 		GovernAccount: governAccount,
 	})
 }

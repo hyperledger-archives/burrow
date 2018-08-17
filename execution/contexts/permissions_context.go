@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 )
@@ -49,14 +48,6 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	if !HasPermission(ctx.StateWriter, inAcc, permFlag, ctx.Logger) {
 		return fmt.Errorf("account %s does not have moderator permission %s (%b)", ctx.tx.Input.Address,
 			permFlag.String(), permFlag)
-	}
-
-	err = validateInput(inAcc, ctx.tx.Input)
-	if err != nil {
-		ctx.Logger.InfoMsg("validateInput failed",
-			"tx_input", ctx.tx.Input,
-			structure.ErrorKey, err)
-		return err
 	}
 
 	value := ctx.tx.Input.Amount
@@ -114,12 +105,6 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// Good!
-	ctx.Logger.TraceMsg("Incrementing sequence number for PermsTx",
-		"tag", "sequence",
-		"account", inAcc.Address(),
-		"old_sequence", inAcc.Sequence(),
-		"new_sequence", inAcc.Sequence()+1)
-	inAcc.IncSequence()
 	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
 		return err

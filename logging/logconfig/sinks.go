@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/eapache/channels"
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )
@@ -104,7 +104,8 @@ type (
 	}
 
 	PruneConfig struct {
-		Keys []string
+		Keys        []string
+		IncludeKeys bool
 	}
 
 	CaptureConfig struct {
@@ -227,6 +228,16 @@ func LabelTransform(prefix bool, labelKeyvals ...string) *TransformConfig {
 	}
 }
 
+func OnlyTransform(keys ...string) *TransformConfig {
+	return &TransformConfig{
+		TransformType: Prune,
+		PruneConfig: &PruneConfig{
+			Keys:        keys,
+			IncludeKeys: true,
+		},
+	}
+}
+
 func PruneTransform(keys ...string) *TransformConfig {
 	return &TransformConfig{
 		TransformType: Prune,
@@ -287,18 +298,18 @@ func VectoriseTransform() *TransformConfig {
 }
 
 // Logger formation
-func (sinkConfig *SinkConfig) BuildLogger() (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+func (sinkConfig *SinkConfig) BuildLogger() (log.Logger, map[string]*loggers.CaptureLogger, error) {
 	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
 }
 
-func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*loggers.CaptureLogger) (kitlog.Logger,
+func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*loggers.CaptureLogger) (log.Logger,
 	map[string]*loggers.CaptureLogger, error) {
 
 	if sinkConfig == nil {
-		return kitlog.NewNopLogger(), captures, nil
+		return log.NewNopLogger(), captures, nil
 	}
 	numSinks := len(sinkConfig.Sinks)
-	outputLoggers := make([]kitlog.Logger, numSinks, numSinks+1)
+	outputLoggers := make([]log.Logger, numSinks, numSinks+1)
 	// We need a depth-first post-order over the output loggers so we'll keep
 	// recurring into children sinks we reach a terminal sink (with no children)
 	for i, sc := range sinkConfig.Sinks {
@@ -326,10 +337,10 @@ func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*logg
 	return outputLogger, captures, nil
 }
 
-func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
+func BuildOutputLogger(outputConfig *OutputConfig) (log.Logger, error) {
 	switch outputConfig.OutputType {
 	case NoOutput:
-		return kitlog.NewNopLogger(), nil
+		return log.NewNopLogger(), nil
 	case File:
 		return loggers.NewFileLogger(outputConfig.FileConfig.Path, outputConfig.Format)
 	case Stdout:
@@ -343,17 +354,21 @@ func BuildOutputLogger(outputConfig *OutputConfig) (kitlog.Logger, error) {
 }
 
 func BuildTransformLoggerPassthrough(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
-	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+	outputLogger log.Logger) (log.Logger, map[string]*loggers.CaptureLogger, error) {
 
 	transformThenOutputLogger, captures, err := BuildTransformLogger(transformConfig, captures, outputLogger)
 	if err != nil {
 		return nil, nil, err
 	}
+	// send signals through captures so they can be flushed
+	if transformConfig.TransformType == Capture {
+		return transformThenOutputLogger, captures, nil
+	}
 	return signalPassthroughLogger(outputLogger, transformThenOutputLogger), captures, nil
 }
 
 func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]*loggers.CaptureLogger,
-	outputLogger kitlog.Logger) (kitlog.Logger, map[string]*loggers.CaptureLogger, error) {
+	outputLogger log.Logger) (log.Logger, map[string]*loggers.CaptureLogger, error) {
 
 	switch transformConfig.TransformType {
 	case NoTransform:
@@ -367,9 +382,9 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 			keyvals = append(keyvals, k, v)
 		}
 		if transformConfig.LabelConfig.Prefix {
-			return kitlog.WithPrefix(outputLogger, keyvals...), captures, nil
+			return log.WithPrefix(outputLogger, keyvals...), captures, nil
 		} else {
-			return kitlog.With(outputLogger, keyvals...), captures, nil
+			return log.With(outputLogger, keyvals...), captures, nil
 		}
 	case Prune:
 		if transformConfig.PruneConfig == nil {
@@ -379,8 +394,12 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 		for i, k := range transformConfig.PruneConfig.Keys {
 			keys[i] = k
 		}
-		return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
-			return outputLogger.Log(structure.RemoveKeys(keyvals, keys...)...)
+		return log.LoggerFunc(func(keyvals ...interface{}) error {
+			if transformConfig.PruneConfig.IncludeKeys {
+				return outputLogger.Log(structure.OnlyKeys(keyvals, keys...)...)
+			} else {
+				return outputLogger.Log(structure.RemoveKeys(keyvals, keys...)...)
+			}
 		}), captures, nil
 
 	case Capture:
@@ -422,8 +441,8 @@ func BuildTransformLogger(transformConfig *TransformConfig, captures map[string]
 	}
 }
 
-func signalPassthroughLogger(ifSignalLogger kitlog.Logger, otherwiseLogger kitlog.Logger) kitlog.Logger {
-	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+func signalPassthroughLogger(ifSignalLogger log.Logger, otherwiseLogger log.Logger) log.Logger {
+	return log.LoggerFunc(func(keyvals ...interface{}) error {
 		if structure.Signal(keyvals) != "" {
 			return ifSignalLogger.Log(keyvals...)
 		}

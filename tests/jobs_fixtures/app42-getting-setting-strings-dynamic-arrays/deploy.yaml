@@ -1,0 +1,93 @@
+jobs:
+
+- name: setTotalNumberOfCars
+  set:
+      val: 5
+
+- name: setCarVariable1
+  set:
+      val: 'Batmobile'
+
+- name: setCarVariable2
+  set:
+      val: 'Bruce Waynes Lambourgini'
+
+- name: setDriverNameVariable
+  set:
+      val: 'Alfred'
+
+- name: deployDriver
+  deploy:
+      contract: driver.sol
+
+- name: setDriverName
+  call:
+      destination: $deployDriver
+      function: setName
+      data:
+        - $setDriverNameVariable
+
+- name: queryDriverName
+  query-contract:
+      destination: $deployDriver
+      function: getName
+
+- name: assertName
+  assert:
+      key: $queryDriverName
+      relation: eq
+      val: $setDriverNameVariable
+
+- name: addDriverCarArray
+  call:
+      destination: $deployDriver
+      function: addCars
+      data:
+        - [ 'Red Car', 'Green Car', 'Blue Car' ]
+
+- name: queryDriverCarArray
+  query-contract:
+      destination: $deployDriver
+      function: getCars
+
+- name: assertCarArray
+  assert:
+      key: $queryDriverCarArray
+      relation: ne
+      val: ""
+
+- name: queryDriverCarAmountShouldBeThree
+  query-contract:
+      destination: $deployDriver
+      function: getCarAmount
+
+- name: assertCarArrayAmount
+  assert:
+      key: $queryDriverCarAmountShouldBeThree
+      relation: eq
+      val: 3
+
+- name: addBatmobile
+  call:
+      destination: $deployDriver
+      function: addCar
+      data:
+        - $setCarVariable1
+
+- name: addLambo
+  call:
+      destination: $deployDriver
+      function: addCar
+      data:
+        - $setCarVariable2
+
+- name: queryDriverCarAmount
+  query-contract:
+      destination: $deployDriver
+      function: getCarAmount
+
+- name: assertCarAmount
+  assert:
+      key: $queryDriverCarAmount
+      relation: eq
+      val: $setTotalNumberOfCars

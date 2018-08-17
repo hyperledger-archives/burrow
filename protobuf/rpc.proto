@@ -4,8 +4,8 @@ syntax = 'proto3';
 option go_package = "github.com/hyperledger/burrow/rpc";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "crypto.proto";
 import "tendermint.proto";
+import "validator.proto";
 import "google/protobuf/timestamp.proto";
 
 package rpc;
@@ -18,14 +18,22 @@ option (gogoproto.messagename_all) = true;
 
 message ResultStatus {
     string ChainID = 1;
+    string RunID = 2;
+    string BurrowVersion = 3;
     bytes GenesisHash = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    tendermint.NodeInfo NodeInfo = 2;
-    string NodeVersion = 3;
-    crypto.PublicKey PublicKey = 5 [(gogoproto.nullable) = false];
-    bytes LatestBlockHash = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    uint64 LatestBlockHeight = 7 [(gogoproto.jsontag) = ""];
-    // Unix
-
-    google.protobuf.Timestamp LatestBlockTime = 8 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+    tendermint.NodeInfo NodeInfo = 5;
+    SyncInfo SyncInfo = 6;
+    validator.Validator ValidatorInfo = 7;
 }
 
+message SyncInfo {
+    uint64 LatestBlockHeight = 1 [(gogoproto.jsontag) = ""];
+    bytes LatestBlockHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    bytes LatestAppHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    // Timestamp of block as set by the block proposer
+    google.protobuf.Timestamp LatestBlockTime = 4 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+    // Time at which we committed the last block
+    google.protobuf.Timestamp LatestBlockSeenTime = 5 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+    // When catching up in fast sync
+    bool CatchingUp = 6 [(gogoproto.jsontag) = ""];
+}

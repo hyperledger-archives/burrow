@@ -18,6 +18,14 @@
   version = "v1.2.2"
 
 [[projects]]
+  digest = "1:5a23cd3a5496a0b2da7e3b348d14e77b11a210738c398200d7d6f04ea8cf3bd8"
+  name = "github.com/asaskevich/govalidator"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
+  version = "v9"
+
+[[projects]]
   branch = "master"
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
   name = "github.com/beorn7/perks"
@@ -31,7 +39,7 @@
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
   pruneopts = "NUT"
-  revision = "9a2f9524024889e129a5422aca2cff73cb3eabf6"
+  revision = "f899737d7f2764dc13e4d01ff00108ec58f766a9"
 
 [[projects]]
   branch = "master"
@@ -73,6 +81,30 @@
   revision = "95f809107225be108efcf10a3509e4ea6ceef3c4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e418703bf70f5f9bab1edb4a57f735b3f80bee70efcff92a10d1ceba6fd20de6"
+  name = "github.com/elgs/gojq"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "81fa9a608a130323eaf4b4fc00224f7a467ffbd1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:6b5a42a385e80b611e158e0b172c6c6bd50e38a103bc7b28382685ab878b5384"
+  name = "github.com/elgs/gosplitargs"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a491c5eeb3c841d55913cf4888f5c957be4c598d"
+
+[[projects]]
+  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   digest = "1:2c03593aec9fa7d6969dc7295c636b46369ec2dd45dcf4acfb298281d62528ff"
   name = "github.com/go-kit/kit"
   packages = [
@@ -95,6 +127,17 @@
   pruneopts = "NUT"
   revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
   version = "v0.3.0"
+
+[[projects]]
+  digest = "1:a82caecb6d771d89e452ddf2721e3e37cb247d72202ed983cbcbab4152d9324b"
+  name = "github.com/go-ozzo/ozzo-validation"
+  packages = [
+    ".",
+    "is",
+  ]
+  pruneopts = "NUT"
+  revision = "9d6782aa52aad2ec5f3ea5af63b7dc4bc5192c40"
+  version = "v3.4.0"
 
 [[projects]]
   digest = "1:a1efdbc2762667c8a41cbf02b19a0549c846bf2c1d08cad4f445e3344089f1f0"
@@ -151,6 +194,25 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:02e4365951e1bc55bd6505938ea88e12b5a9d5dfedcb1ae35d5a3833e502833e"
+  name = "github.com/hashicorp/hcl"
+  packages = [
+    ".",
+    "hcl/ast",
+    "hcl/parser",
+    "hcl/printer",
+    "hcl/scanner",
+    "hcl/strconv",
+    "hcl/token",
+    "json/parser",
+    "json/scanner",
+    "json/token",
+  ]
+  pruneopts = "NUT"
+  revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
+
+[[projects]]
+  branch = "master"
   digest = "1:b7f860847a1d71f925ba9385ed95f1ebc0abfeb418a78e219ab61f48fdfeffad"
   name = "github.com/howeyc/gopass"
   packages = ["."]
@@ -158,12 +220,20 @@
   revision = "bf9dde6d0d2c004a008c27aaee91170c786f6db8"
 
 [[projects]]
-  digest = "1:65300ccc4bcb38b107b868155c303312978981e56bca707c81efec57575b5e06"
+  branch = "master"
+  digest = "1:c13aea0b77243f1fcd0253583c90e180010a3a5bbdf43f61a3daddc48d88b0b2"
+  name = "github.com/iancoleman/strcase"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
+
+[[projects]]
+  digest = "1:9a52adf44086cead3b384e5d0dbf7a1c1cce65e67552ee3383a8561c42a18cd3"
   name = "github.com/imdario/mergo"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9316a62528ac99aaecb4e47eadd6dc8aa6533d58"
-  version = "v0.3.5"
+  revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
+  version = "v0.3.6"
 
 [[projects]]
   digest = "1:fa8175fc1639f717d9462d6c507d92b174662db600997f1b4a92aae0571c23de"
@@ -199,6 +269,14 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
+  digest = "1:d244f8666a838fe6ad70ec8fe77f50ebc29fdc3331a2729ba5886bef8435d10d"
+  name = "github.com/magiconair/properties"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c2353362d570a7bfa228149c62842019201cfb71"
+  version = "v1.8.0"
+
+[[projects]]
   digest = "1:5985ef4caf91ece5d54817c11ea25f182697534f8ae6521eadcd628c142ac4b6"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
@@ -207,12 +285,28 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:0392287f4fcbbd32a8352f82044dd0b644284d8a979897810abfa246a080adec"
+  branch = "master"
+  digest = "1:5fe20cfe4ef484c237cec9f947b2a6fa90bad4b8610fd014f0e4211e13d82d5d"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
+
+[[projects]]
+  digest = "1:9a3c7cb3b6be10c156b8ac4f69bcf0bdf483b6e601005505e254958eeb599281"
   name = "github.com/monax/relic"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "f24b36b5f6f7f5c6034c89a6a47de1bfbbf7787e"
-  version = "v1.1.0"
+  revision = "b713bcb44ab7888328eb63f609abd21e111ff9d5"
+  version = "v2.0.0"
+
+[[projects]]
+  digest = "1:51ea800cff51752ff68e12e04106f5887b4daec6f9356721238c28019f0b42db"
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:5cf3f025cbee5951a4ee961de067c8a89fc95a5adabead774f82822efabab121"
@@ -250,7 +344,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3bbebf77a04cda10bd07834d1686141608aca01c1aeb400d504d8aa026793b5a"
+  digest = "1:edddf4ceb3a45778dfbb9364f128fffd92ea9bd6abd70edf1474f56565832682"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
@@ -258,7 +352,7 @@
     "model",
   ]
   pruneopts = "NUT"
-  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
+  revision = "c7de2306084e37d54b8be01f3541a8464345e9a5"
 
 [[projects]]
   branch = "master"
@@ -271,7 +365,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
+  revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
   branch = "master"
@@ -280,6 +374,57 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
+
+[[projects]]
+  digest = "1:b2339e83ce9b5c4f79405f949429a7f68a9a904fed903c672aac1e7ceb7f5f02"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
+  version = "v1.0.6"
+
+[[projects]]
+  digest = "1:a36d61943d51cd4a1d7ecaf6993190527535a57382114ebf6549956b3e4cb612"
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem",
+  ]
+  pruneopts = "NUT"
+  revision = "787d034dfe70e44075ccc060d346146ef53270ad"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:3fa7947ca83b98ae553590d993886e845a4bff19b7b007e869c6e0dd3b9da9cd"
+  name = "github.com/spf13/cast"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+  version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f29f83301ed096daed24a90f4af591b7560cb14b9cc3e1827abbf04db7269ab5"
+  name = "github.com/spf13/jwalterweatherman"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "14d3d4c518341bea657dd8a226f5121c0ff8c9f2"
+
+[[projects]]
+  digest = "1:e3707aeaccd2adc89eba6c062fec72116fe1fc1ba71097da85b4d8ae1668a675"
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
+  version = "v1.0.2"
+
+[[projects]]
+  digest = "1:454979540e2a1582f375a17c106cf4e11e3bcac4baffb4af23e515c87f87de13"
+  name = "github.com/spf13/viper"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "907c19d40d9a6c9bb55f040ff4ae45271a4754b9"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -302,7 +447,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:922191411ad8f61bcd8018ac127589bb489712c1d1a0ab2497aca4b16de417d2"
+  digest = "1:442d2ffa75ffae302ce8800bf4144696b92bef02917923ea132ce2d39efe7d65"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -319,7 +464,7 @@
     "leveldb/util",
   ]
   pruneopts = "NUT"
-  revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
+  revision = "ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd"
 
 [[projects]]
   branch = "master"
@@ -350,7 +495,7 @@
   version = "v0.9.2"
 
 [[projects]]
-  digest = "1:46ac5207f9074a8ca246a3fce7aa576f5c5f43a30c8f3ef833e247777fdb8a4f"
+  digest = "1:eeaef9ab6a6bc08d1a5b9d1184caf2471b5511c1a8f0d4106b46325ec97bd588"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -362,7 +507,10 @@
     "consensus",
     "consensus/types",
     "crypto",
+    "crypto/ed25519",
+    "crypto/encoding/amino",
     "crypto/merkle",
+    "crypto/secp256k1",
     "crypto/tmhash",
     "evidence",
     "libs/autofile",
@@ -396,8 +544,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "c64a3c74c870d725ba1356f75b4afadf0928c297"
-  version = "v0.22.4"
+  revision = "d542d2c3945116697f60451e6a407082c41c3cc9"
+  version = "v0.22.8"
 
 [[projects]]
   branch = "master"
@@ -417,7 +565,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:acfa60b5755859faec71ac0f34d2ffd16113334fa6350aad536b4207e5b5193f"
+  digest = "1:d5ffbaa51e280341d8ae252ac4b08b1de5daaa9373542e6a44437866a6d5bcc5"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -426,8 +574,6 @@
     "internal/subtle",
     "nacl/box",
     "nacl/secretbox",
-    "openpgp/armor",
-    "openpgp/errors",
     "pbkdf2",
     "poly1305",
     "ripemd160",
@@ -436,7 +582,7 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
 
 [[projects]]
   digest = "1:15dbe437d38eb2103f6b55348758958a6f85a400ecc16fcb53b3f271d38cd8ea"
@@ -456,7 +602,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:48419582c83b5715e244977ca617a3ff596dc6808368e3c1dcaf1b3ad2218e53"
+  digest = "1:8e423261417f9a621f0977b216f435619e72cca646191f6194fb5541f7dd849a"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -464,7 +610,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [[projects]]
   digest = "1:a0f29009397dc27c9dc8440f0945d49e5cbb9b72d0b0fc745474d9bfdea2d9f8"
@@ -491,11 +637,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:601e63e7d4577f907118bec825902505291918859d223bce015539e79f1160e3"
+  digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "02b4e95473316948020af0b7a4f0f22c73929b0e"
+  revision = "d0a8f471bba2dbb160885b0000d814ee5d559bad"
 
 [[projects]]
   digest = "1:f778941d5c2e46da5e0f5d553d3e80bf70eb40d2e80bb4c649b625b9133f3d5f"
@@ -548,8 +694,11 @@
     "github.com/btcsuite/btcd/btcec",
     "github.com/cep21/xdgbasedir",
     "github.com/eapache/channels",
+    "github.com/elgs/gojq",
     "github.com/go-kit/kit/log",
     "github.com/go-kit/kit/log/term",
+    "github.com/go-ozzo/ozzo-validation",
+    "github.com/go-ozzo/ozzo-validation/is",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/types",
@@ -557,12 +706,15 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/gorilla/websocket",
     "github.com/howeyc/gopass",
+    "github.com/iancoleman/strcase",
     "github.com/imdario/mergo",
     "github.com/jawher/mow.cli",
     "github.com/monax/relic",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/rcrowley/go-metrics",
+    "github.com/sirupsen/logrus",
+    "github.com/spf13/viper",
     "github.com/streadway/simpleuuid",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
@@ -574,6 +726,9 @@
     "github.com/tendermint/tendermint/consensus",
     "github.com/tendermint/tendermint/consensus/types",
     "github.com/tendermint/tendermint/crypto",
+    "github.com/tendermint/tendermint/crypto/ed25519",
+    "github.com/tendermint/tendermint/crypto/encoding/amino",
+    "github.com/tendermint/tendermint/crypto/secp256k1",
     "github.com/tendermint/tendermint/crypto/tmhash",
     "github.com/tendermint/tendermint/libs/common",
     "github.com/tendermint/tendermint/libs/db",

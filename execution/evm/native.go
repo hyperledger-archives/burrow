@@ -66,7 +66,7 @@ func ExecuteNativeContract(address Word256, state state.ReaderWriter, caller acm
 	}
 	output, err := contract(state, caller, input, gas, logger)
 	if err != nil {
-		return nil, errors.NewCodedError(errors.ErrorCodeNativeFunction, err.Error())
+		return nil, errors.NewException(errors.ErrorCodeNativeFunction, err.Error())
 	}
 	return output, nil
 }

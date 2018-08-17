@@ -1,0 +1,43 @@
+jobs:
+
+- name: app43
+  meta:
+    file: '../app43-string-concatenation/deploy.yaml'
+
+- name: setVar1
+  set:
+    val: 'The Batmobile Is'
+
+- name: setVar2
+  set:
+    val: 'Bruce Waynes Lambourgini'
+
+- name: tester
+  deploy:
+    contract: test.sol
+
+- name: setVar1
+  call:
+    destination: $tester
+    function: setName
+    data:
+    - $setVar1
+
+- name: addVar2
+  call:
+    destination: $tester
+    function: addName
+    data:
+    - $setVar2
+
+- name: getConcatString
+  query-contract:
+      destination: $tester
+      function: getName
+
+- name: assertStringEqual
+  assert:
+    key: $getConcatString
+    relation: eq
+    val: $setVar1 $setVar2
+

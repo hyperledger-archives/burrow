@@ -61,25 +61,12 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 		return nil, nil, errors.ErrorCodeInvalidAddress
 	}
 
-	err = validateInput(inAcc, ctx.tx.Input)
-	if err != nil {
-		ctx.Logger.InfoMsg("validateInput failed",
-			"tx_input", ctx.tx.Input, structure.ErrorKey, err)
-		return nil, nil, err
-	}
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
 		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
 			"tx_input", ctx.tx.Input)
 		return nil, nil, errors.ErrorCodeInsufficientFunds
 	}
 
-	ctx.Logger.TraceMsg("Incrementing sequence number for CallTx",
-		"tag", "sequence",
-		"account", inAcc.Address(),
-		"old_sequence", inAcc.Sequence(),
-		"new_sequence", inAcc.Sequence()+1)
-
-	inAcc.IncSequence()
 	err = inAcc.SubtractFromBalance(ctx.tx.Fee)
 	if err != nil {
 		return nil, nil, err
@@ -98,10 +85,11 @@ func (ctx *CallContext) Precheck() (*acm.MutableAccount, acm.Account, error) {
 		}
 		// check if its a native contract
 		if evm.IsRegisteredNativeContract(ctx.tx.Address.Word256()) {
-			return nil, nil, fmt.Errorf("attempt to call a native contract at %s, "+
-				"but native contracts cannot be called using CallTx. Use a "+
-				"contract that calls the native contract or the appropriate tx "+
-				"type (eg. PermsTx, NameTx)", ctx.tx.Address)
+			return nil, nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+				"attempt to call a native contract at %s, "+
+					"but native contracts cannot be called using CallTx. Use a "+
+					"contract that calls the native contract or the appropriate tx "+
+					"type (eg. PermsTx, NameTx)", ctx.tx.Address)
 		}
 
 		// Output account may be nil if we are still in mempool and contract was created in same block as this tx

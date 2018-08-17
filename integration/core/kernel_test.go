@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"bufio"
+	"os"
+	"syscall"
+
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
@@ -19,6 +23,9 @@ import (
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmTypes "github.com/tendermint/tendermint/types"
@@ -68,9 +75,51 @@ func TestBootShutdownResume(t *testing.T) {
 	assert.Error(t, bootWaitBlocksShutdown(t, privValidator, testConfig, logger, blockChecker))
 }
 
+func TestLoggingSignals(t *testing.T) {
+	//cleanup := integration.EnterTestDirectory()
+	//defer cleanup()
+	integration.EnterTestDirectory()
+	name := "capture"
+	buffer := 100
+	path := "foo.json"
+	logger, err := lifecycle.NewLoggerFromLoggingConfig(logconfig.New().
+		Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+			return sink.SetTransform(logconfig.CaptureTransform(name, buffer, false)).
+				SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat))
+		}))
+	require.NoError(t, err)
+	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
+	i := 0
+	gap := 1
+	assert.NoError(t, bootWaitBlocksShutdown(t, privValidator, integration.NewTestConfig(genesisDoc), logger,
+		func(block *exec.BlockExecution) (cont bool) {
+			if i == gap {
+				// Send sync signal
+				syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+			}
+			if i == gap*2 {
+				// Send reload signal (shouldn't dump capture logger)
+				syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
+			}
+			if i == gap*3 {
+				return false
+			}
+			i++
+			return true
+		}))
+	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	require.NoError(t, err)
+	n := 0
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		n++
+	}
+	// We may spill a few writes in ring buffer
+	assert.InEpsilon(t, buffer*2, n, 10)
+}
+
 func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, testConfig *config.BurrowConfig,
-	logger *logging.Logger,
-	blockChecker func(block *exec.BlockExecution) (cont bool)) error {
+	logger *logging.Logger, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
 	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
 	keyClient := mock.NewKeyClient(privateAccounts...)
@@ -93,7 +142,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	// Generate a few transactions
 	for i := 0; i < 3; i++ {
-		rpctest.CreateContract(t, tcli, inputAddress)
+		rpctest.CreateContract(t, tcli, inputAddress, rpctest.Bytecode_strange_loop)
 	}
 
 	subID := event.GenSubID()

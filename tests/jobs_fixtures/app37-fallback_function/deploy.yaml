@@ -1,0 +1,20 @@
+jobs:
+- name: deployC
+  deploy:
+      contract: fallback.sol
+
+- name: callFallback
+  call:
+      destination: $deployC
+      function: ()
+
+- name: getX
+  query-contract:
+      destination: $deployC
+      function: x 
+
+- name: assertLevelUp
+  assert:
+      key: $getX
+      relation: eq
+      val: 1

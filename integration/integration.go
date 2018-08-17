@@ -29,6 +29,8 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys/mock"
@@ -80,7 +82,9 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		testConfig.Tendermint.TendermintConfig(),
 		testConfig.RPC,
 		testConfig.Keys,
-		nil, nil, logger)
+		nil,
+		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
+		logger)
 	if err != nil {
 		panic(err)
 	}

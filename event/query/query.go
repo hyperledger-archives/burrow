@@ -190,7 +190,7 @@ func (q *query) Matches(tags Tagged) bool {
 		case rulecontains:
 			op = OpContains
 		case rulevalue:
-			// strip single quotes from value (i.e. "'NewBlock'" -> "NewBlock")
+			// strip single quotes from value (i.e. "'NewBlock'"tagged -> "NewBlock")
 			valueWithoutSingleQuotes := buffer[begin+1 : end-1]
 
 			// see if the triplet (tag, operator, operand) matches any tag

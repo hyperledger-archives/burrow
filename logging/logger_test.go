@@ -18,11 +18,11 @@ import (
 	"os"
 	"testing"
 
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 func TestLogger(t *testing.T) {
-	stderrLogger := kitlog.NewLogfmtLogger(os.Stderr)
+	stderrLogger := log.NewLogfmtLogger(os.Stderr)
 	logger := NewLogger(stderrLogger)
 	logger.Trace.Log("hello", "barry")
 }

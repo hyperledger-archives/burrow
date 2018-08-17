@@ -3,7 +3,7 @@ package loggers
 import (
 	"sort"
 
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 type sortableKeyvals struct {
@@ -31,7 +31,7 @@ func (skv *sortableKeyvals) Len() int {
 // Less reports whether the element with
 // index i should sort before the element with index j.
 func (skv *sortableKeyvals) Less(i, j int) bool {
-	return skv.indexOfKey(i) < skv.indexOfKey(j)
+	return skv.keyRank(i) < skv.keyRank(j)
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -43,25 +43,29 @@ func (skv *sortableKeyvals) Swap(i, j int) {
 	skv.keyvals[keyJdx], skv.keyvals[valJdx] = keyI, valI
 }
 
-func (skv *sortableKeyvals) indexOfKey(i int) int {
+func (skv *sortableKeyvals) keyRank(i int) int {
+	// Check there is a key at this index
 	key, ok := skv.keyvals[i*2].(string)
 	if !ok {
-		return skv.len + 1
+		// Sort keys not provided after those that have been but maintain relative order
+		return len(skv.indices) + i
 	}
+	// See if we have been provided an explicit rank/order for the key
 	idx, ok := skv.indices[key]
 	if !ok {
-		return skv.len
+		// Sort keys not provided after those that have been but maintain relative order
+		return len(skv.indices) + i
 	}
 	return idx
 }
 
 // Provides a logger that sorts key-values with keys in keys before other key-values
-func SortLogger(outputLogger kitlog.Logger, keys ...string) kitlog.Logger {
+func SortLogger(outputLogger log.Logger, keys ...string) log.Logger {
 	indices := make(map[string]int, len(keys))
 	for i, k := range keys {
 		indices[k] = i
 	}
-	return kitlog.LoggerFunc(func(keyvals ...interface{}) error {
+	return log.LoggerFunc(func(keyvals ...interface{}) error {
 		sortKeyvals(indices, keyvals)
 		return outputLogger.Log(keyvals...)
 	})

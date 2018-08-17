@@ -33,6 +33,9 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/tendermint/consensus"
+	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -75,9 +78,9 @@ func (s *Service) ChainID() string {
 	return s.blockchain.ChainID()
 }
 
-func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, error) {
+func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 	// Get all transactions for now
-	transactions, err := s.nodeView.MempoolTransactions(maxTxs)
+	transactions, err := s.nodeView.MempoolTransactions(int(maxTxs))
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +88,18 @@ func (s *Service) ListUnconfirmedTxs(maxTxs int) (*ResultListUnconfirmedTxs, err
 	for i, tx := range transactions {
 		wrappedTxs[i] = tx
 	}
-	return &ResultListUnconfirmedTxs{
+	return &ResultUnconfirmedTxs{
 		NumTxs: len(transactions),
 		Txs:    wrappedTxs,
 	}, nil
 }
 
-func (s *Service) Status(blockWithin string) (*ResultStatus, error) {
-	return Status(s.BlockchainInfo(), s.nodeView, blockWithin)
+func (s *Service) Status() (*ResultStatus, error) {
+	return Status(s.BlockchainInfo(), s.nodeView, "", "")
+}
+
+func (s *Service) StatusWithin(blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
+	return Status(s.BlockchainInfo(), s.nodeView, blockTimeWithin, blockSeenTimeWithin)
 }
 
 func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
@@ -103,34 +110,33 @@ func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
 	}, nil
 }
 
-func (s *Service) Peers() (*ResultPeers, error) {
-	peers := make([]*Peer, s.nodeView.Peers().Size())
-	for i, peer := range s.nodeView.Peers().List() {
-		peers[i] = &Peer{
-			NodeInfo:   tendermint.NewNodeInfo(peer.NodeInfo()),
-			IsOutbound: peer.IsOutbound(),
+func (s *Service) Peers() []core_types.Peer {
+	p2pPeers := s.nodeView.Peers().List()
+	peers := make([]core_types.Peer, len(p2pPeers))
+	for i, peer := range p2pPeers {
+		peers[i] = core_types.Peer{
+			NodeInfo:         peer.NodeInfo(),
+			IsOutbound:       peer.IsOutbound(),
+			ConnectionStatus: peer.Status(),
 		}
 	}
-	return &ResultPeers{
-		Peers: peers,
-	}, nil
+	return peers
 }
 
-func (s *Service) NetInfo() (*ResultNetInfo, error) {
-	listening := s.nodeView.IsListening()
+func (s *Service) Network() (*ResultNetwork, error) {
 	var listeners []string
 	for _, listener := range s.nodeView.Listeners() {
 		listeners = append(listeners, listener.String())
 	}
-	peers, err := s.Peers()
-	if err != nil {
-		return nil, err
-	}
-	return &ResultNetInfo{
-		ThisNode:  s.nodeView.NodeInfo(),
-		Listening: listening,
-		Listeners: listeners,
-		Peers:     peers.Peers,
+	peers := s.Peers()
+	return &ResultNetwork{
+		ThisNode: s.nodeView.NodeInfo(),
+		ResultNetInfo: &core_types.ResultNetInfo{
+			Listening: s.nodeView.IsListening(),
+			Listeners: listeners,
+			NPeers:    len(peers),
+			Peers:     peers,
+		},
 	}, nil
 }
 
@@ -141,15 +147,15 @@ func (s *Service) Genesis() (*ResultGenesis, error) {
 }
 
 // Accounts
-func (s *Service) GetAccount(address crypto.Address) (*ResultGetAccount, error) {
+func (s *Service) Account(address crypto.Address) (*ResultAccount, error) {
 	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
-	return &ResultGetAccount{Account: acm.AsConcreteAccount(acc)}, nil
+	return &ResultAccount{Account: acm.AsConcreteAccount(acc)}, nil
 }
 
-func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAccounts, error) {
+func (s *Service) Accounts(predicate func(acm.Account) bool) (*ResultAccounts, error) {
 	accounts := make([]*acm.ConcreteAccount, 0)
 	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
 		if predicate(account) {
@@ -158,13 +164,13 @@ func (s *Service) ListAccounts(predicate func(acm.Account) bool) (*ResultListAcc
 		return
 	})
 
-	return &ResultListAccounts{
+	return &ResultAccounts{
 		BlockHeight: s.blockchain.LastBlockHeight(),
 		Accounts:    accounts,
 	}, nil
 }
 
-func (s *Service) GetStorage(address crypto.Address, key []byte) (*ResultGetStorage, error) {
+func (s *Service) Storage(address crypto.Address, key []byte) (*ResultStorage, error) {
 	account, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
@@ -178,9 +184,9 @@ func (s *Service) GetStorage(address crypto.Address, key []byte) (*ResultGetStor
 		return nil, err
 	}
 	if value == binary.Zero256 {
-		return &ResultGetStorage{Key: key, Value: nil}, nil
+		return &ResultStorage{Key: key, Value: nil}, nil
 	}
-	return &ResultGetStorage{Key: key, Value: value.UnpadLeft()}, nil
+	return &ResultStorage{Key: key, Value: value.UnpadLeft()}, nil
 }
 
 func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error) {
@@ -201,23 +207,23 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 	}, nil
 }
 
-func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAccountHumanReadable, error) {
+func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHumanReadable, error) {
 	acc, err := s.state.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return &ResultGetAccountHumanReadable{}, nil
+		return &ResultAccountHumanReadable{}, nil
 	}
 	tokens, err := acc.Code().Tokens()
 	if acc == nil {
-		return &ResultGetAccountHumanReadable{}, nil
+		return &ResultAccountHumanReadable{}, nil
 	}
 	perms := permission.BasePermissionsToStringList(acc.Permissions().Base)
 	if acc == nil {
-		return &ResultGetAccountHumanReadable{}, nil
+		return &ResultAccountHumanReadable{}, nil
 	}
-	return &ResultGetAccountHumanReadable{
+	return &ResultAccountHumanReadable{
 		Account: &AccountHumanReadable{
 			Address:     acc.Address(),
 			PublicKey:   acc.PublicKey(),
@@ -231,7 +237,7 @@ func (s *Service) GetAccountHumanReadable(address crypto.Address) (*ResultGetAcc
 }
 
 // Name registry
-func (s *Service) GetName(name string) (*ResultGetName, error) {
+func (s *Service) Name(name string) (*ResultName, error) {
 	entry, err := s.nameReg.GetName(name)
 	if err != nil {
 		return nil, err
@@ -239,10 +245,10 @@ func (s *Service) GetName(name string) (*ResultGetName, error) {
 	if entry == nil {
 		return nil, fmt.Errorf("name %s not found", name)
 	}
-	return &ResultGetName{Entry: entry}, nil
+	return &ResultName{Entry: entry}, nil
 }
 
-func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames, error) {
+func (s *Service) Names(predicate func(*names.Entry) bool) (*ResultNames, error) {
 	var nms []*names.Entry
 	s.nameReg.IterateNames(func(entry *names.Entry) (stop bool) {
 		if predicate(entry) {
@@ -250,14 +256,14 @@ func (s *Service) ListNames(predicate func(*names.Entry) bool) (*ResultListNames
 		}
 		return
 	})
-	return &ResultListNames{
+	return &ResultNames{
 		BlockHeight: s.blockchain.LastBlockHeight(),
 		Names:       nms,
 	}, nil
 }
 
-func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
-	return &ResultGetBlock{
+func (s *Service) Block(height uint64) (*ResultBlock, error) {
+	return &ResultBlock{
 		Block:     &Block{s.nodeView.BlockStore().LoadBlock(int64(height))},
 		BlockMeta: &BlockMeta{s.nodeView.BlockStore().LoadBlockMeta(int64(height))},
 	}, nil
@@ -268,11 +274,11 @@ func (s *Service) GetBlock(height uint64) (*ResultGetBlock, error) {
 // from the top of the range of blocks.
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
-func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, error) {
-	latestHeight := s.blockchain.LastBlockHeight()
+func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
+	latestHeight := int64(s.blockchain.LastBlockHeight())
 
-	if minHeight == 0 {
-		minHeight = 1
+	if minHeight < 1 {
+		minHeight = latestHeight
 	}
 	if maxHeight == 0 || latestHeight < maxHeight {
 		maxHeight = latestHeight
@@ -283,17 +289,17 @@ func (s *Service) ListBlocks(minHeight, maxHeight uint64) (*ResultListBlocks, er
 
 	var blockMetas []*tmTypes.BlockMeta
 	for height := maxHeight; height >= minHeight; height-- {
-		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(int64(height))
+		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(height)
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
-	return &ResultListBlocks{
-		LastHeight: latestHeight,
+	return &ResultBlocks{
+		LastHeight: uint64(latestHeight),
 		BlockMetas: blockMetas,
 	}, nil
 }
 
-func (s *Service) ListValidators() (*ResultListValidators, error) {
+func (s *Service) Validators() (*ResultValidators, error) {
 	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
 	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
 		address := id.Address()
@@ -304,21 +310,39 @@ func (s *Service) ListValidators() (*ResultListValidators, error) {
 		})
 		return
 	})
-	return &ResultListValidators{
+	return &ResultValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
 		BondedValidators:    validators,
 		UnbondingValidators: nil,
 	}, nil
 }
 
-func (s *Service) DumpConsensusState() (*ResultDumpConsensusState, error) {
-	peerRoundState, err := s.nodeView.PeerRoundStates()
+func (s *Service) ConsensusState() (*ResultConsensusState, error) {
+	peers := s.nodeView.Peers().List()
+	peerStates := make([]core_types.PeerStateInfo, len(peers))
+	for i, peer := range peers {
+		peerState := peer.Get(tmTypes.PeerStateKey).(*consensus.PeerState)
+		peerStateJSON, err := peerState.ToJSON()
+		if err != nil {
+			return nil, err
+		}
+		peerStates[i] = core_types.PeerStateInfo{
+			// Peer basic info.
+			NodeAddress: p2p.IDAddressString(peer.ID(), peer.NodeInfo().ListenAddr),
+			// Peer consensus state.
+			PeerState: peerStateJSON,
+		}
+	}
+
+	roundStateJSON, err := s.nodeView.RoundStateJSON()
 	if err != nil {
 		return nil, err
 	}
-	return &ResultDumpConsensusState{
-		RoundState:      s.nodeView.RoundState().RoundStateSimple(),
-		PeerRoundStates: peerRoundState,
+	return &ResultConsensusState{
+		ResultDumpConsensusState: &core_types.ResultDumpConsensusState{
+			RoundState: roundStateJSON,
+			Peers:      peerStates,
+		},
 	}, nil
 }
 
@@ -332,37 +356,72 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	}, nil
 }
 
-func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockWithin string) (*ResultStatus, error) {
+func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
+	publicKey := nodeView.ValidatorPublicKey()
+	address := publicKey.Address()
 	res := &ResultStatus{
-		ChainID:           blockchain.ChainID(),
-		NodeInfo:          nodeView.NodeInfo(),
-		NodeVersion:       project.History.CurrentVersion().String(),
-		GenesisHash:       blockchain.GenesisHash(),
-		PublicKey:         nodeView.ValidatorPublicKey(),
-		LatestBlockHash:   blockchain.LastBlockHash(),
-		LatestBlockHeight: blockchain.LastBlockHeight(),
-		LatestBlockTime:   blockchain.LastBlockTime(),
+		ChainID:       blockchain.ChainID(),
+		RunID:         nodeView.RunID().String(),
+		BurrowVersion: project.FullVersion(),
+		GenesisHash:   blockchain.GenesisHash(),
+		NodeInfo:      nodeView.NodeInfo(),
+		SyncInfo: &SyncInfo{
+			LatestBlockHeight:   blockchain.LastBlockHeight(),
+			LatestBlockHash:     blockchain.LastBlockHash(),
+			LatestAppHash:       blockchain.AppHashAfterLastBlock(),
+			LatestBlockTime:     blockchain.LastBlockTime(),
+			LatestBlockSeenTime: blockchain.LastCommitTime(),
+			CatchingUp:          nodeView.IsFastSyncing(),
+		},
+		ValidatorInfo: &validator.Validator{
+			Address:   &address,
+			PublicKey: publicKey,
+			Power:     blockchain.Validators().Power(publicKey).Uint64(),
+		},
 	}
-	if blockWithin == "" {
-		return res, nil
+
+	now := time.Now()
+
+	if blockTimeWithin != "" {
+		err := timeWithin(now, res.SyncInfo.LatestBlockTime, blockTimeWithin)
+		if err != nil {
+			return nil, fmt.Errorf("have not committed block with sufficiently recent timestamp: %v, current status: %s",
+				err, statusJSON(res))
+		}
 	}
-	duration, err := time.ParseDuration(blockWithin)
+
+	if blockSeenTimeWithin != "" {
+		err := timeWithin(now, res.SyncInfo.LatestBlockSeenTime, blockSeenTimeWithin)
+		if err != nil {
+			return nil, fmt.Errorf("have not committed a block sufficiently recently: %v, current status: %s",
+				err, statusJSON(res))
+		}
+	}
+
+	return res, nil
+}
+
+func statusJSON(res *ResultStatus) string {
+	bs, err := json.Marshal(res)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse blockWithin duration to determine whether to throw error: %v", err)
+		bs = []byte("<error: could not marshal status>")
+	}
+	return string(bs)
+}
+
+func timeWithin(now time.Time, testTime time.Time, within string) error {
+	duration, err := time.ParseDuration(within)
+	if err != nil {
+		return fmt.Errorf("could not parse duration '%s' to determine whether to throw error: %v", within, err)
 	}
 	// Take neg abs in case caller is counting backwards (note we later add the time since we normalise the duration to negative)
 	if duration > 0 {
 		duration = -duration
 	}
-	blockTimeThreshold := time.Now().Add(duration)
-	if res.LatestBlockTime.After(blockTimeThreshold) {
-		// We've created blocks recently enough
-		return res, nil
+	threshold := now.Add(duration)
+	if testTime.After(threshold) {
+		return nil
 	}
-	resJSON, err := json.Marshal(res)
-	if err != nil {
-		resJSON = []byte("<error: could not marshal last block info>")
-	}
-	return nil, fmt.Errorf("no block committed within the last %s (cutoff: %s), current status: %s",
-		blockWithin, blockTimeThreshold.Format(time.RFC3339), string(resJSON))
+	return fmt.Errorf("time %s does not fall within last %s (cutoff: %s)", testTime.Format(time.RFC3339), within,
+		threshold.Format(time.RFC3339))
 }

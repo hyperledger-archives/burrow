@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmCrypto "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
@@ -32,10 +30,14 @@ func PublicKeyLength(curveType CurveType) int {
 	}
 }
 
+func (p PublicKey) IsSet() bool {
+	return p.CurveType != CurveTypeUnset && p.IsValid()
+}
+
 func (p PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
 		CurveType: p.CurveType.String(),
-		PublicKey: hex.EncodeUpperToString(p.Key),
+		PublicKey: hex.EncodeUpperToString(p.PublicKey),
 	}
 	txt, err := json.Marshal(jStruct)
 	return txt, err
@@ -60,7 +62,7 @@ func (p *PublicKey) UnmarshalJSON(text []byte) error {
 		return err
 	}
 	p.CurveType = CurveType
-	p.Key = bs
+	p.PublicKey = bs
 	return nil
 }
 
@@ -70,40 +72,44 @@ func (p *PublicKey) UnmarshalText(text []byte) error {
 
 func (p PublicKey) IsValid() bool {
 	publicKeyLength := PublicKeyLength(p.CurveType)
-	return publicKeyLength != 0 && publicKeyLength == len(p.Key)
+	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
 }
 
-func (p PublicKey) Verify(msg []byte, signature Signature) bool {
+func (p PublicKey) Verify(msg []byte, signature Signature) error {
 	switch p.CurveType {
+	case CurveTypeUnset:
+		return fmt.Errorf("public key is unset")
 	case CurveTypeEd25519:
-		return ed25519.Verify(p.Key, msg, signature)
+		if ed25519.Verify(p.PublicKey.Bytes(), msg, signature.Signature) {
+			return nil
+		}
+		return fmt.Errorf("'%X' is not a valid ed25519 signature for message: %X", signature, msg)
 	case CurveTypeSecp256k1:
-		pub, err := btcec.ParsePubKey(p.Key, btcec.S256())
+		pub, err := btcec.ParsePubKey(p.PublicKey, btcec.S256())
 		if err != nil {
-			return false
+			return fmt.Errorf("could not parse secp256k1 public key: %v", err)
 		}
-		sig, err := btcec.ParseDERSignature(signature, btcec.S256())
+		sig, err := btcec.ParseDERSignature(signature.Signature, btcec.S256())
 		if err != nil {
-			return false
+			return fmt.Errorf("could not parse DER signature for secp256k1 key: %v", err)
 		}
-		return sig.Verify(msg, pub)
+		if sig.Verify(msg, pub) {
+			return nil
+		}
+		return fmt.Errorf("'%X' is not a valid secp256k1 signature for message: %X", signature, msg)
 	default:
-		panic(fmt.Sprintf("invalid curve type"))
+		return fmt.Errorf("invalid curve type")
 	}
-}
-
-func (p PublicKey) PublicKey() PublicKey {
-	return p
 }
 
 func (p PublicKey) Address() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		addr, _ := AddressFromBytes(tmhash.Sum(p.Key))
+		addr, _ := AddressFromBytes(tmhash.Sum(p.PublicKey))
 		return addr
 	case CurveTypeSecp256k1:
 		sha := sha256.New()
-		sha.Write(p.Key[:])
+		sha.Write(p.PublicKey[:])
 
 		hash := ripemd160.New()
 		hash.Write(sha.Sum(nil))
@@ -125,47 +131,8 @@ func (p PublicKey) AddressHashType() string {
 	}
 }
 
-func (p PublicKey) RawBytes() []byte {
-	return p.Key[:]
-}
-
-// Return the ABCI PubKey. See Tendermint protobuf.go for the go-crypto conversion this is based on
-func (p PublicKey) ABCIPubKey() abci.PubKey {
-	return abci.PubKey{
-		Type: p.CurveType.ABCIType(),
-		Data: p.RawBytes(),
-	}
-}
-
-func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
-	switch pk := pubKey.(type) {
-	case tmCrypto.PubKeyEd25519:
-		return PublicKeyFromBytes(pk[:], CurveTypeEd25519)
-	case tmCrypto.PubKeySecp256k1:
-		return PublicKeyFromBytes(pk[:], CurveTypeSecp256k1)
-	default:
-		return PublicKey{}, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
-	}
-
-}
-func PublicKeyFromABCIPubKey(pubKey abci.PubKey) (PublicKey, error) {
-	switch pubKey.Type {
-	case CurveTypeEd25519.ABCIType():
-		return PublicKey{
-			CurveType: CurveTypeEd25519,
-			Key:       pubKey.Data,
-		}, nil
-	case CurveTypeSecp256k1.ABCIType():
-		return PublicKey{
-			CurveType: CurveTypeEd25519,
-			Key:       pubKey.Data,
-		}, nil
-	}
-	return PublicKey{}, fmt.Errorf("did not recognise ABCI PubKey type: %s", pubKey.Type)
-}
-
 func (p PublicKey) String() string {
-	return hex.EncodeUpperToString(p.Key)
+	return hex.EncodeUpperToString(p.PublicKey)
 }
 
 // Produces a binary encoding of the CurveType byte plus
@@ -173,6 +140,6 @@ func (p PublicKey) String() string {
 func (p PublicKey) Encode() []byte {
 	encoded := make([]byte, PublicKeyLength(p.CurveType)+1)
 	encoded[0] = p.CurveType.Byte()
-	copy(encoded[1:], p.Key)
+	copy(encoded[1:], p.PublicKey)
 	return encoded
 }

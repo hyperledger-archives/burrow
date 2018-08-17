@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"time"
 
-	kitlog "github.com/go-kit/kit/log"
+	"sync"
+
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tmthrgd/go-hex"
 )
@@ -29,10 +31,11 @@ import (
 // decide how it wants to display values. Ideal candidates for 'early' formatting here are types that
 // we control and generic output loggers are unlikely to know about.
 type burrowFormatLogger struct {
-	logger kitlog.Logger
+	sync.Mutex
+	logger log.Logger
 }
 
-var _ kitlog.Logger = &burrowFormatLogger{}
+var _ log.Logger = &burrowFormatLogger{}
 
 func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 	if bfl.logger == nil {
@@ -42,7 +45,7 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 		return fmt.Errorf("log line contains an odd number of elements so "+
 			"was dropped: %v", keyvals)
 	}
-	return bfl.logger.Log(structure.MapKeyValues(keyvals,
+	keyvals = structure.MapKeyValues(keyvals,
 		func(key interface{}, value interface{}) (interface{}, interface{}) {
 			switch v := value.(type) {
 			case string:
@@ -54,9 +57,12 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 				value = v.Format(time.RFC3339Nano)
 			}
 			return structure.StringifyKey(key), value
-		})...)
+		})
+	bfl.Lock()
+	defer bfl.Unlock()
+	return bfl.logger.Log(keyvals...)
 }
 
-func BurrowFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
+func BurrowFormatLogger(logger log.Logger) *burrowFormatLogger {
 	return &burrowFormatLogger{logger: logger}
 }

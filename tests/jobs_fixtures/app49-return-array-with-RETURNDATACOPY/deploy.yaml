@@ -1,0 +1,22 @@
+jobs:
+
+- name: deloyReturnArray
+  deploy:
+      contract: returnArray.sol
+
+- name: deloyConsumeArray
+  deploy:
+      contract: consumeArray.sol
+      data:
+        - $deloyReturnArray
+
+- name: lowestSingleDigitPrime
+  query-contract:
+      destination: $deloyConsumeArray
+      function: lowestSingleDigitPrime
+
+- name: assertConsumer
+  assert:
+      key: $lowestSingleDigitPrime
+      relation: eq
+      val: 2

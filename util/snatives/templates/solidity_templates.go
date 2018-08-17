@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/iancoleman/strcase"
 )
 
 const contractTemplateText = `pragma solidity [[.SolidityPragmaVersion]];
@@ -39,7 +40,7 @@ contract [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) public constant returns ([[.Return.TypeName]] [[.Return.Name]]);`
+function [[.Name]]([[.ArgList]]) public constant returns ([[.RetList]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -80,7 +81,7 @@ type solidityFunction struct {
 // Create a templated solidityContract from an SNative contract description
 func NewSolidityContract(contract *evm.SNativeContractDescription) *solidityContract {
 	return &solidityContract{
-		SolidityPragmaVersion:      ">=0.4.0",
+		SolidityPragmaVersion:      ">=0.4.24",
 		SNativeContractDescription: contract,
 	}
 }
@@ -134,9 +135,17 @@ func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunc
 }
 
 func (function *solidityFunction) ArgList() string {
-	argList := make([]string, len(function.Args))
-	for i, arg := range function.Args {
-		argList[i] = fmt.Sprintf("%s %s", arg.TypeName, arg.Name)
+	argList := make([]string, len(function.Abi.Inputs))
+	for i, arg := range function.Abi.Inputs {
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
+	}
+	return strings.Join(argList, ", ")
+}
+
+func (function *solidityFunction) RetList() string {
+	argList := make([]string, len(function.Abi.Outputs))
+	for i, arg := range function.Abi.Outputs {
+		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
 	}
 	return strings.Join(argList, ", ")
 }
@@ -176,4 +185,8 @@ func comment(comment string) string {
 		}
 	}
 	return strings.Join(commentLines, "\n")
+}
+
+func param(name string) string {
+	return "_" + strcase.ToSnake(name)
 }

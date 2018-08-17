@@ -7,9 +7,11 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis/spec"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -18,6 +20,7 @@ import (
 type GovernanceContext struct {
 	StateWriter  state.ReaderWriter
 	ValidatorSet validator.Writer
+	KeyClient    keys.KeyClient
 	Logger       *logging.Logger
 	tx           *payload.GovTx
 	txe          *exec.TxExecution
@@ -32,7 +35,8 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
-	accounts, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
+	// Nothing down with any incoming funds at this point
+	accounts, _, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
 	if err != nil {
 		return err
 	}
@@ -53,6 +57,13 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 			return fmt.Errorf("could not execution GovTx since account template %v contains neither "+
 				"address or public key", update)
 		}
+		if update.PublicKey == nil {
+			update.PublicKey, err = ctx.MaybeGetPublicKey(*update.Address)
+			if err != nil {
+				return err
+			}
+		}
+		// Check address
 		if update.PublicKey != nil {
 			address := update.PublicKey.Address()
 			if update.Address != nil && address != *update.Address {
@@ -60,8 +71,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 					"GovTx", update.PublicKey, address, update.Address)
 			}
 			update.Address = &address
-		}
-		if update.PublicKey == nil && update.Balances().HasPower() {
+		} else if update.Balances().HasPower() {
 			// If we are updating power we will need the key
 			return fmt.Errorf("GovTx must be provided with public key when updating validator power")
 		}
@@ -69,7 +79,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 		if err != nil {
 			return err
 		}
-		governAccountEvent, err := ctx.updateAccount(account, update)
+		governAccountEvent, err := ctx.UpdateAccount(account, update)
 		if err != nil {
 			txe.GovernAccount(governAccountEvent, errors.AsException(err))
 			return err
@@ -79,7 +89,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	return nil
 }
 
-func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
+func (ctx *GovernanceContext) UpdateAccount(account *acm.MutableAccount, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
 	ev = &exec.GovernAccountEvent{
 		AccountUpdate: update,
 	}
@@ -109,6 +119,12 @@ func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update 
 			return ev, err
 		}
 	}
+	if update.Code != nil {
+		err = account.SetCode(*update.Code)
+		if err != nil {
+			return ev, err
+		}
+	}
 	perms := account.Permissions()
 	if len(update.Permissions) > 0 {
 		perms.Base, err = permission.BasePermissionsFromStringList(update.Permissions)
@@ -125,4 +141,22 @@ func (ctx *GovernanceContext) updateAccount(account *acm.MutableAccount, update 
 	}
 	err = ctx.StateWriter.UpdateAccount(account)
 	return
+}
+
+func (ctx *GovernanceContext) MaybeGetPublicKey(address crypto.Address) (*crypto.PublicKey, error) {
+	// First try state in case chain has received input previously
+	acc, err := ctx.StateWriter.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	if acc != nil && acc.PublicKey().IsSet() {
+		publicKey := acc.PublicKey()
+		return &publicKey, nil
+	}
+	// Then try key client
+	publicKey, err := ctx.KeyClient.PublicKey(address)
+	if err == nil {
+		return &publicKey, nil
+	}
+	return nil, nil
 }

@@ -18,8 +18,6 @@ package lifecycle
 import (
 	"os"
 
-	"time"
-
 	"github.com/hyperledger/burrow/logging/adapters/stdlib"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
@@ -28,9 +26,8 @@ import (
 	"fmt"
 
 	"github.com/eapache/channels"
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/streadway/simpleuuid"
 )
 
 // Lifecycle provides a canonical source for burrow loggers. Components should use the functions here
@@ -45,9 +42,9 @@ func NewLoggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (*loggin
 		if err != nil {
 			return nil, err
 		}
-		logger := NewLogger(outputLogger)
+		logger := logging.NewLogger(outputLogger)
 		if loggingConfig.ExcludeTrace {
-			logger.Trace = kitlog.NewNopLogger()
+			logger.Trace = log.NewNopLogger()
 		}
 		go func() {
 			err := <-errCh.Out()
@@ -75,39 +72,28 @@ func NewStdErrLogger() (*logging.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewLogger(outputLogger), nil
-}
-
-// Provided a standard logger that outputs to the supplied underlying outputLogger
-func NewLogger(outputLogger kitlog.Logger) *logging.Logger {
-	logger := logging.NewLogger(outputLogger)
-	// Create a random ID based on start time
-	uuid, _ := simpleuuid.NewTime(time.Now())
-	var runId string
-	if uuid != nil {
-		runId = uuid.String()
-	}
-	return logger.With(structure.RunId, runId)
+	return logging.NewLogger(outputLogger), nil
 }
 
 func JustLogger(logger *logging.Logger, _ channels.Channel) *logging.Logger {
 	return logger
 }
 
-func CaptureStdlibLogOutput(infoTraceLogger *logging.Logger) {
-	stdlib.CaptureRootLogger(infoTraceLogger.With(structure.CapturedLoggingSourceKey, "stdlib_log"))
+func CaptureStdlibLogOutput(logger *logging.Logger) {
+	stdlib.CaptureRootLogger(logger.With(structure.CapturedLoggingSourceKey, "stdlib_log"))
 }
 
 // Helpers
-func loggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (kitlog.Logger, channels.Channel, error) {
+func loggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (log.Logger, channels.Channel, error) {
 	outputLogger, _, err := loggingConfig.RootSink.BuildLogger()
 	if err != nil {
 		return nil, nil, err
 	}
 	var errCh channels.Channel = channels.NewDeadChannel()
-	var logger kitlog.Logger = loggers.BurrowFormatLogger(outputLogger)
+	var logger log.Logger = loggers.BurrowFormatLogger(outputLogger)
 	if loggingConfig.NonBlocking {
 		logger, errCh = loggers.NonBlockingLogger(logger)
+		return logger, errCh, nil
 	}
 	return logger, errCh, err
 }

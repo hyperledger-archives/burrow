@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 )
 
 const (
@@ -49,6 +49,7 @@ const (
 	SignalKey = "__signal__"
 	// The sync signal instructs sync-able loggers to sync
 	SyncSignal       = "__sync__"
+	ReloadSignal     = "__reload__"
 	InfoChannelName  = "Info"
 	TraceChannelName = "Trace"
 )
@@ -107,7 +108,18 @@ func RemoveKeys(keyvals []interface{}, dropKeys ...interface{}) []interface{} {
 	})
 }
 
-// Drops all key value pairs where the key is in keys
+func OnlyKeys(keyvals []interface{}, includeKeys ...interface{}) []interface{} {
+	return DropKeys(keyvals, func(key, value interface{}) bool {
+		for _, includeKey := range includeKeys {
+			if key == includeKey {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+// Drops all key value pairs where dropKeyValPredicate is true
 func DropKeys(keyvals []interface{}, dropKeyValPredicate func(key, value interface{}) bool) []interface{} {
 	keyvalsDropped := make([]interface{}, 0, len(keyvals))
 	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
@@ -254,12 +266,17 @@ func StringifyKey(key interface{}) string {
 
 // Sends the sync signal which causes any syncing loggers to sync.
 // loggers receiving the signal should drop the signal logline from output
-func Sync(logger kitlog.Logger) error {
+func Sync(logger log.Logger) error {
 	return logger.Log(SignalKey, SyncSignal)
 }
 
-// Tried to interpret the logline as a signal by matching the last key-value pair as a signal, returns empty string if
-// no match
+func Reload(logger log.Logger) error {
+	return logger.Log(SignalKey, ReloadSignal)
+}
+
+// Tried to interpret the logline as a signal by matching the last key-value pair as a signal,
+// returns empty string if no match. The idea with signals is that the should be transmitted to a root logger
+// as a single key-value pair so we avoid the need to do a linear probe over every log line in order to detect a signal.
 func Signal(keyvals []interface{}) string {
 	last := len(keyvals) - 1
 	if last > 0 && keyvals[last-1] == SignalKey {

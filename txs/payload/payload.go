@@ -1,6 +1,8 @@
 package payload
 
-import "fmt"
+import (
+	"fmt"
+)
 
 /*
 Payload (Transaction) is an atomic operation on the ledger state.
@@ -93,29 +95,6 @@ type Payload interface {
 	Any() *Any
 	// The serialised size in bytes
 	Size() int
-}
-
-type UnknownTx struct {
-}
-
-func (UnknownTx) String() string {
-	panic("implement me")
-}
-
-func (UnknownTx) GetInputs() []*TxInput {
-	panic("implement me")
-}
-
-func (UnknownTx) Type() Type {
-	panic("implement me")
-}
-
-func (UnknownTx) Any() *Any {
-	panic("implement me")
-}
-
-func (UnknownTx) Size() int {
-	panic("implement me")
 }
 
 func New(txType Type) (Payload, error) {

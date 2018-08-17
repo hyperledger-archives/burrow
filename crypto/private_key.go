@@ -25,45 +25,49 @@ func PublicKeyFromBytes(bs []byte, curveType CurveType) (PublicKey, error) {
 			return PublicKey{}, fmt.Errorf("bytes passed have length %v but secp256k1 public keys have %v bytes",
 				len(bs), btcec.PubKeyBytesLenCompressed)
 		}
+	case CurveTypeUnset:
+		if len(bs) > 0 {
+			return PublicKey{}, fmt.Errorf("attempting to create an 'unset' PublicKey but passed non-empty key bytes: %X", bs)
+		}
+		return PublicKey{}, nil
 	default:
 		return PublicKey{}, ErrInvalidCurve(curveType)
 	}
 
-	return PublicKey{Key: bs, CurveType: curveType}, nil
+	return PublicKey{PublicKey: bs, CurveType: curveType}, nil
 }
 
 func (p PrivateKey) RawBytes() []byte {
-	return p.Key
+	return p.PrivateKey
 }
 
 func (p PrivateKey) Sign(msg []byte) (Signature, error) {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		if len(p.Key) != ed25519.PrivateKeySize {
-			return nil, fmt.Errorf("bytes passed have length %v but ed25519 private keys have %v bytes",
-				len(p.Key), ed25519.PrivateKeySize)
+		if len(p.PrivateKey) != ed25519.PrivateKeySize {
+			return Signature{}, fmt.Errorf("bytes passed have length %v but ed25519 private keys have %v bytes",
+				len(p.PrivateKey), ed25519.PrivateKeySize)
 		}
-		privKey := ed25519.PrivateKey(p.Key)
-		return ed25519.Sign(privKey, msg), nil
+		privKey := ed25519.PrivateKey(p.PrivateKey)
+		return Signature{CurveType: CurveTypeEd25519, Signature: ed25519.Sign(privKey, msg)}, nil
 	case CurveTypeSecp256k1:
-		if len(p.Key) != btcec.PrivKeyBytesLen {
-			return nil, fmt.Errorf("bytes passed have length %v but secp256k1 private keys have %v bytes",
-				len(p.Key), btcec.PrivKeyBytesLen)
+		if len(p.PrivateKey) != btcec.PrivKeyBytesLen {
+			return Signature{}, fmt.Errorf("bytes passed have length %v but secp256k1 private keys have %v bytes",
+				len(p.PrivateKey), btcec.PrivKeyBytesLen)
 		}
-		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), p.Key)
-
+		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), p.PrivateKey)
 		sig, err := privKey.Sign(msg)
 		if err != nil {
-			return nil, err
+			return Signature{}, err
 		}
-		return sig.Serialize(), nil
+		return Signature{CurveType: CurveTypeSecp256k1, Signature: sig.Serialize()}, nil
 	default:
-		return nil, ErrInvalidCurve(p.CurveType)
+		return Signature{}, ErrInvalidCurve(p.CurveType)
 	}
 }
 
 func (p PrivateKey) GetPublicKey() PublicKey {
-	return PublicKey{CurveType: p.CurveType, Key: p.PublicKey}
+	return PublicKey{CurveType: p.CurveType, PublicKey: p.PublicKey}
 }
 
 // Reinitialise after serialisation
@@ -87,7 +91,7 @@ func PrivateKeyFromRawBytes(privKeyBytes []byte, curveType CurveType) (PrivateKe
 			return PrivateKey{}, fmt.Errorf("bytes passed have length %v but ed25519 private keys have %v bytes",
 				len(privKeyBytes), ed25519.PrivateKeySize)
 		}
-		return PrivateKey{Key: privKeyBytes, PublicKey: privKeyBytes[32:], CurveType: CurveTypeEd25519}, nil
+		return PrivateKey{PrivateKey: privKeyBytes, PublicKey: privKeyBytes[32:], CurveType: CurveTypeEd25519}, nil
 	case CurveTypeSecp256k1:
 		if len(privKeyBytes) != btcec.PrivKeyBytesLen {
 			return PrivateKey{}, fmt.Errorf("bytes passed have length %v but secp256k1 private keys have %v bytes",
@@ -97,7 +101,7 @@ func PrivateKeyFromRawBytes(privKeyBytes []byte, curveType CurveType) (PrivateKe
 		if !bytes.Equal(privKey.Serialize(), privKeyBytes) {
 			return PrivateKey{}, fmt.Errorf("serialisation of Secp256k1 private key bytes does not equal")
 		}
-		return PrivateKey{Key: privKeyBytes, PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
+		return PrivateKey{PrivateKey: privKeyBytes, PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
 	default:
 		return PrivateKey{}, ErrInvalidCurve(curveType)
 	}

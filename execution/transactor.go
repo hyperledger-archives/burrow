@@ -17,6 +17,7 @@ package execution
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
@@ -70,30 +71,28 @@ func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, memp
 }
 
 func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
-	// Subscribe to TX
-	// Sign if needed - must do before we sign in order to get correct TxHash
-	if len(txEnv.Signatories) == 0 {
-		var err error
-		var unlock UnlockFunc
-		txEnv, unlock, err = trans.SignTxMempool(txEnv)
-		if err != nil {
-			return nil, fmt.Errorf("error signing transaction: %v", err)
-		}
-		defer unlock()
+	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
+	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	if err != nil {
+		return nil, err
 	}
-
+	// We will try and call this before the function exits unless we error but it is idempotent
+	defer unlock()
+	// Subscribe before submitting to mempool
 	txHash := txEnv.Tx.Hash()
 	subID := event.GenSubID()
 	out, err := trans.Subscribable.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
 	if err != nil {
+		// We do not want to hold the lock with a defer so we must
 		return nil, err
 	}
-	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
-
+	// Push Tx to mempool
 	checkTxReceipt, err := trans.CheckTxSync(txEnv)
+	unlock()
 	if err != nil {
 		return nil, err
 	}
+	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
 	// Wait for all responses
 	timer := time.NewTimer(BlockingTimeout)
 	defer timer.Stop()
@@ -117,17 +116,50 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 // Broadcast a transaction without waiting for confirmation - will attempt to sign server-side and set sequence numbers
 // if no signatures are provided
 func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope) (*txs.Receipt, error) {
-	// Attempt to sign unless signatures provided
+	return trans.CheckTxSync(txEnv)
+}
+
+// Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
+// various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
+func (trans *Transactor) CheckTxSync(txEnv *txs.Envelope) (*txs.Receipt, error) {
+	trans.logger.Trace.Log("method", "CheckTxSync",
+		"tx_hash", txEnv.Tx.Hash(),
+		"tx", txEnv.String())
+	// Sign unless already signed
+	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	err = txEnv.Validate()
+	if err != nil {
+		return nil, err
+	}
+	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
+	if err != nil {
+		return nil, err
+	}
+	return trans.CheckTxSyncRaw(txBytes)
+}
+
+func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, error) {
+	// Sign unless already signed
 	if len(txEnv.Signatories) == 0 {
 		var err error
 		var unlock UnlockFunc
+		// We are writing signatures back to txEnv so don't shadow txEnv here
 		txEnv, unlock, err = trans.SignTxMempool(txEnv)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error signing transaction: %v", err)
 		}
-		defer unlock()
+		// Hash will have change since we signed
+		txEnv.Tx.Rehash()
+
+		// Make this idempotent for defer
+		var once sync.Once
+		return func() { once.Do(unlock) }, nil
 	}
-	return trans.CheckTxSync(txEnv)
+	return func() {}, nil
 }
 
 func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, UnlockFunc, error) {
@@ -173,23 +205,6 @@ func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
 		return nil, err
 	}
 	return txEnv, nil
-}
-
-// Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
-// various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
-func (trans *Transactor) CheckTxSync(txEnv *txs.Envelope) (*txs.Receipt, error) {
-	trans.logger.Trace.Log("method", "CheckTxSync",
-		"tx_hash", txEnv.Tx.Hash(),
-		"tx", txEnv.String())
-	err := txEnv.Validate()
-	if err != nil {
-		return nil, err
-	}
-	txBytes, err := trans.txEncoder.EncodeTx(txEnv)
-	if err != nil {
-		return nil, err
-	}
-	return trans.CheckTxSyncRaw(txBytes)
 }
 
 func (trans *Transactor) CheckTxSyncRaw(txBytes []byte) (*txs.Receipt, error) {

@@ -15,7 +15,7 @@
 package logging
 
 import (
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
 )
 
@@ -29,30 +29,30 @@ type Logger struct {
 	// understand or debug the system. Any handled errors or warnings should be
 	// sent to the Info channel (where you may wish to tag them with a suitable
 	// key-value pair to categorise them as such).
-	Info kitlog.Logger
+	Info log.Logger
 	// Send an log message to the Trace channel, formed of a sequence of key-value
 	// pairs. Trace messages can be used for any state change in the system that
 	// may be of interest to a machine consumer or a human who is trying to debug
 	// the system or trying to understand the system in detail. If the messages
 	// are very point-like and contain little structure, consider using a metric
 	// instead.
-	Trace  kitlog.Logger
-	Output *kitlog.SwapLogger
+	Trace  log.Logger
+	Output *log.SwapLogger
 }
 
 // Create an InfoTraceLogger by passing the initial outputLogger.
-func NewLogger(outputLogger kitlog.Logger) *Logger {
+func NewLogger(outputLogger log.Logger) *Logger {
 	// We will never halt the progress of a log emitter. If log output takes too
 	// long will start dropping log lines by using a ring buffer.
-	swapLogger := new(kitlog.SwapLogger)
+	swapLogger := new(log.SwapLogger)
 	swapLogger.Swap(outputLogger)
 	return &Logger{
 		Output: swapLogger,
 		// logging contexts
-		Info: kitlog.With(swapLogger,
+		Info: log.With(swapLogger,
 			structure.ChannelKey, structure.InfoChannelName,
 		),
-		Trace: kitlog.With(swapLogger,
+		Trace: log.With(swapLogger,
 			structure.ChannelKey, structure.TraceChannelName,
 		),
 	}
@@ -60,25 +60,40 @@ func NewLogger(outputLogger kitlog.Logger) *Logger {
 
 func NewNoopLogger() *Logger {
 	return &Logger{
-		Info:   kitlog.NewNopLogger(),
-		Trace:  kitlog.NewNopLogger(),
-		Output: new(kitlog.SwapLogger),
+		Info:   log.NewNopLogger(),
+		Trace:  log.NewNopLogger(),
+		Output: new(log.SwapLogger),
 	}
+}
+
+// Handle signals
+func (l *Logger) Sync() error {
+	// Send over input channels (to pass through any capture loggers)
+	err := structure.Sync(l.Info)
+	if err != nil {
+		return err
+	}
+	return structure.Sync(l.Trace)
+}
+
+func (l *Logger) Reload() error {
+	// Send directly to output logger
+	return structure.Reload(l.Output)
 }
 
 // A logging context (see go-kit log's Context). Takes a sequence key values
 // via With or WithPrefix and ensures future calls to log will have those
 // contextual values appended to the call to an underlying logger.
-// Values can be dynamic by passing an instance of the kitlog.Valuer interface
-// This provides an interface version of the kitlog.Context struct to be used
-// For implementations that wrap a kitlog.Context. In addition it makes no
+// Values can be dynamic by passing an instance of the log.Valuer interface
+// This provides an interface version of the log.Context struct to be used
+// For implementations that wrap a log.Context. In addition it makes no
 // assumption about the name or signature of the logging method(s).
 // See InfoTraceLogger
 func (l *Logger) With(keyvals ...interface{}) *Logger {
 	return &Logger{
 		Output: l.Output,
-		Info:   kitlog.With(l.Info, keyvals...),
-		Trace:  kitlog.With(l.Trace, keyvals...),
+		Info:   log.With(l.Info, keyvals...),
+		Trace:  log.With(l.Trace, keyvals...),
 	}
 }
 
@@ -86,7 +101,7 @@ func (l *Logger) With(keyvals ...interface{}) *Logger {
 func (l *Logger) WithInfo(keyvals ...interface{}) *Logger {
 	return &Logger{
 		Output: l.Output,
-		Info:   kitlog.With(l.Info, keyvals...),
+		Info:   log.With(l.Info, keyvals...),
 		Trace:  l.Trace,
 	}
 }
@@ -96,20 +111,20 @@ func (l *Logger) WithTrace(keyvals ...interface{}) *Logger {
 	return &Logger{
 		Output: l.Output,
 		Info:   l.Info,
-		Trace:  kitlog.With(l.Trace, keyvals...),
+		Trace:  log.With(l.Trace, keyvals...),
 	}
 }
 
 func (l *Logger) WithPrefix(keyvals ...interface{}) *Logger {
 	return &Logger{
 		Output: l.Output,
-		Info:   kitlog.WithPrefix(l.Info, keyvals...),
-		Trace:  kitlog.WithPrefix(l.Trace, keyvals...),
+		Info:   log.WithPrefix(l.Info, keyvals...),
+		Trace:  log.WithPrefix(l.Trace, keyvals...),
 	}
 }
 
 // Hot swap the underlying outputLogger with another one to re-route messages
-func (l *Logger) SwapOutput(infoLogger kitlog.Logger) {
+func (l *Logger) SwapOutput(infoLogger log.Logger) {
 	l.Output.Swap(infoLogger)
 }
 
@@ -133,7 +148,7 @@ func (l *Logger) WithScope(scopeName string) *Logger {
 }
 
 // Record a structured log line with a message
-func Msg(logger kitlog.Logger, message string, keyvals ...interface{}) error {
+func Msg(logger log.Logger, message string, keyvals ...interface{}) error {
 	prepended := structure.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }

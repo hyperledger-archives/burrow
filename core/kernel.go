@@ -26,7 +26,7 @@ import (
 	"syscall"
 	"time"
 
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
@@ -40,10 +40,11 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/rpc/tm"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/streadway/simpleuuid"
 	tmConfig "github.com/tendermint/tendermint/config"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
@@ -61,12 +62,14 @@ const (
 // Kernel is the root structure of Burrow
 type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
-	Emitter        event.Emitter
-	Service        *rpc.Service
-	Launchers      []process.Launcher
-	State          *execution.State
-	Blockchain     *bcm.Blockchain
-	Node           *tendermint.Node
+	Emitter    event.Emitter
+	Service    *rpc.Service
+	Launchers  []process.Launcher
+	State      *execution.State
+	Blockchain *bcm.Blockchain
+	Node       *tendermint.Node
+	// Time-based UUID randomly generated each time Burrow is started
+	RunID          simpleuuid.UUID
 	Logger         *logging.Logger
 	nodeInfo       string
 	processes      map[string]process.Process
@@ -83,9 +86,13 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		processes:      make(map[string]process.Process),
 		shutdownNotify: make(chan struct{}),
 	}
-	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, kitlog.DefaultTimestampUTC)
-	tmLogger := logger.With(structure.CallerKey, kitlog.Caller(LoggingCallerDepth+1))
-	kern.Logger = logger.WithInfo(structure.CallerKey, kitlog.Caller(LoggingCallerDepth))
+	// Create a random ID based on start time
+	kern.RunID, err = simpleuuid.NewTime(time.Now())
+
+	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, log.DefaultTimestampUTC,
+		structure.RunId, kern.RunID.String())
+	tmLogger := logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1))
+	kern.Logger = logger.WithInfo(structure.CallerKey, log.Caller(LoggingCallerDepth))
 	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackend, tmConf.DBDir())
 
 	kern.Blockchain, err = bcm.LoadOrNewBlockchain(stateDB, genesisDoc, kern.Logger)
@@ -95,6 +102,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	// These should be in sync unless we are at the genesis block
 	if kern.Blockchain.LastBlockHeight() > 0 {
+		kern.Logger.InfoMsg("Loading application state")
 		kern.State, err = execution.LoadState(stateDB, kern.Blockchain.AppHashAfterLastBlock())
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
@@ -103,15 +111,17 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	} else {
 		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
+	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, kern.Logger)
+	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, keyClient, kern.Logger)
 
 	kern.Emitter = event.NewEmitter(kern.Logger)
-	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
+	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, keyClient, kern.Logger,
+		exeOptions...)
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%X", genesisDoc.ChainID(), privValidator.GetAddress())
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
@@ -126,7 +136,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	nameRegState := kern.State
 	accountState := kern.State
-	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec)
+	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec, kern.RunID)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +200,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			Name:    "RPC/tm",
 			Enabled: rpcConfig.TM.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := tm.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
+				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
 				if err != nil {
 					return nil, err
 				}
@@ -287,12 +297,25 @@ func (kern *Kernel) WaitForShutdown() {
 // Supervise kernel once booted
 func (kern *Kernel) supervise() {
 	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	sig := <-signals
-	kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
-		"signal", sig.String())
-	kern.Shutdown(context.Background())
+	shutdownCh := make(chan os.Signal, 1)
+	reloadCh := make(chan os.Signal, 1)
+	syncCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(reloadCh, syscall.SIGHUP)
+	signal.Notify(syncCh, syscall.SIGUSR1)
+	for {
+		select {
+		case <-reloadCh:
+			kern.Logger.Reload()
+		case <-syncCh:
+			kern.Logger.Sync()
+		case sig := <-shutdownCh:
+			kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
+				"signal", sig.String())
+			kern.Shutdown(context.Background())
+			return
+		}
+	}
 }
 
 // Stop the kernel allowing for a graceful shutdown of components in order

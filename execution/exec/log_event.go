@@ -53,6 +53,9 @@ func init() {
 }
 
 func (log *LogEvent) Get(key string) (string, bool) {
+	if log == nil {
+		return "", false
+	}
 	var value interface{}
 	switch key {
 	case event.AddressKey:

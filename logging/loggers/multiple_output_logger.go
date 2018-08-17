@@ -15,15 +15,15 @@
 package loggers
 
 import (
-	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/errors"
 )
 
 // This represents an 'AND' type logger. When logged to it will log to each of
 // the loggers in the slice.
-type MultipleOutputLogger []kitlog.Logger
+type MultipleOutputLogger []log.Logger
 
-var _ kitlog.Logger = MultipleOutputLogger(nil)
+var _ log.Logger = MultipleOutputLogger(nil)
 
 func (mol MultipleOutputLogger) Log(keyvals ...interface{}) error {
 	var errs []error
@@ -37,7 +37,7 @@ func (mol MultipleOutputLogger) Log(keyvals ...interface{}) error {
 }
 
 // Creates a logger that forks log messages to each of its outputLoggers
-func NewMultipleOutputLogger(outputLoggers ...kitlog.Logger) kitlog.Logger {
+func NewMultipleOutputLogger(outputLoggers ...log.Logger) log.Logger {
 	moLogger := make(MultipleOutputLogger, 0, len(outputLoggers))
 	// Flatten any MultipleOutputLoggers
 	for _, ol := range outputLoggers {

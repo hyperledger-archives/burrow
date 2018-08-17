@@ -1,0 +1,18 @@
+jobs:
+
+- name: app08
+  meta:
+    file: '../app08-initialization_constructors_in_contracts/deploy.yaml'
+
+- name: app09
+  meta:
+    file: '../app09-basic_solidity_imports/deploy.yaml'
+
+- name: app28
+  meta:
+    file: '../app28-multiple_imports_single_contract/deploy.yaml'
+
+- name: app38
+  meta:
+    file: '../app38-deploy_bin_file_with_linkage_to_libraries/deploy.yaml'
+

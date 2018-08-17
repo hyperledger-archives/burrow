@@ -9,11 +9,11 @@ import (
 )
 
 type Writer interface {
-	AlterPower(id crypto.Addressable, power *big.Int) (flow *big.Int, err error)
+	AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
 }
 
 type Reader interface {
-	Power(id crypto.Addressable) *big.Int
+	Power(id crypto.PublicKey) *big.Int
 }
 
 type Iterable interface {
@@ -35,34 +35,34 @@ type IterableReaderWriter interface {
 	Iterable
 }
 
-type WriterFunc func(id crypto.Addressable, power *big.Int) (flow *big.Int, err error)
+type WriterFunc func(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
 
 func SyncWriter(locker sync.Locker, writerFunc WriterFunc) WriterFunc {
-	return WriterFunc(func(id crypto.Addressable, power *big.Int) (flow *big.Int, err error) {
+	return WriterFunc(func(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
 		locker.Lock()
 		defer locker.Unlock()
 		return writerFunc(id, power)
 	})
 }
 
-func (wf WriterFunc) AlterPower(id crypto.Addressable, power *big.Int) (flow *big.Int, err error) {
+func (wf WriterFunc) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
 	return wf(id, power)
 }
 
-func AddPower(vs ReaderWriter, id crypto.Addressable, power *big.Int) error {
+func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	// Current power + power
 	_, err := vs.AlterPower(id, new(big.Int).Add(vs.Power(id), power))
 	return err
 }
 
-func SubtractPower(vs ReaderWriter, id crypto.Addressable, power *big.Int) error {
+func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	_, err := vs.AlterPower(id, new(big.Int).Sub(vs.Power(id), power))
 	return err
 }
 
 func Alter(vs Writer, vsOther Iterable) (err error) {
 	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		_, err = vs.AlterPower(id, power)
+		_, err = vs.AlterPower(id.PublicKey(), power)
 		if err != nil {
 			return true
 		}
@@ -74,7 +74,7 @@ func Alter(vs Writer, vsOther Iterable) (err error) {
 // Adds vsOther to vs
 func Add(vs ReaderWriter, vsOther Iterable) (err error) {
 	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		err = AddPower(vs, id, power)
+		err = AddPower(vs, id.PublicKey(), power)
 		if err != nil {
 			return true
 		}
@@ -86,7 +86,7 @@ func Add(vs ReaderWriter, vsOther Iterable) (err error) {
 // Subtracts vsOther from vs
 func Subtract(vs ReaderWriter, vsOther Iterable) (err error) {
 	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		err = SubtractPower(vs, id, power)
+		err = SubtractPower(vs, id.PublicKey(), power)
 		if err != nil {
 			return true
 		}
@@ -98,7 +98,7 @@ func Subtract(vs ReaderWriter, vsOther Iterable) (err error) {
 func Copy(vs Iterable) *Set {
 	vsCopy := NewSet()
 	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		vsCopy.ChangePower(id, power)
+		vsCopy.ChangePower(id.PublicKey(), power)
 		return
 	})
 	return vsCopy

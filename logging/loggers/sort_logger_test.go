@@ -24,7 +24,7 @@ func TestSortLogger(t *testing.T) {
 	require.NoError(t, err)
 	// non string keys sort after string keys, specified keys sort before unspecifed keys, specified key sort in order
 	assert.Equal(t, [][]interface{}{
-		{"foo", 3, "bar", 4, "baz", "horse", "crabs", "cycle", [][]int{}, "bar", "ALL ALONE"},
+		{"foo", 3, "bar", 4, "baz", "horse", [][]int{}, "bar", "crabs", "cycle", "ALL ALONE"},
 		{"foo", 0},
 		{"foo", "baz", "bar", "foo"},
 	}, lines)

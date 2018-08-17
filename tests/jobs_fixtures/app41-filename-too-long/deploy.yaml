@@ -1,0 +1,6 @@
+jobs:
+
+- name: deployK
+  deploy:
+    contract: test.sol
+    libraries: Library1:$defaultAddr, Library2:$defaultAddr, Library3:$defaultAddr, Library4:$defaultAddr, Library5:$defaultAddr, Library6:$defaultAddr

@@ -31,8 +31,7 @@ type SequentialSigningAccount struct {
 
 func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
 	return &Accounts{
-		// TODO: use the no hash variant of RingMutex after it has a test
-		RingMutex: *burrow_sync.NewRingMutexXXHash(mutexCount),
+		RingMutex: *burrow_sync.NewRingMutexNoHash(mutexCount),
 		Reader:    reader,
 		keyClient: keyClient,
 	}

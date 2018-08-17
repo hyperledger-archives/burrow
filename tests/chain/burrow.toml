@@ -1,0 +1,40 @@
+[Tendermint]
+  Seeds = ""
+  PersistentPeers = ""
+  ListenAddress = "tcp://0.0.0.0:36656"
+  ExternalAddress = ""
+  Moniker = ""
+  TendermintRoot = ".burrow"
+
+[Execution]
+
+[Keys]
+  GRPCServiceEnabled = true
+  AllowBadFilePermissions = true
+  RemoteAddress = ""
+  KeysDirectory = "../keys"
+
+[RPC]
+  [RPC.TM]
+    Enabled = true
+    ListenAddress = "tcp://127.0.0.1:36658"
+  [RPC.Profiler]
+    Enabled = false
+    ListenAddress = "tcp://127.0.0.1:7060"
+  [RPC.GRPC]
+    Enabled = true
+    ListenAddress = "127.0.0.1:20997"
+  [RPC.Metrics]
+    Enabled = false
+    ListenAddress = "tcp://127.0.0.1:10102"
+    MetricsPath = "/metrics"
+    BlockSampleSize = 100
+
+[Logging]
+  ExcludeTrace = false
+  NonBlocking = false
+  [Logging.RootSink]
+    [Logging.RootSink.Output]
+      OutputType = "stderr"
+      Format = "json"
+

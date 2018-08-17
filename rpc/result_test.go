@@ -21,9 +21,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/consensus/types"
-	goCrypto "github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/libs/common"
+	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -31,13 +29,13 @@ func TestResultListAccounts(t *testing.T) {
 	concreteAcc := acm.AsConcreteAccount(acm.FromAddressable(
 		acm.GeneratePrivateAccountFromSecret("Super Semi Secret")))
 	acc := concreteAcc
-	res := ResultListAccounts{
+	res := ResultAccounts{
 		Accounts:    []*acm.ConcreteAccount{acc},
 		BlockHeight: 2,
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
-	resOut := new(ResultListAccounts)
+	resOut := new(ResultAccounts)
 	json.Unmarshal(bs, resOut)
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)
@@ -45,12 +43,12 @@ func TestResultListAccounts(t *testing.T) {
 }
 
 func TestResultGetBlock(t *testing.T) {
-	res := &ResultGetBlock{
+	res := &ResultBlock{
 		Block: &Block{&tmTypes.Block{
 			LastCommit: &tmTypes.Commit{
 				Precommits: []*tmTypes.Vote{
 					{
-						Signature: goCrypto.SignatureEd25519{1, 2, 3},
+						Signature: tmEd25519.SignatureEd25519{1, 2, 3},
 					},
 				},
 			},
@@ -59,24 +57,7 @@ func TestResultGetBlock(t *testing.T) {
 	}
 	bs, err := json.Marshal(res)
 	require.NoError(t, err)
-	resOut := new(ResultGetBlock)
-	require.NoError(t, json.Unmarshal([]byte(bs), resOut))
-	bsOut, err := json.Marshal(resOut)
-	require.NoError(t, err)
-	assert.Equal(t, string(bs), string(bsOut))
-}
-
-func TestResultDumpConsensusState(t *testing.T) {
-	res := &ResultDumpConsensusState{
-		RoundState: types.RoundStateSimple{
-			HeightRoundStep: "34/0/3",
-			Votes:           json.RawMessage(`[{"i'm a json": "32"}]`),
-			LockedBlockHash: common.HexBytes{'b', 'y', 't', 'e', 's'},
-		},
-	}
-	bs, err := json.Marshal(res)
-	require.NoError(t, err)
-	resOut := new(ResultDumpConsensusState)
+	resOut := new(ResultBlock)
 	require.NoError(t, json.Unmarshal([]byte(bs), resOut))
 	bsOut, err := json.Marshal(resOut)
 	require.NoError(t, err)

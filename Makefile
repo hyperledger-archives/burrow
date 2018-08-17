@@ -15,15 +15,15 @@ BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
 BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 # Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.proto' -print)
+PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
-SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -type f -name '*.sol' -print)
+SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
 SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
-CI_IMAGE="quay.io/monax/build:burrow-ci"
+CI_IMAGE="hyperledger/burrow:ci"
 
 ### Formatting, linting and vetting
 
@@ -106,11 +106,6 @@ reinstall_vendor: erase_vendor
 ensure_vendor: reinstall_vendor
 	@scripts/is_checkout_dirty.sh
 
-# dumps Solidity interface contracts for SNatives
-.PHONY: snatives
-snatives:
-	@go run ./util/snatives/cmd/main.go
-
 ### Building github.com/hyperledger/burrow
 
 # Output commit_hash but only if we have the git repo (e.g. not in docker build
@@ -169,8 +164,8 @@ solidity: $(SOLIDITY_GO_FILES)
 # Test
 
 .PHONY: test
-test: check
-	@go test ${PACKAGES_NOVENDOR}
+test: check bin/solc
+	@tests/scripts/bin_wrapper.sh go test ./... ${GOPACKAGES_NOVENDOR}
 
 .PHONY: test_keys
 test_keys: build_db
@@ -181,8 +176,12 @@ rpc/test/strange_loop.go: integration/rpctest
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys
+test_integration: test_keys test_deploy
 	@go test -v -tags integration ./integration/...
+
+.PHONY: test_deploy
+test_deploy: bin/solc
+	@tests/scripts/bin_wrapper.sh tests/deploy.sh
 
 # Run integration test from bosmarmot (separated from other integration tests so we can
 # make exception when this test fails when we make a breaking change in Burrow)
@@ -192,8 +191,12 @@ test_integration_bosmarmot: bos build_db
 	make npm_install && \
 	GOPATH="${BOSMARMOT_GOPATH}" \
 	burrow_bin="${REPO}/bin/burrow" \
-	make test_integration_no_burrow
+	make test_burrow_js_no_burrow
 
+bin/solc: ./tests/scripts/deps/solc.sh
+	@mkdir -p bin
+	@tests/scripts/deps/solc.sh bin/solc
+	@touch bin/solc
 
 # test burrow with checks for race conditions
 .PHONY: test_race
@@ -231,14 +234,15 @@ docs: CHANGELOG.md NOTES.md
 tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
 
-.PHONY: docker_build_ci_rebuild
-docker_build_ci_rebuild:
-	docker build --no-cache -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
+.PHONY: release
+release: docs check test
+	@scripts/is_checkout_dirty.sh || echo "checkout is dirty so not releasing!" && exit 1
+	@scripts/release.sh
 
-.PHONY: docker_build_ci
-docker_build_ci:
+.PHONY: build_ci_image
+build_ci_image:
 	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
 
-.PHONY: docker_push_ci
-docker_push_ci: docker_build_ci
+.PHONY: push_ci_image
+push_ci_image: build_ci_image
 	docker push ${CI_IMAGE}

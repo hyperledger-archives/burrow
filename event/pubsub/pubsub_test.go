@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	clientID = "test-client"
+	clientID       = "test-client"
+	receiveTimeout = 10 * time.Second
 )
 
 func TestSubscribe(t *testing.T) {
@@ -230,8 +231,8 @@ func assertReceive(t *testing.T, expected interface{}, ch <-chan interface{}, ms
 		if actual != nil {
 			assert.Equal(t, expected, actual, msgAndArgs...)
 		}
-	case <-time.After(1 * time.Second):
-		t.Errorf("Expected to receive %v from the channel, got nothing after 1s", expected)
+	case <-time.After(receiveTimeout):
+		t.Errorf("Expected to receive %v from the channel, got nothing after %v", expected, receiveTimeout)
 		debug.PrintStack()
 	}
 }

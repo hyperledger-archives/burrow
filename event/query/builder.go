@@ -191,6 +191,10 @@ func operandString(value interface{}) string {
 }
 
 func StringFromValue(value interface{}) string {
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return "nil"
+	}
 	switch v := value.(type) {
 	case string:
 		return v
@@ -220,7 +224,6 @@ func StringFromValue(value interface{}) string {
 	case time.Time:
 		return timeString + " " + v.Format(time.RFC3339)
 	default:
-		rv := reflect.ValueOf(v)
 		if rv.Kind() == reflect.Slice {
 			values := make([]string, rv.Len())
 			for i := 0; i < rv.Len(); i++ {

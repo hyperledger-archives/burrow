@@ -23,6 +23,8 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Action = func() {
 		if *versionOpt {
 			fmt.Println(project.FullVersion())
+		} else {
+			app.PrintHelp()
 		}
 	}
 
@@ -41,6 +43,12 @@ func burrow(output commands.Output) *cli.Cli {
 
 	app.Command("dump", "Dump objects from an offline Burrow .burrow directory",
 		commands.Dump(output))
+
+	app.Command("deploy", "Deploy and test contracts",
+		commands.Deploy(output))
+
+	app.Command("snatives", "Dump Solidity interface contracts for SNatives",
+		commands.Snatives(output))
 
 	return app
 }
