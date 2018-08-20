@@ -213,6 +213,8 @@ type Build struct {
 	// compilers but rather will just be sent to the chain. Note, if you use a "call" job after deploying
 	// a binary contract then you will be **required** to utilize an abi field in the call job.
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`
+	// (Optional) where to save the result of the compilation
+	BinPath string `mapstructure:"binpath" json:"binpath" yaml:"binpath" toml:"binpath"`
 }
 
 func (job *Build) Validate() error {

@@ -40,8 +40,12 @@ func BuildJob(build *def.Build, do *def.Packages) (result string, err error) {
 	}
 
 	// Save
-	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
-		if err := os.Mkdir(do.BinPath, 0775); err != nil {
+	binPath := build.BinPath
+	if binPath == "" {
+		binPath = do.BinPath
+	}
+	if _, err := os.Stat(binPath); os.IsNotExist(err) {
+		if err := os.Mkdir(binPath, 0775); err != nil {
 			return "", err
 		}
 	}
@@ -53,7 +57,7 @@ func BuildJob(build *def.Build, do *def.Packages) (result string, err error) {
 			if err != nil {
 				return "", err
 			}
-			contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", res.Objectname))
+			contractName := filepath.Join(binPath, fmt.Sprintf("%s.bin", res.Objectname))
 			log.WithField("=>", contractName).Warn("Saving Binary")
 			if err := ioutil.WriteFile(contractName, b, 0664); err != nil {
 				return "", err
