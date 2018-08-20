@@ -215,6 +215,14 @@ type Build struct {
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`
 	// (Optional) where to save the result of the compilation
 	BinPath string `mapstructure:"binpath" json:"binpath" yaml:"binpath" toml:"binpath"`
+	// (Optional) the name of contract to instantiate (it has to be one of the contracts present)
+	// in the file defined in Contract above.
+	// When none is provided, the system will choose the contract with the same name as that file.
+	// use "all" to override and deploy all contracts in order. if "all" is selected the result
+	// of the job will default to the address of the contract which was deployed that matches
+	// the name of the file (or the last one deployed if there are no matching names; not the "last"
+	// one deployed" strategy is non-deterministic and should not be used).
+	Instance string `mapstructure:"instance" json:"instance" yaml:"instance" toml:"instance"`
 }
 
 func (job *Build) Validate() error {
