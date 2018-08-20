@@ -2,13 +2,13 @@
 // for persisting key-value pairs.
 //
 //
-// Basic usage of VersionedTree.
+// Basic usage of MutableTree.
 //
 //  import "github.com/tendermint/iavl"
 //  import "github.com/tendermint/tendermint/libs/db"
 //  ...
 //
-//  tree := iavl.NewVersionedTree(db.NewMemDB(), 128)
+//  tree := iavl.NewMutableTree(db.NewMemDB(), 128)
 //
 //  tree.IsEmpty() // true
 //

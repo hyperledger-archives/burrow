@@ -18,9 +18,9 @@
   name = "github.com/tendermint/tendermint"
   version = "=0.22.8"
 
-[[override]]
+[[constraint]]
   name = "github.com/tendermint/iavl"
-  version = "=0.9.2"
+  version = "=0.10.0"
 
 #[[constraint]]
 #  name = "github.com/prometheus/client_golang"
