@@ -11,6 +11,7 @@
 ### Fixed
 - TxExecutions that were exceptions (for example those that were REVERTed) will no longer have their events emitted from ExecutionEventsServer.GetEvents. They remain stored in state for the time being.
 - CallTxSim and CallCodeSim now take same code path as real transactions (via CallContext)
+- Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput.
 
 ### Added
 - Upgraded to Tendermint [0.22.8](https://github.com/tendermint/tendermint/compare/v0.22.4...v0.22.8) (from 0.22.4).
@@ -20,10 +21,6 @@
 - Ability to set --external-address on burrow configure and burrow start
 - Ability to set various command line options on burrow configure and burrow start and by BURROW_ prefixed environment variables
 - Exposed Tendermint SeedMode option
-
-
-### Fixed
-- Release our mempool signing lock once transactions have been CheckTx'd' to massively increase throughput.
 
 
 ## [0.20.0] - 2018-07-24
