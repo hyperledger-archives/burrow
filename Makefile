@@ -115,21 +115,21 @@ commit_hash:
 
 # build all targets in github.com/hyperledger/burrow
 .PHONY: build
-build:	check build_db
+build:	check build_burrow
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
 build_race:	check build_race_db
 
 # build burrow
-.PHONY: build_db
-build_db: commit_hash
+.PHONY: build_burrow
+build_burrow: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
 
-.PHONY: install_db
-install_db: build_db
+.PHONY: install_burrow
+install_burrow: build_burrow
 	cp ${REPO}/bin/burrow ${GOPATH}/bin/burrow
 
 # build burrow with checks for race conditions
@@ -168,7 +168,7 @@ test: check bin/solc
 	@tests/scripts/bin_wrapper.sh go test ./... ${GOPACKAGES_NOVENDOR}
 
 .PHONY: test_keys
-test_keys: build_db
+test_keys: build_burrow
 	burrow_bin="${REPO}/bin/burrow" keys/test.sh
 
 rpc/test/strange_loop.go: integration/rpctest
@@ -186,7 +186,7 @@ test_deploy: bin/solc
 # Run integration test from bosmarmot (separated from other integration tests so we can
 # make exception when this test fails when we make a breaking change in Burrow)
 .PHONY: test_integration_bosmarmot
-test_integration_bosmarmot: bos build_db
+test_integration_bosmarmot: bos build_burrow
 	cd "${BOSMARMOT_CHECKOUT}" &&\
 	make npm_install && \
 	GOPATH="${BOSMARMOT_GOPATH}" \
@@ -235,7 +235,7 @@ tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
 
 .PHONY: release
-release: docs check test
+release: docs check test docker_build
 	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
 	@scripts/release.sh
 

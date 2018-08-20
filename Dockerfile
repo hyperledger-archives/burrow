@@ -16,17 +16,17 @@ FROM alpine:3.8
 
 ARG REPO=/go/src/github.com/hyperledger/burrow
 
-ENV USER monax
-ENV MONAX_PATH /home/$USER/.monax
+ENV USER burrow
+ENV BURROW_PATH /home/$USER
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
-WORKDIR $MONAX_PATH
+WORKDIR $ BURROW_PATH
 USER $USER:$USER
 
 # Copy binaries built in previous stage
 COPY --from=builder $REPO/bin/* /usr/local/bin/
 #RUN chown $USER:$USER /usr/local/bin/burrow*
 
-# Expose ports for 26656:tendermint-peer; 26658: tm; 10997 GRPC
+# Expose ports for 26656: tendermint-peer; 26658: info; 10997: GRPC
 EXPOSE 26656
 EXPOSE 26658
 EXPOSE 10997

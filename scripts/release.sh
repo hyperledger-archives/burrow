@@ -2,10 +2,14 @@
 
 version_regex="^v[0-9]+\.[0-9]+\.[0-9]+$"
 
+set -e
 
 function release {
     notes="NOTES.md"
     echo "Building and releasing $tag..."
+    echo "Pushing docker image..."
+    docker login -u ${DOCKER_USER} -p ${DOCKER_PASS} && docker push ${DOCKER_REPO}
+    echo "Building and pushing binaries"
     [[ -e "$notes" ]] && goreleaser --release-notes "$notes" || goreleaser
 }
 
