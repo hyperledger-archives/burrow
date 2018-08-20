@@ -111,11 +111,11 @@ func TestResubscribe(t *testing.T) {
 	defer s.Stop()
 
 	ctx := context.Background()
-	ch, err := s.Subscribe(ctx, clientID, query.Empty{}, 0)
+	ch, err := s.Subscribe(ctx, clientID, query.Empty{}, 1)
 	require.NoError(t, err)
 	err = s.Unsubscribe(ctx, clientID, query.Empty{})
 	require.NoError(t, err)
-	ch, err = s.Subscribe(ctx, clientID, query.Empty{}, 0)
+	ch, err = s.Subscribe(ctx, clientID, query.Empty{}, 1)
 	require.NoError(t, err)
 
 	err = s.Publish(ctx, "Cable")
