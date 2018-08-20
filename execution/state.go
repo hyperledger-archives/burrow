@@ -79,12 +79,12 @@ type State struct {
 	sync.RWMutex
 	writeState *writeState
 	db         dbm.DB
-	tree       *iavl.VersionedTree
+	tree       *iavl.MutableTree
 	logger     *logging.Logger
 
 	// Values may be reassigned (mutex protected)
 	// Previous version of IAVL tree for concurrent read-only access
-	readTree *iavl.Tree
+	readTree *iavl.ImmutableTree
 	// Last state hash
 	hash []byte
 }
@@ -93,7 +93,7 @@ type State struct {
 func NewState(db dbm.DB) *State {
 	s := &State{
 		db:   db,
-		tree: iavl.NewVersionedTree(db, defaultCacheCapacity),
+		tree: iavl.NewMutableTree(db, defaultCacheCapacity),
 	}
 	s.writeState = &writeState{state: s}
 	return s
@@ -168,15 +168,7 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	if version <= 0 {
 		return nil, fmt.Errorf("trying to load state from non-positive version: version %v, hash: %X", version, hash)
 	}
-	// Load previous version for readTree
-	treeVersion, err := s.tree.LoadVersion(version - 1)
-	if err != nil {
-		return nil, fmt.Errorf("could not load previous version of state tree: %v", version-1)
-	}
-	// Set readTree
-	s.readTree = s.tree.Tree()
-	// Load previous version for readTree
-	treeVersion, err = s.tree.LoadVersion(version)
+	treeVersion, err := s.tree.LoadVersion(version)
 	if err != nil {
 		return nil, fmt.Errorf("could not load current version of state tree: version %v, hash: %X", version, hash)
 	}
@@ -184,6 +176,9 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 		return nil, fmt.Errorf("tried to load state version %v for state hash %X but loaded version %v",
 			version, hash, treeVersion)
 	}
+	// Load previous version for readTree
+	// Set readTree
+	s.readTree, err = s.tree.GetImmutable(version - 1)
 	return s, nil
 }
 
@@ -200,13 +195,13 @@ func (s *State) Update(updater func(up Updatable) error) ([]byte, error) {
 }
 
 func (ws *writeState) save() ([]byte, error) {
-	// Grab the current orphaning tree and save it for reads against committed state. Note that this tree will lazy
-	// load nodes from database (in-memory nodes are cleared when a version is saved - see SaveBranch in IAVL), however
-	// they are not cleared unless SaveBranch is called - and only LoadVersion/SaveVersion could do that which is a hack
-	ws.state.readTree = ws.state.tree.Tree()
-
 	// save state at a new version may still be orphaned before we save the version against the hash
 	hash, treeVersion, err := ws.state.tree.SaveVersion()
+	if err != nil {
+		return nil, err
+	}
+	// Take an immutable reference to the tree we just saved for querying
+	ws.state.readTree, err = ws.state.tree.GetImmutable(treeVersion)
 	if err != nil {
 		return nil, err
 	}
