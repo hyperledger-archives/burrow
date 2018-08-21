@@ -41,7 +41,7 @@ var defaultGraphNodeAttrs = map[string]string{
 	"shape": "circle",
 }
 
-func WriteDOTGraph(w io.Writer, tree *Tree, paths []PathToLeaf) {
+func WriteDOTGraph(w io.Writer, tree *ImmutableTree, paths []PathToLeaf) {
 	ctx := &graphContext{}
 
 	tree.root.hashWithCount()

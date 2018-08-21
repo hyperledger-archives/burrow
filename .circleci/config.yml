@@ -58,24 +58,8 @@ jobs:
           <<: *setup_docker
         # build docker image and tag the docker image(s) depending on branch/tag
       - run: make docker_build
-      - run: docker save $DOCKER_REPO > db-images.tar
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
 
-  # Simple smoke test to ensure burrow binary has been provisioned to container
-  test_docker_smoke:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: .
-      - setup_remote_docker:
-          <<: *setup_docker
-      - run: docker load -i db-images.tar
-      - run: docker run $DOCKER_REPO:$(./scripts/local_version.sh) -h
-
-  push_docker:
+  push_docker_dev:
     <<: *defaults
     steps:
       - attach_workspace:
@@ -83,7 +67,7 @@ jobs:
       - setup_remote_docker:
           <<: *setup_docker
       # Only run on non-pull requests
-      - run: "[[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || (docker login -u $DOCKER_USER -p $DOCKER_PASS && docker load -i db-images.tar && docker push $DOCKER_REPO)"
+      - run: "[[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || (docker login -u $DOCKER_USER_DEV -p $DOCKER_PASS_DEV && docker push $DOCKER_REPO_DEV)"
 
   release:
     <<: *defaults
@@ -115,25 +99,17 @@ workflows:
 
       - build_docker:
           filters:
-            <<: *tags_filters
-
-      - test_docker_smoke:
-          requires:
-            - build_docker
-          filters:
-            <<: *tags_filters
-
-      - push_docker:
-          requires:
-            - test
-            - test_integration
-            - test_integration_bosmarmot
-            - test_docker_smoke
-          filters:
             # tags filters and branch filters are applied disjunctively, so we
             # will still build tags not on develop (i.e. including tagged
             # releases on master that we specifically want to build)
             <<: *tags_filters
+
+      - push_docker_dev:
+          requires:
+          - test
+          - test_integration
+          - test_integration_bosmarmot
+          filters:
             branches:
               only: develop
 
@@ -142,7 +118,6 @@ workflows:
           - test
           - test_integration
           - test_integration_bosmarmot
-          - test_docker_smoke
           filters:
             <<: *tags_filters
             branches:

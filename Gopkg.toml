@@ -16,15 +16,11 @@
 # overriding here because of IAVL
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.22.8"
+  version = "=0.23.0"
 
-[[override]]
+[[constraint]]
   name = "github.com/tendermint/iavl"
-  version = "=0.9.2"
-
-#[[constraint]]
-#  name = "github.com/prometheus/client_golang"
-#  branch = "master"
+  version = "=0.10.0"
 
 # Haven't made a release since 2016.
 [[constraint]]

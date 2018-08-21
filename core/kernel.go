@@ -125,7 +125,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
-	metricsProvider := node.DefaultMetricsProvider
+	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
+		Prometheus:           false,
+		PrometheusListenAddr: "",
+	})
 	kern.Node, err = tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, app, metricsProvider, tmLogger)
 	if err != nil {
 		return nil, err
@@ -197,10 +200,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			},
 		},
 		{
-			Name:    "RPC/tm",
-			Enabled: rpcConfig.TM.Enabled,
+			Name:    "RPC/info",
+			Enabled: rpcConfig.Info.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
+				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.Info.ListenAddress, kern.Logger)
 				if err != nil {
 					return nil, err
 				}

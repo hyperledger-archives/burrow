@@ -44,7 +44,7 @@ func TestBlockchain_Encode(t *testing.T) {
 
 	// Should have exponentially decayed to 0
 	assertZero(t, flow)
-	assertZero(t, bc.validatorCache.Power(id1))
+	assertZero(t, bc.validatorCache.Power(id1.Address()))
 }
 
 // Since we have -0 and 0 with big.Int due to its representation with a neg flag

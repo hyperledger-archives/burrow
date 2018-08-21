@@ -140,7 +140,7 @@ func (node *Node) isLeaf() bool {
 }
 
 // Check if the node has a descendant with the given key.
-func (node *Node) has(t *Tree, key []byte) (has bool) {
+func (node *Node) has(t *ImmutableTree, key []byte) (has bool) {
 	if bytes.Equal(node.key, key) {
 		return true
 	}
@@ -154,7 +154,7 @@ func (node *Node) has(t *Tree, key []byte) (has bool) {
 }
 
 // Get a key under the node.
-func (node *Node) get(t *Tree, key []byte) (index int64, value []byte) {
+func (node *Node) get(t *ImmutableTree, key []byte) (index int64, value []byte) {
 	if node.isLeaf() {
 		switch bytes.Compare(node.key, key) {
 		case -1:
@@ -175,7 +175,7 @@ func (node *Node) get(t *Tree, key []byte) (index int64, value []byte) {
 	return index, value
 }
 
-func (node *Node) getByIndex(t *Tree, index int64) (key []byte, value []byte) {
+func (node *Node) getByIndex(t *ImmutableTree, index int64) (key []byte, value []byte) {
 	if node.isLeaf() {
 		if index == 0 {
 			return node.key, node.value
@@ -341,233 +341,42 @@ func (node *Node) writeBytes(w io.Writer) cmn.Error {
 	return nil
 }
 
-func (node *Node) set(t *Tree, key []byte, value []byte) (
-	newSelf *Node, updated bool, orphaned []*Node,
-) {
-	version := t.version + 1
-
-	if node.isLeaf() {
-		switch bytes.Compare(key, node.key) {
-		case -1:
-			return &Node{
-				key:       node.key,
-				height:    1,
-				size:      2,
-				leftNode:  NewNode(key, value, version),
-				rightNode: node,
-				version:   version,
-			}, false, []*Node{}
-		case 1:
-			return &Node{
-				key:       key,
-				height:    1,
-				size:      2,
-				leftNode:  node,
-				rightNode: NewNode(key, value, version),
-				version:   version,
-			}, false, []*Node{}
-		default:
-			return NewNode(key, value, version), true, []*Node{node}
-		}
-	} else {
-		orphaned = append(orphaned, node)
-		node = node.clone(version)
-
-		if bytes.Compare(key, node.key) < 0 {
-			var leftOrphaned []*Node
-			node.leftNode, updated, leftOrphaned = node.getLeftNode(t).set(t, key, value)
-			node.leftHash = nil // leftHash is yet unknown
-			orphaned = append(orphaned, leftOrphaned...)
-		} else {
-			var rightOrphaned []*Node
-			node.rightNode, updated, rightOrphaned = node.getRightNode(t).set(t, key, value)
-			node.rightHash = nil // rightHash is yet unknown
-			orphaned = append(orphaned, rightOrphaned...)
-		}
-
-		if updated {
-			return node, updated, orphaned
-		}
-		node.calcHeightAndSize(t)
-		newNode, balanceOrphaned := node.balance(t)
-		return newNode, updated, append(orphaned, balanceOrphaned...)
-	}
-}
-
-// removes the node corresponding to the passed key and balances the tree.
-// It returns:
-// - the hash of the new node (or nil if the node is the one removed)
-// - the node that replaces the orig. node after remove
-// - new leftmost leaf key for tree after successfully removing 'key' if changed.
-// - the removed value
-// - the orphaned nodes.
-func (node *Node) remove(t *Tree, key []byte) ([]byte, *Node, []byte, []byte, []*Node) {
-	version := t.version + 1
-
-	if node.isLeaf() {
-		if bytes.Equal(key, node.key) {
-			return nil, nil, nil, node.value, []*Node{node}
-		}
-		return node.hash, node, nil, nil, nil
-	}
-
-	// node.key < key; we go to the left to find the key:
-	if bytes.Compare(key, node.key) < 0 {
-		newLeftHash, newLeftNode, newKey, value, orphaned := node.getLeftNode(t).remove(t, key)
-
-		if len(orphaned) == 0 {
-			return node.hash, node, nil, value, orphaned
-		} else if newLeftHash == nil && newLeftNode == nil { // left node held value, was removed
-			return node.rightHash, node.rightNode, node.key, value, orphaned
-		}
-		orphaned = append(orphaned, node)
-
-		newNode := node.clone(version)
-		newNode.leftHash, newNode.leftNode = newLeftHash, newLeftNode
-		newNode.calcHeightAndSize(t)
-		newNode, balanceOrphaned := newNode.balance(t)
-
-		return newNode.hash, newNode, newKey, value, append(orphaned, balanceOrphaned...)
-	}
-	// node.key >= key; either found or look to the right:
-	newRightHash, newRightNode, newKey, value, orphaned := node.getRightNode(t).remove(t, key)
-
-	if len(orphaned) == 0 {
-		return node.hash, node, nil, value, orphaned
-	} else if newRightHash == nil && newRightNode == nil { // right node held value, was removed
-		return node.leftHash, node.leftNode, nil, value, orphaned
-	}
-	orphaned = append(orphaned, node)
-
-	newNode := node.clone(version)
-	newNode.rightHash, newNode.rightNode = newRightHash, newRightNode
-	if newKey != nil {
-		newNode.key = newKey
-	}
-	newNode.calcHeightAndSize(t)
-	newNode, balanceOrphaned := newNode.balance(t)
-
-	return newNode.hash, newNode, nil, value, append(orphaned, balanceOrphaned...)
-}
-
-func (node *Node) getLeftNode(t *Tree) *Node {
+func (node *Node) getLeftNode(t *ImmutableTree) *Node {
 	if node.leftNode != nil {
 		return node.leftNode
 	}
 	return t.ndb.GetNode(node.leftHash)
 }
 
-func (node *Node) getRightNode(t *Tree) *Node {
+func (node *Node) getRightNode(t *ImmutableTree) *Node {
 	if node.rightNode != nil {
 		return node.rightNode
 	}
 	return t.ndb.GetNode(node.rightHash)
 }
 
-// Rotate right and return the new node and orphan.
-func (node *Node) rotateRight(t *Tree) (newNode *Node, orphan *Node) {
-	version := t.version + 1
-
-	// TODO: optimize balance & rotate.
-	node = node.clone(version)
-	l := node.getLeftNode(t)
-	_l := l.clone(version)
-
-	_lrHash, _lrCached := _l.rightHash, _l.rightNode
-	_l.rightHash, _l.rightNode = node.hash, node
-	node.leftHash, node.leftNode = _lrHash, _lrCached
-
-	node.calcHeightAndSize(t)
-	_l.calcHeightAndSize(t)
-
-	return _l, l
-}
-
-// Rotate left and return the new node and orphan.
-func (node *Node) rotateLeft(t *Tree) (newNode *Node, orphan *Node) {
-	version := t.version + 1
-
-	// TODO: optimize balance & rotate.
-	node = node.clone(version)
-	r := node.getRightNode(t)
-	_r := r.clone(version)
-
-	_rlHash, _rlCached := _r.leftHash, _r.leftNode
-	_r.leftHash, _r.leftNode = node.hash, node
-	node.rightHash, node.rightNode = _rlHash, _rlCached
-
-	node.calcHeightAndSize(t)
-	_r.calcHeightAndSize(t)
-
-	return _r, r
-}
-
 // NOTE: mutates height and size
-func (node *Node) calcHeightAndSize(t *Tree) {
+func (node *Node) calcHeightAndSize(t *ImmutableTree) {
 	node.height = maxInt8(node.getLeftNode(t).height, node.getRightNode(t).height) + 1
 	node.size = node.getLeftNode(t).size + node.getRightNode(t).size
 }
 
-func (node *Node) calcBalance(t *Tree) int {
+func (node *Node) calcBalance(t *ImmutableTree) int {
 	return int(node.getLeftNode(t).height) - int(node.getRightNode(t).height)
 }
 
-// NOTE: assumes that node can be modified
-// TODO: optimize balance & rotate
-func (node *Node) balance(t *Tree) (newSelf *Node, orphaned []*Node) {
-	if node.persisted {
-		panic("Unexpected balance() call on persisted node")
-	}
-	balance := node.calcBalance(t)
-
-	if balance > 1 {
-		if node.getLeftNode(t).calcBalance(t) >= 0 {
-			// Left Left Case
-			newNode, orphaned := node.rotateRight(t)
-			return newNode, []*Node{orphaned}
-		}
-		// Left Right Case
-		var leftOrphaned *Node
-
-		left := node.getLeftNode(t)
-		node.leftHash = nil
-		node.leftNode, leftOrphaned = left.rotateLeft(t)
-		newNode, rightOrphaned := node.rotateRight(t)
-
-		return newNode, []*Node{left, leftOrphaned, rightOrphaned}
-	}
-	if balance < -1 {
-		if node.getRightNode(t).calcBalance(t) <= 0 {
-			// Right Right Case
-			newNode, orphaned := node.rotateLeft(t)
-			return newNode, []*Node{orphaned}
-		}
-		// Right Left Case
-		var rightOrphaned *Node
-
-		right := node.getRightNode(t)
-		node.rightHash = nil
-		node.rightNode, rightOrphaned = right.rotateRight(t)
-		newNode, leftOrphaned := node.rotateLeft(t)
-
-		return newNode, []*Node{right, leftOrphaned, rightOrphaned}
-	}
-	// Nothing changed
-	return node, []*Node{}
-}
-
 // traverse is a wrapper over traverseInRange when we want the whole tree
-func (node *Node) traverse(t *Tree, ascending bool, cb func(*Node) bool) bool {
+func (node *Node) traverse(t *ImmutableTree, ascending bool, cb func(*Node) bool) bool {
 	return node.traverseInRange(t, nil, nil, ascending, false, 0, func(node *Node, depth uint8) bool {
 		return cb(node)
 	})
 }
 
-func (node *Node) traverseWithDepth(t *Tree, ascending bool, cb func(*Node, uint8) bool) bool {
+func (node *Node) traverseWithDepth(t *ImmutableTree, ascending bool, cb func(*Node, uint8) bool) bool {
 	return node.traverseInRange(t, nil, nil, ascending, false, 0, cb)
 }
 
-func (node *Node) traverseInRange(t *Tree, start, end []byte, ascending bool, inclusive bool, depth uint8, cb func(*Node, uint8) bool) bool {
+func (node *Node) traverseInRange(t *ImmutableTree, start, end []byte, ascending bool, inclusive bool, depth uint8, cb func(*Node, uint8) bool) bool {
 	afterStart := start == nil || bytes.Compare(start, node.key) < 0
 	startOrAfter := start == nil || bytes.Compare(start, node.key) <= 0
 	beforeEnd := end == nil || bytes.Compare(node.key, end) < 0
@@ -615,7 +424,7 @@ func (node *Node) traverseInRange(t *Tree, start, end []byte, ascending bool, in
 }
 
 // Only used in testing...
-func (node *Node) lmd(t *Tree) *Node {
+func (node *Node) lmd(t *ImmutableTree) *Node {
 	if node.isLeaf() {
 		return node
 	}

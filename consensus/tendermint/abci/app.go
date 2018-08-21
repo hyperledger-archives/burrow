@@ -3,10 +3,8 @@ package abci
 import (
 	"fmt"
 	"math/big"
-	"sync"
-	"time"
-
 	"runtime/debug"
+	"sync"
 
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
@@ -116,12 +114,12 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 		var err error
 		// Tendermint runs a block behind with the validators passed in here
 		previousValidators := app.blockchain.PreviousValidators()
-		if len(block.Validators) != previousValidators.Count() {
+		if len(block.LastCommitInfo.Validators) != previousValidators.Count() {
 			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d",
-				len(block.Validators), previousValidators.Count())
+				len(block.LastCommitInfo.Validators), previousValidators.Count())
 			panic(err)
 		}
-		for _, v := range block.Validators {
+		for _, v := range block.LastCommitInfo.Validators {
 			err = app.checkValidatorMatches(previousValidators, v.Validator)
 			if err != nil {
 				panic(err)
@@ -132,14 +130,14 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 }
 
 func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validator) error {
-	publicKey, err := crypto.PublicKeyFromABCIPubKey(v.PubKey)
+	address, err := crypto.AddressFromBytes(v.Address)
 	if err != nil {
 		return err
 	}
-	power := ours.Power(publicKey)
+	power := ours.Power(address)
 	if power.Cmp(big.NewInt(v.Power)) != 0 {
 		return fmt.Errorf("validator %v has power %d from Tendermint but power %d from Burrow",
-			publicKey.Address(), v.Power, power)
+			address, v.Power, power)
 	}
 	return nil
 }
@@ -167,7 +165,6 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 		Log:       ctr.Log,
 		Data:      ctr.Data,
 		Tags:      ctr.Tags,
-		Fee:       ctr.Fee,
 		GasUsed:   ctr.GasUsed,
 		GasWanted: ctr.GasWanted,
 		Info:      ctr.Info,
@@ -241,7 +238,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Commit: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	blockTime := time.Unix(app.block.Header.Time, 0)
+	blockTime := app.block.Header.Time
 	app.logger.InfoMsg("Committing block",
 		"tag", "Commit",
 		structure.ScopeKey, "Commit()",

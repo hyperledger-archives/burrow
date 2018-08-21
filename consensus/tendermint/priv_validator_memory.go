@@ -8,7 +8,7 @@ import (
 
 type privValidatorMemory struct {
 	crypto.Addressable
-	signer         func(msg []byte) tmCrypto.Signature
+	signer         func(msg []byte) []byte
 	lastSignedInfo *LastSignedInfo
 }
 
@@ -24,8 +24,8 @@ func NewPrivValidatorMemory(addressable crypto.Addressable, signer crypto.Signer
 	}
 }
 
-func asTendermintSigner(signer crypto.Signer) func(msg []byte) tmCrypto.Signature {
-	return func(msg []byte) tmCrypto.Signature {
+func asTendermintSigner(signer crypto.Signer) func(msg []byte) []byte {
+	return func(msg []byte) []byte {
 		sig, err := signer.Sign(msg)
 		if err != nil {
 			return nil

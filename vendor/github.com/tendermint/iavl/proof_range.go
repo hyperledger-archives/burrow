@@ -26,7 +26,7 @@ type RangeProof struct {
 
 // Keys returns all the keys in the RangeProof.  NOTE: The keys here may
 // include more keys than provided by tree.GetRangeWithProof or
-// VersionedTree.GetVersionedRangeWithProof.  The keys returned there are only
+// MutableTree.GetVersionedRangeWithProof.  The keys returned there are only
 // in the provided [startKey,endKey){limit} range.  The keys returned here may
 // include extra keys, such as:
 // - the key before startKey if startKey is provided and doesn't exist;
@@ -308,7 +308,7 @@ func (proof *RangeProof) _computeRootHash() (rootHash []byte, treeEnd bool, err 
 // If keyEnd-1 exists, no later leaves will be included.
 // If keyStart >= keyEnd and both not nil, panics.
 // Limit is never exceeded.
-func (t *Tree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [][]byte, [][]byte, error) {
+func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [][]byte, [][]byte, error) {
 	if keyStart != nil && keyEnd != nil && bytes.Compare(keyStart, keyEnd) >= 0 {
 		panic("if keyStart and keyEnd are present, need keyStart < keyEnd.")
 	}
@@ -365,7 +365,6 @@ func (t *Tree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [
 	// nolint
 	var innersq = []PathToLeaf(nil)
 	var inners = PathToLeaf(nil)
-	var lastDepth uint8 = 0
 	var leafCount = 1 // from left above.
 	var pathCount = 0
 	// var keys, values [][]byte defined as function outs.
@@ -435,7 +434,6 @@ func (t *Tree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [
 					})
 				}
 			}
-			lastDepth = depth
 			return false
 		},
 	)
@@ -451,7 +449,7 @@ func (t *Tree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [
 
 // GetWithProof gets the value under the key if it exists, or returns nil.
 // A proof of existence or absence is returned alongside the value.
-func (t *Tree) GetWithProof(key []byte) (value []byte, proof *RangeProof, err error) {
+func (t *ImmutableTree) GetWithProof(key []byte) (value []byte, proof *RangeProof, err error) {
 	proof, _, values, err := t.getRangeProof(key, cpIncr(key), 2)
 	if err == nil {
 		if len(values) > 0 {
@@ -466,15 +464,19 @@ func (t *Tree) GetWithProof(key []byte) (value []byte, proof *RangeProof, err er
 }
 
 // GetRangeWithProof gets key/value pairs within the specified range and limit.
-func (t *Tree) GetRangeWithProof(startKey []byte, endKey []byte, limit int) (keys, values [][]byte, proof *RangeProof, err error) {
+func (t *ImmutableTree) GetRangeWithProof(startKey []byte, endKey []byte, limit int) (keys, values [][]byte, proof *RangeProof, err error) {
 	proof, keys, values, err = t.getRangeProof(startKey, endKey, limit)
 	return
 }
 
 // GetVersionedWithProof gets the value under the key at the specified version
 // if it exists, or returns nil.
-func (tree *VersionedTree) GetVersionedWithProof(key []byte, version int64) ([]byte, *RangeProof, error) {
-	if t, ok := tree.versions[version]; ok {
+func (tree *MutableTree) GetVersionedWithProof(key []byte, version int64) ([]byte, *RangeProof, error) {
+	if tree.versions[version] {
+		t, err := tree.GetImmutable(version)
+		if err != nil {
+			return nil, nil, err
+		}
 		return t.GetWithProof(key)
 	}
 	return nil, nil, cmn.ErrorWrap(ErrVersionDoesNotExist, "")
@@ -482,10 +484,14 @@ func (tree *VersionedTree) GetVersionedWithProof(key []byte, version int64) ([]b
 
 // GetVersionedRangeWithProof gets key/value pairs within the specified range
 // and limit.
-func (tree *VersionedTree) GetVersionedRangeWithProof(startKey, endKey []byte, limit int, version int64) (
+func (tree *MutableTree) GetVersionedRangeWithProof(startKey, endKey []byte, limit int, version int64) (
 	keys, values [][]byte, proof *RangeProof, err error) {
 
-	if t, ok := tree.versions[version]; ok {
+	if tree.versions[version] {
+		t, err := tree.GetImmutable(version)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		return t.GetRangeWithProof(startKey, endKey, limit)
 	}
 	return nil, nil, nil, cmn.ErrorWrap(ErrVersionDoesNotExist, "")

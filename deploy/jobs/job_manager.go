@@ -10,10 +10,18 @@ import (
 )
 
 func RunJobs(do *def.Packages) error {
-	// Dial the chain
-	err := do.Dial()
+
+	// Dial the chain if needed
+	err, needed := burrowConnectionNeeded(do)
 	if err != nil {
 		return err
+	}
+
+	if needed {
+		err = do.Dial()
+		if err != nil {
+			return err
+		}
 	}
 
 	// ADD DefaultAddr and DefaultSet to jobs array....
@@ -204,4 +212,24 @@ func postProcess(do *def.Packages) error {
 	// Write the output
 	log.Warn(fmt.Sprintf("Writing [%s] to current directory", do.DefaultOutput))
 	return WriteJobResultJSON(results, do.DefaultOutput)
+}
+
+func burrowConnectionNeeded(do *def.Packages) (error, bool) {
+	// Dial the chain if needed
+	for _, job := range do.Package.Jobs {
+		payload, err := job.Payload()
+		if err != nil {
+			return fmt.Errorf("could not get Job payload: %v", payload), false
+		}
+		switch payload.(type) {
+		case *def.Build:
+			continue
+		case *def.Set:
+			continue
+		default:
+			return nil, true
+		}
+	}
+
+	return nil, false
 }
