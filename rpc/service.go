@@ -376,7 +376,7 @@ func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockT
 		ValidatorInfo: &validator.Validator{
 			Address:   &address,
 			PublicKey: publicKey,
-			Power:     blockchain.Validators().Power(publicKey).Uint64(),
+			Power:     blockchain.Validators().Power(address).Uint64(),
 		},
 	}
 

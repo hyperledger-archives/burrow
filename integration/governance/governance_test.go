@@ -175,7 +175,7 @@ func TestChangePowerByAddress(t *testing.T) {
 	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
 	require.NoError(t, err)
 	set := validator.UnpersistSet(vs.Set)
-	assert.Equal(t, new(big.Int).SetUint64(power), set.Power(acc.PublicKey()))
+	assert.Equal(t, new(big.Int).SetUint64(power), set.Power(acc.Address()))
 }
 
 func TestInvalidSequenceNumber(t *testing.T) {

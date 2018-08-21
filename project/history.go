@@ -29,9 +29,20 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.20.2 - 2018-08-20",
-		`### Fixed
-- Upgrade to IAVL 0.10.0 and load previous versions immutably on boot - for chains with a long history > 20 minute load times could be observed because every previous root was being loaded from DB rather than lightweight version references as was intended`,
+	MustDeclareReleases("0.21.0 - 2018-08-21",
+		`### Changed
+- Upgraded to Tendermint 0.23.0
+- Validator Set Power now takes Address
+- RPC/TM config renamed to RPC/Info
+
+### Added
+- Burrow deploy creates devdoc
+- Docker image has org.label-schema labels
+
+### Fixed
+- Upgrade to IAVL 0.10.0 and load previous versions immutably on boot - for chains with a long history > 20 minute load times could be observed because every previous root was being loaded from DB rather than lightweight version references as was intended
+- Metrics server does not panic on empty block metas and recovers from other panics
+`,
 		"0.20.1 - 2018-08-17",
 		`### Changed
 - The snatives functions have new signatures; string arguments are now string, not byte32.
