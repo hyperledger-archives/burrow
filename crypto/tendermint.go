@@ -63,17 +63,6 @@ func (p PublicKey) TendermintPubKey() tmCrypto.PubKey {
 
 // Signature extensions
 
-func (sig Signature) TendermintSignature() tmCrypto.Signature {
-	switch sig.CurveType {
-	case CurveTypeEd25519:
-		s := tmEd25519.SignatureEd25519{}
-		copy(s[:], sig.Signature)
-		return s
-	case CurveTypeSecp256k1:
-		s := tmSecp256k1.SignatureSecp256k1{}
-		copy(s[:], sig.Signature)
-		return s
-	default:
-		return nil
-	}
+func (sig Signature) TendermintSignature() []byte {
+	return sig.Signature
 }

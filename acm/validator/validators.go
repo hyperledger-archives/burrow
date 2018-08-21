@@ -13,7 +13,7 @@ type Writer interface {
 }
 
 type Reader interface {
-	Power(id crypto.PublicKey) *big.Int
+	Power(id crypto.Address) *big.Int
 }
 
 type Iterable interface {
@@ -51,12 +51,12 @@ func (wf WriterFunc) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.
 
 func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	// Current power + power
-	_, err := vs.AlterPower(id, new(big.Int).Add(vs.Power(id), power))
+	_, err := vs.AlterPower(id, new(big.Int).Add(vs.Power(id.Address()), power))
 	return err
 }
 
 func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
-	_, err := vs.AlterPower(id, new(big.Int).Sub(vs.Power(id), power))
+	_, err := vs.AlterPower(id, new(big.Int).Sub(vs.Power(id.Address()), power))
 	return err
 }
 
