@@ -31,7 +31,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
@@ -88,7 +87,7 @@ type executor struct {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, keyClient keys.KeyClient, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
 	exe := newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
@@ -98,14 +97,13 @@ func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, keyClien
 		&contexts.GovernanceContext{
 			ValidatorSet: exe.blockchain.ValidatorChecker(),
 			StateWriter:  exe.stateCache,
-			KeyClient:    keyClient,
 			Logger:       exe.logger,
 		},
 	)
 }
 
 func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher,
-	keyClient keys.KeyClient, logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
+	logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
 
 	exe := newExecutor("CommitCache", true, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
@@ -114,7 +112,6 @@ func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitte
 		&contexts.GovernanceContext{
 			ValidatorSet: exe.blockchain.ValidatorWriter(),
 			StateWriter:  exe.stateCache,
-			KeyClient:    keyClient,
 			Logger:       exe.logger,
 		},
 	)
@@ -184,11 +181,12 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		"run_call", exe.runCall,
 		"tx_hash", txEnv.Tx.Hash())
 
-	logger.TraceMsg("Executing transaction", "tx", txEnv.String())
+	logger.InfoMsg("Executing transaction", "tx", txEnv.String())
 
 	// Verify transaction signature against inputs
 	err = txEnv.Verify(exe.stateCache, exe.blockchain.ChainID())
 	if err != nil {
+		logger.InfoMsg("Transaction Verify failed", structure.ErrorKey, err)
 		return nil, err
 	}
 
@@ -198,14 +196,20 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		// Validate inputs and check sequence numbers
 		err = txEnv.Tx.ValidateInputs(exe.stateCache)
 		if err != nil {
+			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
 			return nil, err
 		}
 		err = txExecutor.Execute(txe)
 		if err != nil {
+			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 			return nil, err
 		}
 		// Initialise public keys and increment sequence numbers for Tx inputs
-		exe.updateSignatories(txEnv)
+		err = exe.updateSignatories(txEnv)
+		if err != nil {
+			logger.InfoMsg("Updating signatories failed", structure.ErrorKey, err)
+			return nil, err
+		}
 		// Return execution for this tx
 		return txe, nil
 	}

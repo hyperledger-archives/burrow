@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis/spec"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -20,7 +19,6 @@ import (
 type GovernanceContext struct {
 	StateWriter  state.ReaderWriter
 	ValidatorSet validator.Writer
-	KeyClient    keys.KeyClient
 	Logger       *logging.Logger
 	tx           *payload.GovTx
 	txe          *exec.TxExecution
@@ -151,11 +149,6 @@ func (ctx *GovernanceContext) MaybeGetPublicKey(address crypto.Address) (*crypto
 	}
 	if acc != nil && acc.PublicKey().IsSet() {
 		publicKey := acc.PublicKey()
-		return &publicKey, nil
-	}
-	// Then try key client
-	publicKey, err := ctx.KeyClient.PublicKey(address)
-	if err == nil {
 		return &publicKey, nil
 	}
 	return nil, nil

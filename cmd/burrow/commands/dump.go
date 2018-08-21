@@ -61,12 +61,12 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				_, err = explorer.Blocks(start, end,
 					func(block *forensics.Block) (stop bool) {
 						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
-							wrapper := struct{
+							wrapper := struct {
 								Height int64
-								Tx *txs.Envelope
+								Tx     *txs.Envelope
 							}{
 								Height: block.Height,
-								Tx: txEnv,
+								Tx:     txEnv,
 							}
 							bs, err := json.Marshal(wrapper)
 							if err != nil {
