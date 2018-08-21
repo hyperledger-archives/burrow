@@ -32,8 +32,8 @@ import (
 var kern *core.Kernel
 var _ = integration.ClaimPorts()
 var testConfig = integration.NewTestConfig(rpctest.GenesisDoc)
-var jsonRpcClient = rpcClient.NewJSONRPCClient(testConfig.RPC.TM.ListenAddress)
-var httpClient = rpcClient.NewURIClient(testConfig.RPC.TM.ListenAddress)
+var jsonRpcClient = rpcClient.NewJSONRPCClient(testConfig.RPC.Info.ListenAddress)
+var httpClient = rpcClient.NewURIClient(testConfig.RPC.Info.ListenAddress)
 var clients = map[string]tmClient.RPCClient{
 	"JSONRPC": jsonRpcClient,
 	"HTTP":    httpClient,

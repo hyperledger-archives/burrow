@@ -14,6 +14,7 @@
 package metrics
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/hyperledger/burrow/rpc"
@@ -105,6 +106,10 @@ func (e *Exporter) getBlocks() (*rpc.ResultBlocks, error) {
 	res, err := e.service.Blocks(int64(minHeight), int64(maxHeight))
 	if err != nil {
 		return nil, err
+	}
+
+	if !(len(res.BlockMetas) > 0) {
+		return nil, fmt.Errorf("no blocks returned")
 	}
 
 	return res, nil

@@ -197,10 +197,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			},
 		},
 		{
-			Name:    "RPC/tm",
-			Enabled: rpcConfig.TM.Enabled,
+			Name:    "RPC/info",
+			Enabled: rpcConfig.Info.Enabled,
 			Launch: func() (process.Process, error) {
-				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.TM.ListenAddress, kern.Logger)
+				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.Info.ListenAddress, kern.Logger)
 				if err != nil {
 					return nil, err
 				}
