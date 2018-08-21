@@ -1,7 +1,18 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [0.20.2] - 2018-08-20
+## [0.21.0] - 2018-08-21
+### Changed
+- Upgraded to Tendermint 0.23.0
+- Validator Set Power now takes Address
+- RPC/TM config renamed to RPC/Info
+
+### Added
+- Burrow deploy creates devdoc
+- Docker image has org.label-schema labels
+
 ### Fixed
 - Upgrade to IAVL 0.10.0 and load previous versions immutably on boot - for chains with a long history > 20 minute load times could be observed because every previous root was being loaded from DB rather than lightweight version references as was intended
+- Metrics server does not panic on empty block metas and recovers from other panics
+
 
 ## [0.20.1] - 2018-08-17
 ### Changed
@@ -255,7 +266,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[0.20.2]: https://github.com/hyperledger/burrow/compare/v0.20.1...v0.20.2
+[0.21.0]: https://github.com/hyperledger/burrow/compare/v0.20.1...v0.21.0
 [0.20.1]: https://github.com/hyperledger/burrow/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/hyperledger/burrow/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/hyperledger/burrow/compare/v0.18.1...v0.19.0
