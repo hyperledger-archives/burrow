@@ -19,6 +19,10 @@ function log() {
     echo "$*" >> /dev/stderr
 }
 
+# Same as specified RFC3339 but contains the T
+date=$(date -Idate)
+commit=$(git rev-parse --short HEAD)
+
 if [[ ${tag} =~ ${VERSION_REGEX} ]] ; then
     # Only label a build as a release version when the commit is tagged
     log "Building release version (tagged $tag)..."
@@ -28,8 +32,6 @@ if [[ ${tag} =~ ${VERSION_REGEX} ]] ; then
         exit 1
     fi
 else
-    date=$(date +"%Y%m%d")
-    commit=$(git rev-parse --short HEAD)
     version="$version-dev-$date-$commit"
     log "Building non-release version $version..."
 fi
