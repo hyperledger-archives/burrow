@@ -76,7 +76,7 @@ jobs:
       - run: make release
 
 
-workflows:q
+workflows:
   version: 2
 
   test_and_release:

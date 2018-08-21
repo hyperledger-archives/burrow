@@ -37,7 +37,7 @@ func RunJobs(do *def.Packages) error {
 
 	err = do.Validate()
 	if err != nil {
-		return fmt.Errorf("error validating Burrow package file at %s: %v", do.YAMLPath, err)
+		return fmt.Errorf("error validating Burrow deploy file at %s: %v", do.YAMLPath, err)
 	}
 
 	for _, job := range do.Package.Jobs {
