@@ -62,8 +62,6 @@ jobs:
   push_docker_dev:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: .
       - setup_remote_docker:
           <<: *setup_docker
       # Only run on non-pull requests
@@ -72,11 +70,13 @@ jobs:
   release:
     <<: *defaults
     steps:
+      - setup_remote_docker:
+          <<: *setup_docker
       - checkout
       - run: make release
 
 
-workflows:
+workflows:q
   version: 2
 
   test_and_release:
