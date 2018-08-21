@@ -8,7 +8,8 @@ function release {
     notes="NOTES.md"
     echo "Building and releasing $tag..."
     echo "Pushing docker image..."
-    docker login -u ${DOCKER_USER} -p ${DOCKER_PASS} && docker push ${DOCKER_REPO}
+    echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} ${DOCKER_REPO} --password-stdin
+
     echo "Building and pushing binaries"
     [[ -e "$notes" ]] && goreleaser --release-notes "$notes" || goreleaser
 }
