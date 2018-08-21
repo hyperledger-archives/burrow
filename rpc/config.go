@@ -7,7 +7,7 @@ import "fmt"
 const localhost = "127.0.0.1"
 
 type RPCConfig struct {
-	TM       *ServerConfig  `json:",omitempty" toml:",omitempty"`
+	Info     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Metrics  *MetricsConfig `json:",omitempty" toml:",omitempty"`
@@ -37,14 +37,14 @@ type MetricsConfig struct {
 
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
-		TM:       DefaultTMConfig(),
+		Info:     DefaultInfoConfig(),
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
 		Metrics:  DefaultMetricsConfig(),
 	}
 }
 
-func DefaultTMConfig() *ServerConfig {
+func DefaultInfoConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
 		ListenAddress: fmt.Sprintf("tcp://%s:26658", localhost),

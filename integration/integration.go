@@ -170,7 +170,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
 	cnf.Tendermint.ExternalAddress = cnf.Tendermint.ListenAddress
 	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()
 	cnf.RPC.Metrics.ListenAddress = GetTCPLocalAddress()
-	cnf.RPC.TM.ListenAddress = GetTCPLocalAddress()
+	cnf.RPC.Info.ListenAddress = GetTCPLocalAddress()
 	cnf.Keys.RemoteAddress = ""
 	return cnf
 }
