@@ -495,7 +495,7 @@
   version = "v0.10.0"
 
 [[projects]]
-  digest = "1:84249e1324b5a504fd52c52c131a8abc7b36d913803e5bacc6c2c0ab9fbad045"
+  digest = "1:77fa9bc72848b93790fdad4f728f4ae36a905a51d6056dc72752889157fc37c0"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -544,8 +544,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "d542d2c3945116697f60451e6a407082c41c3cc9"
-  version = "v0.22.8"
+  revision = "013b9cef642f875634c614019ab13b17570778ad"
+  version = "v0.23.0"
 
 [[projects]]
   branch = "master"
@@ -565,12 +565,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:af274e79e60e89d72d9b85b1145d330934ff2adca88a0a354886669be0b4b0cb"
+  digest = "1:fda2fde01556c582685ab0a5cf270ea0bd657f572fbdfc89b9acc31e1d48dc8a"
   name = "golang.org/x/crypto"
   packages = [
+    "chacha20poly1305",
     "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "hkdf",
+    "internal/chacha20",
     "internal/subtle",
     "nacl/box",
     "nacl/secretbox",
