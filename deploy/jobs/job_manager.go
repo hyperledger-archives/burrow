@@ -222,6 +222,9 @@ func burrowConnectionNeeded(do *def.Packages) (error, bool) {
 			return fmt.Errorf("could not get Job payload: %v", payload), false
 		}
 		switch payload.(type) {
+		case *def.Meta:
+			// A meta jobs will call runJobs again, so it does not need a connection for itself
+			continue
 		case *def.Build:
 			continue
 		case *def.Set:
