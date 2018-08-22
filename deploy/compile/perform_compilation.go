@@ -94,6 +94,10 @@ func RequestBinaryLinkage(file string, libraries map[string]string) (*BinaryResp
 	if err != nil {
 		return &BinaryResponse{}, err
 	}
+	return BinaryLinkage(contract, libraries)
+}
+
+func BinaryLinkage(contract SolidityOutputContract, libraries map[string]string) (*BinaryResponse, error) {
 	bin := contract.Evm.Bytecode.Object
 	if !strings.Contains(bin, "_") {
 		return &BinaryResponse{
@@ -103,7 +107,7 @@ func RequestBinaryLinkage(file string, libraries map[string]string) (*BinaryResp
 		}, nil
 	}
 	var links map[string]map[string][]struct{ Start, Length int }
-	err = json.Unmarshal(contract.Evm.Bytecode.LinkReferences, &links)
+	err := json.Unmarshal(contract.Evm.Bytecode.LinkReferences, &links)
 	if err != nil {
 		return &BinaryResponse{}, err
 	}
