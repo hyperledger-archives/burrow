@@ -102,29 +102,31 @@ func RequestBinaryLinkage(file string, libraries map[string]string) (*BinaryResp
 			Error:  "",
 		}, nil
 	}
-	var links map[string]map[string]struct{ Start, Length int }
+	var links map[string]map[string][]struct{ Start, Length int }
 	err = json.Unmarshal(contract.Evm.Bytecode.LinkReferences, &links)
 	if err != nil {
 		return &BinaryResponse{}, err
 	}
 	for _, f := range links {
-		for name, relo := range f {
+		for name, relos := range f {
 			addr, ok := libraries[name]
 			if !ok {
 				return &BinaryResponse{}, fmt.Errorf("library %s is not defined", name)
 			}
-			if relo.Length != RelocationLength {
-				return &BinaryResponse{}, fmt.Errorf("linkReference should be %d bytes long, not %d", RelocationLength, relo.Length)
+			for _, relo := range relos {
+				if relo.Length != RelocationLength {
+					return &BinaryResponse{}, fmt.Errorf("linkReference should be %d bytes long, not %d", RelocationLength, relo.Length)
+				}
+				if len(addr) != AddressLength {
+					return &BinaryResponse{}, fmt.Errorf("address %s should be %d character long, not %d", addr, AddressLength, len(addr))
+				}
+				start := relo.Start * 2
+				end := relo.Start*2 + AddressLength
+				if bin[start+1] != '_' || bin[end-1] != '_' {
+					return &BinaryResponse{}, fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
+				}
+				bin = bin[:start] + addr + bin[end:]
 			}
-			if len(addr) != AddressLength {
-				return &BinaryResponse{}, fmt.Errorf("address %s should be %d character long, not %d", addr, AddressLength, len(addr))
-			}
-			start := relo.Start * 2
-			end := relo.Start*2 + AddressLength
-			if bin[start+1] != '_' || bin[end-1] != '_' {
-				return &BinaryResponse{}, fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
-			}
-			bin = bin[:start] + addr + bin[end:]
 		}
 	}
 
