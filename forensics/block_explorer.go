@@ -16,7 +16,7 @@ type BlockExplorer struct {
 
 func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockExplorer {
 	return &BlockExplorer{
-		txDecoder:  txs.NewJSONCodec(),
+		txDecoder:  txs.NewAminoCodec(),
 		BlockStore: blockchain.NewBlockStore(tendermint.DBProvider("blockstore", dbBackendType, dbDir)),
 	}
 }

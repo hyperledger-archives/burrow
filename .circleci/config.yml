@@ -59,17 +59,13 @@ jobs:
         # build docker image and tag the docker image(s) depending on branch/tag
       - run: make docker_build
 
-  push_docker_dev:
+  release_dev:
     <<: *defaults
     steps:
       - setup_remote_docker:
           <<: *setup_docker
-      # Only run on non-pull requests
-      - run: |-
-          [[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || \
-          echo $DOCKER_PASS_DEV | docker login --username $DOCKER_USER_DEV $CI_REGISTRY $DOCKER_HUB_DEV --password-stdin && \
-          docker tag $DOCKER_REPO:$($CIRCLE_WORKING_DIRECTORY/scripts/local_version.sh) $DOCKER_REPO_DEV:$($CIRCLE_WORKING_DIRECTORY/scripts/local_version.sh) && \
-          docker push $DOCKER_REPO_DEV
+      - checkout
+      - run: make release_dev
 
   release:
     <<: *defaults
@@ -108,7 +104,7 @@ workflows:
             # releases on master that we specifically want to build)
             <<: *tags_filters
 
-      - push_docker_dev:
+      - release_dev:
           requires:
           - test
           - test_integration

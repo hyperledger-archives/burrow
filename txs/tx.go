@@ -163,7 +163,7 @@ func (tx *Tx) String() string {
 	if tx == nil {
 		return "Tx{nil}"
 	}
-	return fmt.Sprintf("Tx{TxHash: %X; Payload: %v}", tx.Hash(), tx.Payload)
+	return fmt.Sprintf("Tx{TxHash: %s; Payload: %v}", tx.Hash(), tx.Payload)
 }
 
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance

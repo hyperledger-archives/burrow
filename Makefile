@@ -239,6 +239,10 @@ release: docs check test docker_build
 	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
 	@scripts/release.sh
 
+.PHONY: release_dev
+release_dev: test docker_build
+	@scripts/release_dev.sh
+
 .PHONY: build_ci_image
 build_ci_image:
 	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
