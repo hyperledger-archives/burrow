@@ -68,7 +68,7 @@ jobs:
       - run: |-
           [[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || \
           echo $DOCKER_PASS_DEV | docker login --username $DOCKER_USER_DEV $CI_REGISTRY $DOCKER_HUB_DEV --password-stdin && \
-          docker tag $DOCKER_REPO:$(scripts/local_version.sh) $DOCKER_REPO_DEV:$(scripts/local_version.sh) && \
+          docker tag $DOCKER_REPO:$($CIRCLE_WORKING_DIRECTORY/scripts/local_version.sh) $DOCKER_REPO_DEV:$($CIRCLE_WORKING_DIRECTORY/scripts/local_version.sh) && \
           docker push $DOCKER_REPO_DEV
 
   release:
