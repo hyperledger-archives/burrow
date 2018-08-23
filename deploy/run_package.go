@@ -64,11 +64,12 @@ func RunPackage(do *def.Packages) error {
 	}
 
 	// Ensure relative paths if we're given a different path for deploy contracts jobs
+	// Solidity contracts may import other solidity contracts, and the working directory
+	// is the directory where solc searches from.
 	if do.Path != pwd {
-		for _, job := range do.Package.Jobs {
-			if job.Deploy != nil {
-				job.Deploy.Contract = filepath.Join(do.Path, job.Deploy.Contract)
-			}
+		err = os.Chdir(do.Path)
+		if err != nil {
+			return err
 		}
 	}
 
