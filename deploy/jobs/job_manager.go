@@ -2,12 +2,27 @@ package jobs
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
+	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	log "github.com/sirupsen/logrus"
 )
+
+type trackJob struct {
+	payload      def.Payload
+	job          *def.Job
+	compilerResp *compilers.Response
+	err          error
+	done         chan struct{}
+}
+
+func compile(contract string, track *trackJob) {
+	(*track).compilerResp, (*track).err = compilers.Compile(contract, false, nil)
+	close(track.done)
+}
 
 func RunJobs(do *def.Packages) error {
 
@@ -40,21 +55,51 @@ func RunJobs(do *def.Packages) error {
 		return fmt.Errorf("error validating Burrow deploy file at %s: %v", do.YAMLPath, err)
 	}
 
+	intermediateJobs := make([]*trackJob, 0, len(do.Package.Jobs))
+
 	for _, job := range do.Package.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
 			return fmt.Errorf("could not get Job payload: %v", payload)
 		}
-		err = util.PreProcessFields(payload, do)
+
+		track := trackJob{job: job, payload: payload}
+		intermediateJobs = append(intermediateJobs, &track)
+
+		// Do compilation first
+		switch payload.(type) {
+		case *def.Build:
+			track.done = make(chan struct{})
+			go compile(job.Build.Contract, &track)
+		case *def.Deploy:
+			if filepath.Ext(job.Deploy.Contract) == ".sol" {
+				track.done = make(chan struct{})
+				go compile(job.Deploy.Contract, &track)
+			}
+		}
+	}
+
+	for _, m := range intermediateJobs {
+		job := m.job
+
+		err = util.PreProcessFields(m.payload, do)
 		if err != nil {
 			return err
 		}
 		// Revalidate with possible replacements
-		err = payload.Validate()
+		err = m.payload.Validate()
 		if err != nil {
 			return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
 		}
-		switch payload.(type) {
+
+		if m.done != nil {
+			<-m.done
+			if m.err != nil {
+				return m.err
+			}
+		}
+
+		switch m.payload.(type) {
 		// Meta Job
 		case *def.Meta:
 			announce(job.Name, "Meta")
@@ -88,13 +133,13 @@ func RunJobs(do *def.Packages) error {
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			job.Result, err = DeployJob(job.Deploy, do)
+			job.Result, err = DeployJob(job.Deploy, do, m.compilerResp)
 		case *def.Call:
 			announce(job.Name, "Call")
 			job.Result, job.Variables, err = CallJob(job.Call, do)
 		case *def.Build:
 			announce(job.Name, "Build")
-			job.Result, err = BuildJob(job.Build, do)
+			job.Result, err = BuildJob(job.Build, do, m.compilerResp)
 
 		// State jobs
 		case *def.RestoreState:
@@ -222,6 +267,9 @@ func burrowConnectionNeeded(do *def.Packages) (error, bool) {
 			return fmt.Errorf("could not get Job payload: %v", payload), false
 		}
 		switch payload.(type) {
+		case *def.Meta:
+			// A meta jobs will call runJobs again, so it does not need a connection for itself
+			continue
 		case *def.Build:
 			continue
 		case *def.Set:
