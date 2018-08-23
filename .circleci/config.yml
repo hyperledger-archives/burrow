@@ -65,7 +65,11 @@ jobs:
       - setup_remote_docker:
           <<: *setup_docker
       # Only run on non-pull requests
-      - run: "[[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || (echo $DOCKER_PASS_DEV | docker login --username $DOCKER_USER_DEV $CI_REGISTRY $DOCKER_HUB_DEV --password-stdin && docker push $DOCKER_REPO_DEV)"
+      - run: |-
+          [[ -n \"$CIRCLE_PULL_REQUESTS\" ]] || \
+          echo $DOCKER_PASS_DEV | docker login --username $DOCKER_USER_DEV $CI_REGISTRY $DOCKER_HUB_DEV --password-stdin && \
+          docker tag $DOCKER_REPO:$(scripts/local_version.sh) $DOCKER_REPO_DEV:$(scripts/local_version.sh) && \
+          docker push $DOCKER_REPO_DEV
 
   release:
     <<: *defaults
