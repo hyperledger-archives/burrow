@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hyperledger/burrow/crypto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,12 +79,7 @@ type ResponseItem struct {
 	Binary     SolidityOutputContract `json:"binary"`
 }
 
-const (
-	AddressLength    = 40
-	RelocationLength = 20
-)
-
-func RequestBinaryLinkage(file string, libraries map[string]string) (*BinaryResponse, error) {
+func LinkFile(file string, libraries map[string]string) (*BinaryResponse, error) {
 	//Create Binary Request, send it off
 	codeB, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -94,10 +90,10 @@ func RequestBinaryLinkage(file string, libraries map[string]string) (*BinaryResp
 	if err != nil {
 		return &BinaryResponse{}, err
 	}
-	return BinaryLinkage(contract, libraries)
+	return LinkContract(contract, libraries)
 }
 
-func BinaryLinkage(contract SolidityOutputContract, libraries map[string]string) (*BinaryResponse, error) {
+func LinkContract(contract SolidityOutputContract, libraries map[string]string) (*BinaryResponse, error) {
 	bin := contract.Evm.Bytecode.Object
 	if !strings.Contains(bin, "_") {
 		return &BinaryResponse{
@@ -118,14 +114,14 @@ func BinaryLinkage(contract SolidityOutputContract, libraries map[string]string)
 				return &BinaryResponse{}, fmt.Errorf("library %s is not defined", name)
 			}
 			for _, relo := range relos {
-				if relo.Length != RelocationLength {
-					return &BinaryResponse{}, fmt.Errorf("linkReference should be %d bytes long, not %d", RelocationLength, relo.Length)
+				if relo.Length != crypto.AddressLength {
+					return &BinaryResponse{}, fmt.Errorf("linkReference should be %d bytes long, not %d", crypto.AddressLength, relo.Length)
 				}
-				if len(addr) != AddressLength {
-					return &BinaryResponse{}, fmt.Errorf("address %s should be %d character long, not %d", addr, AddressLength, len(addr))
+				if len(addr) != crypto.AddressHexLength {
+					return &BinaryResponse{}, fmt.Errorf("address %s should be %d character long, not %d", addr, crypto.AddressHexLength, len(addr))
 				}
 				start := relo.Start * 2
-				end := relo.Start*2 + AddressLength
+				end := relo.Start*2 + crypto.AddressHexLength
 				if bin[start+1] != '_' || bin[end-1] != '_' {
 					return &BinaryResponse{}, fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
 				}
@@ -141,7 +137,7 @@ func BinaryLinkage(contract SolidityOutputContract, libraries map[string]string)
 	}, nil
 }
 
-func RequestCompile(file string, optimize bool, libraries map[string]string) (*Response, error) {
+func Compile(file string, optimize bool, libraries map[string]string) (*Response, error) {
 	input := SolidityInput{Language: "Solidity", Sources: make(map[string]SolidityInputSource)}
 
 	input.Sources[file] = SolidityInputSource{Urls: []string{file}}

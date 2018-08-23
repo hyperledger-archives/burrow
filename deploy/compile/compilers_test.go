@@ -61,7 +61,7 @@ func TestLocalMulti(t *testing.T) {
 		Version: "",
 		Error:   "",
 	}
-	resp, err := RequestCompile("contractImport1.sol", false, make(map[string]string))
+	resp, err := Compile("contractImport1.sol", false, make(map[string]string))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestLocalSingle(t *testing.T) {
 		Version: "",
 		Error:   "",
 	}
-	resp, err := RequestCompile("simpleContract.sol", false, make(map[string]string))
+	resp, err := Compile("simpleContract.sol", false, make(map[string]string))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestFaultyContract(t *testing.T) {
 	actualOutput, err := exec.Command("solc", "--combined-json", "bin,abi", "faultyContract.sol").CombinedOutput()
 	err = json.Unmarshal(actualOutput, expectedSolcResponse)
 	t.Log(expectedSolcResponse.Error)
-	resp, err := RequestCompile("faultyContract.sol", false, make(map[string]string))
+	resp, err := Compile("faultyContract.sol", false, make(map[string]string))
 	t.Log(resp.Error)
 	if err != nil {
 		if expectedSolcResponse.Error != resp.Error {

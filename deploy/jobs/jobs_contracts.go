@@ -117,7 +117,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 		log.Info("Binary file detected. Using binary deploy sequence.")
 		log.WithField("=>", contractPath).Info("Binary path")
 
-		binaryResponse, err := compilers.RequestBinaryLinkage(contractPath, libs)
+		binaryResponse, err := compilers.LinkFile(contractPath, libs)
 		if err != nil {
 			return "", fmt.Errorf("Something went wrong with your binary deployment: %v", err)
 		}
@@ -242,7 +242,7 @@ func findContractFile(contract, binPath string) (string, error) {
 func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse compilers.ResponseItem, libs map[string]string) (string, error) {
 	log.WithField("=>", string(compilersResponse.Binary.Abi)).Debug("Specification (From Compilers)")
 
-	linked, err := compilers.BinaryLinkage(compilersResponse.Binary, libs)
+	linked, err := compilers.LinkContract(compilersResponse.Binary, libs)
 	if err != nil {
 		return "", err
 	}

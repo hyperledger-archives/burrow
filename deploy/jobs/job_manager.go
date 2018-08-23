@@ -20,7 +20,7 @@ type trackJob struct {
 }
 
 func compile(contract string, track *trackJob) {
-	(*track).compilerResp, (*track).err = compilers.RequestCompile(contract, false, nil)
+	(*track).compilerResp, (*track).err = compilers.Compile(contract, false, nil)
 	close(track.done)
 }
 
