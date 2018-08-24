@@ -277,7 +277,7 @@ func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.W
 
 func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word256) error {
 	if value == binary.Zero256 {
-		ws.state.tree.Remove(key.Bytes())
+		ws.state.tree.Remove(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
 	} else {
 		ws.state.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
 	}

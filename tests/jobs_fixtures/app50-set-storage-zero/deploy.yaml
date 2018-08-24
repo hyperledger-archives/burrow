@@ -1,0 +1,179 @@
+jobs:
+
+- name: deployStorageK
+  deploy:
+    contract: storageIssueWithZero.sol
+
+- name: makeSureDeployed
+  assert:
+    key: $deployStorageK
+    relation: ne
+    val: ""
+
+#set Int to 5000
+- name: setStorageBaseInt
+  set:
+    val: 50000
+
+- name: setStorageInt
+  call:
+    destination: $deployStorageK
+    function: setInt
+    data: [$setStorageBaseInt]
+
+- name: queryStorageInt
+  query-contract:
+    destination: $deployStorageK
+    function: getInt
+
+- name: assertStorageInt
+  assert:
+    key: $queryStorageInt
+    relation: eq
+    val: $setStorageBaseInt
+
+#set Int to Zero using Yaml
+- name: setStorageBaseInt2
+  set:
+    val: 0
+
+- name: setStorageInt2
+  call:
+    destination: $deployStorageK
+    function: setInt
+    data: [$setStorageBaseInt2]
+
+- name: queryStorageInt2
+  query-contract:
+    destination: $deployStorageK
+    function: getInt
+
+- name: assertStorageInt2
+  assert:
+    key: $queryStorageInt2
+    relation: eq
+    val: $setStorageBaseInt2
+
+#set Int to Zero using solidity
+- name: setStorageInt3
+  call:
+    destination: $deployStorageK
+    function: setIntToZero
+    data: 
+
+- name: queryStorageInt3
+  query-contract:
+    destination: $deployStorageK
+    function: getInt
+
+- name: assertStorageInt3
+  assert:
+    key: $queryStorageInt3
+    relation: eq
+    val: 0
+
+#set Int to another number
+- name: setStorageBaseInt4
+  set:
+    val: 777
+
+- name: setStorageInt4
+  call:
+    destination: $deployStorageK
+    function: setInt
+    data: [$setStorageBaseInt4]
+
+- name: queryStorageInt4
+  query-contract:
+    destination: $deployStorageK
+    function: getInt
+
+- name: assertStorageInt4
+  assert:
+    key: $queryStorageInt4
+    relation: eq
+    val: $setStorageBaseInt4
+
+#set Uint to 9999
+- name: setStorageBaseUint
+  set:
+    val: 9999
+
+- name: setStorageUint
+  call:
+    destination: $deployStorageK
+    function: setUint
+    data: [$setStorageBaseUint]
+
+- name: queryStorageUint
+  query-contract:
+    destination: $deployStorageK
+    function: getUint
+
+- name: assertStorageUint
+  assert:
+    key: $queryStorageUint
+    relation: eq
+    val: $setStorageBaseUint
+
+#set Uint to 0 using Yaml
+- name: setStorageBaseUint2
+  set:
+    val: 0
+
+- name: setStorageUint2
+  call:
+    destination: $deployStorageK
+    function: setUint
+    data: [$setStorageBaseUint2]
+
+- name: queryStorageUint2
+  query-contract:
+    destination: $deployStorageK
+    function: getUint
+
+- name: assertStorageUint2
+  assert:
+    key: $queryStorageUint2
+    relation: eq
+    val: $setStorageBaseUint2
+
+#set Uint to 0 using solidity
+- name: setStorageUint3
+  call:
+    destination: $deployStorageK
+    function: setUintToZero
+    data: 
+
+- name: queryStorageUint3
+  query-contract:
+    destination: $deployStorageK
+    function: getUint
+
+- name: assertStorageUint3
+  assert:
+    key: $queryStorageUint3
+    relation: eq
+    val: 0
+
+#set Uint to another number
+- name: setStorageBaseUint4
+  set:
+    val: 111
+
+- name: setStorageUint4
+  call:
+    destination: $deployStorageK
+    function: setUint
+    data: [$setStorageBaseUint4]
+
+- name: queryStorageUint4
+  query-contract:
+    destination: $deployStorageK
+    function: getUint
+
+- name: assertStorageUint4
+  assert:
+    key: $queryStorageUint4
+    relation: eq
+    val: $setStorageBaseUint4
