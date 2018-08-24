@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MetaJob(meta *def.Meta, do *def.Packages) (string, error) {
+func MetaJob(meta *def.Meta, do *def.Packages, jobs chan *trackJob) (string, error) {
 	var err error
 	var pwd string
 
@@ -71,7 +71,7 @@ func MetaJob(meta *def.Meta, do *def.Packages) (string, error) {
 		}
 	}
 
-	err = RunJobs(newDo)
+	err = RunJobs(newDo, jobs)
 	if err != nil {
 		return "failed", err
 	}

@@ -73,7 +73,7 @@ func RunPackage(do *def.Packages) error {
 		}
 	}
 
-	return jobs.RunJobs(do)
+	return jobs.DoJobs(do)
 }
 
 func printPathPackage(do *def.Packages) {

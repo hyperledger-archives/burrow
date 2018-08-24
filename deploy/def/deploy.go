@@ -20,6 +20,7 @@ type Packages struct {
 	Signer        string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Verbose       bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	YAMLPath      string   `mapstructure:"," json:"," yaml:"," toml:","`
+	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
 
 	Package *Package
 	Client
