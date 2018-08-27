@@ -14,17 +14,30 @@ import (
 type trackJob struct {
 	payload      def.Payload
 	job          *def.Job
+	contractName string
 	compilerResp *compilers.Response
 	err          error
 	done         chan struct{}
 }
 
-func compile(contract string, track *trackJob) {
-	(*track).compilerResp, (*track).err = compilers.Compile(contract, false, nil)
-	close(track.done)
+func concurrentJobRunner(jobs chan *trackJob) {
+	for {
+		track, ok := <-jobs
+		if !ok {
+			break
+		}
+		(*track).compilerResp, (*track).err = compilers.Compile(track.contractName, false, nil)
+		close(track.done)
+	}
 }
 
-func RunJobs(do *def.Packages) error {
+func DoJobs(do *def.Packages) error {
+	jobs := make(chan *trackJob, do.Jobs*2)
+	defer close(jobs)
+	return RunJobs(do, jobs)
+}
+
+func RunJobs(do *def.Packages, jobs chan *trackJob) error {
 
 	// Dial the chain if needed
 	err, needed := burrowConnectionNeeded(do)
@@ -57,6 +70,10 @@ func RunJobs(do *def.Packages) error {
 
 	intermediateJobs := make([]*trackJob, 0, len(do.Package.Jobs))
 
+	for i := 0; i < do.Jobs; i++ {
+		go concurrentJobRunner(jobs)
+	}
+
 	for _, job := range do.Package.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
@@ -70,11 +87,13 @@ func RunJobs(do *def.Packages) error {
 		switch payload.(type) {
 		case *def.Build:
 			track.done = make(chan struct{})
-			go compile(job.Build.Contract, &track)
+			track.contractName = job.Build.Contract
+			jobs <- &track
 		case *def.Deploy:
 			if filepath.Ext(job.Deploy.Contract) == ".sol" {
 				track.done = make(chan struct{})
-				go compile(job.Deploy.Contract, &track)
+				track.contractName = job.Deploy.Contract
+				jobs <- &track
 			}
 		}
 	}
@@ -94,6 +113,7 @@ func RunJobs(do *def.Packages) error {
 
 		if m.done != nil {
 			<-m.done
+
 			if m.err != nil {
 				return m.err
 			}
@@ -104,7 +124,7 @@ func RunJobs(do *def.Packages) error {
 		case *def.Meta:
 			announce(job.Name, "Meta")
 			do.CurrentOutput = fmt.Sprintf("%s.output.json", job.Name)
-			job.Result, err = MetaJob(job.Meta, do)
+			job.Result, err = MetaJob(job.Meta, do, jobs)
 
 		// Governance
 		case *def.UpdateAccount:
@@ -182,7 +202,6 @@ func RunJobs(do *def.Packages) error {
 			return err
 		}
 	}
-
 	postProcess(do)
 	return nil
 }
