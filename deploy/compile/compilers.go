@@ -207,8 +207,6 @@ func Compile(file string, optimize bool, libraries map[string]string) (*Response
 		Error:   errors,
 	}
 
-	PrintResponse(resp, false)
-
 	return &resp, nil
 }
 

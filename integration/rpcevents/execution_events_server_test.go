@@ -131,7 +131,7 @@ func TestGetEventsSendFiltered(t *testing.T) {
 
 func TestRevert(t *testing.T) {
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	txe := rpctest.CreateContract(t, tcli, inputAddress, rpctest.Bytecode_revert)
+	txe := rpctest.CreateContract(t, tcli, inputAddress, rpctest.Bytecode_Revert)
 	functionID := abi.GetFunctionID("RevertAt(uint32)")
 	contractAddress := txe.Receipt.ContractAddress
 	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress,

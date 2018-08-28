@@ -142,7 +142,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	// Generate a few transactions
 	for i := 0; i < 3; i++ {
-		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_strange_loop)
+		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_Strangeloop)
 	}
 
 	subID := event.GenSubID()

@@ -154,9 +154,10 @@ docker_build: check commit_hash
 
 ### Testing github.com/hyperledger/burrow
 
+
 # Solidity fixtures
-%.sol.go: %.sol scripts/solc_compile_go.sh
-	scripts/solc_compile_go.sh $< $@
+%.sol.go: %.sol
+	@go run ./deploy/compile/solgo/main.go $^
 
 .PHONY: solidity
 solidity: $(SOLIDITY_GO_FILES)
