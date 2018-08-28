@@ -12,7 +12,7 @@ library Set {
   // to call the first parameter 'self', if the function can
   // be seen as a method of that object.
   function insert(Data storage self, uint value)
-      returns (bool)
+      public returns (bool)
   {
       if (self.flags[value])
           return false; // already there
@@ -21,7 +21,7 @@ library Set {
   }
 
   function remove(Data storage self, uint value)
-      returns (bool)
+      public returns (bool)
   {
       if (!self.flags[value])
           return false; // not there
@@ -30,7 +30,7 @@ library Set {
   }
 
   function contains(Data storage self, uint value)
-      returns (bool)
+      public view returns (bool)
   {
       return self.flags[value];
   }
@@ -40,12 +40,12 @@ library Set {
 contract C {
     Set.Data knownValues;
 
-    function register(uint value) {
+    function register(uint value) public {
         // The library functions can be called without a
         // specific instance of the library, since the
         // "instance" will be the current contract.
         if (!Set.insert(knownValues, value))
-            throw;
+            revert();
     }
     // In this contract, we can also directly access knownValues.flags, if we want.
 }

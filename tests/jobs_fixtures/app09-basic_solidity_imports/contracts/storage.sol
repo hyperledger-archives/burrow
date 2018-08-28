@@ -3,9 +3,9 @@ pragma solidity >=0.0.0;
 import "./base.sol";
 
 contract Storage is base {
-	function Storage (uint x) base(x){}
+	constructor(uint x) base(x) public {}
 
-	function test() returns (uint) {
+	function test() public pure returns (uint) {
 		return 42;
 	}
 }

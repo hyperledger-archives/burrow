@@ -3,17 +3,17 @@ pragma solidity >=0.0.0;
 contract testNegatives {
 	int public x;
 	int[2] negativeArray;
-	function testNegatives(int a){
+	constructor(int a) public {
 		x = a;
 	} 
-	function setX(int a){
+	function setX(int a) public {
 		x = a;
 	}
-	function setNegativeArray(int a, int b) {
+	function setNegativeArray(int a, int b) public {
 		negativeArray[0] = a;
 		negativeArray[1] = b;
 	}
-	function getNegativeArray() returns (int[2]) {
+	function getNegativeArray() public view returns (int[2]) {
 		return negativeArray;
 	}
 }

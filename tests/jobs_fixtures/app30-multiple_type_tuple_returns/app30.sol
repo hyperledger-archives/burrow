@@ -2,16 +2,16 @@ pragma solidity >=0.0.0;
 
 contract multiReturn {
 
-	function getInts() returns (uint, int) {
+	function getInts() public pure returns (uint, int) {
   		return (1, 2);
 	}
-	function getBools() returns (bool, bool) {
+	function getBools() public pure returns (bool, bool) {
 		return (true, false);
 	}
-	function getBytes() returns (bytes32, bytes32, bytes32, bytes32) {
+	function getBytes() public pure returns (bytes32, bytes32, bytes32, bytes32) {
 		return ("Hello", "World", "of", "marmots");
 	}
-	function getInterMixed() 
+	function getInterMixed() public view
 		returns (
 			address myAddress,
 			bytes2 elaborate,
