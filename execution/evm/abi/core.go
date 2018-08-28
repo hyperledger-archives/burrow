@@ -16,6 +16,16 @@ type Variable struct {
 	Value string
 }
 
+func init() {
+	var err error
+	RevertAbi, err = ReadAbiSpec([]byte(`[{"name":"Error","type":"function","outputs":[{"type":"string"}],"inputs":[{"type":"string"}]}]`))
+	if err != nil {
+		panic(fmt.Sprintf("internal error: failed to build revert abi: %v", err))
+	}
+}
+
+var RevertAbi *AbiSpec
+
 func ReadAbiFormulateCallFile(abiLocation, binPath, funcName string, args []string) ([]byte, error) {
 	abiSpecBytes, err := readAbi(binPath, abiLocation)
 	if err != nil {

@@ -39,7 +39,7 @@ func main() {
 		for _, c := range resp.Objects {
 			f.WriteString(fmt.Sprintf("var Bytecode_%s = hex.MustDecodeString(\"%s\")\n",
 				c.Objectname, c.Binary.Evm.Bytecode.Object))
-			f.WriteString(fmt.Sprintf("var Abi_%s = `%s`\n",
+			f.WriteString(fmt.Sprintf("var Abi_%s = []byte(`%s`)\n",
 				c.Objectname, c.Binary.Abi))
 		}
 	}

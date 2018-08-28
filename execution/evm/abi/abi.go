@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unsafe" // just for Sizeof
 
+	burrow_binary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/sha3"
 )
@@ -867,6 +868,12 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 			if err != nil {
 				return nil, err
 			}
+			for i := range inputs {
+				if inputs[i].Indexed && inputs[i].EVM.isDynamic() {
+					// For Dynamic types, the hash is stored in stead
+					inputs[i].EVM = EVMBytes{M: 32}
+				}
+			}
 			abiSpec.Events[s.Name] = Event{Inputs: inputs}
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
@@ -1005,6 +1012,81 @@ func GetFunctionID(signature string) (id FunctionID) {
 	hash.Write([]byte(signature))
 	copy(id[:], hash.Sum(nil)[:4])
 	return
+}
+
+func UnpackRevert(data []byte) (message string, err error) {
+	err = RevertAbi.UnpackWithID(data, &message)
+	return
+}
+
+/*
+ * Given a eventSpec, get all the fields (topic fields or not)
+ */
+func UnpackEvent(eventSpec Event, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
+	// First unpack the topic fields
+	topicIndex := 0
+	if !eventSpec.Anonymous {
+		topicIndex++
+	}
+
+	for i, a := range eventSpec.Inputs {
+		if a.Indexed {
+			_, err := a.EVM.unpack(topics[topicIndex].Bytes(), 0, args[i])
+			if err != nil {
+				return err
+			}
+			topicIndex++
+		}
+	}
+
+	// Now unpack the other fields. unpack will step over any indexed fields
+	return unpack(eventSpec.Inputs, data, func(i int) interface{} {
+		return args[i]
+	})
+}
+
+func (abiSpec *AbiSpec) Unpack(data []byte, fname string, args ...interface{}) error {
+	var funcSpec FunctionSpec
+	var argSpec []Argument
+	if fname != "" {
+		if _, ok := abiSpec.Functions[fname]; ok {
+			funcSpec = abiSpec.Functions[fname]
+		} else {
+			funcSpec = abiSpec.Fallback
+		}
+	} else {
+		funcSpec = abiSpec.Constructor
+	}
+
+	argSpec = funcSpec.Outputs
+
+	if argSpec == nil {
+		return fmt.Errorf("Unknown function %s", fname)
+	}
+
+	return unpack(argSpec, data, func(i int) interface{} {
+		return args[i]
+	})
+}
+
+func (abiSpec *AbiSpec) UnpackWithID(data []byte, args ...interface{}) error {
+	var argSpec []Argument
+
+	var id FunctionID
+	copy(id[:], data)
+	for _, fspec := range abiSpec.Functions {
+		if id == fspec.FunctionID {
+			argSpec = fspec.Outputs
+		}
+	}
+
+	if argSpec == nil {
+		return fmt.Errorf("Unknown function %x", id)
+	}
+
+	return unpack(argSpec, data[4:], func(i int) interface{} {
+		return args[i]
+	})
 }
 
 func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, error) {
@@ -1213,6 +1295,10 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 	}
 
 	for i, a := range argSpec {
+		if a.Indexed {
+			continue
+		}
+
 		arg := getArg(i)
 		if a.IsArray {
 			var array *[]interface{}

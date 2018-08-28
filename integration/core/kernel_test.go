@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
@@ -142,7 +143,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	// Generate a few transactions
 	for i := 0; i < 3; i++ {
-		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_Strangeloop)
+		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_StrangeLoop)
 	}
 
 	subID := event.GenSubID()

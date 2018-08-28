@@ -49,7 +49,7 @@ func TestInputAccountPublicKeySet(t *testing.T) {
 	assert.False(t, acc.PublicKey.IsSet())
 
 	// Sign with this account - should set public key
-	rpctest.CreateContract(t, tcli, input.Address(), solidity.Bytecode_Strangeloop)
+	rpctest.CreateContract(t, tcli, input.Address(), solidity.Bytecode_StrangeLoop)
 	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
 
 	// Check public key set
