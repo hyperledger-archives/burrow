@@ -1052,10 +1052,6 @@ func callContractCode(addr crypto.Address) []byte {
 		PUSH1, retOff, RETURN)
 }
 
-func pushInt64(i int64) []byte {
-	return pushWord(Int64ToWord256(i))
-}
-
 // Produce bytecode for a PUSH<N>, b_1, ..., b_N where the N is number of bytes
 // contained in the unpadded word
 func pushWord(word Word256) []byte {
