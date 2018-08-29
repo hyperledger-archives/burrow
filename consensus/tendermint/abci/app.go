@@ -145,7 +145,6 @@ func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validat
 func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("BeginBlock")
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
 		}
 	}()

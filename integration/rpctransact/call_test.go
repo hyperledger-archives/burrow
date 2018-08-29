@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -65,7 +66,7 @@ func TestCreateContract(t *testing.T) {
 						Amount:  2,
 					},
 					Address:  nil,
-					Data:     rpctest.Bytecode_strange_loop,
+					Data:     solidity.Bytecode_strange_loop,
 					Fee:      2,
 					GasLimit: 10000,
 				})
@@ -90,7 +91,7 @@ func BenchmarkCreateContract(b *testing.B) {
 				Amount:  2,
 			},
 			Address:  nil,
-			Data:     rpctest.Bytecode_strange_loop,
+			Data:     solidity.Bytecode_strange_loop,
 			Fee:      2,
 			GasLimit: 10000,
 		})
@@ -108,7 +109,7 @@ func TestCallTxSync(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numRuns; j++ {
-				createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
+				createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
 				callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee,
 					functionID[:])
 				depth := binary.Uint64FromWord256(binary.LeftPadWord256(lastCall(callTxe.Events).Return))
@@ -247,7 +248,7 @@ func TestNestedCall(t *testing.T) {
 
 func TestCallEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
 	functionID := abi.GetFunctionID("UpsieDownsie()")
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
@@ -260,7 +261,7 @@ func TestCallEvents(t *testing.T) {
 
 func TestLogEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_strange_loop)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
 	address := lastCall(createTxe.Events).CallData.Callee
 	functionID := abi.GetFunctionID("UpsieDownsie()")
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
@@ -275,7 +276,7 @@ func TestLogEvents(t *testing.T) {
 
 func TestRevert(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	txe := rpctest.CreateContract(t, cli, inputAddress, rpctest.Bytecode_revert)
+	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_revert)
 	functionID := abi.GetFunctionID("RevertAt(uint32)")
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress,
 		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
