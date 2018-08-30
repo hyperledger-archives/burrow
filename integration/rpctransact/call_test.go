@@ -5,7 +5,6 @@ package rpctransact
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
@@ -66,7 +66,7 @@ func TestCreateContract(t *testing.T) {
 						Amount:  2,
 					},
 					Address:  nil,
-					Data:     solidity.Bytecode_strange_loop,
+					Data:     solidity.Bytecode_StrangeLoop,
 					Fee:      2,
 					GasLimit: 10000,
 				})
@@ -91,7 +91,7 @@ func BenchmarkCreateContract(b *testing.B) {
 				Amount:  2,
 			},
 			Address:  nil,
-			Data:     solidity.Bytecode_strange_loop,
+			Data:     solidity.Bytecode_StrangeLoop,
 			Fee:      2,
 			GasLimit: 10000,
 		})
@@ -104,15 +104,20 @@ func TestCallTxSync(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	numGoroutines := 40
 	numRuns := 5
-	functionID := abi.GetFunctionID("UpsieDownsie()")
+	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+	require.NoError(t, err)
+	data, err := spec.Pack("UpsieDownsie")
+	require.NoError(t, err)
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < numRuns; j++ {
-				createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
+				createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_StrangeLoop)
 				callTxe := rpctest.CallContract(t, cli, inputAddress, lastCall(createTxe.Events).CallData.Callee,
-					functionID[:])
-				depth := binary.Uint64FromWord256(binary.LeftPadWord256(lastCall(callTxe.Events).Return))
+					data)
+				var depth int64
+				err = spec.Unpack(lastCall(callTxe.Events).Return, "UpsieDownsie", &depth)
+				require.NoError(t, err)
 				// Would give 23 if taken from wrong frame (i.e. not the outer stackdepth == 0 one)
 				assert.Equal(t, 18, int(depth))
 			}
@@ -248,10 +253,13 @@ func TestNestedCall(t *testing.T) {
 
 func TestCallEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_StrangeLoop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	functionID := abi.GetFunctionID("UpsieDownsie()")
-	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
+	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+	require.NoError(t, err)
+	data, err := spec.Pack("UpsieDownsie")
+	require.NoError(t, err)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
 	callEvents := filterCalls(callTxe.Events)
 	require.Len(t, callEvents, rpctest.UpsieDownsieCallCount, "should see 30 recursive call events")
 	for i, ev := range callEvents {
@@ -261,31 +269,66 @@ func TestCallEvents(t *testing.T) {
 
 func TestLogEvents(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_strange_loop)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_StrangeLoop)
 	address := lastCall(createTxe.Events).CallData.Callee
-	functionID := abi.GetFunctionID("UpsieDownsie()")
-	callTxe := rpctest.CallContract(t, cli, inputAddress, address, functionID[:])
+	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+	require.NoError(t, err)
+	data, err := spec.Pack("UpsieDownsie")
+	require.NoError(t, err)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
 	evs := filterLogs(callTxe.Events)
 	require.Len(t, evs, rpctest.UpsieDownsieCallCount-2)
 	log := evs[0]
-	depth := binary.Int64FromWord256(log.Topics[2])
-	direction := strings.TrimRight(string(log.Topics[1][:]), "\x00")
+	var direction string
+	var depth int64
+	err = abi.UnpackEvent(spec.Events["ChangeLevel"], log.Topics, log.Data, &direction, &depth)
+	require.NoError(t, err)
 	assert.Equal(t, int64(18), depth)
 	assert.Equal(t, "Upsie!", direction)
 }
 
+func TestEventEmitter(t *testing.T) {
+	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_EventEmitter)
+	address := lastCall(createTxe.Events).CallData.Callee
+	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+	require.NoError(t, err)
+	data, err := spec.Pack("EmitOne")
+	require.NoError(t, err)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
+	evs := filterLogs(callTxe.Events)
+	log := evs[0]
+	var direction string
+	var truism bool
+	var depth int64
+	var german string
+	var hash []byte
+	err = abi.UnpackEvent(spec.Events["ManyTypes"], log.Topics, log.Data.Bytes(), &direction, &truism, &german, &depth, &hash)
+	require.NoError(t, err)
+
+	h := sha3.NewKeccak256()
+	h.Write([]byte("hash"))
+	expectedHash := h.Sum(nil)
+	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
+	assert.Equal(t, "Downsie!", direction)
+	assert.Equal(t, true, truism)
+	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", german)
+	assert.Equal(t, int64(102), depth)
+	assert.Equal(t, expectedHash, hash)
+}
+
 func TestRevert(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_revert)
-	functionID := abi.GetFunctionID("RevertAt(uint32)")
-	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress,
-		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
+	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_Revert)
+	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+	require.NoError(t, err)
+	data, err := spec.Pack("RevertAt", 4)
+	require.NoError(t, err)
+	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
-
-	revertReason := "I have reverted"
-	expectedReturn := bc.MustSplice(abi.GetFunctionID("Error(string)"), binary.Int64ToWord256(binary.Word256Length),
-		binary.Int64ToWord256(int64(len(revertReason))), binary.RightPadWord256([]byte(revertReason)))
-	assert.Equal(t, expectedReturn, txe.Result.Return)
+	revertReason, err := abi.UnpackRevert(txe.Result.Return)
+	require.NoError(t, err)
+	assert.Equal(t, revertReason, "I have reverted")
 }
 
 func filterCalls(evs []*exec.Event) []*exec.CallEvent {

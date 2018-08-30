@@ -1,11 +1,11 @@
 pragma solidity >=0.0.0;
 
 library basicMath {
-	function add(uint x, uint y) returns (uint z) {
+	function add(uint x, uint y) public pure returns (uint z) {
 		z = x + y;
 	}
 
-	function subtract(uint x, uint y) returns (uint z) {
+	function subtract(uint x, uint y) public pure returns (uint z) {
 		z = x - y;
 	}
 }

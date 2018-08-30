@@ -4,7 +4,7 @@ import "./two.sol";
 
 contract three is two {
 
-  function iii() returns (uint id) {
+  function iii() public pure returns (uint /* id */) {
     return 3;
   }
 

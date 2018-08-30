@@ -4,21 +4,21 @@ contract GSMulti {
   uint storedData1;
   uint storedData2;
 
-  function GSMulti(uint initialValue1, uint initialValue2) {
+  constructor(uint initialValue1, uint initialValue2) public {
     storedData1 = initialValue1;
     storedData2 = initialValue2;
   }
 
-  function set(uint first, uint second) {
+  function set(uint first, uint second) public {
     storedData1 = first;
     storedData2 = second;
   }
 
-  function getFirst() constant returns (uint retVal) {
+  function getFirst() public constant returns (uint retVal) {
     return storedData1;
   }
 
-  function getSecond() constant returns (uint retVal) {
+  function getSecond() public constant returns (uint retVal) {
     return storedData2;
   }
 }
