@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
@@ -284,6 +285,36 @@ func TestLogEvents(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(18), depth)
 	assert.Equal(t, "Upsie!", direction)
+}
+
+func TestEventEmitter(t *testing.T) {
+	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_EventEmitter)
+	address := lastCall(createTxe.Events).CallData.Callee
+	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+	require.NoError(t, err)
+	data, err := spec.Pack("EmitOne")
+	require.NoError(t, err)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
+	evs := filterLogs(callTxe.Events)
+	log := evs[0]
+	var direction string
+	var truism bool
+	var depth int64
+	var german string
+	var hash []byte
+	err = abi.UnpackEvent(spec.Events["ManyTypes"], log.Topics, log.Data.Bytes(), &direction, &truism, &german, &depth, &hash)
+	require.NoError(t, err)
+
+	h := sha3.NewKeccak256()
+	h.Write([]byte("hash"))
+	expectedHash := h.Sum(nil)
+	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
+	assert.Equal(t, "Downsie!", direction)
+	assert.Equal(t, true, truism)
+	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", german)
+	assert.Equal(t, int64(102), depth)
+	assert.Equal(t, expectedHash, hash)
 }
 
 func TestRevert(t *testing.T) {

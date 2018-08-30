@@ -874,7 +874,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 					inputs[i].EVM = EVMBytes{M: 32}
 				}
 			}
-			abiSpec.Events[s.Name] = Event{Inputs: inputs}
+			abiSpec.Events[s.Name] = Event{Inputs: inputs, Anonymous: s.Anonymous}
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
