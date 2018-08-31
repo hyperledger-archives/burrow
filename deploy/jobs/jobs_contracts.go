@@ -13,6 +13,7 @@ import (
 	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/txs/payload"
 	log "github.com/sirupsen/logrus"
@@ -390,6 +391,14 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) 
 		return "", nil, err
 	}
 
+	if txe.Exception != nil && txe.Exception.ErrorCode() == errors.ErrorCodeExecutionReverted {
+		message, err := abi.UnpackRevert(txe.Result.Return)
+		if err != nil {
+			return "", nil, err
+		}
+		log.WithField("Revert Message", message).Error("transaction reverted")
+		return message, nil, txe.Exception.AsError()
+	}
 	var result string
 	log.Debug(txe.Result.Return)
 
