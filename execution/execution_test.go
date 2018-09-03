@@ -893,7 +893,7 @@ func TestTxSequence(t *testing.T) {
 func TestNameTxs(t *testing.T) {
 	st, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	require.NoError(t, err)
-	st.writeState.save()
+	st.writeState.commit()
 
 	names.MinNameRegistrationPeriod = 5
 	exe := makeExecutor(st)
@@ -1196,7 +1196,7 @@ func TestMerklePanic(t *testing.T) {
 	acc0 := getAccount(st, privAccounts[0].Address())
 	acc1 := getAccount(st, privAccounts[1].Address())
 
-	st.writeState.save()
+	st.writeState.commit()
 	// SendTx.
 	{
 		tx := &payload.SendTx{
@@ -1238,7 +1238,7 @@ func TestMerklePanic(t *testing.T) {
 		err := makeExecutor(stateCallTx).signExecuteCommit(tx, privAccounts[0])
 		require.NoError(t, err)
 	}
-	st.writeState.save()
+	st.writeState.commit()
 	trygetacc0 := getAccount(st, privAccounts[0].Address())
 	fmt.Println(trygetacc0.Address())
 }
@@ -1499,7 +1499,7 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
 	}
-	s0.writeState.save()
+	s0.writeState.commit()
 	return s0, privAccounts
 }
 

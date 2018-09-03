@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -72,12 +75,15 @@ func TestWriteState_AddBlock(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func mkBlock(height, txs, events uint64) *exec.BlockExecution {
+func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
 	be := &exec.BlockExecution{
 		Height: height,
 	}
-	for ti := uint64(0); ti < txs; ti++ {
+	for ti := uint64(0); ti < numTxs; ti++ {
+		hash := txs.NewTx(&payload.CallTx{}).Hash()
+		hash[0] = byte(ti)
 		txe := &exec.TxExecution{
+			TxHash: hash,
 			Height: height,
 		}
 		for e := uint64(0); e < events; e++ {

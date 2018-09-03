@@ -18,13 +18,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/tendermint/tmlibs/merkle/tmhash"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
-	"golang.org/x/crypto/ripemd160"
 )
 
 // Tx is the canonical object that we serialise to produce the SignBytes that we sign
@@ -168,7 +169,7 @@ func (tx *Tx) String() string {
 
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
 func (tx *Tx) Rehash() []byte {
-	hasher := ripemd160.New()
+	hasher := tmhash.New()
 	hasher.Write(tx.MustSignBytes())
 	tx.txHash = hasher.Sum(nil)
 	return tx.txHash
