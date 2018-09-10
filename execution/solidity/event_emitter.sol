@@ -6,7 +6,7 @@ contract EventEmitter {
         bytes32 indexed direction,
         bool trueism,
         string german ,
-        int indexed newDepth,
+        int64 indexed newDepth,
         string indexed hash)
         anonymous;
 

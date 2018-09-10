@@ -529,7 +529,8 @@ type EVMBytes struct {
 }
 
 func (e EVMBytes) getGoType() interface{} {
-	return make([]byte, e.M)
+	v := make([]byte, e.M)
+	return &v
 }
 
 func (e EVMBytes) pack(v interface{}) ([]byte, error) {
@@ -573,8 +574,9 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 		return s.unpack(data, offset, v)
 	}
 
-	switch v := v.(type) {
-	case *string:
+	v2 := reflect.ValueOf(v).Elem()
+	switch v2.Type().Kind() {
+	case reflect.String:
 		start := 0
 		end := int(e.M)
 
@@ -584,9 +586,11 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 		for end > start && data[offset+end-1] == 0 {
 			end--
 		}
-		*v = string(data[offset+start : offset+end])
-	case *[]byte:
-		*v = data[offset : offset+int(e.M)]
+		v2.SetString(string(data[offset+start : offset+end]))
+	case reflect.Array:
+		fallthrough
+	case reflect.Slice:
+		v2.SetBytes(data[offset : offset+int(e.M)])
 	default:
 		return 0, fmt.Errorf("cannot map EVM %s to %s", e.GetSignature(), reflect.ValueOf(v).Kind().String())
 	}
@@ -699,6 +703,7 @@ type Argument struct {
 	EVM         EVMType
 	IsArray     bool
 	Indexed     bool
+	Hashed      bool
 	ArrayLength uint64
 }
 
@@ -872,6 +877,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 				if inputs[i].Indexed && inputs[i].EVM.isDynamic() {
 					// For Dynamic types, the hash is stored in stead
 					inputs[i].EVM = EVMBytes{M: 32}
+					inputs[i].Hashed = true
 				}
 			}
 			abiSpec.Events[s.Name] = Event{Inputs: inputs, Anonymous: s.Anonymous}

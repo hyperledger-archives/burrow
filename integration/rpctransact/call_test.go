@@ -3,6 +3,7 @@
 package rpctransact
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -293,28 +294,62 @@ func TestEventEmitter(t *testing.T) {
 	address := lastCall(createTxe.Events).CallData.Callee
 	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
 	require.NoError(t, err)
-	data, err := spec.Pack("EmitOne")
+	calldata, err := spec.Pack("EmitOne")
 	require.NoError(t, err)
-	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, calldata)
 	evs := filterLogs(callTxe.Events)
 	log := evs[0]
-	var direction string
-	var truism bool
-	var depth int64
-	var german string
-	var hash []byte
-	err = abi.UnpackEvent(spec.Events["ManyTypes"], log.Topics, log.Data.Bytes(), &direction, &truism, &german, &depth, &hash)
+	evAbi := spec.Events["ManyTypes"]
+	data := abi.GetPackingTypes(evAbi.Inputs)
+	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
 	require.NoError(t, err)
 
 	h := sha3.NewKeccak256()
 	h.Write([]byte("hash"))
 	expectedHash := h.Sum(nil)
 	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
-	assert.Equal(t, "Downsie!", direction)
-	assert.Equal(t, true, truism)
-	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", german)
-	assert.Equal(t, int64(102), depth)
-	assert.Equal(t, expectedHash, hash)
+	b := *data[0].(*[]byte)
+	assert.Equal(t, "Downsie!", string(bytes.Trim(b, "\x00")))
+	assert.Equal(t, true, *data[1].(*bool))
+	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
+	assert.Equal(t, int64(102), *data[3].(*int64))
+	assert.Equal(t, expectedHash, *data[4].(*[]byte))
+}
+
+/*
+ * Any indexed string (or dynamic array) will be hashed, so we might want to store strings
+ * in bytes32. This shows how we would automatically map this to string
+ */
+func TestEventEmitterBytes32isString(t *testing.T) {
+	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	createTxe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_EventEmitter)
+	address := lastCall(createTxe.Events).CallData.Callee
+	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+	require.NoError(t, err)
+	calldata, err := spec.Pack("EmitOne")
+	require.NoError(t, err)
+	callTxe := rpctest.CallContract(t, cli, inputAddress, address, calldata)
+	evs := filterLogs(callTxe.Events)
+	log := evs[0]
+	evAbi := spec.Events["ManyTypes"]
+	data := abi.GetPackingTypes(evAbi.Inputs)
+	for i, a := range evAbi.Inputs {
+		if a.Indexed && !a.Hashed && a.EVM.GetSignature() == "bytes32" {
+			data[i] = new(string)
+		}
+	}
+	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
+	require.NoError(t, err)
+
+	h := sha3.NewKeccak256()
+	h.Write([]byte("hash"))
+	expectedHash := h.Sum(nil)
+	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
+	assert.Equal(t, "Downsie!", *data[0].(*string))
+	assert.Equal(t, true, *data[1].(*bool))
+	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
+	assert.Equal(t, int64(102), *data[3].(*int64))
+	assert.Equal(t, expectedHash, *data[4].(*[]byte))
 }
 
 func TestRevert(t *testing.T) {
