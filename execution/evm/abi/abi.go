@@ -394,11 +394,11 @@ func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 		}
 	case *big.Int:
 		b := new(big.Int)
-		b.SetBytes(data[0:ElementSize])
+		b.SetBytes(inv[0:ElementSize])
 		if sign {
-			v = b.Neg(b)
+			*v = *b.Sub(big.NewInt(-1), b)
 		} else {
-			v = b
+			*v = *b
 		}
 	case *uint64:
 		if sign {

@@ -7,10 +7,11 @@ contract EventEmitter {
         bool trueism,
         string german ,
         int64 indexed newDepth,
+        int bignum,
         string indexed hash)
         anonymous;
 
     function EmitOne() public {
-        emit ManyTypes("Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 'hash');
+        emit ManyTypes("Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, "hash");
     }
 }
