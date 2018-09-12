@@ -419,6 +419,48 @@ func TestUnpacker(t *testing.T) {
 				return x
 			}(),
 		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int64),
+			func() *int64 { var v int64; v = 42; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int32),
+			func() *int32 { var v int32; v = 42; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0x7f, 0xff}, 32, true),
+			new(int16),
+			func() *int16 { var v int16; v = 0x7fff; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint16),
+			func() *uint16 { var v uint16; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint32),
+			func() *uint32 { var v uint32; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca, 0, 0, 0, 0, 0, 0}, 32, true),
+			new(uint64),
+			func() *uint64 { var v uint64; v = 0xfdca000000000000; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(big.Int),
+			big.NewInt(42),
+		},
 	} {
 		//t.Log(test.name)
 		t.Log(test.packed)
