@@ -396,8 +396,13 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) 
 		if err != nil {
 			return "", nil, err
 		}
-		log.WithField("Revert Message", message).Error("transaction reverted")
-		return message, nil, txe.Exception.AsError()
+		if message != nil {
+			log.WithField("Revert Reason", *message).Error("Transaction reverted with reason")
+			return *message, nil, txe.Exception.AsError()
+		} else {
+			log.Error("Transaction reverted with no reason")
+			return "", nil, txe.Exception.AsError()
+		}
 	}
 	var result string
 	log.Debug(txe.Result.Return)

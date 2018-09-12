@@ -1019,8 +1019,14 @@ func GetFunctionID(signature string) (id FunctionID) {
 	return
 }
 
-func UnpackRevert(data []byte) (message string, err error) {
-	err = RevertAbi.UnpackWithID(data, &message)
+// UnpackRevert decodes the revert reason if a contract called revert. If no
+// reason was given, message will be nil else it will point to the string
+func UnpackRevert(data []byte) (message *string, err error) {
+	if len(data) > 0 {
+		var msg string
+		err = RevertAbi.UnpackWithID(data, &msg)
+		message = &msg
+	}
 	return
 }
 

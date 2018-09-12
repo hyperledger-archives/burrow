@@ -366,7 +366,22 @@ func TestRevert(t *testing.T) {
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 	revertReason, err := abi.UnpackRevert(txe.Result.Return)
 	require.NoError(t, err)
-	assert.Equal(t, revertReason, "I have reverted")
+	assert.Equal(t, *revertReason, "I have reverted")
+}
+
+func TestRevertWithoutReason(t *testing.T) {
+	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_Revert)
+	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+	require.NoError(t, err)
+	data, err := spec.Pack("RevertNoReason")
+	require.NoError(t, err)
+	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
+	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+	fmt.Printf("%x\n", txe.Result.Return)
+	revertReason, err := abi.UnpackRevert(txe.Result.Return)
+	require.NoError(t, err)
+	assert.Nil(t, revertReason)
 }
 
 func filterCalls(evs []*exec.Event) []*exec.CallEvent {
