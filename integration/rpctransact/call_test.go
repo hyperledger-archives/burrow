@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
 	"testing"
 
@@ -307,13 +308,14 @@ func TestEventEmitter(t *testing.T) {
 	h := sha3.NewKeccak256()
 	h.Write([]byte("hash"))
 	expectedHash := h.Sum(nil)
-	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
+	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
 	b := *data[0].(*[]byte)
 	assert.Equal(t, "Downsie!", string(bytes.Trim(b, "\x00")))
 	assert.Equal(t, true, *data[1].(*bool))
 	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
 	assert.Equal(t, int64(102), *data[3].(*int64))
-	assert.Equal(t, expectedHash, *data[4].(*[]byte))
+	assert.Equal(t, int64(42), data[4].(*big.Int).Int64())
+	assert.Equal(t, expectedHash, *data[5].(*[]byte))
 }
 
 /*
@@ -344,12 +346,13 @@ func TestEventEmitterBytes32isString(t *testing.T) {
 	h := sha3.NewKeccak256()
 	h.Write([]byte("hash"))
 	expectedHash := h.Sum(nil)
-	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, [0xcd, 0x9a, 0xf3], 'hash')
+	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
 	assert.Equal(t, "Downsie!", *data[0].(*string))
 	assert.Equal(t, true, *data[1].(*bool))
 	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
 	assert.Equal(t, int64(102), *data[3].(*int64))
-	assert.Equal(t, expectedHash, *data[4].(*[]byte))
+	assert.Equal(t, int64(42), data[4].(*big.Int).Int64())
+	assert.Equal(t, expectedHash, *data[5].(*[]byte))
 }
 
 func TestRevert(t *testing.T) {
