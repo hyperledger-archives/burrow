@@ -12,4 +12,8 @@ contract Revert {
             this.RevertAt(i);
         }
     }
+
+    function RevertNoReason() pure public {
+        revert();
+    }
 }
