@@ -37,10 +37,10 @@ func (mi *MultiIterator) init() {
 		if it.Valid() {
 			validIterators = append(validIterators, it)
 			start, end := it.Domain()
-			if mi.start == nil || bytes.Compare(start, mi.start) == mi.lessComp {
+			if i == 0 || CompareKeys(start, mi.start) == mi.lessComp {
 				mi.start = start
 			}
-			if mi.end == nil || bytes.Compare(mi.end, end) == mi.lessComp {
+			if i == 0 || CompareKeys(mi.end, end) == mi.lessComp {
 				mi.end = end
 			}
 		} else {
@@ -59,6 +59,7 @@ func (mi *MultiIterator) Len() int {
 
 func (mi *MultiIterator) Less(i, j int) bool {
 	comp := bytes.Compare(mi.iterators[i].Key(), mi.iterators[j].Key())
+	// Use order iterators passed to NewMultiIterator if keys are equal1
 	return comp == mi.lessComp || (comp == 0 && mi.iteratorOrder[mi.iterators[i]] < mi.iteratorOrder[mi.iterators[j]])
 }
 

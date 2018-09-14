@@ -55,7 +55,7 @@ type KVStore interface {
 	KVIterable
 }
 
-// NormaliseDomain encodes the concession that when nil is used as a lower bound is interpreted as low rather
+// NormaliseDomain encodes the assumption that when nil is used as a lower bound is interpreted as low rather
 // than high
 func NormaliseDomain(start, end []byte, reverse bool) ([]byte, []byte) {
 	if reverse {
@@ -85,6 +85,7 @@ func KeyOrder(key []byte) int {
 	return 0
 }
 
+// Sorts the keys as if they were compared lexicographically with their KeyOrder prepended
 func CompareKeys(k1, k2 []byte) int {
 	ko1 := KeyOrder(k1)
 	ko2 := KeyOrder(k2)

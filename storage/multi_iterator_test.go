@@ -14,8 +14,8 @@ func TestMultiIterator(t *testing.T) {
 	ci4 := iteratorOver(kvPairs("c", "zfoo", "A", "nibble", "\xFF", "HIGH"))
 	mi := NewMultiIterator(false, ci4, ci2, ci3, ci1)
 	start, end := mi.Domain()
-	assert.Equal(t, "A", string(start))
-	assert.Equal(t, "\xFF", string(end))
+	assert.Equal(t, []byte{'A'}, start)
+	assert.Equal(t, []byte{0xff}, end)
 	assertIteratorSorted(t, mi, false)
 
 	t.Log("Testing reverse iterator...")
@@ -25,8 +25,8 @@ func TestMultiIterator(t *testing.T) {
 	ci4 = iteratorOver(kvPairs("c", "zfoo", "A", "nibble", "", ""), true)
 	mi = NewMultiIterator(true, ci4, ci2, ci3, ci1)
 	start, end = mi.Domain()
-	assert.Equal(t, "x", string(start))
-	assert.Equal(t, "", string(end))
+	assert.Equal(t, []byte{'x'}, start)
+	assert.Equal(t, []byte{}, end)
 	assertIteratorSorted(t, mi, true)
 }
 
