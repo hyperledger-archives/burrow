@@ -14,9 +14,8 @@ type MultiIterator struct {
 	lessComp      int
 }
 
-// MultiIterator iterates in order over a series o
+// MultiIterator iterates in order over a series of iterators that must be sorted
 func NewMultiIterator(reverse bool, iterators ...KVIterator) *MultiIterator {
-	// reuse backing array
 	lessComp := -1
 	if reverse {
 		lessComp = 1
@@ -32,6 +31,7 @@ func NewMultiIterator(reverse bool, iterators ...KVIterator) *MultiIterator {
 
 func (mi *MultiIterator) init() {
 	validIterators := mi.iterators[:0]
+	// Ensure all validators in start state are valid, discover the domain over the union of iterators
 	for i, it := range mi.iterators {
 		mi.iteratorOrder[it] = i
 		if it.Valid() {
@@ -49,6 +49,7 @@ func (mi *MultiIterator) init() {
 		}
 	}
 	mi.iterators = validIterators
+	// Initialise our container as a heap
 	heap.Init(mi)
 }
 

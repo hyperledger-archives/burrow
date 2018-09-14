@@ -41,10 +41,10 @@ func (p Prefix) Below() []byte {
 	for i := len(p) - 1; i >= 0; i-- {
 		c := p[i]
 		if c > 0x00 {
-			inc := make([]byte, i+1)
-			copy(inc, p)
-			inc[i]--
-			return inc
+			dec := make([]byte, i+1)
+			copy(dec, p)
+			dec[i]--
+			return dec
 		}
 	}
 	return nil

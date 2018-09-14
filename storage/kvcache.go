@@ -14,7 +14,7 @@ type valueInfo struct {
 	deleted bool
 }
 
-// Creates an in-memory cache wrapping a map that stores the provided tombstone value for deleted keys
+// Creates an in-memory cache wrapping a map that remembers when a value was was deleted
 func NewKVCache() *KVCache {
 	return &KVCache{
 		cache: make(map[string]valueInfo),

@@ -564,11 +564,70 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:87f7dc67f512a8d4a687cb9de0f95b076eade110b28f10398c46226414688ada"
+  name = "github.com/tmthrgd/atomics"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c46471f6a25ed6e19416b1da99d8f6db126e5890"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d01f38c0f03047526700989339594cc6514d42a27a1cd772c892e0e79e0babc2"
+  name = "github.com/tmthrgd/go-bitset"
+  packages = [
+    ".",
+    "internal/bitwise",
+  ]
+  pruneopts = "NUT"
+  revision = "62ad9ed7ff29ccce43a833aad11396ffc35d0bbd"
+
+[[projects]]
+  branch = "master"
+  digest = "1:cd88b5873a276995ceabaa5d1426c1c10ca5863faaf0014c4d5ba84229701f12"
+  name = "github.com/tmthrgd/go-bitwise"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "05c5cc92a9898363bd28b6fd27531145cd812cc2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:84983c9836a3716e105c46a5007f319f23c5926a25348a50306d6c500d0dfc7f"
+  name = "github.com/tmthrgd/go-byte-test"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4c4ba03310c8b0e46320049f39660c59f625f3e5"
+
+[[projects]]
+  branch = "master"
   digest = "1:1c470465fb009d034f2cd68b1fb03e8e4c80696c4eb7437c3e7877cbc515db75"
   name = "github.com/tmthrgd/go-hex"
   packages = ["."]
   pruneopts = "NUT"
   revision = "14226a535f434c12dbb6c0a0a59e40716f1534b4"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c3445544bbbdb9fb375ee5a8640dd6e3f4f744456b71b8702b8066a128dd0819"
+  name = "github.com/tmthrgd/go-memset"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6f4e59bf1e1d4c209adeb0b158ab0411e0d5dc89"
+
+[[projects]]
+  branch = "master"
+  digest = "1:046f509dbd35598edf1602acb1b23188d3b854fa4c73dadc50344a4c5c9ad66e"
+  name = "github.com/tmthrgd/go-popcount"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c902bd428c0c63998f5d3ad0ddc272527b5e795a"
+
+[[projects]]
+  branch = "master"
+  digest = "1:52514b8139bc98de95c107b35d339a229c9233e2ca6893c78c8480d800139c2c"
+  name = "github.com/xlab/treeprint"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a009c3971eca89777614839eb7f69abed3ea3959"
 
 [[projects]]
   digest = "1:fda2fde01556c582685ab0a5cf270ea0bd657f572fbdfc89b9acc31e1d48dc8a"
@@ -753,7 +812,9 @@
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
+    "github.com/tmthrgd/go-bitset",
     "github.com/tmthrgd/go-hex",
+    "github.com/xlab/treeprint",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/scrypt",
