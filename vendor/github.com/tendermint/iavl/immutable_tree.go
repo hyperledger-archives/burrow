@@ -39,11 +39,7 @@ func (t *ImmutableTree) String() string {
 }
 
 // Size returns the number of leaf nodes in the tree.
-func (t *ImmutableTree) Size() int {
-	return int(t.Size64())
-}
-
-func (t *ImmutableTree) Size64() int64 {
+func (t *ImmutableTree) Size() int64 {
 	if t.root == nil {
 		return 0
 	}
@@ -51,20 +47,12 @@ func (t *ImmutableTree) Size64() int64 {
 }
 
 // Version returns the version of the tree.
-func (t *ImmutableTree) Version() int {
-	return int(t.Version64())
-}
-
-func (t *ImmutableTree) Version64() int64 {
+func (t *ImmutableTree) Version() int64 {
 	return t.version
 }
 
 // Height returns the height of the tree.
-func (t *ImmutableTree) Height() int {
-	return int(t.Height8())
-}
-
-func (t *ImmutableTree) Height8() int8 {
+func (t *ImmutableTree) Height() int8 {
 	if t.root == nil {
 		return 0
 	}
@@ -98,12 +86,7 @@ func (t *ImmutableTree) hashWithCount() ([]byte, int64) {
 
 // Get returns the index and value of the specified key if it exists, or nil
 // and the next index, if it doesn't.
-func (t *ImmutableTree) Get(key []byte) (index int, value []byte) {
-	index64, value := t.Get64(key)
-	return int(index64), value
-}
-
-func (t *ImmutableTree) Get64(key []byte) (index int64, value []byte) {
+func (t *ImmutableTree) Get(key []byte) (index int64, value []byte) {
 	if t.root == nil {
 		return 0, nil
 	}
@@ -111,11 +94,7 @@ func (t *ImmutableTree) Get64(key []byte) (index int64, value []byte) {
 }
 
 // GetByIndex gets the key and value at the specified index.
-func (t *ImmutableTree) GetByIndex(index int) (key []byte, value []byte) {
-	return t.GetByIndex64(int64(index))
-}
-
-func (t *ImmutableTree) GetByIndex64(index int64) (key []byte, value []byte) {
+func (t *ImmutableTree) GetByIndex(index int64) (key []byte, value []byte) {
 	if t.root == nil {
 		return nil, nil
 	}

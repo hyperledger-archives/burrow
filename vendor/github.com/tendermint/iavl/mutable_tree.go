@@ -294,7 +294,7 @@ func (tree *MutableTree) Rollback() {
 
 // GetVersioned gets the value at the specified key and version.
 func (tree *MutableTree) GetVersioned(key []byte, version int64) (
-	index int, value []byte,
+	index int64, value []byte,
 ) {
 	if tree.versions[version] {
 		t, err := tree.GetImmutable(version)
