@@ -39,7 +39,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		defaultGasOpt := cmd.StringOpt("g gas", "1111111111",
 			"default gas to use; can be overridden for any single job")
 
-		jobsOpt := cmd.IntOpt("j jobs", 8,
+		jobsOpt := cmd.IntOpt("j jobs", 2,
 			"default number of concurrent solidity compilers to run")
 
 		addressOpt := cmd.StringOpt("a address", "",
