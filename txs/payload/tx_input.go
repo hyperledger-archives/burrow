@@ -38,7 +38,7 @@ func ValidateInputs(getter state.AccountGetter, ins []*TxInput) error {
 			return err
 		}
 		if acc == nil {
-			return fmt.Errorf("validateInputs() expects to be able to retrive accoutn %v but it was not found",
+			return fmt.Errorf("validateInputs() expects to be able to retrieve account %v but it was not found",
 				in.Address)
 		}
 		err = in.Validate(acc)
