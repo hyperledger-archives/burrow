@@ -2,6 +2,7 @@ package rpcquery
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
@@ -67,8 +68,12 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 }
 
 // Name registry
-func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (*names.Entry, error) {
-	return qs.nameReg.GetName(param.Name)
+func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry *names.Entry, err error) {
+	entry, err = qs.nameReg.GetName(param.Name)
+	if entry == nil && err == nil {
+		err = fmt.Errorf("name %s not found", param.Name)
+	}
+	return
 }
 
 func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesServer) error {
