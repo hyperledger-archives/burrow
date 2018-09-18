@@ -1,0 +1,23 @@
+jobs:
+
+- name: deployBytes32
+  deploy:
+    contract: bytes32.sol
+
+- name: makeSureDeployed
+  assert:
+    key: $deployBytes32
+    relation: ne
+    val: ""
+
+- name: getLiteralLength
+  call:
+    destination: $deployBytes32
+    function: getLiteralLength
+    data: []
+
+- name: assertLiteralLength
+  assert:
+    key: $getLiteralLength
+    relation: eq
+    val: 0
