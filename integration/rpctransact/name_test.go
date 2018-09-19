@@ -33,6 +33,10 @@ func TestNameTxSync(t *testing.T) {
 
 	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
 	entry, err := qcli.GetName(context.Background(), &rpcquery.GetNameParam{
+		Name: "n'existe pas",
+	})
+	require.Error(t, err)
+	entry, err = qcli.GetName(context.Background(), &rpcquery.GetNameParam{
 		Name: name,
 	})
 	require.NoError(t, err)
@@ -40,6 +44,7 @@ func TestNameTxSync(t *testing.T) {
 	assert.Equal(t, data, entry.Data)
 	assert.Equal(t, inputAddress, entry.Owner)
 	assert.True(t, entry.Expires >= expiresIn, "expiry should be later than expiresIn")
+
 }
 
 func TestNameReg(t *testing.T) {
@@ -56,7 +61,7 @@ func TestNameReg(t *testing.T) {
 	txe := rpctest.UpdateName(t, tcli, inputAddress, name, data, numDesiredBlocks)
 
 	entry := txe.Result.NameEntry
-	assert.NotNil(t, entry, "name shoudl return")
+	assert.NotNil(t, entry, "name should return")
 	_, ok := txe.Envelope.Tx.Payload.(*payload.NameTx)
 	require.True(t, ok, "should be NameTx: %v", txe.Envelope.Tx.Payload)
 
