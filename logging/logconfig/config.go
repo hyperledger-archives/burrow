@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/hyperledger/burrow/logging/structure"
-
 	"encoding/json"
 
 	"github.com/BurntSushi/toml"
@@ -26,16 +24,6 @@ type LoggingConfigWrapper struct {
 func DefaultNodeLoggingConfig() *LoggingConfig {
 	return &LoggingConfig{
 		RootSink: Sink().SetOutput(StderrOutput().SetFormat(loggers.JSONFormat)),
-	}
-}
-
-func DefaultClientLoggingConfig() *LoggingConfig {
-	return &LoggingConfig{
-		// No output
-		RootSink: Sink().
-			SetTransform(FilterTransform(ExcludeWhenAnyMatches,
-				structure.CapturedLoggingSourceKey, "")).
-			SetOutput(StderrOutput()),
 	}
 }
 
