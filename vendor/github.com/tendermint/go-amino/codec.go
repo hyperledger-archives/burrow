@@ -116,7 +116,10 @@ type FieldOptions struct {
 	BinFixed64    bool   // (Binary) Encode as fixed64
 	BinFixed32    bool   // (Binary) Encode as fixed32
 	BinFieldNum   uint32 // (Binary) max 1<<29-1
-	Unsafe        bool   // e.g. if this field is a float.
+
+	Unsafe        bool // e.g. if this field is a float.
+	WriteEmpty    bool // write empty structs and lists (default false except for pointers)
+	EmptyElements bool // Slice and Array elements are never nil, decode 0x00 as empty struct.
 }
 
 //----------------------------------------
@@ -505,8 +508,17 @@ func (cdc *Codec) parseFieldOptions(field reflect.StructField) (skip bool, fopts
 	}
 
 	// Parse amino tags.
-	if aminoTag == "unsafe" {
-		fopts.Unsafe = true
+	aminoTags := strings.Split(aminoTag, ",")
+	for _, aminoTag := range aminoTags {
+		if aminoTag == "unsafe" {
+			fopts.Unsafe = true
+		}
+		if aminoTag == "write_empty" {
+			fopts.WriteEmpty = true
+		}
+		if aminoTag == "empty_elements" {
+			fopts.EmptyElements = true
+		}
 	}
 
 	return

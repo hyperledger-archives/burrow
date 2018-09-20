@@ -24,10 +24,10 @@ import (
 // CONTRACT: rv is valid.
 func (cdc *Codec) encodeReflectBinary(w io.Writer, info *TypeInfo, rv reflect.Value, fopts FieldOptions, bare bool) (err error) {
 	if rv.Kind() == reflect.Ptr {
-		panic("should not happen")
+		panic("not allowed to be called with a reflect.Ptr")
 	}
 	if !rv.IsValid() {
-		panic("should not happen")
+		panic("not allowed to be called with invalid / zero Value")
 	}
 	if printLog {
 		spew.Printf("(E) encodeReflectBinary(info: %v, rv: %#v (%v), fopts: %v)\n",
@@ -297,6 +297,9 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 			}
 		}
 	} else {
+		// NOTE: ert is for the element value, while einfo.Type is dereferenced.
+		isErtStructPointer := ert.Kind() == reflect.Ptr && einfo.Type.Kind() == reflect.Struct
+
 		// Write elems in unpacked form.
 		for i := 0; i < rv.Len(); i++ {
 			// Write elements as repeated fields of the parent struct.
@@ -307,6 +310,17 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 			// Get dereferenced element value and info.
 			var erv, isDefault = isDefaultValue(rv.Index(i))
 			if isDefault {
+				// Special case if:
+				//  - erv is a struct pointer and
+				//  - field option has EmptyElements set
+				if isErtStructPointer && fopts.EmptyElements {
+					// NOTE: Not sure what to do here, but for future-proofing,
+					// we explicitly fail on nil pointers, just like
+					// Proto3's Golang client does.
+					// This also makes it easier to upgrade to Amino2
+					// which would enable the encoding of nil structs.
+					return errors.New("nil struct pointers not supported when empty_elements field tag is set")
+				}
 				// Nothing to encode, so the length is 0.
 				err = EncodeByte(buf, byte(0x00))
 				if err != nil {
@@ -384,28 +398,42 @@ func (cdc *Codec) encodeReflectBinaryStruct(w io.Writer, info *TypeInfo, rv refl
 				return
 			}
 			// Get dereferenced field value and info.
-			var frv, isDefault = isDefaultValue(rv.Field(field.Index))
-			if isDefault {
-				// Do not encode default value fields.
+			var frv = rv.Field(field.Index)
+			var frvIsPtr = frv.Kind() == reflect.Ptr
+			var dfrv, isDefault = isDefaultValue(frv)
+			if isDefault && !fopts.WriteEmpty {
+				// Do not encode default value fields
+				// (except when `amino:"write_empty"` is set).
 				continue
 			}
 			if field.UnpackedList {
 				// Write repeated field entries for each list item.
-				err = cdc.encodeReflectBinaryList(buf, finfo, frv, field.FieldOptions, true)
+				err = cdc.encodeReflectBinaryList(buf, finfo, dfrv, field.FieldOptions, true)
 				if err != nil {
 					return
 				}
 			} else {
+				lBeforeKey := buf.Len()
 				// Write field key (number and type).
 				err = encodeFieldNumberAndTyp3(buf, field.BinFieldNum, typeToTyp3(finfo.Type, field.FieldOptions))
 				if err != nil {
 					return
 				}
-				// Write field from rv.
-				err = cdc.encodeReflectBinary(buf, finfo, frv, field.FieldOptions, false)
+				lBeforeValue := buf.Len()
+
+				// Write field value from rv.
+				err = cdc.encodeReflectBinary(buf, finfo, dfrv, field.FieldOptions, false)
 				if err != nil {
 					return
 				}
+				lAfterValue := buf.Len()
+
+				if !frvIsPtr && !fopts.WriteEmpty && lBeforeValue == lAfterValue-1 && buf.Bytes()[buf.Len()-1] == 0x00 {
+					// rollback typ3/fieldnum and last byte if
+					// not a pointer and empty:
+					buf.Truncate(lBeforeKey)
+				}
+
 			}
 		}
 	}

@@ -401,6 +401,7 @@ func (cdc *Codec) decodeReflectBinaryByteArray(bz []byte, info *TypeInfo, rv ref
 }
 
 // CONTRACT: rv.CanAddr() is true.
+// NOTE: Keep the code structure similar to decodeReflectBinarySlice.
 func (cdc *Codec) decodeReflectBinaryArray(bz []byte, info *TypeInfo, rv reflect.Value, fopts FieldOptions, bare bool) (n int, err error) {
 	if !rv.CanAddr() {
 		panic("rv not addressable")
@@ -461,6 +462,9 @@ func (cdc *Codec) decodeReflectBinaryArray(bz []byte, info *TypeInfo, rv reflect
 			return
 		}
 	} else {
+		// NOTE: ert is for the element value, while einfo.Type is dereferenced.
+		isErtStructPointer := ert.Kind() == reflect.Ptr && einfo.Type.Kind() == reflect.Struct
+
 		// Read elements in unpacked form.
 		for i := 0; i < length; i++ {
 			// Read field key (number and type).
@@ -480,10 +484,16 @@ func (cdc *Codec) decodeReflectBinaryArray(bz []byte, info *TypeInfo, rv reflect
 			}
 			// Decode the next ByteLength bytes into erv.
 			var erv = rv.Index(i)
-			// Special case if next ByteLength bytes are 0x00, set nil.
-			if len(bz) > 0 && bz[0] == 0x00 {
+			// Special case if:
+			//  * next ByteLength bytes are 0x00, and
+			//  * - erv is not a struct pointer, or
+			//    - field option doesn't have EmptyElements set
+			// (the condition below uses demorgan's law)
+			if (len(bz) > 0 && bz[0] == 0x00) &&
+				!(isErtStructPointer && fopts.EmptyElements) {
+
 				slide(&bz, &n, 1)
-				erv.Set(reflect.Zero(erv.Type()))
+				erv.Set(defaultValue(erv.Type()))
 				continue
 			}
 			// Normal case, read next non-nil element from bz.
@@ -547,6 +557,7 @@ func (cdc *Codec) decodeReflectBinaryByteSlice(bz []byte, info *TypeInfo, rv ref
 }
 
 // CONTRACT: rv.CanAddr() is true.
+// NOTE: Keep the code structure similar to decodeReflectBinaryArray.
 func (cdc *Codec) decodeReflectBinarySlice(bz []byte, info *TypeInfo, rv reflect.Value, fopts FieldOptions, bare bool) (n int, err error) {
 	if !rv.CanAddr() {
 		panic("rv not addressable")
@@ -611,6 +622,9 @@ func (cdc *Codec) decodeReflectBinarySlice(bz []byte, info *TypeInfo, rv reflect
 			srv = reflect.Append(srv, erv)
 		}
 	} else {
+		// NOTE: ert is for the element value, while einfo.Type is dereferenced.
+		isErtStructPointer := ert.Kind() == reflect.Ptr && einfo.Type.Kind() == reflect.Struct
+
 		// Read elements in unpacked form.
 		for {
 			if len(bz) == 0 {
@@ -636,10 +650,16 @@ func (cdc *Codec) decodeReflectBinarySlice(bz []byte, info *TypeInfo, rv reflect
 			}
 			// Decode the next ByteLength bytes into erv.
 			erv, _n := reflect.New(ert).Elem(), int(0)
-			// Special case if next ByteLength bytes are 0x00, set nil.
-			if len(bz) > 0 && bz[0] == 0x00 {
+			// Special case if:
+			//  * next ByteLength bytes are 0x00, and
+			//  * - erv is not a struct pointer, or
+			//    - field option doesn't have EmptyElements set
+			// (the condition below uses demorgan's law)
+			if (len(bz) > 0 && bz[0] == 0x00) &&
+				!(isErtStructPointer && fopts.EmptyElements) {
+
 				slide(&bz, &n, 1)
-				erv.Set(reflect.Zero(erv.Type()))
+				erv.Set(defaultValue(erv.Type()))
 				srv = reflect.Append(srv, erv)
 				continue
 			}
@@ -703,7 +723,6 @@ func (cdc *Codec) decodeReflectBinaryStruct(bz []byte, info *TypeInfo, rv reflec
 		var lastFieldNum uint32
 		// Read each field.
 		for _, field := range info.Fields {
-
 			// Get field rv and info.
 			var frv = rv.Field(field.Index)
 			var finfo *TypeInfo
@@ -714,7 +733,7 @@ func (cdc *Codec) decodeReflectBinaryStruct(bz []byte, info *TypeInfo, rv reflec
 
 			// We're done if we've consumed all the bytes.
 			if len(bz) == 0 {
-				frv.Set(reflect.Zero(frv.Type()))
+				frv.Set(defaultValue(frv.Type()))
 				continue
 			}
 
@@ -731,7 +750,7 @@ func (cdc *Codec) decodeReflectBinaryStruct(bz []byte, info *TypeInfo, rv reflec
 				fnum, typ, _n, err = decodeFieldNumberAndTyp3(bz)
 				if field.BinFieldNum < fnum {
 					// Set zero field value.
-					frv.Set(reflect.Zero(frv.Type()))
+					frv.Set(defaultValue(frv.Type()))
 					continue
 					// Do not slide, we will read it again.
 				}
@@ -760,7 +779,6 @@ func (cdc *Codec) decodeReflectBinaryStruct(bz []byte, info *TypeInfo, rv reflec
 						typWanted, fnum, info.Type, typ))
 					return
 				}
-
 				// Decode field into frv.
 				_n, err = cdc.decodeReflectBinary(bz, finfo, frv, field.FieldOptions, false)
 				if slide(&bz, &n, _n) && err != nil {

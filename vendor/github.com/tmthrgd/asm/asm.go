@@ -690,17 +690,3 @@ func (o Opcodes) Jnz(ops ...Operand) { o.a.op("JNZ", ops...) }
 func (o Opcodes) JNZ(ops ...Operand) { o.a.op("JNZ", ops...) }
 func (o Opcodes) Jc(ops ...Operand)  { o.a.op("JC", ops...) }
 func (o Opcodes) JC(ops ...Operand)  { o.a.op("JC", ops...) }
-
-// faulty/incomplete opcodes
-
-// TODO: remove when go1.11 lands (see https://github.com/golang/go/commit/b80b4a23d1)
-func (o Opcodes) Pextrw(ops ...Operand) { o.a.unsupOp("PEXTRW", ops...) }
-func (o Opcodes) PEXTRW(ops ...Operand) { o.a.unsupOp("PEXTRW", ops...) }
-
-// unsupported opcodes
-
-// TODO: remove when go1.11 lands (see https://github.com/golang/go/commit/b80b4a23d1)
-func (o Opcodes) Pblendvb(ops ...Operand)   { o.a.unsupOp("PBLENDVB", ops...) }
-func (o Opcodes) PBLENDVB(ops ...Operand)   { o.a.unsupOp("PBLENDVB", ops...) }
-func (o Opcodes) Cmpxchg16b(ops ...Operand) { o.a.unsupOp("CMPXCHG16B", ops...) }
-func (o Opcodes) CMPXCHG16B(ops ...Operand) { o.a.unsupOp("CMPXCHG16B", ops...) }
