@@ -21,6 +21,8 @@ type Ring struct {
 	head int64
 	// Number of buckets
 	size int64
+	// Number of buckets populated
+	populated int64
 }
 
 var big1 = big.NewInt(1)
@@ -158,6 +160,9 @@ func (vc *Ring) Rotate() (totalPowerChange *big.Int, totalFlow *big.Int, err err
 	vc.flow = NewSet()
 	// Subtract the previous bucket total power so we can add on the current buckets power after this
 	totalPowerChange = new(big.Int).Sub(vc.Cum().TotalPower(), vc.cum[vc.index(-1)].TotalPower())
+	if vc.populated < vc.size {
+		vc.populated++
+	}
 	return
 }
 
@@ -165,8 +170,11 @@ func (vc *Ring) CurrentSet() *Set {
 	return vc.cum[vc.head]
 }
 
-func (vc *Ring) PreviousSet() *Set {
-	return vc.cum[vc.index(-1)]
+func (vc *Ring) PreviousSet(delay int64) *Set {
+	if delay > vc.populated {
+		delay = vc.populated
+	}
+	return vc.cum[vc.index(-delay)]
 }
 
 func (vc *Ring) Cum() *Set {

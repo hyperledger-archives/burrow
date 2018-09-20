@@ -55,9 +55,14 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 		return nil, err
 	}
 
+	nodeKey, err := p2p.LoadOrGenNodeKey(conf.NodeKeyFile())
+	if err != nil {
+		return nil, err
+	}
+
 	nde := &Node{}
 	nde.Node, err = node.NewNode(conf, privValidator,
-		proxy.NewLocalClientCreator(app),
+		nodeKey, proxy.NewLocalClientCreator(app),
 		func() (*tmTypes.GenesisDoc, error) {
 			return genesisDoc, nil
 		},
@@ -81,12 +86,16 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc 
 			Power:  int64(validator.Amount),
 		}
 	}
+	consensusParams := tmTypes.DefaultConsensusParams()
+	// Default limit is 10KiB. Raise his to 1MiB
+	consensusParams.TxSize.MaxBytes = 1024 * 1024
+
 	return &tmTypes.GenesisDoc{
 		ChainID:         burrowGenesisDoc.ChainID(),
 		GenesisTime:     burrowGenesisDoc.GenesisTime,
 		Validators:      validators,
 		AppHash:         burrowGenesisDoc.Hash(),
-		ConsensusParams: tmTypes.DefaultConsensusParams(),
+		ConsensusParams: consensusParams,
 	}
 }
 

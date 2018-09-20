@@ -73,7 +73,7 @@ func BlockHeaderFromHeader(header *abciTypes.Header) *BlockHeader {
 	bs, _ := json.Marshal(header)
 	return &BlockHeader{
 		JSON:   string(bs),
-		NumTxs: header.NumTxs,
+		NumTxs: int32(header.NumTxs),
 	}
 }
 
