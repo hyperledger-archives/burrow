@@ -24,13 +24,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
@@ -131,11 +130,13 @@ func TestGetEventsSendFiltered(t *testing.T) {
 
 func TestRevert(t *testing.T) {
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	txe := rpctest.CreateContract(t, tcli, inputAddress, rpctest.Bytecode_revert)
-	functionID := abi.GetFunctionID("RevertAt(uint32)")
+	txe := rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_Revert)
+	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+	require.NoError(t, err)
+	data, err := spec.Pack("RevertAt", 4)
+	require.NoError(t, err)
 	contractAddress := txe.Receipt.ContractAddress
-	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress,
-		bc.MustSplice(functionID, binary.Int64ToWord256(4)))
+	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 
 	request := &rpcevents.BlocksRequest{

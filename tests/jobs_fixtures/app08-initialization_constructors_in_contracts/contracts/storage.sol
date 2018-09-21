@@ -3,7 +3,7 @@ pragma solidity >=0.0.0;
 contract SimpleConstructorInt {
   uint public storedData;
 
-  function SimpleConstructorInt(uint x, uint y) {
+  constructor(uint x, uint /* y */) public {
     storedData = x;
   }
 }
@@ -11,7 +11,7 @@ contract SimpleConstructorInt {
 contract SimpleConstructorBool {
   bool public storedData;
 
-  function SimpleConstructorBool(bool x, bool y) {
+  constructor(bool x, bool /* y */) public {
     storedData = x;
   }
 }
@@ -19,7 +19,7 @@ contract SimpleConstructorBool {
 contract SimpleConstructorString {
   string public storedData;
 
-  function SimpleConstructorString(string x, string y) {
+  constructor(string x, string /* y */) public {
     storedData = x;
   }
 }
@@ -27,7 +27,7 @@ contract SimpleConstructorString {
 contract SimpleConstructorBytes {
   bytes32 public storedData;
 
-  function SimpleConstructorBytes(bytes32 x, bytes32 y) {
+  constructor(bytes32 x, bytes32 /* y */) public {
     storedData = x;
   }
 }
@@ -35,11 +35,11 @@ contract SimpleConstructorBytes {
 contract SimpleConstructorArray {
   uint[3] public storedData;
 
-  function SimpleConstructorArray(uint[3] x, uint[3] y) {
+  constructor(uint[3] x, uint[3] /* y */) public {
     storedData = x;
   }
 
-  function get() returns (uint[3]) {
+  function get() public view returns (uint[3]) {
     return storedData;
   }
 }

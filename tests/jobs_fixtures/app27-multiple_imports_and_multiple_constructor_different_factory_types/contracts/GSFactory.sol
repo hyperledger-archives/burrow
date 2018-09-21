@@ -7,21 +7,21 @@ contract GSFactory {
     address lastCreatedSingle;
     address lastCreatedMulti;
 
-    function createSingle(uint initialValueSingle) returns (address GSAddrSingle) {
+    function createSingle(uint initialValueSingle) public returns (address GSAddrSingle) {
         lastCreatedSingle = new GSSingle(initialValueSingle);
         return lastCreatedSingle;
     }
 
-    function getLastSingle() returns (address GSAddrSingle) {
+    function getLastSingle() public view returns (address GSAddrSingle) {
         return lastCreatedSingle;
     }
 
-    function createMulti(uint initialValueFirst, uint initialValueSecond) returns (address GSAddrMulti) {
+    function createMulti(uint initialValueFirst, uint initialValueSecond) public returns (address GSAddrMulti) {
         lastCreatedMulti = new GSMulti(initialValueFirst, initialValueSecond);
         return lastCreatedMulti;
     }
 
-    function getLastMulti() returns (address GSAddrMulti) {
+    function getLastMulti() public view returns (address GSAddrMulti) {
         return lastCreatedMulti;
     }
 }

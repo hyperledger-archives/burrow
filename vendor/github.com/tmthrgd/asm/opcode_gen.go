@@ -110,13 +110,8 @@ func main() {
 			continue
 		}
 
-		switch sub[1] {
-		case "PEXTRW":
-			// Golangs PEXTRW is faulty/incomplete
-		default:
-			fmt.Fprintf(out, "func (o Opcodes) %s%s(ops ...Operand) { o.a.op(%q, ops...) }\n", sub[1][:1], strings.ToLower(sub[1][1:]), sub[1])
-			fmt.Fprintf(out, "func (o Opcodes) %[1]s(ops ...Operand) { o.a.op(%[1]q, ops...) }\n", sub[1])
-		}
+		fmt.Fprintf(out, "func (o Opcodes) %s%s(ops ...Operand) { o.a.op(%q, ops...) }\n", sub[1][:1], strings.ToLower(sub[1][1:]), sub[1])
+		fmt.Fprintf(out, "func (o Opcodes) %[1]s(ops ...Operand) { o.a.op(%[1]q, ops...) }\n", sub[1])
 	}
 
 	if s.Err() != nil {

@@ -43,8 +43,6 @@ type encode struct {
 
 	di, si, cx asm.Register
 
-	ret asm.Label
-
 	alpha asm.Operand
 
 	mask asm.Data
@@ -115,28 +113,10 @@ func (e *encode) Convert(out2, out1, in, tmp asm.Operand, vpand, vpunpckhbw, vps
 	}
 }
 
-func (e *encode) BigLoop(l asm.Label, vpand, vpunpckhbw, vpshufb func(ops ...asm.Operand)) {
-	e.Label(l)
+func (e *encode) encodeASM(name string, vpand, vpunpckhbw, vpshufb func(ops ...asm.Operand)) {
+	a := e.Asm
 
-	e.Movou(asm.X0, asm.Address(e.si, e.cx, asm.SX1, -16))
-
-	e.Convert(asm.X2, asm.X1, asm.X0, asm.X3, vpand, vpunpckhbw, vpshufb)
-
-	for i, r := range []asm.Operand{asm.X2, asm.X1} {
-		e.Movou(asm.Address(e.di, e.cx, asm.SX2, -16*(i+1)), r)
-	}
-
-	e.Subq(e.cx, asm.Constant(16))
-	e.Jz(e.ret)
-
-	e.Cmpq(asm.Constant(16), e.cx)
-	e.Jae(l)
-}
-
-func encodeASM(a *asm.Asm) {
-	mask := a.Data("encodeMask", repeat(0x0f, 16))
-
-	a.NewFunction("encodeASM")
+	a.NewFunction(name)
 	a.NoSplit()
 
 	dst := a.Argument("dst", 8)
@@ -146,22 +126,9 @@ func encodeASM(a *asm.Asm) {
 
 	a.Start()
 
-	bigloop_avx := a.NewLabel("bigloop_avx")
-	bigloop_sse := a.NewLabel("bigloop_sse")
+	bigloop := a.NewLabel("bigloop")
 	tail := a.NewLabel("tail")
 	ret := a.NewLabel("ret")
-
-	e := &encode{
-		a,
-
-		asm.DI, asm.SI, asm.BX,
-
-		ret,
-
-		asm.X15,
-
-		mask,
-	}
 
 	a.Movq(e.di, dst)
 	a.Movq(e.si, src)
@@ -173,10 +140,21 @@ func encodeASM(a *asm.Asm) {
 	a.Cmpq(asm.Constant(16), e.cx)
 	a.Jb(tail)
 
-	a.Cmpb(asm.Constant(1), asm.Data("·support_avx"))
-	a.Jne(bigloop_sse)
+	e.Label(bigloop)
 
-	e.BigLoop(bigloop_avx, a.Vpand, a.Vpunpckhbw, a.Vpshufb)
+	e.Movou(asm.X0, asm.Address(e.si, e.cx, asm.SX1, -16))
+
+	e.Convert(asm.X2, asm.X1, asm.X0, asm.X3, vpand, vpunpckhbw, vpshufb)
+
+	for i, r := range []asm.Operand{asm.X2, asm.X1} {
+		e.Movou(asm.Address(e.di, e.cx, asm.SX2, -16*(i+1)), r)
+	}
+
+	e.Subq(e.cx, asm.Constant(16))
+	e.Jz(ret)
+
+	e.Cmpq(asm.Constant(16), e.cx)
+	e.Jae(bigloop)
 
 	a.Label(tail)
 
@@ -218,7 +196,7 @@ func encodeASM(a *asm.Asm) {
 
 	a.Label(tailConv)
 
-	e.Convert(asm.Invalid, asm.X1, asm.X0, asm.X3, e.vpand_sse, e.vpunpckhbw_sse, e.vpshufb_sse)
+	e.Convert(asm.Invalid, asm.X1, asm.X0, asm.X3, vpand, vpunpckhbw, vpshufb)
 
 	for i := 2; i < 8; i += 2 {
 		a.Cmpq(asm.Constant(i), e.cx)
@@ -258,17 +236,29 @@ func encodeASM(a *asm.Asm) {
 
 	a.Label(ret)
 	a.Ret()
+}
 
-	e.BigLoop(bigloop_sse, e.vpand_sse, e.vpunpckhbw_sse, e.vpshufb_sse)
-	a.Jmp(tail)
+func encodeASM(a *asm.Asm) {
+	mask := a.Data("encodeMask", repeat(0x0f, 16))
+
+	e := &encode{
+		a,
+
+		asm.DI, asm.SI, asm.BX,
+
+		asm.X15,
+
+		mask,
+	}
+
+	e.encodeASM("encodeAVX", a.Vpand, a.Vpunpckhbw, a.Vpshufb)
+	e.encodeASM("encodeSSE", e.vpand_sse, e.vpunpckhbw_sse, e.vpshufb_sse)
 }
 
 type decode struct {
 	*asm.Asm
 
 	di, si, cx, invldMskOut, invldMskIn asm.Register
-
-	ret, invalid asm.Label
 
 	base, toLower, high, low, valid, sign asm.Data
 
@@ -323,7 +313,7 @@ func (d *decode) vpshufb_sse(ops ...asm.Operand) {
 	d.Pshufb(ops[0], ops[2])
 }
 
-func (d *decode) Convert(io, tmp4, tmp3, tmp2, tmp1 asm.Operand, vpxor, vpcmpgtb, vpshufb func(ops ...asm.Operand)) {
+func (d *decode) Convert(io, tmp4, tmp3, tmp2, tmp1 asm.Operand, invalid asm.Label, vpxor, vpcmpgtb, vpshufb func(ops ...asm.Operand)) {
 	vpxor(tmp1, io, d.sign)
 
 	d.Por(io, d.toLower)
@@ -342,7 +332,7 @@ func (d *decode) Convert(io, tmp4, tmp3, tmp2, tmp1 asm.Operand, vpxor, vpcmpgtb
 	d.Pmovmskb(d.invldMskOut, tmp3)
 
 	d.Testw(d.invldMskIn, d.invldMskOut)
-	d.Jnz(d.invalid)
+	d.Jnz(invalid)
 
 	d.Psubb(io, d.base.Offset(0))
 
@@ -356,42 +346,10 @@ func (d *decode) Convert(io, tmp4, tmp3, tmp2, tmp1 asm.Operand, vpxor, vpcmpgtb
 	d.Por(io, tmp3)
 }
 
-func (d *decode) BigLoop(l asm.Label, vpxor, vpcmpgtb, vpshufb func(ops ...asm.Operand)) {
-	d.Label(l)
+func (d *decode) decodeASM(name string, vpxor, vpcmpgtb, vpshufb func(ops ...asm.Operand)) {
+	a := d.Asm
 
-	d.Movou(asm.X0, asm.Address(d.si))
-
-	d.Convert(asm.X0, asm.X4, asm.X3, asm.X2, asm.X1, vpxor, vpcmpgtb, vpshufb)
-
-	d.Movq(asm.Address(d.di), asm.X0)
-
-	d.Subq(d.cx, asm.Constant(16))
-	d.Jz(d.ret)
-
-	d.Addq(d.si, asm.Constant(16))
-	d.Addq(d.di, asm.Constant(8))
-
-	d.Cmpq(asm.Constant(16), d.cx)
-	d.Jae(l)
-}
-
-func decodeASM(a *asm.Asm) {
-	base := a.Data("decodeBase", bytes.Join([][]byte{
-		repeat('0', 16),
-		repeat('a'-'0'-10, 16),
-	}, nil))
-	toLower := a.Data("decodeToLower", repeat(0x20, 16))
-	high := a.Data64("decodeHigh", []uint64{0x0e0c0a0806040200, ^uint64(0)})
-	low := a.Data64("decodeLow", []uint64{0x0f0d0b0907050301, ^uint64(0)})
-	valid := a.Data("decodeValid", bytes.Join([][]byte{
-		repeat('0'^0x80, 16),
-		repeat('9'^0x80, 16),
-		repeat('a'^0x80, 16),
-		repeat('f'^0x80, 16),
-	}, nil))
-	sign := a.Data("decodeToSigned", repeat(0x80, 16))
-
-	a.NewFunction("decodeASM")
+	a.NewFunction(name)
 	a.NoSplit()
 
 	dst := a.Argument("dst", 8)
@@ -402,23 +360,10 @@ func decodeASM(a *asm.Asm) {
 
 	a.Start()
 
-	bigloop_avx := a.NewLabel("bigloop_avx")
-	bigloop_sse := a.NewLabel("bigloop_sse")
+	bigloop := a.NewLabel("bigloop")
 	tail := a.NewLabel("tail")
 	ret := a.NewLabel("ret")
 	invalid := a.NewLabel("invalid")
-
-	d := &decode{
-		a,
-
-		asm.DI, asm.SI, asm.BX, asm.AX, asm.DX,
-
-		ret, invalid,
-
-		base, toLower, high, low, valid, sign,
-
-		asm.X14, asm.X15,
-	}
 
 	a.Movq(d.di, dst)
 	a.Movq(d.si, src)
@@ -434,10 +379,22 @@ func decodeASM(a *asm.Asm) {
 	a.Cmpq(asm.Constant(16), d.cx)
 	a.Jb(tail)
 
-	a.Cmpb(asm.Constant(1), asm.Data("·support_avx"))
-	a.Jne(bigloop_sse)
+	d.Label(bigloop)
 
-	d.BigLoop(bigloop_avx, a.Vpxor, a.Vpcmpgtb, a.Vpshufb)
+	d.Movou(asm.X0, asm.Address(d.si))
+
+	d.Convert(asm.X0, asm.X4, asm.X3, asm.X2, asm.X1, invalid, vpxor, vpcmpgtb, vpshufb)
+
+	d.Movq(asm.Address(d.di), asm.X0)
+
+	d.Subq(d.cx, asm.Constant(16))
+	d.Jz(ret)
+
+	d.Addq(d.si, asm.Constant(16))
+	d.Addq(d.di, asm.Constant(8))
+
+	d.Cmpq(asm.Constant(16), d.cx)
+	d.Jae(bigloop)
 
 	a.Label(tail)
 
@@ -476,7 +433,7 @@ func decodeASM(a *asm.Asm) {
 
 	a.Label(tailConv)
 
-	d.Convert(asm.X0, asm.X4, asm.X3, asm.X2, asm.X1, d.vpxor_sse, d.vpcmpgtb_sse, d.vpshufb_sse)
+	d.Convert(asm.X0, asm.X4, asm.X3, asm.X2, asm.X1, invalid, vpxor, vpcmpgtb, vpshufb)
 
 	for i := 4; i <= 12; i += 4 {
 		a.Cmpq(asm.Constant(i), d.cx)
@@ -513,9 +470,36 @@ func decodeASM(a *asm.Asm) {
 	a.Movb(ok, asm.Constant(0))
 
 	a.Ret()
+}
 
-	d.BigLoop(bigloop_sse, d.vpxor_sse, d.vpcmpgtb_sse, d.vpshufb_sse)
-	a.Jmp(tail)
+func decodeASM(a *asm.Asm) {
+	base := a.Data("decodeBase", bytes.Join([][]byte{
+		repeat('0', 16),
+		repeat('a'-'0'-10, 16),
+	}, nil))
+	toLower := a.Data("decodeToLower", repeat(0x20, 16))
+	high := a.Data64("decodeHigh", []uint64{0x0e0c0a0806040200, ^uint64(0)})
+	low := a.Data64("decodeLow", []uint64{0x0f0d0b0907050301, ^uint64(0)})
+	valid := a.Data("decodeValid", bytes.Join([][]byte{
+		repeat('0'^0x80, 16),
+		repeat('9'^0x80, 16),
+		repeat('a'^0x80, 16),
+		repeat('f'^0x80, 16),
+	}, nil))
+	sign := a.Data("decodeToSigned", repeat(0x80, 16))
+
+	d := &decode{
+		a,
+
+		asm.DI, asm.SI, asm.BX, asm.AX, asm.DX,
+
+		base, toLower, high, low, valid, sign,
+
+		asm.X14, asm.X15,
+	}
+
+	d.decodeASM("decodeAVX", a.Vpxor, a.Vpcmpgtb, a.Vpshufb)
+	d.decodeASM("decodeSSE", d.vpxor_sse, d.vpcmpgtb_sse, d.vpshufb_sse)
 }
 
 func main() {

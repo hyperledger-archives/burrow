@@ -861,18 +861,16 @@ func TestTxSequence(t *testing.T) {
 		tx := payload.NewSendTx()
 		tx.AddInputWithSequence(acc0PubKey, 1, sequence)
 		tx.AddOutput(acc1.Address(), 1)
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		stateCopy, err := st.Copy(dbm.NewMemDB())
-		require.NoError(t, err)
-		err = execTxWithState(stateCopy, txEnv)
+
+		exe := makeExecutor(copyState(t, st))
+		err := exe.signExecuteCommit(tx, privAccounts[0])
 		if i == 1 {
 			// Sequence is good.
 			if err != nil {
 				t.Errorf("Expected good sequence to pass: %v", err)
 			}
 			// Check acc.Sequence().
-			newAcc0 := getAccount(stateCopy, acc0.Address())
+			newAcc0 := getAccount(exe.state, acc0.Address())
 			if newAcc0.Sequence() != sequence {
 				t.Errorf("Expected account sequence to change to %v, got %v",
 					sequence, newAcc0.Sequence())
@@ -883,7 +881,7 @@ func TestTxSequence(t *testing.T) {
 				t.Errorf("Expected bad sequence to fail")
 			}
 			// Check acc.Sequence(). (shouldn't have changed)
-			newAcc0 := getAccount(stateCopy, acc0.Address())
+			newAcc0 := getAccount(exe.state, acc0.Address())
 			if newAcc0.Sequence() != acc0.Sequence() {
 				t.Errorf("Expected account sequence to not change from %v, got %v",
 					acc0.Sequence(), newAcc0.Sequence())
@@ -895,7 +893,7 @@ func TestTxSequence(t *testing.T) {
 func TestNameTxs(t *testing.T) {
 	st, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	require.NoError(t, err)
-	st.writeState.save()
+	st.writeState.commit()
 
 	names.MinNameRegistrationPeriod = 5
 	exe := makeExecutor(st)
@@ -1181,12 +1179,8 @@ func TestContractSend(t *testing.T) {
 		Data:     sendData,
 	}
 
-	txEnv := txs.Enclose(testChainID, tx)
-	require.NoError(t, txEnv.Sign(privAccounts[0]))
-	err = execTxWithState(st, txEnv)
-	if err != nil {
-		t.Errorf("Got error in executing call transaction, %v", err)
-	}
+	err = makeExecutor(st).signExecuteCommit(tx, privAccounts[0])
+	require.NoError(t, err)
 
 	acc2 = getAccount(st, acc2.Address())
 	if acc2.Balance() != sendAmt+acc2Balance {
@@ -1195,18 +1189,16 @@ func TestContractSend(t *testing.T) {
 }
 
 func TestMerklePanic(t *testing.T) {
-	state, privAccounts := makeGenesisState(3, true, 1000, 1, true,
+	st, privAccounts := makeGenesisState(3, true, 1000, 1, true,
 		1000)
 
 	//val0 := state.GetValidatorInfo(privValidators[0].Address())
-	acc0 := getAccount(state, privAccounts[0].Address())
-	acc1 := getAccount(state, privAccounts[1].Address())
+	acc0 := getAccount(st, privAccounts[0].Address())
+	acc1 := getAccount(st, privAccounts[1].Address())
 
-	state.writeState.save()
+	st.writeState.commit()
 	// SendTx.
 	{
-		stateSendTx, err := state.Copy(dbm.NewMemDB())
-		require.NoError(t, err)
 		tx := &payload.SendTx{
 			Inputs: []*payload.TxInput{
 				{
@@ -1223,20 +1215,13 @@ func TestMerklePanic(t *testing.T) {
 			},
 		}
 
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err = execTxWithState(stateSendTx, txEnv)
-		if err != nil {
-			t.Errorf("Got error in executing send transaction, %v", err)
-		}
-		// uncomment for panic fun!
-		//stateSendTx.save()
+		err := makeExecutor(copyState(t, st)).signExecuteCommit(tx, privAccounts[0])
+		require.NoError(t, err)
 	}
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx, err := state.Copy(dbm.NewMemDB())
-		require.NoError(t, err)
+		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
 		stateCallTx.writeState.UpdateAccount(newAcc1)
@@ -1250,15 +1235,11 @@ func TestMerklePanic(t *testing.T) {
 			GasLimit: 10,
 		}
 
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err = execTxWithState(stateCallTx, txEnv)
-		if err != nil {
-			t.Errorf("Got error in executing call transaction, %v", err)
-		}
+		err := makeExecutor(stateCallTx).signExecuteCommit(tx, privAccounts[0])
+		require.NoError(t, err)
 	}
-	state.writeState.save()
-	trygetacc0 := getAccount(state, privAccounts[0].Address())
+	st.writeState.commit()
+	trygetacc0 := getAccount(st, privAccounts[0].Address())
 	fmt.Println(trygetacc0.Address())
 }
 
@@ -1273,8 +1254,7 @@ func TestTxs(t *testing.T) {
 
 	// SendTx.
 	{
-		stateSendTx, err := st.Copy(dbm.NewMemDB())
-		require.NoError(t, err)
+		stateSendTx := copyState(t, st)
 		tx := &payload.SendTx{
 			Inputs: []*payload.TxInput{
 				{
@@ -1291,12 +1271,8 @@ func TestTxs(t *testing.T) {
 			},
 		}
 
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err = execTxWithState(stateSendTx, txEnv)
-		if err != nil {
-			t.Errorf("Got error in executing send transaction, %v", err)
-		}
+		err := makeExecutor(stateSendTx).signExecuteCommit(tx, privAccounts[0])
+		require.NoError(t, err)
 		newAcc0 := getAccount(stateSendTx, acc0.Address())
 		if acc0.Balance()-1 != newAcc0.Balance() {
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
@@ -1311,11 +1287,10 @@ func TestTxs(t *testing.T) {
 
 	// CallTx. Just runs through it and checks the transfer. See vm, rpc tests for more
 	{
-		stateCallTx, err := st.Copy(dbm.NewMemDB())
-		require.NoError(t, err)
+		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(stateCallTx, acc1.Address())
 		newAcc1.SetCode([]byte{0x60})
-		_, err = stateCallTx.Update(func(up Updatable) error {
+		_, err := stateCallTx.Update(func(up Updatable) error {
 			return up.UpdateAccount(newAcc1)
 		})
 		require.NoError(t, err)
@@ -1329,12 +1304,8 @@ func TestTxs(t *testing.T) {
 			GasLimit: 10,
 		}
 
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err = execTxWithState(stateCallTx, txEnv)
-		if err != nil {
-			t.Errorf("Got error in executing call transaction, %v", err)
-		}
+		err = makeExecutor(stateCallTx).signExecuteCommit(tx, privAccounts[0])
+		require.NoError(t, err)
 		newAcc0 := getAccount(stateCallTx, acc0.Address())
 		if acc0.Balance()-1 != newAcc0.Balance() {
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
@@ -1369,7 +1340,7 @@ basis,   and   nodes   can   leave  and   rejoin   the  network   at  will,  acc
 proof-of-work chain as proof of what happened while they were gone `
 		entryAmount := uint64(10000)
 
-		stateNameTx := st
+		stateNameTx := copyState(t, st)
 		tx := &payload.NameTx{
 			Input: &payload.TxInput{
 				Address:  acc0.Address(),
@@ -1380,13 +1351,10 @@ proof-of-work chain as proof of what happened while they were gone `
 			Data: entryData,
 		}
 
-		txEnv := txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
+		exe := makeExecutor(stateNameTx)
+		err := exe.signExecuteCommit(tx, privAccounts[0])
+		require.NoError(t, err)
 
-		err := execTxWithState(stateNameTx, txEnv)
-		if err != nil {
-			t.Errorf("Got error in executing call transaction, %v", err)
-		}
 		newAcc0 := getAccount(stateNameTx, acc0.Address())
 		if acc0.Balance()-entryAmount != newAcc0.Balance() {
 			t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
@@ -1404,65 +1372,12 @@ proof-of-work chain as proof of what happened while they were gone `
 		// test a bad string
 		tx.Data = string([]byte{0, 1, 2, 3, 127, 128, 129, 200, 251})
 		tx.Input.Sequence += 1
-		txEnv = txs.Enclose(testChainID, tx)
-		require.NoError(t, txEnv.Sign(privAccounts[0]))
-		err = execTxWithState(stateNameTx, txEnv)
+		err = exe.signExecuteCommit(tx, privAccounts[0])
+		require.Error(t, err)
 		if errors.AsException(err).ErrorCode() != errors.ErrorCodeInvalidString {
 			t.Errorf("Expected invalid string error. Got: %v", err)
 		}
 	}
-
-	// BondTx. TODO
-	/*
-		{
-			state := state.Copy()
-			tx := &payload.BondTx{
-				PublicKey: acc0PubKey.(acm.PublicKeyEd25519),
-				Inputs: []*payload.TxInput{
-					&payload.TxInput{
-						Address:  acc0.Address(),
-						Amount:   1,
-						Sequence: acc0.Sequence() + 1,
-						PublicKey:   acc0PubKey,
-					},
-				},
-				UnbondTo: []*payload.TxOutput{
-					&payload.TxOutput{
-						Address: acc0.Address(),
-						Amount:  1,
-					},
-				},
-			}
-			tx.Signature = privAccounts[0] acm.ChainSign(testChainID, tx).(crypto.SignatureEd25519)
-			tx.Inputs[0].Signature = privAccounts[0] acm.ChainSign(testChainID, tx)
-			err := execTxWithState(state, tx)
-			if err != nil {
-				t.Errorf("Got error in executing bond transaction, %v", err)
-			}
-			newAcc0 := getAccount(state, acc0.Address())
-			if newAcc0.Balance() != acc0.Balance()-1 {
-				t.Errorf("Unexpected newAcc0 balance. Expected %v, got %v",
-					acc0.Balance()-1, newAcc0.Balance())
-			}
-			_, acc0Val := state.BondedValidators.GetByAddress(acc0.Address())
-			if acc0Val == nil {
-				t.Errorf("acc0Val not present")
-			}
-			if acc0Val.BondHeight != blockchain.LastBlockHeight()+1 {
-				t.Errorf("Unexpected bond height. Expected %v, got %v",
-					blockchain.LastBlockHeight(), acc0Val.BondHeight)
-			}
-			if acc0Val.Power != 1 {
-				t.Errorf("Unexpected voting power. Expected %v, got %v",
-					acc0Val.Power, acc0.Balance())
-			}
-			if acc0Val.Accum != 0 {
-				t.Errorf("Unexpected accum. Expected 0, got %v",
-					acc0Val.Accum)
-			}
-		} */
-
-	// TODO UnbondTx.
 
 }
 
@@ -1519,6 +1434,9 @@ func TestSelfDestruct(t *testing.T) {
 	}
 }
 
+//-------------------------------------------------------------------------------------
+// helpers
+
 func makeUsers(n int) []acm.AddressableSigner {
 	users := make([]acm.AddressableSigner, n)
 	for i := 0; i < n; i++ {
@@ -1527,11 +1445,11 @@ func makeUsers(n int) []acm.AddressableSigner {
 	}
 	return users
 }
+
 func newBlockchain(genesisDoc *genesis.GenesisDoc) *bcm.Blockchain {
 	testDB := dbm.NewDB("test", dbBackend, ".")
-	bc, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
-
-	return bc
+	blockchain, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
+	return blockchain
 }
 
 func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesis.GenesisDoc {
@@ -1568,25 +1486,6 @@ func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesi
 	}
 }
 
-func execTxWithStateAndBlockchain(state *State, blockchain *bcm.Blockchain, txEnv *txs.Envelope) error {
-	exe := newExecutor("execTxWithStateAndBlockchainCache", true, state, blockchain,
-		event.NewNoOpPublisher(), logger)
-	if _, err := exe.Execute(txEnv); err != nil {
-		return err
-	} else {
-		_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
-		if err != nil {
-			return err
-		}
-		commitNewBlock(state, blockchain)
-		return nil
-	}
-}
-
-func execTxWithState(state *State, txEnv *txs.Envelope) error {
-	return execTxWithStateAndBlockchain(state, newBlockchain(testGenesisDoc), txEnv)
-}
-
 func commitNewBlock(state *State, blockchain *bcm.Blockchain) {
 	blockchain.CommitBlock(blockchain.LastBlockTime().Add(time.Second), sha3.Sha3(blockchain.LastBlockHash()),
 		state.Hash())
@@ -1600,7 +1499,7 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
 	}
-	s0.writeState.save()
+	s0.writeState.commit()
 	return s0, privAccounts
 }
 
@@ -1620,9 +1519,6 @@ func addressPtr(account acm.Account) *crypto.Address {
 	return &accountAddresss
 }
 
-//-------------------------------------------------------------------------------------
-// helpers
-
 var ExceptionTimeOut = errors.NewException(errors.ErrorCodeGeneric, "timed out waiting for event")
 
 type testExecutor struct {
@@ -1635,6 +1531,12 @@ func makeExecutor(state *State) *testExecutor {
 		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),
 	}
+}
+
+func copyState(t testing.TB, st *State) *State {
+	cpy, err := st.Copy(dbm.NewMemDB())
+	require.NoError(t, err)
+	return cpy
 }
 
 func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.AddressableSigner) error {
@@ -1661,7 +1563,7 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	if err != nil {
 		return nil, err
 	}
-	evs, err := exe.Execute(txEnv)
+	txe, err := exe.Execute(txEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -1670,7 +1572,7 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	_, _, err = exe.blockchain.CommitBlock(time.Time{}, nil, nil)
 	require.NoError(t, err)
 
-	for _, ev := range evs.TaggedEvents().Filter(qry) {
+	for _, ev := range txe.TaggedEvents().Filter(qry) {
 		if ev.Call != nil {
 			return ev.Call, ev.Header.Exception.AsError()
 		}

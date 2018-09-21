@@ -1,4 +1,4 @@
 package amino
 
 // Version
-const Version = "0.10.1"
+const Version = "0.12.0"

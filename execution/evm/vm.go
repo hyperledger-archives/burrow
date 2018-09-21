@@ -608,7 +608,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case GASPRICE_DEPRECATED: // 0x3A
 			stack.Push(Zero256)
-			vm.Debugf(" => %X (GASPRICE IS DEPRECATED)\n")
+			vm.Debugf(" => %X (GASPRICE IS DEPRECATED)\n", Zero256)
 
 		case EXTCODESIZE: // 0x3B
 			addr := stack.Pop()

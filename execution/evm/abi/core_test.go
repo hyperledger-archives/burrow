@@ -3,9 +3,11 @@ package abi
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmthrgd/go-hex"
 )
@@ -138,7 +140,7 @@ func TestPacker(t *testing.T) {
 	}
 }
 
-func TestUnpacker(t *testing.T) {
+func TestUnpackerString(t *testing.T) {
 	for _, test := range []struct {
 		abi            string
 		packed         []byte
@@ -323,6 +325,150 @@ func TestUnpacker(t *testing.T) {
 				t.Errorf("Unpacker failed: Incorrect value, got %v expected %v", output[i].Value, expectedOutput.Value)
 			}
 		}
+	}
+}
+
+func TestUnpacker(t *testing.T) {
+	for _, test := range []struct {
+		evm            EVMType
+		packed         []byte
+		data           interface{}
+		expectedOutput interface{}
+	}{
+		/* positive numbers */
+		{
+			EVMInt{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int64),
+			func() *int64 { var v int64; v = 42; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int32),
+			func() *int32 { var v int32; v = 42; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{0x7f, 0xff}, 32, true),
+			new(int16),
+			func() *int16 { var v int16; v = 0x7fff; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint16),
+			func() *uint16 { var v uint16; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint32),
+			func() *uint32 { var v uint32; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{0xfd, 0xca, 0, 0, 0, 0, 0, 0}, 32, true),
+			new(uint64),
+			func() *uint64 { var v uint64; v = 0xfdca000000000000; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			pad([]byte{42}, 32, true),
+			new(big.Int),
+			big.NewInt(42),
+		},
+		/* Negative numbers */
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD6"),
+			new(int64),
+			func() *int64 { var v int64; v = -42; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD6"),
+			new(int32),
+			func() *int32 { var v int32; v = -42; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8001"),
+			new(int16),
+			func() *int16 { var v int16; v = -0x7fff; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFB6C20"),
+			new(int32),
+			func() *int32 { var v int32; v = -300000; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF35010124111"),
+			new(int64),
+			func() *int64 { var v int64; v = -0xcafefedbeef; return &v }(),
+		},
+		{
+			EVMInt{M: 256},
+			hexToBytes(t, "80000000000000000000000000000000000000000000000000000CAFEFEDBEEF"),
+			new(big.Int),
+			func() *big.Int {
+				v := new(big.Int)
+				x, _ := v.SetString("-57896044618658097711785492504343953926634992332820282019728791990006780674321", 10)
+				return x
+			}(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int64),
+			func() *int64 { var v int64; v = 42; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(int32),
+			func() *int32 { var v int32; v = 42; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0x7f, 0xff}, 32, true),
+			new(int16),
+			func() *int16 { var v int16; v = 0x7fff; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint16),
+			func() *uint16 { var v uint16; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca}, 32, true),
+			new(uint32),
+			func() *uint32 { var v uint32; v = 0xfdca; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{0xfd, 0xca, 0, 0, 0, 0, 0, 0}, 32, true),
+			new(uint64),
+			func() *uint64 { var v uint64; v = 0xfdca000000000000; return &v }(),
+		},
+		{
+			EVMUint{M: 256},
+			pad([]byte{42}, 32, true),
+			new(big.Int),
+			big.NewInt(42),
+		},
+	} {
+		//t.Log(test.name)
+		t.Log(test.packed)
+		_, err := test.evm.unpack(test.packed, 0, test.data)
+		if err != nil {
+			t.Errorf("Unpacker failed: %v", err)
+		}
+		assert.EqualValues(t, test.expectedOutput, test.data)
 	}
 }
 

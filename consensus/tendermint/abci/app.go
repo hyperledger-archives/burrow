@@ -47,8 +47,8 @@ func NewApp(nodeInfo string, blockchain *bcm.Blockchain, checker execution.Batch
 		blockchain: blockchain,
 		checker:    checker,
 		committer:  committer,
-		checkTx:    txExecutor(checker, txDecoder, logger.WithScope("CheckTx")),
-		deliverTx:  txExecutor(committer, txDecoder, logger.WithScope("DeliverTx")),
+		checkTx:    txExecutor("CheckTx", checker, txDecoder, logger.WithScope("CheckTx")),
+		deliverTx:  txExecutor("DeliverTx", committer, txDecoder, logger.WithScope("DeliverTx")),
 		panicFunc:  panicFunc,
 		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
 			"node_info", nodeInfo),
@@ -94,7 +94,8 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 			len(chain.Validators), app.blockchain.NumValidators()))
 	}
 	for _, v := range chain.Validators {
-		err := app.checkValidatorMatches(app.blockchain.Validators(), v)
+		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
+		err = app.checkValidatorMatches(app.blockchain.Validators(), abciTypes.Validator{Address: pk.Address().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
@@ -113,13 +114,13 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 	if block.Header.Height > 1 {
 		var err error
 		// Tendermint runs a block behind with the validators passed in here
-		previousValidators := app.blockchain.PreviousValidators()
-		if len(block.LastCommitInfo.Validators) != previousValidators.Count() {
-			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d",
-				len(block.LastCommitInfo.Validators), previousValidators.Count())
+		previousValidators := app.blockchain.PreviousValidators(2)
+		if len(block.LastCommitInfo.Votes) != previousValidators.Count() {
+			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d/ %v",
+				len(block.LastCommitInfo.Votes), previousValidators.Count(), previousValidators.String())
 			panic(err)
 		}
-		for _, v := range block.LastCommitInfo.Validators {
+		for _, v := range block.LastCommitInfo.Votes {
 			err = app.checkValidatorMatches(previousValidators, v.Validator)
 			if err != nil {
 				panic(err)
@@ -145,7 +146,6 @@ func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validat
 func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("BeginBlock")
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
@@ -171,27 +171,30 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 	}
 }
 
-func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
+func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Decoder, logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
+	logf := func(format string, args ...interface{}) string {
+		return fmt.Sprintf("%s: "+format, append([]interface{}{name}, args...)...)
+	}
 	return func(txBytes []byte) abciTypes.ResponseCheckTx {
 		txEnv, err := txDecoder.DecodeTx(txBytes)
 		if err != nil {
-			logger.TraceMsg("Decoding error",
+			logger.InfoMsg("Decoding error",
 				structure.ErrorKey, err)
 			return abciTypes.ResponseCheckTx{
 				Code: codes.EncodingErrorCode,
-				Log:  fmt.Sprintf("Encoding error: %s", err),
+				Log:  logf("Encoding error: %s", err),
 			}
 		}
 
 		txe, err := executor.Execute(txEnv)
 		if err != nil {
 			ex := errors2.AsException(err)
-			logger.TraceMsg("Execution error",
+			logger.InfoMsg("Execution error",
 				structure.ErrorKey, err,
 				"tx_hash", txEnv.Tx.Hash())
 			return abciTypes.ResponseCheckTx{
 				Code: codes.TxExecutionErrorCode,
-				Log:  fmt.Sprintf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
+				Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
 			}
 		}
 
@@ -199,29 +202,28 @@ func txExecutor(executor execution.BatchExecutor, txDecoder txs.Decoder, logger 
 		if err != nil {
 			return abciTypes.ResponseCheckTx{
 				Code: codes.EncodingErrorCode,
-				Log:  fmt.Sprintf("Could not serialise receipt: %s", err),
+				Log:  logf("Could not serialise receipt: %s", err),
 			}
 		}
-		logger.TraceMsg("Execution success",
+		logger.InfoMsg("Execution success",
 			"tx_hash", txe.TxHash,
 			"contract_address", txe.Receipt.ContractAddress,
 			"creates_contract", txe.Receipt.CreatesContract)
 		return abciTypes.ResponseCheckTx{
 			Code: codes.TxExecutionSuccessCode,
-			Log:  "Execution success - TxExecution in data",
+			Log:  logf("Execution success - TxExecution in data"),
 			Data: bs,
 		}
 	}
 }
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
-	var validatorUpdates abciTypes.Validators
+	var validatorUpdates []abciTypes.ValidatorUpdate
 	app.blockchain.PendingValidators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.Address(),
 			"new_power", power)
-		validatorUpdates = append(validatorUpdates, abciTypes.Validator{
-			Address: id.Address().Bytes(),
-			PubKey:  id.PublicKey().ABCIPubKey(),
+		validatorUpdates = append(validatorUpdates, abciTypes.ValidatorUpdate{
+			PubKey: id.PublicKey().ABCIPubKey(),
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})

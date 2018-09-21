@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
@@ -48,7 +49,7 @@ func TestInputAccountPublicKeySet(t *testing.T) {
 	assert.False(t, acc.PublicKey.IsSet())
 
 	// Sign with this account - should set public key
-	rpctest.CreateContract(t, tcli, input.Address(), rpctest.Bytecode_strange_loop)
+	rpctest.CreateContract(t, tcli, input.Address(), solidity.Bytecode_StrangeLoop)
 	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
 
 	// Check public key set

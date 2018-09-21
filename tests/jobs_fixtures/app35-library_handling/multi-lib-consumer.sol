@@ -4,11 +4,11 @@ import "./multi-lib.sol";
 
 contract c {
 	intStructs.intStruct myIntStruct;
-	function c() {
+	constructor() public {
 		myIntStruct = intStructs.intStruct(1, 2);
 	}
 
-	function basicFunctionReturn() constant returns (uint x, uint y) {
+	function basicFunctionReturn() public constant returns (uint x, uint y) {
 		x = basicMath.add(myIntStruct.x, myIntStruct.y);
 		y = basicMath.subtract(myIntStruct.x, myIntStruct.y);
 	}

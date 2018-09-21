@@ -17,7 +17,9 @@ package execution
 import (
 	"fmt"
 	"sync"
-	"time"
+
+	"github.com/tendermint/go-amino"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
@@ -26,35 +28,36 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/tendermint/iavl"
+	"github.com/hyperledger/burrow/storage"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 const (
 	defaultCacheCapacity = 1024
-	// Age of state versions in blocks before we remove them. This has us keeping a little over an hour's worth of blocks
-	// in principle we could manage with 2. Ideally we would lift this limit altogether but IAVL leaks memory on access
-	// to previous tree versions since it lazy loads values (nice) but gives no ability to unload them (see SaveBranch)
-	defaultVersionExpiry = 2048
+	uint64Length         = 8
 
-	// Version by state hash
-	versionPrefix = "v/"
-
-	// Prefix of keys in state tree
-	accountsPrefix = "a/"
-	storagePrefix  = "s/"
-	nameRegPrefix  = "n/"
-	blockPrefix    = "b/"
-	txPrefix       = "t/"
+	// Prefix under which the versioned merkle state tree resides - tracking previous versions of history
+	treePrefix = "m"
+	// Prefix under which all non-versioned values reside - either immutable values of references to immutable values
+	// that track the current state rather than being part of the history.
+	refsPrefix = "r"
 )
 
 var (
-	accountsStart, accountsEnd []byte = prefixKeyRange(accountsPrefix)
-	storageStart, storageEnd   []byte = prefixKeyRange(storagePrefix)
-	nameRegStart, nameRegEnd   []byte = prefixKeyRange(nameRegPrefix)
-	lastBlockHeightKey                = []byte("h")
+	// Directly referenced values
+	accountKeyFormat = storage.NewMustKeyFormat("a", crypto.AddressLength)
+	storageKeyFormat = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
+	nameKeyFormat    = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
+	// Keys that reference references
+	blockRefKeyFormat = storage.NewMustKeyFormat("b", uint64Length)
+	txRefKeyFormat    = storage.NewMustKeyFormat("t", uint64Length, uint64Length)
+	// Reference keys
+	// TODO: implement content-addressing of code and optionally blocks (to allow reference to block to be stored in state tree)
+	//codeKeyFormat   = storage.NewMustKeyFormat("c", sha256.Size)
+	//blockKeyFormat  = storage.NewMustKeyFormat("b", sha256.Size)
+	txKeyFormat     = storage.NewMustKeyFormat("b", tmhash.Size)
+	commitKeyFormat = storage.NewMustKeyFormat("x", tmhash.Size)
 )
 
 // Implements account and blockchain state
@@ -73,27 +76,38 @@ type writeState struct {
 	state *State
 }
 
+type CommitID struct {
+	Hash binary.HexBytes
+	// Height and Version will normally be the same - but it's not clear we should assume this
+	Height  uint64
+	Version int64
+}
+
 // Writers to state are responsible for calling State.Lock() before calling
 type State struct {
 	// Values not reassigned
 	sync.RWMutex
 	writeState *writeState
+	height     uint64
 	db         dbm.DB
-	tree       *iavl.MutableTree
-	logger     *logging.Logger
-
-	// Values may be reassigned (mutex protected)
-	// Previous version of IAVL tree for concurrent read-only access
-	readTree *iavl.ImmutableTree
-	// Last state hash
-	hash []byte
+	cacheDB    *storage.CacheDB
+	tree       *storage.RWTree
+	refs       storage.KVStore
+	codec      *amino.Codec
 }
 
 // Create a new State object
 func NewState(db dbm.DB) *State {
+	// We collapse all db operations into a single batch committed by save()
+	cacheDB := storage.NewCacheDB(db)
+	tree := storage.NewRWTree(storage.NewPrefixDB(cacheDB, treePrefix), defaultCacheCapacity)
+	refs := storage.NewPrefixDB(cacheDB, refsPrefix)
 	s := &State{
-		db:   db,
-		tree: iavl.NewMutableTree(db, defaultCacheCapacity),
+		db:      db,
+		cacheDB: cacheDB,
+		tree:    tree,
+		refs:    refs,
+		codec:   amino.NewCodec(),
 	}
 	s.writeState = &writeState{state: s}
 	return s
@@ -106,15 +120,6 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	}
 
 	s := NewState(db)
-
-	if genesisDoc.GenesisTime.IsZero() {
-		// NOTE: [ben] change GenesisTime to requirement on v0.17
-		// GenesisTime needs to be deterministic across the chain
-		// and should be required in the genesis file;
-		// the requirement is not yet enforced when lacking set
-		// time to 11/18/2016 @ 4:09am (UTC)
-		genesisDoc.GenesisTime = time.Unix(1479442162, 0)
-	}
 
 	// Make accounts state tree
 	for _, genAcc := range genesisDoc.Accounts {
@@ -149,7 +154,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	}
 
 	// We need to save at least once so that readTree points at a non-working-state tree
-	_, err = s.writeState.save()
+	_, err = s.writeState.commit()
 	if err != nil {
 		return nil, err
 	}
@@ -161,24 +166,18 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	s := NewState(db)
 	// Get the version associated with this state hash
-	version, err := s.writeState.GetVersion(hash)
+	commitID := new(CommitID)
+	err := s.codec.UnmarshalBinary(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode CommitID: %v", err)
 	}
-	if version <= 0 {
-		return nil, fmt.Errorf("trying to load state from non-positive version: version %v, hash: %X", version, hash)
+	if commitID.Version <= 0 {
+		return nil, fmt.Errorf("trying to load state from non-positive version: CommitID: %v", commitID)
 	}
-	treeVersion, err := s.tree.LoadVersion(version)
+	err = s.tree.Load(commitID.Version)
 	if err != nil {
-		return nil, fmt.Errorf("could not load current version of state tree: version %v, hash: %X", version, hash)
+		return nil, fmt.Errorf("could not load current version of state tree: CommitID: %v", commitID)
 	}
-	if treeVersion != version {
-		return nil, fmt.Errorf("tried to load state version %v for state hash %X but loaded version %v",
-			version, hash, treeVersion)
-	}
-	// Load previous version for readTree
-	// Set readTree
-	s.readTree, err = s.tree.GetImmutable(version - 1)
 	return s, nil
 }
 
@@ -191,46 +190,40 @@ func (s *State) Update(updater func(up Updatable) error) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.writeState.save()
+	return s.writeState.commit()
 }
 
-func (ws *writeState) save() ([]byte, error) {
+func (ws *writeState) commit() ([]byte, error) {
 	// save state at a new version may still be orphaned before we save the version against the hash
-	hash, treeVersion, err := ws.state.tree.SaveVersion()
+	hash, treeVersion, err := ws.state.tree.Save()
 	if err != nil {
 		return nil, err
 	}
-	// Take an immutable reference to the tree we just saved for querying
-	ws.state.readTree, err = ws.state.tree.GetImmutable(treeVersion)
-	if err != nil {
-		return nil, err
+	if len(hash) == 0 {
+		// Normalise the hash of an empty to tree to the correct hash size
+		hash = make([]byte, tmhash.Size)
 	}
-
 	// Provide a reference to load this version in the future from the state hash
-	ws.SetVersion(hash, treeVersion)
-	ws.state.hash = hash
-	return hash, err
-}
-
-// Get a previously saved tree version stored by state hash
-func (ws *writeState) GetVersion(hash []byte) (int64, error) {
-	versionBytes := ws.state.db.Get(prefixedKey(versionPrefix, hash))
-	if versionBytes == nil {
-		return -1, fmt.Errorf("could not retrieve version corresponding to state hash '%X' in database", hash)
+	commitID := CommitID{
+		Hash:    hash,
+		Height:  ws.state.height,
+		Version: treeVersion,
 	}
-	return binary.GetInt64BE(versionBytes), nil
-}
-
-// Set the tree version associated with a particular hash
-func (ws *writeState) SetVersion(hash []byte, version int64) {
-	versionBytes := make([]byte, 8)
-	binary.PutInt64BE(versionBytes, version)
-	ws.state.db.SetSync(prefixedKey(versionPrefix, hash), versionBytes)
+	bs, err := ws.state.codec.MarshalBinary(commitID)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode CommitID %v: %v", commitID, err)
+	}
+	ws.state.refs.Set(commitKeyFormat.Key(hash), bs)
+	// Commit the state in cacheDB atomically for this block (synchronous)
+	batch := ws.state.db.NewBatch()
+	ws.state.cacheDB.Commit(batch)
+	batch.WriteSync()
+	return hash, err
 }
 
 // Returns nil if account does not exist with given address.
 func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
-	_, accBytes := s.readTree.Get(prefixedKey(accountsPrefix, address.Bytes()))
+	accBytes := s.tree.Get(accountKeyFormat.Key(address))
 	if accBytes == nil {
 		return nil, nil
 	}
@@ -241,66 +234,67 @@ func (ws *writeState) UpdateAccount(account acm.Account) error {
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in State")
 	}
-	// TODO: find a way to implement something equivalent to this so we can set the account StorageRoot
-	//storageRoot := s.tree.SubTreeHash(prefixedKey(storagePrefix, account.Address().Bytes()))
-	// Alternatively just abandon and
-	accountWithStorageRoot := acm.AsMutableAccount(account)
-	encodedAccount, err := accountWithStorageRoot.Encode()
+	encodedAccount, err := account.Encode()
 	if err != nil {
-		return err
+		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
-	ws.state.tree.Set(prefixedKey(accountsPrefix, account.Address().Bytes()), encodedAccount)
+	ws.state.tree.Set(accountKeyFormat.Key(account.Address()), encodedAccount)
 	return nil
 }
 
 func (ws *writeState) RemoveAccount(address crypto.Address) error {
-	ws.state.tree.Remove(prefixedKey(accountsPrefix, address.Bytes()))
+	ws.state.tree.Delete(accountKeyFormat.Key(address))
 	return nil
 }
 
 func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
-	stopped = s.readTree.IterateRange(accountsStart, accountsEnd, true, func(key, value []byte) bool {
-		var account acm.Account
-		account, err = acm.Decode(value)
+	it := accountKeyFormat.Iterator(s.tree, nil, nil)
+	for it.Valid() {
+		account, err := acm.Decode(it.Value())
 		if err != nil {
-			return true
+			return true, fmt.Errorf("IterateAccounts could not decode account: %v", err)
 		}
-		return consumer(account)
-	})
-	return
+		if consumer(account) {
+			return true, nil
+		}
+		it.Next()
+	}
+	return false, nil
 }
 
 func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
-	_, value := s.readTree.Get(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()))
-	return binary.LeftPadWord256(value), nil
+	return binary.LeftPadWord256(s.tree.Get(storageKeyFormat.Key(address, key))), nil
 }
 
 func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word256) error {
 	if value == binary.Zero256 {
-		ws.state.tree.Remove(key.Bytes())
+		ws.state.tree.Delete(storageKeyFormat.Key(address, key))
 	} else {
-		ws.state.tree.Set(prefixedKey(storagePrefix, address.Bytes(), key.Bytes()), value.Bytes())
+		ws.state.tree.Set(storageKeyFormat.Key(address, key), value.Bytes())
 	}
 	return nil
 }
 
-func (s *State) IterateStorage(address crypto.Address,
-	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
-	stopped = s.readTree.IterateRange(storageStart, storageEnd, true, func(key []byte, value []byte) (stop bool) {
-		// Note: no left padding should occur unless there is a bug and non-words have been writte to this storage tree
+func (s *State) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+	it := storageKeyFormat.Fix(address).Iterator(s.tree, nil, nil)
+	for it.Valid() {
+		key := it.Key()
+		// Note: no left padding should occur unless there is a bug and non-words have been written to this storage tree
 		if len(key) != binary.Word256Length {
-			err = fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+			return true, fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
-			return true
 		}
+		value := it.Value()
 		if len(value) != binary.Word256Length {
-			err = fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+			return true, fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
-			return true
 		}
-		return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
-	})
-	return
+		if consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value)) {
+			return true, nil
+		}
+		it.Next()
+	}
+	return false, nil
 }
 
 // State.storage
@@ -309,12 +303,11 @@ func (s *State) IterateStorage(address crypto.Address,
 
 // Execution events
 func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
-	lastBlockHeight, ok := ws.lastBlockHeight()
-	if ok && be.Height != lastBlockHeight+1 {
+	if ws.state.height > 0 && be.Height != ws.state.height+1 {
 		return fmt.Errorf("AddBlock received block for height %v but last block height was %v",
-			be.Height, lastBlockHeight)
+			be.Height, ws.state.height)
 	}
-	ws.setLastBlockHeight(be.Height)
+	ws.state.height = be.Height
 	// Index transactions so they can be retrieved by their TxHash
 	for i, txe := range be.TxExecutions {
 		ws.addTx(txe.TxHash, be.Height, uint64(i))
@@ -323,37 +316,34 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	if err != nil {
 		return err
 	}
-	key := blockKey(be.Height)
-	ws.state.tree.Set(key, bs)
+	ws.state.refs.Set(blockRefKeyFormat.Key(be.Height), bs)
 	return nil
 }
 
 func (ws *writeState) addTx(txHash []byte, height, index uint64) {
-	ws.state.tree.Set(txKey(txHash), encodeTxRef(height, index))
+	ws.state.refs.Set(txKeyFormat.Key(txHash), txRefKeyFormat.Key(height, index))
 }
 
 func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
-	_, bs := s.readTree.Get(txKey(txHash))
+	bs := s.tree.Get(txKeyFormat.Key(txHash))
 	if len(bs) == 0 {
 		return nil, nil
 	}
-	height, index, err := decodeTxRef(bs)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding database reference to tx %X: %v", txHash, err)
-	}
-	be, err := s.GetBlock(height)
+	height, index := new(uint64), new(uint64)
+	txRefKeyFormat.Scan(bs, height, index)
+	be, err := s.GetBlock(*height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting block %v containing tx %X", height, txHash)
 	}
-	if index < uint64(len(be.TxExecutions)) {
-		return be.TxExecutions[index], nil
+	if *index < uint64(len(be.TxExecutions)) {
+		return be.TxExecutions[*index], nil
 	}
 	return nil, fmt.Errorf("retrieved index %v in block %v for tx %X but block only contains %v TxExecutions",
 		index, height, txHash, len(be.TxExecutions))
 }
 
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
-	_, bs := s.readTree.Get(blockKey(height))
+	bs := s.tree.Get(blockRefKeyFormat.Key(height))
 	if len(bs) == 0 {
 		return nil, nil
 	}
@@ -361,36 +351,25 @@ func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 }
 
 func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) (stop bool)) (stopped bool, err error) {
-	return s.readTree.IterateRange(blockKey(startHeight), blockKey(endHeight), true,
-		func(_, value []byte) bool {
-			block, err := exec.DecodeBlockExecution(value)
-			if err != nil {
-				err = fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
-				// stop iteration on error
-				return true
-			}
-			return consumer(block)
-		}), err
+	kf := blockRefKeyFormat
+	it := kf.Iterator(s.refs, kf.Suffix(startHeight), kf.Suffix(endHeight))
+	for it.Valid() {
+		block, err := exec.DecodeBlockExecution(it.Value())
+		if err != nil {
+			return true, fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
+		}
+		if consumer(block) {
+			return true, nil
+		}
+		it.Next()
+	}
+	return false, nil
 }
 
 func (s *State) Hash() []byte {
 	s.RLock()
 	defer s.RUnlock()
-	return s.hash
-}
-
-func (s *writeState) lastBlockHeight() (uint64, bool) {
-	_, bs := s.state.tree.Get(lastBlockHeightKey)
-	if len(bs) == 0 {
-		return 0, false
-	}
-	return binary.GetUint64BE(bs), true
-}
-
-func (s *writeState) setLastBlockHeight(height uint64) {
-	bs := make([]byte, 8)
-	binary.PutUint64BE(bs, height)
-	s.state.tree.Set(lastBlockHeightKey, bs)
+	return s.tree.Hash()
 }
 
 // Events
@@ -400,7 +379,7 @@ func (s *writeState) setLastBlockHeight(height uint64) {
 var _ names.IterableReader = &State{}
 
 func (s *State) GetName(name string) (*names.Entry, error) {
-	_, entryBytes := s.readTree.Get(prefixedKey(nameRegPrefix, []byte(name)))
+	entryBytes := s.tree.Get(nameKeyFormat.Key(name))
 	if entryBytes == nil {
 		return nil, nil
 	}
@@ -408,93 +387,45 @@ func (s *State) GetName(name string) (*names.Entry, error) {
 	return names.DecodeEntry(entryBytes)
 }
 
-func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
-	return s.readTree.IterateRange(nameRegStart, nameRegEnd, true, func(key []byte, value []byte) (stop bool) {
-		var entry *names.Entry
-		entry, err = names.DecodeEntry(value)
-		if err != nil {
-			return true
-		}
-		return consumer(entry)
-	}), err
-}
-
 func (ws *writeState) UpdateName(entry *names.Entry) error {
 	bs, err := entry.Encode()
 	if err != nil {
 		return err
 	}
-	ws.state.tree.Set(prefixedKey(nameRegPrefix, []byte(entry.Name)), bs)
+	ws.state.tree.Set(nameKeyFormat.Key(entry.Name), bs)
 	return nil
 }
 
 func (ws *writeState) RemoveName(name string) error {
-	ws.state.tree.Remove(prefixedKey(nameRegPrefix, []byte(name)))
+	ws.state.tree.Delete(nameKeyFormat.Key(name))
 	return nil
+}
+
+func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+	it := nameKeyFormat.Iterator(s.tree, nil, nil)
+	for it.Valid() {
+		entry, err := names.DecodeEntry(it.Value())
+		if err != nil {
+			return true, fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
+		}
+		if consumer(entry) {
+			return true, nil
+		}
+		it.Next()
+	}
+	return false, nil
 }
 
 // Creates a copy of the database to the supplied db
 func (s *State) Copy(db dbm.DB) (*State, error) {
 	stateCopy := NewState(db)
-	s.tree.Iterate(func(key []byte, value []byte) bool {
+	s.tree.IterateRange(nil, nil, true, func(key, value []byte) bool {
 		stateCopy.tree.Set(key, value)
 		return false
 	})
-	_, err := stateCopy.writeState.save()
+	_, err := stateCopy.writeState.commit()
 	if err != nil {
 		return nil, err
 	}
 	return stateCopy, nil
-}
-
-// Key and value helpers
-
-func encodeTxRef(height, index uint64) []byte {
-	bs := make([]byte, 16)
-	binary.PutUint64BE(bs[:8], height)
-	binary.PutUint64BE(bs[8:], index)
-	return bs
-}
-
-func decodeTxRef(bs []byte) (height, index uint64, _ error) {
-	if len(bs) != 16 {
-		return 0, 0, fmt.Errorf("tx reference must have 16 bytes but '%X' does not", bs)
-	}
-	height = binary.GetUint64BE(bs[:8])
-	index = binary.GetUint64BE(bs[8:])
-	return
-}
-
-func txKey(txHash []byte) []byte {
-	return prefixedKey(txPrefix, txHash)
-}
-
-func blockKey(height uint64) []byte {
-	bs := make([]byte, 8)
-	binary.PutUint64BE(bs, height)
-	return prefixedKey(blockPrefix, bs)
-}
-
-func prefixedKey(prefix string, suffices ...[]byte) []byte {
-	key := []byte(prefix)
-	for _, suffix := range suffices {
-		key = append(key, suffix...)
-	}
-	return key
-}
-
-// Returns the start key equal to the bytes of prefix and the end key which lexicographically above any key beginning
-// with prefix
-func prefixKeyRange(prefix string) (start, end []byte) {
-	start = []byte(prefix)
-	for i := len(start) - 1; i >= 0; i-- {
-		c := start[i]
-		if c < 0xff {
-			end = make([]byte, i+1)
-			copy(end, start)
-			end[i]++
-			return
-		}
-	}
-	return
 }

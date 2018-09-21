@@ -35,7 +35,6 @@ run_test(){
   goto_base
 
   cd $1
-  echo "PWD: $PWD"
   cat readme.md
   echo
 

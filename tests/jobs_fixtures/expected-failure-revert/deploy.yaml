@@ -1,0 +1,20 @@
+jobs:
+
+- name: deployRevert
+  deploy:
+      contract: revert.sol
+
+- name: doNotRevert
+  call:
+      destination: $deployRevert
+      function: RevertIf0
+      data:
+        - 1
+
+- name: doRevert
+  call:
+      destination: $deployRevert
+      function: RevertIf0
+      data:
+        - 0
+

@@ -154,9 +154,10 @@ docker_build: check commit_hash
 
 ### Testing github.com/hyperledger/burrow
 
+
 # Solidity fixtures
-%.sol.go: %.sol scripts/solc_compile_go.sh
-	scripts/solc_compile_go.sh $< $@
+%.sol.go: %.sol
+	@go run ./deploy/compile/solgo/main.go $^
 
 .PHONY: solidity
 solidity: $(SOLIDITY_GO_FILES)
@@ -238,6 +239,10 @@ tag_release: test check CHANGELOG.md NOTES.md build
 release: docs check test docker_build
 	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
 	@scripts/release.sh
+
+.PHONY: release_dev
+release_dev: test docker_build
+	@scripts/release_dev.sh
 
 .PHONY: build_ci_image
 build_ci_image:

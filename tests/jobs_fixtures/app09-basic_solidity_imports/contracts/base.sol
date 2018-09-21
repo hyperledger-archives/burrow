@@ -3,15 +3,15 @@ pragma solidity >=0.0.0;
 contract base {
   uint storedData;
 
-  function base(uint x) {
+  constructor(uint /* x */) public {
   	storedData = 10;
   }
 
-  function set(uint x) {
+  function set(uint x) public {
     storedData = x;
   }
 
-  function get() constant returns (uint retVal) {
+  function get() constant public returns (uint retVal) {
     return storedData;
   }
 }

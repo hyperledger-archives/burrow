@@ -11,24 +11,24 @@ contract Structs0 {
 
     Thing[] things;
 
-    function addThing(bytes32 description, bytes32 url, bytes32 filehash, bytes32 filename) returns (uint) {
+    function addThing(bytes32 description, bytes32 url, bytes32 filehash, bytes32 filename) public returns (uint) {
         things.push(Thing(msg.sender, description, url, filehash, filename));
         return 10;
     }
 
-    function getDesc() returns(bytes32 description) {
+    function getDesc() public view returns(bytes32 description) {
         return things[0].description;
     }
 
-    function getUrl() returns(bytes32 url) {
+    function getUrl() public view returns(bytes32 url) {
         return things[0].url;
     }
 
-    function getHash() returns(bytes32 filehash) {
+    function getHash() public view returns(bytes32 filehash) {
         return things[0].filehash;
     }
 
-    function getName() returns(bytes32 filename) {
+    function getName() public view returns(bytes32 filename) {
         return things[0].filename;
     }
 }

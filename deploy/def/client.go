@@ -49,7 +49,7 @@ func (c *Client) Dial(chainAddress, keysClientAddress string) error {
 		logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
 		c.MempoolSigning = true
 	} else {
-		logrus.Info("Using keys server at: %s", keysClientAddress)
+		logrus.Infof("Using keys server at: %s", keysClientAddress)
 		c.keyClient, err = keys.NewRemoteKeyClient(keysClientAddress, logging.NewNoopLogger())
 	}
 
@@ -227,7 +227,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 			if c.keyClient != nil {
 				publicKey, err := c.keyClient.PublicKey(*update.Address)
 				if err != nil {
-					logrus.Info("Could not retrieve public key for %v from keys server", *update.Address)
+					logrus.Infof("Could not retrieve public key for %v from keys server", *update.Address)
 				} else {
 					update.PublicKey = &publicKey
 				}

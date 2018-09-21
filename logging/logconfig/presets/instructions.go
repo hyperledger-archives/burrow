@@ -38,7 +38,9 @@ const (
 	Up         = "up"
 	Down       = "down"
 	Info       = "info"
+	Trace      = "trace"
 	Minimal    = "minimal"
+	Opcodes    = "opcodes"
 	IncludeAny = "include-any"
 	Stderr     = "stderr"
 	Stdout     = "stdout"
@@ -85,6 +87,16 @@ var instructions = []Instruction{
 		},
 	},
 	{
+		name: Opcodes,
+		desc: "Capture opcodes exclusively (when VMOptions includes DebugOpccodes in main config)",
+		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
+			return push(stack,
+				logconfig.Sink().
+					SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch, "tag", "DebugOpcodes")).
+					SetOutput(logconfig.StdoutOutput().SetFormat("{{.message}}"))), nil
+		},
+	},
+	{
 		name: IncludeAny,
 		desc: "Establish an 'include when any predicate matches' filter transform at this this sink",
 		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
@@ -96,6 +108,16 @@ var instructions = []Instruction{
 	},
 	{
 		name: Info,
+		desc: "Add a filter predicate to match the Info logging channel",
+		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
+			sink := peek(stack)
+			ensureFilter(sink)
+			sink.Transform.FilterConfig.AddPredicate(structure.ChannelKey, structure.InfoChannelName)
+			return stack, nil
+		},
+	},
+	{
+		name: Trace,
 		desc: "Add a filter predicate to match the Info logging channel",
 		builder: func(stack []*logconfig.SinkConfig, args []string) ([]*logconfig.SinkConfig, error) {
 			sink := peek(stack)

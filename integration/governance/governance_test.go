@@ -162,20 +162,16 @@ func TestChangePowerByAddress(t *testing.T) {
 	inputAddress := privateAccounts[0].Address()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
-	qcli := rpctest.NewQueryClient(t, grpcAddress)
 
 	acc := account(2)
 	address := acc.Address()
 	power := uint64(2445)
-	govSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+	_, err := govSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 		Address: &address,
 		Amounts: balance.New().Power(power),
 	}))
-
-	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
-	require.NoError(t, err)
-	set := validator.UnpersistSet(vs.Set)
-	assert.Equal(t, new(big.Int).SetUint64(power), set.Power(acc.Address()))
+	require.Error(t, err, "Should not be able to set power without providing public key")
+	assert.Contains(t, err.Error(), "GovTx must be provided with public key when updating validator power")
 }
 
 func TestInvalidSequenceNumber(t *testing.T) {
@@ -186,10 +182,12 @@ func TestInvalidSequenceNumber(t *testing.T) {
 
 	acc := account(2)
 	address := acc.Address()
+	publicKey := acc.PublicKey()
 	power := uint64(2445)
 	tx := governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
-		Address: &address,
-		Amounts: balance.New().Power(power),
+		Address:   &address,
+		PublicKey: &publicKey,
+		Amounts:   balance.New().Power(power),
 	})
 
 	setSequence(t, qcli, tx)

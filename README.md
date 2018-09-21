@@ -36,7 +36,7 @@ make build
 
 This will build the `burrow` and `burrow-client` binaries and put them in the `bin/` directory. They can be executed from there or put wherever is convenient.
 
-You can also install `burrow` into `$GOPATH/bin` with `make install_db`,
+You can also install `burrow` into `$GOPATH/bin` with `make install_burrow`,
 
 ## Usage
 
@@ -65,9 +65,9 @@ Once the `burrow.toml` has been created, we run:
 
 ```
 # To select our validator address by index in the GenesisDoc
-burrow serve --validator-index=0
+burrow start --validator-index=0
 # Or to select based on address directly (substituting the example address below with your validator's):
-burrow serve --validator-address=BE584820DC904A55449D7EB0C97607B40224B96E
+burrow start --validator-address=BE584820DC904A55449D7EB0C97607B40224B96E
 ```
 
 and the logs will start streaming through.

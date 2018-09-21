@@ -2,23 +2,23 @@ pragma solidity >=0.0.0;
 
 contract Zero {
 
-  function zeroInt() returns (int zeroInt) {
+  function zeroInt() public pure returns (int /* zeroInt */) {
     return 0;
   }
 
-  function zeroUInt() returns (uint zeroUInt) {
+  function zeroUInt() public pure returns (uint /* zeroUInt */) {
     return 0;
   }
 
-  function zeroBytes() returns (bytes32 zeroBytes) {
+  function zeroBytes() public pure returns (bytes32 /* zeroBytes */) {
     return "";
   }
 
-  function zeroAddress() returns (address zeroAddress) {
+  function zeroAddress() public pure returns (address /* zeroAddress */) {
     return 0x0;
   }
 
-  function zeroBool() returns (bool zeroBool) {
+  function zeroBool() public pure returns (bool /* zeroBool */) {
     return false;
   }
 }

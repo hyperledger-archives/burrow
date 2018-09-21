@@ -3,23 +3,23 @@ pragma solidity >=0.0.0;
 contract GSContract {
   uint storedData;
 
-  function set(uint x) {
+  function set(uint x) public {
     storedData = x;
   }
 
-  function get() constant returns (uint retVal) {
+  function get() public constant returns (uint retVal) {
     return storedData;
   }
 }
 
 contract GSFactory {
 	address lastCreated;
-	function create() returns (address GSAddr) {
+	function create() public returns (address /* GSAddr */) {
 		lastCreated = new GSContract();
 		return lastCreated;
 	}
 
-	function getLast() returns (address GSAddr) {
+	function getLast() public returns (address /* GSAddr */) {
 		return lastCreated;
 	}
 }
