@@ -29,7 +29,19 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.21.0 - 2018-08-21",
+	MustDeclareReleases("0.22.0 - 2018-09-21",
+		`### Changed
+- Upgraded to Tendermint 0.24.0
+- Upgraded to IAVL 0.11.0
+
+### Fixed
+- Fixed non-determinism in Governance Tx
+- Fixed various abi issues
+
+## Added
+- burrow deploy displays revert reason when available
+- burrow deploy compiles contracts concurrently`,
+		"0.21.0 - 2018-08-21",
 		`### Changed
 - Upgraded to Tendermint 0.23.0
 - Validator Set Power now takes Address
