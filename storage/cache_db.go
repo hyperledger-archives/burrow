@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"fmt"
-
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -42,7 +40,6 @@ func (cdb *CacheDB) Iterator(start, end []byte) KVIterator {
 }
 
 func (cdb *CacheDB) ReverseIterator(start, end []byte) KVIterator {
-	fmt.Printf("ReverseIterator(%s, %s)\n", string(start), string(end))
 	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(start, end), cdb.backend.ReverseIterator(start, end)))
 }
 

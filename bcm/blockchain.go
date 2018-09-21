@@ -275,10 +275,10 @@ func (bc *Blockchain) CurrentValidators() *validator.Set {
 	return bc.validatorCache.CurrentSet()
 }
 
-func (bc *Blockchain) PreviousValidators() *validator.Set {
+func (bc *Blockchain) PreviousValidators(delay int) *validator.Set {
 	bc.RLock()
 	defer bc.RUnlock()
-	return bc.validatorCache.PreviousSet()
+	return bc.validatorCache.PreviousSet(int64(delay))
 }
 
 func (bc *Blockchain) NumValidators() int {

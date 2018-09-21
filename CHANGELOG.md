@@ -1,4 +1,17 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.22.0] - 2018-09-21
+### Changed
+- Upgraded to Tendermint 0.24.0
+- Upgraded to IAVL 0.11.0
+
+### Fixed
+- Fixed non-determinism in Governance Tx
+- Fixed various abi issues
+
+## Added
+- burrow deploy displays revert reason when available
+- burrow deploy compiles contracts concurrently
+
 ## [0.21.0] - 2018-08-21
 ### Changed
 - Upgraded to Tendermint 0.23.0
@@ -266,6 +279,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.22.0]: https://github.com/hyperledger/burrow/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/hyperledger/burrow/compare/v0.20.1...v0.21.0
 [0.20.1]: https://github.com/hyperledger/burrow/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/hyperledger/burrow/compare/v0.19.0...v0.20.0

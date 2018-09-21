@@ -96,10 +96,12 @@ func derefPointersZero(rv reflect.Value) (drv reflect.Value, isPtr bool, isNilPt
 	return
 }
 
-// Returns isDefaultValue=true iff is ultimately nil or empty after (recursive)
-// dereferencing. If isDefaultValue=false, erv is set to the non-nil non-empty
-// non-default dereferenced value.
-// A zero/empty struct is not considered default.
+// Returns isDefaultValue=true iff is ultimately nil or empty
+// after (recursive) dereferencing.
+// If isDefaultValue=false, erv is set to the non-nil non-default
+// dereferenced value.
+// A zero/empty struct is not considered default for this
+// function.
 func isDefaultValue(rv reflect.Value) (erv reflect.Value, isDefaultValue bool) {
 	rv, _, isNilPtr := derefPointers(rv)
 	if isNilPtr {
@@ -122,6 +124,47 @@ func isDefaultValue(rv reflect.Value) (erv reflect.Value, isDefaultValue bool) {
 			return rv, false
 		}
 	}
+}
+
+// Returns the default value of a type.  For a time type or a pointer(s) to
+// time, the default value is not zero (or nil), but the time value of 1970.
+func defaultValue(rt reflect.Type) (rv reflect.Value) {
+	switch rt.Kind() {
+	case reflect.Ptr:
+		// Dereference all the way and see if it's a time type.
+		rt_, indirects := rt.Elem(), 1
+		for rt_.Kind() == reflect.Ptr {
+			rt_ = rt_.Elem()
+			indirects += 1
+		}
+		switch rt_ {
+		case timeType:
+			// Start from the top and construct pointers as needed.
+			rv = reflect.New(rt).Elem()
+			rt_, rv_ := rt, rv
+			for rt_.Kind() == reflect.Ptr {
+				newPtr := reflect.New(rt_.Elem())
+				rv_.Set(newPtr)
+				rt_ = rt_.Elem()
+				rv_ = rv_.Elem()
+			}
+			// Set to 1970, the whole point of this function.
+			rv_.Set(reflect.ValueOf(zeroTime))
+			return rv
+		}
+	case reflect.Struct:
+		switch rt {
+		case timeType:
+			// Set to 1970, the whole point of this function.
+			rv = reflect.New(rt).Elem()
+			rv.Set(reflect.ValueOf(zeroTime))
+			return rv
+		}
+	}
+
+	// Just return ithe default Go zero object.
+	// Return an empty struct.
+	return reflect.Zero(rt)
 }
 
 func isNil(rv reflect.Value) bool {

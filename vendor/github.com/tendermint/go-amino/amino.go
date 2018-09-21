@@ -8,14 +8,28 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"time"
 )
 
 //----------------------------------------
 // Global methods for global sealed codec.
 var gcdc *Codec
 
+// we use this time to init. a zero value (opposed to reflect.Zero which gives time.Time{} / 01-01-01 00:00:00)
+var zeroTime time.Time
+
+const (
+	unixEpochStr = "1970-01-01 00:00:00 +0000 UTC"
+	epochFmt     = "2006-01-02 15:04:05 +0000 UTC"
+)
+
 func init() {
 	gcdc = NewCodec().Seal()
+	var err error
+	zeroTime, err = time.Parse(epochFmt, unixEpochStr)
+	if err != nil {
+		panic("couldn't parse Zero value for time")
+	}
 }
 
 func MarshalBinary(o interface{}) ([]byte, error) {
@@ -189,7 +203,7 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = cdc.encodeReflectBinary(buf, info, rv, FieldOptions{}, true)
+	err = cdc.encodeReflectBinary(buf, info, rv, FieldOptions{BinFieldNum: 1}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +341,7 @@ func (cdc *Codec) UnmarshalBinaryBare(bz []byte, ptr interface{}) error {
 		bz = bz[4:]
 	}
 	// Decode contents into rv.
-	n, err := cdc.decodeReflectBinary(bz, info, rv, FieldOptions{}, true)
+	n, err := cdc.decodeReflectBinary(bz, info, rv, FieldOptions{BinFieldNum: 1}, true)
 	if err != nil {
 		return fmt.Errorf("unmarshal to %v failed after %d bytes (%v): %X", info.Type, n, err, bz)
 	}

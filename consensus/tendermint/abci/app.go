@@ -94,7 +94,8 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 			len(chain.Validators), app.blockchain.NumValidators()))
 	}
 	for _, v := range chain.Validators {
-		err := app.checkValidatorMatches(app.blockchain.Validators(), v)
+		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
+		err = app.checkValidatorMatches(app.blockchain.Validators(), abciTypes.Validator{Address: pk.Address().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
@@ -113,13 +114,13 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 	if block.Header.Height > 1 {
 		var err error
 		// Tendermint runs a block behind with the validators passed in here
-		previousValidators := app.blockchain.PreviousValidators()
-		if len(block.LastCommitInfo.Validators) != previousValidators.Count() {
-			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d",
-				len(block.LastCommitInfo.Validators), previousValidators.Count())
+		previousValidators := app.blockchain.PreviousValidators(2)
+		if len(block.LastCommitInfo.Votes) != previousValidators.Count() {
+			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d/ %v",
+				len(block.LastCommitInfo.Votes), previousValidators.Count(), previousValidators.String())
 			panic(err)
 		}
-		for _, v := range block.LastCommitInfo.Validators {
+		for _, v := range block.LastCommitInfo.Votes {
 			err = app.checkValidatorMatches(previousValidators, v.Validator)
 			if err != nil {
 				panic(err)
@@ -217,13 +218,12 @@ func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Dec
 }
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
-	var validatorUpdates abciTypes.Validators
+	var validatorUpdates []abciTypes.ValidatorUpdate
 	app.blockchain.PendingValidators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.Address(),
 			"new_power", power)
-		validatorUpdates = append(validatorUpdates, abciTypes.Validator{
-			Address: id.Address().Bytes(),
-			PubKey:  id.PublicKey().ABCIPubKey(),
+		validatorUpdates = append(validatorUpdates, abciTypes.ValidatorUpdate{
+			PubKey: id.PublicKey().ABCIPubKey(),
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})
