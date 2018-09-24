@@ -43,7 +43,7 @@ func lowerFirstCharacter(name string) string {
 	return string(bs)
 }
 
-func PreProcessFields(value interface{}, do *def.Packages) (err error) {
+func PreProcessFields(value interface{}, do *def.Packages, client *def.Client) (err error) {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -51,7 +51,7 @@ func PreProcessFields(value interface{}, do *def.Packages) (err error) {
 	for i := 0; i < rv.NumField(); i++ {
 		field := rv.Field(i)
 		if field.Kind() == reflect.String {
-			str, err := PreProcess(field.String(), do)
+			str, err := PreProcess(field.String(), do, client)
 			if err != nil {
 				return err
 			}
@@ -61,14 +61,14 @@ func PreProcessFields(value interface{}, do *def.Packages) (err error) {
 	return nil
 }
 
-func PreProcess(toProcess string, do *def.Packages) (string, error) {
+func PreProcess(toProcess string, do *def.Packages, client *def.Client) (string, error) {
 	// Run through the replacement process for any placeholder matches
 	for _, pm := range rule.MatchPlaceholders(toProcess) {
 		log.WithField("match", toProcess).Debug("Replacement Match Found")
 
 		// first parse the reserved words.
 		if strings.Contains(pm.JobName, "block") {
-			block, err := replaceBlockVariable(pm.Match, do)
+			block, err := replaceBlockVariable(pm.Match, client)
 			if err != nil {
 				log.WithField("err", err).Error("Error replacing block variable.")
 				return "", err
@@ -117,11 +117,11 @@ func PreProcess(toProcess string, do *def.Packages) (string, error) {
 	return toProcess, nil
 }
 
-func replaceBlockVariable(toReplace string, do *def.Packages) (string, error) {
+func replaceBlockVariable(toReplace string, client *def.Client) (string, error) {
 	log.WithFields(log.Fields{
 		"var": toReplace,
 	}).Debug("Correcting $block variable")
-	blockHeight, err := GetBlockHeight(do)
+	blockHeight, err := GetBlockHeight(client)
 	block := itoaU64(blockHeight)
 	log.WithField("=>", block).Debug("Current height is")
 	if err != nil {
@@ -169,7 +169,7 @@ func replaceBlockVariable(toReplace string, do *def.Packages) (string, error) {
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.Packages, constructor bool) (string, []string, error) {
+func PreProcessInputData(function string, data interface{}, do *def.Packages, client *def.Client, constructor bool) (string, []string, error) {
 	var callDataArray []string
 	var callArray []string
 	if function == "" && !constructor {
@@ -179,7 +179,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 		function = strings.Split(data.(string), " ")[0]
 		callArray = strings.Split(data.(string), " ")[1:]
 		for _, val := range callArray {
-			output, _ := PreProcess(val, do)
+			output, _ := PreProcess(val, do, client)
 			callDataArray = append(callDataArray, output)
 		}
 	} else if data != nil {
@@ -188,7 +188,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 				log.Warn("Deprecation Warning: Your deploy job is currently using a soon to be deprecated way of declaring constructor values. Please remember to update your run file to store them as a array rather than a string. See documentation for further details.")
 				callArray = strings.Split(data.(string), " ")
 				for _, val := range callArray {
-					output, _ := PreProcess(val, do)
+					output, _ := PreProcess(val, do, client)
 					callDataArray = append(callDataArray, output)
 				}
 				return function, callDataArray, nil
@@ -216,7 +216,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 					case reflect.String:
 						stringified = value.String()
 					}
-					index, _ = PreProcess(stringified, do)
+					index, _ = PreProcess(stringified, do, client)
 					args = append(args, stringified)
 				}
 				newString = "[" + strings.Join(args, ",") + "]"
@@ -224,15 +224,15 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, co
 			default:
 				newString = s.Interface().(string)
 			}
-			newString, _ = PreProcess(newString, do)
+			newString, _ = PreProcess(newString, do, client)
 			callDataArray = append(callDataArray, newString)
 		}
 	}
 	return function, callDataArray, nil
 }
 
-func PreProcessLibs(libs string, do *def.Packages) (string, error) {
-	libraries, _ := PreProcess(libs, do)
+func PreProcessLibs(libs string, do *def.Packages, client *def.Client) (string, error) {
+	libraries, _ := PreProcess(libs, do, client)
 	if libraries != "" {
 		pairs := strings.Split(libraries, ",")
 		libraries = strings.Join(pairs, " ")

@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MetaJob(meta *def.Meta, do *def.Packages, jobs chan *trackJob) (string, error) {
+func MetaJob(meta *def.Meta, do *def.Packages, client *def.Client, jobs chan *trackJob) (string, error) {
 	var err error
 	var pwd string
 
@@ -29,7 +29,6 @@ func MetaJob(meta *def.Meta, do *def.Packages, jobs chan *trackJob) (string, err
 	newDo.DefaultGas = do.DefaultGas
 	newDo.DefaultSets = do.DefaultSets
 	newDo.Signer = do.Signer
-	newDo.MempoolSigning = do.MempoolSigning
 
 	// Set subYAMLPath
 	newDo.YAMLPath = meta.File
@@ -71,7 +70,7 @@ func MetaJob(meta *def.Meta, do *def.Packages, jobs chan *trackJob) (string, err
 		}
 	}
 
-	err = RunJobs(newDo, jobs)
+	err = RunJobs(newDo, client, jobs)
 	if err != nil {
 		return "failed", err
 	}

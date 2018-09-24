@@ -73,7 +73,9 @@ func RunPackage(do *def.Packages) error {
 		}
 	}
 
-	return jobs.DoJobs(do)
+	client := def.Client{ChainAddress: do.ChainURL, MempoolSigning: do.MempoolSigning, KeysClientAddress: do.Signer}
+
+	return jobs.DoJobs(do, &client)
 }
 
 func printPathPackage(do *def.Packages) {

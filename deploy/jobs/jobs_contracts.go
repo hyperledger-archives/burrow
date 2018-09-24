@@ -19,9 +19,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func BuildJob(build *def.Build, do *def.Packages, resp *compilers.Response) (result string, err error) {
+func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (result string, err error) {
 	// assemble contract
-	contractPath, err := findContractFile(build.Contract, do.BinPath)
+	contractPath, err := findContractFile(build.Contract, binPath)
 	if err != nil {
 		return
 	}
@@ -40,12 +40,12 @@ func BuildJob(build *def.Build, do *def.Packages, resp *compilers.Response) (res
 	}
 
 	// Save
-	binPath := build.BinPath
-	if binPath == "" {
-		binPath = do.BinPath
+	binP := build.BinPath
+	if binP == "" {
+		binP = binPath
 	}
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		if err := os.Mkdir(binPath, 0775); err != nil {
+	if _, err := os.Stat(binP); os.IsNotExist(err) {
+		if err := os.Mkdir(binP, 0775); err != nil {
 			return "", err
 		}
 	}
@@ -78,8 +78,8 @@ func BuildJob(build *def.Build, do *def.Packages, resp *compilers.Response) (res
 	return "", nil
 }
 
-func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (result string, err error) {
-	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do)
+func DeployJob(deploy *def.Deploy, do *def.Packages, client *def.Client, resp *compilers.Response) (result string, err error) {
+	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do, client)
 	// trim the extension
 	contractName := strings.TrimSuffix(deploy.Contract, filepath.Ext(deploy.Contract))
 
@@ -128,7 +128,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 		contractCode := binaryResponse.Binary
 
 		if deploy.Data != nil {
-			_, callDataArray, err := util.PreProcessInputData("", deploy.Data, do, true)
+			_, callDataArray, err := util.PreProcessInputData("", deploy.Data, do, client, true)
 			if err != nil {
 				return "", err
 			}
@@ -140,11 +140,11 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 			contractCode = contractCode + callData
 		}
 
-		tx, err := deployTx(do, deploy, contractName, string(contractCode))
+		tx, err := deployTx(client, deploy, contractName, string(contractCode))
 		if err != nil {
 			return "could not deploy binary contract", err
 		}
-		result, err := deployFinalize(do, tx)
+		result, err := deployFinalize(do, client, tx)
 		if err != nil {
 			return "", fmt.Errorf("Error finalizing contract deploy from path %s: %v", contractPath, err)
 		}
@@ -171,7 +171,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 			log.WithField("=>", string(response.Binary.Abi)).Info("Abi")
 			log.WithField("=>", response.Binary.Evm.Bytecode.Object).Info("Bin")
 			if response.Binary.Evm.Bytecode.Object != "" {
-				result, err = deployContract(deploy, do, response, libs)
+				result, err = deployContract(deploy, do, client, response, libs)
 				if err != nil {
 					return "", err
 				}
@@ -183,7 +183,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 				if response.Binary.Evm.Bytecode.Object == "" {
 					continue
 				}
-				result, err = deployContract(deploy, do, response, libs)
+				result, err = deployContract(deploy, do, client, response, libs)
 				if err != nil {
 					return "", err
 				}
@@ -204,7 +204,7 @@ func DeployJob(deploy *def.Deploy, do *def.Packages, resp *compilers.Response) (
 				if matchInstanceName(response.Objectname, deploy.Instance) {
 					log.WithField("=>", string(response.Binary.Abi)).Info("Abi")
 					log.WithField("=>", response.Binary.Evm.Bytecode.Object).Info("Bin")
-					result, err = deployContract(deploy, do, response, libs)
+					result, err = deployContract(deploy, do, client, response, libs)
 					if err != nil {
 						return "", err
 					}
@@ -240,7 +240,7 @@ func findContractFile(contract, binPath string) (string, error) {
 }
 
 // TODO [rj] refactor to remove [contractPath] from functions signature => only used in a single error throw.
-func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse compilers.ResponseItem, libs map[string]string) (string, error) {
+func deployContract(deploy *def.Deploy, do *def.Packages, client *def.Client, compilersResponse compilers.ResponseItem, libs map[string]string) (string, error) {
 	log.WithField("=>", string(compilersResponse.Binary.Abi)).Debug("Specification (From Compilers)")
 
 	linked, err := compilers.LinkContract(compilersResponse.Binary, libs)
@@ -262,7 +262,7 @@ func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse comp
 	// mint packing
 
 	if deploy.Data != nil {
-		_, callDataArray, err := util.PreProcessInputData(compilersResponse.Objectname, deploy.Data, do, true)
+		_, callDataArray, err := util.PreProcessInputData(compilersResponse.Objectname, deploy.Data, do, client, true)
 		if err != nil {
 			return "", err
 		}
@@ -274,13 +274,13 @@ func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse comp
 		contractCode = contractCode + callData
 	}
 
-	tx, err := deployTx(do, deploy, compilersResponse.Objectname, contractCode)
+	tx, err := deployTx(client, deploy, compilersResponse.Objectname, contractCode)
 	if err != nil {
 		return "", err
 	}
 
 	// Sign, broadcast, display
-	contractAddress, err := deployFinalize(do, tx)
+	contractAddress, err := deployFinalize(do, client, tx)
 	if err != nil {
 		return "", fmt.Errorf("Error finalizing contract deploy %s: %v", deploy.Contract, err)
 	}
@@ -309,7 +309,7 @@ func deployContract(deploy *def.Deploy, do *def.Packages, compilersResponse comp
 	}
 }
 
-func deployTx(do *def.Packages, deploy *def.Deploy, contractName, contractCode string) (*payload.CallTx, error) {
+func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode string) (*payload.CallTx, error) {
 	// Deploy contract
 	log.WithFields(log.Fields{
 		"name": contractName,
@@ -318,10 +318,10 @@ func deployTx(do *def.Packages, deploy *def.Deploy, contractName, contractCode s
 	log.WithFields(log.Fields{
 		"source":    deploy.Source,
 		"code":      contractCode,
-		"chain-url": do.ChainURL,
+		"chain-url": client.ChainAddress,
 	}).Info()
 
-	return do.Call(&def.CallArg{
+	return client.Call(&def.CallArg{
 		Input:    deploy.Source,
 		Amount:   deploy.Amount,
 		Fee:      deploy.Fee,
@@ -331,12 +331,12 @@ func deployTx(do *def.Packages, deploy *def.Deploy, contractName, contractCode s
 	})
 }
 
-func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, do *def.Packages, client *def.Client) (string, []*abi.Variable, error) {
 	var err error
 	var callData string
 	var callDataArray []string
 	//todo: find a way to call the fallback function here
-	call.Function, callDataArray, err = util.PreProcessInputData(call.Function, call.Data, do, false)
+	call.Function, callDataArray, err = util.PreProcessInputData(call.Function, call.Data, do, client, false)
 	if err != nil {
 		return "", nil, err
 	}
@@ -371,7 +371,7 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) 
 		"data":        callData,
 	}).Info("Calling")
 
-	tx, err := do.Call(&def.CallArg{
+	tx, err := client.Call(&def.CallArg{
 		Input:    call.Source,
 		Amount:   call.Amount,
 		Address:  call.Destination,
@@ -385,9 +385,9 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) 
 	}
 
 	// Sign, broadcast, display
-	txe, err := do.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		var err = util.ChainErrorHandler(do, err)
+		var err = util.ChainErrorHandler(do.Package.Account, err)
 		return "", nil, err
 	}
 
@@ -438,10 +438,10 @@ func CallJob(call *def.Call, do *def.Packages) (string, []*abi.Variable, error) 
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.Packages, tx payload.Payload) (*crypto.Address, error) {
-	txe, err := do.SignAndBroadcast(tx)
+func deployFinalize(do *def.Packages, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return nil, util.ChainErrorHandler(do, err)
+		return nil, util.ChainErrorHandler(do.Package.Account, err)
 	}
 
 	if err := util.ReadTxSignAndBroadcast(txe, err); err != nil {

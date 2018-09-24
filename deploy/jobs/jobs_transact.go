@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SendJob(send *def.Send, do *def.Packages) (string, error) {
+func SendJob(send *def.Send, account string, client *def.Client) (string, error) {
 	// Use Default
-	send.Source = useDefault(send.Source, do.Package.Account)
+	send.Source = useDefault(send.Source, account)
 
 	// Formulate tx
 	log.WithFields(log.Fields{
@@ -22,20 +22,20 @@ func SendJob(send *def.Send, do *def.Packages) (string, error) {
 		"amount":      send.Amount,
 	}).Info("Sending Transaction")
 
-	tx, err := do.Send(&def.SendArg{
+	tx, err := client.Send(&def.SendArg{
 		Input:    send.Source,
 		Output:   send.Destination,
 		Amount:   send.Amount,
 		Sequence: send.Sequence,
 	})
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(account, err)
 	}
 
 	// Sign, broadcast, display
-	txe, err := do.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(account, err)
 	}
 
 	util.ReadTxSignAndBroadcast(txe, err)
@@ -46,7 +46,7 @@ func SendJob(send *def.Send, do *def.Packages) (string, error) {
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.Packages) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.Packages, client *def.Client) (string, error) {
 	// If a data file is given it should be in csv format and
 	// it will be read first. Once the file is parsed and sent
 	// to the chain then a single nameRegTx will be sent if that
@@ -89,7 +89,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.Packages) (string, error) {
 				Amount:   record[2],
 				Fee:      name.Fee,
 				Sequence: name.Sequence,
-			}, do)
+			}, do, client)
 
 			if err != nil {
 				return "", err
@@ -107,14 +107,14 @@ func RegisterNameJob(name *def.RegisterName, do *def.Packages) (string, error) {
 	// If the data field is populated then there is a single
 	// nameRegTx to send. So do that *now*.
 	if name.Data != "" {
-		return registerNameTx(name, do)
+		return registerNameTx(name, do, client)
 	} else {
 		return "data_file_parsed", nil
 	}
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.Packages) (string, error) {
+func registerNameTx(name *def.RegisterName, do *def.Packages, client *def.Client) (string, error) {
 	// Set Defaults
 	name.Source = useDefault(name.Source, do.Package.Account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
@@ -127,7 +127,7 @@ func registerNameTx(name *def.RegisterName, do *def.Packages) (string, error) {
 		"amount": name.Amount,
 	}).Info("NameReg Transaction")
 
-	tx, err := do.Name(&def.NameArg{
+	tx, err := client.Name(&def.NameArg{
 		Input:    name.Source,
 		Sequence: name.Sequence,
 		Name:     name.Name,
@@ -136,12 +136,12 @@ func registerNameTx(name *def.RegisterName, do *def.Packages) (string, error) {
 		Fee:      name.Fee,
 	})
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(do.Package.Account, err)
 	}
 	// Sign, broadcast, display
-	txe, err := do.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(do.Package.Account, err)
 	}
 
 	util.ReadTxSignAndBroadcast(txe, err)
@@ -152,9 +152,9 @@ func registerNameTx(name *def.RegisterName, do *def.Packages) (string, error) {
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func PermissionJob(perm *def.Permission, do *def.Packages) (string, error) {
+func PermissionJob(perm *def.Permission, account string, client *def.Client) (string, error) {
 	// Set defaults
-	perm.Source = useDefault(perm.Source, do.Package.Account)
+	perm.Source = useDefault(perm.Source, account)
 
 	log.Debug("Target: ", perm.Target)
 	log.Debug("Marmots Deny: ", perm.Role)
@@ -162,7 +162,7 @@ func PermissionJob(perm *def.Permission, do *def.Packages) (string, error) {
 	// Populate the transaction appropriately
 
 	// Formulate tx
-	tx, err := do.Permissions(&def.PermArg{
+	tx, err := client.Permissions(&def.PermArg{
 		Input:      perm.Source,
 		Sequence:   perm.Sequence,
 		Action:     perm.Action,
@@ -172,15 +172,15 @@ func PermissionJob(perm *def.Permission, do *def.Packages) (string, error) {
 		Value:      perm.Value,
 	})
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(account, err)
 	}
 
 	log.Debug("What are the args returned in transaction: ", tx.PermArgs)
 
 	// Sign, broadcast, display
-	txe, err := do.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return "", util.ChainErrorHandler(do, err)
+		return "", util.ChainErrorHandler(account, err)
 	}
 
 	util.ReadTxSignAndBroadcast(txe, err)

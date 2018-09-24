@@ -15,20 +15,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetBlockHeight(do *def.Packages) (latestBlockHeight uint64, err error) {
-	stat, err := do.Status()
+func GetBlockHeight(client *def.Client) (latestBlockHeight uint64, err error) {
+	stat, err := client.Status()
 	if err != nil {
 		return 0, err
 	}
 	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
-func AccountsInfo(account, field string, do *def.Packages) (string, error) {
+func AccountsInfo(account, field string, client *def.Client) (string, error) {
 	address, err := crypto.AddressFromHexString(account)
 	if err != nil {
 		return "", err
 	}
-	acc, err := do.GetAccount(address)
+	acc, err := client.GetAccount(address)
 	if err != nil {
 		return "", err
 	}
@@ -76,8 +76,8 @@ func AccountsInfo(account, field string, do *def.Packages) (string, error) {
 	return s, nil
 }
 
-func NamesInfo(name, field string, do *def.Packages) (string, error) {
-	entry, err := do.GetName(name)
+func NamesInfo(name, field string, client *def.Client) (string, error) {
+	entry, err := client.GetName(name)
 	if err != nil {
 		return "", err
 	}
@@ -96,10 +96,10 @@ func NamesInfo(name, field string, do *def.Packages) (string, error) {
 	}
 }
 
-func ValidatorsInfo(query string, do *def.Packages) (interface{}, error) {
+func ValidatorsInfo(query string, client *def.Client) (interface{}, error) {
 	// Currently there is no notion of 'unbonding validators' we can revisit what should go here or whether this deserves
 	// to exist as a job
-	validatorSet, err := do.GetValidatorSet()
+	validatorSet, err := client.GetValidatorSet()
 	if err != nil {
 		return nil, err
 	}
