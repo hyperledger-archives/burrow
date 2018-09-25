@@ -57,9 +57,6 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		cmd.Action = func() {
 			do := new(def.Packages)
 
-			do.ChainURL = *chainUrlOpt
-			do.Signer = *signerOpt
-			do.MempoolSigning = *mempoolSigningOpt
 			do.Path = *pathOpt
 			do.DefaultOutput = *defaultOutputOpt
 			do.YAMLPath = *yamlPathOpt
@@ -79,7 +76,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if do.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			util.IfExit(pkgs.RunPackage(do))
+			util.IfExit(pkgs.RunPackage(do, *chainUrlOpt, *signerOpt, *mempoolSigningOpt))
 		}
 	}
 }

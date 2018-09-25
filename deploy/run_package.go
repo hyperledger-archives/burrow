@@ -11,9 +11,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.Packages) error {
+func RunPackage(do *def.Packages, chainURL, keysClientAddress string, mempoolSigning bool) error {
 	var err error
 	var pwd string
+
+	client := def.Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress}
 
 	pwd, err = os.Getwd()
 	if err != nil {
@@ -53,7 +55,7 @@ func RunPackage(do *def.Packages) error {
 	}
 
 	// useful for debugging
-	printPathPackage(do)
+	printPathPackage(&client)
 
 	// Load the package if it doesn't exist
 	if do.Package == nil {
@@ -73,12 +75,10 @@ func RunPackage(do *def.Packages) error {
 		}
 	}
 
-	client := def.Client{ChainAddress: do.ChainURL, MempoolSigning: do.MempoolSigning, KeysClientAddress: do.Signer}
-
 	return jobs.DoJobs(do, &client)
 }
 
-func printPathPackage(do *def.Packages) {
-	log.WithField("=>", do.ChainURL).Info("With ChainURL")
-	log.WithField("=>", do.Signer).Info("Using Signer at")
+func printPathPackage(client *def.Client) {
+	log.WithField("=>", client.ChainAddress).Info("With ChainURL")
+	log.WithField("=>", client.KeysClientAddress).Info("Using Signer at")
 }

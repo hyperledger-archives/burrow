@@ -22,13 +22,11 @@ func MetaJob(meta *def.Meta, do *def.Packages, client *def.Client, jobs chan *tr
 	// work from a fresh Do object
 	newDo := new(def.Packages)
 	newDo.Address = do.Address
-	newDo.ChainURL = do.ChainURL
 	newDo.CurrentOutput = do.CurrentOutput
 	newDo.DefaultAmount = do.DefaultAmount
 	newDo.DefaultFee = do.DefaultFee
 	newDo.DefaultGas = do.DefaultGas
 	newDo.DefaultSets = do.DefaultSets
-	newDo.Signer = do.Signer
 
 	// Set subYAMLPath
 	newDo.YAMLPath = meta.File
