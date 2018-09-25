@@ -5,7 +5,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def/rule"
 )
 
-type Packages struct {
+type DeployArgs struct {
 	Address       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	BinPath       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	CurrentOutput string   `mapstructure:"," json:"," yaml:"," toml:","`
@@ -23,7 +23,7 @@ type Packages struct {
 	Package *Package
 }
 
-func (do *Packages) Validate() error {
+func (do *DeployArgs) Validate() error {
 	return validation.ValidateStruct(do,
 		validation.Field(&do.Address, rule.Address),
 		validation.Field(&do.DefaultAmount, rule.Uint64),

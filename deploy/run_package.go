@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.Packages, chainURL, keysClientAddress string, mempoolSigning bool) error {
+func RunPackage(do *def.DeployArgs, chainURL, keysClientAddress string, mempoolSigning bool) error {
 	var err error
 	var pwd string
 

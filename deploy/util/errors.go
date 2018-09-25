@@ -38,7 +38,7 @@ There has been an error talking to your Burrow chain using account %s.
 `, account, err)
 }
 
-func ABIErrorHandler(do *def.Packages, err error, call *def.Call, query *def.QueryContract) (string, error) {
+func ABIErrorHandler(do *def.DeployArgs, err error, call *def.Call, query *def.QueryContract) (string, error) {
 	switch {
 	case call != nil:
 		log.WithFields(log.Fields{

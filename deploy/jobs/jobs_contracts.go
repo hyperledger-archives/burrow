@@ -78,7 +78,7 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 	return "", nil
 }
 
-func DeployJob(deploy *def.Deploy, do *def.Packages, client *def.Client, resp *compilers.Response) (result string, err error) {
+func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp *compilers.Response) (result string, err error) {
 	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do, client)
 	// trim the extension
 	contractName := strings.TrimSuffix(deploy.Contract, filepath.Ext(deploy.Contract))
@@ -240,7 +240,7 @@ func findContractFile(contract, binPath string) (string, error) {
 }
 
 // TODO [rj] refactor to remove [contractPath] from functions signature => only used in a single error throw.
-func deployContract(deploy *def.Deploy, do *def.Packages, client *def.Client, compilersResponse compilers.ResponseItem, libs map[string]string) (string, error) {
+func deployContract(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, compilersResponse compilers.ResponseItem, libs map[string]string) (string, error) {
 	log.WithField("=>", string(compilersResponse.Binary.Abi)).Debug("Specification (From Compilers)")
 
 	linked, err := compilers.LinkContract(compilersResponse.Binary, libs)
@@ -331,7 +331,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 	})
 }
 
-func CallJob(call *def.Call, do *def.Packages, client *def.Client) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
 	var err error
 	var callData string
 	var callDataArray []string
@@ -438,7 +438,7 @@ func CallJob(call *def.Call, do *def.Packages, client *def.Client) (string, []*a
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.Packages, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
+func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
 		return nil, util.ChainErrorHandler(do.Package.Account, err)

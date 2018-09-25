@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetAccountJob(account *def.Account, do *def.Packages) (string, error) {
+func SetAccountJob(account *def.Account, do *def.DeployArgs) (string, error) {
 	var result string
 
 	// Set the Account in the Package & Announce
@@ -17,7 +17,7 @@ func SetAccountJob(account *def.Account, do *def.Packages) (string, error) {
 	return result, nil
 }
 
-func SetValJob(set *def.Set, do *def.Packages) (string, error) {
+func SetValJob(set *def.Set, do *def.DeployArgs) (string, error) {
 	var result string
 	log.WithField("=>", set.Value).Info("Setting Variable")
 	result = set.Value

@@ -55,7 +55,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		debugOpt := cmd.BoolOpt("d debug", false, "debug level output")
 
 		cmd.Action = func() {
-			do := new(def.Packages)
+			do := new(def.DeployArgs)
 
 			do.Path = *pathOpt
 			do.DefaultOutput = *defaultOutputOpt

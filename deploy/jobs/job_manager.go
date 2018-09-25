@@ -31,13 +31,13 @@ func concurrentJobRunner(jobs chan *trackJob) {
 	}
 }
 
-func DoJobs(do *def.Packages, client *def.Client) error {
+func DoJobs(do *def.DeployArgs, client *def.Client) error {
 	jobs := make(chan *trackJob, do.Jobs*2)
 	defer close(jobs)
 	return RunJobs(do, client, jobs)
 }
 
-func RunJobs(do *def.Packages, client *def.Client, jobs chan *trackJob) error {
+func RunJobs(do *def.DeployArgs, client *def.Client, jobs chan *trackJob) error {
 	// ADD DefaultAddr and DefaultSet to jobs array....
 	// These work in reverse order and the addendums to the
 	// the ordering from the loading process is lifo
@@ -199,7 +199,7 @@ func announce(job, typ string) {
 	log.Warn("\n")
 }
 
-func defaultAddrJob(do *def.Packages) {
+func defaultAddrJob(do *def.DeployArgs) {
 	oldJobs := do.Package.Jobs
 
 	newJob := &def.Job{
@@ -212,7 +212,7 @@ func defaultAddrJob(do *def.Packages) {
 	do.Package.Jobs = append([]*def.Job{newJob}, oldJobs...)
 }
 
-func defaultSetJobs(do *def.Packages) {
+func defaultSetJobs(do *def.DeployArgs) {
 	oldJobs := do.Package.Jobs
 
 	newJobs := []*def.Job{}
@@ -232,7 +232,7 @@ func defaultSetJobs(do *def.Packages) {
 	do.Package.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.Packages) error {
+func postProcess(do *def.DeployArgs) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
 	for _, job := range do.Package.Jobs {

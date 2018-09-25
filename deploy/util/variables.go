@@ -43,7 +43,7 @@ func lowerFirstCharacter(name string) string {
 	return string(bs)
 }
 
-func PreProcessFields(value interface{}, do *def.Packages, client *def.Client) (err error) {
+func PreProcessFields(value interface{}, do *def.DeployArgs, client *def.Client) (err error) {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -61,7 +61,7 @@ func PreProcessFields(value interface{}, do *def.Packages, client *def.Client) (
 	return nil
 }
 
-func PreProcess(toProcess string, do *def.Packages, client *def.Client) (string, error) {
+func PreProcess(toProcess string, do *def.DeployArgs, client *def.Client) (string, error) {
 	// Run through the replacement process for any placeholder matches
 	for _, pm := range rule.MatchPlaceholders(toProcess) {
 		log.WithField("match", toProcess).Debug("Replacement Match Found")
@@ -169,7 +169,7 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.Packages, client *def.Client, constructor bool) (string, []string, error) {
+func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, client *def.Client, constructor bool) (string, []string, error) {
 	var callDataArray []string
 	var callArray []string
 	if function == "" && !constructor {
@@ -231,7 +231,7 @@ func PreProcessInputData(function string, data interface{}, do *def.Packages, cl
 	return function, callDataArray, nil
 }
 
-func PreProcessLibs(libs string, do *def.Packages, client *def.Client) (string, error) {
+func PreProcessLibs(libs string, do *def.DeployArgs, client *def.Client) (string, error) {
 	libraries, _ := PreProcess(libs, do, client)
 	if libraries != "" {
 		pairs := strings.Split(libraries, ",")

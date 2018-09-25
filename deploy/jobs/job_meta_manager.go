@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MetaJob(meta *def.Meta, do *def.Packages, client *def.Client, jobs chan *trackJob) (string, error) {
+func MetaJob(meta *def.Meta, do *def.DeployArgs, client *def.Client, jobs chan *trackJob) (string, error) {
 	var err error
 	var pwd string
 
@@ -20,7 +20,7 @@ func MetaJob(meta *def.Meta, do *def.Packages, client *def.Client, jobs chan *tr
 	}
 
 	// work from a fresh Do object
-	newDo := new(def.Packages)
+	newDo := new(def.DeployArgs)
 	newDo.Address = do.Address
 	newDo.CurrentOutput = do.CurrentOutput
 	newDo.DefaultAmount = do.DefaultAmount

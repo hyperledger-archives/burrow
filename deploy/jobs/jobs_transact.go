@@ -46,7 +46,7 @@ func SendJob(send *def.Send, account string, client *def.Client) (string, error)
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.Packages, client *def.Client) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
 	// If a data file is given it should be in csv format and
 	// it will be read first. Once the file is parsed and sent
 	// to the chain then a single nameRegTx will be sent if that
@@ -114,7 +114,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.Packages, client *def.Clien
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.Packages, client *def.Client) (string, error) {
+func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
 	// Set Defaults
 	name.Source = useDefault(name.Source, do.Package.Account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
