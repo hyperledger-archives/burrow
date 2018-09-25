@@ -38,6 +38,11 @@ type Client struct {
 	keyClient             keys.KeyClient
 }
 
+func NewClient(chainURL, keysClientAddress string, mempoolSigning bool) *Client {
+	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress}
+	return &client
+}
+
 // Connect GRPC clients using ChainURL
 func (c *Client) dial() error {
 	if c.transactClient == nil {

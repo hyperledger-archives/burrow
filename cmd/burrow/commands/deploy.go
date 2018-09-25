@@ -76,7 +76,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if do.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			util.IfExit(pkgs.RunPackage(do, *chainUrlOpt, *signerOpt, *mempoolSigningOpt))
+			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt)
+
+			util.IfExit(pkgs.RunPackage(do, client))
 		}
 	}
 }
