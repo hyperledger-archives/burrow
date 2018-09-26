@@ -27,7 +27,9 @@ import (
 )
 
 type Client struct {
-	MempoolSigning bool
+	MempoolSigning    bool
+	ChainAddress      string
+	KeysClientAddress string
 	// Memoised clients and info
 	chainID               string
 	transactClient        rpctransact.TransactClient
@@ -36,63 +38,102 @@ type Client struct {
 	keyClient             keys.KeyClient
 }
 
-// Connect GRPC clients using ChainURL
-func (c *Client) Dial(chainAddress, keysClientAddress string) error {
-	conn, err := grpc.Dial(chainAddress, grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-	c.transactClient = rpctransact.NewTransactClient(conn)
-	c.queryClient = rpcquery.NewQueryClient(conn)
-	c.executionEventsClient = rpcevents.NewExecutionEventsClient(conn)
-	if keysClientAddress == "" {
-		logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
-		c.MempoolSigning = true
-	} else {
-		logrus.Infof("Using keys server at: %s", keysClientAddress)
-		c.keyClient, err = keys.NewRemoteKeyClient(keysClientAddress, logging.NewNoopLogger())
-	}
+func NewClient(chainURL, keysClientAddress string, mempoolSigning bool) *Client {
+	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress}
+	return &client
+}
 
-	if err != nil {
-		return err
+// Connect GRPC clients using ChainURL
+func (c *Client) dial() error {
+	if c.transactClient == nil {
+		conn, err := grpc.Dial(c.ChainAddress, grpc.WithInsecure())
+		if err != nil {
+			return err
+		}
+		c.transactClient = rpctransact.NewTransactClient(conn)
+		c.queryClient = rpcquery.NewQueryClient(conn)
+		c.executionEventsClient = rpcevents.NewExecutionEventsClient(conn)
+		if c.KeysClientAddress == "" {
+			logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
+			c.MempoolSigning = true
+		} else {
+			logrus.Infof("Using keys server at: %s", c.KeysClientAddress)
+			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logging.NewNoopLogger())
+		}
+
+		if err != nil {
+			return err
+		}
+		stat, err := c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+		if err != nil {
+			return err
+		}
+		c.chainID = stat.ChainID
 	}
-	stat, err := c.Status()
-	if err != nil {
-		return err
-	}
-	c.chainID = stat.ChainID
 	return nil
 }
 
-func (c *Client) Transact() rpctransact.TransactClient {
-	return c.transactClient
+func (c *Client) Transact() (rpctransact.TransactClient, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return c.transactClient, err
 }
 
-func (c *Client) Query() rpcquery.QueryClient {
-	return c.queryClient
+func (c *Client) Query() (rpcquery.QueryClient, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return c.queryClient, nil
 }
 
-func (c *Client) Events() rpcevents.ExecutionEventsClient {
-	return c.executionEventsClient
+func (c *Client) Events() (rpcevents.ExecutionEventsClient, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return c.executionEventsClient, nil
 }
 
 func (c *Client) Status() (*rpc.ResultStatus, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.ConcreteAccount, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.queryClient.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: address})
 }
 
 func (c *Client) GetName(name string) (*names.Entry, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.queryClient.GetName(context.Background(), &rpcquery.GetNameParam{Name: name})
 }
 
 func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.queryClient.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{IncludeHistory: true})
 }
 
 func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	txEnv, err := c.SignTx(tx)
 	if err != nil {
 		return nil, err
@@ -101,12 +142,15 @@ func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error)
 }
 
 func (c *Client) SignTx(tx payload.Payload) (*txs.Envelope, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	txEnv := txs.Enclose(c.chainID, tx)
 	if c.MempoolSigning {
 		logrus.Info("Using mempool signing")
 		return txEnv, nil
 	}
-	var err error
 	inputs := tx.GetInputs()
 	signers := make([]acm.AddressableSigner, len(inputs))
 	for i, input := range inputs {
@@ -124,11 +168,14 @@ func (c *Client) SignTx(tx payload.Payload) (*txs.Envelope, error) {
 
 // Creates a keypair using attached keys service
 func (c *Client) CreateKey(keyName, curveTypeString string) (crypto.PublicKey, error) {
+	err := c.dial()
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
 	if c.keyClient == nil {
 		return crypto.PublicKey{}, fmt.Errorf("could not create key pair since no keys service is attached, " +
 			"pass --keys flag")
 	}
-	var err error
 	curveType := crypto.CurveTypeEd25519
 	if curveTypeString != "" {
 		curveType, err = crypto.CurveTypeFromString(curveTypeString)
@@ -145,11 +192,19 @@ func (c *Client) CreateKey(keyName, curveTypeString string) (crypto.PublicKey, e
 
 // Broadcast payload for remote signing
 func (c *Client) Broadcast(tx payload.Payload) (*exec.TxExecution, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
 }
 
 // Broadcast envelope - can be locally signed or remote signing will be attempted
 func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope) (*exec.TxExecution, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
 }
 
@@ -196,6 +251,10 @@ type GovArg struct {
 
 func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 	logArg("GovTx", arg)
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
 	input, err := c.TxInput(arg.Input, arg.Native, arg.Sequence)
 	if err != nil {
 		return nil, err
@@ -467,6 +526,10 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string) (*pay
 }
 
 func (c *Client) GetSequence(sequence string, inputAddress crypto.Address) (uint64, error) {
+	err := c.dial()
+	if err != nil {
+		return 0, err
+	}
 	if sequence == "" {
 		if c.MempoolSigning {
 			// Perform mempool signing

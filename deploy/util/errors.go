@@ -24,9 +24,9 @@ func IfExit(err error) {
 	}
 }
 
-func ChainErrorHandler(do *def.Packages, err error) error {
+func ChainErrorHandler(account string, err error) error {
 	log.WithFields(log.Fields{
-		"defAddr": do.Package.Account,
+		"defAddr": account,
 		"rawErr":  err,
 	}).Error("")
 
@@ -35,10 +35,10 @@ There has been an error talking to your Burrow chain using account %s.
 
 %v
 
-`, do.Package.Account, err)
+`, account, err)
 }
 
-func ABIErrorHandler(do *def.Packages, err error, call *def.Call, query *def.QueryContract) (string, error) {
+func ABIErrorHandler(do *def.DeployArgs, err error, call *def.Call, query *def.QueryContract) (string, error) {
 	switch {
 	case call != nil:
 		log.WithFields(log.Fields{
