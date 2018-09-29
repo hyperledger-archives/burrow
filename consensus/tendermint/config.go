@@ -19,6 +19,8 @@ type BurrowTendermintConfig struct {
 	ExternalAddress string
 	Moniker         string
 	TendermintRoot  string
+	// Peers ID or address this node is authorize to sync with
+	AuthorizedPeers string
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -47,6 +49,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.Moniker = btc.Moniker
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false
+		conf.FilterPeers = btc.AuthorizedPeers != ""
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""

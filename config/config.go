@@ -85,7 +85,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	}
 
 	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		conf.Keys, keyStore, exeOptions, logger)
+		conf.Keys, keyStore, exeOptions, conf.Tendermint.AuthorizedPeers, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

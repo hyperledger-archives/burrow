@@ -84,6 +84,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		testConfig.Keys,
 		nil,
 		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
+		"",
 		logger)
 	if err != nil {
 		panic(err)
