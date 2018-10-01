@@ -24,14 +24,13 @@ type App struct {
 	// Node information to return in Info
 	nodeInfo string
 	// State
-	blockchain             *bcm.Blockchain
-	checker                execution.BatchExecutor
-	committer              execution.BatchCommitter
-	checkTx                func(txBytes []byte) abciTypes.ResponseCheckTx
-	deliverTx              func(txBytes []byte) abciTypes.ResponseCheckTx
-	mempoolLocker          sync.Locker
-	authorizedPeersID      []string
-	authorizedPeersAddress []string
+	blockchain              *bcm.Blockchain
+	checker                 execution.BatchExecutor
+	committer               execution.BatchCommitter
+	checkTx                 func(txBytes []byte) abciTypes.ResponseCheckTx
+	deliverTx               func(txBytes []byte) abciTypes.ResponseCheckTx
+	mempoolLocker           sync.Locker
+	authorizedPeersProvider PeersFilterProvider
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
 	block *abciTypes.RequestBeginBlock
 	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
@@ -40,20 +39,22 @@ type App struct {
 	logger *logging.Logger
 }
 
+// PeersFilterProvider provides current authorized nodes id and/or addresses
+type PeersFilterProvider func() (authorizedPeersID []string, authorizedPeersAddress []string)
+
 var _ abciTypes.Application = &App{}
 
 func NewApp(nodeInfo string, blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
-	txDecoder txs.Decoder, authorizedPeers string, panicFunc func(error), logger *logging.Logger) *App {
+	txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider, panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
-		nodeInfo:               nodeInfo,
-		blockchain:             blockchain,
-		checker:                checker,
-		committer:              committer,
-		checkTx:                txExecutor("CheckTx", checker, txDecoder, logger.WithScope("CheckTx")),
-		deliverTx:              txExecutor("DeliverTx", committer, txDecoder, logger.WithScope("DeliverTx")),
-		authorizedPeersID:      makeAuthorizedPeersID(authorizedPeers),
-		authorizedPeersAddress: makeAuthorizedPeersAddress(authorizedPeers),
-		panicFunc:              panicFunc,
+		nodeInfo:                nodeInfo,
+		blockchain:              blockchain,
+		checker:                 checker,
+		committer:               committer,
+		checkTx:                 txExecutor("CheckTx", checker, txDecoder, logger.WithScope("CheckTx")),
+		deliverTx:               txExecutor("DeliverTx", committer, txDecoder, logger.WithScope("DeliverTx")),
+		authorizedPeersProvider: authorizedPeersProvider,
+		panicFunc:               panicFunc,
 		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
 			"node_info", nodeInfo),
 	}
@@ -87,12 +88,12 @@ func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.Resp
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Query: %v\n%s", r, debug.Stack()))
 		}
 	}()
+	respQuery.Log = "Query not supported"
+	respQuery.Code = codes.UnsupportedRequestCode
+
 	switch {
 	case isPeersFilterQuery(&reqQuery):
 		app.peersFilter(&reqQuery, &respQuery)
-	default:
-		respQuery.Log = "Query not supported"
-		respQuery.Code = codes.UnsupportedRequestCode
 	}
 	return
 }

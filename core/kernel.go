@@ -79,7 +79,7 @@ type Kernel struct {
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeers string, logger *logging.Logger) (*Kernel, error) {
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, logger *logging.Logger) (*Kernel, error) {
 
 	var err error
 	kern := &Kernel{
@@ -121,7 +121,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, authorizedPeers, kern.Panic, logger)
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, authorizedPeersProvider, kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
 	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
