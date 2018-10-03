@@ -129,7 +129,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 		testConfig.Tendermint.TendermintConfig(),
 		testConfig.RPC,
 		testConfig.Keys,
-		keyStore, nil, logger)
+		keyStore, nil, testConfig.Tendermint.DefaultAuthorizedPeersProvider(), logger)
 	if err != nil {
 		return err
 	}
