@@ -13,3 +13,11 @@ func DebugOpcodes(vm *VM) {
 func DumpTokens(vm *VM) {
 	vm.dumpTokens = true
 }
+
+func StackOptions(callStackMaxDepth uint64, dataStackInitialCapacity int, dataStackMaxDepth int) func(*VM) {
+	return func(vm *VM) {
+		vm.params.CallStackMaxDepth = callStackMaxDepth
+		vm.params.DataStackInitialCapacity = dataStackInitialCapacity
+		vm.params.DataStackMaxDepth = dataStackMaxDepth
+	}
+}

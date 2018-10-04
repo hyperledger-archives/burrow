@@ -35,8 +35,8 @@ import (
 )
 
 const (
-	dataStackCapacity = 1024
-	callStackCapacity = 100 // TODO ensure usage.
+	DataStackInitialCapacity = 1024
+	callStackCapacity        = 100 // TODO ensure usage.
 )
 
 type EventSink interface {
@@ -50,10 +50,13 @@ func (*noopEventSink) Call(call *exec.CallEvent, exception *errors.Exception) {}
 func (*noopEventSink) Log(log *exec.LogEvent)                                 {}
 
 type Params struct {
-	BlockHeight uint64
-	BlockHash   Word256
-	BlockTime   int64
-	GasLimit    uint64
+	BlockHeight              uint64
+	BlockHash                Word256
+	BlockTime                int64
+	GasLimit                 uint64
+	CallStackMaxDepth        uint64
+	DataStackInitialCapacity int
+	DataStackMaxDepth        int
 }
 
 type VM struct {
@@ -143,6 +146,11 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 		return
 	}
 
+	if err = vm.ensureStackDepth(); err != nil {
+		*exception = err
+		return
+	}
+
 	childCallState := state.NewCache(callState)
 
 	if len(code) > 0 {
@@ -187,6 +195,11 @@ func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee *a
 
 	// DelegateCall does not transfer the value to the callee.
 
+	if err = vm.ensureStackDepth(); err != nil {
+		*exception = err.Error()
+		return
+	}
+
 	childCallState := state.NewCache(callState)
 
 	if len(code) > 0 {
@@ -229,7 +242,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 	var (
 		pc     int64 = 0
-		stack        = NewStack(dataStackCapacity, gas, &err)
+		stack        = NewStack(vm.params.DataStackInitialCapacity, vm.params.DataStackMaxDepth, gas, &err)
 		memory       = vm.memoryProvider()
 	)
 
@@ -1229,4 +1242,11 @@ func dumpTokens(txHash []byte, caller, callee acm.Account, code []byte) {
 	}
 	ioutil.WriteFile(fmt.Sprintf("tokens_%s_%s_%s.asm", txHashString, callerString, calleeString),
 		[]byte(tokensString), 0777)
+}
+
+func (vm *VM) ensureStackDepth() errors.CodedError {
+	if vm.params.CallStackMaxDepth > 0 && vm.stackDepth == vm.params.CallStackMaxDepth {
+		return errors.ErrorCodeCallStackOverflow
+	}
+	return nil
 }

@@ -25,19 +25,21 @@ import (
 
 // Not goroutine safe
 type Stack struct {
-	data []Word256
-	ptr  int
+	data        []Word256
+	maxCapacity int
+	ptr         int
 
 	gas *uint64
 	err *errors.CodedError
 }
 
-func NewStack(capacity int, gas *uint64, err *errors.CodedError) *Stack {
+func NewStack(initialCapacity int, maxCapacity int, gas *uint64, err *errors.CodedError) *Stack {
 	return &Stack{
-		data: make([]Word256, capacity),
-		ptr:  0,
-		gas:  gas,
-		err:  err,
+		data:        make([]Word256, initialCapacity),
+		ptr:         0,
+		maxCapacity: maxCapacity,
+		gas:         gas,
+		err:         err,
 	}
 }
 
@@ -58,8 +60,10 @@ func (st *Stack) setErr(err errors.CodedError) {
 func (st *Stack) Push(d Word256) {
 	st.useGas(GasStackOp)
 	if st.ptr == cap(st.data) {
-		st.setErr(errors.ErrorCodeDataStackOverflow)
-		return
+		if !st.tryGrow() {
+			st.setErr(errors.ErrorCodeDataStackOverflow)
+			return
+		}
 	}
 	st.data[st.ptr] = d
 	st.ptr++
@@ -184,4 +188,30 @@ func Is64BitOverflow(word Word256) bool {
 		}
 	}
 	return false
+}
+
+func (st *Stack) tryGrow() bool {
+	stackCap := cap(st.data)
+	hasMaxCap := st.maxCapacity > 0
+	if hasMaxCap && st.maxCapacity == stackCap {
+		return false
+	}
+
+	newCap := stackCap * 2
+	if newCap == 0 {
+		// Initialized with no capacity but stack can grow
+		newCap = 2
+	}
+
+	if hasMaxCap && st.maxCapacity < newCap {
+		// Last attempt to grow
+		newCap = st.maxCapacity
+	}
+
+	// Grow
+	newData := make([]Word256, newCap)
+	copy(newData, st.data)
+	st.data = newData
+
+	return true
 }
