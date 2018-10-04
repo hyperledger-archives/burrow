@@ -39,6 +39,7 @@ const (
 	ErrorCodeZeroPayment
 	ErrorCodeInvalidSequence
 	ErrorCodeReservedAddress
+	ErrorCodeInvalidStateChange
 )
 
 func (c Code) ErrorCode() Code {
@@ -113,6 +114,8 @@ func (c Code) String() string {
 		return "Invalid sequence number"
 	case ErrorCodeReservedAddress:
 		return "Address is reserved for SNative or internal use"
+	case ErrorCodeInvalidStateChange:
+		return "Callee attempted to modify state after STATICCALL"
 	default:
 		return "Unknown error"
 	}
