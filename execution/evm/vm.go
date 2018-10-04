@@ -71,6 +71,7 @@ type VM struct {
 	returnData       []byte
 	debugOpcodes     bool
 	dumpTokens       bool
+	static           bool
 }
 
 func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
@@ -172,10 +173,6 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 			// Copy any state updates from child call frame into current call frame
 			childCallState.Sync(callState)
 		}
-		if vm.stackDepth == 0 {
-			// clean up ready for next call
-			vm.nestedCallErrors = nil
-		}
 	}
 
 	return
@@ -185,7 +182,13 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte,
+	value uint64, gas *uint64, static bool) (output []byte, err errors.CodedError) {
+
+	if static && !vm.static {
+		vm.static = true
+		defer func() { vm.static = false }()
+	}
 
 	exception := new(string)
 	// fire the post call event (including exception if applicable)
@@ -772,6 +775,9 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.Debugf("%s {0x%X = 0x%X}\n", callee.Address(), loc, data)
 
 		case SSTORE: // 0x55
+			if vm.static {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+			}
 			loc, data := stack.Pop(), stack.Pop()
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
@@ -849,6 +855,9 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			//stack.Print(10)
 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
+			if vm.static {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+			}
 			n := int(op - LOG0)
 			topics := make([]Word256, n)
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
@@ -868,6 +877,9 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
+			if vm.static {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+			}
 			vm.returnData = nil
 
 			if !HasPermission(callState, callee, permission.CreateContract) {
@@ -917,7 +929,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 				stack.Push(newAccount.Address().Word256())
 			}
 
-		case CALL, CALLCODE, DELEGATECALL: // 0xF1, 0xF2, 0xF4
+		case CALL, CALLCODE, DELEGATECALL, STATICCALL: // 0xF1, 0xF2, 0xF4, 0xFA
 			vm.returnData = nil
 
 			if !HasPermission(callState, callee, permission.Call) {
@@ -936,11 +948,14 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			// for DELEGATECALL and should not be popped.  Instead previous
 			// caller value is used.  for CALL and CALLCODE value is stored
 			// on stack and needs to be overwritten from the given value.
-			if op != DELEGATECALL {
+			if op != DELEGATECALL && op != STATICCALL {
 				value, popErr = stack.PopU64()
 				if popErr != nil {
 					return nil, firstErr(err, popErr)
 				}
+			}
+			if op == CALL && value != 0 && vm.static {
+				return nil, errors.ErrorCodeInvalidStateChange
 			}
 			// inputs
 			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
@@ -995,11 +1010,11 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 						return nil, firstErr(callErr, errors.ErrorCodeUnknownAddress)
 					}
 					ret, callErr = vm.Call(callState, callee, callee, acc.Code(), args, value, &gasLimit)
-				} else if op == DELEGATECALL {
+				} else if op == DELEGATECALL || op == STATICCALL {
 					if acc == nil {
 						return nil, firstErr(callErr, errors.ErrorCodeUnknownAddress)
 					}
-					ret, callErr = vm.DelegateCall(callState, caller, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.DelegateCall(callState, caller, callee, acc.Code(), args, value, &gasLimit, op == STATICCALL)
 				} else {
 					// nil account means we're sending funds to a new account
 					if acc == nil {
@@ -1088,6 +1103,9 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			return nil, errors.ErrorCodeExecutionAborted
 
 		case SELFDESTRUCT: // 0xFF
+			if vm.static {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+			}
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
@@ -1127,7 +1145,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 		case STOP: // 0x00
 			return nil, nil
 
-		case STATICCALL, CREATE2:
+		case CREATE2:
 			return nil, errors.Errorf("%v not yet implemented", op)
 
 		default:

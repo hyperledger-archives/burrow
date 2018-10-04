@@ -710,6 +710,32 @@ func TestSendCall(t *testing.T) {
 	assert.NoError(t, err, "Expected insufficient gas error")
 }
 
+// Test to ensure that contracts called with STATICCALL cannot modify state
+func TestStaticCall(t *testing.T) {
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	inOff, inSize := byte(0x0), byte(0x0) // no call data
+	retOff, retSize := byte(0x0), byte(0x2)
+
+	calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
+		MustSplice(SSTORE, PUSH1, int64(20), return1()))
+
+	callerAccount, _ := makeAccountWithCode(cache, "caller",
+		MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+			inOff, PUSH20, calleeAddress, PUSH1, 0x1, GAS, SUB, STATICCALL, returnWord()))
+
+	_, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
+
+	for _, nestedError := range ourVm.nestedCallErrors {
+		if nestedError.NestedError.ErrorCode() == errors.ErrorCodeInvalidStateChange {
+			err = nestedError.NestedError.ErrorCode()
+			break
+		}
+	}
+	assert.Error(t, err, errors.ErrorCodeInvalidStateChange, "Expected static call violation")
+}
+
 // This test was introduced to cover an issues exposed in our handling of the
 // gas limit passed from caller to callee on various forms of CALL.
 // The idea of this test is to implement a simple DelegateCall in EVM code
