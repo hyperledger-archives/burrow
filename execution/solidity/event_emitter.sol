@@ -8,8 +8,7 @@ contract EventEmitter {
         string german ,
         int64 indexed newDepth,
         int bignum,
-        string indexed hash)
-        anonymous;
+        string indexed hash);
 
     function EmitOne() public {
         emit ManyTypes("Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, "hash");
