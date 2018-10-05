@@ -73,6 +73,7 @@ func newAccount(seed ...byte) *acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -96,6 +97,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestSHL(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -245,6 +247,7 @@ func TestSHL(t *testing.T) {
 }
 
 func TestSHR(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -398,6 +401,7 @@ func TestSHR(t *testing.T) {
 }
 
 func TestSAR(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -570,6 +574,7 @@ func TestSAR(t *testing.T) {
 
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -600,6 +605,7 @@ func TestJumpErr(t *testing.T) {
 
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	st := newAppState()
 	cache := state.NewCache(st)
 	// Create accounts
@@ -640,6 +646,7 @@ func TestSubcurrency(t *testing.T) {
 //This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -673,6 +680,7 @@ func TestRevert(t *testing.T) {
 
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -712,28 +720,58 @@ func TestSendCall(t *testing.T) {
 
 // Test to ensure that contracts called with STATICCALL cannot modify state
 func TestStaticCall(t *testing.T) {
-	cache := state.NewCache(newAppState())
-	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
-
+	fmt.Printf("%s ---\n", t.Name())
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x2)
 
-	calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
-		MustSplice(SSTORE, PUSH1, int64(20), return1()))
+	for _, illegalOp := range []OpCode{SSTORE, LOG0, LOG1, LOG2, LOG3, LOG4, CREATE, CREATE2, SELFDESTRUCT} {
+		cache := state.NewCache(newAppState())
+		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+		calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
+			MustSplice(illegalOp, PUSH1, 0x1, return1()))
+
+		callerAccount, _ := makeAccountWithCode(cache, "caller",
+			MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+				inOff, PUSH20, calleeAddress, PUSH1, 0x1, GAS, SUB, STATICCALL, returnWord()))
+
+		_, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
+
+		for _, nestedError := range ourVm.nestedCallErrors {
+			err = nil
+			if nestedError.NestedError.ErrorCode() == errors.ErrorCodeInvalidStateChange {
+				err = nestedError.NestedError.ErrorCode()
+				break
+			}
+		}
+		assert.Error(t, err, errors.ErrorCodeInvalidStateChange, "Expected static call violation")
+	}
+
+	cache := state.NewCache(newAppState())
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	finalRecipient := newAccount(1)
+	addr := finalRecipient.Address()
+
+	calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee", callContractCode(addr))
 
 	callerAccount, _ := makeAccountWithCode(cache, "caller",
 		MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 			inOff, PUSH20, calleeAddress, PUSH1, 0x1, GAS, SUB, STATICCALL, returnWord()))
 
-	_, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
+	err := calleeAccount.AddToBalance(100000)
+	require.NoError(t, err)
+	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
 
 	for _, nestedError := range ourVm.nestedCallErrors {
+		err = nil
 		if nestedError.NestedError.ErrorCode() == errors.ErrorCodeInvalidStateChange {
 			err = nestedError.NestedError.ErrorCode()
 			break
 		}
 	}
 	assert.Error(t, err, errors.ErrorCodeInvalidStateChange, "Expected static call violation")
+
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
@@ -742,6 +780,7 @@ func TestStaticCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -800,6 +839,7 @@ func TestDelegateCallGas(t *testing.T) {
 }
 
 func TestMemoryBounds(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
@@ -845,6 +885,7 @@ func TestMemoryBounds(t *testing.T) {
 }
 
 func TestMsgSender(t *testing.T) {
+	fmt.Printf("%s ---\n", t.Name())
 	st := newAppState()
 	cache := state.NewCache(st)
 	account1 := newAccount(1, 2, 3)
