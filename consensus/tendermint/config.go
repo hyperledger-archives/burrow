@@ -1,7 +1,10 @@
 package tendermint
 
 import (
+	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	tm_config "github.com/tendermint/tendermint/config"
+	"net/url"
+	"strings"
 )
 
 // Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
@@ -19,6 +22,8 @@ type BurrowTendermintConfig struct {
 	ExternalAddress string
 	Moniker         string
 	TendermintRoot  string
+	// Peers ID or address this node is authorize to sync with
+	AuthorizedPeers string
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -47,8 +52,28 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.Moniker = btc.Moniker
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false
+		conf.FilterPeers = btc.AuthorizedPeers != ""
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""
 	return conf
+}
+
+func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.PeersFilterProvider {
+	var authorizedPeersID, authorizedPeersAddress []string
+
+	authorizedPeersAddrOrID := strings.Split(btc.AuthorizedPeers, ",")
+	for _, authorizedPeerAddrOrID := range authorizedPeersAddrOrID {
+		_, err := url.Parse(authorizedPeerAddrOrID)
+		isNodeAddress := err != nil
+		if isNodeAddress {
+			authorizedPeersAddress = append(authorizedPeersAddress, authorizedPeerAddrOrID)
+		} else {
+			authorizedPeersID = append(authorizedPeersID, authorizedPeerAddrOrID)
+		}
+	}
+
+	return func() ([]string, []string) {
+		return authorizedPeersID, authorizedPeersAddress
+	}
 }
