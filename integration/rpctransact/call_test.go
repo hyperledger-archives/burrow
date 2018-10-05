@@ -283,8 +283,10 @@ func TestLogEvents(t *testing.T) {
 	log := evs[0]
 	var direction string
 	var depth int64
-	err = abi.UnpackEvent(spec.Events["ChangeLevel"], log.Topics, log.Data, &direction, &depth)
+	evAbi := spec.Events["ChangeLevel"]
+	err = abi.UnpackEvent(evAbi, log.Topics, log.Data, &direction, &depth)
 	require.NoError(t, err)
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	assert.Equal(t, int64(18), depth)
 	assert.Equal(t, "Upsie!", direction)
 }
@@ -302,6 +304,8 @@ func TestEventEmitter(t *testing.T) {
 	log := evs[0]
 	evAbi := spec.Events["ManyTypes"]
 	data := abi.GetPackingTypes(evAbi.Inputs)
+	// Check signature
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
 	require.NoError(t, err)
 
@@ -310,6 +314,7 @@ func TestEventEmitter(t *testing.T) {
 	expectedHash := h.Sum(nil)
 	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
 	b := *data[0].(*[]byte)
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	assert.Equal(t, "Downsie!", string(bytes.Trim(b, "\x00")))
 	assert.Equal(t, true, *data[1].(*bool))
 	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
