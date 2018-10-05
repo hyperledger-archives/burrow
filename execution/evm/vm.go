@@ -68,7 +68,7 @@ type VM struct {
 	returnData       []byte
 	debugOpcodes     bool
 	dumpTokens       bool
-	static           bool
+	inStaticCall     bool
 }
 
 func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
@@ -177,9 +177,9 @@ func (vm *VM) Call(callState *state.Cache, caller, callee *acm.MutableAccount, c
 func (vm *VM) DelegateCall(callState *state.Cache, caller acm.Account, callee *acm.MutableAccount, code, input []byte,
 	value uint64, gas *uint64, static bool) (output []byte, err errors.CodedError) {
 
-	if static && !vm.static {
-		vm.static = true
-		defer func() { vm.static = false }()
+	if static && !vm.inStaticCall {
+		vm.inStaticCall = true
+		defer func() { vm.inStaticCall = false }()
 	}
 
 	exception := new(string)
@@ -762,7 +762,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.Debugf("%s {0x%X = 0x%X}\n", callee.Address(), loc, data)
 
 		case SSTORE: // 0x55
-			if vm.static {
+			if vm.inStaticCall {
 				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
 			}
 			loc, data := stack.Pop(), stack.Pop()
@@ -842,7 +842,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			//stack.Print(10)
 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
-			if vm.static {
+			if vm.inStaticCall {
 				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
 			}
 			n := int(op - LOG0)
@@ -864,7 +864,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
-			if vm.static {
+			if vm.inStaticCall {
 				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
 			}
 			vm.returnData = nil
@@ -941,8 +941,8 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 					return nil, firstErr(err, popErr)
 				}
 			}
-			if op == CALL && value != 0 && vm.static {
-				return nil, errors.ErrorCodeInvalidStateChange
+			if op == CALL && value != 0 && vm.inStaticCall {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
 			}
 			// inputs
 			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
@@ -1090,7 +1090,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			return nil, errors.ErrorCodeExecutionAborted
 
 		case SELFDESTRUCT: // 0xFF
-			if vm.static {
+			if vm.inStaticCall {
 				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
 			}
 			addr := stack.Pop()
@@ -1133,6 +1133,9 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 			return nil, nil
 
 		case CREATE2:
+			if vm.inStaticCall {
+				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+			}
 			return nil, errors.Errorf("%v not yet implemented", op)
 
 		default:
