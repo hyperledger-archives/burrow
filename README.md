@@ -44,6 +44,7 @@ See the [install instructions](docs/INSTALL.md).
 1. [Send transactions](docs/quickstart/send-transactions.md)
 1. [Deploy contracts](docs/quickstart/deploy-contracts.md)
 1. [Multiple validators](docs/quickstart/multiple-validators.md)
+1. [Seed nodes](docs/quickstart/seed-nodes.md)
 
 ## Project documentation
 Burrow documentation is available in the [docs](docs/README.md) directory.
