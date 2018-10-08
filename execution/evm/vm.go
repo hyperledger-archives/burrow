@@ -763,7 +763,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case SSTORE: // 0x55
 			if vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			loc, data := stack.Pop(), stack.Pop()
 			if useGasNegative(gas, GasStorageUpdate, &err) {
@@ -843,7 +843,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
 			if vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			n := int(op - LOG0)
 			topics := make([]Word256, n)
@@ -865,7 +865,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case CREATE: // 0xF0
 			if vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			vm.returnData = nil
 
@@ -942,7 +942,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 				}
 			}
 			if op == CALL && value != 0 && vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			// inputs
 			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
@@ -1091,7 +1091,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case SELFDESTRUCT: // 0xFF
 			if vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
@@ -1134,7 +1134,7 @@ func (vm *VM) call(callState *state.Cache, caller acm.Account, callee *acm.Mutab
 
 		case CREATE2:
 			if vm.inStaticCall {
-				return nil, firstErr(err, errors.ErrorCodeInvalidStateChange)
+				return nil, firstErr(err, errors.ErrorCodeIllegalWrite)
 			}
 			return nil, errors.Errorf("%v not yet implemented", op)
 
