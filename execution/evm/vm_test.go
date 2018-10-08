@@ -739,12 +739,12 @@ func TestStaticCall(t *testing.T) {
 
 		for _, nestedError := range ourVm.nestedCallErrors {
 			err = nil
-			if nestedError.NestedError.ErrorCode() == errors.ErrorCodeInvalidStateChange {
+			if nestedError.NestedError.ErrorCode() == errors.ErrorCodeIllegalWrite {
 				err = nestedError.NestedError.ErrorCode()
 				break
 			}
 		}
-		assert.Error(t, err, errors.ErrorCodeInvalidStateChange, "Expected static call violation")
+		assert.Error(t, err, errors.ErrorCodeIllegalWrite, "Expected static call violation")
 	}
 
 	cache := state.NewCache(newAppState())
@@ -765,12 +765,12 @@ func TestStaticCall(t *testing.T) {
 
 	for _, nestedError := range ourVm.nestedCallErrors {
 		err = nil
-		if nestedError.NestedError.ErrorCode() == errors.ErrorCodeInvalidStateChange {
+		if nestedError.NestedError.ErrorCode() == errors.ErrorCodeIllegalWrite {
 			err = nestedError.NestedError.ErrorCode()
 			break
 		}
 	}
-	assert.Error(t, err, errors.ErrorCodeInvalidStateChange, "Expected static call violation")
+	assert.Error(t, err, errors.ErrorCodeIllegalWrite, "Expected static call violation")
 
 }
 
