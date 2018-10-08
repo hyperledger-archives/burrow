@@ -723,6 +723,7 @@ type FunctionSpec struct {
 type EventSpec struct {
 	EventID   EventID
 	Inputs    []Argument
+	Name      string
 	Anonymous bool
 }
 
@@ -731,6 +732,7 @@ type AbiSpec struct {
 	Fallback    FunctionSpec
 	Functions   map[string]FunctionSpec
 	Events      map[string]EventSpec
+	EventsById  map[EventID]EventSpec
 }
 
 type ArgumentJSON struct {
@@ -858,8 +860,9 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 	}
 
 	abiSpec := AbiSpec{
-		Events:    make(map[string]EventSpec),
-		Functions: make(map[string]FunctionSpec),
+		Events:     make(map[string]EventSpec),
+		EventsById: make(map[EventID]EventSpec),
+		Functions:  make(map[string]FunctionSpec),
 	}
 
 	for _, s := range specJ {
@@ -886,8 +889,9 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 					inputs[i].Hashed = true
 				}
 			}
-			ev := EventSpec{EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
-			abiSpec.Events[s.Name] = ev
+			ev := EventSpec{Name: s.Name, EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
+			abiSpec.Events[ev.Name] = ev
+			abiSpec.EventsById[ev.EventID] = ev
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
