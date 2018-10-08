@@ -40,14 +40,15 @@ Go version | Go1.10 or higher
 See the [install instructions](docs/INSTALL.md).
 
 ## Quick Start
-1. [Single full node](docs/quickstart/single-full-node.md)
-1. [Send transactions](docs/quickstart/send-transactions.md)
-1. [Deploy contracts](docs/quickstart/deploy-contracts.md)
-1. [Multiple validators](docs/quickstart/multiple-validators.md)
-1. [Seed nodes](docs/quickstart/seed-nodes.md)
+1. [Single full node](docs/quickstart/single-full-node.md) - start your first chain
+1. [Send transactions](docs/quickstart/send-transactions.md) - how to communicate with your Burrow chain
+1. [Deploy contracts](docs/quickstart/deploy-contracts.md) - interact with the Ethereum Virtual Machine
+1. [Multiple validators](docs/quickstart/multiple-validators.md) - advanced consensus setup
+1. [Seed nodes](docs/quickstart/seed-nodes.md) - add new node dynamically
+1. [Kubernetes](https://github.com/helm/charts/tree/master/stable/burrow) - bootstraps a burrow network on a Kubernetes cluster
 
 ## Project documentation
-Burrow documentation is available in the [docs](docs/README.md) directory.
+Burrow getting started documentation is available in the [docs](docs/README.md) directory and in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
 
 ## Contribute
 
