@@ -710,14 +710,20 @@ const FunctionIDSize = 4
 
 type FunctionID [FunctionIDSize]byte
 
+const EventIDSize = 32
+
+type EventID [EventIDSize]byte
+
 type FunctionSpec struct {
 	FunctionID FunctionID
 	Inputs     []Argument
 	Outputs    []Argument
 }
 
-type Event struct {
+type EventSpec struct {
+	EventID   EventID
 	Inputs    []Argument
+	Name      string
 	Anonymous bool
 }
 
@@ -725,7 +731,8 @@ type AbiSpec struct {
 	Constructor FunctionSpec
 	Fallback    FunctionSpec
 	Functions   map[string]FunctionSpec
-	Events      map[string]Event
+	Events      map[string]EventSpec
+	EventsById  map[EventID]EventSpec
 }
 
 type ArgumentJSON struct {
@@ -839,6 +846,9 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 			args[i].EVM = EVMBytes{M: 0}
 		case "string":
 			args[i].EVM = EVMString{}
+		default:
+			// Assume it is a type of Contract
+			args[i].EVM = EVMAddress{}
 		}
 	}
 
@@ -849,12 +859,21 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 	var specJ []AbiSpecJSON
 	err := json.Unmarshal(specBytes, &specJ)
 	if err != nil {
-		return nil, err
+		// The abi spec file might a bin file, with the Abi under the Abi field in json
+		var binFile struct {
+			Abi []AbiSpecJSON
+		}
+		err = json.Unmarshal(specBytes, &binFile)
+		if err != nil {
+			return nil, err
+		}
+		specJ = binFile.Abi
 	}
 
 	abiSpec := AbiSpec{
-		Events:    make(map[string]Event),
-		Functions: make(map[string]FunctionSpec),
+		Events:     make(map[string]EventSpec),
+		EventsById: make(map[EventID]EventSpec),
+		Functions:  make(map[string]FunctionSpec),
 	}
 
 	for _, s := range specJ {
@@ -872,6 +891,8 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 			if err != nil {
 				return nil, err
 			}
+			// Get signature before we deal with hashed types
+			sig := Signature(s.Name, inputs)
 			for i := range inputs {
 				if inputs[i].Indexed && inputs[i].EVM.isDynamic() {
 					// For Dynamic types, the hash is stored in stead
@@ -879,7 +900,9 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 					inputs[i].Hashed = true
 				}
 			}
-			abiSpec.Events[s.Name] = Event{Inputs: inputs, Anonymous: s.Anonymous}
+			ev := EventSpec{Name: s.Name, EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
+			abiSpec.Events[ev.Name] = ev
+			abiSpec.EventsById[ev.EventID] = ev
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
@@ -905,6 +928,32 @@ func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
 	}
 
 	return ReadAbiSpec(specBytes)
+}
+
+// MergeAbiSpec takes multiple AbiSpecs and merges them into once structure. Note that
+// the same function name or event name can occur in different abis, so there might be
+// some information loss.
+func MergeAbiSpec(abiSpec []*AbiSpec) *AbiSpec {
+	newSpec := AbiSpec{
+		Events:     make(map[string]EventSpec),
+		EventsById: make(map[EventID]EventSpec),
+		Functions:  make(map[string]FunctionSpec),
+	}
+
+	for _, s := range abiSpec {
+		for n, f := range s.Functions {
+			newSpec.Functions[n] = f
+		}
+
+		// Different Abis can have the Event name, but with a different signature
+		// Loop over the signatures, as these are less likely to have collisions
+		for _, e := range s.EventsById {
+			newSpec.Events[e.Name] = e
+			newSpec.EventsById[e.EventID] = e
+		}
+	}
+
+	return &newSpec
 }
 
 func EVMTypeFromReflect(v reflect.Type) Argument {
@@ -989,9 +1038,9 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 	return &s
 }
 
-func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
-	sig := functionName + "("
-	for i, a := range functionSpec.Inputs {
+func Signature(name string, args []Argument) (sig string) {
+	sig = name + "("
+	for i, a := range args {
 		if i > 0 {
 			sig += ","
 		}
@@ -1005,6 +1054,11 @@ func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
 		}
 	}
 	sig += ")"
+	return
+}
+
+func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
+	sig := Signature(functionName, functionSpec.Inputs)
 	functionSpec.FunctionID = GetFunctionID(sig)
 }
 
@@ -1016,6 +1070,17 @@ func GetFunctionID(signature string) (id FunctionID) {
 	hash := sha3.NewKeccak256()
 	hash.Write([]byte(signature))
 	copy(id[:], hash.Sum(nil)[:4])
+	return
+}
+
+func (fs EventID) Bytes() []byte {
+	return fs[:]
+}
+
+func GetEventID(signature string) (id EventID) {
+	hash := sha3.NewKeccak256()
+	hash.Write([]byte(signature))
+	copy(id[:], hash.Sum(nil))
 	return
 }
 
@@ -1033,7 +1098,7 @@ func UnpackRevert(data []byte) (message *string, err error) {
 /*
  * Given a eventSpec, get all the fields (topic fields or not)
  */
-func UnpackEvent(eventSpec Event, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
+func UnpackEvent(eventSpec EventSpec, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
 	// First unpack the topic fields
 	topicIndex := 0
 	if !eventSpec.Anonymous {
