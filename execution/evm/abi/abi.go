@@ -723,6 +723,7 @@ type FunctionSpec struct {
 type EventSpec struct {
 	EventID   EventID
 	Inputs    []Argument
+	Name      string
 	Anonymous bool
 }
 
@@ -731,6 +732,7 @@ type AbiSpec struct {
 	Fallback    FunctionSpec
 	Functions   map[string]FunctionSpec
 	Events      map[string]EventSpec
+	EventsById  map[EventID]EventSpec
 }
 
 type ArgumentJSON struct {
@@ -844,6 +846,9 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 			args[i].EVM = EVMBytes{M: 0}
 		case "string":
 			args[i].EVM = EVMString{}
+		default:
+			// Assume it is a type of Contract
+			args[i].EVM = EVMAddress{}
 		}
 	}
 
@@ -854,12 +859,21 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 	var specJ []AbiSpecJSON
 	err := json.Unmarshal(specBytes, &specJ)
 	if err != nil {
-		return nil, err
+		// The abi spec file might a bin file, with the Abi under the Abi field in json
+		var binFile struct {
+			Abi []AbiSpecJSON
+		}
+		err = json.Unmarshal(specBytes, &binFile)
+		if err != nil {
+			return nil, err
+		}
+		specJ = binFile.Abi
 	}
 
 	abiSpec := AbiSpec{
-		Events:    make(map[string]EventSpec),
-		Functions: make(map[string]FunctionSpec),
+		Events:     make(map[string]EventSpec),
+		EventsById: make(map[EventID]EventSpec),
+		Functions:  make(map[string]FunctionSpec),
 	}
 
 	for _, s := range specJ {
@@ -886,8 +900,9 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 					inputs[i].Hashed = true
 				}
 			}
-			ev := EventSpec{EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
-			abiSpec.Events[s.Name] = ev
+			ev := EventSpec{Name: s.Name, EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
+			abiSpec.Events[ev.Name] = ev
+			abiSpec.EventsById[ev.EventID] = ev
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
@@ -913,6 +928,32 @@ func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
 	}
 
 	return ReadAbiSpec(specBytes)
+}
+
+// MergeAbiSpec takes multiple AbiSpecs and merges them into once structure. Note that
+// the same function name or event name can occur in different abis, so there might be
+// some information loss.
+func MergeAbiSpec(abiSpec []*AbiSpec) *AbiSpec {
+	newSpec := AbiSpec{
+		Events:     make(map[string]EventSpec),
+		EventsById: make(map[EventID]EventSpec),
+		Functions:  make(map[string]FunctionSpec),
+	}
+
+	for _, s := range abiSpec {
+		for n, f := range s.Functions {
+			newSpec.Functions[n] = f
+		}
+
+		// Different Abis can have the Event name, but with a different signature
+		// Loop over the signatures, as these are less likely to have collisions
+		for _, e := range s.EventsById {
+			newSpec.Events[e.Name] = e
+			newSpec.EventsById[e.EventID] = e
+		}
+	}
+
+	return &newSpec
 }
 
 func EVMTypeFromReflect(v reflect.Type) Argument {

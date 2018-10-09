@@ -1,7 +1,12 @@
 # Hyperledger Burrow
 
-|[![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow) | Linux |
-|---|-------|
+[![version](https://img.shields.io/github/tag/hyperledger/burrow.svg)](https://github.com/hyperledger/burrow/releases/latest)
+[![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
+[![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](LICENSE.md)
+[![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
+
+Branch    | Linux
+----------|------
 | Master | [![Circle CI](https://circleci.com/gh/hyperledger/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/master) |
 | Develop | [![Circle CI (develop)](https://circleci.com/gh/hyperledger/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/develop) |
 
@@ -20,349 +25,30 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 - **Application Binary Interface (ABI):** Transactions need to be formulated in a binary format that can be processed by the blockchain node. Current tooling provides functionality to compile, deploy and link solidity smart contracts and formulate transactions to call smart contracts on the chain.
 - **API Gateway:** Burrow exposes REST and JSON-RPC endpoints to interact with the blockchain network and the application state through broadcasting transactions, or querying the current state of the application. Websockets allow subscribing to events, which is particularly valuable as the consensus engine and smart contract application can give unambiguously finalised results to transactions within one blocktime of about one second.
 
-## Project documentation and Roadmap
+## Project Roadmap
 
 Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/projects/burrow).
 
+## Minimum requirements
+
+Requirement|Notes
+---|---
+Go version | Go1.10 or higher
+
 ## Installation
 
-- [Install go](https://golang.org/doc/install) version 1.10 or above and have `$GOPATH` set
-
-```
-go get github.com/hyperledger/burrow
-cd github.com/hyperledger/burrow
-make build
-```
-
-This will build the `burrow` and `burrow-client` binaries and put them in the `bin/` directory. They can be executed from there or put wherever is convenient.
-
-You can also install `burrow` into `$GOPATH/bin` with `make install_burrow`,
-
-## Usage
-
-The end result will be a `burrow.toml` that will be read in from your current working directory when starting `burrow`.
-
-### Configuration
-
-#### Configure Burrow
-The quick-and-dirty one-liner looks like:
-
-```shell
-# Read spec on stdin
-burrow spec -p1 -f1 | burrow configure -s- > burrow.toml
-```
-
-which translates into:
-
-```shell
-# This is a place we can store config files and burrow's working directory '.burrow'
-mkdir chain_dir && cd chain_dir
-burrow spec --participant-accounts=1 --full-accounts=1 > genesis-spec.json
-burrow configure --genesis-spec=genesis-spec.json > burrow.toml
-```
-#### Run Burrow
-Once the `burrow.toml` has been created, we run:
-
-```
-# To select our validator address by index in the GenesisDoc
-burrow start --validator-index=0
-# Or to select based on address directly (substituting the example address below with your validator's):
-burrow start --validator-address=BE584820DC904A55449D7EB0C97607B40224B96E
-```
-
-and the logs will start streaming through.
-
-If you would like to reset your node, you can just delete its working directory with `rm -rf .burrow`. In the context of a
-multi-node chain it will resync with peers, otherwise it will restart from height 0.
-
-### Logging
-
-Logging is highly configurable through the `burrow.toml` `[logging]` section. Each log line is a list of key-value pairs that flows from the root sink through possible child sinks. Each sink can have an output, a transform, and sinks that it outputs to. Below is a more involved example than the one appearing in the default generated config of what you can configure:
-
-```toml
-# This is a top level config section within the main Burrow config
-[logging]
-  # All log lines are sent to the root sink from all sources
-  [logging.root_sink]
-    # We define two child sinks that each receive all log lines
-    [[logging.root_sink.sinks]]
-      # We send all output to stderr
-      [logging.root_sink.sinks.output]
-        output_type = "stderr"
-
-    [[logging.root_sink.sinks]]
-      # But for the second sink we define a transform that filters log lines from Tendermint's p2p module
-      [logging.root_sink.sinks.transform]
-        transform_type = "filter"
-        filter_mode = "exclude_when_all_match"
-
-        [[logging.root_sink.sinks.transform.predicates]]
-          key_regex = "module"
-          value_regex = "p2p"
-
-        [[logging.root_sink.sinks.transform.predicates]]
-          key_regex = "captured_logging_source"
-          value_regex = "tendermint_log15"
-
-      # The child sinks of this filter transform sink are syslog and file and will omit log lines originating from p2p
-      [[logging.root_sink.sinks.sinks]]
-        [logging.root_sink.sinks.sinks.output]
-          output_type = "syslog"
-          url = ""
-          tag = "Burrow-network"
-
-      [[logging.root_sink.sinks.sinks]]
-        [logging.root_sink.sinks.sinks.output]
-          output_type = "file"
-          path = "/var/log/burrow-network.log"
-```
-## Deploy Contracts
-
-Now that the burrow node is running, we can deploy contracts.
-
-For this step, we need two things: one or more solidity contracts, and an `deploy.yaml`.
-
-Let's take a simple example, found in [this directory](tests/jobs_fixtures/app06-deploy_basic_contract_and_different_solc_types_packed_unpacked/).
-
-The `deploy.yaml` should look like:
-
-```
-jobs:
-
-- name: deployStorageK
-  deploy:
-    contract: storage.sol
-
-- name: setStorageBaseBool
-  set:
-    val: "true"
-
-- name: setStorageBool
-  call:
-    destination: $deployStorageK
-    function: setBool
-    data: [$setStorageBaseBool]
-
-- name: queryStorageBool
-  query-contract:
-    destination: $deployStorageK
-    function: getBool
-
-- name: assertStorageBool
-  assert:
-    key: $queryStorageBool
-    relation: eq
-    val: $setStorageBaseBool
-
-# tests string bools: #71
-- name: setStorageBool2
-  call:
-    destination: $deployStorageK
-    function: setBool2
-    data: [true]
-
-- name: queryStorageBool2
-  query-contract:
-    destination: $deployStorageK
-    function: getBool2
-
-- name: assertStorageBool2
-  assert:
-    key: $queryStorageBool2
-    relation: eq
-    val: "true"
-
-- name: setStorageBaseInt
-  set:
-    val: 50000
-
-- name: setStorageInt
-  call:
-    destination: $deployStorageK
-    function: setInt
-    data: [$setStorageBaseInt]
-
-- name: queryStorageInt
-  query-contract:
-    destination: $deployStorageK
-    function: getInt
-
-- name: assertStorageInt
-  assert:
-    key: $queryStorageInt
-    relation: eq
-    val: $setStorageBaseInt
-
-- name: setStorageBaseUint
-  set:
-    val: 9999999
-
-- name: setStorageUint
-  call:
-    destination: $deployStorageK
-    function: setUint
-    data: [$setStorageBaseUint]
-
-- name: queryStorageUint
-  query-contract:
-    destination: $deployStorageK
-    function: getUint
-
-- name: assertStorageUint
-  assert:
-    key: $queryStorageUint
-    relation: eq
-    val: $setStorageBaseUint
-
-- name: setStorageBaseAddress
-  set:
-    val: "1040E6521541DAB4E7EE57F21226DD17CE9F0FB7"
-
-- name: setStorageAddress
-  call:
-    destination: $deployStorageK
-    function: setAddress
-    data: [$setStorageBaseAddress]
-
-- name: queryStorageAddress
-  query-contract:
-    destination: $deployStorageK
-    function: getAddress
-
-- name: assertStorageAddress
-  assert:
-    key: $queryStorageAddress
-    relation: eq
-    val: $setStorageBaseAddress
-
-- name: setStorageBaseBytes
-  set:
-    val: marmatoshi
-
-- name: setStorageBytes
-  call:
-    destination: $deployStorageK
-    function: setBytes
-    data: [$setStorageBaseBytes]
-
-- name: queryStorageBytes
-  query-contract:
-    destination: $deployStorageK
-    function: getBytes
-
-- name: assertStorageBytes
-  assert:
-    key: $queryStorageBytes
-    relation: eq
-    val: $setStorageBaseBytes
-
-- name: setStorageBaseString
-  set:
-    val: nakaburrow
-
-- name: setStorageString
-  call:
-    destination: $deployStorageK
-    function: setString
-    data: [$setStorageBaseString]
-
-- name: queryStorageString
-  query-contract:
-    destination: $deployStorageK
-    function: getString
-
-- name: assertStorageString
-  assert:
-    key: $queryStorageString
-    relation: eq
-    val: $setStorageBaseString
-```
-
-while our Solidity contract (`storage.sol`) looks like:
-
-```
-pragma solidity >=0.0.0;
-
-contract SimpleStorage {
-  bool storedBool;
-  bool storedBool2;
-  int storedInt;
-  uint storedUint;
-  address storedAddress;
-  bytes32 storedBytes;
-  string storedString;
-
-  function setBool(bool x) {
-    storedBool = x;
-  }
-
-  function getBool() constant returns (bool retBool) {
-    return storedBool;
-  }
-
-  function setBool2(bool x) {
-    storedBool2 = x;
-  }
-
-  function getBool2() constant returns (bool retBool) {
-    return storedBool2;
-  }
-
-  function setInt(int x) {
-    storedInt = x;
-  }
-
-  function getInt() constant returns (int retInt) {
-    return storedInt;
-  }
-
-  function setUint(uint x) {
-    storedUint = x;
-  }
-
-  function getUint() constant returns (uint retUint) {
-    return storedUint;
-  }
-
-  function setAddress(address x) {
-    storedAddress = x;
-  }
-
-  function getAddress() constant returns (address retAddress) {
-    return storedAddress;
-  }
-
-  function setBytes(bytes32 x) {
-    storedBytes = x;
-  }
-
-  function getBytes() constant returns (bytes32 retBytes) {
-    return storedBytes;
-  }
-
-  function setString(string x) {
-    storedString = x;
-  }
-
-  function getString() constant returns (string retString) {
-    return storedString;
-  }
-}
-```
-
-Both files (`deploy.yaml` & `storage.sol`) should be in the same directory with no other yaml or sol files.
-
-From inside that directory, we are ready to deploy.
-
-```
-burrow deploy --address=F71831847564B7008AD30DD56336D9C42787CF63
-```
-
-where you should replace the `--address` field with the `ValidatorAddress` at the top of your `burrow.toml`.
-
-That's it! You've succesfully deployed (and tested) a Soldity contract to a Burrow node.
-
-Note - that to redeploy the burrow chain later, you will need the same genesis-spec.json and burrow.toml files - so keep hold of them!
+See the [install instructions](docs/INSTALL.md).
+
+## Quick Start
+1. [Single full node](docs/quickstart/single-full-node.md) - start your first chain
+1. [Send transactions](docs/quickstart/send-transactions.md) - how to communicate with your Burrow chain
+1. [Deploy contracts](docs/quickstart/deploy-contracts.md) - interact with the Ethereum Virtual Machine
+1. [Multiple validators](docs/quickstart/multiple-validators.md) - advanced consensus setup
+1. [Seed nodes](docs/quickstart/seed-nodes.md) - add new node dynamically
+1. [Kubernetes](https://github.com/helm/charts/tree/master/stable/burrow) - bootstraps a burrow network on a Kubernetes cluster
+
+## Project documentation
+Burrow getting started documentation is available in the [docs](docs/README.md) directory and in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
 
 ## Contribute
 
@@ -375,7 +61,7 @@ You can find us on:
 
 ## Future work
 
-For some (slightly outdated) ideas on future work, see the [proposals document](./docs/PROPOSALS.md).
+For some (slightly outdated) ideas on future work, see the [proposals document](docs/PROPOSALS.md).
 
 ## License
 
