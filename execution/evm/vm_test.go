@@ -17,6 +17,7 @@ package evm
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"strconv"
 	"testing"
 	"time"
@@ -88,7 +89,7 @@ func TestVM(t *testing.T) {
 		MSTORE, PUSH1, 0x05, JUMP, JUMPDEST)
 
 	start := time.Now()
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	if err != nil {
@@ -107,7 +108,7 @@ func TestSHL(t *testing.T) {
 
 	//Shift left 0
 	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SHL, return1())
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value := []uint8([]byte{0x1})
 	expected := LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -121,7 +122,7 @@ func TestSHL(t *testing.T) {
 	//Alternative shift left 0
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -135,7 +136,7 @@ func TestSHL(t *testing.T) {
 
 	//Shift left 1
 	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x2})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -149,7 +150,7 @@ func TestSHL(t *testing.T) {
 	//Alternative shift left 1
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE})
 
@@ -164,7 +165,7 @@ func TestSHL(t *testing.T) {
 	//Alternative shift left 1
 	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE})
 
@@ -178,7 +179,7 @@ func TestSHL(t *testing.T) {
 
 	//Shift left 255
 	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0xFF, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x80})
 	expected = RightPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -192,7 +193,7 @@ func TestSHL(t *testing.T) {
 	//Alternative shift left 255
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x80})
 	expected = RightPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -205,7 +206,7 @@ func TestSHL(t *testing.T) {
 
 	//Shift left 256 (overflow)
 	bytecode = MustSplice(PUSH1, 0x01, PUSH2, 0x01, 0x00, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -220,7 +221,7 @@ func TestSHL(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SHL,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -233,7 +234,7 @@ func TestSHL(t *testing.T) {
 
 	//Shift left 257 (overflow)
 	bytecode = MustSplice(PUSH1, 0x01, PUSH2, 0x01, 0x01, SHL, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -257,7 +258,7 @@ func TestSHR(t *testing.T) {
 
 	//Shift right 0
 	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SHR, return1())
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value := []uint8([]byte{0x1})
 	expected := LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -271,7 +272,7 @@ func TestSHR(t *testing.T) {
 	//Alternative shift right 0
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -285,7 +286,7 @@ func TestSHR(t *testing.T) {
 
 	//Shift right 1
 	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -299,7 +300,7 @@ func TestSHR(t *testing.T) {
 	//Alternative shift right 1
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0x01, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x40})
 	expected = RightPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -313,7 +314,7 @@ func TestSHR(t *testing.T) {
 	//Alternative shift right 1
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -328,7 +329,7 @@ func TestSHR(t *testing.T) {
 	//Shift right 255
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0xFF, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x1})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -342,7 +343,7 @@ func TestSHR(t *testing.T) {
 	//Alternative shift right 255
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SHR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x1})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -357,7 +358,7 @@ func TestSHR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x00, SHR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -372,7 +373,7 @@ func TestSHR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SHR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -387,7 +388,7 @@ func TestSHR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x01, SHR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -411,7 +412,7 @@ func TestSAR(t *testing.T) {
 
 	//Shift arith right 0
 	bytecode := MustSplice(PUSH1, 0x01, PUSH1, 0x00, SAR, return1())
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value := []uint8([]byte{0x1})
 	expected := LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -425,7 +426,7 @@ func TestSAR(t *testing.T) {
 	//Alternative arith shift right 0
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x00, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -439,7 +440,7 @@ func TestSAR(t *testing.T) {
 
 	//Shift arith right 1
 	bytecode = MustSplice(PUSH1, 0x01, PUSH1, 0x01, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -453,7 +454,7 @@ func TestSAR(t *testing.T) {
 	//Alternative shift arith right 1
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0x01, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0xc0})
 	expected = RightPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -467,7 +468,7 @@ func TestSAR(t *testing.T) {
 	//Alternative shift arith right 1
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0x01, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -482,7 +483,7 @@ func TestSAR(t *testing.T) {
 	//Shift arith right 255
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH1, 0xFF, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -497,7 +498,7 @@ func TestSAR(t *testing.T) {
 	//Alternative shift arith right 255
 	bytecode = MustSplice(PUSH32, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -512,7 +513,7 @@ func TestSAR(t *testing.T) {
 	//Alternative shift arith right 255
 	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH1, 0xFF, SAR, return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = RightPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -527,7 +528,7 @@ func TestSAR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x00, SAR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -543,7 +544,7 @@ func TestSAR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, PUSH2, 0x01, 0x00, SAR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	value = []uint8([]byte{0x00})
 	expected = LeftPadBytes(value, 32)
 	assert.Equal(t, expected, output)
@@ -558,7 +559,7 @@ func TestSAR(t *testing.T) {
 	bytecode = MustSplice(PUSH32, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, PUSH2, 0x01, 0x01, SAR,
 		return1())
-	output, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	expected = []uint8([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 
@@ -589,7 +590,7 @@ func TestJumpErr(t *testing.T) {
 	var err error
 	ch := make(chan struct{})
 	go func() {
-		_, err = ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+		_, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 		ch <- struct{}{}
 	}()
 	tick := time.NewTicker(time.Second * 2)
@@ -636,7 +637,7 @@ func TestSubcurrency(t *testing.T) {
 		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, RETURN)
 
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
-	output, err := ourVm.Call(cache, account1, account2, bytecode, data, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, data, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	if err != nil {
 		t.Fatal(err)
@@ -668,7 +669,7 @@ func TestRevert(t *testing.T) {
 	0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, REVERT)*/
 
-	output, cErr := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, cErr := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	assert.Error(t, cErr, "Expected execution reverted error")
 
 	storageVal, err := cache.GetStorage(account1.Address(), LeftPadWord256(key))
@@ -726,7 +727,8 @@ func TestStaticCall(t *testing.T) {
 
 	for _, illegalOp := range []OpCode{SSTORE, LOG0, LOG1, LOG2, LOG3, LOG4, CREATE, CREATE2, SELFDESTRUCT} {
 		cache := state.NewCache(newAppState())
-		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+		logger2, _ := lifecycle.NewStdErrLogger()
+		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger2, DebugOpcodes)
 
 		calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
 			MustSplice(illegalOp, PUSH1, 0x1, return1()))
@@ -744,7 +746,8 @@ func TestStaticCall(t *testing.T) {
 				break
 			}
 		}
-		assert.Error(t, err, errors.ErrorCodeIllegalWrite, "Expected static call violation")
+		assertErrorCode(t, errors.ErrorCodeIllegalWrite, err, "expected static call violation")
+		t.FailNow()
 	}
 
 	cache := state.NewCache(newAppState())
@@ -770,8 +773,7 @@ func TestStaticCall(t *testing.T) {
 			break
 		}
 	}
-	assert.Error(t, err, errors.ErrorCodeIllegalWrite, "Expected static call violation")
-
+	assertErrorCode(t, errors.ErrorCodeIllegalWrite, err, "expected static call violation")
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
@@ -850,7 +852,7 @@ func TestMemoryBounds(t *testing.T) {
 	gas := uint64(100000)
 	// This attempts to store a value at the memory boundary and return it
 	word := One256
-	output, err := ourVm.call(cache, caller, callee,
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee,
 		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
@@ -858,7 +860,7 @@ func TestMemoryBounds(t *testing.T) {
 
 	// Same with number
 	word = Int64ToWord256(232234234432)
-	output, err = ourVm.call(cache, caller, callee,
+	output, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee,
 		MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
@@ -869,7 +871,7 @@ func TestMemoryBounds(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(cache, caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, word.Bytes(), output)
@@ -879,7 +881,7 @@ func TestMemoryBounds(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
-	output, err = ourVm.call(cache, caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
+	output, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
 }
@@ -919,7 +921,7 @@ func TestMsgSender(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
-	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
+	contractCode, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, code, code, 0, &gas)
 	require.NoError(t, err)
 
 	// Not needed for this test (since contract code is passed as argument to vm), but this is what an execution
@@ -929,7 +931,7 @@ func TestMsgSender(t *testing.T) {
 	// Input is the function hash of `get()`
 	input, err := hex.DecodeString("6d4ce63c")
 
-	output, err := ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, contractCode, input, 0, &gas)
 	require.NoError(t, err)
 
 	assert.Equal(t, account1.Address().Word256().Bytes(), output)
@@ -950,7 +952,7 @@ func TestInvalid(t *testing.T) {
 		0x67, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
 
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	assert.Equal(t, errors.ErrorCodeExecutionAborted, err.ErrorCode())
 	t.Logf("Output: %v Error: %v\n", output, err)
 }
@@ -983,7 +985,7 @@ func TestReturnDataSize(t *testing.T) {
 
 	expected := LeftPadBytes([]byte{0x0E}, 32)
 
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 
 	assert.Equal(t, expected, output)
 
@@ -1023,7 +1025,7 @@ func TestReturnDataCopy(t *testing.T) {
 
 	expected := []byte{0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x20, 0x6D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65}
 
-	output, err := ourVm.Call(cache, account1, account2, bytecode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 
 	assert.Equal(t, expected, output)
 
@@ -1095,14 +1097,13 @@ func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee *acm.Mutable
 
 // Subscribes to an AccCall, runs the vm, returns the output and any direct
 // exception
-func runVM(sink EventSink, vmCache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount,
+func runVM(sink EventSink, cache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount,
 	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
 
 	fmt.Printf("subscribe to %s\n", subscribeAddr)
 
-	ourVm.SetEventSink(sink)
 	start := time.Now()
-	output, err := ourVm.Call(vmCache, caller, callee, contractCode, []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, sink, caller, callee, contractCode, []byte{}, 0, &gas)
 	fmt.Printf("Output: %v Error: %v\n", output, err)
 	fmt.Println("Call took:", time.Since(start))
 	return output, err
@@ -1341,4 +1342,10 @@ func PermFlagFromString(t *testing.T, binaryString string) permission.PermFlag {
 	permFlag, err := strconv.ParseUint(binaryString, 2, 64)
 	require.NoError(t, err)
 	return permission.PermFlag(permFlag)
+}
+
+func assertErrorCode(t *testing.T, code errors.Code, err error, msgAndArgs ...interface{}) {
+	if assert.Error(t, err, msgAndArgs...) {
+		assert.Equal(t, code, errors.AsException(err).Code, "expected error code %v", code)
+	}
 }

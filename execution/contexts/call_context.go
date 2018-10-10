@@ -144,7 +144,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 		callee  *acm.MutableAccount = nil // initialized below
 		code    []byte              = nil
 		ret     []byte              = nil
-		txCache                     = state.NewCache(ctx.StateWriter, state.Name("TxCache"))
+		txCache                     = state.NewCache(ctx.StateWriter, state.NameOption("TxCache"))
 		params                      = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
@@ -194,9 +194,8 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 	txCache.UpdateAccount(caller)
 	txCache.UpdateAccount(callee)
 	vmach := evm.NewVM(params, caller.Address(), ctx.txe.Envelope.Tx, ctx.Logger, ctx.VMOptions...)
-	vmach.SetEventSink(ctx.txe)
 	// NOTE: Call() transfers the value from caller to callee iff call succeeds.
-	ret, exception := vmach.Call(txCache, caller, callee, code, ctx.tx.Data, value, &gas)
+	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 	if exception != nil {
 		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 		ctx.Logger.InfoMsg("Error on execution",
