@@ -123,7 +123,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 		runCall:      runCall,
 		state:        backend,
 		blockchain:   blockchain,
-		stateCache:   state.NewCache(backend, state.Name(name)),
+		stateCache:   state.NewCache(backend, state.NameOption(name)),
 		nameRegCache: names.NewCache(backend),
 		publisher:    publisher,
 		blockExecution: &exec.BlockExecution{
