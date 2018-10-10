@@ -25,14 +25,15 @@ func CallSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, address c
 		Logger:      logger,
 	}
 
-	txe := exec.NewTxExecution(txs.Enclose(tip.ChainID(), &payload.CallTx{
+	txEnv := txs.Enclose(tip.ChainID(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: fromAddress,
 		},
 		Address:  &address,
 		Data:     data,
 		GasLimit: contexts.GasLimit,
-	}))
+	})
+	txe := exec.NewTxExecution(txEnv, txEnv.Tx)
 	err := exe.Execute(txe)
 	if err != nil {
 		return nil, err

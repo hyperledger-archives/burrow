@@ -32,6 +32,8 @@ const (
 	Bond // 32
 	// Name permits manipulation of the name registry by allowing an account to issue a NameTx
 	Name // 64
+	// Propose permits creating proposals and voting for them
+	Proposal // 128
 
 	// Moderator permissions.
 	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
@@ -45,11 +47,11 @@ const (
 	AddRole
 	RemoveRole
 
-	NumPermissions uint = 14 // NOTE Adjust this too. We can support upto 64
+	NumPermissions uint = 15 // NOTE Adjust this too. We can support upto 64
 
 	TopPermFlag      PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     PermFlag = TopPermFlag | (TopPermFlag - 1)
-	DefaultPermFlags PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole
+	DefaultPermFlags PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole | Proposal
 
 	// Chain permissions strings
 	RootString           string = "root"
@@ -59,6 +61,7 @@ const (
 	CreateAccountString         = "createAccount"
 	BondString                  = "bond"
 	NameString                  = "name"
+	ProposalString              = "proposal"
 
 	// Moderator permissions strings
 	HasBaseString    = "hasBase"
@@ -101,6 +104,8 @@ func (pf PermFlag) String() string {
 		return BondString
 	case Name:
 		return NameString
+	case Proposal:
+		return ProposalString
 	case HasBase:
 		return HasBaseString
 	case SetBase:
@@ -140,6 +145,8 @@ func PermStringToFlag(perm string) (PermFlag, error) {
 		return Bond, nil
 	case NameString:
 		return Name, nil
+	case ProposalString:
+		return Proposal, nil
 	case HasBaseString, "hasbase", "has_base":
 		return HasBase, nil
 	case SetBaseString, "setbase", "set_base":

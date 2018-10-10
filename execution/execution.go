@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
@@ -49,6 +50,7 @@ type Context interface {
 type ExecutorState interface {
 	Update(updater func(ws Updatable) error) (hash []byte, err error)
 	names.Reader
+	proposal.Reader
 	state.IterableReader
 }
 
@@ -72,16 +74,17 @@ type BatchCommitter interface {
 
 type executor struct {
 	sync.RWMutex
-	runCall        bool
-	blockchain     *bcm.Blockchain
-	state          ExecutorState
-	stateCache     *state.Cache
-	nameRegCache   *names.Cache
-	publisher      event.Publisher
-	blockExecution *exec.BlockExecution
-	logger         *logging.Logger
-	vmOptions      []func(*evm.VM)
-	contexts       map[payload.Type]Context
+	runCall          bool
+	blockchain       *bcm.Blockchain
+	state            ExecutorState
+	stateCache       *state.Cache
+	nameRegCache     *names.Cache
+	proposalRegCache *proposal.Cache
+	publisher        event.Publisher
+	blockExecution   *exec.BlockExecution
+	logger           *logging.Logger
+	vmOptions        []func(*evm.VM)
+	contexts         map[payload.Type]Context
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -120,12 +123,13 @@ func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitte
 func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 	exe := &executor{
-		runCall:      runCall,
-		state:        backend,
-		blockchain:   blockchain,
-		stateCache:   state.NewCache(backend, state.Named(name)),
-		nameRegCache: names.NewCache(backend),
-		publisher:    publisher,
+		runCall:          runCall,
+		state:            backend,
+		blockchain:       blockchain,
+		stateCache:       state.NewCache(backend, state.Named(name)),
+		nameRegCache:     names.NewCache(backend),
+		proposalRegCache: proposal.NewCache(backend),
+		publisher:        publisher,
 		blockExecution: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
 		},
@@ -156,6 +160,12 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 		payload.TypePermissions: &contexts.PermissionsContext{
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
+			Logger:      exe.logger,
+		},
+		payload.TypeProposal: &contexts.ProposalContext{
+			Tip:         blockchain,
+			StateWriter: exe.stateCache,
+			ProposalReg: exe.proposalRegCache,
 			Logger:      exe.logger,
 		},
 	}
@@ -192,7 +202,8 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
-		txe := exe.blockExecution.Tx(txEnv)
+		txe := exe.blockExecution.Tx(txEnv, txEnv.Tx)
+
 		// Validate inputs and check sequence numbers
 		err = txEnv.Tx.ValidateInputs(exe.stateCache)
 		if err != nil {
@@ -206,6 +217,33 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			txe.PushError(err)
 			return nil, err
 		}
+
+		if pc, ok := txExecutor.(*contexts.ProposalContext); ok {
+			proposal, votesReceived := pc.GetProposal()
+			// if !runCall we're in checkTx, else only execute if we've got our votes
+			if !exe.runCall || votesReceived {
+				for _, step := range proposal.BatchTx.Txs {
+					// Establish new TxExecution
+					tx := *txEnv.Tx
+					tx.Payload = step.GetPayload()
+					tx.Rehash()
+					txe := exe.blockExecution.Tx(txEnv, &tx)
+
+					// Validate inputs and check sequence numbers
+					err = tx.ValidateInputs(exe.stateCache)
+					if err != nil {
+						logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
+						return nil, err
+					}
+					err = txExecutor.Execute(txe)
+					if err != nil {
+						logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
+						return nil, err
+					}
+				}
+			}
+		}
+
 		// Initialise public keys and increment sequence numbers for Tx inputs
 		err = exe.updateSignatories(txEnv)
 		if err != nil {

@@ -80,7 +80,7 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 	return "", nil
 }
 
-func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp *compilers.Response) (result string, err error) {
+func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, intermediate interface{}) (result string, err error) {
 	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do, client)
 	// trim the extension
 	contractName := strings.TrimSuffix(deploy.Contract, filepath.Ext(deploy.Contract))
@@ -165,6 +165,11 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 		contractPath = deploy.Contract
 		log.WithField("=>", contractPath).Info("Contract path")
 		// normal compilation/deploy sequence
+
+		resp, err := getCompilerWork(intermediate)
+		if err != nil {
+			return "", err
+		}
 
 		if resp == nil {
 			log.Errorln("Error compiling contracts: Missing compiler result")
@@ -352,14 +357,13 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 	})
 }
 
-func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
-	var err error
+func FormulateCallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (tx *payload.CallTx, err error) {
 	var callData string
 	var callDataArray []string
 	//todo: find a way to call the fallback function here
 	call.Function, callDataArray, err = util.PreProcessInputData(call.Function, call.Data, do, client, false)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	// Use default
 	call.Source = useDefault(call.Source, do.Package.Account)
@@ -381,8 +385,8 @@ func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []
 		if call.Function == "()" {
 			log.Warn("Calling the fallback function")
 		} else {
-			var str, err = util.ABIErrorHandler(do, err, call, nil)
-			return str, nil, err
+			err = util.ABIErrorHandler(err, call, nil)
+			return
 		}
 	}
 
@@ -392,7 +396,7 @@ func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []
 		"data":        callData,
 	}).Info("Calling")
 
-	tx, err := client.Call(&def.CallArg{
+	return client.Call(&def.CallArg{
 		Input:    call.Source,
 		Amount:   call.Amount,
 		Address:  call.Destination,
@@ -401,9 +405,10 @@ func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []
 		Data:     callData,
 		Sequence: call.Sequence,
 	})
-	if err != nil {
-		return "", nil, err
-	}
+}
+
+func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
+	var err error
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx)
@@ -426,10 +431,11 @@ func CallJob(call *def.Call, do *def.DeployArgs, client *def.Client) (string, []
 		}
 	}
 	var result string
-	log.Debug(txe.Result.Return)
 
 	// Formally process the return
 	if txe.Result.Return != nil {
+		log.Debug(txe.Result.Return)
+
 		log.WithField("=>", result).Debug("Decoding Raw Result")
 		if call.Bin != "" {
 			call.Variables, err = abi.ReadAndDecodeContractReturn(call.Bin, do.BinPath, call.Function, txe.Result.Return)

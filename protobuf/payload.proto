@@ -28,6 +28,8 @@ message Any {
     GovTx GovTx = 5;
     BondTx BondTx = 6;
     UnbondTx UnbondTx = 7;
+    BatchTx BatchTx = 8;
+    ProposalTx ProposalTx = 9;
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -95,7 +97,7 @@ message NameTx {
     string Name = 2;
     // The data to store against the name
     string Data = 3;
-    // The fee to provide that will determine the lenght of the name lease
+    // The fee to provide that will determine the length of the name lease
     uint64 Fee = 4;
 }
 
@@ -122,4 +124,58 @@ message GovTx {
 
     repeated TxInput Inputs = 1;
     repeated spec.TemplateAccount AccountUpdates = 2 [(gogoproto.nullable) = true];
+}
+
+message ProposalTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    TxInput Input = 1;
+    int64 VotingWeight = 2;
+    bytes ProposalHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
+    Proposal Proposal = 4 [(gogoproto.nullable) = true];;
+    uint64 Fee = 5;
+}
+
+// We're using gogoproto.onlyone as "oneof" is implemented using interfaces, and then payload.BatchTx
+// cannot be used with json.Unmarshal.
+message BatchTxItem {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+    option (gogoproto.onlyone) = true;
+
+    CallTx CallTx = 1;
+    SendTx SendTx = 2;
+    NameTx NameTx = 3;
+    PermsTx PermsTx = 4;
+    GovTx GovTx = 5;
+    BondTx BondTx = 6;
+    UnbondTx UnbondTx = 7;
+}
+
+message BatchTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    repeated BatchTxItem txs = 1;
+}
+
+message Vote {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    int64 VotingWeight = 2;
+}
+
+message Proposal {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    string Name = 1;
+    string Description = 2;
+    TxInput Input = 3;
+    BatchTx BatchTx = 4;
+    repeated Vote Votes = 5;
+    bool Executed = 6;
 }

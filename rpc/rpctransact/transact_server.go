@@ -126,5 +126,8 @@ func EnvelopeFromAny(chainID string, p *payload.Any) *txs.Envelope {
 	if p.GovTx != nil {
 		return txs.Enclose(chainID, p.GovTx)
 	}
+	if p.ProposalTx != nil {
+		return txs.Enclose(chainID, p.ProposalTx)
+	}
 	return nil
 }

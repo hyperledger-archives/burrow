@@ -19,6 +19,9 @@ type DeployArgs struct {
 	Verbose       bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	YAMLPath      string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
+	Propose       bool     `mapstructure:"," json:"," yaml:"," toml:","`
+	ProposeName   string   `mapstructure:"," json:"," yaml:"," toml:","`
+	ProposeDesc   string   `mapstructure:"," json:"," yaml:"," toml:","`
 
 	Package *Package
 }

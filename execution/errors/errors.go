@@ -50,6 +50,9 @@ const (
 	ErrorCodeReservedAddress
 	ErrorCodeIllegalWrite
 	ErrorCodeIntegerOverflow
+	ErrorCodeInvalidProposal
+	ErrorCodeExpiredProposal
+	ErrorCodeProposalExecuted
 )
 
 func (c Code) ErrorCode() Code {

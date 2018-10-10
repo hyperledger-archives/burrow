@@ -43,7 +43,7 @@ func (m *NodeInfo) Reset()         { *m = NodeInfo{} }
 func (m *NodeInfo) String() string { return proto.CompactTextString(m) }
 func (*NodeInfo) ProtoMessage()    {}
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tendermint_9e4683663e9f3893, []int{0}
+	return fileDescriptor_tendermint_e325e774fb767bb8, []int{0}
 }
 func (m *NodeInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -611,10 +611,10 @@ var (
 	ErrIntOverflowTendermint   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("tendermint.proto", fileDescriptor_tendermint_9e4683663e9f3893) }
-func init() { golang_proto.RegisterFile("tendermint.proto", fileDescriptor_tendermint_9e4683663e9f3893) }
+func init() { proto.RegisterFile("tendermint.proto", fileDescriptor_tendermint_e325e774fb767bb8) }
+func init() { golang_proto.RegisterFile("tendermint.proto", fileDescriptor_tendermint_e325e774fb767bb8) }
 
-var fileDescriptor_tendermint_9e4683663e9f3893 = []byte{
+var fileDescriptor_tendermint_e325e774fb767bb8 = []byte{
 	// 318 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0xcd, 0x4e, 0xfa, 0x40,
 	0x14, 0xc5, 0xff, 0x53, 0xfe, 0x7c, 0x4d, 0x34, 0x31, 0x8d, 0x8b, 0x89, 0x8b, 0x42, 0x8c, 0x0b,

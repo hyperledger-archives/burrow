@@ -29,7 +29,7 @@ func TestBasePermissionsToStringList(t *testing.T) {
 	assert.Equal(t, []string{"root", "call", "setBase", "hasRole"}, permStrings)
 
 	permStrings = BasePermissionsToStringList(allSetBasePermission(AllPermFlags))
-	assert.Equal(t, []string{"root", "send", "call", "createContract", "createAccount", "bond", "name", "hasBase",
+	assert.Equal(t, []string{"root", "send", "call", "createContract", "createAccount", "bond", "name", "proposal", "hasBase",
 		"setBase", "unsetBase", "setGlobal", "hasRole", "addRole", "removeRole"}, permStrings)
 
 	permStrings = BasePermissionsToStringList(allSetBasePermission(AllPermFlags + 1))
@@ -38,7 +38,7 @@ func TestBasePermissionsToStringList(t *testing.T) {
 
 func TestBasePermissionsString(t *testing.T) {
 	permissionString := BasePermissionsString(allSetBasePermission(AllPermFlags &^ Root))
-	assert.Equal(t, "send | call | createContract | createAccount | bond | name | hasBase | "+
+	assert.Equal(t, "send | call | createContract | createAccount | bond | name | proposal | hasBase | "+
 		"setBase | unsetBase | setGlobal | hasRole | addRole | removeRole", permissionString)
 }
 

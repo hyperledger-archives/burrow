@@ -46,7 +46,7 @@ func (m *TemplateAccount) Reset()         { *m = TemplateAccount{} }
 func (m *TemplateAccount) String() string { return proto.CompactTextString(m) }
 func (*TemplateAccount) ProtoMessage()    {}
 func (*TemplateAccount) Descriptor() ([]byte, []int) {
-	return fileDescriptor_spec_10310dc635ae69bb, []int{0}
+	return fileDescriptor_spec_831313800fa00c7f, []int{0}
 }
 func (m *TemplateAccount) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -701,10 +701,10 @@ var (
 	ErrIntOverflowSpec   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("spec.proto", fileDescriptor_spec_10310dc635ae69bb) }
-func init() { golang_proto.RegisterFile("spec.proto", fileDescriptor_spec_10310dc635ae69bb) }
+func init() { proto.RegisterFile("spec.proto", fileDescriptor_spec_831313800fa00c7f) }
+func init() { golang_proto.RegisterFile("spec.proto", fileDescriptor_spec_831313800fa00c7f) }
 
-var fileDescriptor_spec_10310dc635ae69bb = []byte{
+var fileDescriptor_spec_831313800fa00c7f = []byte{
 	// 396 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0x31, 0x8f, 0xd3, 0x30,
 	0x14, 0xc6, 0x34, 0xbd, 0x52, 0xe7, 0x10, 0x9c, 0xa7, 0xe8, 0x86, 0x24, 0x2a, 0x03, 0x11, 0x3a,

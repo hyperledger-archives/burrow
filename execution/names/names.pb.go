@@ -44,7 +44,7 @@ type Entry struct {
 func (m *Entry) Reset()      { *m = Entry{} }
 func (*Entry) ProtoMessage() {}
 func (*Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_names_e6c9a43e2c6e55bc, []int{0}
+	return fileDescriptor_names_7c23a6fa0ca7a06d, []int{0}
 }
 func (m *Entry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -457,10 +457,10 @@ var (
 	ErrIntOverflowNames   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("names.proto", fileDescriptor_names_e6c9a43e2c6e55bc) }
-func init() { golang_proto.RegisterFile("names.proto", fileDescriptor_names_e6c9a43e2c6e55bc) }
+func init() { proto.RegisterFile("names.proto", fileDescriptor_names_7c23a6fa0ca7a06d) }
+func init() { golang_proto.RegisterFile("names.proto", fileDescriptor_names_7c23a6fa0ca7a06d) }
 
-var fileDescriptor_names_e6c9a43e2c6e55bc = []byte{
+var fileDescriptor_names_7c23a6fa0ca7a06d = []byte{
 	// 245 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xce, 0x4b, 0xcc, 0x4d,
 	0x2d, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0xa4, 0x74, 0xd3, 0x33, 0x4b,

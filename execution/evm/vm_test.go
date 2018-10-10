@@ -1216,14 +1216,14 @@ func TestHasPermission(t *testing.T) {
 		Address: newAddress("frog"),
 		Permissions: permission.AccountPermissions{
 			Base: BasePermissionsFromStrings(t,
-				"00100001000111",
-				"11011110111000"),
+				"001000001000111",
+				"110111010111000"),
 		},
 	}
 	require.NoError(t, st.UpdateAccount(acc))
 	// Ensure we are falling through to global permissions on those bits not set
 	cache := NewState(st)
-	assert.True(t, HasPermission(cache, acc.Address, PermFlagFromString(t, "100001000110")))
+	assert.True(t, HasPermission(cache, acc.Address, PermFlagFromString(t, "1000001000110")))
 	require.NoError(t, cache.Error())
 }
 

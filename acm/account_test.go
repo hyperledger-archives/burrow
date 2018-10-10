@@ -96,7 +96,7 @@ func TestMarshalJSON(t *testing.T) {
 
 	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
 		`"Sequence":4,"Balance":10,"Code":"3C172D",`+
-		`"Permissions":{"Base":{"Perms":16383,"SetBit":0}}}`,
+		`"Permissions":{"Base":{"Perms":32767,"SetBit":0}}}`,
 		acc.Address, acc.PublicKey)
 	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)

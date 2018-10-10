@@ -21,12 +21,12 @@ func EventStringLogEvent(addr crypto.Address) string       { return fmt.Sprintf(
 func EventStringTxExecution(txHash []byte) string          { return fmt.Sprintf("Execution/Tx/%X", txHash) }
 func EventStringGovernAccount(addr *crypto.Address) string { return fmt.Sprintf("Govern/Acc/%v", addr) }
 
-func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
+func NewTxExecution(txEnv *txs.Envelope, tx *txs.Tx) *TxExecution {
 	return &TxExecution{
-		TxHash:   txEnv.Tx.Hash(),
-		TxType:   txEnv.Tx.Type(),
+		TxHash:   tx.Hash(),
+		TxType:   tx.Type(),
 		Envelope: txEnv,
-		Receipt:  txEnv.Tx.GenerateReceipt(),
+		Receipt:  tx.GenerateReceipt(),
 	}
 }
 

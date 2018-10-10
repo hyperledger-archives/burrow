@@ -10,6 +10,37 @@ import (
 )
 
 // ------------------------------------------------------------------------
+// Proposal Jobs
+// ------------------------------------------------------------------------
+
+type Proposal struct {
+	// (Required), address of the account that proffers the proposal and as which it will be executed
+	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
+	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
+	// know what you're doing)
+	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+	// (Optional)
+	VotingPower string `mapstructure:"votingpower" json:"votingpower" yaml:"votingpower" toml:"votingpower"`
+	// (Required) the name of the proposal
+	Name string `mapstructure:"name" json:"name" yaml:"name" toml:"name"`
+	// (Required) the description of the proposal
+	Description string `mapstructure:"description" json:"description" yaml:"description" toml:"description"`
+	// (Required) the file path of the sub yaml to run
+	Jobs []*Job `mapstructure:"jobs" json:"jobs" yaml:"jobs" toml:"jobs"`
+}
+
+func (job *Proposal) Validate() error {
+	return validation.ValidateStruct(job,
+		validation.Field(&job.Source, rule.AddressOrPlaceholder),
+		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
+		validation.Field(&job.VotingPower, rule.Uint64OrPlaceholder),
+		validation.Field(&job.Name, validation.Required),
+		validation.Field(&job.Description, validation.Required),
+		validation.Field(&job.Jobs, validation.Required),
+	)
+}
+
+// ------------------------------------------------------------------------
 // Meta Jobs
 // ------------------------------------------------------------------------
 
