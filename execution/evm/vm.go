@@ -55,8 +55,8 @@ type Params struct {
 	BlockTime                int64
 	GasLimit                 uint64
 	CallStackMaxDepth        uint64
-	DataStackInitialCapacity int
-	DataStackMaxDepth        int
+	DataStackInitialCapacity uint64
+	DataStackMaxDepth        uint64
 }
 
 type VM struct {

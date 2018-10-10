@@ -14,7 +14,7 @@ func DumpTokens(vm *VM) {
 	vm.dumpTokens = true
 }
 
-func StackOptions(callStackMaxDepth uint64, dataStackInitialCapacity int, dataStackMaxDepth int) func(*VM) {
+func StackOptions(callStackMaxDepth uint64, dataStackInitialCapacity uint64, dataStackMaxDepth uint64) func(*VM) {
 	return func(vm *VM) {
 		vm.params.CallStackMaxDepth = callStackMaxDepth
 		vm.params.DataStackInitialCapacity = dataStackInitialCapacity

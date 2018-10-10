@@ -21,21 +21,28 @@ import (
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
+	"math"
 )
+
+// Change the length of this zero array to tweak the size of the block of zeros
+// written to the backing slice at a time when it is grown. A larger number may
+// lead to fewer calls to append to achieve the desired capacity although it is
+// unlikely to make a lot of difference.
+var zeroWords []Word256 = make([]Word256, 32)
 
 // Not goroutine safe
 type Stack struct {
-	data        []Word256
-	maxCapacity int
+	slice       []Word256
+	maxCapacity uint64
 	ptr         int
 
 	gas *uint64
 	err *errors.CodedError
 }
 
-func NewStack(initialCapacity int, maxCapacity int, gas *uint64, err *errors.CodedError) *Stack {
+func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, err *errors.CodedError) *Stack {
 	return &Stack{
-		data:        make([]Word256, initialCapacity),
+		slice:       make([]Word256, initialCapacity),
 		ptr:         0,
 		maxCapacity: maxCapacity,
 		gas:         gas,
@@ -59,13 +66,12 @@ func (st *Stack) setErr(err errors.CodedError) {
 
 func (st *Stack) Push(d Word256) {
 	st.useGas(GasStackOp)
-	if st.ptr == cap(st.data) {
-		if !st.tryGrow() {
-			st.setErr(errors.ErrorCodeDataStackOverflow)
-			return
-		}
+	err := st.ensureCapacity(uint64(st.ptr) + 1)
+	if err != nil {
+		st.setErr(errors.ErrorCodeDataStackOverflow)
+		return
 	}
-	st.data[st.ptr] = d
+	st.slice[st.ptr] = d
 	st.ptr++
 }
 
@@ -101,7 +107,7 @@ func (st *Stack) Pop() Word256 {
 		return Zero256
 	}
 	st.ptr--
-	return st.data[st.ptr]
+	return st.slice[st.ptr]
 }
 
 func (st *Stack) PopBytes() []byte {
@@ -143,7 +149,7 @@ func (st *Stack) Swap(n int) {
 		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
-	st.data[st.ptr-n], st.data[st.ptr-1] = st.data[st.ptr-1], st.data[st.ptr-n]
+	st.slice[st.ptr-n], st.slice[st.ptr-1] = st.slice[st.ptr-1], st.slice[st.ptr-n]
 }
 
 func (st *Stack) Dup(n int) {
@@ -152,7 +158,7 @@ func (st *Stack) Dup(n int) {
 		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
-	st.Push(st.data[st.ptr-n])
+	st.Push(st.slice[st.ptr-n])
 }
 
 // Not an opcode, costs no gas.
@@ -161,7 +167,7 @@ func (st *Stack) Peek() Word256 {
 		st.setErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
 	}
-	return st.data[st.ptr-1]
+	return st.slice[st.ptr-1]
 }
 
 func (st *Stack) Print(n int) {
@@ -172,7 +178,7 @@ func (st *Stack) Print(n int) {
 			nn = st.ptr
 		}
 		for j, i := 0, st.ptr-1; i > st.ptr-1-nn; i-- {
-			fmt.Printf("%-3d  %X\n", j, st.data[i])
+			fmt.Printf("%-3d  %X\n", j, st.slice[i])
 			j += 1
 		}
 	} else {
@@ -190,28 +196,37 @@ func Is64BitOverflow(word Word256) bool {
 	return false
 }
 
-func (st *Stack) tryGrow() bool {
-	stackCap := cap(st.data)
-	hasMaxCap := st.maxCapacity > 0
-	if hasMaxCap && st.maxCapacity == stackCap {
-		return false
+// Ensures the current stack can hold a new element. Will only grow the
+// backing array (will not shrink).
+func (st *Stack) ensureCapacity(newCapacity uint64) error {
+	// Maximum length of a slice that allocates memory is the same as the native int max size
+	// We could rethink this limit, but we don't want different validators to disagree on
+	// transaction validity so we pick the lowest common denominator
+	if newCapacity > math.MaxInt32 {
+		// If we ever did want more than an int32 of space then we would need to
+		// maintain multiple pages of memory
+		return fmt.Errorf("cannot address memory beyond a maximum index "+
+			"with int32 width (%v bytes)", math.MaxInt32)
 	}
-
-	newCap := stackCap * 2
-	if newCap == 0 {
-		// Initialized with no capacity but stack can grow
-		newCap = 2
+	newCapacityInt := int(newCapacity)
+	// We're already big enough so return
+	if newCapacityInt <= len(st.slice) {
+		return nil
 	}
-
-	if hasMaxCap && st.maxCapacity < newCap {
-		// Last attempt to grow
-		newCap = st.maxCapacity
+	if st.maxCapacity > 0 && newCapacity > st.maxCapacity {
+		return fmt.Errorf("cannot grow memory because it would exceed the "+
+			"current maximum limit of %v bytes", st.maxCapacity)
 	}
-
-	// Grow
-	newData := make([]Word256, newCap)
-	copy(newData, st.data)
-	st.data = newData
-
-	return true
+	// Ensure the backing array of slice is big enough
+	// Grow the memory one word at time using the pre-allocated zeroWords to avoid
+	// unnecessary allocations. Use append to make use of any spare capacity in
+	// the slice's backing array.
+	for newCapacityInt > cap(st.slice) {
+		// We'll trust Go exponentially grow our arrays (at first).
+		st.slice = append(st.slice, zeroWords...)
+	}
+	// Now we've ensured the backing array of the slice is big enough we can
+	// just re-slice (even if len(mem.slice) < newCapacity)
+	st.slice = st.slice[:newCapacity]
+	return nil
 }

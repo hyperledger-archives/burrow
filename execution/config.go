@@ -15,8 +15,8 @@ const (
 
 type ExecutionConfig struct {
 	CallStackMaxDepth        uint64
-	DataStackInitialCapacity int
-	DataStackMaxDepth        int
+	DataStackInitialCapacity uint64
+	DataStackMaxDepth        uint64
 	VMOptions                []VMOption `json:",omitempty" toml:",omitempty"`
 }
 
