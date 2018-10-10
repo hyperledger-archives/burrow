@@ -28,7 +28,7 @@ Image files should be included in a subdirectory of the `assets` folder for that
 
 Each BIP must begin with an RFC 822 style header preamble, preceded and followed by three hyphens (`---`). The headers must appear in the following order. Headers marked with "*" are optional and are described below. All other headers are required.
 
-` bip:` <BIP number> (this is determined by the BIP editor)
+` bip:` <BIP number>
 
 ` title:` <BIP title>
 
