@@ -101,6 +101,7 @@ message LogEvent {
 }
 
 message CallEvent {
+    uint32 CallType = 5 [(gogoproto.casttype) = "CallType"];
     CallData CallData = 1;
     bytes Origin = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     uint64 StackDepth = 3;
