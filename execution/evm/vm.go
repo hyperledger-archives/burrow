@@ -39,20 +39,6 @@ const (
 	callStackCapacity        = 100 // TODO ensure usage.
 )
 
-type EventSink interface {
-	Call(call *exec.CallEvent, exception *errors.Exception)
-	Log(log *exec.LogEvent)
-}
-
-type noopEventSink struct{}
-
-func NewNoopEventSink() *noopEventSink {
-	return &noopEventSink{}
-}
-
-func (*noopEventSink) Call(call *exec.CallEvent, exception *errors.Exception) {}
-func (*noopEventSink) Log(log *exec.LogEvent)                                 {}
-
 type Params struct {
 	BlockHeight              uint64
 	BlockHash                Word256
@@ -64,16 +50,15 @@ type Params struct {
 }
 
 type VM struct {
-	memoryProvider   func() Memory
-	params           Params
-	origin           crypto.Address
-	tx               *txs.Tx
-	stackDepth       uint64
-	nestedCallErrors []errors.NestedCall
-	logger           *logging.Logger
-	returnData       []byte
-	debugOpcodes     bool
-	dumpTokens       bool
+	memoryProvider func() Memory
+	params         Params
+	origin         crypto.Address
+	tx             *txs.Tx
+	stackDepth     uint64
+	logger         *logging.Logger
+	returnData     []byte
+	debugOpcodes   bool
+	dumpTokens     bool
 }
 
 func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
@@ -108,10 +93,11 @@ func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm permiss
 	return value
 }
 
-func (vm *VM) fireCallEvent(eventSink EventSink, exception *errors.CodedError, output *[]byte, callerAddress,
-	calleeAddress crypto.Address, input []byte, value uint64, gas *uint64) {
+func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, exception *errors.CodedError, output *[]byte,
+	callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64, err *errors.CodedError) {
 	// fire the post call event (including exception if applicable)
-	eventSink.Call(&exec.CallEvent{
+	eventErr := eventSink.Call(&exec.CallEvent{
+		CallType: callType,
 		CallData: &exec.CallData{
 			Caller: callerAddress,
 			Callee: calleeAddress,
@@ -123,6 +109,9 @@ func (vm *VM) fireCallEvent(eventSink EventSink, exception *errors.CodedError, o
 		StackDepth: vm.stackDepth,
 		Return:     *output,
 	}, errors.AsException(*exception))
+	if eventErr != nil {
+		*err = firstErr(*err, eventErr)
+	}
 }
 
 // CONTRACT state is aware of caller and callee, so we can just mutate them.
@@ -131,12 +120,19 @@ func (vm *VM) fireCallEvent(eventSink EventSink, exception *errors.CodedError, o
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState state.ReaderWriter, eventSink EventSink, caller, callee *acm.MutableAccount, code, input []byte, value uint64,
-	gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) Call(callState state.ReaderWriter, eventSink EventSink, caller, callee *acm.MutableAccount, code,
+	input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+
+	return vm.call(callState, eventSink, caller, callee, code, input, value, gas, exec.CallTypeCall)
+}
+
+func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller, callee *acm.MutableAccount, code,
+	input []byte, value uint64, gas *uint64, callType exec.CallType) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(eventSink, exception, &output, caller.Address(), callee.Address(), input, value, gas)
+	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller.Address(), callee.Address(), input,
+		value, gas, &err)
 
 	if err = transfer(caller, callee, value); err != nil {
 		*exception = err
@@ -150,13 +146,9 @@ func (vm *VM) Call(callState state.ReaderWriter, eventSink EventSink, caller, ca
 
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.call(callState, eventSink, caller, callee, code, input, value, gas)
+		output, err = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
-			err = errors.Call{
-				CallError:    err,
-				NestedErrors: vm.nestedCallErrors,
-			}
 			*exception = err
 			transferErr := transfer(callee, caller, value)
 			if transferErr != nil {
@@ -173,28 +165,27 @@ func (vm *VM) Call(callState state.ReaderWriter, eventSink EventSink, caller, ca
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) DelegateCall(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount, code, input []byte,
-	value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+func (vm *VM) delegateCall(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount, code, input []byte,
+	value uint64, gas *uint64, callType exec.CallType) (output []byte, err errors.CodedError) {
 
-	exception := new(string)
-	// fire the post call event (including exception if applicable)
-	// NOTE: [ben] hotfix for issue 371;
-	// introduce event EventStringAccDelegateCall Acc/%s/DelegateCall
-	// defer vm.fireCallEvent(exception, &output, caller, callee, input, value, gas)
+	exception := new(errors.CodedError)
+
+	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller.Address(), callee.Address(),
+		input, value, gas, &err)
 
 	// DelegateCall does not transfer the value to the callee.
 
 	if err = vm.ensureStackDepth(); err != nil {
-		*exception = err.Error()
+		*exception = err
 		return
 	}
 
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.call(callState, eventSink, caller, callee, code, input, value, gas)
+		output, err = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
-			*exception = err.Error()
+			*exception = err
 		}
 	}
 
@@ -214,7 +205,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bo
 }
 
 // Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount,
+func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount,
 	code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
 		len(callee.Code()), *gas, input)
@@ -848,11 +839,14 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller acm
 				vm.Debugf(" => Memory err: %s", memErr)
 				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
 			}
-			eventSink.Log(&exec.LogEvent{
+			eventErr := eventSink.Log(&exec.LogEvent{
 				Address: callee.Address(),
 				Topics:  topics,
 				Data:    data,
 			})
+			if eventErr != nil {
+				return nil, firstErr(err, eventErr)
+			}
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
@@ -964,7 +958,8 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller acm
 				ret, callErr = ExecuteNativeContract(addr, callState, callee, args, &gasLimit, logger)
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				// NOTE: these fire call go_events and not particular go_events for eg name reg or permissions
-				vm.fireCallEvent(eventSink, &callErr, &ret, callee.Address(), crypto.AddressFromWord256(addr), args, value, &gasLimit)
+				vm.fireCallEvent(eventSink, exec.CallTypeSNative, &callErr, &ret, callee.Address(),
+					crypto.AddressFromWord256(addr), args, value, &gasLimit, &err)
 			} else {
 				// EVM contract
 				if useGasNegative(gas, GasGetAccount, &callErr) {
@@ -998,27 +993,20 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller acm
 				childCallState.UpdateAccount(acc)
 				switch op {
 				case CALLCODE:
-					ret, callErr = vm.Call(childCallState, eventSink, callee, callee, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.call(childCallState, eventSink, callee, callee, acc.Code(), args, value, &gasLimit,
+						exec.CallTypeCode)
 
 				case DELEGATECALL:
-					ret, callErr = vm.DelegateCall(childCallState, eventSink, caller, callee, acc.Code(), args, value,
-						&gasLimit)
+					ret, callErr = vm.delegateCall(childCallState, eventSink, caller, callee, acc.Code(), args, value,
+						&gasLimit, exec.CallTypeDelegate)
 
 				case STATICCALL:
-					noopSink := NewNoopEventSink()
-					state.ReadOnlyOption(childCallState)
-
-					ret, callErr = vm.DelegateCall(childCallState, noopSink, caller, callee, acc.Code(), args, value,
-						&gasLimit)
-
-					if noopSink.logCount > 0 {
-						callErr = firstErr(callErr, errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
-							"STATICCALL generated %d LOG events which are classfied as state-mutating",
-							noopSink.logCount))
-					}
+					ret, callErr = vm.delegateCall(state.ReadOnly(childCallState), NewLogFreeEventSink(eventSink),
+						caller, callee, acc.Code(), args, value, &gasLimit, exec.CallTypeStatic)
 
 				case CALL:
-					ret, callErr = vm.Call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit)
+					ret, callErr = vm.call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit,
+						exec.CallTypeCall)
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))
@@ -1046,12 +1034,6 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller acm
 			if callErr != nil {
 				vm.Debugf("error from nested sub-call (depth: %v): %s\n", vm.stackDepth, callErr.Error())
 				// So we can return nested errors.CodedError if the top level return is an errors.CodedError
-				vm.nestedCallErrors = append(vm.nestedCallErrors, errors.NestedCall{
-					NestedError: callErr,
-					StackDepth:  vm.stackDepth,
-					Caller:      caller.Address(),
-					Callee:      callee.Address(),
-				})
 				stack.Push(Zero256)
 
 				if callErr.ErrorCode() == errors.ErrorCodeExecutionReverted {

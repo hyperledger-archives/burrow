@@ -16,8 +16,6 @@ package evm
 
 import (
 	"encoding/hex"
-	"fmt"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"strconv"
 	"testing"
 	"time"
@@ -75,7 +73,6 @@ func newAccount(seed ...byte) *acm.MutableAccount {
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -91,15 +88,14 @@ func TestVM(t *testing.T) {
 
 	start := time.Now()
 	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
-	fmt.Printf("Output: %v Error: %v\n", output, err)
-	fmt.Println("Call took:", time.Since(start))
+	t.Logf("Output: %v Error: %v\n", output, err)
+	t.Logf("Call took: %v", time.Since(start))
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestSHL(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -249,7 +245,6 @@ func TestSHL(t *testing.T) {
 }
 
 func TestSHR(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -403,7 +398,6 @@ func TestSHR(t *testing.T) {
 }
 
 func TestSAR(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(1)
@@ -576,7 +570,6 @@ func TestSAR(t *testing.T) {
 
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -607,7 +600,6 @@ func TestJumpErr(t *testing.T) {
 
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	st := newAppState()
 	cache := state.NewCache(st)
 	// Create accounts
@@ -639,7 +631,7 @@ func TestSubcurrency(t *testing.T) {
 
 	data, _ := hex.DecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
 	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, data, 0, &gas)
-	fmt.Printf("Output: %v Error: %v\n", output, err)
+	t.Logf("Output: %v Error: %v\n", output, err)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -648,7 +640,6 @@ func TestSubcurrency(t *testing.T) {
 //This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -682,7 +673,6 @@ func TestRevert(t *testing.T) {
 
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -700,15 +690,17 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// account2 has insufficient balance, should fail
-	_, err := runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
-	assert.Error(t, err, "Expected insufficient balance error")
+	txe, err := runVMWaitError(cache, ourVm, account1, account2, contractCode, 1000)
+	exCalls := txe.ExceptionalCalls()
+	require.Len(t, exCalls, 1)
+	assertErrorCode(t, errors.ErrorCodeInsufficientBalance, exCalls[0].Header.Exception)
 
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
 	account2 = newAccount(2)
 	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 1000)
+	_, err = runVMWaitError(cache, ourVm, account1, account2, contractCode, 1000)
 	assert.NoError(t, err, "Should have sufficient balance")
 
 	//----------------------------------------------
@@ -716,20 +708,18 @@ func TestSendCall(t *testing.T) {
 	account2 = newAccount(2)
 	err = account2.AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(cache, ourVm, account1, account2, addr, contractCode, 100)
+	_, err = runVMWaitError(cache, ourVm, account1, account2, contractCode, 100)
 	assert.NoError(t, err, "Expected insufficient gas error")
 }
 
 // Test to ensure that contracts called with STATICCALL cannot modify state
 func TestStaticCall(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	inOff, inSize := byte(0x0), byte(0x0) // no call data
 	retOff, retSize := byte(0x0), byte(0x2)
 
 	for _, illegalOp := range []OpCode{SSTORE, LOG0, LOG1, LOG2, LOG3, LOG4, CREATE, CREATE2, SELFDESTRUCT} {
 		cache := state.NewCache(newAppState())
-		logger2, _ := lifecycle.NewStdErrLogger()
-		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger2, DebugOpcodes)
+		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger, DebugOpcodes)
 
 		calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
 			MustSplice(illegalOp, PUSH1, 0x1, return1()))
@@ -738,16 +728,11 @@ func TestStaticCall(t *testing.T) {
 			MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 				inOff, PUSH20, calleeAddress, PUSH1, 0x1, GAS, SUB, STATICCALL, returnWord()))
 
-		_, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
-
-		for _, nestedError := range ourVm.nestedCallErrors {
-			err = nil
-			if nestedError.NestedError.ErrorCode() == errors.ErrorCodeIllegalWrite {
-				err = nestedError.NestedError.ErrorCode()
-				break
-			}
-		}
-		assertErrorCode(t, errors.ErrorCodeIllegalWrite, err, "expected static call violation")
+		txe, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
+		require.NoError(t, err)
+		exCalls := txe.ExceptionalCalls()
+		require.Len(t, exCalls, 1)
+		assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
 		t.FailNow()
 	}
 
@@ -765,16 +750,12 @@ func TestStaticCall(t *testing.T) {
 
 	err := calleeAccount.AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress, callerAccount.Code(), 1000)
+	txe, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
 
-	for _, nestedError := range ourVm.nestedCallErrors {
-		err = nil
-		if nestedError.NestedError.ErrorCode() == errors.ErrorCodeIllegalWrite {
-			err = nestedError.NestedError.ErrorCode()
-			break
-		}
-	}
-	assertErrorCode(t, errors.ErrorCodeIllegalWrite, err, "expected static call violation")
+	require.NoError(t, err)
+	exCalls := txe.ExceptionalCalls()
+	require.Len(t, exCalls, 1)
+	assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
@@ -783,7 +764,6 @@ func TestStaticCall(t *testing.T) {
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -825,10 +805,9 @@ func TestDelegateCallGas(t *testing.T) {
 			callerCodeSuffix))
 
 	// Should pass
-	output, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress,
-		callerAccount.Code(), 100)
+	txe, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 100)
 	assert.NoError(t, err, "Should have sufficient funds for call")
-	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), output)
+	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), txe.Result.Return)
 
 	callerAccount.SetCode(MustSplice(callerCodePrefix,
 		// Shouldn't be enough gas to make call
@@ -836,13 +815,11 @@ func TestDelegateCallGas(t *testing.T) {
 		callerCodeSuffix))
 
 	// Should fail
-	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, calleeAddress,
-		callerAccount.Code(), 100)
+	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 100)
 	assert.Error(t, err, "Should have insufficient gas for call")
 }
 
 func TestMemoryBounds(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	cache := state.NewCache(newAppState())
 	memoryProvider := func() Memory {
 		return NewDynamicMemory(1024, 2048)
@@ -888,7 +865,6 @@ func TestMemoryBounds(t *testing.T) {
 }
 
 func TestMsgSender(t *testing.T) {
-	fmt.Printf("%s ---\n", t.Name())
 	st := newAppState()
 	cache := state.NewCache(st)
 	account1 := newAccount(1, 2, 3)
@@ -1080,34 +1056,14 @@ func makeAccountWithCode(accountUpdater state.AccountUpdater, name string,
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount, subscribeAddr crypto.Address,
-	contractCode []byte, gas uint64) ([]byte, error) {
+func runVMWaitError(vmCache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount, contractCode []byte,
+	gas uint64) (*exec.TxExecution, error) {
+	gasBefore := gas
 	txe := new(exec.TxExecution)
-	output, err := runVM(txe, vmCache, ourVm, caller, callee, subscribeAddr, contractCode, gas)
-	if err != nil {
-		return output, err
-	}
-	if len(txe.Events) > 0 {
-		ex := txe.Events[0].Header.Exception
-		if ex != nil {
-			return output, ex
-		}
-	}
-	return output, nil
-}
-
-// Subscribes to an AccCall, runs the vm, returns the output and any direct
-// exception
-func runVM(sink EventSink, cache *state.Cache, ourVm *VM, caller, callee *acm.MutableAccount,
-	subscribeAddr crypto.Address, contractCode []byte, gas uint64) ([]byte, error) {
-
-	fmt.Printf("subscribe to %s\n", subscribeAddr)
-
-	start := time.Now()
-	output, err := ourVm.Call(cache, sink, caller, callee, contractCode, []byte{}, 0, &gas)
-	fmt.Printf("Output: %v Error: %v\n", output, err)
-	fmt.Println("Call took:", time.Since(start))
-	return output, err
+	output, err := ourVm.Call(vmCache, txe, caller, callee, contractCode, []byte{}, 0, &gas)
+	txe.SetException(err)
+	txe.Return(output, gasBefore-gas)
+	return txe, err
 }
 
 // this is code to call another contract (hardcoded as addr)
@@ -1345,8 +1301,11 @@ func PermFlagFromString(t *testing.T, binaryString string) permission.PermFlag {
 	return permission.PermFlag(permFlag)
 }
 
-func assertErrorCode(t *testing.T, code errors.Code, err error, msgAndArgs ...interface{}) {
+func assertErrorCode(t *testing.T, expectedCode errors.Code, err error, msgAndArgs ...interface{}) {
 	if assert.Error(t, err, msgAndArgs...) {
-		assert.Equal(t, code, errors.AsException(err).Code, "expected error code %v", code)
+		actualCode := errors.AsException(err).Code
+		if !assert.Equal(t, expectedCode, actualCode, "expected error code %v", expectedCode) {
+			t.Logf("Expected '%v' but got '%v'", expectedCode, actualCode)
+		}
 	}
 }

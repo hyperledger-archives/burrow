@@ -76,18 +76,20 @@ func (txe *TxExecution) Output(address crypto.Address, exception *errors.Excepti
 	})
 }
 
-func (txe *TxExecution) Log(log *LogEvent) {
+func (txe *TxExecution) Log(log *LogEvent) error {
 	txe.Append(&Event{
 		Header: txe.Header(TypeLog, EventStringLogEvent(log.Address), nil),
 		Log:    log,
 	})
+	return nil
 }
 
-func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) {
+func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) error {
 	txe.Append(&Event{
 		Header: txe.Header(TypeCall, EventStringAccountCall(call.CallData.Callee), exception),
 		Call:   call,
 	})
+	return nil
 }
 
 func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, exception *errors.Exception) {
@@ -99,6 +101,16 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 
 func (txe *TxExecution) SetException(err error) {
 	txe.Exception = errors.AsException(err)
+}
+
+func (txe *TxExecution) ExceptionalCalls() []*Event {
+	var exCalls []*Event
+	for _, ev := range txe.Events {
+		if ev.Call != nil && ev.Header.Exception != nil {
+			exCalls = append(exCalls, ev)
+		}
+	}
+	return exCalls
 }
 
 // Set result
