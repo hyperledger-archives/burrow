@@ -42,7 +42,7 @@ type accountInfo struct {
 	updated bool
 }
 
-type CacheOption func(*Cache)
+type CacheOption func(*Cache) *Cache
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
@@ -57,14 +57,16 @@ func NewCache(backend Reader, options ...CacheOption) *Cache {
 	return cache
 }
 
-func NameOption(name string) CacheOption {
-	return func(cache *Cache) {
+func Named(name string) CacheOption {
+	return func(cache *Cache) *Cache {
 		cache.name = name
+		return cache
 	}
 }
 
-var ReadOnlyOption CacheOption = func(cache *Cache) {
+var ReadOnly CacheOption = func(cache *Cache) *Cache {
 	cache.readonly = true
+	return cache
 }
 
 func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {

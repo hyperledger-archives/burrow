@@ -134,7 +134,7 @@ func AsMutableAccount(account Account) *MutableAccount {
 var _ Account = &MutableAccount{}
 
 func (acc ConcreteAccount) String() string {
-	return fmt.Sprintf("ConcreteAccount{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeLength: %v; Permissions: %s}",
+	return fmt.Sprintf("ConcreteAccount{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeLength: %v; Permissions: %v}",
 		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.Code), acc.Permissions)
 }
 

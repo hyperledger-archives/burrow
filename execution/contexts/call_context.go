@@ -144,7 +144,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 		callee  *acm.MutableAccount = nil // initialized below
 		code    []byte              = nil
 		ret     []byte              = nil
-		txCache                     = state.NewCache(ctx.StateWriter, state.NameOption("TxCache"))
+		txCache                     = state.NewCache(ctx.StateWriter, state.Named("TxCache"))
 		params                      = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
