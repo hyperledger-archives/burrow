@@ -2,7 +2,6 @@ package contexts
 
 import (
 	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/bcm"
@@ -170,16 +169,20 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 			// but to create with one contract and call with another
 			// you have to wait a block to avoid a re-ordering attack
 			// that will take your fees
+			var exception *errors.Exception
 			if outAcc == nil {
-				ctx.Logger.InfoMsg("Call to address that does not exist",
+				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress, "Call to address that does not exist")
+				ctx.Logger.Info.Log(structure.ErrorKey, exception,
 					"caller_address", inAcc.Address(),
 					"callee_address", ctx.tx.Address)
 			} else {
-				ctx.Logger.InfoMsg("Call to address that holds no code",
+				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress, "Call to address that holds no code")
+				ctx.Logger.Info.Log(exception,
 					"caller_address", inAcc.Address(),
 					"callee_address", ctx.tx.Address)
 			}
-			ctx.CallEvents(errors.ErrorCodeInvalidAddress)
+			ctx.txe.SetException(exception)
+			ctx.CallEvents(exception)
 			return nil
 		}
 		callee = acm.AsMutableAccount(outAcc)
@@ -200,7 +203,9 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 		ctx.Logger.InfoMsg("Error on execution",
 			structure.ErrorKey, exception)
-		ctx.txe.SetException(exception)
+
+		ctx.txe.SetException(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
+			exception.Error(), ctx.txe.Trace()))
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")
 		if createContract {
