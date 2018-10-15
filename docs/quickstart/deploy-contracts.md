@@ -170,7 +170,7 @@ jobs:
 
 while our Solidity contract (`storage.sol`) looks like:
 
-```
+```solidity
 pragma solidity >=0.0.0;
 
 contract SimpleStorage {
