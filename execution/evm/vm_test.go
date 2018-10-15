@@ -1176,7 +1176,6 @@ func TestHasPermission(t *testing.T) {
 }
 
 func TestDataStackOverflow(t *testing.T) {
-
 	st := newAppState()
 	cache := state.NewCache(st)
 	account1 := newAccount(1, 2, 3)
@@ -1211,18 +1210,18 @@ func TestDataStackOverflow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
-	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
+	eventSink := NewNoopEventSink()
+	contractCode, err := ourVm.Call(cache, eventSink, account1, account2, code, code, 0, &gas)
 	require.NoError(t, err)
 
 	// Input is the function hash of `get()`
 	input, err := hex.DecodeString("6d4ce63c")
 
-	_, err = ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
-	require.EqualError(t, err, errors.Call{CallError: errors.ErrorCodeDataStackOverflow}.Error())
+	_, err = ourVm.Call(cache, eventSink, account1, account2, contractCode, input, 0, &gas)
+	assertErrorCode(t, errors.ErrorCodeDataStackOverflow, err, "Should be stack overflow")
 }
 
 func TestCallStackOverflow(t *testing.T) {
-
 	st := newAppState()
 	cache := state.NewCache(st)
 	account1 := newAccount(1, 2, 3)
@@ -1264,7 +1263,7 @@ func TestCallStackOverflow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
-	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
+	contractCode, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, code, code, 0, &gas)
 	require.NoError(t, err)
 
 	account2.SetCode(contractCode)
@@ -1274,18 +1273,19 @@ func TestCallStackOverflow(t *testing.T) {
 	input, err := hex.DecodeString("692c3b7c")
 	require.NoError(t, err)
 
-	_, err = ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
+	txe := new(exec.TxExecution)
+	_, err = ourVm.Call(cache, txe, account1, account2, contractCode, input, 0, &gas)
+	txe.SetException(err)
 	require.Error(t, err)
-	expectedError := fmt.Sprintf(`Call error: %v, nested call errors:
-%v`,
-		errors.ErrorCodeExecutionReverted,
-		errors.NestedCall{
-			NestedError: errors.ErrorCodeCallStackOverflow,
-			StackDepth:  params.CallStackMaxDepth,
-			Caller:      account2.Address(),
-			Callee:      account1.Address(),
-		})
-	require.True(t, strings.HasPrefix(err.Error(), expectedError), "Unexpected error %v", err.Error())
+	callError := txe.CallError()
+	require.Error(t, callError)
+	assertErrorCode(t, errors.ErrorCodeExecutionReverted, callError)
+	// Errors are post-order so first is deepest
+	deepestErr := callError.NestedErrors[0]
+	assertErrorCode(t, errors.ErrorCodeCallStackOverflow, deepestErr)
+	assert.Equal(t, params.CallStackMaxDepth, deepestErr.StackDepth)
+	assert.Equal(t, account2.Address(), deepestErr.Callee)
+	assert.Equal(t, account1.Address(), deepestErr.Caller)
 }
 
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {

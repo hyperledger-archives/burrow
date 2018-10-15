@@ -165,8 +165,9 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller, ca
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) delegateCall(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount, code, input []byte,
-	value uint64, gas *uint64, callType exec.CallType) (output []byte, err errors.CodedError) {
+func (vm *VM) delegateCall(callState state.ReaderWriter, eventSink EventSink, caller acm.Account,
+	callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64,
+	callType exec.CallType) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 

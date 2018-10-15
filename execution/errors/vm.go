@@ -21,35 +21,29 @@ func (err PermissionDenied) Error() string {
 	return fmt.Sprintf("Account/contract %v does not have permission %v", err.Address, err.Perm)
 }
 
-type NestedCall struct {
-	NestedError CodedError
+type NestedCallError struct {
+	CodedError
 	Caller      crypto.Address
 	Callee      crypto.Address
 	StackDepth  uint64
 }
 
-func (err NestedCall) ErrorCode() Code {
-	return err.NestedError.ErrorCode()
-}
-
-func (err NestedCall) Error() string {
+func (err NestedCallError) Error() string {
 	return fmt.Sprintf("error in nested call at depth %v: %s (callee) -> %s (caller): %v",
-		err.StackDepth, err.Callee, err.Caller, err.NestedError)
+		err.StackDepth, err.Callee, err.Caller, err.CodedError)
 }
 
-type Call struct {
-	CallError    CodedError
-	NestedErrors []NestedCall
+type CallError struct {
+	// The error from the original call which defines the overall error code
+	CodedError
+	// Errors from nested sub-calls of the original call that may have also occurred
+	NestedErrors []NestedCallError
 }
 
-func (err Call) ErrorCode() Code {
-	return err.CallError.ErrorCode()
-}
-
-func (err Call) Error() string {
+func (err CallError) Error() string {
 	buf := new(bytes.Buffer)
 	buf.WriteString("Call error: ")
-	buf.WriteString(err.CallError.Error())
+	buf.WriteString(err.CodedError.Error())
 	if len(err.NestedErrors) > 0 {
 		buf.WriteString(", nested call errors:\n")
 		for _, nestedErr := range err.NestedErrors {
