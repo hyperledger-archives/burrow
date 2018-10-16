@@ -12,6 +12,21 @@ connect to seed nodes once you have received enough addresses, so typically you
 only need them on the first start. The seed node will immediately disconnect
 from you after sending you some addresses.
 
+### Seed mode
+SeedMode can be enabled on a node.
+
+If a node is in seed mode it will accept inbound connections, share its address book, then hang up.
+Seeds modes will do a bit of gossip but not that usefully.
+Any type of node can be referenced as a 'Seeds' in the config, whether or not another node considers this node as a seed is independent of whether this node is in 'seed mode'.
+These are different concepts:
+> You are free to use a non-seed-mode node as a seed.
+
+You do not want to have too many seeds in your network (because they just keep hanging up on other nodes once they've spread their wild oats), but they are useful for accelerating peer exchange (of addresses).
+
+### Persistent peers
+Persistent peers are peers that you want to connect of regardless of the heuristics and churn dynamics built into the p2p switch.
+Ordinarily you would not stay connected to a particular peer forever, and you would not indefinitely redial, but you will for a persistent peer.
+
 ## Configure network
 
 In this quick start, we will few create validator nodes which does not know each other from network point of view.
@@ -133,7 +148,7 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
   SeedMode = false
   PersistentPeers = ""
   ListenAddress = "tcp://0.0.0.0:40000"
-  Moniker = "val_node_1"
+  Moniker = "val_node_2"
   TendermintRoot = ".burrow_node2"
 
 [Execution]
@@ -186,4 +201,37 @@ burrow start --validator-index=2 --config=.burrow_val2.toml  > .burrow_val2.log 
 
 Nodes will connect to seed node and request addresses, then they will connect to each other and start submitting and voting on blocks.
 
-At the moment, there is an [issue](https://github.com/tendermint/tendermint/issues/2092) opened in Tendermint that can lead to no sync.
+Check network status, validators nodes are connected to each others:
+```bash
+curl -s 127.0.0.1:40001/network | jq -r '.result.peers[].node_info.moniker'
+val_node_0
+val_node_1
+```
+
+You can monitor consensus and current blockchain height from the node info websockets:
+```bash
+curl -s 127.0.0.1:20001/consensus | jq -r '.result.round_state.height'
+```
+
+At the moment, there is an [issue](https://github.com/tendermint/tendermint/issues/2092) opened in Tendermint with seedMode.
+
+Disable seed mode on the seed node and see how it affects the peers network:
+
+```toml
+[Tendermint]
+  SeedMode = false
+```
+
+Clear nodes folder (Note it will restart the chain from the genesis block):
+```bash
+killall burrow
+rm -rf .burrow_node0 .burrow_node1 .burrow_node2 .burrow_seed_0
+```
+
+Restart all nodes, then check network status (Validator 3 is now connected to all peers, included seed node):
+```bash
+curl -s 127.0.0.1:40001/network | jq -r '.result.peers[].node_info.moniker'
+seed_node_0
+val_node_0
+val_node_1
+```
