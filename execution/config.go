@@ -14,11 +14,18 @@ const (
 )
 
 type ExecutionConfig struct {
-	VMOptions []VMOption `json:",omitempty" toml:",omitempty"`
+	CallStackMaxDepth        uint64
+	DataStackInitialCapacity uint64
+	DataStackMaxDepth        uint64
+	VMOptions                []VMOption `json:",omitempty" toml:",omitempty"`
 }
 
 func DefaultExecutionConfig() *ExecutionConfig {
-	return &ExecutionConfig{}
+	return &ExecutionConfig{
+		CallStackMaxDepth:        0, // Unlimited by default
+		DataStackInitialCapacity: evm.DataStackInitialCapacity,
+		DataStackMaxDepth:        0, // Unlimited by default
+	}
 }
 
 type ExecutionOption func(*executor)
@@ -42,6 +49,7 @@ func (ec *ExecutionConfig) ExecutionOptions() ([]ExecutionOption, error) {
 			return nil, fmt.Errorf("VM option '%s' not recognised", option)
 		}
 	}
+	vmOptions = append(vmOptions, evm.StackOptions(ec.CallStackMaxDepth, ec.DataStackInitialCapacity, ec.DataStackMaxDepth))
 	exeOptions = append(exeOptions, VMOptions(vmOptions...))
 	return exeOptions, nil
 }
