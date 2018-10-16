@@ -76,9 +76,10 @@ test_setup(){
     echo "Starting Burrow using GRPC address: $BURROW_HOST:$BURROW_GRPC_PORT..."
     echo
     rm -rf ${burrow_root}
-    $(cd "$chain_dir" && ${burrow_bin} start -v0 2> "$burrow_log")&
+    pushd "$chain_dir"
+    ${burrow_bin} start -v0 2> "$burrow_log"&
     burrow_pid=$!
-
+    popd
   else
     echo "Not booting Burrow, but expecting Burrow to be running with tm RPC on port $BURROW_GRPC_PORT"
   fi
@@ -98,9 +99,10 @@ test_setup(){
 test_teardown(){
   echo "Cleaning up..."
   if [[ "$boot" = true ]]; then
+    echo "Killing burrow with PID $burrow_pid"
     kill ${burrow_pid} 2> /dev/null
-    wait $! 2> /dev/null
     echo "Waiting for burrow to shutdown..."
+    wait ${burrow_pid} 2> /dev/null
     rm -rf "$burrow_root"
   fi
   echo ""
