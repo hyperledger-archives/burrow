@@ -114,7 +114,7 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 	}
 
 	// compile
-	if filepath.Ext(deploy.Contract) == ".bin" {
+	if filepath.Ext(deploy.Contract) != ".sol" {
 		log.Info("Binary file detected. Using binary deploy sequence.")
 		log.WithField("=>", contractPath).Info("Binary path")
 
@@ -124,6 +124,9 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 		}
 		if binaryResponse.Error != "" {
 			return "", fmt.Errorf("Something went wrong when you were trying to link your binaries: %v", binaryResponse.Error)
+		}
+		if binaryResponse.Binary == "" {
+			return "", fmt.Errorf("Contract binary code missing")
 		}
 		contractCode := binaryResponse.Binary
 
@@ -170,15 +173,18 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 			response := resp.Objects[0]
 			log.WithField("=>", string(response.Binary.Abi)).Info("Abi")
 			log.WithField("=>", response.Binary.Evm.Bytecode.Object).Info("Bin")
-			if response.Binary.Evm.Bytecode.Object != "" {
-				result, err = deployContract(deploy, do, client, response, libs)
-				if err != nil {
-					return "", err
-				}
+			if response.Binary.Evm.Bytecode.Object == "" {
+				return "", fmt.Errorf("Contract binary code missing")
+			}
+
+			result, err = deployContract(deploy, do, client, response, libs)
+			if err != nil {
+				return "", err
 			}
 		case deploy.Instance == "all":
 			log.WithField("path", contractPath).Info("Deploying all contracts")
 			var baseObj string
+			deployedCount := 0
 			for _, response := range resp.Objects {
 				if response.Binary.Evm.Bytecode.Object == "" {
 					continue
@@ -187,9 +193,13 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 				if err != nil {
 					return "", err
 				}
+				deployedCount++
 				if strings.ToLower(response.Objectname) == strings.ToLower(strings.TrimSuffix(filepath.Base(deploy.Contract), filepath.Ext(filepath.Base(deploy.Contract)))) {
 					baseObj = result
 				}
+			}
+			if deployedCount == 0 {
+				return "", fmt.Errorf("Contract binary code missing")
 			}
 			if baseObj != "" {
 				result = baseObj
@@ -202,6 +212,9 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, resp 
 					continue
 				}
 				if matchInstanceName(response.Objectname, deploy.Instance) {
+					if response.Binary.Evm.Bytecode.Object == "" {
+						return "", fmt.Errorf("Contract binary code missing")
+					}
 					log.WithField("=>", string(response.Binary.Abi)).Info("Abi")
 					log.WithField("=>", response.Binary.Evm.Bytecode.Object).Info("Bin")
 					result, err = deployContract(deploy, do, client, response, libs)
