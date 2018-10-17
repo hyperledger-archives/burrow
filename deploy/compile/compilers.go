@@ -35,7 +35,7 @@ type SolidityInputSource struct {
 }
 
 type SolidityOutput struct {
-	Contracts map[string]map[string]SolidityOutputContract
+	Contracts map[string]map[string]SolidityContract
 	Errors    []struct {
 		Component        string
 		FormattedMessage string
@@ -45,7 +45,7 @@ type SolidityOutput struct {
 	}
 }
 
-type SolidityOutputContract struct {
+type SolidityContract struct {
 	Abi json.RawMessage
 	Evm struct {
 		Bytecode struct {
@@ -66,75 +66,70 @@ type Response struct {
 	Error   string         `json:"error"`
 }
 
-type BinaryResponse struct {
-	Binary string          `json:"binary"`
-	Abi    json.RawMessage `json:"abi"`
-	Error  string          `json:"error"`
-}
-
 // Compile response object
 type ResponseItem struct {
-	Filename   string                 `json:"filename"`
-	Objectname string                 `json:"objectname"`
-	Binary     SolidityOutputContract `json:"binary"`
+	Filename   string           `json:"filename"`
+	Objectname string           `json:"objectname"`
+	Contract   SolidityContract `json:"binary"`
 }
 
-func LinkFile(file string, libraries map[string]string) (*BinaryResponse, error) {
-	//Create Binary Request, send it off
+func LoadSolidityContract(file string) (*SolidityContract, error) {
 	codeB, err := ioutil.ReadFile(file)
 	if err != nil {
-		return &BinaryResponse{}, err
+		return &SolidityContract{}, err
 	}
-	contract := SolidityOutputContract{}
+	contract := SolidityContract{}
 	err = json.Unmarshal(codeB, &contract)
 	if err != nil {
-		return &BinaryResponse{}, err
+		return &SolidityContract{}, err
 	}
-	return LinkContract(contract, libraries)
+	return &contract, nil
 }
 
-func LinkContract(contract SolidityOutputContract, libraries map[string]string) (*BinaryResponse, error) {
+func (contract *SolidityContract) Save(file string) error {
+	str, err := json.Marshal(*contract)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, str, 0644)
+}
+
+func (contract *SolidityContract) Link(libraries map[string]string) error {
 	bin := contract.Evm.Bytecode.Object
 	if !strings.Contains(bin, "_") {
-		return &BinaryResponse{
-			Binary: bin,
-			Abi:    contract.Abi,
-			Error:  "",
-		}, nil
+		return nil
 	}
 	var links map[string]map[string][]struct{ Start, Length int }
 	err := json.Unmarshal(contract.Evm.Bytecode.LinkReferences, &links)
 	if err != nil {
-		return &BinaryResponse{}, err
+		return err
 	}
 	for _, f := range links {
 		for name, relos := range f {
 			addr, ok := libraries[name]
 			if !ok {
-				return &BinaryResponse{}, fmt.Errorf("library %s is not defined", name)
+				return fmt.Errorf("library %s is not defined", name)
 			}
 			for _, relo := range relos {
 				if relo.Length != crypto.AddressLength {
-					return &BinaryResponse{}, fmt.Errorf("linkReference should be %d bytes long, not %d", crypto.AddressLength, relo.Length)
+					return fmt.Errorf("linkReference should be %d bytes long, not %d", crypto.AddressLength, relo.Length)
 				}
 				if len(addr) != crypto.AddressHexLength {
-					return &BinaryResponse{}, fmt.Errorf("address %s should be %d character long, not %d", addr, crypto.AddressHexLength, len(addr))
+					return fmt.Errorf("address %s should be %d character long, not %d", addr, crypto.AddressHexLength, len(addr))
 				}
 				start := relo.Start * 2
 				end := relo.Start*2 + crypto.AddressHexLength
 				if bin[start+1] != '_' || bin[end-1] != '_' {
-					return &BinaryResponse{}, fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
+					return fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
 				}
 				bin = bin[:start] + addr + bin[end:]
 			}
 		}
 	}
 
-	return &BinaryResponse{
-		Binary: bin,
-		Abi:    contract.Abi,
-		Error:  "",
-	}, nil
+	contract.Evm.Bytecode.Object = bin
+
+	return nil
 }
 
 func Compile(file string, optimize bool, libraries map[string]string) (*Response, error) {
@@ -177,7 +172,7 @@ func Compile(file string, optimize bool, libraries map[string]string) (*Response
 			respItem := ResponseItem{
 				Filename:   f,
 				Objectname: objectName(contract),
-				Binary:     item,
+				Contract:   item,
 			}
 			respItemArray = append(respItemArray, respItem)
 		}
@@ -196,8 +191,8 @@ func Compile(file string, optimize bool, libraries map[string]string) (*Response
 	for _, re := range respItemArray {
 		log.WithFields(log.Fields{
 			"name": re.Objectname,
-			"bin":  re.Binary.Evm.Bytecode.Object,
-			"abi":  string(re.Binary.Abi),
+			"bin":  re.Contract.Evm.Bytecode.Object,
+			"abi":  string(re.Contract.Abi),
 		}).Debug("Response formulated")
 	}
 
@@ -234,9 +229,9 @@ func PrintResponse(resp Response, cli bool) {
 		for _, r := range resp.Objects {
 			message := log.WithFields((log.Fields{
 				"name": r.Objectname,
-				"bin":  r.Binary.Evm.Bytecode,
-				"abi":  string(r.Binary.Abi[:]),
-				"link": string(r.Binary.Evm.Bytecode.LinkReferences[:]),
+				"bin":  r.Contract.Evm.Bytecode,
+				"abi":  string(r.Contract.Abi[:]),
+				"link": string(r.Contract.Evm.Bytecode.LinkReferences[:]),
 			}))
 			if cli {
 				message.Warn("Response")

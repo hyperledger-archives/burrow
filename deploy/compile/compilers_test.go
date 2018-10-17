@@ -52,7 +52,7 @@ func TestLocalMulti(t *testing.T) {
 		respItem := ResponseItem{
 			Objectname: objectName(strings.TrimSpace(contract)),
 		}
-		respItem.Binary.Evm.Bytecode.Object = item.Bin
+		respItem.Contract.Evm.Bytecode.Object = item.Bin
 		respItemArray = append(respItemArray, respItem)
 	}
 	expectedResponse := &Response{
@@ -97,9 +97,9 @@ func TestLocalSingle(t *testing.T) {
 			Objectname: objectName(strings.TrimSpace(contract)),
 			Filename:   "simpleContract.sol",
 		}
-		respItem.Binary.Abi = json.RawMessage(item.Abi)
-		respItem.Binary.Evm.Bytecode.Object = item.Bin
-		respItem.Binary.Evm.Bytecode.LinkReferences = []byte("{}")
+		respItem.Contract.Abi = json.RawMessage(item.Abi)
+		respItem.Contract.Evm.Bytecode.Object = item.Bin
+		respItem.Contract.Evm.Bytecode.LinkReferences = []byte("{}")
 		respItemArray = append(respItemArray, respItem)
 	}
 	expectedResponse := &Response{
@@ -113,9 +113,9 @@ func TestLocalSingle(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := range resp.Objects {
-		resp.Objects[i].Binary.Metadata = ""
-		resp.Objects[i].Binary.Devdoc = nil
-		resp.Objects[i].Binary.Evm.Bytecode.Opcodes = ""
+		resp.Objects[i].Contract.Metadata = ""
+		resp.Objects[i].Contract.Devdoc = nil
+		resp.Objects[i].Contract.Evm.Bytecode.Opcodes = ""
 	}
 	assert.Equal(t, expectedResponse, resp)
 }
@@ -163,7 +163,7 @@ func extractWarningJSON(output string) (warning string, json string) {
 
 func contains(s []ResponseItem, e ResponseItem) bool {
 	for _, a := range s {
-		if a.Binary.Evm.Bytecode.Object == e.Binary.Evm.Bytecode.Object {
+		if a.Contract.Evm.Bytecode.Object == e.Contract.Evm.Bytecode.Object {
 			return true
 		}
 	}
