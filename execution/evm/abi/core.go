@@ -1,9 +1,7 @@
 package abi
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -146,16 +144,10 @@ func readAbi(root, contract string) (string, error) {
 		}
 	}
 	log.WithField("abifile", p).Debug("Found ABI")
-	b, err := ioutil.ReadFile(p)
+	sol, err := compile.LoadSolidityContract(p)
 	if err != nil {
 		return "", err
 	}
-	sol := compile.SolidityOutputContract{}
-	err = json.Unmarshal(b, &sol)
-	if err != nil {
-		return "", err
-	}
-
 	return string(sol.Abi), nil
 }
 
