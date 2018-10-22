@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
+	"strings"
 )
 
 // Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below
@@ -1147,6 +1148,119 @@ func TestHasPermission(t *testing.T) {
 	}.Account()
 	// Ensure we are falling through to global permissions on those bits not set
 	assert.True(t, HasPermission(st, acc, PermFlagFromString(t, "100001000110")))
+}
+
+func TestDataStackOverflow(t *testing.T) {
+
+	st := newAppState()
+	cache := state.NewCache(st)
+	account1 := newAccount(1, 2, 3)
+	account2 := newAccount(3, 2, 1)
+	cache.UpdateAccount(account1)
+	cache.UpdateAccount(account2)
+	cache.Sync(st)
+
+	params := newParams()
+	params.DataStackMaxDepth = 4
+	ourVm := NewVM(params, crypto.ZeroAddress, nil, logger)
+
+	var gas uint64 = 100000
+
+	/*
+		pragma solidity ^0.4.0;
+
+		contract SimpleStorage {
+			function get() public constant returns (address) {
+				return get();
+			}
+		}
+	*/
+
+	// This bytecode is compiled from Solidity contract above using remix.ethereum.org online compiler
+	code, err := hex.DecodeString("608060405234801561001057600080fd5b5060d18061001f6000396000f300608060405260043610" +
+		"603f576000357c0100000000000000000000000000000000000000000000000000000000900463ff" +
+		"ffffff1680636d4ce63c146044575b600080fd5b348015604f57600080fd5b5060566098565b6040" +
+		"51808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffff" +
+		"ffffffffffff16815260200191505060405180910390f35b600060a06098565b9050905600a16562" +
+		"7a7a72305820daacfba0c21afacb5b67f26bc8021de63eaa560db82f98357d4e513f3249cf350029")
+	require.NoError(t, err)
+
+	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
+	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
+	require.NoError(t, err)
+
+	// Input is the function hash of `get()`
+	input, err := hex.DecodeString("6d4ce63c")
+
+	_, err = ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
+	require.EqualError(t, err, errors.Call{CallError: errors.ErrorCodeDataStackOverflow}.Error())
+}
+
+func TestCallStackOverflow(t *testing.T) {
+
+	st := newAppState()
+	cache := state.NewCache(st)
+	account1 := newAccount(1, 2, 3)
+	account2 := newAccount(3, 2, 1)
+	cache.UpdateAccount(account1)
+	cache.UpdateAccount(account2)
+	cache.Sync(st)
+
+	params := newParams()
+
+	// Sender accepts lot of gaz but we run on a caped call stack node
+	var gas uint64 = 100000
+	params.CallStackMaxDepth = 2
+
+	ourVm := NewVM(params, crypto.ZeroAddress, nil, logger)
+
+	/*
+		pragma solidity ^0.4.0;
+
+		contract A {
+		   function callMeBack() public {
+				return require(msg.sender.call(bytes4(keccak256("callMeBack()")),this));
+			}
+		}
+	*/
+
+	// This bytecode is compiled from Solidity contract above using remix.ethereum.org online compiler
+	code, err := hex.DecodeString("608060405234801561001057600080fd5b5061017a806100206000396000f3006080604052600436" +
+		"10610041576000357c01000000000000000000000000000000000000000000000000000000009004" +
+		"63ffffffff168063692c3b7c14610046575b600080fd5b34801561005257600080fd5b5061005b61" +
+		"005d565b005b3373ffffffffffffffffffffffffffffffffffffffff1660405180807f63616c6c4d" +
+		"654261636b28290000000000000000000000000000000000000000815250600c0190506040518091" +
+		"0390207c010000000000000000000000000000000000000000000000000000000090043060405182" +
+		"63ffffffff167c010000000000000000000000000000000000000000000000000000000002815260" +
+		"0401808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffff" +
+		"ffffffffffffff1681526020019150506000604051808303816000875af192505050151561014c57" +
+		"600080fd5b5600a165627a7a723058209315a40abb8b23b7c2a340e938b01367b419a23818475a2e" +
+		"ee80d09da3f7ba780029")
+	require.NoError(t, err)
+
+	// Run the contract initialisation code to obtain the contract code that would be mounted at account2
+	contractCode, err := ourVm.Call(cache, account1, account2, code, code, 0, &gas)
+	require.NoError(t, err)
+
+	account2.SetCode(contractCode)
+	account1.SetCode(contractCode)
+
+	// keccak256 hash of 'callMeBack()'
+	input, err := hex.DecodeString("692c3b7c")
+	require.NoError(t, err)
+
+	_, err = ourVm.Call(cache, account1, account2, contractCode, input, 0, &gas)
+	require.Error(t, err)
+	expectedError := fmt.Sprintf(`Call error: %v, nested call errors:
+%v`,
+		errors.ErrorCodeExecutionReverted,
+		errors.NestedCall{
+			NestedError: errors.ErrorCodeCallStackOverflow,
+			StackDepth:  params.CallStackMaxDepth,
+			Caller:      account2.Address(),
+			Callee:      account1.Address(),
+		})
+	require.True(t, strings.HasPrefix(err.Error(), expectedError), "Unexpected error %v", err.Error())
 }
 
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {

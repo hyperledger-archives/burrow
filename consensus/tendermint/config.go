@@ -18,20 +18,26 @@ type BurrowTendermintConfig struct {
 	// Peers to which we automatically connect
 	PersistentPeers string
 	ListenAddress   string
-	// Optional external that nodes my provide with their NodeInfo
+	// Optional external that nodes may provide with their NodeInfo
 	ExternalAddress string
 	Moniker         string
 	TendermintRoot  string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
+
+	// EmptyBlocks mode and possible interval between empty blocks in seconds
+	CreateEmptyBlocks         bool
+	CreateEmptyBlocksInterval int
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 	tmDefaultConfig := tm_config.DefaultConfig()
 	return &BurrowTendermintConfig{
-		ListenAddress:   tmDefaultConfig.P2P.ListenAddress,
-		ExternalAddress: tmDefaultConfig.P2P.ExternalAddress,
-		TendermintRoot:  ".burrow",
+		ListenAddress:             tmDefaultConfig.P2P.ListenAddress,
+		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
+		TendermintRoot:            ".burrow",
+		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
+		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
 	}
 }
 
@@ -42,6 +48,8 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		// minimal
 		conf.RootDir = btc.TendermintRoot
 		conf.Consensus.RootDir = btc.TendermintRoot
+		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
+		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
 		conf.Mempool.RootDir = btc.TendermintRoot
 		conf.P2P.RootDir = btc.TendermintRoot
 		conf.P2P.Seeds = btc.Seeds
