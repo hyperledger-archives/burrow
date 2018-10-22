@@ -1,0 +1,25 @@
+jobs:
+
+- name: BuildUserAccountTest
+  build:
+    contract: UserAccountTest.sol
+
+##########
+# UserAccount Tests
+
+- name: UserAccountTest
+  deploy:
+    contract: UserAccountTest.bin
+    instance: UserAccountTest
+
+- name: testCallForwarding
+  call:
+    destination: $UserAccountTest
+    bin: UserAccountTest
+    function: testCallForwarding
+
+- name: assertCallForwarding
+  assert:
+    key: $testCallForwarding
+    relation: eq
+    val: success
