@@ -1008,6 +1008,10 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 				case CALL:
 					ret, callErr = vm.call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit,
 						exec.CallTypeCall)
+					stateErr := callState.UpdateAccount(acc)
+					if stateErr != nil && value > 0 {
+						return nil, firstErr(callErr, stateErr)
+					}
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))
