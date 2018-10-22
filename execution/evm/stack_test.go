@@ -1,11 +1,12 @@
 package evm
 
 import (
+	"math"
+	"testing"
+
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/stretchr/testify/assert"
-	"math"
-	"testing"
 )
 
 func TestStack_MaxDepthInt32(t *testing.T) {

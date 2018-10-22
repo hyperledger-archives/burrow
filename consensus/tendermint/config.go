@@ -1,10 +1,11 @@
 package tendermint
 
 import (
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
-	tm_config "github.com/tendermint/tendermint/config"
 	"net/url"
 	"strings"
+
+	"github.com/hyperledger/burrow/consensus/tendermint/abci"
+	tm_config "github.com/tendermint/tendermint/config"
 )
 
 // Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
