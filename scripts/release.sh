@@ -9,6 +9,7 @@ function release {
     echo "Building and releasing $tag..."
     echo "Pushing docker image..."
     echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
+    docker tag ${DOCKER_REPO}:latest
     docker push ${DOCKER_REPO}
     echo "Building and pushing binaries"
     [[ -e "$notes" ]] && goreleaser --release-notes "$notes" || goreleaser
