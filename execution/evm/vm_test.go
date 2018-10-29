@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
@@ -34,7 +36,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
-	"strings"
 )
 
 // Test output is a bit clearer if we /dev/null the logging, but can be re-enabled by uncommenting the below

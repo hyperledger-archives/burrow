@@ -2,9 +2,10 @@ package abci
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
-	"strings"
 )
 
 const (

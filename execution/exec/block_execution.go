@@ -3,8 +3,6 @@ package exec
 import (
 	"fmt"
 
-	"encoding/json"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -62,18 +60,6 @@ func (be *BlockExecution) Tagged() *TaggedBlockExecution {
 			query.MustReflectTags(be.BlockHeader),
 		),
 		BlockExecution: be,
-	}
-}
-
-// TODO remove when Header gogo protobuf fixed in Tendermint
-func BlockHeaderFromHeader(header *abciTypes.Header) *BlockHeader {
-	if header == nil {
-		return nil
-	}
-	bs, _ := json.Marshal(header)
-	return &BlockHeader{
-		JSON:   string(bs),
-		NumTxs: int32(header.NumTxs),
 	}
 }
 

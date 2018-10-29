@@ -5,7 +5,7 @@ package exec;
 option go_package = "github.com/hyperledger/burrow/execution/exec";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-//import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "github.com/tendermint/tendermint/abci/types/types.proto";
 
 import "errors.proto";
 import "names.proto";
@@ -22,15 +22,8 @@ option (gogoproto.messagename_all) = true;
 message BlockExecution {
     // The height of this block
     uint64 Height = 1;
-    // TODO: reintroduce this when upstream merges: https://github.com/tendermint/tendermint/pull/1987
-//    types.Header BlockHeader = 2;
-    BlockHeader BlockHeader = 2;
+    types.Header BlockHeader = 2;
     repeated TxExecution TxExecutions = 3;
-}
-
-message BlockHeader {
-    string JSON = 1;
-    int32 NumTxs = 2;
 }
 
 message TxExecution {
