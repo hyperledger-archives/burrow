@@ -2,12 +2,13 @@ package abci
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
-	"testing"
 )
 
 const (

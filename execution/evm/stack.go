@@ -19,9 +19,10 @@ import (
 
 	"math/big"
 
+	"math"
+
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
-	"math"
 )
 
 // Change the length of this zero array to tweak the size of the block of zeros

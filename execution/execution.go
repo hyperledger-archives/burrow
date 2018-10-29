@@ -314,7 +314,7 @@ func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.Blo
 	// Capture BlockExecution to return
 	be := exe.blockExecution
 	// Set the header when provided
-	be.BlockHeader = exec.BlockHeaderFromHeader(header)
+	be.BlockHeader = header
 	// Start new execution for the next height
 	exe.blockExecution = &exec.BlockExecution{
 		Height: exe.blockExecution.Height + 1,
