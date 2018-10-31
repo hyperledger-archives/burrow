@@ -4,7 +4,7 @@
 
 ```
 go get github.com/hyperledger/burrow
-cd $GOPATH/github.com/hyperledger/burrow
+cd $GOPATH/src/github.com/hyperledger/burrow
 make build
 ```
 
