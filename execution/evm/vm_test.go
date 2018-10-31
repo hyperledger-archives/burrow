@@ -711,6 +711,7 @@ func TestSendCall(t *testing.T) {
 }
 
 // Test to ensure that contracts called with STATICCALL cannot modify state
+// as per https://github.com/ethereum/EIPs/blob/master/EIPS/eip-214.md
 func TestStaticCall(t *testing.T) {
 	gas1, gas2 := byte(0x1), byte(0x1)
 	value := byte(0x69)
@@ -718,14 +719,19 @@ func TestStaticCall(t *testing.T) {
 	retOff, retSize := byte(0x0), byte(0x0E)
 	log_default := MustSplice(PUSH1, inSize, PUSH1, inOff)
 
-	tesRecipient := newAccount(1)
-	testAddr := tesRecipient.Address()
+	testRecipient := newAccount(1)
+	testAddr := testRecipient.Address()
 
+	// check all illegal state modifications in child staticcall frame
 	for _, illegalContractCode := range [][]byte{
-		MustSplice(PUSH13, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x65, 0x64, 0x20, 0x64, 0x61, 0x74, 0x61, PUSH1, 0x00, SSTORE), MustSplice(log_default, LOG0),
-		MustSplice(log_default, PUSH1, 0x1, LOG1), MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, LOG2), MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, LOG3),
-		MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, LOG4), MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x69, CREATE), MustSplice(PUSH20, testAddr, SELFDESTRUCT)} {
-
+		MustSplice(PUSH9, "arbitrary", PUSH1, 0x00, SSTORE),
+		MustSplice(log_default, LOG0),
+		MustSplice(log_default, PUSH1, 0x1, LOG1),
+		MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, LOG2),
+		MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, LOG3),
+		MustSplice(log_default, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, PUSH1, 0x1, LOG4),
+		MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x69, CREATE),
+		MustSplice(PUSH20, testAddr, SELFDESTRUCT)} {
 		// TODO: CREATE2
 
 		cache := state.NewCache(newAppState())
@@ -734,16 +740,19 @@ func TestStaticCall(t *testing.T) {
 		calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee",
 			MustSplice(illegalContractCode, PUSH1, 0x1, return1()))
 
+		// equivalent to CALL, but enforce state immutability for children
 		callerAccount, _ := makeAccountWithCode(cache, "caller",
 			MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 				inOff, PUSH1, value, PUSH20, calleeAddress, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
 				PUSH1, retOff, RETURN))
 
 		txe, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
+		// the topmost caller can never *illegally* modify state
 		require.NoError(t, err)
 		exCalls := txe.ExceptionalCalls()
+		// as we only make one call, the stack depth should be 1
 		require.Len(t, exCalls, 1)
-		assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
+		assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "should get an error from child accounts that cache is read only")
 	}
 
 	cache := state.NewCache(newAppState())
@@ -759,14 +768,14 @@ func TestStaticCall(t *testing.T) {
 			inOff, PUSH1, value, PUSH20, calleeAddress, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
 			PUSH1, retOff, RETURN))
 
+	// TODO: uncomment test assertions
 	err := calleeAccount.AddToBalance(100000)
 	require.NoError(t, err)
 	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
 	require.NoError(t, err)
-	// TODO: reintroduce these assertions when vm account state is refactored
-	//exCalls := txe.ExceptionalCalls()
-	//require.Len(t, exCalls, 1)
-	//assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
+	// exCalls := txe.ExceptionalCalls()
+	// require.Len(t, exCalls, 1)
+	// assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
