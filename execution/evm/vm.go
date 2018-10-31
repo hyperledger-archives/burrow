@@ -993,6 +993,10 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 				// Add the account to the tx cache
 				childCallState.UpdateAccount(acc)
 				switch op {
+				case CALL:
+					ret, callErr = vm.call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit,
+						exec.CallTypeCall)
+
 				case CALLCODE:
 					ret, callErr = vm.call(childCallState, eventSink, callee, callee, acc.Code(), args, value, &gasLimit,
 						exec.CallTypeCode)
@@ -1004,14 +1008,6 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 				case STATICCALL:
 					ret, callErr = vm.delegateCall(state.ReadOnly(childCallState), NewLogFreeEventSink(eventSink),
 						caller, callee, acc.Code(), args, value, &gasLimit, exec.CallTypeStatic)
-
-				case CALL:
-					ret, callErr = vm.call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit,
-						exec.CallTypeCall)
-					stateErr := callState.UpdateAccount(acc)
-					if stateErr != nil && value > 0 {
-						return nil, firstErr(callErr, stateErr)
-					}
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))

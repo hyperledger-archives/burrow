@@ -2,6 +2,7 @@ package contexts
 
 import (
 	"fmt"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/bcm"

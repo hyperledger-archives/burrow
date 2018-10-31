@@ -23,9 +23,9 @@ func (err PermissionDenied) Error() string {
 
 type NestedCallError struct {
 	CodedError
-	Caller      crypto.Address
-	Callee      crypto.Address
-	StackDepth  uint64
+	Caller     crypto.Address
+	Callee     crypto.Address
+	StackDepth uint64
 }
 
 func (err NestedCallError) Error() string {
