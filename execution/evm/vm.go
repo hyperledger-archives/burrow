@@ -1014,7 +1014,10 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 				}
 
 				if callErr == nil {
-					childCallState.Sync(callState)
+					syncErr := errors.AsException(childCallState.Sync(callState))
+					if op == CALL && value != 0 && syncErr != nil {
+						return nil, syncErr
+					}
 				}
 			}
 			vm.returnData = ret

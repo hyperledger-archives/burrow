@@ -760,6 +760,7 @@ func TestStaticCall(t *testing.T) {
 
 	_, finalAddress := makeAccountWithCode(cache, "final", MustSplice(PUSH1, int64(20), return1()))
 
+	// intermediate account CALLs another contract *with* a value
 	calleeAccount, calleeAddress := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
 		inOff, PUSH1, value, PUSH20, finalAddress, PUSH2, gas1, gas2, CALL, returnWord()))
 
@@ -768,14 +769,34 @@ func TestStaticCall(t *testing.T) {
 			inOff, PUSH1, value, PUSH20, calleeAddress, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
 			PUSH1, retOff, RETURN))
 
-	// TODO: uncomment test assertions
 	err := calleeAccount.AddToBalance(100000)
 	require.NoError(t, err)
-	_, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
+	txe, err := runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
 	require.NoError(t, err)
-	// exCalls := txe.ExceptionalCalls()
-	// require.Len(t, exCalls, 1)
-	// assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation")
+	exCalls := txe.ExceptionalCalls()
+	require.Len(t, exCalls, 1)
+	assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation because of call with value")
+
+	// this final test just checks that STATICCALL actually works
+	cache = state.NewCache(newAppState())
+	ourVm = NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	// intermediate account CALLs another contract *without* a value
+	calleeAccount, calleeAddress = makeAccountWithCode(cache, "callee", MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+		inOff, PUSH1, 0x00, PUSH20, finalAddress, PUSH2, gas1, gas2, CALL, returnWord()))
+
+	callerAccount, _ = makeAccountWithCode(cache, "caller",
+		MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize, PUSH1,
+			inOff, PUSH1, value, PUSH20, calleeAddress, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
+			PUSH1, retOff, RETURN))
+
+	err = calleeAccount.AddToBalance(100000)
+	require.NoError(t, err)
+	txe, err = runVMWaitError(cache, ourVm, callerAccount, calleeAccount, callerAccount.Code(), 1000)
+	// no exceptions expected because value never set in children
+	require.NoError(t, err)
+	exCalls = txe.ExceptionalCalls()
+	require.Len(t, exCalls, 0)
 }
 
 // This test was introduced to cover an issues exposed in our handling of the
