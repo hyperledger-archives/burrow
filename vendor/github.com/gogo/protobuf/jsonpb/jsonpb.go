@@ -862,7 +862,7 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
 
 			return nil
 		case "Duration":
-			unq, err := strconv.Unquote(string(inputValue))
+			unq, err := unquote(string(inputValue))
 			if err != nil {
 				return err
 			}
@@ -879,7 +879,7 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
 			target.Field(1).SetInt(ns)
 			return nil
 		case "Timestamp":
-			unq, err := strconv.Unquote(string(inputValue))
+			unq, err := unquote(string(inputValue))
 			if err != nil {
 				return err
 			}
@@ -925,7 +925,7 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
 				target.Field(0).Set(reflect.ValueOf(&types.Value_NullValue{}))
 			} else if v, err := strconv.ParseFloat(ivStr, 0); err == nil {
 				target.Field(0).Set(reflect.ValueOf(&types.Value_NumberValue{NumberValue: v}))
-			} else if v, err := strconv.Unquote(ivStr); err == nil {
+			} else if v, err := unquote(ivStr); err == nil {
 				target.Field(0).Set(reflect.ValueOf(&types.Value_StringValue{StringValue: v}))
 			} else if v, err := strconv.ParseBool(ivStr); err == nil {
 				target.Field(0).Set(reflect.ValueOf(&types.Value_BoolValue{BoolValue: v}))
@@ -991,16 +991,16 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
 		return nil
 	}
 
+	if prop != nil && len(prop.CustomType) > 0 && target.CanAddr() {
+		if m, ok := target.Addr().Interface().(interface {
+			UnmarshalJSON([]byte) error
+		}); ok {
+			return json.Unmarshal(inputValue, m)
+		}
+	}
+
 	// Handle nested messages.
 	if targetType.Kind() == reflect.Struct {
-		if prop != nil && len(prop.CustomType) > 0 && target.CanAddr() {
-			if m, ok := target.Addr().Interface().(interface {
-				UnmarshalJSON([]byte) error
-			}); ok {
-				return json.Unmarshal(inputValue, m)
-			}
-		}
-
 		var jsonFields map[string]json.RawMessage
 		if err := json.Unmarshal(inputValue, &jsonFields); err != nil {
 			return err
@@ -1188,6 +1188,12 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
 
 	// Use the encoding/json for parsing other value types.
 	return json.Unmarshal(inputValue, target.Addr().Interface())
+}
+
+func unquote(s string) (string, error) {
+	var ret string
+	err := json.Unmarshal([]byte(s), &ret)
+	return ret, err
 }
 
 // jsonProperties returns parsed proto.Properties for the field and corrects JSONName attribute.

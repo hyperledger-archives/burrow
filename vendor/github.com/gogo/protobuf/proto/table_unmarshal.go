@@ -99,6 +99,8 @@ type unmarshalFieldInfo struct {
 
 	// if a required field, contains a single set bit at this field's index in the required field list.
 	reqMask uint64
+
+	name string // name of the field, for error reporting
 }
 
 var (
@@ -360,7 +362,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 		}
 
 		// Store the info in the correct slot in the message.
-		u.setTag(tag, toField(&f), unmarshal, reqMask)
+		u.setTag(tag, toField(&f), unmarshal, reqMask, name)
 	}
 
 	// Find any types associated with oneof fields.
@@ -376,10 +378,17 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 
 			f := typ.Field(0) // oneof implementers have one field
 			baseUnmarshal := fieldUnmarshaler(&f)
-			tagstr := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-			tag, err := strconv.Atoi(tagstr)
+			tags := strings.Split(f.Tag.Get("protobuf"), ",")
+			fieldNum, err := strconv.Atoi(tags[1])
 			if err != nil {
-				panic("protobuf tag field not an integer: " + tagstr)
+				panic("protobuf tag field not an integer: " + tags[1])
+			}
+			var name string
+			for _, tag := range tags {
+				if strings.HasPrefix(tag, "name=") {
+					name = strings.TrimPrefix(tag, "name=")
+					break
+				}
 			}
 
 			// Find the oneof field that this struct implements.
@@ -390,7 +399,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 					// That lets us know where this struct should be stored
 					// when we encounter it during unmarshaling.
 					unmarshal := makeUnmarshalOneof(typ, of.ityp, baseUnmarshal)
-					u.setTag(tag, of.field, unmarshal, 0)
+					u.setTag(fieldNum, of.field, unmarshal, 0, name)
 				}
 			}
 		}
@@ -411,7 +420,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 	// [0 0] is [tag=0/wiretype=varint varint-encoded-0].
 	u.setTag(0, zeroField, func(b []byte, f pointer, w int) ([]byte, error) {
 		return nil, fmt.Errorf("proto: %s: illegal tag 0 (wire type %d)", t, w)
-	}, 0)
+	}, 0, "")
 
 	// Set mask for required field check.
 	u.reqMask = uint64(1)<<uint(len(u.reqFields)) - 1
@@ -423,8 +432,9 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 // tag = tag # for field
 // field/unmarshal = unmarshal info for that field.
 // reqMask = if required, bitmask for field position in required field list. 0 otherwise.
-func (u *unmarshalInfo) setTag(tag int, field field, unmarshal unmarshaler, reqMask uint64) {
-	i := unmarshalFieldInfo{field: field, unmarshal: unmarshal, reqMask: reqMask}
+// name = short name of the field.
+func (u *unmarshalInfo) setTag(tag int, field field, unmarshal unmarshaler, reqMask uint64, name string) {
+	i := unmarshalFieldInfo{field: field, unmarshal: unmarshal, reqMask: reqMask, name: name}
 	n := u.typ.NumField()
 	if tag >= 0 && (tag < 16 || tag < 2*n) { // TODO: what are the right numbers here?
 		for len(u.dense) <= tag {
@@ -455,6 +465,7 @@ func typeUnmarshaler(t reflect.Type, tags string) unmarshaler {
 	ctype := false
 	isTime := false
 	isDuration := false
+	isWktPointer := false
 	for _, tag := range tagArray[3:] {
 		if strings.HasPrefix(tag, "name=") {
 			name = tag[5:]
@@ -467,6 +478,9 @@ func typeUnmarshaler(t reflect.Type, tags string) unmarshaler {
 		}
 		if tag == "stdduration" {
 			isDuration = true
+		}
+		if tag == "wktptr" {
+			isWktPointer = true
 		}
 	}
 
@@ -520,6 +534,112 @@ func typeUnmarshaler(t reflect.Type, tags string) unmarshaler {
 			return makeUnmarshalDurationSlice(getUnmarshalInfo(t), name)
 		}
 		return makeUnmarshalDuration(getUnmarshalInfo(t), name)
+	}
+
+	if isWktPointer {
+		switch t.Kind() {
+		case reflect.Float64:
+			if pointer {
+				if slice {
+					return makeStdDoubleValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdDoubleValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdDoubleValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdDoubleValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Float32:
+			if pointer {
+				if slice {
+					return makeStdFloatValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdFloatValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdFloatValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdFloatValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Int64:
+			if pointer {
+				if slice {
+					return makeStdInt64ValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdInt64ValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdInt64ValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdInt64ValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Uint64:
+			if pointer {
+				if slice {
+					return makeStdUInt64ValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdUInt64ValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdUInt64ValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdUInt64ValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Int32:
+			if pointer {
+				if slice {
+					return makeStdInt32ValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdInt32ValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdInt32ValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdInt32ValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Uint32:
+			if pointer {
+				if slice {
+					return makeStdUInt32ValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdUInt32ValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdUInt32ValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdUInt32ValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.Bool:
+			if pointer {
+				if slice {
+					return makeStdBoolValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdBoolValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdBoolValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdBoolValueUnmarshaler(getUnmarshalInfo(t), name)
+		case reflect.String:
+			if pointer {
+				if slice {
+					return makeStdStringValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdStringValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdStringValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdStringValueUnmarshaler(getUnmarshalInfo(t), name)
+		case uint8SliceType:
+			if pointer {
+				if slice {
+					return makeStdBytesValuePtrSliceUnmarshaler(getUnmarshalInfo(t), name)
+				}
+				return makeStdBytesValuePtrUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			if slice {
+				return makeStdBytesValueSliceUnmarshaler(getUnmarshalInfo(t), name)
+			}
+			return makeStdBytesValueUnmarshaler(getUnmarshalInfo(t), name)
+		default:
+			panic(fmt.Sprintf("unknown wktpointer type %#v", t))
+		}
 	}
 
 	// We'll never have both pointer and slice for basic types.
@@ -1729,6 +1849,9 @@ func makeUnmarshalMap(f *reflect.StructField) unmarshaler {
 			valTags = append(valTags, t)
 		}
 		if t == "stdduration" {
+			valTags = append(valTags, t)
+		}
+		if t == "wktptr" {
 			valTags = append(valTags, t)
 		}
 	}
