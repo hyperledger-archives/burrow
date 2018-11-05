@@ -3,8 +3,8 @@
 	"ChainName": "BurrowChain_D70885",
 	"GlobalPermissions": {
 		"Base": {
-			"Perms": 4606,
-			"SetBit": 32767
+			"Perms": 9214,
+			"SetBit": 65535
 		}
 	},
 	"Accounts": [
@@ -18,8 +18,8 @@
 			"Name": "Full_0",
 			"Permissions": {
 				"Base": {
-					"Perms": 32767,
-					"SetBit": 32767
+					"Perms": 65535,
+					"SetBit": 65535
 				}
 			}
 		},
