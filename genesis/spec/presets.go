@@ -45,7 +45,7 @@ func ParticipantAccount(name string) GenesisSpec {
 			Name:    name,
 			Amounts: balance.New().Native(amount),
 			Permissions: []string{permission.SendString, permission.CallString, permission.NameString,
-				permission.HasRoleString},
+				permission.HasRoleString, permission.ProposalString, permission.InputString},
 		}},
 	}
 }
@@ -59,7 +59,7 @@ func DeveloperAccount(name string) GenesisSpec {
 			Amounts: balance.New().Native(amount),
 			Permissions: []string{permission.SendString, permission.CallString, permission.CreateContractString,
 				permission.CreateAccountString, permission.NameString, permission.HasRoleString,
-				permission.RemoveRoleString},
+				permission.RemoveRoleString, permission.ProposalString, permission.InputString},
 		}},
 	}
 }
