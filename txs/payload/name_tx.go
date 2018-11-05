@@ -8,7 +8,7 @@ import (
 )
 
 func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
-	addr := from.Address()
+	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -17,13 +17,13 @@ func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string,
 		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
 	}
 
-	sequence := acc.Sequence() + 1
+	sequence := acc.Sequence + 1
 	return NewNameTxWithSequence(from, name, data, amt, fee, sequence), nil
 }
 
 func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
-		Address:  from.Address(),
+		Address:  from.GetAddress(),
 		Amount:   amt,
 		Sequence: sequence,
 	}

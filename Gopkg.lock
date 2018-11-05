@@ -712,6 +712,7 @@
     "github.com/go-kit/kit/log/term",
     "github.com/go-ozzo/ozzo-validation",
     "github.com/go-ozzo/ozzo-validation/is",
+    "github.com/go-stack/stack",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/types",

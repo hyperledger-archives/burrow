@@ -47,7 +47,7 @@ type ResultStorage struct {
 
 type ResultAccounts struct {
 	BlockHeight uint64
-	Accounts    []*acm.ConcreteAccount
+	Accounts    []*acm.Account
 }
 
 type ResultDumpStorage struct {
@@ -151,7 +151,7 @@ type ResultGeneratePrivateAccount struct {
 }
 
 type ResultAccount struct {
-	Account *acm.ConcreteAccount
+	Account *acm.Account
 }
 
 type AccountHumanReadable struct {

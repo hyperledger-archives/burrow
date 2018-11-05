@@ -31,7 +31,7 @@ func UpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not create key for new account: %v", err)
 		}
-		arg.Address = publicKey.Address().String()
+		arg.Address = publicKey.GetAddress().String()
 		arg.PublicKey = publicKey.String()
 	} else if len(gov.Target) == crypto.AddressHexLength {
 		arg.Address = gov.Target

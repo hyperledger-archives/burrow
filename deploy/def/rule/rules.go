@@ -89,7 +89,7 @@ func stripBraces(str string) string {
 	return str[start:]
 }
 
-var exampleAddress = acm.GeneratePrivateAccountFromSecret("marmot").Address()
+var exampleAddress = acm.GeneratePrivateAccountFromSecret("marmot").GetAddress()
 
 // Rules
 var (

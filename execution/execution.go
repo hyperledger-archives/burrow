@@ -197,17 +197,20 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		err = txEnv.Tx.ValidateInputs(exe.stateCache)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
+			txe.SetException(err)
 			return nil, err
 		}
 		err = txExecutor.Execute(txe)
 		if err != nil {
 			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
+			txe.SetException(err)
 			return nil, err
 		}
 		// Initialise public keys and increment sequence numbers for Tx inputs
 		err = exe.updateSignatories(txEnv)
 		if err != nil {
 			logger.InfoMsg("Updating signatories failed", structure.ErrorKey, err)
+			txe.SetException(err)
 			return nil, err
 		}
 		// Return execution for this tx
@@ -293,7 +296,7 @@ func (exe *executor) Reset() error {
 // to always access the freshest mempool state as needed by accounts.SequentialSigningAccount
 //
 // Accounts
-func (exe *executor) GetAccount(address crypto.Address) (acm.Account, error) {
+func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetAccount(address)
@@ -327,23 +330,23 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 	for _, sig := range txEnv.Signatories {
 		// pointer dereferences are safe since txEnv.Validate() is run by txEnv.Verify() above which checks they are
 		// non-nil
-		acc, err := state.GetMutableAccount(exe.stateCache, *sig.Address)
+		acc, err := exe.stateCache.GetAccount(*sig.Address)
 		if err != nil {
 			return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
 		}
 		// Important that verify has been run against signatories at this point
-		if sig.PublicKey.Address() != acc.Address() {
+		if sig.PublicKey.GetAddress() != acc.Address {
 			return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
-				acc.Address(), sig.PublicKey)
+				acc.Address, sig.PublicKey)
 		}
-		acc.SetPublicKey(*sig.PublicKey)
+		acc.PublicKey = *sig.PublicKey
 
 		exe.logger.TraceMsg("Incrementing sequence number Tx signatory/input",
 			"tag", "sequence",
-			"account", acc.Address(),
-			"old_sequence", acc.Sequence(),
-			"new_sequence", acc.Sequence()+1)
-		acc.IncSequence()
+			"account", acc.Address,
+			"old_sequence", acc.Sequence,
+			"new_sequence", acc.Sequence+1)
+		acc.Sequence++
 		err = exe.stateCache.UpdateAccount(acc)
 		if err != nil {
 			return fmt.Errorf("error updating account after setting public key: %v", err)

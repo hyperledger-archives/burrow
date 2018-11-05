@@ -25,11 +25,10 @@ import (
 )
 
 func TestResultListAccounts(t *testing.T) {
-	concreteAcc := acm.AsConcreteAccount(acm.FromAddressable(
-		acm.GeneratePrivateAccountFromSecret("Super Semi Secret")))
+	concreteAcc := acm.FromAddressable(acm.GeneratePrivateAccountFromSecret("Super Semi Secret"))
 	acc := concreteAcc
 	res := ResultAccounts{
-		Accounts:    []*acm.ConcreteAccount{acc},
+		Accounts:    []*acm.Account{acc},
 		BlockHeight: 2,
 	}
 	bs, err := json.Marshal(res)

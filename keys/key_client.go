@@ -189,11 +189,11 @@ func AddressableSigner(keyClient KeyClient, address crypto.Address) (*Signer, er
 	}, nil
 }
 
-func (ms *Signer) Address() crypto.Address {
+func (ms *Signer) GetAddress() crypto.Address {
 	return ms.address
 }
 
-func (ms *Signer) PublicKey() crypto.PublicKey {
+func (ms *Signer) GetPublicKey() crypto.PublicKey {
 	return ms.publicKey
 }
 

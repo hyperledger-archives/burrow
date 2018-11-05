@@ -102,7 +102,7 @@ func (p PublicKey) Verify(msg []byte, signature Signature) error {
 	}
 }
 
-func (p PublicKey) Address() Address {
+func (p PublicKey) GetAddress() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
 		addr, _ := AddressFromBytes(tmhash.Sum(p.PublicKey))

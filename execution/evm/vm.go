@@ -77,6 +77,7 @@ func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Log
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
+	//fmt.Printf(format, a...)
 	if vm.debugOpcodes {
 		vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "DebugOpcodes")
 	}
@@ -88,9 +89,25 @@ func (vm *VM) Debugf(format string, a ...interface{}) {
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
-func HasPermission(stateWriter state.ReaderWriter, acc acm.Account, perm permission.PermFlag) bool {
-	value, _ := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(stateWriter).Base).Get(perm)
+func HasPermission(st Interface, address crypto.Address, perm permission.PermFlag) bool {
+	globalPerms := st.GetPermissions(acm.GlobalPermissionsAddress)
+	accPerms := st.GetPermissions(address)
+	perms := accPerms.Base.Compose(globalPerms.Base)
+	value, err := perms.Get(perm)
+	if err != nil {
+		return false
+	}
 	return value
+}
+
+func EnsurePermission(st Interface, address crypto.Address, perm permission.PermFlag) errors.CodedError {
+	if !HasPermission(st, address, perm) {
+		return errors.PermissionDenied{
+			Address: address,
+			Perm:    perm,
+		}
+	}
+	return nil
 }
 
 func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, exception *errors.CodedError, output *[]byte,
@@ -120,21 +137,26 @@ func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, excepti
 // value: To be transferred from caller to callee. Refunded upon errors.CodedError.
 // gas:   Available gas. No refunds for gas.
 // code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
-func (vm *VM) Call(callState state.ReaderWriter, eventSink EventSink, caller, callee *acm.MutableAccount, code,
+func (vm *VM) Call(callState Interface, eventSink EventSink, caller, callee crypto.Address, code,
 	input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
-	return vm.call(callState, eventSink, caller, callee, code, input, value, gas, exec.CallTypeCall)
+	// Always return output - we may have a reverted exception for which the return is meaningful
+	output, err = vm.call(callState, eventSink, caller, callee, code, input, value, gas, exec.CallTypeCall)
+	if err == nil {
+		err = callState.Error()
+	}
+	return
 }
 
-func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller, callee *acm.MutableAccount, code,
+func (vm *VM) call(callState Interface, eventSink EventSink, caller, callee crypto.Address, code,
 	input []byte, value uint64, gas *uint64, callType exec.CallType) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller.Address(), callee.Address(), input,
+	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller, callee, input,
 		value, gas, &err)
 
-	if err = transfer(caller, callee, value); err != nil {
+	if err = transfer(callState, caller, callee, value); err != nil {
 		*exception = err
 		return
 	}
@@ -150,10 +172,10 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller, ca
 		vm.stackDepth -= 1
 		if err != nil {
 			*exception = err
-			transferErr := transfer(callee, caller, value)
+			transferErr := transfer(callState, callee, caller, value)
 			if transferErr != nil {
-				return nil, errors.Wrap(transferErr,
-					fmt.Sprintf("error transferring value %v %s (callee) -> %s (caller)", value, callee, caller))
+				err = errors.Wrap(transferErr,
+					fmt.Sprintf("error refunding value %v %s (callee) -> %s (caller)", value, callee, caller))
 			}
 		}
 	}
@@ -165,14 +187,14 @@ func (vm *VM) call(callState state.ReaderWriter, eventSink EventSink, caller, ca
 // The intent of delegate call is to run the code of the callee in the storage context of the caller;
 // while preserving the original caller to the previous callee.
 // Different to the normal CALL or CALLCODE, the value does not need to be transferred to the callee.
-func (vm *VM) delegateCall(callState state.ReaderWriter, eventSink EventSink, caller acm.Account,
-	callee *acm.MutableAccount, code, input []byte, value uint64, gas *uint64,
+func (vm *VM) delegateCall(callState Interface, eventSink EventSink, caller, callee crypto.Address,
+	code, input []byte, value uint64, gas *uint64,
 	callType exec.CallType) (output []byte, err errors.CodedError) {
 
 	exception := new(errors.CodedError)
 
-	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller.Address(), callee.Address(),
-		input, value, gas, &err)
+	// &err allows fireCallEvent to push back an error to this function's return
+	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller, callee, input, value, gas, &err)
 
 	// DelegateCall does not transfer the value to the callee.
 
@@ -205,11 +227,10 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bo
 	return true
 }
 
-// Just like Call() but does not transfer 'value' or modify the callDepth.
-func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller acm.Account, callee *acm.MutableAccount,
+// Executes the EVM code passed in the appropriate context
+func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee crypto.Address,
 	code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
-	vm.Debugf("(%d) (%X) %X (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller.Address().Bytes()[:4], callee.Address(),
-		len(callee.Code()), *gas, input)
+	vm.Debugf("(%d) (%s) %s (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller, callee, len(code), *gas, input)
 
 	logger := vm.logger.With("tx_hash", vm.tx.Hash())
 
@@ -224,6 +245,10 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 	)
 
 	for {
+		// Check for any error accrued to state
+		if callState.Error() != nil {
+			return nil, firstErr(err, callState.Error())
+		}
 		// Use BaseOp gas.
 		if useGasNegative(gas, GasBaseOp, &err) {
 			return nil, err
@@ -501,22 +526,15 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			vm.Debugf(" => (%v) %X\n", size, data)
 
 		case ADDRESS: // 0x30
-			stack.Push(callee.Address().Word256())
-			vm.Debugf(" => %X\n", callee.Address())
+			stack.Push(callee.Word256())
+			vm.Debugf(" => %X\n", callee)
 
 		case BALANCE: // 0x31
 			addr := stack.Pop()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := callState.GetAccount(crypto.AddressFromWord256(addr))
-			if errAcc != nil {
-				return nil, firstErr(err, errAcc)
-			}
-			if acc == nil {
-				return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
-			}
-			balance := acc.Balance()
+			balance := callState.GetBalance(crypto.AddressFromWord256(addr))
 			stack.PushU64(balance)
 			vm.Debugf(" => %v (%X)\n", balance, addr)
 
@@ -525,8 +543,8 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			vm.Debugf(" => %X\n", vm.origin)
 
 		case CALLER: // 0x33
-			stack.Push(caller.Address().Word256())
-			vm.Debugf(" => %X\n", caller.Address())
+			stack.Push(caller.Word256())
+			vm.Debugf(" => %X\n", caller)
 
 		case CALLVALUE: // 0x34
 			stack.PushU64(value)
@@ -601,43 +619,35 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			vm.Debugf(" => %X (GASPRICE IS DEPRECATED)\n", Zero256)
 
 		case EXTCODESIZE: // 0x3B
-			addr := stack.Pop()
+			address := stack.PopAddress()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := callState.GetAccount(crypto.AddressFromWord256(addr))
-			if errAcc != nil {
-				return nil, firstErr(err, errAcc)
-			}
-			if acc == nil {
-				if _, ok := registeredNativeContracts[addr]; !ok {
-					return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
-				}
-				vm.Debugf(" => returning code size of 1 to indicated existence of native contract at %X\n", addr)
-				stack.Push(One256)
-			} else {
-				code := acc.Code()
+			if callState.Exists(address) {
+				code := callState.GetCode(address)
 				l := int64(len(code))
 				stack.Push64(l)
 				vm.Debugf(" => %d\n", l)
+			} else {
+				if _, ok := registeredNativeContracts[address]; !ok {
+					return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
+				}
+				vm.Debugf(" => returning code size of 1 to indicated existence of native contract at %X\n", address)
+				stack.Push(One256)
 			}
 		case EXTCODECOPY: // 0x3C
-			addr := stack.Pop()
+			address := stack.PopAddress()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			acc, errAcc := callState.GetAccount(crypto.AddressFromWord256(addr))
-			if errAcc != nil {
-				return nil, firstErr(err, errAcc)
-			}
-			if acc == nil {
-				if _, ok := registeredNativeContracts[addr]; ok {
-					vm.Debugf(" => attempted to copy native contract at %X but this is not supported\n", addr)
+			if !callState.Exists(address) {
+				if _, ok := registeredNativeContracts[address]; ok {
+					vm.Debugf(" => attempted to copy native contract at %v but this is not supported\n", address)
 					return nil, firstErr(err, errors.ErrorCodeNativeContractCodeCopy)
 				}
 				return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
 			}
-			code := acc.Code()
+			code := callState.GetCode(address)
 			memOff := stack.PopBigInt()
 			codeOff, popErr := stack.Pop64()
 			if popErr != nil {
@@ -741,23 +751,17 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data, errSto := callState.GetStorage(callee.Address(), loc)
-			if errSto != nil {
-				return nil, firstErr(err, errSto)
-			}
+			data := callState.GetStorage(callee, loc)
 			stack.Push(data)
-			vm.Debugf("%s {0x%X = 0x%X}\n", callee.Address(), loc, data)
+			vm.Debugf("%s {0x%X = 0x%X}\n", callee, loc, data)
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
 			if useGasNegative(gas, GasStorageUpdate, &err) {
 				return nil, err
 			}
-			errSto := callState.SetStorage(callee.Address(), loc, data)
-			if errSto != nil {
-				return nil, firstErr(err, errSto)
-			}
-			vm.Debugf("%s {0x%X := 0x%X}\n", callee.Address(), loc, data)
+			callState.SetStorage(callee, loc, data)
+			vm.Debugf("%s {0x%X := 0x%X}\n", callee, loc, data)
 
 		case JUMP: // 0x56
 			to, popErr := stack.Pop64()
@@ -815,7 +819,6 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			stack.Push(res)
 			pc += a
 			vm.Debugf(" => 0x%X\n", res)
-			//stack.Print(10)
 
 		case DUP1, DUP2, DUP3, DUP4, DUP5, DUP6, DUP7, DUP8, DUP9, DUP10, DUP11, DUP12, DUP13, DUP14, DUP15, DUP16:
 			n := int(op - DUP1 + 1)
@@ -826,7 +829,6 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			n := int(op - SWAP1 + 2)
 			stack.Swap(n)
 			vm.Debugf(" => [%d] %X\n", n, stack.Peek())
-			//stack.Print(10)
 
 		case LOG0, LOG1, LOG2, LOG3, LOG4:
 			n := int(op - LOG0)
@@ -841,7 +843,7 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
 			}
 			eventErr := eventSink.Log(&exec.LogEvent{
-				Address: callee.Address(),
+				Address: callee,
 				Topics:  topics,
 				Data:    data,
 			})
@@ -853,12 +855,6 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 		case CREATE: // 0xF0
 			vm.returnData = nil
 
-			if !HasPermission(callState, callee, permission.CreateContract) {
-				return nil, errors.PermissionDenied{
-					Address: callee.Address(),
-					Perm:    permission.CreateContract,
-				}
-			}
 			contractValue, popErr := stack.PopU64()
 			if popErr != nil {
 				return nil, firstErr(err, popErr)
@@ -871,7 +867,7 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			}
 
 			// Check balance
-			if callee.Balance() < uint64(contractValue) {
+			if callState.GetBalance(callee) < uint64(contractValue) {
 				return nil, firstErr(err, errors.ErrorCodeInsufficientBalance)
 			}
 
@@ -880,10 +876,9 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			if useGasNegative(gas, GasCreateAccount, &gasErr) {
 				return nil, firstErr(err, gasErr)
 			}
-			newAccount, createErr := vm.createAccount(callState, callee, logger)
-			if createErr != nil {
-				return nil, firstErr(err, createErr)
-			}
+
+			callState.IncSequence(callee)
+			newAccount := crypto.NewContractAddress(callee, callState.GetSequence(callee))
 
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
@@ -896,24 +891,27 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 					return ret, callErr
 				}
 			} else {
-				newAccount.SetCode(ret) // Set the code (ret need not be copied as per Call contract)
-				stack.Push(newAccount.Address().Word256())
+				// Set the code (ret need not be copied as per Call contract)
+				createErr := createContract(callState, callee, newAccount, ret)
+				if createErr != nil {
+					return nil, firstErr(err, createErr)
+				}
+				stack.PushAddress(newAccount)
 			}
 
 		case CALL, CALLCODE, DELEGATECALL, STATICCALL: // 0xF1, 0xF2, 0xF4, 0xFA
 			vm.returnData = nil
 
-			if !HasPermission(callState, callee, permission.Call) {
-				return nil, errors.PermissionDenied{
-					Address: callee.Address(),
-					Perm:    permission.Call,
-				}
+			permErr := EnsurePermission(callState, callee, permission.Call)
+			if permErr != nil {
+				return nil, firstErr(err, permErr)
+
 			}
 			gasLimit, popErr := stack.PopU64()
 			if popErr != nil {
 				return nil, firstErr(err, popErr)
 			}
-			addr := stack.Pop()
+			address := stack.PopAddress()
 			// NOTE: for DELEGATECALL value is preserved from the original
 			// caller, as such it is not stored on stack as an argument
 			// for DELEGATECALL and should not be popped.  Instead previous
@@ -933,7 +931,7 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			if popErr != nil {
 				return nil, firstErr(err, popErr)
 			}
-			vm.Debugf(" => %X\n", addr)
+			vm.Debugf(" => %v\n", address)
 
 			// Get the arguments from the memory
 			args, memErr := memory.Read(inOffset, inSize)
@@ -953,82 +951,71 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			// Begin execution
 			var ret []byte
 			var callErr errors.CodedError
-
-			if IsRegisteredNativeContract(addr) {
+			// Establish a stack frame and perform the call
+			var childCallState Interface
+			if IsRegisteredNativeContract(address) {
 				// Native contract
-				ret, callErr = ExecuteNativeContract(addr, callState, callee, args, &gasLimit, logger)
+				childCallState = callState.NewCache()
+				ret, callErr = ExecuteNativeContract(address, childCallState, callee, args, &gasLimit, logger)
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				// NOTE: these fire call go_events and not particular go_events for eg name reg or permissions
-				vm.fireCallEvent(eventSink, exec.CallTypeSNative, &callErr, &ret, callee.Address(),
-					crypto.AddressFromWord256(addr), args, value, &gasLimit, &err)
+				vm.fireCallEvent(eventSink, exec.CallTypeSNative, &callErr, &ret, callee, address, args, value,
+					&gasLimit, &err)
 			} else {
 				// EVM contract
 				if useGasNegative(gas, GasGetAccount, &callErr) {
 					return nil, callErr
 				}
-				acc, errAcc := state.GetMutableAccount(callState, crypto.AddressFromWord256(addr))
-				if errAcc != nil {
-					return nil, firstErr(callErr, errAcc)
-				}
 				// since CALL is used also for sending funds,
 				// acc may not exist yet. This is an errors.CodedError for
 				// CALLCODE, but not for CALL, though I don't think
 				// ethereum actually cares
-				if acc == nil {
+				if !callState.Exists(address) {
 					if op == CALL {
-						// nil account means we're sending funds to a new account
-						if !HasPermission(callState, caller, permission.CreateAccount) {
-							return nil, errors.PermissionDenied{
-								Address: callee.Address(),
-								Perm:    permission.CreateAccount,
-							}
+						// We're sending funds to a new account so we must create it first
+						createErr := createAccount(callState, callee, address)
+						if createErr != nil {
+							return nil, firstErr(err, createErr)
 						}
-						acc = acm.ConcreteAccount{Address: crypto.AddressFromWord256(addr)}.MutableAccount()
 					} else {
 						return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
 					}
 				}
-				// Establish a stack frame and perform the call
-				childCallState := state.NewCache(callState)
-				// Add the account to the tx cache
-				childCallState.UpdateAccount(acc)
 				switch op {
 				case CALL:
-					ret, callErr = vm.call(childCallState, eventSink, callee, acc, acc.Code(), args, value, &gasLimit,
-						exec.CallTypeCall)
+					childCallState = callState.NewCache()
+					ret, callErr = vm.call(childCallState, eventSink, callee, address, callState.GetCode(address),
+						args, value, &gasLimit, exec.CallTypeCall)
 
 				case CALLCODE:
-					ret, callErr = vm.call(childCallState, eventSink, callee, callee, acc.Code(), args, value, &gasLimit,
-						exec.CallTypeCode)
+					childCallState = callState.NewCache()
+					ret, callErr = vm.call(childCallState, eventSink, callee, callee, callState.GetCode(address),
+						args, value, &gasLimit, exec.CallTypeCode)
 
 				case DELEGATECALL:
-					ret, callErr = vm.delegateCall(childCallState, eventSink, caller, callee, acc.Code(), args, value,
-						&gasLimit, exec.CallTypeDelegate)
+					childCallState = callState.NewCache()
+					ret, callErr = vm.delegateCall(childCallState, eventSink, caller, callee,
+						callState.GetCode(address), args, value, &gasLimit, exec.CallTypeDelegate)
 
 				case STATICCALL:
-					ret, callErr = vm.delegateCall(state.ReadOnly(childCallState), NewLogFreeEventSink(eventSink),
-						caller, callee, acc.Code(), args, value, &gasLimit, exec.CallTypeStatic)
+					childCallState = callState.NewCache(state.ReadOnly)
+					ret, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
+						caller, callee, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))
 				}
 
-				if callErr == nil {
-					childCallState.Sync(callState)
-				}
 			}
+
+			// Set regardless of call error in case execution reverted - does no harm if not reverted
 			vm.returnData = ret
 
-			// In case any calls deeper in the stack (particularly SNatives) has altered either of two accounts to which
-			// we hold a reference, we need to freshen our state for subsequent iterations of this call frame's EVM loop
-			var getErr error
-			caller, getErr = callState.GetAccount(caller.Address())
-			if getErr != nil {
-				return nil, firstErr(err, getErr)
-			}
-			callee, getErr = state.GetMutableAccount(callState, callee.Address())
-			if getErr != nil {
-				return nil, firstErr(err, getErr)
+			if callErr == nil {
+				callErr = childCallState.Sync()
+				if callErr != nil {
+					return nil, firstErr(err, callErr)
+				}
 			}
 
 			// Push result
@@ -1056,7 +1043,7 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			// Handle remaining gas.
 			*gas += gasLimit
 
-			vm.Debugf("resume %s (%v)\n", callee.Address(), gas)
+			vm.Debugf("resume %s (%v)\n", callee, gas)
 
 		case RETURN: // 0xF3
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
@@ -1079,44 +1066,29 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
 			return output, errors.ErrorCodeExecutionReverted
 
-		case INVALID: //0xFE
+		case INVALID: // 0xFE
 			return nil, errors.ErrorCodeExecutionAborted
 
 		case SELFDESTRUCT: // 0xFF
-			addr := stack.Pop()
+			receiver := stack.PopAddress()
 			if useGasNegative(gas, GasGetAccount, &err) {
 				return nil, err
 			}
-			receiver, errAcc := state.GetMutableAccount(callState, crypto.AddressFromWord256(addr))
-			if errAcc != nil {
-				return nil, firstErr(err, errAcc)
-			}
-			if receiver == nil {
+			if !callState.Exists(receiver) {
+				// If receiver address doesn't exist, try to create it
 				var gasErr errors.CodedError
 				if useGasNegative(gas, GasCreateAccount, &gasErr) {
 					return nil, firstErr(err, gasErr)
 				}
-				if !HasPermission(callState, callee, permission.CreateContract) {
-					return nil, firstErr(err, errors.PermissionDenied{
-						Address: callee.Address(),
-						Perm:    permission.CreateContract,
-					})
-				}
-				var createErr errors.CodedError
-				receiver, createErr = vm.createAccount(callState, callee, logger)
+				createErr := createAccount(callState, callee, receiver)
 				if createErr != nil {
 					return nil, firstErr(err, createErr)
 				}
-
 			}
-
-			errAdd := receiver.AddToBalance(callee.Balance())
-			if errAdd != nil {
-				return nil, firstErr(err, errAdd)
-			}
-			callState.UpdateAccount(receiver)
-			callState.RemoveAccount(callee.Address())
-			vm.Debugf(" => (%X) %v\n", addr[:4], callee.Balance())
+			balance := callState.GetBalance(callee)
+			callState.AddToBalance(receiver, balance)
+			callState.RemoveAccount(callee)
+			vm.Debugf(" => (%X) %v\n", receiver[:4], balance)
 			fallthrough
 
 		case STOP: // 0x00
@@ -1133,22 +1105,33 @@ func (vm *VM) execute(callState state.ReaderWriter, eventSink EventSink, caller 
 	}
 }
 
-func (vm *VM) createAccount(callState state.ReaderWriter, callee *acm.MutableAccount, logger *logging.Logger) (*acm.MutableAccount, errors.CodedError) {
-	newAccount := DeriveNewAccount(callee, state.GlobalAccountPermissions(callState), logger)
-	if IsRegisteredNativeContract(newAccount.Address().Word256()) {
-		return nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
-			"cannot create account at %v because that address is reserved for a native contract",
-			newAccount.Address())
-	}
-	err := callState.UpdateAccount(newAccount)
+func createAccount(st Interface, creator, address crypto.Address) errors.CodedError {
+	err := EnsurePermission(st, creator, permission.CreateAccount)
 	if err != nil {
-		return nil, errors.AsException(err)
+		return err
 	}
-	err = callState.UpdateAccount(callee)
+	return create(st, address, nil)
+}
+
+func createContract(st Interface, creator, address crypto.Address, code []byte) errors.CodedError {
+	err := EnsurePermission(st, creator, permission.CreateContract)
 	if err != nil {
-		return nil, errors.AsException(err)
+		return err
 	}
-	return newAccount, nil
+	return create(st, address, code)
+}
+
+func create(st Interface, address crypto.Address, code []byte) errors.CodedError {
+	if IsRegisteredNativeContract(address) {
+		return errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+			"cannot create account at %v because that address is reserved for a native contract", address)
+	}
+	st.CreateAccount(address)
+	st.InitCode(address, code)
+	if st.Error() != nil {
+		return errors.Wrap(st.Error(), "createAccount could not create account")
+	}
+	return nil
 }
 
 // TODO: [Silas] this function seems extremely dubious to me. It was being used
@@ -1201,21 +1184,25 @@ func firstErr(errA, errB error) errors.CodedError {
 	}
 }
 
-func transfer(from, to *acm.MutableAccount, amount uint64) errors.CodedError {
-	if from.Balance() < amount {
+func transfer(st Interface, from, to crypto.Address, amount uint64) errors.CodedError {
+	if amount == 0 {
+		return nil
+	}
+	if st.GetBalance(from) < amount {
 		return errors.ErrorCodeInsufficientBalance
 	} else {
-		from.SubtractFromBalance(amount)
-		err := to.AddToBalance(amount)
-		if err != nil {
-			return errors.AsException(err)
-		}
+		st.SubtractFromBalance(from, amount)
+		st.AddToBalance(to, amount)
+	}
+	err := st.Error()
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 // Dump the bytecode being sent to the EVM in the current working directory
-func dumpTokens(txHash []byte, caller, callee acm.Account, code []byte) {
+func dumpTokens(txHash []byte, caller, callee crypto.Address, code []byte) {
 	var tokensString string
 	tokens, err := acm.Bytecode(code).Tokens()
 	if err != nil {
@@ -1228,12 +1215,12 @@ func dumpTokens(txHash []byte, caller, callee acm.Account, code []byte) {
 		txHashString = fmt.Sprintf("tx-%X", txHash[:4])
 	}
 	callerString := "caller-none"
-	if caller != nil {
-		callerString = fmt.Sprintf("caller-%v", caller.Address())
+	if caller != crypto.ZeroAddress {
+		callerString = fmt.Sprintf("caller-%v", caller)
 	}
 	calleeString := "callee-none"
-	if callee != nil {
-		calleeString = fmt.Sprintf("callee-%s", caller.Address())
+	if callee != crypto.ZeroAddress {
+		calleeString = fmt.Sprintf("callee-%v", caller)
 	}
 	ioutil.WriteFile(fmt.Sprintf("tokens_%s_%s_%s.asm", txHashString, callerString, calleeString),
 		[]byte(tokensString), 0777)

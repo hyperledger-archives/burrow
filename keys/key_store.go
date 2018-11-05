@@ -385,7 +385,7 @@ func NewKey(typ crypto.CurveType) (*Key, error) {
 	return &Key{
 		CurveType:  typ,
 		PublicKey:  pubKey,
-		Address:    pubKey.Address(),
+		Address:    pubKey.GetAddress(),
 		PrivateKey: privKey,
 	}, nil
 }
@@ -403,7 +403,7 @@ func NewKeyFromPub(curveType crypto.CurveType, PubKeyBytes []byte) (*Key, error)
 	return &Key{
 		CurveType: curveType,
 		PublicKey: pubKey,
-		Address:   pubKey.Address(),
+		Address:   pubKey.GetAddress(),
 	}, nil
 }
 
@@ -418,7 +418,7 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 
 	return &Key{
 		CurveType:  curveType,
-		Address:    pubKey.Address(),
+		Address:    pubKey.GetAddress(),
 		PublicKey:  pubKey,
 		PrivateKey: privKey,
 	}, nil

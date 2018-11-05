@@ -48,13 +48,13 @@ func (s *Signatory) RealisePublicKey(getter state.AccountGetter) error {
 		if err != nil {
 			return fmt.Errorf("%s: could not get account %v: %v", errPrefix, *s.Address, err)
 		}
-		publicKey := acc.PublicKey()
+		publicKey := acc.PublicKey
 		s.PublicKey = &publicKey
 	}
 	if !s.PublicKey.IsValid() {
 		return fmt.Errorf("%s: public key %v is invalid", errPrefix, *s.PublicKey)
 	}
-	address := s.PublicKey.Address()
+	address := s.PublicKey.GetAddress()
 	if s.Address == nil {
 		s.Address = &address
 	} else if address != *s.Address {
@@ -137,7 +137,7 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 	}
 	signingAccountMap := make(map[crypto.Address]acm.AddressableSigner)
 	for _, sa := range signingAccounts {
-		signingAccountMap[sa.Address()] = sa
+		signingAccountMap[sa.GetAddress()] = sa
 	}
 	// Sign in order of inputs
 	for i, in := range txEnv.Tx.GetInputs() {
@@ -149,8 +149,8 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 		if err != nil {
 			return err
 		}
-		address := sa.Address()
-		publicKey := sa.PublicKey()
+		address := sa.GetAddress()
+		publicKey := sa.GetPublicKey()
 		txEnv.Signatories = append(txEnv.Signatories, Signatory{
 			Address:   &address,
 			PublicKey: &publicKey,

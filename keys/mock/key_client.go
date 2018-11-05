@@ -37,7 +37,7 @@ func NewKeyClient(privateAccounts ...*acm.PrivateAccount) *KeyClient {
 		knownKeys: make(map[crypto.Address]*Key),
 	}
 	for _, pa := range privateAccounts {
-		client.knownKeys[pa.Address()] = mockKeyFromPrivateAccount(pa)
+		client.knownKeys[pa.GetAddress()] = mockKeyFromPrivateAccount(pa)
 	}
 	return client
 }

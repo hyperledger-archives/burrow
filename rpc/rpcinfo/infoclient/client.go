@@ -47,17 +47,13 @@ func ChainId(client RPCClient) (*rpc.ResultChainId, error) {
 	return res, nil
 }
 
-func Account(client RPCClient, address crypto.Address) (acm.Account, error) {
+func Account(client RPCClient, address crypto.Address) (*acm.Account, error) {
 	res := new(rpc.ResultAccount)
 	_, err := client.Call(rpcinfo.Account, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
-	concreteAccount := res.Account
-	if concreteAccount == nil {
-		return nil, nil
-	}
-	return concreteAccount.Account(), nil
+	return res.Account, nil
 }
 
 func DumpStorage(client RPCClient, address crypto.Address) (*rpc.ResultDumpStorage, error) {

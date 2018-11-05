@@ -124,12 +124,12 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	// Make accounts state tree
 	for _, genAcc := range genesisDoc.Accounts {
 		perm := genAcc.Permissions
-		acc := &acm.ConcreteAccount{
+		acc := &acm.Account{
 			Address:     genAcc.Address,
 			Balance:     genAcc.Amount,
 			Permissions: perm,
 		}
-		err := s.writeState.UpdateAccount(acc.Account())
+		err := s.writeState.UpdateAccount(acc)
 		if err != nil {
 			return nil, err
 		}
@@ -143,12 +143,12 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	// Without it the HasPermission() functions will fail
 	globalPerms.Base.SetBit = permission.AllPermFlags
 
-	permsAcc := &acm.ConcreteAccount{
+	permsAcc := &acm.Account{
 		Address:     acm.GlobalPermissionsAddress,
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	err := s.writeState.UpdateAccount(permsAcc.Account())
+	err := s.writeState.UpdateAccount(permsAcc)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (ws *writeState) commit() ([]byte, error) {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
+func (s *State) GetAccount(address crypto.Address) (*acm.Account, error) {
 	accBytes := s.tree.Get(accountKeyFormat.Key(address))
 	if accBytes == nil {
 		return nil, nil
@@ -230,7 +230,7 @@ func (s *State) GetAccount(address crypto.Address) (acm.Account, error) {
 	return acm.Decode(accBytes)
 }
 
-func (ws *writeState) UpdateAccount(account acm.Account) error {
+func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in State")
 	}
@@ -238,7 +238,7 @@ func (ws *writeState) UpdateAccount(account acm.Account) error {
 	if err != nil {
 		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
-	ws.state.tree.Set(accountKeyFormat.Key(account.Address()), encodedAccount)
+	ws.state.tree.Set(accountKeyFormat.Key(account.Address), encodedAccount)
 	return nil
 }
 
@@ -247,7 +247,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (s *State) IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
 	it := accountKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		account, err := acm.Decode(it.Value())

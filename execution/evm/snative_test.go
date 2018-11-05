@@ -18,6 +18,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"strings"
 
 	"github.com/hyperledger/burrow/acm"
@@ -65,14 +67,16 @@ func TestPermissionsContractSignatures(t *testing.T) {
 
 func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	contract := SNativeContracts()["Permissions"]
-	state := newAppState()
-	caller := acm.ConcreteAccount{
+	st := newAppState()
+	caller := &acm.Account{
 		Address: crypto.Address{1, 1, 1},
-	}.MutableAccount()
-	grantee := acm.ConcreteAccount{
+	}
+	grantee := &acm.Account{
 		Address: crypto.Address{2, 2, 2},
-	}.MutableAccount()
-	state.UpdateAccount(grantee)
+	}
+	require.NoError(t, st.UpdateAccount(caller))
+	require.NoError(t, st.UpdateAccount(grantee))
+	cache := NewState(st)
 
 	function, err := contract.FunctionByName("addRole")
 	if err != nil {
@@ -82,17 +86,18 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	gas := uint64(1000)
 
 	// Should fail since we have no permissions
-	retValue, err := contract.Dispatch(state, caller, bc.MustSplice(funcID[:],
-		grantee.Address(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
+	retValue, err := contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:], grantee.Address,
+		permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
 	assert.IsType(t, err, errors.LacksSNativePermission{})
 
 	// Grant all permissions and dispatch should success
-	caller.SetPermissions(allAccountPermissions())
-	retValue, err = contract.Dispatch(state, caller, bc.MustSplice(funcID[:],
-		grantee.Address().Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
+	cache.SetPermission(caller.Address, permission.AddRole, true)
+	require.NoError(t, cache.Error())
+	retValue, err = contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:],
+		grantee.Address.Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }

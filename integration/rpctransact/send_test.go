@@ -21,7 +21,7 @@ func TestSendTxSync(t *testing.T) {
 				Amount:  2003,
 			}},
 			Outputs: []*payload.TxOutput{{
-				Address: rpctest.PrivateAccounts[3].Address(),
+				Address: rpctest.PrivateAccounts[3].GetAddress(),
 				Amount:  2003,
 			}},
 		})

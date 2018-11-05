@@ -21,5 +21,5 @@ func TestValidators_AlterPower(t *testing.T) {
 }
 
 func pubKey(secret interface{}) crypto.PublicKey {
-	return acm.NewConcreteAccountFromSecret(fmt.Sprintf("%v", secret)).PublicKey
+	return acm.NewAccountFromSecret(fmt.Sprintf("%v", secret)).PublicKey
 }

@@ -11,7 +11,7 @@ import (
 )
 
 func TestJob_Validate(t *testing.T) {
-	address := acm.GeneratePrivateAccountFromSecret("blah").Address()
+	address := acm.GeneratePrivateAccountFromSecret("blah").GetAddress()
 	job := &Job{
 		Result: "brian",
 		// This should pass emptiness validation

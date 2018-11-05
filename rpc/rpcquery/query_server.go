@@ -41,20 +41,16 @@ func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.Res
 
 // Account state
 
-func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (*acm.ConcreteAccount, error) {
-	acc, err := qs.accounts.GetAccount(param.Address)
-	if err != nil {
-		return nil, err
-	}
-	return acm.AsConcreteAccount(acc), nil
+func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (*acm.Account, error) {
+	return qs.accounts.GetAccount(param.Address)
 }
 
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {
 	qry, err := query.NewBuilder(param.Query).Query()
 	var streamErr error
-	_, err = qs.accounts.IterateAccounts(func(acc acm.Account) (stop bool) {
+	_, err = qs.accounts.IterateAccounts(func(acc *acm.Account) (stop bool) {
 		if qry.Matches(acc.Tagged()) {
-			streamErr = stream.Send(acm.AsConcreteAccount(acc))
+			streamErr = stream.Send(acc)
 			if streamErr != nil {
 				return true
 			}

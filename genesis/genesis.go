@@ -115,13 +115,13 @@ func GenesisDocFromJSON(jsonBlob []byte) (*GenesisDoc, error) {
 //------------------------------------------------------------
 // Account methods
 
-func GenesisAccountFromAccount(name string, account acm.Account) Account {
+func GenesisAccountFromAccount(name string, account *acm.Account) Account {
 	return Account{
 		Name:        name,
-		Permissions: account.Permissions(),
+		Permissions: account.Permissions,
 		BasicAccount: BasicAccount{
-			Address: account.Address(),
-			Amount:  account.Balance(),
+			Address: account.Address,
+			Amount:  account.Balance,
 		},
 	}
 }
@@ -143,7 +143,7 @@ func (genesisAccount *Account) Clone() Account {
 // Validator methods
 
 func (gv *Validator) Validator() validator.Validator {
-	address := gv.PublicKey.Address()
+	address := gv.PublicKey.GetAddress()
 	return validator.Validator{
 		Address:   &address,
 		PublicKey: gv.PublicKey,
@@ -184,7 +184,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 // and a slice of pointers to Validator to construct a GenesisDoc, or returns an error on
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
-func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]acm.Account,
+func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]*acm.Account,
 	validators map[string]validator.Validator) *GenesisDoc {
 
 	// Establish deterministic order of accounts by name so we obtain identical GenesisDoc

@@ -19,8 +19,8 @@ option (gogoproto.messagename_all) = true;
 
 service Query {
     rpc Status (StatusParam) returns (rpc.ResultStatus);
-    rpc GetAccount (GetAccountParam) returns (acm.ConcreteAccount);
-    rpc ListAccounts (ListAccountsParam) returns (stream acm.ConcreteAccount);
+    rpc GetAccount (GetAccountParam) returns (acm.Account);
+    rpc ListAccounts (ListAccountsParam) returns (stream acm.Account);
 
     rpc GetName (GetNameParam) returns (names.Entry);
     rpc ListNames (ListNamesParam) returns (stream names.Entry);

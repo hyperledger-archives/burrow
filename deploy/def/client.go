@@ -105,7 +105,7 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
 }
 
-func (c *Client) GetAccount(address crypto.Address) (*acm.ConcreteAccount, error) {
+func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	err := c.dial()
 	if err != nil {
 		return nil, err
@@ -277,7 +277,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 		}
 		update.PublicKey = &publicKey
 		// Update arg for variable usage
-		arg.Address = publicKey.Address().String()
+		arg.Address = publicKey.GetAddress().String()
 	}
 	if update.PublicKey == nil {
 		// Attempt to get public key from connected key client

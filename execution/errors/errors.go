@@ -7,6 +7,11 @@ type CodedError interface {
 	ErrorCode() Code
 }
 
+type Provider interface {
+	// Returns the first error that occurred in some execution or nil if none occurred
+	Error() CodedError
+}
+
 type Code uint32
 
 const (
@@ -40,6 +45,7 @@ const (
 	ErrorCodeInvalidSequence
 	ErrorCodeReservedAddress
 	ErrorCodeIllegalWrite
+	ErrorCodeIntegerOverflow
 )
 
 func (c Code) ErrorCode() Code {
@@ -116,6 +122,8 @@ func (c Code) String() string {
 		return "Address is reserved for SNative or internal use"
 	case ErrorCodeIllegalWrite:
 		return "Callee attempted to illegally modify state"
+	case ErrorCodeIntegerOverflow:
+		return "Integer overflow"
 	default:
 		return "Unknown error"
 	}

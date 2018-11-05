@@ -21,7 +21,6 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -40,16 +39,16 @@ var expectedTopics = []Word256{
 // Tests logs and events.
 func TestLog4(t *testing.T) {
 	st := newAppState()
-	cache := state.NewCache(st)
+	cache := NewState(st)
 	// Create accounts
-	account1 := acm.ConcreteAccount{
+	account1 := &acm.Account{
 		Address: crypto.Address{1, 3, 5, 7, 9},
-	}.MutableAccount()
-	account2 := acm.ConcreteAccount{
+	}
+	account2 := &acm.Account{
 		Address: crypto.Address{2, 4, 6, 8, 10},
-	}.MutableAccount()
-	st.accounts[account1.Address()] = account1
-	st.accounts[account2.Address()] = account2
+	}
+	st.accounts[account1.Address] = account1
+	st.accounts[account2.Address] = account2
 
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
@@ -76,7 +75,7 @@ func TestLog4(t *testing.T) {
 		stop,
 	}
 
-	_, err := ourVm.Call(cache, txe, account1, account2, code, []byte{}, 0, &gas)
+	_, err := ourVm.Call(cache, txe, account1.Address, account2.Address, code, []byte{}, 0, &gas)
 	require.NoError(t, err)
 
 	for _, ev := range txe.Events {

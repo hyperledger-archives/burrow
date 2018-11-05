@@ -36,7 +36,7 @@ type Cache struct {
 
 type accountInfo struct {
 	sync.RWMutex
-	account acm.Account
+	account *acm.Account
 	storage map[binary.Word256]binary.Word256
 	removed bool
 	updated bool
@@ -69,7 +69,7 @@ var ReadOnly CacheOption = func(cache *Cache) *Cache {
 	return cache
 }
 
-func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {
+func (cache *Cache) GetAccount(address crypto.Address) (*acm.Account, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return nil, err
@@ -79,23 +79,23 @@ func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {
 	if accInfo.removed {
 		return nil, nil
 	}
-	return accInfo.account, nil
+	return accInfo.account.Copy(), nil
 }
 
-func (cache *Cache) UpdateAccount(account acm.Account) error {
+func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called on read-only account %v", account.Address())
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called on read-only account %v", account.GetAddress())
 	}
-	accInfo, err := cache.get(account.Address())
+	accInfo, err := cache.get(account.GetAddress())
 	if err != nil {
 		return err
 	}
 	accInfo.Lock()
 	defer accInfo.Unlock()
 	if accInfo.removed {
-		return fmt.Errorf("UpdateAccount on a removed account: %s", account.Address())
+		return fmt.Errorf("UpdateAccount on a removed account: %s", account.GetAddress())
 	}
-	accInfo.account = account
+	accInfo.account = account.Copy()
 	accInfo.updated = true
 	return nil
 }
@@ -118,7 +118,7 @@ func (cache *Cache) RemoveAccount(address crypto.Address) error {
 }
 
 // Iterates over all cached accounts first in cache and then in backend until consumer returns true for 'stop'
-func (cache *Cache) IterateCachedAccount(consumer func(acm.Account) (stop bool)) (stopped bool, err error) {
+func (cache *Cache) IterateCachedAccount(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
 	// Try cache first for early exit
 	cache.RLock()
 	for _, info := range cache.accounts {
@@ -198,6 +198,7 @@ func (cache *Cache) IterateCachedStorage(address crypto.Address,
 // the account they belong so that storage values can be taken account of in the update.
 func (cache *Cache) Sync(state Writer) error {
 	if cache.readonly {
+		// Sync is (should be) a no-op for read-only - any modifications should have been caught in respective methods
 		return nil
 	}
 	cache.Lock()

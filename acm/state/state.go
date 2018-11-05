@@ -9,20 +9,20 @@ import (
 
 type AccountGetter interface {
 	// Get an account by its address return nil if it does not exist (which should not be an error)
-	GetAccount(address crypto.Address) (acm.Account, error)
+	GetAccount(address crypto.Address) (*acm.Account, error)
 }
 
 type AccountIterable interface {
 	// Iterates through accounts calling passed function once per account, if the consumer
 	// returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateAccounts(consumer func(acm.Account) (stop bool)) (stopped bool, err error)
+	IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error)
 }
 
 type AccountUpdater interface {
 	// Updates the fields of updatedAccount by address, creating the account
 	// if it does not exist
-	UpdateAccount(updatedAccount acm.Account) error
+	UpdateAccount(updatedAccount *acm.Account) error
 	// Remove the account at address
 	RemoveAccount(address crypto.Address) error
 }
@@ -81,23 +81,7 @@ type IterableReaderWriter interface {
 	Writer
 }
 
-func GetConcreteAccount(getter AccountGetter, address crypto.Address) (*acm.ConcreteAccount, error) {
-	acc, err := getter.GetAccount(address)
-	if err != nil {
-		return nil, err
-	}
-	return acm.AsConcreteAccount(acc), nil
-}
-
-func GetMutableAccount(getter AccountGetter, address crypto.Address) (*acm.MutableAccount, error) {
-	acc, err := getter.GetAccount(address)
-	if err != nil {
-		return nil, err
-	}
-	return acm.AsMutableAccount(acc), nil
-}
-
-func GlobalPermissionsAccount(getter AccountGetter) acm.Account {
+func GlobalPermissionsAccount(getter AccountGetter) *acm.Account {
 	acc, err := getter.GetAccount(acm.GlobalPermissionsAddress)
 	if err != nil {
 		panic("Could not get global permission account, but this must exist")
@@ -112,5 +96,5 @@ func GlobalAccountPermissions(getter AccountGetter) permission.AccountPermission
 			Roles: []string{},
 		}
 	}
-	return GlobalPermissionsAccount(getter).Permissions()
+	return GlobalPermissionsAccount(getter).Permissions
 }
