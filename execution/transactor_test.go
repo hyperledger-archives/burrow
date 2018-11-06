@@ -55,7 +55,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	height := uint64(35)
 	trans := NewTransactor(bc, evc, NewAccounts(state.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
-			txe := exec.NewTxExecution(txEnv, txEnv.Tx)
+			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height
 			fmt.Printf("Sending transaction with hash %v\n", txEnv.Tx.Hash())
 			err := evc.Publish(context.Background(), txe, txe.Tagged())

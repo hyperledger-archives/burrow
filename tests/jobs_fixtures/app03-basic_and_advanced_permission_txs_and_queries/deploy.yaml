@@ -59,4 +59,4 @@ jobs:
   assert:
       key: $queryPerm2
       relation: eq
-      val: 8262
+      val: 16454

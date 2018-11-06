@@ -116,7 +116,7 @@ func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorS
 	return vs, nil
 }
 
-func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Proposal, err error) {
+func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {
 	proposal, err = qs.proposalReg.GetProposal(param.Hash)
 	if proposal == nil && err == nil {
 		err = fmt.Errorf("proposal %x not found", param.Hash)
@@ -126,9 +126,9 @@ func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam)
 
 func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
 	var streamErr error
-	_, err := qs.proposalReg.IterateProposals(func(hash []byte, proposal *payload.Proposal) (stop bool) {
-		if param.GetExecuted() == true || proposal.Executed == false {
-			streamErr = stream.Send(&ProposalResult{Hash: hash, Proposal: proposal})
+	_, err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) (stop bool) {
+		if param.GetProposed() == true || ballot.ProposalState == payload.Ballot_PROPOSED {
+			streamErr = stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
 			if streamErr != nil {
 				return true
 			}

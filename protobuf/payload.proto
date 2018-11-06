@@ -21,6 +21,8 @@ option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
 message Any {
+    option (gogoproto.onlyone) = true;
+
     CallTx CallTx = 1;
     SendTx SendTx = 2;
     NameTx NameTx = 3;
@@ -133,31 +135,15 @@ message ProposalTx {
     TxInput Input = 1;
     int64 VotingWeight = 2;
     bytes ProposalHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
-    Proposal Proposal = 4 [(gogoproto.nullable) = true];;
-    uint64 Fee = 5;
-}
-
-// We're using gogoproto.onlyone as "oneof" is implemented using interfaces, and then payload.BatchTx
-// cannot be used with json.Unmarshal.
-message BatchTxItem {
-    option (gogoproto.goproto_stringer) = false;
-    option (gogoproto.goproto_getters) = false;
-    option (gogoproto.onlyone) = true;
-
-    CallTx CallTx = 1;
-    SendTx SendTx = 2;
-    NameTx NameTx = 3;
-    PermsTx PermsTx = 4;
-    GovTx GovTx = 5;
-    BondTx BondTx = 6;
-    UnbondTx UnbondTx = 7;
+    Proposal Proposal = 4;
 }
 
 message BatchTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    repeated BatchTxItem txs = 1;
+    repeated TxInput Inputs = 1;
+    repeated Any Txs = 2;
 }
 
 message Vote {
@@ -174,8 +160,18 @@ message Proposal {
 
     string Name = 1;
     string Description = 2;
-    TxInput Input = 3;
-    BatchTx BatchTx = 4;
+    BatchTx BatchTx = 3;
+}
+
+message Ballot {
+    Proposal Proposal = 1;
+    bytes FinalizingTx = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
+    enum ProposalState {
+        // PROPOSED might be expired, if sequence number of any of the input accounts are out of date
+        PROPOSED = 0;
+        EXECUTED = 1;
+        FAILED = 2;
+    }
+    ProposalState proposalState = 4;
     repeated Vote Votes = 5;
-    bool Executed = 6;
 }

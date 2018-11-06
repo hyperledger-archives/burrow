@@ -27,7 +27,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, job
 			return "", fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
 		}
 
-		item := payload.BatchTxItem{}
+		item := payload.Any{}
 
 		switch load.(type) {
 		case *def.Call:
@@ -51,7 +51,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, job
 	if err != nil {
 		return "", err
 	}
-	proposal.Input = input
+	proposal.BatchTx.Inputs = []*payload.TxInput{input}
 
 	txe, err := client.SignAndBroadcast(&payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal})
 	if err != nil {

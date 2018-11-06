@@ -28,7 +28,7 @@ service Query {
 
     rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
 
-    rpc GetProposal(GetProposalParam) returns (payload.Proposal);
+    rpc GetProposal(GetProposalParam) returns (payload.Ballot);
     rpc ListProposals(ListProposalsParam) returns (stream ProposalResult);
 }
 
@@ -72,10 +72,10 @@ message GetProposalParam {
 }
 
 message ListProposalsParam {
-    bool Executed = 1;
+    bool Proposed = 1;
 }
 
 message ProposalResult {
     bytes Hash = 1;
-    payload.Proposal Proposal = 2;
+    payload.Ballot Ballot = 2;
 }

@@ -3,8 +3,8 @@
 	"ChainName": "BurrowChain_D70885",
 	"GlobalPermissions": {
 		"Base": {
-			"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
-			"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+			"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
+			"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
 		}
 	},
 	"Accounts": [
@@ -18,8 +18,8 @@
 			"Name": "Full_0",
 			"Permissions": {
 				"Base": {
-					"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
-					"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+					"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
+					"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
 				}
 			}
 		},

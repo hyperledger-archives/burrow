@@ -211,3 +211,28 @@ func DecodeReceipt(bs []byte) (*Receipt, error) {
 func (receipt *Receipt) Encode() ([]byte, error) {
 	return cdc.MarshalBinary(receipt)
 }
+
+func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {
+	if p.CallTx != nil {
+		return Enclose(chainID, p.CallTx)
+	}
+	if p.SendTx != nil {
+		return Enclose(chainID, p.SendTx)
+	}
+	if p.NameTx != nil {
+		return Enclose(chainID, p.NameTx)
+	}
+	if p.PermsTx != nil {
+		return Enclose(chainID, p.PermsTx)
+	}
+	if p.GovTx != nil {
+		return Enclose(chainID, p.GovTx)
+	}
+	if p.ProposalTx != nil {
+		return Enclose(chainID, p.ProposalTx)
+	}
+	if p.BatchTx != nil {
+		return Enclose(chainID, p.BatchTx)
+	}
+	return nil
+}

@@ -424,16 +424,16 @@ func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped b
 // Proposal
 var _ proposal.IterableReader = &State{}
 
-func (s *State) GetProposal(proposalHash []byte) (*payload.Proposal, error) {
+func (s *State) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	bs := s.tree.Get(proposalKeyFormat.Key(proposalHash))
 	if len(bs) == 0 {
 		return nil, nil
 	}
 
-	return payload.DecodeProposal(bs)
+	return payload.DecodeBallot(bs)
 }
 
-func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Proposal) error {
+func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) error {
 	bs, err := p.Encode()
 	if err != nil {
 		return err
@@ -447,14 +447,16 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 	return nil
 }
 
-func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Proposal) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
 	it := proposalKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
-		entry, err := payload.DecodeProposal(it.Value())
+		entry, err := payload.DecodeBallot(it.Value())
 		if err != nil {
 			return true, fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
 		}
-		if consumer(it.Key(), entry) {
+		var proposalHash [sha256.Size]byte
+		proposalKeyFormat.Scan(it.Key(), &proposalHash)
+		if consumer(proposalHash[:], entry) {
 			return true, nil
 		}
 		it.Next()

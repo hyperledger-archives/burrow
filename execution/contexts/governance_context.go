@@ -26,10 +26,10 @@ type GovernanceContext struct {
 
 // GovTx provides a set of TemplateAccounts and GovernanceContext tries to alter the chain state to match the
 // specification given
-func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
+func (ctx *GovernanceContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
 	ctx.txe = txe
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.GovTx)
+	ctx.tx, ok = p.(*payload.GovTx)
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}

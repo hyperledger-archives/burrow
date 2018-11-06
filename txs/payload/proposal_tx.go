@@ -52,3 +52,16 @@ func (p *Proposal) String() string {
 func (v *Vote) String() string {
 	return v.Address.String()
 }
+
+func DecodeBallot(ballotBytes []byte) (*Ballot, error) {
+	ballot := new(Ballot)
+	err := cdc.UnmarshalBinary(ballotBytes, ballot)
+	if err != nil {
+		return nil, err
+	}
+	return ballot, nil
+}
+
+func (p *Ballot) Encode() ([]byte, error) {
+	return cdc.MarshalBinary(p)
+}

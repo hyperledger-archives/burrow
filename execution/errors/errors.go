@@ -131,6 +131,12 @@ func (c Code) String() string {
 		return "Callee attempted to illegally modify state"
 	case ErrorCodeIntegerOverflow:
 		return "Integer overflow"
+	case ErrorCodeInvalidProposal:
+		return "Proposal is invalid"
+	case ErrorCodeExpiredProposal:
+		return "Proposal is expired since sequence number does not match"
+	case ErrorCodeProposalExecuted:
+		return "Proposal has already been executed"
 	default:
 		return "Unknown error"
 	}

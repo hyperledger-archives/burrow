@@ -29,8 +29,8 @@ func (*BlockExecution) EventType() EventType {
 	return TypeBlockExecution
 }
 
-func (be *BlockExecution) Tx(txEnv *txs.Envelope, tx *txs.Tx) *TxExecution {
-	txe := NewTxExecution(txEnv, tx)
+func (be *BlockExecution) Tx(txEnv *txs.Envelope) *TxExecution {
+	txe := NewTxExecution(txEnv)
 	be.Append(txe)
 	return txe
 }

@@ -44,7 +44,7 @@ type Executor interface {
 }
 
 type Context interface {
-	Execute(txe *exec.TxExecution) error
+	Execute(txe *exec.TxExecution, p payload.Payload) error
 }
 
 type ExecutorState interface {
@@ -202,7 +202,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
-		txe := exe.blockExecution.Tx(txEnv, txEnv.Tx)
+		txe := exe.blockExecution.Tx(txEnv)
 
 		// Validate inputs and check sequence numbers
 		err = txEnv.Tx.ValidateInputs(exe.stateCache)
@@ -211,37 +211,43 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			txe.PushError(err)
 			return nil, err
 		}
-		err = txExecutor.Execute(txe)
+
+		err = txExecutor.Execute(txe, txe.Envelope.Tx.Payload)
 		if err != nil {
 			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
 		}
 
+		// FIXME: This should be moved into proposal_context (does not have executer firelds)
 		if pc, ok := txExecutor.(*contexts.ProposalContext); ok {
-			proposal, votesReceived := pc.GetProposal()
 			// if !runCall we're in checkTx, else only execute if we've got our votes
-			if !exe.runCall || votesReceived {
-				for _, step := range proposal.BatchTx.Txs {
-					// Establish new TxExecution
-					tx := *txEnv.Tx
-					tx.Payload = step.GetPayload()
-					tx.Rehash()
-					txe := exe.blockExecution.Tx(txEnv, &tx)
+			if !exe.runCall || pc.ThresholdReached() {
+				if exe.runCall {
+					pc.Ballot.ProposalState = payload.Ballot_EXECUTED
+				}
+				for i, step := range pc.Ballot.Proposal.BatchTx.Txs {
+					txE := txs.EnvelopeFromAny(txEnv.Tx.ChainID, step)
 
-					// Validate inputs and check sequence numbers
-					err = tx.ValidateInputs(exe.stateCache)
-					if err != nil {
-						logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
-						return nil, err
+					txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
+
+					if txExecutor, ok := exe.contexts[txE.Tx.Type()]; ok {
+						err = txExecutor.Execute(txe, txE.Tx.Payload)
+						if err != nil {
+							logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
+							return nil, err
+						}
 					}
-					err = txExecutor.Execute(txe)
-					if err != nil {
-						logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
-						return nil, err
+
+					if txe.Exception != nil {
+						if exe.runCall {
+							pc.Ballot.ProposalState = payload.Ballot_FAILED
+						}
+						break
 					}
 				}
 			}
+			pc.UpdateProposal()
 		}
 
 		// Initialise public keys and increment sequence numbers for Tx inputs

@@ -14,7 +14,7 @@ func TestSerialise(t *testing.T) {
 	tx := AlterPowerTx(priv.GetAddress(), priv, 3242323)
 	txEnv := txs.Enclose("OOh", tx)
 
-	txe := exec.NewTxExecution(txEnv, txEnv.Tx)
+	txe := exec.NewTxExecution(txEnv)
 	bs, err := txe.Marshal()
 	require.NoError(t, err)
 	txeOut := new(exec.TxExecution)

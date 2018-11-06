@@ -27,9 +27,9 @@ type NameContext struct {
 	tx          *payload.NameTx
 }
 
-func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
+func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.NameTx)
+	ctx.tx, ok = p.(*payload.NameTx)
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}

@@ -21,9 +21,9 @@ type PermissionsContext struct {
 	tx          *payload.PermsTx
 }
 
-func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
+func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.PermsTx)
+	ctx.tx, ok = p.(*payload.PermsTx)
 	if !ok {
 		return fmt.Errorf("payload must be PermsTx, but is: %v", txe.Envelope.Tx.Payload)
 	}

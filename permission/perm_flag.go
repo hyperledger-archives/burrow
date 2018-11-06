@@ -36,6 +36,8 @@ const (
 	Proposal // 128
 	// Input allows account to sign transactions
 	Input // 256
+	// Permission to execute batch transactins
+	Batch // 512
 
 	// Moderator permissions.
 	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
@@ -49,11 +51,11 @@ const (
 	AddRole
 	RemoveRole
 
-	NumPermissions uint = 16 // NOTE Adjust this too. We can support upto 64
+	NumPermissions uint = 17 // NOTE Adjust this too. We can support upto 64
 
 	TopPermFlag      PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     PermFlag = TopPermFlag | (TopPermFlag - 1)
-	DefaultPermFlags PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole | Proposal | Input
+	DefaultPermFlags PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole | Proposal | Input | Batch
 
 	// Chain permissions strings
 	RootString           string = "root"
@@ -65,6 +67,7 @@ const (
 	NameString                  = "name"
 	ProposalString              = "proposal"
 	InputString                 = "input"
+	BatchString                 = "batch"
 
 	// Moderator permissions strings
 	HasBaseString    = "hasBase"
@@ -111,6 +114,8 @@ func (pf PermFlag) String() string {
 		return ProposalString
 	case Input:
 		return InputString
+	case Batch:
+		return BatchString
 	case HasBase:
 		return HasBaseString
 	case SetBase:
@@ -154,6 +159,8 @@ func PermStringToFlag(perm string) (PermFlag, error) {
 		return Proposal, nil
 	case InputString:
 		return Input, nil
+	case BatchString:
+		return Batch, nil
 	case HasBaseString, "hasbase", "has_base":
 		return HasBase, nil
 	case SetBaseString, "setbase", "set_base":

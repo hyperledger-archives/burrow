@@ -1,6 +1,7 @@
 package contexts
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"unicode"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
@@ -23,13 +25,14 @@ type ProposalContext struct {
 	ProposalReg  proposal.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.ProposalTx
-	majorityVote bool
-	proposal     *payload.Proposal
+	votes        int
+	Ballot       *payload.Ballot
+	proposalHash []byte
 }
 
-func (ctx *ProposalContext) Execute(txe *exec.TxExecution) error {
+func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.ProposalTx)
+	ctx.tx, ok = p.(*payload.ProposalTx)
 	if !ok {
 		return fmt.Errorf("payload must be ProposalTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
@@ -43,94 +46,98 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution) error {
 			"tx_input", ctx.tx.Input)
 		return errors.ErrorCodeInvalidAddress
 	}
+
 	// check permission
 	if !hasProposalPermission(ctx.StateWriter, inAcc, ctx.Logger) {
 		return fmt.Errorf("account %s does not have Proposal permission", ctx.tx.Input.Address)
 	}
-	if ctx.tx.Input.Amount < ctx.tx.Fee {
-		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
-			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInsufficientFunds
-	}
 
-	proposal := ctx.tx.Proposal
+	var ballot *payload.Ballot
 	var proposalHash []byte
 
-	if proposal == nil {
+	if ctx.tx.Proposal == nil {
 		// voting for existing proposal
-		if ctx.tx.ProposalHash == nil {
+		if ctx.tx.ProposalHash == nil || ctx.tx.ProposalHash.Size() != sha256.Size {
 			return errors.ErrorCodeInvalidProposal
 		}
-		proposal, err = ctx.ProposalReg.GetProposal(ctx.tx.ProposalHash.Bytes())
+		ballot, err = ctx.ProposalReg.GetProposal(ctx.tx.ProposalHash.Bytes())
 		if err != nil {
 			return err
 		}
 	} else {
-		if ctx.tx.ProposalHash != nil || proposal.Votes != nil || len(proposal.BatchTx.Txs) == 0 {
+		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil || len(ctx.tx.Proposal.BatchTx.Txs) == 0 {
 			return errors.ErrorCodeInvalidProposal
 		}
 
 		// validate the input strings
-		if err := validateProposalStrings(proposal); err != nil {
+		if err := validateProposalStrings(ctx.tx.Proposal); err != nil {
 			return err
 		}
 
-		bs, err := proposal.Encode()
+		bs, err := ctx.tx.Proposal.Encode()
 		if err != nil {
 			return err
 		}
 
 		proposalHash = sha3.Sha3(bs)
 
-		prop, err := ctx.ProposalReg.GetProposal(proposalHash)
-		if err == nil && prop != nil {
-			// vote for prop
-			proposal = prop
+		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
+		if ballot == nil && err == nil {
+			ballot = &payload.Ballot{
+				Proposal:      ctx.tx.Proposal,
+				ProposalState: payload.Ballot_PROPOSED,
+			}
+		}
+		if err != nil {
+			return err
 		}
 	}
 
-	if proposal.Executed == true {
-		return errors.ErrorCodeProposalExecuted
-	}
-
-	// Validate input
-	proposeAcc, err := ctx.StateWriter.GetAccount(proposal.Input.Address)
-	if err != nil {
-		return err
-	}
-
-	if proposeAcc == nil {
-		ctx.Logger.InfoMsg("Cannot find input account",
-			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInvalidAddress
-	}
-
-	if proposeAcc.GetSequence()+1 != proposal.Input.Sequence {
-		ctx.Logger.InfoMsg("Expired sequence number",
-			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeExpiredProposal
-	}
-
-	// vote for thing
+	// count votes for proposal
 	votes := make(map[crypto.Address]int64)
-	seenOurVote := false
-	for _, v := range proposal.Votes {
-		if v.Address == ctx.tx.Input.Address {
-			seenOurVote = true
-		}
+
+	if ballot.Votes == nil {
+		ballot.Votes = make([]*payload.Vote, 0)
+	}
+
+	for _, v := range ballot.Votes {
 		acc, err := ctx.StateWriter.GetAccount(v.Address)
 		if err != nil {
 			return err
 		}
+		// Belt and braces, should have already been checked
 		if !hasProposalPermission(ctx.StateWriter, acc, ctx.Logger) {
 			return fmt.Errorf("account %s does not have Proposal permission", ctx.tx.Input.Address)
 		}
-
 		votes[v.Address] = v.VotingWeight
 	}
-	if !seenOurVote {
-		proposal.Votes = append(proposal.Votes, &payload.Vote{Address: ctx.tx.Input.Address, VotingWeight: ctx.tx.VotingWeight})
-		votes[ctx.tx.Input.Address] = ctx.tx.VotingWeight
+
+	for _, i := range ballot.Proposal.BatchTx.GetInputs() {
+		// Validate input
+		proposeAcc, err := ctx.StateWriter.GetAccount(i.Address)
+		if err != nil {
+			return err
+		}
+
+		if proposeAcc == nil {
+			ctx.Logger.InfoMsg("Cannot find input account",
+				"tx_input", ctx.tx.Input)
+			return errors.ErrorCodeInvalidAddress
+		}
+
+		if !hasBatchPermission(ctx.StateWriter, proposeAcc, ctx.Logger) {
+			return fmt.Errorf("account %s does not have batch permission", i.Address)
+		}
+
+		if proposeAcc.GetSequence() != i.Sequence {
+			return errors.ErrorCodeExpiredProposal
+		}
+
+		// Do we have a record of our own vote
+		if _, ok := votes[i.Address]; !ok {
+			votes[i.Address] = ctx.tx.VotingWeight
+			ballot.Votes = append(ballot.Votes, &payload.Vote{Address: i.Address, VotingWeight: ctx.tx.VotingWeight})
+		}
 	}
 
 	// Count the number of validators; ensure we have at least half the number of validators
@@ -141,23 +148,32 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution) error {
 			power++
 		}
 	}
-	proposal.Executed = power*2 > ctx.Tip.NumValidators()
 
-	// The CheckTx happens in BatchExecuter; do minimal checking here
-	for _, tx := range proposal.BatchTx.Txs {
-		if tx.CallTx != nil {
-			if tx.CallTx.Input.Address != proposal.Input.Address {
-				return errors.ErrorCodeInvalidAddress
+	for _, step := range ballot.Proposal.BatchTx.Txs {
+		txE := txs.EnvelopeFromAny("", step)
+
+		for _, i := range txE.Tx.GetInputs() {
+			_, err := ctx.StateWriter.GetAccount(i.Address)
+			if err != nil {
+				return err
 			}
+
+			// Do not check sequence numbers of inputs
 		}
 	}
 
-	ctx.proposal = proposal
-	return ctx.ProposalReg.UpdateProposal(proposalHash, proposal)
+	ctx.votes = power
+	ctx.Ballot = ballot
+	ctx.proposalHash = proposalHash
+	return nil
 }
 
-func (ctx *ProposalContext) GetProposal() (*payload.Proposal, bool) {
-	return ctx.proposal, ctx.majorityVote
+func (ctx *ProposalContext) UpdateProposal() error {
+	return ctx.ProposalReg.UpdateProposal(ctx.proposalHash, ctx.Ballot)
+}
+
+func (ctx *ProposalContext) ThresholdReached() bool {
+	return ctx.votes*2 > ctx.Tip.NumValidators()
 }
 
 func validateProposalStrings(proposal *payload.Proposal) error {

@@ -30,11 +30,11 @@ type CallContext struct {
 	txe         *exec.TxExecution
 }
 
-func (ctx *CallContext) Execute(txe *exec.TxExecution) error {
+func (ctx *CallContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.CallTx)
+	ctx.tx, ok = p.(*payload.CallTx)
 	if !ok {
-		return fmt.Errorf("payload must be CallTx, but is: %v", txe.Envelope.Tx.Payload)
+		return fmt.Errorf("payload must be CallTx, but is: %v", p)
 	}
 	ctx.txe = txe
 	inAcc, outAcc, err := ctx.Precheck()

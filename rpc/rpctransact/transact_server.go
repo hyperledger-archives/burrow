@@ -53,7 +53,7 @@ func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*
 }
 
 func (ts *transactServer) FormulateTx(ctx context.Context, param *payload.Any) (*TxEnvelope, error) {
-	txEnv := EnvelopeFromAny(ts.transactor.Tip.ChainID(), param)
+	txEnv := txs.EnvelopeFromAny(ts.transactor.Tip.ChainID(), param)
 	if txEnv == nil {
 		return nil, fmt.Errorf("no payload provided to FormulateTx")
 	}
@@ -105,29 +105,7 @@ func (te *TxEnvelopeParam) GetEnvelope(chainID string) *txs.Envelope {
 		return te.Envelope
 	}
 	if te.Payload != nil {
-		return EnvelopeFromAny(chainID, te.Payload)
-	}
-	return nil
-}
-
-func EnvelopeFromAny(chainID string, p *payload.Any) *txs.Envelope {
-	if p.CallTx != nil {
-		return txs.Enclose(chainID, p.CallTx)
-	}
-	if p.SendTx != nil {
-		return txs.Enclose(chainID, p.SendTx)
-	}
-	if p.NameTx != nil {
-		return txs.Enclose(chainID, p.NameTx)
-	}
-	if p.PermsTx != nil {
-		return txs.Enclose(chainID, p.PermsTx)
-	}
-	if p.GovTx != nil {
-		return txs.Enclose(chainID, p.GovTx)
-	}
-	if p.ProposalTx != nil {
-		return txs.Enclose(chainID, p.ProposalTx)
+		return txs.EnvelopeFromAny(chainID, te.Payload)
 	}
 	return nil
 }

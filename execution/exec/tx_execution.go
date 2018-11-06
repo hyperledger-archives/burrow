@@ -20,13 +20,14 @@ func EventStringAccountCall(addr crypto.Address) string    { return fmt.Sprintf(
 func EventStringLogEvent(addr crypto.Address) string       { return fmt.Sprintf("Log/%s", addr) }
 func EventStringTxExecution(txHash []byte) string          { return fmt.Sprintf("Execution/Tx/%X", txHash) }
 func EventStringGovernAccount(addr *crypto.Address) string { return fmt.Sprintf("Govern/Acc/%v", addr) }
+func EventStringPayload(index uint32) string               { return fmt.Sprintf("Payload/%d", index) }
 
-func NewTxExecution(txEnv *txs.Envelope, tx *txs.Tx) *TxExecution {
+func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 	return &TxExecution{
-		TxHash:   tx.Hash(),
-		TxType:   tx.Type(),
+		TxHash:   txEnv.Tx.Hash(),
+		TxType:   txEnv.Tx.Type(),
 		Envelope: txEnv,
-		Receipt:  tx.GenerateReceipt(),
+		Receipt:  txEnv.Tx.GenerateReceipt(),
 	}
 }
 
@@ -108,6 +109,13 @@ func (txe *TxExecution) PushError(err error) {
 			txe.Exception = ex
 		}
 	}
+}
+
+func (txe *TxExecution) PayloadEvent(payload *PayloadEvent) {
+	txe.Append(&Event{
+		Header:  txe.Header(TypePayload, EventStringPayload(payload.Index), nil),
+		Payload: payload,
+	})
 }
 
 func (txe *TxExecution) Trace() string {

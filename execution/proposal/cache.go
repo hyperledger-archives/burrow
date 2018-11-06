@@ -33,9 +33,9 @@ type Cache struct {
 
 type proposalInfo struct {
 	sync.RWMutex
-	proposal *payload.Proposal
-	removed  bool
-	updated  bool
+	ballot  *payload.Ballot
+	removed bool
+	updated bool
 }
 
 type ProposalHash [tmhash.Size]byte
@@ -73,7 +73,7 @@ func NewCache(backend Reader) *Cache {
 	}
 }
 
-func (cache *Cache) GetProposal(proposalHash []byte) (*payload.Proposal, error) {
+func (cache *Cache) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	proposalInfo, err := cache.get(proposalHash)
 	if err != nil {
 		return nil, err
@@ -83,10 +83,10 @@ func (cache *Cache) GetProposal(proposalHash []byte) (*payload.Proposal, error) 
 	if proposalInfo.removed {
 		return nil, nil
 	}
-	return proposalInfo.proposal, nil
+	return proposalInfo.ballot, nil
 }
 
-func (cache *Cache) UpdateProposal(proposalHash []byte, proposal *payload.Proposal) error {
+func (cache *Cache) UpdateProposal(proposalHash []byte, ballot *payload.Ballot) error {
 	proposalInfo, err := cache.get(proposalHash)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (cache *Cache) UpdateProposal(proposalHash []byte, proposal *payload.Propos
 		return fmt.Errorf("UpdateProposal on a removed proposal: %x", proposalHash)
 	}
 
-	proposalInfo.proposal = proposal
+	proposalInfo.ballot = ballot
 	proposalInfo.updated = true
 	return nil
 }
@@ -140,7 +140,7 @@ func (cache *Cache) Sync(state Writer) error {
 				return err
 			}
 		} else if proposalInfo.updated {
-			err := state.UpdateProposal(hash[:], proposalInfo.proposal)
+			err := state.UpdateProposal(hash[:], proposalInfo.ballot)
 			if err != nil {
 				proposalInfo.RUnlock()
 				return err
@@ -190,7 +190,7 @@ func (cache *Cache) get(proposalHash []byte) (*proposalInfo, error) {
 				return nil, err
 			}
 			propInfo = &proposalInfo{
-				proposal: prop,
+				ballot: prop,
 			}
 			cache.proposals[hash] = propInfo
 		}
