@@ -36,26 +36,26 @@ import (
 )
 
 var inputAccount = rpctest.PrivateAccounts[0]
-var inputAddress = inputAccount.Address()
+var inputAddress = inputAccount.GetAddress()
 
 func TestInputAccountPublicKeySet(t *testing.T) {
 	input := rpctest.PrivateAccounts[9]
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
-	acc, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
+	acc, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.GetAddress()})
 	require.NoError(t, err)
 
 	// Account PublicKey should be initially unset
 	assert.False(t, acc.PublicKey.IsSet())
 
 	// Sign with this account - should set public key
-	rpctest.CreateContract(t, tcli, input.Address(), solidity.Bytecode_StrangeLoop)
-	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address()})
+	rpctest.CreateContract(t, tcli, input.GetAddress(), solidity.Bytecode_StrangeLoop)
+	acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.GetAddress()})
 
 	// Check public key set
 	require.NoError(t, err)
 	assert.True(t, acc.PublicKey.IsSet())
-	assert.Equal(t, input.PublicKey(), acc.PublicKey)
+	assert.Equal(t, input.GetPublicKey(), acc.PublicKey)
 }
 
 func TestBroadcastTxLocallySigned(t *testing.T) {
@@ -72,7 +72,7 @@ func TestBroadcastTxLocallySigned(t *testing.T) {
 			Amount:   amount,
 		}},
 		Outputs: []*payload.TxOutput{{
-			Address: rpctest.PrivateAccounts[1].Address(),
+			Address: rpctest.PrivateAccounts[1].GetAddress(),
 			Amount:  amount,
 		}},
 	})

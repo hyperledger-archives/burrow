@@ -35,15 +35,15 @@ import (
 
 func TestState_UpdateAccount(t *testing.T) {
 	s := NewState(db.NewMemDB())
-	account := acm.NewConcreteAccountFromSecret("Foo").MutableAccount()
-	account.MutablePermissions().Base.Perms = permission.SetGlobal | permission.HasRole
+	account := acm.NewAccountFromSecret("Foo")
+	account.Permissions.Base.Perms = permission.SetGlobal | permission.HasRole
 	_, err := s.Update(func(ws Updatable) error {
 		return ws.UpdateAccount(account)
 	})
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	accountOut, err := s.GetAccount(account.Address())
+	accountOut, err := s.GetAccount(account.Address)
 	require.NoError(t, err)
 	assert.Equal(t, account, accountOut)
 }

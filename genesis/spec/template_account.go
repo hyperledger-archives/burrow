@@ -95,7 +95,7 @@ func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient) (
 			return
 		}
 	} else {
-		address = (*ta.PublicKey).Address()
+		address = (*ta.PublicKey).GetAddress()
 		if ta.Address != nil && *ta.Address != address {
 			err = fmt.Errorf("template address %s does not match public key derived address %s", ta.Address,
 				ta.PublicKey)

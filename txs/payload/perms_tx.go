@@ -9,7 +9,7 @@ import (
 )
 
 func NewPermsTx(st state.AccountGetter, from crypto.PublicKey, args permission.PermArgs) (*PermsTx, error) {
-	addr := from.Address()
+	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -18,13 +18,13 @@ func NewPermsTx(st state.AccountGetter, from crypto.PublicKey, args permission.P
 		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
 	}
 
-	sequence := acc.Sequence() + 1
+	sequence := acc.Sequence + 1
 	return NewPermsTxWithSequence(from, args, sequence), nil
 }
 
 func NewPermsTxWithSequence(from crypto.PublicKey, args permission.PermArgs, sequence uint64) *PermsTx {
 	input := &TxInput{
-		Address:  from.Address(),
+		Address:  from.GetAddress(),
 		Amount:   1, // NOTE: amounts can't be 0 ...
 		Sequence: sequence,
 	}

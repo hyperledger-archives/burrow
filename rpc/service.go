@@ -152,14 +152,14 @@ func (s *Service) Account(address crypto.Address) (*ResultAccount, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ResultAccount{Account: acm.AsConcreteAccount(acc)}, nil
+	return &ResultAccount{Account: acc}, nil
 }
 
-func (s *Service) Accounts(predicate func(acm.Account) bool) (*ResultAccounts, error) {
-	accounts := make([]*acm.ConcreteAccount, 0)
-	s.state.IterateAccounts(func(account acm.Account) (stop bool) {
+func (s *Service) Accounts(predicate func(*acm.Account) bool) (*ResultAccounts, error) {
+	accounts := make([]*acm.Account, 0)
+	s.state.IterateAccounts(func(account *acm.Account) (stop bool) {
 		if predicate(account) {
-			accounts = append(accounts, acm.AsConcreteAccount(account))
+			accounts = append(accounts, account)
 		}
 		return
 	})
@@ -215,23 +215,23 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 	if acc == nil {
 		return &ResultAccountHumanReadable{}, nil
 	}
-	tokens, err := acc.Code().Tokens()
+	tokens, err := acc.Code.Tokens()
 	if acc == nil {
 		return &ResultAccountHumanReadable{}, nil
 	}
-	perms := permission.BasePermissionsToStringList(acc.Permissions().Base)
+	perms := permission.BasePermissionsToStringList(acc.Permissions.Base)
 	if acc == nil {
 		return &ResultAccountHumanReadable{}, nil
 	}
 	return &ResultAccountHumanReadable{
 		Account: &AccountHumanReadable{
-			Address:     acc.Address(),
-			PublicKey:   acc.PublicKey(),
-			Sequence:    acc.Sequence(),
-			Balance:     acc.Balance(),
+			Address:     acc.GetAddress(),
+			PublicKey:   acc.PublicKey,
+			Sequence:    acc.Sequence,
+			Balance:     acc.Balance,
 			Code:        tokens,
 			Permissions: perms,
-			Roles:       acc.Permissions().Roles,
+			Roles:       acc.Permissions.Roles,
 		},
 	}, nil
 }
@@ -302,10 +302,10 @@ func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
 func (s *Service) Validators() (*ResultValidators, error) {
 	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
 	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		address := id.Address()
+		address := id.GetAddress()
 		validators = append(validators, &validator.Validator{
 			Address:   &address,
-			PublicKey: id.PublicKey(),
+			PublicKey: id.GetPublicKey(),
 			Power:     power.Uint64(),
 		})
 		return
@@ -358,7 +358,7 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 
 func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
 	publicKey := nodeView.ValidatorPublicKey()
-	address := publicKey.Address()
+	address := publicKey.GetAddress()
 	res := &ResultStatus{
 		ChainID:       blockchain.ChainID(),
 		RunID:         nodeView.RunID().String(),

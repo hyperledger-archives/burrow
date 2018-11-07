@@ -27,7 +27,7 @@ func TestStack_UnlimitedAllocation(t *testing.T) {
 	st.Push64(math.MaxInt64)
 	assert.Nil(t, *st.err)
 	assert.Equal(t, 1, len(st.slice))
-	assert.Equal(t, 32, cap(st.slice))
+	assert.Equal(t, 1, cap(st.slice))
 }
 
 // Test static memory allocation with maximum == initial capacity - memory should not grow

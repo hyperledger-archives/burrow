@@ -63,7 +63,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 		}
 		// Check address
 		if update.PublicKey != nil {
-			address := update.PublicKey.Address()
+			address := update.PublicKey.GetAddress()
 			if update.Address != nil && address != *update.Address {
 				return fmt.Errorf("supplied public key %v whose address %v does not match %v provided by"+
 					"GovTx", update.PublicKey, address, update.Address)
@@ -87,15 +87,12 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution) error {
 	return nil
 }
 
-func (ctx *GovernanceContext) UpdateAccount(account *acm.MutableAccount, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
+func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.TemplateAccount) (ev *exec.GovernAccountEvent, err error) {
 	ev = &exec.GovernAccountEvent{
 		AccountUpdate: update,
 	}
 	if update.Balances().HasNative() {
-		err = account.SetBalance(update.Balances().GetNative(0))
-		if err != nil {
-			return
-		}
+		account.Balance = update.Balances().GetNative(0)
 	}
 	if update.NodeAddress != nil {
 		// TODO: can we do something useful if provided with a NodeAddress for an account about to become a validator
@@ -118,12 +115,12 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.MutableAccount, update 
 		}
 	}
 	if update.Code != nil {
-		err = account.SetCode(*update.Code)
+		account.Code = *update.Code
 		if err != nil {
 			return ev, err
 		}
 	}
-	perms := account.Permissions()
+	perms := account.Permissions
 	if len(update.Permissions) > 0 {
 		perms.Base, err = permission.BasePermissionsFromStringList(update.Permissions)
 		if err != nil {
@@ -133,7 +130,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.MutableAccount, update 
 	if len(update.Roles) > 0 {
 		perms.Roles = update.Roles
 	}
-	err = account.SetPermissions(perms)
+	account.Permissions = perms
 	if err != nil {
 		return
 	}
@@ -147,8 +144,8 @@ func (ctx *GovernanceContext) MaybeGetPublicKey(address crypto.Address) (*crypto
 	if err != nil {
 		return nil, err
 	}
-	if acc != nil && acc.PublicKey().IsSet() {
-		publicKey := acc.PublicKey()
+	if acc != nil && acc.PublicKey.IsSet() {
+		publicKey := acc.PublicKey
 		return &publicKey, nil
 	}
 	return nil, nil

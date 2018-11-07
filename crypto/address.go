@@ -12,14 +12,14 @@ import (
 
 type Addressable interface {
 	// Get the 20 byte EVM address of this account
-	Address() Address
+	GetAddress() Address
 	// Public key from which the Address is derived
-	PublicKey() PublicKey
+	GetPublicKey() PublicKey
 }
 
 func NewAddressable(publicKey PublicKey) Addressable {
 	return &memoizedAddressable{
-		address:   publicKey.Address(),
+		address:   publicKey.GetAddress(),
 		publicKey: publicKey,
 	}
 }
@@ -33,14 +33,14 @@ func MemoizeAddressable(addressable Addressable) Addressable {
 	if a, ok := addressable.(*memoizedAddressable); ok {
 		return a
 	}
-	return NewAddressable(addressable.PublicKey())
+	return NewAddressable(addressable.GetPublicKey())
 }
 
-func (a *memoizedAddressable) PublicKey() PublicKey {
+func (a *memoizedAddressable) GetPublicKey() PublicKey {
 	return a.publicKey
 }
 
-func (a *memoizedAddressable) Address() Address {
+func (a *memoizedAddressable) GetAddress() Address {
 	return a.address
 }
 

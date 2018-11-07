@@ -17,15 +17,15 @@ import (
 // acm.PublicKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
-func getInputs(accountGetter state.AccountGetter, ins []*payload.TxInput) (map[crypto.Address]*acm.MutableAccount, uint64, error) {
+func getInputs(accountGetter state.AccountGetter, ins []*payload.TxInput) (map[crypto.Address]*acm.Account, uint64, error) {
 	var total uint64
-	accounts := map[crypto.Address]*acm.MutableAccount{}
+	accounts := map[crypto.Address]*acm.Account{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
 			return nil, total, errors.ErrorCodeDuplicateAddress
 		}
-		acc, err := state.GetMutableAccount(accountGetter, in.Address)
+		acc, err := accountGetter.GetAccount(in.Address)
 		if err != nil {
 			return nil, total, err
 		}
@@ -38,10 +38,10 @@ func getInputs(accountGetter state.AccountGetter, ins []*payload.TxInput) (map[c
 	return accounts, total, nil
 }
 
-func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
-	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]*acm.MutableAccount, error) {
+func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]*acm.Account, error) {
 	if accs == nil {
-		accs = make(map[crypto.Address]*acm.MutableAccount)
+		accs = make(map[crypto.Address]*acm.Account)
 	}
 	// we should err if an account is being created but the inputs don't have permission
 	var err error
@@ -54,14 +54,14 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	return accs, nil
 }
 
-func getOrMakeOutput(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
-	outputAddress crypto.Address, logger *logging.Logger) (*acm.MutableAccount, error) {
+func getOrMakeOutput(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+	outputAddress crypto.Address, logger *logging.Logger) (*acm.Account, error) {
 
 	// Account shouldn't be duplicated
 	if _, ok := accs[outputAddress]; ok {
 		return nil, errors.ErrorCodeDuplicateAddress
 	}
-	acc, err := state.GetMutableAccount(accountGetter, outputAddress)
+	acc, err := accountGetter.GetAccount(outputAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +71,12 @@ func getOrMakeOutput(accountGetter state.AccountGetter, accs map[crypto.Address]
 			return nil, fmt.Errorf("at least one input does not have permission to create accounts")
 		}
 		logger.InfoMsg("Account not found so attempting to create it", "address", outputAddress)
-		acc = acm.ConcreteAccount{
+		acc = &acm.Account{
 			Address:     outputAddress,
 			Sequence:    0,
 			Balance:     0,
 			Permissions: permission.ZeroAccountPermissions,
-		}.MutableAccount()
+		}
 	}
 
 	return acc, nil
@@ -91,35 +91,29 @@ func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[crypto.Address]*acm.MutableAccount, ins []*payload.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput, logger *logging.Logger) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
 			return fmt.Errorf("adjustByInputs() expects account in accounts, but account %s not found", in.Address)
 		}
-		if acc.Balance() < in.Amount {
+		if acc.Balance < in.Amount {
 			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
-				"we are deducting %v", in.Address, acc.Balance(), in.Amount)
+				"we are deducting %v", in.Address, acc.Balance, in.Amount)
 		}
-		err := acc.SubtractFromBalance(in.Amount)
-		if err != nil {
-			return err
-		}
+		acc.Balance -= in.Amount
 	}
 	return nil
 }
 
-func adjustByOutputs(accs map[crypto.Address]*acm.MutableAccount, outs []*payload.TxOutput) error {
+func adjustByOutputs(accs map[crypto.Address]*acm.Account, outs []*payload.TxOutput) error {
 	for _, out := range outs {
 		acc := accs[out.Address]
 		if acc == nil {
 			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
 				out.Address)
 		}
-		err := acc.AddToBalance(out.Amount)
-		if err != nil {
-			return err
-		}
+		acc.Balance += out.Amount
 	}
 	return nil
 }
@@ -127,7 +121,7 @@ func adjustByOutputs(accs map[crypto.Address]*acm.MutableAccount, outs []*payloa
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm permission.PermFlag, logger *logging.Logger) bool {
+func HasPermission(accountGetter state.AccountGetter, acc *acm.Account, perm permission.PermFlag, logger *logging.Logger) bool {
 	if perm > permission.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
@@ -137,7 +131,7 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm perm
 		return false
 	}
 
-	v, err := acc.Permissions().Base.Compose(state.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	v, err := acc.Permissions.Base.Compose(state.GlobalAccountPermissions(accountGetter).Base).Get(perm)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", perm.String(),
@@ -146,22 +140,22 @@ func HasPermission(accountGetter state.AccountGetter, acc acm.Account, perm perm
 
 	if v {
 		logger.TraceMsg("Account has permission",
-			"account_address", acc.Address,
+			"account_address", acc.GetAddress,
 			"perm_flag", perm.String())
 	} else {
 		logger.TraceMsg("Account does not have permission",
-			"account_address", acc.Address,
+			"account_address", acc.GetAddress,
 			"perm_flag", perm.String())
 	}
 	return v
 }
 
 func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFlag,
-	accs map[crypto.Address]*acm.MutableAccount, logger *logging.Logger) error {
+	accs map[crypto.Address]*acm.Account, logger *logging.Logger) error {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, perm, logger) {
 			return errors.PermissionDenied{
-				Address: acc.Address(),
+				Address: acc.Address,
 				Perm:    perm,
 			}
 		}
@@ -169,22 +163,22 @@ func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFl
 	return nil
 }
 
-func hasNamePermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasNamePermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
-func hasCallPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasCallPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
-func hasCreateContractPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasCreateContractPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.MutableAccount,
+func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -194,12 +188,12 @@ func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[cryp
 	return true
 }
 
-func hasBondPermission(accountGetter state.AccountGetter, acc acm.Account,
+func hasBondPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]acm.Account,
+func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

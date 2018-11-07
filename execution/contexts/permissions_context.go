@@ -28,7 +28,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 		return fmt.Errorf("payload must be PermsTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
-	inAcc, err := state.GetMutableAccount(ctx.StateWriter, ctx.tx.Input.Address)
+	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	ctx.Logger.TraceMsg("New PermsTx",
 		"perm_args", ctx.tx.PermArgs.String())
 
-	var permAcc acm.Account
+	var permAcc *acm.Account
 	switch ctx.tx.PermArgs.Action {
 	case permission.HasBase:
 		// this one doesn't make sense from txs
@@ -89,7 +89,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	case permission.RemoveRole:
 		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
-				if !perms.RmRole(*ctx.tx.PermArgs.Role) {
+				if !perms.RemoveRole(*ctx.tx.PermArgs.Role) {
 					return fmt.Errorf("role (%s) does not exist for account %s",
 						*ctx.tx.PermArgs.Role, *ctx.tx.PermArgs.Target)
 				}
@@ -105,7 +105,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	// Good!
-	err = inAcc.SubtractFromBalance(value)
+	inAcc.Balance -= value
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution) error {
 }
 
 func mutatePermissions(stateReader state.Reader, address crypto.Address,
-	mutator func(*permission.AccountPermissions) error) (acm.Account, error) {
+	mutator func(*permission.AccountPermissions) error) (*acm.Account, error) {
 
 	account, err := stateReader.GetAccount(address)
 	if err != nil {
@@ -129,7 +129,5 @@ func mutatePermissions(stateReader state.Reader, address crypto.Address,
 	if account == nil {
 		return nil, fmt.Errorf("could not get account at address %s in order to alter permissions", address)
 	}
-	mutableAccount := acm.AsMutableAccount(account)
-
-	return mutableAccount, mutator(mutableAccount.MutablePermissions())
+	return account, mutator(&account.Permissions)
 }

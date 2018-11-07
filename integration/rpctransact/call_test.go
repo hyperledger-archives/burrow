@@ -30,7 +30,7 @@ func TestCallTxNoCode(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 
 	// Flip flops between sending private key and input address to test private key and address based signing
-	toAddress := rpctest.PrivateAccounts[2].Address()
+	toAddress := rpctest.PrivateAccounts[2].GetAddress()
 
 	numCreates := 1000
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
@@ -139,7 +139,7 @@ func TestSendTxAsync(t *testing.T) {
 				Amount:  2003,
 			}},
 			Outputs: []*payload.TxOutput{{
-				Address: rpctest.PrivateAccounts[3].Address(),
+				Address: rpctest.PrivateAccounts[3].GetAddress(),
 				Amount:  2003,
 			}},
 		})
@@ -191,7 +191,8 @@ func TestCallContract(t *testing.T) {
 	assert.NotEqual(t, 0, len(txe.TxHash), "Receipt should contain a"+
 		" transaction hash")
 	contractAddress := txe.Receipt.ContractAddress
-	assert.NotEqual(t, 0, len(contractAddress), "Transactions claims to have"+
+	fmt.Printf("%v\n", txe.Receipt.ContractAddress)
+	assert.NotEqual(t, crypto.ZeroAddress, contractAddress, "Transactions claims to have"+
 		" created a contract but the contract address is empty")
 
 	txe, err = cli.CallTxSync(context.Background(), &payload.CallTx{

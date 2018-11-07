@@ -34,8 +34,8 @@ func TestMakeGenesisDocFromAccounts(t *testing.T) {
 	fmt.Println(string(bs))
 }
 
-func accountMap(names ...string) map[string]acm.Account {
-	accounts := make(map[string]acm.Account, len(names))
+func accountMap(names ...string) map[string]*acm.Account {
+	accounts := make(map[string]*acm.Account, len(names))
 	for _, name := range names {
 		accounts[name] = accountFromName(name)
 	}
@@ -46,16 +46,16 @@ func validatorMap(names ...string) map[string]validator.Validator {
 	validators := make(map[string]validator.Validator, len(names))
 	for _, name := range names {
 		acc := accountFromName(name)
-		validators[name] = validator.FromAccount(acc, acc.Balance())
+		validators[name] = validator.FromAccount(acc, acc.Balance)
 	}
 	return validators
 }
 
-func accountFromName(name string) acm.Account {
-	ca := acm.NewConcreteAccountFromSecret(name)
+func accountFromName(name string) *acm.Account {
+	ca := acm.NewAccountFromSecret(name)
 	for _, c := range name {
 		ca.Balance += uint64(c)
 	}
 	ca.Permissions = permission.AllAccountPermissions.Clone()
-	return ca.Account()
+	return ca
 }

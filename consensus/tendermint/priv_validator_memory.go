@@ -35,11 +35,11 @@ func asTendermintSigner(signer crypto.Signer) func(msg []byte) []byte {
 }
 
 func (pvm *privValidatorMemory) GetAddress() tmTypes.Address {
-	return pvm.Address().Bytes()
+	return pvm.Addressable.GetAddress().Bytes()
 }
 
 func (pvm *privValidatorMemory) GetPubKey() tmCrypto.PubKey {
-	return pvm.PublicKey().TendermintPubKey()
+	return pvm.GetPublicKey().TendermintPubKey()
 }
 
 // TODO: consider persistence to disk/database to avoid double signing after a crash

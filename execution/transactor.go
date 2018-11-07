@@ -35,7 +35,8 @@ import (
 )
 
 const (
-	BlockingTimeout     = 10 * time.Second
+	BlockingTimeout = 1000 * time.Second
+	//BlockingTimeout     = 10 * time.Second
 	SubscribeBufferSize = 10
 )
 
@@ -180,7 +181,7 @@ func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, Unlo
 		unlockers[i] = unlock
 		signers[i] = sa
 		// Set sequence number consecutively from mempool
-		input.Sequence = sa.Sequence() + 1
+		input.Sequence = sa.Sequence + 1
 	}
 
 	err := txEnv.Sign(signers...)

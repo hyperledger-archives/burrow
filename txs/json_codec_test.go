@@ -44,7 +44,7 @@ func TestJSONEncodeTxDecodeTx_CallTx(t *testing.T) {
 	sequence := uint64(3)
 	tx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address:  inputAccount.Address(),
+			Address:  inputAccount.GetAddress(),
 			Amount:   amount,
 			Sequence: sequence,
 		},
@@ -71,7 +71,7 @@ func TestJSONEncodeTxDecodeTx_CallTxNoData(t *testing.T) {
 	sequence := uint64(3)
 	tx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address:  inputAccount.Address(),
+			Address:  inputAccount.GetAddress(),
 			Amount:   amount,
 			Sequence: sequence,
 		},

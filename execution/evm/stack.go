@@ -17,6 +17,8 @@ package evm
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/crypto"
+
 	"math/big"
 
 	"math"
@@ -24,12 +26,6 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
 )
-
-// Change the length of this zero array to tweak the size of the block of zeros
-// written to the backing slice at a time when it is grown. A larger number may
-// lead to fewer calls to append to achieve the desired capacity although it is
-// unlikely to make a lot of difference.
-var zeroWords []Word256 = make([]Word256, 32)
 
 // Not goroutine safe
 type Stack struct {
@@ -84,6 +80,10 @@ func (st *Stack) PushBytes(bz []byte) {
 	st.Push(LeftPadWord256(bz))
 }
 
+func (st *Stack) PushAddress(address crypto.Address) {
+	st.Push(address.Word256())
+}
+
 func (st *Stack) Push64(i int64) {
 	st.Push(Int64ToWord256(i))
 }
@@ -113,6 +113,10 @@ func (st *Stack) Pop() Word256 {
 
 func (st *Stack) PopBytes() []byte {
 	return st.Pop().Bytes()
+}
+
+func (st *Stack) PopAddress() crypto.Address {
+	return crypto.AddressFromWord256(st.Pop())
 }
 
 func (st *Stack) Pop64() (int64, errors.CodedError) {
@@ -224,7 +228,7 @@ func (st *Stack) ensureCapacity(newCapacity uint64) error {
 	// the slice's backing array.
 	for newCapacityInt > cap(st.slice) {
 		// We'll trust Go exponentially grow our arrays (at first).
-		st.slice = append(st.slice, zeroWords...)
+		st.slice = append(st.slice, Zero256)
 	}
 	// Now we've ensured the backing array of the slice is big enough we can
 	// just re-slice (even if len(mem.slice) < newCapacity)

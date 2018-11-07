@@ -60,13 +60,13 @@ func TestAccount(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	testWithAllClients(t, func(t *testing.T, clientName string, client infoclient.RPCClient) {
-		acc := rpctest.GetAccount(t, client, rpctest.PrivateAccounts[0].Address())
+		acc := rpctest.GetAccount(t, client, rpctest.PrivateAccounts[0].GetAddress())
 		if acc == nil {
 			t.Fatal("Account was nil")
 		}
-		if acc.Address() != rpctest.PrivateAccounts[0].Address() {
-			t.Fatalf("Failed to get correct account. Got %s, expected %s", acc.Address(),
-				rpctest.PrivateAccounts[0].Address())
+		if acc.GetAddress() != rpctest.PrivateAccounts[0].GetAddress() {
+			t.Fatalf("Failed to get correct account. Got %s, expected %s", acc.GetAddress(),
+				rpctest.PrivateAccounts[0].GetAddress())
 		}
 	})
 }
