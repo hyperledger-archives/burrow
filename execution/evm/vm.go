@@ -77,6 +77,7 @@ func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Log
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
+	// Uncomment for quick and dirty debug
 	//fmt.Printf(format, a...)
 	if vm.debugOpcodes {
 		vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "DebugOpcodes")

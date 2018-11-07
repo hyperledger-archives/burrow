@@ -126,6 +126,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param Account account address
 			* @param Permission the base permissions flags to set for the account
 			* @param Set whether to set or unset the permissions flags at the account level
+			* @return The permission flag that was set as uint64
 			`,
 				Name:      "setBase",
 				PermFlag:  permission.SetBase,
@@ -137,6 +138,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
       		* @param Account account address
       		* @param Permission the permissions flags to unset for the account
+			* @return The permission flag that was unset as uint64
       `,
 				Name:      "unsetBase",
 				PermFlag:  permission.UnsetBase,
@@ -160,6 +162,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Sets the global (default) permissions flags for the entire chain
 			* @param Permission the permissions flags to set
 			* @param Set whether to set (or unset) the permissions flags
+			* @return The permission flag that was set as uint64
 			`,
 				Name:      "setGlobal",
 				PermFlag:  permission.SetGlobal,
@@ -353,7 +356,7 @@ type setBaseArgs struct {
 }
 
 type setBaseRets struct {
-	Result bool
+	Result uint64
 }
 
 func setBase(stateWriter Interface, caller crypto.Address, gas *uint64,
@@ -372,7 +375,7 @@ func setBase(stateWriter Interface, caller crypto.Address, gas *uint64,
 	logger.Trace.Log("function", "setBase", "address", args.Account.String(),
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", args.Permission)
-	return setBaseRets{Result: true}, nil
+	return setBaseRets{Result: uint64(permN)}, nil
 }
 
 type unsetBaseArgs struct {
@@ -381,7 +384,7 @@ type unsetBaseArgs struct {
 }
 
 type unsetBaseRets struct {
-	Result bool
+	Result uint64
 }
 
 func unsetBase(stateWriter Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
@@ -400,7 +403,7 @@ func unsetBase(stateWriter Interface, caller crypto.Address, gas *uint64, logger
 		"perm_flag", fmt.Sprintf("%b", permN),
 		"permission_flag", fmt.Sprintf("%b", permN))
 
-	return unsetBaseRets{Result: true}, nil
+	return unsetBaseRets{Result: uint64(permN)}, nil
 }
 
 type setGlobalArgs struct {
@@ -409,7 +412,7 @@ type setGlobalArgs struct {
 }
 
 type setGlobalRets struct {
-	Result bool
+	Result uint64
 }
 
 func setGlobal(stateWriter Interface, caller crypto.Address, gas *uint64,
@@ -425,7 +428,7 @@ func setGlobal(stateWriter Interface, caller crypto.Address, gas *uint64,
 	logger.Trace.Log("function", "setGlobal",
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", args.Set)
-	return setGlobalRets{Result: true}, nil
+	return setGlobalRets{Result: uint64(permN)}, nil
 }
 
 type hasRoleArgs struct {

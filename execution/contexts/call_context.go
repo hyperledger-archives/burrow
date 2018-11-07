@@ -215,7 +215,6 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		}
 	}
 	ctx.CallEvents(exception)
-	fmt.Println(string(ret))
 	ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	// Create a receipt from the ret and whether it erred.
 	ctx.Logger.TraceMsg("VM call complete",
