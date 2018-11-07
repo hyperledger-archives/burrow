@@ -54,7 +54,6 @@ func TestLog4(t *testing.T) {
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	txe := new(exec.TxExecution)
-	ourVm.SetEventSink(txe)
 
 	var gas uint64 = 100000
 
@@ -77,7 +76,7 @@ func TestLog4(t *testing.T) {
 		stop,
 	}
 
-	_, err := ourVm.Call(cache, account1, account2, code, []byte{}, 0, &gas)
+	_, err := ourVm.Call(cache, txe, account1, account2, code, []byte{}, 0, &gas)
 	require.NoError(t, err)
 
 	for _, ev := range txe.Events {

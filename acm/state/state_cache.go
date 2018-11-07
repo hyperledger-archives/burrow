@@ -19,6 +19,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/hyperledger/burrow/execution/errors"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -29,6 +31,7 @@ type Cache struct {
 	name     string
 	backend  Reader
 	accounts map[crypto.Address]*accountInfo
+	readonly bool
 }
 
 type accountInfo struct {
@@ -39,7 +42,7 @@ type accountInfo struct {
 	updated bool
 }
 
-type CacheOption func(*Cache)
+type CacheOption func(*Cache) *Cache
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
 // via Sync. Goroutine safe for concurrent access.
@@ -54,10 +57,16 @@ func NewCache(backend Reader, options ...CacheOption) *Cache {
 	return cache
 }
 
-func Name(name string) CacheOption {
-	return func(cache *Cache) {
+func Named(name string) CacheOption {
+	return func(cache *Cache) *Cache {
 		cache.name = name
+		return cache
 	}
+}
+
+var ReadOnly CacheOption = func(cache *Cache) *Cache {
+	cache.readonly = true
+	return cache
 }
 
 func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {
@@ -74,6 +83,9 @@ func (cache *Cache) GetAccount(address crypto.Address) (acm.Account, error) {
 }
 
 func (cache *Cache) UpdateAccount(account acm.Account) error {
+	if cache.readonly {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called on read-only account %v", account.Address())
+	}
 	accInfo, err := cache.get(account.Address())
 	if err != nil {
 		return err
@@ -89,6 +101,9 @@ func (cache *Cache) UpdateAccount(account acm.Account) error {
 }
 
 func (cache *Cache) RemoveAccount(address crypto.Address) error {
+	if cache.readonly {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "RemoveAccount called on read-only account %v", address)
+	}
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return err
@@ -143,6 +158,9 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (bina
 
 // NOTE: Set value to zero to remove.
 func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
+	if cache.readonly {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetStorage called on read-only account %v", address)
+	}
 	accInfo, err := cache.get(address)
 	accInfo.Lock()
 	defer accInfo.Unlock()
@@ -179,6 +197,9 @@ func (cache *Cache) IterateCachedStorage(address crypto.Address,
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating
 // the account they belong so that storage values can be taken account of in the update.
 func (cache *Cache) Sync(state Writer) error {
+	if cache.readonly {
+		return nil
+	}
 	cache.Lock()
 	defer cache.Unlock()
 	var addresses crypto.Addresses
