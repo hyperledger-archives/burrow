@@ -106,8 +106,9 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 			checkTxReceipt.TxHash, BlockingTimeout)
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
-		if txe.Exception != nil && txe.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
-			return nil, errors.Wrap(txe.Exception, "exception during transaction execution")
+		callError := txe.CallError()
+		if callError != nil && callError.ErrorCode() != errors.ErrorCodeExecutionReverted {
+			return nil, errors.Wrap(callError, "exception during transaction execution")
 		}
 		return txe, nil
 	}

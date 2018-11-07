@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
@@ -76,18 +77,20 @@ func (txe *TxExecution) Output(address crypto.Address, exception *errors.Excepti
 	})
 }
 
-func (txe *TxExecution) Log(log *LogEvent) {
+func (txe *TxExecution) Log(log *LogEvent) error {
 	txe.Append(&Event{
 		Header: txe.Header(TypeLog, EventStringLogEvent(log.Address), nil),
 		Log:    log,
 	})
+	return nil
 }
 
-func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) {
+func (txe *TxExecution) Call(call *CallEvent, exception *errors.Exception) error {
 	txe.Append(&Event{
 		Header: txe.Header(TypeCall, EventStringAccountCall(call.CallData.Callee), exception),
 		Call:   call,
 	})
+	return nil
 }
 
 func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, exception *errors.Exception) {
@@ -99,6 +102,52 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 
 func (txe *TxExecution) SetException(err error) {
 	txe.Exception = errors.AsException(err)
+}
+
+func (txe *TxExecution) Trace() string {
+	var calls []string
+	for _, ev := range txe.Events {
+		if ev.Call != nil {
+			ex := ""
+			if ev.Header.Exception != nil {
+				ex = fmt.Sprintf(" [%v]", ev.Header.Exception)
+			}
+			calls = append(calls, fmt.Sprintf("%v: %v -> %v: %v%s",
+				ev.Call.CallType, ev.Call.CallData.Caller, ev.Call.CallData.Callee, ev.Call.Return, ex))
+		}
+	}
+	return strings.Join(calls, "\n")
+}
+
+func (txe *TxExecution) ExceptionalCalls() []*Event {
+	var exCalls []*Event
+	for _, ev := range txe.Events {
+		if ev.Call != nil && ev.Header.Exception != nil {
+			exCalls = append(exCalls, ev)
+		}
+	}
+	return exCalls
+}
+
+func (txe *TxExecution) CallError() *errors.CallError {
+	if txe.Exception == nil {
+		return nil
+	}
+	var nestedErrors []errors.NestedCallError
+	for _, ev := range txe.Events {
+		if ev.Call != nil && ev.Header.Exception != nil {
+			nestedErrors = append(nestedErrors, errors.NestedCallError{
+				CodedError: ev.Header.Exception,
+				Caller:     ev.Call.CallData.Caller,
+				Callee:     ev.Call.CallData.Callee,
+				StackDepth: ev.Call.StackDepth,
+			})
+		}
+	}
+	return &errors.CallError{
+		CodedError:   txe.Exception,
+		NestedErrors: nestedErrors,
+	}
 }
 
 // Set result

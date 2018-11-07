@@ -144,7 +144,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 		callee  *acm.MutableAccount = nil // initialized below
 		code    []byte              = nil
 		ret     []byte              = nil
-		txCache                     = state.NewCache(ctx.StateWriter, state.Name("TxCache"))
+		txCache                     = state.NewCache(ctx.StateWriter, state.Named("TxCache"))
 		params                      = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
@@ -170,16 +170,20 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 			// but to create with one contract and call with another
 			// you have to wait a block to avoid a re-ordering attack
 			// that will take your fees
+			var exception *errors.Exception
 			if outAcc == nil {
-				ctx.Logger.InfoMsg("Call to address that does not exist",
+				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress, "Call to address that does not exist")
+				ctx.Logger.Info.Log(structure.ErrorKey, exception,
 					"caller_address", inAcc.Address(),
 					"callee_address", ctx.tx.Address)
 			} else {
-				ctx.Logger.InfoMsg("Call to address that holds no code",
+				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress, "Call to address that holds no code")
+				ctx.Logger.Info.Log(exception,
 					"caller_address", inAcc.Address(),
 					"callee_address", ctx.tx.Address)
 			}
-			ctx.CallEvents(errors.ErrorCodeInvalidAddress)
+			ctx.txe.SetException(exception)
+			ctx.CallEvents(exception)
 			return nil
 		}
 		callee = acm.AsMutableAccount(outAcc)
@@ -194,14 +198,15 @@ func (ctx *CallContext) Deliver(inAcc, outAcc acm.Account, value uint64) error {
 	txCache.UpdateAccount(caller)
 	txCache.UpdateAccount(callee)
 	vmach := evm.NewVM(params, caller.Address(), ctx.txe.Envelope.Tx, ctx.Logger, ctx.VMOptions...)
-	vmach.SetEventSink(ctx.txe)
 	// NOTE: Call() transfers the value from caller to callee iff call succeeds.
-	ret, exception := vmach.Call(txCache, caller, callee, code, ctx.tx.Data, value, &gas)
+	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 	if exception != nil {
 		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 		ctx.Logger.InfoMsg("Error on execution",
 			structure.ErrorKey, exception)
-		ctx.txe.SetException(exception)
+
+		ctx.txe.SetException(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
+			exception.Error(), ctx.txe.Trace()))
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")
 		if createContract {

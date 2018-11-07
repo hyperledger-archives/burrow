@@ -55,7 +55,7 @@ func (typ EventType) String() string {
 	if ok {
 		return name
 	}
-	return "UnknownTx"
+	return "UnknownEventType"
 }
 
 func (typ EventType) MarshalText() ([]byte, error) {
