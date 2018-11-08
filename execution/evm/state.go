@@ -18,6 +18,7 @@ type Interface interface {
 	Writer
 	// Capture any errors when accessing or writing state - will return nil if no errors have occurred so far
 	errors.Provider
+	errors.Sink
 	// Create a new cached state over this one inheriting any cache options
 	NewCache(cacheOptions ...state.CacheOption) Interface
 	// Sync this state cache to into its originator
@@ -89,12 +90,23 @@ func (st *State) Error() errors.CodedError {
 	return st.error
 }
 
+func (st *State) PushError(err error) {
+	if st.error == nil {
+		// Make sure we are not wrapping a known nil value
+		ex := errors.AsException(err)
+		if ex != nil {
+			ex.Exception = fmt.Sprintf("%s\nStack trace: %s", ex.Exception, stack.Trace().String())
+			st.error = ex
+		}
+	}
+}
+
 // Reader
 
 func (st *State) GetStorage(address crypto.Address, key binary.Word256) binary.Word256 {
 	value, err := st.cache.GetStorage(address, key)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 		return binary.Zero256
 	}
 	return value
@@ -127,7 +139,7 @@ func (st *State) GetCode(address crypto.Address) acm.Bytecode {
 func (st *State) Exists(address crypto.Address) bool {
 	acc, err := st.cache.GetAccount(address)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 		return false
 	}
 	if acc == nil {
@@ -148,7 +160,7 @@ func (st *State) GetSequence(address crypto.Address) uint64 {
 
 func (st *State) CreateAccount(address crypto.Address) {
 	if st.Exists(address) {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
 			"tried to create an account at an address that already exists: %v", address))
 		return
 	}
@@ -158,12 +170,12 @@ func (st *State) CreateAccount(address crypto.Address) {
 func (st *State) InitCode(address crypto.Address, code []byte) {
 	acc := st.mustAccount(address)
 	if acc == nil {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
 			"tried to initialise code for an account that does not exist: %v", address))
 		return
 	}
 	if acc.Code != nil {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
@@ -173,7 +185,7 @@ func (st *State) InitCode(address crypto.Address, code []byte) {
 
 func (st *State) RemoveAccount(address crypto.Address) {
 	if !st.Exists(address) {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
 			"tried to remove an account at an address that does not exist: %v", address))
 		return
 	}
@@ -183,7 +195,7 @@ func (st *State) RemoveAccount(address crypto.Address) {
 func (st *State) SetStorage(address crypto.Address, key, value binary.Word256) {
 	err := st.cache.SetStorage(address, key, value)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 	}
 }
 
@@ -193,7 +205,7 @@ func (st *State) AddToBalance(address crypto.Address, amount uint64) {
 		return
 	}
 	if binary.IsUint64SumOverflow(acc.Balance, amount) {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
 			"uint64 overflow: attempt to add %v to the balance of %s", amount, address))
 		return
 	}
@@ -207,7 +219,7 @@ func (st *State) SubtractFromBalance(address crypto.Address, amount uint64) {
 		return
 	}
 	if amount > acc.Balance {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
 			"insufficient funds: attempt to subtract %v from the balance of %s",
 			amount, acc.Address))
 		return
@@ -265,18 +277,10 @@ func (st *State) IncSequence(address crypto.Address) {
 
 // Helpers
 
-func (st *State) setError(err error) {
-	if st.error == nil {
-		ex := errors.AsException(err)
-		ex.Exception = fmt.Sprintf("%s\nStack trace: %s", ex.Exception, stack.Trace().String())
-		st.error = ex
-	}
-}
-
 func (st *State) account(address crypto.Address) *acm.Account {
 	acc, err := st.cache.GetAccount(address)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 	}
 	return acc
 }
@@ -284,7 +288,7 @@ func (st *State) account(address crypto.Address) *acm.Account {
 func (st *State) mustAccount(address crypto.Address) *acm.Account {
 	acc := st.account(address)
 	if acc == nil {
-		st.setError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"attempted to modify non-existent account: %v", address))
 	}
 	return acc
@@ -293,13 +297,13 @@ func (st *State) mustAccount(address crypto.Address) *acm.Account {
 func (st *State) updateAccount(account *acm.Account) {
 	err := st.cache.UpdateAccount(account)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 	}
 }
 
 func (st *State) removeAccount(address crypto.Address) {
 	err := st.cache.RemoveAccount(address)
 	if err != nil {
-		st.setError(err)
+		st.PushError(err)
 	}
 }

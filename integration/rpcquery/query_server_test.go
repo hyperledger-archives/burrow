@@ -21,7 +21,6 @@ import (
 func TestStatus(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
 	status, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
-	require.NoError(t, err)
 	assert.Equal(t, rpctest.PrivateAccounts[0].GetPublicKey(), status.ValidatorInfo.PublicKey)
 	assert.Equal(t, rpctest.GenesisDoc.ChainID(), status.ChainID)
 	for i := 0; i < 3; i++ {

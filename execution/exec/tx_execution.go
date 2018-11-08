@@ -100,8 +100,14 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 	})
 }
 
-func (txe *TxExecution) SetException(err error) {
-	txe.Exception = errors.AsException(err)
+func (txe *TxExecution) PushError(err error) {
+	if txe.Exception == nil {
+		// Don't forget the nil jig
+		ex := errors.AsException(err)
+		if ex != nil {
+			txe.Exception = ex
+		}
+	}
 }
 
 func (txe *TxExecution) Trace() string {

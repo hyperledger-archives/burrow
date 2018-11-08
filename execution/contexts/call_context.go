@@ -182,7 +182,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 					"caller_address", inAcc.GetAddress(),
 					"callee_address", ctx.tx.Address)
 			}
-			ctx.txe.SetException(exception)
+			ctx.txe.PushError(exception)
 			ctx.CallEvents(exception)
 			return nil
 		}
@@ -202,7 +202,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ctx.Logger.InfoMsg("Error on execution",
 			structure.ErrorKey, exception)
 
-		ctx.txe.SetException(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
+		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
 			exception.Error(), ctx.txe.Trace()))
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")

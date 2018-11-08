@@ -197,20 +197,20 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		err = txEnv.Tx.ValidateInputs(exe.stateCache)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
-			txe.SetException(err)
+			txe.PushError(err)
 			return nil, err
 		}
 		err = txExecutor.Execute(txe)
 		if err != nil {
 			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
-			txe.SetException(err)
+			txe.PushError(err)
 			return nil, err
 		}
 		// Initialise public keys and increment sequence numbers for Tx inputs
 		err = exe.updateSignatories(txEnv)
 		if err != nil {
 			logger.InfoMsg("Updating signatories failed", structure.ErrorKey, err)
-			txe.SetException(err)
+			txe.PushError(err)
 			return nil, err
 		}
 		// Return execution for this tx

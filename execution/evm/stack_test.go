@@ -4,15 +4,16 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStack_MaxDepthInt32(t *testing.T) {
-	var errCode errors.CodedError
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(0, 0, &gaz, &errCode)
+	st := NewStack(0, 0, &gaz, errors.FirstOnly())
 
 	err := st.ensureCapacity(math.MaxInt32 + 1)
 	assert.Error(t, err)
@@ -20,25 +21,25 @@ func TestStack_MaxDepthInt32(t *testing.T) {
 
 // Test static memory allocation with unlimited depth - memory should grow
 func TestStack_UnlimitedAllocation(t *testing.T) {
-	var errCode errors.CodedError
+	err := errors.FirstOnly()
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(0, 0, &gaz, &errCode)
+	st := NewStack(0, 0, &gaz, err)
 
 	st.Push64(math.MaxInt64)
-	assert.Nil(t, *st.err)
+	require.NoError(t, err.Error())
 	assert.Equal(t, 1, len(st.slice))
 	assert.Equal(t, 1, cap(st.slice))
 }
 
 // Test static memory allocation with maximum == initial capacity - memory should not grow
 func TestStack_StaticAllocation(t *testing.T) {
-	var errCode errors.CodedError
+	err := errors.FirstOnly()
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(4, 4, &gaz, &errCode)
+	st := NewStack(4, 4, &gaz, err)
 
 	for i := 0; i < 4; i++ {
 		st.Push64(math.MaxInt64)
-		assert.Nil(t, *st.err)
+		assert.NoError(t, err.Error())
 	}
 
 	assert.Equal(t, 4, cap(st.slice), "Slice capacity should not grow")
@@ -46,32 +47,31 @@ func TestStack_StaticAllocation(t *testing.T) {
 
 // Test writing beyond the current capacity - memory should grow
 func TestDynamicMemory_PushAhead(t *testing.T) {
-	var errCode errors.CodedError
+	err := errors.FirstOnly()
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(2, 4, &gaz, &errCode)
+	st := NewStack(2, 4, &gaz, err)
 
 	for i := 0; i < 4; i++ {
 		st.Push64(math.MaxInt64)
-		assert.Nil(t, *st.err)
+		assert.NoError(t, err.Error())
 	}
 
 	st.Push64(math.MaxInt64)
-	assert.Equal(t, errors.ErrorCodeDataStackOverflow, *st.err)
+	assert.Equal(t, errors.ErrorCodeDataStackOverflow, err.Error().ErrorCode())
 }
 
 func TestStack_ZeroInitialCapacity(t *testing.T) {
-	var errCode errors.CodedError
+	err := errors.FirstOnly()
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(0, 16, &gaz, &errCode)
+	st := NewStack(0, 16, &gaz, err)
+	require.NoError(t, err.Error())
 	st.Push64(math.MaxInt64)
-	assert.Nil(t, *st.err)
 	assert.Equal(t, []binary.Word256{binary.Int64ToWord256(math.MaxInt64)}, st.slice)
 }
 
 func TestStack_ensureCapacity(t *testing.T) {
-	var errCode errors.CodedError
 	var gaz uint64 = math.MaxUint64
-	st := NewStack(4, 16, &gaz, &errCode)
+	st := NewStack(4, 16, &gaz, errors.FirstOnly())
 	// Check we can grow within bounds
 	err := st.ensureCapacity(8)
 	assert.NoError(t, err)
