@@ -64,7 +64,8 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return err
 		}
 	} else {
-		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil || len(ctx.tx.Proposal.BatchTx.Txs) == 0 {
+		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil ||
+			len(ctx.tx.Proposal.BatchTx.Txs) == 0 || len(ctx.tx.Proposal.BatchTx.GetInputs()) == 0 {
 			return errors.ErrorCodeInvalidProposal
 		}
 
@@ -128,7 +129,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return fmt.Errorf("account %s does not have batch permission", i.Address)
 		}
 
-		if proposeAcc.GetSequence() != i.Sequence {
+		if proposeAcc.GetSequence()+1 != i.Sequence {
 			return errors.ErrorCodeExpiredProposal
 		}
 

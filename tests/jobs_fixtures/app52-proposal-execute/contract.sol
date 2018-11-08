@@ -1,6 +1,13 @@
+pragma solidity ^0.4.25;
 
 contract foo {
-	function foobar(string name) public returns (bool) {
-		return false;
+	uint foobar;
+
+	function addFoobar(uint n) public {
+		foobar += n;
+	}
+
+	function getFoobar() public view returns (uint n) {
+		n = foobar;
 	}
 }

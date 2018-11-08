@@ -9,7 +9,7 @@ func (tx *BatchTx) Type() Type {
 }
 
 func (tx *BatchTx) GetInputs() []*TxInput {
-	return make([]*TxInput, 0)
+	return tx.Inputs
 }
 
 func (tx *BatchTx) String() string {

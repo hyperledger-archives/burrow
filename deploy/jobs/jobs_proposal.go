@@ -47,7 +47,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, job
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}
 
-	input, err := client.TxInput(prop.Source, "", prop.Sequence)
+	input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
 	if err != nil {
 		return "", err
 	}
