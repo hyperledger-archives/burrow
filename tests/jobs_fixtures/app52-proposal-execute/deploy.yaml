@@ -1,0 +1,26 @@
+jobs:
+ - name: foobar
+   deploy:
+     contract: contract.sol
+
+ - name: Propose Calling stuff
+   proposal:
+    name: CallFooBarProposal
+    description: I say we should call FooBar
+    source: $addr1
+    jobs:
+     - name: CallFoobar
+       call:
+         source: $addr2
+         destination: $foobar
+         function: foobar
+         bin: foo
+         data: [ 'baz' ]
+     - name: CallFoobar2
+       call:
+         source: $addr2
+         destination: $foobar
+         function: foobar
+         bin: foo
+         data: [ 'baz' ]
+ 
