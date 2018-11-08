@@ -53,6 +53,7 @@ const (
 	ErrorCodeInvalidProposal
 	ErrorCodeExpiredProposal
 	ErrorCodeProposalExecuted
+	ErrorCodeNoInputPermission
 )
 
 func (c Code) ErrorCode() Code {
@@ -137,6 +138,8 @@ func (c Code) String() string {
 		return "Proposal is expired since sequence number does not match"
 	case ErrorCodeProposalExecuted:
 		return "Proposal has already been executed"
+	case ErrorCodeNoInputPermission:
+		return "Account has no input permission"
 	default:
 		return "Unknown error"
 	}

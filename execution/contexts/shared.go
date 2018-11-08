@@ -173,6 +173,11 @@ func hasProposalPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	return HasPermission(accountGetter, acc, permission.Proposal, logger)
 }
 
+func hasInputPermission(accountGetter state.AccountGetter, acc *acm.Account,
+	logger *logging.Logger) bool {
+	return HasPermission(accountGetter, acc, permission.Input, logger)
+}
+
 func hasBatchPermission(accountGetter state.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Batch, logger)

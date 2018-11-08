@@ -21,7 +21,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
@@ -76,10 +75,6 @@ func (tx *Tx) SignBytes() ([]byte, error) {
 		return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
 	}
 	return bs, nil
-}
-
-func (tx *Tx) ValidateInputs(getter state.AccountGetter) error {
-	return payload.ValidateInputs(getter, tx.GetInputs())
 }
 
 // Serialisation intermediate for switching on type

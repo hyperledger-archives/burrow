@@ -28,12 +28,14 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/contexts"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
@@ -212,7 +214,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		txe := exe.blockExecution.Tx(txEnv)
 
 		// Validate inputs and check sequence numbers
-		err = txEnv.Tx.ValidateInputs(exe.stateCache)
+		err = validateInputs(txEnv.Tx, exe.stateCache)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
 			txe.PushError(err)
@@ -237,6 +239,41 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return txe, nil
 	}
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
+}
+
+func validateInputs(tx *txs.Tx, getter state.AccountGetter) error {
+	for _, in := range tx.GetInputs() {
+		acc, err := getter.GetAccount(in.Address)
+		if err != nil {
+			return err
+		}
+		if acc == nil {
+			return fmt.Errorf("validateInputs() expects to be able to retrieve account %v but it was not found",
+				in.Address)
+		}
+		if in.Address != acc.GetAddress() {
+			return fmt.Errorf("trying to validate input from address %v but passed account %v", in.Address,
+				acc.GetAddress())
+		}
+		// Check sequences
+		if acc.Sequence+1 != uint64(in.Sequence) {
+			return errors.ErrorCodef(errors.ErrorCodeInvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
+				"so expected input to have sequence %d", in, in.Sequence, acc.Sequence, acc.Sequence+1)
+		}
+		// Check amount
+		if acc.Balance < uint64(in.Amount) {
+			return errors.ErrorCodeInsufficientFunds
+		}
+		// Check for Input permission
+		v, err := acc.Permissions.Base.Compose(state.GlobalAccountPermissions(getter).Base).Get(permission.Input)
+		if err != nil {
+			return err
+		}
+		if !v {
+			return errors.ErrorCodeNoInputPermission
+		}
+	}
+	return nil
 }
 
 func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (_ []byte, err error) {
