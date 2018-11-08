@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 )
@@ -25,9 +26,7 @@ type ProposalContext struct {
 	ProposalReg  proposal.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.ProposalTx
-	votes        int
-	Ballot       *payload.Ballot
-	proposalHash []byte
+	Contexts     map[payload.Type]Context
 }
 
 func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -162,18 +161,30 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	ctx.votes = power
-	ctx.Ballot = ballot
-	ctx.proposalHash = proposalHash
-	return nil
-}
+	if power*2 > ctx.Tip.NumValidators() {
+		ballot.ProposalState = payload.Ballot_EXECUTED
 
-func (ctx *ProposalContext) UpdateProposal() error {
-	return ctx.ProposalReg.UpdateProposal(ctx.proposalHash, ctx.Ballot)
-}
+		for i, step := range ballot.Proposal.BatchTx.Txs {
+			txE := txs.EnvelopeFromAny("", step)
 
-func (ctx *ProposalContext) ThresholdReached() bool {
-	return ctx.votes*2 > ctx.Tip.NumValidators()
+			txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
+
+			if txExecutor, ok := ctx.Contexts[txE.Tx.Type()]; ok {
+				err = txExecutor.Execute(txe, txE.Tx.Payload)
+				if err != nil {
+					ctx.Logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
+					return err
+				}
+			}
+
+			if txe.Exception != nil {
+				ballot.ProposalState = payload.Ballot_FAILED
+				break
+			}
+		}
+	}
+
+	return ctx.ProposalReg.UpdateProposal(proposalHash, ballot)
 }
 
 func validateProposalStrings(proposal *payload.Proposal) error {

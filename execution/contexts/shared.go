@@ -7,11 +7,16 @@ import (
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 )
+
+type Context interface {
+	Execute(txe *exec.TxExecution, p payload.Payload) error
+}
 
 // The accounts from the TxInputs must either already have
 // acm.PublicKey().(type) != nil, (it must be known),

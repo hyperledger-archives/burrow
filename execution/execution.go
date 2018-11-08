@@ -43,10 +43,6 @@ type Executor interface {
 	Execute(txEnv *txs.Envelope) (*exec.TxExecution, error)
 }
 
-type Context interface {
-	Execute(txe *exec.TxExecution, p payload.Payload) error
-}
-
 type ExecutorState interface {
 	Update(updater func(ws Updatable) error) (hash []byte, err error)
 	names.Reader
@@ -84,7 +80,7 @@ type executor struct {
 	blockExecution   *exec.BlockExecution
 	logger           *logging.Logger
 	vmOptions        []func(*evm.VM)
-	contexts         map[payload.Type]Context
+	contexts         map[payload.Type]contexts.Context
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -138,7 +134,8 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 	for _, option := range options {
 		option(exe)
 	}
-	exe.contexts = map[payload.Type]Context{
+
+	baseContexts := map[payload.Type]contexts.Context{
 		payload.TypeSend: &contexts.SendContext{
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
@@ -162,17 +159,27 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
+	}
+
+	exe.contexts = map[payload.Type]contexts.Context{
 		payload.TypeProposal: &contexts.ProposalContext{
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			ProposalReg: exe.proposalRegCache,
 			Logger:      exe.logger,
+			Contexts:    baseContexts,
 		},
 	}
+
+	// Copy over base contexts
+	for k, v := range baseContexts {
+		exe.contexts[k] = v
+	}
+
 	return exe
 }
 
-func (exe *executor) AddContext(ty payload.Type, ctx Context) *executor {
+func (exe *executor) AddContext(ty payload.Type, ctx contexts.Context) *executor {
 	exe.contexts[ty] = ctx
 	return exe
 }
@@ -217,37 +224,6 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
-		}
-
-		// FIXME: This should be moved into proposal_context (does not have executer firelds)
-		if pc, ok := txExecutor.(*contexts.ProposalContext); ok {
-			// if !runCall we're in checkTx, else only execute if we've got our votes
-			if !exe.runCall || pc.ThresholdReached() {
-				if exe.runCall {
-					pc.Ballot.ProposalState = payload.Ballot_EXECUTED
-				}
-				for i, step := range pc.Ballot.Proposal.BatchTx.Txs {
-					txE := txs.EnvelopeFromAny(txEnv.Tx.ChainID, step)
-
-					txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
-
-					if txExecutor, ok := exe.contexts[txE.Tx.Type()]; ok {
-						err = txExecutor.Execute(txe, txE.Tx.Payload)
-						if err != nil {
-							logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
-							return nil, err
-						}
-					}
-
-					if txe.Exception != nil {
-						if exe.runCall {
-							pc.Ballot.ProposalState = payload.Ballot_FAILED
-						}
-						break
-					}
-				}
-			}
-			pc.UpdateProposal()
 		}
 
 		// Initialise public keys and increment sequence numbers for Tx inputs
