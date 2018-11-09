@@ -41,7 +41,7 @@ type Envelope struct {
 func (m *Envelope) Reset()      { *m = Envelope{} }
 func (*Envelope) ProtoMessage() {}
 func (*Envelope) Descriptor() ([]byte, []int) {
-	return fileDescriptor_txs_d68f38b98c76a1e7, []int{0}
+	return fileDescriptor_txs_b92c5a7b1275d306, []int{0}
 }
 func (m *Envelope) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -95,7 +95,7 @@ func (m *Signatory) Reset()         { *m = Signatory{} }
 func (m *Signatory) String() string { return proto.CompactTextString(m) }
 func (*Signatory) ProtoMessage()    {}
 func (*Signatory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_txs_d68f38b98c76a1e7, []int{1}
+	return fileDescriptor_txs_b92c5a7b1275d306, []int{1}
 }
 func (m *Signatory) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -154,7 +154,7 @@ func (m *Receipt) Reset()         { *m = Receipt{} }
 func (m *Receipt) String() string { return proto.CompactTextString(m) }
 func (*Receipt) ProtoMessage()    {}
 func (*Receipt) Descriptor() ([]byte, []int) {
-	return fileDescriptor_txs_d68f38b98c76a1e7, []int{2}
+	return fileDescriptor_txs_b92c5a7b1275d306, []int{2}
 }
 func (m *Receipt) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -955,10 +955,10 @@ var (
 	ErrIntOverflowTxs   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("txs.proto", fileDescriptor_txs_d68f38b98c76a1e7) }
-func init() { golang_proto.RegisterFile("txs.proto", fileDescriptor_txs_d68f38b98c76a1e7) }
+func init() { proto.RegisterFile("txs.proto", fileDescriptor_txs_b92c5a7b1275d306) }
+func init() { golang_proto.RegisterFile("txs.proto", fileDescriptor_txs_b92c5a7b1275d306) }
 
-var fileDescriptor_txs_d68f38b98c76a1e7 = []byte{
+var fileDescriptor_txs_b92c5a7b1275d306 = []byte{
 	// 422 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0xcf, 0x6e, 0xd4, 0x30,
 	0x10, 0xc6, 0xeb, 0xec, 0x6a, 0xdb, 0xf5, 0x16, 0x2a, 0x7c, 0x40, 0xab, 0x1e, 0x92, 0xb2, 0xa7,

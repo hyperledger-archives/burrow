@@ -19,28 +19,36 @@ func TestStateCache_GetAccount(t *testing.T) {
 	writeBackend := NewCache(NewMemoryState())
 	cache := NewCache(readBackend)
 
-	//Create account
+	// Create account
 	acc := readBackend.Accounts[addressOf("acc1")]
 
-	//Get account from cache
-	accOut, err := cache.GetAccount(acc.Address())
+	// Get account from cache
+	accOut, err := cache.GetAccount(acc.Address)
 	require.NoError(t, err)
 	cache.UpdateAccount(accOut)
 
-	//Check that cache account matches original account
-	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
+	// Check that cache account matches original account
+	assert.True(t, acc.Equal(accOut), "accounts should be equal")
 
-	//Sync account to backend
+	// Sync account to backend
 	err = cache.Sync(writeBackend)
 	require.NoError(t, err)
 
-	//Get account from backend
-	accOut, err = writeBackend.GetAccount(acc.Address())
+	// Get account from backend
+	accOut, err = writeBackend.GetAccount(acc.Address)
 	require.NotNil(t, accOut)
 	assert.NoError(t, err)
 
-	//Check that backend account matches original account
-	assert.Equal(t, acm.AsConcreteAccount(acc), acm.AsConcreteAccount(accOut))
+	// Check that backend account matches original account
+	assert.True(t, acc.Equal(accOut), "accounts should be equal")
+
+	accOut, err = cache.GetAccount(acc.Address)
+	require.NoError(t, err)
+	accOut.Balance = 100000
+	cache2 := NewCache(cache)
+	accOut2, err := cache2.GetAccount(acc.Address)
+	require.NoError(t, err)
+	assert.NotEqual(t, accOut2.Balance, accOut.Balance)
 }
 
 func TestStateCache_Miss(t *testing.T) {
@@ -50,10 +58,10 @@ func TestStateCache_Miss(t *testing.T) {
 	acc1Address := addressOf("acc1")
 	acc1, err := cache.GetAccount(acc1Address)
 	require.NoError(t, err)
-	fmt.Println(acc1)
+	assert.Equal(t, uint64(0), acc1.Balance)
 
 	acc1Exp := readBackend.Accounts[acc1Address]
-	assert.Equal(t, acc1Exp, acc1)
+	assert.True(t, acc1Exp.Equal(acc1), "accounts should be equal")
 	acc8, err := cache.GetAccount(addressOf("acc8"))
 	require.NoError(t, err)
 	assert.Nil(t, acc8)
@@ -64,16 +72,16 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 	backend := NewCache(NewMemoryState())
 	cache := NewCache(backend)
 	// Create acccount
-	accNew := acm.NewConcreteAccountFromSecret("accNew")
-	balance := uint64(24)
+	accNew := acm.NewAccountFromSecret("accNew")
+	balance := uint64(0xff)
 	accNew.Balance = balance
-	err := cache.UpdateAccount(accNew.Account())
+	err := cache.UpdateAccount(accNew)
 	require.NoError(t, err)
 
 	// Check cache
 	accNewOut, err := cache.GetAccount(accNew.Address)
 	require.NoError(t, err)
-	assert.Equal(t, balance, accNewOut.Balance())
+	assert.Equal(t, balance, accNewOut.Balance)
 
 	// Check not stored in backend
 	accNewOut, err = backend.GetAccount(accNew.Address)
@@ -85,23 +93,26 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 	require.NoError(t, err)
 	accNewOut, err = backend.GetAccount(accNew.Address)
 	require.NoError(t, err)
-	assert.Equal(t, balance, accNewOut.Balance())
+	assert.Equal(t, balance, accNewOut.Balance)
 
 	// Alter in cache
-	newBalance := uint64(100029)
+	newBalance := uint64(0xff00aa)
 	accNew.Balance = newBalance
-	err = cache.UpdateAccount(accNew.Account())
+	err = cache.UpdateAccount(accNew)
 	require.NoError(t, err)
 
 	// Check cache
 	accNewOut, err = cache.GetAccount(accNew.Address)
 	require.NoError(t, err)
-	assert.Equal(t, newBalance, accNewOut.Balance())
+	assert.Equal(t, newBalance, accNewOut.Balance)
 
 	// Check backend unchanged
 	accNewOut, err = backend.GetAccount(accNew.Address)
 	require.NoError(t, err)
-	assert.Equal(t, balance, accNewOut.Balance())
+	assert.Equal(t, balance, accNewOut.Balance)
+
+	fmt.Println(accNewOut == accNew)
+	fmt.Println(accNewOut == accNew)
 }
 
 func TestStateCache_RemoveAccount(t *testing.T) {
@@ -110,8 +121,8 @@ func TestStateCache_RemoveAccount(t *testing.T) {
 	cache := NewCache(backend)
 
 	//Create new account
-	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
-	err := cache.UpdateAccount(newAcc.Account())
+	newAcc := acm.NewAccountFromSecret("newAcc")
+	err := cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
 
 	//Sync account to backend
@@ -155,7 +166,7 @@ func TestStateCache_GetStorage(t *testing.T) {
 	acc := readBackend.Accounts[addressOf("acc1")]
 
 	//Get storage from cache
-	accStorage, err := cache.GetStorage(acc.Address(), word("I AM A KEY"))
+	accStorage, err := cache.GetStorage(acc.Address, word("I AM A KEY"))
 	require.NoError(t, err)
 	cache.UpdateAccount(acc)
 
@@ -167,7 +178,7 @@ func TestStateCache_GetStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	//Get storage from backend
-	accStorage, err = writeBackend.GetStorage(acc.Address(), word("I AM A KEY"))
+	accStorage, err = writeBackend.GetStorage(acc.Address, word("I AM A KEY"))
 	assert.NoError(t, err)
 	require.NotNil(t, accStorage)
 
@@ -181,10 +192,10 @@ func TestStateCache_SetStorage(t *testing.T) {
 	cache := NewCache(backend)
 
 	//Create new account and set its storage in cache
-	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+	newAcc := acm.NewAccountFromSecret("newAcc")
 	err := cache.SetStorage(newAcc.Address, word("What?"), word("Huh?"))
 	require.NoError(t, err)
-	err = cache.UpdateAccount(newAcc.Account())
+	err = cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
 
 	//Check for correct cache storage value
@@ -208,7 +219,7 @@ func TestStateCache_Sync(t *testing.T) {
 	cache := NewCache(backend)
 
 	//Create new account
-	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+	newAcc := acm.NewAccountFromSecret("newAcc")
 
 	//Set balance for account
 	balance := uint64(24)
@@ -219,13 +230,13 @@ func TestStateCache_Sync(t *testing.T) {
 	require.NoError(t, err)
 
 	//Update cache with account changes
-	err = cache.UpdateAccount(newAcc.Account())
+	err = cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
 
 	//Confirm changes to account balance in cache
 	newAccOut, err := cache.GetAccount(newAcc.Address)
 	require.NoError(t, err)
-	assert.Equal(t, balance, newAccOut.Balance())
+	assert.Equal(t, balance, newAccOut.Balance)
 
 	//Confirm changes to account storage in cache
 	newAccStorage, err := cache.GetStorage(newAcc.Address, word("God save"))
@@ -239,7 +250,7 @@ func TestStateCache_Sync(t *testing.T) {
 	//Confirm changes to account balance synced correctly to backend
 	newAccOut, err = backend.GetAccount(newAcc.Address)
 	require.NoError(t, err)
-	assert.Equal(t, balance, newAccOut.Balance())
+	assert.Equal(t, balance, newAccOut.Balance)
 
 	//Confirm changes to account storage synced correctly to backend
 	newAccStorage, err = cache.GetStorage(newAcc.Address, word("God save"))
@@ -265,10 +276,10 @@ func TestStateCache_get(t *testing.T) {
 	cache := NewCache(backend)
 
 	//Create new account
-	newAcc := acm.NewConcreteAccountFromSecret("newAcc")
+	newAcc := acm.NewAccountFromSecret("newAcc")
 
 	//Add new account to cache
-	err := cache.UpdateAccount(newAcc.Account())
+	err := cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
 
 	//Check that get returns an account from cache
@@ -288,33 +299,33 @@ func TestStateCache_get(t *testing.T) {
 }
 
 func testAccounts() *MemoryState {
-	acc1 := acm.NewConcreteAccountFromSecret("acc1")
+	acc1 := acm.NewAccountFromSecret("acc1")
 	acc1.Permissions.Base.Perms = permission.AddRole | permission.Send
 	acc1.Permissions.Base.SetBit = acc1.Permissions.Base.Perms
 
-	acc2 := acm.NewConcreteAccountFromSecret("acc2")
+	acc2 := acm.NewAccountFromSecret("acc2")
 	acc2.Permissions.Base.Perms = permission.AddRole | permission.Send
 	acc2.Permissions.Base.SetBit = acc1.Permissions.Base.Perms
 	acc2.Code, _ = acm.NewBytecode(asm.PUSH1, 0x20)
 
 	cache := combine(
-		account(acc1.Account(), "I AM A KEY", "NO YOU ARE A KEY"),
-		account(acc2.Account(), "ducks", "have lucks",
+		account(acc1, "I AM A KEY", "NO YOU ARE A KEY"),
+		account(acc2, "ducks", "have lucks",
 			"chickens", "just cluck"),
 	)
 	return cache
 }
 
 func addressOf(secret string) crypto.Address {
-	return acm.NewConcreteAccountFromSecret(secret).Address
+	return acm.NewAccountFromSecret(secret).Address
 }
 
-func account(acc acm.Account, keyvals ...string) *MemoryState {
+func account(acc *acm.Account, keyvals ...string) *MemoryState {
 	ts := NewMemoryState()
-	ts.Accounts[acc.Address()] = acc
-	ts.Storage[acc.Address()] = make(map[binary.Word256]binary.Word256)
+	ts.Accounts[acc.Address] = acc
+	ts.Storage[acc.Address] = make(map[binary.Word256]binary.Word256)
 	for i := 0; i < len(keyvals); i += 2 {
-		ts.Storage[acc.Address()][word(keyvals[i])] = word(keyvals[i+1])
+		ts.Storage[acc.Address][word(keyvals[i])] = word(keyvals[i+1])
 	}
 	return ts
 }
@@ -323,8 +334,8 @@ func combine(states ...*MemoryState) *MemoryState {
 	ts := NewMemoryState()
 	for _, state := range states {
 		for _, acc := range state.Accounts {
-			ts.Accounts[acc.Address()] = acc
-			ts.Storage[acc.Address()] = state.Storage[acc.Address()]
+			ts.Accounts[acc.Address] = acc
+			ts.Storage[acc.Address] = state.Storage[acc.Address]
 		}
 	}
 	return ts

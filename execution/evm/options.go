@@ -1,6 +1,8 @@
 package evm
 
-func MemoryProvider(memoryProvider func() Memory) func(*VM) {
+import "github.com/hyperledger/burrow/execution/errors"
+
+func MemoryProvider(memoryProvider func(errors.Sink) Memory) func(*VM) {
 	return func(vm *VM) {
 		vm.memoryProvider = memoryProvider
 	}

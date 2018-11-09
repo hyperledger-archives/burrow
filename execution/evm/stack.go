@@ -17,6 +17,8 @@ package evm
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/crypto"
+
 	"math/big"
 
 	"math"
@@ -25,29 +27,23 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 )
 
-// Change the length of this zero array to tweak the size of the block of zeros
-// written to the backing slice at a time when it is grown. A larger number may
-// lead to fewer calls to append to achieve the desired capacity although it is
-// unlikely to make a lot of difference.
-var zeroWords []Word256 = make([]Word256, 32)
-
 // Not goroutine safe
 type Stack struct {
 	slice       []Word256
 	maxCapacity uint64
 	ptr         int
 
-	gas *uint64
-	err *errors.CodedError
+	gas     *uint64
+	errSink errors.Sink
 }
 
-func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, err *errors.CodedError) *Stack {
+func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, errSink errors.Sink) *Stack {
 	return &Stack{
 		slice:       make([]Word256, initialCapacity),
 		ptr:         0,
 		maxCapacity: maxCapacity,
 		gas:         gas,
-		err:         err,
+		errSink:     errSink,
 	}
 }
 
@@ -55,21 +51,19 @@ func (st *Stack) useGas(gasToUse uint64) {
 	if *st.gas > gasToUse {
 		*st.gas -= gasToUse
 	} else {
-		st.setErr(errors.ErrorCodeInsufficientGas)
+		st.pushErr(errors.ErrorCodeInsufficientGas)
 	}
 }
 
-func (st *Stack) setErr(err errors.CodedError) {
-	if *st.err == nil {
-		*st.err = err
-	}
+func (st *Stack) pushErr(err errors.CodedError) {
+	st.errSink.PushError(err)
 }
 
 func (st *Stack) Push(d Word256) {
 	st.useGas(GasStackOp)
 	err := st.ensureCapacity(uint64(st.ptr) + 1)
 	if err != nil {
-		st.setErr(errors.ErrorCodeDataStackOverflow)
+		st.pushErr(errors.ErrorCodeDataStackOverflow)
 		return
 	}
 	st.slice[st.ptr] = d
@@ -82,6 +76,10 @@ func (st *Stack) PushBytes(bz []byte) {
 		panic("Invalid bytes size: expected 32")
 	}
 	st.Push(LeftPadWord256(bz))
+}
+
+func (st *Stack) PushAddress(address crypto.Address) {
+	st.Push(address.Word256())
 }
 
 func (st *Stack) Push64(i int64) {
@@ -104,7 +102,7 @@ func (st *Stack) PushBigInt(bigInt *big.Int) Word256 {
 func (st *Stack) Pop() Word256 {
 	st.useGas(GasStackOp)
 	if st.ptr == 0 {
-		st.setErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
 	}
 	st.ptr--
@@ -115,20 +113,26 @@ func (st *Stack) PopBytes() []byte {
 	return st.Pop().Bytes()
 }
 
-func (st *Stack) Pop64() (int64, errors.CodedError) {
-	d := st.Pop()
-	if Is64BitOverflow(d) {
-		return 0, errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d)
-	}
-	return Int64FromWord256(d), nil
+func (st *Stack) PopAddress() crypto.Address {
+	return crypto.AddressFromWord256(st.Pop())
 }
 
-func (st *Stack) PopU64() (uint64, errors.CodedError) {
+func (st *Stack) Pop64() int64 {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		return 0, errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d)
+		st.pushErr(errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d))
+		return 0
 	}
-	return Uint64FromWord256(d), nil
+	return Int64FromWord256(d)
+}
+
+func (st *Stack) PopU64() uint64 {
+	d := st.Pop()
+	if Is64BitOverflow(d) {
+		st.pushErr(errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d))
+		return 0
+	}
+	return Uint64FromWord256(d)
 }
 
 func (st *Stack) PopBigIntSigned() *big.Int {
@@ -147,7 +151,7 @@ func (st *Stack) Len() int {
 func (st *Stack) Swap(n int) {
 	st.useGas(GasStackOp)
 	if st.ptr < n {
-		st.setErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
 	st.slice[st.ptr-n], st.slice[st.ptr-1] = st.slice[st.ptr-1], st.slice[st.ptr-n]
@@ -156,7 +160,7 @@ func (st *Stack) Swap(n int) {
 func (st *Stack) Dup(n int) {
 	st.useGas(GasStackOp)
 	if st.ptr < n {
-		st.setErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return
 	}
 	st.Push(st.slice[st.ptr-n])
@@ -165,7 +169,7 @@ func (st *Stack) Dup(n int) {
 // Not an opcode, costs no gas.
 func (st *Stack) Peek() Word256 {
 	if st.ptr == 0 {
-		st.setErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
 	}
 	return st.slice[st.ptr-1]
@@ -224,7 +228,7 @@ func (st *Stack) ensureCapacity(newCapacity uint64) error {
 	// the slice's backing array.
 	for newCapacityInt > cap(st.slice) {
 		// We'll trust Go exponentially grow our arrays (at first).
-		st.slice = append(st.slice, zeroWords...)
+		st.slice = append(st.slice, Zero256)
 	}
 	// Now we've ensured the backing array of the slice is big enough we can
 	// just re-slice (even if len(mem.slice) < newCapacity)

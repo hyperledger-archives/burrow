@@ -31,8 +31,8 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
-		var str, err = util.ABIErrorHandler(do, err, nil, query)
-		return str, nil, err
+		var err = util.ABIErrorHandler(err, nil, query)
+		return "", nil, err
 	}
 
 	// Call the client

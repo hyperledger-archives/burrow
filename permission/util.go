@@ -71,7 +71,7 @@ func BasePermissionsFromStringList(permissions []string) (BasePermissions, error
 func PermFlagFromStringList(permissions []string) (PermFlag, error) {
 	var permFlag PermFlag
 	for _, perm := range permissions {
-		flag, err := PermStringToFlag(perm)
+		flag, err := PermStringToFlag(strings.TrimSpace(perm))
 		if err != nil {
 			return permFlag, err
 		}
@@ -106,4 +106,13 @@ func BasePermissionsString(basePermissions BasePermissions) string {
 
 func String(permFlag PermFlag) string {
 	return strings.Join(PermFlagToStringList(permFlag), " | ")
+}
+
+func (pf PermFlag) MarshalText() ([]byte, error) {
+	return []byte(String(pf)), nil
+}
+
+func (pf *PermFlag) UnmarshalText(s []byte) (err error) {
+	*pf, err = PermFlagFromStringList(strings.Split(string(s), "|"))
+	return
 }

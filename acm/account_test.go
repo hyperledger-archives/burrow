@@ -49,7 +49,7 @@ func TestAddress(t *testing.T) {
 }
 
 func TestDecodeConcrete(t *testing.T) {
-	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
+	concreteAcc := NewAccountFromSecret("Super Semi Secret")
 	concreteAcc.Permissions = permission.AccountPermissions{
 		Base: permission.BasePermissions{
 			Perms:  permission.SetGlobal,
@@ -61,22 +61,21 @@ func TestDecodeConcrete(t *testing.T) {
 	encodedAcc, err := acc.Encode()
 	require.NoError(t, err)
 
-	concreteAccOut, err := DecodeConcrete(encodedAcc)
+	concreteAccOut, err := Decode(encodedAcc)
 	require.NoError(t, err)
 
 	assert.Equal(t, concreteAcc, concreteAccOut)
-	concreteAccOut, err = DecodeConcrete([]byte("flungepliffery munknut tolopops"))
+	concreteAccOut, err = Decode([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
 }
 
 func TestDecode(t *testing.T) {
-	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
-	acc := concreteAcc.Account()
+	acc := NewAccountFromSecret("Super Semi Secret")
 	encodedAcc, err := acc.Encode()
 	require.NoError(t, err)
 	accOut, err := Decode(encodedAcc)
 	require.NoError(t, err)
-	assert.Equal(t, concreteAcc, AsConcreteAccount(accOut))
+	assert.Equal(t, NewAccountFromSecret("Super Semi Secret"), accOut)
 
 	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
 	require.Error(t, err)
@@ -84,22 +83,21 @@ func TestDecode(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	concreteAcc := NewConcreteAccountFromSecret("Super Semi Secret")
-	concreteAcc.Code = []byte{60, 23, 45}
-	concreteAcc.Permissions = permission.AccountPermissions{
+	acc := NewAccountFromSecret("Super Semi Secret")
+	acc.Code = []byte{60, 23, 45}
+	acc.Permissions = permission.AccountPermissions{
 		Base: permission.BasePermissions{
 			Perms: permission.AllPermFlags,
 		},
 	}
-	concreteAcc.Sequence = 4
-	concreteAcc.Balance = 10
-	acc := concreteAcc.Account()
+	acc.Sequence = 4
+	acc.Balance = 10
 	bs, err := json.Marshal(acc)
 
 	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
 		`"Sequence":4,"Balance":10,"Code":"3C172D",`+
-		`"Permissions":{"Base":{"Perms":16383,"SetBit":0}}}`,
-		concreteAcc.Address, concreteAcc.PublicKey)
+		`"Permissions":{"Base":{"Perms":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole","SetBit":""}}}`,
+		acc.Address, acc.PublicKey)
 	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)
 }

@@ -80,7 +80,7 @@ func testServerKeygenAndPub(t *testing.T, typ string) {
 	require.NoError(t, err)
 	publicKey, err := crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 	require.NoError(t, err)
-	assert.Equal(t, addrB, publicKey.Address())
+	assert.Equal(t, addrB, publicKey.GetAddress())
 }
 
 func TestServerKeygenAndPub(t *testing.T) {

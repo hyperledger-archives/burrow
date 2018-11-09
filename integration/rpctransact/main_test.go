@@ -39,6 +39,7 @@ func TestMain(m *testing.M) {
 	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig,
 		logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 			return sink
+			//return sink.SetOutput(logconfig.StderrOutput())
 			// Uncomment for debug opcode output
 			//return sink.
 			//	SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch, "tag", "DebugOpcodes")).

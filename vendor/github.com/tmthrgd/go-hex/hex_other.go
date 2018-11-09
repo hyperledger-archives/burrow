@@ -15,11 +15,7 @@ func RawEncode(dst, src, alpha []byte) int {
 		panic("invalid alphabet")
 	}
 
-	for i, v := range src {
-		dst[i*2] = alpha[v>>4]
-		dst[i*2+1] = alpha[v&0x0f]
-	}
-
+	encodeGeneric(dst, src, alpha)
 	return len(src) * 2
 }
 
@@ -32,33 +28,9 @@ func Decode(dst, src []byte) (int, error) {
 		return 0, errLength
 	}
 
-	for i := 0; i < len(src)/2; i++ {
-		a, ok := fromHexChar(src[i*2])
-		if !ok {
-			return 0, InvalidByteError(src[i*2])
-		}
-
-		b, ok := fromHexChar(src[i*2+1])
-		if !ok {
-			return 0, InvalidByteError(src[i*2+1])
-		}
-
-		dst[i] = (a << 4) | b
+	if n, ok := decodeGeneric(dst, src); !ok {
+		return 0, InvalidByteError(src[n])
 	}
 
 	return len(src) / 2, nil
-}
-
-// fromHexChar converts a hex character into its value and a success flag.
-func fromHexChar(c byte) (byte, bool) {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0', true
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10, true
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10, true
-	}
-
-	return 0, false
 }

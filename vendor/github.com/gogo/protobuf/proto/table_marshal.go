@@ -97,6 +97,8 @@ type marshalElemInfo struct {
 var (
 	marshalInfoMap  = map[reflect.Type]*marshalInfo{}
 	marshalInfoLock sync.Mutex
+
+	uint8SliceType = reflect.TypeOf(([]uint8)(nil)).Kind()
 )
 
 // getMarshalInfo returns the information to marshal a given type of message.
@@ -281,7 +283,7 @@ func (u *marshalInfo) marshal(b []byte, ptr pointer, deterministic bool) ([]byte
 	}
 	for _, f := range u.fields {
 		if f.required && errreq == nil {
-			if ptr.offset(f.field).getPointer().isNil() {
+			if f.isPointer && ptr.offset(f.field).getPointer().isNil() {
 				// Required field is not set.
 				// We record the error but keep going, to give a complete marshaling.
 				errreq = &RequiredNotSetError{f.name}
@@ -304,6 +306,10 @@ func (u *marshalInfo) marshal(b []byte, ptr pointer, deterministic bool) ([]byte
 			}
 			if err == errRepeatedHasNil {
 				err = errors.New("proto: repeated field " + f.name + " has nil element")
+			}
+			if err == errInvalidUTF8 {
+				fullName := revProtoTypes[reflect.PtrTo(u.typ)] + "." + f.name
+				err = fmt.Errorf("proto: string field %q contains invalid UTF-8", fullName)
 			}
 			return b, err
 		}
@@ -577,6 +583,7 @@ func typeMarshaler(t reflect.Type, tags []string, nozero, oneof bool) (sizer, ma
 	ctype := false
 	isTime := false
 	isDuration := false
+	isWktPointer := false
 	for i := 2; i < len(tags); i++ {
 		if tags[i] == "packed" {
 			packed = true
@@ -592,6 +599,9 @@ func typeMarshaler(t reflect.Type, tags []string, nozero, oneof bool) (sizer, ma
 		}
 		if tags[i] == "stdduration" {
 			isDuration = true
+		}
+		if tags[i] == "wktptr" {
+			isWktPointer = true
 		}
 	}
 	if !proto3 && !pointer && !slice {
@@ -636,6 +646,112 @@ func typeMarshaler(t reflect.Type, tags []string, nozero, oneof bool) (sizer, ma
 			return makeDurationSliceMarshaler(getMarshalInfo(t))
 		}
 		return makeDurationMarshaler(getMarshalInfo(t))
+	}
+
+	if isWktPointer {
+		switch t.Kind() {
+		case reflect.Float64:
+			if pointer {
+				if slice {
+					return makeStdDoubleValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdDoubleValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdDoubleValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdDoubleValueMarshaler(getMarshalInfo(t))
+		case reflect.Float32:
+			if pointer {
+				if slice {
+					return makeStdFloatValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdFloatValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdFloatValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdFloatValueMarshaler(getMarshalInfo(t))
+		case reflect.Int64:
+			if pointer {
+				if slice {
+					return makeStdInt64ValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdInt64ValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdInt64ValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdInt64ValueMarshaler(getMarshalInfo(t))
+		case reflect.Uint64:
+			if pointer {
+				if slice {
+					return makeStdUInt64ValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdUInt64ValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdUInt64ValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdUInt64ValueMarshaler(getMarshalInfo(t))
+		case reflect.Int32:
+			if pointer {
+				if slice {
+					return makeStdInt32ValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdInt32ValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdInt32ValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdInt32ValueMarshaler(getMarshalInfo(t))
+		case reflect.Uint32:
+			if pointer {
+				if slice {
+					return makeStdUInt32ValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdUInt32ValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdUInt32ValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdUInt32ValueMarshaler(getMarshalInfo(t))
+		case reflect.Bool:
+			if pointer {
+				if slice {
+					return makeStdBoolValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdBoolValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdBoolValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdBoolValueMarshaler(getMarshalInfo(t))
+		case reflect.String:
+			if pointer {
+				if slice {
+					return makeStdStringValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdStringValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdStringValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdStringValueMarshaler(getMarshalInfo(t))
+		case uint8SliceType:
+			if pointer {
+				if slice {
+					return makeStdBytesValuePtrSliceMarshaler(getMarshalInfo(t))
+				}
+				return makeStdBytesValuePtrMarshaler(getMarshalInfo(t))
+			}
+			if slice {
+				return makeStdBytesValueSliceMarshaler(getMarshalInfo(t))
+			}
+			return makeStdBytesValueMarshaler(getMarshalInfo(t))
+		default:
+			panic(fmt.Sprintf("unknown wktpointer type %#v", t))
+		}
 	}
 
 	switch t.Kind() {
@@ -2326,6 +2442,9 @@ func makeMapMarshaler(f *reflect.StructField) (sizer, marshaler) {
 			valTags = append(valTags, t)
 		}
 		if t == "stdduration" {
+			valTags = append(valTags, t)
+		}
+		if t == "wktptr" {
 			valTags = append(valTags, t)
 		}
 	}

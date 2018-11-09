@@ -27,7 +27,7 @@ func TestBlockchain_Encode(t *testing.T) {
 	assert.Equal(t, logconfig.JSONString(bc.genesisDoc), logconfig.JSONString(bcOut.genesisDoc))
 	require.Equal(t, bc.genesisDoc.Hash(), bcOut.genesisDoc.Hash())
 	power := new(big.Int).SetUint64(genesisDoc.Validators[1].Amount)
-	id1 := validators[1].PublicKey()
+	id1 := validators[1].GetPublicKey()
 	var flow *big.Int
 	for i := 0; i < 100; i++ {
 		power := power.Div(power, big.NewInt(2))
@@ -44,7 +44,7 @@ func TestBlockchain_Encode(t *testing.T) {
 
 	// Should have exponentially decayed to 0
 	assertZero(t, flow)
-	assertZero(t, bc.validatorCache.Power(id1.Address()))
+	assertZero(t, bc.validatorCache.Power(id1.GetAddress()))
 }
 
 // Since we have -0 and 0 with big.Int due to its representation with a neg flag

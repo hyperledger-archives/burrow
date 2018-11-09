@@ -36,7 +36,7 @@ var privateAccounts = make(map[crypto.Address]acm.AddressableSigner)
 
 func makePrivateAccount(str string) *acm.PrivateAccount {
 	acc := acm.GeneratePrivateAccountFromSecret(str)
-	privateAccounts[acc.Address()] = acc
+	privateAccounts[acc.GetAddress()] = acc
 	return acc
 }
 
@@ -44,23 +44,23 @@ func TestSendTx(t *testing.T) {
 	sendTx := &payload.SendTx{
 		Inputs: []*payload.TxInput{
 			{
-				Address:  makePrivateAccount("input1").Address(),
+				Address:  makePrivateAccount("input1").GetAddress(),
 				Amount:   12345,
 				Sequence: 67890,
 			},
 			{
-				Address:  makePrivateAccount("input2").Address(),
+				Address:  makePrivateAccount("input2").GetAddress(),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		Outputs: []*payload.TxOutput{
 			{
-				Address: makePrivateAccount("output1").Address(),
+				Address: makePrivateAccount("output1").GetAddress(),
 				Amount:  333,
 			},
 			{
-				Address: makePrivateAccount("output2").Address(),
+				Address: makePrivateAccount("output2").GetAddress(),
 				Amount:  444,
 			},
 		},
@@ -80,10 +80,10 @@ func TestSendTx(t *testing.T) {
 }
 
 func TestCallTxSignable(t *testing.T) {
-	toAddress := makePrivateAccount("contract1").Address()
+	toAddress := makePrivateAccount("contract1").GetAddress()
 	callTx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address:  makePrivateAccount("input1").Address(),
+			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 67890,
 		},
@@ -99,7 +99,7 @@ func TestCallTxSignable(t *testing.T) {
 func TestNameTxSignable(t *testing.T) {
 	nameTx := &payload.NameTx{
 		Input: &payload.TxInput{
-			Address:  makePrivateAccount("input1").Address(),
+			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 250,
 		},
@@ -115,23 +115,23 @@ func TestBondTxSignable(t *testing.T) {
 	bondTx := &payload.BondTx{
 		Inputs: []*payload.TxInput{
 			{
-				Address:  makePrivateAccount("input1").Address(),
+				Address:  makePrivateAccount("input1").GetAddress(),
 				Amount:   12345,
 				Sequence: 67890,
 			},
 			{
-				Address:  makePrivateAccount("input2").Address(),
+				Address:  makePrivateAccount("input2").GetAddress(),
 				Amount:   111,
 				Sequence: 222,
 			},
 		},
 		UnbondTo: []*payload.TxOutput{
 			{
-				Address: makePrivateAccount("output1").Address(),
+				Address: makePrivateAccount("output1").GetAddress(),
 				Amount:  333,
 			},
 			{
-				Address: makePrivateAccount("output2").Address(),
+				Address: makePrivateAccount("output2").GetAddress(),
 				Amount:  444,
 			},
 		},
@@ -143,9 +143,9 @@ func TestBondTxSignable(t *testing.T) {
 func TestUnbondTxSignable(t *testing.T) {
 	unbondTx := &payload.UnbondTx{
 		Input: &payload.TxInput{
-			Address: makePrivateAccount("fooo1").Address(),
+			Address: makePrivateAccount("fooo1").GetAddress(),
 		},
-		Address: makePrivateAccount("address1").Address(),
+		Address: makePrivateAccount("address1").GetAddress(),
 		Height:  111,
 	}
 	testTxMarshalJSON(t, unbondTx)
@@ -155,11 +155,11 @@ func TestUnbondTxSignable(t *testing.T) {
 func TestPermissionsTxSignable(t *testing.T) {
 	permsTx := &payload.PermsTx{
 		Input: &payload.TxInput{
-			Address:  makePrivateAccount("input1").Address(),
+			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 250,
 		},
-		PermArgs: permission.SetBaseArgs(makePrivateAccount("address1").Address(), 1, true),
+		PermArgs: permission.SetBaseArgs(makePrivateAccount("address1").GetAddress(), 1, true),
 	}
 
 	testTxMarshalJSON(t, permsTx)
@@ -167,10 +167,10 @@ func TestPermissionsTxSignable(t *testing.T) {
 }
 
 func TestTxWrapper_MarshalJSON(t *testing.T) {
-	toAddress := makePrivateAccount("contract1").Address()
+	toAddress := makePrivateAccount("contract1").GetAddress()
 	callTx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address:  makePrivateAccount("input1").Address(),
+			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 67890,
 		},
@@ -190,8 +190,8 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {
 	privateAccount := makePrivateAccount("shhhhh")
-	args := permission.SetBaseArgs(privateAccount.PublicKey().Address(), permission.HasRole, true)
-	permTx := payload.NewPermsTxWithSequence(privateAccount.PublicKey(), args, 1)
+	args := permission.SetBaseArgs(privateAccount.GetPublicKey().GetAddress(), permission.HasRole, true)
+	permTx := payload.NewPermsTxWithSequence(privateAccount.GetPublicKey(), args, 1)
 	testTxMarshalJSON(t, permTx)
 	testTxSignVerify(t, permTx)
 }

@@ -78,6 +78,7 @@ protobuf_deps:
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
+	cp -a vendor/github.com/gogo/protobuf/gogoproto/gogo.proto protobuf/github.com/gogo/protobuf/gogoproto/gogo.proto
 	protoc -I protobuf -I vendor $< --gogo_out=plugins=grpc:${GOPATH}/src
 
 .PHONY: protobuf

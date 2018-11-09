@@ -39,7 +39,7 @@ func (ap *AccountPermissions) AddRole(role string) bool {
 }
 
 // Returns true if the role is removed, and false if it is not found
-func (ap *AccountPermissions) RmRole(role string) bool {
+func (ap *AccountPermissions) RemoveRole(role string) bool {
 	role = string(binary.RightPadBytes([]byte(role), 32))
 	for i, r := range ap.Roles {
 		if r == role {

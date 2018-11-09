@@ -8,7 +8,7 @@ builds:
     - -extldflags "-static"
     - -s -w
     - -X github.com/hyperledger/burrow/project.commit={{.Commit}}
-    - -X github.com/hyperledger/burrow/project.commit={{.Date}}
+    - -X github.com/hyperledger/burrow/project.date={{.Date}}
 archive:
   replacements:
     darwin: Darwin

@@ -47,9 +47,9 @@ func (vs *Set) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, e
 
 // Add the power of a validator and returns the flow into that validator
 func (vs *Set) ChangePower(id crypto.PublicKey, power *big.Int) *big.Int {
-	address := id.Address()
+	address := id.GetAddress()
 	// Calculcate flow into this validator (postive means in, negative means out)
-	flow := new(big.Int).Sub(power, vs.Power(id.Address()))
+	flow := new(big.Int).Sub(power, vs.Power(id.GetAddress()))
 	vs.totalPower.Add(vs.totalPower, flow)
 
 	if vs.trim && power.Sign() == 0 {
@@ -87,7 +87,7 @@ func (vs *Set) Equal(vsOther *Set) bool {
 	}
 	// Stop iteration IFF we find a non-matching validator
 	return !vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		otherPower := vsOther.Power(id.Address())
+		otherPower := vsOther.Power(id.GetAddress())
 		if otherPower.Cmp(power) != 0 {
 			return true
 		}
@@ -134,7 +134,7 @@ func (vs *Set) Validators() []*Validator {
 	}
 	pvs := make([]*Validator, 0, vs.Count())
 	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		pvs = append(pvs, &Validator{PublicKey: id.PublicKey(), Power: power.Uint64()})
+		pvs = append(pvs, &Validator{PublicKey: id.GetPublicKey(), Power: power.Uint64()})
 		return
 	})
 	return pvs
@@ -156,7 +156,7 @@ func (vs *Set) String() string {
 func (vs *Set) Strings() string {
 	strs := make([]string, 0, vs.Count())
 	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		strs = append(strs, fmt.Sprintf("%v->%v", id.Address(), power))
+		strs = append(strs, fmt.Sprintf("%v->%v", id.GetAddress(), power))
 		return
 	})
 	return strings.Join(strs, ", ")

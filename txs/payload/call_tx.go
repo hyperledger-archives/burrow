@@ -10,7 +10,7 @@ import (
 func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
-	addr := from.Address()
+	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
@@ -19,14 +19,14 @@ func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address
 		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
 	}
 
-	sequence := acc.Sequence() + 1
+	sequence := acc.Sequence + 1
 	return NewCallTxWithSequence(from, to, data, amt, gasLimit, fee, sequence), nil
 }
 
 func NewCallTxWithSequence(from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
-		Address:  from.Address(),
+		Address:  from.GetAddress(),
 		Amount:   amt,
 		Sequence: sequence,
 	}

@@ -1,0 +1,46 @@
+jobs:
+ - name: foobar
+   deploy:
+     contract: contract.sol
+
+ - name: SystemAccount
+   update-account:
+     target: new()
+     native: 300
+     permissions: ["all"]
+
+ - name: AssertSystemAccountCreated
+   assert:
+     key: $SystemAccount.address
+     relation: ne
+     val: ""
+
+ - name: Propose Calling stuff
+   proposal:
+    name: CallFooBarProposal
+    description: I say we should call addFoobar() twice
+    source: $SystemAccount.address
+    jobs:
+     - name: CallFoobar
+       call:
+         destination: $foobar
+         function: addFoobar
+         bin: foo
+         data: [ 2 ]
+     - name: CallFoobar2
+       call:
+         destination: $foobar
+         function: addFoobar
+         bin: foo
+         data: [ 3 ]
+
+ - name: getFoobar
+   call:
+     destination: $foobar
+     function: getFoobar
+
+ - name: checkFoobar
+   assert:
+     key: $getFoobar
+     relation: eq
+     val: 5

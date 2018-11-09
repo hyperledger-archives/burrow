@@ -105,7 +105,7 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
 }
 
-func (c *Client) GetAccount(address crypto.Address) (*acm.ConcreteAccount, error) {
+func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	err := c.dial()
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	input, err := c.TxInput(arg.Input, arg.Native, arg.Sequence)
+	input, err := c.TxInput(arg.Input, arg.Native, arg.Sequence, true)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 		}
 		update.PublicKey = &publicKey
 		// Update arg for variable usage
-		arg.Address = publicKey.Address().String()
+		arg.Address = publicKey.GetAddress().String()
 	}
 	if update.PublicKey == nil {
 		// Attempt to get public key from connected key client
@@ -350,7 +350,7 @@ type CallArg struct {
 
 func (c *Client) Call(arg *CallArg) (*payload.CallTx, error) {
 	logArg("CallTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +393,7 @@ type SendArg struct {
 
 func (c *Client) Send(arg *SendArg) (*payload.SendTx, error) {
 	logArg("SendTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +422,7 @@ type NameArg struct {
 
 func (c *Client) Name(arg *NameArg) (*payload.NameTx, error) {
 	logArg("NameTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +451,7 @@ type PermArg struct {
 
 func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 	logArg("PermsTx", arg)
-	input, err := c.TxInput(arg.Input, "", arg.Sequence)
+	input, err := c.TxInput(arg.Input, "", arg.Sequence, true)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +500,7 @@ func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 	return tx, nil
 }
 
-func (c *Client) TxInput(inputString, amountString, sequenceString string) (*payload.TxInput, error) {
+func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool) (*payload.TxInput, error) {
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
@@ -514,7 +514,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string) (*pay
 		amount, err = c.ParseUint64(amountString)
 	}
 	var sequence uint64
-	sequence, err = c.GetSequence(sequenceString, inputAddress)
+	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning)
 	if err != nil {
 		return nil, err
 	}
@@ -525,13 +525,13 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string) (*pay
 	}, nil
 }
 
-func (c *Client) GetSequence(sequence string, inputAddress crypto.Address) (uint64, error) {
+func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempoolSigning bool) (uint64, error) {
 	err := c.dial()
 	if err != nil {
 		return 0, err
 	}
 	if sequence == "" {
-		if c.MempoolSigning {
+		if mempoolSigning {
 			// Perform mempool signing
 			return 0, nil
 		}

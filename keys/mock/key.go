@@ -41,7 +41,7 @@ func newKey(name string) (*Key, error) {
 		return nil, err
 	}
 
-	key.Address, err = crypto.AddressFromBytes(pk.Address().Bytes())
+	key.Address, err = crypto.AddressFromBytes(pk.GetAddress().Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +60,9 @@ func mockKeyFromPrivateAccount(privateAccount *acm.PrivateAccount) *Key {
 		panic(fmt.Errorf("mock key client only supports ed25519 private keys at present"))
 	}
 	key := &Key{
-		Name:       privateAccount.Address().String(),
-		Address:    privateAccount.Address(),
-		PublicKey:  privateAccount.PublicKey().PublicKey,
+		Name:       privateAccount.GetAddress().String(),
+		Address:    privateAccount.GetAddress(),
+		PublicKey:  privateAccount.GetPublicKey().PublicKey,
 		PrivateKey: privateAccount.PrivateKey().PrivateKey,
 	}
 	return key

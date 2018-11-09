@@ -27,14 +27,14 @@ type NameContext struct {
 	tx          *payload.NameTx
 }
 
-func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
+func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.NameTx)
+	ctx.tx, ok = p.(*payload.NameTx)
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
-	inAcc, err := state.GetMutableAccount(ctx.StateWriter, ctx.tx.Input.Address)
+	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -162,10 +162,10 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution) error {
 	// Good!
 	ctx.Logger.TraceMsg("Incrementing sequence number for NameTx",
 		"tag", "sequence",
-		"account", inAcc.Address(),
-		"old_sequence", inAcc.Sequence(),
-		"new_sequence", inAcc.Sequence()+1)
-	err = inAcc.SubtractFromBalance(value)
+		"account", inAcc.Address,
+		"old_sequence", inAcc.Sequence,
+		"new_sequence", inAcc.Sequence+1)
+	inAcc.Balance -= value
 	if err != nil {
 		return err
 	}

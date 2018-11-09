@@ -27,7 +27,7 @@ func (tx *BondTx) String() string {
 }
 
 func (tx *BondTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
-	addr := pubkey.Address()
+	addr := pubkey.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return err
@@ -35,12 +35,12 @@ func (tx *BondTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt 
 	if acc == nil {
 		return fmt.Errorf("Invalid address %s from pubkey %s", addr, pubkey)
 	}
-	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence()+uint64(1))
+	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence+uint64(1))
 }
 
 func (tx *BondTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
 	tx.Inputs = append(tx.Inputs, &TxInput{
-		Address:  pubkey.Address(),
+		Address:  pubkey.GetAddress(),
 		Amount:   amt,
 		Sequence: sequence,
 	})

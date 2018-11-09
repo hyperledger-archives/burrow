@@ -44,7 +44,7 @@ func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
 	sequence := uint64(3)
 	tx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address:  inputAccount.Address(),
+			Address:  inputAccount.GetAddress(),
 			Amount:   amount,
 			Sequence: sequence,
 		},
@@ -68,8 +68,8 @@ func TestAminoTxEnvelope(t *testing.T) {
 	codec := NewAminoCodec()
 	privAccFrom := acm.GeneratePrivateAccountFromSecret("foo")
 	privAccTo := acm.GeneratePrivateAccountFromSecret("bar")
-	toAddress := privAccTo.Address()
-	txEnv := Enclose("testChain", payload.NewCallTxWithSequence(privAccFrom.PublicKey(), &toAddress,
+	toAddress := privAccTo.GetAddress()
+	txEnv := Enclose("testChain", payload.NewCallTxWithSequence(privAccFrom.GetPublicKey(), &toAddress,
 		[]byte{3, 4, 5, 5}, 343, 2323, 12, 3))
 	err := txEnv.Sign(privAccFrom)
 	require.NoError(t, err)

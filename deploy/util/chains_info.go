@@ -131,7 +131,7 @@ func validatorMap(vs []*validator.Validator) map[string]interface{} {
 	vsMap["TotalPower"] = set.TotalPower().String()
 	vsMap["String"] = set.String()
 	for _, v := range vs {
-		vsMap[v.GetPublicKey().Address().String()] = v
+		vsMap[v.GetPublicKey().GetAddress().String()] = v
 	}
 	return vsMap
 }

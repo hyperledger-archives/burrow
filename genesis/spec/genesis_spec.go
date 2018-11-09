@@ -15,6 +15,7 @@ import (
 
 const DefaultAmount uint64 = 1000000
 const DefaultPower uint64 = 10000
+const DefaultProposalThreshold uint64 = 3
 
 // A GenesisSpec is schematic representation of a genesis state, that is it is a template
 // for a GenesisDoc excluding that which needs to be instantiated at the point of genesis
@@ -25,9 +26,14 @@ const DefaultPower uint64 = 10000
 type GenesisSpec struct {
 	GenesisTime       *time.Time        `json:",omitempty" toml:",omitempty"`
 	ChainName         string            `json:",omitempty" toml:",omitempty"`
+	Params            params            `json:",omitempty" toml:",omitempty"`
 	Salt              []byte            `json:",omitempty" toml:",omitempty"`
 	GlobalPermissions []string          `json:",omitempty" toml:",omitempty"`
 	Accounts          []TemplateAccount `json:",omitempty" toml:",omitempty"`
+}
+
+type params struct {
+	ProposalThreshold uint64 `json:",omitempty" toml:",omitempty"`
 }
 
 func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
@@ -53,6 +59,10 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys boo
 		genesisDoc.ChainName = fmt.Sprintf("BurrowChain_%X", gs.ShortHash())
 	} else {
 		genesisDoc.ChainName = gs.ChainName
+	}
+
+	if gs.Params.ProposalThreshold != 0 {
+		genesisDoc.Params.ProposalThreshold = DefaultProposalThreshold
 	}
 
 	if len(gs.GlobalPermissions) == 0 {

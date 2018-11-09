@@ -11,12 +11,11 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
-	errors2 "github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/pkg/errors"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -110,7 +109,7 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 	}
 	for _, v := range chain.Validators {
 		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
-		err = app.checkValidatorMatches(app.blockchain.Validators(), abciTypes.Validator{Address: pk.Address().Bytes(), Power: v.Power})
+		err = app.checkValidatorMatches(app.blockchain.Validators(), abciTypes.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
@@ -203,7 +202,7 @@ func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Dec
 
 		txe, err := executor.Execute(txEnv)
 		if err != nil {
-			ex := errors2.AsException(err)
+			ex := errors.AsException(err)
 			logger.InfoMsg("Execution error",
 				structure.ErrorKey, err,
 				"tx_hash", txEnv.Tx.Hash())
@@ -235,10 +234,10 @@ func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Dec
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
 	var validatorUpdates []abciTypes.ValidatorUpdate
 	app.blockchain.PendingValidators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		app.logger.InfoMsg("Updating validator power", "validator_address", id.Address(),
+		app.logger.InfoMsg("Updating validator power", "validator_address", id.GetAddress(),
 			"new_power", power)
 		validatorUpdates = append(validatorUpdates, abciTypes.ValidatorUpdate{
-			PubKey: id.PublicKey().ABCIPubKey(),
+			PubKey: id.GetPublicKey().ABCIPubKey(),
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})

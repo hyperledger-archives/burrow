@@ -30,7 +30,7 @@ func AlterPowerTx(inputAddress crypto.Address, id crypto.Addressable, power uint
 }
 
 func AlterBalanceTx(inputAddress crypto.Address, id crypto.Addressable, bal balance.Balances) *payload.GovTx {
-	publicKey := id.PublicKey()
+	publicKey := id.GetPublicKey()
 	return UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 		PublicKey: &publicKey,
 		Amounts:   bal,
@@ -38,7 +38,7 @@ func AlterBalanceTx(inputAddress crypto.Address, id crypto.Addressable, bal bala
 }
 
 func AlterPermissionsTx(inputAddress crypto.Address, id crypto.Addressable, perms permission.PermFlag) *payload.GovTx {
-	address := id.Address()
+	address := id.GetAddress()
 	return UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 		Address:     &address,
 		Permissions: permission.PermFlagToStringList(perms),
