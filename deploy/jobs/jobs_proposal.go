@@ -55,7 +55,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 	proposal.BatchTx.Inputs = []*payload.TxInput{proposalInput}
 	proposalHash := proposal.Hash()
 
-	log.Warn("Proposal hash: %x\n", proposalHash)
+	log.Warnf("Proposal hash: %x\n", proposalHash)
 
 	input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
 	if err != nil {

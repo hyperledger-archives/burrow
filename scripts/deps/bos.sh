@@ -2,4 +2,4 @@
 
 # The git revision of Bosmarmot/bos we will build and install into ./bin/ for integration tests
 
-echo "9ba2079ec19617933697f0880795850c2637b49b"
+echo "e5488bb7a238caf2206105bdef32265279b89c46"

@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/go-stack/stack"
-	"github.com/hyperledger/burrow/binary"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
