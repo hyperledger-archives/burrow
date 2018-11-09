@@ -58,9 +58,16 @@ type Validator struct {
 //------------------------------------------------------------
 // GenesisDoc is stored in the state database
 
+const DefaultProposalThreshold uint64 = 3
+
+type params struct {
+	ProposalThreshold uint64
+}
+
 type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
+	Params            params `json:",omitempty" toml:",omitempty"`
 	Salt              []byte `json:",omitempty" toml:",omitempty"`
 	GlobalPermissions permission.AccountPermissions
 	Accounts          []Account

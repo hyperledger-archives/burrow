@@ -24,6 +24,7 @@ func Spec(output Output) func(cmd *cli.Cmd) {
 		developerOpt := cmd.IntOpt("d developer-accounts", 0, "Number of preset Developer type accounts")
 		participantsOpt := cmd.IntOpt("p participant-accounts", 0, "Number of preset Participant type accounts")
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
+		proposalThresholdOpt := cmd.IntOpt("param-proposalthreshold", 3, "Number of votes required for a proposal to pass")
 
 		cmd.Spec = "[--name-prefix=<prefix for account names>][--full-accounts] [--validator-accounts] [--root-accounts] " +
 			"[--developer-accounts] [--participant-accounts] [--chain-name] [--toml] [BASE...]"
@@ -57,6 +58,7 @@ func Spec(output Output) func(cmd *cli.Cmd) {
 			if *chainNameOpt != "" {
 				genesisSpec.ChainName = *chainNameOpt
 			}
+			genesisSpec.Params.ProposalThreshold = uint64(*proposalThresholdOpt)
 			if *tomlOpt {
 				output.Printf(source.TOMLString(genesisSpec))
 			} else {

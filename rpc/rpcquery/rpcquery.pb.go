@@ -12,6 +12,7 @@ import acm "github.com/hyperledger/burrow/acm"
 import validator "github.com/hyperledger/burrow/acm/validator"
 import names "github.com/hyperledger/burrow/execution/names"
 import rpc "github.com/hyperledger/burrow/rpc"
+import payload "github.com/hyperledger/burrow/txs/payload"
 
 import github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 
@@ -46,7 +47,7 @@ func (m *StatusParam) Reset()         { *m = StatusParam{} }
 func (m *StatusParam) String() string { return proto.CompactTextString(m) }
 func (*StatusParam) ProtoMessage()    {}
 func (*StatusParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{0}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{0}
 }
 func (m *StatusParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -104,7 +105,7 @@ func (m *GetAccountParam) Reset()         { *m = GetAccountParam{} }
 func (m *GetAccountParam) String() string { return proto.CompactTextString(m) }
 func (*GetAccountParam) ProtoMessage()    {}
 func (*GetAccountParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{1}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{1}
 }
 func (m *GetAccountParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -148,7 +149,7 @@ func (m *ListAccountsParam) Reset()         { *m = ListAccountsParam{} }
 func (m *ListAccountsParam) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsParam) ProtoMessage()    {}
 func (*ListAccountsParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{2}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{2}
 }
 func (m *ListAccountsParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -199,7 +200,7 @@ func (m *GetNameParam) Reset()         { *m = GetNameParam{} }
 func (m *GetNameParam) String() string { return proto.CompactTextString(m) }
 func (*GetNameParam) ProtoMessage()    {}
 func (*GetNameParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{3}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{3}
 }
 func (m *GetNameParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -250,7 +251,7 @@ func (m *ListNamesParam) Reset()         { *m = ListNamesParam{} }
 func (m *ListNamesParam) String() string { return proto.CompactTextString(m) }
 func (*ListNamesParam) ProtoMessage()    {}
 func (*ListNamesParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{4}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{4}
 }
 func (m *ListNamesParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -301,7 +302,7 @@ func (m *GetValidatorSetParam) Reset()         { *m = GetValidatorSetParam{} }
 func (m *GetValidatorSetParam) String() string { return proto.CompactTextString(m) }
 func (*GetValidatorSetParam) ProtoMessage()    {}
 func (*GetValidatorSetParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{5}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{5}
 }
 func (m *GetValidatorSetParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -354,7 +355,7 @@ func (m *ValidatorSet) Reset()         { *m = ValidatorSet{} }
 func (m *ValidatorSet) String() string { return proto.CompactTextString(m) }
 func (*ValidatorSet) ProtoMessage()    {}
 func (*ValidatorSet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{6}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{6}
 }
 func (m *ValidatorSet) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -419,7 +420,7 @@ func (m *ValidatorSetDeltas) Reset()         { *m = ValidatorSetDeltas{} }
 func (m *ValidatorSetDeltas) String() string { return proto.CompactTextString(m) }
 func (*ValidatorSetDeltas) ProtoMessage()    {}
 func (*ValidatorSetDeltas) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_26b74ddcc46e67e1, []int{7}
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{7}
 }
 func (m *ValidatorSetDeltas) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -458,6 +459,167 @@ func (m *ValidatorSetDeltas) GetValidators() []*validator.Validator {
 func (*ValidatorSetDeltas) XXX_MessageName() string {
 	return "rpcquery.ValidatorSetDeltas"
 }
+
+type GetProposalParam struct {
+	Hash                 []byte   `protobuf:"bytes,1,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetProposalParam) Reset()         { *m = GetProposalParam{} }
+func (m *GetProposalParam) String() string { return proto.CompactTextString(m) }
+func (*GetProposalParam) ProtoMessage()    {}
+func (*GetProposalParam) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{8}
+}
+func (m *GetProposalParam) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetProposalParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetProposalParam.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetProposalParam) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetProposalParam.Merge(dst, src)
+}
+func (m *GetProposalParam) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetProposalParam) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetProposalParam.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetProposalParam proto.InternalMessageInfo
+
+func (m *GetProposalParam) GetHash() []byte {
+	if m != nil {
+		return m.Hash
+	}
+	return nil
+}
+
+func (*GetProposalParam) XXX_MessageName() string {
+	return "rpcquery.GetProposalParam"
+}
+
+type ListProposalsParam struct {
+	Proposed             bool     `protobuf:"varint,1,opt,name=Proposed,proto3" json:"Proposed,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListProposalsParam) Reset()         { *m = ListProposalsParam{} }
+func (m *ListProposalsParam) String() string { return proto.CompactTextString(m) }
+func (*ListProposalsParam) ProtoMessage()    {}
+func (*ListProposalsParam) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{9}
+}
+func (m *ListProposalsParam) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListProposalsParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListProposalsParam.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *ListProposalsParam) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListProposalsParam.Merge(dst, src)
+}
+func (m *ListProposalsParam) XXX_Size() int {
+	return m.Size()
+}
+func (m *ListProposalsParam) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListProposalsParam.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListProposalsParam proto.InternalMessageInfo
+
+func (m *ListProposalsParam) GetProposed() bool {
+	if m != nil {
+		return m.Proposed
+	}
+	return false
+}
+
+func (*ListProposalsParam) XXX_MessageName() string {
+	return "rpcquery.ListProposalsParam"
+}
+
+type ProposalResult struct {
+	Hash                 []byte          `protobuf:"bytes,1,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	Ballot               *payload.Ballot `protobuf:"bytes,2,opt,name=Ballot" json:"Ballot,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *ProposalResult) Reset()         { *m = ProposalResult{} }
+func (m *ProposalResult) String() string { return proto.CompactTextString(m) }
+func (*ProposalResult) ProtoMessage()    {}
+func (*ProposalResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcquery_cb31e54d800faa17, []int{10}
+}
+func (m *ProposalResult) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ProposalResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ProposalResult.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *ProposalResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ProposalResult.Merge(dst, src)
+}
+func (m *ProposalResult) XXX_Size() int {
+	return m.Size()
+}
+func (m *ProposalResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_ProposalResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ProposalResult proto.InternalMessageInfo
+
+func (m *ProposalResult) GetHash() []byte {
+	if m != nil {
+		return m.Hash
+	}
+	return nil
+}
+
+func (m *ProposalResult) GetBallot() *payload.Ballot {
+	if m != nil {
+		return m.Ballot
+	}
+	return nil
+}
+
+func (*ProposalResult) XXX_MessageName() string {
+	return "rpcquery.ProposalResult"
+}
 func init() {
 	proto.RegisterType((*StatusParam)(nil), "rpcquery.StatusParam")
 	golang_proto.RegisterType((*StatusParam)(nil), "rpcquery.StatusParam")
@@ -475,6 +637,12 @@ func init() {
 	golang_proto.RegisterType((*ValidatorSet)(nil), "rpcquery.ValidatorSet")
 	proto.RegisterType((*ValidatorSetDeltas)(nil), "rpcquery.ValidatorSetDeltas")
 	golang_proto.RegisterType((*ValidatorSetDeltas)(nil), "rpcquery.ValidatorSetDeltas")
+	proto.RegisterType((*GetProposalParam)(nil), "rpcquery.GetProposalParam")
+	golang_proto.RegisterType((*GetProposalParam)(nil), "rpcquery.GetProposalParam")
+	proto.RegisterType((*ListProposalsParam)(nil), "rpcquery.ListProposalsParam")
+	golang_proto.RegisterType((*ListProposalsParam)(nil), "rpcquery.ListProposalsParam")
+	proto.RegisterType((*ProposalResult)(nil), "rpcquery.ProposalResult")
+	golang_proto.RegisterType((*ProposalResult)(nil), "rpcquery.ProposalResult")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -495,6 +663,8 @@ type QueryClient interface {
 	GetName(ctx context.Context, in *GetNameParam, opts ...grpc.CallOption) (*names.Entry, error)
 	ListNames(ctx context.Context, in *ListNamesParam, opts ...grpc.CallOption) (Query_ListNamesClient, error)
 	GetValidatorSet(ctx context.Context, in *GetValidatorSetParam, opts ...grpc.CallOption) (*ValidatorSet, error)
+	GetProposal(ctx context.Context, in *GetProposalParam, opts ...grpc.CallOption) (*payload.Ballot, error)
+	ListProposals(ctx context.Context, in *ListProposalsParam, opts ...grpc.CallOption) (Query_ListProposalsClient, error)
 }
 
 type queryClient struct {
@@ -605,6 +775,47 @@ func (c *queryClient) GetValidatorSet(ctx context.Context, in *GetValidatorSetPa
 	return out, nil
 }
 
+func (c *queryClient) GetProposal(ctx context.Context, in *GetProposalParam, opts ...grpc.CallOption) (*payload.Ballot, error) {
+	out := new(payload.Ballot)
+	err := c.cc.Invoke(ctx, "/rpcquery.Query/GetProposal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ListProposals(ctx context.Context, in *ListProposalsParam, opts ...grpc.CallOption) (Query_ListProposalsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Query_serviceDesc.Streams[2], "/rpcquery.Query/ListProposals", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &queryListProposalsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Query_ListProposalsClient interface {
+	Recv() (*ProposalResult, error)
+	grpc.ClientStream
+}
+
+type queryListProposalsClient struct {
+	grpc.ClientStream
+}
+
+func (x *queryListProposalsClient) Recv() (*ProposalResult, error) {
+	m := new(ProposalResult)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // QueryServer is the server API for Query service.
 type QueryServer interface {
 	Status(context.Context, *StatusParam) (*rpc.ResultStatus, error)
@@ -613,6 +824,8 @@ type QueryServer interface {
 	GetName(context.Context, *GetNameParam) (*names.Entry, error)
 	ListNames(*ListNamesParam, Query_ListNamesServer) error
 	GetValidatorSet(context.Context, *GetValidatorSetParam) (*ValidatorSet, error)
+	GetProposal(context.Context, *GetProposalParam) (*payload.Ballot, error)
+	ListProposals(*ListProposalsParam, Query_ListProposalsServer) error
 }
 
 func RegisterQueryServer(s *grpc.Server, srv QueryServer) {
@@ -733,6 +946,45 @@ func _Query_GetValidatorSet_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_GetProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProposalParam)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).GetProposal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcquery.Query/GetProposal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).GetProposal(ctx, req.(*GetProposalParam))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ListProposals_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListProposalsParam)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(QueryServer).ListProposals(m, &queryListProposalsServer{stream})
+}
+
+type Query_ListProposalsServer interface {
+	Send(*ProposalResult) error
+	grpc.ServerStream
+}
+
+type queryListProposalsServer struct {
+	grpc.ServerStream
+}
+
+func (x *queryListProposalsServer) Send(m *ProposalResult) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 var _Query_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcquery.Query",
 	HandlerType: (*QueryServer)(nil),
@@ -753,6 +1005,10 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			MethodName: "GetValidatorSet",
 			Handler:    _Query_GetValidatorSet_Handler,
 		},
+		{
+			MethodName: "GetProposal",
+			Handler:    _Query_GetProposal_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -763,6 +1019,11 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ListNames",
 			Handler:       _Query_ListNames_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListProposals",
+			Handler:       _Query_ListProposals_Handler,
 			ServerStreams: true,
 		},
 	},
@@ -1026,6 +1287,101 @@ func (m *ValidatorSetDeltas) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *GetProposalParam) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetProposalParam) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Hash) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintRpcquery(dAtA, i, uint64(len(m.Hash)))
+		i += copy(dAtA[i:], m.Hash)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ListProposalsParam) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListProposalsParam) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Proposed {
+		dAtA[i] = 0x8
+		i++
+		if m.Proposed {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ProposalResult) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ProposalResult) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Hash) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintRpcquery(dAtA, i, uint64(len(m.Hash)))
+		i += copy(dAtA[i:], m.Hash)
+	}
+	if m.Ballot != nil {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintRpcquery(dAtA, i, uint64(m.Ballot.Size()))
+		n2, err := m.Ballot.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n2
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
 func encodeVarintRpcquery(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -1170,6 +1526,57 @@ func (m *ValidatorSetDeltas) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovRpcquery(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GetProposalParam) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Hash)
+	if l > 0 {
+		n += 1 + l + sovRpcquery(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ListProposalsParam) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Proposed {
+		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ProposalResult) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Hash)
+	if l > 0 {
+		n += 1 + l + sovRpcquery(uint64(l))
+	}
+	if m.Ballot != nil {
+		l = m.Ballot.Size()
+		n += 1 + l + sovRpcquery(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1905,6 +2312,274 @@ func (m *ValidatorSetDeltas) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *GetProposalParam) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetProposalParam: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetProposalParam: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Hash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Hash = append(m.Hash[:0], dAtA[iNdEx:postIndex]...)
+			if m.Hash == nil {
+				m.Hash = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListProposalsParam) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListProposalsParam: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListProposalsParam: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Proposed", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Proposed = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ProposalResult) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ProposalResult: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ProposalResult: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Hash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Hash = append(m.Hash[:0], dAtA[iNdEx:postIndex]...)
+			if m.Hash == nil {
+				m.Hash = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ballot", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Ballot == nil {
+				m.Ballot = &payload.Ballot{}
+			}
+			if err := m.Ballot.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipRpcquery(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
@@ -2010,44 +2685,51 @@ var (
 	ErrIntOverflowRpcquery   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_26b74ddcc46e67e1) }
-func init() { golang_proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_26b74ddcc46e67e1) }
+func init() { proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_cb31e54d800faa17) }
+func init() { golang_proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_cb31e54d800faa17) }
 
-var fileDescriptor_rpcquery_26b74ddcc46e67e1 = []byte{
-	// 547 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x54, 0xcf, 0x8f, 0xd2, 0x40,
-	0x18, 0xb5, 0xb0, 0xc2, 0xf2, 0xd1, 0x40, 0x76, 0x44, 0x82, 0xd5, 0x74, 0x37, 0x3d, 0x10, 0x34,
-	0xda, 0x12, 0xdc, 0xf5, 0x62, 0x62, 0x5c, 0xa2, 0xc1, 0x35, 0x66, 0xa3, 0xc5, 0x68, 0xe2, 0xad,
-	0x94, 0x11, 0x1a, 0xdb, 0x4e, 0x9d, 0x4e, 0x35, 0xfc, 0x03, 0xfe, 0x5d, 0x1e, 0x39, 0x7a, 0xf6,
-	0xb0, 0x31, 0xec, 0x3f, 0x62, 0x3a, 0x9d, 0xfe, 0x82, 0x0d, 0xb7, 0xef, 0x7d, 0xf3, 0xde, 0xbc,
-	0x7e, 0x33, 0x6f, 0x0a, 0x2d, 0x1a, 0xd8, 0xdf, 0x23, 0x4c, 0x57, 0x7a, 0x40, 0x09, 0x23, 0xe8,
-	0x30, 0xc5, 0xca, 0x93, 0x85, 0xc3, 0x96, 0xd1, 0x4c, 0xb7, 0x89, 0x67, 0x2c, 0xc8, 0x82, 0x18,
-	0x9c, 0x30, 0x8b, 0xbe, 0x72, 0xc4, 0x01, 0xaf, 0x12, 0xa1, 0xd2, 0xf4, 0x2d, 0x0f, 0x87, 0x02,
-	0x34, 0x2c, 0xdb, 0x13, 0x65, 0xfb, 0x87, 0xe5, 0x3a, 0x73, 0x8b, 0x11, 0x9a, 0xae, 0xd1, 0xc0,
-	0x4e, 0x4a, 0xcd, 0x81, 0xe6, 0x94, 0x59, 0x2c, 0x0a, 0xdf, 0x5b, 0xd4, 0xf2, 0xd0, 0x00, 0xda,
-	0x63, 0x97, 0xd8, 0xdf, 0x3e, 0x3a, 0x1e, 0xfe, 0xec, 0xb0, 0xa5, 0xe3, 0xf7, 0xa4, 0x13, 0x69,
-	0xd0, 0x30, 0xb7, 0xdb, 0x68, 0x08, 0x77, 0x78, 0x6b, 0x8a, 0xb1, 0x5f, 0x60, 0x57, 0x38, 0xfb,
-	0xa6, 0x25, 0xcd, 0x82, 0xf6, 0x04, 0xb3, 0x73, 0xdb, 0x26, 0x91, 0xcf, 0x12, 0xbb, 0x4b, 0xa8,
-	0x9f, 0xcf, 0xe7, 0x14, 0x87, 0x21, 0xb7, 0x91, 0xc7, 0xa7, 0xeb, 0xab, 0xe3, 0x5b, 0x7f, 0xaf,
-	0x8e, 0x1f, 0x17, 0x26, 0x5f, 0xae, 0x02, 0x4c, 0x5d, 0x3c, 0x5f, 0x60, 0x6a, 0xcc, 0x22, 0x4a,
-	0xc9, 0x4f, 0xc3, 0xa6, 0xab, 0x80, 0x11, 0x5d, 0x68, 0xcd, 0x74, 0x13, 0xed, 0x21, 0x1c, 0xbd,
-	0x73, 0xc2, 0xd4, 0x43, 0xcc, 0xd4, 0x81, 0xdb, 0x1f, 0xe2, 0xe3, 0x14, 0x93, 0x24, 0x40, 0xd3,
-	0x40, 0x9e, 0x60, 0x76, 0x69, 0x79, 0x38, 0x61, 0x21, 0x38, 0x88, 0x81, 0x20, 0xf1, 0x5a, 0xeb,
-	0x43, 0x2b, 0xde, 0x2e, 0xae, 0xf7, 0xee, 0xf5, 0x02, 0x3a, 0x13, 0xcc, 0x3e, 0xa5, 0xa7, 0x3c,
-	0xc5, 0x62, 0xbc, 0x3e, 0xb4, 0x2e, 0x7c, 0xdb, 0x8d, 0xe6, 0xf8, 0x8d, 0x13, 0x32, 0x22, 0x64,
-	0x87, 0xe6, 0x56, 0x57, 0xfb, 0x25, 0x81, 0x5c, 0x54, 0xa3, 0x2e, 0xd4, 0x96, 0xd8, 0x59, 0x2c,
-	0x19, 0x17, 0x1c, 0x98, 0x02, 0xa1, 0x3e, 0x54, 0xa7, 0x98, 0xf5, 0x2a, 0x27, 0xd5, 0x41, 0x73,
-	0xd4, 0xd1, 0xf3, 0x7b, 0xcd, 0xd4, 0x66, 0x4c, 0x40, 0xcf, 0xa0, 0x9e, 0x3a, 0x56, 0x39, 0xf7,
-	0x81, 0x9e, 0x85, 0xac, 0x68, 0xf4, 0x0a, 0xbb, 0xcc, 0x0a, 0xcd, 0x94, 0xac, 0xbd, 0x05, 0xb4,
-	0xbb, 0x8c, 0x4e, 0x01, 0xb2, 0x6e, 0xb8, 0xd7, 0xbc, 0xc0, 0x1b, 0x6d, 0x2a, 0xe2, 0xac, 0xd0,
-	0x08, 0x6a, 0x49, 0xc6, 0xd0, 0xdd, 0xfc, 0x33, 0x0a, 0xa9, 0x53, 0x8e, 0xe2, 0xb6, 0x6e, 0xe2,
-	0x30, 0x72, 0x99, 0x60, 0x9e, 0x01, 0xe4, 0x61, 0x41, 0xf7, 0x72, 0xdd, 0x56, 0x84, 0x14, 0x59,
-	0x8f, 0x83, 0x9e, 0x12, 0x9f, 0x83, 0x5c, 0x0c, 0x00, 0xba, 0x9f, 0x0b, 0x77, 0x82, 0x51, 0x96,
-	0x0e, 0x25, 0x64, 0x40, 0x5d, 0x44, 0x02, 0x75, 0x4b, 0x86, 0x59, 0x4a, 0x14, 0x59, 0x4f, 0xde,
-	0xd8, 0x6b, 0x9f, 0xd1, 0x15, 0x3a, 0x83, 0x46, 0x96, 0x0f, 0xd4, 0x2b, 0x5b, 0xe5, 0xa1, 0x29,
-	0x8b, 0x86, 0x12, 0xba, 0xe0, 0x0f, 0xa1, 0x74, 0xe1, 0x6a, 0xc9, 0x6f, 0x27, 0x49, 0x4a, 0xf7,
-	0xe6, 0xfb, 0x1b, 0xbf, 0x5c, 0x6f, 0x54, 0xe9, 0xcf, 0x46, 0x95, 0xfe, 0x6d, 0x54, 0xe9, 0xf7,
-	0xb5, 0x2a, 0xad, 0xaf, 0x55, 0xe9, 0xcb, 0xa3, 0xfd, 0xaf, 0x87, 0x06, 0xb6, 0x91, 0x6e, 0x37,
-	0xab, 0xf1, 0xff, 0xc0, 0xd3, 0xff, 0x01, 0x00, 0x00, 0xff, 0xff, 0x5d, 0x63, 0x49, 0xd7, 0x86,
-	0x04, 0x00, 0x00,
+var fileDescriptor_rpcquery_cb31e54d800faa17 = []byte{
+	// 657 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x54, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0xc5, 0x4d, 0x49, 0xdb, 0x49, 0x9a, 0xd0, 0xa1, 0x54, 0xc5, 0x54, 0x69, 0xe5, 0x43, 0x28,
+	0x08, 0x9c, 0x28, 0xb4, 0x1c, 0x40, 0x42, 0x34, 0x02, 0xa5, 0x45, 0x50, 0x15, 0x07, 0x81, 0xc4,
+	0x6d, 0x63, 0x2f, 0x89, 0x85, 0x93, 0x35, 0xeb, 0x35, 0x28, 0x3f, 0xc0, 0x77, 0x71, 0xec, 0x91,
+	0x33, 0x87, 0x0a, 0xb5, 0x27, 0xfe, 0x02, 0x79, 0xbd, 0x76, 0xbc, 0x69, 0xd5, 0xdb, 0xcc, 0xec,
+	0x7b, 0xf3, 0x34, 0xb3, 0x6f, 0x17, 0x6a, 0x3c, 0x74, 0xbf, 0xc5, 0x94, 0x4f, 0xed, 0x90, 0x33,
+	0xc1, 0x70, 0x39, 0xcb, 0xcd, 0xc7, 0x43, 0x5f, 0x8c, 0xe2, 0x81, 0xed, 0xb2, 0x71, 0x6b, 0xc8,
+	0x86, 0xac, 0x25, 0x01, 0x83, 0xf8, 0x8b, 0xcc, 0x64, 0x22, 0xa3, 0x94, 0x68, 0x56, 0x26, 0x64,
+	0x4c, 0x23, 0x95, 0xac, 0x10, 0x77, 0xac, 0xc2, 0xfa, 0x77, 0x12, 0xf8, 0x1e, 0x11, 0x8c, 0x67,
+	0x67, 0x3c, 0x74, 0x55, 0xb8, 0x1a, 0x92, 0x69, 0xc0, 0x88, 0x97, 0xa6, 0x96, 0x0f, 0x95, 0xbe,
+	0x20, 0x22, 0x8e, 0x4e, 0x08, 0x27, 0x63, 0xdc, 0x85, 0x7a, 0x37, 0x60, 0xee, 0xd7, 0x0f, 0xfe,
+	0x98, 0x7e, 0xf2, 0xc5, 0xc8, 0x9f, 0x6c, 0x1a, 0x3b, 0xc6, 0xee, 0x8a, 0x33, 0x5f, 0xc6, 0x36,
+	0xdc, 0x96, 0xa5, 0x3e, 0xa5, 0x93, 0x02, 0x7a, 0x41, 0xa2, 0xaf, 0x3a, 0xb2, 0x08, 0xd4, 0x7b,
+	0x54, 0x1c, 0xb8, 0x2e, 0x8b, 0x27, 0x22, 0x95, 0x3b, 0x86, 0xa5, 0x03, 0xcf, 0xe3, 0x34, 0x8a,
+	0xa4, 0x4c, 0xb5, 0xbb, 0x77, 0x7a, 0xb6, 0x7d, 0xe3, 0xcf, 0xd9, 0xf6, 0xa3, 0xc2, 0x22, 0x46,
+	0xd3, 0x90, 0xf2, 0x80, 0x7a, 0x43, 0xca, 0x5b, 0x83, 0x98, 0x73, 0xf6, 0xa3, 0xe5, 0xf2, 0x69,
+	0x28, 0x98, 0xad, 0xb8, 0x4e, 0xd6, 0xc4, 0x7a, 0x00, 0x6b, 0x6f, 0xfd, 0x28, 0xd3, 0x50, 0x33,
+	0xad, 0xc3, 0xcd, 0xf7, 0xc9, 0x76, 0xd5, 0x24, 0x69, 0x62, 0x59, 0x50, 0xed, 0x51, 0x71, 0x4c,
+	0xc6, 0x34, 0x45, 0x21, 0x2c, 0x26, 0x89, 0x02, 0xc9, 0xd8, 0x6a, 0x42, 0x2d, 0x69, 0x97, 0xc4,
+	0xd7, 0xf6, 0x7a, 0x01, 0xeb, 0x3d, 0x2a, 0x3e, 0x66, 0x4b, 0xef, 0x53, 0x35, 0x5e, 0x13, 0x6a,
+	0x47, 0x13, 0x37, 0x88, 0x3d, 0x7a, 0xe8, 0x47, 0x82, 0x29, 0xda, 0xb2, 0x33, 0x57, 0xb5, 0x7e,
+	0x1a, 0x50, 0x2d, 0xb2, 0x71, 0x03, 0xca, 0x23, 0xea, 0x0f, 0x47, 0x42, 0x12, 0x16, 0x1d, 0x95,
+	0x61, 0x13, 0x4a, 0x7d, 0x2a, 0x36, 0x17, 0x76, 0x4a, 0xbb, 0x95, 0xce, 0xba, 0x3d, 0xbb, 0xe6,
+	0x9c, 0xed, 0x24, 0x00, 0x7c, 0x0a, 0x4b, 0x99, 0x62, 0x49, 0x62, 0xb7, 0xec, 0xdc, 0x73, 0x45,
+	0xa1, 0x57, 0x34, 0x10, 0x24, 0x72, 0x32, 0xb0, 0xf5, 0x06, 0xf0, 0xf2, 0x31, 0xee, 0x01, 0xe4,
+	0xd5, 0xe8, 0x5a, 0xf1, 0x02, 0xce, 0x6a, 0xc2, 0xad, 0x1e, 0x15, 0x27, 0x9c, 0x85, 0x2c, 0x22,
+	0x41, 0xbe, 0xe4, 0x43, 0x12, 0x8d, 0xd2, 0xcb, 0x76, 0x64, 0x6c, 0xb5, 0x01, 0x93, 0x25, 0x67,
+	0x40, 0xb5, 0x68, 0x13, 0x96, 0xd3, 0x0a, 0xf5, 0xd4, 0xd2, 0xf2, 0xdc, 0x7a, 0x07, 0xb5, 0x0c,
+	0xed, 0xd0, 0x28, 0x0e, 0xc4, 0x55, 0x7d, 0xf1, 0x3e, 0x94, 0xbb, 0x24, 0x08, 0x98, 0x90, 0x9e,
+	0xac, 0x74, 0xea, 0x76, 0xe6, 0xfc, 0xb4, 0xec, 0xa8, 0xe3, 0xce, 0xbf, 0x92, 0xba, 0x54, 0xec,
+	0x40, 0x39, 0x7d, 0x0c, 0x78, 0x67, 0xb6, 0xaf, 0xc2, 0xf3, 0x30, 0xd7, 0x92, 0xb2, 0x9d, 0x8a,
+	0x2a, 0xe4, 0x3e, 0xc0, 0xcc, 0xd5, 0x78, 0x77, 0xc6, 0x9b, 0xf3, 0xba, 0x59, 0xb5, 0x93, 0x07,
+	0x9a, 0x01, 0x9f, 0x43, 0xb5, 0xe8, 0x54, 0xbc, 0x37, 0x23, 0x5e, 0x72, 0xb0, 0x4e, 0x6d, 0x1b,
+	0xd8, 0x82, 0x25, 0xe5, 0x5d, 0xdc, 0xd0, 0x04, 0x73, 0x3b, 0x9b, 0x55, 0x3b, 0xfd, 0x1b, 0x5e,
+	0x4f, 0x04, 0x9f, 0xe2, 0x3e, 0xac, 0xe4, 0x46, 0xc6, 0x4d, 0x5d, 0x6a, 0xe6, 0x6e, 0x9d, 0xd4,
+	0x36, 0xf0, 0x48, 0xbe, 0x58, 0xcd, 0x99, 0x0d, 0x4d, 0xef, 0x92, 0xe5, 0xcd, 0x8d, 0xab, 0x8d,
+	0x86, 0xcf, 0xa0, 0x52, 0x70, 0x03, 0x9a, 0x5a, 0x1b, 0xcd, 0x24, 0xe6, 0xfc, 0x45, 0xe1, 0x11,
+	0xac, 0x6a, 0x0e, 0xc1, 0x2d, 0x7d, 0x02, 0xdd, 0x3a, 0x66, 0x61, 0x3e, 0xdd, 0x26, 0x6d, 0xa3,
+	0xfb, 0xf2, 0xf4, 0xbc, 0x61, 0xfc, 0x3e, 0x6f, 0x18, 0x7f, 0xcf, 0x1b, 0xc6, 0xaf, 0x8b, 0x86,
+	0x71, 0x7a, 0xd1, 0x30, 0x3e, 0x3f, 0xbc, 0xfe, 0xb7, 0xe1, 0xa1, 0xdb, 0xca, 0x5a, 0x0e, 0xca,
+	0xf2, 0xdf, 0x7c, 0xf2, 0x3f, 0x00, 0x00, 0xff, 0xff, 0x1b, 0xf0, 0x61, 0x80, 0xc5, 0x05, 0x00,
+	0x00,
 }

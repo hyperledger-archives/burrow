@@ -50,6 +50,10 @@ const (
 	ErrorCodeReservedAddress
 	ErrorCodeIllegalWrite
 	ErrorCodeIntegerOverflow
+	ErrorCodeInvalidProposal
+	ErrorCodeExpiredProposal
+	ErrorCodeProposalExecuted
+	ErrorCodeNoInputPermission
 )
 
 func (c Code) ErrorCode() Code {
@@ -128,6 +132,14 @@ func (c Code) String() string {
 		return "Callee attempted to illegally modify state"
 	case ErrorCodeIntegerOverflow:
 		return "Integer overflow"
+	case ErrorCodeInvalidProposal:
+		return "Proposal is invalid"
+	case ErrorCodeExpiredProposal:
+		return "Proposal is expired since sequence number does not match"
+	case ErrorCodeProposalExecuted:
+		return "Proposal has already been executed"
+	case ErrorCodeNoInputPermission:
+		return "Account has no input permission"
 	default:
 		return "Unknown error"
 	}

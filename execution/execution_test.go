@@ -187,6 +187,8 @@ func TestName(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
@@ -265,7 +267,8 @@ func TestSendPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true) // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)  // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
@@ -292,7 +295,8 @@ func TestCallPermission(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)  // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
@@ -408,6 +412,7 @@ func TestCreatePermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)          // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
@@ -523,6 +528,8 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)          // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
+	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
 	st, err := MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
@@ -652,8 +659,9 @@ func TestSNativeCALL(t *testing.T) {
 	stateDB := dbm.NewDB("state", dbBackend, dbDir)
 	defer stateDB.Close()
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
-	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true) // give the 0 account permission
-	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)  // give the 0 account permission
+	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
+	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true)  // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 
@@ -1679,11 +1687,12 @@ func testSNativeTxExpectPass(t *testing.T, batchCommitter *testExecutor, perm pe
 
 func testSNativeTx(t *testing.T, expectPass bool, batchCommitter *testExecutor, perm permission.PermFlag,
 	snativeArgs permission.PermArgs) {
+	acc := getAccount(batchCommitter.stateCache, users[0].GetAddress())
 	if expectPass {
-		acc := getAccount(batchCommitter.stateCache, users[0].GetAddress())
 		acc.Permissions.Base.Set(perm, true)
-		batchCommitter.stateCache.UpdateAccount(acc)
 	}
+	acc.Permissions.Base.Set(permission.Input, true)
+	batchCommitter.stateCache.UpdateAccount(acc)
 	tx, _ := payload.NewPermsTx(batchCommitter.stateCache, users[0].GetPublicKey(), snativeArgs)
 	txEnv := txs.Enclose(testChainID, tx)
 	require.NoError(t, txEnv.Sign(users[0]))

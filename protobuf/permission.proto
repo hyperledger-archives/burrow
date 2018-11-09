@@ -19,11 +19,16 @@ option (gogoproto.messagename_all) = true;
 
 message AccountPermissions {
     optional BasePermissions Base = 1 [(gogoproto.nullable) = false];
+    option (gogoproto.goproto_sizecache) = false;
+    option (gogoproto.goproto_unkeyed) = false;
+
     repeated string Roles = 2;
 }
 
 message BasePermissions {
     option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_sizecache) = false;
+    option (gogoproto.goproto_unkeyed) = false;
     optional uint64 Perms = 1 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
     optional uint64 SetBit = 2 [(gogoproto.casttype) = "PermFlag", (gogoproto.nullable) = false];
 }

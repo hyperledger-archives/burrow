@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hyperledger/burrow/txs/payload"
+
+	"github.com/hyperledger/burrow/execution/proposal"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/bcm"
@@ -15,23 +19,25 @@ import (
 )
 
 type queryServer struct {
-	accounts   state.IterableReader
-	nameReg    names.IterableReader
-	blockchain bcm.BlockchainInfo
-	nodeView   *tendermint.NodeView
-	logger     *logging.Logger
+	accounts    state.IterableReader
+	nameReg     names.IterableReader
+	proposalReg proposal.IterableReader
+	blockchain  bcm.BlockchainInfo
+	nodeView    *tendermint.NodeView
+	logger      *logging.Logger
 }
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
-	nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
+func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
+	blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
-		accounts:   state,
-		nameReg:    nameReg,
-		blockchain: blockchain,
-		nodeView:   nodeView,
-		logger:     logger,
+		accounts:    state,
+		nameReg:     nameReg,
+		proposalReg: proposalReg,
+		blockchain:  blockchain,
+		nodeView:    nodeView,
+		logger:      logger,
 	}
 }
 
@@ -108,4 +114,29 @@ func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorS
 		}
 	}
 	return vs, nil
+}
+
+func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {
+	proposal, err = qs.proposalReg.GetProposal(param.Hash)
+	if proposal == nil && err == nil {
+		err = fmt.Errorf("proposal %x not found", param.Hash)
+	}
+	return
+}
+
+func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
+	var streamErr error
+	_, err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) (stop bool) {
+		if param.GetProposed() == true || ballot.ProposalState == payload.Ballot_PROPOSED {
+			streamErr = stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
+			if streamErr != nil {
+				return true
+			}
+		}
+		return
+	})
+	if err != nil {
+		return err
+	}
+	return streamErr
 }

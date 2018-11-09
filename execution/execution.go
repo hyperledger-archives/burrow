@@ -28,11 +28,14 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/contexts"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
@@ -42,13 +45,10 @@ type Executor interface {
 	Execute(txEnv *txs.Envelope) (*exec.TxExecution, error)
 }
 
-type Context interface {
-	Execute(txe *exec.TxExecution) error
-}
-
 type ExecutorState interface {
 	Update(updater func(ws Updatable) error) (hash []byte, err error)
 	names.Reader
+	proposal.Reader
 	state.IterableReader
 }
 
@@ -72,16 +72,17 @@ type BatchCommitter interface {
 
 type executor struct {
 	sync.RWMutex
-	runCall        bool
-	blockchain     *bcm.Blockchain
-	state          ExecutorState
-	stateCache     *state.Cache
-	nameRegCache   *names.Cache
-	publisher      event.Publisher
-	blockExecution *exec.BlockExecution
-	logger         *logging.Logger
-	vmOptions      []func(*evm.VM)
-	contexts       map[payload.Type]Context
+	runCall          bool
+	blockchain       *bcm.Blockchain
+	state            ExecutorState
+	stateCache       *state.Cache
+	nameRegCache     *names.Cache
+	proposalRegCache *proposal.Cache
+	publisher        event.Publisher
+	blockExecution   *exec.BlockExecution
+	logger           *logging.Logger
+	vmOptions        []func(*evm.VM)
+	contexts         map[payload.Type]contexts.Context
 }
 
 var _ BatchExecutor = (*executor)(nil)
@@ -120,12 +121,13 @@ func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitte
 func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 	exe := &executor{
-		runCall:      runCall,
-		state:        backend,
-		blockchain:   blockchain,
-		stateCache:   state.NewCache(backend, state.Named(name)),
-		nameRegCache: names.NewCache(backend),
-		publisher:    publisher,
+		runCall:          runCall,
+		state:            backend,
+		blockchain:       blockchain,
+		stateCache:       state.NewCache(backend, state.Named(name)),
+		nameRegCache:     names.NewCache(backend),
+		proposalRegCache: proposal.NewCache(backend),
+		publisher:        publisher,
 		blockExecution: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
 		},
@@ -134,7 +136,8 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 	for _, option := range options {
 		option(exe)
 	}
-	exe.contexts = map[payload.Type]Context{
+
+	baseContexts := map[payload.Type]contexts.Context{
 		payload.TypeSend: &contexts.SendContext{
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
@@ -159,10 +162,26 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 			Logger:      exe.logger,
 		},
 	}
+
+	exe.contexts = map[payload.Type]contexts.Context{
+		payload.TypeProposal: &contexts.ProposalContext{
+			Tip:         blockchain,
+			StateWriter: exe.stateCache,
+			ProposalReg: exe.proposalRegCache,
+			Logger:      exe.logger,
+			Contexts:    baseContexts,
+		},
+	}
+
+	// Copy over base contexts
+	for k, v := range baseContexts {
+		exe.contexts[k] = v
+	}
+
 	return exe
 }
 
-func (exe *executor) AddContext(ty payload.Type, ctx Context) *executor {
+func (exe *executor) AddContext(ty payload.Type, ctx contexts.Context) *executor {
 	exe.contexts[ty] = ctx
 	return exe
 }
@@ -193,19 +212,22 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)
+
 		// Validate inputs and check sequence numbers
-		err = txEnv.Tx.ValidateInputs(exe.stateCache)
+		err = validateInputs(txEnv.Tx, exe.stateCache)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
 		}
-		err = txExecutor.Execute(txe)
+
+		err = txExecutor.Execute(txe, txe.Envelope.Tx.Payload)
 		if err != nil {
 			logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
 		}
+
 		// Initialise public keys and increment sequence numbers for Tx inputs
 		err = exe.updateSignatories(txEnv)
 		if err != nil {
@@ -217,6 +239,41 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 		return txe, nil
 	}
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
+}
+
+func validateInputs(tx *txs.Tx, getter state.AccountGetter) error {
+	for _, in := range tx.GetInputs() {
+		acc, err := getter.GetAccount(in.Address)
+		if err != nil {
+			return err
+		}
+		if acc == nil {
+			return fmt.Errorf("validateInputs() expects to be able to retrieve account %v but it was not found",
+				in.Address)
+		}
+		if in.Address != acc.GetAddress() {
+			return fmt.Errorf("trying to validate input from address %v but passed account %v", in.Address,
+				acc.GetAddress())
+		}
+		// Check sequences
+		if acc.Sequence+1 != uint64(in.Sequence) {
+			return errors.ErrorCodef(errors.ErrorCodeInvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
+				"so expected input to have sequence %d", in, in.Sequence, acc.Sequence, acc.Sequence+1)
+		}
+		// Check amount
+		if acc.Balance < uint64(in.Amount) {
+			return errors.ErrorCodeInsufficientFunds
+		}
+		// Check for Input permission
+		v, err := acc.Permissions.Base.Compose(state.GlobalAccountPermissions(getter).Base).Get(permission.Input)
+		if err != nil {
+			return err
+		}
+		if !v {
+			return errors.ErrorCodeNoInputPermission
+		}
+	}
+	return nil
 }
 
 func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (_ []byte, err error) {

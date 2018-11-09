@@ -117,7 +117,7 @@ jobs:
       function: hasBase
       data:
         - $addr2
-        - 2118
+        - 8262
 
 - name: assertBase1
   assert:
@@ -131,12 +131,12 @@ jobs:
       function: hasBase
       data: 
         - $addr2
-        - 14847
+        - 59007
 
 - name: assertBase2
   assert:
       key: $checkBase2
-      relation: ne
+      relation: eq
       val: "true"
 
 - name: setBase
@@ -145,7 +145,7 @@ jobs:
       function: setBase 
       data:
         - $addr2
-        - 2119
+        - 8263
         - true
 
 - name: checkBase3
@@ -154,7 +154,7 @@ jobs:
       function: hasBase
       data:
         - $addr2
-        - 2119
+        - 8263
 
 - name: assertBase3
   assert:
@@ -168,7 +168,7 @@ jobs:
       function: unsetBase
       data:
         - $addr2
-        - 2119
+        - 8263
 
 - name: checkBase4
   call:
@@ -176,10 +176,10 @@ jobs:
       function: hasBase
       data:
         - $addr2
-        - 2119
+        - 8263
 
 - name: assertBase4
   assert:
       key: $checkBase4
       relation: eq
-      val: "false"
+      val: "true"

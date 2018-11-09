@@ -21,6 +21,7 @@ func NewAminoCodec() *aminoCodec {
 	registerTx(cdc, &payload.PermsTx{})
 	registerTx(cdc, &payload.NameTx{})
 	registerTx(cdc, &payload.GovTx{})
+	registerTx(cdc, &payload.ProposalTx{})
 	return &aminoCodec{cdc}
 }
 

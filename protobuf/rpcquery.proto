@@ -10,6 +10,7 @@ import "names.proto";
 import "acm.proto";
 import "validator.proto";
 import "rpc.proto";
+import "payload.proto";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
@@ -26,6 +27,9 @@ service Query {
     rpc ListNames (ListNamesParam) returns (stream names.Entry);
 
     rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
+
+    rpc GetProposal(GetProposalParam) returns (payload.Ballot);
+    rpc ListProposals(ListProposalsParam) returns (stream ProposalResult);
 }
 
 message StatusParam {
@@ -61,4 +65,17 @@ message ValidatorSet {
 
 message ValidatorSetDeltas {
     repeated validator.Validator Validators = 2;
+}
+
+message GetProposalParam {
+    bytes Hash = 1;
+}
+
+message ListProposalsParam {
+    bool Proposed = 1;
+}
+
+message ProposalResult {
+    bytes Hash = 1;
+    payload.Ballot Ballot = 2;
 }

@@ -18,9 +18,13 @@ type Job struct {
 	// Name of the job
 	Name string `mapstructure:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" toml:"name"`
 	// Not marshalled
+	Intermediate interface{} `json:"-" yaml:"-" toml:"-"`
+	// Not marshalled
 	Result interface{} `json:"-" yaml:"-" toml:"-"`
 	// For multiple values
 	Variables []*abi.Variable `json:"-" yaml:"-" toml:"-"`
+	// Create proposal or vote for one
+	Proposal *Proposal `mapstructure:"proposal,omitempty" json:"proposal,omitempty" yaml:"proposal,omitempty" toml:"proposal"`
 	// Sets/Resets the primary account to use
 	Account *Account `mapstructure:"account,omitempty" json:"account,omitempty" yaml:"account,omitempty" toml:"account"`
 	// Set an arbitrary value

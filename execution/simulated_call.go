@@ -33,7 +33,7 @@ func CallSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, address c
 		Data:     data,
 		GasLimit: contexts.GasLimit,
 	}))
-	err := exe.Execute(txe)
+	err := exe.Execute(txe, txe.Envelope.Tx.Payload)
 	if err != nil {
 		return nil, err
 	}

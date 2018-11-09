@@ -21,6 +21,8 @@ option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
 message Any {
+    option (gogoproto.onlyone) = true;
+
     CallTx CallTx = 1;
     SendTx SendTx = 2;
     NameTx NameTx = 3;
@@ -28,6 +30,8 @@ message Any {
     GovTx GovTx = 5;
     BondTx BondTx = 6;
     UnbondTx UnbondTx = 7;
+    BatchTx BatchTx = 8;
+    ProposalTx ProposalTx = 9;
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -95,7 +99,7 @@ message NameTx {
     string Name = 2;
     // The data to store against the name
     string Data = 3;
-    // The fee to provide that will determine the lenght of the name lease
+    // The fee to provide that will determine the length of the name lease
     uint64 Fee = 4;
 }
 
@@ -122,4 +126,52 @@ message GovTx {
 
     repeated TxInput Inputs = 1;
     repeated spec.TemplateAccount AccountUpdates = 2 [(gogoproto.nullable) = true];
+}
+
+message ProposalTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    TxInput Input = 1;
+    int64 VotingWeight = 2;
+    bytes ProposalHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
+    Proposal Proposal = 4;
+}
+
+message BatchTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    repeated TxInput Inputs = 1;
+    repeated Any Txs = 2;
+}
+
+message Vote {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    int64 VotingWeight = 2;
+}
+
+message Proposal {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    string Name = 1;
+    string Description = 2;
+    BatchTx BatchTx = 3;
+}
+
+message Ballot {
+    Proposal Proposal = 1;
+    bytes FinalizingTx = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
+    enum ProposalState {
+        // PROPOSED might be expired, if sequence number of any of the input accounts are out of date
+        PROPOSED = 0;
+        EXECUTED = 1;
+        FAILED = 2;
+    }
+    ProposalState proposalState = 4;
+    repeated Vote Votes = 5;
 }

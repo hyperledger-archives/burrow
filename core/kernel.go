@@ -138,6 +138,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		kern.Node.MempoolReactor().BroadcastTx, txCodec, kern.Logger)
 
 	nameRegState := kern.State
+	proposalRegState := kern.State
 	accountState := kern.State
 	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec, kern.RunID)
 	if err != nil {
@@ -244,7 +245,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 					keys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState,
+				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
 					kern.Blockchain, nodeView, kern.Logger))
 
 				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))

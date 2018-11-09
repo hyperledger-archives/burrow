@@ -15,8 +15,11 @@
 package execution
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sync"
+
+	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -27,6 +30,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
@@ -46,9 +50,10 @@ const (
 
 var (
 	// Directly referenced values
-	accountKeyFormat = storage.NewMustKeyFormat("a", crypto.AddressLength)
-	storageKeyFormat = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
-	nameKeyFormat    = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
+	accountKeyFormat  = storage.NewMustKeyFormat("a", crypto.AddressLength)
+	storageKeyFormat  = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
+	nameKeyFormat     = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
+	proposalKeyFormat = storage.NewMustKeyFormat("p", sha256.Size)
 	// Keys that reference references
 	blockRefKeyFormat = storage.NewMustKeyFormat("b", uint64Length)
 	txRefKeyFormat    = storage.NewMustKeyFormat("t", uint64Length, uint64Length)
@@ -409,6 +414,49 @@ func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped b
 			return true, fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
 		}
 		if consumer(entry) {
+			return true, nil
+		}
+		it.Next()
+	}
+	return false, nil
+}
+
+// Proposal
+var _ proposal.IterableReader = &State{}
+
+func (s *State) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
+	bs := s.tree.Get(proposalKeyFormat.Key(proposalHash))
+	if len(bs) == 0 {
+		return nil, nil
+	}
+
+	return payload.DecodeBallot(bs)
+}
+
+func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) error {
+	bs, err := p.Encode()
+	if err != nil {
+		return err
+	}
+	ws.state.tree.Set(proposalKeyFormat.Key(proposalHash), bs)
+	return nil
+}
+
+func (ws *writeState) RemoveProposal(proposalHash []byte) error {
+	ws.state.tree.Delete(proposalKeyFormat.Key(proposalHash))
+	return nil
+}
+
+func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
+	it := proposalKeyFormat.Iterator(s.tree, nil, nil)
+	for it.Valid() {
+		entry, err := payload.DecodeBallot(it.Value())
+		if err != nil {
+			return true, fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
+		}
+		var proposalHash [sha256.Size]byte
+		proposalKeyFormat.Scan(it.Key(), &proposalHash)
+		if consumer(proposalHash[:], entry) {
 			return true, nil
 		}
 		it.Next()
