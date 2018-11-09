@@ -52,7 +52,7 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 }
 
 func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
-	var numTxs int32
+	var numTxs int64
 	emptyBlocks := 0
 	maxEmptyBlocks := 2
 	outCh := make(chan int)
@@ -131,8 +131,8 @@ func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypt
 
 func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.Envelope {
-	sequence := GetSequence(t, client, PrivateAccounts[0].Address())
-	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].PublicKey(), addr, code, amt, gasLim, fee, sequence+1)
+	sequence := GetSequence(t, client, PrivateAccounts[0].GetAddress())
+	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].GetPublicKey(), addr, code, amt, gasLim, fee, sequence+1)
 	txEnv := txs.Enclose(GenesisDoc.ChainID(), tx)
 	require.NoError(t, txEnv.Sign(PrivateAccounts[0]))
 	return txEnv
@@ -150,11 +150,11 @@ func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address)
 	if acc == nil {
 		return 0
 	}
-	return acc.Sequence()
+	return acc.Sequence
 }
 
 // get the account
-func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) acm.Account {
+func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *acm.Account {
 	ac, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)

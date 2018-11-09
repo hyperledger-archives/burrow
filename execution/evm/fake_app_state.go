@@ -26,19 +26,19 @@ import (
 )
 
 type FakeAppState struct {
-	accounts map[crypto.Address]acm.Account
+	accounts map[crypto.Address]*acm.Account
 	storage  map[string]Word256
 }
 
 var _ state.ReaderWriter = &FakeAppState{}
 
-func (fas *FakeAppState) GetAccount(addr crypto.Address) (acm.Account, error) {
+func (fas *FakeAppState) GetAccount(addr crypto.Address) (*acm.Account, error) {
 	account := fas.accounts[addr]
 	return account, nil
 }
 
-func (fas *FakeAppState) UpdateAccount(account acm.Account) error {
-	fas.accounts[account.Address()] = account
+func (fas *FakeAppState) UpdateAccount(account *acm.Account) error {
+	fas.accounts[account.GetAddress()] = account
 	return nil
 }
 
@@ -83,7 +83,7 @@ func (fas *FakeAppState) accountsDump() string {
 	buf := new(bytes.Buffer)
 	fmt.Fprint(buf, "Dumping accounts...", "\n")
 	for _, acc := range fas.accounts {
-		fmt.Fprint(buf, acc.Address().String(), "\n")
+		fmt.Fprint(buf, acc.GetAddress().String(), "\n")
 	}
 	return buf.String()
 }

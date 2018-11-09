@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -65,13 +64,13 @@ type SNativeFunctionDescription struct {
 	// Permissions required to call function
 	PermFlag permission.PermFlag
 	// Native function to which calls will be dispatched when a containing
-	F func(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
-		logger *logging.Logger, v interface{}) (interface{}, error)
+	F func(stateWriter Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
+		v interface{}) (interface{}, error)
 }
 
 func registerSNativeContracts() {
 	for _, contract := range SNativeContracts() {
-		if !RegisterNativeContract(contract.Address().Word256(), contract.Dispatch) {
+		if !RegisterNativeContract(contract.Address(), contract.Dispatch) {
 			panic(fmt.Errorf("could not register SNative contract %s because address %s already registered",
 				contract.Address(), contract.Name))
 		}
@@ -127,7 +126,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @param Account account address
 			* @param Permission the base permissions flags to set for the account
 			* @param Set whether to set or unset the permissions flags at the account level
-			* @return result the effective permissions flags on the account after the call
+			* @return The permission flag that was set as uint64
 			`,
 				Name:      "setBase",
 				PermFlag:  permission.SetBase,
@@ -139,7 +138,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
       		* @param Account account address
       		* @param Permission the permissions flags to unset for the account
-			* @return result the effective permissions flags on the account after the call
+			* @return The permission flag that was unset as uint64
       `,
 				Name:      "unsetBase",
 				PermFlag:  permission.UnsetBase,
@@ -163,7 +162,7 @@ func SNativeContracts() map[string]*SNativeContractDescription {
 			* @notice Sets the global (default) permissions flags for the entire chain
 			* @param Permission the permissions flags to set
 			* @param Set whether to set (or unset) the permissions flags
-			* @return result the global permissions flags after the call
+			* @return The permission flag that was set as uint64
 			`,
 				Name:      "setGlobal",
 				PermFlag:  permission.SetGlobal,
@@ -213,7 +212,7 @@ func NewSNativeContract(comment, name string,
 // This function is designed to be called from the EVM once a SNative contract
 // has been selected. It is also placed in a registry by registerSNativeContracts
 // So it can be looked up by SNative address
-func (contract *SNativeContractDescription) Dispatch(state state.ReaderWriter, caller acm.Account,
+func (contract *SNativeContractDescription) Dispatch(st Interface, caller crypto.Address,
 	args []byte, gas *uint64, logger *logging.Logger) (output []byte, err error) {
 
 	logger = logger.With(structure.ScopeKey, "Dispatch", "contract_name", contract.Name)
@@ -232,14 +231,14 @@ func (contract *SNativeContractDescription) Dispatch(state state.ReaderWriter, c
 	}
 
 	logger.TraceMsg("Dispatching to function",
-		"caller", caller.Address(),
+		"caller", caller,
 		"function_name", function.Name)
 
 	remainingArgs := args[abi.FunctionIDSize:]
 
 	// check if we have permission to call this function
-	if !HasPermission(state, caller, function.PermFlag) {
-		return nil, errors.LacksSNativePermission{caller.Address(), function.Name}
+	if !HasPermission(st, caller, function.PermFlag) {
+		return nil, errors.LacksSNativePermission{Address: caller, SNative: function.Name}
 	}
 
 	nativeArgs := reflect.New(function.Arguments).Interface()
@@ -248,9 +247,13 @@ func (contract *SNativeContractDescription) Dispatch(state state.ReaderWriter, c
 		return nil, err
 	}
 
-	nativeRets, err := function.F(state, caller, gas, logger, nativeArgs)
+	nativeRets, err := function.F(st, caller, gas, logger, nativeArgs)
 	if err != nil {
 		return nil, err
+	}
+	err = st.Error()
+	if err != nil {
+		return nil, fmt.Errorf("state error in %v: %v", function, err)
 	}
 
 	return abi.PackIntoStruct(function.Abi.Outputs, nativeRets)
@@ -310,6 +313,11 @@ func (function *SNativeFunctionDescription) NArgs() int {
 	return len(function.Abi.Inputs)
 }
 
+func (fn *SNativeFunctionDescription) String() string {
+	return fmt.Sprintf("SNativeFunction{Name: %s; Inputs: %d; Outputs: %d}",
+		fn.Name, len(fn.Abi.Inputs), len(fn.Abi.Outputs))
+}
+
 // Permission function defintions
 
 // TODO: catch errors, log em, return 0s to the vm (should some errors cause exceptions though?)
@@ -322,25 +330,20 @@ type hasBaseRets struct {
 	Result bool
 }
 
-func hasBase(state state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, a interface{}) (interface{}, error) {
+func hasBase(state Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
+	a interface{}) (interface{}, error) {
 	args := a.(*hasBaseArgs)
 
-	acc, err := state.GetAccount(args.Account)
-	if err != nil {
-		return false, err
-	}
-	if acc == nil {
+	if !state.Exists(args.Account) {
 		return false, fmt.Errorf("unknown account %s", args.Account)
 	}
 	permN := permission.PermFlag(args.Permission) // already shifted
 	if !permN.IsValid() {
 		return false, permission.ErrInvalidPermission(permN)
 	}
-	hasPermission := HasPermission(state, acc, permN)
+	hasPermission := HasPermission(state, args.Account, permN)
 	logger.Trace.Log("function", "hasBase",
 		"address", args.Account.String(),
-		"account_base_permissions", acc.Permissions().Base,
 		"perm_flag", fmt.Sprintf("%b", permN),
 		"has_permission", hasPermission)
 	return hasBaseRets{Result: hasPermission}, nil
@@ -356,29 +359,23 @@ type setBaseRets struct {
 	Result uint64
 }
 
-func setBase(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
+func setBase(stateWriter Interface, caller crypto.Address, gas *uint64,
 	logger *logging.Logger, a interface{}) (interface{}, error) {
 	args := a.(*setBaseArgs)
 
-	acc, err := state.GetMutableAccount(stateWriter, args.Account)
-	if err != nil {
-		return 0, err
-	}
-	if acc == nil {
-		return 0, fmt.Errorf("unknown account %s", args.Account)
+	exists := stateWriter.Exists(args.Account)
+	if !exists {
+		return false, fmt.Errorf("unknown account %s", args.Account)
 	}
 	permN := permission.PermFlag(args.Permission)
 	if !permN.IsValid() {
 		return 0, permission.ErrInvalidPermission(permN)
 	}
-	if err = acc.MutablePermissions().Base.Set(permN, args.Set); err != nil {
-		return 0, err
-	}
-	stateWriter.UpdateAccount(acc)
+	stateWriter.SetPermission(args.Account, permN, args.Set)
 	logger.Trace.Log("function", "setBase", "address", args.Account.String(),
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", args.Permission)
-	return setBaseRets{Result: uint64(effectivePerm(acc.Permissions().Base, globalPerms(stateWriter)))}, nil
+	return setBaseRets{Result: uint64(permN)}, nil
 }
 
 type unsetBaseArgs struct {
@@ -390,30 +387,23 @@ type unsetBaseRets struct {
 	Result uint64
 }
 
-func unsetBase(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, a interface{}) (r interface{}, err error) {
+func unsetBase(stateWriter Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
+	a interface{}) (r interface{}, err error) {
 	args := a.(*unsetBaseArgs)
 
-	acc, err := state.GetMutableAccount(stateWriter, args.Account)
-	if err != nil {
-		return 0, err
-	}
-	if acc == nil {
-		return 0, fmt.Errorf("unknown account %s", args.Account)
+	if !stateWriter.Exists(args.Account) {
+		return false, fmt.Errorf("unknown account %s", args.Account)
 	}
 	permN := permission.PermFlag(args.Permission)
 	if !permN.IsValid() {
 		return 0, permission.ErrInvalidPermission(permN)
 	}
-	if err = acc.MutablePermissions().Base.Unset(permN); err != nil {
-		return 0, err
-	}
-	stateWriter.UpdateAccount(acc)
+	stateWriter.UnsetPermission(args.Account, permN)
 	logger.Trace.Log("function", "unsetBase", "address", args.Account.String(),
 		"perm_flag", fmt.Sprintf("%b", permN),
 		"permission_flag", fmt.Sprintf("%b", permN))
 
-	return unsetBaseRets{Result: uint64(effectivePerm(acc.Permissions().Base, globalPerms(stateWriter)))}, nil
+	return unsetBaseRets{Result: uint64(permN)}, nil
 }
 
 type setGlobalArgs struct {
@@ -425,30 +415,20 @@ type setGlobalRets struct {
 	Result uint64
 }
 
-func setGlobal(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, a interface{}) (r interface{}, err error) {
+func setGlobal(stateWriter Interface, caller crypto.Address, gas *uint64,
+	logger *logging.Logger, a interface{}) (interface{}, error) {
 
 	args := a.(*setGlobalArgs)
 
-	acc, err := state.GetMutableAccount(stateWriter, acm.GlobalPermissionsAddress)
-	if err != nil {
-		return 0, err
-	}
-	if acc == nil {
-		panic("cant find the global permissions account")
-	}
 	permN := permission.PermFlag(args.Permission)
 	if !permN.IsValid() {
 		return 0, permission.ErrInvalidPermission(permN)
 	}
-	if err = acc.MutablePermissions().Base.Set(permN, args.Set); err != nil {
-		return 0, err
-	}
-	stateWriter.UpdateAccount(acc)
+	stateWriter.SetPermission(acm.GlobalPermissionsAddress, permN, args.Set)
 	logger.Trace.Log("function", "setGlobal",
 		"permission_flag", fmt.Sprintf("%b", permN),
 		"permission_value", args.Set)
-	return setGlobalRets{Result: uint64(acc.Permissions().Base.ResultantPerms())}, nil
+	return setGlobalRets{Result: uint64(permN)}, nil
 }
 
 type hasRoleArgs struct {
@@ -460,18 +440,15 @@ type hasRoleRets struct {
 	Result bool
 }
 
-func hasRole(state state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, a interface{}) (r interface{}, err error) {
+func hasRole(st Interface, caller crypto.Address, gas *uint64,
+	logger *logging.Logger, a interface{}) (interface{}, error) {
 
 	args := a.(*hasRoleArgs)
-	acc, err := state.GetAccount(args.Account)
-	if err != nil {
-		return nil, err
+	perms := st.GetPermissions(args.Account)
+	if err := st.Error(); err != nil {
+		return false, fmt.Errorf("hasRole could not get permissions: %v", err)
 	}
-	if acc == nil {
-		return nil, fmt.Errorf("unknown account %s", args.Account)
-	}
-	hasRole := acc.Permissions().HasRole(args.Role)
+	hasRole := perms.HasRole(args.Role)
 	logger.Trace.Log("function", "hasRole", "address", args.Account.String(),
 		"role", args.Role,
 		"has_role", hasRole)
@@ -487,18 +464,10 @@ type addRoleRets struct {
 	Result bool
 }
 
-func addRole(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, v interface{}) (interface{}, error) {
+func addRole(stateWriter Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
+	v interface{}) (interface{}, error) {
 	args := v.(*addRoleArgs)
-	acc, err := state.GetMutableAccount(stateWriter, args.Account)
-	if err != nil {
-		return nil, err
-	}
-	if acc == nil {
-		return nil, fmt.Errorf("unknown account %s", args.Account)
-	}
-	roleAdded := acc.MutablePermissions().AddRole(args.Role)
-	stateWriter.UpdateAccount(acc)
+	roleAdded := stateWriter.AddRole(args.Account, args.Role)
 	logger.Trace.Log("function", "addRole", "address", args.Account.String(),
 		"role", args.Role,
 		"role_added", roleAdded)
@@ -514,36 +483,13 @@ type removeRoleRets struct {
 	Result bool
 }
 
-func removeRole(stateWriter state.ReaderWriter, caller acm.Account, gas *uint64,
-	logger *logging.Logger, a interface{}) (interface{}, error) {
+func removeRole(stateWriter Interface, caller crypto.Address, gas *uint64, logger *logging.Logger,
+	a interface{}) (interface{}, error) {
 	args := a.(*removeRoleArgs)
 
-	acc, err := state.GetMutableAccount(stateWriter, args.Account)
-	if err != nil {
-		return false, err
-	}
-	if acc == nil {
-		return false, fmt.Errorf("unknown account %s", args.Account)
-	}
-	roleRemoved := acc.MutablePermissions().RmRole(args.Role)
-	stateWriter.UpdateAccount(acc)
+	roleRemoved := stateWriter.RemoveRole(args.Account, args.Role)
 	logger.Trace.Log("function", "removeRole", "address", args.Account.String(),
 		"role", args.Role,
 		"role_removed", roleRemoved)
 	return removeRoleRets{Result: roleRemoved}, nil
-}
-
-//------------------------------------------------------------------------------------------------
-// Errors and utility funcs
-
-// Get the global BasePermissions
-func globalPerms(stateWriter state.ReaderWriter) permission.BasePermissions {
-	return state.GlobalAccountPermissions(stateWriter).Base
-}
-
-// Compute the effective permissions from an acm.Account's BasePermissions by
-// taking the bitwise or with the global BasePermissions resultant permissions
-func effectivePerm(basePerms permission.BasePermissions,
-	globalPerms permission.BasePermissions) permission.PermFlag {
-	return basePerms.ResultantPerms() | globalPerms.ResultantPerms()
 }

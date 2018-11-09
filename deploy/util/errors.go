@@ -24,9 +24,9 @@ func IfExit(err error) {
 	}
 }
 
-func ChainErrorHandler(do *def.Packages, err error) error {
+func ChainErrorHandler(account string, err error) error {
 	log.WithFields(log.Fields{
-		"defAddr": do.Package.Account,
+		"defAddr": account,
 		"rawErr":  err,
 	}).Error("")
 
@@ -35,10 +35,10 @@ There has been an error talking to your Burrow chain using account %s.
 
 %v
 
-`, do.Package.Account, err)
+`, account, err)
 }
 
-func ABIErrorHandler(do *def.Packages, err error, call *def.Call, query *def.QueryContract) (string, error) {
+func ABIErrorHandler(err error, call *def.Call, query *def.QueryContract) error {
 	switch {
 	case call != nil:
 		log.WithFields(log.Fields{
@@ -56,7 +56,7 @@ func ABIErrorHandler(do *def.Packages, err error, call *def.Call, query *def.Que
 		}).Error("ABI Error")
 	}
 
-	return "", fmt.Errorf(`
+	return fmt.Errorf(`
 There has been an error in finding or in using your ABI. ABI's are "Application Binary
 Interface" and they are what let us know how to talk to smart contracts.
 

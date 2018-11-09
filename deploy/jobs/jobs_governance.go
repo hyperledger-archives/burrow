@@ -9,8 +9,8 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
-func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []*abi.Variable, error) {
-	gov.Source = useDefault(gov.Source, do.Package.Account)
+func UpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client) (interface{}, []*abi.Variable, error) {
+	gov.Source = useDefault(gov.Source, account)
 	perms := make([]string, len(gov.Permissions))
 
 	for i, p := range gov.Permissions {
@@ -27,11 +27,11 @@ func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []
 	newAccountMatch := def.NewKeyRegex.FindStringSubmatch(gov.Target)
 	if len(newAccountMatch) > 0 {
 		keyName, curveType := def.KeyNameCurveType(newAccountMatch)
-		publicKey, err := do.CreateKey(keyName, curveType)
+		publicKey, err := client.CreateKey(keyName, curveType)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not create key for new account: %v", err)
 		}
-		arg.Address = publicKey.Address().String()
+		arg.Address = publicKey.GetAddress().String()
 		arg.PublicKey = publicKey.String()
 	} else if len(gov.Target) == crypto.AddressHexLength {
 		arg.Address = gov.Target
@@ -39,14 +39,14 @@ func UpdateAccountJob(gov *def.UpdateAccount, do *def.Packages) (interface{}, []
 		arg.PublicKey = gov.Target
 	}
 
-	tx, err := do.UpdateAccount(arg)
+	tx, err := client.UpdateAccount(arg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txe, err := do.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return nil, nil, util.ChainErrorHandler(do, err)
+		return nil, nil, util.ChainErrorHandler(account, err)
 	}
 
 	util.ReadTxSignAndBroadcast(txe, err)

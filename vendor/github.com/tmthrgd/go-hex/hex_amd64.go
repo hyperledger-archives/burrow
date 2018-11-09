@@ -26,10 +26,13 @@ func RawEncode(dst, src, alpha []byte) int {
 		return 0
 	}
 
-	if cpu.X86.HasAVX {
+	switch {
+	case cpu.X86.HasAVX:
 		encodeAVX(&dst[0], &src[0], uint64(len(src)), &alpha[0])
-	} else {
+	case cpu.X86.HasSSE41:
 		encodeSSE(&dst[0], &src[0], uint64(len(src)), &alpha[0])
+	default:
+		encodeGeneric(dst, src, alpha)
 	}
 
 	return len(src) * 2
@@ -56,10 +59,13 @@ func Decode(dst, src []byte) (int, error) {
 		n  uint64
 		ok bool
 	)
-	if cpu.X86.HasAVX {
+	switch {
+	case cpu.X86.HasAVX:
 		n, ok = decodeAVX(&dst[0], &src[0], uint64(len(src)))
-	} else {
+	case cpu.X86.HasSSE41:
 		n, ok = decodeSSE(&dst[0], &src[0], uint64(len(src)))
+	default:
+		n, ok = decodeGeneric(dst, src)
 	}
 
 	if !ok {

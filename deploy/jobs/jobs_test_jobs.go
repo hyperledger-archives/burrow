@@ -11,10 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*abi.Variable, error) {
+func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
 	var queryDataArray []string
 	var err error
-	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, false)
+	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, client, false)
 	if err != nil {
 		return "", nil, err
 	}
@@ -31,12 +31,12 @@ func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*ab
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
-		var str, err = util.ABIErrorHandler(do, err, nil, query)
-		return str, nil, err
+		var err = util.ABIErrorHandler(err, nil, query)
+		return "", nil, err
 	}
 
 	// Call the client
-	txe, err := do.QueryContract(&def.QueryArg{
+	txe, err := client.QueryContract(&def.QueryArg{
 		Input:   query.Source,
 		Address: query.Destination,
 		Data:    data,
@@ -69,12 +69,12 @@ func QueryContractJob(query *def.QueryContract, do *def.Packages) (string, []*ab
 	return result2, query.Variables, nil
 }
 
-func QueryAccountJob(query *def.QueryAccount, do *def.Packages) (string, error) {
+func QueryAccountJob(query *def.QueryAccount, client *def.Client) (string, error) {
 	// Perform Query
 	arg := fmt.Sprintf("%s:%s", query.Account, query.Field)
 	log.WithField("=>", arg).Info("Querying Account")
 
-	result, err := util.AccountsInfo(query.Account, query.Field, do)
+	result, err := util.AccountsInfo(query.Account, query.Field, client)
 	if err != nil {
 		return "", err
 	}
@@ -88,13 +88,13 @@ func QueryAccountJob(query *def.QueryAccount, do *def.Packages) (string, error) 
 	return result, nil
 }
 
-func QueryNameJob(query *def.QueryName, do *def.Packages) (string, error) {
+func QueryNameJob(query *def.QueryName, client *def.Client) (string, error) {
 	// Peform query
 	log.WithFields(log.Fields{
 		"name":  query.Name,
 		"field": query.Field,
 	}).Info("Querying")
-	result, err := util.NamesInfo(query.Name, query.Field, do)
+	result, err := util.NamesInfo(query.Name, query.Field, client)
 	if err != nil {
 		return "", err
 	}
@@ -107,9 +107,9 @@ func QueryNameJob(query *def.QueryName, do *def.Packages) (string, error) {
 	return result, nil
 }
 
-func QueryValsJob(query *def.QueryVals, do *def.Packages) (interface{}, error) {
+func QueryValsJob(query *def.QueryVals, client *def.Client) (interface{}, error) {
 	log.WithField("=>", query.Query).Info("Querying Vals")
-	result, err := util.ValidatorsInfo(query.Query, do)
+	result, err := util.ValidatorsInfo(query.Query, client)
 	if err != nil {
 		return "", fmt.Errorf("error querying validators with jq-style query %s: %v", query.Query, err)
 	}
@@ -122,7 +122,7 @@ func QueryValsJob(query *def.QueryVals, do *def.Packages) (interface{}, error) {
 	return result, nil
 }
 
-func AssertJob(assertion *def.Assert, do *def.Packages) (string, error) {
+func AssertJob(assertion *def.Assert) (string, error) {
 	var result string
 
 	// Switch on relation

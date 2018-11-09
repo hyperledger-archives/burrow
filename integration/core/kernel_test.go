@@ -129,7 +129,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 		testConfig.Tendermint.TendermintConfig(),
 		testConfig.RPC,
 		testConfig.Keys,
-		keyStore, nil, logger)
+		keyStore, nil, testConfig.Tendermint.DefaultAuthorizedPeersProvider(), logger)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 		return err
 	}
 
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	// Generate a few transactions
 	for i := 0; i < 3; i++ {

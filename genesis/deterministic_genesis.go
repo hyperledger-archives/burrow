@@ -31,8 +31,8 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		account, privAccount := dg.Account(randBalance, minBalance)
 		accounts[i] = Account{
 			BasicAccount: BasicAccount{
-				Address: account.Address(),
-				Amount:  account.Balance(),
+				Address: account.GetAddress(),
+				Amount:  account.Balance,
 			},
 			Permissions: defaultPerms.Clone(), // This will get copied into each state.Account.
 		}
@@ -45,13 +45,13 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 		privValidators[i] = validator
 		validators[i] = Validator{
 			BasicAccount: BasicAccount{
-				Address:   validator.Address(),
-				PublicKey: validator.PublicKey(),
+				Address:   validator.GetAddress(),
+				PublicKey: validator.GetPublicKey(),
 				Amount:    uint64(dg.random.Int63()),
 			},
 			UnbondTo: []BasicAccount{
 				{
-					Address: validator.Address(),
+					Address: validator.GetAddress(),
 					Amount:  uint64(dg.random.Int63()),
 				},
 			},
@@ -66,7 +66,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 
 }
 
-func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (acm.Account, *acm.PrivateAccount) {
+func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (*acm.Account, *acm.PrivateAccount) {
 	privateKey, err := crypto.GeneratePrivateKey(dg.random, crypto.CurveTypeEd25519)
 	if err != nil {
 		panic(fmt.Errorf("could not generate private key deterministically"))
@@ -74,10 +74,10 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 	privAccount := &acm.ConcretePrivateAccount{
 		PublicKey:  privateKey.GetPublicKey(),
 		PrivateKey: privateKey,
-		Address:    privateKey.GetPublicKey().Address(),
+		Address:    privateKey.GetPublicKey().GetAddress(),
 	}
 	perms := permission.DefaultAccountPermissions
-	acc := &acm.ConcreteAccount{
+	acc := &acm.Account{
 		Address:     privAccount.Address,
 		PublicKey:   privAccount.PublicKey,
 		Sequence:    uint64(dg.random.Int()),
@@ -87,5 +87,5 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (ac
 	if randBalance {
 		acc.Balance += uint64(dg.random.Int())
 	}
-	return acc.Account(), privAccount.PrivateAccount()
+	return acc, privAccount.PrivateAccount()
 }

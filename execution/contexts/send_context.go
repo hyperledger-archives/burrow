@@ -19,9 +19,9 @@ type SendContext struct {
 	tx          *payload.SendTx
 }
 
-func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
+func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
-	ctx.tx, ok = txe.Envelope.Tx.Payload.(*payload.SendTx)
+	ctx.tx, ok = p.(*payload.SendTx)
 	if !ok {
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
@@ -69,7 +69,10 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution) error {
 	}
 
 	for _, acc := range accounts {
-		ctx.StateWriter.UpdateAccount(acc)
+		err = ctx.StateWriter.UpdateAccount(acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, i := range ctx.tx.Inputs {

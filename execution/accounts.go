@@ -19,7 +19,7 @@ type Accounts struct {
 }
 
 type SigningAccount struct {
-	acm.Account
+	*acm.Account
 	crypto.Signer
 }
 
@@ -41,21 +41,21 @@ func (accs *Accounts) SigningAccount(address crypto.Address) (*SigningAccount, e
 	if err != nil {
 		return nil, err
 	}
-	account, err := state.GetMutableAccount(accs, address)
+	account, err := accs.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}
 	// If the account is unknown to us return a zeroed account
 	if account == nil {
-		account = acm.ConcreteAccount{
+		account = &acm.Account{
 			Address: address,
-		}.MutableAccount()
+		}
 	}
 	pubKey, err := accs.keyClient.PublicKey(address)
 	if err != nil {
 		return nil, err
 	}
-	account.SetPublicKey(pubKey)
+	account.PublicKey = pubKey
 	return &SigningAccount{
 		Account: account,
 		Signer:  signer,

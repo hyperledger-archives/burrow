@@ -96,3 +96,42 @@ func MustDecodeString(str string) []byte {
 
 	return dst
 }
+
+func encodeGeneric(dst, src, alpha []byte) {
+	for i, v := range src {
+		dst[i*2] = alpha[v>>4]
+		dst[i*2+1] = alpha[v&0x0f]
+	}
+}
+
+func decodeGeneric(dst, src []byte) (uint64, bool) {
+	for i := 0; i < len(src)/2; i++ {
+		a, ok := fromHexChar(src[i*2])
+		if !ok {
+			return uint64(i * 2), false
+		}
+
+		b, ok := fromHexChar(src[i*2+1])
+		if !ok {
+			return uint64(i*2 + 1), false
+		}
+
+		dst[i] = (a << 4) | b
+	}
+
+	return 0, true
+}
+
+// fromHexChar converts a hex character into its value and a success flag.
+func fromHexChar(c byte) (byte, bool) {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0', true
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10, true
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10, true
+	}
+
+	return 0, false
+}

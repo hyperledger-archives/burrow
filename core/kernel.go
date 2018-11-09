@@ -68,6 +68,7 @@ type Kernel struct {
 	State      *execution.State
 	Blockchain *bcm.Blockchain
 	Node       *tendermint.Node
+	Transactor *execution.Transactor
 	// Time-based UUID randomly generated each time Burrow is started
 	RunID          simpleuuid.UUID
 	Logger         *logging.Logger
@@ -79,7 +80,7 @@ type Kernel struct {
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, logger *logging.Logger) (*Kernel, error) {
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, logger *logging.Logger) (*Kernel, error) {
 
 	var err error
 	kern := &Kernel{
@@ -121,7 +122,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, kern.Panic, logger)
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, authorizedPeersProvider, kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
 	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
@@ -133,10 +134,11 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		return nil, err
 	}
 
-	transactor := execution.NewTransactor(kern.Blockchain, kern.Emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
 		kern.Node.MempoolReactor().BroadcastTx, txCodec, kern.Logger)
 
 	nameRegState := kern.State
+	proposalRegState := kern.State
 	accountState := kern.State
 	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec, kern.RunID)
 	if err != nil {
@@ -243,10 +245,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 					keys.RegisterKeysServer(grpcServer, ks)
 				}
 
-				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState,
+				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
 					kern.Blockchain, nodeView, kern.Logger))
 
-				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(transactor, txCodec))
+				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))
 
 				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
 					kern.Emitter, kern.Blockchain, kern.Logger))

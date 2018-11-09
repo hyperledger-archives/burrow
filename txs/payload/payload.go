@@ -26,9 +26,10 @@ type Type uint32
 const (
 	TypeUnknown = Type(0x00)
 	// Account transactions
-	TypeSend = Type(0x01)
-	TypeCall = Type(0x02)
-	TypeName = Type(0x03)
+	TypeSend  = Type(0x01)
+	TypeCall  = Type(0x02)
+	TypeName  = Type(0x03)
+	TypeBatch = Type(0x04)
 
 	// Validation transactions
 	TypeBond   = Type(0x11)
@@ -37,6 +38,7 @@ const (
 	// Admin transactions
 	TypePermissions = Type(0x21)
 	TypeGovernance  = Type(0x22)
+	TypeProposal    = Type(0x23)
 )
 
 var nameFromType = map[Type]string{
@@ -44,10 +46,12 @@ var nameFromType = map[Type]string{
 	TypeSend:        "SendTx",
 	TypeCall:        "CallTx",
 	TypeName:        "NameTx",
+	TypeBatch:       "BatchTx",
 	TypeBond:        "BondTx",
 	TypeUnbond:      "UnbondTx",
 	TypePermissions: "PermsTx",
 	TypeGovernance:  "GovTx",
+	TypeProposal:    "ProposalTx",
 }
 
 var typeFromName = make(map[string]Type)
@@ -105,6 +109,8 @@ func New(txType Type) (Payload, error) {
 		return &CallTx{}, nil
 	case TypeName:
 		return &NameTx{}, nil
+	case TypeBatch:
+		return &BatchTx{}, nil
 	case TypeBond:
 		return &BondTx{}, nil
 	case TypeUnbond:
@@ -113,6 +119,8 @@ func New(txType Type) (Payload, error) {
 		return &PermsTx{}, nil
 	case TypeGovernance:
 		return &GovTx{}, nil
+	case TypeProposal:
+		return &ProposalTx{}, nil
 	}
 	return nil, fmt.Errorf("unknown payload type: %d", txType)
 }

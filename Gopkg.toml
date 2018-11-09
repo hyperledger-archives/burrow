@@ -34,6 +34,16 @@
 [[constraint]]
   name = "golang.org/x/net"
   revision = "292b43bbf7cb8d35ddf40f8d5100ef3837cced3f"
+
+[[override]]
+  name = "github.com/gogo/protobuf"
+  branch = "master"
+
+# v1.1.0 breaks load_package_test.go
+[[override]]
+  name = "github.com/mitchellh/mapstructure"
+  revision = "v1.0.0"
+
 #
 #[[override]]
 #  name = "github.com/gogo/protobuf"

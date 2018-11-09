@@ -82,6 +82,14 @@ func (bc Bytecode) Size() int {
 	return len(bc)
 }
 
+func (bc Bytecode) MustTokens() []string {
+	tokens, err := bc.Tokens()
+	if err != nil {
+		panic(err)
+	}
+	return tokens
+}
+
 // Tokenises the bytecode into opcodes and values
 func (bc Bytecode) Tokens() ([]string, error) {
 	// Overestimate of capacity in the presence of pushes

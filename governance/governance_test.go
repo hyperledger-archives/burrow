@@ -11,7 +11,7 @@ import (
 
 func TestSerialise(t *testing.T) {
 	priv := acm.GeneratePrivateAccountFromSecret("hhelo")
-	tx := AlterPowerTx(priv.Address(), priv, 3242323)
+	tx := AlterPowerTx(priv.GetAddress(), priv, 3242323)
 	txEnv := txs.Enclose("OOh", tx)
 
 	txe := exec.NewTxExecution(txEnv)

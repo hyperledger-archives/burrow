@@ -35,7 +35,8 @@ import (
 )
 
 const (
-	BlockingTimeout     = 10 * time.Second
+	BlockingTimeout = 1000 * time.Second
+	//BlockingTimeout     = 10 * time.Second
 	SubscribeBufferSize = 10
 )
 
@@ -106,8 +107,9 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 			checkTxReceipt.TxHash, BlockingTimeout)
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
-		if txe.Exception != nil && txe.Exception.ErrorCode() != errors.ErrorCodeExecutionReverted {
-			return nil, errors.Wrap(txe.Exception, "exception during transaction execution")
+		callError := txe.CallError()
+		if callError != nil && callError.ErrorCode() != errors.ErrorCodeExecutionReverted {
+			return nil, errors.Wrap(callError, "exception during transaction execution")
 		}
 		return txe, nil
 	}
@@ -179,7 +181,7 @@ func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, Unlo
 		unlockers[i] = unlock
 		signers[i] = sa
 		// Set sequence number consecutively from mempool
-		input.Sequence = sa.Sequence() + 1
+		input.Sequence = sa.Sequence + 1
 	}
 
 	err := txEnv.Sign(signers...)

@@ -30,7 +30,7 @@ func TestCallTxNoCode(t *testing.T) {
 	cli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 
 	// Flip flops between sending private key and input address to test private key and address based signing
-	toAddress := rpctest.PrivateAccounts[2].Address()
+	toAddress := rpctest.PrivateAccounts[2].GetAddress()
 
 	numCreates := 1000
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
@@ -139,7 +139,7 @@ func TestSendTxAsync(t *testing.T) {
 				Amount:  2003,
 			}},
 			Outputs: []*payload.TxOutput{{
-				Address: rpctest.PrivateAccounts[3].Address(),
+				Address: rpctest.PrivateAccounts[3].GetAddress(),
 				Amount:  2003,
 			}},
 		})
@@ -191,7 +191,8 @@ func TestCallContract(t *testing.T) {
 	assert.NotEqual(t, 0, len(txe.TxHash), "Receipt should contain a"+
 		" transaction hash")
 	contractAddress := txe.Receipt.ContractAddress
-	assert.NotEqual(t, 0, len(contractAddress), "Transactions claims to have"+
+	fmt.Printf("%v\n", txe.Receipt.ContractAddress)
+	assert.NotEqual(t, crypto.ZeroAddress, contractAddress, "Transactions claims to have"+
 		" created a contract but the contract address is empty")
 
 	txe, err = cli.CallTxSync(context.Background(), &payload.CallTx{
@@ -283,8 +284,10 @@ func TestLogEvents(t *testing.T) {
 	log := evs[0]
 	var direction string
 	var depth int64
-	err = abi.UnpackEvent(spec.Events["ChangeLevel"], log.Topics, log.Data, &direction, &depth)
+	evAbi := spec.Events["ChangeLevel"]
+	err = abi.UnpackEvent(evAbi, log.Topics, log.Data, &direction, &depth)
 	require.NoError(t, err)
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	assert.Equal(t, int64(18), depth)
 	assert.Equal(t, "Upsie!", direction)
 }
@@ -302,6 +305,8 @@ func TestEventEmitter(t *testing.T) {
 	log := evs[0]
 	evAbi := spec.Events["ManyTypes"]
 	data := abi.GetPackingTypes(evAbi.Inputs)
+	// Check signature
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
 	require.NoError(t, err)
 
@@ -310,6 +315,7 @@ func TestEventEmitter(t *testing.T) {
 	expectedHash := h.Sum(nil)
 	// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
 	b := *data[0].(*[]byte)
+	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	assert.Equal(t, "Downsie!", string(bytes.Trim(b, "\x00")))
 	assert.Equal(t, true, *data[1].(*bool))
 	assert.Equal(t, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", *data[2].(*string))
@@ -378,6 +384,7 @@ func TestRevertWithoutReason(t *testing.T) {
 	require.NoError(t, err)
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+	fmt.Println(txe.Exception)
 	fmt.Printf("%x\n", txe.Result.Return)
 	revertReason, err := abi.UnpackRevert(txe.Result.Return)
 	require.NoError(t, err)

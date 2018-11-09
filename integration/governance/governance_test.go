@@ -29,7 +29,7 @@ import (
 )
 
 func TestAlterValidators(t *testing.T) {
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
@@ -79,13 +79,13 @@ func TestAlterValidators(t *testing.T) {
 
 func TestAlterValidatorsTooQuickly(t *testing.T) {
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
 
 	maxFlow := getMaxFlow(t, qcli)
 	acc1 := acm.GeneratePrivateAccountFromSecret("Foo1")
-	t.Logf("Changing power of new account %v to MaxFlow = %d that should succeed", acc1.Address(), maxFlow)
+	t.Logf("Changing power of new account %v to MaxFlow = %d that should succeed", acc1.GetAddress(), maxFlow)
 
 	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, acc1, maxFlow))
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestAlterValidatorsTooQuickly(t *testing.T) {
 	maxFlow = getMaxFlow(t, qcli)
 	power := maxFlow + 1
 	acc2 := acm.GeneratePrivateAccountFromSecret("Foo2")
-	t.Logf("Changing power of new account %v to MaxFlow + 1 = %d that should fail", acc2.Address(), power)
+	t.Logf("Changing power of new account %v to MaxFlow + 1 = %d that should fail", acc2.GetAddress(), power)
 
 	_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, acc2, power))
 	require.Error(t, err)
@@ -103,14 +103,14 @@ func TestNoRootPermission(t *testing.T) {
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	// Account does not have Root permission
-	inputAddress := privateAccounts[4].Address()
+	inputAddress := privateAccounts[4].GetAddress()
 	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errors.PermissionDenied{Address: inputAddress, Perm: permission.Root}.Error())
 }
 
 func TestAlterAmount(t *testing.T) {
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
@@ -118,7 +118,7 @@ func TestAlterAmount(t *testing.T) {
 	acc := account(5)
 	_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 	require.NoError(t, err)
-	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
+	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 	require.NoError(t, err)
 	assert.Equal(t, amount, ca.Balance)
 	// Check we haven't altered permissions
@@ -126,14 +126,14 @@ func TestAlterAmount(t *testing.T) {
 }
 
 func TestAlterPermissions(t *testing.T) {
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
 	acc := account(5)
 	_, err := govSync(tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
 	require.NoError(t, err)
-	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
+	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 	require.NoError(t, err)
 	assert.Equal(t, permission.AccountPermissions{
 		Base: permission.BasePermissions{
@@ -144,7 +144,7 @@ func TestAlterPermissions(t *testing.T) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 	qcli := rpctest.NewQueryClient(t, grpcAddress)
@@ -152,19 +152,19 @@ func TestCreateAccount(t *testing.T) {
 	acc := acm.GeneratePrivateAccountFromSecret("we almost certainly don't exist")
 	_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 	require.NoError(t, err)
-	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.Address()})
+	ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 	require.NoError(t, err)
 	assert.Equal(t, amount, ca.Balance)
 }
 
 func TestChangePowerByAddress(t *testing.T) {
 	// Should use the key client to look up public key
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	tcli := rpctest.NewTransactClient(t, grpcAddress)
 
 	acc := account(2)
-	address := acc.Address()
+	address := acc.GetAddress()
 	power := uint64(2445)
 	_, err := govSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 		Address: &address,
@@ -175,14 +175,14 @@ func TestChangePowerByAddress(t *testing.T) {
 }
 
 func TestInvalidSequenceNumber(t *testing.T) {
-	inputAddress := privateAccounts[0].Address()
+	inputAddress := privateAccounts[0].GetAddress()
 	tcli1 := rpctest.NewTransactClient(t, testConfigs[0].RPC.GRPC.ListenAddress)
 	tcli2 := rpctest.NewTransactClient(t, testConfigs[4].RPC.GRPC.ListenAddress)
 	qcli := rpctest.NewQueryClient(t, testConfigs[0].RPC.GRPC.ListenAddress)
 
 	acc := account(2)
-	address := acc.Address()
-	publicKey := acc.PublicKey()
+	address := acc.GetAddress()
+	publicKey := acc.GetPublicKey()
 	power := uint64(2445)
 	tx := governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 		Address:   &address,
@@ -239,7 +239,7 @@ func assertValidatorsEqual(t testing.TB, expected, actual *validator.Set) {
 }
 
 func alterPower(vs *validator.Set, i int, power uint64) {
-	vs.AlterPower(account(i).PublicKey(), new(big.Int).SetUint64(power))
+	vs.AlterPower(account(i).GetPublicKey(), new(big.Int).SetUint64(power))
 }
 
 func setSequence(t testing.TB, qcli rpcquery.QueryClient, tx payload.Payload) {

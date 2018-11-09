@@ -11,47 +11,67 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type trackJob struct {
-	payload      def.Payload
-	job          *def.Job
+type intermediateJob struct {
 	contractName string
 	compilerResp *compilers.Response
 	err          error
 	done         chan struct{}
 }
 
-func concurrentJobRunner(jobs chan *trackJob) {
+func intermediateJobRunner(jobs chan *intermediateJob) {
 	for {
-		track, ok := <-jobs
+		intermediate, ok := <-jobs
 		if !ok {
 			break
 		}
-		(*track).compilerResp, (*track).err = compilers.Compile(track.contractName, false, nil)
-		close(track.done)
+		resp, err := compilers.Compile(intermediate.contractName, false, nil)
+		(*intermediate).compilerResp = resp
+		(*intermediate).err = err
+		close(intermediate.done)
 	}
 }
 
-func DoJobs(do *def.Packages) error {
-	jobs := make(chan *trackJob, do.Jobs*2)
-	defer close(jobs)
-	return RunJobs(do, jobs)
-}
-
-func RunJobs(do *def.Packages, jobs chan *trackJob) error {
-
-	// Dial the chain if needed
-	err, needed := burrowConnectionNeeded(do)
+func queueCompilerWork(job *def.Job, jobs chan *intermediateJob) error {
+	payload, err := job.Payload()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get Job payload: %v", payload)
 	}
 
-	if needed {
-		err = do.Dial()
-		if err != nil {
-			return err
+	// Do compilation first
+	switch payload.(type) {
+	case *def.Build:
+		intermediate := intermediateJob{done: make(chan struct{}), contractName: job.Build.Contract}
+		job.Intermediate = &intermediate
+		jobs <- &intermediate
+	case *def.Deploy:
+		if filepath.Ext(job.Deploy.Contract) == ".sol" {
+			intermediate := intermediateJob{done: make(chan struct{}), contractName: job.Deploy.Contract}
+			job.Intermediate = &intermediate
+			jobs <- &intermediate
+		}
+	case *def.Proposal:
+		for _, job := range job.Proposal.Jobs {
+			err = queueCompilerWork(job, jobs)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
+	return nil
+}
+
+func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
+	if intermediate, ok := intermediate.(*intermediateJob); ok {
+		<-intermediate.done
+
+		return intermediate.compilerResp, intermediate.err
+	}
+
+	return nil, fmt.Errorf("internal error: no compiler work queued")
+}
+
+func DoJobs(do *def.DeployArgs, client *def.Client) error {
 	// ADD DefaultAddr and DefaultSet to jobs array....
 	// These work in reverse order and the addendums to the
 	// the ordering from the loading process is lifo
@@ -63,15 +83,21 @@ func RunJobs(do *def.Packages, jobs chan *trackJob) error {
 		defaultAddrJob(do)
 	}
 
-	err = do.Validate()
+	err := do.Validate()
 	if err != nil {
 		return fmt.Errorf("error validating Burrow deploy file at %s: %v", do.YAMLPath, err)
 	}
 
-	intermediateJobs := make([]*trackJob, 0, len(do.Package.Jobs))
+	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
+	jobs := make(chan *intermediateJob, do.Jobs*2)
+	defer close(jobs)
 
 	for i := 0; i < do.Jobs; i++ {
-		go concurrentJobRunner(jobs)
+		go intermediateJobRunner(jobs)
+	}
+
+	for _, job := range do.Package.Jobs {
+		queueCompilerWork(job, jobs)
 	}
 
 	for _, job := range do.Package.Jobs {
@@ -80,56 +106,31 @@ func RunJobs(do *def.Packages, jobs chan *trackJob) error {
 			return fmt.Errorf("could not get Job payload: %v", payload)
 		}
 
-		track := trackJob{job: job, payload: payload}
-		intermediateJobs = append(intermediateJobs, &track)
-
-		// Do compilation first
-		switch payload.(type) {
-		case *def.Build:
-			track.done = make(chan struct{})
-			track.contractName = job.Build.Contract
-			jobs <- &track
-		case *def.Deploy:
-			if filepath.Ext(job.Deploy.Contract) == ".sol" {
-				track.done = make(chan struct{})
-				track.contractName = job.Deploy.Contract
-				jobs <- &track
-			}
-		}
-	}
-
-	for _, m := range intermediateJobs {
-		job := m.job
-
-		err = util.PreProcessFields(m.payload, do)
+		err = util.PreProcessFields(payload, do, client)
 		if err != nil {
 			return err
 		}
 		// Revalidate with possible replacements
-		err = m.payload.Validate()
+		err = payload.Validate()
 		if err != nil {
 			return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
 		}
 
-		if m.done != nil {
-			<-m.done
+		switch payload.(type) {
+		case *def.Proposal:
+			announce(job.Name, "Proposal")
+			job.Result, err = ProposalJob(job.Proposal, do, client)
 
-			if m.err != nil {
-				return m.err
-			}
-		}
-
-		switch m.payload.(type) {
 		// Meta Job
 		case *def.Meta:
 			announce(job.Name, "Meta")
 			do.CurrentOutput = fmt.Sprintf("%s.output.json", job.Name)
-			job.Result, err = MetaJob(job.Meta, do, jobs)
+			job.Result, err = MetaJob(job.Meta, do, client)
 
 		// Governance
 		case *def.UpdateAccount:
 			announce(job.Name, "UpdateAccount")
-			job.Result, job.Variables, err = UpdateAccountJob(job.UpdateAccount, do)
+			job.Result, job.Variables, err = UpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
 
 		// Util jobs
 		case *def.Account:
@@ -142,49 +143,58 @@ func RunJobs(do *def.Packages, jobs chan *trackJob) error {
 		// Transaction jobs
 		case *def.Send:
 			announce(job.Name, "Sent")
-			job.Result, err = SendJob(job.Send, do)
+			job.Result, err = SendJob(job.Send, do.Package.Account, client)
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName")
-			job.Result, err = RegisterNameJob(job.RegisterName, do)
+			job.Result, err = RegisterNameJob(job.RegisterName, do, client)
 		case *def.Permission:
 			announce(job.Name, "Permission")
-			job.Result, err = PermissionJob(job.Permission, do)
+			job.Result, err = PermissionJob(job.Permission, do.Package.Account, client)
 
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			job.Result, err = DeployJob(job.Deploy, do, m.compilerResp)
+			job.Result, err = DeployJob(job.Deploy, do, client, job.Intermediate)
 		case *def.Call:
 			announce(job.Name, "Call")
-			job.Result, job.Variables, err = CallJob(job.Call, do)
+			CallTx, ferr := FormulateCallJob(job.Call, do, client)
+			if ferr != nil {
+				return ferr
+			}
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, do, client)
 		case *def.Build:
 			announce(job.Name, "Build")
-			job.Result, err = BuildJob(job.Build, do, m.compilerResp)
+			var resp *compilers.Response
+			resp, err = getCompilerWork(job.Intermediate)
+			if err != nil {
+				return err
+			}
+			job.Result, err = BuildJob(job.Build, do.BinPath, resp)
 
 		// State jobs
 		case *def.RestoreState:
 			announce(job.Name, "RestoreState")
-			job.Result, err = RestoreStateJob(job.RestoreState, do)
+			job.Result, err = RestoreStateJob(job.RestoreState)
 		case *def.DumpState:
 			announce(job.Name, "DumpState")
-			job.Result, err = DumpStateJob(job.DumpState, do)
+			job.Result, err = DumpStateJob(job.DumpState)
 
 		// Test jobs
 		case *def.QueryAccount:
 			announce(job.Name, "QueryAccount")
-			job.Result, err = QueryAccountJob(job.QueryAccount, do)
+			job.Result, err = QueryAccountJob(job.QueryAccount, client)
 		case *def.QueryContract:
 			announce(job.Name, "QueryContract")
-			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do)
+			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do, client)
 		case *def.QueryName:
 			announce(job.Name, "QueryName")
-			job.Result, err = QueryNameJob(job.QueryName, do)
+			job.Result, err = QueryNameJob(job.QueryName, client)
 		case *def.QueryVals:
 			announce(job.Name, "QueryVals")
-			job.Result, err = QueryValsJob(job.QueryVals, do)
+			job.Result, err = QueryValsJob(job.QueryVals, client)
 		case *def.Assert:
 			announce(job.Name, "Assert")
-			job.Result, err = AssertJob(job.Assert, do)
+			job.Result, err = AssertJob(job.Assert)
 
 		default:
 			log.Error("")
@@ -213,7 +223,14 @@ func announce(job, typ string) {
 	log.Warn("\n")
 }
 
-func defaultAddrJob(do *def.Packages) {
+func announceProposalJob(job, typ string) {
+	log.Warn("*****Capturing Proposal Job*****\n")
+	log.WithField("=>", job).Warn("Job Name")
+	log.WithField("=>", typ).Info("Type")
+	log.Warn("\n")
+}
+
+func defaultAddrJob(do *def.DeployArgs) {
 	oldJobs := do.Package.Jobs
 
 	newJob := &def.Job{
@@ -226,7 +243,7 @@ func defaultAddrJob(do *def.Packages) {
 	do.Package.Jobs = append([]*def.Job{newJob}, oldJobs...)
 }
 
-func defaultSetJobs(do *def.Packages) {
+func defaultSetJobs(do *def.DeployArgs) {
 	oldJobs := do.Package.Jobs
 
 	newJobs := []*def.Job{}
@@ -246,7 +263,7 @@ func defaultSetJobs(do *def.Packages) {
 	do.Package.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.Packages) error {
+func postProcess(do *def.DeployArgs) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
 	for _, job := range do.Package.Jobs {
@@ -276,27 +293,4 @@ func postProcess(do *def.Packages) error {
 	// Write the output
 	log.Warn(fmt.Sprintf("Writing [%s] to current directory", do.DefaultOutput))
 	return WriteJobResultJSON(results, do.DefaultOutput)
-}
-
-func burrowConnectionNeeded(do *def.Packages) (error, bool) {
-	// Dial the chain if needed
-	for _, job := range do.Package.Jobs {
-		payload, err := job.Payload()
-		if err != nil {
-			return fmt.Errorf("could not get Job payload: %v", payload), false
-		}
-		switch payload.(type) {
-		case *def.Meta:
-			// A meta jobs will call runJobs again, so it does not need a connection for itself
-			continue
-		case *def.Build:
-			continue
-		case *def.Set:
-			continue
-		default:
-			return nil, true
-		}
-	}
-
-	return nil, false
 }

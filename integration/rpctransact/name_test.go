@@ -88,7 +88,7 @@ func TestNameReg(t *testing.T) {
 	// try to update as non owner, should fail
 	txe, err = tcli.NameTxSync(context.Background(), &payload.NameTx{
 		Input: &payload.TxInput{
-			Address: rpctest.PrivateAccounts[1].Address(),
+			Address: rpctest.PrivateAccounts[1].GetAddress(),
 			Amount:  names.NameCostForExpiryIn(name, data, numDesiredBlocks),
 		},
 		Name: name,
@@ -100,7 +100,7 @@ func TestNameReg(t *testing.T) {
 	waitNBlocks(t, numDesiredBlocks)
 	//now the entry should be expired, so we can update as non owner
 	const data2 = "this is not my beautiful house"
-	owner := rpctest.PrivateAccounts[3].Address()
+	owner := rpctest.PrivateAccounts[3].GetAddress()
 	txe = rpctest.UpdateName(t, tcli, owner, name, data2, numDesiredBlocks)
 	entry = txe.Result.NameEntry
 

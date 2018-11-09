@@ -70,7 +70,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-	signer, err := keys.AddressableSigner(keyClient, val.Address())
+	signer, err := keys.AddressableSigner(keyClient, val.GetAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	}
 
 	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		conf.Keys, keyStore, exeOptions, logger)
+		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

@@ -180,7 +180,7 @@ func doSends(t *testing.T, numSends int, cli rpctransact.TransactClient) {
 					Amount:  amt,
 				}},
 				Outputs: []*payload.TxOutput{{
-					Address: rpctest.PrivateAccounts[4].Address(),
+					Address: rpctest.PrivateAccounts[4].GetAddress(),
 					Amount:  amt,
 				}},
 			})

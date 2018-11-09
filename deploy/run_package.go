@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.Packages) error {
+func RunPackage(do *def.DeployArgs, client *def.Client) error {
 	var err error
 	var pwd string
 
@@ -53,7 +53,7 @@ func RunPackage(do *def.Packages) error {
 	}
 
 	// useful for debugging
-	printPathPackage(do)
+	printPathPackage(client)
 
 	// Load the package if it doesn't exist
 	if do.Package == nil {
@@ -73,10 +73,10 @@ func RunPackage(do *def.Packages) error {
 		}
 	}
 
-	return jobs.DoJobs(do)
+	return jobs.DoJobs(do, client)
 }
 
-func printPathPackage(do *def.Packages) {
-	log.WithField("=>", do.ChainURL).Info("With ChainURL")
-	log.WithField("=>", do.Signer).Info("Using Signer at")
+func printPathPackage(client *def.Client) {
+	log.WithField("=>", client.ChainAddress).Info("With ChainURL")
+	log.WithField("=>", client.KeysClientAddress).Info("Using Signer at")
 }

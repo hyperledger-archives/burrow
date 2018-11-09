@@ -21,8 +21,7 @@ import (
 func TestStatus(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
 	status, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
-	require.NoError(t, err)
-	assert.Equal(t, rpctest.PrivateAccounts[0].PublicKey(), status.ValidatorInfo.PublicKey)
+	assert.Equal(t, rpctest.PrivateAccounts[0].GetPublicKey(), status.ValidatorInfo.PublicKey)
 	assert.Equal(t, rpctest.GenesisDoc.ChainID(), status.ChainID)
 	for i := 0; i < 3; i++ {
 		// Unless we get lucky this is an error
@@ -51,12 +50,12 @@ func TestStatus(t *testing.T) {
 
 func TestGetAccount(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
-	ca, err := cli.GetAccount(context.Background(), &rpcquery.GetAccountParam{
-		Address: rpctest.PrivateAccounts[2].Address(),
+	acc, err := cli.GetAccount(context.Background(), &rpcquery.GetAccountParam{
+		Address: rpctest.PrivateAccounts[2].GetAddress(),
 	})
 	require.NoError(t, err)
 	genAcc := rpctest.GenesisDoc.Accounts[2]
-	genAccOut := genesis.GenesisAccountFromAccount(rpctest.GenesisDoc.Accounts[2].Name, ca.Account())
+	genAccOut := genesis.GenesisAccountFromAccount(rpctest.GenesisDoc.Accounts[2].Name, acc)
 	// Normalise
 	genAcc.Permissions.Roles = nil
 	genAccOut.Permissions.Roles = nil
@@ -67,10 +66,10 @@ func TestListAccounts(t *testing.T) {
 	cli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
 	stream, err := cli.ListAccounts(context.Background(), &rpcquery.ListAccountsParam{})
 	require.NoError(t, err)
-	var accs []acm.Account
+	var accs []*acm.Account
 	acc, err := stream.Recv()
 	for err == nil {
-		accs = append(accs, acc.Account())
+		accs = append(accs, acc)
 		acc, err = stream.Recv()
 	}
 	if err != nil && err != io.EOF {
@@ -86,9 +85,9 @@ func TestListNames(t *testing.T) {
 	for i := 0; i < n; i++ {
 		name := fmt.Sprintf("Flub/%v", i)
 		if i%2 == 0 {
-			rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[0].Address(), name, dataA, 200)
+			rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[0].GetAddress(), name, dataA, 200)
 		} else {
-			rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[1].Address(), name, dataB, 200)
+			rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[1].GetAddress(), name, dataB, 200)
 		}
 	}
 	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)

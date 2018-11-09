@@ -12,16 +12,16 @@ func (v Validator) String() string {
 
 func (v Validator) FillAddress() {
 	if v.Address == nil {
-		address := v.PublicKey.Address()
+		address := v.PublicKey.GetAddress()
 		v.Address = &address
 	}
 }
 
-func FromAccount(acc acm.Account, power uint64) Validator {
-	address := acc.Address()
+func FromAccount(acc *acm.Account, power uint64) Validator {
+	address := acc.GetAddress()
 	return Validator{
 		Address:   &address,
-		PublicKey: acc.PublicKey(),
+		PublicKey: acc.GetPublicKey(),
 		Power:     power,
 	}
 }

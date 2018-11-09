@@ -45,7 +45,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	privAccount := acm.GeneratePrivateAccountFromSecret("frogs")
 	tx := &payload.CallTx{
 		Input: &payload.TxInput{
-			Address: privAccount.Address(),
+			Address: privAccount.GetAddress(),
 		},
 		Address: &crypto.Address{1, 2, 3},
 	}

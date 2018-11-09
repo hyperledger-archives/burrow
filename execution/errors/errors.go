@@ -7,6 +7,15 @@ type CodedError interface {
 	ErrorCode() Code
 }
 
+type Provider interface {
+	// Returns the an error if errors occurred some execution or nil if none occurred
+	Error() CodedError
+}
+
+type Sink interface {
+	PushError(error)
+}
+
 type Code uint32
 
 const (
@@ -39,6 +48,12 @@ const (
 	ErrorCodeZeroPayment
 	ErrorCodeInvalidSequence
 	ErrorCodeReservedAddress
+	ErrorCodeIllegalWrite
+	ErrorCodeIntegerOverflow
+	ErrorCodeInvalidProposal
+	ErrorCodeExpiredProposal
+	ErrorCodeProposalExecuted
+	ErrorCodeNoInputPermission
 )
 
 func (c Code) ErrorCode() Code {
@@ -113,6 +128,18 @@ func (c Code) String() string {
 		return "Invalid sequence number"
 	case ErrorCodeReservedAddress:
 		return "Address is reserved for SNative or internal use"
+	case ErrorCodeIllegalWrite:
+		return "Callee attempted to illegally modify state"
+	case ErrorCodeIntegerOverflow:
+		return "Integer overflow"
+	case ErrorCodeInvalidProposal:
+		return "Proposal is invalid"
+	case ErrorCodeExpiredProposal:
+		return "Proposal is expired since sequence number does not match"
+	case ErrorCodeProposalExecuted:
+		return "Proposal has already been executed"
+	case ErrorCodeNoInputPermission:
+		return "Account has no input permission"
 	default:
 		return "Unknown error"
 	}
@@ -177,4 +204,38 @@ func (e *Exception) Error() string {
 		return ""
 	}
 	return e.Exception
+}
+
+func (e *Exception) Equal(ce CodedError) bool {
+	ex := AsException(ce)
+	if e == nil || ex == nil {
+		return e == nil && ex == nil
+	}
+	return e.Code == ex.Code && e.Exception == ex.Exception
+}
+
+type singleError struct {
+	CodedError
+}
+
+func FirstOnly() *singleError {
+	return &singleError{}
+}
+
+func (se *singleError) PushError(err error) {
+	if se.CodedError == nil {
+		// Do our nil dance
+		ex := AsException(err)
+		if ex != nil {
+			se.CodedError = ex
+		}
+	}
+}
+
+func (se *singleError) Error() CodedError {
+	return se.CodedError
+}
+
+func (se *singleError) Reset() {
+	se.CodedError = nil
 }

@@ -5,10 +5,9 @@ import (
 	"github.com/hyperledger/burrow/deploy/def/rule"
 )
 
-type Packages struct {
+type DeployArgs struct {
 	Address       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	BinPath       string   `mapstructure:"," json:"," yaml:"," toml:","`
-	ChainURL      string   `mapstructure:"," json:"," yaml:"," toml:","`
 	CurrentOutput string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Debug         bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	DefaultAmount string   `mapstructure:"," json:"," yaml:"," toml:","`
@@ -17,16 +16,16 @@ type Packages struct {
 	DefaultOutput string   `mapstructure:"," json:"," yaml:"," toml:","`
 	DefaultSets   []string `mapstructure:"," json:"," yaml:"," toml:","`
 	Path          string   `mapstructure:"," json:"," yaml:"," toml:","`
-	Signer        string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Verbose       bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	YAMLPath      string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
+	ProposeVerify bool     `mapstructure:"," json:"," yaml:"," toml:","`
+	ProposeVote   bool     `mapstructure:"," json:"," yaml:"," toml:","`
 
 	Package *Package
-	Client
 }
 
-func (do *Packages) Validate() error {
+func (do *DeployArgs) Validate() error {
 	return validation.ValidateStruct(do,
 		validation.Field(&do.Address, rule.Address),
 		validation.Field(&do.DefaultAmount, rule.Uint64),
@@ -34,10 +33,6 @@ func (do *Packages) Validate() error {
 		validation.Field(&do.DefaultGas, rule.Uint64),
 		validation.Field(&do.Package),
 	)
-}
-
-func (do *Packages) Dial() error {
-	return do.Client.Dial(do.ChainURL, do.Signer)
 }
 
 type Package struct {

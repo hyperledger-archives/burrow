@@ -9,8 +9,8 @@ import (
 )
 
 func TestGovernAccount_Validate(t *testing.T) {
-	sourceAddress := acm.GeneratePrivateAccountFromSecret("frogs").Address()
-	targetAddress := acm.GeneratePrivateAccountFromSecret("logs").Address()
+	sourceAddress := acm.GeneratePrivateAccountFromSecret("frogs").GetAddress()
+	targetAddress := acm.GeneratePrivateAccountFromSecret("logs").GetAddress()
 	job := &UpdateAccount{
 		Target:      targetAddress.String(),
 		Source:      sourceAddress.String(),

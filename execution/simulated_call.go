@@ -33,7 +33,7 @@ func CallSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, address c
 		Data:     data,
 		GasLimit: contexts.GasLimit,
 	}))
-	err := exe.Execute(txe)
+	err := exe.Execute(txe, txe.Envelope.Tx.Payload)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +47,10 @@ func CallCodeSim(reader state.Reader, tip bcm.BlockchainInfo, fromAddress, addre
 
 	// Attach code to target account (overwriting target)
 	cache := state.NewCache(reader)
-	err := cache.UpdateAccount(acm.ConcreteAccount{
+	err := cache.UpdateAccount(&acm.Account{
 		Address: address,
 		Code:    code,
-	}.MutableAccount())
+	})
 
 	if err != nil {
 		return nil, err

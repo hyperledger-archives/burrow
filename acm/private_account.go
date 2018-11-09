@@ -31,11 +31,11 @@ type PrivateAccount struct {
 	concretePrivateAccount *ConcretePrivateAccount
 }
 
-func (pa *PrivateAccount) Address() crypto.Address {
+func (pa *PrivateAccount) GetAddress() crypto.Address {
 	return pa.concretePrivateAccount.Address
 }
 
-func (pa *PrivateAccount) PublicKey() crypto.PublicKey {
+func (pa *PrivateAccount) GetPublicKey() crypto.PublicKey {
 	return pa.concretePrivateAccount.PublicKey
 }
 
@@ -65,7 +65,7 @@ func (pa *PrivateAccount) ConcretePrivateAccount() *ConcretePrivateAccount {
 }
 
 func (pa *PrivateAccount) String() string {
-	return fmt.Sprintf("PrivateAccount{%v}", pa.Address())
+	return fmt.Sprintf("PrivateAccount{%v}", pa.GetAddress())
 }
 
 type ConcretePrivateAccount struct {
@@ -90,7 +90,7 @@ func PrivateAccountFromPrivateKey(privateKey crypto.PrivateKey) *PrivateAccount 
 		concretePrivateAccount: &ConcretePrivateAccount{
 			PrivateKey: privateKey,
 			PublicKey:  publicKey,
-			Address:    publicKey.Address(),
+			Address:    publicKey.GetAddress(),
 		},
 	}
 }
@@ -112,7 +112,7 @@ func GeneratePrivateAccount() (*PrivateAccount, error) {
 	}
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
-		Address:    publicKey.Address(),
+		Address:    publicKey.GetAddress(),
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount(), nil
@@ -123,7 +123,7 @@ func GeneratePrivateAccountFromSecret(secret string) *PrivateAccount {
 	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519)
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
-		Address:    publicKey.Address(),
+		Address:    publicKey.GetAddress(),
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount()
@@ -136,7 +136,7 @@ func PrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (*PrivateAccount, er
 	}
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
-		Address:    publicKey.Address(),
+		Address:    publicKey.GetAddress(),
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount(), nil

@@ -84,6 +84,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		testConfig.Keys,
 		nil,
 		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
+		testConfig.Tendermint.DefaultAuthorizedPeersProvider(),
 		logger)
 	if err != nil {
 		panic(err)
@@ -101,11 +102,11 @@ func EnterTestDirectory() (cleanup func()) {
 }
 
 func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
-	accounts := make(map[string]acm.Account, len(addressables))
+	accounts := make(map[string]*acm.Account, len(addressables))
 	for i, pa := range addressables {
 		account := acm.FromAddressable(pa)
-		account.AddToBalance(1 << 32)
-		account.SetPermissions(permission.AllAccountPermissions.Clone())
+		account.Balance += 1 << 32
+		account.Permissions = permission.AllAccountPermissions.Clone()
 		accounts[fmt.Sprintf("user_%v", i)] = account
 	}
 	genesisTime, err := time.Parse("02-01-2006", "27-10-2017")
