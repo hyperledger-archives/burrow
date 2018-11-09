@@ -3,6 +3,7 @@ package payload
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/evm/sha3"
 	amino "github.com/tendermint/go-amino"
 )
 
@@ -43,6 +44,15 @@ func DecodeProposal(proposalBytes []byte) (*Proposal, error) {
 
 func (p *Proposal) Encode() ([]byte, error) {
 	return cdc.MarshalBinary(p)
+}
+
+func (p *Proposal) Hash() []byte {
+	bs, err := p.Encode()
+	if err != nil {
+		panic("failed to encode Proposal")
+	}
+
+	return sha3.Sha3(bs)
 }
 
 func (p *Proposal) String() string {

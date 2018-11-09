@@ -6,6 +6,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/txs/payload"
+	log "github.com/sirupsen/logrus"
 )
 
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, jobs chan *intermediateJob) (string, error) {
@@ -52,6 +53,9 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, job
 		return "", err
 	}
 	proposal.BatchTx.Inputs = []*payload.TxInput{input}
+	proposalHash := proposal.Hash()
+
+	log.Warn("Proposal hash: %x\n", proposalHash)
 
 	txe, err := client.SignAndBroadcast(&payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal})
 	if err != nil {
