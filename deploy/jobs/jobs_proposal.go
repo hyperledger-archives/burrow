@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, jobs chan *intermediateJob) (string, error) {
+func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
 
 	for _, job := range prop.Jobs {
@@ -48,15 +48,19 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client, job
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}
 
-	input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, true)
 	if err != nil {
 		return "", err
 	}
-	proposal.BatchTx.Inputs = []*payload.TxInput{input}
+	proposal.BatchTx.Inputs = []*payload.TxInput{proposalInput}
 	proposalHash := proposal.Hash()
 
 	log.Warn("Proposal hash: %x\n", proposalHash)
 
+	input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+	if err != nil {
+		return "", err
+	}
 	txe, err := client.SignAndBroadcast(&payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal})
 	if err != nil {
 		var err = util.ChainErrorHandler(do.Package.Account, err)

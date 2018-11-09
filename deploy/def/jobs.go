@@ -14,11 +14,15 @@ import (
 // ------------------------------------------------------------------------
 
 type Proposal struct {
-	// (Required), address of the account that proffers the proposal and as which it will be executed
+	// (Optional), address of the account that signs the proposal
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+	// (Required), address of the account used for serialising proposals, the proposals system account
+	ProposalAddress string `mapstructure:"propposaladdress" json:"propposaladdress" yaml:"propposaladdress" toml:"proposaladdress"`
+	// (Optional), sequence of the ProposalAddress
+	ProposalSequence string `mapstructure:"proposalsequence" json:"proposalsequence" yaml:"proposalsequence" toml:"proposalsequence"`
 	// (Optional)
 	VotingPower string `mapstructure:"votingpower" json:"votingpower" yaml:"votingpower" toml:"votingpower"`
 	// (Required) the name of the proposal

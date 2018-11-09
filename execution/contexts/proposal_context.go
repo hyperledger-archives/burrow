@@ -129,7 +129,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return fmt.Errorf("account %s does not have batch permission", i.Address)
 		}
 
-		if proposeAcc.GetSequence()+1 != i.Sequence {
+		if proposeAcc.GetSequence() != i.Sequence {
 			return errors.ErrorCodeExpiredProposal
 		}
 

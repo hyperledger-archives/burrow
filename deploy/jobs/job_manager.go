@@ -119,7 +119,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		switch payload.(type) {
 		case *def.Proposal:
 			announce(job.Name, "Proposal")
-			job.Result, err = ProposalJob(job.Proposal, do, client, jobs)
+			job.Result, err = ProposalJob(job.Proposal, do, client)
 
 		// Meta Job
 		case *def.Meta:
