@@ -607,7 +607,6 @@ func TestJumpErr(t *testing.T) {
 			t.Fatal("Expected invalid jump dest err")
 		}
 	}
-	require.NoError(t, cache.Error())
 }
 
 // Tests the code for a subcurrency contract compiled by serpent
@@ -635,7 +634,7 @@ func TestSubcurrency(t *testing.T) {
 		0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SLT, ISZERO, ISZERO, PUSH2, 0x00, 0x86, JUMPI,
 		PUSH1, 0xA0, MLOAD, PUSH1, 0xC0, MLOAD, SUB, PUSH1, 0xE0, MLOAD, SSTORE, PUSH1,
 		0xA0, MLOAD, PUSH1, 0x80, MLOAD, SLOAD, ADD, PUSH1, 0x80, MLOAD, SSTORE, JUMPDEST,
-		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, RETURN)
+		JUMPDEST, POP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, RETURN)
 
 	data := hex.MustDecodeString("693200CE0000000000000000000000004B4363CDE27C2EB05E66357DB05BC5C88F850C1A0000000000000000000000000000000000000000000000000000000000000005")
 	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, data, 0, &gas)
@@ -677,8 +676,6 @@ func TestRevert(t *testing.T) {
 	assert.Equal(t, LeftPadWord256(value), storageVal)
 
 	t.Logf("Output: %v\n", output)
-
-	require.NoError(t, cache.Error())
 }
 
 // Test sending tokens from a contract to another account
@@ -698,7 +695,7 @@ func TestSendCall(t *testing.T) {
 
 	//----------------------------------------------
 	// account2 has insufficient balance, should fail
-	txe, err := runVMWaitError(cache, ourVm, account1, account2, contractCode, 1000)
+	txe := runVM(cache, ourVm, account1, account2, contractCode, 100000)
 	exCalls := txe.ExceptionalCalls()
 	require.Len(t, exCalls, 1)
 	assertErrorCode(t, errors.ErrorCodeInsufficientBalance, exCalls[0].Header.Exception)
@@ -706,14 +703,13 @@ func TestSendCall(t *testing.T) {
 	//----------------------------------------------
 	// give account2 sufficient balance, should pass
 	cache.AddToBalance(account2, 100000)
-	_, err = runVMWaitError(cache, ourVm, account1, account2, contractCode, 1000)
-	assert.NoError(t, err, "Should have sufficient balance")
+	txe = runVM(cache, ourVm, account1, account2, contractCode, 1000)
+	assert.Nil(t, txe.Exception, "Should have sufficient balance")
 
 	//----------------------------------------------
 	// insufficient gas, should fail
-	_, err = runVMWaitError(cache, ourVm, account1, account2, contractCode, 100)
-	assert.NoError(t, err, "Expected insufficient gas error")
-	require.NoError(t, cache.Error())
+	txe = runVM(cache, ourVm, account1, account2, contractCode, 100)
+	assert.NotNil(t, txe.Exception, "Expected insufficient gas error")
 }
 
 // Test to ensure that contracts called with STATICCALL cannot modify state
@@ -749,12 +745,11 @@ func TestStaticCallReadOnly(t *testing.T) {
 				PUSH1, value, PUSH20, callee, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
 				PUSH1, retOff, RETURN))
 
-		txe, err := runVMWaitError(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+		txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
 		// the topmost caller can never *illegally* modify state
-		require.NoError(t, err)
-		exCalls := txe.ExceptionalCalls()
-		require.True(t, len(exCalls) > 0, "should have exceptional calls")
-		assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "should get an error from child accounts that cache is read only")
+		require.Error(t, txe.Exception)
+		assertErrorCode(t, errors.ErrorCodeIllegalWrite, txe.Exception,
+			"should get an error from child accounts that cache is read only")
 	}
 }
 
@@ -778,11 +773,9 @@ func TestStaticCallWithValue(t *testing.T) {
 			PUSH1, retOff, RETURN))
 
 	cache.AddToBalance(callee, 100000)
-	txe, err := runVMWaitError(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
-	require.NoError(t, err)
-	exCalls := txe.ExceptionalCalls()
-	require.Len(t, exCalls, 1)
-	assertErrorCode(t, errors.ErrorCodeIllegalWrite, exCalls[0].Header.Exception, "expected static call violation because of call with value")
+	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+	require.NotNil(t, txe.Exception)
+	assertErrorCode(t, errors.ErrorCodeIllegalWrite, txe.Exception, "expected static call violation because of call with value")
 }
 
 func TestStaticCallNoValue(t *testing.T) {
@@ -805,9 +798,9 @@ func TestStaticCallNoValue(t *testing.T) {
 			PUSH1, retOff, RETURN))
 
 	cache.AddToBalance(callee, 100000)
-	txe, err := runVMWaitError(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
 	// no exceptions expected because value never set in children
-	require.NoError(t, err)
+	require.NoError(t, txe.Exception.AsError())
 	exCalls := txe.ExceptionalCalls()
 	require.Len(t, exCalls, 0)
 }
@@ -827,19 +820,20 @@ func TestDelegateCallGas(t *testing.T) {
 	retSize := 32
 	calleeReturnValue := int64(20)
 
-	// DELEGATECALL(retSize, refOffset, inSize, inOffset, addr, gasLimit)
-	// 6 pops
-	delegateCallCost := GasStackOp * 6
-	// 1 push
-	gasCost := GasStackOp
-	// 2 pops, 1 push
-	subCost := GasStackOp * 3
-	pushCost := GasStackOp
+	callee := makeAccountWithCode(cache, "callee",
+		MustSplice(PUSH1, calleeReturnValue, PUSH1, 0, MSTORE, PUSH1, 32, PUSH1, 0, RETURN))
 
-	costBetweenGasAndDelegateCall := gasCost + subCost + delegateCallCost + pushCost
+	// 6 op codes total
+	baseOpsCost := GasBaseOp * 6
+	// 4 pushes
+	pushCost := GasStackOp * 4
+	// 2 pushes 2 pops
+	returnCost := GasStackOp * 4
+	// To push success/failure
+	resumeCost := GasStackOp
 
-	// Do a simple operation using 1 gas unit
-	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, calleeReturnValue, return1()))
+	// Gas is not allowed to drop to 0 so we add resumecost
+	delegateCallCost := baseOpsCost + pushCost + returnCost + resumeCost
 
 	// Here we split up the caller code so we can make a DELEGATE call with
 	// different amounts of gas. The value we sandwich in the middle is the amount
@@ -848,32 +842,31 @@ func TestDelegateCallGas(t *testing.T) {
 	// gives us the code to make the call
 	callerCodePrefix := MustSplice(PUSH1, retSize, PUSH1, retOff, PUSH1, inSize,
 		PUSH1, inOff, PUSH20, callee, PUSH1)
-	callerCodeSuffix := MustSplice(GAS, SUB, DELEGATECALL, returnWord())
+	callerCodeSuffix := MustSplice(DELEGATECALL, returnWord())
 
 	// Perform a delegate call
 	caller := makeAccountWithCode(cache, "caller", MustSplice(callerCodePrefix,
 		// Give just enough gas to make the DELEGATECALL
-		costBetweenGasAndDelegateCall, callerCodeSuffix))
+		delegateCallCost, callerCodeSuffix))
 
 	// Should pass
-	txe, err := runVMWaitError(cache, ourVm, caller, callee, cache.GetCode(caller), 100)
-	assert.NoError(t, err, "Should have sufficient funds for call")
+	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 100)
+	assert.Nil(t, txe.Exception, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), txe.Result.Return)
 
 	caller2 := makeAccountWithCode(cache, "caller2", MustSplice(callerCodePrefix,
 		// Shouldn't be enough gas to make call
-		costBetweenGasAndDelegateCall-1, callerCodeSuffix))
+		delegateCallCost-1, callerCodeSuffix))
 
 	// Should fail
-	_, err = runVMWaitError(cache, ourVm, caller2, callee, cache.GetCode(caller2), 100)
-	assert.Error(t, err, "Should have insufficient gas for call")
-	require.NoError(t, cache.Error())
+	txe = runVM(cache, ourVm, caller2, callee, cache.GetCode(caller2), 100)
+	assert.NotNil(t, txe.Exception, "Should have insufficient gas for call")
 }
 
 func TestMemoryBounds(t *testing.T) {
 	cache := NewState(newAppState())
-	memoryProvider := func() Memory {
-		return NewDynamicMemory(1024, 2048)
+	memoryProvider := func(err errors.Sink) Memory {
+		return NewDynamicMemory(1024, 2048, err)
 	}
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger, MemoryProvider(memoryProvider))
 	caller := makeAccountWithCode(cache, "caller", nil)
@@ -910,10 +903,10 @@ func TestMemoryBounds(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
+	require.NoError(t, cache.Error())
 	output, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
-	require.NoError(t, cache.Error())
 }
 
 func TestMsgSender(t *testing.T) {
@@ -979,7 +972,6 @@ func TestInvalid(t *testing.T) {
 	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	assert.Equal(t, errors.ErrorCodeExecutionAborted, err.ErrorCode())
 	t.Logf("Output: %v Error: %v\n", output, err)
-	require.NoError(t, cache.Error())
 }
 
 func TestReturnDataSize(t *testing.T) {
@@ -1099,14 +1091,17 @@ func returnWord() []byte {
 // and then waits for any exceptions transmitted by Data in the AccCall
 // event (in the case of no direct error from call we will block waiting for
 // at least 1 AccCall event)
-func runVMWaitError(vmCache Interface, ourVm *VM, caller, callee crypto.Address, contractCode []byte,
-	gas uint64) (*exec.TxExecution, error) {
+func runVM(vmCache Interface, ourVm *VM, caller, callee crypto.Address, contractCode []byte,
+	gas uint64) *exec.TxExecution {
 	gasBefore := gas
 	txe := new(exec.TxExecution)
 	output, err := ourVm.Call(vmCache, txe, caller, callee, contractCode, []byte{}, 0, &gas)
-	txe.SetException(err)
+	txe.PushError(err)
+	for _, ev := range txe.ExceptionalCalls() {
+		txe.PushError(ev.Header.Exception)
+	}
 	txe.Return(output, gasBefore-gas)
-	return txe, err
+	return txe
 }
 
 // this is code to call another contract (hardcoded as addr)
@@ -1190,19 +1185,29 @@ func TestSubslice(t *testing.T) {
 	for i := 0; i < size; i++ {
 		data[i] = byte(i)
 	}
+	err := errors.FirstOnly()
 	for n := int64(0); n < size; n++ {
 		data = data[:n]
 		for offset := int64(-size); offset < size; offset++ {
 			for length := int64(-size); length < size; length++ {
-				_, ok := subslice(data, offset, length)
+				err.Reset()
+				subslice(data, offset, length, err)
 				if offset < 0 || length < 0 || n < offset {
-					assert.False(t, ok)
+					assert.NotNil(t, err.Error())
 				} else {
-					assert.True(t, ok)
+					assert.Nil(t, err.Error())
 				}
 			}
 		}
 	}
+
+	err.Reset()
+	assert.Equal(t, []byte{
+		5, 6, 7, 8, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+	}, subslice([]byte{1, 2, 3, 4, 5, 6, 7, 8}, 4, 32, err))
 }
 
 func TestHasPermission(t *testing.T) {
@@ -1263,7 +1268,6 @@ func TestDataStackOverflow(t *testing.T) {
 
 	_, err = ourVm.Call(cache, eventSink, account1, account2, contractCode, input, 0, &gas)
 	assertErrorCode(t, errors.ErrorCodeDataStackOverflow, err, "Should be stack overflow")
-	require.NoError(t, cache.Error())
 }
 
 func TestCallStackOverflow(t *testing.T) {
@@ -1317,7 +1321,7 @@ func TestCallStackOverflow(t *testing.T) {
 
 	txe := new(exec.TxExecution)
 	_, err = ourVm.Call(cache, txe, account1, account2, contractCode, input, 0, &gas)
-	txe.SetException(err)
+	txe.PushError(err)
 	require.Error(t, err)
 	callError := txe.CallError()
 	require.Error(t, callError)
@@ -1328,7 +1332,6 @@ func TestCallStackOverflow(t *testing.T) {
 	assert.Equal(t, params.CallStackMaxDepth, deepestErr.StackDepth)
 	assert.Equal(t, account2, deepestErr.Callee)
 	assert.Equal(t, account1, deepestErr.Caller)
-	require.NoError(t, cache.Error())
 }
 
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {

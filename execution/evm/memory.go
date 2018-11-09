@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/hyperledger/burrow/execution/errors"
 )
 
 const (
@@ -27,12 +29,12 @@ type Memory interface {
 	//
 	// The value returned should be copy of any underlying memory, not a reference
 	// to the underlying store.
-	Read(offset, length *big.Int) ([]byte, error)
+	Read(offset, length *big.Int) []byte
 	// Write a value to the memory starting at offset (the index of the first byte
 	// written will equal offset). The value is provided as bytes to be written
 	// consecutively to the memory store. Return an error if the memory cannot be
 	// written or allocated.
-	Write(offset *big.Int, value []byte) error
+	Write(offset *big.Int, value []byte)
 	// Returns the current capacity of the memory. For dynamically allocating
 	// memory this capacity can be used as a write offset that is guaranteed to be
 	// unused. Solidity in particular makes this assumption when using MSIZE to
@@ -43,15 +45,16 @@ type Memory interface {
 // Get a new DynamicMemory (note that although we take a maximumCapacity of uint64 we currently
 // limit the maximum to int32 at runtime because we are using a single slice which we cannot guarantee
 // to be indexable above int32 or all validators
-func NewDynamicMemory(initialCapacity, maximumCapacity uint64) Memory {
+func NewDynamicMemory(initialCapacity, maximumCapacity uint64, errSink errors.Sink) Memory {
 	return &dynamicMemory{
 		slice:           make([]byte, initialCapacity),
 		maximumCapacity: maximumCapacity,
+		errSink:         errSink,
 	}
 }
 
-func DefaultDynamicMemoryProvider() Memory {
-	return NewDynamicMemory(defaultInitialMemoryCapacity, defaultMaximumMemoryCapacity)
+func DefaultDynamicMemoryProvider(errSink errors.Sink) Memory {
+	return NewDynamicMemory(defaultInitialMemoryCapacity, defaultMaximumMemoryCapacity, errSink)
 }
 
 // Implements a bounded dynamic memory that relies on Go's (pretty good) dynamic
@@ -59,18 +62,42 @@ func DefaultDynamicMemoryProvider() Memory {
 type dynamicMemory struct {
 	slice           []byte
 	maximumCapacity uint64
+	errSink         errors.Sink
 }
 
-func (mem *dynamicMemory) Read(offset, length *big.Int) ([]byte, error) {
+func (mem *dynamicMemory) Read(offset, length *big.Int) []byte {
 	// Ensures positive and not too wide
 	if !offset.IsUint64() {
-		return nil, fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset)
+		mem.pushErr(fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset))
+		return nil
 	}
 	// Ensures positive and not too wide
 	if !length.IsUint64() {
-		return nil, fmt.Errorf("length %v does not fit inside an unsigned 64-bit integer", offset)
+		mem.pushErr(fmt.Errorf("length %v does not fit inside an unsigned 64-bit integer", offset))
+		return nil
 	}
-	return mem.read(offset.Uint64(), length.Uint64())
+	output, err := mem.read(offset.Uint64(), length.Uint64())
+	if err != nil {
+		mem.pushErr(err)
+		return nil
+	}
+	return output
+}
+
+func (mem *dynamicMemory) Write(offset *big.Int, value []byte) {
+	// Ensures positive and not too wide
+	if !offset.IsUint64() {
+		mem.pushErr(fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset))
+		return
+	}
+	err := mem.write(offset.Uint64(), value)
+	if err != nil {
+		mem.pushErr(err)
+	}
+}
+
+func (mem *dynamicMemory) Capacity() *big.Int {
+	return big.NewInt(int64(len(mem.slice)))
 }
 
 func (mem *dynamicMemory) read(offset, length uint64) ([]byte, error) {
@@ -84,14 +111,6 @@ func (mem *dynamicMemory) read(offset, length uint64) ([]byte, error) {
 	return value, nil
 }
 
-func (mem *dynamicMemory) Write(offset *big.Int, value []byte) error {
-	// Ensures positive and not too wide
-	if !offset.IsUint64() {
-		return fmt.Errorf("offset %v does not fit inside an unsigned 64-bit integer", offset)
-	}
-	return mem.write(offset.Uint64(), value)
-}
-
 func (mem *dynamicMemory) write(offset uint64, value []byte) error {
 	capacity := offset + uint64(len(value))
 	err := mem.ensureCapacity(capacity)
@@ -102,8 +121,8 @@ func (mem *dynamicMemory) write(offset uint64, value []byte) error {
 	return nil
 }
 
-func (mem *dynamicMemory) Capacity() *big.Int {
-	return big.NewInt(int64(len(mem.slice)))
+func (mem *dynamicMemory) pushErr(err error) {
+	mem.errSink.PushError(err)
 }
 
 // Ensures the current memory store can hold newCapacity. Will only grow the

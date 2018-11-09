@@ -6,6 +6,6 @@
 - Fixed non-determinism in Governance Tx
 - Fixed various abi issues
 
-## Added
+### Added
 - burrow deploy displays revert reason when available
 - burrow deploy compiles contracts concurrently

@@ -567,11 +567,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:acef19f6a48ca48abc8c7213ebcdcccd98e644114ad644a4b91b9134fdbc3b41"
+  digest = "1:1c470465fb009d034f2cd68b1fb03e8e4c80696c4eb7437c3e7877cbc515db75"
   name = "github.com/tmthrgd/go-hex"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "d1fb3dbb16a1d00be1dec2027f83714c7bd920f1"
+  revision = "14226a535f434c12dbb6c0a0a59e40716f1534b4"
 
 [[projects]]
   branch = "master"

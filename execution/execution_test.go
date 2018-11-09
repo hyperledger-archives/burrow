@@ -677,7 +677,6 @@ func TestSNativeCALL(t *testing.T) {
 	//doug.Permissions.Base.Set(permission.HasBase, true)
 	exe.updateAccounts(t, doug)
 
-	fmt.Printf("Doug: %s\n", exe.permString(t, users[3].GetAddress()))
 	fmt.Println("\n#### HasBase")
 	// HasBase
 	snativeAddress, pF, data := snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
@@ -1635,12 +1634,12 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 }
 
 // give a contract perms for an snative, call it, it calls the snative, but shouldn't have permission
-func testSNativeCALLExpectFail(t *testing.T, exe *testExecutor, doug *acm.Account,
-	snativeAddress crypto.Address, data []byte) {
+func testSNativeCALLExpectFail(t *testing.T, exe *testExecutor, doug *acm.Account, snativeAddress crypto.Address,
+	data []byte) {
 	testSNativeCALL(t, false, exe, doug, 0, snativeAddress, data, nil)
 }
 
-// give a contract perms for an snative, call it, it calls the snative, ensure the check funciton (f) succeeds
+// give a contract perms for an snative, call it, it calls the snative, ensure the check function (f) succeeds
 func testSNativeCALLExpectPass(t *testing.T, exe *testExecutor, doug *acm.Account, snativePerm permission.PermFlag,
 	snativeAddress crypto.Address, data []byte, f func([]byte) error) {
 	testSNativeCALL(t, true, exe, doug, snativePerm, snativeAddress, data, f)

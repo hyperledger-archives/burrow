@@ -50,13 +50,12 @@ type Params struct {
 }
 
 type VM struct {
-	memoryProvider func() Memory
+	memoryProvider func(errors.Sink) Memory
 	params         Params
 	origin         crypto.Address
 	tx             *txs.Tx
 	stackDepth     uint64
 	logger         *logging.Logger
-	returnData     []byte
 	debugOpcodes   bool
 	dumpTokens     bool
 }
@@ -111,8 +110,8 @@ func EnsurePermission(st Interface, address crypto.Address, perm permission.Perm
 	return nil
 }
 
-func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, exception *errors.CodedError, output *[]byte,
-	callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64, err *errors.CodedError) {
+func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, errProvider errors.Provider, output *[]byte,
+	callerAddress, calleeAddress crypto.Address, input []byte, value uint64, gas *uint64, errSink errors.Sink) {
 	// fire the post call event (including exception if applicable)
 	eventErr := eventSink.Call(&exec.CallEvent{
 		CallType: callType,
@@ -126,10 +125,8 @@ func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, excepti
 		Origin:     vm.origin,
 		StackDepth: vm.stackDepth,
 		Return:     *output,
-	}, errors.AsException(*exception))
-	if eventErr != nil {
-		*err = firstErr(*err, eventErr)
-	}
+	}, errors.AsException(errProvider.Error()))
+	errSink.PushError(eventErr)
 }
 
 // CONTRACT state is aware of caller and callee, so we can just mutate them.
@@ -152,32 +149,27 @@ func (vm *VM) Call(callState Interface, eventSink EventSink, caller, callee cryp
 func (vm *VM) call(callState Interface, eventSink EventSink, caller, callee crypto.Address, code,
 	input []byte, value uint64, gas *uint64, callType exec.CallType) (output []byte, err errors.CodedError) {
 
-	exception := new(errors.CodedError)
-	// fire the post call event (including exception if applicable)
-	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller, callee, input,
-		value, gas, &err)
+	// fire the post call event (including exception if applicable) and make sure we return the accumulated call error
+	defer func() {
+		vm.fireCallEvent(eventSink, callType, callState, &output, caller, callee, input, value, gas, callState)
+		err = callState.Error()
+	}()
 
-	if err = transfer(callState, caller, callee, value); err != nil {
-		*exception = err
-		return
-	}
+	callState.PushError(transfer(callState, caller, callee, value))
+	callState.PushError(vm.ensureStackDepth())
 
-	if err = vm.ensureStackDepth(); err != nil {
-		*exception = err
+	// Early exit
+	if callState.Error() != nil {
 		return
 	}
 
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
+		output = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
 		if err != nil {
-			*exception = err
-			transferErr := transfer(callState, callee, caller, value)
-			if transferErr != nil {
-				err = errors.Wrap(transferErr,
-					fmt.Sprintf("error refunding value %v %s (callee) -> %s (caller)", value, callee, caller))
-			}
+			callState.PushError(err)
+			callState.PushError(transfer(callState, callee, caller, value))
 		}
 	}
 
@@ -192,45 +184,42 @@ func (vm *VM) delegateCall(callState Interface, eventSink EventSink, caller, cal
 	code, input []byte, value uint64, gas *uint64,
 	callType exec.CallType) (output []byte, err errors.CodedError) {
 
-	exception := new(errors.CodedError)
-
-	// &err allows fireCallEvent to push back an error to this function's return
-	defer vm.fireCallEvent(eventSink, callType, exception, &output, caller, callee, input, value, gas, &err)
+	// fire the post call event (including exception if applicable) and make sure we return the accumulated call error
+	defer func() {
+		vm.fireCallEvent(eventSink, callType, callState, &output, caller, callee, input, value, gas, callState)
+		err = callState.Error()
+	}()
 
 	// DelegateCall does not transfer the value to the callee.
 
-	if err = vm.ensureStackDepth(); err != nil {
-		*exception = err
+	callState.PushError(vm.ensureStackDepth())
+
+	// Early exit
+	if callState.Error() != nil {
 		return
 	}
 
 	if len(code) > 0 {
 		vm.stackDepth += 1
-		output, err = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
+		output = vm.execute(callState, eventSink, caller, callee, code, input, value, gas)
 		vm.stackDepth -= 1
-		if err != nil {
-			*exception = err
-		}
 	}
-
 	return
 }
 
 // Try to deduct gasToUse from gasLeft.  If ok return false, otherwise
 // set err and return true.
-func useGasNegative(gasLeft *uint64, gasToUse uint64, err *errors.CodedError) bool {
+func useGasNegative(gasLeft *uint64, gasToUse uint64, err errors.Sink) {
 	if *gasLeft >= gasToUse {
 		*gasLeft -= gasToUse
-		return false
-	} else if *err == nil {
-		*err = errors.ErrorCodeInsufficientGas
+	} else {
+		err.PushError(errors.ErrorCodeInsufficientGas)
 	}
-	return true
 }
 
 // Executes the EVM code passed in the appropriate context
 func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee crypto.Address,
-	code, input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
+	code, input []byte, value uint64, gas *uint64) (returnData []byte) {
 	vm.Debugf("(%d) (%s) %s (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller, callee, len(code), *gas, input)
 
 	logger := vm.logger.With("tx_hash", vm.tx.Hash())
@@ -239,24 +228,22 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 		dumpTokens(vm.tx.Hash(), caller, callee, code)
 	}
 
-	var (
-		pc     int64 = 0
-		stack        = NewStack(vm.params.DataStackInitialCapacity, vm.params.DataStackMaxDepth, gas, &err)
-		memory       = vm.memoryProvider()
-	)
+	// Program counter - the index into code that tracks current instruction
+	pc := int64(0)
+	// Provide stack and memory storage - passing in the callState as an error provider
+	stack := NewStack(vm.params.DataStackInitialCapacity, vm.params.DataStackMaxDepth, gas, callState)
+	memory := vm.memoryProvider(callState)
 
 	for {
 		// Check for any error accrued to state
 		if callState.Error() != nil {
-			return nil, firstErr(err, callState.Error())
-		}
-		// Use BaseOp gas.
-		if useGasNegative(gas, GasBaseOp, &err) {
-			return nil, err
+			return
 		}
 
 		var op = codeGetOp(code, pc)
-		vm.Debugf("(pc) %-3d (op) %-14s (st) %-4d ", pc, op.String(), stack.Len())
+		vm.Debugf("(pc) %-3d (op) %-14s (st) %-4d (gas) %d", pc, op.String(), stack.Len(), *gas)
+		// Use BaseOp gas.
+		useGasNegative(gas, GasBaseOp, callState)
 
 		switch op {
 
@@ -353,10 +340,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			vm.Debugf(" %v ** %v = %v (%X)\n", x, y, pow, res)
 
 		case SIGNEXTEND: // 0x0B
-			back, popErr := stack.PopU64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			back := stack.PopU64()
 			if back < Word256Length-1 {
 				stack.PushBigInt(SignExtend(back, stack.PopBigInt()))
 			}
@@ -458,10 +442,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			vm.Debugf(" !%X = %X\n", x, z)
 
 		case BYTE: // 0x1A
-			idx, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			idx := stack.Pop64()
 			val := stack.Pop()
 			res := byte(0)
 			if idx < 32 {
@@ -513,15 +494,9 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			}
 
 		case SHA3: // 0x20
-			if useGasNegative(gas, GasSha3, &err) {
-				return nil, err
-			}
+			useGasNegative(gas, GasSha3, callState)
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
-			data, memErr := memory.Read(offset, size)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			data := memory.Read(offset, size)
 			data = sha3.Sha3(data)
 			stack.PushBytes(data)
 			vm.Debugf(" => (%v) %X\n", size, data)
@@ -531,13 +506,11 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			vm.Debugf(" => %X\n", callee)
 
 		case BALANCE: // 0x31
-			addr := stack.Pop()
-			if useGasNegative(gas, GasGetAccount, &err) {
-				return nil, err
-			}
-			balance := callState.GetBalance(crypto.AddressFromWord256(addr))
+			address := stack.PopAddress()
+			useGasNegative(gas, GasGetAccount, callState)
+			balance := callState.GetBalance(address)
 			stack.PushU64(balance)
-			vm.Debugf(" => %v (%X)\n", balance, addr)
+			vm.Debugf(" => %v (%X)\n", balance, address)
 
 		case ORIGIN: // 0x32
 			stack.Push(vm.origin.Word256())
@@ -552,14 +525,8 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			vm.Debugf(" => %v\n", value)
 
 		case CALLDATALOAD: // 0x35
-			offset, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			data, ok := subslice(input, offset, 32)
-			if !ok {
-				return nil, firstErr(err, errors.ErrorCodeInputOutOfBounds)
-			}
+			offset := stack.Pop64()
+			data := subslice(input, offset, 32, callState)
 			res := LeftPadWord256(data)
 			stack.Push(res)
 			vm.Debugf(" => 0x%X\n", res)
@@ -570,23 +537,10 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case CALLDATACOPY: // 0x37
 			memOff := stack.PopBigInt()
-			inputOff, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			length, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			data, ok := subslice(input, inputOff, length)
-			if !ok {
-				return nil, firstErr(err, errors.ErrorCodeInputOutOfBounds)
-			}
-			memErr := memory.Write(memOff, data)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			inputOff := stack.Pop64()
+			length := stack.Pop64()
+			data := subslice(input, inputOff, length, callState)
+			memory.Write(memOff, data)
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
@@ -596,23 +550,10 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case CODECOPY: // 0x39
 			memOff := stack.PopBigInt()
-			codeOff, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			length, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			data, ok := subslice(code, codeOff, length)
-			if !ok {
-				return nil, firstErr(err, errors.ErrorCodeCodeOutOfBounds)
-			}
-			memErr := memory.Write(memOff, data)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			codeOff := stack.Pop64()
+			length := stack.Pop64()
+			data := subslice(code, codeOff, length, callState)
+			memory.Write(memOff, data)
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case GASPRICE_DEPRECATED: // 0x3A
@@ -621,9 +562,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case EXTCODESIZE: // 0x3B
 			address := stack.PopAddress()
-			if useGasNegative(gas, GasGetAccount, &err) {
-				return nil, err
-			}
+			useGasNegative(gas, GasGetAccount, callState)
 			if callState.Exists(address) {
 				code := callState.GetCode(address)
 				l := int64(len(code))
@@ -631,65 +570,46 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				vm.Debugf(" => %d\n", l)
 			} else {
 				if _, ok := registeredNativeContracts[address]; !ok {
-					return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
+					callState.PushError(errors.ErrorCodeUnknownAddress)
+					continue
 				}
 				vm.Debugf(" => returning code size of 1 to indicated existence of native contract at %X\n", address)
 				stack.Push(One256)
 			}
 		case EXTCODECOPY: // 0x3C
 			address := stack.PopAddress()
-			if useGasNegative(gas, GasGetAccount, &err) {
-				return nil, err
-			}
+			useGasNegative(gas, GasGetAccount, callState)
 			if !callState.Exists(address) {
 				if _, ok := registeredNativeContracts[address]; ok {
 					vm.Debugf(" => attempted to copy native contract at %v but this is not supported\n", address)
-					return nil, firstErr(err, errors.ErrorCodeNativeContractCodeCopy)
+					callState.PushError(errors.ErrorCodeNativeContractCodeCopy)
 				}
-				return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
+				callState.PushError(errors.ErrorCodeUnknownAddress)
+				continue
 			}
 			code := callState.GetCode(address)
 			memOff := stack.PopBigInt()
-			codeOff, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			length, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			data, ok := subslice(code, codeOff, length)
-			if !ok {
-				return nil, firstErr(err, errors.ErrorCodeCodeOutOfBounds)
-			}
-			memErr := memory.Write(memOff, data)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			codeOff := stack.Pop64()
+			length := stack.Pop64()
+			data := subslice(code, codeOff, length, callState)
+			memory.Write(memOff, data)
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case RETURNDATASIZE: // 0x3D
-			stack.Push64(int64(len(vm.returnData)))
-			vm.Debugf(" => %d\n", len(vm.returnData))
+			stack.Push64(int64(len(returnData)))
+			vm.Debugf(" => %d\n", len(returnData))
 
 		case RETURNDATACOPY: // 0x3E
 			memOff, outputOff, length := stack.PopBigInt(), stack.PopBigInt(), stack.PopBigInt()
-
 			end := new(big.Int).Add(outputOff, length)
 
-			if end.BitLen() > 64 || uint64(len(vm.returnData)) < end.Uint64() {
-				return nil, errors.ErrorCodeReturnDataOutOfBounds
+			if end.BitLen() > 64 || uint64(len(returnData)) < end.Uint64() {
+				callState.PushError(errors.ErrorCodeReturnDataOutOfBounds)
+				continue
 			}
 
-			data := vm.returnData
-
-			memErr := memory.Write(memOff, data)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
-			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, data)
+			memory.Write(memOff, returnData)
+			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, returnData)
 
 		case BLOCKHASH: // 0x40
 			stack.Push(Zero256)
@@ -719,35 +639,20 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case MLOAD: // 0x51
 			offset := stack.PopBigInt()
-			data, memErr := memory.Read(offset, BigWord256Length)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			data := memory.Read(offset, BigWord256Length)
 			stack.Push(LeftPadWord256(data))
 			vm.Debugf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE: // 0x52
 			offset, data := stack.PopBigInt(), stack.Pop()
-			memErr := memory.Write(offset, data.Bytes())
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			memory.Write(offset, data.Bytes())
 			vm.Debugf(" => 0x%X @ 0x%X\n", data, offset)
 
 		case MSTORE8: // 0x53
 			offset := stack.PopBigInt()
-			val64, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			val64 := stack.Pop64()
 			val := byte(val64 & 0xFF)
-			memErr := memory.Write(offset, []byte{val})
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			memory.Write(offset, []byte{val})
 			vm.Debugf(" => [%v] 0x%X\n", offset, val)
 
 		case SLOAD: // 0x54
@@ -758,35 +663,20 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
-			if useGasNegative(gas, GasStorageUpdate, &err) {
-				return nil, err
-			}
+			useGasNegative(gas, GasStorageUpdate, callState)
 			callState.SetStorage(callee, loc, data)
 			vm.Debugf("%s {0x%X := 0x%X}\n", callee, loc, data)
 
 		case JUMP: // 0x56
-			to, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
-			jumpErr := vm.jump(code, to, &pc)
-			if jumpErr != nil {
-				vm.Debugf(" => JUMP err: %s", jumpErr)
-				return nil, firstErr(err, jumpErr)
-			}
+			to := stack.Pop64()
+			vm.jump(code, to, &pc, callState)
 			continue
 
 		case JUMPI: // 0x57
-			pos, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			pos := stack.Pop64()
 			cond := stack.Pop()
 			if !cond.IsZero() {
-				jumpErr := vm.jump(code, pos, &pc)
-				if jumpErr != nil {
-					return nil, firstErr(err, jumpErr)
-				}
+				vm.jump(code, pos, &pc, callState)
 				continue
 			}
 			vm.Debugf(" ~> false\n")
@@ -812,10 +702,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case PUSH1, PUSH2, PUSH3, PUSH4, PUSH5, PUSH6, PUSH7, PUSH8, PUSH9, PUSH10, PUSH11, PUSH12, PUSH13, PUSH14, PUSH15, PUSH16, PUSH17, PUSH18, PUSH19, PUSH20, PUSH21, PUSH22, PUSH23, PUSH24, PUSH25, PUSH26, PUSH27, PUSH28, PUSH29, PUSH30, PUSH31, PUSH32:
 			a := int64(op - PUSH1 + 1)
-			codeSegment, ok := subslice(code, pc+1, a)
-			if !ok {
-				return nil, firstErr(err, errors.ErrorCodeCodeOutOfBounds)
-			}
+			codeSegment := subslice(code, pc+1, a, callState)
 			res := LeftPadWord256(codeSegment)
 			stack.Push(res)
 			pc += a
@@ -838,46 +725,23 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			for i := 0; i < n; i++ {
 				topics[i] = stack.Pop()
 			}
-			data, memErr := memory.Read(offset, size)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
-			eventErr := eventSink.Log(&exec.LogEvent{
+			data := memory.Read(offset, size)
+			callState.PushError(eventSink.Log(&exec.LogEvent{
 				Address: callee,
 				Topics:  topics,
 				Data:    data,
-			})
-			if eventErr != nil {
-				return nil, firstErr(err, eventErr)
-			}
+			}))
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0
-			vm.returnData = nil
+			returnData = nil
 
-			contractValue, popErr := stack.PopU64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			contractValue := stack.PopU64()
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
-			input, memErr := memory.Read(offset, size)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
-
-			// Check balance
-			if callState.GetBalance(callee) < uint64(contractValue) {
-				return nil, firstErr(err, errors.ErrorCodeInsufficientBalance)
-			}
+			input := memory.Read(offset, size)
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
-			var gasErr errors.CodedError
-			if useGasNegative(gas, GasCreateAccount, &gasErr) {
-				return nil, firstErr(err, gasErr)
-			}
-
+			useGasNegative(gas, GasCreateAccount, callState)
 			callState.IncSequence(callee)
 			newAccount := crypto.NewContractAddress(callee, callState.GetSequence(callee))
 
@@ -887,31 +751,22 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			if callErr != nil {
 				stack.Push(Zero256)
 				// Note we both set the return buffer and return the result normally
-				vm.returnData = ret
-				if callErr.ErrorCode() == errors.ErrorCodeExecutionReverted {
-					return ret, callErr
-				}
+				returnData = ret
 			} else {
-				// Set the code (ret need not be copied as per Call contract)
-				createErr := createContract(callState, callee, newAccount, ret)
-				if createErr != nil {
-					return nil, firstErr(err, createErr)
-				}
+				callState.PushError(createContract(callState, callee, newAccount, ret))
 				stack.PushAddress(newAccount)
 			}
 
 		case CALL, CALLCODE, DELEGATECALL, STATICCALL: // 0xF1, 0xF2, 0xF4, 0xFA
-			vm.returnData = nil
+			returnData = nil
 
 			permErr := EnsurePermission(callState, callee, permission.Call)
 			if permErr != nil {
-				return nil, firstErr(err, permErr)
+				callState.PushError(permErr)
+				continue
 
 			}
-			gasLimit, popErr := stack.PopU64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			gasLimit := stack.PopU64()
 			address := stack.PopAddress()
 			// NOTE: for DELEGATECALL value is preserved from the original
 			// caller, as such it is not stored on stack as an argument
@@ -919,27 +774,17 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			// caller value is used.  for CALL and CALLCODE value is stored
 			// on stack and needs to be overwritten from the given value.
 			if op != DELEGATECALL && op != STATICCALL {
-				value, popErr = stack.PopU64()
-				if popErr != nil {
-					return nil, firstErr(err, popErr)
-				}
+				value = stack.PopU64()
 			}
 			// inputs
 			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
 			// outputs
 			retOffset := stack.PopBigInt()
-			retSize, popErr := stack.Pop64()
-			if popErr != nil {
-				return nil, firstErr(err, popErr)
-			}
+			retSize := stack.Pop64()
 			vm.Debugf(" => %v\n", address)
 
 			// Get the arguments from the memory
-			args, memErr := memory.Read(inOffset, inSize)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			args := memory.Read(inOffset, inSize)
 
 			// Ensure that gasLimit is reasonable
 			if *gas < gasLimit {
@@ -950,57 +795,56 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			*gas -= gasLimit
 
 			// Begin execution
-			var ret []byte
 			var callErr errors.CodedError
 			// Establish a stack frame and perform the call
 			var childCallState Interface
 			if IsRegisteredNativeContract(address) {
 				// Native contract
 				childCallState = callState.NewCache()
-				ret, callErr = ExecuteNativeContract(address, childCallState, callee, args, &gasLimit, logger)
+				returnData, callErr = ExecuteNativeContract(address, childCallState, callee, args, &gasLimit, logger)
+				childCallState.PushError(callErr)
 				// for now we fire the Call event. maybe later we'll fire more particulars
 				// NOTE: these fire call go_events and not particular go_events for eg name reg or permissions
-				vm.fireCallEvent(eventSink, exec.CallTypeSNative, &callErr, &ret, callee, address, args, value,
-					&gasLimit, &err)
+				vm.fireCallEvent(eventSink, exec.CallTypeSNative, childCallState, &returnData, callee, address, args, value,
+					&gasLimit, childCallState)
 			} else {
 				// EVM contract
-				if useGasNegative(gas, GasGetAccount, &callErr) {
-					return nil, callErr
-				}
+				useGasNegative(gas, GasGetAccount, callState)
 				// since CALL is used also for sending funds,
 				// acc may not exist yet. This is an errors.CodedError for
 				// CALLCODE, but not for CALL, though I don't think
 				// ethereum actually cares
 				if !callState.Exists(address) {
-					if op == CALL {
-						// We're sending funds to a new account so we must create it first
-						createErr := createAccount(callState, callee, address)
-						if createErr != nil {
-							return nil, firstErr(err, createErr)
-						}
-					} else {
-						return nil, firstErr(err, errors.ErrorCodeUnknownAddress)
+					if op != CALL {
+						callState.PushError(errors.ErrorCodeUnknownAddress)
+						continue
+					}
+					// We're sending funds to a new account so we must create it first
+					createErr := createAccount(callState, callee, address)
+					if createErr != nil {
+						callState.PushError(createErr)
+						continue
 					}
 				}
 				switch op {
 				case CALL:
 					childCallState = callState.NewCache()
-					ret, callErr = vm.call(childCallState, eventSink, callee, address, callState.GetCode(address),
+					returnData, callErr = vm.call(childCallState, eventSink, callee, address, callState.GetCode(address),
 						args, value, &gasLimit, exec.CallTypeCall)
 
 				case CALLCODE:
 					childCallState = callState.NewCache()
-					ret, callErr = vm.call(childCallState, eventSink, callee, callee, callState.GetCode(address),
+					returnData, callErr = vm.call(childCallState, eventSink, callee, callee, callState.GetCode(address),
 						args, value, &gasLimit, exec.CallTypeCode)
 
 				case DELEGATECALL:
 					childCallState = callState.NewCache()
-					ret, callErr = vm.delegateCall(childCallState, eventSink, caller, callee,
+					returnData, callErr = vm.delegateCall(childCallState, eventSink, caller, callee,
 						callState.GetCode(address), args, value, &gasLimit, exec.CallTypeDelegate)
 
 				case STATICCALL:
 					childCallState = callState.NewCache(state.ReadOnly)
-					ret, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
+					returnData, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
 						caller, callee, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
 
 				default:
@@ -1009,14 +853,9 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 			}
 
-			// Set regardless of call error in case execution reverted - does no harm if not reverted
-			vm.returnData = ret
-
 			if callErr == nil {
-				callErr = childCallState.Sync()
-				if callErr != nil {
-					return nil, firstErr(err, callErr)
-				}
+				// Sync error is a hard stop
+				callState.PushError(childCallState.Sync())
 			}
 
 			// Push result
@@ -1026,19 +865,15 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				stack.Push(Zero256)
 
 				if callErr.ErrorCode() == errors.ErrorCodeExecutionReverted {
-					memory.Write(retOffset, RightPadBytes(ret, int(retSize)))
+					memory.Write(retOffset, RightPadBytes(returnData, int(retSize)))
 				}
 			} else {
 				stack.Push(One256)
 
 				// Should probably only be necessary when there is no return value and
-				// ret is empty, but since EVM expects retSize to be respected this will
-				// defensively pad or truncate the portion of ret to be returned.
-				memErr := memory.Write(retOffset, RightPadBytes(ret, int(retSize)))
-				if memErr != nil {
-					vm.Debugf(" => Memory err: %s", memErr)
-					return nil, firstErr(callErr, errors.ErrorCodeMemoryOutOfBounds)
-				}
+				// returnData is empty, but since EVM expects retSize to be respected this will
+				// defensively pad or truncate the portion of returnData to be returned.
+				memory.Write(retOffset, RightPadBytes(returnData, int(retSize)))
 			}
 
 			// Handle remaining gas.
@@ -1048,42 +883,31 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case RETURN: // 0xF3
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
-			output, memErr := memory.Read(offset, size)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
+			output := memory.Read(offset, size)
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
-			return output, nil
+			return output
 
 		case REVERT: // 0xFD
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
-			output, memErr := memory.Read(offset, size)
-			if memErr != nil {
-				vm.Debugf(" => Memory err: %s", memErr)
-				return nil, firstErr(err, errors.ErrorCodeMemoryOutOfBounds)
-			}
-
+			output := memory.Read(offset, size)
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
-			return output, errors.ErrorCodeExecutionReverted
+			callState.PushError(errors.ErrorCodeExecutionReverted)
+			return output
 
 		case INVALID: // 0xFE
-			return nil, errors.ErrorCodeExecutionAborted
+			callState.PushError(errors.ErrorCodeExecutionAborted)
+			return nil
 
 		case SELFDESTRUCT: // 0xFF
 			receiver := stack.PopAddress()
-			if useGasNegative(gas, GasGetAccount, &err) {
-				return nil, err
-			}
+			useGasNegative(gas, GasGetAccount, callState)
 			if !callState.Exists(receiver) {
 				// If receiver address doesn't exist, try to create it
-				var gasErr errors.CodedError
-				if useGasNegative(gas, GasCreateAccount, &gasErr) {
-					return nil, firstErr(err, gasErr)
-				}
+				useGasNegative(gas, GasCreateAccount, callState)
 				createErr := createAccount(callState, callee, receiver)
 				if createErr != nil {
-					return nil, firstErr(err, createErr)
+					callState.PushError(createErr)
+					continue
 				}
 			}
 			balance := callState.GetBalance(callee)
@@ -1093,17 +917,20 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			fallthrough
 
 		case STOP: // 0x00
-			return nil, nil
+			return nil
 
 		case CREATE2:
-			return nil, errors.Errorf("%v not yet implemented", op)
+			callState.PushError(errors.Errorf("%v not yet implemented", op))
+			return nil
 
 		default:
 			vm.Debugf("(pc) %-3v Unknown opcode %v\n", pc, op)
-			return nil, errors.Errorf("unknown opcode %v", op)
+			callState.PushError(errors.Errorf("unknown opcode %v", op))
+			return nil
 		}
 		pc++
 	}
+	return
 }
 
 func createAccount(st Interface, creator, address crypto.Address) errors.CodedError {
@@ -1135,27 +962,25 @@ func create(st Interface, address crypto.Address, code []byte) errors.CodedError
 	return nil
 }
 
-// TODO: [Silas] this function seems extremely dubious to me. It was being used
-// in circumstances where its behaviour did not match the intention. It's bounds
-// check is strange (treats a read at data length as a zero read of arbitrary length)
-// I have left it in for now to be conservative about where its behaviour is being used
-//
 // Returns a subslice from offset of length length and a bool
 // (true iff slice was possible). If the subslice
 // extends past the end of data it returns A COPY of the segment at the end of
 // data padded with zeroes on the right. If offset == len(data) it returns all
 // zeroes. if offset > len(data) it returns a false
-func subslice(data []byte, offset, length int64) (ret []byte, ok bool) {
+func subslice(data []byte, offset, length int64, err errors.Sink) []byte {
 	size := int64(len(data))
 	if size < offset || offset < 0 || length < 0 {
-		return nil, false
-	} else if size < offset+length {
-		ret, ok = data[offset:], true
-		ret = RightPadBytes(ret, 32)
-	} else {
-		ret, ok = data[offset:offset+length], true
+		err.PushError(errors.ErrorCodef(errors.ErrorCodeInputOutOfBounds,
+			"subslice could not slice data of size %d at offset %d for length %d", size, offset, length))
+		return nil
 	}
-	return
+	if size < offset+length {
+		// Extract slice from offset to end padding to requested length
+		ret := make([]byte, length)
+		copy(ret, data[offset:])
+		return ret
+	}
+	return data[offset : offset+length]
 }
 
 func codeGetOp(code []byte, n int64) OpCode {
@@ -1166,23 +991,15 @@ func codeGetOp(code []byte, n int64) OpCode {
 	}
 }
 
-func (vm *VM) jump(code []byte, to int64, pc *int64) (err errors.CodedError) {
+func (vm *VM) jump(code []byte, to int64, pc *int64, err errors.Sink) {
 	dest := codeGetOp(code, to)
 	if dest != JUMPDEST {
 		vm.Debugf(" ~> %v invalid jump dest %v\n", to, dest)
-		return errors.ErrorCodeInvalidJumpDest
+		err.PushError(errors.ErrorCodeInvalidJumpDest)
+		return
 	}
 	vm.Debugf(" ~> %v\n", to)
 	*pc = to
-	return nil
-}
-
-func firstErr(errA, errB error) errors.CodedError {
-	if errA != nil {
-		return errors.AsException(errA)
-	} else {
-		return errors.AsException(errB)
-	}
 }
 
 func transfer(st Interface, from, to crypto.Address, amount uint64) errors.CodedError {
