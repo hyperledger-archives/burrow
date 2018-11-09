@@ -47,15 +47,14 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("",
+	MustDeclareReleases("0.23.0 - 2018-11-09",
 		`### Changed
-- [EVM] Added EVM State interface removing unnecessary cache layer (fixing various issues)
-- [Deploy] Burrow deploy meta jobs reuses GRPC connection
 - [ABI] provides fast event lookup of EventID
 - [Events] BlockExecution now included full Tendermint block header as protobuf object rather than JSON string
 - [EVM] Nested call errors are now transmitted to EventSink (e.g. TxExecution) as events for better tracing and tests
 - [SNative] Permissions contract returns permission flag set not resultant permissions from setBase unsetBase and setGlobal
 - [EVM] Errors transmitted through errors.Pusher interface for more reliable capture from memory, stack, and elsewhere
+- [Governance] Breaking change to state structure due to governance storage in tree (state root hashes will not match)
 
 
 ### Fixed
@@ -68,6 +67,9 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 
 
 ### Added
+- [Deploy] Burrow deploy meta jobs reuses GRPC connection
+- [Governance] Added proposal mechanism (via ProposalTx) that allows bulk atomic update of smart contracts and changing network parameters via a threshold voting mechanism. This allows some level of network evolution without any single trusted party or hard forks. This should be considered alpha level functionality.
+- [EVM] Added EVM State interface removing unnecessary cache layer (fixing various issues)
 - [EVM] Implemented STATICCALL opcode
 - [P2P] Added AuthorizedPeers config option to sync only with whitelisted peers exposed over ABCI query under key /p2p/filter/
 - [EVM] stack depth now dynamically allocated and exponentially grown in the same way as memory
