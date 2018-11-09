@@ -142,7 +142,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 
 	// Count the number of validators; ensure we have at least half the number of validators
 	// This also means that when running with a single validator, a proposal will run straight away
-	power := 0
+	var power uint64
 	for _, v := range votes {
 		if v > 0 {
 			power++
@@ -162,7 +162,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	if power*2 > ctx.Tip.NumValidators() {
+	if power >= ctx.Tip.GenesisDoc().Params.ProposalThreshold {
 		ballot.ProposalState = payload.Ballot_EXECUTED
 
 		for i, step := range ballot.Proposal.BatchTx.Txs {

@@ -1,6 +1,9 @@
 {
 	"GenesisTime": "2018-07-23T20:54:35.145610201Z",
 	"ChainName": "BurrowChain_D70885",
+	"Params": {
+		"ProposalThreshold": 1
+	},
 	"GlobalPermissions": {
 		"Base": {
 			"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
