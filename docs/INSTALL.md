@@ -8,6 +8,6 @@ cd $GOPATH/src/github.com/hyperledger/burrow
 make build
 ```
 
-This will build the `burrow` and `burrow-client` binaries and put them in the `bin/` directory. They can be executed from there or put wherever is convenient.
+This will build the `burrow` binary and put it in the `bin/` directory. It can be executed from there or put wherever is convenient.
 
 You can also install `burrow` into `$GOPATH/bin` with `make install_burrow`,
