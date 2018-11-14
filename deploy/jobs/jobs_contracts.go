@@ -9,11 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hyperledger/burrow/execution/errors"
+
 	"github.com/hyperledger/burrow/crypto"
 	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
-	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/txs/payload"
 	log "github.com/sirupsen/logrus"
@@ -417,23 +418,29 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def
 		return "", nil, err
 	}
 
-	if txe.Exception != nil && txe.Exception.ErrorCode() == errors.ErrorCodeExecutionReverted {
-		message, err := abi.UnpackRevert(txe.Result.Return)
-		if err != nil {
-			return "", nil, err
-		}
-		if message != nil {
-			log.WithField("Revert Reason", *message).Error("Transaction reverted with reason")
-			return *message, nil, txe.Exception.AsError()
-		} else {
-			log.Error("Transaction reverted with no reason")
+	if txe.Exception != nil {
+		switch txe.Exception.ErrorCode() {
+		case errors.ErrorCodeExecutionReverted:
+			message, err := abi.UnpackRevert(txe.Result.Return)
+			if err != nil {
+				return "", nil, err
+			}
+			if message != nil {
+				log.WithField("Revert Reason", *message).Error("Transaction reverted with reason")
+				return *message, nil, txe.Exception.AsError()
+			} else {
+				log.Error("Transaction reverted with no reason")
+				return "", nil, txe.Exception.AsError()
+			}
+		default:
+			log.Error("Transaction execution exception")
 			return "", nil, txe.Exception.AsError()
 		}
 	}
 	var result string
 
 	// Formally process the return
-	if txe.Result.Return != nil {
+	if txe.GetResult().GetReturn() != nil {
 		log.Debug(txe.Result.Return)
 
 		log.WithField("=>", result).Debug("Decoding Raw Result")
