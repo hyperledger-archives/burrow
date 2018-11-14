@@ -48,7 +48,11 @@ func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.Res
 // Account state
 
 func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (*acm.Account, error) {
-	return qs.accounts.GetAccount(param.Address)
+	acc, err := qs.accounts.GetAccount(param.Address)
+	if acc == nil {
+		acc = &acm.Account{}
+	}
+	return acc, err
 }
 
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {

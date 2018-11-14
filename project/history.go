@@ -47,21 +47,13 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("",
-		`### Security
-
-### Changed
-
-### Fixed
+	MustDeclareReleases("0.23.1 - 2018-11-14",
+		`### Fixed
 - [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
+- [GRPC] GetAccount on unknown account no longer causes a panic
 
 ### Added
 - [Execution] panics from executors are captured and pushed to error sink of TxExecution
-
-### Removed
-
-### Deprecated
-
 `,
 		"0.23.0 - 2018-11-09",
 		`### Changed
