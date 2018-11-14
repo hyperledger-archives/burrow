@@ -126,7 +126,8 @@ build_race:	check build_race_db
 .PHONY: build_burrow
 build_burrow: commit_hash
 	go build -ldflags "-extldflags '-static' \
-	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt)" \
+	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
+	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
 
 .PHONY: install_burrow
