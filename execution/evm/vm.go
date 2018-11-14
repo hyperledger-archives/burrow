@@ -100,14 +100,13 @@ func HasPermission(st Interface, address crypto.Address, perm permission.PermFla
 	return value
 }
 
-func EnsurePermission(st Interface, address crypto.Address, perm permission.PermFlag) errors.CodedError {
+func EnsurePermission(st Interface, address crypto.Address, perm permission.PermFlag) {
 	if !HasPermission(st, address, perm) {
-		return errors.PermissionDenied{
+		st.PushError(errors.PermissionDenied{
 			Address: address,
 			Perm:    perm,
-		}
+		})
 	}
-	return nil
 }
 
 func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, errProvider errors.Provider, output *[]byte,
@@ -745,26 +744,36 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			callState.IncSequence(callee)
 			newAccount := crypto.NewContractAddress(callee, callState.GetSequence(callee))
 
+			// Check the CreateContract permission for this account
+			EnsurePermission(callState, callee, permission.CreateContract)
+			if callState.Error() != nil {
+				continue
+			}
+
+			// Establish a frame in which the putative account exists
+			childCallState := callState.NewCache()
+			create(childCallState, newAccount)
+
 			// Run the input to get the contract code.
 			// NOTE: no need to copy 'input' as per Call contract.
-			ret, callErr := vm.Call(callState, eventSink, callee, newAccount, input, input, contractValue, gas)
+			ret, callErr := vm.Call(childCallState, eventSink, callee, newAccount, input, input, contractValue, gas)
 			if callErr != nil {
 				stack.Push(Zero256)
 				// Note we both set the return buffer and return the result normally
 				returnData = ret
 			} else {
-				callState.PushError(createContract(callState, callee, newAccount, ret))
+				// Update the account with its initialised contract code
+				childCallState.InitCode(newAccount, ret)
+				callState.PushError(childCallState.Sync())
 				stack.PushAddress(newAccount)
 			}
 
 		case CALL, CALLCODE, DELEGATECALL, STATICCALL: // 0xF1, 0xF2, 0xF4, 0xFA
 			returnData = nil
 
-			permErr := EnsurePermission(callState, callee, permission.Call)
-			if permErr != nil {
-				callState.PushError(permErr)
+			EnsurePermission(callState, callee, permission.Call)
+			if callState.Error() != nil {
 				continue
-
 			}
 			gasLimit := stack.PopU64()
 			address := stack.PopAddress()
@@ -820,9 +829,8 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 						continue
 					}
 					// We're sending funds to a new account so we must create it first
-					createErr := createAccount(callState, callee, address)
-					if createErr != nil {
-						callState.PushError(createErr)
+					createAccount(callState, callee, address)
+					if callState.Error() != nil {
 						continue
 					}
 				}
@@ -904,9 +912,8 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			if !callState.Exists(receiver) {
 				// If receiver address doesn't exist, try to create it
 				useGasNegative(gas, GasCreateAccount, callState)
-				createErr := createAccount(callState, callee, receiver)
-				if createErr != nil {
-					callState.PushError(createErr)
+				createAccount(callState, callee, receiver)
+				if callState.Error() != nil {
 					continue
 				}
 			}
@@ -914,7 +921,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			callState.AddToBalance(receiver, balance)
 			callState.RemoveAccount(callee)
 			vm.Debugf(" => (%X) %v\n", receiver[:4], balance)
-			fallthrough
+			return nil
 
 		case STOP: // 0x00
 			return nil
@@ -933,33 +940,17 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 	return
 }
 
-func createAccount(st Interface, creator, address crypto.Address) errors.CodedError {
-	err := EnsurePermission(st, creator, permission.CreateAccount)
-	if err != nil {
-		return err
-	}
-	return create(st, address, nil)
+func createAccount(st Interface, creator, address crypto.Address) {
+	EnsurePermission(st, creator, permission.CreateAccount)
+	create(st, address)
 }
 
-func createContract(st Interface, creator, address crypto.Address, code []byte) errors.CodedError {
-	err := EnsurePermission(st, creator, permission.CreateContract)
-	if err != nil {
-		return err
-	}
-	return create(st, address, code)
-}
-
-func create(st Interface, address crypto.Address, code []byte) errors.CodedError {
+func create(st Interface, address crypto.Address) {
 	if IsRegisteredNativeContract(address) {
-		return errors.ErrorCodef(errors.ErrorCodeReservedAddress,
-			"cannot create account at %v because that address is reserved for a native contract", address)
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+			"cannot create account at %v because that address is reserved for a native contract", address))
 	}
 	st.CreateAccount(address)
-	st.InitCode(address, code)
-	if st.Error() != nil {
-		return errors.Wrap(st.Error(), "createAccount could not create account")
-	}
-	return nil
 }
 
 // Returns a subslice from offset of length length and a bool

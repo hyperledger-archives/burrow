@@ -193,9 +193,9 @@ func TestStateCache_SetStorage(t *testing.T) {
 
 	//Create new account and set its storage in cache
 	newAcc := acm.NewAccountFromSecret("newAcc")
-	err := cache.SetStorage(newAcc.Address, word("What?"), word("Huh?"))
+	err := cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
-	err = cache.UpdateAccount(newAcc)
+	err = cache.SetStorage(newAcc.Address, word("What?"), word("Huh?"))
 	require.NoError(t, err)
 
 	//Check for correct cache storage value
@@ -211,6 +211,15 @@ func TestStateCache_SetStorage(t *testing.T) {
 	newAccStorage, err = backend.GetStorage(newAcc.Address, word("What?"))
 	require.NoError(t, err)
 	assert.Equal(t, word("Huh?"), newAccStorage)
+
+	noone := acm.NewAccountFromSecret("noone at all")
+	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, binary.Word256{102, 103, 104})
+	require.Error(t, err, "should not be able to write to non-existent account")
+
+	err = cache.UpdateAccount(noone)
+	require.NoError(t, err)
+	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, binary.Word256{102, 103, 104})
+	require.NoError(t, err, "should be able to update account after creating it")
 }
 
 func TestStateCache_Sync(t *testing.T) {
@@ -218,15 +227,17 @@ func TestStateCache_Sync(t *testing.T) {
 	backend := NewCache(NewMemoryState())
 	cache := NewCache(backend)
 
-	//Create new account
+	// Create new account
 	newAcc := acm.NewAccountFromSecret("newAcc")
+	// Create account
+	err := cache.UpdateAccount(newAcc)
 
-	//Set balance for account
+	// Set balance for account
 	balance := uint64(24)
 	newAcc.Balance = balance
 
-	//Set storage for account
-	err := cache.SetStorage(newAcc.Address, word("God save"), word("the queen!"))
+	// Set storage for account
+	err = cache.SetStorage(newAcc.Address, word("God save"), word("the queen!"))
 	require.NoError(t, err)
 
 	//Update cache with account changes
@@ -295,7 +306,6 @@ func TestStateCache_get(t *testing.T) {
 	newAccOut, err = backend.GetAccount(newAcc.Address)
 	require.NoError(t, err)
 	require.NotNil(t, newAccOut)
-
 }
 
 func testAccounts() *MemoryState {
