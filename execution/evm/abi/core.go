@@ -2,10 +2,13 @@ package abi
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/hyperledger/burrow/deploy/compile"
+	"github.com/hyperledger/burrow/execution/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -149,6 +152,38 @@ func readAbi(root, contract string) (string, error) {
 		return "", err
 	}
 	return string(sol.Abi), nil
+}
+
+// FindEventSpec helps when you have an event but you do not know what contract
+// it came from. Events can be emitted from contracts called from other contracts,
+// so you are not likely to know what abi to use. Therefore, this will go through
+// all the files in the directory and see if a matching event spec can be found.
+func FindEventSpec(abiDir string, eventID EventID) (evAbi *EventSpec, err error) {
+	err = filepath.Walk(abiDir, func(path string, fi os.FileInfo, err error) error {
+		ext := filepath.Ext(path)
+		if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
+			return nil
+		}
+		if err == nil {
+			abiSpc, err := ReadAbiSpecFile(path)
+			if err != nil {
+				return errors.Wrap(err, "Error parsing abi file "+path)
+			}
+
+			a, ok := abiSpc.EventsById[eventID]
+			if ok {
+				evAbi = &a
+				return io.EOF
+			}
+		}
+		return nil
+	})
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return
 }
 
 func stripHex(s string) string {
