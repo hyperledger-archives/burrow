@@ -47,7 +47,16 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.23.0 - 2018-11-09",
+	MustDeclareReleases("0.23.1 - 2018-11-14",
+		`### Fixed
+- [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
+- [GRPC] GetAccount on unknown account no longer causes a panic
+
+### Added
+- [Docker] Added solc 0.4.25 binary to docker container so that burrow deploy has what it needs to function
+- [Execution] panics from executors are captured and pushed to error sink of TxExecution
+`,
+		"0.23.0 - 2018-11-09",
 		`### Changed
 - [ABI] provides fast event lookup of EventID
 - [Events] BlockExecution now included full Tendermint block header as protobuf object rather than JSON string

@@ -83,8 +83,12 @@ func (cache *Cache) GetAccount(address crypto.Address) (*acm.Account, error) {
 }
 
 func (cache *Cache) UpdateAccount(account *acm.Account) error {
+	if account == nil {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called with nil account")
+	}
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called on read-only account %v", account.GetAddress())
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			"UpdateAccount called in a read-only context on account %v", account.GetAddress())
 	}
 	accInfo, err := cache.get(account.GetAddress())
 	if err != nil {
@@ -93,7 +97,7 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	accInfo.Lock()
 	defer accInfo.Unlock()
 	if accInfo.removed {
-		return fmt.Errorf("UpdateAccount on a removed account: %s", account.GetAddress())
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount on a removed account: %s", account.GetAddress())
 	}
 	accInfo.account = account.Copy()
 	accInfo.updated = true
@@ -159,16 +163,21 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (bina
 // NOTE: Set value to zero to remove.
 func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetStorage called on read-only account %v", address)
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			"SetStorage called in a read-only context on account %v", address)
 	}
 	accInfo, err := cache.get(address)
+	if accInfo.account == nil {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			"SetStorage called on an account that does not exist: %v", address)
+	}
 	accInfo.Lock()
 	defer accInfo.Unlock()
 	if err != nil {
 		return err
 	}
 	if accInfo.removed {
-		return fmt.Errorf("SetStorage on a removed account: %s", address)
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetStorage on a removed account: %s", address)
 	}
 	accInfo.storage[key] = value
 	accInfo.updated = true
@@ -196,7 +205,7 @@ func (cache *Cache) IterateCachedStorage(address crypto.Address,
 
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating
 // the account they belong so that storage values can be taken account of in the update.
-func (cache *Cache) Sync(state Writer) error {
+func (cache *Cache) Sync(st Writer) error {
 	if cache.readonly {
 		// Sync is (should be) a no-op for read-only - any modifications should have been caught in respective methods
 		return nil
@@ -213,30 +222,31 @@ func (cache *Cache) Sync(state Writer) error {
 		accInfo := cache.accounts[address]
 		accInfo.RLock()
 		if accInfo.removed {
-			err := state.RemoveAccount(address)
+			err := st.RemoveAccount(address)
 			if err != nil {
 				return err
 			}
 		} else if accInfo.updated {
+			// First update account in case it needs to be created
+			err := st.UpdateAccount(accInfo.account)
+			if err != nil {
+				return err
+			}
+			// Sort keys
 			var keys binary.Words256
 			for key := range accInfo.storage {
 				keys = append(keys, key)
 			}
-			// First update keys
 			sort.Sort(keys)
+			// Update account's storage
 			for _, key := range keys {
 				value := accInfo.storage[key]
-				err := state.SetStorage(address, key, value)
+				err := st.SetStorage(address, key, value)
 				if err != nil {
 					return err
 				}
 			}
-			// Update account - this gives backend the opportunity to update StorageRoot after calculating the new
-			// value from any storage value updates
-			err := state.UpdateAccount(accInfo.account)
-			if err != nil {
-				return err
-			}
+
 		}
 		accInfo.RUnlock()
 	}

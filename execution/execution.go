@@ -212,6 +212,14 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
 		txe := exe.blockExecution.Tx(txEnv)
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
+					debug.Stack())
+				// If we recover here we are in a position to promulgate the error to the TxExecution
+				txe.PushError(err)
+			}
+		}()
 
 		// Validate inputs and check sequence numbers
 		err = validateInputs(txEnv.Tx, exe.stateCache)
