@@ -53,6 +53,9 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [GRPC] GetAccount on unknown account no longer causes a panic
 
 ### Added
+- [Docker] Added solc 0.4.25 binary to docker container so that burrow deploy has what it needs to function
+
+### Added
 - [Execution] panics from executors are captured and pushed to error sink of TxExecution
 `,
 		"0.23.0 - 2018-11-09",
